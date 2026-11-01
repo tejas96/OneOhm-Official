@@ -8,6 +8,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
+import { STAGE_LABEL } from './lead-labels';
 
 const CLOSED: LeadStage[] = ['won', 'lost'];
 
@@ -159,7 +160,7 @@ export class LeadsService {
         id,
         actor.userId,
         'stage_change',
-        `Moved from ${current.stage} to ${patch.stage}.`,
+        `Moved from ${STAGE_LABEL[current.stage]} to ${STAGE_LABEL[patch.stage]}.`,
       );
     if (patch.nextActionOn && patch.nextActionOn !== current.nextActionOn) {
       await this.log(

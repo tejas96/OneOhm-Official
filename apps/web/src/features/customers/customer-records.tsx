@@ -14,7 +14,7 @@ import { formatInrCompact, formatKwp } from '@oneohm/shared';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
-import { MetroLine, ProjectStatus } from '@/features/command-center/project-ledger';
+import { MetroLine, ProjectStatus } from '@/features/projects/project-journey';
 
 const QUOTATION_TONE: Readonly<Record<QuotationSummary['status'], PillTone>> = {
   draft: 'neutral',

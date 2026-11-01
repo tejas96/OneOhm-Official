@@ -54,7 +54,10 @@ export const crmContract = c.router({
     query: z.object({
       stage: leadStageSchema.optional(),
       search: z.string().trim().max(80).optional(),
-      open: z.coerce.boolean().optional(),
+      open: z
+        .union([z.boolean(), z.enum(['true', 'false'])])
+        .transform((value) => value === true || value === 'true')
+        .optional(),
     }),
     responses: { 200: z.array(leadSchema) },
   },
