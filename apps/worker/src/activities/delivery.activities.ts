@@ -23,64 +23,77 @@ export function deliveryActivities({ db, sender, language }: DeliveryDeps) {
       .where(eq(outbox.id, id));
   };
 
+  /** Why a message cannot go out as is, or the template values it needs. */
+  const prepare = async (
+    row: typeof outbox.$inferSelect,
+  ): Promise<
+    | { readonly verdict: 'skipped' | 'failed'; readonly note: string }
+    | { readonly verdict: 'send'; readonly parameters: string[] }
+  > => {
+    if (row.channel !== 'whatsapp') {
+      return { verdict: 'skipped', note: `The ${row.channel} channel is not connected yet.` };
+    }
+    if (!isMessageKey(row.template)) {
+      return { verdict: 'failed', note: `No WhatsApp template is set up for "${row.template}".` };
+    }
+    const [customer] = await db
+      .select({ optIn: customers.whatsappOptIn })
+      .from(customers)
+      .where(eq(customers.phoneE164, row.recipient))
+      .limit(1);
+    if (customer && !customer.optIn) {
+      return { verdict: 'skipped', note: 'The customer has opted out of WhatsApp messages.' };
+    }
+    try {
+      return {
+        verdict: 'send',
+        parameters: templateParameters(row.template, row.payload as Record<string, unknown>),
+      };
+    } catch (error) {
+      if (!(error instanceof MissingFieldError)) throw error;
+      return { verdict: 'failed', note: error.message };
+    }
+  };
+
+  const send = async (row: typeof outbox.$inferSelect, parameters: string[]) => {
+    try {
+      const result = await sender.send({
+        toE164: row.recipient,
+        template: row.template,
+        language,
+        parameters,
+      });
+      if (result.outcome === 'logged') {
+        await finish(row.id, 'skipped', 'Not sent: WhatsApp delivery is in log mode.');
+        return 'skipped';
+      }
+      await finish(row.id, 'sent', result.providerId ? `message ${result.providerId}` : null);
+      return 'sent';
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (error instanceof PermanentSendError) {
+        await finish(row.id, 'failed', reason);
+        return 'failed';
+      }
+      await db.update(outbox).set({ lastError: reason }).where(eq(outbox.id, row.id));
+      throw error;
+    }
+  };
+
   return {
     async deliverOutboxMessage(id: string): Promise<DeliveryOutcome> {
       const [row] = await db.select().from(outbox).where(eq(outbox.id, id));
-      if (!row || row.status !== 'pending') return 'not_pending';
+      if (row?.status !== 'pending') return 'not_pending';
       await db
         .update(outbox)
         .set({ attempts: sql`${outbox.attempts} + 1` })
         .where(eq(outbox.id, id));
-
-      if (row.channel !== 'whatsapp') {
-        await finish(id, 'skipped', `The ${row.channel} channel is not connected yet.`);
-        return 'skipped';
+      const prepared = await prepare(row);
+      if (prepared.verdict !== 'send') {
+        await finish(id, prepared.verdict, prepared.note);
+        return prepared.verdict;
       }
-      if (!isMessageKey(row.template)) {
-        await finish(id, 'failed', `No WhatsApp template is set up for "${row.template}".`);
-        return 'failed';
-      }
-      const [customer] = await db
-        .select({ optIn: customers.whatsappOptIn })
-        .from(customers)
-        .where(eq(customers.phoneE164, row.recipient))
-        .limit(1);
-      if (customer && !customer.optIn) {
-        await finish(id, 'skipped', 'The customer has opted out of WhatsApp messages.');
-        return 'skipped';
-      }
-
-      let parameters: string[];
-      try {
-        parameters = templateParameters(row.template, row.payload as Record<string, unknown>);
-      } catch (error) {
-        if (!(error instanceof MissingFieldError)) throw error;
-        await finish(id, 'failed', error.message);
-        return 'failed';
-      }
-
-      try {
-        const result = await sender.send({
-          toE164: row.recipient,
-          template: row.template,
-          language,
-          parameters,
-        });
-        if (result.outcome === 'logged') {
-          await finish(id, 'skipped', 'Not sent: WhatsApp delivery is in log mode.');
-          return 'skipped';
-        }
-        await finish(id, 'sent', result.providerId ? `message ${result.providerId}` : null);
-        return 'sent';
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        if (error instanceof PermanentSendError) {
-          await finish(id, 'failed', reason);
-          return 'failed';
-        }
-        await db.update(outbox).set({ lastError: reason }).where(eq(outbox.id, id));
-        throw error;
-      }
+      return send(row, prepared.parameters);
     },
 
     /** Called once retries run out, so the failure is visible to the office. */

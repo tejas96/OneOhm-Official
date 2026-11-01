@@ -1,6 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReportOverview, ReportStatus } from '@oneohm/api-contracts';
-import { customers, discoms, properties, projectFacts, projects, projectTasks } from '@oneohm/database';
+import {
+  customers,
+  discoms,
+  projectFacts,
+  projects,
+  projectTasks,
+  properties,
+} from '@oneohm/database';
 import { desc, eq, ne } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
