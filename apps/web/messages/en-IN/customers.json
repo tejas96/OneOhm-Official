@@ -1,0 +1,104 @@
+{
+  "customers": {
+    "eyebrow": "Sales",
+    "title": "Customers",
+    "detailTitle": "Customer",
+    "description": "One record per customer, with every site, quotation and project.",
+    "loading": "Loading customers",
+    "back": "All customers",
+    "since": "Customer since {date}",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "email": "Email",
+    "searchLabel": "Search customers",
+    "searchPlaceholder": "Name or phone",
+    "kind": {
+      "individual": "Person",
+      "organization": "Organisation"
+    },
+    "columns": {
+      "customer": "Customer",
+      "kind": "Type",
+      "properties": "Sites",
+      "projects": "Projects",
+      "since": "Since"
+    },
+    "empty": {
+      "title": "No customers yet",
+      "body": "A lead becomes a customer when its site is added. Convert a lead to start.",
+      "searchTitle": "No matching customers",
+      "searchBody": "Nothing matches “{term}”. Try a phone number or another spelling."
+    },
+    "figures": {
+      "sites": "Sites",
+      "quotations": "Quotations",
+      "accepted": "Accepted value",
+      "capacity": "Solar in projects"
+    },
+    "sections": {
+      "properties": "Sites",
+      "projects": "Projects",
+      "quotations": "Quotations"
+    },
+    "property": {
+      "none": "No sites yet.",
+      "category": "Site type",
+      "label": "Site name",
+      "labelHint": "How the team refers to it, e.g. Home or Shop",
+      "labelDefault": "Home",
+      "floors": "Floors",
+      "address": "Address",
+      "city": "City or village",
+      "district": "District",
+      "state": "State",
+      "pincode": "PIN code",
+      "households": "Households",
+      "householdsHint": "Homes in the society; sets the subsidy limit",
+      "connection": "Electricity connection",
+      "discom": "DISCOM",
+      "discomUnknown": "Not known yet",
+      "consumerNumber": "Consumer number",
+      "meterHolder": "Meter holder",
+      "meterHolderHint": "Name on the electricity bill",
+      "sanctionedLoad": "Sanctioned load (kW)",
+      "sanctionedLoadHint": "From the electricity bill",
+      "phase": "Supply",
+      "phases": {
+        "single": "Single phase",
+        "three": "Three phase",
+        "unknown": "Not known"
+      },
+      "meterInSocietyName": "The meter is in the society's name",
+      "subsidyClaimed": "Subsidy claimed",
+      "edit": "Edit",
+      "createQuotation": "Create quotation"
+    },
+    "editProperty": {
+      "title": "Edit site",
+      "cancel": "Cancel",
+      "submit": "Save site",
+      "saved": "Site updated"
+    },
+    "quotations": {
+      "title": "Quotations",
+      "none": "No quotations yet.",
+      "number": "Quotation",
+      "status": "Status",
+      "size": "Size",
+      "total": "Total",
+      "effective": "After subsidy",
+      "validUntil": "Valid until",
+      "discountPending": "Discount awaiting approval",
+      "statuses": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "superseded": "Replaced"
+      }
+    },
+    "projects": {
+      "none": "No projects yet."
+    }
+  }
+}

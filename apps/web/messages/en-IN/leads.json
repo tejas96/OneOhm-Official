@@ -1,0 +1,175 @@
+{
+  "leads": {
+    "eyebrow": "Sales",
+    "title": "Leads",
+    "detailTitle": "Lead",
+    "description": "Every enquiry with an owner and a next step. Overdue follow-ups come first.",
+    "new": "New lead",
+    "loading": "Loading leads",
+    "back": "All leads",
+    "since": "Lead since {date}",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "unassigned": "Unassigned",
+    "noNextAction": "No follow-up set",
+    "today": "Today",
+    "overdueOn": "Overdue · {date}",
+    "filterLabel": "Show leads",
+    "searchLabel": "Search leads",
+    "searchPlaceholder": "Name, phone or city",
+    "filters": {
+      "open": "Open",
+      "new": "New",
+      "contacted": "Contacted",
+      "survey_scheduled": "Survey",
+      "quoted": "Quoted",
+      "won": "Won",
+      "lost": "Lost",
+      "all": "All"
+    },
+    "figures": {
+      "showing": "showing",
+      "overdue": "overdue",
+      "today": "to follow up today"
+    },
+    "columns": {
+      "lead": "Lead",
+      "stage": "Stage",
+      "next": "Next follow-up",
+      "owner": "Owner",
+      "size": "Size",
+      "source": "Source"
+    },
+    "empty": {
+      "title": "No leads here",
+      "body": "New enquiries from calls, the website, WhatsApp, staff and resellers appear here.",
+      "searchTitle": "No matching leads",
+      "searchBody": "Nothing matches “{term}”. Try a phone number or another spelling."
+    },
+    "stage": {
+      "new": "New",
+      "contacted": "Contacted",
+      "survey_scheduled": "Survey scheduled",
+      "quoted": "Quoted",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "source": {
+      "manual": "Walk-in or call",
+      "website": "Website",
+      "whatsapp": "WhatsApp",
+      "employee": "Employee referral",
+      "reseller": "Reseller",
+      "referral": "Customer referral"
+    },
+    "category": {
+      "individual": "Residential",
+      "society": "Housing society",
+      "commercial": "Commercial"
+    },
+    "create": {
+      "title": "New lead",
+      "description": "Who enquired, how to reach them, and when to follow up.",
+      "name": "Name",
+      "phone": "Mobile number",
+      "phoneHint": "10 digits. A number with an open lead is caught as a duplicate.",
+      "city": "City or village",
+      "email": "Email",
+      "category": "Site type",
+      "source": "Came from",
+      "estimatedKw": "Expected size (kW)",
+      "estimatedHint": "Optional, e.g. 3.3",
+      "owner": "Owner",
+      "ownerMe": "Me",
+      "nextActionOn": "Follow up on",
+      "nextActionNote": "Next step",
+      "nextActionPlaceholder": "e.g. Call to fix a site survey",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "submit": "Add lead",
+      "created": "{name} added",
+      "openExisting": "Open the existing lead"
+    },
+    "log": {
+      "title": "Log what happened",
+      "kindLabel": "Type of contact",
+      "kind": {
+        "call": "Call",
+        "visit": "Visit",
+        "whatsapp": "WhatsApp",
+        "note": "Note"
+      },
+      "noteLabel": "What happened",
+      "placeholder": {
+        "call": "What did they say on the call?",
+        "visit": "What did you see at the site?",
+        "whatsapp": "What was shared on WhatsApp?",
+        "note": "Anything the team should know"
+      },
+      "nextOn": "Next follow-up",
+      "nextNote": "Next step",
+      "nextNotePlaceholder": "e.g. Send the quotation",
+      "submit": "Save",
+      "saved": "Saved to the lead"
+    },
+    "timeline": {
+      "title": "History",
+      "empty": "Nothing logged yet.",
+      "kind": {
+        "note": "Note",
+        "call": "Call",
+        "visit": "Visit",
+        "whatsapp": "WhatsApp",
+        "stage_change": "Stage changed",
+        "follow_up": "Follow-up set"
+      }
+    },
+    "followUp": {
+      "title": "Next follow-up",
+      "today": "Today",
+      "none": "No follow-up set",
+      "overdue": "This follow-up is overdue."
+    },
+    "stageCard": {
+      "title": "Stage",
+      "move": "Move to stage",
+      "markLost": "Mark as lost",
+      "reopen": "Reopen lead",
+      "lostTitle": "Mark this lead as lost",
+      "lostDescription": "The reason helps the team learn why sales are lost.",
+      "lostReason": "Why was it lost?",
+      "lostSubmit": "Mark as lost"
+    },
+    "customerCard": {
+      "title": "Ready to quote?",
+      "body": "Add the site and its electricity connection. The customer is matched by phone, so no duplicates.",
+      "convert": "Convert to customer",
+      "convertedTitle": "Customer created",
+      "convertedBody": "The site is on file. Create the quotation next.",
+      "createQuotation": "Create quotation",
+      "openCustomer": "Open customer"
+    },
+    "facts": {
+      "title": "Details",
+      "owner": "Owner",
+      "category": "Site type",
+      "size": "Expected size",
+      "source": "Came from",
+      "email": "Email"
+    },
+    "convert": {
+      "title": "Convert to customer",
+      "description": "Add the site for {name}. Only the address is needed now; the rest can follow from the survey.",
+      "kind": "Customer is",
+      "kinds": {
+        "individual": "A person",
+        "organization": "An organisation"
+      },
+      "cancel": "Cancel",
+      "submit": "Create customer",
+      "done": "{name} is now a customer",
+      "createQuotation": "Create quotation"
+    },
+    "closed": "Closed"
+  }
+}
