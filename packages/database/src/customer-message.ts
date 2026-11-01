@@ -42,6 +42,18 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: 'Change request done',
     body: `${p.request}, number ${p.number}.`,
   }),
+  document_requested: (p) => ({
+    title: `Please send your ${p.document}`,
+    body: `${p.project}: open Documents and tap Send to add a photo or PDF.`,
+  }),
+  maintenance_visit: (p) => ({
+    title: `Your free ${p.visit} visit is on ${p.date}`,
+    body: `${p.project}: our service team will call before they come.`,
+  }),
+  referral_reward: (p) => ({
+    title: 'Referral reward update',
+    body: `${p.friend}: ${p.amount} is ${p.status}.`,
+  }),
 };
 
 /** The in-app alert for a customer message, or null when the message has none. */

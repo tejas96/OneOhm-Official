@@ -6,6 +6,8 @@ interface Known {
   readonly keys: ReadonlyMap<string, readonly string[]>;
   readonly roles: ReadonlySet<string>;
   readonly messages: ReadonlyMap<string, readonly string[]>;
+  /** Active skill keys a template may ask for. */
+  readonly skills?: ReadonlySet<string>;
 }
 
 /** True when following `dependsOn` from `start` comes back to it. */
@@ -32,6 +34,11 @@ export function checkTaskTemplate(
 ) {
   if (!known.roles.has(input.roleKey))
     throw invalid('Pick a role from the list.', { roleKey: 'Unknown role.' });
+  const lineKeys = (input.checklist ?? []).map((line) => line.key);
+  if (new Set(lineKeys).size !== lineKeys.length)
+    throw invalid('Two checklist lines say the same thing.', { checklist: 'Remove the repeat.' });
+  if (input.skillKey && known.skills && !known.skills.has(input.skillKey))
+    throw invalid('Pick a skill from the list.', { skillKey: 'Unknown or switched-off skill.' });
   const missing = input.dependsOn.filter((key) => !known.keys.has(key) || key === input.key);
   if (missing.length > 0)
     throw invalid('A task can only wait for other existing tasks.', {

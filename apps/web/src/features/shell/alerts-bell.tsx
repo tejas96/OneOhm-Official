@@ -20,6 +20,13 @@ function hrefOf(subject: NotificationItem['subject']): string {
   if (subject.type === 'leave') return '/team?tab=leave';
   if (subject.type === 'correction') return '/team?tab=attendance';
   if (subject.type === 'points') return '/team?tab=points';
+  if (subject.type === 'travel_claim') return '/team?tab=travel';
+  if (subject.type === 'service_request')
+    return `/service?tab=requests&view=all&request=${subject.id}`;
+  if (subject.type === 'purchase_request')
+    return `/inventory?tab=requests&status=all&request=${subject.id}`;
+  if (subject.type === 'vendor_advance') return '/finance?tab=advances';
+  if (subject.type === 'stock') return '/inventory?tab=stock';
   return '/';
 }
 

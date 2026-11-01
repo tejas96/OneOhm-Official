@@ -1,4 +1,5 @@
 import type { MyWorkday } from '@oneohm/api-contracts';
+import { LOCATION_CONSENT_VERSION } from '@oneohm/domain';
 import { unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
@@ -23,7 +24,11 @@ export function useAttendanceAction(kind: 'in' | 'out', workday: MyWorkday | und
   const client = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const wanted = workday?.attendance.captureLocation && workday.consent.given;
+      // Only with consent, the policy on and inside working hours (PRD 4.3).
+      const wanted =
+        (workday?.tracking ?? 'on') === 'on' &&
+        workday?.attendance.captureLocation &&
+        workday.consent.given;
       const reading = wanted ? await readLocation() : null;
       const position = reading && reading !== 'denied' ? reading : null;
       const body = { position };
@@ -39,10 +44,22 @@ export function useAttendanceAction(kind: 'in' | 'out', workday: MyWorkday | und
   });
 }
 
+/**
+ * Yes or no to the consent words, sent with their version so the record says what was
+ * read. Site check-ins read the same consent, so their screens refresh too.
+ */
 export function useConsent() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (given: boolean) => unwrap(api.workforce.setLocationConsent({ body: { given } })),
-    onSuccess: (day) => client.setQueryData(keys.workday, day),
+    mutationFn: (given: boolean) =>
+      unwrap(
+        api.workforce.setLocationConsent({
+          body: { given, version: LOCATION_CONSENT_VERSION },
+        }),
+      ),
+    onSuccess: async (day) => {
+      client.setQueryData(keys.workday, day);
+      await client.invalidateQueries({ queryKey: ['site'] });
+    },
   });
 }

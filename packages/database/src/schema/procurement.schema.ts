@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { products } from './catalog.schema';
 import { calendarDate, createdAt, instant, money, primaryId, updatedAt } from './columns';
+import { contractors } from './contractors.schema';
 import { payables } from './finance.schema';
 import { users } from './identity.schema';
 import { stockLocations, vendors } from './inventory.schema';
@@ -28,6 +29,8 @@ export const reservationStatusEnum = pgEnum('reservation_status', [
   'active',
   'dispatched',
   'released',
+  /** Handed straight from the store to the project's contractor. */
+  'issued',
 ]);
 
 /** A purchase order to a vendor, for stock or for one project (PRD 3.10). */
@@ -118,6 +121,9 @@ export const goodsReceiptLines = pgTable(
     /** DCR panels: who made the cells and the GST invoice they came on. */
     cellManufacturer: text('cell_manufacturer'),
     cellInvoiceNumber: text('cell_invoice_number'),
+    /** Units that failed inspection and went back: not stocked, not billed, still due. */
+    rejectedQuantity: doublePrecision('rejected_quantity').notNull().default(0),
+    rejectionReason: text('rejection_reason'),
   },
   (table) => [index('goods_receipt_lines_receipt_idx').on(table.receiptId)],
 );
@@ -162,6 +168,8 @@ export const dispatches = pgTable(
     driverName: text('driver_name'),
     driverPhone: text('driver_phone'),
     notes: text('notes'),
+    /** The contractor whose crew took the material at site; it is then with them. */
+    contractorId: uuid('contractor_id').references(() => contractors.id),
     /** Product, quantity and serials per line, as printed on the challan. */
     lines: jsonb('lines').notNull(),
     createdByUserId: uuid('created_by_user_id').references(() => users.id),

@@ -7,17 +7,25 @@ import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
+import { TravelTab } from '@/features/site-activity/travel/travel-tab';
 import { useCurrentUser } from '@/providers/current-user';
 import { AttendanceTab } from './attendance/attendance-tab';
 import { LeaveTab } from './leave/leave-tab';
 import { PeopleTab } from './people-tab';
 import { PointsTab } from './points/points-tab';
+import { ResellersTab } from './resellers/resellers-tab';
 
 const TABS = [
   { value: 'people', requires: ['people.view', 'people.manage'], Panel: PeopleTab },
   { value: 'attendance', requires: ['people.view', 'leave.approve'], Panel: AttendanceTab },
   { value: 'leave', requires: ['leave.request', 'leave.approve'], Panel: LeaveTab },
   { value: 'points', requires: ['people.view'], Panel: PointsTab },
+  { value: 'travel', requires: ['leave.approve', 'finance.view'], Panel: TravelTab },
+  {
+    value: 'resellers',
+    requires: ['people.view', 'finance.view', 'settings.manage'],
+    Panel: ResellersTab,
+  },
 ] as const satisfies readonly {
   value: string;
   requires: readonly Capability[];
@@ -25,7 +33,7 @@ const TABS = [
 }[];
 type TabValue = (typeof TABS)[number]['value'];
 
-/** People, the day's attendance, leave and points. The open tab lives in `?tab=`. */
+/** People, the day's attendance, leave, points and travel. The open tab lives in `?tab=`. */
 export function TeamView() {
   const t = useTranslations('team');
   const user = useCurrentUser();

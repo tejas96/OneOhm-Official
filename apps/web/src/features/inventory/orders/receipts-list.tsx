@@ -9,6 +9,7 @@ import { formatQuantity } from '../use-inventory';
 /** Goods receipts on an order, each with its serial numbers. */
 export function ReceiptsList({ receipts }: { readonly receipts: PurchaseOrderDetail['receipts'] }) {
   const t = useTranslations('inventory.order');
+  const tr = useTranslations('purchasing.inspection');
   const format = useFormatter();
   return (
     <section className="flex flex-col gap-3">
@@ -53,6 +54,14 @@ export function ReceiptsList({ receipts }: { readonly receipts: PurchaseOrderDet
                         quantity: formatQuantity(line.quantity),
                         item: line.description,
                       })}
+                      {line.rejectedQuantity > 0 && (
+                        <span className="mt-0.5 block text-at-risk">
+                          {tr('rejectedLine', {
+                            quantity: formatQuantity(line.rejectedQuantity),
+                            reason: line.rejectionReason ?? '',
+                          })}
+                        </span>
+                      )}
                       {line.serials.length > 0 && (
                         <span className="mt-1 block font-mono text-[0.75rem] break-words text-ink-faint">
                           {line.serials.join(', ')}

@@ -98,6 +98,7 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
         <Fact label={t('facts.category')}>{t(`category.${lead.subsidyCategory}`)}</Fact>
         <Fact label={t('facts.size')}>{lead.estimatedWp ? formatKwp(lead.estimatedWp) : '—'}</Fact>
         <Fact label={t('facts.source')}>{t(`source.${lead.source}`)}</Fact>
+        {lead.referredBy && <Fact label={t('facts.referredBy')}>{lead.referredBy.name}</Fact>}
         {lead.email && <Fact label={t('facts.email')}>{lead.email}</Fact>}
       </dl>
       {lead.notes && (

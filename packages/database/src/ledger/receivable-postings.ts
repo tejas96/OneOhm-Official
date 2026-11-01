@@ -19,6 +19,7 @@ import {
   projects,
   quotations,
 } from '../schema';
+import { handlingRemap } from './cash-handling-postings';
 import { postJournal } from './post-journal';
 
 /** Calendar date in India for an instant. */
@@ -183,7 +184,11 @@ async function postPaymentReversal(
   // reversing it puts the amount back on the receivable, not on advances.
   const receivable =
     payment?.payer === 'bank' ? ACCOUNT.bankLoanReceivables : ACCOUNT.customerReceivables;
-  const remap = applied ? { [ACCOUNT.advancesReceived]: receivable } : {};
+  const remap = {
+    ...(applied ? { [ACCOUNT.advancesReceived]: receivable } : {}),
+    // Deposited cash and cleared cheques are in the bank now, so they leave from there.
+    ...(await handlingRemap(db, originalPaymentId)),
+  };
   await reverseEntry(db, original, userId, reason ?? 'Payment reversed', remap);
 }
 

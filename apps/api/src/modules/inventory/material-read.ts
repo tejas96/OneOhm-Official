@@ -1,5 +1,6 @@
 import type { Dispatch, MaterialRequirement, ProjectMaterial } from '@oneohm/api-contracts';
 import {
+  contractors,
   type DatabaseExecutor,
   dispatches,
   goodsReceiptLines,
@@ -54,15 +55,17 @@ export async function dispatchList(db: DatabaseExecutor, where?: SQL): Promise<D
       projectCode: projects.code,
       projectName: projects.name,
       locationName: stockLocations.name,
+      contractorName: contractors.name,
       by: users.fullName,
     })
     .from(dispatches)
     .innerJoin(projects, eq(projects.id, dispatches.projectId))
     .innerJoin(stockLocations, eq(stockLocations.id, dispatches.locationId))
+    .leftJoin(contractors, eq(contractors.id, dispatches.contractorId))
     .leftJoin(users, eq(users.id, dispatches.createdByUserId))
     .where(where)
     .orderBy(desc(dispatches.createdAt));
-  return rows.map(({ dispatch, ...row }) => ({
+  return rows.map(({ dispatch, contractorName, ...row }) => ({
     id: dispatch.id,
     number: dispatch.number,
     projectId: dispatch.projectId,
@@ -71,6 +74,10 @@ export async function dispatchList(db: DatabaseExecutor, where?: SQL): Promise<D
     driverName: dispatch.driverName,
     driverPhone: dispatch.driverPhone,
     notes: dispatch.notes,
+    contractor:
+      dispatch.contractorId && contractorName
+        ? { id: dispatch.contractorId, name: contractorName }
+        : null,
     lines: dispatch.lines as Dispatch['lines'],
     ...row,
   }));
@@ -132,6 +139,7 @@ export async function projectMaterial(
         ordered: sum(orderedLines.filter((row) => row.productId === need.productId)),
         reserved: sum(mine.filter((row) => row.status === 'active')),
         dispatched: sum(mine.filter((row) => row.status === 'dispatched')),
+        issued: sum(mine.filter((row) => row.status === 'issued')),
         freeInStore: roundQuantity(
           levels
             .filter((row) => row.productId === need.productId)
@@ -143,9 +151,10 @@ export async function projectMaterial(
 
   const sent = orders.filter((order) => order.status !== 'draft' && order.status !== 'cancelled');
   const covered = (row: MaterialRequirement, count: number) => count >= row.needed - 0.0005;
-  const stage = requirements.every((row) => covered(row, row.dispatched))
+  const sentOut = (row: MaterialRequirement) => row.dispatched + row.issued;
+  const stage = requirements.every((row) => covered(row, sentOut(row)))
     ? 'dispatched'
-    : requirements.every((row) => covered(row, row.reserved + row.dispatched))
+    : requirements.every((row) => covered(row, row.reserved + sentOut(row)))
       ? 'reserved'
       : sent.length > 0
         ? 'ordered'

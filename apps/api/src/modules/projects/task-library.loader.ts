@@ -5,6 +5,7 @@ import {
   roles,
   taskTemplates,
   userRoles,
+  userSkills,
   users,
 } from '@oneohm/database';
 import type { AssigneeCandidate, TaskConditions, TaskTemplate } from '@oneohm/domain';
@@ -23,6 +24,7 @@ export async function loadTaskLibrary(db: DatabaseExecutor): Promise<TaskTemplat
     title: row.title,
     stage: row.stage,
     roleKey: row.roleKey,
+    skillKey: row.skillKey,
     offsetDays: row.offsetDays,
     durationDays: row.durationDays,
     dependsOn: row.dependsOn,
@@ -33,6 +35,7 @@ export async function loadTaskLibrary(db: DatabaseExecutor): Promise<TaskTemplat
     approval: row.approval,
     evidence: row.evidence as TaskTemplate['evidence'],
     captures: row.captures,
+    checklist: row.checklist ?? null,
     ...(row.onComplete
       ? { onComplete: row.onComplete as NonNullable<TaskTemplate['onComplete']> }
       : {}),
@@ -61,6 +64,9 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
     })
     .from(leaveRequests)
     .where(and(eq(leaveRequests.status, 'approved'), gte(leaveRequests.toDate, todayIn())));
+  const held = await db
+    .select({ userId: userSkills.userId, key: userSkills.skillKey })
+    .from(userSkills);
   const byUser = new Map<string, AssigneeCandidate>();
   for (const person of people) {
     const existing = byUser.get(person.userId);
@@ -68,6 +74,7 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
     byUser.set(person.userId, {
       userId: person.userId,
       roleKeys,
+      skills: held.filter((row) => row.userId === person.userId).map((row) => row.key),
       onLeave: person.onLeave,
       away: leave.filter((row) => row.userId === person.userId),
       openTasks: loads.find((load) => load.userId === person.userId)?.open ?? 0,

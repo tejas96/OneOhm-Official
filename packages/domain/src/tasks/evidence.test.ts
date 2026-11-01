@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { missingEvidence, missingMeasurements } from './evidence';
-import { checklistFactKey, checklistFor, measurementsFor } from './task-checklists';
+import {
+  checklistFactKey,
+  checklistFor,
+  checklistLineKey,
+  measurementsFor,
+} from './task-checklists';
 
 const task = (evidence: string[], templateKey = 'custom_task', captures: string[] = []) => ({
   templateKey,
@@ -72,5 +77,31 @@ describe('checklistFor', () => {
   it('gives Settings templates a short generic checklist', () => {
     expect(checklistFor(task(['checklist'])).map((item) => item.label)).toHaveLength(2);
     expect(checklistFor(task(['photo'], 'site_survey'))).toEqual([]);
+  });
+});
+
+describe('checklist from Settings (PRD 4.4)', () => {
+  it('uses the template own lines when it has them', () => {
+    const items = checklistFor({
+      templateKey: 'site_survey',
+      evidence: ['checklist'],
+      checklist: [{ key: 'ladder', label: 'Ladder tied at the top' }],
+    });
+    expect(items).toEqual([
+      { key: 'checklist_site_survey_ladder', label: 'Ladder tied at the top' },
+    ]);
+  });
+
+  it('falls back to the built-in lines when the list is empty', () => {
+    const items = checklistFor({
+      templateKey: 'site_survey',
+      evidence: ['checklist'],
+      checklist: [],
+    });
+    expect(items.length).toBeGreaterThan(3);
+  });
+
+  it('makes a stable key from a line', () => {
+    expect(checklistLineKey('Earthing pit watered & tested!')).toBe('earthing_pit_watered_tested');
   });
 });

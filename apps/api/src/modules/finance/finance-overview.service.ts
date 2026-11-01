@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { FinanceOverview } from '@oneohm/api-contracts';
-import { payables, payments } from '@oneohm/database';
+import { payables, payments, vendorAdvances } from '@oneohm/database';
 import { ACCOUNT, AGEING_BUCKETS } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { and, eq, gte, ne } from 'drizzle-orm';
+import { and, eq, gte, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { accountBalances } from './ledger-read.service';
 import { ReceivablesService } from './receivables.service';
@@ -52,16 +52,27 @@ export class FinanceOverviewService {
     const bills = await this.db.select().from(payables).where(ne(payables.status, 'paid'));
     const weekEnd = addDays(today, 7);
     const billSum = (filter: (bill: (typeof bills)[number]) => boolean) =>
-      bills.filter(filter).reduce((sum, bill) => sum + bill.amountPaise, 0);
+      bills
+        .filter(filter)
+        .reduce((sum, bill) => sum + bill.amountPaise - bill.advanceAdjustedPaise, 0);
 
     const received = await this.db
       .select({ on: payments.receivedOn, amount: payments.amountPaise })
       .from(payments)
       .where(gte(payments.receivedOn, from));
-    const paidOut = await this.db
-      .select({ on: payables.paidOn, amount: payables.amountPaise })
+    // Money out: bills (less any vendor advance set against them) and the advances themselves.
+    const billsPaid = await this.db
+      .select({
+        on: payables.paidOn,
+        amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise})::float8`,
+      })
       .from(payables)
       .where(and(eq(payables.status, 'paid'), gte(payables.paidOn, from)));
+    const advancesPaid = await this.db
+      .select({ on: vendorAdvances.paidOn, amount: vendorAdvances.amountPaise })
+      .from(vendorAdvances)
+      .where(and(eq(vendorAdvances.status, 'paid'), gte(vendorAdvances.paidOn, from)));
+    const paidOut = [...billsPaid, ...advancesPaid];
 
     return {
       balances: {
@@ -90,7 +101,7 @@ export class FinanceOverviewService {
           .reduce((sum, row) => sum + row.amount, 0),
         outPaise: paidOut
           .filter((row) => row.on?.startsWith(month))
-          .reduce((sum, row) => sum + row.amount, 0),
+          .reduce((sum, row) => sum + Number(row.amount), 0),
       })),
     };
   }

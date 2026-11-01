@@ -102,6 +102,8 @@ export const projectTasks = pgTable(
     approvedByUserId: uuid('approved_by_user_id').references(() => users.id),
     evidence: text('evidence').array().notNull(),
     captures: text('captures').array().notNull(),
+    /** The template's checklist when the task was made; null uses the built-in list. */
+    checklist: jsonb('checklist').$type<{ key: string; label: string }[]>(),
     onComplete: text('on_complete'),
     reports: text('reports').array().notNull(),
     note: text('note'),

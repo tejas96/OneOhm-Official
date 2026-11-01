@@ -12,7 +12,11 @@ export type NoticeSubject =
   | 'points'
   | 'payment'
   | 'service_request'
-  | 'quotation';
+  | 'quotation'
+  | 'purchase_request'
+  | 'vendor_advance'
+  | 'stock'
+  | 'travel_claim';
 
 export interface Notice {
   readonly kind: string;

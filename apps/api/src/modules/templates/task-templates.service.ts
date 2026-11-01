@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TaskTemplateInput, TaskTemplateRecord } from '@oneohm/api-contracts';
-import { messageTemplates, roles, taskTemplates } from '@oneohm/database';
+import { messageTemplates, roles, skills, taskTemplates } from '@oneohm/database';
 import { asc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -17,6 +17,7 @@ function present(row: Row): TaskTemplateRecord {
     title: row.title,
     stage: row.stage,
     roleKey: row.roleKey,
+    skillKey: row.skillKey,
     offsetDays: row.offsetDays,
     durationDays: row.durationDays,
     dependsOn: row.dependsOn,
@@ -31,6 +32,7 @@ function present(row: Row): TaskTemplateRecord {
     approval: row.approval,
     evidence: row.evidence as TaskTemplateRecord['evidence'],
     captures: row.captures,
+    checklist: row.checklist ?? null,
     onComplete: (row.onComplete as TaskTemplateRecord['onComplete']) ?? null,
     reports: row.reports,
     position: row.position,
@@ -118,12 +120,17 @@ export class TaskTemplatesService {
       .select({ key: taskTemplates.key, dependsOn: taskTemplates.dependsOn })
       .from(taskTemplates);
     const roleRows = await this.db.select({ key: roles.key }).from(roles);
+    const skillRows = await this.db
+      .select({ key: skills.key })
+      .from(skills)
+      .where(eq(skills.active, true));
     const messages = await this.db
       .select({ key: messageTemplates.key, fields: messageTemplates.fields })
       .from(messageTemplates);
     return {
       keys: new Map(templates.map((row) => [row.key, row.dependsOn])),
       roles: new Set(roleRows.map((row) => row.key)),
+      skills: new Set(skillRows.map((row) => row.key)),
       messages: new Map(messages.map((row) => [row.key, row.fields])),
     };
   }

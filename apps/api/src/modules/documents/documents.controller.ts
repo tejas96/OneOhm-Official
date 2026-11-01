@@ -45,7 +45,7 @@ export class DocumentsController {
           body: await this.documents.list(actor, query),
         }),
         documentFile: async ({ params, query }) => {
-          const file = await this.documents.file(actor, params.id);
+          const file = await this.documents.file(actor, params.id, query.disposition);
           const stream = new StreamableFile(file.body, {
             type: file.type,
             ...(file.length === undefined ? {} : { length: file.length }),

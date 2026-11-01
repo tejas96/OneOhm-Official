@@ -18,6 +18,7 @@ import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
+import { checkCollected, recordHandling } from './payment-handling';
 
 export interface NewPayment {
   milestoneId: string;
@@ -30,6 +31,11 @@ export interface NewPayment {
   gatewayFeePaise?: number | null | undefined;
   /** Paid out of the customer's credit (an earlier overpayment), not new money. */
   paidFromCredit?: boolean | undefined;
+  /** Cash or cheque: who holds it, and the cheque's details (see payment-handling). */
+  collectedByUserId?: string | null | undefined;
+  chequeNumber?: string | null | undefined;
+  chequeBank?: string | null | undefined;
+  chequeDate?: string | null | undefined;
 }
 
 /** Who records a payment: a person, or no one for a gateway webhook. */
@@ -81,6 +87,7 @@ export class FinanceService {
         method: 'Choose bank disbursement.',
       });
     }
+    checkCollected(input);
     const id = await this.db.transaction(async (tx) => {
       const [payment] = await tx
         .insert(payments)
@@ -157,6 +164,7 @@ export class FinanceService {
         amountPaise: input.amountPaise,
         method: input.method,
       });
+      await recordHandling(tx, payment.id, input, actor.userId);
       await postPayment(tx, payment.id, actor.userId);
       await postGatewayFee(tx, payment.id, actor.userId);
       if (alsoInTransaction) await alsoInTransaction(tx, payment.id);

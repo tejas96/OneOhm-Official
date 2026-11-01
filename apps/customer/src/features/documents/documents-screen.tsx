@@ -7,7 +7,7 @@ import {
   Text,
   unwrap,
 } from '@oneohm/mobile-ui';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
@@ -17,6 +17,7 @@ import { useHome } from '@/features/home/use-home';
 import { useBilling } from '@/features/payments/use-billing';
 import { longDate, momentDate } from '@/lib/dates';
 import { FileRow } from './file-row';
+import { RequestedSection, requestsKey } from './requested-section';
 
 /** The quotation, the agreements and reports that are ready, and the papers OneOhm shared. */
 export function DocumentsScreen() {
@@ -30,6 +31,7 @@ export function DocumentsScreen() {
     queryFn: () => unwrap(api.customer.listDocuments()),
   });
   const billing = useBilling();
+  const client = useQueryClient();
   const failed = home.error ?? reports.error ?? files.error;
   const invoices = (billing.data ?? []).flatMap((entry) =>
     entry.invoices
@@ -41,6 +43,7 @@ export function DocumentsScreen() {
     void home.refetch();
     void reports.refetch();
     void files.refetch();
+    void client.invalidateQueries({ queryKey: requestsKey });
   };
   const projects = home.data?.projects ?? [];
   const many = projects.length > 1;
@@ -61,6 +64,8 @@ export function DocumentsScreen() {
           onRetry={refresh}
         />
       ) : null}
+
+      <RequestedSection />
 
       {projects.length > 0 ? (
         <Section title={DOCUMENTS.quotationTitle}>

@@ -1,6 +1,7 @@
 'use client';
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
+import { InstalledSystemCard } from '@/features/after-sales/installed-system-card';
 import type { ProjectSignals } from '../room-signals';
 import { useRoomTab } from '../use-room-tab';
 import { AboutPanel } from './about-panel';
@@ -10,6 +11,7 @@ import { OverviewKpis } from './overview-kpis';
 import { PaymentsSummary } from './payments-summary';
 import { ReportsSummary } from './reports-summary';
 import { RisksPanel } from './risks-panel';
+import { StageRatingsCard } from './stage-ratings-card';
 import { TeamPanel } from './team-panel';
 
 /**
@@ -35,6 +37,7 @@ export function OverviewTab({
             <PaymentsSummary project={project} href={hrefFor('payments')} />
             <ReportsSummary reports={project.reports} href={hrefFor('reports')} />
           </div>
+          <InstalledSystemCard project={project} />
         </div>
         <div className="order-first min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
           <RisksPanel signals={signals} />
@@ -42,6 +45,7 @@ export function OverviewTab({
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-2">
           <BudgetPanel project={project} />
           <TeamPanel project={project} />
+          <StageRatingsCard projectId={project.id} />
           <AboutPanel project={project} />
         </div>
       </div>

@@ -11,6 +11,7 @@ import {
   projects,
   purchaseOrderLines,
   purchaseOrders,
+  type Transaction,
   vendors,
 } from '@oneohm/database';
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
@@ -41,66 +42,8 @@ export class PurchaseOrdersService {
   }
 
   async create(actor: Actor, input: PurchaseOrderData): Promise<PurchaseOrderDetail> {
-    const [vendor] = await this.db.select().from(vendors).where(eq(vendors.id, input.vendorId));
-    if (!vendor?.active) throw invalid('Pick an active vendor.', { vendorId: 'Pick a vendor.' });
-    if (input.projectId) {
-      const [project] = await this.db
-        .select({ id: projects.id })
-        .from(projects)
-        .where(eq(projects.id, input.projectId));
-      if (!project) throw invalid('That project was not found.', { projectId: 'Pick a project.' });
-    }
-    if (input.expectedOn && input.expectedOn < input.orderDate) {
-      throw invalid('Delivery cannot be before the order.', {
-        expectedOn: 'Pick a date on or after the order date.',
-      });
-    }
-    const productIds = input.lines.flatMap((line) => (line.productId ? [line.productId] : []));
-    if (productIds.length > 0) {
-      const found = await this.db
-        .select({ id: products.id })
-        .from(products)
-        .where(inArray(products.id, productIds));
-      if (found.length !== new Set(productIds).size)
-        throw invalid('A line has an unknown product.');
-    }
-    const subtotal = input.lines.reduce(
-      (sum, line) => sum + Math.round(line.quantity * line.ratePaise),
-      0,
-    );
-    const total = input.lines.reduce((sum, line) => sum + lineTotal(line), 0);
-
-    const id = await this.db.transaction(async (tx) => {
-      const number = await nextNumber(tx, 'purchase_orders', 'PO', input.orderDate);
-      const [order] = await tx
-        .insert(purchaseOrders)
-        .values({
-          number,
-          vendorId: input.vendorId,
-          projectId: input.projectId,
-          orderDate: input.orderDate,
-          expectedOn: input.expectedOn,
-          notes: input.notes,
-          subtotalPaise: subtotal,
-          taxPaise: total - subtotal,
-          totalPaise: total,
-          createdByUserId: actor.userId,
-        })
-        .returning({ id: purchaseOrders.id });
-      if (!order) throw new Error('Purchase order insert returned nothing.');
-      await tx.insert(purchaseOrderLines).values(
-        input.lines.map((line, index) => ({
-          ...line,
-          purchaseOrderId: order.id,
-          position: index,
-        })),
-      );
-      await recordAudit(tx, actor.userId, 'purchase_order.created', 'purchase_order', order.id, {
-        number,
-        total,
-      });
-      return order.id;
-    });
+    await checkOrderInput(this.db, input);
+    const id = await this.db.transaction(async (tx) => (await insertOrder(tx, actor, input)).id);
     return this.get(id);
   }
 
@@ -169,4 +112,75 @@ export class PurchaseOrdersService {
     if (!order) throw notFound('That purchase order');
     return order;
   }
+}
+
+/** The vendor, project, dates and products on a new order, checked before writing. */
+export async function checkOrderInput(
+  db: Pick<Database, 'select'>,
+  input: PurchaseOrderData,
+): Promise<void> {
+  const [vendor] = await db.select().from(vendors).where(eq(vendors.id, input.vendorId));
+  if (!vendor?.active) throw invalid('Pick an active vendor.', { vendorId: 'Pick a vendor.' });
+  if (input.projectId) {
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, input.projectId));
+    if (!project) throw invalid('That project was not found.', { projectId: 'Pick a project.' });
+  }
+  if (input.expectedOn && input.expectedOn < input.orderDate) {
+    throw invalid('Delivery cannot be before the order.', {
+      expectedOn: 'Pick a date on or after the order date.',
+    });
+  }
+  const productIds = input.lines.flatMap((line) => (line.productId ? [line.productId] : []));
+  if (productIds.length > 0) {
+    const found = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(inArray(products.id, productIds));
+    if (found.length !== new Set(productIds).size) throw invalid('A line has an unknown product.');
+  }
+}
+
+/** Writes a checked order as a draft, in the caller's transaction. */
+export async function insertOrder(
+  tx: Transaction,
+  actor: Actor,
+  input: PurchaseOrderData,
+): Promise<{ readonly id: string; readonly number: string }> {
+  const subtotal = input.lines.reduce(
+    (sum, line) => sum + Math.round(line.quantity * line.ratePaise),
+    0,
+  );
+  const total = input.lines.reduce((sum, line) => sum + lineTotal(line), 0);
+  const number = await nextNumber(tx, 'purchase_orders', 'PO', input.orderDate);
+  const [order] = await tx
+    .insert(purchaseOrders)
+    .values({
+      number,
+      vendorId: input.vendorId,
+      projectId: input.projectId,
+      orderDate: input.orderDate,
+      expectedOn: input.expectedOn,
+      notes: input.notes,
+      subtotalPaise: subtotal,
+      taxPaise: total - subtotal,
+      totalPaise: total,
+      createdByUserId: actor.userId,
+    })
+    .returning({ id: purchaseOrders.id });
+  if (!order) throw new Error('Purchase order insert returned nothing.');
+  await tx.insert(purchaseOrderLines).values(
+    input.lines.map((line, index) => ({
+      ...line,
+      purchaseOrderId: order.id,
+      position: index,
+    })),
+  );
+  await recordAudit(tx, actor.userId, 'purchase_order.created', 'purchase_order', order.id, {
+    number,
+    total,
+  });
+  return { id: order.id, number };
 }

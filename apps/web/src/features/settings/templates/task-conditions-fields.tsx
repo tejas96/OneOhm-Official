@@ -1,6 +1,6 @@
 'use client';
 
-import { Checkbox, Field, Input, SegmentedControl } from '@oneohm/design-system/web';
+import { Checkbox, Field, Input, SegmentedControl, Textarea } from '@oneohm/design-system/web';
 import { EVIDENCE_KINDS, PROJECT_TYPES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import type { SetDraft, TaskDraft } from './task-draft';
@@ -89,6 +89,15 @@ export function TaskConditionsFields({
           ))}
         </div>
       </Field>
+      {draft.evidence.includes('checklist') && (
+        <Field label={t('checklist')} hint={t('checklistHint')} error={errors.checklist}>
+          <Textarea
+            value={draft.checklistText}
+            rows={5}
+            onChange={(e) => set('checklistText', e.target.value)}
+          />
+        </Field>
+      )}
       <Field label={t('captures')} hint={t('capturesHint')} error={errors.captures}>
         <Input
           value={draft.capturesText}

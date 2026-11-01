@@ -1,6 +1,7 @@
 export * from './client';
 export * from './customer-message';
 export * from './ledger';
+export * from './location-retention';
 export * from './migrate';
 export * from './notify';
 export * as schema from './schema';
@@ -9,3 +10,4 @@ export * from './security/password';
 export * from './seed/company.seed';
 export * from './seed/inventory.seed';
 export * from './seed/seed';
+export * from './service-work';

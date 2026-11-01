@@ -27,7 +27,7 @@ export class VendorsService {
     const owed = await this.db
       .select({
         vendorId: purchaseOrders.vendorId,
-        amount: sql<string>`coalesce(sum(${payables.amountPaise}), 0)`,
+        amount: sql<string>`coalesce(sum(${payables.amountPaise} - ${payables.advanceAdjustedPaise}), 0)`,
       })
       .from(goodsReceipts)
       .innerJoin(purchaseOrders, eq(purchaseOrders.id, goodsReceipts.purchaseOrderId))

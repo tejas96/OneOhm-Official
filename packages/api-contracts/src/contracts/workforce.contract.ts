@@ -32,7 +32,8 @@ export const workforceContract = c.router({
   setLocationConsent: {
     method: 'POST',
     path: '/attendance/consent',
-    body: z.object({ given: z.boolean() }),
+    /** `version`: the consent words the person read (LOCATION_CONSENT_VERSION). */
+    body: z.object({ given: z.boolean(), version: z.number().int().min(1).optional() }),
     responses: { 200: myWorkdaySchema },
   },
   checkIn: {

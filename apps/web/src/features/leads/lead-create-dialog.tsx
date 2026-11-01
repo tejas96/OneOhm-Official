@@ -27,6 +27,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { kwToWp, leadKeys } from './lead-labels';
+import { ReferralCodeField } from './referral-code-field';
 
 const ME = 'me';
 
@@ -87,6 +88,7 @@ export function LeadCreateDialog({
       nextActionOn: text('nextActionOn'),
       nextActionNote: text('nextActionNote') || null,
       notes: text('notes') || null,
+      referralCode: text('referralCode') || null,
     });
   };
 
@@ -177,11 +179,12 @@ export function LeadCreateDialog({
             options={LEAD_SOURCES.map((value) => ({ value, label: sourceT(value) }))}
           />
         </Field>
+        <ReferralCodeField error={fieldError('referralCode')} />
         <Field label={t('estimatedKw')} hint={t('estimatedHint')} error={fieldError('estimatedWp')}>
           <Input name="estimatedKw" inputMode="decimal" />
         </Field>
         {canAssign && (
-          <Field label={t('owner')} className="sm:col-span-2">
+          <Field label={t('owner')}>
             <Select value={owner} onValueChange={setOwner} options={ownerOptions} />
           </Field>
         )}

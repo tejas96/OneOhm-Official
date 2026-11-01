@@ -65,6 +65,10 @@ export const taskTemplates = pgTable(
     title: text('title').notNull(),
     stage: epcStageEnum('stage').notNull(),
     roleKey: text('role_key').notNull(),
+    /** A skill the assignee should have; people in the role without it are the fallback. */
+    skillKey: text('skill_key'),
+    /** Its own checklist lines ({ key, label }); null uses the built-in list (PRD 4.4). */
+    checklist: jsonb('checklist').$type<{ key: string; label: string }[]>(),
     offsetDays: integer('offset_days').notNull().default(0),
     durationDays: integer('duration_days').notNull().default(1),
     dependsOn: text('depends_on').array().notNull(),

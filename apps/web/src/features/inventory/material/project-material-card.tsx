@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
+import { RequestMaterialBar } from '../../purchasing/requests/request-material-bar';
 import { formatQuantity, useProjectMaterial, useRefreshInventory } from '../use-inventory';
 import { DispatchDialog } from './dispatch-dialog';
 
@@ -70,7 +71,9 @@ export function ProjectMaterialCard({ projectId }: { readonly projectId: string 
   const data = material.data;
   if (!data) return null;
   const reserved = data.requirements.some((row) => row.reserved > 0);
-  const outstanding = data.requirements.some((row) => row.reserved + row.dispatched < row.needed);
+  const outstanding = data.requirements.some(
+    (row) => row.reserved + row.dispatched + row.issued < row.needed,
+  );
   const showRaise = canBuy && data.stage === 'to_order';
   const showReserve = canStore && outstanding;
   const showHeld = reserved && (canStore || canDispatch);
@@ -99,6 +102,7 @@ export function ProjectMaterialCard({ projectId }: { readonly projectId: string 
         </div>
       )}
       <MaterialLinks material={data} />
+      <RequestMaterialBar projectId={projectId} stage={data.stage} />
       {(showRaise || showReserve || showHeld) && (
         <div className="flex flex-wrap gap-2 border-t border-hairline px-5 py-3">
           {showRaise && (
@@ -167,11 +171,11 @@ function RequirementRow({ row }: { readonly row: MaterialRequirement }) {
         />
         <span
           className="absolute inset-y-0 left-0 rounded-full bg-accent/60"
-          style={{ width: share(row.reserved + row.dispatched) }}
+          style={{ width: share(row.reserved + row.dispatched + row.issued) }}
         />
         <span
           className="absolute inset-y-0 left-0 rounded-full bg-accent"
-          style={{ width: share(row.dispatched) }}
+          style={{ width: share(row.dispatched + row.issued) }}
         />
       </span>
       <p className="type-label text-ink-faint">
@@ -179,6 +183,7 @@ function RequirementRow({ row }: { readonly row: MaterialRequirement }) {
           ordered: formatQuantity(row.ordered),
           reserved: formatQuantity(row.reserved),
           dispatched: formatQuantity(row.dispatched),
+          issued: formatQuantity(row.issued),
         })}{' '}
         · {t('free', { free: formatQuantity(row.freeInStore) })}
       </p>

@@ -249,6 +249,24 @@
       "label": "Show as",
       "cards": "Cards",
       "table": "Table"
+    },
+    "material": {
+      "title": "Material",
+      "description": "What this contractor’s crews hold, per project.",
+      "loading": "Loading material",
+      "empty": "Nothing has been issued to this contractor yet.",
+      "allAccounted": "Everything issued is used or back in the store.",
+      "outstanding": "{count, plural, =1 {# item with them} other {# items with them}}",
+      "installed": "Installed",
+      "settled": "{count, plural, =1 {# more project fully accounted for} other {# more projects fully accounted for}}",
+      "columns": {
+        "item": "Item",
+        "issued": "Issued",
+        "used": "Used",
+        "returned": "Returned",
+        "balance": "With them"
+      },
+      "openProject": "Open project"
     }
   }
 }

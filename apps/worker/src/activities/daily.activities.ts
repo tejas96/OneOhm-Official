@@ -8,8 +8,12 @@ import {
 } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { openMaintenanceVisits } from './after-sales';
+import { queueCashReminders } from './cash-reminders';
 import { queueEscalations } from './escalations';
+import { clearOldLocations } from './location-retention';
 import { queueOwnerSummaries } from './owner-summary';
+import { queueSlaAlerts } from './service-sla';
 import { queueStaffDigests } from './staff-digest';
 
 /** A customer is reminded about an unpaid milestone at most once a week. */
@@ -86,12 +90,28 @@ export function dailyActivities(db: Database, timeZone: string) {
       return queueOwnerSummaries(db, todayIn(timeZone));
     },
 
+    async queueCashReminders(): Promise<number> {
+      return queueCashReminders(db, todayIn(timeZone));
+    },
+
     async queueEscalations(): Promise<number> {
       return queueEscalations(db, todayIn(timeZone));
     },
 
     async queueStaffDigests(): Promise<number> {
       return queueStaffDigests(db, todayIn(timeZone));
+    },
+
+    async openMaintenanceVisits(): Promise<number> {
+      return openMaintenanceVisits(db, todayIn(timeZone));
+    },
+
+    async queueSlaAlerts(): Promise<number> {
+      return queueSlaAlerts(db, new Date(), timeZone);
+    },
+
+    async clearOldLocations(): Promise<number> {
+      return clearOldLocations(db, todayIn(timeZone));
     },
   };
 }

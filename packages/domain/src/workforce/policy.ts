@@ -30,12 +30,23 @@ export interface PointsPolicy {
   readonly recognitionMax: number;
 }
 
+/** Site check-ins and travel reimbursement (PRD 4.2, 4.3). */
+export interface SiteTravelPolicy {
+  /** A site check-in farther than this from the saved site location is flagged, in metres. */
+  readonly farFromSiteM: number;
+  /** Paid per km of travel between the day's site visits, in paise. */
+  readonly ratePaisePerKm: number;
+  /** Minutes before the day starts and after it ends when location may still be read. */
+  readonly hoursMarginMinutes: number;
+}
+
 export interface WorkforcePolicy {
   readonly leaveTypes: readonly LeaveType[];
   /** Days of the week off (0 = Sunday … 6 = Saturday); not counted as leave. */
   readonly weeklyOff: readonly number[];
   readonly attendance: AttendancePolicy;
   readonly points: PointsPolicy;
+  readonly travel: SiteTravelPolicy;
 }
 
 export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
@@ -52,4 +63,19 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     retentionDays: 90,
   },
   points: { onTimeTask: 10, goodRating: 50, recognitionMax: 200 },
+  travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60 },
 };
+
+/** A saved policy with any section added since it was saved filled from the defaults. */
+export function withPolicyDefaults(
+  saved: Partial<WorkforcePolicy> | null | undefined,
+): WorkforcePolicy {
+  if (!saved) return DEFAULT_WORKFORCE_POLICY;
+  return {
+    ...DEFAULT_WORKFORCE_POLICY,
+    ...saved,
+    attendance: { ...DEFAULT_WORKFORCE_POLICY.attendance, ...saved.attendance },
+    points: { ...DEFAULT_WORKFORCE_POLICY.points, ...saved.points },
+    travel: { ...DEFAULT_WORKFORCE_POLICY.travel, ...saved.travel },
+  };
+}

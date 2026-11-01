@@ -10,6 +10,7 @@ import {
   subsidyCategoryEnum,
 } from './enums';
 import { users } from './identity.schema';
+import { leadSteps } from './lead-steps.schema';
 
 /** One customer identity across leads, quotations, projects and service (PRD 3.2). */
 export const customers = pgTable(
@@ -84,6 +85,8 @@ export const leads = pgTable(
       onDelete: 'set null',
     }),
     stage: leadStageEnum('stage').notNull().default('new'),
+    /** The owner's pipeline step inside the stage; null means the stage's first step. */
+    stepKey: text('step_key').references(() => leadSteps.key, { onDelete: 'set null' }),
     ownerUserId: uuid('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
     resellerUserId: uuid('reseller_user_id').references(() => users.id, { onDelete: 'set null' }),
     estimatedWp: integer('estimated_wp'),

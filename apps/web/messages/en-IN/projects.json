@@ -123,6 +123,23 @@
         "documents": "Documents",
         "reports": "Reports",
         "activity": "Activity"
+      },
+      "ratings": {
+        "title": "Customer ratings",
+        "empty": "No ratings yet. The customer rates each stage in their app once it is done.",
+        "stage": {
+          "survey": "Site survey",
+          "installation": "Installation",
+          "commissioning": "Switch-on and handover"
+        },
+        "stars": "{rating} out of 5 stars",
+        "replyBy": "{name} replied:",
+        "replyLabel": "Reply to the customer",
+        "replyPlaceholder": "Thank the customer, in a line.",
+        "replyLowPlaceholder": "Say sorry and what you will do about it. The customer sees this.",
+        "reply": "Send reply",
+        "replied": "Reply sent to the customer",
+        "failed": "Could not send the reply"
       }
     },
     "board": {
@@ -260,7 +277,15 @@
       "cancel": "Cancel",
       "recordSubmit": "Record payment",
       "recorded": "Payment recorded",
-      "refundVia": "Refund · {method}"
+      "refundVia": "Refund · {method}",
+      "collected": {
+        "collectedBy": "Collected by",
+        "collectedByHint": "Who holds the money until it is deposited in the bank.",
+        "chequeNumber": "Cheque number",
+        "chequeDate": "Cheque date",
+        "chequeBank": "Bank and branch",
+        "chequeBankPlaceholder": "For example: Sangli Urban Co-op Bank, Vishrambag"
+      }
     },
     "reports": {
       "title": "Statutory reports",

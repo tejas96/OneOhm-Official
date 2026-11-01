@@ -1,0 +1,345 @@
+{
+  "purchasing": {
+    "requests": {
+      "status": {
+        "pending": "Waiting",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "ordered": "On order",
+        "cancelled": "Cancelled"
+      },
+      "item": "{item} × {quantity} {unit}",
+      "moreItems": "{count, plural, one {and # more item} other {and # more items}}",
+      "waiting": "Waiting for procurement",
+      "caption": "Purchase requests",
+      "columns": {
+        "request": "Request",
+        "for": "For",
+        "items": "Items",
+        "need": "Needed by",
+        "raised": "Raised by",
+        "outcome": "Decision"
+      },
+      "forStock": "Stock",
+      "new": "Request material",
+      "loading": "Loading purchase requests",
+      "count": "{count, plural, one {# request} other {# requests}}",
+      "emptyTitle": "No purchase requests yet",
+      "emptyBody": "Ask for material here, for the store or for a project. Procurement approves it and turns it into an order.",
+      "noMatchTitle": "No requests match",
+      "noMatchBody": "Try another status, or clear the search.",
+      "filters": {
+        "search": "Search number, item, project or person",
+        "status": "Status",
+        "scope": "For",
+        "statuses": {
+          "open": "Open",
+          "pending": "Waiting",
+          "approved": "Approved",
+          "ordered": "On order",
+          "rejected": "Rejected",
+          "cancelled": "Cancelled",
+          "all": "All"
+        },
+        "scopes": {
+          "any": "Anything",
+          "projects": "Projects",
+          "stock": "Stock",
+          "mine": "Raised by me"
+        }
+      },
+      "sheet": {
+        "loading": "Loading the request",
+        "lines": "Items",
+        "free": "{quantity} {unit} free in the store",
+        "coveredByStock": "Stock covers it",
+        "needBy": "Needed by {date}",
+        "forProject": "For {project}",
+        "forStock": "For stock",
+        "raisedBy": "Raised by {name} {when}",
+        "decided": {
+          "approved": "Approved by {name} {when}",
+          "rejected": "Rejected by {name} {when}"
+        },
+        "onOrder": "On order as {number}"
+      },
+      "actions": {
+        "cancel": "Cancel request",
+        "keep": "Keep it",
+        "reject": "Reject",
+        "approve": "Approve",
+        "order": "Raise purchase order",
+        "note": "Note",
+        "noteNeeded": "Say why, so the requester knows what to do next.",
+        "noteOptional": "Optional. The requester sees it.",
+        "approveTitle": "Approve {number}?",
+        "approveBody": "{name} hears that it is approved. You raise the order next.",
+        "rejectTitle": "Reject {number}?",
+        "rejectBody": "{name} sees your note.",
+        "cancelTitle": "Cancel {number}?",
+        "cancelBody": "It will not be ordered. This cannot be undone.",
+        "done": {
+          "approve": "{number} approved",
+          "reject": "{number} rejected",
+          "cancel": "{number} cancelled"
+        }
+      },
+      "form": {
+        "title": "Request material",
+        "description": "Procurement is alerted and approves or rejects it with a note.",
+        "submit": "Send request",
+        "done": "{number} sent to procurement",
+        "for": "For",
+        "forStock": "Stock (the store)",
+        "reason": "Why it is needed",
+        "reasonHint": "For example: roof at Miraj needs panels before the install date.",
+        "lines": "Items",
+        "item": "Item",
+        "pickItem": "Pick an item",
+        "quantity": "Quantity",
+        "neededBy": "Needed by",
+        "addLine": "Add item",
+        "removeLine": "Remove this item"
+      },
+      "order": {
+        "title": "Order {number}",
+        "loading": "Loading the request",
+        "description": "Saved as a draft purchase order. Check it, then send it to the vendor.",
+        "vendor": "Vendor",
+        "pickVendor": "Pick a vendor",
+        "supplies": "supplies every item",
+        "orderDate": "Order date",
+        "expectedOn": "Expected on",
+        "expectedHint": "Starts at the earliest need-by date.",
+        "rate": "Rate per {unit}",
+        "gst": "GST",
+        "total": "Order total",
+        "submit": "Create draft order",
+        "done": "{number} drafted"
+      }
+    },
+    "advances": {
+      "status": {
+        "pending": "Waiting approval",
+        "approved": "Approved",
+        "paid": "Paid",
+        "open": "Paid · open",
+        "used": "Used on bills",
+        "cancelled": "Cancelled"
+      },
+      "filterLabel": "Show",
+      "filters": {
+        "open": "Open",
+        "pending": "Waiting approval",
+        "approved": "Approved",
+        "paid": "Paid",
+        "cancelled": "Cancelled",
+        "all": "All"
+      },
+      "add": "Record advance",
+      "explainer": "Money paid to a vendor before the goods, against one purchase order. When the vendor's bill for that order is approved, the advance comes off it and only the balance is left to pay.",
+      "loading": "Loading vendor advances",
+      "emptyTitle": "No vendor advances here",
+      "emptyBody": "Record an advance against a sent purchase order. It is approved, then paid.",
+      "caption": "Vendor advances",
+      "columns": {
+        "advance": "Advance",
+        "vendor": "Vendor and order",
+        "amount": "Amount",
+        "paid": "Paid",
+        "actions": "Next step"
+      },
+      "forStock": "Stock",
+      "openOf": "{open} still open",
+      "recordedBy": "Recorded by {name}",
+      "nextBill": "Comes off the next approved bill",
+      "allUsed": "Used on bills",
+      "approve": "Approve",
+      "pay": {
+        "title": "Pay this advance",
+        "description": "{amount} to {vendor} against {order}.",
+        "submit": "Mark as paid",
+        "done": "{number} paid",
+        "method": "Paid by",
+        "paidOn": "Paid on",
+        "reference": "Reference",
+        "referenceHint": "UTR, cheque number or UPI reference."
+      },
+      "cancel": "Cancel",
+      "failed": "That did not work",
+      "done": {
+        "approve": "{number} approved",
+        "cancel": "{number} cancelled"
+      },
+      "record": {
+        "title": "Record a vendor advance",
+        "description": "Against a purchase order sent to the vendor. It waits for approval before it is paid.",
+        "submit": "Record advance",
+        "done": "{number} recorded",
+        "order": "Purchase order",
+        "pickOrder": "Pick a sent order",
+        "amount": "Amount",
+        "room": "Up to {room} more; {advanced} already advanced on this order.",
+        "note": "Note"
+      },
+      "onOrder": {
+        "title": "Advances",
+        "record": "Record advance",
+        "none": "No advance paid on this order.",
+        "adjusted": "{amount} used on bills"
+      }
+    },
+    "vendors": {
+      "columns": {
+        "vendor": "Vendor",
+        "ordered": "Ordered",
+        "onTime": "On time",
+        "days": "Days to deliver",
+        "inspection": "Failed inspection",
+        "outstanding": "To pay",
+        "advances": "Open advances"
+      },
+      "inactive": "Inactive",
+      "terms": "{days, plural, =0 {Pays on delivery} one {Pays in # day} other {Pays in # days}}",
+      "orders": "{count, plural, one {# order} other {# orders}}",
+      "onTimeOf": "{onTime} of {total}",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "failures": "{failed} of {receipts, plural, one {# receipt} other {# receipts}}",
+      "overdue": "{amount} overdue",
+      "noMatchTitle": "No vendors match",
+      "noMatchBody": "Try another filter, or clear the search.",
+      "filters": {
+        "search": "Search name, GSTIN or contact",
+        "show": "Show",
+        "sort": "Sort",
+        "shows": {
+          "active": "Active vendors",
+          "owed": "Money owed",
+          "overdue": "Overdue bills",
+          "late": "Late deliveries",
+          "advances": "Open advances",
+          "all": "All vendors"
+        },
+        "sorts": {
+          "name": "Name",
+          "outstanding": "Most owed",
+          "ordered": "Most ordered",
+          "onTime": "Least on time"
+        }
+      }
+    },
+    "profile": {
+      "pageTitle": "Vendor",
+      "loading": "Loading the vendor",
+      "back": "Vendors",
+      "overline": "{days, plural, =0 {Pays on delivery} one {Pays in # day} other {Pays in # days}}",
+      "inactive": "Inactive",
+      "noContact": "No contact details yet",
+      "edit": "Edit vendor",
+      "advance": "Record advance",
+      "tabsLabel": "Vendor records",
+      "tabs": {
+        "orders": "Orders · {count}",
+        "bills": "Bills to pay · {count}",
+        "advances": "Advances · {count}",
+        "inspection": "Inspection · {count}"
+      },
+      "ageing": {
+        "title": "To pay, by age of the bill",
+        "description": "What is still owed after advances, by days since the vendor's invoice."
+      },
+      "kpis": {
+        "ordered": "Ordered",
+        "orderedDetail": "{count, plural, one {# order placed} other {# orders placed}}",
+        "onTime": "On time",
+        "onTimeNone": "No dated deliveries yet",
+        "onTimeDetail": "{onTime} on time · {late} late · {open} overdue",
+        "days": "Days to deliver",
+        "daysValue": "{days, plural, one {# day} other {# days}}",
+        "daysDetail": "Order to last receipt, over {count, plural, one {# delivery} other {# deliveries}}",
+        "inspection": "Failed inspection",
+        "inspectionDetail": "Receipts with rejected units, of {count}",
+        "outstanding": "To pay",
+        "overdue": "{amount} overdue",
+        "nothingOverdue": "Nothing overdue",
+        "advances": "Open advances",
+        "advancesDetail": "Paid, not yet used on a bill"
+      },
+      "orders": {
+        "caption": "Purchase orders with this vendor",
+        "emptyTitle": "No orders yet",
+        "emptyBody": "Purchase orders to this vendor appear here with their delivery record.",
+        "forStock": "Stock",
+        "columns": {
+          "order": "Order",
+          "for": "For",
+          "ordered": "Ordered",
+          "expected": "Expected",
+          "received": "Received",
+          "outcome": "Delivery",
+          "total": "Total"
+        },
+        "outcomes": {
+          "on_time": "On time",
+          "late": "Late",
+          "open_late": "Overdue",
+          "open": "Open",
+          "no_date": "No date",
+          "not_ordered": "Not placed"
+        }
+      },
+      "bills": {
+        "caption": "Bills still to pay",
+        "emptyTitle": "Nothing to pay",
+        "emptyBody": "Bills raised from goods receipts appear here until they are paid.",
+        "columns": {
+          "bill": "Bill",
+          "billed": "Billed",
+          "due": "Due",
+          "amount": "Amount",
+          "adjusted": "Advance used",
+          "balance": "To pay"
+        },
+        "status": {
+          "pending": "Waiting approval",
+          "approved": "Approved",
+          "paid": "Paid"
+        },
+        "overdueSince": "Overdue since {date}",
+        "toFinance": "Approve and pay in Finance"
+      },
+      "advances": {
+        "caption": "Advances to this vendor",
+        "emptyTitle": "No advances",
+        "emptyBody": "Advances paid against this vendor's orders appear here.",
+        "columns": {
+          "advance": "Advance",
+          "order": "Order",
+          "paid": "Paid on",
+          "amount": "Amount",
+          "open": "Still open"
+        },
+        "toFinance": "Manage advances in Finance"
+      },
+      "inspection": {
+        "caption": "Units that failed inspection",
+        "emptyTitle": "No failed inspections",
+        "emptyBody": "Units rejected at goods receipt appear here with the reason.",
+        "columns": {
+          "receipt": "Receipt",
+          "item": "Item",
+          "quantity": "Rejected",
+          "reason": "Reason"
+        }
+      }
+    },
+    "inspection": {
+      "accepted": "Accepted",
+      "rejected": "Failed inspection",
+      "rejectedHint": "Sent back. Not stocked or billed; still due.",
+      "reason": "Why it failed",
+      "reasonPlaceholder": "Cracked glass, wrong model, damaged box",
+      "rejectedLine": "{quantity} failed inspection: {reason}"
+    }
+  }
+}

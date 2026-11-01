@@ -6,6 +6,7 @@ import { History } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { PhotoGeotagDetail } from '@/features/site-activity/photo-geotag-detail';
 import { swatchFor } from '@/lib/format/contact';
 import { FOLDER_ICONS, folderOf } from './document-kinds';
 import { useFolderLabel, useRelativeTime } from './use-labels';
@@ -90,6 +91,7 @@ export function PreviewDetails({
             </Link>
           </Detail>
         )}
+        <PhotoGeotagDetail geotag={document.geotag} />
       </dl>
       {document.replaced && (
         <p className="flex items-start gap-2 type-body-sm text-ink-muted">

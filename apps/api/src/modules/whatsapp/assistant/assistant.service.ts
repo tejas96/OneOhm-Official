@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { customers, notifyHolders, projects, waConversations } from '@oneohm/database';
+import { findReferralCode } from '@oneohm/domain';
 import { desc, eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
@@ -37,6 +38,8 @@ export class AssistantService {
       return this.menu(chat);
     }
     if (chat.state === 'human') return;
+    const code = chat.customerId ? null : findReferralCode(incoming.text);
+    if (code) return this.referredFriend(chat, code, word);
     if (!chat.customerId) return this.stranger(chat, word);
     if (chat.state === 'await_problem') return this.problem(chat, chat.customerId, incoming);
     if (chat.state === 'await_referral') return this.referral(chat, chat.customerId, incoming);
@@ -144,6 +147,21 @@ export class AssistantService {
       throw error;
     }
     return this.say(chat, { kind: 'text', body: WORDS.referralSaved(friend.name) });
+  }
+
+  /** A new number with a customer's referral code becomes that customer's referral (PRD 5.6). */
+  private async referredFriend(chat: Conversation, code: string, word: string) {
+    try {
+      const saved = await this.portal.referByCode(code, {
+        name: chat.profileName?.trim() || 'WhatsApp contact',
+        phone: chat.phone,
+      });
+      if (!saved) return this.stranger(chat, word);
+      return this.say(chat, { kind: 'text', body: WORDS.referredWelcome(saved.referrer) });
+    } catch (error) {
+      if (error instanceof AppError) return this.say(chat, { kind: 'text', body: error.message });
+      throw error;
+    }
   }
 
   private async rate(chat: Conversation, customerId: string, rating: number) {

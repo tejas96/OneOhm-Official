@@ -15,13 +15,16 @@ import {
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { LifeBuoy, Plus } from 'lucide-react-native';
+import { LifeBuoy, Plus, Star } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
+import { RATE } from '@/copy/after-sales';
 import { SUPPORT } from '@/copy/care';
 import { COMMON } from '@/copy/common';
-import { momentDate } from '@/lib/dates';
+import { useChosenProject, useHome } from '@/features/home/use-home';
+import { momentDate, shortDate } from '@/lib/dates';
+import { CoverCard, VisitsCard } from './cover-card';
 
 const TONE: Readonly<Record<ServiceRequest['status'], Tone>> = {
   open: 'waiting',
@@ -36,6 +39,7 @@ export function HelpScreen() {
     queryKey: keys.service,
     queryFn: () => unwrap(api.customer.listServiceRequests()),
   });
+  const { project } = useChosenProject(useHome().data?.projects);
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.head}>
@@ -50,6 +54,8 @@ export function HelpScreen() {
           fullWidth
         />
       </View>
+      <VisitsCard />
+      <CoverCard projectId={project?.id ?? null} />
       <View style={styles.section}>
         <SectionTitle
           title={SUPPORT.historyTitle.toUpperCase()}
@@ -84,7 +90,7 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
     <Card style={styles.card}>
       <View style={styles.cardHead}>
         <Text variant="titleMd" style={styles.grow}>
-          {SUPPORT.category[request.category]}
+          {request.categoryLabel}
         </Text>
         <StatusPill size="sm" tone={TONE[request.status]} label={SUPPORT.status[request.status]} />
       </View>
@@ -102,13 +108,49 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
       <Text variant="label" tone="tertiary">
         {[
           request.projectCode,
-          SUPPORT.raisedOn(momentDate(request.createdAt)),
+          request.scheduledFor
+            ? RATE.scheduled(shortDate(request.scheduledFor))
+            : SUPPORT.raisedOn(momentDate(request.createdAt)),
           request.photoCount > 0 ? SUPPORT.photoCount(request.photoCount) : null,
         ]
           .filter(Boolean)
           .join(' · ')}
       </Text>
+      {request.status === 'resolved' ? <RateRow request={request} /> : null}
     </Card>
+  );
+}
+
+/** After a request is resolved the customer can rate it, and change the rating later. */
+function RateRow({ request }: { readonly request: ServiceRequest }) {
+  const theme = useTheme();
+  const rated = request.rating?.rating ?? 0;
+  const open = () =>
+    router.push({
+      pathname: '/help/rate/[requestId]',
+      params: { requestId: request.id, ...(rated ? { rating: String(rated) } : {}) },
+    });
+  return (
+    <View style={styles.rateRow}>
+      {rated ? (
+        <View style={styles.stars} accessibilityLabel={RATE.yours(rated)}>
+          {[1, 2, 3, 4, 5].map((value) => (
+            <Star
+              key={value}
+              size={16}
+              color={value <= rated ? theme.colors.energy : theme.colors.textTertiary}
+              fill={value <= rated ? theme.colors.energy : 'transparent'}
+            />
+          ))}
+        </View>
+      ) : null}
+      <Button
+        label={rated ? RATE.change : RATE.action}
+        variant={rated ? 'quiet' : 'secondary'}
+        size="sm"
+        onPress={open}
+      />
+    </View>
   );
 }
 
@@ -119,4 +161,6 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   grow: { flex: 1 },
   resolution: { gap: 2 },
+  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  stars: { flexDirection: 'row', gap: 2 },
 });

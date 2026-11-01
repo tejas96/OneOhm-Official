@@ -21,6 +21,8 @@ import { api, keys } from '@/api/api';
 import { ScreenHeader } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
+import { CrewMaterialPrompt } from '@/features/crew/crew-material-prompt';
+import { SiteVisitCard } from '@/features/site/site-visit-card';
 import { shortDate } from '@/lib/dates';
 import { ChecklistCard } from './evidence/checklist-card';
 import { completionFacts } from './evidence/evidence-rules';
@@ -126,6 +128,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
           ))}
         </Card>
       ) : null}
+      <SiteVisitCard task={task} />
       {task.approval ? (
         <View style={styles.row}>
           <ShieldCheck size={16} color={theme.status.review.fg} />
@@ -156,6 +159,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       ) : null}
       <ChecklistCard task={task} ticked={ticked} onToggle={toggle} />
       <EvidenceSection task={task} evidence={evidence} />
+      <CrewMaterialPrompt projectId={task.projectId} taskId={task.id} />
       <SignatureCard task={task} evidence={evidence} />
       <WaitingSheet
         open={waiting}

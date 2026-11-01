@@ -1,6 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Payable } from '@oneohm/api-contracts';
-import { payables, postPayableApproved, postPayablePaid, projects, users } from '@oneohm/database';
+import {
+  applyVendorAdvances,
+  goodsReceipts,
+  payables,
+  postPayableApproved,
+  postPayablePaid,
+  projects,
+  users,
+} from '@oneohm/database';
 import type { MoneyOutMethod } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { and, asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
@@ -109,6 +117,13 @@ export class PayablesService {
         .returning({ amount: payables.amountPaise });
       if (!updated) throw await this.notPending(id, 'approved');
       await postPayableApproved(tx, id, actor.userId);
+      // A vendor bill from a goods receipt: advances paid on that order come off it.
+      const [receipt] = await tx
+        .select({ orderId: goodsReceipts.purchaseOrderId })
+        .from(goodsReceipts)
+        .where(eq(goodsReceipts.payableId, id))
+        .limit(1);
+      if (receipt) await applyVendorAdvances(tx, receipt.orderId, actor.userId);
       await recordAudit(tx, actor.userId, 'payable.approved', 'payable', id, {
         amountPaise: updated.amount,
       });
@@ -179,5 +194,6 @@ function present(row: Row, code: string | null, approver: string | null, today: 
     paidMethod: row.paidMethod,
     paidReference: row.paidReference,
     createdAt: row.createdAt.toISOString(),
+    advanceAdjustedPaise: row.advanceAdjustedPaise,
   };
 }

@@ -6,6 +6,7 @@ import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { ObjectStorageService, type StoredObject } from '../documents/object-storage.service';
 import { type PdfFile, ReportPdfService } from '../reports/report-pdf.service';
+import { ReportSettingsService } from '../reports/report-settings.service';
 import { ReportStatusService } from '../reports/report-status.service';
 
 /**
@@ -35,6 +36,7 @@ export class CustomerDocumentsService {
     private readonly storage: ObjectStorageService,
     private readonly statuses: ReportStatusService,
     private readonly reports: ReportPdfService,
+    private readonly settings: ReportSettingsService,
   ) {}
 
   async list(customerId: string): Promise<CustomerDocument[]> {
@@ -103,9 +105,11 @@ export class CustomerDocumentsService {
 
   async readyReports(customerId: string): Promise<CustomerReport[]> {
     const result: CustomerReport[] = [];
+    const shared = await this.settings.customerVisible();
     for (const project of await this.projectsOf(customerId)) {
       for (const report of await this.statuses.statuses(project.id)) {
-        if (report.status !== 'ready') continue;
+        // Only ready reports the owner shares with customers (PRD 3.18).
+        if (report.status !== 'ready' || !shared.has(report.key)) continue;
         result.push({
           projectId: project.id,
           projectCode: project.code,
@@ -120,6 +124,7 @@ export class CustomerDocumentsService {
   async reportPdf(customerId: string, projectId: string, key: ReportKey): Promise<PdfFile> {
     const own = await this.projectsOf(customerId);
     if (!own.some((project) => project.id === projectId)) throw notFound('That project');
+    if (!(await this.settings.customerVisible()).has(key)) throw notFound('That report');
     return this.reports.render(projectId, key);
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import type { CompanyAssets, DocumentRecord } from '@oneohm/api-contracts';
+import type { CompanyAssets, DocumentRecord, MaterialSlip } from '@oneohm/api-contracts';
 import type { CompanyAssetKind } from '@oneohm/domain';
 import { networkError, toApiError } from './api-error';
 import { CSRF_COOKIE, CSRF_HEADER } from './contract';
@@ -76,6 +76,10 @@ export const replaceDocument = (id: string, file: File, onProgress?: (fraction: 
 
 export const uploadCompanyAsset = (kind: CompanyAssetKind, file: File) =>
   send<CompanyAssets>(`/settings/company/assets/${kind}`, file, {});
+
+/** A photo of material handed to (or back from) a contractor, kept with the project. */
+export const uploadSlipPhoto = (slipId: string, file: File) =>
+  send<MaterialSlip>(`/material-slips/${slipId}/photo`, file, {});
 
 /** Where the browser reads a document (the API checks access on every request). */
 export const documentUrl = (id: string, disposition: 'inline' | 'attachment' = 'inline') =>

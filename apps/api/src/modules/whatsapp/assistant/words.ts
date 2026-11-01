@@ -61,6 +61,8 @@ export const WORDS = {
   referralSaved: (name: string) =>
     `Thank you! We will call ${name}. You earn a reward when their solar is installed.`,
   referralUnclear: 'I could not find a name and a 10-digit mobile number. Please try again.',
+  referredWelcome: (referrer: string) =>
+    `Welcome to OneOhm! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,
   askRating: 'How happy are you with OneOhm so far?',
   ratingSaved: 'Thank you for rating us! It helps the team.',
   humanSoon:

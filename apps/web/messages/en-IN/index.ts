@@ -1,3 +1,4 @@
+import afterSales from './after-sales.json';
 import alerts from './alerts.json';
 import businessReports from './business-reports.json';
 import commandCenter from './command-center.json';
@@ -10,6 +11,7 @@ import finance from './finance.json';
 import inventory from './inventory.json';
 import leads from './leads.json';
 import projects from './projects.json';
+import purchasing from './purchasing.json';
 import quotations from './quotations.json';
 import reportCollections from './report-collections.json';
 import reportDelays from './report-delays.json';
@@ -22,6 +24,7 @@ import reports from './reports.json';
 import service from './service.json';
 import settings from './settings.json';
 import signIn from './sign-in.json';
+import siteActivity from './site-activity.json';
 import team from './team.json';
 import today from './today.json';
 
@@ -32,6 +35,7 @@ import today from './today.json';
 const messages = {
   ...common,
   ...alerts,
+  ...afterSales,
   ...signIn,
   ...commandCenter,
   ...contractors,
@@ -42,6 +46,7 @@ const messages = {
   ...discom,
   ...leads,
   ...projects,
+  ...purchasing,
   ...quotations,
   ...reports,
   ...businessReports,
@@ -54,6 +59,7 @@ const messages = {
   ...reportService,
   ...service,
   ...settings,
+  ...siteActivity,
   ...team,
   ...today,
 };

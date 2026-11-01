@@ -19,6 +19,7 @@ import {
   workOrderSummarySchema,
 } from '../schemas/contractor.schema';
 import { projectTypeSchema } from '../schemas/project.schema';
+import { crewRoutes } from './crew.routes';
 
 const c = initContract();
 const pdfResponse = c.otherResponse({ contentType: 'application/pdf', body: c.type<Blob>() });
@@ -73,6 +74,7 @@ export const contractorInputSchema = z.object({
 export type ContractorInput = z.infer<typeof contractorInputSchema>;
 
 export const contractorsContract = c.router({
+  ...crewRoutes,
   listContractors: {
     method: 'GET',
     path: '/contractors',

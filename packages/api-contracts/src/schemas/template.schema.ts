@@ -57,6 +57,8 @@ export const taskTemplateSchema = z.object({
   title: z.string(),
   stage: z.enum(EPC_STAGES),
   roleKey: z.string(),
+  /** A skill the assignee should have; the role is the fallback (PRD 3.7). */
+  skillKey: z.string().nullable(),
   offsetDays: z.number().int(),
   durationDays: z.number().int(),
   dependsOn: z.array(z.string()),
@@ -71,6 +73,8 @@ export const taskTemplateSchema = z.object({
   approval: z.boolean(),
   evidence: z.array(z.enum(EVIDENCE_KINDS)),
   captures: z.array(z.string()),
+  /** Its own checklist; null uses the built-in lines (PRD 4.4). */
+  checklist: z.array(z.object({ key: z.string(), label: z.string() })).nullable(),
   onComplete: z.enum(COMPLETION_ACTIONS).nullable(),
   reports: z.array(z.string()),
   position: z.number().int(),
@@ -87,6 +91,20 @@ export const taskTemplateInputSchema = taskTemplateSchema
       .regex(/^[a-z][a-z0-9_]{2,60}$/, 'Lowercase words joined by underscores, like site_survey.'),
     title: z.string().trim().min(3, 'Name the task.').max(120),
     roleKey: z.string().trim().min(1, 'Pick who does it.'),
+    skillKey: z.string().trim().max(60).nullable().optional(),
+    checklist: z
+      .array(
+        z.object({
+          key: z
+            .string()
+            .trim()
+            .regex(/^[a-z0-9_]{1,40}$/),
+          label: z.string().trim().min(3, 'Write what to check.').max(120),
+        }),
+      )
+      .max(20, 'Keep the checklist to 20 lines.')
+      .nullable()
+      .optional(),
     offsetDays: z.number().int().min(0).max(365),
     durationDays: z.number().int().min(1).max(180),
     customerTitle: z.string().trim().max(120).nullable(),

@@ -54,6 +54,9 @@ export async function postPayablePaid(
   const row = await loadPayable(db, payableId);
   if (row?.payable.status !== 'paid') return;
   const { payable } = row;
+  // Vendor advances set against the bill were posted when adjusted; only the rest is paid.
+  const paidOut = payable.amountPaise - payable.advanceAdjustedPaise;
+  if (paidOut <= 0) return;
   const method = OUT_METHODS.find((entry) => entry === payable.paidMethod) ?? 'bank_transfer';
   await postJournal(db, {
     entryDate: payable.paidOn ?? businessDate(payable.paidAt ?? payable.updatedAt),
@@ -62,7 +65,7 @@ export async function postPayablePaid(
     sourceId: payable.id,
     projectId: payable.projectId,
     postedByUserId: userId,
-    lines: payablePaidPosting({ party: payable.party, method, amountPaise: payable.amountPaise }),
+    lines: payablePaidPosting({ party: payable.party, method, amountPaise: paidOut }),
   });
 }
 

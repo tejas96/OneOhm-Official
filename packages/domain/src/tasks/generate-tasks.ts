@@ -38,6 +38,8 @@ export function generateTasks(
 export interface AssigneeCandidate {
   readonly userId: string;
   readonly roleKeys: readonly string[];
+  /** Skill keys the person holds (PRD 3.7). */
+  readonly skills?: readonly string[];
   readonly openTasks: number;
   /** Marked unavailable by hand (for example a long absence). */
   readonly onLeave: boolean;
@@ -56,11 +58,14 @@ export function awayDuring(
 /**
  * The least-loaded person in the role who is available; null leaves the task unassigned.
  * With `when`, people on approved leave during those days are skipped (PRD 3.8, Flow E).
+ * With `skillKey`, people in the role who hold the skill come first; when nobody free
+ * has it, the task still goes to the role so it never waits unassigned (PRD 3.7).
  */
 export function pickAssignee(
   candidates: readonly AssigneeCandidate[],
   roleKey: string,
   when?: { readonly from: string; readonly to: string },
+  skillKey?: string | null,
 ): AssigneeCandidate | null {
   const eligible = candidates
     .filter(
@@ -72,5 +77,9 @@ export function pickAssignee(
     .sort(
       (left, right) => left.openTasks - right.openTasks || left.userId.localeCompare(right.userId),
     );
+  if (skillKey) {
+    const skilled = eligible.find((candidate) => candidate.skills?.includes(skillKey));
+    if (skilled) return skilled;
+  }
   return eligible[0] ?? null;
 }

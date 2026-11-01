@@ -7,16 +7,21 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { SiteTravelSection } from '@/features/site-activity/settings/site-travel-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { LeaveKindsSection } from './leave-kinds-section';
 import { LocationSection } from './location-section';
 import { PlacesSection } from './places-section';
 import { PointsValuesSection } from './points-values-section';
+import { SkillsSection } from './skills-section';
 import { useWorkforceSettings, WORKFORCE_SETTINGS_KEY } from './use-workforce-settings';
 import { WorkingDaySection } from './working-day-section';
 
-/** Leave kinds, the working week, location at check-in, point values and authorised places. */
+/**
+ * Leave kinds, the working week, location at check-in, site check-ins and travel, point
+ * values and authorised places.
+ */
 export function WorkforcePanel() {
   const t = useTranslations('settings.workforce');
   const settingsT = useTranslations('settings');
@@ -71,6 +76,11 @@ export function WorkforcePanel() {
           onChange={(attendance) => setDraft({ ...draft, attendance })}
           errors={form.fieldErrors}
         />
+        <SiteTravelSection
+          travel={draft.travel}
+          onChange={(travel) => setDraft({ ...draft, travel })}
+          errors={form.fieldErrors}
+        />
         <PointsValuesSection
           points={draft.points}
           onChange={(points) => setDraft({ ...draft, points })}
@@ -90,6 +100,7 @@ export function WorkforcePanel() {
         </div>
       </form>
       <PlacesSection locations={query.data.locations} />
+      <SkillsSection />
     </div>
   );
 }

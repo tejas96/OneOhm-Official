@@ -16,6 +16,8 @@ export const leadSchema = z.object({
   city: z.string(),
   source: leadSourceSchema,
   stage: leadStageSchema,
+  /** The owner's pipeline step inside the stage (PRD 3.3); null once won or lost. */
+  step: z.object({ key: z.string(), name: z.string() }).nullable(),
   subsidyCategory: subsidyCategorySchema,
   estimatedWp: z.number().int().nullable(),
   owner: userRefSchema.nullable(),
@@ -27,6 +29,8 @@ export const leadSchema = z.object({
   propertyId: idSchema.nullable(),
   lostReason: z.string().nullable(),
   notes: z.string().nullable(),
+  /** The customer who referred this lead, if any. */
+  referredBy: z.object({ id: idSchema, name: z.string() }).nullable(),
   createdAt: instantSchema,
 });
 export type Lead = z.infer<typeof leadSchema>;

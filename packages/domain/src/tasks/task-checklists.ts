@@ -13,6 +13,14 @@ export interface EvidenceTask {
   readonly templateKey: string;
   readonly evidence: readonly string[];
   readonly captures: readonly string[];
+  /** The template's own checklist (Settings); null or empty uses the built-in one. */
+  readonly checklist?: readonly ChecklistLine[] | null;
+}
+
+/** A checklist line as written in Settings: a short key and what to check. */
+export interface ChecklistLine {
+  readonly key: string;
+  readonly label: string;
 }
 
 type Items = readonly (readonly [key: string, label: string])[];
@@ -72,14 +80,34 @@ export const checklistFactKey = (templateKey: string, itemKey: string): string =
 const wants = (task: Pick<EvidenceTask, 'evidence'>, kind: EvidenceKind) =>
   task.evidence.includes(kind);
 
+/** The built-in lines for a template, for Settings to show before anyone edits them. */
+export function defaultChecklist(templateKey: string): ChecklistLine[] {
+  return (CHECKLISTS[templateKey] ?? ANY_TASK).map(([key, label]) => ({ key, label }));
+}
+
+/** "Earthing pit watered and tested" → "earthing_pit_watered_and_tested". */
+export function checklistLineKey(label: string): string {
+  return (
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 40) || 'item'
+  );
+}
+
 /** The items to tick before the task completes; empty when it needs no checklist. */
 export function checklistFor(
-  task: Pick<EvidenceTask, 'templateKey' | 'evidence'>,
+  task: Pick<EvidenceTask, 'templateKey' | 'evidence' | 'checklist'>,
 ): ChecklistItem[] {
   if (!wants(task, 'checklist')) return [];
-  return (CHECKLISTS[task.templateKey] ?? ANY_TASK).map(([key, label]) => ({
-    key: checklistFactKey(task.templateKey, key),
-    label,
+  const lines =
+    task.checklist && task.checklist.length > 0
+      ? task.checklist
+      : defaultChecklist(task.templateKey);
+  return lines.map((line) => ({
+    key: checklistFactKey(task.templateKey, line.key),
+    label: line.label,
   }));
 }
 

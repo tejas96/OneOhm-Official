@@ -59,7 +59,10 @@ export function LeadDetailView({ id }: { readonly id: string }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
-              <StatusPill tone={STAGE_TONE[lead.stage]} label={t(`stage.${lead.stage}`)} />
+              <StatusPill
+                tone={STAGE_TONE[lead.stage]}
+                label={lead.step?.name ?? t(`stage.${lead.stage}`)}
+              />
               <span className="font-mono text-[0.75rem] text-ink-faint uppercase">
                 {t('since', {
                   date: format.dateTime(new Date(lead.createdAt), {

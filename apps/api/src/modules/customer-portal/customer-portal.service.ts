@@ -4,32 +4,27 @@ import {
   customerFeedback,
   customers,
   leads,
+  notify,
   notifyHolders,
+  openServiceRequest,
   projects,
   quotations,
   serviceRequests,
 } from '@oneohm/database';
-import type { LeadStage } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, desc, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
-import { photosOfRequests } from '../../common/read-models/service-request-photos';
+import { pickableCategory } from '../../common/read-models/service-categories';
+import {
+  serviceRequestRows,
+  toCustomerRequest,
+} from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
+import { customerReferrals } from '../referrals/customer-referrals.read';
+import { resolveReferralCode } from '../referrals/referral-codes';
 import { suggestRatingPoints } from '../workforce/points';
 import { customerProjects } from './customer-home';
-
-const REFERRAL_STATUS: Readonly<Record<LeadStage, Referral['status']>> = {
-  new: 'received',
-  contacted: 'in_progress',
-  survey_scheduled: 'in_progress',
-  quoted: 'in_progress',
-  won: 'installed',
-  lost: 'closed',
-};
-
-type Category = ServiceRequest['category'];
-type Status = ServiceRequest['status'];
 
 /** What a signed-in customer can see and do; every query is scoped to that customer. */
 @Injectable()
@@ -68,18 +63,9 @@ export class CustomerPortalService {
     return row.id;
   }
 
-  async referrals(customerId: string): Promise<Referral[]> {
-    const rows = await this.db
-      .select({ id: leads.id, name: leads.name, stage: leads.stage, createdAt: leads.createdAt })
-      .from(leads)
-      .where(eq(leads.referredByCustomerId, customerId))
-      .orderBy(desc(leads.createdAt));
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      status: REFERRAL_STATUS[row.stage],
-      createdAt: row.createdAt.toISOString(),
-    }));
+  /** People the customer referred, how each is going and the reward it earned (PRD 5.6). */
+  referrals(customerId: string): Promise<Referral[]> {
+    return customerReferrals(this.db, customerId);
   }
 
   async refer(
@@ -120,57 +106,69 @@ export class CustomerPortalService {
       id: lead.id,
       name: lead.name,
       status: 'received',
+      reward: null,
       createdAt: lead.createdAt.toISOString(),
     };
   }
 
-  async serviceRequests(customerId: string): Promise<ServiceRequest[]> {
-    const rows = await this.db
-      .select({ request: serviceRequests, projectCode: projects.code })
-      .from(serviceRequests)
-      .leftJoin(projects, eq(projects.id, serviceRequests.projectId))
-      .where(eq(serviceRequests.customerId, customerId))
-      .orderBy(desc(serviceRequests.createdAt));
-    const photos = await photosOfRequests(
-      this.db,
-      rows.map(({ request }) => request.id),
-    );
-    return rows.map(({ request, projectCode }) => ({
-      id: request.id,
-      projectCode,
-      category: request.category as Category,
-      description: request.description,
-      status: request.status as Status,
-      resolutionNote: request.resolutionNote,
-      photoCount: photos.get(request.id)?.length ?? 0,
-      createdAt: request.createdAt.toISOString(),
-      resolvedAt: request.resolvedAt?.toISOString() ?? null,
-    }));
+  /**
+   * Someone new messaged OneOhm with a customer's referral code (the shared WhatsApp
+   * text): they become a referral lead of that customer. Null for an unknown code.
+   */
+  async referByCode(
+    code: string,
+    friend: { name: string; phone: string },
+  ): Promise<{ referrer: string } | null> {
+    const owner = await resolveReferralCode(this.db, code);
+    if (!owner || owner.phone === friend.phone) return null;
+    await this.refer(owner.customerId, {
+      ...friend,
+      note: `Messaged on WhatsApp with code ${owner.code}.`,
+    });
+    return { referrer: owner.name.split(/\s+/)[0] ?? owner.name };
   }
 
+  async serviceRequests(customerId: string): Promise<ServiceRequest[]> {
+    const rows = await serviceRequestRows(this.db, eq(serviceRequests.customerId, customerId));
+    return rows.map(toCustomerRequest);
+  }
+
+  /** Opens the request with its service levels and owner (see openServiceRequest). */
   async raiseServiceRequest(
     customerId: string,
-    input: { projectId?: string | null | undefined; category: Category; description: string },
+    input: { projectId?: string | null | undefined; category: string; description: string },
   ): Promise<ServiceRequest> {
     if (input.projectId) await this.ownProject(customerId, input.projectId);
-    const [row] = await this.db
-      .insert(serviceRequests)
-      .values({
-        customerId,
-        projectId: input.projectId ?? null,
-        category: input.category,
-        description: input.description,
-      })
-      .returning({ id: serviceRequests.id });
-    const created = (await this.serviceRequests(customerId)).find((item) => item.id === row?.id);
-    if (!created) throw new Error('Service request was not saved.');
-    await notifyHolders(this.db, 'service.manage', {
+    const created = await openServiceRequest(this.db, {
+      customerId,
+      projectId: input.projectId ?? null,
+      category: await pickableCategory(this.db, input.category),
+      description: input.description,
+    });
+    const notice = {
       kind: 'service_request',
       title: 'New service request',
       body: input.description.slice(0, 140),
+      subject: {
+        type: 'service_request' as const,
+        id: created.id,
+        projectId: input.projectId ?? null,
+      },
       dedupeKey: `service_request:${created.id}`,
-    });
-    return created;
+    };
+    await notifyHolders(this.db, 'service.manage', notice);
+    if (created.assigneeUserId)
+      await notify(
+        this.db,
+        { userId: created.assigneeUserId },
+        {
+          ...notice,
+          dedupeKey: `${notice.dedupeKey}:${created.assigneeUserId}`,
+        },
+      );
+    const [row] = await serviceRequestRows(this.db, eq(serviceRequests.id, created.id));
+    if (!row) throw new Error('Service request was not saved.');
+    return toCustomerRequest(row);
   }
 
   async feedback(

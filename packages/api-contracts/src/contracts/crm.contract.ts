@@ -77,6 +77,8 @@ export const crmContract = c.router({
       nextActionOn: calendarDateSchema,
       nextActionNote: z.string().trim().max(300).nullable().optional(),
       notes: noteSchema.nullable().optional(),
+      /** A customer's referral code: the lead remembers who referred it (PRD 5.6). */
+      referralCode: z.string().trim().max(16).nullable().optional(),
     }),
     responses: { 201: leadSchema },
     summary: 'Duplicate detection: an open lead with the same phone answers 409 with its id.',
@@ -93,6 +95,8 @@ export const crmContract = c.router({
     pathParams: idParams,
     body: z.object({
       stage: leadStageSchema.optional(),
+      /** Moves the lead to this pipeline step (and its stage). */
+      stepKey: z.string().trim().min(1).max(60).optional(),
       ownerUserId: idSchema.nullable().optional(),
       nextActionOn: calendarDateSchema.nullable().optional(),
       nextActionNote: z.string().trim().max(300).nullable().optional(),

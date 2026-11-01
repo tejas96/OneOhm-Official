@@ -8,9 +8,9 @@ import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { useCan } from '@/providers/current-user';
 import { DocumentRow } from './document-row';
 import { PendingThumb } from './document-thumb';
+import { useDocumentRights } from './use-document-rights';
 import { useUploads } from './use-uploads';
 
 type Scope = { readonly projectId: string } | { readonly customerId: string };
@@ -33,7 +33,7 @@ export function DocumentsPanel({
 }) {
   const t = useTranslations('documents');
   const client = useQueryClient();
-  const canManage = useCan('documents.manage');
+  const rights = useDocumentRights();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<DocumentCategory | 'all'>('all');
   const [category, setCategory] = useState<DocumentCategory>('other');
@@ -73,7 +73,7 @@ export function DocumentsPanel({
           {query.data ? t('count', { count: query.data.length }) : t('loading')}
         </p>
       )}
-      {canManage && (
+      {rights.upload && (
         <div className="flex flex-wrap items-center gap-2 border-t border-hairline px-5 py-3">
           <Select
             label={t('uploadAs')}
@@ -157,7 +157,8 @@ export function DocumentsPanel({
               <DocumentRow
                 key={document.id}
                 document={document}
-                canReplace={canManage}
+                canReplace={rights.manage}
+                canDownload={rights.download}
                 onChanged={refresh}
               />
             ))}

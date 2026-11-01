@@ -32,6 +32,12 @@ export const workforcePolicySchema = z.object({
     goodRating: z.number().int().min(0).max(5000),
     recognitionMax: z.number().int().min(1).max(10000),
   }),
+  /** Site check-ins and travel reimbursement (PRD 4.3). */
+  travel: z.object({
+    farFromSiteM: z.number().int().min(50).max(5000),
+    ratePaisePerKm: z.number().int().min(0).max(10_000),
+    hoursMarginMinutes: z.number().int().min(0).max(240),
+  }),
 });
 export type WorkforcePolicyInput = z.infer<typeof workforcePolicySchema>;
 
@@ -119,7 +125,16 @@ export type PointsEntry = z.infer<typeof pointsEntrySchema>;
 export const myWorkdaySchema = z.object({
   today: attendanceDaySchema.nullable(),
   /** `answered` is false until the person has said yes or no once. */
-  consent: z.object({ given: z.boolean(), answered: z.boolean(), at: instantSchema.nullable() }),
+  consent: z.object({
+    given: z.boolean(),
+    answered: z.boolean(),
+    at: instantSchema.nullable(),
+    /** The version of the words the person agreed to, and the one the app shows now. */
+    version: z.number().int().nullable().optional(),
+    currentVersion: z.number().int().optional(),
+  }),
+  /** Whether location is read right now: consent, policy and working hours (PRD 4.3). */
+  tracking: z.enum(['on', 'no_consent', 'policy_off', 'outside_hours']).optional(),
   attendance: z.object({
     dayStart: z.string(),
     dayEnd: z.string(),

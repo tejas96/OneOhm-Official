@@ -9,6 +9,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { CompanyAssetsSection } from '@/features/documents/company-assets-section';
+import { ReportVisibilitySection } from '@/features/documents/report-visibility-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
@@ -105,6 +106,7 @@ export function CompanyPanel() {
         </div>
       </SettingsSection>
       <CompanyAssetsSection />
+      <ReportVisibilitySection />
       <SettingsSection title={t('documents')}>
         <Field
           label={t('quotationValidityDays')}

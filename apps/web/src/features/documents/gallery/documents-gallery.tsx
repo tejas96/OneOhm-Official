@@ -6,7 +6,7 @@ import { CheckSquare, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadError } from '@/components/query-state';
-import { useCan } from '@/providers/current-user';
+import { useDocumentRights } from '../use-document-rights';
 import { AddDocumentSheet } from './add-document-sheet';
 import { DocumentCard } from './document-card';
 import { DEFAULT_FILTERS, type GalleryFilters } from './document-kinds';
@@ -33,7 +33,7 @@ export function DocumentsGallery({
 }) {
   const t = useTranslations('documents.gallery');
   const folderLabel = useFolderLabel();
-  const canManage = useCan('documents.manage');
+  const rights = useDocumentRights();
   const [filters, setFilters] = useState<GalleryFilters>(DEFAULT_FILTERS);
   const [adding, setAdding] = useState(false);
   const [open, setOpen] = useState<DocumentRecord | null>(null);
@@ -55,7 +55,8 @@ export function DocumentsGallery({
     setFilters((current) => ({ ...current, ...patch }));
   const filtered = filters.folder !== 'all' || filters.kind !== 'all' || filters.search !== '';
   const isCustomer = 'customerId' in scope;
-  const add = canManage ? () => setAdding(true) : null;
+  const add = rights.upload ? () => setAdding(true) : null;
+  const canBundle = rights.download || rights.print;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -64,7 +65,7 @@ export function DocumentsGallery({
           {t(isCustomer ? 'intro.customer' : 'intro.project')}
         </p>
         <span className="flex flex-wrap gap-2 self-start sm:self-auto">
-          {total > 0 && !selecting && (
+          {total > 0 && !selecting && canBundle && (
             <Button
               variant="secondary"
               leadingIcon={<CheckSquare aria-hidden />}
@@ -134,6 +135,7 @@ export function DocumentsGallery({
         <SelectionBar
           ids={[...picked]}
           name={bundleName ?? t('select.defaultName')}
+          rights={rights}
           onClear={stopSelecting}
         />
       )}
@@ -143,12 +145,7 @@ export function DocumentsGallery({
         onOpenChange={setAdding}
         defaultFolder={filters.folder === 'all' ? null : filters.folder}
       />
-      <PreviewSheet
-        document={open}
-        canManage={canManage}
-        showProject={isCustomer}
-        onChange={setOpen}
-      />
+      <PreviewSheet document={open} rights={rights} showProject={isCustomer} onChange={setOpen} />
     </div>
   );
 }

@@ -15,11 +15,15 @@ export interface LedgerAccount {
 export const LEDGER_ACCOUNTS = [
   { code: '1000', name: 'Bank account', type: 'asset' },
   { code: '1010', name: 'Cash in hand', type: 'asset' },
+  { code: '1015', name: 'Cheques in hand', type: 'asset' },
   { code: '1020', name: 'Payment gateway clearing', type: 'asset' },
   { code: '1100', name: 'Customer receivables', type: 'asset' },
   { code: '1110', name: 'Bank loan receivables', type: 'asset' },
+  { code: '1200', name: 'Vendor advances', type: 'asset' },
   { code: '2000', name: 'Vendor payables', type: 'liability' },
   { code: '2010', name: 'Contractor payables', type: 'liability' },
+  { code: '2020', name: 'Referral and commission payables', type: 'liability' },
+  { code: '2030', name: 'Employee reimbursements payable', type: 'liability' },
   { code: '2100', name: 'Advances received', type: 'liability' },
   { code: '2110', name: 'Customer credit', type: 'liability' },
   { code: '2200', name: 'GST output', type: 'liability' },
@@ -29,6 +33,9 @@ export const LEDGER_ACCOUNTS = [
   { code: '5000', name: 'Material cost', type: 'expense' },
   { code: '5010', name: 'Installation and labour cost', type: 'expense' },
   { code: '5020', name: 'Payment gateway fees', type: 'expense' },
+  { code: '5030', name: 'Marketing: referral rewards', type: 'expense' },
+  { code: '5040', name: 'Reseller commission', type: 'expense' },
+  { code: '5050', name: 'Staff travel and conveyance', type: 'expense' },
 ] as const satisfies readonly LedgerAccount[];
 
 export type LedgerAccountCode = (typeof LEDGER_ACCOUNTS)[number]['code'];
@@ -36,11 +43,15 @@ export type LedgerAccountCode = (typeof LEDGER_ACCOUNTS)[number]['code'];
 export const ACCOUNT = {
   bank: '1000',
   cash: '1010',
+  chequesInHand: '1015',
   gateway: '1020',
   customerReceivables: '1100',
   bankLoanReceivables: '1110',
+  vendorAdvances: '1200',
   vendorPayables: '2000',
   contractorPayables: '2010',
+  incentivePayables: '2020',
+  employeePayables: '2030',
   advancesReceived: '2100',
   customerCredit: '2110',
   gstOutput: '2200',
@@ -50,6 +61,9 @@ export const ACCOUNT = {
   materialCost: '5000',
   installationCost: '5010',
   gatewayFees: '5020',
+  referralRewards: '5030',
+  resellerCommission: '5040',
+  staffTravel: '5050',
 } as const satisfies Record<string, LedgerAccountCode>;
 
 /** Assets and expenses grow with debits; liabilities, equity and income with credits. */

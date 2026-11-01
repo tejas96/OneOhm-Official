@@ -17,6 +17,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
+import { setSkills, skillsOf } from './person-skills';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -66,6 +67,7 @@ export class PeopleService {
         ),
       );
     const awayIds = new Set(away.map((row) => row.userId));
+    const held = await skillsOf(this.db, ids);
     return rows.map((row) => ({
       id: row.id,
       fullName: row.fullName,
@@ -78,6 +80,7 @@ export class PeopleService {
       roles: roleRows
         .filter((role) => role.userId === row.id)
         .map(({ userId: _ignored, ...role }) => role),
+      skills: held.get(row.id) ?? [],
       openTasks: loads.find((load) => load.userId === row.id)?.open ?? 0,
     }));
   }
@@ -144,6 +147,7 @@ export class PeopleService {
         await tx.delete(userRoles).where(eq(userRoles.userId, id));
         await tx.insert(userRoles).values(patch.roleIds.map((roleId) => ({ userId: id, roleId })));
       }
+      if (patch.skills) await setSkills(tx, id, patch.skills);
       if (Object.keys(fields).length > 0)
         await tx
           .update(users)

@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { leadStageSchema } from './crm.schema';
-import { SERVICE_CATEGORIES } from './customer-portal.schema';
 import { changeRequestSummarySchema } from './discom.schema';
 import { moneyInMethodSchema, payerSchema } from './finance.schema';
-import { SERVICE_STATUSES } from './service-desk.schema';
+import { SERVICE_STATUSES, serviceCategoryKeySchema } from './service-desk.schema';
 import { chatMessageSchema, DELIVERY_STATES } from './whatsapp.schema';
 
 const projectRefSchema = z.object({ id: idSchema, code: z.string() });
@@ -87,7 +86,8 @@ export type CustomerAlert = z.infer<typeof customerAlertSchema>;
 
 export const customerServiceRequestSchema = z.object({
   id: idSchema,
-  category: z.enum(SERVICE_CATEGORIES),
+  category: serviceCategoryKeySchema,
+  categoryLabel: z.string(),
   description: z.string(),
   status: z.enum(SERVICE_STATUSES),
   project: projectRefSchema.nullable(),

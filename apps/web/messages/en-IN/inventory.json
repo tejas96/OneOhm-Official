@@ -6,6 +6,7 @@
     "tabsLabel": "Inventory sections",
     "tabs": {
       "stock": "Stock",
+      "requests": "Purchase requests",
       "orders": "Purchase orders",
       "vendors": "Vendors",
       "dispatches": "Dispatches"
@@ -55,7 +56,9 @@
         "reservation": "Reserved",
         "release": "Released",
         "dispatch": "Dispatched",
-        "adjustment": "Adjusted"
+        "adjustment": "Adjusted",
+        "issue": "Issued to contractor",
+        "return": "Returned by contractor"
       },
       "held": "held"
     },
@@ -241,7 +244,7 @@
         "dispatched": "Dispatched"
       },
       "needed": "Needs {needed} {unit}",
-      "progress": "{ordered} ordered · {reserved} reserved · {dispatched} sent",
+      "progress": "{ordered} ordered · {reserved} reserved · {dispatched} sent · {issued} issued",
       "free": "{free} free in store",
       "raisePo": "Raise PO",
       "reserve": "Reserve from store",
@@ -263,7 +266,99 @@
       "driverPhone": "Driver mobile",
       "notes": "Notes",
       "save": "Dispatch",
-      "saved": "Dispatched on {number}"
+      "saved": "Dispatched on {number}",
+      "contractor": "Handed to",
+      "contractorHint": "The crew taking the material at site. It then counts as with them.",
+      "noContractor": "Nobody yet"
+    },
+    "custody": {
+      "reconcileTitle": "Reconciliation",
+      "reconcileDescription": "Every goods line on the accepted quotation, from the store to the roof.",
+      "installed": "Installation done",
+      "inProgress": "Installation in progress",
+      "warningsTitle": "{count, plural, =1 {One line does not add up} other {# lines do not add up}}",
+      "warningsBody": "After installation, everything issued should be used or back in the store.",
+      "columns": {
+        "item": "Item",
+        "needed": "Needed",
+        "reserved": "Reserved",
+        "dispatched": "Dispatched",
+        "issued": "Issued",
+        "used": "Used",
+        "returned": "Returned",
+        "withContractor": "With contractor",
+        "difference": "Used vs quote"
+      },
+      "extra": "Not on the quotation",
+      "notTracked": "no stock item on the quotation, so not reserved",
+      "warnings": {
+        "unaccounted": "{quantity} {unit} unaccounted for",
+        "over_used": "{quantity} {unit} more than quoted"
+      },
+      "issuedAs": "Issued as {names}",
+      "holdingsTitle": "With contractors",
+      "holdingsDescription": "Material in each crew’s hands for this project.",
+      "holdingsEmpty": "Nothing has been issued to a contractor for this project.",
+      "noContractor": "Issue a work order to a contractor first; material goes to their crew.",
+      "allAccounted": "All accounted for",
+      "holding": "{balance} {unit} with them",
+      "holdingLine": "{issued} issued · {used} used · {returned} returned",
+      "issue": "Issue to contractor",
+      "recordUse": "Record use",
+      "recordReturn": "Return to store",
+      "historyTitle": "Slips",
+      "historyEmpty": "No slips yet.",
+      "kinds": {
+        "issue": "Issued",
+        "use": "Used",
+        "return": "Returned"
+      },
+      "slipMeta": "{date} · {who}",
+      "slipFrom": "from {place}",
+      "slipChallan": "on challan {number}",
+      "slipTask": "at “{task}”",
+      "photo": "Photo",
+      "issueForm": {
+        "title": "Issue material",
+        "description": "Out of the store into {contractor}’s hands for {project}.",
+        "contractor": "Contractor",
+        "location": "From store",
+        "date": "Issue date",
+        "lines": "What they take",
+        "linesHint": "Leave a line empty to skip it. Reserved material for this project is used first.",
+        "product": "Stock item",
+        "noStock": "No stock item of this kind in the store",
+        "quantity": "Quantity",
+        "toIssue": "{remaining} {unit} still to issue · {free} free",
+        "free": "{free} {unit} free",
+        "note": "Note",
+        "photo": "Photo of the handover",
+        "photoHint": "Optional. JPEG, PNG, WebP or HEIC.",
+        "save": "Issue",
+        "saved": "Issued on {number}",
+        "nothing": "Enter a quantity for at least one item.",
+        "photoFailed": "Issued, but the photo did not upload: {reason}"
+      },
+      "drawForm": {
+        "useTitle": "Record use",
+        "useDescription": "What {contractor}’s crew put into the system on {project}.",
+        "returnTitle": "Return to store",
+        "returnDescription": "Unused material {contractor} brings back from {project}.",
+        "location": "Back to store",
+        "date": "Date",
+        "held": "{balance} {unit} with them",
+        "quantity": "Quantity",
+        "serials": "Serial numbers",
+        "serialsHint": "One per unit returned. Out on this project: {serials}",
+        "note": "Note",
+        "saveUse": "Record use",
+        "saveReturn": "Record return",
+        "savedUse": "Usage recorded on {number}",
+        "savedReturn": "Returned on {number}",
+        "nothing": "Enter a quantity for at least one item.",
+        "empty": "Nothing is with this contractor on this project."
+      },
+      "failed": "That did not work"
     }
   }
 }

@@ -12,6 +12,8 @@ export const customerSessions = pgTable(
     customerId: uuid('customer_id')
       .notNull()
       .references(() => customers.id, { onDelete: 'cascade' }),
+    /** A family member signed in on the customer's behalf (PRD 5.1); null is the customer. */
+    contactId: uuid('contact_id'),
     tokenHash: text('token_hash').notNull(),
     expiresAt: instant('expires_at').notNull(),
     lastSeenAt: instant('last_seen_at'),
@@ -35,6 +37,10 @@ export const serviceRequests = pgTable(
     status: text('status').notNull().default('open'),
     assigneeUserId: uuid('assignee_user_id').references(() => users.id, { onDelete: 'set null' }),
     resolutionNote: text('resolution_note'),
+    /** Service levels from the category (PRD 7.2); empty on requests raised before them. */
+    responseDueAt: instant('response_due_at'),
+    resolutionDueAt: instant('resolution_due_at'),
+    respondedAt: instant('responded_at'),
     resolvedAt: instant('resolved_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

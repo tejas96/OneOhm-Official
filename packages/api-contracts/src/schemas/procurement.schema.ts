@@ -64,7 +64,14 @@ export const goodsReceiptSchema = z.object({
   amountPaise: paiseSchema,
   by: z.string().nullable(),
   lines: z.array(
-    z.object({ description: z.string(), quantity: z.number(), serials: z.array(z.string()) }),
+    z.object({
+      description: z.string(),
+      quantity: z.number(),
+      serials: z.array(z.string()),
+      /** Units that failed inspection and went back to the vendor. */
+      rejectedQuantity: z.number(),
+      rejectionReason: z.string().nullable(),
+    }),
   ),
 });
 
@@ -114,6 +121,11 @@ export const receiptInputSchema = z.object({
         serials: z.array(z.string().trim().max(80)).max(2000).default([]),
         cellManufacturer: optional(160),
         cellInvoiceNumber: optional(60),
+        /** Units that failed inspection: sent back, not stocked or billed, still due. */
+        rejectedQuantity: quantitySchema
+          .refine((value) => value >= 0, 'Enter 0 or more.')
+          .default(0),
+        rejectionReason: optional(300),
       }),
     )
     .min(1, 'Enter what arrived.'),
@@ -134,6 +146,8 @@ export const materialRequirementSchema = z.object({
   ordered: z.number(),
   reserved: z.number(),
   dispatched: z.number(),
+  /** Handed from the store straight to the project's contractor. */
+  issued: z.number(),
   /** Free stock in the store that could be reserved now. */
   freeInStore: z.number(),
 });

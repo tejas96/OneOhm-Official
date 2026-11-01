@@ -2,6 +2,7 @@ import { COMPANY_ASSET_KINDS, DOCUMENT_CATEGORIES, TASK_EVIDENCE_CATEGORIES } fr
 import { z } from 'zod';
 import { idSchema, instantSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
+import { geotagFieldsSchema, photoGeotagSchema } from './site-activity.schema';
 
 export const documentCategorySchema = z.enum(DOCUMENT_CATEGORIES);
 export const companyAssetKindSchema = z.enum(COMPANY_ASSET_KINDS);
@@ -31,6 +32,8 @@ export const documentSchema = attachmentSchema.extend({
   uploadedBy: userRefSchema.nullable(),
   /** True when this file replaced an earlier one (the earlier file is not shown). */
   replaced: z.boolean(),
+  /** Where and when a field photo was taken, when it was recorded (PRD 4.2). */
+  geotag: photoGeotagSchema.nullable().optional(),
 });
 export type DocumentRecord = z.infer<typeof documentSchema>;
 
@@ -65,6 +68,7 @@ export const uploadFieldsSchema = z
     customerId: optionalId,
     propertyId: optionalId,
     name: z.string().trim().max(160).optional(),
+    ...geotagFieldsSchema.shape,
   })
   .refine(
     (fields) => Boolean(fields.projectId || fields.taskId || fields.customerId),

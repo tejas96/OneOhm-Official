@@ -6,6 +6,7 @@ import { apiContract } from '../../contract';
 import { pdfBody } from '../reports/reports.controller';
 import { ContractorCrewService } from './contractor-crew.service';
 import { ContractorsService } from './contractors.service';
+import { CrewPortalService } from './crew-portal.service';
 import { WorkOrderAdjustmentsService } from './work-order-adjustments.service';
 import { WorkOrderPdfService } from './work-order-pdf.service';
 import { WorkOrdersService } from './work-orders.service';
@@ -18,12 +19,16 @@ export class ContractorsController {
     private readonly workOrders: WorkOrdersService,
     private readonly adjustments: WorkOrderAdjustmentsService,
     private readonly pdf: WorkOrderPdfService,
+    private readonly crewPortal: CrewPortalService,
   ) {}
 
   @TsRestHandler(apiContract.contractors)
   handler(@CurrentActor() actor: Actor) {
     const manage = () => assertCan(actor, 'contractors.manage');
     return tsRestHandler(apiContract.contractors, {
+      // A crew member's own contractor only; the service turns everyone else away.
+      crewPayments: async () => ({ status: 200, body: await this.crewPortal.payments(actor) }),
+      crewFeedback: async () => ({ status: 200, body: await this.crewPortal.feedback(actor) }),
       listContractors: async ({ query }) => {
         manage();
         return { status: 200, body: await this.contractors.list(query.search) };

@@ -62,6 +62,11 @@ export const projectsContract = c.router({
       method: z.enum(['cash', 'cheque', 'bank_transfer', 'upi', 'razorpay', 'bank_disbursement']),
       receivedOn: calendarDateSchema,
       reference: z.string().trim().max(120).nullable().optional(),
+      /** Cash or cheque: who holds it until it is deposited (defaults to the recorder). */
+      collectedByUserId: idSchema.nullable().optional(),
+      chequeNumber: z.string().trim().max(20).nullable().optional(),
+      chequeBank: z.string().trim().max(80).nullable().optional(),
+      chequeDate: calendarDateSchema.nullable().optional(),
     }),
     responses: { 201: projectDetailSchema },
   },

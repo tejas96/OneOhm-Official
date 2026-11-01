@@ -3,6 +3,7 @@ import { ReportsModule } from '../reports/reports.module';
 import { ContractorCrewService } from './contractor-crew.service';
 import { ContractorsController } from './contractors.controller';
 import { ContractorsService } from './contractors.service';
+import { CrewPortalService } from './crew-portal.service';
 import { WorkOrderAdjustmentsService } from './work-order-adjustments.service';
 import { WorkOrderPdfService } from './work-order-pdf.service';
 import { WorkOrdersService } from './work-orders.service';
@@ -17,6 +18,7 @@ import { WorkOrdersService } from './work-orders.service';
     WorkOrdersService,
     WorkOrderAdjustmentsService,
     WorkOrderPdfService,
+    CrewPortalService,
   ],
 })
 export class ContractorsModule {}

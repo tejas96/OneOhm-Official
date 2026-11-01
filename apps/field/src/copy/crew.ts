@@ -1,0 +1,111 @@
+/**
+ * English (India) copy for the contractor crew screens (PRD 4.9): work orders, material
+ * with the crew, payments to the contractor, and feedback on the crew's work.
+ */
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+export const CREW = {
+  overline: 'Your work',
+  title: 'Work',
+  loading: 'Loading your work',
+  sections: {
+    label: 'Show',
+    orders: 'Orders',
+    material: 'Material',
+    payments: 'Payments',
+    feedback: 'Feedback',
+  },
+  orders: {
+    title: 'Work orders',
+    emptyTitle: 'No work orders yet',
+    emptyBody: 'When OneOhm gives your crew a project, its work order shows here.',
+    status: {
+      open: 'Open',
+      in_progress: 'In progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+    },
+    tasks: (done: number, total: number) => `${done} of ${plural(total, 'task', 'tasks')} done`,
+    due: (label: string) => `Due ${label}`,
+    overdue: 'Past due date',
+    noDue: 'No due date',
+  },
+  order: {
+    notFound: 'This work order is not available.',
+    scope: 'Scope',
+    due: 'Due',
+    tasksTitle: 'Tasks',
+    noTasks: 'No tasks are on this work order.',
+    cancelled: (reason: string) => `Cancelled: ${reason}`,
+  },
+  material: {
+    title: 'Material with your crew',
+    hint: 'Bring unused material back to the store; they record the return.',
+    emptyTitle: 'No material with your crew',
+    emptyBody: 'Material the store issues to your crew for a project shows here.',
+    withYou: 'with you',
+    totals: (issued: string, used: string, returned: string) =>
+      `Issued ${issued} · used ${used} · returned ${returned}`,
+    accounted: 'All accounted for',
+    installed: 'Installation done',
+    recordUse: 'Record use',
+    historyTitle: 'Recent slips',
+    kinds: { issue: 'Issued', use: 'Used', return: 'Returned' },
+    line: (quantity: string, unit: string, name: string) => `${quantity} ${unit} ${name}`,
+  },
+  use: {
+    title: 'Record what you used',
+    description: (project: string) =>
+      `What went into the system on ${project}. Leave an item empty if none of it was used.`,
+    quantity: (unit: string) => `Used (${unit})`,
+    max: (balance: string, unit: string) => `Up to ${balance} ${unit} with you`,
+    note: 'Note',
+    notePlaceholder: 'Anything the store should know',
+    save: 'Save usage',
+    saved: 'Usage recorded',
+    nothing: 'Enter how much of at least one item was used.',
+    tooMuch: 'More than is with your crew.',
+    wholeUnits: 'Use whole units.',
+  },
+  prompt: {
+    title: 'Material with your crew here',
+    body: (count: number) =>
+      `${plural(count, 'item', 'items')} still with you on this project. Record what went in when you finish.`,
+    action: 'Record what you used',
+  },
+  payments: {
+    title: 'Payments to your contractor',
+    awaiting: 'Awaiting approval',
+    approved: 'Approved, to be paid',
+    paid: 'Paid',
+    emptyTitle: 'No payments yet',
+    emptyBody: 'When a work order is finished and approved, its payment shows here.',
+    kinds: { work_order: 'Payout', retention: 'Retention', advance: 'Advance' },
+    status: { pending: 'Awaiting approval', approved: 'Approved', paid: 'Paid' },
+    paidOn: (date: string) => `Paid ${date}`,
+    dueOn: (date: string) => `Due ${date}`,
+    methods: {
+      cash: 'cash',
+      cheque: 'cheque',
+      bank_transfer: 'bank transfer',
+      upi: 'UPI',
+      razorpay: 'online',
+      bank_disbursement: 'bank transfer',
+    },
+    paidBy: (date: string, method: string) => `Paid ${date} by ${method}`,
+  },
+  feedback: {
+    title: 'How your work is going',
+    onTime: 'On time',
+    completed: 'Orders done',
+    rating: 'Customer rating',
+    ratingValue: (value: string) => `${value} / 5`,
+    none: '—',
+    ratingsTitle: 'Customer ratings',
+    ratingAria: (rating: number) => `${rating} out of 5`,
+    noRatings: 'No customer ratings yet.',
+    reworkTitle: 'Rework',
+    noRework: 'No rework recorded. Well done.',
+    deduction: (amount: string) => `${amount} deducted`,
+  },
+} as const;

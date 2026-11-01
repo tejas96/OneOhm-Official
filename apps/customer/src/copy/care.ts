@@ -1,5 +1,3 @@
-import type { ServiceRequest } from '@oneohm/api-contracts';
-
 export const SUPPORT = {
   title: 'Help',
   intro: 'Something not right with your system? Tell us and the service team will call you.',
@@ -16,16 +14,6 @@ export const SUPPORT = {
   historyTitle: 'Your requests',
   emptyTitle: 'No requests yet',
   emptyBody: 'If anything goes wrong with your system, ask for help here.',
-  category: {
-    no_generation: 'No electricity from solar',
-    low_generation: 'Less electricity than usual',
-    inverter_error: 'Inverter error or alarm',
-    physical_damage: 'Damage to panels or wiring',
-    cleaning: 'Panel cleaning',
-    billing_net_meter: 'Electricity bill or net meter',
-    subsidy: 'Subsidy question',
-    other: 'Something else',
-  } satisfies Readonly<Record<ServiceRequest['category'], string>>,
   status: { open: 'Received', in_progress: 'Being handled', resolved: 'Resolved' },
   raisedOn: (date: string) => `Raised ${date}`,
   resolution: 'What we did',
@@ -43,6 +31,18 @@ export const SUPPORT = {
   libraryDenied: 'Allow photo access in your phone settings to attach photos.',
 } as const;
 
+type ReferEvent = 'project_created' | 'advance_paid' | 'commissioned';
+const FRIEND_DOES: Readonly<Record<ReferEvent, string>> = {
+  project_created: 'books their solar project',
+  advance_paid: 'pays the advance',
+  commissioned: 'has their system switched on',
+};
+const THEY_DO: Readonly<Record<ReferEvent, string>> = {
+  project_created: 'book their project',
+  advance_paid: 'pay the advance',
+  commissioned: 'switch their system on',
+};
+
 export const REFER = {
   title: 'Refer a neighbour',
   intro:
@@ -58,10 +58,43 @@ export const REFER = {
   status: {
     received: 'Received',
     in_progress: 'Talking to OneOhm',
+    ordered: 'Going solar',
     installed: 'Went solar',
     closed: 'Closed',
   },
   referredOn: (date: string) => `Referred ${date}`,
+  codeTitle: 'Your referral code',
+  codeLabel: (code: string) => `Your referral code is ${code}`,
+  codeHint: 'Friends quote this code on WhatsApp or when our team calls.',
+  terms: (amount: string, event: ReferEvent) =>
+    `Earn ${amount} when your friend ${FRIEND_DOES[event]}.`,
+  termsPerKw: (amount: string, event: ReferEvent) =>
+    `Earn ${amount} for every kW your friend installs, once they ${THEY_DO[event]}.`,
+  termsOff: 'Share your code with anyone who wants solar. We call them and keep you posted.',
+  approvalNote: 'OneOhm approves each reward, then pays it to you.',
+  shareWhatsApp: 'Share on WhatsApp',
+  shareOther: 'Share another way',
+  shareFailed: 'Sharing did not open. Tell your friend your code instead.',
+  shareText: (code: string, link: string | null) =>
+    link
+      ? `I got solar from OneOhm and my electricity bill came down. Want solar too? Message OneOhm on WhatsApp with my referral code ${code}: ${link}`
+      : `I got solar from OneOhm and my electricity bill came down. Want solar too? Call OneOhm and quote my referral code ${code}.`,
+  friendMessage: (code: string) =>
+    `Hi OneOhm, I would like solar for my home. My referral code is ${code}.`,
+  totals: {
+    earned: 'Earned',
+    pending: 'Waiting for approval',
+    approved: 'Approved',
+    paid: 'Paid to you',
+  },
+  reward: {
+    pending: 'Reward pending',
+    approved: 'Reward approved',
+    paid: 'Reward paid',
+    rejected: 'Not eligible',
+  },
+  rewardAmount: (amount: string) => `Reward ${amount}`,
+  rewardPaidOn: (amount: string, date: string) => `${amount} paid ${date}`,
 } as const;
 
 export const FEEDBACK = {

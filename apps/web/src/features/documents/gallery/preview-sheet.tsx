@@ -2,11 +2,13 @@
 
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { Button, Sheet } from '@oneohm/design-system/web';
-import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, ExternalLink, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { printDocument } from '@/lib/api/print';
 import { documentUrl } from '@/lib/api/upload';
 import { fileSize } from '../document-row';
+import type { DocumentRights } from '../use-document-rights';
 import { folderOf, titleOf } from './document-kinds';
 import { ACCEPT } from './file-drop-zone';
 import { PreviewDetails } from './preview-details';
@@ -16,17 +18,17 @@ import { useRemoveDocument, useReplaceDocument } from './use-document-actions';
 import { useFolderLabel, useKindLabel } from './use-labels';
 
 /**
- * A document opened from the gallery: a large preview, the details, open and download,
- * and (for people who manage documents) replace and remove with a confirmation.
+ * A document opened from the gallery: a large preview, the details, open, print and
+ * download (each by right), and for managers replace and remove with a confirmation.
  */
 export function PreviewSheet({
   document,
-  canManage,
+  rights,
   showProject,
   onChange,
 }: {
   readonly document: DocumentRecord | null;
-  readonly canManage: boolean;
+  readonly rights: DocumentRights;
   readonly showProject: boolean;
   /** The sheet now shows another record (a replacement) or nothing. */
   readonly onChange: (document: DocumentRecord | null) => void;
@@ -59,7 +61,7 @@ export function PreviewSheet({
   const footer = shown && (
     // Phones: open and download first, two to a row; wider screens: one row, remove apart.
     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
-      {canManage && (
+      {rights.manage && (
         <>
           <Button
             variant="quiet"
@@ -94,12 +96,24 @@ export function PreviewSheet({
           </Button>
         </>
       )}
-      <Button asChild variant="secondary" className="order-1 sm:order-none">
-        <a href={documentUrl(shown.id, 'attachment')} download={shown.name}>
-          <Download aria-hidden className="size-4" />
-          {t('download')}
-        </a>
-      </Button>
+      {rights.print && (
+        <Button
+          variant="secondary"
+          leadingIcon={<Printer aria-hidden />}
+          onClick={() => printDocument(shown.id)}
+          className="order-1 sm:order-none"
+        >
+          {t('print')}
+        </Button>
+      )}
+      {rights.download && (
+        <Button asChild variant="secondary" className="order-1 sm:order-none">
+          <a href={documentUrl(shown.id, 'attachment')} download={shown.name}>
+            <Download aria-hidden className="size-4" />
+            {t('download')}
+          </a>
+        </Button>
+      )}
       <Button asChild variant="primary" className="order-2 sm:order-none">
         <a href={documentUrl(shown.id)} target="_blank" rel="noopener">
           <ExternalLink aria-hidden className="size-4" />

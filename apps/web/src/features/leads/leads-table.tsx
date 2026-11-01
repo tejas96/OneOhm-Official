@@ -46,7 +46,11 @@ export function LeadsTable({
       key: 'stage',
       header: t('columns.stage'),
       cell: (lead) => (
-        <StatusPill tone={STAGE_TONE[lead.stage]} label={t(`stage.${lead.stage}`)} size="sm" />
+        <StatusPill
+          tone={STAGE_TONE[lead.stage]}
+          label={lead.step?.name ?? t(`stage.${lead.stage}`)}
+          size="sm"
+        />
       ),
     },
     {

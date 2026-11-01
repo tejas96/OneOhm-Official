@@ -9,13 +9,21 @@ import {
 import { applyStockChange, type StockProblem } from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { AppError, notFound } from '../../common/http/errors';
+import { alertIfShort } from './stock-alerts';
 
 export interface StockMove {
   readonly productId: string;
   /** Product name, for the error people read when a rule would break. */
   readonly label: string;
   readonly locationId: string;
-  readonly kind: 'receipt' | 'reservation' | 'release' | 'dispatch' | 'adjustment';
+  readonly kind:
+    | 'receipt'
+    | 'reservation'
+    | 'release'
+    | 'dispatch'
+    | 'adjustment'
+    | 'issue'
+    | 'return';
   readonly onHand: number;
   readonly reserved: number;
   readonly projectId?: string | null;
@@ -63,6 +71,7 @@ export async function moveStock(tx: Transaction, move: StockMove): Promise<void>
     note: move.note ?? null,
     userId: move.userId,
   });
+  await alertIfShort(tx, move);
 }
 
 /** The chosen location, or the main store when none is given. */
@@ -81,8 +90,14 @@ export async function resolveLocation(tx: Transaction, locationId: string | null
 /** Next document number for the year, e.g. PO/2026/0007. Serialised per prefix. */
 export async function nextNumber(
   tx: Transaction,
-  table: 'purchase_orders' | 'goods_receipts' | 'dispatches',
-  prefix: 'PO' | 'GRN' | 'DC',
+  table:
+    | 'purchase_orders'
+    | 'goods_receipts'
+    | 'dispatches'
+    | 'material_slips'
+    | 'purchase_requests'
+    | 'vendor_advances',
+  prefix: 'PO' | 'GRN' | 'DC' | 'MI' | 'MU' | 'MR' | 'PR' | 'VA',
   date: string,
 ): Promise<string> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`oneohm:${prefix}`}))`);

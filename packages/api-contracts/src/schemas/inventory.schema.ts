@@ -151,7 +151,7 @@ export const stockMovementSchema = z.object({
   productName: z.string(),
   unit: z.string(),
   locationName: z.string(),
-  kind: z.enum(['receipt', 'reservation', 'release', 'dispatch', 'adjustment']),
+  kind: z.enum(['receipt', 'reservation', 'release', 'dispatch', 'adjustment', 'issue', 'return']),
   onHandDelta: z.number(),
   reservedDelta: z.number(),
   projectCode: z.string().nullable(),
@@ -172,6 +172,8 @@ export const dispatchInputSchema = z.object({
   driverName: optional(120),
   driverPhone: optionalPhone,
   notes: optional(500),
+  /** The contractor whose crew takes the material at site; it is then with them. */
+  contractorId: idSchema.nullable().default(null),
 });
 export type DispatchInput = z.input<typeof dispatchInputSchema>;
 export type DispatchData = z.output<typeof dispatchInputSchema>;
@@ -196,6 +198,7 @@ export const dispatchSchema = z.object({
   driverName: z.string().nullable(),
   driverPhone: z.string().nullable(),
   notes: z.string().nullable(),
+  contractor: z.object({ id: idSchema, name: z.string() }).nullable(),
   lines: z.array(dispatchLineSchema),
   by: z.string().nullable(),
 });

@@ -62,7 +62,7 @@ export const payableSchema = z.object({
   id: idSchema,
   projectId: idSchema.nullable(),
   projectCode: z.string().nullable(),
-  party: z.enum(['vendor', 'contractor']),
+  party: z.enum(['vendor', 'contractor', 'employee']),
   partyName: z.string(),
   description: z.string(),
   billNumber: z.string().nullable(),
@@ -76,6 +76,8 @@ export const payableSchema = z.object({
   paidMethod: moneyInMethodSchema.nullable(),
   paidReference: z.string().nullable(),
   createdAt: instantSchema,
+  /** Vendor advances set against the bill; only the rest is paid out. */
+  advanceAdjustedPaise: paiseSchema,
 });
 export type Payable = z.infer<typeof payableSchema>;
 

@@ -1,7 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { serviceRequests } from '@oneohm/database';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { eq } from 'drizzle-orm';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
@@ -16,8 +14,11 @@ export class ServiceDeskController {
     return tsRestHandler(apiContract.serviceDesk, {
       listTickets: async ({ query }) => {
         assertCan(actor, 'service.manage', 'customers.view');
-        const where = query.status ? eq(serviceRequests.status, query.status) : undefined;
-        return { status: 200, body: await this.desk.tickets(where) };
+        return { status: 200, body: await this.desk.tickets(query) };
+      },
+      listAssignees: async () => {
+        assertCan(actor, 'service.manage');
+        return { status: 200, body: await this.desk.assignees() };
       },
       updateTicket: async ({ params, body }) => {
         assertCan(actor, 'service.manage');

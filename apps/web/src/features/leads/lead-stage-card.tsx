@@ -10,11 +10,11 @@ import {
   StatusPill,
   Textarea,
 } from '@oneohm/design-system/web';
-import { LEAD_STAGES, type LeadStage } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { RotateCcw, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { useLeadSteps } from '@/features/settings/lead-steps/use-lead-steps';
 import { ApiError } from '@/lib/api/api-error';
 import { STAGE_TONE } from './lead-labels';
 import { useUpdateLead } from './use-lead-mutations';
@@ -29,19 +29,17 @@ export function LeadStageCard({
 }) {
   const t = useTranslations('leads');
   const update = useUpdateLead(lead.id);
+  const steps = useLeadSteps();
   const [losing, setLosing] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const lost = lead.stage === 'lost';
 
-  const move = (stage: LeadStage) => {
+  const move = (value: string) => {
     setError(null);
-    update.mutate(
-      { stage },
-      {
-        onError: (caught) => setError(caught instanceof ApiError ? caught.message : String(caught)),
-      },
-    );
+    update.mutate(value === 'won' ? { stage: 'won' } : { stepKey: value }, {
+      onError: (caught) => setError(caught instanceof ApiError ? caught.message : String(caught)),
+    });
   };
   const markLost = () =>
     update.mutate(
@@ -61,7 +59,11 @@ export function LeadStageCard({
     <Card className="flex flex-col gap-4 rounded-[28px] p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="type-overline text-ink-faint uppercase">{t('stageCard.title')}</h2>
-        <StatusPill tone={STAGE_TONE[lead.stage]} label={t(`stage.${lead.stage}`)} size="sm" />
+        <StatusPill
+          tone={STAGE_TONE[lead.stage]}
+          label={lead.step?.name ?? t(`stage.${lead.stage}`)}
+          size="sm"
+        />
       </div>
       {lost ? (
         <div className="flex flex-col gap-3">
@@ -84,12 +86,18 @@ export function LeadStageCard({
           <div className="flex flex-col gap-3">
             <Select
               label={t('stageCard.move')}
-              value={lead.stage}
+              value={lead.step?.key ?? lead.stage}
               onValueChange={move}
-              options={LEAD_STAGES.filter((stage) => stage !== 'lost').map((value) => ({
-                value,
-                label: t(`stage.${value}`),
-              }))}
+              options={[
+                ...(steps.data ?? [])
+                  .filter((step) => step.active || step.key === lead.step?.key)
+                  .map((step) => ({
+                    value: step.key,
+                    label: step.name,
+                    description: t(`stage.${step.stage}`),
+                  })),
+                { value: 'won', label: t('stage.won') },
+              ]}
               disabled={update.isPending}
             />
             <Button

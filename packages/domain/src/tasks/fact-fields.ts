@@ -41,6 +41,7 @@ const SPECS: Readonly<Record<string, FieldSpec>> = {
   module_count: ['Number of panels', 'number'],
   inverter_make: ['Inverter make'],
   inverter_serial_number: ['Inverter serial number'],
+  battery_serial_number: ['Battery serial number'],
   earthing_resistance: ['Earthing resistance (Ω)', 'number'],
   meter_serial_number: ['Generation meter serial number'],
   meter_make: ['Meter make'],

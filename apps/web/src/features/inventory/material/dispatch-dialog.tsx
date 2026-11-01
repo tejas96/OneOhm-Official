@@ -1,7 +1,15 @@
 'use client';
 
 import type { ProjectMaterial } from '@oneohm/api-contracts';
-import { Button, Dialog, Field, Input, Textarea, useToast } from '@oneohm/design-system/web';
+import {
+  Button,
+  Dialog,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  useToast,
+} from '@oneohm/design-system/web';
 import { todayIn } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
@@ -9,6 +17,9 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useRefreshInventory } from '../use-inventory';
+import { useProjectCustody } from './use-custody';
+
+const NOBODY = 'none';
 
 /** Everything reserved for the project leaves the store on one delivery challan. */
 export function DispatchDialog({
@@ -28,6 +39,9 @@ export function DispatchDialog({
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [contractorId, setContractorId] = useState(NOBODY);
+  const custody = useProjectCustody(material?.projectId ?? null);
+  const crews = custody.data?.contractors ?? [];
   const { reset } = form;
 
   useEffect(() => {
@@ -39,6 +53,11 @@ export function DispatchDialog({
     setNotes('');
     reset();
   }, [material, reset]);
+  // One crew on the project: they are the ones taking it at site.
+  const onlyCrew = custody.data?.contractors.length === 1 ? custody.data.contractors[0]?.id : null;
+  useEffect(() => {
+    if (material) setContractorId(onlyCrew ?? NOBODY);
+  }, [material, onlyCrew]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,7 +66,14 @@ export function DispatchDialog({
       expectStatus(
         api.inventory.material.dispatch({
           params: { id: material.projectId },
-          body: { dispatchedOn, vehicle, driverName, driverPhone, notes },
+          body: {
+            dispatchedOn,
+            vehicle,
+            driverName,
+            driverPhone,
+            notes,
+            contractorId: contractorId === NOBODY ? null : contractorId,
+          },
         }),
         201,
       ),
@@ -100,6 +126,18 @@ export function DispatchDialog({
             />
           </Field>
         </div>
+        {crews.length > 0 && (
+          <Field label={t('contractor')} hint={t('contractorHint')} error={errors.contractorId}>
+            <Select
+              value={contractorId}
+              onValueChange={setContractorId}
+              options={[
+                { value: NOBODY, label: t('noContractor') },
+                ...crews.map((crew) => ({ value: crew.id, label: crew.name })),
+              ]}
+            />
+          </Field>
+        )}
         <Field label={t('notes')} error={errors.notes}>
           <Textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} />
         </Field>

@@ -9,6 +9,7 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { bodyFrom, draftFrom, EMPTY_PERSON, PersonFields } from './person-fields';
+import { SkillsPicker } from './skills/skills-picker';
 import { PEOPLE_KEY, ROLES_KEY } from './use-team';
 
 /** Details, roles, leave and sign-in access for one person. */
@@ -29,6 +30,7 @@ export function EditPersonSheet({
   const [draft, setDraft] = useState(EMPTY_PERSON);
   const [onLeave, setOnLeave] = useState(false);
   const [active, setActive] = useState(true);
+  const [skills, setSkills] = useState<string[]>([]);
   const { reset } = form;
 
   useEffect(() => {
@@ -36,13 +38,19 @@ export function EditPersonSheet({
     setDraft(draftFrom(person));
     setOnLeave(person.onLeave);
     setActive(person.status === 'active');
+    setSkills(person.skills);
     reset();
   }, [person, reset]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!person) return;
-    const body = { ...bodyFrom(draft), onLeave, status: active ? 'active' : 'inactive' } as const;
+    const body = {
+      ...bodyFrom(draft),
+      onLeave,
+      status: active ? 'active' : 'inactive',
+      skills,
+    } as const;
     const saved = await form.run(() =>
       expectStatus(api.people.updatePerson({ params: { id: person.id }, body }), 200),
     );
@@ -88,6 +96,11 @@ export function EditPersonSheet({
             errors={form.fieldErrors}
             mode="edit"
           />
+        </section>
+        <section className="flex flex-col gap-2 border-t border-hairline pt-6">
+          <h3 className="type-overline text-ink-faint uppercase">{t('skills')}</h3>
+          <p className="type-body-sm text-ink-faint">{t('skillsHint')}</p>
+          <SkillsPicker value={skills} onChange={setSkills} error={form.fieldErrors.skills} />
         </section>
         <section className="flex flex-col gap-1 border-t border-hairline pt-6">
           <h3 className="mb-2 type-overline text-ink-faint uppercase">{t('access')}</h3>

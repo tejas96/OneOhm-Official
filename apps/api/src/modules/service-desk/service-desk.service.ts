@@ -1,118 +1,170 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { FeedbackEntry, ServiceTicket } from '@oneohm/api-contracts';
-import { customerFeedback, customers, projects, serviceRequests, users } from '@oneohm/database';
-import { desc, eq, type SQL } from 'drizzle-orm';
+import type {
+  FeedbackEntry,
+  ServiceAssignee,
+  ServiceTicket,
+  serviceTicketQuerySchema,
+} from '@oneohm/api-contracts';
+import {
+  customerFeedback,
+  customers,
+  holdersOf,
+  notify,
+  projects,
+  serviceCategories,
+  serviceRequests,
+  users,
+} from '@oneohm/database';
+import { slaBreached } from '@oneohm/domain';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import type { z } from 'zod';
 import { recordAudit } from '../../common/audit';
-import { notFound } from '../../common/http/errors';
+import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
-import { photosOfRequests } from '../../common/read-models/service-request-photos';
+import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
 
 type Ticket = ServiceTicket;
+type Query = z.infer<typeof serviceTicketQuerySchema>;
 type Patch = {
   status?: Ticket['status'] | undefined;
   assigneeUserId?: string | null | undefined;
+  category?: string | undefined;
   resolutionNote?: string | null | undefined;
 };
 
-const CATEGORY_LABEL: Readonly<Record<Ticket['category'], string>> = {
-  no_generation: 'no generation',
-  low_generation: 'low generation',
-  inverter_error: 'an inverter error',
-  physical_damage: 'physical damage',
-  cleaning: 'panel cleaning',
-  billing_net_meter: 'billing or the net meter',
-  subsidy: 'your subsidy',
-  other: 'your request',
-};
 const STATUS_LABEL: Readonly<Record<Ticket['status'], string>> = {
   open: 'received',
   in_progress: 'being worked on',
   resolved: 'resolved',
 };
 
+function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
+  if (!filter) return true;
+  if (filter === 'breached') return slaBreached(ticket.sla);
+  return ticket.sla.response === 'due_soon' || ticket.sla.resolution === 'due_soon';
+}
+
+type Row = Awaited<ReturnType<typeof serviceRequestRows>>[number];
+
+/** The columns a patch changes. Leaving "open" for the first time answers the request. */
+function changesFor(patch: Patch, before: Row['request'], now: Date) {
+  const moving = patch.status !== undefined && patch.status !== before.status;
+  const answered = moving && patch.status !== 'open' && !before.respondedAt;
+  return {
+    ...(patch.status ? { status: patch.status } : {}),
+    ...(patch.assigneeUserId !== undefined ? { assigneeUserId: patch.assigneeUserId } : {}),
+    ...(patch.category ? { category: patch.category } : {}),
+    ...(patch.resolutionNote !== undefined ? { resolutionNote: patch.resolutionNote } : {}),
+    ...(patch.status ? { resolvedAt: patch.status === 'resolved' ? now : null } : {}),
+    ...(answered ? { respondedAt: now } : {}),
+    updatedAt: now,
+  };
+}
+
+function assignedNotice(current: Row, owner: string, now: Date) {
+  const { request } = current;
+  return {
+    kind: 'service_assigned',
+    title: 'Service request for you',
+    body: `${current.label ?? request.category}: ${current.customer.name}. ${request.description.slice(0, 100)}`,
+    subject: { type: 'service_request' as const, id: request.id, projectId: request.projectId },
+    dedupeKey: `service_assigned:${request.id}:${owner}:${now.getTime()}`,
+  };
+}
+
 /** Customer service requests and ratings, as the office sees and works them. */
 @Injectable()
 export class ServiceDeskService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async tickets(where?: SQL): Promise<Ticket[]> {
-    const rows = await this.db
-      .select({
-        request: serviceRequests,
-        customer: { id: customers.id, name: customers.name, phone: customers.phoneE164 },
-        projectCode: projects.code,
-        assigneeName: users.fullName,
-      })
-      .from(serviceRequests)
-      .innerJoin(customers, eq(customers.id, serviceRequests.customerId))
-      .leftJoin(projects, eq(projects.id, serviceRequests.projectId))
-      .leftJoin(users, eq(users.id, serviceRequests.assigneeUserId))
-      .where(where)
-      .orderBy(desc(serviceRequests.createdAt));
-    const photos = await photosOfRequests(
+  async tickets(query: Query = {}): Promise<Ticket[]> {
+    const rows = await serviceRequestRows(
       this.db,
-      rows.map(({ request }) => request.id),
+      query.status ? eq(serviceRequests.status, query.status) : undefined,
     );
-    return rows.map(({ request, customer, projectCode, assigneeName }) => ({
-      id: request.id,
-      category: request.category as Ticket['category'],
-      description: request.description,
-      status: request.status as Ticket['status'],
-      customer,
-      project:
-        request.projectId && projectCode ? { id: request.projectId, code: projectCode } : null,
-      assignee:
-        request.assigneeUserId && assigneeName
-          ? { id: request.assigneeUserId, name: assigneeName }
-          : null,
-      resolutionNote: request.resolutionNote,
-      photos: photos.get(request.id) ?? [],
-      createdAt: request.createdAt.toISOString(),
-      resolvedAt: request.resolvedAt?.toISOString() ?? null,
-    }));
+    const now = new Date();
+    return rows
+      .map((row) => toTicket(row, now))
+      .filter((ticket) => !query.kind || ticket.kind === query.kind)
+      .filter((ticket) => matchesSla(ticket, query.sla));
+  }
+
+  private async one(id: string) {
+    const [row] = await serviceRequestRows(this.db, eq(serviceRequests.id, id));
+    if (!row) throw notFound('That service request');
+    return row;
+  }
+
+  /** Everyone who works service requests, least busy first; people on leave last. */
+  async assignees(): Promise<ServiceAssignee[]> {
+    const ids = await holdersOf(this.db, 'service.manage');
+    if (ids.length === 0) return [];
+    const people = await this.db
+      .select({ id: users.id, name: users.fullName, onLeave: users.onLeave })
+      .from(users)
+      .where(inArray(users.id, ids));
+    const loads = await this.db
+      .select({ userId: serviceRequests.assigneeUserId, open: sql<number>`count(*)::int` })
+      .from(serviceRequests)
+      .where(
+        and(ne(serviceRequests.status, 'resolved'), inArray(serviceRequests.assigneeUserId, ids)),
+      )
+      .groupBy(serviceRequests.assigneeUserId);
+    return people
+      .map((person) => ({
+        ...person,
+        open: loads.find((load) => load.userId === person.id)?.open ?? 0,
+      }))
+      .sort(
+        (left, right) =>
+          Number(left.onLeave) - Number(right.onLeave) ||
+          left.open - right.open ||
+          left.name.localeCompare(right.name),
+      );
   }
 
   async update(actorId: string, id: string, patch: Patch): Promise<Ticket> {
-    const [current] = await this.tickets(eq(serviceRequests.id, id));
-    if (!current) throw notFound('That service request');
-    const resolving = patch.status === 'resolved' && current.status !== 'resolved';
+    const current = await this.one(id);
+    const before = current.request;
+    if (patch.category && patch.category !== before.category)
+      await this.assertCategory(patch.category);
+    const now = new Date();
     await this.db.transaction(async (tx) => {
       await tx
         .update(serviceRequests)
-        .set({
-          ...(patch.status ? { status: patch.status } : {}),
-          ...(patch.assigneeUserId !== undefined ? { assigneeUserId: patch.assigneeUserId } : {}),
-          ...(patch.resolutionNote !== undefined ? { resolutionNote: patch.resolutionNote } : {}),
-          ...(patch.status ? { resolvedAt: patch.status === 'resolved' ? new Date() : null } : {}),
-          updatedAt: new Date(),
-        })
+        .set(changesFor(patch, before, now))
         .where(eq(serviceRequests.id, id));
-      if (patch.status && patch.status !== current.status) {
+      if (patch.status && patch.status !== before.status) {
         await queueWhatsApp(
           tx,
           current.customer.phone,
           'service_update',
           {
             customer: current.customer.name,
-            topic: CATEGORY_LABEL[current.category],
+            topic: (current.customerLabel ?? current.label ?? 'your request').toLowerCase(),
             status: STATUS_LABEL[patch.status],
           },
-          `service:${id}:${patch.status}:${Date.now()}`,
+          `service:${id}:${patch.status}:${now.getTime()}`,
         );
       }
-      await recordAudit(
-        tx,
-        actorId,
-        resolving ? 'service.resolved' : 'service.updated',
-        'service_request',
-        id,
-        patch,
-      );
+      const owner = patch.assigneeUserId;
+      if (owner && owner !== before.assigneeUserId && owner !== actorId) {
+        await notify(tx, { userId: owner }, assignedNotice(current, owner, now));
+      }
+      const resolving = patch.status === 'resolved' && before.status !== 'resolved';
+      const action = resolving ? 'service.resolved' : 'service.updated';
+      await recordAudit(tx, actorId, action, 'service_request', id, patch);
     });
-    const [updated] = await this.tickets(eq(serviceRequests.id, id));
-    if (!updated) throw notFound('That service request');
-    return updated;
+    return toTicket(await this.one(id), new Date());
+  }
+
+  private async assertCategory(key: string): Promise<void> {
+    const [row] = await this.db
+      .select({ active: serviceCategories.active })
+      .from(serviceCategories)
+      .where(eq(serviceCategories.key, key));
+    if (!row?.active) throw invalid('Pick a category that is in use.', { category: 'Not in use.' });
   }
 
   async feedback(): Promise<FeedbackEntry[]> {

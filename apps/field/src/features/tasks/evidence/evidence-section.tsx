@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { TASK } from '@/copy/tasks';
 import { UPLOADS } from '@/copy/uploads';
+import { useTaskSite } from '@/features/site/use-task-site';
 import { isSignatureFile, splitQueued } from './evidence-rules';
 import { AttachmentTile, PendingTile } from './evidence-tiles';
 import { pickDocuments } from './pick-documents';
@@ -30,6 +31,8 @@ export function EvidenceSection({
 }) {
   const theme = useTheme();
   const [notice, setNotice] = useState<string | null>(null);
+  // Photos carry their location only with consent, in working hours (PRD 4.2, 4.3).
+  const locate = useTaskSite(task.id).data?.tracking.state === 'on';
   const open = task.status !== 'completed';
   const wantsPhoto = task.evidence.includes('photo');
   const wantsDocument = task.evidence.includes('document');
@@ -39,7 +42,7 @@ export function EvidenceSection({
 
   const choose = async (source: PhotoSource) => {
     setNotice(null);
-    const picked = await pickPhotos(source);
+    const picked = await pickPhotos(source, locate);
     if (picked === 'denied') {
       setNotice(source === 'camera' ? TASK.evidence.cameraDenied : TASK.evidence.libraryDenied);
       return;

@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
+import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
 import { TaskActions } from './task-actions';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
@@ -135,6 +136,7 @@ export function TaskCard({
           </p>
         )}
         <TaskEvidenceLine task={task} />
+        {!showProject && <TaskVisitLine task={task} />}
       </div>
     </motion.li>
   );

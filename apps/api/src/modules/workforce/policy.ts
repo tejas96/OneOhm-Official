@@ -1,15 +1,18 @@
 import { type DatabaseExecutor, workforcePolicy, workLocations } from '@oneohm/database';
-import { DEFAULT_WORKFORCE_POLICY, type WorkforcePolicy, type WorkLocation } from '@oneohm/domain';
+import { type WorkforcePolicy, type WorkLocation, withPolicyDefaults } from '@oneohm/domain';
 import { asc, eq } from 'drizzle-orm';
 
-/** The current rules; the defaults until an owner saves their own. */
+/**
+ * The current rules; the defaults until an owner saves their own, and for any section
+ * added since they last saved (the travel rules, for example).
+ */
 export async function loadPolicy(db: DatabaseExecutor): Promise<WorkforcePolicy> {
   const [row] = await db
     .select({ policy: workforcePolicy.policy })
     .from(workforcePolicy)
     .where(eq(workforcePolicy.id, 'default'))
     .limit(1);
-  return row?.policy ?? DEFAULT_WORKFORCE_POLICY;
+  return withPolicyDefaults(row?.policy);
 }
 
 /** Every authorised place (active or not), oldest first. */

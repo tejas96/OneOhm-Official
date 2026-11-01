@@ -1,4 +1,3 @@
-import { SERVICE_CATEGORIES, type ServiceRequest } from '@oneohm/api-contracts';
 import {
   Button,
   ChoiceChips,
@@ -12,30 +11,33 @@ import {
   unwrap,
 } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { FormAlert } from '@/components/form-alert';
 import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
+import { COVER } from '@/copy/after-sales';
 import { SUPPORT } from '@/copy/care';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { PhotoStrip } from './photo-strip';
 import { MAX_REQUEST_PHOTOS, pickRequestPhotos, sendRequestPhotos } from './request-photos';
-
-type Category = ServiceRequest['category'];
+import { useServiceCategories } from './use-after-sales';
 
 /** One question at a time: what kind of problem, which system, and what is happening. */
 export function NewRequestScreen() {
   const toast = useToast();
   const client = useQueryClient();
   const home = useHome();
+  const categories = useServiceCategories().data ?? [];
+  // "Ask about an AMC" opens this screen with the question written out.
+  const asking = useLocalSearchParams<{ ask?: string }>().ask === 'amc';
   const projects = home.data?.projects ?? [];
   const { project: chosen } = useChosenProject(projects);
-  const [category, setCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<string | null>(asking ? 'other' : null);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(asking ? COVER.askDescription : '');
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<readonly UploadableFile[]>([]);
   const forProject = projectId ?? chosen?.id ?? null;
@@ -95,7 +97,7 @@ export function NewRequestScreen() {
       <View style={styles.form}>
         <ChoiceChips
           label={SUPPORT.categoryLabel}
-          choices={SERVICE_CATEGORIES.map((value) => ({ value, label: SUPPORT.category[value] }))}
+          choices={categories.map((item) => ({ value: item.key, label: item.label }))}
           value={category}
           onChange={setCategory}
         />

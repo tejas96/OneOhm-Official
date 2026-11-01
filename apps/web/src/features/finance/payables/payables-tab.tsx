@@ -88,7 +88,14 @@ export function PayablesTab() {
       header: t('columns.amount'),
       align: 'end',
       cell: (bill) => (
-        <span className="font-mono text-ink tabular-nums">{formatInr(bill.amountPaise)}</span>
+        <span className="flex flex-col items-end gap-0.5">
+          <span className="font-mono text-ink tabular-nums">{formatInr(bill.amountPaise)}</span>
+          {bill.advanceAdjustedPaise > 0 && (
+            <span className="whitespace-nowrap type-label text-ink-faint">
+              {t('advanceAdjusted', { amount: formatInr(bill.advanceAdjustedPaise) })}
+            </span>
+          )}
+        </span>
       ),
     },
     {

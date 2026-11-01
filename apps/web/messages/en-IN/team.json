@@ -61,7 +61,9 @@
       "activeHint": "Turning this off signs them out and keeps their history.",
       "save": "Save changes",
       "saved": "Changes saved",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "skills": "Skills",
+      "skillsHint": "Tasks that need a skill go first to people in the role who have it."
     },
     "tabsLabel": "Team sections",
     "noAccess": "You do not have permission to see the team.",
@@ -69,7 +71,9 @@
       "people": "People",
       "attendance": "Attendance",
       "leave": "Leave",
-      "points": "Points"
+      "points": "Points",
+      "resellers": "Resellers",
+      "travel": "Travel"
     },
     "decide": {
       "choice": "Your decision",
@@ -307,6 +311,86 @@
         "recognitionDetail": "Given by a manager, with a reason.",
         "upTo": "up to {max}"
       }
+    },
+    "resellers": {
+      "intro": "Leads each reseller brought, how many turned into projects, the value sold and the commission they earned. Finance approves and pays commission under Finance, Commissions & rewards.",
+      "loading": "Loading resellers",
+      "loadingRule": "Loading the default rule",
+      "caption": "Reseller performance",
+      "emptyTitle": "No resellers yet",
+      "emptyBody": "Add a person with the Reseller / Promoter role under People. Their leads and commission show here.",
+      "inactive": "Inactive",
+      "defaultTitle": "Default commission",
+      "defaultHint": "Every reseller without their own rule earns this.",
+      "editDefault": "Edit default",
+      "ownRule": "Own rule",
+      "defaultRule": "Default",
+      "editRule": "Edit",
+      "setRule": "Set own rule",
+      "leadsCount": "{count, plural, one {# lead} other {# leads}}",
+      "openCount": "{count} still open",
+      "wonLost": "{won} won · {lost} lost",
+      "projectsSold": "{count, plural, =0 {No projects} one {# project} other {# projects}} · {size}",
+      "commissionSplit": "{open} owed · {paid} paid",
+      "stats": {
+        "resellers": "Resellers",
+        "valueSold": "Value sold",
+        "toApprove": "Commission to approve",
+        "toPay": "Commission to pay"
+      },
+      "columns": {
+        "reseller": "Reseller",
+        "leads": "Leads",
+        "conversion": "Conversion",
+        "sold": "Sold",
+        "commission": "Commission earned",
+        "rule": "Rule"
+      },
+      "rule": {
+        "off": "No commission (rule is off)",
+        "percent": "{rate}% of project value, {event}",
+        "perKw": "{amount} per kW, {event}",
+        "events": {
+          "project_created": "when the project is created",
+          "advance_paid": "when the advance is paid",
+          "commissioned": "when the system is commissioned"
+        }
+      },
+      "sheet": {
+        "titleDefault": "Default commission",
+        "titleFor": "Commission for {name}",
+        "descriptionDefault": "Applies to every reseller without their own rule. Commission already earned keeps its terms.",
+        "descriptionFor": "This reseller's own rule, instead of the default. Commission already earned keeps its terms.",
+        "defaultName": "Default commission",
+        "active": "Commission is on",
+        "activeHint": "When off, nothing new is earned.",
+        "basis": "Commission is",
+        "bases": {
+          "percent": "A percent of project value",
+          "per_kw": "An amount per kW"
+        },
+        "rate": "Percent of project value",
+        "rateHint": "Of the full contract price the customer pays, for example 3.",
+        "perKw": "Amount per kW",
+        "perKwHint": "For each kW of capacity sold.",
+        "event": "Earned when",
+        "eventHint": "Commission is earned once, when the project reaches this step.",
+        "useDefault": "Use the default instead",
+        "cancel": "Cancel",
+        "save": "Save rule",
+        "saved": "Commission rule saved",
+        "reverted": "Back on the default rule",
+        "events": {
+          "project_created": "Project created",
+          "advance_paid": "Advance paid",
+          "commissioned": "System commissioned"
+        }
+      }
+    },
+    "skills": {
+      "loading": "Loading skills",
+      "none": "No skills set up yet. Add them in Settings → Workforce.",
+      "list": "Skills: {names}"
     }
   }
 }

@@ -12,6 +12,7 @@ import { LoadError } from '@/components/query-state';
 import { formatPhone } from '@/lib/format/contact';
 import { ContractorCrewCard } from './contractor-crew-card';
 import { ContractorEditSheet } from './contractor-edit-sheet';
+import { ContractorMaterialCard } from './contractor-material-card';
 import { ContractorRatesCard } from './contractor-rates-card';
 import { IssueWorkOrderDialog } from './issue-work-order-dialog';
 import { useContractor } from './use-contractors';
@@ -80,12 +81,15 @@ export function ContractorDetailView({ id }: { readonly id: string }) {
       </header>
       <PerformanceStrip contractor={contractor} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <section className="flex flex-col gap-4 lg:col-span-7">
-          <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">
-            {t('workOrders.title')}
-          </h2>
-          <WorkOrdersTable orders={contractor.workOrders} />
-        </section>
+        <div className="flex min-w-0 flex-col gap-10 lg:col-span-7">
+          <section className="flex flex-col gap-4">
+            <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">
+              {t('workOrders.title')}
+            </h2>
+            <WorkOrdersTable orders={contractor.workOrders} />
+          </section>
+          <ContractorMaterialCard contractorId={contractor.id} />
+        </div>
         <div className="flex flex-col gap-6 lg:col-span-5">
           <ContractorCrewCard contractor={contractor} />
           <ContractorRatesCard contractor={contractor} />

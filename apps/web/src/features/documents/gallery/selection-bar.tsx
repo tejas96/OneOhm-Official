@@ -6,15 +6,18 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { describeError } from '@/lib/api/api-error';
 import { downloadBundle } from '@/lib/api/bundle';
+import type { DocumentRights } from '../use-document-rights';
 
 /** What to do with the picked files: one ZIP, or one PDF to print. */
 export function SelectionBar({
   ids,
   name,
+  rights,
   onClear,
 }: {
   readonly ids: readonly string[];
   readonly name: string;
+  readonly rights: DocumentRights;
   readonly onClear: () => void;
 }) {
   const t = useTranslations('documents.gallery.select');
@@ -35,26 +38,30 @@ export function SelectionBar({
       <span className="mr-auto type-body-sm font-medium text-ink">
         {t('count', { count: ids.length })}
       </span>
-      <Button
-        size="sm"
-        variant="secondary"
-        leadingIcon={<FileArchive />}
-        pending={busy === 'zip'}
-        disabled={ids.length === 0}
-        onClick={() => run('zip')}
-      >
-        {t('zip')}
-      </Button>
-      <Button
-        size="sm"
-        variant="secondary"
-        leadingIcon={<Printer />}
-        pending={busy === 'pdf'}
-        disabled={ids.length === 0}
-        onClick={() => run('pdf')}
-      >
-        {t('pdf')}
-      </Button>
+      {rights.download && (
+        <Button
+          size="sm"
+          variant="secondary"
+          leadingIcon={<FileArchive />}
+          pending={busy === 'zip'}
+          disabled={ids.length === 0}
+          onClick={() => run('zip')}
+        >
+          {t('zip')}
+        </Button>
+      )}
+      {(rights.print || rights.download) && (
+        <Button
+          size="sm"
+          variant="secondary"
+          leadingIcon={<Printer />}
+          pending={busy === 'pdf'}
+          disabled={ids.length === 0}
+          onClick={() => run('pdf')}
+        >
+          {t('pdf')}
+        </Button>
+      )}
       <Button size="sm" variant="quiet" leadingIcon={<X />} onClick={onClear}>
         {t('done')}
       </Button>

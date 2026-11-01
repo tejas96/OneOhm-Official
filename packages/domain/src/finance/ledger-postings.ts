@@ -16,7 +16,8 @@ export type MoneyInMethod =
   | 'razorpay'
   | 'bank_disbursement';
 export type MoneyOutMethod = 'cash' | 'cheque' | 'bank_transfer' | 'upi';
-export type PayableParty = 'vendor' | 'contractor';
+/** `employee`: travel reimbursements and other money owed to staff (PRD 4.3). */
+export type PayableParty = 'vendor' | 'contractor' | 'employee';
 
 const debit = (account: LedgerAccountCode, paise: number): JournalLine => ({
   account,
@@ -34,6 +35,14 @@ export function cashAccountFor(method: MoneyInMethod | MoneyOutMethod): LedgerAc
   if (method === 'cash') return ACCOUNT.cash;
   if (method === 'razorpay') return ACCOUNT.gateway;
   return ACCOUNT.bank;
+}
+
+/**
+ * Where money received first sits. A cheque is not money in the bank until it clears,
+ * so it waits in "Cheques in hand" (PRD 3.11).
+ */
+export function moneyInAccountFor(method: MoneyInMethod): LedgerAccountCode {
+  return method === 'cheque' ? ACCOUNT.chequesInHand : cashAccountFor(method);
 }
 
 const receivableFor = (payer: Payer) =>
@@ -71,7 +80,7 @@ export function paymentPosting(input: {
 }): JournalLine[] {
   return [
     debit(
-      input.fromCredit ? ACCOUNT.customerCredit : cashAccountFor(input.method),
+      input.fromCredit ? ACCOUNT.customerCredit : moneyInAccountFor(input.method),
       input.amountPaise,
     ),
     credit(
@@ -105,15 +114,24 @@ export function advanceAppliedPosting(input: {
   ];
 }
 
-const payableAccount = (party: PayableParty) =>
-  party === 'vendor' ? ACCOUNT.vendorPayables : ACCOUNT.contractorPayables;
+const PAYABLE_ACCOUNT = {
+  vendor: ACCOUNT.vendorPayables,
+  contractor: ACCOUNT.contractorPayables,
+  employee: ACCOUNT.employeePayables,
+} as const satisfies Record<PayableParty, LedgerAccountCode>;
+const PAYABLE_COST = {
+  vendor: ACCOUNT.materialCost,
+  contractor: ACCOUNT.installationCost,
+  employee: ACCOUNT.staffTravel,
+} as const satisfies Record<PayableParty, LedgerAccountCode>;
+const payableAccount = (party: PayableParty) => PAYABLE_ACCOUNT[party];
 
-/** An approved bill: the cost is booked and OneOhm owes the vendor or crew. */
+/** An approved bill: the cost is booked and OneOhm owes the vendor, crew or employee. */
 export function payableApprovedPosting(input: {
   readonly party: PayableParty;
   readonly amountPaise: number;
 }): JournalLine[] {
-  const cost = input.party === 'vendor' ? ACCOUNT.materialCost : ACCOUNT.installationCost;
+  const cost = PAYABLE_COST[input.party];
   return [debit(cost, input.amountPaise), credit(payableAccount(input.party), input.amountPaise)];
 }
 

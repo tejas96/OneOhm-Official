@@ -176,6 +176,8 @@ async function receiptsOf(db: DatabaseExecutor, orderId: string, lines: readonly
           lines.find((orderLine) => orderLine.id === line.purchaseOrderLineId)?.description ?? '',
         quantity: line.quantity,
         serials: serials.filter((row) => row.lineId === line.id).map((row) => row.serial),
+        rejectedQuantity: line.rejectedQuantity,
+        rejectionReason: line.rejectionReason,
       })),
   }));
 }

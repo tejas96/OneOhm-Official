@@ -6,14 +6,20 @@
     "tabs": {
       "roles": "Roles & permissions",
       "company": "Company",
+      "leadSteps": "Lead stages",
       "products": "Products",
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
       "workforce": "Workforce",
       "tasks": "Task templates",
+      "documents": "Required documents",
       "messages": "WhatsApp messages",
       "activity": "Activity log",
-      "payments": "Payment terms"
+      "payments": "Payment terms",
+      "referrals": "Refer and earn",
+      "serviceSla": "Service and SLAs",
+      "warranty": "Warranty",
+      "amcPlans": "AMC plans"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -153,7 +159,10 @@
       },
       "documents": {
         "view": "See documents",
-        "manage": "Upload and verify documents"
+        "upload": "Upload documents and ask customers for papers",
+        "download": "Download documents",
+        "print": "Print documents",
+        "manage": "Replace, remove and manage all documents"
       },
       "reports": {
         "generate": "Generate statutory reports"
@@ -476,7 +485,7 @@
         "captureOff": "Check-ins record the time only.",
         "privacyTitle": "How location is handled",
         "privacyConsent": "Each person agrees in the app before anything is shared, and can stop sharing at any time.",
-        "privacyMoments": "The location is read only at the moment of check-in and check-out, never in between.",
+        "privacyMoments": "The location is read only at the moment of a day or site check-in or check-out and when a site photo is taken, in working hours, never in between.",
         "privacyRetention": "Coordinates are deleted after {days} days; the times stay.",
         "retention": "Keep locations for (days)",
         "retentionHint": "Between 7 and 730 days."
@@ -519,6 +528,30 @@
           "save": "Save place",
           "added": "Place added",
           "updated": "Place saved"
+        }
+      },
+      "skills": {
+        "title": "Skills",
+        "description": "Skills people hold and task templates can ask for, such as a wiring licence or working at height.",
+        "loading": "Loading skills",
+        "emptyTitle": "No skills yet",
+        "summary": "{people, plural, =0 {Nobody has it yet} one {# person} other {# people}}{about, select, other { · {about}}}",
+        "edit": "Edit {name}",
+        "hint": "Tick skills on each person in Team. Switching a skill off keeps it on people but stops new use.",
+        "add": "Add skill",
+        "failed": "Could not change the skill",
+        "dialog": {
+          "addTitle": "Add a skill",
+          "editTitle": "Edit {name}",
+          "description": "The name shows on people and task templates.",
+          "name": "Name",
+          "about": "What it means",
+          "aboutHint": "For example: holds a valid wireman licence for AC work.",
+          "cancel": "Cancel",
+          "save": "Save",
+          "add": "Add skill",
+          "added": "Skill added",
+          "updated": "Skill saved"
         }
       }
     },
@@ -624,7 +657,12 @@
           "started": "When it starts",
           "completed": "When it is done",
           "approved": "When it is approved"
-        }
+        },
+        "skill": "Needs a skill",
+        "skillHint": "People in the role with this skill get the task first; if none is free, anyone in the role.",
+        "anySkill": "Anyone in the role",
+        "checklist": "Checklist",
+        "checklistHint": "One line per check. The person ticks each before finishing. New projects get this list; tasks already made keep theirs."
       }
     },
     "messageTemplates": {
@@ -656,6 +694,7 @@
         "service_update": "Service request update",
         "change_request_raised": "Change request started",
         "change_request_completed": "Change request done",
+        "referral_reward": "Referral reward update",
         "staff_daily_digest": "Morning summary for staff"
       },
       "dialog": {
@@ -736,7 +775,148 @@
       "organisation": "Organisation",
       "selling": "Selling and pricing",
       "operations": "Projects and messages",
-      "security": "Security"
+      "security": "Security",
+      "afterSales": "After-sales"
+    },
+    "referrals": {
+      "title": "Refer and earn",
+      "loading": "Loading the referral programme",
+      "intro": "Customers share their own code on WhatsApp. When a referred friend's project reaches the event you choose, the reward is earned and waits for finance to approve and pay it. Changes apply to rewards earned from now on.",
+      "unsaved": "You have unsaved changes.",
+      "discard": "Discard",
+      "events": {
+        "project_created": "Project created",
+        "advance_paid": "Advance paid",
+        "commissioned": "System commissioned"
+      },
+      "types": {
+        "residential": "Homes (residential)",
+        "society": "Housing societies",
+        "commercial": "Shops and businesses"
+      },
+      "reward": {
+        "title": "Reward",
+        "description": "What a customer earns for each friend who goes solar.",
+        "active": "Programme is on",
+        "activeHint": "When off, codes still work and referrals are recorded, but nothing is earned.",
+        "basis": "Reward is",
+        "bases": {
+          "per_referral": "A fixed amount",
+          "per_kw": "An amount per kW"
+        },
+        "amount": "Reward per referral",
+        "amountHint": "Paid once for each referred project.",
+        "amountPerKw": "Reward per kW installed",
+        "amountPerKwHint": "A 3.27 kW system at ₹500 per kW earns ₹1,635.",
+        "event": "Earned when",
+        "eventHint": "The referred friend's project must reach this step."
+      },
+      "campaign": {
+        "title": "Campaign and limits",
+        "description": "Referrals registered from the start day count. Rewards never go over the budget or a customer's limit.",
+        "startsOn": "Campaign starts on",
+        "startsOnHint": "Older referrals earn nothing.",
+        "budget": "Campaign budget",
+        "budgetHint": "Leave empty for no budget.",
+        "perCustomerCount": "Most rewards per customer",
+        "perCustomerPaise": "Most a customer can earn",
+        "noLimit": "Leave empty for no limit.",
+        "usage": "{committed} committed of {budget}. {left} left.",
+        "usageNoBudget": "{committed} committed so far, {paid} paid. No budget set.",
+        "usageLabel": "Campaign budget used",
+        "paid": "Paid",
+        "owed": "Earned, not paid",
+        "left": "Left"
+      },
+      "eligibility": {
+        "title": "Who qualifies",
+        "description": "The kinds of project that earn a reward, and where friends send the code.",
+        "types": "Project types",
+        "allTypes": "None ticked: every project type qualifies.",
+        "someTypes": "Only the ticked project types earn a reward.",
+        "shareNumber": "WhatsApp number for friends",
+        "shareNumberHint": "Leave empty to use the company number, {number}.",
+        "shareNumberNone": "Leave empty to use the company's first phone number."
+      }
+    },
+    "leadSteps": {
+      "loading": "Loading the sales pipeline",
+      "intro": "Name the steps a lead goes through, in your own words. Each step sits inside one of four fixed stages that OneOhm uses for automation: sending a quotation moves a lead to Quoted, and an accepted quotation wins it.",
+      "stage": {
+        "new": "New",
+        "contacted": "Contacted",
+        "survey_scheduled": "Survey booked",
+        "quoted": "Quoted"
+      },
+      "about": {
+        "new": "Just captured, not yet spoken to.",
+        "contacted": "Spoken to; working out the need and the site.",
+        "survey_scheduled": "A site survey is booked or done.",
+        "quoted": "A quotation went out. Sending one moves leads here."
+      },
+      "leads": "{count, plural, =0 {No open leads} one {# open lead} other {# open leads}}",
+      "up": "Move {name} up",
+      "down": "Move {name} down",
+      "edit": "Rename {name}",
+      "add": "Add a step",
+      "failed": "Could not change the step",
+      "dialog": {
+        "addTitle": "Add a step",
+        "editTitle": "Rename {name}",
+        "description": "A step inside {stage}.",
+        "name": "Step name",
+        "nameHint": "For example: Negotiation, Loan check, Site visit done.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "add": "Add step"
+      }
+    },
+    "requirements": {
+      "loading": "Loading required documents",
+      "intro": "The papers every project checklist asks for, and which projects need each one. Switching a paper off takes it off every checklist; files already uploaded stay.",
+      "up": "Move {name} up",
+      "down": "Move {name} down",
+      "edit": "Edit {name}",
+      "add": "Add a paper",
+      "failed": "Could not change the list",
+      "rule": {
+        "always": "every project",
+        "loan": "loan projects",
+        "noLoan": "no loan",
+        "subsidy": "subsidy projects",
+        "noSubsidy": "no subsidy",
+        "nameChange": "with a name change",
+        "noNameChange": "no name change",
+        "fromCustomer": "from the customer"
+      },
+      "dialog": {
+        "addTitle": "Add a required paper",
+        "editTitle": "Edit {name}",
+        "description": "Any file in the chosen folder counts as this paper.",
+        "label": "Paper",
+        "why": "Why it is needed",
+        "folder": "Folder",
+        "folderHint": "Files in this folder count as this paper.",
+        "fromCustomer": "The customer provides it",
+        "fromCustomerHint": "The team can ask the customer for it from the checklist.",
+        "types": "Project types",
+        "typesHint": "None ticked means every type.",
+        "flags": {
+          "loan": "Bank loan",
+          "subsidy": "Subsidy claimed",
+          "nameChange": "Consumer name change"
+        },
+        "tri": {
+          "any": "Any",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "discoms": "DISCOM codes",
+        "discomsHint": "Comma separated, for example MSEDCL. Empty means every DISCOM.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "add": "Add paper"
+      }
     }
   }
 }

@@ -58,6 +58,7 @@ export const LATE_TASKS: readonly TaskTemplate[] = [
     dependsOn: ['inverter_installation', 'battery_procurement'],
     when: { battery: true },
     evidence: ['photo'],
+    captures: ['battery_serial_number'],
   }),
   task({
     key: 'earthing_protection',

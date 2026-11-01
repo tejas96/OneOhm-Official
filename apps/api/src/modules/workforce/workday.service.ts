@@ -7,6 +7,7 @@ import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
 import { AttendanceService } from './attendance.service';
 import { loadPolicy } from './policy';
+import { trackingFor } from './tracking';
 import { balancesOf, readDays, readLeave, readPoints } from './workforce-read';
 
 /** The person's own day for the field app's Today screen (PRD 4.1). */
@@ -20,9 +21,10 @@ export class WorkdayService {
   async get(actor: Actor): Promise<MyWorkday> {
     const today = todayIn();
     const policy = await loadPolicy(this.db);
-    const [days, consent, leave, points] = await Promise.all([
+    const [days, consent, tracking, leave, points] = await Promise.all([
       readDays(this.db, today, [actor.userId]),
       this.attendance.consented(actor.userId),
+      trackingFor(this.db, actor.userId),
       readLeave(this.db, policy, eq(leaveRequests.userId, actor.userId)),
       readPoints(
         this.db,
@@ -37,7 +39,10 @@ export class WorkdayService {
         given: consent.given,
         answered: consent.answered,
         at: consent.at?.toISOString() ?? null,
+        version: consent.version,
+        currentVersion: tracking.status.consentVersion,
       },
+      tracking: tracking.status.state,
       attendance: {
         dayStart: policy.attendance.dayStart,
         dayEnd: policy.attendance.dayEnd,

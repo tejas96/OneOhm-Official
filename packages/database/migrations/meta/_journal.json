@@ -127,6 +127,97 @@
       "when": 1793525816880,
       "tag": "0017_payment_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793528121898,
+      "tag": "0018_contractor_material",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793528223037,
+      "tag": "0019_referrals_commissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793528899985,
+      "tag": "0020_after_sales",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793529822584,
+      "tag": "0021_document_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793530816500,
+      "tag": "0022_cash_handling",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793531061107,
+      "tag": "0023_purchase_requests_vendor_advances",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793531241288,
+      "tag": "0024_site_activity_travel",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793531453069,
+      "tag": "0025_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793531980893,
+      "tag": "0026_stage_ratings",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793532395669,
+      "tag": "0027_lead_steps",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793532831874,
+      "tag": "0028_task_checklists",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793533038479,
+      "tag": "0029_document_requirements",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793533345757,
+      "tag": "0030_customer_family",
+      "breakpoints": true
     }
   ]
 }

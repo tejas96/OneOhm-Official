@@ -20,13 +20,17 @@ export const ATTENDANCE = {
     inside ? `At ${place}` : `${metres} m from ${place}`,
   noPlace: 'Location not shared',
   correction: 'Wrong time? Ask for a correction',
-  consentTitle: 'Share your location at check-in?',
+  consentTitle: 'Share your location during work?',
+  /**
+   * The consent words, version 2 (LOCATION_CONSENT_VERSION in @oneohm/domain). Change
+   * them only together with that version, so everyone is asked again.
+   */
   consentBody: (days: number) =>
-    `OneOhm records where you are only when you check in and check out, to confirm you are at an approved place. Nothing is tracked in between, and the location is deleted after ${days} days.`,
-  allow: 'Share at check-in',
+    `OneOhm reads where you are only when you check in or out (for the day or at a customer's site) and when you take a site photo, and only during working hours. It confirms attendance and site visits and works out your travel. Nothing is tracked in between or after work, and the location is deleted after ${days} days.`,
+  allow: 'Share during work',
   notNow: 'Not now',
-  locationTitle: 'Location at check-in',
-  sharing: 'Location shared at check-in and check-out',
+  locationTitle: 'Location during work',
+  sharing: 'Location shared at check-ins and site photos',
   notSharing: 'Location not shared. You can still check in.',
   stopSharing: 'Stop sharing',
   noFix: 'Your location could not be read. You are checked in without it.',

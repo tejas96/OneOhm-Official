@@ -5,9 +5,11 @@ import { Card, CardHeader, cn } from '@oneohm/design-system/web';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  HardHat,
   Lock,
   type LucideIcon,
   SlidersHorizontal,
+  Undo2,
   Unlock,
 } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
@@ -20,6 +22,8 @@ const ICON: Readonly<Record<StockMovement['kind'], LucideIcon>> = {
   release: Unlock,
   dispatch: ArrowUpFromLine,
   adjustment: SlidersHorizontal,
+  issue: HardHat,
+  return: Undo2,
 };
 
 const signed = (value: number) => `${value > 0 ? '+' : ''}${formatQuantity(value)}`;

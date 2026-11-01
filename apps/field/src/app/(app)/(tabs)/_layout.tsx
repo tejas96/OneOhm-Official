@@ -1,8 +1,18 @@
 import { fontFaceFor, useTheme } from '@oneohm/mobile-ui';
 import { Tabs } from 'expo-router';
-import { Calculator, CalendarDays, CircleUserRound, Sun, Target } from 'lucide-react-native';
+import {
+  Calculator,
+  CalendarDays,
+  CircleUserRound,
+  HardHat,
+  ReceiptIndianRupee,
+  Sun,
+  Target,
+  Users,
+} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COMMON } from '@/copy/common';
+import { useIsCrew } from '@/features/crew/use-crew';
 import { useCan } from '@/session/session-provider';
 
 /**
@@ -15,6 +25,8 @@ export default function TabsLayout() {
   const sells = useCan('leads.manage', 'leads.view_own', 'leads.view_all');
   const quotes = useCan('quotations.create');
   const takesLeave = useCan('leave.request');
+  const crew = useIsCrew();
+  const earns = useCan('commission.view_own');
   return (
     <Tabs
       screenOptions={{
@@ -40,6 +52,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="work"
+        options={{
+          title: COMMON.tabs.work,
+          href: crew ? '/work' : null,
+          tabBarIcon: ({ color }) => <HardHat size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="leads"
         options={{
           title: COMMON.tabs.leads,
@@ -53,6 +73,22 @@ export default function TabsLayout() {
           title: COMMON.tabs.quote,
           href: quotes ? '/quote' : null,
           tabBarIcon: ({ color }) => <Calculator size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="customers"
+        options={{
+          title: COMMON.tabs.customers,
+          href: earns ? '/customers' : null,
+          tabBarIcon: ({ color }) => <Users size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="earnings"
+        options={{
+          title: COMMON.tabs.earnings,
+          href: earns ? '/earnings' : null,
+          tabBarIcon: ({ color }) => <ReceiptIndianRupee size={22} color={color} />,
         }}
       />
       <Tabs.Screen

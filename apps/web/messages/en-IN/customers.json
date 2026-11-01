@@ -208,6 +208,7 @@
         "service_request": "Service request",
         "change_request_raised": "Change request started",
         "change_request_completed": "Change request done",
+        "referral_reward": "Referral reward update",
         "budget_revision": "Revised quotation"
       },
       "otherTemplate": "Message",

@@ -10,6 +10,7 @@ import { type FormEvent, useId, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useInvalidateWork } from '../tasks/use-task-actions';
+import { type Collected, CollectedFields } from './collected-fields';
 
 type Milestone = ProjectDetail['milestones'][number];
 const METHODS = [
@@ -21,6 +22,21 @@ const METHODS = [
   'bank_disbursement',
 ] as const;
 type Method = (typeof METHODS)[number];
+
+/** Only cash and cheques carry who holds them and the cheque's details. */
+function collectedBody(method: Method, collected: Collected) {
+  if (method !== 'cash' && method !== 'cheque') return {};
+  return {
+    collectedByUserId: collected.collectedByUserId || null,
+    ...(method === 'cheque'
+      ? {
+          chequeNumber: collected.chequeNumber.trim() || null,
+          chequeBank: collected.chequeBank.trim() || null,
+          chequeDate: collected.chequeDate || null,
+        }
+      : {}),
+  };
+}
 
 const remaining = (milestone: Milestone) => milestone.amountPaise - milestone.paidPaise;
 const toRupees = (paise: number) => String(paise / 100);
@@ -51,6 +67,12 @@ export function RecordPaymentDialog({
   );
   const [receivedOn, setReceivedOn] = useState(todayIn());
   const [reference, setReference] = useState('');
+  const [collected, setCollected] = useState<Collected>({
+    collectedByUserId: '',
+    chequeNumber: '',
+    chequeBank: '',
+    chequeDate: '',
+  });
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
   const milestone = milestones.find((candidate) => candidate.id === milestoneId);
@@ -67,6 +89,7 @@ export function RecordPaymentDialog({
             method: bank ? 'bank_disbursement' : method,
             receivedOn,
             reference: reference.trim() || null,
+            ...collectedBody(bank ? 'bank_disbursement' : method, collected),
           },
         }),
         201,
@@ -154,6 +177,12 @@ export function RecordPaymentDialog({
         <Field label={t('reference')} hint={t('referenceHint')} error={fieldErrors.reference}>
           <Input value={reference} onChange={(event) => setReference(event.target.value)} />
         </Field>
+        <CollectedFields
+          method={bank ? 'bank_disbursement' : method}
+          value={collected}
+          onChange={setCollected}
+          errors={fieldErrors}
+        />
         {error && (
           <p
             role="alert"

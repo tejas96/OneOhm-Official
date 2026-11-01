@@ -69,6 +69,26 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     preview: 'Hello {{1}}, your {{2}} request ({{3}}) is complete.',
   },
   {
+    key: 'document_requested',
+    audience: 'customer',
+    fields: ['customer', 'document', 'project'],
+    preview:
+      'Hello {{1}}, please send your {{2}} for project {{3}}. Open the OneOhm app, go to Documents and tap Send.',
+  },
+  {
+    key: 'referral_reward',
+    audience: 'customer',
+    fields: ['customer', 'friend', 'amount', 'status'],
+    preview: 'Hello {{1}}, your OneOhm referral reward for {{2}} ({{3}}) is {{4}}. Thank you!',
+  },
+  {
+    key: 'maintenance_visit',
+    audience: 'customer',
+    fields: ['customer', 'visit', 'date', 'project'],
+    preview:
+      'Hello {{1}}, your free {{2}} visit for {{4}} is on {{3}}. Our service team will call before they come.',
+  },
+  {
     key: 'staff_daily_digest',
     audience: 'staff',
     fields: ['name', 'overdue', 'today', 'followUps'],

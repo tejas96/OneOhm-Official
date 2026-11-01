@@ -7,7 +7,9 @@ import {
   type Transaction,
   taskDependencies,
 } from '@oneohm/database';
+import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { awardOnTimeTask } from '../workforce/points';
 import { tellCustomerAbout, tellManagerDone } from './task-messages';
@@ -68,6 +70,11 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .returning({ id: paymentMilestones.id });
     // The receivable is booked in the same transaction (PRD 3.11, Flow D).
     for (const milestone of due) await postMilestoneDue(tx, milestone.id, userId);
+  }
+
+  // Commissioning records the installed system and starts its warranties (PRD 3.17).
+  if (task.onComplete === 'commissioning_completed' || task.onComplete === 'project_operational') {
+    await recordInstalledAssets(tx, task.projectId, todayIn('Asia/Kolkata', now));
   }
 
   const remaining = await tx

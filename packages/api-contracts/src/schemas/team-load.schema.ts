@@ -9,6 +9,9 @@ const loadFields = {
   done: z.number().int(),
   /** Share of the period's finished tasks done by their due date; null when none. */
   onTimePercent: z.number().int().nullable(),
+  /** Customers' stars for their stage work (PRD 5.7); null until enough ratings. */
+  rating: z.number().nullable(),
+  ratings: z.number().int(),
 };
 
 /** Who carries the work, and who is falling behind (PRD 3.1 drill-down). */

@@ -4,10 +4,14 @@ import type { TaskTemplateRecord } from '@oneohm/api-contracts';
 import { Checkbox, Field, Input, Select, type SelectOption } from '@oneohm/design-system/web';
 import { EPC_STAGES, WAITING_PARTIES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
+import { useSkills } from '@/features/team/skills/use-skills';
 import { NumberInput } from '../number-input';
 import type { SetDraft, TaskDraft } from './task-draft';
 
-/** Name, key, stage, owner, timing and what it waits for. */
+/** The Select needs a value; this one means "anyone in the role". */
+const ANY_SKILL = '__any__';
+
+/** Name, key, stage, owner, skill, timing and what it waits for. */
 export function TaskBasicsFields({
   draft,
   set,
@@ -25,6 +29,7 @@ export function TaskBasicsFields({
 }) {
   const t = useTranslations('settings.taskTemplates.sheet');
   const stageT = useTranslations('stages');
+  const skills = useSkills();
   const toggleWait = (key: string, on: boolean) =>
     set(
       'dependsOn',
@@ -57,6 +62,18 @@ export function TaskBasicsFields({
             value={draft.roleKey || undefined}
             onValueChange={(value) => set('roleKey', value)}
             options={roles}
+          />
+        </Field>
+        <Field label={t('skill')} hint={t('skillHint')} error={errors.skillKey}>
+          <Select
+            value={draft.skillKey ?? ANY_SKILL}
+            onValueChange={(value) => set('skillKey', value === ANY_SKILL ? null : value)}
+            options={[
+              { value: ANY_SKILL, label: t('anySkill') },
+              ...(skills.data ?? [])
+                .filter((skill) => skill.active || skill.key === draft.skillKey)
+                .map((skill) => ({ value: skill.key, label: skill.name })),
+            ]}
           />
         </Field>
         <Field label={t('offset')} hint={t('offsetHint')} error={errors.offsetDays}>

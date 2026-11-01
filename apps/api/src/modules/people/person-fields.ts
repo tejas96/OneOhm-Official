@@ -11,6 +11,8 @@ export interface PersonPatch {
   readonly status?: 'active' | 'inactive' | undefined;
   readonly onLeave?: boolean | undefined;
   readonly designation?: string | null | undefined;
+  /** Skill keys; replaces the person's skills when given (PRD 3.7). */
+  readonly skills?: string[] | undefined;
 }
 
 /** The users-table columns an edit touches; the password is stored only as a hash. */

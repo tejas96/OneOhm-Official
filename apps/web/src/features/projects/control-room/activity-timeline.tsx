@@ -7,6 +7,7 @@ import {
   Hourglass,
   IndianRupee,
   type LucideIcon,
+  MapPin,
   Package,
   ShieldCheck,
   Sparkles,
@@ -21,6 +22,9 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   payment: IndianRupee,
   review: ShieldCheck,
   material: Package,
+  site_check_in: MapPin,
+  site_check_out: MapPin,
+  site_location: MapPin,
 };
 
 /** What happened on the project, newest first, with who did it and when. */

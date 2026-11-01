@@ -3,11 +3,18 @@ import { z } from 'zod';
 /** What a queued file is evidence of; decides its document category and its tile. */
 export type UploadKind = 'photo' | 'document' | 'signature';
 
-/** Where and when a photo was taken, read from its EXIF when the picker gives it. */
+/**
+ * Where and when a photo was taken: from its EXIF when the picker gives it, or the
+ * phone's location at capture (`device`). Coordinates are null when location is not
+ * shared; the time is still kept.
+ */
 export interface Geotag {
-  readonly latitude: number;
-  readonly longitude: number;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  /** EXIF local time ("2026-11-01T10:22:33", India) or an instant with its offset. */
   readonly takenAt: string | null;
+  readonly accuracyM?: number | null | undefined;
+  readonly source?: 'exif' | 'device' | undefined;
 }
 
 /**
@@ -25,7 +32,7 @@ export interface QueuedUpload {
   readonly type: string;
   /** The kept copy: a file in the app's documents, or a key in the browser's store. */
   readonly uri: string;
-  /** Kept with the file for when the API takes geotags; not sent today. */
+  /** Sent with the file; the server keeps the coordinates only with consent. */
   readonly geotag: Geotag | null;
   readonly attempts: number;
   /** The last failure, shown on the tile; null while it waits or sends. */
@@ -127,9 +134,11 @@ export function mine(
 export const onItsWay = (item: QueuedUpload) => item.error === null || item.autoRetry;
 
 const geotagSchema = z.object({
-  latitude: z.number(),
-  longitude: z.number(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   takenAt: z.string().nullable(),
+  accuracyM: z.number().nullable().optional(),
+  source: z.enum(['exif', 'device']).optional(),
 });
 
 const queuedSchema = z.object({

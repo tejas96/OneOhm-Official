@@ -32,9 +32,30 @@ export function canChangeDocument(actor: Actor, links: DocumentLinks): boolean {
   return !links.taskCompleted && links.taskAssigneeId === actor.userId;
 }
 
-/** Uploading: `documents.manage`, or evidence on a task assigned to the person. */
+/** `documents.upload` or `documents.manage`: may add files to any customer or project. */
+export const canUploadDocuments = (actor: Actor) =>
+  can(actor, 'documents.upload') || can(actor, 'documents.manage');
+
+/** Uploading: the right to upload, or evidence on a task assigned to the person. */
 export function canAttach(actor: Actor, taskAssigneeId: string | null): boolean {
-  return (
-    can(actor, 'documents.manage') || (taskAssigneeId !== null && taskAssigneeId === actor.userId)
-  );
+  return canUploadDocuments(actor) || (taskAssigneeId !== null && taskAssigneeId === actor.userId);
 }
+
+/**
+ * Saving a copy (PRD 3.14): `documents.download`, or the person's own work. Opening a
+ * file to look at it needs only the right to see it.
+ */
+export function canDownloadDocument(actor: Actor, links: DocumentLinks): boolean {
+  if (!canViewDocument(actor, links)) return false;
+  if (isCompanyAsset(links.category)) return true;
+  if (can(actor, 'documents.download') || can(actor, 'documents.manage')) return true;
+  return links.uploadedByUserId === actor.userId || links.taskAssigneeId === actor.userId;
+}
+
+/** Printing and one combined PDF of many files: `documents.print`. */
+export const canPrintDocuments = (actor: Actor) =>
+  can(actor, 'documents.print') || can(actor, 'documents.manage');
+
+/** One ZIP of many files: `documents.download`. */
+export const canDownloadMany = (actor: Actor) =>
+  can(actor, 'documents.download') || can(actor, 'documents.manage');

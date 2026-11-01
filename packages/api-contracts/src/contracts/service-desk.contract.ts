@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { idSchema } from '../common/primitives';
 import {
   feedbackEntrySchema,
-  SERVICE_STATUSES,
+  serviceAssigneeSchema,
   serviceTicketPatchSchema,
+  serviceTicketQuerySchema,
   serviceTicketSchema,
 } from '../schemas/service-desk.schema';
 
@@ -15,8 +16,15 @@ export const serviceDeskContract = c.router({
   listTickets: {
     method: 'GET',
     path: '/service-requests',
-    query: z.object({ status: z.enum(SERVICE_STATUSES).optional() }),
+    query: serviceTicketQuerySchema,
     responses: { 200: z.array(serviceTicketSchema) },
+    summary: 'Newest first; `sla` keeps requests due soon or past a promised time.',
+  },
+  listAssignees: {
+    method: 'GET',
+    path: '/service-requests/assignees',
+    responses: { 200: z.array(serviceAssigneeSchema) },
+    summary: 'People who can take service work, least busy first.',
   },
   updateTicket: {
     method: 'PATCH',

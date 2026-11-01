@@ -2,7 +2,7 @@
   "service": {
     "eyebrow": "After-sales",
     "title": "Service",
-    "description": "Requests customers raise in the OneOhm app, their WhatsApp chats, and every message we send them.",
+    "description": "Requests customers raise and planned AMC visits, worked against their promised times; WhatsApp chats; and every message we send.",
     "viewLabel": "Show",
     "views": {
       "open": "Open",
@@ -23,22 +23,12 @@
       "in_progress": "In progress",
       "resolved": "Resolved"
     },
-    "category": {
-      "no_generation": "No generation",
-      "low_generation": "Low generation",
-      "inverter_error": "Inverter error",
-      "physical_damage": "Physical damage",
-      "cleaning": "Panel cleaning",
-      "billing_net_meter": "Billing or net meter",
-      "subsidy": "Subsidy",
-      "other": "Something else"
-    },
     "resolution": "Resolved: {note}",
     "photos": "{count, plural, one {# photo} other {# photos}} from the customer",
     "start": "Start",
     "resolve": "Resolve",
     "resolveTitle": "Resolve this request",
-    "resolveBody": "{name} gets a WhatsApp update that the request is resolved.",
+    "resolveBody": "{name} gets a WhatsApp update that the request is resolved, and can rate it in the app.",
     "resolutionLabel": "What was done",
     "done": {
       "open": "Updated",
@@ -150,6 +140,77 @@
         "all": "No business messages yet. WhatsApp replies and app alerts appear here as they go out.",
         "filtered": "No messages in this state."
       }
+    },
+    "filters": {
+      "slaLabel": "Service level",
+      "sla": {
+        "all": "Any service level",
+        "due_soon": "Due soon",
+        "breached": "Breached"
+      },
+      "kindLabel": "Kind",
+      "kind": {
+        "all": "Requests and visits",
+        "request": "Customer requests",
+        "maintenance_visit": "Maintenance visits"
+      }
+    },
+    "count": "{count, plural, one {# request} other {# requests}}",
+    "caption": "Service requests with their promised times",
+    "emptyFiltered": "Nothing matches these filters.",
+    "columns": {
+      "request": "Request",
+      "customer": "Customer",
+      "assignee": "With",
+      "status": "Status",
+      "response": "First response",
+      "resolution": "Resolution",
+      "raised": "Raised"
+    },
+    "kind": {
+      "request": "Request",
+      "maintenance_visit": "Maintenance visit"
+    },
+    "visitOn": "Visit {date}",
+    "unassigned": "Not assigned",
+    "sla": {
+      "none": "No promise",
+      "state": {
+        "on_track": "On track",
+        "due_soon": "Due soon",
+        "breached": "Breached",
+        "met": "Met",
+        "missed": "Missed"
+      },
+      "due": "Due {time}",
+      "done": "Done {time}"
+    },
+    "sheet": {
+      "raised": "Raised {time}",
+      "details": "Details",
+      "customer": "Customer",
+      "project": "Project",
+      "visit": "Visit day",
+      "photosTitle": "Photos from the customer",
+      "levels": "Promised times",
+      "levelsHint": "From the category’s hours in Settings. The service team is alerted once when each is due soon and once if it is missed.",
+      "responseDue": "First response due",
+      "resolutionDue": "Resolution due",
+      "answered": "Answered {time}",
+      "resolvedAt": "Resolved {time}",
+      "work": "Work it",
+      "assignee": "Who is on it",
+      "nobody": "Nobody yet",
+      "category": "Category",
+      "assigned": "Assigned to {name}",
+      "unassignedDone": "Assignment removed",
+      "categoryChanged": "Category changed",
+      "ratingTitle": "Customer rating",
+      "ratingValue": "{rating} of 5",
+      "noComment": "No comment.",
+      "noRating": "The customer has not rated this yet. They can rate it in the app once it is resolved.",
+      "close": "Close",
+      "notePlaceholder": "For example: cleaned all panels and checked the inverter."
     }
   }
 }

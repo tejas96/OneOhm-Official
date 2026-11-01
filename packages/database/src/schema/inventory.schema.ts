@@ -25,6 +25,9 @@ export const stockMovementKindEnum = pgEnum('stock_movement_kind', [
   'release',
   'dispatch',
   'adjustment',
+  /** Issued to a contractor for a project, and unused material coming back from one. */
+  'issue',
+  'return',
 ]);
 export const serialStatusEnum = pgEnum('serial_status', ['in_stock', 'reserved', 'dispatched']);
 
@@ -112,7 +115,7 @@ export const stockMovements = pgTable(
     onHandDelta: doublePrecision('on_hand_delta').notNull(),
     reservedDelta: doublePrecision('reserved_delta').notNull(),
     projectId: uuid('project_id').references(() => projects.id),
-    /** The receipt, reservation, dispatch or adjustment that caused it. */
+    /** The receipt, reservation, dispatch, adjustment or material slip that caused it. */
     referenceId: uuid('reference_id'),
     note: text('note'),
     userId: uuid('user_id').references(() => users.id),

@@ -87,6 +87,20 @@ export function TeamLoadSection({ query }: { readonly query: CommandCenterQuery 
         </span>
       ),
     },
+    {
+      key: 'rating',
+      header: t('columns.rating'),
+      align: 'end',
+      cell: (row) => (
+        <span className="tabular-nums" title={t('ratingHint', { count: row.ratings })}>
+          {row.rating === null
+            ? row.ratings > 0
+              ? t('fewRatings', { count: row.ratings })
+              : '—'
+            : t('stars', { rating: row.rating, count: row.ratings })}
+        </span>
+      ),
+    },
   ];
   return (
     <section className="flex flex-col gap-4">

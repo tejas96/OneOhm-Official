@@ -73,7 +73,7 @@ export const paymentMethodEnum = pgEnum('payment_method', [
   'razorpay',
   'bank_disbursement',
 ]);
-export const payablePartyEnum = pgEnum('payable_party', ['vendor', 'contractor']);
+export const payablePartyEnum = pgEnum('payable_party', ['vendor', 'contractor', 'employee']);
 export const payableStatusEnum = pgEnum('payable_status', ['pending', 'approved', 'paid']);
 export const documentSourceEnum = pgEnum('document_source', ['upload', 'system', 'report']);
 export const outboxChannelEnum = pgEnum('outbox_channel', ['whatsapp', 'sms', 'push']);

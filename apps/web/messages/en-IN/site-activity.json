@@ -1,0 +1,124 @@
+{
+  "siteActivity": {
+    "kinds": {
+      "survey": "Survey",
+      "installation": "Installation",
+      "inspection": "Inspection",
+      "service": "Service visit"
+    },
+    "distance": {
+      "metres": "{value} m",
+      "kilometres": "{value} km",
+      "fromSite": "{distance} from the site",
+      "far": "{distance} from the site",
+      "farFlag": "Far from site",
+      "notShared": "Location not shared",
+      "siteUnknown": "Site location not saved",
+      "cleared": "Location cleared after the retention period"
+    },
+    "duration": {
+      "minutes": "{minutes} min",
+      "hours": "{hours} h",
+      "hoursMinutes": "{hours} h {minutes} min",
+      "onSite": "On site now"
+    },
+    "visits": {
+      "title": "Site visits",
+      "description": "Check-ins and check-outs at the customer's site, with how far from the saved site location they were.",
+      "empty": "No one has checked in at this site yet.",
+      "loading": "Loading site visits",
+      "caption": "Site visits on this project",
+      "farCount": "{count, plural, one {# far from the site} other {# far from the site}}",
+      "columns": {
+        "person": "Person",
+        "task": "Task",
+        "inOut": "In and out",
+        "duration": "Time on site",
+        "where": "Distance"
+      },
+      "inOut": "{from} to {to}",
+      "stillIn": "In at {from}, still on site",
+      "taskLine": "On site {from}–{to} · {duration}",
+      "taskLineOpen": "On site since {from}",
+      "taskLineFar": "Check-in flagged: {distance} from the site"
+    },
+    "geotag": {
+      "label": "Where taken",
+      "atSite": "Taken at site, {distance} away, {time}",
+      "farFromSite": "Taken {distance} from the site, {time}",
+      "noSite": "Location recorded, site location not saved, {time}",
+      "timeOnly": "Taken at {time}, location not shared",
+      "cleared": "Taken at {time}, location cleared after the retention period",
+      "fromCamera": "From the camera",
+      "fromPhone": "From the phone at capture"
+    },
+    "claims": {
+      "title": "Travel claims",
+      "description": "Travel between site visits, claimed from the field app at the rate in Settings. Approving makes a payable to the employee in Finance.",
+      "loading": "Loading travel claims",
+      "caption": "Travel claims",
+      "emptyTitle": "No travel claims here",
+      "emptyBody": "Claims made from the field app show here.",
+      "waiting": "{count, plural, one {# claim waiting for approval} other {# claims waiting for approval}}",
+      "statusLabel": "Status",
+      "personLabel": "Person",
+      "monthLabel": "Month",
+      "allStatuses": "All statuses",
+      "allPeople": "Everyone",
+      "allMonths": "Any month",
+      "status": {
+        "pending": "Waiting for approval",
+        "approved": "Approved, not paid",
+        "paid": "Paid",
+        "rejected": "Declined",
+        "cancelled": "Cancelled"
+      },
+      "columns": {
+        "person": "Person",
+        "day": "Day",
+        "visits": "Visits",
+        "distance": "Distance",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "visitsCount": "{count, plural, one {# visit} other {# visits}}",
+      "review": "Review",
+      "open": "Details",
+      "rate": "at {rate}/km",
+      "approved": "Claim approved",
+      "approvedBody": "Finance can pay it from Payables.",
+      "declined": "Claim declined",
+      "dialogTitle": "{name}: travel on {day}",
+      "approveNote": "Approving adds a payable of {amount} to the employee in Finance, and books it as travel cost.",
+      "totalLine": "{distance} at {rate}/km = {amount}"
+    },
+    "sheet": {
+      "title": "Travel on {day}",
+      "legs": "Route",
+      "legsHint": "Straight-line distance between stops, not road distance.",
+      "unpaidLeg": "No location at one end, not paid",
+      "visits": "Site check-ins",
+      "noVisits": "No site check-ins on this day.",
+      "note": "Their note",
+      "decided": "Decided by {name}",
+      "decisionNote": "Note: {note}",
+      "paidOn": "Paid on {date}",
+      "payable": "Open in Payables",
+      "approve": "Approve",
+      "decline": "Decline",
+      "ownClaim": "Someone else approves your own claim.",
+      "close": "Close",
+      "loading": "Loading the day"
+    },
+    "settings": {
+      "title": "Site check-ins and travel",
+      "description": "How far from the saved site a check-in can be before it is flagged, when location may be read, and what travel between sites is paid.",
+      "farFromSite": "Flag farther than (m)",
+      "farFromSiteHint": "A check-in farther than this from the saved site is flagged to the project manager, never refused.",
+      "rate": "Travel rate per km",
+      "rateHint": "Paid on straight-line distance between the day's stops.",
+      "margin": "Window either side (min)",
+      "marginHint": "Location is read only from the day’s start minus this to its end plus this."
+    }
+  }
+}

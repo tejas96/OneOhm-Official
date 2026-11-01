@@ -15,6 +15,8 @@ export interface DocumentRequirement {
   readonly categories: readonly DocumentCategory[];
   /** Why it is needed, shown under the name. */
   readonly why: string;
+  /** Only the customer holds it, so the team may ask them for it (PRD 5.4). */
+  readonly fromCustomer?: boolean;
 }
 
 const ALWAYS: readonly DocumentRequirement[] = [
@@ -23,18 +25,21 @@ const ALWAYS: readonly DocumentRequirement[] = [
     label: 'Customer ID proof (Aadhaar or PAN)',
     categories: ['customer_kyc'],
     why: 'DISCOM application and subsidy registration.',
+    fromCustomer: true,
   },
   {
     key: 'bill',
     label: 'Latest electricity bill',
     categories: ['electricity_bill'],
     why: 'Consumer number and sanctioned load.',
+    fromCustomer: true,
   },
   {
     key: 'property',
     label: 'Property proof (tax receipt, 7/12 or index II)',
     categories: ['property'],
     why: 'Shows the customer may install on this roof.',
+    fromCustomer: true,
   },
   {
     key: 'survey',
@@ -80,6 +85,7 @@ export function requiredDocuments(project: RequirementContext): DocumentRequirem
       label: 'Society NOC and resolution',
       categories: ['property'],
       why: 'The society agrees to the common-roof installation.',
+      fromCustomer: true,
     });
   if (project.loan)
     extra.push({
@@ -87,6 +93,7 @@ export function requiredDocuments(project: RequirementContext): DocumentRequirem
       label: 'Bank loan papers (sanction letter, agreement)',
       categories: ['bank_loan'],
       why: 'Needed to claim the bank disbursement.',
+      fromCustomer: true,
     });
   if (project.subsidy)
     extra.push({
@@ -94,6 +101,7 @@ export function requiredDocuments(project: RequirementContext): DocumentRequirem
       label: 'Bank passbook or cancelled cheque',
       categories: ['subsidy'],
       why: 'The government pays the subsidy into this account.',
+      fromCustomer: true,
     });
   if (project.nameChange)
     extra.push({
@@ -101,6 +109,7 @@ export function requiredDocuments(project: RequirementContext): DocumentRequirem
       label: 'Name change papers',
       categories: ['discom'],
       why: 'The DISCOM must show the customer as the consumer.',
+      fromCustomer: true,
     });
   return [...ALWAYS.slice(0, 5), ...extra, ...ALWAYS.slice(5)];
 }

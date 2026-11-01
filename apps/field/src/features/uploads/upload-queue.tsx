@@ -16,6 +16,7 @@ import { AppState } from 'react-native';
 import { API_BASE_URL, currentToken, keys } from '@/api/api';
 import { UPLOADS } from '@/copy/uploads';
 import { useCurrentUser } from '@/session/session-provider';
+import { geotagFields } from './geotag-fields';
 import {
   afterFailure,
   type Failure,
@@ -134,7 +135,12 @@ export function UploadQueueProvider({ children }: { readonly children: ReactNode
           url: `${API_BASE_URL.replace(/\/+$/, '')}/v1/documents`,
           token: currentToken(),
           file,
-          fields: { category: item.category, taskId: item.taskId, name: item.name },
+          fields: {
+            category: item.category,
+            taskId: item.taskId,
+            name: item.name,
+            ...geotagFields(item.geotag),
+          },
           onProgress: (fraction) => setProgress((current) => ({ ...current, [item.id]: fraction })),
         });
         settle();

@@ -31,6 +31,8 @@ export interface TaskTemplate {
   readonly stage: EpcStage;
   /** Assigned by role; the engine picks the least-loaded available person. */
   readonly roleKey: string;
+  /** A skill the assignee should have (PRD 3.7); people in the role without it are a fallback. */
+  readonly skillKey?: string | null;
   readonly offsetDays: number;
   readonly durationDays: number;
   readonly dependsOn: readonly string[];
@@ -43,6 +45,8 @@ export interface TaskTemplate {
   readonly evidence: readonly EvidenceKind[];
   /** Report facts this task captures (the task requires them as evidence). */
   readonly captures: readonly string[];
+  /** Its own checklist lines; null uses the built-in list (PRD 4.4). */
+  readonly checklist?: readonly { readonly key: string; readonly label: string }[] | null;
   readonly onComplete?: CompletionAction;
   /** Statutory reports that become ready when this task completes. */
   readonly reports?: readonly string[];

@@ -1,0 +1,171 @@
+{
+  "afterSales": {
+    "hours": "{count, plural, one {# hour} other {# hours}}",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "years": "{count, plural, =0 {No cover} one {# year} other {# years}}",
+    "categories": {
+      "title": "Service categories",
+      "intro": "The kinds of problem customers report, and how quickly OneOhm promises to respond and to fix each. Requests turn amber in the last quarter of their time and red once it runs out; the service team gets one alert for each.",
+      "add": "New category",
+      "loading": "Loading service categories",
+      "caption": "Service categories and their promised times",
+      "columns": {
+        "category": "Category",
+        "customer": "Customer sees",
+        "response": "First response",
+        "resolution": "Resolved within",
+        "status": "Status"
+      },
+      "system": "Made by OneOhm",
+      "active": "In use",
+      "archived": "Not in use",
+      "visitNote": "For maintenance visits, the first response is confirming the visit with the customer, and the resolution time counts from the visit day.",
+      "dialog": {
+        "createTitle": "New service category",
+        "editTitle": "Edit service category",
+        "label": "Name the team reads",
+        "customerLabel": "What the customer picks in the app",
+        "responseHours": "First response within",
+        "resolutionHours": "Resolved within",
+        "hoursHint": "In hours, counted around the clock. 48 hours is 2 days.",
+        "active": "In use",
+        "activeHint": "Customers can pick it, and it counts for new requests.",
+        "applies": "New hours apply to requests raised from now on; open requests keep their times.",
+        "create": "Add category",
+        "created": "{name} added",
+        "updated": "{name} saved"
+      }
+    },
+    "warranty": {
+      "title": "Warranty",
+      "intro": "Years of cover for each part of a system. Cover starts on the commissioning day and is recorded on the project when testing and commissioning is completed.",
+      "loading": "Loading warranty years",
+      "kinds": {
+        "panel": "Solar panels",
+        "inverter": "Inverter",
+        "battery": "Battery",
+        "structure": "Mounting structure",
+        "workmanship": "Installation workmanship"
+      },
+      "hints": {
+        "panel": "Product warranty, plus the maker’s power output (performance) warranty.",
+        "inverter": "The maker’s product warranty.",
+        "battery": "The maker’s product warranty.",
+        "structure": "OneOhm’s warranty on the structure.",
+        "workmanship": "OneOhm’s warranty on the installation work."
+      },
+      "years": "Product warranty (years)",
+      "performanceYears": "Performance warranty (years)",
+      "applies": "Changes apply to systems commissioned from now on. Warranties already recorded keep their dates.",
+      "updated": "Last changed {time} by {name}",
+      "starter": "These are the starting values; change them to match the makers you buy from.",
+      "unsaved": "You have unsaved changes",
+      "discard": "Discard"
+    },
+    "amc": {
+      "title": "AMC plans",
+      "intro": "Annual maintenance contracts the service team can sell for a commissioned system. The visits are spread evenly across the contract; each opens as a service request a week ahead, and the customer gets a WhatsApp.",
+      "add": "New plan",
+      "loading": "Loading AMC plans",
+      "caption": "AMC plans",
+      "empty": "No AMC plans yet",
+      "emptyBody": "Add a plan with its price, visits a year and what each visit includes.",
+      "columns": {
+        "plan": "Plan",
+        "price": "Price",
+        "visits": "Visits",
+        "length": "Length",
+        "sold": "Running",
+        "status": "Status"
+      },
+      "perYear": "{count, plural, one {# a year} other {# a year}}",
+      "months": "{count, plural, one {# month} other {# months}}",
+      "running": "{count, plural, =0 {None} one {# contract} other {# contracts}}",
+      "active": "On sale",
+      "archived": "Not on sale",
+      "dialog": {
+        "createTitle": "New AMC plan",
+        "editTitle": "Edit AMC plan",
+        "name": "Plan name",
+        "price": "Price, with tax",
+        "visitsPerYear": "Visits a year",
+        "durationMonths": "Length (months)",
+        "visitName": "What the customer calls a visit",
+        "visitNameHint": "Used in the WhatsApp: “Your free {example} visit is on 7 Nov.”",
+        "includes": "What each visit includes",
+        "includesHint": "One item per line, for example Panel cleaning.",
+        "active": "On sale",
+        "applies": "Contracts already sold keep the terms they were sold on.",
+        "create": "Add plan",
+        "created": "{name} added",
+        "updated": "{name} saved"
+      }
+    },
+    "project": {
+      "title": "Installed system",
+      "description": "What was installed, with warranty end dates and the AMC.",
+      "loading": "Loading the installed system",
+      "notYet": "The installed system and its warranties are recorded when testing and commissioning is completed.",
+      "notRecorded": "Commissioned on {date}, but the installed system was not recorded yet.",
+      "record": "Record from the quotation",
+      "recorded": "Installed system recorded",
+      "kinds": {
+        "panel": "Panels",
+        "inverter": "Inverter",
+        "battery": "Battery",
+        "structure": "Structure",
+        "workmanship": "Workmanship"
+      },
+      "quantity": "{count} ×",
+      "serials": "{count, plural, =0 {No serial numbers} one {# serial number} other {# serial numbers}}",
+      "until": "Until {date}",
+      "performance": "Output until {date}",
+      "state": {
+        "active": "Covered",
+        "ending_soon": "Ends soon",
+        "ended": "Ended"
+      },
+      "edit": "Edit {item}",
+      "amcTitle": "AMC",
+      "noAmc": "No AMC yet.",
+      "sell": "Sell AMC",
+      "amcState": {
+        "upcoming": "Starts soon",
+        "active": "Running",
+        "ended": "Ended",
+        "cancelled": "Cancelled"
+      },
+      "amcPeriod": "{from} to {to} · {price}",
+      "visits": "{done} of {total} visits done",
+      "nextVisit": "Next visit {date}",
+      "cancel": "Cancel AMC",
+      "cancelTitle": "Cancel this AMC?",
+      "cancelBody": "Visits not yet opened are dropped. Visit requests already with the service team stay open.",
+      "cancelled": "AMC cancelled",
+      "keep": "Keep it",
+      "asset": {
+        "title": "Edit {item}",
+        "make": "Make",
+        "model": "Model",
+        "serials": "Serial numbers",
+        "serialsHint": "One per line, or separated by commas.",
+        "saved": "Saved"
+      },
+      "sale": {
+        "title": "Sell an AMC",
+        "description": "For {code}. The visits are planned across the contract when you save.",
+        "plan": "Plan",
+        "planOption": "{name} · {price}",
+        "noPlans": "There are no AMC plans on sale. Add one in Settings → AMC plans.",
+        "startsOn": "Starts on",
+        "price": "Price agreed, with tax",
+        "note": "Note",
+        "notePlaceholder": "For example: paid in cash at handover.",
+        "preview": "{count, plural, one {# visit} other {# visits}}, ending {date}.",
+        "money": "The price is kept on the contract only. Record the payment in Finance if it was paid.",
+        "submit": "Sell AMC",
+        "sold": "AMC sold — {count, plural, one {# visit} other {# visits}} planned"
+      }
+    }
+  }
+}

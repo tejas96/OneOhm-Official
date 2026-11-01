@@ -7,6 +7,7 @@ import { createWhatsAppSender } from './channels/whatsapp-cloud';
 import { loadConfig } from './config';
 import { OutboxRelay } from './relay/outbox-relay';
 import { ensureDailyOperationsSchedule } from './schedules/daily-operations.schedule';
+import { ensureServiceSlaSchedule } from './schedules/service-sla.schedule';
 import { workflowSource } from './workflow-source';
 
 /**
@@ -40,6 +41,10 @@ async function main(): Promise<void> {
   const clientConnection = await Connection.connect({ address: config.TEMPORAL_ADDRESS });
   const client = new Client({ connection: clientConnection, namespace: config.TEMPORAL_NAMESPACE });
   await ensureDailyOperationsSchedule(client, {
+    taskQueue: config.TEMPORAL_TASK_QUEUE,
+    timeZone: config.BUSINESS_TIMEZONE,
+  });
+  await ensureServiceSlaSchedule(client, {
     taskQueue: config.TEMPORAL_TASK_QUEUE,
     timeZone: config.BUSINESS_TIMEZONE,
   });

@@ -1,10 +1,13 @@
 import type { MyWorkday } from '@oneohm/api-contracts';
 import { Button, Card, describeError, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
-import { LogIn, LogOut, Sparkles } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { LogIn, LogOut, Route, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
+import { TRAVEL } from '@/copy/site';
 import { ATTENDANCE, POINTS } from '@/copy/workforce';
+import { TrackingStatus } from '@/features/site/tracking-status';
 import { ConsentPrompt } from './consent-prompt';
 import { CorrectionSheet } from './correction-sheet';
 import { DayLine } from './day-line';
@@ -37,6 +40,11 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
         </Text>
       </View>
       <DayLine workday={workday} />
+      {workday.tracking ? (
+        <View style={styles.status}>
+          <TrackingStatus state={workday.tracking} />
+        </View>
+      ) : null}
       {askConsent && !day ? <ConsentPrompt days={workday.attendance.retentionDays} /> : null}
       {day?.checkOutAt ? (
         <Text variant="bodySm" tone="secondary">
@@ -70,6 +78,16 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
             {ATTENDANCE.correction}
           </Text>
         </PressableScale>
+        <PressableScale
+          accessibilityRole="button"
+          onPress={() => router.push('/travel')}
+          style={styles.place}
+        >
+          <Route size={14} color={theme.colors.accent} />
+          <Text variant="label" tone="accent">
+            {TRAVEL.link}
+          </Text>
+        </PressableScale>
       </View>
       <CorrectionSheet open={correcting} onClose={() => setCorrecting(false)} />
     </Card>
@@ -81,4 +99,5 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   place: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   foot: { gap: 8, paddingTop: 4 },
+  status: { flexDirection: 'row' },
 });

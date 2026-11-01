@@ -34,6 +34,8 @@ export const personSchema = z.object({
   status: z.enum(['active', 'inactive']),
   onLeave: z.boolean(),
   roles: z.array(roleRefSchema),
+  /** Skill keys the person holds (PRD 3.7). */
+  skills: z.array(z.string()),
   openTasks: z.number().int(),
 });
 export type Person = z.infer<typeof personSchema>;

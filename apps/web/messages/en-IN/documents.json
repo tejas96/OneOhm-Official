@@ -130,6 +130,7 @@
         "oneohm": "OneOhm",
         "notRecorded": "Not recorded",
         "openFull": "Open full size",
+        "print": "Print",
         "download": "Download",
         "replace": "Replace",
         "remove": "Remove",
@@ -188,7 +189,50 @@
         "missing": "Missing",
         "ready_to_save": "Ready to save",
         "not_ready": "Not ready"
+      },
+      "ask": "Ask the customer",
+      "asked": "Asked"
+    },
+    "requests": {
+      "title": "Asked from the customer",
+      "intro": "Papers only the customer holds. They get WhatsApp and an app alert, and send a photo or PDF from the OneOhm app.",
+      "ask": "Ask for a paper",
+      "loading": "Loading requests",
+      "askedBy": "Asked by {name}, {when}",
+      "askedWhen": "Asked {when}",
+      "receivedWhen": "Sent {when}",
+      "openFile": "Open the file",
+      "cancel": "Cancel",
+      "cancelled": "Request cancelled",
+      "cancelFailed": "Could not cancel the request",
+      "status": {
+        "open": "Waiting",
+        "received": "Received",
+        "cancelled": "Cancelled"
+      },
+      "sheet": {
+        "title": "Ask the customer for a paper",
+        "description": "The customer gets a WhatsApp message and an alert in the OneOhm app, and sends a photo or PDF from there.",
+        "what": "What do you need?",
+        "whatHint": "The customer sees exactly this, for example \"Latest electricity bill\".",
+        "category": "Kind of paper",
+        "note": "Note for the customer (optional)",
+        "notePlaceholder": "For example: the bill must show the consumer number.",
+        "send": "Send request",
+        "sent": "Request sent to the customer",
+        "failed": "Could not send the request",
+        "close": "Cancel"
       }
+    },
+    "reportVisibility": {
+      "title": "Reports the customer sees",
+      "description": "Ready reports switched on here appear in the customer app. The team always sees every report.",
+      "loading": "Loading report settings",
+      "defaultShown": "Shown to customers by default",
+      "defaultHidden": "Kept internal by default",
+      "shown": "{name} is now shown to customers",
+      "hidden": "{name} is now internal only",
+      "failed": "Could not change the report setting"
     }
   }
 }

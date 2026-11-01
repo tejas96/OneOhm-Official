@@ -8,9 +8,11 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { recordPhotoGeotag } from '../site-activity/photo-geotag';
 import {
   canAttach,
   canChangeDocument,
+  canDownloadDocument,
   canViewAllDocuments,
   canViewDocument,
   type DocumentLinks,
@@ -91,6 +93,14 @@ export class DocumentsService {
         })
         .returning({ id: documents.id });
       if (!row) throw new Error('Document insert returned nothing');
+      // Where and when a field photo was taken, kept with consent only (PRD 4.2).
+      await recordPhotoGeotag(tx, {
+        documentId: row.id,
+        userId: actor.userId,
+        propertyId: links.propertyId,
+        contentType: checked.contentType,
+        fields,
+      });
       await recordAudit(tx, actor.userId, 'document.uploaded', 'document', row.id, {
         name: checked.name,
         category: fields.category,
@@ -101,9 +111,16 @@ export class DocumentsService {
     return this.one(id);
   }
 
-  async file(actor: Actor, id: string): Promise<StoredObject & { name: string; type: string }> {
+  async file(
+    actor: Actor,
+    id: string,
+    disposition: 'inline' | 'attachment' = 'inline',
+  ): Promise<StoredObject & { name: string; type: string }> {
     const { row, links } = await this.load(id);
     if (!canViewDocument(actor, links)) throw forbidden();
+    if (disposition === 'attachment' && !canDownloadDocument(actor, links)) {
+      throw forbidden('You may look at this file but not download it.');
+    }
     const stored = await this.storage.get(row.storageKey);
     return { ...stored, name: row.name, type: row.contentType };
   }

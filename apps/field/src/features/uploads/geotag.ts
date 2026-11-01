@@ -42,6 +42,13 @@ function takenAt(value: unknown): string | null {
 const asRecord = (value: unknown): Exif =>
   typeof value === 'object' && value !== null ? (value as Exif) : {};
 
+/** When the photo was taken by its EXIF, even when it carries no position. */
+export function exifTakenAt(exif: unknown): string | null {
+  const flat = asRecord(exif);
+  const exifBlock = asRecord(flat['{Exif}']);
+  return takenAt(flat.DateTimeOriginal ?? exifBlock.DateTimeOriginal ?? flat.DateTime);
+}
+
 /**
  * The geotag in a photo's EXIF as the image picker returns it: flat `GPSLatitude` keys
  * (Android) or a `{GPS}` block (iOS). Null when the photo carries no position.

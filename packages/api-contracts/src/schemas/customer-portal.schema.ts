@@ -9,12 +9,20 @@ import {
   paiseSchema,
   phoneSchema,
 } from '../common/primitives';
+import {
+  SERVICE_KINDS,
+  SERVICE_STATUSES,
+  serviceCategoryKeySchema,
+  ticketRatingSchema,
+} from './service-desk.schema';
 
 export const customerProfileSchema = z.object({
   id: idSchema,
   name: z.string(),
   phone: z.string(),
   email: z.string().nullable(),
+  /** A family member signed in on the customer's behalf (PRD 5.1); absent for the customer. */
+  viewer: z.object({ name: z.string(), relation: z.string() }).nullable().optional(),
 });
 export type CustomerProfile = z.infer<typeof customerProfileSchema>;
 
@@ -97,11 +105,21 @@ export const referralInputSchema = z.object({
 export const referralSchema = z.object({
   id: idSchema,
   name: z.string(),
-  status: z.enum(['received', 'in_progress', 'installed', 'closed']),
+  /** `ordered`: their project is under way; `installed` once it is commissioned. */
+  status: z.enum(['received', 'in_progress', 'ordered', 'installed', 'closed']),
+  /** The reward once their project reached the qualifying event (PRD 5.6). */
+  reward: z
+    .object({
+      status: z.enum(['pending', 'approved', 'paid', 'rejected']),
+      amountPaise: z.number().int(),
+      paidOn: calendarDateSchema.nullable(),
+    })
+    .nullable(),
   createdAt: instantSchema,
 });
 export type Referral = z.infer<typeof referralSchema>;
 
+/** The categories OneOhm ships with; owners add more in Settings (service_categories). */
 export const SERVICE_CATEGORIES = [
   'no_generation',
   'low_generation',
@@ -115,17 +133,24 @@ export const SERVICE_CATEGORIES = [
 
 export const serviceRequestInputSchema = z.object({
   projectId: idSchema.nullable().optional(),
-  category: z.enum(SERVICE_CATEGORIES),
+  category: serviceCategoryKeySchema,
   description: z.string().trim().min(5, 'Tell us a little more.').max(2000),
 });
 
 export const serviceRequestSchema = z.object({
   id: idSchema,
   projectCode: z.string().nullable(),
-  category: z.enum(SERVICE_CATEGORIES),
+  category: serviceCategoryKeySchema,
+  /** The category in the customer's words. */
+  categoryLabel: z.string(),
+  kind: z.enum(SERVICE_KINDS),
+  /** The day of a planned maintenance visit. */
+  scheduledFor: calendarDateSchema.nullable(),
   description: z.string(),
-  status: z.enum(['open', 'in_progress', 'resolved']),
+  status: z.enum(SERVICE_STATUSES),
   resolutionNote: z.string().nullable(),
+  /** The customer's rating once resolved (PRD 5.5). */
+  rating: ticketRatingSchema.nullable(),
   /** Photos the customer added in the app. */
   photoCount: z.number().int(),
   createdAt: instantSchema,

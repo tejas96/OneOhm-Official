@@ -8,8 +8,11 @@
     "tabs": {
       "overview": "Overview",
       "receivables": "Receivables",
+      "cash": "Cash and cheques",
       "invoices": "Invoices",
       "payables": "Payables",
+      "advances": "Vendor advances",
+      "payouts": "Commissions & rewards",
       "loans": "Loans",
       "ledger": "Ledger"
     },
@@ -124,9 +127,11 @@
       },
       "party": {
         "vendor": "Vendor",
-        "contractor": "Contractor crew"
+        "contractor": "Contractor crew",
+        "employee": "Employee travel"
       },
       "paidOn": "Paid {date}",
+      "advanceAdjusted": "{amount} advance used",
       "overdueSince": "Overdue since {date}",
       "status": {
         "pending": "Waiting approval",
@@ -282,7 +287,19 @@
         "payable_approved": "Bill approved",
         "payable_paid": "Bill paid",
         "work_order_tds": "TDS held",
-        "reversal": "Reversal"
+        "reversal": "Reversal",
+        "referral_reward_approved": "Referral reward approved",
+        "referral_reward_paid": "Referral reward paid",
+        "commission_approved": "Commission approved",
+        "commission_paid": "Commission paid",
+        "gateway_fee": "Gateway fee",
+        "settlement": "Gateway payout",
+        "customer_credit": "Customer credit",
+        "customer_refund": "Refund",
+        "vendor_advance_paid": "Vendor advance paid",
+        "vendor_advance_adjusted": "Vendor advance used on a bill",
+        "cash_deposit": "Cash deposit",
+        "cheque_cleared": "Cheque cleared"
       }
     },
     "links": {
@@ -426,6 +443,182 @@
         "cheque": "Cheque",
         "cash": "Cash"
       }
+    },
+    "payouts": {
+      "intro": {
+        "commissions": "Commission resellers earned on projects they sold. Approving books it as a cost and what OneOhm owes; paying records the bank or cash movement. The reseller sees each step in the field app.",
+        "referrals": "Rewards customers earned for referring friends. Approving books a marketing expense; paying records the bank or cash movement. The customer is told on WhatsApp and in their app at each step."
+      },
+      "viewLabel": "Show",
+      "views": {
+        "commissions": "Reseller commission",
+        "referrals": "Referral rewards"
+      },
+      "filterLabel": "Filter by status",
+      "filters": {
+        "open": "To do",
+        "pending": "To approve",
+        "approved": "To pay",
+        "paid": "Paid",
+        "rejected": "Not approved",
+        "all": "All"
+      },
+      "status": {
+        "pending": "Waiting for approval",
+        "approved": "Approved, to pay",
+        "paid": "Paid",
+        "rejected": "Not approved"
+      },
+      "events": {
+        "project_created": "project created",
+        "advance_paid": "advance paid",
+        "commissioned": "commissioned"
+      },
+      "summary": "{pending} waiting for approval · {approved} approved and waiting to be paid",
+      "loading": "Loading commissions and rewards",
+      "commissionsCaption": "Reseller commission",
+      "referralsCaption": "Referral rewards",
+      "columns": {
+        "reseller": "Reseller",
+        "project": "Customer and project",
+        "basis": "Terms",
+        "amount": "Amount",
+        "status": "Status",
+        "referrer": "Referred by",
+        "friend": "Friend and project",
+        "earned": "Earned"
+      },
+      "earnedOn": "Earned {date}, {event}",
+      "basisPercent": "{rate}% of {value}",
+      "basisPerKw": "{amount} per kW × {size}",
+      "rewardFlat": "Fixed reward, {event}",
+      "rewardPerKw": "{amount} per kW, {event}",
+      "paidOn": "Paid {date}",
+      "approvedBy": "Approved by {name}",
+      "approve": "Approve",
+      "reject": "Not approve",
+      "pay": "Record payment",
+      "approved": "Approved",
+      "failed": "That did not go through",
+      "empty": {
+        "commissions": {
+          "title": "No commission here",
+          "body": "Commission appears when a project a reseller sold reaches the event in their rule."
+        },
+        "referrals": {
+          "title": "No rewards here",
+          "body": "Rewards appear when a referred friend's project reaches the event set in Settings, Refer and earn."
+        }
+      },
+      "payDialog": {
+        "title": "Record the payment",
+        "description": "{amount} to {party}. The ledger books it from the bank or cash.",
+        "method": "Paid by",
+        "paidOn": "Paid on",
+        "reference": "Reference",
+        "referenceHint": "UTR, UPI or cheque number.",
+        "submit": "Record payment",
+        "done": "Payment recorded"
+      },
+      "rejectDialog": {
+        "title": "Do not approve",
+        "description": "{amount} for {party}. They are told the reason.",
+        "reason": "Reason",
+        "reasonHint": "For example: the referred friend was already our customer.",
+        "submit": "Do not approve",
+        "done": "Marked as not approved"
+      }
+    },
+    "cash": {
+      "loading": "Loading cash and cheques",
+      "openTitle": "Not yet in the bank",
+      "openIntro": "Cash held by the team and cheques waiting to clear, oldest first. Tick money in hand to put it on a deposit slip. Cash held more than {days} days is flagged.",
+      "openCaption": "Cash and cheques not yet in the bank",
+      "allBanked": "Everything collected is in the bank",
+      "pick": "Add the payment from {from} to the deposit",
+      "unknownHolder": "Not recorded",
+      "held": "{days, plural, =0 {Received today} one {Held # day} other {Held # days}}",
+      "depositedOn": "On {number}",
+      "columns": {
+        "from": "Received from",
+        "method": "How",
+        "amount": "Amount",
+        "holder": "Held by",
+        "status": "Where it is",
+        "actions": "Cheque"
+      },
+      "method": {
+        "cash": "Cash",
+        "cheque": "Cheque"
+      },
+      "status": {
+        "in_hand": "In hand",
+        "deposited": "Deposited",
+        "cleared": "Cleared",
+        "bounced": "Bounced"
+      },
+      "figures": {
+        "cash": "Cash in hand",
+        "cashNote": "{count, plural, =0 {Nobody holds cash} one {Held by # person} other {Held by # people}}",
+        "cheques": "Cheques to clear",
+        "chequesNote": "In hand or deposited, not yet credited",
+        "oldest": "Oldest cash held",
+        "days": "{days, plural, one {# day} other {# days}}",
+        "late": "Overdue for deposit",
+        "onTime": "Within the deposit time",
+        "collector": "{name}: {amount}, oldest {days, plural, one {# day} other {# days}}",
+        "unknown": "Not recorded"
+      },
+      "deposit": {
+        "title": "Record a bank deposit",
+        "description": "{count, plural, one {# payment} other {# payments}} on one bank slip.",
+        "cash": "Cash",
+        "cheques": "Cheques",
+        "date": "Deposited on",
+        "reference": "Bank slip or reference",
+        "referenceHint": "As printed on the counterfoil, so it can be found on the bank statement.",
+        "note": "Note",
+        "chequesNote": "Cash moves to the bank now. Cheques move when you mark them cleared.",
+        "submit": "Record deposit",
+        "cancel": "Cancel",
+        "done": "Deposit recorded",
+        "failed": "Could not record the deposit"
+      },
+      "cheque": {
+        "clear": "Mark cleared",
+        "bounce": "Mark bounced",
+        "clearTitle": "Cheque cleared",
+        "bounceTitle": "Cheque bounced",
+        "about": "Cheque {number} for {amount} from {customer}.",
+        "clearedOn": "Credited on",
+        "bouncedOn": "Returned on",
+        "reason": "Reason",
+        "reasonHint": "As the bank gave it, for example \"Insufficient funds\".",
+        "bounceNote": "The payment is reversed, the milestone is due again and the project manager is told.",
+        "clearSubmit": "Mark cleared",
+        "bounceSubmit": "Mark bounced",
+        "cancel": "Cancel",
+        "cleared": "Cheque cleared",
+        "bounced": "Cheque marked bounced",
+        "failed": "Could not update the cheque"
+      },
+      "deposits": {
+        "title": "Deposit slips",
+        "intro": "Every bank deposit of cash and cheques, newest first.",
+        "empty": "No deposits yet.",
+        "caption": "Deposit slips",
+        "items": "{count, plural, one {# payment} other {# payments}}",
+        "columns": {
+          "number": "Slip",
+          "reference": "Bank reference",
+          "cash": "Cash",
+          "cheques": "Cheques",
+          "by": "Deposited by"
+        }
+      },
+      "picked": "{count, plural, one {# payment} other {# payments}} ticked · {amount}",
+      "unpick": "Clear",
+      "depositAction": "Record deposit"
     }
   }
 }

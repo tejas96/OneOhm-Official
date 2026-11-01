@@ -9,11 +9,17 @@ import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
 import { ActivityPanel } from './activity/activity-panel';
+import { AmcPlansPanel } from './after-sales/amc-plans-panel';
+import { ServiceCategoriesPanel } from './after-sales/service-categories-panel';
+import { WarrantyPanel } from './after-sales/warranty-panel';
 import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
+import { LeadStepsPanel } from './lead-steps/lead-steps-panel';
 import { PaymentPlansPanel } from './payment-plans/payment-plans-panel';
 import { ProductsPanel } from './products/products-panel';
 import { RatesPanel } from './rates/rates-panel';
+import { ReferralsPanel } from './referrals/referrals-panel';
+import { RequirementsPanel } from './requirements/requirements-panel';
 import { RolesPanel } from './roles/roles-panel';
 import { type NavGroup, SettingsNav } from './settings-nav';
 import { MessageTemplatesPanel } from './templates/message-templates-panel';
@@ -27,9 +33,15 @@ const TABS = [
   { value: 'rates', requires: 'settings.manage', Panel: RatesPanel },
   { value: 'payments', requires: 'settings.manage', Panel: PaymentPlansPanel },
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
+  { value: 'referrals', requires: 'settings.manage', Panel: ReferralsPanel },
+  { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
   { value: 'tasks', requires: 'settings.manage', Panel: TaskTemplatesPanel },
+  { value: 'documents', requires: 'settings.manage', Panel: RequirementsPanel },
   { value: 'messages', requires: 'settings.manage', Panel: MessageTemplatesPanel },
+  { value: 'serviceSla', requires: 'settings.manage', Panel: ServiceCategoriesPanel },
+  { value: 'warranty', requires: 'settings.manage', Panel: WarrantyPanel },
+  { value: 'amcPlans', requires: 'settings.manage', Panel: AmcPlansPanel },
   { value: 'activity', requires: 'settings.manage', Panel: ActivityPanel },
 ] as const satisfies readonly {
   value: string;
@@ -40,8 +52,9 @@ type TabValue = (typeof TABS)[number]['value'];
 
 const GROUPS: readonly NavGroup<TabValue>[] = [
   { key: 'organisation', items: ['company', 'roles', 'workforce'] },
-  { key: 'selling', items: ['products', 'rates', 'payments', 'discoms'] },
-  { key: 'operations', items: ['tasks', 'messages'] },
+  { key: 'selling', items: ['leadSteps', 'products', 'rates', 'payments', 'discoms', 'referrals'] },
+  { key: 'operations', items: ['tasks', 'documents', 'messages'] },
+  { key: 'afterSales', items: ['serviceSla', 'warranty', 'amcPlans'] },
   { key: 'security', items: ['activity'] },
 ];
 

@@ -29,6 +29,14 @@ export const journalSourceEnum = pgEnum('journal_source', [
   'settlement',
   'customer_credit',
   'customer_refund',
+  'cash_deposit',
+  'cheque_cleared',
+  'referral_reward_approved',
+  'referral_reward_paid',
+  'commission_approved',
+  'commission_paid',
+  'vendor_advance_paid',
+  'vendor_advance_adjusted',
 ]);
 
 /** The chart of accounts (seeded from `LEDGER_ACCOUNTS` in the domain package). */

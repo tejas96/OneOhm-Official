@@ -7,6 +7,8 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { contractorOnProject } from './custody-checks';
+import { handOverDispatch } from './custody-handover';
 import { projectMaterial, projectNeeds } from './material-read';
 import {
   activeReservations,
@@ -122,6 +124,9 @@ export class MaterialService {
     await this.db.transaction(async (tx) => {
       const active = await activeReservations(tx, projectId);
       if (active.length === 0) throw conflict('Reserve the material before dispatching it.');
+      const crew = input.contractorId
+        ? await contractorOnProject(tx, input.contractorId, projectId)
+        : null;
       const { catalog } = await projectNeeds(tx, projectId);
       const locationId = active[0]?.locationId ?? '';
       const number = await nextNumber(tx, 'dispatches', 'DC', input.dispatchedOn);
@@ -181,10 +186,23 @@ export class MaterialService {
             active.map((row) => row.id),
           ),
         );
+      const slip = crew
+        ? await handOverDispatch(tx, {
+            contractorId: crew.id,
+            projectId,
+            locationId,
+            dispatch: { id: dispatch.id, on: input.dispatchedOn },
+            lines,
+            catalog,
+            userId: actor.userId,
+          })
+        : null;
       await tx.insert(projectActivities).values({
         projectId,
         kind: 'material',
-        message: `Material dispatched to site on ${number}.`,
+        message: crew
+          ? `Material dispatched to site on ${number} and handed to ${crew.name} (${slip}).`
+          : `Material dispatched to site on ${number}.`,
         userId: actor.userId,
       });
       await recordAudit(tx, actor.userId, 'material.dispatched', 'project', projectId, { number });

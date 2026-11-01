@@ -2,13 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Lead, LeadDetail } from '@oneohm/api-contracts';
 import { leadActivities, leads, users } from '@oneohm/database';
 import type { LeadSource, LeadStage, SubsidyCategory } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
-import { and, asc, desc, eq, ilike, inArray, notInArray, or, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, notInArray, or, type SQL } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
-import { STAGE_LABEL } from './lead-labels';
+import { resolveReferralCode } from '../referrals/referral-codes';
+import { presentLeads } from './lead-present';
+import { movedNote, pickStep, stepColumns } from './lead-steps-read';
 
 const CLOSED: LeadStage[] = ['won', 'lost'];
 
@@ -24,6 +25,7 @@ export interface NewLead {
   nextActionOn: string;
   nextActionNote?: string | null | undefined;
   notes?: string | null | undefined;
+  referralCode?: string | null | undefined;
 }
 
 /** Every lead has an owner and a next action; an open lead is never silent (PRD 3.3). */
@@ -99,6 +101,7 @@ export class LeadsService {
       );
     }
     const reseller = actor.kind === 'reseller';
+    const referrer = await this.referrer(input);
     const [created] = await this.db
       .insert(leads)
       .values({
@@ -106,7 +109,8 @@ export class LeadsService {
         phoneE164: input.phone,
         email: input.email ?? null,
         city: input.city,
-        source: reseller ? 'reseller' : input.source,
+        source: reseller ? 'reseller' : referrer ? 'referral' : input.source,
+        referredByCustomerId: referrer?.customerId ?? null,
         subsidyCategory: input.subsidyCategory,
         estimatedWp: input.estimatedWp ?? null,
         ownerUserId: reseller ? null : (input.ownerUserId ?? actor.userId),
@@ -117,7 +121,12 @@ export class LeadsService {
       })
       .returning();
     if (!created) throw new Error('Lead insert returned nothing.');
-    await this.log(created.id, actor.userId, 'note', 'Lead created.');
+    await this.log(
+      created.id,
+      actor.userId,
+      'note',
+      referrer ? `Lead created, referred by ${referrer.name} (${referrer.code}).` : 'Lead created.',
+    );
     const [lead] = await this.present([created]);
     if (!lead) throw notFound('That lead');
     return lead;
@@ -128,6 +137,7 @@ export class LeadsService {
     id: string,
     patch: Patch<{
       stage: LeadStage;
+      stepKey: string;
       ownerUserId: string | null;
       nextActionOn: string | null;
       nextActionNote: string | null;
@@ -136,7 +146,8 @@ export class LeadsService {
     }>,
   ): Promise<LeadDetail> {
     const current = await this.get(actor, id);
-    const stage = patch.stage ?? current.stage;
+    const step = patch.stepKey ? await pickStep(this.db, patch.stepKey) : null;
+    const stage = step?.stage ?? patch.stage ?? current.stage;
     const nextActionOn =
       patch.nextActionOn === undefined ? current.nextActionOn : patch.nextActionOn;
     if (!CLOSED.includes(stage) && !nextActionOn) {
@@ -151,17 +162,13 @@ export class LeadsService {
       .update(leads)
       .set({
         ...definedOnly(patch),
+        ...stepColumns(step, patch.stage),
         ...(stage === 'won' && current.stage !== 'won' ? { wonAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(leads.id, id));
-    if (patch.stage && patch.stage !== current.stage)
-      await this.log(
-        id,
-        actor.userId,
-        'stage_change',
-        `Moved from ${STAGE_LABEL[current.stage]} to ${STAGE_LABEL[patch.stage]}.`,
-      );
+    const moved = movedNote(current, step, patch.stage);
+    if (moved) await this.log(id, actor.userId, 'stage_change', moved);
     if (patch.nextActionOn && patch.nextActionOn !== current.nextActionOn) {
       await this.log(
         id,
@@ -191,6 +198,23 @@ export class LeadsService {
       .where(eq(leads.id, id));
   }
 
+  /** The customer whose referral code came with the lead; a code that fits no one is an error. */
+  private async referrer(input: NewLead) {
+    if (!input.referralCode?.trim()) return null;
+    const owner = await resolveReferralCode(this.db, input.referralCode);
+    if (!owner) {
+      throw invalid('No customer has this referral code.', {
+        referralCode: 'Check the code with the customer who referred them.',
+      });
+    }
+    if (owner.phone === input.phone) {
+      throw invalid('A customer cannot refer themselves.', {
+        referralCode: 'This code belongs to the same phone number.',
+      });
+    }
+    return owner;
+  }
+
   private async log(
     leadId: string,
     userId: string,
@@ -210,36 +234,7 @@ export class LeadsService {
     );
   }
 
-  private async present(rows: Array<typeof leads.$inferSelect>): Promise<Lead[]> {
-    const ownerIds = [
-      ...new Set(rows.map((row) => row.ownerUserId).filter((id): id is string => id !== null)),
-    ];
-    const owners = ownerIds.length
-      ? await this.db
-          .select({ id: users.id, fullName: users.fullName })
-          .from(users)
-          .where(inArray(users.id, ownerIds))
-      : [];
-    const today = todayIn();
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      phone: row.phoneE164,
-      email: row.email,
-      city: row.city,
-      source: row.source,
-      stage: row.stage,
-      subsidyCategory: row.subsidyCategory,
-      estimatedWp: row.estimatedWp,
-      owner: owners.find((owner) => owner.id === row.ownerUserId) ?? null,
-      nextActionOn: row.nextActionOn,
-      nextActionNote: row.nextActionNote,
-      overdue: !CLOSED.includes(row.stage) && row.nextActionOn !== null && row.nextActionOn < today,
-      customerId: row.customerId,
-      propertyId: row.propertyId,
-      lostReason: row.lostReason,
-      notes: row.notes,
-      createdAt: row.createdAt.toISOString(),
-    }));
+  private present(rows: Array<typeof leads.$inferSelect>): Promise<Lead[]> {
+    return presentLeads(this.db, rows);
   }
 }

@@ -14,6 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { HOME } from '@/copy/home';
 import { Bell } from '@/features/alerts/bell';
+import { RateStageCard } from '@/features/ratings/rate-stage-card';
 import { BUSINESS_TIME_ZONE, longToday } from '@/lib/dates';
 import { asksForFeedback } from '@/lib/journey';
 import { useCustomer } from '@/session/session-provider';
@@ -30,7 +31,9 @@ export function HomeScreen() {
   const query = useHome();
   const { project, choose } = useChosenProject(query.data?.projects);
   const phase = skyPhase(localHours(new Date(), BUSINESS_TIME_ZONE));
-  const firstName = customer.name.split(/\s+/)[0] ?? customer.name;
+  // A family member is greeted by their own name.
+  const greeted = customer.viewer?.name ?? customer.name;
+  const firstName = greeted.split(/\s+/)[0] ?? greeted;
 
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
@@ -73,6 +76,7 @@ export function HomeScreen() {
           {project.waiting ? <WaitingCard waiting={project.waiting} /> : null}
           <JourneyCard project={project} />
           <NextStepCard next={project.nextStep} />
+          <RateStageCard projectId={project.id} />
           {asksForFeedback(project) ? <FeedbackPrompt projectId={project.id} /> : null}
           <SubsidyCard subsidy={project.subsidy} />
           <ContactCard contact={project.contact} />

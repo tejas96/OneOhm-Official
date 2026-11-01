@@ -10,6 +10,10 @@ export const NOTICE_SUBJECTS = [
   'payment',
   'service_request',
   'quotation',
+  'purchase_request',
+  'vendor_advance',
+  'stock',
+  'travel_claim',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */

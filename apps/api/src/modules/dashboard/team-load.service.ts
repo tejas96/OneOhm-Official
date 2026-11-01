@@ -6,8 +6,10 @@ import {
   leaveRequests,
   projects,
   projectTasks,
+  stageRatingPeople,
   users,
 } from '@oneohm/database';
+import { ratingSummary } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -66,6 +68,11 @@ export class TeamLoadService {
     const crews = await this.db
       .select({ id: contractors.id, name: contractors.name })
       .from(contractors);
+    const stars = await this.db
+      .select({ userId: stageRatingPeople.userId, rating: stageRatingPeople.rating })
+      .from(stageRatingPeople);
+    const starsOf = (ids: readonly string[]) =>
+      ratingSummary(stars.filter((row) => ids.includes(row.userId)).map((row) => row.rating));
     const byUser = new Map(rows.map((row) => [row.userId, row]));
     const awayIds = new Set(away.map((row) => row.userId));
     const empty: Counts = { open: 0, overdue: 0, dueToday: 0, done: 0, onTime: 0 };
@@ -82,6 +89,7 @@ export class TeamLoadService {
           dueToday: counts.dueToday,
           done: counts.done,
           onTimePercent: percent(counts),
+          ...summaryFields(starsOf([person.id])),
         };
       })
       .filter((person) => person.open + person.done > 0)
@@ -108,6 +116,7 @@ export class TeamLoadService {
           dueToday: counts.dueToday,
           done: counts.done,
           onTimePercent: percent(counts),
+          ...summaryFields(starsOf(members.map((member) => member.id))),
         };
       })
       .filter((crew) => crew.open + crew.done > 0)
@@ -115,3 +124,8 @@ export class TeamLoadService {
     return { people: staff, contractors: contractorRows };
   }
 }
+
+const summaryFields = (summary: { average: number | null; count: number }) => ({
+  rating: summary.average,
+  ratings: summary.count,
+});

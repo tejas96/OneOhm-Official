@@ -3,6 +3,7 @@ import type { PurchaseOrderDetail, ReceiptData } from '@oneohm/api-contracts';
 import {
   goodsReceiptLines,
   goodsReceipts,
+  notifyHolders,
   payables,
   projectActivities,
   purchaseOrderLines,
@@ -52,19 +53,7 @@ export class ReceivingService {
         (sum, row) => sum + lineTotal({ ...row.line, quantity: row.quantity }),
         0,
       );
-      const invoice = input.vendorInvoiceNumber ? ` · invoice ${input.vendorInvoiceNumber}` : '';
-      const [payable] = await tx
-        .insert(payables)
-        .values({
-          projectId: order.projectId,
-          party: 'vendor',
-          partyName: vendor.name,
-          description: `${number} against ${order.number}${invoice}`,
-          billNumber: input.vendorInvoiceNumber ?? null,
-          amountPaise: amount,
-          dueOn: addDays(input.receivedOn, vendor.paymentTermsDays),
-        })
-        .returning({ id: payables.id });
+      const payableId = await raiseBill(tx, { number, order, vendor, input, amount });
       const [receipt] = await tx
         .insert(goodsReceipts)
         .values({
@@ -76,7 +65,7 @@ export class ReceivingService {
           vendorInvoiceDate: input.vendorInvoiceDate,
           notes: input.notes,
           amountPaise: amount,
-          payableId: payable?.id ?? null,
+          payableId,
           receivedByUserId: actor.userId,
         })
         .returning({ id: goodsReceipts.id });
@@ -110,6 +99,7 @@ export class ReceivingService {
         number,
         amount,
       });
+      await reportRejections(tx, actor, { number, order, vendor: vendor.name, checked });
     });
     return purchaseOrderDetail(this.db, orderId);
   }
@@ -135,8 +125,11 @@ async function receiveLine(
       quantity: row.quantity,
       cellManufacturer: row.cellManufacturer,
       cellInvoiceNumber: row.cellInvoiceNumber,
+      rejectedQuantity: row.rejectedQuantity,
+      rejectionReason: row.rejectionReason,
     })
     .returning({ id: goodsReceiptLines.id });
+  if (row.quantity <= 0) return;
   await tx
     .update(purchaseOrderLines)
     .set({ receivedQuantity: row.line.receivedQuantity + row.quantity })
@@ -165,4 +158,71 @@ async function receiveLine(
       })),
     );
   }
+}
+
+/** Procurement hears when units fail inspection: the vendor owes replacements. */
+async function reportRejections(
+  tx: Transaction,
+  actor: Actor,
+  context: {
+    readonly number: string;
+    readonly order: typeof purchaseOrders.$inferSelect;
+    readonly vendor: string;
+    readonly checked: readonly CheckedLine[];
+  },
+): Promise<void> {
+  const rejected = context.checked.filter((row) => row.rejectedQuantity > 0);
+  if (rejected.length === 0) return;
+  const what = rejected
+    .map((row) => `${row.rejectedQuantity} ${row.line.description} (${row.rejectionReason})`)
+    .join('; ');
+  await notifyHolders(
+    tx,
+    'procurement.manage',
+    {
+      kind: 'inspection_failed',
+      title: `Failed inspection on ${context.number}`,
+      body: `${context.vendor}, ${context.order.number}: ${what}. Still due from the vendor.`,
+      ...(context.order.projectId
+        ? {
+            subject: {
+              type: 'project' as const,
+              id: context.order.projectId,
+              projectId: context.order.projectId,
+            },
+          }
+        : {}),
+      dedupeKey: `inspection_failed:${context.number}`,
+    },
+    actor.userId,
+  );
+}
+
+/** The vendor's bill for what was accepted, due after their terms; none if nothing was. */
+async function raiseBill(
+  tx: Transaction,
+  context: {
+    readonly number: string;
+    readonly order: typeof purchaseOrders.$inferSelect;
+    readonly vendor: typeof vendors.$inferSelect;
+    readonly input: ReceiptData;
+    readonly amount: number;
+  },
+): Promise<string | null> {
+  const { number, order, vendor, input, amount } = context;
+  if (amount <= 0) return null;
+  const invoice = input.vendorInvoiceNumber ? ` · invoice ${input.vendorInvoiceNumber}` : '';
+  const [payable] = await tx
+    .insert(payables)
+    .values({
+      projectId: order.projectId,
+      party: 'vendor',
+      partyName: vendor.name,
+      description: `${number} against ${order.number}${invoice}`,
+      billNumber: input.vendorInvoiceNumber ?? null,
+      amountPaise: amount,
+      dueOn: addDays(input.receivedOn, vendor.paymentTermsDays),
+    })
+    .returning({ id: payables.id });
+  return payable?.id ?? null;
 }

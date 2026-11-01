@@ -8,6 +8,7 @@ import {
   type Database,
   leads,
   projects,
+  serviceCategories,
   serviceRequests,
   users,
 } from '@oneohm/database';
@@ -21,15 +22,22 @@ export async function customerServiceRequests(
   customerId: string,
 ): Promise<CustomerServiceRequest[]> {
   const rows = await db
-    .select({ request: serviceRequests, projectCode: projects.code, assignee: users.fullName })
+    .select({
+      request: serviceRequests,
+      projectCode: projects.code,
+      assignee: users.fullName,
+      categoryLabel: serviceCategories.label,
+    })
     .from(serviceRequests)
     .leftJoin(projects, eq(projects.id, serviceRequests.projectId))
     .leftJoin(users, eq(users.id, serviceRequests.assigneeUserId))
+    .leftJoin(serviceCategories, eq(serviceCategories.key, serviceRequests.category))
     .where(eq(serviceRequests.customerId, customerId))
     .orderBy(desc(serviceRequests.createdAt));
-  return rows.map(({ request, projectCode, assignee }) => ({
+  return rows.map(({ request, projectCode, assignee, categoryLabel }) => ({
     id: request.id,
-    category: request.category as CustomerServiceRequest['category'],
+    category: request.category,
+    categoryLabel: categoryLabel ?? request.category,
     description: request.description,
     status: (SERVICE_STATUSES.has(request.status)
       ? request.status

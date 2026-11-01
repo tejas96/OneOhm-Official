@@ -110,6 +110,8 @@ export const payables = pgTable(
     paidMethod: paymentMethodEnum('paid_method'),
     paidReference: text('paid_reference'),
     paidByUserId: uuid('paid_by_user_id').references(() => users.id),
+    /** Vendor advances set against this bill; only the rest is paid out. */
+    advanceAdjustedPaise: money('advance_adjusted_paise').notNull().default(0),
   },
   (table) => [index('payables_due_idx').on(table.dueOn)],
 );

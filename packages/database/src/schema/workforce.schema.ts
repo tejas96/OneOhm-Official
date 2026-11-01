@@ -47,6 +47,8 @@ export const locationConsents = pgTable('location_consents', {
     .references(() => users.id, { onDelete: 'cascade' }),
   consentedAt: instant('consented_at'),
   withdrawnAt: instant('withdrawn_at'),
+  /** Which version of the consent words the person agreed to (PRD 4.3). */
+  textVersion: integer('text_version'),
 });
 
 /**

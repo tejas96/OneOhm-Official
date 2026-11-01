@@ -75,7 +75,8 @@ describe('posting rules', () => {
       milestoneDue: false,
     });
     expect(lines[1]?.account).toBe(ACCOUNT.advancesReceived);
-    expect(lines[0]?.account).toBe(ACCOUNT.bank);
+    // A cheque waits in "Cheques in hand" until it clears.
+    expect(lines[0]?.account).toBe(ACCOUNT.chequesInHand);
   });
 
   it('reversal swaps every side', () => {

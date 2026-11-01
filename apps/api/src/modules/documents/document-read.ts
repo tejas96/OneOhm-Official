@@ -1,6 +1,7 @@
 import type { Attachment, DocumentRecord } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, documents, projects, projectTasks, users } from '@oneohm/database';
 import { and, desc, eq, isNull, not, type SQL, sql } from 'drizzle-orm';
+import { geotagsOf } from '../site-activity/photo-geotag';
 
 type DocumentRow = typeof documents.$inferSelect;
 
@@ -39,6 +40,10 @@ export async function presentDocuments(
     .leftJoin(users, eq(users.id, documents.uploadedByUserId))
     .where(where)
     .orderBy(desc(documents.createdAt));
+  const geotags = await geotagsOf(
+    db,
+    rows.map((row) => row.document.id),
+  );
   return rows.map(({ document, projectCode, taskTitle, uploaderName }) => ({
     ...toAttachment(document),
     category: document.category,
@@ -55,5 +60,6 @@ export async function presentDocuments(
         ? { id: document.uploadedByUserId, fullName: uploaderName }
         : null,
     replaced: document.replacesDocumentId !== null,
+    geotag: geotags.get(document.id) ?? null,
   }));
 }

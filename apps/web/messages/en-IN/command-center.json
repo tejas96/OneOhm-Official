@@ -188,8 +188,12 @@
         "overdue": "Late",
         "today": "Due today",
         "done": "Done",
-        "onTime": "On time"
-      }
+        "onTime": "On time",
+        "rating": "Customer rating"
+      },
+      "stars": "{rating} ★ ({count})",
+      "fewRatings": "{count, plural, one {# rating} other {# ratings}}",
+      "ratingHint": "Customers rate each finished stage. The average shows after 3 ratings."
     }
   }
 }

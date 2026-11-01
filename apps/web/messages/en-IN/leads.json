@@ -77,6 +77,10 @@
       "email": "Email",
       "category": "Site type",
       "source": "Came from",
+      "referralCode": "Referral code",
+      "referralCodeHint": "Optional. The code of the customer who referred them.",
+      "referralCodeUnknown": "No customer has this code. Check it with the customer who referred them.",
+      "referredBy": "Referred by {name}",
       "estimatedKw": "Expected size (kW)",
       "estimatedHint": "Optional, e.g. 3.3",
       "owner": "Owner",
@@ -155,6 +159,7 @@
       "category": "Site type",
       "size": "Expected size",
       "source": "Came from",
+      "referredBy": "Referred by",
       "email": "Email"
     },
     "convert": {

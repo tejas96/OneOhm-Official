@@ -103,6 +103,7 @@ Business-initiated WhatsApp messages need templates approved in **WhatsApp Manag
    | `service_update` | customer, what the request is about, new status |
    | `change_request_raised` | customer, change requested (e.g. Consumer name change), request number |
    | `change_request_completed` | customer, change requested, request number |
+   | `document_requested` | customer, document asked for (e.g. Latest electricity bill), project code |
    | `payment_link` | customer, amount, milestone, project code, payment link |
 
    The names, languages, field order and wording can be changed later in **Settings → WhatsApp messages**, so they can match exactly what Meta approved.

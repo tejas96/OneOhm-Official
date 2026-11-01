@@ -50,9 +50,7 @@ function ServiceRequestsCard({
       primary: true,
       cell: (request) => (
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="type-body font-medium text-ink">
-            {t(`categories.${request.category}`)}
-          </span>
+          <span className="type-body font-medium text-ink">{request.categoryLabel}</span>
           <span className="line-clamp-2 type-body-sm text-ink-muted">{request.description}</span>
           {request.resolutionNote && (
             <span className="line-clamp-2 type-body-sm text-ink-faint">

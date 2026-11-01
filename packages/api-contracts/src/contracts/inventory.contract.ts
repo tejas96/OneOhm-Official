@@ -21,6 +21,7 @@ import {
   purchaseOrderSummarySchema,
   receiptInputSchema,
 } from '../schemas/procurement.schema';
+import { custodyRouter } from './material-custody.contract';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -170,4 +171,10 @@ const material = c.router({
   },
 });
 
-export const inventoryContract = c.router({ vendors, purchaseOrders, stock, material });
+export const inventoryContract = c.router({
+  vendors,
+  purchaseOrders,
+  stock,
+  material,
+  custody: custodyRouter,
+});

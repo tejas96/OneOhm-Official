@@ -3,7 +3,9 @@ import { todayIn } from '@oneohm/shared';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
+import { forbidden } from '../../common/http/errors';
 import { apiContract } from '../../contract';
+import { canDownloadMany, canPrintDocuments } from './document-access';
 import { DocumentBundleService } from './document-bundle.service';
 
 const routes = apiContract.documentBundle;
@@ -29,6 +31,7 @@ export class DocumentBundleController {
     return tsRestHandler(routes, {
       zip: async ({ body }) => {
         assertCan(actor, 'documents.view');
+        if (!canDownloadMany(actor)) throw forbidden('You may not download documents.');
         const files = await this.bundles.load(actor, body.ids);
         const name = fileName(body.name);
         return {
@@ -42,6 +45,9 @@ export class DocumentBundleController {
       },
       pdf: async ({ body }) => {
         assertCan(actor, 'documents.view');
+        if (!canPrintDocuments(actor) && !canDownloadMany(actor)) {
+          throw forbidden('You may not print or download documents.');
+        }
         const files = await this.bundles.load(actor, body.ids);
         const name = fileName(body.name);
         return {

@@ -18,7 +18,7 @@ interface Need {
   readonly quantity: number;
 }
 
-/** What is still to reserve: the quotation's needs less what is held or already sent. */
+/** What is still to reserve: the quotation's needs less what is held, sent or issued. */
 export async function outstandingNeeds(
   tx: Transaction,
   projectId: string,
@@ -30,7 +30,7 @@ export async function outstandingNeeds(
     .where(
       and(
         eq(stockReservations.projectId, projectId),
-        inArray(stockReservations.status, ['active', 'dispatched']),
+        inArray(stockReservations.status, ['active', 'dispatched', 'issued']),
       ),
     );
   return needs

@@ -16,6 +16,8 @@ const EVERYONE: readonly Capability[] = [
   'leave.request',
   'attendance.mark',
   'documents.view',
+  'documents.download',
+  'documents.print',
 ];
 
 const ADMIN: readonly Capability[] = CAPABILITIES.filter(
@@ -46,6 +48,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       'surveys.perform',
       'quotations.view',
       'quotations.create',
+      'documents.upload',
     ],
   },
   {
@@ -66,6 +69,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       'projects.view_all',
       'loans.manage',
       'finance.view',
+      'documents.upload',
     ],
   },
   {
@@ -79,6 +83,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       'projects.view_all',
       'discom.manage',
       'subsidy.manage',
+      'documents.upload',
       'documents.manage',
       'reports.generate',
     ],
@@ -111,6 +116,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       'inventory.view',
       'contractors.manage',
       'reports.generate',
+      'documents.upload',
       'documents.manage',
     ],
   },
@@ -147,7 +153,13 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     name: 'Service',
     kind: 'staff',
     description: 'Service tickets, AMC and warranty.',
-    capabilities: [...EVERYONE, 'customers.view', 'projects.view_all', 'service.manage'],
+    capabilities: [
+      ...EVERYONE,
+      'customers.view',
+      'projects.view_all',
+      'service.manage',
+      'documents.upload',
+    ],
   },
   {
     key: 'dispatch',

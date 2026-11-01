@@ -48,6 +48,7 @@ export const SAMPLE = {
   topic: 'Inverter error',
   status: 'resolved',
   request: 'Name change',
+  friend: 'Suresh Jadhav',
   overdue: '2',
   today: '3',
   followUps: '1',

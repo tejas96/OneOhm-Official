@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { DocumentChecklistCard } from '@/features/documents/document-checklist-card';
 import { DocumentsGallery } from '@/features/documents/gallery/documents-gallery';
-import { ProjectMaterialCard } from '@/features/inventory/material/project-material-card';
+import { ProjectMaterialTab } from '@/features/inventory/material/project-material-tab';
+import { SiteVisitsCard } from '@/features/site-activity/site-visits-card';
 import { ActivityTimeline } from './activity-timeline';
 import { OverviewTab } from './overview/overview-tab';
 import { PaymentsTab } from './payments-tab';
@@ -36,11 +37,7 @@ export function RoomTabs({
       case 'payments':
         return <PaymentsTab project={project} />;
       case 'material':
-        return (
-          <div className="max-w-4xl">
-            <ProjectMaterialCard projectId={project.id} />
-          </div>
-        );
+        return <ProjectMaterialTab projectId={project.id} />;
       case 'documents':
         return (
           <div className="flex flex-col gap-8">
@@ -56,8 +53,11 @@ export function RoomTabs({
         );
       case 'activity':
         return (
-          <div className="max-w-3xl">
-            <ActivityTimeline activities={project.activities} />
+          <div className="flex flex-col gap-8">
+            <SiteVisitsCard projectId={project.id} />
+            <div className="max-w-3xl">
+              <ActivityTimeline activities={project.activities} />
+            </div>
           </div>
         );
     }

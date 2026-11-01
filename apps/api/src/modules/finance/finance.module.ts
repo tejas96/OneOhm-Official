@@ -3,6 +3,8 @@ import { CustomerPortalModule } from '../customer-portal/customer-portal.module'
 import { ProjectsModule } from '../projects/projects.module';
 import { ReportsModule } from '../reports/reports.module';
 import { BillingController } from './billing.controller';
+import { CashHandlingController } from './cash-handling.controller';
+import { CashHandlingService } from './cash-handling.service';
 import { CustomerBillingController } from './customer-billing.controller';
 import { CustomerBillingService } from './customer-billing.service';
 import { CustomerMoneyService } from './customer-money.service';
@@ -26,7 +28,12 @@ import { ReceivablesService } from './receivables.service';
  */
 @Module({
   imports: [ProjectsModule, ReportsModule, CustomerPortalModule],
-  controllers: [FinanceController, BillingController, CustomerBillingController],
+  controllers: [
+    FinanceController,
+    BillingController,
+    CustomerBillingController,
+    CashHandlingController,
+  ],
   providers: [
     FinanceOverviewService,
     ReceivablesService,
@@ -42,6 +49,7 @@ import { ReceivablesService } from './receivables.service';
     LendersService,
     LedgerReadService,
     LedgerSyncService,
+    CashHandlingService,
   ],
   exports: [ReceiptPdfService],
 })

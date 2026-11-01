@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerProfile } from '@oneohm/api-contracts';
-import { customerSessions, customers, otpChallenges } from '@oneohm/database';
+import { customerSessions, otpChallenges } from '@oneohm/database';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { Request } from 'express';
 import { bearerToken } from '../../common/auth/session-cookies';
@@ -10,6 +10,7 @@ import { AppError, unauthenticated } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { createOtpSender, type OtpSender } from '../auth/otp-sender';
+import { whoSignsIn } from './customer-family';
 
 const DAY_MS = 86_400_000;
 const OTP_TTL_SECONDS = 300;
@@ -33,12 +34,7 @@ export class CustomerAuthService {
   }
 
   async requestCode(phoneE164: string): Promise<{ expiresInSeconds: number }> {
-    const [customer] = await this.db
-      .select({ id: customers.id })
-      .from(customers)
-      .where(eq(customers.phoneE164, phoneE164))
-      .limit(1);
-    if (customer) {
+    if (await whoSignsIn(this.db, phoneE164)) {
       await assertOtpBudget(this.db, phoneE164, PURPOSE, this.env.OTP_REQUESTS_PER_10_MIN);
       const code =
         this.env.OTP_DEVELOPMENT_CODE ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
@@ -87,31 +83,35 @@ export class CustomerAuthService {
       .update(otpChallenges)
       .set({ consumedAt: new Date() })
       .where(eq(otpChallenges.id, challenge.id));
-    const [customer] = await this.db
-      .select({
-        id: customers.id,
-        name: customers.name,
-        phone: customers.phoneE164,
-        email: customers.email,
-      })
-      .from(customers)
-      .where(eq(customers.phoneE164, phoneE164))
-      .limit(1);
-    if (!customer) throw wrong;
+    const who = await whoSignsIn(this.db, phoneE164);
+    if (!who) throw wrong;
     const token = randomBytes(32).toString('base64url');
     await this.db.insert(customerSessions).values({
-      customerId: customer.id,
+      customerId: who.customer.id,
+      contactId: who.contact?.id ?? null,
       tokenHash: hash(token),
       expiresAt: new Date(Date.now() + this.env.SESSION_DAYS_MOBILE * DAY_MS),
     });
-    return { token, customer };
+    return {
+      token,
+      customer: {
+        ...who.customer,
+        viewer: who.contact ? { name: who.contact.name, relation: who.contact.relation } : null,
+      },
+    };
   }
 
   /** The customer behind a bearer token, or null. */
-  async authenticate(token: string): Promise<{ customerId: string; sessionId: string } | null> {
+  async authenticate(
+    token: string,
+  ): Promise<{ customerId: string; sessionId: string; contactId: string | null } | null> {
     const now = new Date();
     const [session] = await this.db
-      .select({ id: customerSessions.id, customerId: customerSessions.customerId })
+      .select({
+        id: customerSessions.id,
+        customerId: customerSessions.customerId,
+        contactId: customerSessions.contactId,
+      })
       .from(customerSessions)
       .where(
         and(
@@ -126,7 +126,7 @@ export class CustomerAuthService {
       .update(customerSessions)
       .set({ lastSeenAt: now })
       .where(eq(customerSessions.id, session.id));
-    return { customerId: session.customerId, sessionId: session.id };
+    return { customerId: session.customerId, sessionId: session.id, contactId: session.contactId };
   }
 
   async signOut(sessionId: string): Promise<void> {

@@ -1,11 +1,13 @@
 import { Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { Mail, Phone, Star, UserPlus } from 'lucide-react-native';
+import { Mail, Phone, Star, UserPlus, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/api/api';
 import { FEEDBACK, REFER } from '@/copy/care';
 import { PROFILE } from '@/copy/common';
+import { FAMILY } from '@/copy/family';
+import { CoverCard } from '@/features/help/cover-card';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { dialDigits } from '@/lib/journey';
 import { useCustomer, useSession } from '@/session/session-provider';
@@ -36,6 +38,8 @@ export function ProfileScreen() {
         {customer.email ? <Row label={PROFILE.email} value={customer.email} /> : null}
       </Card>
 
+      <CoverCard projectId={project?.id ?? null} />
+
       <Card tone="sunken" style={styles.card}>
         <Text variant="titleMd">{PROFILE.refer}</Text>
         <Text variant="bodySm" tone="secondary">
@@ -48,6 +52,19 @@ export function ProfileScreen() {
           onPress={() => router.push('/refer')}
         />
         <ReferralList />
+      </Card>
+
+      <Card tone="sunken" style={styles.card}>
+        <Text variant="titleMd">{FAMILY.cardTitle}</Text>
+        <Text variant="bodySm" tone="secondary">
+          {FAMILY.cardHint}
+        </Text>
+        <Button
+          label={FAMILY.open}
+          variant="secondary"
+          icon={<Users size={16} color={icon} />}
+          onPress={() => router.push('/family')}
+        />
       </Card>
 
       {project ? (

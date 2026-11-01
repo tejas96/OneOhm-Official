@@ -67,6 +67,7 @@ export async function writeGeneratedTasks(
       candidates.map((candidate) => ({ ...candidate, openTasks: load.get(candidate.userId) ?? 0 })),
       task.roleKey,
       { from: task.startDate, to: task.dueDate },
+      task.skillKey,
     );
     if (assignee) {
       load.set(assignee.userId, (load.get(assignee.userId) ?? 0) + 1);
@@ -90,6 +91,7 @@ export async function writeGeneratedTasks(
         approval: task.approval,
         evidence: [...task.evidence],
         captures: [...task.captures],
+        checklist: task.checklist ? [...task.checklist] : null,
         onComplete: task.onComplete ?? null,
         reports: [...(task.reports ?? [])],
         position,

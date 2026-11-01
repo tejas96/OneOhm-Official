@@ -8,19 +8,25 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
+import { AdvancesTab } from '../purchasing/advances/advances-tab';
 import { InvoicesTab } from './billing/invoices-tab';
+import { CashTab } from './cash/cash-tab';
 import { LedgerTab } from './ledger/ledger-tab';
 import { LoansTab } from './loans/loans-tab';
 import { OverviewTab } from './overview/overview-tab';
 import { PayablesTab } from './payables/payables-tab';
+import { PayoutsTab } from './payouts/payouts-tab';
 import { ReceivablesTab } from './receivables/receivables-tab';
 
 const VIEW: readonly Capability[] = ['finance.view', 'finance.record_payments'];
 const TABS = [
   { value: 'overview', requires: VIEW, Panel: OverviewTab },
   { value: 'receivables', requires: VIEW, Panel: ReceivablesTab },
+  { value: 'cash', requires: VIEW, Panel: CashTab },
   { value: 'invoices', requires: VIEW, Panel: InvoicesTab },
   { value: 'payables', requires: VIEW, Panel: PayablesTab },
+  { value: 'advances', requires: VIEW, Panel: AdvancesTab },
+  { value: 'payouts', requires: VIEW, Panel: PayoutsTab },
   { value: 'loans', requires: [...VIEW, 'loans.manage'], Panel: LoansTab },
   { value: 'ledger', requires: VIEW, Panel: LedgerTab },
 ] as const satisfies readonly {

@@ -1,6 +1,6 @@
 import { type Database, payables, paymentMilestones, payments } from '@oneohm/database';
 import { addDays } from '@oneohm/shared';
-import { and, eq, gte, inArray, lte, ne } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 
 export interface MoneyFigures {
   readonly collectedPaise: number;
@@ -90,7 +90,8 @@ export async function moneyFigures(
   const outgoing = await db
     .select({
       party: payables.party,
-      amount: payables.amountPaise,
+      // What is left to pay once any vendor advance is set against the bill.
+      amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise})::float8`,
       description: payables.description,
     })
     .from(payables)

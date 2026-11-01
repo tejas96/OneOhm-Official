@@ -8,20 +8,17 @@ import {
   userRoles,
   users,
 } from '@oneohm/database';
-import { isLateCheckIn, nearestLocation } from '@oneohm/domain';
+import { isLateCheckIn, LOCATION_CONSENT_VERSION, nearestLocation } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { activeLocations, indiaTime, loadPolicy } from './policy';
+import { consentSummary, type Position, usableReading } from './tracking';
 import { readDays } from './workforce-read';
 
-export interface Position {
-  latitude: number;
-  longitude: number;
-  accuracyM?: number | null | undefined;
-}
+export type { Position } from './tracking';
 
 /**
  * Check-in and check-out, with the phone's location only when the person has agreed
@@ -31,17 +28,23 @@ export interface Position {
 export class AttendanceService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async consented(userId: string): Promise<{ given: boolean; answered: boolean; at: Date | null }> {
+  /** Consent to the current words only: a change of words asks everyone again. */
+  async consented(userId: string) {
     const [row] = await this.db
       .select()
       .from(locationConsents)
       .where(eq(locationConsents.userId, userId))
       .limit(1);
-    const given = Boolean(row?.consentedAt) && !row?.withdrawnAt;
-    return { given, answered: Boolean(row), at: given ? (row?.consentedAt ?? null) : null };
+    return consentSummary(row ?? null);
   }
 
-  async setConsent(actor: Actor, given: boolean): Promise<void> {
+  /**
+   * Records yes or no, when, and which version of the words the person read (PRD 4.3).
+   * A yes to words other than today's is refused, so the app shows them again.
+   */
+  async setConsent(actor: Actor, given: boolean, version?: number): Promise<void> {
+    if (given && version !== LOCATION_CONSENT_VERSION)
+      throw conflict('The location consent has new words. Read them again first.', 'consent_text');
     const now = new Date();
     await this.db
       .insert(locationConsents)
@@ -49,21 +52,25 @@ export class AttendanceService {
         userId: actor.userId,
         consentedAt: given ? now : null,
         withdrawnAt: given ? null : now,
+        textVersion: version ?? null,
       })
       .onConflictDoUpdate({
         target: locationConsents.userId,
-        set: given ? { consentedAt: now, withdrawnAt: null } : { withdrawnAt: now },
+        set: given
+          ? { consentedAt: now, withdrawnAt: null, textVersion: version ?? null }
+          : { withdrawnAt: now },
       });
   }
 
-  /** The reading kept for this person now: none without consent or when the policy is off. */
+  /**
+   * The reading kept for this person now: none without consent to the current words,
+   * when the policy is off, or outside working hours.
+   */
   private async usable(actor: Actor, position: Position | null | undefined) {
-    if (!position) return null;
-    const policy = await loadPolicy(this.db);
-    if (!policy.attendance.captureLocation) return null;
-    if (!(await this.consented(actor.userId)).given) return null;
-    const match = nearestLocation(position, await activeLocations(this.db));
-    return { position, match, policy };
+    const reading = await usableReading(this.db, actor.userId, position);
+    if (!reading) return null;
+    const match = nearestLocation(reading.position, await activeLocations(this.db));
+    return { position: reading.position, match, policy: reading.policy };
   }
 
   async checkIn(actor: Actor, position: Position | null | undefined): Promise<void> {

@@ -1,3 +1,4 @@
+import { CUSTOMER_REQUESTABLE_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { idSchema } from '../common/primitives';
 
@@ -12,6 +13,10 @@ export const checklistItemSchema = z.object({
   documentIds: z.array(idSchema),
   /** For reports not ready: what is missing, e.g. "Meter serial (Meter installation)". */
   missing: z.array(z.string()),
+  /** For a missing paper the customer holds: the category to ask them for. */
+  askCategory: z.enum(CUSTOMER_REQUESTABLE_CATEGORIES).nullable(),
+  /** An open request to the customer already covers this paper. */
+  requested: z.boolean(),
 });
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 

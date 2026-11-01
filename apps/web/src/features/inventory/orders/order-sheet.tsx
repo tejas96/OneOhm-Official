@@ -12,6 +12,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
+import { OrderAdvances } from '../../purchasing/advances/order-advances';
 import { formatQuantity, useOrder, useRefreshInventory } from '../use-inventory';
 import { OrderStatusPill } from './order-status';
 import { ReceiptsList } from './receipts-list';
@@ -115,6 +116,7 @@ export function OrderSheet({
             </section>
             {data.notes && <p className="type-body-sm text-ink-muted">{data.notes}</p>}
             <ReceiptsList receipts={data.receipts} />
+            <OrderAdvances order={data} />
             <ReceiveDialog order={receiving ? data : null} onClose={() => setReceiving(false)} />
           </div>
         )}

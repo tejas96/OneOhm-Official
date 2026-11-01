@@ -42,6 +42,7 @@ export const peopleContract = c.router({
       status: z.enum(['active', 'inactive']).optional(),
       onLeave: z.boolean().optional(),
       designation: z.string().trim().max(120).nullable().optional(),
+      skills: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
     }),
     responses: { 200: personSchema },
   },

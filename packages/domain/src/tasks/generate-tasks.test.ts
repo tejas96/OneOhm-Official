@@ -96,3 +96,23 @@ describe('pickAssignee with leave', () => {
     ).toBe('a');
   });
 });
+
+describe('pickAssignee with a skill (PRD 3.7)', () => {
+  const people = [
+    { userId: 'a', roleKeys: ['execution'], openTasks: 0, onLeave: false, skills: [] },
+    { userId: 'b', roleKeys: ['execution'], openTasks: 4, onLeave: false, skills: ['electrical'] },
+    { userId: 'c', roleKeys: ['sales'], openTasks: 0, onLeave: false, skills: ['electrical'] },
+  ];
+
+  it('prefers someone in the role who holds the skill, even if busier', () => {
+    expect(pickAssignee(people, 'execution', undefined, 'electrical')?.userId).toBe('b');
+  });
+
+  it('falls back to the least-loaded person in the role when nobody has it', () => {
+    expect(pickAssignee(people, 'execution', undefined, 'roof_work')?.userId).toBe('a');
+  });
+
+  it('never picks someone outside the role for a skill', () => {
+    expect(pickAssignee(people, 'liaisoning', undefined, 'electrical')).toBeNull();
+  });
+});

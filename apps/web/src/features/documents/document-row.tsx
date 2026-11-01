@@ -21,10 +21,12 @@ export function fileSize(bytes: number): string {
 export function DocumentRow({
   document,
   canReplace,
+  canDownload,
   onChanged,
 }: {
   readonly document: DocumentRecord;
   readonly canReplace: boolean;
+  readonly canDownload: boolean;
   readonly onChanged: () => Promise<unknown>;
 }) {
   const t = useTranslations('documents');
@@ -75,10 +77,12 @@ export function DocumentRow({
           <ExternalLink aria-hidden className="size-4" />
           <span className="sr-only">{t('view', { name: document.name })}</span>
         </a>
-        <a href={documentUrl(document.id, 'attachment')} className={ACTION}>
-          <Download aria-hidden className="size-4" />
-          <span className="sr-only">{t('download', { name: document.name })}</span>
-        </a>
+        {canDownload && (
+          <a href={documentUrl(document.id, 'attachment')} className={ACTION}>
+            <Download aria-hidden className="size-4" />
+            <span className="sr-only">{t('download', { name: document.name })}</span>
+          </a>
+        )}
         {canReplace && (
           <label
             className={cn(

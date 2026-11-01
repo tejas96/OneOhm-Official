@@ -30,8 +30,9 @@ export class WorkforceController {
         return day();
       },
       setLocationConsent: async ({ body }) => {
-        mark();
-        await this.attendance.setConsent(actor, body.given);
+        // Crews check in at sites too, so they answer the same consent.
+        assertCan(actor, 'attendance.mark', 'tasks.complete');
+        await this.attendance.setConsent(actor, body.given, body.version);
         return day();
       },
       checkIn: async ({ body }) => {

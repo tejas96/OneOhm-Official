@@ -3,6 +3,7 @@
 import type { Person } from '@oneohm/api-contracts';
 import { Avatar, Badge, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import { useSkills } from './skills/use-skills';
 
 /** +919876543210 → +91 98765 43210 */
 export function formatPhone(phone: string): string {
@@ -47,14 +48,25 @@ export function PersonIdentity({
 
 export function PersonRoles({ person }: { readonly person: Person }) {
   const t = useTranslations('team');
+  const skills = useSkills();
+  const names = person.skills
+    .map((key) => skills.data?.find((skill) => skill.key === key)?.name)
+    .filter((name): name is string => Boolean(name));
   if (person.roles.length === 0) return <span className="text-ink-faint">{t('noRole')}</span>;
   return (
-    <span className="flex flex-wrap justify-end gap-1 md:justify-start">
-      {person.roles.map((role) => (
-        <Badge key={role.id} variant={role.kind === 'staff' ? 'soft' : 'accent'}>
-          {role.name}
-        </Badge>
-      ))}
+    <span className="flex flex-col items-end gap-1 md:items-start">
+      <span className="flex flex-wrap justify-end gap-1 md:justify-start">
+        {person.roles.map((role) => (
+          <Badge key={role.id} variant={role.kind === 'staff' ? 'soft' : 'accent'}>
+            {role.name}
+          </Badge>
+        ))}
+      </span>
+      {names.length > 0 && (
+        <span className="type-label text-ink-faint">
+          {t('skills.list', { names: names.join(', ') })}
+        </span>
+      )}
     </span>
   );
 }
