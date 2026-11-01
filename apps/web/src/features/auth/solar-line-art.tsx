@@ -24,14 +24,16 @@ export function SolarLineArt({ className }: { readonly className?: string }) {
   const draw = (stroke: Stroke) => {
     const delay = 0.15 + order * 0.07;
     order += 1;
+    // Drawing on sets stroke-dasharray, which would wipe out a dashed pattern, so dashed strokes fade in.
+    const drawn = !stroke.dashed;
     return (
       <motion.path
         key={stroke.d}
         d={stroke.d}
         strokeOpacity={stroke.faint ? 0.38 : 0.9}
         strokeDasharray={stroke.dashed ? '3 5' : undefined}
-        initial={calm ? false : { pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
+        initial={calm ? false : drawn ? { pathLength: 0, opacity: 0 } : { opacity: 0 }}
+        animate={drawn ? { pathLength: 1, opacity: 1 } : { opacity: 1 }}
         transition={{ duration: 1.1, ease: easing('outQuint'), delay }}
       />
     );
