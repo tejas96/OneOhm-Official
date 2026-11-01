@@ -1,0 +1,66 @@
+{
+  "documents": {
+    "title": "Documents",
+    "count": "{count, plural, =0 {No files yet} one {# file} other {# files}}",
+    "loading": "Loading documents",
+    "empty": "No documents yet. Photos added to tasks and files uploaded here appear in this list.",
+    "noMatch": "No document matches that search.",
+    "search": "Search by name",
+    "filter": "Category",
+    "allCategories": "All categories",
+    "uploadAs": "Category for new files",
+    "upload": "Upload",
+    "view": "Open {name}",
+    "download": "Download {name}",
+    "replace": "Replace {name}",
+    "replaced": "File replaced",
+    "replaceFailed": "Could not replace the file",
+    "remove": "Remove {name}",
+    "retry": "Try the upload again",
+    "discard": "Discard this file",
+    "uploading": "Uploading {name}",
+    "categories": {
+      "site_photo": "Site photo",
+      "site_survey": "Site survey",
+      "customer_kyc": "Customer ID and KYC",
+      "electricity_bill": "Electricity bill",
+      "property": "Property papers",
+      "quotation": "Quotation",
+      "invoice_receipt": "Invoice or receipt",
+      "vendor": "Vendor document",
+      "bank_loan": "Bank and loan",
+      "discom": "DISCOM",
+      "subsidy": "Subsidy",
+      "commissioning_handover": "Commissioning and handover",
+      "warranty": "Warranty and manuals",
+      "statutory_report": "Statutory report",
+      "other": "Other"
+    },
+    "evidence": {
+      "title": "Photos and files",
+      "photoNeeded": "Site photo needed",
+      "photoAdded": "Photo added",
+      "takePhoto": "Take photo",
+      "addFiles": "Add photos or PDF",
+      "hint": "Photos upload as soon as you pick them. JPEG, PNG, WebP, HEIC or PDF, up to 25 MB each.",
+      "files": "{count, plural, one {# file attached} other {# files attached}}",
+      "removeFailed": "Could not remove the file"
+    },
+    "company": {
+      "title": "Logo, signature and stamp",
+      "description": "Printed on every quotation and statutory report.",
+      "hint": "PNG with a transparent background looks best. Until you upload one, documents use the images that came with OneOhm.",
+      "usingBundled": "Using the built-in image",
+      "upload": "Upload",
+      "replace": "Replace",
+      "choose": "Choose the {kind} image",
+      "saved": "{kind} saved",
+      "failed": "Could not save the image",
+      "kinds": {
+        "logo": "Logo",
+        "signature": "Signature",
+        "stamp": "Stamp"
+      }
+    }
+  }
+}

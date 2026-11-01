@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests src"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1152.0",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
     "@fontsource-variable/newsreader": "5.3.0",

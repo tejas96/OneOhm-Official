@@ -1,0 +1,82 @@
+'use client';
+
+import type { CompanyAssets, DocumentRecord } from '@oneohm/api-contracts';
+import type { CompanyAssetKind } from '@oneohm/domain';
+import { networkError, toApiError } from './api-error';
+import { CSRF_COOKIE, CSRF_HEADER } from './contract';
+
+function csrfToken(): string | null {
+  for (const part of document.cookie.split(';')) {
+    const [key, ...rest] = part.trim().split('=');
+    if (key === CSRF_COOKIE) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+}
+
+/**
+ * Multipart upload with progress (fetch cannot report upload progress, so this uses
+ * XMLHttpRequest). Same origin, cookie session, CSRF header — like every other call.
+ */
+function send<T>(
+  path: string,
+  file: File,
+  fields: Readonly<Record<string, string | undefined>>,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) if (value) form.append(key, value);
+  form.append('file', file, file.name);
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `/api/v1${path}`);
+    request.withCredentials = true;
+    const token = csrfToken();
+    if (token) request.setRequestHeader(CSRF_HEADER, token);
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+    };
+    request.onerror = () => reject(networkError());
+    request.onload = () => {
+      let body: unknown = null;
+      try {
+        body = request.responseText ? JSON.parse(request.responseText) : null;
+      } catch {
+        body = null;
+      }
+      if (request.status === 201) {
+        resolve(body as T);
+        return;
+      }
+      if (request.status === 401) {
+        window.location.assign(`/sign-in?next=${encodeURIComponent(window.location.pathname)}`);
+      }
+      reject(toApiError(request.status, body));
+    };
+    request.send(form);
+  });
+}
+
+export interface UploadLinks {
+  readonly category: string;
+  readonly projectId?: string;
+  readonly taskId?: string;
+  readonly customerId?: string;
+  readonly propertyId?: string;
+  readonly name?: string;
+}
+
+export const uploadDocument = (
+  file: File,
+  links: UploadLinks,
+  onProgress?: (fraction: number) => void,
+) => send<DocumentRecord>('/documents', file, { ...links }, onProgress);
+
+export const replaceDocument = (id: string, file: File, onProgress?: (fraction: number) => void) =>
+  send<DocumentRecord>(`/documents/${id}/replace`, file, {}, onProgress);
+
+export const uploadCompanyAsset = (kind: CompanyAssetKind, file: File) =>
+  send<CompanyAssets>(`/settings/company/assets/${kind}`, file, {});
+
+/** Where the browser reads a document (the API checks access on every request). */
+export const documentUrl = (id: string, disposition: 'inline' | 'attachment' = 'inline') =>
+  `/api/v1/documents/${id}/file?disposition=${disposition}`;

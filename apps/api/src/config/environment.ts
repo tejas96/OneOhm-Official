@@ -30,6 +30,14 @@ const environmentSchema = z
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
     CHROMIUM_PATH: z.string().optional(),
+    /** S3-compatible object storage (RustFS) for photos, documents and company assets. */
+    STORAGE_ENDPOINT: z.string().url().default('http://127.0.0.1:9120'),
+    STORAGE_REGION: z.string().default('ap-south-1'),
+    STORAGE_BUCKET: z.string().default('oneohm-files'),
+    STORAGE_ACCESS_KEY: z.string().default('oneohm-local'),
+    STORAGE_SECRET_KEY: z.string().default('oneohm-local-secret'),
+    /** Creates the bucket at start-up when missing; on by default outside production. */
+    STORAGE_AUTO_CREATE_BUCKET: flag,
     /** Above this share of the price, a discount waits for an approver. */
     DISCOUNT_APPROVAL_BP: z.coerce.number().int().default(300),
   })
@@ -41,6 +49,10 @@ const environmentSchema = z
         path: ['OTP_DEVELOPMENT_CODE'],
         message: 'Not allowed in production.',
       });
+    for (const key of ['STORAGE_ACCESS_KEY', 'STORAGE_SECRET_KEY'] as const) {
+      if (env[key].startsWith('oneohm-local'))
+        context.addIssue({ code: 'custom', path: [key], message: 'Set a real key in production.' });
+    }
     if (env.OTP_PROVIDER !== 'msg91')
       context.addIssue({
         code: 'custom',

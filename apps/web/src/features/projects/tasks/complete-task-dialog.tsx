@@ -5,6 +5,7 @@ import { Badge, Button, Dialog, Field, Textarea } from '@oneohm/design-system/we
 import { CircleAlert, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
+import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { FactFields } from './fact-fields';
@@ -40,6 +41,7 @@ export function CompleteTaskDialog({
     Object.fromEntries(task.captures.map((key) => [key, knownFacts[key] ?? ''])),
   );
   const [note, setNote] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
 
@@ -69,7 +71,13 @@ export function CompleteTaskDialog({
           <Button type="button" variant="quiet" onClick={() => onOpenChange(false)}>
             {t('cancel')}
           </Button>
-          <Button type="submit" form={formId} variant="primary" pending={mutation.isPending}>
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            pending={mutation.isPending}
+            disabled={uploading}
+          >
             {task.approval && !canApprove ? t('submitReview') : t('submit')}
           </Button>
         </>
@@ -99,6 +107,7 @@ export function CompleteTaskDialog({
             </ul>
           </section>
         )}
+        <EvidenceUploader task={task} onBusyChange={setUploading} />
         <Field label={t('note')} hint={t('noteHint')}>
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>

@@ -1,6 +1,7 @@
 import { authContract } from './auth.contract';
 import { catalogContract } from './catalog.contract';
 import { crmContract } from './crm.contract';
+import { documentsContract } from './documents.contract';
 import { peopleContract } from './people.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { quotationsContract } from './quotations.contract';
@@ -19,6 +20,7 @@ export type ApiRouterDefinition = {
   readonly projects: typeof projectsContract;
   readonly tasks: typeof tasksContract;
   readonly reports: typeof reportsContract;
+  readonly documents: typeof documentsContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -30,6 +32,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   projects: projectsContract,
   tasks: tasksContract,
   reports: reportsContract,
+  documents: documentsContract,
 };
 
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
@@ -38,6 +41,7 @@ export {
   authContract,
   catalogContract,
   crmContract,
+  documentsContract,
   peopleContract,
   projectsContract,
   quotationsContract,

@@ -56,7 +56,7 @@ engine.registerPartial(
 );
 engine.registerPartial(
   'vendorSignature',
-  '<div class="rpt-sig"><div class="rpt-sig-space"><img class="rpt-stamp" src="{{@root.__stamp}}" alt="Signature and seal" /></div><div class="rpt-sig-name">{{name}}</div><div class="rpt-sig-rule"></div><div class="rpt-sig-role">{{role}}</div></div>',
+  '<div class="rpt-sig"><div class="rpt-sig-space"><img class="rpt-stamp" src="{{@root.__signature}}" alt="Signature and seal" /></div><div class="rpt-sig-name">{{name}}</div><div class="rpt-sig-rule"></div><div class="rpt-sig-role">{{role}}</div></div>',
 );
 engine.registerPartial(
   'vendorStamp',

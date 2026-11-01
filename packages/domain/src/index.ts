@@ -1,3 +1,4 @@
+export * from './documents';
 export * from './epc';
 export * from './finance';
 export * from './identity';

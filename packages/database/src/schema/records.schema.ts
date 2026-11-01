@@ -1,6 +1,6 @@
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId } from './columns';
-import { customers } from './crm.schema';
+import { customers, properties } from './crm.schema';
 import { documentSourceEnum, outboxChannelEnum, outboxStatusEnum } from './enums';
 import { users } from './identity.schema';
 import { projects, projectTasks } from './projects.schema';
@@ -20,14 +20,30 @@ export const documents = pgTable(
     contentType: text('content_type').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
     reportKey: text('report_key'),
+    propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),
+    /** The earlier file this one replaced; the old row keeps `replacedAt` and who did it. */
+    replacesDocumentId: uuid('replaces_document_id'),
     /** When replaced, the old row stays for the audit trail (no visible versioning). */
     replacedAt: instant('replaced_at'),
+    replacedByUserId: uuid('replaced_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    /** Taken off a task or project (for example a wrong photo); the file is kept. */
+    removedAt: instant('removed_at'),
+    removedByUserId: uuid('removed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     uploadedByUserId: uuid('uploaded_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
     createdAt: createdAt(),
   },
-  (table) => [index('documents_project_idx').on(table.projectId)],
+  (table) => [
+    index('documents_project_idx').on(table.projectId),
+    index('documents_task_idx').on(table.taskId),
+    index('documents_customer_idx').on(table.customerId),
+    index('documents_category_idx').on(table.category),
+  ],
 );
 
 /** Important changes and financial actions, with who did them (PRD 7.3). */

@@ -1,6 +1,7 @@
 import commandCenter from './command-center.json';
 import common from './common.json';
 import customers from './customers.json';
+import documents from './documents.json';
 import leads from './leads.json';
 import projects from './projects.json';
 import quotations from './quotations.json';
@@ -18,6 +19,7 @@ const messages = {
   ...signIn,
   ...commandCenter,
   ...customers,
+  ...documents,
   ...leads,
   ...projects,
   ...quotations,

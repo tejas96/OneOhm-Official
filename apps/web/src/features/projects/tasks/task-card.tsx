@@ -6,6 +6,7 @@ import { CalendarClock, ClipboardList, Eye, Lock, ShieldCheck } from 'lucide-rea
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
 import { useCan } from '@/providers/current-user';
 import { useFactLabel } from './fact-fields';
 import { TaskActions } from './task-actions';
@@ -141,6 +142,7 @@ export function TaskCard({
             {t('records', { facts: task.captures.map(factLabel).join(', ') })}
           </p>
         )}
+        <TaskEvidenceLine task={task} />
       </div>
     </motion.li>
   );
