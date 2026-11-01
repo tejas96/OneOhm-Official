@@ -37,6 +37,8 @@ export const FACT_LABELS: Readonly<Record<string, string>> = {
   module_model_number: 'Panel model number',
   module_efficiency: 'Panel efficiency (%)',
   inverter_make_model: 'Inverter make and model',
+  application_number: 'DISCOM application number',
+  ev_meter_number: 'EV meter number',
 };
 
 export const factLabel = (key: string) => FACT_LABELS[key] ?? key.replace(/_/g, ' ');

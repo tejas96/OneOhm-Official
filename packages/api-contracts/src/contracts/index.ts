@@ -1,6 +1,8 @@
 import { authContract } from './auth.contract';
 import { catalogContract } from './catalog.contract';
+import { contractorsContract } from './contractors.contract';
 import { crmContract } from './crm.contract';
+import { discomContract } from './discom.contract';
 import { peopleContract } from './people.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { quotationsContract } from './quotations.contract';
@@ -19,6 +21,8 @@ export type ApiRouterDefinition = {
   readonly projects: typeof projectsContract;
   readonly tasks: typeof tasksContract;
   readonly reports: typeof reportsContract;
+  readonly contractors: typeof contractorsContract;
+  readonly discom: typeof discomContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -30,14 +34,19 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   projects: projectsContract,
   tasks: tasksContract,
   reports: reportsContract,
+  contractors: contractorsContract,
+  discom: discomContract,
 };
 
+export { type ContractorInput, contractorInputSchema } from './contractors.contract';
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
 export { REPORT_KEYS, type ReportKey, reportKeySchema } from './reports.contract';
 export {
   authContract,
   catalogContract,
+  contractorsContract,
   crmContract,
+  discomContract,
   peopleContract,
   projectsContract,
   quotationsContract,

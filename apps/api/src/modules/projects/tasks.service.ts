@@ -6,8 +6,14 @@ import { and, eq, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
+import {
+  changeRequestsBlocking,
+  openChangeRequestBlocks,
+} from '../../common/read-models/change-request-blocks';
 import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
+import { settleWorkOrderForTask } from '../contractors/work-order-settle';
+import { syncWorkOrders } from '../contractors/work-order-sync';
 import { factLabel } from './fact-labels';
 import { finishTask, missingCaptures } from './task-completion';
 
@@ -33,7 +39,7 @@ export class TasksService {
 
   async start(actor: Actor, id: string): Promise<ProjectTask> {
     const task = await this.load(actor, id);
-    await this.assertUnblocked(id);
+    await this.assertUnblocked(task);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
     await this.db
       .update(projectTasks)
@@ -44,6 +50,7 @@ export class TasksService {
         updatedAt: new Date(),
       })
       .where(eq(projectTasks.id, id));
+    await settleWorkOrderForTask(this.db, id, actor.userId);
     return this.present(id);
   }
 
@@ -85,7 +92,7 @@ export class TasksService {
   ): Promise<ProjectTask> {
     const task = await this.load(actor, id);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
-    await this.assertUnblocked(id);
+    await this.assertUnblocked(task);
     const known = await this.db
       .select({ key: projectFacts.key })
       .from(projectFacts)
@@ -159,11 +166,15 @@ export class TasksService {
       .where(eq(projectTasks.id, id))
       .limit(1);
     if (!task) throw notFound('That task');
-    await this.db
-      .update(projectTasks)
-      .set({ assigneeUserId: userId, updatedAt: new Date() })
-      .where(eq(projectTasks.id, id));
-    await recordAudit(this.db, actor.userId, 'task.assigned', 'task', id, { userId });
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(projectTasks)
+        .set({ assigneeUserId: userId, updatedAt: new Date() })
+        .where(eq(projectTasks.id, id));
+      // A task given to a contractor's crew joins that contractor's work order.
+      await syncWorkOrders(tx, task.projectId, actor.userId);
+      await recordAudit(tx, actor.userId, 'task.assigned', 'task', id, { userId });
+    });
     return this.present(id);
   }
 
@@ -180,17 +191,19 @@ export class TasksService {
     return task;
   }
 
-  private async assertUnblocked(id: string): Promise<void> {
+  /** Earlier tasks and open change requests (PRD 3.15) can both hold a task back. */
+  private async assertUnblocked(task: typeof projectTasks.$inferSelect): Promise<void> {
     const blockers = await this.db
       .select({ title: projectTasks.title })
       .from(taskDependencies)
       .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
-      .where(and(eq(taskDependencies.taskId, id), ne(projectTasks.status, 'completed')));
-    if (blockers.length > 0)
-      throw conflict(
-        `Waiting for: ${blockers.map((blocker) => blocker.title).join(', ')}.`,
-        'blocked',
-      );
+      .where(and(eq(taskDependencies.taskId, task.id), ne(projectTasks.status, 'completed')));
+    const changes = changeRequestsBlocking(
+      (await openChangeRequestBlocks(this.db, [task.projectId])).get(task.projectId),
+      task,
+    );
+    const titles = [...blockers.map((blocker) => blocker.title), ...changes];
+    if (titles.length > 0) throw conflict(`Waiting for: ${titles.join(', ')}.`, 'blocked');
   }
 
   private async present(id: string): Promise<ProjectTask> {

@@ -1,0 +1,175 @@
+{
+  "discom": {
+    "eyebrow": "Delivery",
+    "title": "DISCOM desk",
+    "description": "Everything waiting on the utility, oldest first. DISCOM time is kept apart from OneOhm's own.",
+    "raiseButton": "Raise change request",
+    "loading": "Loading the DISCOM desk",
+    "tabsLabel": "DISCOM work",
+    "tabs": { "desk": "Waiting on DISCOM", "requests": "Change requests" },
+    "totals": {
+      "waiting": "Waiting now",
+      "followUpsDue": "Follow-ups due",
+      "openChangeRequests": "Open requests"
+    },
+    "desk": {
+      "emptyTitle": "Nothing is waiting on a DISCOM",
+      "emptyBody": "When a task or change request is marked as waiting on the DISCOM, it shows here with its age.",
+      "noDiscom": "No DISCOM set",
+      "noAverage": "No timings yet",
+      "average": "Average wait {days} days · expected {expected}",
+      "changeRequest": "Change request",
+      "age": "{days, plural, one {# day} other {# days}} of {expected}",
+      "followUp": "Follow up",
+      "open": "Open"
+    },
+    "followUp": {
+      "title": "DISCOM follow-up",
+      "save": "Save follow-up",
+      "saved": "Follow-up saved",
+      "reference": "Application or reference number",
+      "office": "DISCOM office",
+      "next": "Next follow-up",
+      "note": "Note"
+    },
+    "steps": {
+      "title": "Slowest DISCOM steps",
+      "description": "Average days each finished step waited, so delays are visible by DISCOM.",
+      "empty": "Timings appear once DISCOM steps finish.",
+      "days": "{days} days",
+      "samples": "{count, plural, one {# time} other {# times}}"
+    },
+    "requests": {
+      "title": "Change requests",
+      "filter": "Show",
+      "loading": "Loading change requests",
+      "emptyTitle": "No change requests here",
+      "emptyBody": "Raise one from the DISCOM desk, a customer's site or a project.",
+      "columns": {
+        "request": "Request",
+        "customer": "Customer",
+        "step": "Now",
+        "raised": "Raised"
+      },
+      "stepOf": "Step {done} of {total} done",
+      "status": { "open": "Open", "completed": "Done", "cancelled": "Cancelled" }
+    },
+    "types": {
+      "consumer_name_change": "Consumer name change",
+      "name_spelling_correction": "Name spelling correction",
+      "property_type_change": "Property type change",
+      "load_change": "Load change",
+      "new_ev_meter": "New EV meter",
+      "new_connection": "New connection"
+    },
+    "raise": {
+      "title": "Raise a change request",
+      "description": "Pick the type and fill only its fields. The DISCOM steps are created and assigned for you.",
+      "submit": "Raise request",
+      "done": "Change request {number} raised",
+      "findCustomer": "Find the customer",
+      "searchCustomer": "Name or phone",
+      "customer": "Customer",
+      "pickCustomer": "Pick the customer",
+      "site": "Site",
+      "pickSite": "Pick the site",
+      "project": "Project",
+      "projectHint": "Link it when the change holds project work.",
+      "noProject": "No project",
+      "suggested": "Suggested: {type}.",
+      "type": "Change",
+      "purpose": {
+        "consumer_name_change": "Moves the connection to the new owner's name",
+        "name_spelling_correction": "Fixes a spelling mistake on the DISCOM record",
+        "property_type_change": "Changes the connection category",
+        "load_change": "Raises or lowers the sanctioned load",
+        "new_ev_meter": "A separate meter for EV charging",
+        "new_connection": "A new electricity connection for the site"
+      },
+      "choose": "Choose",
+      "note": "Note (optional)",
+      "steps": "{count, plural, one {# DISCOM step} other {# DISCOM steps}} will be created.",
+      "blocks": "Dependent project work waits until it is done."
+    },
+    "fields": {
+      "newName": "New consumer name",
+      "correctedName": "Correct spelling",
+      "newCategory": "New property type",
+      "phase": "Phase",
+      "newLoadKw": "New load (kW)",
+      "note": "Note",
+      "options": {
+        "individual": "Residential",
+        "society": "Housing society",
+        "commercial": "Commercial",
+        "single": "Single phase",
+        "three": "Three phase"
+      },
+      "site": {
+        "meterHolderName": "Consumer name",
+        "subsidyCategory": "Property type",
+        "phase": "Phase",
+        "sanctionedLoadW": "Sanctioned load",
+        "consumerNumber": "Consumer number"
+      }
+    },
+    "captures": {
+      "application_number": "DISCOM application number",
+      "ev_meter_number": "EV meter number",
+      "consumer_number": "New consumer number"
+    },
+    "request": {
+      "pageTitle": "Change request",
+      "loading": "Loading the change request",
+      "back": "DISCOM desk",
+      "cancelled": "Cancelled: {reason}",
+      "cancel": "Cancel request",
+      "change": "The change",
+      "applied": "Updated on the site",
+      "impact": "Project impact",
+      "noImpact": "No project work waits for this request.",
+      "holding": "Holding back: {work}. Everything else continues.",
+      "released": "Released: {work}.",
+      "netMeteringApplication": "Net-metering application",
+      "steps": "DISCOM steps",
+      "stepsDone": "{done} of {total} done",
+      "unassigned": "Unassigned",
+      "doneOn": "Done {date}",
+      "dueOn": "Due {date}",
+      "waitingOn": "Waiting on {party}",
+      "followUpOn": "Follow up {date}",
+      "start": "Start",
+      "wait": "Waiting on DISCOM",
+      "complete": "Complete",
+      "completeLast": "Complete and update the site",
+      "failed": "That did not go through"
+    },
+    "stepDialogs": {
+      "wait": {
+        "title": "Mark as waiting",
+        "submit": "Save",
+        "done": "Marked as waiting",
+        "party": "Waiting on",
+        "reference": "Application or reference number",
+        "next": "Next follow-up",
+        "note": "Note"
+      },
+      "complete": {
+        "title": "Complete step",
+        "lastHint": "This is the last step: the site's details are updated and the customer is told.",
+        "submit": "Complete step",
+        "submitLast": "Complete and update the site",
+        "done": "Step completed",
+        "applied": "Change applied to the site",
+        "note": "Note (optional)"
+      },
+      "cancel": {
+        "title": "Cancel this change request",
+        "description": "The site stays as it is; held project work continues.",
+        "submit": "Cancel request",
+        "done": "Change request cancelled",
+        "reason": "Reason"
+      }
+    }
+  }
+}

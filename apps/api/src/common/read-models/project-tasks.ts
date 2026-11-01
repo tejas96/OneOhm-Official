@@ -8,6 +8,7 @@ import {
 } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { asc, eq, inArray, type SQL } from 'drizzle-orm';
+import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
 export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<ProjectTask[]> {
@@ -35,6 +36,9 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
         .where(inArray(taskDependencies.taskId, ids))
     : [];
+  const changeBlocks = await openChangeRequestBlocks(db, [
+    ...new Set(rows.map((row) => row.task.projectId)),
+  ]);
   const today = todayIn();
   return rows.map(({ task, code, name, assigneeName }) => ({
     id: task.id,
@@ -58,9 +62,14 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     approval: task.approval,
     evidence: task.evidence,
     captures: task.captures,
-    blockedBy: deps
-      .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
-      .map((dep) => dep.title),
+    blockedBy: [
+      ...deps
+        .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
+        .map((dep) => dep.title),
+      ...(task.status === 'completed'
+        ? []
+        : changeRequestsBlocking(changeBlocks.get(task.projectId), task)),
+    ],
     completedAt: task.completedAt?.toISOString() ?? null,
   }));
 }

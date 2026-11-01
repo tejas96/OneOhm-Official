@@ -8,6 +8,7 @@ import { ArrowLeft, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { ProjectChangeRequestButton } from '@/features/discom/project-change-request-button';
 
 function stagesOf(project: ProjectDetail, name: (stage: string) => string): TrackerStage[] {
   const waiting = project.waitingOn !== null && project.waitingOn !== 'internal';
@@ -71,6 +72,7 @@ export function RoomHeader({ project }: { readonly project: ProjectDetail }) {
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
           <StatusPill tone={project.tone} label={project.toneLabel} />
+          <ProjectChangeRequestButton projectId={project.id} />
           {project.next && (
             <p className="type-body-sm text-ink-muted">
               {t('next', { label: project.next.label })} ·{' '}
