@@ -1,0 +1,134 @@
+import { createHash, randomBytes, randomInt } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
+import type { CustomerProfile } from '@oneohm/api-contracts';
+import { customerSessions, customers, otpChallenges } from '@oneohm/database';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { AppError } from '../../common/http/errors';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
+import { createOtpSender, type OtpSender } from '../auth/otp-sender';
+
+const DAY_MS = 86_400_000;
+const OTP_TTL_SECONDS = 300;
+const OTP_MAX_ATTEMPTS = 5;
+const PURPOSE = 'customer';
+const hash = (value: string) => createHash('sha256').update(value).digest('base64url');
+
+/**
+ * Customer app sign-in: a one-time code to the mobile number on the customer record.
+ * Codes and tokens are stored only as hashes; unknown numbers get the same answer.
+ */
+@Injectable()
+export class CustomerAuthService {
+  private readonly otp: OtpSender;
+
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
+  ) {
+    this.otp = createOtpSender(env);
+  }
+
+  async requestCode(phoneE164: string): Promise<{ expiresInSeconds: number }> {
+    const [customer] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.phoneE164, phoneE164))
+      .limit(1);
+    if (customer) {
+      const code =
+        this.env.OTP_DEVELOPMENT_CODE ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
+      await this.db.insert(otpChallenges).values({
+        phoneE164,
+        purpose: PURPOSE,
+        codeHash: hash(`${PURPOSE}:${phoneE164}:${code}`),
+        expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
+      });
+      await this.otp.send(phoneE164, code);
+    }
+    return { expiresInSeconds: OTP_TTL_SECONDS };
+  }
+
+  async verifyCode(
+    phoneE164: string,
+    code: string,
+  ): Promise<{ token: string; customer: CustomerProfile }> {
+    const wrong = new AppError(
+      401,
+      'That code is not right or has expired. Ask for a new one.',
+      'bad_code',
+    );
+    const [challenge] = await this.db
+      .select()
+      .from(otpChallenges)
+      .where(
+        and(
+          eq(otpChallenges.phoneE164, phoneE164),
+          eq(otpChallenges.purpose, PURPOSE),
+          isNull(otpChallenges.consumedAt),
+          gt(otpChallenges.expiresAt, new Date()),
+        ),
+      )
+      .orderBy(desc(otpChallenges.createdAt))
+      .limit(1);
+    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) throw wrong;
+    if (challenge.codeHash !== hash(`${PURPOSE}:${phoneE164}:${code}`)) {
+      await this.db
+        .update(otpChallenges)
+        .set({ attempts: challenge.attempts + 1 })
+        .where(eq(otpChallenges.id, challenge.id));
+      throw wrong;
+    }
+    await this.db
+      .update(otpChallenges)
+      .set({ consumedAt: new Date() })
+      .where(eq(otpChallenges.id, challenge.id));
+    const [customer] = await this.db
+      .select({
+        id: customers.id,
+        name: customers.name,
+        phone: customers.phoneE164,
+        email: customers.email,
+      })
+      .from(customers)
+      .where(eq(customers.phoneE164, phoneE164))
+      .limit(1);
+    if (!customer) throw wrong;
+    const token = randomBytes(32).toString('base64url');
+    await this.db.insert(customerSessions).values({
+      customerId: customer.id,
+      tokenHash: hash(token),
+      expiresAt: new Date(Date.now() + this.env.SESSION_DAYS_MOBILE * DAY_MS),
+    });
+    return { token, customer };
+  }
+
+  /** The customer behind a bearer token, or null. */
+  async authenticate(token: string): Promise<{ customerId: string; sessionId: string } | null> {
+    const now = new Date();
+    const [session] = await this.db
+      .select({ id: customerSessions.id, customerId: customerSessions.customerId })
+      .from(customerSessions)
+      .where(
+        and(
+          eq(customerSessions.tokenHash, hash(token)),
+          isNull(customerSessions.revokedAt),
+          gt(customerSessions.expiresAt, now),
+        ),
+      )
+      .limit(1);
+    if (!session) return null;
+    await this.db
+      .update(customerSessions)
+      .set({ lastSeenAt: now })
+      .where(eq(customerSessions.id, session.id));
+    return { customerId: session.customerId, sessionId: session.id };
+  }
+
+  async signOut(sessionId: string): Promise<void> {
+    await this.db
+      .update(customerSessions)
+      .set({ revokedAt: new Date() })
+      .where(eq(customerSessions.id, sessionId));
+  }
+}

@@ -77,6 +77,10 @@ export const leads = pgTable(
     email: text('email'),
     city: text('city').notNull(),
     source: leadSourceEnum('source').notNull().default('manual'),
+    /** Set when an existing customer referred this lead from the customer app. */
+    referredByCustomerId: uuid('referred_by_customer_id').references(() => customers.id, {
+      onDelete: 'set null',
+    }),
     stage: leadStageEnum('stage').notNull().default('new'),
     ownerUserId: uuid('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
     resellerUserId: uuid('reseller_user_id').references(() => users.id, { onDelete: 'set null' }),

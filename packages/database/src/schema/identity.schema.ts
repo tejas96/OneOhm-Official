@@ -111,6 +111,8 @@ export const otpChallenges = pgTable(
   {
     id: primaryId(),
     phoneE164: text('phone_e164').notNull(),
+    /** Who is signing in: staff (field app) or customer (customer app). */
+    purpose: text('purpose').notNull().default('staff'),
     codeHash: text('code_hash').notNull(),
     attempts: integer('attempts').notNull().default(0),
     expiresAt: instant('expires_at').notNull(),

@@ -76,6 +76,7 @@ export class AuthService {
       .where(
         and(
           eq(otpChallenges.phoneE164, phoneE164),
+          eq(otpChallenges.purpose, 'staff'),
           isNull(otpChallenges.consumedAt),
           gt(otpChallenges.expiresAt, new Date()),
         ),

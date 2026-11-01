@@ -9,6 +9,6 @@ import { ReportsController } from './reports.controller';
 @Module({
   controllers: [ReportsController],
   providers: [ReportStatusService, ReportPdfService, QuotationPdfService, PdfRendererService],
-  exports: [ReportStatusService],
+  exports: [ReportStatusService, QuotationPdfService],
 })
 export class ReportsModule {}

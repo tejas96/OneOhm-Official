@@ -1,6 +1,7 @@
 export * from './catalog.schema';
 export * from './company.schema';
 export * from './crm.schema';
+export * from './customer-portal.schema';
 export * from './enums';
 export * from './finance.schema';
 export * from './identity.schema';
