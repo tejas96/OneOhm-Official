@@ -62,6 +62,251 @@
       "save": "Save changes",
       "saved": "Changes saved",
       "cancel": "Cancel"
+    },
+    "tabsLabel": "Team sections",
+    "noAccess": "You do not have permission to see the team.",
+    "tabs": {
+      "people": "People",
+      "attendance": "Attendance",
+      "leave": "Leave",
+      "points": "Points"
+    },
+    "decide": {
+      "choice": "Your decision",
+      "approve": "Approve",
+      "decline": "Decline",
+      "note": "Note for them",
+      "noteHint": "Optional. They see it with your decision.",
+      "cancel": "Cancel",
+      "confirmApprove": "Approve",
+      "confirmDecline": "Decline"
+    },
+    "attendance": {
+      "day": "Day",
+      "today": "Back to today",
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "loading": "Loading attendance",
+      "emptyTitle": "No staff yet",
+      "emptyBody": "Staff appear here once they are added to the team.",
+      "caption": "Attendance for the day",
+      "columns": {
+        "person": "Person",
+        "in": "Checked in",
+        "out": "Checked out",
+        "where": "Where",
+        "notes": "Notes"
+      },
+      "late": "Late",
+      "notIn": "Not checked in",
+      "none": "—",
+      "stillIn": "Still in",
+      "leftOutside": "Outside the place",
+      "noLocation": "Location not shared",
+      "metres": "{value} m",
+      "kilometres": "{value} km",
+      "inside": "Inside · {distance}",
+      "outside": "Outside · {distance} away",
+      "corrected": "Corrected",
+      "kpis": {
+        "label": "The day at a glance",
+        "present": "Present",
+        "ofTeam": "of {count} on the team",
+        "late": "Late",
+        "onLeave": "On leave",
+        "notIn": "Not checked in"
+      },
+      "corrections": {
+        "title": "Corrections",
+        "description": "People asked to fix a check-in or check-out time. Approving changes their day.",
+        "none": "No corrections waiting.",
+        "dialogTitle": "{name}, {day}",
+        "checkIn": "Check-in {time}",
+        "checkOut": "Check-out {time}",
+        "approve": "Approve",
+        "decline": "Decline",
+        "approved": "Correction approved",
+        "declined": "Correction declined"
+      }
+    },
+    "leave": {
+      "intro": "Leave is counted in working days; a half day counts as 0.5. Approving hands the open tasks in those days to the backup.",
+      "applyAction": "Apply for leave",
+      "loading": "Loading leave",
+      "halfDay": "Half a day",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "emergency": "Emergency",
+      "noBackup": "No backup named",
+      "coveredBy": "{name} covers",
+      "handedOver": "{count, plural, =0 {no tasks handed over} one {# task handed over} other {# tasks handed over}}",
+      "decidedBy": "Decided by {name}.",
+      "status": {
+        "pending": "Waiting",
+        "approved": "Approved",
+        "rejected": "Declined",
+        "cancelled": "Cancelled"
+      },
+      "balances": {
+        "label": "Your leave balances",
+        "ring": "{booked} of {allowed} days used or booked",
+        "left": "{count, plural, one {# day} other {# days}} left of {allowed}",
+        "waiting": "{count, plural, one {# day} other {# days}} waiting for approval"
+      },
+      "queue": {
+        "title": "Waiting for a decision",
+        "description": "Oldest first. Your own requests go to someone else.",
+        "none": "No leave requests waiting for you.",
+        "asked": "Asked {when}",
+        "dialogTitle": "{name}’s {kind}",
+        "handoverOnApprove": "Approving hands their open tasks in these days to {name}.",
+        "noHandover": "No backup was named, so no tasks move.",
+        "approve": "Approve",
+        "decline": "Decline",
+        "approved": "Leave approved",
+        "declined": "Leave declined",
+        "approvedHandover": "{count, plural, =0 {No open tasks needed handing to {name}.} one {# task handed over to {name}.} other {# tasks handed over to {name}.}}"
+      },
+      "history": {
+        "title": "Everyone’s leave",
+        "description": "Upcoming leave soonest first; past leave latest first.",
+        "whenLabel": "Show leave",
+        "upcoming": "Upcoming",
+        "past": "Past",
+        "statusLabel": "Filter by status",
+        "allStatuses": "All statuses",
+        "emptyUpcoming": "No upcoming leave",
+        "emptyPast": "No past leave",
+        "noBackup": "None",
+        "columns": {
+          "person": "Person",
+          "kind": "Kind",
+          "dates": "Dates",
+          "days": "Days",
+          "backup": "Backup",
+          "status": "Status"
+        }
+      },
+      "mine": {
+        "title": "Your leave",
+        "description": "What is left this year, and your requests.",
+        "none": "You have not asked for leave yet.",
+        "cancel": "Cancel this leave",
+        "cancelled": "Leave cancelled",
+        "confirmTitle": "Cancel this leave?",
+        "confirmBody": "The days go back to your balance. If tasks were handed over, they stay with your backup until someone reassigns them.",
+        "keep": "Keep it",
+        "confirm": "Cancel leave"
+      },
+      "impact": {
+        "label": "What this leave covers",
+        "pickDays": "Pick the days to see how many count, what is left after, and the work they touch.",
+        "noWorkingDays": "No working days",
+        "days": "{count, plural, one {# day} other {# days}}",
+        "left": "{count, plural, one {# day} other {# days}} of {kind} left after this",
+        "over": "{count, plural, one {# day} other {# days}} more than your {kind} left",
+        "overlap": "You already have leave on some of these days.",
+        "noTasks": "Nothing you own is due in these days.",
+        "tasks": "{count, plural, one {# task due while you are away} other {# tasks due while you are away}}",
+        "due": "Due {day}",
+        "customerSees": "Customer sees this"
+      },
+      "cover": {
+        "title": "Who covers your work",
+        "description": "Suggested from people with the same role, least busy first. You choose; nothing moves until the leave is approved.",
+        "backup": "Backup",
+        "noOne": "No one",
+        "openTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+        "hintTasks": "{count, plural, one {Approving hands this task to them.} other {Approving hands these # tasks to them.}}",
+        "hintNoTasks": "Nothing is due, but they will know to stand in.",
+        "note": "What they need to know",
+        "noteHint": "Optional. Where things are, who to call.",
+        "nobodyFree": "Nobody who does this kind of work is free on these days. A manager can reassign the tasks after approving."
+      },
+      "apply": {
+        "title": "Apply for leave",
+        "description": "Choose the days. You will see what they affect before you send it.",
+        "kind": "Kind of leave",
+        "from": "First day",
+        "to": "Last day",
+        "toHint": "Leave empty for a single day.",
+        "halfDay": "Half day",
+        "halfDayHint": "Counts as 0.5 of a day.",
+        "halfDayOneDay": "Only for a single day.",
+        "emergency": "Emergency leave",
+        "emergencyHint": "For days already gone or short notice. It can go over your balance.",
+        "reason": "Reason",
+        "reasonHint": "Optional. Your approver sees it.",
+        "cancel": "Cancel",
+        "submit": "Send request",
+        "sent": "Leave requested"
+      }
+    },
+    "points": {
+      "intro": "Points thank people for dependable work: tasks finished on time, good customer ratings and recognition from a manager. Rating points wait for a manager to agree.",
+      "giveAction": "Give recognition",
+      "loading": "Loading points",
+      "standings": {
+        "title": "Standings",
+        "description": "Approved points only. This month first, then all time.",
+        "emptyTitle": "No points yet",
+        "emptyBody": "Points appear here once work is recognised.",
+        "columns": {
+          "person": "Person",
+          "month": "This month",
+          "total": "All time"
+        }
+      },
+      "suggestions": {
+        "title": "Suggestions waiting",
+        "description": "Suggested after good customer ratings. Approve the ones that are fair.",
+        "none": "Nothing waiting.",
+        "approve": "Approve",
+        "decline": "Decline",
+        "approved": "Points approved",
+        "declined": "Points declined",
+        "failed": "Could not decide",
+        "yours": "Someone else decides yours."
+      },
+      "source": {
+        "task_on_time": "On-time task",
+        "customer_rating": "Customer rating",
+        "recognition": "Recognition"
+      },
+      "recent": {
+        "title": "Recent points",
+        "description": "The latest decided points, newest first.",
+        "none": "No points given yet.",
+        "columns": {
+          "person": "Person",
+          "points": "Points",
+          "reason": "Why",
+          "source": "From",
+          "status": "Status"
+        }
+      },
+      "give": {
+        "title": "Give recognition",
+        "description": "Thank someone for good work. They see the points and why.",
+        "person": "Who",
+        "personPlaceholder": "Choose a colleague",
+        "points": "Points",
+        "pointsHint": "Up to {max} at a time.",
+        "reason": "What it is for",
+        "reasonHint": "A sentence they will be glad to read.",
+        "cancel": "Cancel",
+        "submit": "Give points",
+        "given": "{count} points to {name}"
+      },
+      "rules": {
+        "title": "What earns points",
+        "onTime": "A task done on time",
+        "onTimeDetail": "Given automatically when a task is finished by its due date.",
+        "rating": "A good customer rating",
+        "ratingDetail": "Suggested after a good rating; a manager approves it.",
+        "recognition": "Recognition",
+        "recognitionDetail": "Given by a manager, with a reason.",
+        "upTo": "up to {max}"
+      }
     }
   }
 }

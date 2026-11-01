@@ -8,7 +8,8 @@
       "company": "Company",
       "products": "Products",
       "rates": "Rate card",
-      "discoms": "DISCOMs & subsidy"
+      "discoms": "DISCOMs & subsidy",
+      "workforce": "Workforce"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -302,6 +303,113 @@
       "perHousehold": "Up to {capacity} per household",
       "maxEligible": "Eligible capacity at most {capacity}",
       "none": "No subsidy"
+    },
+    "workforce": {
+      "title": "Workforce rules",
+      "loading": "Loading workforce rules",
+      "intro": "How leave, attendance and points work. These rules guide requests and check-ins; people still decide every approval.",
+      "unsaved": "You have unsaved changes.",
+      "discard": "Discard",
+      "leaveKinds": {
+        "title": "Kinds of leave",
+        "description": "What people can ask for, and how many days of each a year.",
+        "perYear": "{count, plural, one {# day a year} other {# days a year}}",
+        "edit": "Edit {name}",
+        "remove": "Remove {name}",
+        "add": "Add a kind of leave",
+        "removeHint": "Requests already made keep their kind. Changes apply when you save.",
+        "dialog": {
+          "addTitle": "New kind of leave",
+          "editTitle": "Edit {name}",
+          "description": "Kept with your other changes until you save the page.",
+          "label": "Name",
+          "labelError": "Give it a name of at least 2 letters.",
+          "key": "Short name",
+          "keyHint": "Lowercase letters and underscores, stored on every request.",
+          "keyFixed": "Fixed once requests can use it.",
+          "keyError": "Use 2 to 30 lowercase letters or underscores.",
+          "keyTaken": "Another kind already uses this short name.",
+          "days": "Days a year",
+          "daysHint": "Whole days a person can take in a calendar year.",
+          "daysError": "Between 0 and 366.",
+          "cancel": "Cancel",
+          "add": "Add",
+          "update": "Done"
+        }
+      },
+      "workingDay": {
+        "title": "Working week",
+        "description": "The days people work, and when the working day starts and ends.",
+        "workingDays": "Working days",
+        "days": {
+          "0": "Sun",
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat"
+        },
+        "offDays": "Weekly off: {days}. Leave on these days is not counted.",
+        "noOffDays": "No weekly off day.",
+        "dayStart": "Day starts",
+        "dayEnd": "Day ends",
+        "grace": "Grace minutes",
+        "graceHint": "Check-ins later than the start plus these minutes are marked late."
+      },
+      "location": {
+        "title": "Location at check-in",
+        "description": "Whether check-in and check-out note where the phone is, to compare with your authorised places.",
+        "capture": "Ask for location at check-in",
+        "captureOn": "Used only for people who have agreed to share it.",
+        "captureOff": "Check-ins record the time only.",
+        "privacyTitle": "How location is handled",
+        "privacyConsent": "Each person agrees in the app before anything is shared, and can stop sharing at any time.",
+        "privacyMoments": "The location is read only at the moment of check-in and check-out, never in between.",
+        "privacyRetention": "Coordinates are deleted after {days} days; the times stay.",
+        "retention": "Keep locations for (days)",
+        "retentionHint": "Between 7 and 730 days."
+      },
+      "points": {
+        "title": "Points",
+        "description": "What each kind of good work is worth.",
+        "onTimeTask": "Task done on time",
+        "onTimeTaskHint": "Given automatically.",
+        "goodRating": "Good customer rating",
+        "goodRatingHint": "Suggested; a manager approves it.",
+        "recognitionMax": "Most recognition at once",
+        "recognitionMaxHint": "The limit when a manager gives points."
+      },
+      "places": {
+        "title": "Authorised places",
+        "description": "Offices and yards check-ins are measured against. Changes here save straight away.",
+        "emptyTitle": "No places yet",
+        "emptyBody": "Add the office so check-ins can say whether people were there.",
+        "summary": "{latitude}, {longitude} · within {radius} m",
+        "edit": "Edit {name}",
+        "activeHint": "Only places that are switched on are used for check-ins.",
+        "add": "Add a place",
+        "failed": "Could not change the place",
+        "dialog": {
+          "addTitle": "New place",
+          "editTitle": "Edit {name}",
+          "description": "Check-ins within the radius count as inside.",
+          "name": "Name",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "numberError": "Enter a number, for example 16.8524.",
+          "coordinatesHint": "In Google Maps, right-click the spot and click the numbers to copy them.",
+          "radius": "Radius (metres)",
+          "radiusHint": "Between 25 and 5,000 m.",
+          "active": "In use",
+          "activeHint": "Switch off to stop using it without losing it.",
+          "cancel": "Cancel",
+          "add": "Add place",
+          "save": "Save place",
+          "added": "Place added",
+          "updated": "Place saved"
+        }
+      }
     }
   }
 }

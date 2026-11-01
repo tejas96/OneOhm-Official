@@ -1,158 +1,66 @@
 'use client';
 
-import type { Person } from '@oneohm/api-contracts';
-import {
-  Button,
-  EmptyState,
-  Input,
-  PageHeader,
-  pageEnter,
-  ResponsiveTable,
-  Select,
-  type TableColumn,
-} from '@oneohm/design-system/web';
-import { Search, UserPlus, UsersRound } from 'lucide-react';
+import { EmptyState, PageHeader, pageEnter, TabPanel, Tabs } from '@oneohm/design-system/web';
+import type { Capability } from '@oneohm/domain';
+import { Lock } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
-import { ListSkeleton, LoadError } from '@/components/query-state';
-import { useCan } from '@/providers/current-user';
-import { AddPersonDialog } from './add-person-dialog';
-import { EditPersonSheet } from './edit-person-sheet';
-import { PersonContact, PersonIdentity, PersonRoles, PersonStatus } from './person-row';
-import { usePeople, useRoles } from './use-team';
+import type { ComponentType } from 'react';
+import { useCurrentUser } from '@/providers/current-user';
+import { AttendanceTab } from './attendance/attendance-tab';
+import { LeaveTab } from './leave/leave-tab';
+import { PeopleTab } from './people-tab';
+import { PointsTab } from './points/points-tab';
 
-const ALL = 'all';
+const TABS = [
+  { value: 'people', requires: ['people.view', 'people.manage'], Panel: PeopleTab },
+  { value: 'attendance', requires: ['people.view', 'leave.approve'], Panel: AttendanceTab },
+  { value: 'leave', requires: ['leave.request', 'leave.approve'], Panel: LeaveTab },
+  { value: 'points', requires: ['people.view'], Panel: PointsTab },
+] as const satisfies readonly {
+  value: string;
+  requires: readonly Capability[];
+  Panel: ComponentType;
+}[];
+type TabValue = (typeof TABS)[number]['value'];
 
-function matches(person: Person, search: string, roleId: string): boolean {
-  if (roleId !== ALL && !person.roles.some((role) => role.id === roleId)) return false;
-  const needle = search.trim().toLowerCase();
-  if (!needle) return true;
-  return [person.fullName, person.email, person.phone, person.employeeCode, person.designation]
-    .filter((value): value is string => Boolean(value))
-    .some((value) => value.toLowerCase().includes(needle));
-}
-
-/** Everyone on the team with their roles, contact and current load. */
+/** People, the day's attendance, leave and points. The open tab lives in `?tab=`. */
 export function TeamView() {
   const t = useTranslations('team');
-  const canManage = useCan('people.manage');
-  const people = usePeople();
-  const roles = useRoles();
-  const [search, setSearch] = useState('');
-  const [roleId, setRoleId] = useState<string>(ALL);
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const visible = useMemo(
-    () => (people.data ?? []).filter((person) => matches(person, search, roleId)),
-    [people.data, search, roleId],
+  const user = useCurrentUser();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const allowed = TABS.filter((tab) =>
+    tab.requires.some((capability) => user.capabilities.includes(capability)),
   );
-  const editing = people.data?.find((person) => person.id === editingId) ?? null;
-  const roleOptions = [
-    { value: ALL, label: t('allRoles') },
-    ...(roles.data ?? [])
-      .filter((role) => !role.archived)
-      .map((role) => ({ value: role.id, label: role.name })),
-  ];
+  const current = allowed.find((tab) => tab.value === params.get('tab')) ?? allowed[0];
 
-  const columns: readonly TableColumn<Person>[] = [
-    {
-      key: 'person',
-      header: t('columns.person'),
-      primary: true,
-      cell: (person) => (
-        <PersonIdentity
-          person={person}
-          onOpen={canManage ? () => setEditingId(person.id) : undefined}
-        />
-      ),
-    },
-    { key: 'roles', header: t('columns.roles'), cell: (person) => <PersonRoles person={person} /> },
-    {
-      key: 'contact',
-      header: t('columns.contact'),
-      cell: (person) => <PersonContact person={person} />,
-    },
-    {
-      key: 'status',
-      header: t('columns.status'),
-      cell: (person) => <PersonStatus person={person} />,
-    },
-    {
-      key: 'load',
-      header: t('columns.load'),
-      align: 'end',
-      cell: (person) => (
-        <span
-          className={person.openTasks > 0 ? 'text-ink tabular-nums' : 'text-ink-faint tabular-nums'}
-        >
-          {t('openTasks', { count: person.openTasks })}
-        </span>
-      ),
-    },
-  ];
+  const select = (value: TabValue) => {
+    const next = new URLSearchParams(params);
+    next.set('tab', value);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
 
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 py-2">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          canManage && (
-            <Button
-              variant="primary"
-              leadingIcon={<UserPlus />}
-              onClick={() => setAdding(true)}
-              disabled={!roles.data}
-            >
-              {t('add')}
-            </Button>
-          )
-        }
-      />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="sm:max-w-md sm:flex-1">
-          <Input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('search')}
-            aria-label={t('search')}
-            leading={<Search aria-hidden className="size-4" />}
-          />
-        </div>
-        <Select
-          value={roleId}
-          onValueChange={setRoleId}
-          options={roleOptions}
-          label={t('roleFilter')}
-          className="sm:w-56"
-        />
-        {people.data && (
-          <p className="type-body-sm text-ink-faint sm:ml-auto">
-            {t('count', { count: visible.length })}
-          </p>
-        )}
-      </div>
-      {people.isPending && <ListSkeleton label={t('loading')} />}
-      {people.isError && <LoadError error={people.error} onRetry={() => people.refetch()} />}
-      {people.data && visible.length === 0 && (
-        <EmptyState icon={<UsersRound />} title={t('emptyTitle')} description={t('emptyBody')} />
-      )}
-      {visible.length > 0 && (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={visible}
-          rowKey={(person) => person.id}
-        />
-      )}
-      {roles.data && (
-        <>
-          <AddPersonDialog open={adding} onOpenChange={setAdding} roles={roles.data} />
-          <EditPersonSheet person={editing} roles={roles.data} onClose={() => setEditingId(null)} />
-        </>
+      <PageHeader title={t('title')} description={t('description')} />
+      {current ? (
+        <Tabs
+          value={current.value}
+          onValueChange={select}
+          items={allowed.map((tab) => ({ value: tab.value, label: t(`tabs.${tab.value}`) }))}
+          label={t('tabsLabel')}
+        >
+          {allowed.map(({ value, Panel }) => (
+            <TabPanel key={value} value={value} className="pt-8 outline-none">
+              {value === current.value && <Panel />}
+            </TabPanel>
+          ))}
+        </Tabs>
+      ) : (
+        <EmptyState icon={<Lock />} title={t('noAccess')} />
       )}
     </motion.div>
   );

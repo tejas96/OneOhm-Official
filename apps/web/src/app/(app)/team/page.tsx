@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { TeamView } from '@/features/team/team-view';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,5 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function TeamPage() {
-  return <TeamView />;
+  return (
+    <Suspense>
+      <TeamView />
+    </Suspense>
+  );
 }

@@ -10,7 +10,8 @@ export function formatPhone(phone: string): string {
   return match ? `+91 ${match[1]} ${match[2]}` : phone;
 }
 
-const swatchOf = (id: string) =>
+/** The same person keeps the same avatar colour on every tab. */
+export const swatchOf = (id: string) =>
   [...id].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 6;
 
 export function PersonIdentity({

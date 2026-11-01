@@ -1,0 +1,51 @@
+'use client';
+
+import { EmptyState } from '@oneohm/design-system/web';
+import { todayIn } from '@oneohm/shared';
+import { UsersRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useCan, useCurrentUser } from '@/providers/current-user';
+import { AttendanceKpis } from './attendance-kpis';
+import { AttendanceTable } from './attendance-table';
+import { CorrectionsQueue } from './corrections-queue';
+import { DayPicker } from './day-picker';
+import { usePendingCorrections, useTeamAttendance } from './use-attendance';
+
+/** Who came in on a day, when and where; corrections waiting for a decision come first. */
+export function AttendanceTab() {
+  const t = useTranslations('team.attendance');
+  const canDecide = useCan('leave.approve');
+  const me = useCurrentUser();
+  const today = todayIn();
+  const [date, setDate] = useState(today);
+  const rows = useTeamAttendance(date);
+  const corrections = usePendingCorrections(canDecide);
+  // Nobody decides their own correction; those wait for someone else.
+  const waiting = (corrections.data ?? []).filter((item) => item.user.id !== me.id);
+
+  return (
+    <div className="flex flex-col gap-8">
+      {corrections.isError && (
+        <LoadError error={corrections.error} onRetry={() => corrections.refetch()} />
+      )}
+      {waiting.length > 0 && <CorrectionsQueue items={waiting} />}
+      <DayPicker date={date} today={today} onChange={setDate} />
+      {rows.isPending && <ListSkeleton label={t('loading')} rows={4} />}
+      {rows.isError && <LoadError error={rows.error} onRetry={() => rows.refetch()} />}
+      {rows.data && rows.data.length === 0 && (
+        <EmptyState icon={<UsersRound />} title={t('emptyTitle')} description={t('emptyBody')} />
+      )}
+      {rows.data && rows.data.length > 0 && (
+        <>
+          <AttendanceKpis rows={rows.data} />
+          <AttendanceTable rows={rows.data} />
+        </>
+      )}
+      {canDecide && corrections.data && waiting.length === 0 && (
+        <p className="type-body-sm text-ink-faint">{t('corrections.none')}</p>
+      )}
+    </div>
+  );
+}
