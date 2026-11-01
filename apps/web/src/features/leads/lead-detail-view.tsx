@@ -3,7 +3,7 @@
 import { Button, pageEnter, Skeleton, SkeletonGroup, StatusPill } from '@oneohm/design-system/web';
 import { todayIn } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, MessageCircle, Phone } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Phone, UserRoundCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -81,6 +81,15 @@ export function LeadDetailView({ id }: { readonly id: string }) {
               <span aria-hidden>·</span>
               <span>{lead.city}</span>
             </p>
+            {lead.matchedCustomer && !lead.customerId && (
+              <Link
+                href={`/customers/${lead.matchedCustomer.id}`}
+                className="inline-flex items-center gap-1.5 self-start type-body-sm font-medium text-accent underline-offset-4 hover:underline"
+              >
+                <UserRoundCheck aria-hidden className="size-4" />
+                {t('matchedCustomer', { name: lead.matchedCustomer.name })}
+              </Link>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="secondary" size="sm" leadingIcon={<Phone />}>

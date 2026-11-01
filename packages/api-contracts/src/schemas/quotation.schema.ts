@@ -1,4 +1,4 @@
-import { LINE_CATEGORIES } from '@oneohm/domain';
+import { EXTRA_KINDS, LINE_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { subsidyCategorySchema } from './crm.schema';
@@ -19,7 +19,41 @@ export const subsidyIneligibleSchema = z.enum([
   'meter_not_in_society_name',
   'already_subsidised',
   'no_rule',
+  'no_households',
 ]);
+
+export const extraKindSchema = z.enum(EXTRA_KINDS);
+
+/**
+ * A line sales adds by hand (PRD 3.5, 3.9): an optional item (shown, not in the total),
+ * a gift (free, its cost kept), a site-specific charge, or an adjustment up or down.
+ * Anything but an optional item needs a reason. With `productId`, the catalog fills the
+ * price, cost and GST.
+ */
+export const extraLineInputSchema = z
+  .object({
+    kind: extraKindSchema,
+    productId: idSchema.nullable().optional(),
+    description: z.string().trim().min(2, 'Describe the item.').max(160),
+    quantity: z.number().positive().max(10_000).default(1),
+    unit: z.string().trim().min(1).max(20).default('nos'),
+    unitPricePaise: paiseSchema.min(-10_00_00_000).max(10_00_00_000).default(0),
+    unitCostPaise: paiseSchema.min(0).max(10_00_00_000).default(0),
+    reason: z.string().trim().max(300).default(''),
+  })
+  .superRefine((line, context) => {
+    if (line.kind !== 'optional' && line.reason.length < 3)
+      context.addIssue({ code: 'custom', path: ['reason'], message: 'Say why this line is here.' });
+    if (line.kind === 'adjustment' && line.unitPricePaise === 0)
+      context.addIssue({ code: 'custom', path: ['unitPricePaise'], message: 'Enter the amount.' });
+    if (line.kind !== 'adjustment' && line.unitPricePaise < 0)
+      context.addIssue({
+        code: 'custom',
+        path: ['unitPricePaise'],
+        message: 'Use an adjustment to lower the price.',
+      });
+  });
+export type ExtraLineInput = z.infer<typeof extraLineInputSchema>;
 
 /** What sales chooses; everything else comes from the property, catalog and rate card. */
 export const quotationInputSchema = z.object({
@@ -38,6 +72,7 @@ export const quotationInputSchema = z.object({
   dcCableMeters: z.number().positive().nullable().optional(),
   acCableMeters: z.number().positive().nullable().optional(),
   discountPaise: paiseSchema.min(0).default(0),
+  extras: z.array(extraLineInputSchema).max(20).optional(),
 });
 export type QuotationInput = z.infer<typeof quotationInputSchema>;
 
@@ -67,6 +102,9 @@ export const quotationLineSchema = z.object({
   taxPaise: paiseSchema,
   totalPaise: paiseSchema,
   costPaise: paiseSchema,
+  /** Set on lines added by hand, with the reason given. */
+  extra: extraKindSchema.nullable().optional(),
+  reason: z.string().nullable().optional(),
 });
 
 export const quotationTotalsSchema = z.object({
@@ -82,6 +120,8 @@ export const quotationTotalsSchema = z.object({
   subsidyPaise: paiseSchema,
   subsidyIneligible: subsidyIneligibleSchema.nullable(),
   effectivePaise: paiseSchema,
+  /** Optional items offered, with GST; never part of the total. */
+  optionalPaise: paiseSchema.optional(),
 });
 export type QuotationTotals = z.infer<typeof quotationTotalsSchema>;
 
@@ -118,5 +158,7 @@ export const quotationDetailSchema = quotationSummarySchema.extend({
   totals: quotationTotalsSchema,
   lines: z.array(quotationLineSchema),
   customerPhone: z.string(),
+  /** What the customer said when turning it down. */
+  rejectionReason: z.string().nullable().optional(),
 });
 export type QuotationDetail = z.infer<typeof quotationDetailSchema>;

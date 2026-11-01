@@ -14,9 +14,10 @@ import {
 } from './profitability-report.math';
 import {
   readBills,
-  readDispatches,
   readProjects,
   readQuotedLines,
+  readStockMoves,
+  readTravel,
 } from './profitability-report.read';
 import { type ReportScope, reportScope } from './report-scope';
 
@@ -34,20 +35,20 @@ export class ProfitabilityReportService {
     const quotationIds = started.flatMap((project) =>
       project.quotation ? [project.quotation.id] : [],
     );
-    const [lines, bills, dispatches] = await Promise.all([
+    const [lines, bills, moves, travel] = await Promise.all([
       readQuotedLines(this.db, quotationIds),
       readBills(this.db, ids),
-      readDispatches(this.db, ids),
+      readStockMoves(this.db, ids),
+      readTravel(this.db, ids),
     ]);
     const rows = started
       .map((project): ProjectRow => {
         const quote = project.quotation;
         const contractPaise = quote ? quote.totalPaise - quote.taxPaise : 0;
         const estimatedCostPaise = quote?.costPaise ?? 0;
-        const actual = actualCost(
-          bills.filter((bill) => bill.projectId === project.id),
-          dispatches.filter((row) => row.projectId === project.id),
-        );
+        const own = <T extends { projectId: string }>(rows: readonly T[]) =>
+          rows.filter((row) => row.projectId === project.id);
+        const actual = actualCost(own(bills), own(moves), own(travel));
         const actualCostPaise = totalOf(actual);
         const { variancePaise, estimatedMarginRate, marginSoFarRate } = profit(
           contractPaise,
@@ -94,6 +95,7 @@ export class ProfitabilityReportService {
           stockPaise: sum((row) => row.actual.stockPaise),
           vendorPaise: sum((row) => row.actual.vendorPaise),
           contractorPaise: sum((row) => row.actual.contractorPaise),
+          travelPaise: sum((row) => row.actual.travelPaise),
         },
         bills: this.billsByStatus(bills),
       },
@@ -113,9 +115,10 @@ export class ProfitabilityReportService {
         'Contract without GST (₹)',
         'Estimated cost (₹)',
         'Estimated margin %',
-        'Stock dispatched (₹)',
+        'Material from stock (₹)',
         'Vendor bills (₹)',
         'Contractor bills (₹)',
+        'Travel claims (₹)',
         'Actual cost so far (₹)',
         'Variance (₹)',
         'Margin so far %',
@@ -131,6 +134,7 @@ export class ProfitabilityReportService {
         rupees(row.actual.stockPaise),
         rupees(row.actual.vendorPaise),
         rupees(row.actual.contractorPaise),
+        rupees(row.actual.travelPaise),
         rupees(row.actualCostPaise),
         rupees(row.variancePaise),
         percent(row.marginSoFarRate),

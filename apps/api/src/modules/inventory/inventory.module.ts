@@ -6,6 +6,8 @@ import { CustodyPhotoService } from './custody-photo.service';
 import { MaterialService } from './material.service';
 import { ProcurementController } from './procurement.controller';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { ReceiptPapersController } from './receipt-papers.controller';
+import { ReceiptPapersService } from './receipt-papers.service';
 import { ReceivingService } from './receiving.service';
 import { StockController } from './stock.controller';
 import { StockService } from './stock.service';
@@ -14,11 +16,12 @@ import { VendorsService } from './vendors.service';
 /** Inventory, procurement, vendors, dispatch and material with contractors (PRD 3.10). */
 @Module({
   imports: [DocumentsModule],
-  controllers: [ProcurementController, StockController, CustodyController],
+  controllers: [ProcurementController, StockController, CustodyController, ReceiptPapersController],
   providers: [
     VendorsService,
     PurchaseOrdersService,
     ReceivingService,
+    ReceiptPapersService,
     StockService,
     MaterialService,
     CustodyService,

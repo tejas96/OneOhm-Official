@@ -36,9 +36,11 @@ export class PaymentLinksService {
 
   /** Returns the open link when there is one; otherwise makes one for what is left. */
   /** `actor` is null-user when the WhatsApp assistant asks on the customer's behalf. */
+  /** `tell: false` when the customer is already paying (the app's Pay button): no message. */
   async create(
     actor: { readonly userId: string | null },
     milestoneId: string,
+    options: { readonly tell?: boolean } = {},
   ): Promise<PaymentLink> {
     if (this.gateway.mode === 'off')
       throw conflict('Online payments are not set up yet. Add the Razorpay keys.', 'off');
@@ -89,19 +91,20 @@ export class PaymentLinksService {
         })
         .returning({ id: paymentLinks.id });
       if (!link) throw new Error('Link insert returned nothing.');
-      await queueCustomerMessage(
-        tx,
-        customer.phoneE164,
-        'payment_link',
-        {
-          customer: customer.name,
-          amount: formatInr(owed),
-          milestone: milestone.label,
-          project: project.code,
-          link: created.url,
-        },
-        `payment_link:${link.id}`,
-      );
+      if (options.tell !== false)
+        await queueCustomerMessage(
+          tx,
+          customer.phoneE164,
+          'payment_link',
+          {
+            customer: customer.name,
+            amount: formatInr(owed),
+            milestone: milestone.label,
+            project: project.code,
+            link: created.url,
+          },
+          `payment_link:${link.id}`,
+        );
       await recordAudit(tx, actor.userId, 'payment_link.created', 'project', project.id, {
         milestoneId,
         amountPaise: owed,

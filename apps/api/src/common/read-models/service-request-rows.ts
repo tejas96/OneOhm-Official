@@ -9,9 +9,17 @@ import {
   serviceRequests,
   users,
 } from '@oneohm/database';
-import { factLabel, MAINTENANCE_VISIT_CATEGORY, serviceSla } from '@oneohm/domain';
+import {
+  factLabel,
+  isAudioType,
+  isVideoType,
+  MAINTENANCE_VISIT_CATEGORY,
+  serviceSla,
+} from '@oneohm/domain';
 import { desc, eq, type SQL } from 'drizzle-orm';
-import { photosOfRequests } from './service-request-photos';
+import { filesOfRequests, type RequestFiles } from './service-request-photos';
+
+const NO_FILES: RequestFiles = { photos: [], media: [] };
 
 /**
  * Service requests with what both the desk and the customer app show: the category's
@@ -40,11 +48,11 @@ export async function serviceRequestRows(db: DatabaseExecutor, where?: SQL) {
     .leftJoin(serviceRatings, eq(serviceRatings.serviceRequestId, serviceRequests.id))
     .where(where)
     .orderBy(desc(serviceRequests.createdAt));
-  const photos = await photosOfRequests(
+  const files = await filesOfRequests(
     db,
     rows.map(({ request }) => request.id),
   );
-  return rows.map((row) => ({ ...row, photos: photos.get(row.request.id) ?? [] }));
+  return rows.map((row) => ({ ...row, ...(files.get(row.request.id) ?? NO_FILES) }));
 }
 
 type Row = Awaited<ReturnType<typeof serviceRequestRows>>[number];
@@ -64,6 +72,7 @@ function shared(row: Row) {
         ? ('maintenance_visit' as const)
         : ('request' as const),
     scheduledFor: row.visitDueOn,
+    visitOn: request.visitOn,
     description: request.description,
     status: statusOf(request.status),
     resolutionNote: request.resolutionNote,
@@ -92,6 +101,7 @@ export function toTicket(row: Row, now: Date): ServiceTicket {
         ? { id: request.assigneeUserId, name: row.assigneeName }
         : null,
     photos: row.photos,
+    media: row.media,
     responseDueAt: iso(request.responseDueAt),
     resolutionDueAt: iso(request.resolutionDueAt),
     respondedAt: iso(request.respondedAt),
@@ -106,5 +116,7 @@ export function toCustomerRequest(row: Row): ServiceRequest {
     projectCode: row.projectCode,
     categoryLabel: row.customerLabel ?? row.label ?? factLabel(row.request.category),
     photoCount: row.photos.length,
+    hasVideo: row.media.some((file) => isVideoType(file.contentType)),
+    hasVoiceNote: row.media.some((file) => isAudioType(file.contentType)),
   };
 }

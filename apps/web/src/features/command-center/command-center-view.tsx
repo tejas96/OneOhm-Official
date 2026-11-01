@@ -14,9 +14,12 @@ import { CenterFilterBar } from './center-filter-bar';
 import { CenterKpis } from './center-kpis';
 import { DeadlinesAhead, DecisionsWaiting } from './center-panels';
 import { HealthCard } from './health-card';
+import { MaterialRiskCard } from './material-risks';
 import { MoneyLedger } from './money-ledger';
+import { OutlookTile } from './outlook-tile';
 import { PipelineTile } from './pipeline-tile';
 import { ProjectLedger } from './project-ledger';
+import { ProjectStates } from './project-states';
 import { RiskCards } from './risk-cards';
 import { TeamLoadSection } from './team-load';
 import { useCenterFilters } from './use-center-filters';
@@ -84,24 +87,27 @@ export function CommandCenterView() {
           className={`flex flex-col gap-8 transition-opacity ${center.isPlaceholderData ? 'opacity-60' : ''}`}
         >
           <div className={COLUMNS}>
-            <HealthCard data={data} />
+            <HealthCard data={data} query={query} />
             <ActionList actions={data.actions} compact limit={4} />
           </div>
-          <CenterKpis data={data} />
+          <CenterKpis data={data} query={query} />
+          <ProjectStates data={data} query={query} />
           <div className={COLUMNS}>
             <div className="flex min-w-0 flex-col gap-6">
               <RiskCards risks={data.risks} />
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <WaitingTile days={data.waitingDays} />
-                <PipelineTile pipeline={data.pipeline} />
+                <WaitingTile days={data.waitingDays} query={query} />
+                <PipelineTile pipeline={data.pipeline} query={query} />
               </div>
+              <MaterialRiskCard materials={data.materials} />
             </div>
             <div className="flex min-w-0 flex-col gap-6">
               <DecisionsWaiting decisions={data.decisions} />
+              <OutlookTile outlook={data.outlook} query={query} />
               <DeadlinesAhead deadlines={data.deadlines} today={todayIn()} />
             </div>
           </div>
-          <ProjectLedger projects={data.projects} total={data.liveProjects} />
+          <ProjectLedger projects={data.projects} total={data.liveProjects} query={query} />
           <MoneyLedger money={data.money} />
           <TeamLoadSection query={query} />
         </div>

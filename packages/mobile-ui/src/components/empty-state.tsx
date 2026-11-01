@@ -1,8 +1,9 @@
 import { RADIUS } from '@oneohm/design-system/tokens';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { Button } from './button';
+import { SkeletonRows } from './skeleton';
 import { Text } from './text';
 
 export interface EmptyStateProps {
@@ -37,15 +38,7 @@ export function EmptyState({ title, description, icon, action }: EmptyStateProps
 
 /** Shown while a screen loads for the first time. */
 export function LoadingState({ label }: { readonly label: string }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.loading} accessibilityLabel={label} accessibilityRole="progressbar">
-      <ActivityIndicator color={theme.colors.accent} />
-      <Text variant="bodySm" tone="tertiary">
-        {label}
-      </Text>
-    </View>
-  );
+  return <SkeletonRows label={label} />;
 }
 
 /** Shown when a screen could not load; says why and offers a retry. */
@@ -87,5 +80,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  loading: { alignItems: 'center', gap: 10, paddingVertical: 48 },
 });

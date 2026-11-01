@@ -56,7 +56,7 @@
       </div>
     </section>
     <p class="q-note">
-      {{#if money.subsidyReason}}{{money.subsidyReason}}{{else}}The subsidy is credited by the government directly to your bank account after commissioning and DISCOM inspection, under PM Surya Ghar rules. OneOhm invoices and collects the full project price.{{/if}}
+      {{#if money.subsidyReason}}{{money.subsidyReason}}{{else}}The subsidy is credited by the government directly to your bank account after commissioning and DISCOM inspection, under PM Surya Ghar rules. {{company.brand}} invoices and collects the full project price.{{/if}}
     </p>
 
     {{#if comparison}}
@@ -76,9 +76,9 @@
     <section class="q-section q-keep">
       <h2>System details</h2>
       <dl class="q-specs">
-        <div class="q-spec"><dt>Solar panels</dt><dd>{{system.modules}} <span class="q-muted">· {{system.panelKind}}</span></dd></div>
-        <div class="q-spec"><dt>Inverter</dt><dd>{{system.inverter}}</dd></div>
-        {{#if system.battery}}<div class="q-spec"><dt>Battery</dt><dd>{{system.battery}}</dd></div>{{/if}}
+        <div class="q-spec"><dt>Solar panels</dt><dd>{{system.modules}} <span class="q-muted">· {{system.panelKind}}</span>{{#if system.panelSpecs}}<br /><small class="q-spec-note">{{system.panelSpecs}}</small>{{/if}}</dd></div>
+        <div class="q-spec"><dt>Inverter</dt><dd>{{system.inverter}}{{#if system.inverterSpecs}}<br /><small class="q-spec-note">{{system.inverterSpecs}}</small>{{/if}}</dd></div>
+        {{#if system.battery}}<div class="q-spec"><dt>Battery</dt><dd>{{system.battery}}{{#if system.batterySpecs}}<br /><small class="q-spec-note">{{system.batterySpecs}}</small>{{/if}}</dd></div>{{/if}}
         <div class="q-spec"><dt>Mounting</dt><dd>{{system.structure}}</dd></div>
       </dl>
     </section>
@@ -89,7 +89,7 @@
         <thead><tr><th class="q-index">#</th><th>Item</th><th class="q-num">Quantity</th><th class="q-num">GST</th><th class="q-num">Amount</th></tr></thead>
         <tbody>
           {{#each lines}}
-          <tr><td class="q-index">{{index}}</td><td>{{description}}</td><td class="q-num">{{quantity}}</td><td class="q-num">{{gst}}</td><td class="q-num">{{amount}}</td></tr>
+          <tr><td class="q-index">{{index}}</td><td>{{description}}{{#if note}}<br /><small class="q-spec-note">{{note}}</small>{{/if}}</td><td class="q-num">{{quantity}}</td><td class="q-num">{{gst}}</td><td class="q-num">{{amount}}</td></tr>
           {{/each}}
         </tbody>
       </table>
@@ -100,6 +100,21 @@
         <div class="q-row q-grand"><dt>Total project price</dt><dd>{{money.total}}</dd></div>
       </dl>
     </section>
+
+    {{#if optional.length}}
+    <section class="q-section q-keep">
+      <h2>Optional items · not included in the total</h2>
+      <table class="q-lines">
+        <thead><tr><th class="q-index">#</th><th>Item</th><th class="q-num">Quantity</th><th class="q-num">GST</th><th class="q-num">Price with GST</th></tr></thead>
+        <tbody>
+          {{#each optional}}
+          <tr><td class="q-index">{{index}}</td><td>{{description}}</td><td class="q-num">{{quantity}}</td><td class="q-num">{{gst}}</td><td class="q-num">{{amount}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <p class="q-muted">Tell us if you would like any of these added; we will send a revised quotation.</p>
+    </section>
+    {{/if}}
 
     <section class="q-section q-keep">
       <h2>Payment schedule</h2>
@@ -116,8 +131,8 @@
       <h2>Terms</h2>
       <ol class="q-terms">
         <li>Prices include GST. This quotation is valid until {{validUntil}}.</li>
-        <li>Cable lengths, structure and labour are estimated from your site type. After the site survey, a difference within our tolerance is absorbed by OneOhm; a larger difference is shared with you as a revised quotation for your approval.</li>
-        <li>The expected subsidy follows the PM Surya Ghar rules in force today and is paid by the government, not by OneOhm. It depends on approval of your application and inspection by the DISCOM.</li>
+        <li>Cable lengths, structure and labour are estimated from your site type. After the site survey, a difference within our tolerance is absorbed by {{company.brand}}; a larger difference is shared with you as a revised quotation for your approval.</li>
+        <li>The expected subsidy follows the PM Surya Ghar rules in force today and is paid by the government, not by {{company.brand}}. It depends on approval of your application and inspection by the DISCOM.</li>
         <li>Net-metering approval and the meter are arranged with the DISCOM on your behalf; DISCOM fees, if any, are as per their schedule.</li>
       </ol>
     </section>

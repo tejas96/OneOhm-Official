@@ -1,15 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Lead, LeadDetail } from '@oneohm/api-contracts';
-import { leadActivities, leads, users } from '@oneohm/database';
+import { leads } from '@oneohm/database';
 import type { LeadSource, LeadStage, SubsidyCategory } from '@oneohm/domain';
+import { todayIn } from '@oneohm/shared';
 import { and, asc, desc, eq, ilike, notInArray, or, type SQL } from 'drizzle-orm';
-import { type Actor, can } from '../../common/auth/actor';
-import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
-import { definedOnly, type Patch } from '../../common/patch';
+import type { Actor } from '../../common/auth/actor';
+import { conflict, invalid, notFound } from '../../common/http/errors';
+import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { resolveReferralCode } from '../referrals/referral-codes';
+import { logLead, logLeadChanges, tellLeadOwner } from './lead-history';
+import { assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
-import { movedNote, pickStep, stepColumns } from './lead-steps-read';
+import { leadVisibility, needsFollowUp, readLeadDetail, unownedLeads } from './lead-read';
+import { pickStep, stepColumns } from './lead-steps-read';
+import { assertOpenLeadComplete, type LeadPatch, lostColumns } from './lead-update';
 
 const CLOSED: LeadStage[] = ['won', 'lost'];
 
@@ -39,11 +44,13 @@ export class LeadsService {
       stage?: LeadStage | undefined;
       search?: string | undefined;
       open?: boolean | undefined;
+      unowned?: boolean | undefined;
     },
   ): Promise<Lead[]> {
-    const conditions: SQL[] = [this.visibility(actor)];
+    const conditions: SQL[] = [leadVisibility(actor)];
     if (filter.stage) conditions.push(eq(leads.stage, filter.stage));
-    if (filter.open) conditions.push(notInArray(leads.stage, CLOSED));
+    if (filter.open) conditions.push(needsFollowUp(todayIn()));
+    if (filter.unowned) conditions.push(unownedLeads(this.db));
     if (filter.search) {
       const term = `%${filter.search}%`;
       const match = or(
@@ -58,34 +65,11 @@ export class LeadsService {
       .from(leads)
       .where(and(...conditions))
       .orderBy(asc(leads.nextActionOn), desc(leads.createdAt));
-    return this.present(rows);
+    return presentLeads(this.db, rows);
   }
 
-  async get(actor: Actor, id: string): Promise<LeadDetail> {
-    const [row] = await this.db
-      .select()
-      .from(leads)
-      .where(and(eq(leads.id, id), this.visibility(actor)))
-      .limit(1);
-    if (!row) throw notFound('That lead');
-    const [lead] = await this.present([row]);
-    const activityRows = await this.db
-      .select({ activity: leadActivities, userName: users.fullName })
-      .from(leadActivities)
-      .leftJoin(users, eq(users.id, leadActivities.userId))
-      .where(eq(leadActivities.leadId, id))
-      .orderBy(desc(leadActivities.createdAt));
-    if (!lead) throw notFound('That lead');
-    return {
-      ...lead,
-      activities: activityRows.map(({ activity, userName }) => ({
-        id: activity.id,
-        kind: activity.kind,
-        note: activity.note,
-        user: activity.userId && userName ? { id: activity.userId, fullName: userName } : null,
-        createdAt: activity.createdAt.toISOString(),
-      })),
-    };
+  get(actor: Actor, id: string): Promise<LeadDetail> {
+    return readLeadDetail(this.db, actor, id);
   }
 
   async create(actor: Actor, input: NewLead): Promise<Lead> {
@@ -102,6 +86,10 @@ export class LeadsService {
     }
     const reseller = actor.kind === 'reseller';
     const referrer = await this.referrer(input);
+    // A reseller's lead gets a OneOhm owner by rule; staff own what they add unless they pick.
+    const owner = reseller ? await ownerByRule(this.db) : (input.ownerUserId ?? actor.userId);
+    if (!owner) throw conflict('Nobody can take new leads yet. Ask an admin to set up Sales.');
+    if (input.ownerUserId) await assertCanOwnLeads(this.db, input.ownerUserId);
     const [created] = await this.db
       .insert(leads)
       .values({
@@ -113,7 +101,7 @@ export class LeadsService {
         referredByCustomerId: referrer?.customerId ?? null,
         subsidyCategory: input.subsidyCategory,
         estimatedWp: input.estimatedWp ?? null,
-        ownerUserId: reseller ? null : (input.ownerUserId ?? actor.userId),
+        ownerUserId: owner,
         resellerUserId: reseller ? actor.userId : null,
         nextActionOn: input.nextActionOn,
         nextActionNote: input.nextActionNote ?? null,
@@ -121,62 +109,46 @@ export class LeadsService {
       })
       .returning();
     if (!created) throw new Error('Lead insert returned nothing.');
-    await this.log(
+    await logLead(
+      this.db,
       created.id,
       actor.userId,
       'note',
       referrer ? `Lead created, referred by ${referrer.name} (${referrer.code}).` : 'Lead created.',
     );
-    const [lead] = await this.present([created]);
+    if (owner !== actor.userId) await tellLeadOwner(this.db, owner, created, actor.fullName);
+    const [lead] = await presentLeads(this.db, [created]);
     if (!lead) throw notFound('That lead');
     return lead;
   }
 
-  async update(
-    actor: Actor,
-    id: string,
-    patch: Patch<{
-      stage: LeadStage;
-      stepKey: string;
-      ownerUserId: string | null;
-      nextActionOn: string | null;
-      nextActionNote: string | null;
-      lostReason: string | null;
-      estimatedWp: number | null;
-    }>,
-  ): Promise<LeadDetail> {
+  async update(actor: Actor, id: string, patch: LeadPatch): Promise<LeadDetail> {
     const current = await this.get(actor, id);
     const step = patch.stepKey ? await pickStep(this.db, patch.stepKey) : null;
     const stage = step?.stage ?? patch.stage ?? current.stage;
-    const nextActionOn =
-      patch.nextActionOn === undefined ? current.nextActionOn : patch.nextActionOn;
-    if (!CLOSED.includes(stage) && !nextActionOn) {
-      throw invalid('An open lead needs a next action date.', {
-        nextActionOn: 'Choose when to follow up.',
-      });
+    assertOpenLeadComplete(current, patch, stage);
+    if (patch.ownerUserId && patch.ownerUserId !== current.owner?.id) {
+      await assertCanOwnLeads(this.db, patch.ownerUserId);
     }
-    if (stage === 'lost' && !(patch.lostReason ?? current.lostReason)) {
-      throw invalid('Say why the lead was lost.', { lostReason: 'Required when a lead is lost.' });
-    }
+    const lost = lostColumns(current, patch, stage, todayIn());
+    // Reopening a lead that never had an owner gives it one by rule.
+    const needsOwner = !CLOSED.includes(stage) && !current.owner && patch.ownerUserId === undefined;
+    const owner = needsOwner ? await ownerByRule(this.db) : patch.ownerUserId;
+    if (needsOwner && !owner) throw invalid('Pick who follows this lead up.');
     await this.db
       .update(leads)
       .set({
-        ...definedOnly(patch),
+        ...definedOnly({
+          ...patch,
+          ...lost,
+          ...(owner === undefined ? {} : { ownerUserId: owner }),
+        }),
         ...stepColumns(step, patch.stage),
         ...(stage === 'won' && current.stage !== 'won' ? { wonAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(leads.id, id));
-    const moved = movedNote(current, step, patch.stage);
-    if (moved) await this.log(id, actor.userId, 'stage_change', moved);
-    if (patch.nextActionOn && patch.nextActionOn !== current.nextActionOn) {
-      await this.log(
-        id,
-        actor.userId,
-        'follow_up',
-        `Next action on ${patch.nextActionOn}${patch.nextActionNote ? `: ${patch.nextActionNote}` : ''}.`,
-      );
-    }
+    await logLeadChanges(this.db, actor, current, { patch, step, stage, lost, owner });
     return this.get(actor, id);
   }
 
@@ -185,9 +157,10 @@ export class LeadsService {
     id: string,
     kind: 'note' | 'call' | 'visit' | 'whatsapp',
     note: string,
+    internal = false,
   ): Promise<LeadDetail> {
     await this.get(actor, id);
-    await this.log(id, actor.userId, kind, note);
+    await logLead(this.db, id, actor.userId, kind, note, internal && actor.kind !== 'reseller');
     return this.get(actor, id);
   }
 
@@ -213,28 +186,5 @@ export class LeadsService {
       });
     }
     return owner;
-  }
-
-  private async log(
-    leadId: string,
-    userId: string,
-    kind: 'note' | 'call' | 'visit' | 'whatsapp' | 'stage_change' | 'follow_up',
-    note: string,
-  ) {
-    await this.db.insert(leadActivities).values({ leadId, userId, kind, note });
-  }
-
-  /** Staff with `leads.view_all` see every lead; others see the leads they own or brought. */
-  private visibility(actor: Actor): SQL {
-    if (can(actor, 'leads.view_all')) return eq(leads.id, leads.id);
-    if (!can(actor, 'leads.view_own') && !can(actor, 'leads.manage')) throw forbidden();
-    return (
-      or(eq(leads.ownerUserId, actor.userId), eq(leads.resellerUserId, actor.userId)) ??
-      eq(leads.ownerUserId, actor.userId)
-    );
-  }
-
-  private present(rows: Array<typeof leads.$inferSelect>): Promise<Lead[]> {
-    return presentLeads(this.db, rows);
   }
 }

@@ -45,13 +45,16 @@
     "money": {
       "title": "Money",
       "comingIn": "Coming in",
-      "goingOut": "Going out this week",
+      "goingOut": "Going out",
+      "revenue": "Revenue booked in this period",
       "collected": "Collected in this period",
       "stillDue": "Still due from customers",
       "fromBanks": "Bank disbursements pending",
-      "toVendors": "To vendors",
-      "toContractors": "To contractors",
-      "advances": "Advances to crews"
+      "toVendors": "Owed to vendors",
+      "toContractors": "Owed to contractors",
+      "dueThisWeek": "Of which due within 7 days",
+      "advances": "Crew advances not yet paid",
+      "note": "Revenue is what the ledger booked as project revenue when milestones fell due in the period. Bills owed count everything not yet paid, whenever it falls due."
     },
     "loading": "Loading the business",
     "description": "Live from {scope}, {start} to {end}. Updated {updated}.",
@@ -105,7 +108,7 @@
     "kpis": {
       "liveProjects": "Live projects",
       "needingAttention": "Projects needing attention",
-      "needingDetail": "At risk, overdue or waiting",
+      "needingDetail": "Blocked, overdue, at risk or waiting",
       "overdueTasks": "Overdue tasks",
       "ofOpen": "of {open} open",
       "unassigned": "Tasks with no one assigned",
@@ -161,7 +164,14 @@
         "bills": "Bills to approve",
         "change_requests": "DISCOM change requests open",
         "service_requests": "Customer help requests open",
-        "bank_claims": "Bank disbursements to claim"
+        "bank_claims": "Bank disbursements to claim",
+        "leave": "Leave requests to decide",
+        "attendance_corrections": "Attendance corrections to decide",
+        "travel_claims": "Travel claims to approve",
+        "purchase_requests": "Purchase requests to approve",
+        "vendor_advances": "Vendor advances to approve",
+        "points": "Points to approve",
+        "incentives": "Commissions and referral rewards to approve"
       }
     },
     "deadlines": {
@@ -189,11 +199,121 @@
         "today": "Due today",
         "done": "Done",
         "onTime": "On time",
-        "rating": "Customer rating"
+        "rating": "Customer rating",
+        "people": "Person",
+        "departments": "Department",
+        "contractors": "Contractor"
       },
       "stars": "{rating} ★ ({count})",
       "fewRatings": "{count, plural, one {# rating} other {# ratings}}",
-      "ratingHint": "Customers rate each finished stage. The average shows after 3 ratings."
+      "ratingHint": "Customers rate each finished stage. The average shows after 3 ratings.",
+      "departments": "Departments",
+      "noDepartment": "No role yet",
+      "peopleCount": "{count, plural, one {# person} other {# people}}",
+      "departmentNote": "OneOhm has no separate departments, so each person counts under their main role (the first role they were given).",
+      "inDepartment": "Department: {name}",
+      "showEveryone": "Show everyone"
+    },
+    "states": {
+      "label": "Projects by state",
+      "onTrack": "On track",
+      "atRisk": "At risk",
+      "waiting": "Waiting",
+      "blocked": "Blocked",
+      "overdue": "Overdue",
+      "completed": "Completed in period",
+      "unpaid": "{count} with money due"
+    },
+    "outlook": {
+      "title": "Expected to finish",
+      "thisMonth": "This month",
+      "nextMonth": "Next month",
+      "later": "Later",
+      "behind": "Running behind plan, {days, plural, one {# day} other {# days}} on average",
+      "noneBehind": "Running behind plan",
+      "rule": "Each project: the last open task's due date, moved on by how many days its work runs late today."
+    },
+    "materials": {
+      "title": "Material and purchasing",
+      "description": "Shortages and late orders that could hold up installations.",
+      "empty": "No shortages. Stock is above reorder levels and orders are on time.",
+      "groups": {
+        "shortProjects": "{count, plural, one {# project short of material} other {# projects short of material}}",
+        "latePurchaseOrders": "{count, plural, one {# purchase order late} other {# purchase orders late}}",
+        "belowReorder": "{count, plural, one {# item below reorder level} other {# items below reorder level}}"
+      },
+      "more": "{count} more",
+      "shortItem": "{quantity} {unit} {name}",
+      "lateOrder": "{days, plural, one {# day} other {# days}} late · {project}",
+      "forStock": "for stock",
+      "reorder": "{free} {unit} free, reorder at {minimum}"
+    },
+    "taskBoard": {
+      "pageTitle": "Tasks across projects",
+      "back": "Command centre",
+      "loading": "Loading tasks",
+      "caption": "Tasks across projects",
+      "summary": "{count, plural, =0 {No tasks} one {# task} other {# tasks}} on live projects, as of today.",
+      "summaryPeriod": "{count, plural, =0 {No tasks} one {# task} other {# tasks}} from {start} to {end}.",
+      "truncated": "Showing the first 300. Narrow the filters to see the rest.",
+      "emptyTitle": "No tasks match",
+      "emptyBody": "Nothing fits these filters. Remove one to see more.",
+      "nobody": "No one assigned",
+      "late": "{days, plural, one {# day late} other {# days late}}",
+      "doneOn": "Done {date}",
+      "titles": {
+        "open": "Open tasks",
+        "overdue": "Overdue tasks",
+        "unassigned": "Tasks with no one assigned",
+        "waiting": "Tasks waiting",
+        "done": "Tasks finished",
+        "late": "Late tasks",
+        "review": "Tasks to review",
+        "confirm": "Tasks to confirm"
+      },
+      "explain": {
+        "open": "Every task not yet done on live projects.",
+        "overdue": "Open tasks on live projects past their due date.",
+        "unassigned": "Open tasks on live projects that nobody owns yet.",
+        "waiting": "Tasks marked as waiting, with who they wait on.",
+        "done": "Tasks finished in the period, latest first.",
+        "late": "Open tasks past their due date, and tasks finished late in the period, as the delays report counts them.",
+        "review": "Tasks finished by their owner and waiting for a reviewer to approve them.",
+        "confirm": "Open tasks with a proposed person that a manager has not confirmed yet.",
+        "doneProject": "Every task finished on this project, latest first."
+      },
+      "filters": {
+        "show": "Show",
+        "party": "Waiting on or delayed by",
+        "anyParty": "Anyone",
+        "period": "Period"
+      },
+      "chips": {
+        "label": "Filters from the link you followed",
+        "remove": "Remove this filter",
+        "chosen": "the one chosen",
+        "manager": "Manager: {name}",
+        "type": "Type: {name}",
+        "project": "Project: {name}",
+        "assignee": "Person: {name}",
+        "contractor": "Crew: {name}"
+      },
+      "columns": {
+        "task": "Task",
+        "stage": "Stage",
+        "who": "Who",
+        "due": "Due",
+        "status": "Status"
+      },
+      "status": {
+        "pending": "Not started",
+        "ready": "Ready",
+        "in_progress": "In progress",
+        "waiting": "Waiting",
+        "in_review": "With reviewer",
+        "completed": "Done"
+      },
+      "summaryAll": "{count, plural, =0 {No tasks} one {# task} other {# tasks}} on this project."
     }
   }
 }

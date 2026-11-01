@@ -3,21 +3,23 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
 import { Button, Dialog, Field, Input, Select, Switch, useToast } from '@oneohm/design-system/web';
 import { rupeesToPaise, todayIn } from '@oneohm/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
+import { AUTO_CONTRACTOR } from '@/features/projects/team/contractor-field';
+import { useTeamOptions } from '@/features/projects/team/use-team-options';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
-import { useCan } from '@/providers/current-user';
 import { useDiscoms, useProperty } from '../builder/property-summary';
+import { CreateTeamSection, MANAGER_LATER } from './create-team-section';
 import { DEFAULT_PLAN, PaymentPlanField } from './payment-plan-field';
-
-const LATER = 'later';
+import { ProjectFactsSummary } from './project-facts-summary';
 
 /**
- * Accepted quotation → project (PRD 8 step 7): confirm the DISCOM, loan and options; the
- * API then generates the project's tasks, assigns the team and activates the payments.
+ * Accepted quotation → project (PRD 3.8, Flow A step 7): confirm the type and subsidy,
+ * DISCOM, loan, options, team and contractor; the API then generates the tasks, assigns
+ * them within that team and activates the payments.
  */
 export function CreateProjectDialog({
   quotation,
@@ -29,27 +31,26 @@ export function CreateProjectDialog({
   readonly onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations('quotations.project');
+  const teamT = useTranslations('projectTeam.create');
   const toast = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const canSeePeople = useCan('people.view');
   const property = useProperty(open ? quotation.input.propertyId : null);
   const discoms = useDiscoms();
-  const people = useQuery({
-    queryKey: ['people'],
-    queryFn: () => expectStatus(api.people.listPeople(), 200),
-    enabled: open && canSeePeople,
-  });
+  const options = useTeamOptions(open);
 
   const [discomId, setDiscomId] = useState<string | undefined>(undefined);
   const [startDate, setStartDate] = useState(() => todayIn());
+  const [targetFinish, setTargetFinish] = useState('');
   const [loan, setLoan] = useState(false);
   const [lender, setLender] = useState('');
   const [loanRupees, setLoanRupees] = useState('');
   const [battery, setBattery] = useState(Boolean(quotation.input.batteryProductId));
   const [groundMount, setGroundMount] = useState(quotation.input.structureType === 'ground_mount');
   const [nameChange, setNameChange] = useState(false);
-  const [manager, setManager] = useState<string>(LATER);
+  const [manager, setManager] = useState<string>(MANAGER_LATER);
+  const [contractor, setContractor] = useState<string>(AUTO_CONTRACTOR);
+  const [team, setTeam] = useState<string[]>([]);
   const [plan, setPlan] = useState<string>(DEFAULT_PLAN);
 
   const site = property.data;
@@ -73,9 +74,12 @@ export function CreateProjectDialog({
             battery,
             groundMount,
             nameChange,
-            managerUserId: manager === LATER ? null : manager,
+            managerUserId: manager === MANAGER_LATER ? null : manager,
             paymentPlanId: plan === DEFAULT_PLAN ? null : plan,
             startDate,
+            targetFinishDate: targetFinish || null,
+            contractorId: contractor === AUTO_CONTRACTOR ? null : contractor,
+            teamUserIds: team,
           },
         }),
         201,
@@ -86,7 +90,10 @@ export function CreateProjectDialog({
       toast({
         tone: 'success',
         title: t('created', { code: project.code }),
-        description: t('createdDetail', { tasks: project.tasks, unassigned: project.unassigned }),
+        description: [
+          t('createdDetail', { tasks: project.tasks, unassigned: project.unassigned }),
+          project.toConfirm > 0 ? teamT('toConfirm', { count: project.toConfirm }) : '',
+        ].join(' '),
       });
       onOpenChange(false);
       router.push(`/projects/${project.id}`);
@@ -123,6 +130,7 @@ export function CreateProjectDialog({
       }
     >
       <form id="create-project" onSubmit={submit} className="flex flex-col gap-5">
+        <ProjectFactsSummary quotation={quotation} />
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={t('discom')} error={errors.discomId} required>
             <Select
@@ -141,6 +149,18 @@ export function CreateProjectDialog({
               onChange={(event) => setStartDate(event.target.value)}
             />
           </Field>
+          <Field
+            label={teamT('targetFinish')}
+            hint={teamT('targetFinishHint')}
+            error={errors.targetFinishDate}
+          >
+            <Input
+              type="date"
+              value={targetFinish}
+              min={startDate}
+              onChange={(event) => setTargetFinish(event.target.value)}
+            />
+          </Field>
         </div>
         <PaymentPlanField
           value={plan}
@@ -148,20 +168,16 @@ export function CreateProjectDialog({
           error={errors.paymentPlanId}
           enabled={open}
         />
-        {canSeePeople && (
-          <Field label={t('manager')} hint={t('managerHint')} error={errors.managerUserId}>
-            <Select
-              value={manager}
-              onValueChange={setManager}
-              options={[
-                { value: LATER, label: t('managerLater') },
-                ...(people.data ?? [])
-                  .filter((person) => person.status === 'active')
-                  .map((person) => ({ value: person.id, label: person.fullName })),
-              ]}
-            />
-          </Field>
-        )}
+        <CreateTeamSection
+          options={options.data}
+          manager={manager}
+          onManager={setManager}
+          contractor={contractor}
+          onContractor={setContractor}
+          team={team}
+          onTeam={setTeam}
+          errors={errors}
+        />
         <div className="flex flex-col divide-y divide-hairline rounded-xl border border-hairline px-4">
           <Switch
             className="py-3"

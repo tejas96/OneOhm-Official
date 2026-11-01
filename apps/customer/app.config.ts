@@ -59,6 +59,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'OneOhm uses the camera so you can show us a problem with your solar system.',
         photosPermission:
           'OneOhm uses your photos so you can show us a problem with your solar system.',
+        microphonePermission: 'OneOhm records sound with a short video of the problem.',
+      },
+    ],
+    [
+      'expo-audio',
+      {
+        microphonePermission:
+          'OneOhm uses the microphone so you can describe a problem in a voice note.',
       },
     ],
     [

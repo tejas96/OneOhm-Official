@@ -149,7 +149,7 @@ export const NAVIGATION: readonly NavGroup[] = [
         href: '/settings',
         icon: Settings2,
         built: true,
-        requires: ['settings.manage', 'roles.manage'],
+        requires: ['settings.manage', 'roles.manage', 'audit.view'],
       },
     ],
   },

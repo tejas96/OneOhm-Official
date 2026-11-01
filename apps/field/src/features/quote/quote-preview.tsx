@@ -50,12 +50,38 @@ export function QuotePreviewBlock({
   );
 }
 
-/** Every priced line: what it is, how much, and its total. */
+type Line = QuotationPreview['lines'][number];
+
+const lineAmount = (line: Line) => {
+  if (line.extra === 'gift') return QUOTE.extras.free;
+  return line.totalPaise < 0 ? `− ${formatInr(-line.totalPaise)}` : formatInr(line.totalPaise);
+};
+
+/** Every priced line: what it is, how much, and its total; optional items apart. */
 export function QuoteLines({ lines }: { readonly lines: QuotationPreview['lines'] }) {
-  const theme = useTheme();
+  const included = lines.filter((line) => line.extra !== 'optional');
+  const optional = lines.filter((line) => line.extra === 'optional');
   return (
     <View style={styles.lines}>
-      <SectionTitle title={QUOTE.lines} count={lines.length} />
+      <SectionTitle title={QUOTE.lines} count={included.length} />
+      <LineList lines={included} />
+      {optional.length > 0 ? (
+        <>
+          <SectionTitle title={QUOTE.extras.optionalTitle} count={optional.length} />
+          <Text variant="bodySm" tone="secondary">
+            {QUOTE.extras.optionalNote}
+          </Text>
+          <LineList lines={optional} />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function LineList({ lines }: { readonly lines: readonly Line[] }) {
+  const theme = useTheme();
+  return (
+    <>
       {lines.map((line) => (
         <View
           key={line.key}
@@ -65,14 +91,19 @@ export function QuoteLines({ lines }: { readonly lines: QuotationPreview['lines'
             <Text variant="bodySm" numberOfLines={2}>
               {line.description}
             </Text>
+            {line.reason ? (
+              <Text variant="bodySm" tone="secondary" numberOfLines={2}>
+                {line.reason}
+              </Text>
+            ) : null}
             <Text variant="mono" tone="tertiary">
               {line.quantity} {line.unit}
             </Text>
           </View>
-          <Text variant="bodySm">{formatInr(line.totalPaise)}</Text>
+          <Text variant="bodySm">{lineAmount(line)}</Text>
         </View>
       ))}
-    </View>
+    </>
   );
 }
 

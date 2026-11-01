@@ -11,6 +11,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
 import { SETTINGS_KEYS } from '../use-settings';
+import { ProductSpecs } from './product-specs';
 
 const BLANK: ProductInput = {
   sku: '',
@@ -27,7 +28,7 @@ const BLANK: ProductInput = {
   active: true,
 };
 
-const inputFrom = ({ id: _id, ...product }: Product): ProductInput => product;
+const inputFrom = ({ id: _id, datasheet: _sheet, ...product }: Product): ProductInput => product;
 
 /** Add or edit one catalog product; `product` null with `open` adds. */
 export function ProductDialog({
@@ -173,6 +174,7 @@ export function ProductDialog({
             />
           </Field>
         </div>
+        <ProductSpecs draft={draft} set={set} errors={errors} product={product} />
         <Switch
           checked={draft.active}
           onCheckedChange={(value) => set('active', value)}

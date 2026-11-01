@@ -1,4 +1,4 @@
-import type { Product } from '@oneohm/api-contracts';
+import type { ExtraLineInput, Product } from '@oneohm/api-contracts';
 import { ChoiceChips, Field, Input } from '@oneohm/mobile-ui';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
@@ -17,6 +17,8 @@ export interface QuoteForm {
   readonly households: string;
   readonly distanceKm: string;
   readonly discount: string;
+  /** Gifts, optional items, site charges and adjustments added on site. */
+  readonly extras: readonly ExtraLineInput[];
 }
 
 /** Size, panels, inverter, mounting and the few site numbers pricing needs. */

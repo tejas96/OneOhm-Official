@@ -1,4 +1,5 @@
 export * from './backfill';
+export * from './bonus-postings';
 export * from './cash-handling-postings';
 export * from './customer-credit-postings';
 export * from './gateway-postings';

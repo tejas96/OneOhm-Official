@@ -1,5 +1,6 @@
 'use client';
 
+import type { Lead } from '@oneohm/api-contracts';
 import {
   Button,
   EmptyState,
@@ -14,6 +15,7 @@ import { todayIn } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, Target } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -24,20 +26,42 @@ import { LeadCreateDialog } from './lead-create-dialog';
 import { isOpenLead, leadKeys } from './lead-labels';
 import { LeadsTable } from './leads-table';
 
-type Filter = 'open' | LeadStage | 'all';
-const FILTERS: readonly Filter[] = ['open', ...LEAD_STAGES, 'all'];
+type Filter = 'open' | 'due' | 'unowned' | LeadStage | 'all';
+const FILTERS: readonly Filter[] = ['open', 'due', 'unowned', ...LEAD_STAGES, 'all'];
+
+/** The chosen filter lives in `?filter=`, so a link from a count opens exactly those leads. */
+function useLeadFilter(): readonly [Filter, (next: Filter) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const asked = params.get('filter');
+  const filter = FILTERS.find((candidate) => candidate === asked) ?? 'open';
+  const set = (next: Filter) => {
+    const search = new URLSearchParams(params);
+    if (next === 'open') search.delete('filter');
+    else search.set('filter', next);
+    const suffix = search.toString();
+    router.replace(suffix ? `${pathname}?${suffix}` : pathname, { scroll: false });
+  };
+  return [filter, set];
+}
 
 /** Every lead with its next action; overdue and today's follow-ups stand out (PRD 3.3). */
 export function LeadsView() {
   const t = useTranslations('leads');
   const canManage = useCan('leads.manage');
-  const [filter, setFilter] = useState<Filter>('open');
+  const [filter, setFilter] = useLeadFilter();
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const term = useDebouncedValue(search.trim());
   const query = useLeadList(filter, term);
   const today = todayIn();
-  const rows = query.data ?? [];
+  const rows = (query.data ?? []).filter(
+    (lead) =>
+      filter !== 'due' ||
+      lead.revisitDue ||
+      (isOpenLead(lead) && lead.nextActionOn !== null && lead.nextActionOn <= today),
+  );
   const overdue = rows.filter((lead) => lead.overdue).length;
   const dueToday = rows.filter(
     (lead) => isOpenLead(lead) && !lead.overdue && lead.nextActionOn === today,
@@ -85,6 +109,7 @@ export function LeadsView() {
         />
       </div>
       <LeadsBody
+        rows={rows}
         query={query}
         term={term}
         today={today}
@@ -102,8 +127,11 @@ function useLeadList(filter: Filter, term: string) {
       expectStatus(
         api.crm.listLeads({
           query: {
-            ...(filter === 'open' ? { open: true } : {}),
-            ...(filter !== 'open' && filter !== 'all' ? { stage: filter } : {}),
+            ...(filter === 'open' || filter === 'due' ? { open: true } : {}),
+            ...(filter === 'unowned' ? { unowned: true } : {}),
+            ...(filter !== 'open' && filter !== 'all' && filter !== 'due' && filter !== 'unowned'
+              ? { stage: filter }
+              : {}),
             ...(term ? { search: term } : {}),
           },
         }),
@@ -114,11 +142,13 @@ function useLeadList(filter: Filter, term: string) {
 }
 
 function LeadsBody({
+  rows,
   query,
   term,
   today,
   onCreate,
 }: {
+  readonly rows: readonly Lead[];
   readonly query: ReturnType<typeof useLeadList>;
   readonly term: string;
   readonly today: string;
@@ -127,7 +157,7 @@ function LeadsBody({
   const t = useTranslations('leads');
   if (query.isPending) return <ListSkeleton label={t('loading')} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
-  if (query.data.length > 0) return <LeadsTable leads={query.data} today={today} />;
+  if (rows.length > 0) return <LeadsTable leads={rows} today={today} />;
   return (
     <EmptyState
       icon={<Target />}

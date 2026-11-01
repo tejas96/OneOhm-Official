@@ -1,40 +1,17 @@
 import type { ProjectSummary } from '@oneohm/api-contracts';
+import { type DatabaseExecutor, discoms, projects, properties, users } from '@oneohm/database';
 import {
-  type DatabaseExecutor,
-  discoms,
-  paymentMilestones,
-  projects,
-  projectTasks,
-  properties,
-  users,
-} from '@oneohm/database';
-import { EPC_STAGES, type EpcStage, type WaitingParty } from '@oneohm/domain';
+  deliveryForecast,
+  EPC_STAGES,
+  type EpcStage,
+  type ProjectBlock,
+  projectState,
+} from '@oneohm/domain';
 import { daysBetween, todayIn } from '@oneohm/shared';
-import { desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { desc, eq, type SQL } from 'drizzle-orm';
+import { type MilestoneRow, summaryFacts, type TaskRow } from './project-summary-facts';
 
-const PARTY_LABEL: Readonly<Record<WaitingParty, string>> = {
-  discom: 'Waiting on DISCOM',
-  bank: 'Waiting on bank',
-  customer: 'Waiting on customer',
-  internal: 'Waiting on OneOhm team',
-};
 const PAYMENT_GRACE_DAYS = 7;
-
-type TaskRow = Pick<
-  typeof projectTasks.$inferSelect,
-  | 'projectId'
-  | 'status'
-  | 'stage'
-  | 'dueDate'
-  | 'waitingParty'
-  | 'waitingSince'
-  | 'title'
-  | 'customerVisible'
->;
-type MilestoneRow = Pick<
-  typeof paymentMilestones.$inferSelect,
-  'projectId' | 'status' | 'dueAt' | 'label' | 'payer'
->;
 
 /** Project cards: stage, progress, who it waits on, what is next, and how worried to be. */
 export async function projectSummaries(
@@ -43,7 +20,17 @@ export async function projectSummaries(
 ): Promise<ProjectSummary[]> {
   const query = db
     .select({
-      project: projects,
+      project: {
+        id: projects.id,
+        code: projects.code,
+        name: projects.name,
+        type: projects.type,
+        capacityWp: projects.capacityWp,
+        status: projects.status,
+        currentStage: projects.currentStage,
+        managerUserId: projects.managerUserId,
+        financiallyClosedAt: projects.financiallyClosedAt,
+      },
       city: properties.city,
       discom: discoms.code,
       managerName: users.fullName,
@@ -56,52 +43,48 @@ export async function projectSummaries(
   const rows = where ? await query.where(where) : await query;
   const ids = rows.map((row) => row.project.id);
   if (ids.length === 0) return [];
-  const tasks: TaskRow[] = await db
-    .select({
-      projectId: projectTasks.projectId,
-      status: projectTasks.status,
-      stage: projectTasks.stage,
-      dueDate: projectTasks.dueDate,
-      waitingParty: projectTasks.waitingParty,
-      waitingSince: projectTasks.waitingSince,
-      title: projectTasks.title,
-      customerVisible: projectTasks.customerVisible,
-    })
-    .from(projectTasks)
-    .where(inArray(projectTasks.projectId, ids));
-  const milestones: MilestoneRow[] = await db
-    .select({
-      projectId: paymentMilestones.projectId,
-      status: paymentMilestones.status,
-      payer: paymentMilestones.payer,
-      dueAt: paymentMilestones.dueAt,
-      label: paymentMilestones.label,
-    })
-    .from(paymentMilestones)
-    .where(inArray(paymentMilestones.projectId, ids));
   const today = todayIn();
+  const { tasks, milestones, blocked } = await summaryFacts(db, ids, today);
   return rows.map(({ project, city, discom, managerName }) =>
-    summarise(
+    summarise({
       project,
       city,
       discom,
       managerName,
-      tasks.filter((task) => task.projectId === project.id),
-      milestones.filter((milestone) => milestone.projectId === project.id),
+      tasks: tasks.filter((task) => task.projectId === project.id),
+      milestones: milestones.filter((milestone) => milestone.projectId === project.id),
+      blockedBy: blocked.get(project.id) ?? null,
       today,
-    ),
+    }),
   );
 }
 
-function summarise(
-  project: typeof projects.$inferSelect,
-  city: string,
-  discom: string,
-  managerName: string | null,
-  tasks: readonly TaskRow[],
-  milestones: readonly MilestoneRow[],
-  today: string,
-): ProjectSummary {
+const isoDate = (instant: Date) => todayIn('Asia/Kolkata', instant);
+
+type ProjectRow = Pick<
+  typeof projects.$inferSelect,
+  | 'id'
+  | 'code'
+  | 'name'
+  | 'type'
+  | 'capacityWp'
+  | 'status'
+  | 'currentStage'
+  | 'managerUserId'
+  | 'financiallyClosedAt'
+>;
+
+function summarise(input: {
+  readonly project: ProjectRow;
+  readonly city: string;
+  readonly discom: string;
+  readonly managerName: string | null;
+  readonly tasks: readonly TaskRow[];
+  readonly milestones: readonly MilestoneRow[];
+  readonly blockedBy: ProjectBlock | null;
+  readonly today: string;
+}): ProjectSummary {
+  const { project, tasks, milestones, today } = input;
   const open = tasks.filter((task) => task.status !== 'completed');
   const stagesWithTasks = new Set(tasks.map((task) => task.stage));
   const currentStage: EpcStage =
@@ -111,51 +94,49 @@ function summarise(
     ? inStage.filter((task) => task.status === 'completed').length / inStage.length
     : 1;
   const overdue = open.filter((task) => task.dueDate < today);
-  const waitingTasks = open
+  const longest = open
     .filter((task) => task.status === 'waiting' && task.waitingSince)
     .sort(
       (left, right) => (left.waitingSince?.getTime() ?? 0) - (right.waitingSince?.getTime() ?? 0),
-    );
-  const longest = waitingTasks[0];
+    )[0];
   const waitingDays = longest?.waitingSince
-    ? Math.max(0, daysBetween(longest.waitingSince.toISOString().slice(0, 10), today))
+    ? Math.max(0, daysBetween(isoDate(longest.waitingSince), today))
     : 0;
   const nextTask = [...open].sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
-  const latePayment = milestones.find(
-    (milestone) =>
-      milestone.status !== 'paid' &&
-      milestone.dueAt &&
-      daysBetween(milestone.dueAt.toISOString().slice(0, 10), today) > PAYMENT_GRACE_DAYS,
-  );
-
-  const [tone, toneLabel] = projectTone({
+  const money = moneyFacts(milestones, today);
+  const latePayment = money.latePayment;
+  const state = projectState({
     status: project.status,
-    latePayment: Boolean(latePayment),
-    unpaid: milestones.find((milestone) => milestone.status !== 'paid')?.payer ?? null,
-    longest,
-    overdue: overdue.length,
-    nextTask,
-    today,
+    financiallyClosed: project.financiallyClosedAt !== null,
+    unpaidBy: money.unpaidBy,
+    paymentDue: money.paymentDue,
+    paymentLate: Boolean(latePayment),
+    blockedBy: input.blockedBy,
+    waitingOn: longest?.waitingParty ?? null,
+    overdueTasks: overdue.length,
+    nextDueSoonNotStarted: Boolean(
+      nextTask && daysBetween(today, nextTask.dueDate) <= 1 && nextTask.status !== 'in_progress',
+    ),
   });
 
   return {
     id: project.id,
     code: project.code,
     name: project.name,
-    place: city,
+    place: input.city,
     type: project.type,
     capacityWp: project.capacityWp,
-    discom,
+    discom: input.discom,
     status: project.status,
     currentStage,
     stageProgress,
     skippedStages: EPC_STAGES.filter((stage) => !stagesWithTasks.has(stage)),
-    tone,
-    toneLabel,
+    tone: state.tone,
+    toneLabel: state.label,
     waitingOn: longest?.waitingParty ?? null,
     waitingDays,
     next: latePayment
-      ? { label: latePayment.label, date: latePayment.dueAt?.toISOString().slice(0, 10) ?? today }
+      ? { label: latePayment.label, date: latePayment.dueAt ? isoDate(latePayment.dueAt) : today }
       : nextTask
         ? { label: nextTask.title, date: nextTask.dueDate }
         : null,
@@ -164,41 +145,38 @@ function summarise(
     tasksDone: tasks.length - open.length,
     tasksTotal: tasks.length,
     manager:
-      project.managerUserId && managerName
-        ? { id: project.managerUserId, fullName: managerName }
+      project.managerUserId && input.managerName
+        ? { id: project.managerUserId, fullName: input.managerName }
         : null,
+    blockedBy: state.tone === 'blocked' ? (input.blockedBy?.detail ?? null) : null,
+    forecast: deliveryForecast(open, today),
+    completedOn: project.status === 'completed' ? finishedOn(tasks) : null,
   };
 }
 
-/** The one word on a project card: the most urgent thing about it, or that it is fine. */
-function projectTone(facts: {
-  readonly status: (typeof projects.$inferSelect)['status'];
-  readonly latePayment: boolean;
-  /** Who still owes money, if anyone: the customer or the bank. */
-  readonly unpaid: 'customer' | 'bank' | null;
-  readonly longest: TaskRow | undefined;
-  readonly overdue: number;
-  readonly nextTask: TaskRow | undefined;
-  readonly today: string;
-}): [ProjectSummary['tone'], string] {
-  const { status, longest, nextTask } = facts;
-  // Work done is not the end: the PRD keeps unpaid completed projects in view (Flow D).
-  if (status === 'completed' && facts.unpaid === 'customer')
-    return ['overdue', 'Completed — payment outstanding'];
-  if (status === 'completed' && facts.unpaid === 'bank')
-    return ['waiting', 'Completed — waiting for bank disbursement'];
-  if (status === 'completed') return ['done', 'Completed'];
-  if (facts.latePayment) return ['overdue', 'Payment overdue'];
-  if (longest && longest.waitingParty !== 'internal')
-    return ['waiting', PARTY_LABEL[longest.waitingParty]];
-  if (facts.overdue > 0)
-    return ['overdue', facts.overdue === 1 ? '1 task overdue' : `${facts.overdue} tasks overdue`];
-  if (
-    nextTask &&
-    daysBetween(facts.today, nextTask.dueDate) <= 1 &&
-    nextTask.status !== 'in_progress'
-  )
-    return ['atRisk', 'At risk'];
-  if (status === 'operational') return ['onTrack', 'Operational'];
-  return ['onTrack', 'On track'];
+/** Who still owes money, whether a milestone is due, and the first one past the grace days. */
+function moneyFacts(milestones: readonly MilestoneRow[], today: string) {
+  const dueNow = milestones.filter(
+    (milestone) => milestone.status === 'due' || milestone.status === 'partly_paid',
+  );
+  const unpaid = milestones.filter((milestone) => milestone.status !== 'paid');
+  const customerOwes = unpaid.some((milestone) => milestone.payer === 'customer');
+  return {
+    paymentDue: dueNow.length > 0,
+    latePayment: dueNow.find(
+      (milestone) =>
+        milestone.dueAt && daysBetween(isoDate(milestone.dueAt), today) > PAYMENT_GRACE_DAYS,
+    ),
+    unpaidBy: customerOwes ? ('customer' as const) : unpaid.length > 0 ? ('bank' as const) : null,
+  };
+}
+
+/** The India date the last task finished, or null when none has. */
+function finishedOn(tasks: readonly TaskRow[]): string | null {
+  const latest = tasks.reduce<Date | null>(
+    (last, task) =>
+      task.completedAt && (!last || task.completedAt > last) ? task.completedAt : last,
+    null,
+  );
+  return latest ? isoDate(latest) : null;
 }

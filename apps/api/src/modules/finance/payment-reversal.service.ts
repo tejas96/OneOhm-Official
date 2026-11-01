@@ -114,6 +114,7 @@ export class PaymentReversalService {
           payer: original.payer,
           method: original.method,
           amountPaise: -original.amountPaise,
+          tdsPaise: -original.tdsPaise,
           receivedOn: todayIn(),
           reference: original.reference ? `Reversal of ${original.reference}` : 'Reversal',
           recordedByUserId: actor.userId,

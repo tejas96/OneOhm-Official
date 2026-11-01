@@ -7,6 +7,7 @@ import { apiContract } from '../../contract';
 import { assertQuotationAccess, detailFor, previewFor, quotationScope } from './quotation-access';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { QuotationsService } from './quotations.service';
+import { setSubsidyClaimed } from './subsidy-claim';
 
 @Controller()
 export class QuotationsController {
@@ -57,6 +58,13 @@ export class QuotationsController {
         return {
           status: 200,
           body: detailFor(actor, await this.quotations.accept(actor, params.id)),
+        };
+      },
+      setSubsidyClaimed: async ({ params, body }) => {
+        assertCan(actor, 'subsidy.manage', 'customers.manage');
+        return {
+          status: 200,
+          body: await setSubsidyClaimed(this.db, actor, params.id, body.claimed),
         };
       },
       rejectQuotation: async ({ params, body }) => {

@@ -11,6 +11,9 @@ export const messageTemplates = pgTable('message_templates', {
   audience: text('audience').notNull(),
   metaName: text('meta_name').notNull(),
   language: text('language').notNull().default('en'),
+  /** The same message approved in Marathi and Hindi (language codes mr, hi); null sends English. */
+  metaNameMr: text('meta_name_mr'),
+  metaNameHi: text('meta_name_hi'),
   fields: text('fields').array().notNull(),
   preview: text('preview').notNull(),
   active: boolean('active').notNull().default(true),

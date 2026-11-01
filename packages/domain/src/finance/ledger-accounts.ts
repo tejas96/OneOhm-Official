@@ -20,6 +20,7 @@ export const LEDGER_ACCOUNTS = [
   { code: '1100', name: 'Customer receivables', type: 'asset' },
   { code: '1110', name: 'Bank loan receivables', type: 'asset' },
   { code: '1200', name: 'Vendor advances', type: 'asset' },
+  { code: '1300', name: 'TDS receivable (deducted by customers)', type: 'asset' },
   { code: '2000', name: 'Vendor payables', type: 'liability' },
   { code: '2010', name: 'Contractor payables', type: 'liability' },
   { code: '2020', name: 'Referral and commission payables', type: 'liability' },
@@ -36,6 +37,7 @@ export const LEDGER_ACCOUNTS = [
   { code: '5030', name: 'Marketing: referral rewards', type: 'expense' },
   { code: '5040', name: 'Reseller commission', type: 'expense' },
   { code: '5050', name: 'Staff travel and conveyance', type: 'expense' },
+  { code: '5060', name: 'Staff bonuses and incentives', type: 'expense' },
 ] as const satisfies readonly LedgerAccount[];
 
 export type LedgerAccountCode = (typeof LEDGER_ACCOUNTS)[number]['code'];
@@ -48,6 +50,7 @@ export const ACCOUNT = {
   customerReceivables: '1100',
   bankLoanReceivables: '1110',
   vendorAdvances: '1200',
+  tdsReceivable: '1300',
   vendorPayables: '2000',
   contractorPayables: '2010',
   incentivePayables: '2020',
@@ -64,6 +67,7 @@ export const ACCOUNT = {
   referralRewards: '5030',
   resellerCommission: '5040',
   staffTravel: '5050',
+  staffBonuses: '5060',
 } as const satisfies Record<string, LedgerAccountCode>;
 
 /** Assets and expenses grow with debits; liabilities, equity and income with credits. */

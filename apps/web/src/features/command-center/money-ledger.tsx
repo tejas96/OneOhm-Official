@@ -2,29 +2,33 @@
 
 import type { CommandCenter } from '@oneohm/api-contracts';
 import { formatInrCompact } from '@oneohm/shared';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { SectionHeading } from './section-heading';
 
 interface LedgerRow {
   readonly key: string;
   readonly value: number;
+  readonly href: string;
 }
 
 /**
- * Money set as a ledger with leader dots: what comes in (customers and banks) beside
- * what goes out this week (vendors and contractors).
+ * Money set as a ledger with leader dots: what was earned and comes in (customers and
+ * banks) beside everything still owed to vendors and crews. Each line opens its records.
  */
 export function MoneyLedger({ money }: { readonly money: CommandCenter['money'] }) {
   const t = useTranslations('commandCenter.money');
   const comingIn: readonly LedgerRow[] = [
-    { key: 'collected', value: money.collectedPaise },
-    { key: 'stillDue', value: money.stillDuePaise },
-    { key: 'fromBanks', value: money.bankPendingPaise },
+    { key: 'revenue', value: money.revenuePaise, href: '/finance?tab=ledger' },
+    { key: 'collected', value: money.collectedPaise, href: '/finance?tab=receivables' },
+    { key: 'stillDue', value: money.stillDuePaise, href: '/finance?tab=receivables' },
+    { key: 'fromBanks', value: money.bankPendingPaise, href: '/finance?tab=loans' },
   ];
   const goingOut: readonly LedgerRow[] = [
-    { key: 'toVendors', value: money.toVendorsPaise },
-    { key: 'toContractors', value: money.toContractorsPaise },
-    { key: 'advances', value: money.advancesPaise },
+    { key: 'toVendors', value: money.toVendorsPaise, href: '/finance?tab=payables' },
+    { key: 'toContractors', value: money.toContractorsPaise, href: '/finance?tab=payables' },
+    { key: 'dueThisWeek', value: money.dueThisWeekPaise, href: '/finance?tab=payables' },
+    { key: 'advances', value: money.advancesPaise, href: '/finance?tab=advances' },
   ];
   return (
     <section id="money" aria-label={t('title')} className="flex scroll-mt-24 flex-col gap-5">
@@ -33,6 +37,7 @@ export function MoneyLedger({ money }: { readonly money: CommandCenter['money'] 
         <Ledger heading={t('comingIn')} rows={comingIn} />
         <Ledger heading={t('goingOut')} rows={goingOut} />
       </div>
+      <p className="type-label text-ink-faint">{t('note')}</p>
     </section>
   );
 }
@@ -48,15 +53,22 @@ function Ledger({
   return (
     <div className="flex flex-col gap-1">
       <p className="type-overline text-ink-faint uppercase">{heading}</p>
-      <dl className="flex flex-col">
+      <ul className="flex flex-col">
         {rows.map((row) => (
-          <div key={row.key} className="flex items-baseline gap-3 py-2.5">
-            <dt className="type-body text-ink-muted">{t(row.key)}</dt>
-            <span aria-hidden className="flex-1 border-b border-dotted border-rule" />
-            <dd className="type-display-md text-ink tabular-nums">{formatInrCompact(row.value)}</dd>
-          </div>
+          <li key={row.key}>
+            <Link
+              href={row.href}
+              className="group -mx-2 flex items-baseline gap-3 rounded-md px-2 py-2.5 hover:bg-surface"
+            >
+              <span className="type-body text-ink-muted group-hover:text-ink">{t(row.key)}</span>
+              <span aria-hidden className="flex-1 border-b border-dotted border-rule" />
+              <span className="type-display-md text-ink tabular-nums">
+                {formatInrCompact(row.value)}
+              </span>
+            </Link>
+          </li>
         ))}
-      </dl>
+      </ul>
     </div>
   );
 }

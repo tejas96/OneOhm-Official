@@ -15,6 +15,12 @@ export const productSchema = z.object({
   pricePaise: paiseSchema,
   costPaise: paiseSchema,
   taxRateBp: z.number().int(),
+  /** Specifications printed on quotations (PRD 3.5); efficiency in basis points. */
+  efficiencyBp: z.number().int().nullable().optional(),
+  technology: z.string().nullable().optional(),
+  warrantyYears: z.number().int().nullable().optional(),
+  /** The maker's datasheet, when uploaded. */
+  datasheet: z.object({ id: idSchema, name: z.string() }).nullable().optional(),
   active: z.boolean(),
 });
 export type Product = z.infer<typeof productSchema>;

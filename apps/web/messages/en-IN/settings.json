@@ -274,7 +274,19 @@
         "active": "Available for new quotations",
         "create": "Add product",
         "created": "{name} added",
-        "updated": "{name} saved"
+        "updated": "{name} saved",
+        "specs": "Specifications",
+        "efficiency": "Efficiency (%)",
+        "efficiencyHint": "Printed on quotations, for example 21.5.",
+        "technology": "Technology",
+        "technologyHint": "For example Mono PERC bifacial or TOPCon.",
+        "warrantyYears": "Warranty (years)",
+        "datasheetLater": "Save the product first, then add its datasheet.",
+        "noDatasheet": "No datasheet yet",
+        "uploadDatasheet": "Add datasheet",
+        "replaceDatasheet": "Replace",
+        "datasheetSaved": "Datasheet saved",
+        "datasheetFailed": "The datasheet was not saved"
       }
     },
     "rates": {
@@ -315,7 +327,9 @@
         "toleranceBp": "Survey tolerance (%)",
         "toleranceHint": "Cost changes within this band after the survey are absorbed; beyond it, a revision needs approval.",
         "discountApprovalBp": "Discount approval threshold (%)",
-        "discountApprovalHint": "Discounts larger than this share of the price need a manager's approval."
+        "discountApprovalHint": "Discounts larger than this share of the price need a manager's approval.",
+        "sqmPerKwp": "Shadow-free area per kWp (m²)",
+        "sqmPerKwpHint": "After the survey, a roof with less shadow-free area than this per kWp gets a revision sized to fit. 0 switches the check off."
       }
     },
     "discoms": {
@@ -488,7 +502,19 @@
         "privacyMoments": "The location is read only at the moment of a day or site check-in or check-out and when a site photo is taken, in working hours, never in between.",
         "privacyRetention": "Coordinates are deleted after {days} days; the times stay.",
         "retention": "Keep locations for (days)",
-        "retentionHint": "Between 7 and 730 days."
+        "retentionHint": "Between 7 and 730 days.",
+        "autoCheckIn": "Check in automatically at the first site check-in",
+        "autoCheckInOn": "The day’s first site or service check-in also starts the working day, for people who mark attendance.",
+        "autoCheckInOff": "People check in for the day themselves.",
+        "byRole": {
+          "title": "By role",
+          "description": "Switch location on or off for whole roles. A person’s own setting in Team wins; a role switched off wins over one switched on.",
+          "label": "Location for {role}",
+          "followOn": "Company (on)",
+          "followOff": "Company (off)",
+          "on": "On",
+          "off": "Off"
+        }
       },
       "points": {
         "title": "Points",
@@ -498,7 +524,9 @@
         "goodRating": "Good customer rating",
         "goodRatingHint": "Suggested; a manager approves it.",
         "recognitionMax": "Most recognition at once",
-        "recognitionMaxHint": "The limit when a manager gives points."
+        "recognitionMaxHint": "The limit when a manager gives points.",
+        "stageRating": "Named on a 4–5 star stage rating",
+        "stageRatingHint": "Suggested for each person a customer names; a manager approves it."
       },
       "places": {
         "title": "Authorised places",
@@ -553,6 +581,12 @@
           "added": "Skill added",
           "updated": "Skill saved"
         }
+      },
+      "workload": {
+        "title": "Workload",
+        "description": "How many open tasks one person should carry. Team shows a warning when someone is at or over it.",
+        "limit": "Open tasks per person",
+        "limitHint": "0 means no limit. People can have their own limit in Team."
       }
     },
     "taskTemplates": {
@@ -595,6 +629,8 @@
         "updated": "{title} saved.",
         "basics": "The task",
         "title": "Task name",
+        "description": "Description",
+        "descriptionHint": "One or two plain lines on what to get done. Shown on the task in the app and on the web.",
         "key": "Key",
         "keyHint": "Lowercase words joined by underscores. It cannot change later.",
         "stage": "Stage",
@@ -628,6 +664,12 @@
         "captures": "Details it records",
         "capturesHint": "Report fact keys, comma separated.",
         "approval": "Needs approval before it counts as done",
+        "reviewer": "Who approves",
+        "reviewerHint": "Nobody approves their own work while someone else can.",
+        "reviewers": {
+          "approvers": "Anyone who approves tasks",
+          "project_manager": "The project manager"
+        },
         "onComplete": "When done, also",
         "onCompleteNone": "Nothing else",
         "onCompleteOptions": {
@@ -643,7 +685,7 @@
         "notifyEvent": "Send it on",
         "message": "Message",
         "customerTitle": "Words the customer sees",
-        "customerTitleHint": "Leave empty to use the task name.",
+        "customerTitleHint": "Required when the customer is told. For example “Net meter fitted”.",
         "preview": "Preview",
         "notifyManager": "Tell the project manager when it is done",
         "active": "In use for new projects",
@@ -662,7 +704,17 @@
         "skillHint": "People in the role with this skill get the task first; if none is free, anyone in the role.",
         "anySkill": "Anyone in the role",
         "checklist": "Checklist",
-        "checklistHint": "One line per check. The person ticks each before finishing. New projects get this list; tasks already made keep theirs."
+        "checklistHint": "One line per check. The person ticks each before finishing. New projects get this list; tasks already made keep theirs.",
+        "recipients": "Who hears it",
+        "recipientOptions": {
+          "customer": "The customer",
+          "customer_and_family": "The customer and family members with app access"
+        },
+        "attachment": "Link in the message",
+        "attachmentHint": "A report, or the newest paper in a folder. Pick “Update with a link” as the message.",
+        "attachmentNone": "No link",
+        "attachmentReport": "Report: {name}",
+        "attachmentFolder": "Newest paper in: {name}"
       }
     },
     "messageTemplates": {
@@ -695,7 +747,16 @@
         "change_request_raised": "Change request started",
         "change_request_completed": "Change request done",
         "referral_reward": "Referral reward update",
-        "staff_daily_digest": "Morning summary for staff"
+        "survey_scheduled": "Site survey date",
+        "staff_daily_digest": "Morning summary for staff",
+        "stage_rating_request": "Ask the customer to rate a stage",
+        "document_requested": "Paper requested",
+        "maintenance_visit": "Free maintenance visit",
+        "installation_started": "Installation started",
+        "commissioning_completed": "Switched on, final payment due",
+        "project_update_link": "Update with a link",
+        "service_visit_booked": "Technician visit booked",
+        "project_waiting": "Step waiting on someone outside"
       },
       "dialog": {
         "title": "Edit {name}",
@@ -708,7 +769,10 @@
         "previewHint": "Copy it from WhatsApp Manager, with '{{'1'}}', '{{'2'}}' where details go.",
         "sample": "With sample details",
         "active": "Send this message",
-        "saved": "{name} saved."
+        "saved": "{name} saved.",
+        "metaNameMr": "Marathi template name (optional)",
+        "metaNameHi": "Hindi template name (optional)",
+        "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one."
       }
     },
     "activity": {

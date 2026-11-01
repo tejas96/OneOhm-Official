@@ -11,6 +11,7 @@ export * from './inventory';
 export * from './language';
 export * from './messaging';
 export * from './pricing';
+export * from './project-health';
 export * from './purchasing';
 export * from './reports';
 export * from './subsidy';

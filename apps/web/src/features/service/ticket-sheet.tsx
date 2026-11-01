@@ -8,7 +8,9 @@ import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { formatPhone } from '@/lib/format/contact';
 import { SlaCell } from './sla-pill';
+import { TicketCustomerFiles } from './ticket-customer-files';
 import { TicketFieldWork } from './ticket-field-work';
+import { TicketVisitDay } from './ticket-visit-day';
 import { TicketWork } from './ticket-work';
 import { STATUS_TONE } from './tickets-table';
 import { useAgo } from './use-ago';
@@ -116,6 +118,8 @@ export function TicketSheet({
   const t = useTranslations('service');
   const format = useFormatter();
   const ago = useAgo();
+  // A planned AMC visit's day, or the day the desk booked for a request.
+  const visitDay = ticket?.scheduledFor ?? ticket?.visitOn ?? null;
   return (
     <Sheet
       open={ticket !== null}
@@ -165,9 +169,9 @@ export function TicketSheet({
                   </Link>
                 </Fact>
               )}
-              {ticket.scheduledFor && (
-                <Fact label={t('sheet.visit')}>
-                  {format.dateTime(new Date(ticket.scheduledFor), {
+              {visitDay && (
+                <Fact label={ticket.scheduledFor ? t('sheet.visit') : t('visitDay.title')}>
+                  {format.dateTime(new Date(visitDay), {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',
@@ -176,30 +180,8 @@ export function TicketSheet({
               )}
             </dl>
           </Section>
-          {ticket.photos.length > 0 && (
-            <Section title={t('sheet.photosTitle')}>
-              <ul className="flex flex-wrap gap-2">
-                {ticket.photos.map((photo) => (
-                  <li key={photo.id}>
-                    <a
-                      href={`/api/v1/documents/${photo.id}/file?disposition=inline`}
-                      target="_blank"
-                      rel="noopener"
-                      className="block size-20 overflow-hidden rounded-lg ring-1 ring-hairline hover:ring-accent"
-                    >
-                      {/* biome-ignore lint/performance/noImgElement: streamed from the API after its access check, not Next's image loader. */}
-                      <img
-                        src={`/api/v1/documents/${photo.id}/file?disposition=inline`}
-                        alt={photo.name}
-                        className="size-full object-cover"
-                        loading="lazy"
-                      />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
+          <TicketCustomerFiles ticket={ticket} />
+          <TicketVisitDay key={`visit-${ticket.id}`} ticket={ticket} />
           <Levels ticket={ticket} />
           {ticket.resolutionNote && (
             <p className="type-body-sm text-on-track">

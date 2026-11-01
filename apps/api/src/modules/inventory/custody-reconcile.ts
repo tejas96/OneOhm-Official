@@ -13,6 +13,7 @@ import {
 import { custodyTotals, isMaterialCategory, reconcileLine, roundQuantity } from '@oneohm/domain';
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { pricedLinesOnly } from '../quotations/quotation-rows';
 import {
   type CustodyEntryRow,
   custodyEntries,
@@ -34,7 +35,7 @@ export async function quoteMaterial(db: DatabaseExecutor, projectId: string) {
   const lines = await db
     .select()
     .from(quotationLines)
-    .where(eq(quotationLines.quotationId, row.quotation.id))
+    .where(and(eq(quotationLines.quotationId, row.quotation.id), pricedLinesOnly()))
     .orderBy(asc(quotationLines.position));
   const quoteProducts: Readonly<Record<string, string | null>> = {
     panel: row.quotation.panelProductId,

@@ -5,6 +5,19 @@
  */
 import type { LanguageWords } from './customer-message-words';
 
+const HI_STAGES: Readonly<Record<string, string>> = {
+  survey: 'साइट सर्वे',
+  installation: 'इंस्टॉलेशन',
+  commissioning: 'सिस्टम चालू करना और हैंडओवर',
+};
+
+/** Who a delayed step waits on, by the party key in the message. */
+const HI_WAITING: Readonly<Record<string, string>> = {
+  customer: 'आपसे कोई कागज़ या जवाब चाहिए',
+  bank: 'बैंक के जवाब का इंतज़ार है',
+  discom: 'बिजली विभाग (DISCOM) के जवाब का इंतज़ार है',
+};
+
 export const HINDI_WORDS: LanguageWords = {
   messages: {
     quotation_sent: (p) => ({
@@ -51,6 +64,34 @@ export const HINDI_WORDS: LanguageWords = {
       title: `मुफ़्त ${p.visit} विज़िट: ${p.date}`,
       body: `${p.project}: आने से पहले हमारी सर्विस टीम आपको फ़ोन करेगी।`,
     }),
+    survey_scheduled: (p) => ({
+      title: `साइट सर्वे: ${p.date}`,
+      body: `${p.project}: आने से पहले हमारी टीम आपको फ़ोन करेगी।`,
+    }),
+    stage_rating_request: (p) => ({
+      title: 'हमारा काम कैसा लगा?',
+      body: `${p.project}: ${HI_STAGES[p.stageKey ?? ''] ?? p.stage} पूरा हुआ। कृपया ऐप में रेटिंग दें।`,
+    }),
+    installation_started: (p) => ({
+      title: 'लगाने का काम शुरू हो गया',
+      body: `${p.project}: हमारी टीम आपका ${p.capacity} सिस्टम लगा रही है।`,
+    }),
+    commissioning_completed: (p) => ({
+      title: 'आपका सिस्टम चालू हो गया',
+      body: `${p.project}: अब आखिरी पेमेंट बाकी है। ‘पेमेंट’ खोलकर देखें।`,
+    }),
+    project_update_link: (p) => ({
+      title: p.milestone ?? 'प्रोजेक्ट की नई जानकारी',
+      body: `${p.project}: कागज़ ‘दस्तावेज़’ में है।`,
+    }),
+    service_visit_booked: (p) => ({
+      title: `टेक्नीशियन की विज़िट: ${p.date}`,
+      body: `${p.topic}: आने से पहले टेक्नीशियन आपको फ़ोन करेंगे।`,
+    }),
+    project_waiting: (p) => ({
+      title: HI_WAITING[p.party ?? ''] ?? 'थोड़ी देर हो रही है',
+      body: `${p.project}: ${p.milestone}। आगे की जानकारी हम देंगे।`,
+    }),
     referral_reward: (p) => ({
       title: 'रेफ़रल इनाम की जानकारी',
       body: `${p.friend}: ${p.amount} — ${p.status}।`,
@@ -58,6 +99,9 @@ export const HINDI_WORDS: LanguageWords = {
   },
   steps: {
     site_survey: 'साइट विज़िट और छत की नाप',
+    site_survey_society: 'साइट विज़िट और छत की नाप',
+    site_survey_commercial: 'साइट विज़िट और छत की नाप',
+    site_survey_ground: 'साइट विज़िट और ज़मीन की नाप',
     name_change: 'बिजली कनेक्शन में नाम बदलना',
     system_design: 'आपके सिस्टम का डिज़ाइन मंज़ूर हुआ',
     loan_approval: 'बैंक लोन मंज़ूर हुआ',
@@ -70,6 +114,7 @@ export const HINDI_WORDS: LanguageWords = {
     net_meter_installation: 'नेट मीटर लग गया',
     handover: 'सिस्टम सौंपा गया, वारंटी के कागज़',
     subsidy_application: 'पीएम सूर्य घर पोर्टल पर सब्सिडी की अर्ज़ी दी गई',
+    subsidy_inspection: 'सब्सिडी के लिए जाँच मंज़ूर हुई',
     subsidy_release: 'सब्सिडी आपके बैंक खाते में आ गई',
   },
   payments: {

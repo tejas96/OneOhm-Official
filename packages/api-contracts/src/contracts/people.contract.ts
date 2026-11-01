@@ -43,6 +43,10 @@ export const peopleContract = c.router({
       onLeave: z.boolean().optional(),
       designation: z.string().trim().max(120).nullable().optional(),
       skills: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
+      /** Own open-task limit; null goes back to the company default. */
+      openTaskLimit: z.number().int().min(1).max(500).nullable().optional(),
+      /** Location on or off for this person; null follows their roles and the company. */
+      tracking: z.enum(['on', 'off']).nullable().optional(),
     }),
     responses: { 200: personSchema },
   },

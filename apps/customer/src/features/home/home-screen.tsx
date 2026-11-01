@@ -14,14 +14,13 @@ import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { HOME } from '@/copy/home';
 import { Bell } from '@/features/alerts/bell';
-import { RateStageCard } from '@/features/ratings/rate-stage-card';
 import { BUSINESS_TIME_ZONE, longToday } from '@/lib/dates';
-import { asksForFeedback } from '@/lib/journey';
 import { useCustomer } from '@/session/session-provider';
 import { JourneyCard } from './journey-card';
 import { NextStepCard, UpdatesCard, WaitingCard } from './progress-cards';
 import { ProjectSwitcher } from './project-switcher';
-import { ContactCard, FeedbackPrompt, ReferPrompt, SubsidyCard } from './support-cards';
+import { ContactCard, ReferPrompt, SubsidyCard } from './support-cards';
+import { TodoCard } from './todo-card';
 import { useChosenProject, useHome } from './use-home';
 
 /** The customer's solar journey: where things stand, what happens next, who to call. */
@@ -74,10 +73,9 @@ export function HomeScreen() {
         <>
           <ProjectSwitcher projects={query.data.projects} chosenId={project.id} onChoose={choose} />
           {project.waiting ? <WaitingCard waiting={project.waiting} /> : null}
+          <TodoCard project={project} />
           <JourneyCard project={project} />
           <NextStepCard next={project.nextStep} />
-          <RateStageCard projectId={project.id} />
-          {asksForFeedback(project) ? <FeedbackPrompt projectId={project.id} /> : null}
           <SubsidyCard subsidy={project.subsidy} />
           <ContactCard contact={project.contact} />
           <UpdatesCard updates={project.updates} />

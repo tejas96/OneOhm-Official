@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { VendorProfile, VendorScorecard } from '@oneohm/api-contracts';
 import { projects, vendorAdvances, vendors } from '@oneohm/database';
-import { deliveryOutcome, payableAgeing, summariseDeliveries } from '@oneohm/domain';
+import { billToPay, deliveryOutcome, payableAgeing, summariseDeliveries } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
@@ -71,7 +71,7 @@ export class VendorPerformanceService {
         dueOn: payable.dueOn,
         amountPaise: payable.amountPaise,
         adjustedPaise: payable.advanceAdjustedPaise,
-        balancePaise: payable.amountPaise - payable.advanceAdjustedPaise,
+        balancePaise: billToPay(payable),
         status: payable.status,
         overdue: payable.dueOn < today,
       })),
@@ -96,7 +96,7 @@ function scorecard(
     facts.bills
       .filter((bill) => bill.vendorId === vendor.id)
       .map(({ payable, billedOn }) => ({
-        balancePaise: payable.amountPaise - payable.advanceAdjustedPaise,
+        balancePaise: billToPay(payable),
         billedOn,
         dueOn: payable.dueOn,
       })),

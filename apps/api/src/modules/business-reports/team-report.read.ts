@@ -6,6 +6,7 @@ import {
   leaveRequests,
   projects,
   projectTasks,
+  taskReviews,
   users,
 } from '@oneohm/database';
 import { leaveHalfDays, type WaitingParty } from '@oneohm/domain';
@@ -22,6 +23,8 @@ export interface TeamTask {
   readonly open: boolean;
   /** Paused now, waiting on `party`. */
   readonly waiting: boolean;
+  /** Times its work was sent back for correction (PRD 3.12 quality). */
+  readonly reworks?: number;
 }
 
 export interface TeamPerson {
@@ -57,6 +60,7 @@ export async function readTeamTasks(db: DatabaseExecutor, scope: ReportScope): P
       party: projectTasks.waitingParty,
       dueDate: projectTasks.dueDate,
       completedAt: projectTasks.completedAt,
+      reworks: sql<number>`(select count(*)::int from ${taskReviews} where ${taskReviews.taskId} = ${projectTasks.id} and ${taskReviews.outcome} = 'returned')`,
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
@@ -82,6 +86,7 @@ export async function readTeamTasks(db: DatabaseExecutor, scope: ReportScope): P
         finishedOn: done && row.completedAt ? indiaDate(row.completedAt) : null,
         open: !done,
         waiting: row.status === 'waiting',
+        reworks: row.reworks,
       },
     ];
   });

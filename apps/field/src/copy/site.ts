@@ -13,7 +13,8 @@ export const TRACKING = {
   on: 'Location on during work',
   noConsent: 'Location off: not shared',
   policyOff: 'Location off for everyone',
-  outsideHours: (from: string, to: string) => `Location paused outside ${from}–${to}`,
+  // Short enough for a phone pill; the working hours show on the card itself.
+  outsideHours: 'Location off outside work hours',
   explainOn: 'Read only when you check in or out and when you take a site photo.',
 } as const;
 
@@ -64,6 +65,10 @@ export const TRAVEL = {
       : `${count} visits had no location, so their legs are not paid.`,
   note: 'Note for your manager',
   noteHint: 'For example: two trips to the same site.',
+  project: 'Project',
+  projectHint: 'The travel counts in this project’s cost.',
+  noProject: 'None',
+  forProject: (code: string) => `For ${code}`,
   claimedFor: (amount: string, metres: number) => `Claimed ${amount} for ${distance(metres)}`,
   claim: 'Claim reimbursement',
   claimed: 'Claim sent for approval.',

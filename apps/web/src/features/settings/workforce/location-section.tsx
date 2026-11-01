@@ -6,6 +6,7 @@ import { ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
+import { TrackingByRole } from './tracking-by-role';
 
 type Attendance = WorkforcePolicyInput['attendance'];
 
@@ -27,6 +28,17 @@ export function LocationSection({
         onCheckedChange={(captureLocation) => onChange({ ...attendance, captureLocation })}
         label={t('capture')}
         description={attendance.captureLocation ? t('captureOn') : t('captureOff')}
+      />
+      <TrackingByRole
+        byRole={attendance.trackingByRole}
+        company={attendance.captureLocation}
+        onChange={(trackingByRole) => onChange({ ...attendance, trackingByRole })}
+      />
+      <Switch
+        checked={attendance.autoCheckInFromSite}
+        onCheckedChange={(autoCheckInFromSite) => onChange({ ...attendance, autoCheckInFromSite })}
+        label={t('autoCheckIn')}
+        description={attendance.autoCheckInFromSite ? t('autoCheckInOn') : t('autoCheckInOff')}
       />
       <div className="flex items-start gap-3 rounded-lg bg-sunken/70 px-4 py-3.5">
         <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-faint" />

@@ -77,7 +77,12 @@ export class TravelClaimsService {
     return readClaims(this.db, conditions.length ? and(...conditions) : undefined);
   }
 
-  async claim(actor: Actor, workDate: string, note?: string | null): Promise<TravelClaim> {
+  async claim(
+    actor: Actor,
+    workDate: string,
+    note?: string | null,
+    projectId?: string | null,
+  ): Promise<TravelClaim> {
     if (actor.kind !== 'staff') throw forbidden('Travel claims are for employees.');
     if (workDate > todayIn())
       throw invalid('Claim a day that has started.', { workDate: 'Later.' });
@@ -86,6 +91,8 @@ export class TravelClaimsService {
       throw conflict('You have already claimed this day.', 'claimed');
     if (!day.claimable)
       throw invalid('There is no travel to claim on this day.', { workDate: 'No distance.' });
+    if (projectId && !day.visits.some((visit) => visit.projectId === projectId))
+      throw invalid('Pick a project you visited that day.', { projectId: 'Not visited.' });
     const [row] = await this.db
       .insert(travelClaims)
       .values({
@@ -96,6 +103,7 @@ export class TravelClaimsService {
         amountPaise: day.amountPaise,
         legs: day.legs,
         visits: day.visits.length,
+        projectId: projectId ?? null,
         note: note?.trim() || null,
       })
       .onConflictDoNothing()
@@ -105,6 +113,7 @@ export class TravelClaimsService {
       workDate,
       amountPaise: day.amountPaise,
       distanceM: day.distanceM,
+      projectId: projectId ?? null,
     });
     await notifyHolders(
       this.db,

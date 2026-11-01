@@ -6,6 +6,8 @@ import { MapPin, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { useCan } from '@/providers/current-user';
+import { SubsidyClaimedSwitch } from './subsidy-claimed-switch';
 
 /** The property with its customer; shared by the builder and the project dialog. */
 export function useProperty(propertyId: string | null) {
@@ -38,6 +40,7 @@ export function PropertySummary({
   const categoryT = useTranslations('quotations.category');
   const property = useProperty(propertyId);
   const discoms = useDiscoms();
+  const canMarkSubsidy = useCan('subsidy.manage', 'customers.manage');
   if (property.isPending) return <Skeleton className="h-28 w-full rounded-xl" />;
   if (property.isError) {
     return <LoadError error={property.error} onRetry={() => property.refetch()} />;
@@ -70,6 +73,9 @@ export function PropertySummary({
           )}
           {site.subsidyClaimed && <Badge variant="accent">{t('subsidyClaimed')}</Badge>}
         </div>
+        {onChange && canMarkSubsidy && (
+          <SubsidyClaimedSwitch propertyId={site.id} claimed={site.subsidyClaimed} />
+        )}
       </div>
       {onChange && (
         <Button variant="quiet" size="sm" onClick={onChange}>

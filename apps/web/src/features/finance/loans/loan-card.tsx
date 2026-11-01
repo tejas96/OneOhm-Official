@@ -45,7 +45,7 @@ export function LoanCard({
         <div className="flex min-w-0 flex-col gap-1">
           <p className="font-mono text-[0.75rem] text-ink-faint">{loan.projectCode}</p>
           <Link
-            href={`/projects/${loan.projectId}`}
+            href={`/projects/${loan.projectId}?tab=payments`}
             className="truncate type-title-lg text-ink [font-family:var(--font-display)] hover:text-accent"
           >
             {loan.customerName}

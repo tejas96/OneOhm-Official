@@ -45,6 +45,12 @@ import { StageRatingsService } from './stage-ratings.service';
     CustomerFamilyService,
     CustomerLanguageService,
   ],
-  exports: [CustomerPortalService, CustomerDocumentsService, CustomerAuthService],
+  exports: [
+    CustomerPortalService,
+    CustomerDocumentsService,
+    CustomerAuthService,
+    CustomerDocumentRequestsService,
+    CustomerRequestPhotosService,
+  ],
 })
 export class CustomerPortalModule {}

@@ -10,6 +10,7 @@ const known = {
   messages: new Map<string, readonly string[]>([
     ['project_milestone', ['customer', 'project', 'milestone']],
     ['payment_link', ['customer', 'amount', 'milestone', 'project', 'link']],
+    ['project_update_link', ['customer', 'project', 'milestone', 'link']],
   ]),
 };
 
@@ -27,9 +28,14 @@ const base = {
   notifyCustomer: true,
   notifyEvent: 'completed' as const,
   messageKey: 'project_milestone',
-  customerTitle: null,
+  customerTitle: 'Installation finished',
+  recipients: 'customer' as const,
+  attachment: null,
   notifyManager: false,
+  confirmAssignee: false,
+  escalateAfterDays: null,
   approval: false,
+  reviewer: 'approvers' as const,
   evidence: [],
   captures: [],
   onComplete: null,
@@ -56,6 +62,34 @@ describe('task template checks', () => {
     );
     expect(() => checkTaskTemplate({ ...base, notifyEvent: 'approved' }, known)).toThrow(
       /approval/,
+    );
+  });
+
+  it('never lets an internal task message the customer, or use the team title', () => {
+    expect(() => checkTaskTemplate({ ...base, customerVisible: false }, known)).toThrow(/internal/);
+    expect(() => checkTaskTemplate({ ...base, customerTitle: '  ' }, known)).toThrow(
+      /customer should read/,
+    );
+    expect(() =>
+      checkTaskTemplate({ ...base, notifyCustomer: false, customerVisible: false }, known),
+    ).not.toThrow();
+  });
+
+  it('links only a known report or a folder customers see, in a message with a link', () => {
+    const linked = { ...base, messageKey: 'project_update_link' };
+    expect(() => checkTaskTemplate({ ...linked, attachment: 'report:wcr' }, known)).not.toThrow();
+    expect(() =>
+      checkTaskTemplate({ ...linked, attachment: 'document:warranty' }, known),
+    ).not.toThrow();
+    expect(() => checkTaskTemplate({ ...linked, attachment: 'document:vendor' }, known)).toThrow(
+      /cannot see/,
+    );
+    expect(() => checkTaskTemplate({ ...linked, attachment: 'report:nope' }, known)).toThrow(
+      /report/,
+    );
+    expect(() => checkTaskTemplate(linked, known)).toThrow(/needs a link/);
+    expect(() => checkTaskTemplate({ ...base, attachment: 'report:wcr' }, known)).toThrow(
+      /no place for a link/,
     );
   });
 });

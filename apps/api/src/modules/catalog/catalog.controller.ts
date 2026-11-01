@@ -54,20 +54,20 @@ export class CatalogController {
       },
       listSubsidyRules: async () => ({ status: 200, body: await this.subsidy.list() }),
       createSubsidyRule: async ({ body }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'subsidy.manage');
         return { status: 201, body: await this.subsidy.create(actor, body) };
       },
       updateSubsidyRule: async ({ params, body }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'subsidy.manage');
         return { status: 200, body: await this.subsidy.update(actor, params.id, body) };
       },
       deleteSubsidyRule: async ({ params }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'subsidy.manage');
         await this.subsidy.remove(actor, params.id);
         return { status: 204, body: undefined };
       },
       subsidyRuleImpact: async ({ query }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'subsidy.manage', 'settings.manage');
         return { status: 200, body: await this.impact.impact(query.asOf) };
       },
       getCompany: async () => ({ status: 200, body: await this.catalog.company() }),

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { GpsFields, readCoordinate } from './gps-fields';
 
 const NO_DISCOM = 'none';
 type Phase = 'single' | 'three' | 'unknown';
@@ -92,6 +93,7 @@ export function PropertyFields({
       <Field label={t('pincode')} error={errors('pincode')}>
         <Input name="pincode" inputMode="numeric" maxLength={6} defaultValue={text('pincode')} />
       </Field>
+      <GpsFields initial={initial} errors={errors} />
       {category === 'society' && (
         <Field label={t('households')} hint={t('householdsHint')} error={errors('households')}>
           <Input name="households" type="number" min={1} defaultValue={text('households')} />
@@ -188,5 +190,7 @@ export function readPropertyForm(data: FormData): PropertyInput {
     phase: phase === 'single' || phase === 'three' ? phase : null,
     meterInSocietyName: category === 'society' ? text('meterInSocietyName') === 'true' : null,
     floors: whole('floors') ?? 1,
+    latitude: readCoordinate(data, 'latitude'),
+    longitude: readCoordinate(data, 'longitude'),
   };
 }

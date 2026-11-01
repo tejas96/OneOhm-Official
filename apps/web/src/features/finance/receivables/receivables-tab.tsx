@@ -45,7 +45,7 @@ export function ReceivablesTab() {
       cell: (row) => (
         <span className="flex flex-col">
           <Link
-            href={`/projects/${row.projectId}`}
+            href={`/projects/${row.projectId}?tab=payments`}
             className="oh-stretched-link type-body font-medium text-ink hover:text-accent"
           >
             {row.customerName}
@@ -111,7 +111,7 @@ export function ReceivablesTab() {
             <>
               <PaymentLinkAction milestoneId={row.milestoneId} link={row.link} />
               <Button asChild size="sm" variant="secondary" className="relative z-[2]">
-                <Link href={`/projects/${row.projectId}`}>{t('record')}</Link>
+                <Link href={`/projects/${row.projectId}?tab=payments`}>{t('record')}</Link>
               </Button>
             </>
           )}

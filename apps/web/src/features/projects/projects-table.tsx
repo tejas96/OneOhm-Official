@@ -7,6 +7,7 @@ import { formatKwp } from '@oneohm/shared';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { projectSwatch } from './control-room/room-stages';
+import { ForecastShort } from './forecast-note';
 
 /** Every project as one row: who, where, how big, how far, how it stands and what is next. */
 export function ProjectsTable({ projects }: { readonly projects: readonly ProjectSummary[] }) {
@@ -94,18 +95,22 @@ export function ProjectsTable({ projects }: { readonly projects: readonly Projec
     },
     {
       key: 'due',
-      header: t('columns.due'),
-      cell: (project) =>
-        project.next ? (
-          <time
-            dateTime={project.next.date}
-            className="font-mono text-[0.8125rem] whitespace-nowrap text-ink tabular-nums"
-          >
-            {format.dateTime(new Date(project.next.date), { day: 'numeric', month: 'short' })}
-          </time>
-        ) : (
-          <span className="text-ink-faint">{t('card.noDate')}</span>
-        ),
+      header: t('columns.dueFinish'),
+      cell: (project) => (
+        <span className="flex flex-col gap-0.5 whitespace-nowrap">
+          {project.next ? (
+            <time
+              dateTime={project.next.date}
+              className="font-mono text-[0.8125rem] text-ink tabular-nums"
+            >
+              {format.dateTime(new Date(project.next.date), { day: 'numeric', month: 'short' })}
+            </time>
+          ) : (
+            <span className="text-ink-faint">{t('card.noDate')}</span>
+          )}
+          <ForecastShort forecast={project.forecast} />
+        </span>
+      ),
     },
     {
       key: 'tasks',

@@ -27,10 +27,20 @@ export function QuotationLines({
 }) {
   const t = useTranslations('quotations.lines');
   const categoryT = useTranslations('quotations.categories');
-  const groups = LINE_CATEGORIES.map((category) => ({
-    category,
-    lines: lines.filter((line) => line.category === category),
-  })).filter((group) => group.lines.length > 0);
+  const extraT = useTranslations('quotations.extras');
+  const groups = [
+    ...LINE_CATEGORIES.map((category) => ({
+      key: category,
+      title: categoryT(category),
+      lines: lines.filter((line) => !line.extra && line.category === category),
+    })),
+    ...SHOWN_EXTRAS.map((kind) => ({
+      key: kind,
+      title: extraT(`groups.${kind}`),
+      lines: lines.filter((line) => line.extra === kind),
+    })),
+  ].filter((group) => group.lines.length > 0);
+  const optional = lines.filter((line) => line.extra === 'optional');
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,8 +51,8 @@ export function QuotationLines({
         <span className="text-right type-overline text-ink-faint uppercase">{t('amount')}</span>
       </div>
       {groups.map((group) => (
-        <section key={group.category} aria-label={categoryT(group.category)}>
-          <h4 className="mb-1 type-overline text-accent uppercase">{categoryT(group.category)}</h4>
+        <section key={group.key} aria-label={group.title}>
+          <h4 className="mb-1 type-overline text-accent uppercase">{group.title}</h4>
           <ul className="flex flex-col divide-y divide-hairline">
             {group.lines.map((line) => (
               <LineRow key={line.key} line={line} />
@@ -72,18 +82,39 @@ export function QuotationLines({
           </>
         )}
       </dl>
+      {optional.length > 0 && (
+        <section
+          aria-label={extraT('groups.optional')}
+          className="rounded-xl border border-dashed border-rule px-4 py-3"
+        >
+          <h4 className="type-overline text-ink-faint uppercase">{extraT('groups.optional')}</h4>
+          <p className="type-body-sm text-ink-faint">{extraT('optionalNote')}</p>
+          <ul className="flex flex-col divide-y divide-hairline">
+            {optional.map((line) => (
+              <LineRow key={line.key} line={line} />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
+/** Hand-added lines that count, shown after the engine's own; optional items sit apart. */
+const SHOWN_EXTRAS = ['charge', 'adjustment', 'gift'] as const;
+
+const signedInr = (paise: number) => (paise < 0 ? `− ${formatInr(-paise)}` : formatInr(paise));
+
 function LineRow({ line }: { readonly line: Line }) {
   const t = useTranslations('quotations.lines');
+  const extraT = useTranslations('quotations.extras');
   const format = useFormatter();
   const quantity = format.number(line.quantity, { maximumFractionDigits: 2 });
   return (
     <li className={cn(ROW, 'items-baseline py-3')}>
       <span className="flex min-w-0 flex-col gap-1">
         <span className="type-body text-ink">{line.description}</span>
+        {line.reason && <span className="type-body-sm text-ink-faint">{line.reason}</span>}
         <span className="flex flex-wrap items-center gap-2 type-label text-ink-faint">
           <span className="md:hidden">
             {quantity} {line.unit} × {formatInr(line.unitPricePaise)}
@@ -99,10 +130,10 @@ function LineRow({ line }: { readonly line: Line }) {
         {quantity} {line.unit}
       </span>
       <span className="hidden text-right type-body-sm text-ink-muted tabular-nums md:block">
-        {formatInr(line.unitPricePaise)}
+        {signedInr(line.unitPricePaise)}
       </span>
       <span className="text-right type-body text-ink tabular-nums">
-        {formatInr(line.amountPaise)}
+        {line.extra === 'gift' ? extraT('free') : signedInr(line.amountPaise)}
       </span>
     </li>
   );

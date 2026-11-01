@@ -86,6 +86,7 @@
       "claim": "Claim"
     },
     "payments": {
+      "tdsIncluded": "incl. {amount} TDS",
       "title": "Payments received",
       "description": "The latest 50, newest first, with refunds and overpayments held as credit. Each payment has a receipt.",
       "loading": "Loading payments",
@@ -132,6 +133,32 @@
       },
       "paidOn": "Paid {date}",
       "advanceAdjusted": "{amount} advance used",
+      "tdsHeld": "{amount} TDS held",
+      "invoice": {
+        "matches": "Matches invoice",
+        "higherShort": "Invoice {amount} more",
+        "lowerShort": "Invoice {amount} less",
+        "higher": "The vendor's invoice is {amount} more than the order amount for what was received. Worth a word with the vendor before approving.",
+        "lower": "The vendor's invoice is {amount} less than the order amount for what was received. Check whether something was left off before approving."
+      },
+      "review": {
+        "title": "Review bill",
+        "orderAmount": "Order amount for what was received",
+        "billAmount": "Bill amount",
+        "gstIncluded": "GST in it",
+        "invoiceAmount": "Vendor invoice total",
+        "invoiceAmountHint": "With GST, as printed on their invoice.",
+        "tds": "TDS to hold",
+        "tdsHint": "Optional, in %. Held back and paid to the government, not to the payee.",
+        "tdsHintGst": "Optional, in %. Worked out on the amount before GST, and paid to the government.",
+        "tdsHeld": "TDS held",
+        "advanceUsed": "Advance used",
+        "toPay": "To pay",
+        "save": "Save",
+        "approve": "Approve bill",
+        "saved": "Bill updated",
+        "approved": "Bill approved"
+      },
       "overdueSince": "Overdue since {date}",
       "status": {
         "pending": "Waiting approval",
@@ -155,11 +182,14 @@
         "billNumber": "Their bill number",
         "billNumberHint": "As printed on the bill, if there is one.",
         "project": "Project",
-        "noProject": "Not for one project"
+        "noProject": "Not for one project",
+        "tds": "TDS to hold",
+        "tdsHint": "Optional, in %. Held back and paid to the government."
       },
       "payDialog": {
         "title": "Pay this bill",
         "description": "{amount} to {party}.",
+        "descriptionTds": "{amount} to {party}, after {tds} TDS held.",
         "submit": "Mark as paid",
         "done": "Bill paid",
         "method": "Paid by",
@@ -663,6 +693,35 @@
       "picked": "{count, plural, one {# payment} other {# payments}} ticked · {amount}",
       "unpick": "Clear",
       "depositAction": "Record deposit"
+    },
+    "settlements": {
+      "title": "Online payments to the bank",
+      "intro": "Razorpay pays online payments into the bank in batches, after its fees. The check compares what the books received online with what Razorpay paid out.",
+      "loading": "Loading gateway payouts",
+      "caption": "Razorpay payouts to the bank",
+      "empty": "No payouts from Razorpay yet.",
+      "noUtr": "No bank reference",
+      "figures": {
+        "received": "Received online",
+        "paidOut": "Paid out to the bank, with fees",
+        "held": "Still with Razorpay"
+      },
+      "state": {
+        "matched": "Matched",
+        "waiting": "Payout due",
+        "check": "Check needed"
+      },
+      "explain": {
+        "matched": "Everything received online has reached the bank or been booked as a gateway fee.",
+        "waiting": "Razorpay still holds this money; it arrives with its next payout, usually within two working days.",
+        "check": "Razorpay paid out more than the books show as received. An online payment may not have been recorded."
+      },
+      "columns": {
+        "date": "Paid in on",
+        "reference": "Bank reference (UTR)",
+        "fees": "Fees and tax",
+        "amount": "Amount paid in"
+      }
     }
   }
 }

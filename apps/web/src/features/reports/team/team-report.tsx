@@ -10,6 +10,8 @@ import {
 } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { centerHref } from '../../command-center/center-links';
+import { useCenterFilters } from '../../command-center/use-center-filters';
 import { PeriodNumbers } from '../parts/period-numbers';
 import { ReportBody, ReportNote } from '../parts/report-body';
 import { formatRate, useBucketNames, whole } from '../parts/report-format';
@@ -20,6 +22,7 @@ import { CrewTable, PeopleTable } from './team-tables';
 function Kpis({ data }: { readonly data: TeamReport }) {
   const t = useTranslations('teamReport.kpis');
   const { totals } = data;
+  const { query } = useCenterFilters();
   const days = (value: number) => t('days', { days: Math.round(value * 2) / 2 });
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -38,6 +41,8 @@ function Kpis({ data }: { readonly data: TeamReport }) {
         value={totals.pastDue}
         format={whole}
         detail={t('pastDueDetail', { open: totals.open, people: totals.peopleBehind })}
+        href={centerHref('/command-center/tasks', query, { show: 'overdue' })}
+        hrefLabel={t('pastDueLink')}
       />
       <KpiTile
         label={t('leave')}

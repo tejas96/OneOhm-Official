@@ -21,6 +21,7 @@ const SOURCES = [
   { key: 'stock', fill: 'bg-accent' },
   { key: 'vendor', fill: 'bg-review-solid' },
   { key: 'contractor', fill: 'bg-waiting-solid' },
+  { key: 'travel', fill: 'bg-at-risk-solid' },
 ] as const;
 
 const parts = (actual: Actual) =>
@@ -36,7 +37,7 @@ const signed = (paise: number) => (paise > 0 ? `+${money(paise)}` : money(paise)
 /** Actual cost so far by source against the estimate, and the estimate by kind. */
 export function CostSplit({ cost }: { readonly cost: ProfitabilityReport['cost'] }) {
   const t = useTranslations('profitabilityReport.cost');
-  const actual = cost.actual.stockPaise + cost.actual.vendorPaise + cost.actual.contractorPaise;
+  const actual = SOURCES.reduce((sum, source) => sum + cost.actual[`${source.key}Paise`], 0);
   const estimated =
     cost.estimate.materialPaise + cost.estimate.installationPaise + cost.estimate.otherPaise;
   const kinds = [

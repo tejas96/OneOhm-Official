@@ -8,9 +8,13 @@ import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { MessageThread } from '@/features/service/whatsapp/message-thread';
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
+import { CustomerLeadHistory } from './customer-lead-history';
 import { CustomerAlerts, CustomerOutbound } from './customer-outbound';
 
-/** Every conversation with the customer: the WhatsApp chat, messages sent and app alerts. */
+/**
+ * Every conversation with the customer: the WhatsApp chat, the calls, visits and notes
+ * from their leads, messages sent and app alerts.
+ */
 export function CustomerConversationsTab({
   activity,
   name,
@@ -24,6 +28,7 @@ export function CustomerConversationsTab({
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <ChatCard chat={activity.chat} name={name} phone={phone} />
       <div className="flex min-w-0 flex-col gap-6">
+        <CustomerLeadHistory entries={activity.leadHistory} />
         <CustomerOutbound messages={activity.outbound} />
         <CustomerAlerts alerts={activity.alerts} />
       </div>

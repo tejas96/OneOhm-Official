@@ -16,6 +16,7 @@ import { loadQuotationDetail } from './quotation-detail';
 import { leadForQuotation } from './quotation-lead';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
+import { lineRows, quotationRow } from './quotation-rows';
 import { applyAcceptedRevision } from './revision-accept';
 
 @Injectable()
@@ -34,7 +35,10 @@ export class QuotationsService {
     revisionOf?: RevisionOf,
   ): Promise<QuotationDetail> {
     const property = await this.customers.property(input.propertyId);
-    const priced = await this.pricing.price(input);
+    // A survey revision is priced as the accepted quotation was: only measurements move it.
+    const priced = revisionOf
+      ? await this.pricing.priceAgainst(input, revisionOf.id)
+      : await this.pricing.price(input);
     const company = await this.catalog.company();
     const today = todayIn();
     // A project whose survey revision was turned down takes this quote as its next one.
@@ -45,76 +49,26 @@ export class QuotationsService {
       const leadId = await leadForQuotation(tx, input.leadId, property.customerId);
       const [created] = await tx
         .insert(quotations)
-        .values({
-          number: slot.number,
-          revision: slot.revision,
-          previousQuotationId: slot.previousId,
-          leadId,
-          customerId: property.customerId,
-          propertyId: property.id,
-          subsidyCategory: input.subsidyCategory,
-          systemType: input.systemType,
-          targetWp: input.targetWp,
-          capacityWp: totals.capacityWp,
-          moduleCount: totals.moduleCount,
-          panelProductId: input.panelProductId,
-          inverterProductId: input.inverterProductId,
-          batteryProductId: input.batteryProductId ?? null,
-          structureType: input.structureType,
-          floors: input.floors,
-          distanceKm: input.distanceKm,
-          dcCableMeters: input.dcCableMeters ?? null,
-          acCableMeters: input.acCableMeters ?? null,
-          contingencyBp: priced.rates.contingencyBp,
-          toleranceBp: priced.rates.toleranceBp,
-          discountPaise: totals.discountPaise,
-          discountApprovedByUserId:
-            priced.preview.discountNeedsApproval && can(actor, 'quotations.approve_discount')
-              ? actor.userId
-              : null,
-          subtotalPaise: totals.subtotalPaise,
-          contingencyPaise: totals.contingencyPaise,
-          taxPaise: totals.taxPaise,
-          totalPaise: totals.totalPaise,
-          costPaise: totals.costPaise,
-          marginPaise: totals.marginPaise,
-          subsidyPaise: totals.subsidyPaise,
-          subsidyIneligible: totals.subsidyIneligible,
-          effectivePaise: totals.effectivePaise,
-          snapshot: {
-            rates: priced.rates,
-            rule: priced.rule,
-            households: input.households ?? null,
-            discountNeedsApproval: priced.preview.discountNeedsApproval,
-            comparison: priced.preview.comparison,
-          },
-          validUntil: addDays(today, company.quotationValidityDays),
-          createdByUserId: actor.userId,
-        })
+        .values(
+          quotationRow(input, priced, {
+            number: slot.number,
+            revision: slot.revision,
+            previousQuotationId: slot.previousId,
+            leadId,
+            customerId: property.customerId,
+            propertyId: property.id,
+            discountApprovedByUserId:
+              priced.preview.discountNeedsApproval && can(actor, 'quotations.approve_discount')
+                ? actor.userId
+                : null,
+            validUntil: addDays(today, company.quotationValidityDays),
+            createdByUserId: actor.userId,
+          }),
+        )
         .returning({ id: quotations.id });
       if (!created) throw new Error('Quotation insert returned nothing.');
       if (redraft) await linkRevision(tx, redraft.projectId, created.id);
-      await tx.insert(quotationLines).values(
-        priced.lines.map((line, position) => ({
-          quotationId: created.id,
-          position,
-          key: line.key,
-          description: line.description,
-          category: line.category,
-          quantity: line.quantity,
-          unit: line.unit,
-          unitPricePaise: line.unitPricePaise,
-          unitCostPaise: line.unitCostPaise,
-          taxRateBp: line.taxRateBp,
-          basis: line.basis,
-          amountPaise: line.amountPaise,
-          contingencyPaise: line.contingencyPaise,
-          discountPaise: line.discountPaise,
-          taxPaise: line.taxPaise,
-          totalPaise: line.totalPaise,
-          costPaise: line.costPaise,
-        })),
-      );
+      await tx.insert(quotationLines).values(lineRows(created.id, priced));
       if (leadId)
         await tx
           .update(leads)
@@ -224,7 +178,12 @@ export class QuotationsService {
     await this.db.transaction(async (tx) => {
       await tx
         .update(quotations)
-        .set({ status: 'rejected', rejectedAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: 'rejected',
+          rejectedAt: new Date(),
+          rejectionReason: reason,
+          updatedAt: new Date(),
+        })
         .where(eq(quotations.id, id));
       if (project) await revisionTurnedDown(tx, project, quotation, reason, actor.userId);
       await recordAudit(tx, actor.userId, 'quotation.rejected', 'quotation', id, { reason });

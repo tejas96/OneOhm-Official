@@ -130,7 +130,7 @@ export async function postPayment(
   const from = payment.payer === 'bank' ? `the bank for ${row.customer}` : row.customer;
   await postJournal(db, {
     entryDate: payment.receivedOn,
-    memo: `${row.code} · ${formatInr(payment.amountPaise)} ${payment.paidFromCredit ? 'of credit applied for' : 'received from'} ${from}${row.label ? ` (${row.label})` : ''}`,
+    memo: `${row.code} · ${formatInr(payment.amountPaise)} ${payment.paidFromCredit ? 'of credit applied for' : 'received from'} ${from}${row.label ? ` (${row.label})` : ''}${payment.tdsPaise > 0 ? `, ${formatInr(payment.tdsPaise)} of it as TDS` : ''}`,
     sourceType: 'payment',
     sourceId: payment.id,
     projectId: payment.projectId,
@@ -141,6 +141,7 @@ export async function postPayment(
       amountPaise: payment.amountPaise,
       milestoneDue,
       fromCredit: payment.paidFromCredit,
+      tdsPaise: payment.tdsPaise,
     }),
   });
 }

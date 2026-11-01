@@ -1,4 +1,5 @@
 import {
+  billToPay,
   contractorTdsPosting,
   type MoneyOutMethod,
   payableApprovedPosting,
@@ -41,7 +42,11 @@ export async function postPayableApproved(
     sourceId: payable.id,
     projectId: payable.projectId,
     postedByUserId: userId,
-    lines: payableApprovedPosting({ party: payable.party, amountPaise: payable.amountPaise }),
+    lines: payableApprovedPosting({
+      party: payable.party,
+      amountPaise: payable.amountPaise,
+      tdsPaise: payable.tdsPaise,
+    }),
   });
 }
 
@@ -54,8 +59,9 @@ export async function postPayablePaid(
   const row = await loadPayable(db, payableId);
   if (row?.payable.status !== 'paid') return;
   const { payable } = row;
-  // Vendor advances set against the bill were posted when adjusted; only the rest is paid.
-  const paidOut = payable.amountPaise - payable.advanceAdjustedPaise;
+  // TDS went to its own account on approval, and vendor advances set against the bill
+  // were posted when adjusted; only the rest is paid.
+  const paidOut = billToPay(payable);
   if (paidOut <= 0) return;
   const method = OUT_METHODS.find((entry) => entry === payable.paidMethod) ?? 'bank_transfer';
   await postJournal(db, {

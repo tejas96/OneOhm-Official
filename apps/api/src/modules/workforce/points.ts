@@ -1,6 +1,14 @@
-import { type DatabaseExecutor, pointsEntries, projects, roles, userRoles } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  pointsEntries,
+  projects,
+  roles,
+  stageRatingPeople,
+  stageRatings,
+  userRoles,
+} from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gte, isNull } from 'drizzle-orm';
 import { loadPolicy } from './policy';
 
 /** Points are for staff; partner crews and resellers are paid, not scored (PRD 3.12). */
@@ -74,3 +82,52 @@ export async function suggestRatingPoints(
     })
     .onConflictDoNothing();
 }
+
+/**
+ * Flow G: a customer who names people on a stage rating with 4 or 5 stars suggests
+ * points for each of them (staff only; crews show it in their contractor's ratings).
+ * A manager approves each, so no rating turns into a reward on its own.
+ */
+export async function suggestStageRatingPoints(
+  db: DatabaseExecutor,
+  ratingId: string,
+): Promise<number> {
+  const named = await db
+    .select({
+      userId: stageRatingPeople.userId,
+      stars: stageRatingPeople.rating,
+      stage: stageRatings.stage,
+      code: projects.code,
+    })
+    .from(stageRatingPeople)
+    .innerJoin(stageRatings, eq(stageRatings.id, stageRatingPeople.ratingId))
+    .innerJoin(projects, eq(projects.id, stageRatings.projectId))
+    .where(and(eq(stageRatingPeople.ratingId, ratingId), gte(stageRatingPeople.rating, 4)));
+  if (named.length === 0) return 0;
+  const { points } = await loadPolicy(db);
+  if (points.stageRating <= 0) return 0;
+  let suggested = 0;
+  for (const person of named) {
+    if (!(await isStaff(db, person.userId))) continue;
+    const rows = await db
+      .insert(pointsEntries)
+      .values({
+        userId: person.userId,
+        points: points.stageRating,
+        reason: `${person.stars}-star ${STAGE_WORDS[person.stage] ?? person.stage} rating on ${person.code}`,
+        sourceType: 'stage_rating',
+        sourceId: ratingId,
+        status: 'pending',
+      })
+      .onConflictDoNothing()
+      .returning({ id: pointsEntries.id });
+    suggested += rows.length;
+  }
+  return suggested;
+}
+
+const STAGE_WORDS: Readonly<Record<string, string>> = {
+  survey: 'site survey',
+  installation: 'installation',
+  commissioning: 'switch-on',
+};

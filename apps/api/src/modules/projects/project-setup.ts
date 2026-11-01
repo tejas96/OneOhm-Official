@@ -1,13 +1,21 @@
 import {
   type customers,
   type products,
+  projects,
   projectTasks,
   type properties,
   type quotations,
   type Transaction,
   taskDependencies,
 } from '@oneohm/database';
-import { type AssigneeCandidate, type GeneratedTask, pickAssignee } from '@oneohm/domain';
+import {
+  type AssigneeCandidate,
+  type Assignment,
+  type GeneratedTask,
+  type ProjectPool,
+  pickProjectAssignee,
+} from '@oneohm/domain';
+import { like, sql } from 'drizzle-orm';
 
 type Customer = typeof customers.$inferSelect;
 type Property = typeof properties.$inferSelect;
@@ -48,54 +56,72 @@ export function initialFacts(
   return Object.fromEntries(Object.entries(facts).filter(([, value]) => value !== ''));
 }
 
+/** One generated task as a row: a critical task's pick is only a proposal (PRD 3.8). */
+function taskValues(
+  projectId: string,
+  task: GeneratedTask,
+  position: number,
+  picked: Assignment,
+  proposed: boolean,
+): typeof projectTasks.$inferInsert {
+  return {
+    projectId,
+    templateKey: task.key,
+    title: task.title,
+    stage: task.stage,
+    roleKey: task.roleKey,
+    assigneeUserId: proposed ? null : picked.userId,
+    proposedUserId: proposed ? picked.userId : null,
+    outsideTeam: picked.outsideTeam,
+    status: task.dependsOn.length === 0 ? 'ready' : 'pending',
+    waitingParty: task.waitingParty,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    customerVisible: task.customerVisible,
+    notifyCustomer: task.notifyCustomer,
+    approval: task.approval,
+    evidence: [...task.evidence],
+    captures: [...task.captures],
+    checklist: task.checklist ? [...task.checklist] : null,
+    onComplete: task.onComplete ?? null,
+    reports: [...(task.reports ?? [])],
+    position,
+  };
+}
+
 /**
- * Writes the generated tasks: each to the least-loaded available person in its role
- * (load is counted as tasks are handed out, so work spreads), then the dependencies.
+ * Writes the generated tasks: each to the right person in the project's pool (crew work
+ * to its one contractor, the rest to its team first), counting load as work is handed
+ * out so it spreads. Critical tasks only get a proposed person until a manager confirms.
  */
 export async function writeGeneratedTasks(
   tx: Transaction,
   projectId: string,
   generated: readonly GeneratedTask[],
   candidates: AssigneeCandidate[],
-): Promise<{ unassigned: number; perPerson: Map<string, number> }> {
+  pool: ProjectPool,
+): Promise<{ unassigned: number; toConfirm: number; perPerson: Map<string, number> }> {
   const ids = new Map<string, string>();
   const load = new Map(candidates.map((candidate) => [candidate.userId, candidate.openTasks]));
   const perPerson = new Map<string, number>();
   let unassigned = 0;
+  let toConfirm = 0;
   for (const [position, task] of generated.entries()) {
-    const assignee = pickAssignee(
+    const picked = pickProjectAssignee(
       candidates.map((candidate) => ({ ...candidate, openTasks: load.get(candidate.userId) ?? 0 })),
-      task.roleKey,
-      { from: task.startDate, to: task.dueDate },
-      task.skillKey,
+      pool,
+      task,
     );
-    if (assignee) {
-      load.set(assignee.userId, (load.get(assignee.userId) ?? 0) + 1);
-      perPerson.set(assignee.userId, (perPerson.get(assignee.userId) ?? 0) + 1);
-    } else unassigned += 1;
+    const proposed = task.confirmAssignee === true;
+    if (!picked.userId) unassigned += 1;
+    else {
+      load.set(picked.userId, (load.get(picked.userId) ?? 0) + 1);
+      if (proposed) toConfirm += 1;
+      else perPerson.set(picked.userId, (perPerson.get(picked.userId) ?? 0) + 1);
+    }
     const [row] = await tx
       .insert(projectTasks)
-      .values({
-        projectId,
-        templateKey: task.key,
-        title: task.title,
-        stage: task.stage,
-        roleKey: task.roleKey,
-        assigneeUserId: assignee?.userId ?? null,
-        status: task.dependsOn.length === 0 ? 'ready' : 'pending',
-        waitingParty: task.waitingParty,
-        startDate: task.startDate,
-        dueDate: task.dueDate,
-        customerVisible: task.customerVisible,
-        notifyCustomer: task.notifyCustomer,
-        approval: task.approval,
-        evidence: [...task.evidence],
-        captures: [...task.captures],
-        checklist: task.checklist ? [...task.checklist] : null,
-        onComplete: task.onComplete ?? null,
-        reports: [...(task.reports ?? [])],
-        position,
-      })
+      .values(taskValues(projectId, task, position, picked, proposed))
       .returning({ id: projectTasks.id });
     if (!row) throw new Error('Task insert returned nothing.');
     ids.set(task.key, row.id);
@@ -108,5 +134,28 @@ export async function writeGeneratedTasks(
     }),
   );
   if (links.length > 0) await tx.insert(taskDependencies).values(links);
-  return { unassigned, perPerson };
+  return { unassigned, toConfirm, perPerson };
+}
+
+/** The next OH-YYYY-NNN code for the year. */
+export async function nextCode(tx: Transaction, year: string): Promise<string> {
+  const [row] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(projects)
+    .where(like(projects.code, `OH-${year}-%`));
+  return `OH-${year}-${String((row?.count ?? 0) + 1).padStart(3, '0')}`;
+}
+
+/** "Project created from Q-… with 31 tasks, 2 waiting for someone to be assigned." */
+export function createdMessage(
+  quotation: string,
+  tasks: number,
+  unassigned: number,
+  toConfirm: number,
+): string {
+  const waiting = [
+    unassigned ? `${unassigned} waiting for someone to be assigned` : '',
+    toConfirm ? `${toConfirm} for a manager to confirm who does them` : '',
+  ].filter(Boolean);
+  return `Project created from ${quotation} with ${tasks} tasks${waiting.length ? `, ${waiting.join(' and ')}` : ''}.`;
 }

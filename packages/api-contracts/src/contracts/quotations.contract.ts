@@ -62,6 +62,15 @@ export const quotationsContract = c.router({
     body: c.noBody(),
     responses: { 200: quotationDetailSchema },
   },
+  setSubsidyClaimed: {
+    method: 'PUT',
+    path: '/properties/:id/subsidy-claimed',
+    pathParams: idParams,
+    body: z.object({ claimed: z.boolean() }),
+    responses: { 200: z.object({ subsidyClaimed: z.boolean() }) },
+    summary:
+      'One subsidy per property (PRD 3.5): set when it was claimed elsewhere, or cleared when marked by mistake.',
+  },
   rejectQuotation: {
     method: 'POST',
     path: '/quotations/:id/reject',

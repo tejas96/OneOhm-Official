@@ -8,7 +8,7 @@ import {
   StatusPill,
   type TableColumn,
 } from '@oneohm/design-system/web';
-import { CalendarClock, Camera } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Camera, Film, Mic } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { formatPhone } from '@/lib/format/contact';
@@ -53,12 +53,28 @@ function RequestCell({
               : t('kind.maintenance_visit')}
           </Badge>
         )}
+        {ticket.kind === 'request' && ticket.visitOn && ticket.status !== 'resolved' && (
+          <Badge variant="accent">
+            <CalendarCheck aria-hidden className="size-3" />
+            {t('visitOn', { date: format.dateTime(new Date(ticket.visitOn), VISIT_DATE) })}
+          </Badge>
+        )}
         {ticket.photos.length > 0 && (
           <span className="inline-flex items-center gap-1 type-label text-ink-faint">
             <Camera aria-hidden className="size-3.5" />
             {t('photos', { count: ticket.photos.length })}
           </span>
         )}
+        {ticket.media.map((file) => (
+          <span key={file.id} className="inline-flex items-center gap-1 type-label text-ink-faint">
+            {file.contentType.startsWith('audio/') ? (
+              <Mic aria-hidden className="size-3.5" />
+            ) : (
+              <Film aria-hidden className="size-3.5" />
+            )}
+            {file.contentType.startsWith('audio/') ? t('voiceNote') : t('video')}
+          </span>
+        ))}
       </span>
     </span>
   );

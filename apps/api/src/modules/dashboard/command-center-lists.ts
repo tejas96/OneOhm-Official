@@ -1,16 +1,7 @@
 import type { CommandCenter, RiskItem } from '@oneohm/api-contracts';
-import {
-  changeRequests,
-  type Database,
-  payables,
-  projects,
-  projectTasks,
-  quotations,
-  serviceRequests,
-  users,
-} from '@oneohm/database';
+import { type Database, projects, projectTasks, users } from '@oneohm/database';
 import { addDays, daysBetween } from '@oneohm/shared';
-import { and, asc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { CenterScope } from './command-center-scope';
 
@@ -25,7 +16,16 @@ const manager = alias(users, 'manager');
 export async function risksIn(db: Database, scope: CenterScope): Promise<RiskItem[]> {
   const rows = await db
     .select({
-      task: projectTasks,
+      task: {
+        id: projectTasks.id,
+        projectId: projectTasks.projectId,
+        title: projectTasks.title,
+        dueDate: projectTasks.dueDate,
+        status: projectTasks.status,
+        waitingSince: projectTasks.waitingSince,
+        waitingParty: projectTasks.waitingParty,
+        assigneeUserId: projectTasks.assigneeUserId,
+      },
       code: projects.code,
       name: projects.name,
       owner: users.fullName,
@@ -76,7 +76,17 @@ export async function deadlinesIn(
   scope: CenterScope,
 ): Promise<CommandCenter['deadlines']> {
   const rows = await db
-    .select({ task: projectTasks, code: projects.code, assignee: users.fullName })
+    .select({
+      task: {
+        id: projectTasks.id,
+        projectId: projectTasks.projectId,
+        title: projectTasks.title,
+        dueDate: projectTasks.dueDate,
+        customerVisible: projectTasks.customerVisible,
+      },
+      code: projects.code,
+      assignee: users.fullName,
+    })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
     .leftJoin(users, eq(users.id, projectTasks.assigneeUserId))
@@ -99,54 +109,4 @@ export async function deadlinesIn(
     assignee,
     customerVisible: task.customerVisible,
   }));
-}
-
-const countOf = async (query: Promise<{ count: number }[]>) => (await query)[0]?.count ?? 0;
-const counted = sql<number>`count(*)::int`;
-
-/** Decisions waiting on someone at OneOhm; each links to where it is made. */
-export async function decisionsWaiting(db: Database): Promise<CommandCenter['decisions']> {
-  const [discounts, reviews, bills, changes, service, claims] = await Promise.all([
-    countOf(
-      db
-        .select({ count: counted })
-        .from(quotations)
-        .where(
-          and(
-            inArray(quotations.status, ['draft', 'sent']),
-            isNull(quotations.discountApprovedByUserId),
-            ne(quotations.discountPaise, 0),
-          ),
-        ),
-    ),
-    countOf(
-      db.select({ count: counted }).from(projectTasks).where(eq(projectTasks.status, 'in_review')),
-    ),
-    countOf(db.select({ count: counted }).from(payables).where(eq(payables.status, 'pending'))),
-    countOf(
-      db.select({ count: counted }).from(changeRequests).where(eq(changeRequests.status, 'open')),
-    ),
-    countOf(
-      db.select({ count: counted }).from(serviceRequests).where(eq(serviceRequests.status, 'open')),
-    ),
-    countOf(
-      db
-        .select({ count: counted })
-        .from(projectTasks)
-        .where(
-          and(
-            eq(projectTasks.templateKey, 'loan_disbursement_claim'),
-            inArray(projectTasks.status, ['ready', 'in_progress']),
-          ),
-        ),
-    ),
-  ]);
-  return [
-    { key: 'discounts' as const, count: discounts, href: '/quotations' },
-    { key: 'task_reviews' as const, count: reviews, href: '/today' },
-    { key: 'bills' as const, count: bills, href: '/finance?tab=payables' },
-    { key: 'change_requests' as const, count: changes, href: '/discom' },
-    { key: 'service_requests' as const, count: service, href: '/service' },
-    { key: 'bank_claims' as const, count: claims, href: '/finance?tab=loans' },
-  ].filter((decision) => decision.count > 0);
 }

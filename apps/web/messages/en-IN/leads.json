@@ -19,6 +19,8 @@
     "searchPlaceholder": "Name, phone or city",
     "filters": {
       "open": "Open",
+      "due": "Follow-up due",
+      "unowned": "No owner",
       "new": "New",
       "contacted": "Contacted",
       "survey_scheduled": "Survey",
@@ -92,7 +94,10 @@
       "cancel": "Cancel",
       "submit": "Add lead",
       "created": "{name} added",
-      "openExisting": "Open the existing lead"
+      "openExisting": "Open the existing lead",
+      "matchCustomer": "This number is already customer {name}.",
+      "matchLead": "{name} already has an open lead with this number.",
+      "openCustomer": "Open customer"
     },
     "log": {
       "title": "Log what happened",
@@ -114,7 +119,9 @@
       "nextNote": "Next step",
       "nextNotePlaceholder": "e.g. Send the quotation",
       "submit": "Save",
-      "saved": "Saved to the lead"
+      "saved": "Saved to the lead",
+      "staffOnly": "Staff only",
+      "staffOnlyHint": "Hidden from the reseller who brought this lead."
     },
     "timeline": {
       "title": "History",
@@ -126,7 +133,8 @@
         "whatsapp": "WhatsApp",
         "stage_change": "Stage changed",
         "follow_up": "Follow-up set"
-      }
+      },
+      "staffOnly": "Staff only"
     },
     "followUp": {
       "title": "Next follow-up",
@@ -138,11 +146,7 @@
       "title": "Stage",
       "move": "Move to stage",
       "markLost": "Mark as lost",
-      "reopen": "Reopen lead",
-      "lostTitle": "Mark this lead as lost",
-      "lostDescription": "The reason helps the team learn why sales are lost.",
-      "lostReason": "Why was it lost?",
-      "lostSubmit": "Mark as lost"
+      "reopen": "Reopen lead"
     },
     "customerCard": {
       "title": "Ready to quote?",
@@ -173,8 +177,45 @@
       "cancel": "Cancel",
       "submit": "Create customer",
       "done": "{name} is now a customer",
-      "createQuotation": "Create quotation"
+      "createQuotation": "Create quotation",
+      "alreadyCustomer": "This number is already customer <link>{name}</link>. The site goes on their record.",
+      "siteChoice": "Which site?",
+      "siteExisting": "A site on file",
+      "siteNew": "A new site",
+      "site": "Site"
     },
-    "closed": "Closed"
+    "closed": "Closed",
+    "matchedCustomer": "This number is already customer {name}",
+    "lost": {
+      "title": "Mark this lead as lost",
+      "description": "Why it was lost helps the team learn. Pick a day to try again if it may come back.",
+      "reason": "Why was it lost?",
+      "reasonPlaceholder": "Choose a reason",
+      "reasons": {
+        "price": "Price too high",
+        "competitor": "Went with another company",
+        "not_interested": "Not interested any more",
+        "no_response": "Could not reach them",
+        "not_feasible": "Site not suitable",
+        "finance": "Could not arrange the money",
+        "postponed": "Putting it off for now",
+        "other": "Other"
+      },
+      "words": "In a few words",
+      "wordsOptional": "Anything to add (optional)",
+      "revisitOn": "Try again on (optional)",
+      "revisitHint": "On this day the lead comes back to the owner's follow-ups.",
+      "cancel": "Cancel",
+      "submit": "Mark as lost",
+      "revisitDue": "Time to try again",
+      "revisitOnDate": "Try again on {date}",
+      "revisitShort": "Lost · try again {date}"
+    },
+    "chat": {
+      "openLead": "Open lead",
+      "createLead": "Create lead"
+    },
+    "ownerLoad": "{count, plural, =0 {No open leads} one {# open lead} other {# open leads}}",
+    "ownerOnLeave": "On leave · {count, plural, =0 {no open leads} one {# open lead} other {# open leads}}"
   }
 }

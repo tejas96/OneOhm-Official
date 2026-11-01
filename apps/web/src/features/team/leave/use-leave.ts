@@ -81,17 +81,33 @@ export function useCancelLeave() {
   );
 }
 
+export interface LeaveDecisionBody {
+  readonly approve: boolean;
+  readonly note: string | null;
+  /** Who covers the affected work; undefined keeps the one asked for. */
+  readonly backupUserId?: string | null;
+  /** Emergency leave only: approve with nobody covering. */
+  readonly skipHandover?: boolean;
+}
+
 export function useDecideLeave() {
   const refresh = useRefreshLeave();
   return useCallback(
-    async (id: string, approve: boolean, note: string | null) => {
-      const decided = await expectStatus(
-        api.workforce.decideLeave({ params: { id }, body: { approve, note } }),
-        200,
-      );
+    async (id: string, body: LeaveDecisionBody) => {
+      const decided = await expectStatus(api.workforce.decideLeave({ params: { id }, body }), 200);
       await refresh();
       return decided;
     },
     [refresh],
   );
+}
+
+/** For the approver: the work a pending request touches now, and who could cover. */
+export function useRequestImpact(id: string | null) {
+  return useQuery({
+    queryKey: ['leave', 'request-impact', id],
+    queryFn: () => expectStatus(api.workforce.requestImpact({ params: { id: id ?? '' } }), 200),
+    enabled: id !== null,
+    retry: false,
+  });
 }

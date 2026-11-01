@@ -1,6 +1,12 @@
 'use client';
 
-import type { CompanyAssets, DocumentRecord, MaterialSlip } from '@oneohm/api-contracts';
+import type {
+  CompanyAssets,
+  DocumentRecord,
+  MaterialSlip,
+  OrderDcrPapers,
+  Product,
+} from '@oneohm/api-contracts';
 import type { CompanyAssetKind } from '@oneohm/domain';
 import { networkError, toApiError } from './api-error';
 import { CSRF_COOKIE, CSRF_HEADER } from './contract';
@@ -80,6 +86,14 @@ export const uploadCompanyAsset = (kind: CompanyAssetKind, file: File) =>
 /** A photo of material handed to (or back from) a contractor, kept with the project. */
 export const uploadSlipPhoto = (slipId: string, file: File) =>
   send<MaterialSlip>(`/material-slips/${slipId}/photo`, file, {});
+
+/** The panel maker's DCR certificate for a goods receipt, filed with the documents. */
+export const uploadDcrCertificate = (receiptId: string, file: File) =>
+  send<OrderDcrPapers>(`/inventory/receipts/${receiptId}/dcr-certificate`, file, {});
+
+/** The maker's datasheet for a catalog product (Settings → Products). */
+export const uploadProductDatasheet = (productId: string, file: File) =>
+  send<Product>(`/catalog/products/${productId}/datasheet`, file, {});
 
 /** Where the browser reads a document (the API checks access on every request). */
 export const documentUrl = (id: string, disposition: 'inline' | 'attachment' = 'inline') =>

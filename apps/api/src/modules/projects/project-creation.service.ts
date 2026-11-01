@@ -2,31 +2,29 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
   discoms,
-  paymentMilestones,
-  postMilestoneDue,
   products,
   projectActivities,
   projectFacts,
   projects,
   properties,
   quotations,
-  type Transaction,
 } from '@oneohm/database';
-import { generateTasks, type ProjectType, planMilestones } from '@oneohm/domain';
+import { generateTasks, type ProjectType } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
-import { eq, like, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
 import { syncWorkOrders } from '../contractors/work-order-sync';
-import { planSteps } from '../payment-plans/payment-plans.service';
-import { initialFacts, writeGeneratedTasks } from './project-setup';
+import { activateMilestones } from './project-milestones';
+import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
+import { resolveProjectTeam, saveProjectTeam, type TeamChoice } from './project-team';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 import { tellTeam } from './task-notices';
 
-export interface NewProject {
+export interface NewProject extends TeamChoice {
   quotationId: string;
   discomId: string;
   loan: boolean;
@@ -38,6 +36,7 @@ export interface NewProject {
   managerUserId?: string | null | undefined;
   paymentPlanId?: string | null | undefined;
   startDate: string;
+  targetFinishDate?: string | null | undefined;
 }
 
 const PROJECT_TYPE = {
@@ -46,22 +45,28 @@ const PROJECT_TYPE = {
   commercial: 'commercial',
 } as const satisfies Record<string, ProjectType>;
 
+export interface CreatedProject {
+  id: string;
+  code: string;
+  tasks: number;
+  unassigned: number;
+  toConfirm: number;
+}
+
 /**
- * The owner confirms a handful of facts; the system builds the rest: conditional tasks,
- * role-based assignment, dependencies, payment milestones and report facts (PRD 3.8).
+ * The owner confirms a handful of facts, the team and the contractor; the system builds
+ * the rest: conditional tasks, assignment within that team, dependencies, payment
+ * milestones and report facts (PRD 3.8, Flow A).
  */
 @Injectable()
 export class ProjectCreationService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async create(
-    actor: Actor,
-    input: NewProject,
-  ): Promise<{ id: string; code: string; tasks: number; unassigned: number }> {
+  private async acceptedQuotation(quotationId: string) {
     const [quotation] = await this.db
       .select()
       .from(quotations)
-      .where(eq(quotations.id, input.quotationId))
+      .where(eq(quotations.id, quotationId))
       .limit(1);
     if (!quotation) throw notFound('That quotation');
     if (quotation.status !== 'accepted')
@@ -76,6 +81,32 @@ export class ProjectCreationService {
         'A project already exists for this quotation.',
         `project_exists:${existing.id}`,
       );
+    return quotation;
+  }
+
+  private async parts(quotation: typeof quotations.$inferSelect) {
+    const [property] = await this.db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, quotation.propertyId));
+    const [customer] = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, quotation.customerId));
+    const [panel] = await this.db
+      .select()
+      .from(products)
+      .where(eq(products.id, quotation.panelProductId));
+    const [inverter] = await this.db
+      .select()
+      .from(products)
+      .where(eq(products.id, quotation.inverterProductId));
+    if (!property || !customer || !panel || !inverter) throw notFound('The quotation details');
+    return { property, customer, panel, inverter };
+  }
+
+  async create(actor: Actor, input: NewProject): Promise<CreatedProject> {
+    const quotation = await this.acceptedQuotation(input.quotationId);
     const [discom] = await this.db
       .select()
       .from(discoms)
@@ -84,55 +115,36 @@ export class ProjectCreationService {
     if (!discom) throw invalid('Choose the DISCOM.', { discomId: 'Unknown DISCOM.' });
     if (input.loan && input.loanPaise <= 0)
       throw invalid('Enter the loan amount.', { loanPaise: 'Required for a loan project.' });
-
-    const [property] = await this.db
-      .select()
-      .from(properties)
-      .where(eq(properties.id, quotation.propertyId))
-      .limit(1);
-    const [customer] = await this.db
-      .select()
-      .from(customers)
-      .where(eq(customers.id, quotation.customerId))
-      .limit(1);
-    const [panel] = await this.db
-      .select()
-      .from(products)
-      .where(eq(products.id, quotation.panelProductId))
-      .limit(1);
-    const [inverter] = await this.db
-      .select()
-      .from(products)
-      .where(eq(products.id, quotation.inverterProductId))
-      .limit(1);
-    if (!property || !customer || !panel || !inverter) throw notFound('The quotation details');
+    if (input.targetFinishDate && input.targetFinishDate < input.startDate)
+      throw invalid('The target finish comes after the start.', {
+        targetFinishDate: 'Pick a date on or after the start date.',
+      });
+    const { property, customer, panel, inverter } = await this.parts(quotation);
 
     const type = PROJECT_TYPE[quotation.subsidyCategory];
-    const library = await loadTaskLibrary(this.db);
+    const battery = input.battery || quotation.batteryProductId !== null;
+    const groundMount = input.groundMount || quotation.structureType === 'ground_mount';
     const generated = generateTasks(
-      library,
+      await loadTaskLibrary(this.db),
       {
         projectType: type,
         discomCode: discom.code,
         loan: input.loan,
-        battery: input.battery || quotation.batteryProductId !== null,
-        groundMount: input.groundMount || quotation.structureType === 'ground_mount',
+        battery,
+        groundMount,
         subsidy: quotation.subsidyPaise > 0,
         nameChange: input.nameChange,
       },
       input.startDate,
     );
-    const candidates = (await loadAssigneeCandidates(this.db)).map((candidate) => ({
-      ...candidate,
-    }));
+    const candidates = await loadAssigneeCandidates(this.db);
+    const team = await resolveProjectTeam(this.db, input, generated, candidates, [
+      property.district,
+      property.city,
+    ]);
 
     return this.db.transaction(async (tx) => {
-      const year = input.startDate.slice(0, 4);
-      const [countRow] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(projects)
-        .where(like(projects.code, `OH-${year}-%`));
-      const code = `OH-${year}-${String((countRow?.count ?? 0) + 1).padStart(3, '0')}`;
+      const code = await nextCode(tx, input.startDate.slice(0, 4));
       const name =
         property.label && property.label !== 'Home' ? property.label : `${customer.name}`;
       const [project] = await tx
@@ -149,47 +161,36 @@ export class ProjectCreationService {
           loan: input.loan,
           lenderName: input.lenderName ?? null,
           loanPaise: input.loan ? input.loanPaise : 0,
-          battery: quotation.batteryProductId !== null || input.battery,
-          groundMount: input.groundMount || quotation.structureType === 'ground_mount',
+          battery,
+          groundMount,
           subsidy: quotation.subsidyPaise > 0,
           nameChange: input.nameChange,
           managerUserId: input.managerUserId ?? actor.userId,
           startDate: input.startDate,
+          targetFinishDate: input.targetFinishDate ?? null,
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
 
-      const { unassigned, perPerson } = await writeGeneratedTasks(
+      await saveProjectTeam(tx, project.id, team, actor.userId);
+      const { unassigned, toConfirm, perPerson } = await writeGeneratedTasks(
         tx,
         project.id,
         generated,
         candidates,
+        team.pool,
       );
       await syncWorkOrders(tx, project.id, actor.userId);
-
-      const milestones = planMilestones(
-        quotation.totalPaise,
-        await planSteps(tx, input.paymentPlanId),
-        input.loan ? input.loanPaise : 0,
+      await activateMilestones(
+        tx,
+        project.id,
+        {
+          totalPaise: quotation.totalPaise,
+          paymentPlanId: input.paymentPlanId,
+          loanPaise: input.loan ? input.loanPaise : 0,
+        },
+        actor.userId,
       );
-      const createdMilestones = await tx
-        .insert(paymentMilestones)
-        .values(
-          milestones.map((milestone, position) => ({
-            projectId: project.id,
-            key: milestone.key,
-            label: milestone.label,
-            payer: milestone.payer,
-            amountPaise: milestone.amountPaise,
-            trigger: milestone.trigger,
-            status:
-              milestone.trigger === 'quotation_accepted' ? ('due' as const) : ('upcoming' as const),
-            dueAt: milestone.trigger === 'quotation_accepted' ? new Date() : null,
-            position,
-          })),
-        )
-        .returning({ id: paymentMilestones.id, dueAt: paymentMilestones.dueAt });
-      await postDueMilestones(tx, createdMilestones, actor.userId);
 
       const facts = initialFacts(customer, property, quotation, panel, inverter, input.startDate);
       await tx
@@ -200,7 +201,7 @@ export class ProjectCreationService {
       await tx.insert(projectActivities).values({
         projectId: project.id,
         kind: 'created',
-        message: `Project created from ${quotation.number} with ${generated.length} tasks${unassigned ? `, ${unassigned} waiting for someone to be assigned` : ''}.`,
+        message: createdMessage(quotation.number, generated.length, unassigned, toConfirm),
         userId: actor.userId,
       });
       await queueWhatsApp(
@@ -214,19 +215,10 @@ export class ProjectCreationService {
       await recordAudit(tx, actor.userId, 'project.created', 'project', project.id, {
         code,
         tasks: generated.length,
+        contractorId: team.pool.contractor?.id ?? null,
+        team: team.pool.team,
       });
-      return { id: project.id, code, tasks: generated.length, unassigned };
+      return { id: project.id, code, tasks: generated.length, unassigned, toConfirm };
     });
-  }
-}
-
-/** Milestones due from day one (the advance) are booked in the ledger with the project. */
-async function postDueMilestones(
-  tx: Transaction,
-  milestones: readonly { readonly id: string; readonly dueAt: Date | null }[],
-  userId: string,
-): Promise<void> {
-  for (const milestone of milestones) {
-    if (milestone.dueAt) await postMilestoneDue(tx, milestone.id, userId);
   }
 }

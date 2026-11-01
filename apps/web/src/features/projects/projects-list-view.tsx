@@ -1,5 +1,6 @@
 'use client';
 
+import type { ProjectSummary } from '@oneohm/api-contracts';
 import {
   Button,
   EmptyState,
@@ -8,8 +9,8 @@ import {
   Skeleton,
   SkeletonGroup,
 } from '@oneohm/design-system/web';
-import { formatKwp } from '@oneohm/shared';
-import { useQuery } from '@tanstack/react-query';
+import { formatKwp, todayIn } from '@oneohm/shared';
+import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { FileCheck2, SearchX, SunMedium } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
@@ -19,7 +20,8 @@ import { LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { ProjectCard } from './project-card';
-import { DEFAULT_FILTERS, filterProjects, isFiltered } from './project-filters';
+import { DEFAULT_FILTERS, filterProjects, isFiltered, type Layout } from './project-filters';
+import { ProjectsExtraFilters } from './projects-extra-filters';
 import { ProjectsFilterBar } from './projects-filter-bar';
 import { ProjectsTable } from './projects-table';
 import { useProjectFilters } from './use-project-filters';
@@ -44,7 +46,7 @@ export function ProjectsListView() {
     queryFn: () => expectStatus(api.projects.listProjects(), 200),
   });
   const shown = useMemo(
-    () => (query.data ? filterProjects(query.data, filters) : []),
+    () => (query.data ? filterProjects(query.data, filters, todayIn()) : []),
     [query.data, filters],
   );
   const capacity = shown.reduce((sum, project) => sum + project.capacityWp, 0);
@@ -77,36 +79,49 @@ export function ProjectsListView() {
         search={search}
         onSearch={setSearch}
       />
-      {query.isPending ? (
-        <ProjectsSkeleton label={t('loading')} />
-      ) : query.isError ? (
-        <LoadError error={query.error} onRetry={() => query.refetch()} />
-      ) : query.data.length === 0 ? (
-        <EmptyState icon={<SunMedium />} title={t('emptyTitle')} description={t('emptyBody')} />
-      ) : shown.length === 0 ? (
-        <EmptyState
-          icon={<SearchX />}
-          title={t('noMatchTitle')}
-          description={t('noMatchBody')}
-          action={
-            <Button variant="secondary" size="sm" onClick={clear}>
-              {t('clearFilters')}
-            </Button>
-          }
-        />
-      ) : filters.view === 'table' ? (
-        <ProjectsTable projects={shown} />
-      ) : (
-        <ul
-          aria-label={t('title')}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-        >
-          {shown.map((project, index) => (
-            <ProjectCard key={project.id} project={project} index={index} />
-          ))}
-        </ul>
-      )}
+      <ProjectsExtraFilters filters={filters} projects={query.data ?? []} onChange={setFilters} />
+      <ProjectsBody query={query} shown={shown} layout={filters.view} onClear={clear} />
     </motion.div>
+  );
+}
+
+/** Loading, error, empty, no match, or the projects as cards or a table. */
+function ProjectsBody({
+  query,
+  shown,
+  layout,
+  onClear,
+}: {
+  readonly query: UseQueryResult<ProjectSummary[]>;
+  readonly shown: readonly ProjectSummary[];
+  readonly layout: Layout;
+  readonly onClear: () => void;
+}) {
+  const t = useTranslations('projects.list');
+  if (query.isPending) return <ProjectsSkeleton label={t('loading')} />;
+  if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+  if (query.data.length === 0)
+    return <EmptyState icon={<SunMedium />} title={t('emptyTitle')} description={t('emptyBody')} />;
+  if (shown.length === 0)
+    return (
+      <EmptyState
+        icon={<SearchX />}
+        title={t('noMatchTitle')}
+        description={t('noMatchBody')}
+        action={
+          <Button variant="secondary" size="sm" onClick={onClear}>
+            {t('clearFilters')}
+          </Button>
+        }
+      />
+    );
+  if (layout === 'table') return <ProjectsTable projects={shown} />;
+  return (
+    <ul aria-label={t('title')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {shown.map((project, index) => (
+        <ProjectCard key={project.id} project={project} index={index} />
+      ))}
+    </ul>
   );
 }
 

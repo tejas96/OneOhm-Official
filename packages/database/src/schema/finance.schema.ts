@@ -73,6 +73,11 @@ export const payments = pgTable(
     gatewayFeePaise: money('gateway_fee_paise'),
     /** The money came out of the customer's credit (an earlier overpayment), not in afresh. */
     paidFromCredit: boolean('paid_from_credit').notNull().default(false),
+    /**
+     * TDS the business customer deducted (PRD 3.11). `amountPaise` is what the receipt
+     * settles, including it; the money that arrived is `amountPaise - tdsPaise`.
+     */
+    tdsPaise: money('tds_paise').notNull().default(0),
   },
   (table) => [
     index('payments_project_idx').on(table.projectId),
@@ -112,6 +117,13 @@ export const payables = pgTable(
     paidByUserId: uuid('paid_by_user_id').references(() => users.id),
     /** Vendor advances set against this bill; only the rest is paid out. */
     advanceAdjustedPaise: money('advance_adjusted_paise').notNull().default(0),
+    /** The total on the vendor's own invoice, checked against the order (PRD 3.10). */
+    vendorInvoicePaise: money('vendor_invoice_paise'),
+    /** GST inside the amount, when known (bills from goods receipts); TDS is on the rest. */
+    gstPaise: money('gst_paise').notNull().default(0),
+    /** TDS held on the bill (PRD 3.11): owed to the government, not paid to the payee. */
+    tdsBp: integer('tds_bp').notNull().default(0),
+    tdsPaise: money('tds_paise').notNull().default(0),
   },
   (table) => [index('payables_due_idx').on(table.dueOn)],
 );

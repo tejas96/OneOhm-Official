@@ -19,6 +19,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { openLinksFor } from '../online-payments/open-links';
 import { ReportStatusService } from '../reports/report-status.service';
+import { ProjectTeamService } from './project-team.service';
 
 /** The project control room: everything about one project in one answer. */
 @Injectable()
@@ -26,6 +27,7 @@ export class ProjectReadService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly reports: ReportStatusService,
+    private readonly team: ProjectTeamService,
   ) {}
 
   list() {
@@ -136,6 +138,7 @@ export class ProjectReadService {
         createdAt: activity.createdAt.toISOString(),
       })),
       reports: await this.reports.statuses(id),
+      setup: await this.team.setup(project),
     };
   }
 }

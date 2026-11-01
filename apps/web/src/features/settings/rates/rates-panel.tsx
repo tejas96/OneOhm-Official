@@ -2,6 +2,7 @@
 
 import type { RateCardValues } from '@oneohm/api-contracts';
 import { Button, useToast } from '@oneohm/design-system/web';
+import { DEFAULT_SQM_PER_KWP } from '@oneohm/domain';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
@@ -172,6 +173,14 @@ export function RatesPanel() {
               error={errors[rule.key]}
             />
           ))}
+          <ValueRow
+            label={t('fields.sqmPerKwp')}
+            hint={t('fields.sqmPerKwpHint')}
+            unit="whole"
+            value={rates.sqmPerKwp ?? DEFAULT_SQM_PER_KWP}
+            onChange={(sqmPerKwp) => setRates({ ...rates, sqmPerKwp })}
+            error={errors.sqmPerKwp}
+          />
         </RowGroup>
       </SettingsSection>
 

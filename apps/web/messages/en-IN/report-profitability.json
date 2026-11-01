@@ -15,7 +15,8 @@
       "costDetail": "{used} of the {estimate} estimated cost",
       "over": "Over budget",
       "overDetail": "{count, plural, one {Project} other {Projects}} whose actual cost is already above the estimate",
-      "overNone": "No project has cost more than estimated so far"
+      "overNone": "No project has cost more than estimated so far",
+      "byProjectLink": "See margin by project"
     },
     "trend": {
       "title": "Projects started by {unit}",
@@ -37,11 +38,13 @@
       "body": "Actual cost so far, by where it came from, against the estimate for the same projects.",
       "spentOf": "{actual} of {estimate} estimated",
       "stock": "Material from stock",
-      "stockBody": "Dispatched to site, at catalogue cost",
+      "stockBody": "Dispatched to site or issued to the contractor, less what came back, at catalogue cost",
       "vendor": "Vendor bills",
       "vendorBody": "Bought for the project directly",
       "contractor": "Contractor bills",
       "contractorBody": "Installation work orders, advances and retention",
+      "travel": "Travel claims",
+      "travelBody": "Employees' travel claimed for the project, waiting or approved",
       "billsStatus": "Bills {paid} paid · {approved} approved · {pending} waiting approval",
       "estimate": "Estimated cost by kind",
       "material": "Material: panels, inverters, structure, cable, electrical",
@@ -65,6 +68,6 @@
         "completed": "Completed"
       }
     },
-    "note": "Projects counted: not cancelled, started in the period, for the chosen manager and type. Contract value is the accepted quotation's price without GST (the survey revision once the customer accepts it); the estimated cost and margin come from the same quotation. Actual cost so far = material dispatched from stock at the product's catalogue cost + vendor bills + contractor bills on the project, whether waiting approval, approved or paid. A vendor bill raised from a goods receipt bought stock into the store, so it counts when that stock is dispatched, not twice. Margin so far = (contract value − actual cost) ÷ contract value. Projects still in progress have not had all their costs yet, so their actual cost is incomplete and their margin so far will come down."
+    "note": "Projects counted: not cancelled, started in the period, for the chosen manager and type. Contract value is the accepted quotation's price without GST (the survey revision once the customer accepts it); the estimated cost and margin come from the same quotation. Actual cost so far = material dispatched from stock or issued straight to the contractor, less what the contractor returned unused, at the product's catalogue cost + vendor bills + contractor bills on the project, whether waiting approval, approved or paid + employees' travel claims made for the project, waiting or approved. A vendor bill raised from a goods receipt bought stock into the store, so it counts when that stock is dispatched, not twice. Margin so far = (contract value − actual cost) ÷ contract value. Projects still in progress have not had all their costs yet, so their actual cost is incomplete and their margin so far will come down."
   }
 }

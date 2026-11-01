@@ -18,6 +18,9 @@ export const STAGE_MEANING: Copy<typeof en.STAGE_MEANING> = {
 
 export const MILESTONE: Copy<typeof en.MILESTONE> = {
   site_survey: 'साईट भेट आणि छताचे मोजमाप',
+  site_survey_society: 'साईट भेट आणि छताचे मोजमाप',
+  site_survey_commercial: 'साईट भेट आणि छताचे मोजमाप',
+  site_survey_ground: 'साईट भेट आणि जमिनीचे मोजमाप',
   name_change: 'वीज कनेक्शनवरील नाव बदल',
   system_design: 'तुमच्या सिस्टिमचे डिझाइन मंजूर झाले',
   loan_approval: 'बँकेचे कर्ज मंजूर झाले',
@@ -30,6 +33,7 @@ export const MILESTONE: Copy<typeof en.MILESTONE> = {
   net_meter_installation: 'नेट मीटर बसवला',
   handover: 'सिस्टिम ताब्यात दिली, वॉरंटीची कागदपत्रे',
   subsidy_application: 'पीएम सूर्य घर पोर्टलवर सबसिडीचा अर्ज केला',
+  subsidy_inspection: 'सबसिडीसाठी तपासणी मंजूर झाली',
   subsidy_release: 'सबसिडी तुमच्या बँक खात्यात जमा झाली',
 };
 
@@ -71,10 +75,16 @@ export const HOME: Copy<typeof en.HOME> = {
   subsidy: {
     pending: 'नेट मीटर बसवल्यावर आम्ही अर्ज करू.',
     applied: 'पीएम सूर्य घर पोर्टलवर अर्ज केला आहे. सरकार ती थेट तुमच्या बँकेत जमा करते.',
+    inspected: 'तपासणी मंजूर झाली. आता सरकार ती तुमच्या बँकेत जमा करेल.',
     released: 'तुमच्या बँक खात्यात जमा झाली.',
     not_applicable: 'या प्रकल्पाला लागू नाही.',
   },
-  subsidyStatus: { pending: 'अजून अर्ज केला नाही', applied: 'अर्ज केला', released: 'जमा झाली' },
+  subsidyStatus: {
+    pending: 'अजून अर्ज केला नाही',
+    applied: 'अर्ज केला',
+    inspected: 'तपासणी झाली',
+    released: 'जमा झाली',
+  },
   contactTitle: 'तुमचे OneOhm संपर्क',
   contactFallback: 'OneOhm टीम',
   call: 'फोन करा',
@@ -86,4 +96,14 @@ export const HOME: Copy<typeof en.HOME> = {
   feedbackBody: 'तुमच्या रेटिंगमुळे पुढच्या घरासाठी आमची टीम अजून चांगले काम करेल.',
   feedbackAction: 'तुमचा अनुभव सांगा',
   feedbackThanks: 'रेटिंगबद्दल धन्यवाद.',
+  todoTitle: 'तुम्ही करायच्या गोष्टी',
+  todoPay: 'भरा',
+  todoSee: 'पाहा',
+  todoSend: 'पाठवा',
+  todoRate: 'रेटिंग द्या',
+  todoPaymentMeta: (amount) => `${amount} भरायचे आहेत`,
+  todoPaperMeta: 'OneOhm ला तुमच्याकडून हा कागद हवा आहे',
+  todoRatingMeta: 'फक्त काही सेकंद लागतील.',
+  todoFeedback: 'तुमचा सोलरचा अनुभव कसा होता?',
+  todoPayFailed: 'पेमेंटचे पान उघडले नाही. पुन्हा प्रयत्न करा.',
 };

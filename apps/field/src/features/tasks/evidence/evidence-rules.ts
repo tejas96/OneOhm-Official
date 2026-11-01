@@ -6,6 +6,10 @@ type TaskInfo = Pick<ProjectTask, 'templateKey' | 'stage'>;
 
 const BY_TEMPLATE: Readonly<Record<string, DocumentCategory>> = {
   site_survey: 'site_survey',
+  site_survey_society: 'site_survey',
+  site_survey_commercial: 'site_survey',
+  site_survey_ground: 'site_survey',
+  commercial_documents: 'customer_kyc',
   electricity_details: 'electricity_bill',
   society_documents: 'customer_kyc',
   name_change: 'discom',

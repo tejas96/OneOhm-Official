@@ -5,6 +5,19 @@
  */
 import type { LanguageWords } from './customer-message-words';
 
+const MR_STAGES: Readonly<Record<string, string>> = {
+  survey: 'साइट सर्व्हे',
+  installation: 'इन्स्टॉलेशन',
+  commissioning: 'सिस्टिम सुरू करणे आणि हस्तांतरण',
+};
+
+/** Who a delayed step waits on, by the party key in the message. */
+const MR_WAITING: Readonly<Record<string, string>> = {
+  customer: 'तुमच्याकडून कागद किंवा उत्तर हवे आहे',
+  bank: 'बँकेकडून उत्तराची वाट पाहत आहोत',
+  discom: 'वीज मंडळाकडून (DISCOM) उत्तराची वाट पाहत आहोत',
+};
+
 export const MARATHI_WORDS: LanguageWords = {
   messages: {
     quotation_sent: (p) => ({
@@ -51,6 +64,34 @@ export const MARATHI_WORDS: LanguageWords = {
       title: `मोफत ${p.visit} भेट: ${p.date}`,
       body: `${p.project}: येण्याआधी आमची सर्व्हिस टीम तुम्हाला फोन करेल.`,
     }),
+    survey_scheduled: (p) => ({
+      title: `साइट सर्व्हे: ${p.date}`,
+      body: `${p.project}: येण्याआधी आमची टीम तुम्हाला फोन करेल.`,
+    }),
+    stage_rating_request: (p) => ({
+      title: 'आमचे काम कसे वाटले?',
+      body: `${p.project}: ${MR_STAGES[p.stageKey ?? ''] ?? p.stage} पूर्ण झाले. कृपया ॲपमध्ये रेटिंग द्या.`,
+    }),
+    installation_started: (p) => ({
+      title: 'बसवण्याचे काम सुरू झाले',
+      body: `${p.project}: आमची टीम तुमची ${p.capacity} सिस्टिम बसवत आहे.`,
+    }),
+    commissioning_completed: (p) => ({
+      title: 'तुमची सिस्टिम सुरू झाली',
+      body: `${p.project}: आता शेवटचे पेमेंट बाकी आहे. ‘पेमेंट’ उघडून पाहा.`,
+    }),
+    project_update_link: (p) => ({
+      title: p.milestone ?? 'प्रकल्पाची नवी माहिती',
+      body: `${p.project}: कागद ‘कागदपत्रे’ मध्ये आहे.`,
+    }),
+    service_visit_booked: (p) => ({
+      title: `तंत्रज्ञाची भेट: ${p.date}`,
+      body: `${p.topic}: येण्याआधी तंत्रज्ञ तुम्हाला फोन करतील.`,
+    }),
+    project_waiting: (p) => ({
+      title: MR_WAITING[p.party ?? ''] ?? 'थोडा उशीर होत आहे',
+      body: `${p.project}: ${p.milestone}. पुढची माहिती आम्ही कळवू.`,
+    }),
     referral_reward: (p) => ({
       title: 'रेफरल बक्षिसाची माहिती',
       body: `${p.friend}: ${p.amount} — ${p.status}.`,
@@ -58,6 +99,9 @@ export const MARATHI_WORDS: LanguageWords = {
   },
   steps: {
     site_survey: 'साईट भेट आणि छताचे मोजमाप',
+    site_survey_society: 'साईट भेट आणि छताचे मोजमाप',
+    site_survey_commercial: 'साईट भेट आणि छताचे मोजमाप',
+    site_survey_ground: 'साईट भेट आणि जमिनीचे मोजमाप',
     name_change: 'वीज कनेक्शनवरील नाव बदल',
     system_design: 'तुमच्या सिस्टिमचे डिझाइन मंजूर झाले',
     loan_approval: 'बँकेचे कर्ज मंजूर झाले',
@@ -70,6 +114,7 @@ export const MARATHI_WORDS: LanguageWords = {
     net_meter_installation: 'नेट मीटर बसवला',
     handover: 'सिस्टिम ताब्यात दिली, वॉरंटीची कागदपत्रे',
     subsidy_application: 'पीएम सूर्य घर पोर्टलवर सबसिडीचा अर्ज केला',
+    subsidy_inspection: 'सबसिडीसाठी तपासणी मंजूर झाली',
     subsidy_release: 'सबसिडी तुमच्या बँक खात्यात जमा झाली',
   },
   payments: {

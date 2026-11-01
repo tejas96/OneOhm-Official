@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, Plus, Search, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -37,13 +38,30 @@ function matches(quotation: QuotationSummary, filter: Filter, term: string): boo
   return haystack.toLowerCase().includes(term.toLowerCase());
 }
 
+/** The chosen status lives in `?filter=`, so a link from a count opens exactly those quotations. */
+function useQuotationFilter(): readonly [Filter, (next: Filter) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const asked = params.get('filter');
+  const filter = FILTERS.find((candidate) => candidate === asked) ?? 'all';
+  const set = (next: Filter) => {
+    const search = new URLSearchParams(params);
+    if (next === 'all') search.delete('filter');
+    else search.set('filter', next);
+    const suffix = search.toString();
+    router.replace(suffix ? `${pathname}?${suffix}` : pathname, { scroll: false });
+  };
+  return [filter, set];
+}
+
 /** Every quotation, newest first, filtered by status and found by number or customer. */
 export function QuotationsList() {
   const t = useTranslations('quotations.list');
   const statusT = useTranslations('quotations.status');
   const format = useFormatter();
   const canCreate = useCan('quotations.create');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useQuotationFilter();
   const [term, setTerm] = useState('');
   const query = useQuery({
     queryKey: ['quotations'],
@@ -136,15 +154,15 @@ export function QuotationsList() {
             size="sm"
             value={filter}
             onValueChange={setFilter}
-            options={FILTERS.filter((value) => value !== 'approval' || waiting > 0).map(
-              (value) => ({
-                value,
-                label:
-                  value === 'approval'
-                    ? t('approvalFilter', { count: waiting })
-                    : t(`filters.${value}`),
-              }),
-            )}
+            options={FILTERS.filter(
+              (value) => value !== 'approval' || waiting > 0 || filter === 'approval',
+            ).map((value) => ({
+              value,
+              label:
+                value === 'approval'
+                  ? t('approvalFilter', { count: waiting })
+                  : t(`filters.${value}`),
+            }))}
           />
         </div>
         <Input

@@ -7,6 +7,7 @@ import {
   lendingPartnerSchema,
   loanStatusSchema,
   moneyOutMethodSchema,
+  payableReviewSchema,
   payableSchema,
   projectLoanSchema,
   receivableSchema,
@@ -83,8 +84,18 @@ export const financeContract = c.router({
       billNumber: shortText(60).nullable().optional(),
       amountPaise: paiseSchema.positive('Enter an amount above zero.'),
       dueOn: calendarDateSchema,
+      /** TDS to hold on the bill, in basis points (1% = 100). */
+      tdsBp: payableReviewSchema.shape.tdsBp.default(0),
     }),
     responses: { 201: payableSchema },
+  },
+  reviewPayable: {
+    method: 'PATCH',
+    path: '/finance/payables/:id',
+    pathParams: idParams,
+    body: payableReviewSchema,
+    responses: { 200: payableSchema },
+    summary: "Before approval: the vendor's invoice total and the TDS rate on the bill.",
   },
   approvePayable: {
     method: 'POST',

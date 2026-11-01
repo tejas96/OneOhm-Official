@@ -8,6 +8,7 @@ import { FAMILY } from '@/copy/family';
 import { HOME, MILESTONE, STAGE_MEANING } from '@/copy/home';
 import { BILLING, DOCUMENTS, PAYMENTS } from '@/copy/money';
 import { STAGE_RATING } from '@/copy/ratings';
+import { REQUEST_MEDIA } from '@/copy/request-media';
 import { lookup } from './copy';
 import { currentLanguage, dateLocale, setLanguage } from './language';
 
@@ -30,6 +31,7 @@ const MODULES = {
   DOCUMENTS,
   PAYMENTS,
   STAGE_RATING,
+  REQUEST_MEDIA,
 };
 
 /** Every string in a copy module (functions called with sample arguments), with its path. */

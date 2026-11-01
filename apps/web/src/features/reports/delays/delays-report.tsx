@@ -10,6 +10,8 @@ import {
 } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { centerHref } from '@/features/command-center/center-links';
+import { useCenterFilters } from '@/features/command-center/use-center-filters';
 import { PeriodNumbers } from '../parts/period-numbers';
 import { ReportBody, ReportNote } from '../parts/report-body';
 import { useBucketNames, whole } from '../parts/report-format';
@@ -20,6 +22,7 @@ import { DiscomTime, SlowestSteps, WaitingNow } from './delays-tables';
 /** One tile per cause: days late on tasks finished in the period plus open ones past due. */
 function Kpis({ data }: { readonly data: DelaysReport }) {
   const t = useTranslations('delaysReport.kpis');
+  const { query } = useCenterFilters();
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {data.byParty.map((row) => (
@@ -35,6 +38,8 @@ function Kpis({ data }: { readonly data: DelaysReport }) {
               <span>{t('open', { count: row.openLate, days: row.openDays })}</span>
             </span>
           }
+          href={centerHref('/command-center/tasks', query, { show: 'late', party: row.party })}
+          hrefLabel={t('openLate', { party: t(row.party) })}
         />
       ))}
     </div>

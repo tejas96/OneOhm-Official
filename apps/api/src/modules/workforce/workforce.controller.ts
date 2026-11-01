@@ -86,12 +86,13 @@ export class WorkforceController {
         const filter = query.status ? eq(leaveRequests.status, query.status) : undefined;
         return { status: 200, body: await this.leave.list(filter) };
       },
+      requestImpact: async ({ params }) => {
+        approve();
+        return { status: 200, body: await this.leave.requestImpact(params.id) };
+      },
       decideLeave: async ({ params, body }) => {
         approve();
-        return {
-          status: 200,
-          body: await this.leave.decide(actor, params.id, body.approve, body.note),
-        };
+        return { status: 200, body: await this.leave.decide(actor, params.id, body) };
       },
     });
   }

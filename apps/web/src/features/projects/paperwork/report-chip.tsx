@@ -54,7 +54,7 @@ export function ReportChip({
       }
     >
       <Link
-        href={`/projects/${projectId}#reports`}
+        href={`/projects/${projectId}?tab=reports`}
         className={cn(BASE, 'bg-at-risk-tint text-at-risk hover:ring-1 hover:ring-at-risk/40')}
       >
         <CircleAlert aria-hidden className="size-3.5 shrink-0" />

@@ -1,12 +1,17 @@
 import type { CustomerProject } from '@oneohm/api-contracts';
 import { Button, Card, formatInr, StatusPill, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { HandCoins, MessageCircle, Phone, Star, UsersRound } from 'lucide-react-native';
+import { HandCoins, MessageCircle, Phone, UsersRound } from 'lucide-react-native';
 import { Linking, StyleSheet, View } from 'react-native';
 import { HOME } from '@/copy/home';
 import { dialDigits } from '@/lib/journey';
 
-const SUBSIDY_TONE = { pending: 'neutral', applied: 'waiting', released: 'done' } as const;
+const SUBSIDY_TONE = {
+  pending: 'neutral',
+  applied: 'waiting',
+  inspected: 'review',
+  released: 'done',
+} as const;
 
 /** The expected government subsidy and where it stands. */
 export function SubsidyCard({ subsidy }: { readonly subsidy: CustomerProject['subsidy'] }) {
@@ -77,30 +82,6 @@ export function ContactCard({ contact }: { readonly contact: CustomerProject['co
           />
         </View>
       ) : null}
-    </Card>
-  );
-}
-
-/** Asks for a rating once the system is live. */
-export function FeedbackPrompt({ projectId }: { readonly projectId: string }) {
-  const theme = useTheme();
-  return (
-    <Card tone="sunken" style={styles.card}>
-      <View style={styles.headRow}>
-        <Star size={20} color={theme.status.atRisk.solid} />
-        <Text variant="titleMd" style={styles.fill}>
-          {HOME.feedbackTitle}
-        </Text>
-      </View>
-      <Text variant="bodySm" tone="secondary">
-        {HOME.feedbackBody}
-      </Text>
-      <Button
-        label={HOME.feedbackAction}
-        variant="primary"
-        size="sm"
-        onPress={() => router.push({ pathname: '/feedback/[projectId]', params: { projectId } })}
-      />
     </Card>
   );
 }

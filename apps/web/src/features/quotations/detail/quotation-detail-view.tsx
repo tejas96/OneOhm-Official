@@ -10,7 +10,7 @@ import {
   StatusPill,
 } from '@oneohm/design-system/web';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MessageSquareX } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -94,6 +94,15 @@ function Detail({ quotation }: { readonly quotation: QuotationDetail }) {
       <div className="-mt-4 flex flex-wrap items-center gap-2 empty:hidden">
         <QuotationActions quotation={quotation} />
       </div>
+      {quotation.status === 'rejected' && quotation.rejectionReason && (
+        <p className="-mt-4 flex max-w-3xl items-start gap-2.5 rounded-xl border border-hairline bg-raised px-4 py-3 type-body-sm text-ink-muted">
+          <MessageSquareX aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-faint" />
+          <span>
+            <span className="font-medium text-ink">{t('rejected')}</span> ·{' '}
+            {t('rejectedReason', { reason: quotation.rejectionReason })}
+          </span>
+        </p>
+      )}
       <div className="grid gap-10 lg:grid-cols-[minmax(22rem,27rem)_minmax(0,1fr)] lg:items-start">
         <PriceStack totals={quotation.totals} className="lg:sticky lg:top-6" />
         <div className="flex flex-col gap-10">

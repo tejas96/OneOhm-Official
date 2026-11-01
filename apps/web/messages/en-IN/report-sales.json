@@ -11,7 +11,7 @@
       "leadsLink": "Open the leads",
       "won": "Orders won",
       "wonDetail": "{count, plural, one {# order} other {# orders}} · {capacity}",
-      "wonLink": "Open the quotations",
+      "wonLink": "Open the accepted quotations",
       "conversion": "Lead to order",
       "conversionDetail": "{won} of {leads} leads from this period won so far",
       "winRate": "Quotation win rate",

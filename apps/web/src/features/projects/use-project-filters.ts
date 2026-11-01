@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useRef } from 'react';
 import {
   DEFAULT_FILTERS,
+  FINISH_FILTERS,
   HEALTH_FILTERS,
   LAYOUTS,
   type ProjectFilters,
@@ -23,6 +24,9 @@ const PARAMS: Readonly<Record<keyof ProjectFilters, string>> = {
   type: 'type',
   sort: 'sort',
   view: 'view',
+  manager: 'manager',
+  finish: 'finish',
+  since: 'since',
 };
 
 /**
@@ -41,6 +45,11 @@ export function useProjectFilters(): [ProjectFilters, (patch: Partial<ProjectFil
       type: pick(params.get(PARAMS.type), TYPE_FILTERS, DEFAULT_FILTERS.type),
       sort: pick(params.get(PARAMS.sort), SORTS, DEFAULT_FILTERS.sort),
       view: pick(params.get(PARAMS.view), LAYOUTS, DEFAULT_FILTERS.view),
+      manager: params.get(PARAMS.manager) ?? '',
+      finish: pick(params.get(PARAMS.finish), FINISH_FILTERS, DEFAULT_FILTERS.finish),
+      since: /^\d{4}-\d{2}-\d{2}$/.test(params.get(PARAMS.since) ?? '')
+        ? (params.get(PARAMS.since) ?? '')
+        : '',
     }),
     [params],
   );

@@ -1,4 +1,4 @@
-import { Text, useTheme } from '@oneohm/mobile-ui';
+import { Text, useReducedMotion, useTheme } from '@oneohm/mobile-ui';
 import * as Haptics from 'expo-haptics';
 import { CircleCheck } from 'lucide-react-native';
 import { createContext, type ReactNode, use, useCallback, useRef, useState } from 'react';
@@ -13,6 +13,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
   const shown = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const show = useCallback(
@@ -21,21 +22,24 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
       if (Platform.OS !== 'web')
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (timer.current) clearTimeout(timer.current);
-      Animated.spring(shown, {
-        toValue: 1,
-        useNativeDriver: Platform.OS !== 'web',
-        stiffness: 380,
-        damping: 32,
-      }).start();
+      // Reduced motion: the toast simply appears and disappears.
+      if (reduced) shown.setValue(1);
+      else
+        Animated.spring(shown, {
+          toValue: 1,
+          useNativeDriver: Platform.OS !== 'web',
+          stiffness: 380,
+          damping: 32,
+        }).start();
       timer.current = setTimeout(() => {
         Animated.timing(shown, {
           toValue: 0,
-          duration: 180,
+          duration: reduced ? 0 : 180,
           useNativeDriver: Platform.OS !== 'web',
         }).start(() => setMessage(null));
       }, 2400);
     },
-    [shown],
+    [shown, reduced],
   );
 
   return (

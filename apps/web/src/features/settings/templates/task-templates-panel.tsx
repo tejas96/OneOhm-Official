@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
+import { EscalationCard } from './escalation-card';
 import { useTaskColumns } from './task-template-columns';
 import { TaskTemplateSheet } from './task-template-sheet';
 import { TEMPLATE_KEYS, useRoleOptions, useTaskTemplates } from './use-templates';
@@ -74,6 +75,7 @@ export function TaskTemplatesPanel() {
           {t('add')}
         </Button>
       </div>
+      <EscalationCard />
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative md:w-72">
           <Search

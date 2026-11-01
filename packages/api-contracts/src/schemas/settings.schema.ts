@@ -39,6 +39,8 @@ export const rateCardSchema = z.object({
   contingencyBp: basisPointsSchema,
   toleranceBp: basisPointsSchema,
   discountApprovalBp: basisPointsSchema,
+  /** Shadow-free m² a rooftop needs per kWp, checked after the survey; 0 switches it off. */
+  sqmPerKwp: z.number().min(0).max(50).optional(),
 });
 export type RateCardValues = z.infer<typeof rateCardSchema>;
 
@@ -63,6 +65,15 @@ export const productInputSchema = z.object({
   pricePaise: amountSchema,
   costPaise: amountSchema,
   taxRateBp: basisPointsSchema,
+  efficiencyBp: z
+    .number()
+    .int()
+    .min(100, 'Use at least 1%.')
+    .max(10_000, 'Use at most 100%.')
+    .nullable()
+    .optional(),
+  technology: z.string().trim().max(80).nullable().optional(),
+  warrantyYears: z.number().int().min(0).max(40, 'Use at most 40 years.').nullable().optional(),
   active: z.boolean(),
 });
 export type ProductInput = z.infer<typeof productInputSchema>;

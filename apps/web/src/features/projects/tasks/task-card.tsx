@@ -10,10 +10,12 @@ import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
 import { TaskActions } from './task-actions';
+import { ReworkBadge, TaskCardNotes } from './task-card-notes';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
 
 const DISC: Readonly<Record<string, string>> = {
   onTrack: 'bg-on-track-tint text-on-track',
+  atRisk: 'bg-at-risk-tint text-at-risk',
   blocked: 'bg-blocked-tint text-blocked',
   overdue: 'bg-overdue-tint text-overdue',
   review: 'bg-review-tint text-review',
@@ -76,6 +78,7 @@ export function TaskCard({
           <p className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}>{task.title}</p>
           <TaskActions task={task} />
         </div>
+        <TaskCardNotes task={task} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 type-body-sm text-ink-muted">
           <StatusPill
             tone={tone}
@@ -116,6 +119,7 @@ export function TaskCard({
               {t('needsApproval')}
             </span>
           )}
+          <ReworkBadge count={task.reworkCount} />
           {task.customerVisible && (
             <span className="inline-flex items-center gap-1.5">
               <Eye aria-hidden className="size-3.5" />

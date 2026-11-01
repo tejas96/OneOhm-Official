@@ -70,6 +70,8 @@ export function milestoneDuePosting(input: {
  * Money received. Before its milestone is due it is an advance, not a settlement.
  * `fromCredit`: the customer's credit (an earlier overpayment) is applied, so the money
  * comes out of customer credit instead of arriving in the bank again.
+ * `tdsPaise`: TDS the customer deducted. The receipt settles the full amount; the TDS
+ * part is a credit OneOhm claims from the tax department, not money in the bank.
  */
 export function paymentPosting(input: {
   readonly payer: Payer;
@@ -77,12 +79,15 @@ export function paymentPosting(input: {
   readonly amountPaise: number;
   readonly milestoneDue: boolean;
   readonly fromCredit?: boolean;
+  readonly tdsPaise?: number;
 }): JournalLine[] {
+  const tds = Math.min(Math.max(0, input.tdsPaise ?? 0), input.amountPaise);
+  const money = input.amountPaise - tds;
   return [
-    debit(
-      input.fromCredit ? ACCOUNT.customerCredit : moneyInAccountFor(input.method),
-      input.amountPaise,
-    ),
+    ...(money > 0
+      ? [debit(input.fromCredit ? ACCOUNT.customerCredit : moneyInAccountFor(input.method), money)]
+      : []),
+    ...(tds > 0 ? [debit(ACCOUNT.tdsReceivable, tds)] : []),
     credit(
       input.milestoneDue ? receivableFor(input.payer) : ACCOUNT.advancesReceived,
       input.amountPaise,
@@ -126,13 +131,34 @@ const PAYABLE_COST = {
 } as const satisfies Record<PayableParty, LedgerAccountCode>;
 const payableAccount = (party: PayableParty) => PAYABLE_ACCOUNT[party];
 
-/** An approved bill: the cost is booked and OneOhm owes the vendor, crew or employee. */
+/**
+ * An approved bill: the cost is booked and OneOhm owes the vendor, crew or employee.
+ * TDS held on the bill is owed to the government instead of the payee.
+ */
 export function payableApprovedPosting(input: {
   readonly party: PayableParty;
   readonly amountPaise: number;
+  readonly tdsPaise?: number;
 }): JournalLine[] {
   const cost = PAYABLE_COST[input.party];
-  return [debit(cost, input.amountPaise), credit(payableAccount(input.party), input.amountPaise)];
+  const tds = Math.min(Math.max(0, input.tdsPaise ?? 0), input.amountPaise);
+  const owed = input.amountPaise - tds;
+  return [
+    debit(cost, input.amountPaise),
+    ...(owed > 0 ? [credit(payableAccount(input.party), owed)] : []),
+    ...(tds > 0 ? [credit(ACCOUNT.tdsPayable, tds)] : []),
+  ];
+}
+
+/**
+ * An approved project bonus or incentive for an employee (PRD 4.7): a staff cost, owed to
+ * the employee until finance pays it. Paying it is an ordinary payable payment.
+ */
+export function employeeBonusPosting(input: { readonly amountPaise: number }): JournalLine[] {
+  return [
+    debit(ACCOUNT.staffBonuses, input.amountPaise),
+    credit(ACCOUNT.employeePayables, input.amountPaise),
+  ];
 }
 
 export function payablePaidPosting(input: {

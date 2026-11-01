@@ -26,11 +26,16 @@ export const workforcePolicySchema = z.object({
     graceMinutes: z.number().int().min(0).max(240),
     captureLocation: z.boolean(),
     retentionDays: z.number().int().min(7).max(730),
+    /** The first site check-in of the day also checks the person in (PRD 4.3). */
+    autoCheckInFromSite: z.boolean().default(false),
+    /** Location on or off for whole roles (role key → on), over `captureLocation`. */
+    trackingByRole: z.record(z.string(), z.boolean()).default({}),
   }),
   points: z.object({
     onTimeTask: z.number().int().min(0).max(1000),
     goodRating: z.number().int().min(0).max(5000),
     recognitionMax: z.number().int().min(1).max(10000),
+    stageRating: z.number().int().min(0).max(5000).default(20),
   }),
   /** Site check-ins and travel reimbursement (PRD 4.3). */
   travel: z.object({
@@ -38,6 +43,10 @@ export const workforcePolicySchema = z.object({
     ratePaisePerKm: z.number().int().min(0).max(10_000),
     hoursMarginMinutes: z.number().int().min(0).max(240),
   }),
+  /** Open tasks one person should carry (PRD 3.12); 0 means no limit. */
+  capacity: z
+    .object({ defaultOpenTaskLimit: z.number().int().min(0).max(500) })
+    .default({ defaultOpenTaskLimit: 0 }),
 });
 export type WorkforcePolicyInput = z.infer<typeof workforcePolicySchema>;
 
@@ -64,7 +73,12 @@ export const positionSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   accuracyM: z.number().min(0).max(100_000).nullable().optional(),
+  /** Battery and connection at the reading, where the phone tells us (PRD 4.3). */
+  batteryPercent: z.number().int().min(0).max(100).nullable().optional(),
+  charging: z.boolean().nullable().optional(),
+  network: z.enum(['wifi', 'cellular', 'none', 'other']).nullable().optional(),
 });
+export type PositionInput = z.infer<typeof positionSchema>;
 
 export const attendanceDaySchema = z.object({
   workDate: calendarDateSchema,
@@ -77,6 +91,17 @@ export const attendanceDaySchema = z.object({
     .nullable(),
   checkOutInside: z.boolean().nullable(),
   corrected: z.boolean(),
+  /** The phone's battery and connection at check-in, when it told us. */
+  device: z
+    .object({
+      batteryPercent: z.number().int().nullable(),
+      charging: z.boolean().nullable(),
+      network: z.enum(['wifi', 'cellular', 'none', 'other']).nullable(),
+    })
+    .nullable()
+    .optional(),
+  /** Checked in by the day's first site check-in (PRD 4.3). */
+  autoFromSite: z.boolean().optional(),
 });
 export type AttendanceDay = z.infer<typeof attendanceDaySchema>;
 
@@ -97,6 +122,8 @@ export const leaveRequestSchema = z.object({
   decidedBy: userRef.nullable(),
   decisionNote: z.string().nullable(),
   tasksHandedOver: z.number().int(),
+  /** Emergency leave approved with work affected and nobody covering it. */
+  handoverSkipped: z.boolean(),
   createdAt: instantSchema,
 });
 export type LeaveRequestRecord = z.infer<typeof leaveRequestSchema>;
@@ -115,7 +142,7 @@ export const pointsEntrySchema = z.object({
   user: userRef,
   points: z.number().int(),
   reason: z.string(),
-  sourceType: z.enum(['task_on_time', 'customer_rating', 'recognition']),
+  sourceType: z.enum(['task_on_time', 'customer_rating', 'recognition', 'stage_rating']),
   status: decisionStatusSchema,
   createdAt: instantSchema,
 });
@@ -151,23 +178,7 @@ export const myWorkdaySchema = z.object({
 });
 export type MyWorkday = z.infer<typeof myWorkdaySchema>;
 
-export const leaveImpactSchema = z.object({
-  halfDays: z.number().int(),
-  /** What is left of this kind of leave if this request is approved. */
-  balanceAfterHalfDays: z.number().int(),
-  overlapsExisting: z.boolean(),
-  tasks: z.array(
-    z.object({
-      id: idSchema,
-      title: z.string(),
-      projectCode: z.string(),
-      dueDate: calendarDateSchema,
-      customerVisible: z.boolean(),
-    }),
-  ),
-  backups: z.array(z.object({ id: idSchema, fullName: z.string(), openTasks: z.number().int() })),
-});
-export type LeaveImpact = z.infer<typeof leaveImpactSchema>;
+export { type LeaveImpact, leaveImpactSchema } from './leave-impact.schema';
 
 export const correctionSchema = z.object({
   id: idSchema,

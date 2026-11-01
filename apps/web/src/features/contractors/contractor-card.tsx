@@ -3,7 +3,7 @@
 import type { ContractorSummary } from '@oneohm/api-contracts';
 import { Badge, cn, listItemEnter, ProgressRing } from '@oneohm/design-system/web';
 import { formatInrCompact } from '@oneohm/shared';
-import { HardHat, MapPin, Phone } from 'lucide-react';
+import { HardHat, MapPin, Phone, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -65,6 +65,12 @@ export function ContractorCard({
             </span>
           </ProgressRing>
         </div>
+        <p className="flex items-center gap-1.5 type-label text-ink-faint">
+          <Star aria-hidden className="size-3.5" />
+          {performance.rating
+            ? `${t('figures.ratingValue', { value: performance.rating })} · ${t('figures.ratingCount', { count: performance.ratings ?? 0 })}`
+            : t('figures.ratingTooFew', { count: performance.ratings ?? 0 })}
+        </p>
         {contractor.serviceAreas.length > 0 && (
           <p className="flex items-center gap-1.5 type-label text-ink-faint">
             <MapPin aria-hidden className="size-3.5" />

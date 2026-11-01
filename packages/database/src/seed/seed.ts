@@ -9,6 +9,7 @@ import { seedStockLocations } from './inventory.seed';
 import { seedLeadSteps } from './lead-steps.seed';
 import { seedRoles } from './roles.seed';
 import { seedSkills } from './skills.seed';
+import { placeNewLibraryTasks, seedEscalationPolicy, templateOrder } from './task-setup.seed';
 import { seedWorkforcePolicy } from './workforce.seed';
 
 /** Everything OneOhm needs on day one. Safe to run again: existing rows are kept. */
@@ -19,7 +20,10 @@ export async function runSeed(db: Database, admin: AdminSeed): Promise<{ adminCr
   await seedSkills(db);
   await seedLeadSteps(db);
   await seedDocumentRequirements(db);
+  const taskOrder = await templateOrder(db);
   await seedCatalog(db);
+  await placeNewLibraryTasks(db, taskOrder);
+  await seedEscalationPolicy(db);
   await seedStockLocations(db);
   await seedWorkforcePolicy(db);
   await seedAfterSales(db);

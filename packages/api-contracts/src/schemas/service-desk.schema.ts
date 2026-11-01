@@ -1,6 +1,7 @@
 import { SERVICE_CATEGORY_KEY_PATTERN } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, noteSchema } from '../common/primitives';
+import { attachmentSchema } from './document.schema';
 
 export const SERVICE_STATUSES = ['open', 'in_progress', 'resolved'] as const;
 
@@ -46,6 +47,10 @@ export const serviceTicketSchema = z.object({
   resolutionNote: z.string().nullable(),
   /** Photos the customer added in the app, oldest first. */
   photos: z.array(z.object({ id: idSchema, name: z.string() })),
+  /** The customer's short video and voice note, if they added them. */
+  media: z.array(attachmentSchema),
+  /** The day the desk booked the technician's visit to a request (PRD 5.5). */
+  visitOn: calendarDateSchema.nullable(),
   responseDueAt: instantSchema.nullable(),
   resolutionDueAt: instantSchema.nullable(),
   respondedAt: instantSchema.nullable(),
@@ -68,6 +73,9 @@ export const serviceTicketPatchSchema = z.object({
   category: serviceCategoryKeySchema.optional(),
   resolutionNote: noteSchema.nullable().optional(),
 });
+
+/** Books or moves the technician's visit day; null clears it. */
+export const serviceVisitDaySchema = z.object({ visitOn: calendarDateSchema.nullable() });
 
 /** Someone who can take service work, with how much is open on them. */
 export const serviceAssigneeSchema = z.object({

@@ -30,7 +30,10 @@ export const SMS_MAX = 300;
 /** The SMS version of a message: one plain line, signed, never cut mid-word. */
 export function smsText(title: string, body: string): string {
   const sign = ' - OneOhm';
-  const text = [title.trim(), body.trim()].filter(Boolean).join('. ').replace(/\s+/g, ' ');
+  // A title that already ends a sentence ("How did we do?") gets no extra full stop.
+  const head = title.trim();
+  const joiner = /[.?!:]$/.test(head) ? ' ' : '. ';
+  const text = [head, body.trim()].filter(Boolean).join(joiner).replace(/\s+/g, ' ');
   const room = SMS_MAX - sign.length;
   if (text.length <= room) return `${text}${sign}`;
   const cut = text.slice(0, room - 1);

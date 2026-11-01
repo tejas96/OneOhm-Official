@@ -1,17 +1,18 @@
 'use client';
 
-import type { CommandCenter } from '@oneohm/api-contracts';
+import type { CommandCenter, CommandCenterQuery } from '@oneohm/api-contracts';
 import { Card, type PillTone, Popover, ProgressRing, StatusPill } from '@oneohm/design-system/web';
 import { formatInrCompact } from '@oneohm/shared';
 import { ArrowRight, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { centerHref } from './center-links';
 
 const WEIGHT = { delivery: 0.4, money: 0.35, team: 0.25 } as const;
 const HREF = {
-  delivery: '/projects',
-  money: '/finance?tab=receivables',
-  team: '/projects',
+  delivery: { path: '/command-center/tasks', show: 'overdue' },
+  money: { path: '/finance?tab=receivables', show: null },
+  team: { path: '/command-center/tasks', show: 'unassigned' },
 } as const;
 type Factor = keyof typeof WEIGHT;
 
@@ -22,7 +23,13 @@ function standing(score: number): { tone: PillTone; key: 'healthy' | 'atRisk' | 
 }
 
 /** The health score, what it means, and the parts pulling it down, each with a way in. */
-export function HealthCard({ data }: { readonly data: CommandCenter }) {
+export function HealthCard({
+  data,
+  query,
+}: {
+  readonly data: CommandCenter;
+  readonly query: CommandCenterQuery;
+}) {
   const t = useTranslations('commandCenter.healthCard');
   const { health, kpis, collections } = data;
   const { tone, key } = standing(health.score);
@@ -92,7 +99,11 @@ export function HealthCard({ data }: { readonly data: CommandCenter }) {
                 <span className="type-body-sm text-ink-muted">{detail(factor)}</span>
               </span>
               <Link
-                href={HREF[factor]}
+                href={
+                  HREF[factor].show
+                    ? centerHref(HREF[factor].path, query, { show: HREF[factor].show })
+                    : HREF[factor].path
+                }
                 className="inline-flex items-center gap-1 type-body-sm text-accent hover:underline"
               >
                 {t(`${factor}.link`)}

@@ -27,7 +27,7 @@ export function InvoicesTab() {
   const t = useTranslations('finance.billing.invoices');
   const invoiceT = useTranslations('finance.billing.invoice');
   const format = useFormatter();
-  const canCancel = useCan('finance.record_payments');
+  const canCancel = useCan('finance.approve_payments');
   const query = useInvoices();
   const [filter, setFilter] = useState<Filter>('issued');
   const [cancelling, setCancelling] = useState<TaxInvoice | null>(null);

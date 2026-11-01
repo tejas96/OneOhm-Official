@@ -43,6 +43,45 @@ describe('WhatsApp webhook', () => {
     expect(incoming[1]).toMatchObject({ kind: 'choice', choiceId: 'payments' });
   });
 
+  it('reads the file in photos, papers, videos and voice notes', () => {
+    const { incoming } = readWebhook(
+      post({
+        messages: [
+          {
+            from: '919000000101',
+            id: 'm1',
+            type: 'image',
+            image: { id: 'media-1', mime_type: 'image/jpeg', caption: ' Inverter light is red ' },
+          },
+          {
+            from: '919000000101',
+            id: 'm2',
+            type: 'document',
+            document: { id: 'media-2', mime_type: 'application/pdf', filename: 'bill.pdf' },
+          },
+          { from: '919000000101', id: 'm3', type: 'audio', audio: { id: 'media-3' } },
+          { from: '919000000101', id: 'm4', type: 'image', image: { caption: 'no file' } },
+        ],
+      }),
+    );
+    expect(incoming[0]).toMatchObject({
+      kind: 'media',
+      text: 'Inverter light is red',
+      media: { type: 'image', id: 'media-1', mimeType: 'image/jpeg', fileName: null },
+    });
+    expect(incoming[1]).toMatchObject({
+      kind: 'media',
+      text: 'bill.pdf',
+      media: { type: 'document', id: 'media-2', fileName: 'bill.pdf' },
+    });
+    expect(incoming[2]).toMatchObject({
+      kind: 'media',
+      text: '',
+      media: { type: 'audio', id: 'media-3', mimeType: null },
+    });
+    expect(incoming[3]).toMatchObject({ kind: 'other' });
+  });
+
   it('reads delivery receipts and failures', () => {
     const { updates } = readWebhook(
       post({

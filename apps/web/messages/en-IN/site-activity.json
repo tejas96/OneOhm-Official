@@ -82,6 +82,7 @@
         "status": "Status"
       },
       "visitsCount": "{count, plural, one {# visit} other {# visits}}",
+      "forProject": "For {code}",
       "review": "Review",
       "open": "Details",
       "rate": "at {rate}/km",
@@ -97,6 +98,8 @@
       "legs": "Route",
       "legsHint": "Straight-line distance between stops, not road distance.",
       "unpaidLeg": "No location at one end, not paid",
+      "project": "Counted in the cost of {code}",
+      "noProject": "Not tied to a project, so it is not in any project's cost.",
       "visits": "Site check-ins",
       "noVisits": "No site check-ins on this day.",
       "note": "Their note",

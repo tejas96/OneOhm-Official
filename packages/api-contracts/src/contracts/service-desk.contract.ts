@@ -7,6 +7,7 @@ import {
   serviceTicketPatchSchema,
   serviceTicketQuerySchema,
   serviceTicketSchema,
+  serviceVisitDaySchema,
 } from '../schemas/service-desk.schema';
 
 const c = initContract();
@@ -33,6 +34,14 @@ export const serviceDeskContract = c.router({
     body: serviceTicketPatchSchema,
     responses: { 200: serviceTicketSchema },
     summary: 'Assign, start or resolve; resolving tells the customer on WhatsApp.',
+  },
+  setTicketVisitDay: {
+    method: 'PUT',
+    path: '/service-requests/:id/visit-day',
+    pathParams: z.object({ id: idSchema }),
+    body: serviceVisitDaySchema,
+    responses: { 200: serviceTicketSchema },
+    summary: 'Books, moves or clears the technician visit; a new day tells the customer.',
   },
   listFeedback: {
     method: 'GET',

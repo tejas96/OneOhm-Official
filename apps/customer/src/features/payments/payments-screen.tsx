@@ -57,6 +57,7 @@ export function PaymentsScreen() {
         <>
           <ProjectSwitcher projects={query.data.projects} chosenId={project.id} onChoose={choose} />
           <Summary project={project} />
+          <EffectiveCost project={project} />
           <View style={styles.section}>
             <SectionTitle title={PAYMENTS.scheduleTitle.toUpperCase()} />
             <Card style={styles.schedule}>
@@ -108,6 +109,18 @@ function Summary({ project }: { readonly project: CustomerProject }) {
   );
 }
 
+/** Price − expected subsidy = what the customer really pays, in one line (PRD 5.3). */
+function EffectiveCost({ project }: { readonly project: CustomerProject }) {
+  const price = project.payments.totalPaise;
+  const subsidy = project.subsidy.amountPaise;
+  if (project.subsidy.status === 'not_applicable' || subsidy <= 0 || price <= 0) return null;
+  return (
+    <Text variant="body" tone="secondary" style={styles.effective}>
+      {PAYMENTS.effectiveCost(formatInr(price), formatInr(subsidy), formatInr(price - subsidy))}
+    </Text>
+  );
+}
+
 function HowToPay({
   home,
   project,
@@ -145,4 +158,5 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   bar: { height: 8, borderRadius: 4 },
   howTo: { gap: 10 },
+  effective: { paddingHorizontal: 4 },
 });

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   type ViewStyle,
 } from 'react-native';
+import { useReducedMotion } from '../theme/reduced-motion';
 
 export interface PressableScaleProps extends Omit<PressableProps, 'style'> {
   readonly style?: StyleProp<ViewStyle>;
@@ -41,15 +42,19 @@ export function PressableScale({
   ...props
 }: PressableScaleProps) {
   const scale = useRef(new Animated.Value(1)).current;
+  const reduced = useReducedMotion();
   const { outer, inner } = splitStyle(style);
   const to = (value: number) =>
-    Animated.spring(scale, {
-      toValue: value,
-      stiffness: 500,
-      damping: 40,
-      mass: 1,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
+    // With reduced motion the surface does not move at all.
+    reduced
+      ? undefined
+      : Animated.spring(scale, {
+          toValue: value,
+          stiffness: 500,
+          damping: 40,
+          mass: 1,
+          useNativeDriver: Platform.OS !== 'web',
+        }).start();
   return (
     <Pressable
       {...props}

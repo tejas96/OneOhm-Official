@@ -6,6 +6,7 @@ import { initials } from '@/components/initials';
 import { PROFILE } from '@/copy/common';
 import { LocationSharingCard } from '@/features/attendance/location-sharing-card';
 import { useCurrentUser, useSession } from '@/session/session-provider';
+import { ContactCard } from './contact-card';
 
 /** Who is signed in, their roles, and sign out. */
 export function ProfileScreen() {
@@ -36,6 +37,7 @@ export function ProfileScreen() {
         </Text>
       </View>
       <LocationSharingCard />
+      {user.kind === 'reseller' ? <ContactCard /> : null}
       <Card style={styles.card}>
         <Text variant="label" tone="tertiary">
           {PROFILE.roles}

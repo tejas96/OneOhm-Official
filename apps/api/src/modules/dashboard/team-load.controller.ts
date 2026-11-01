@@ -16,4 +16,12 @@ export class TeamLoadController {
       return { status: 200, body: await this.team.load(query) };
     });
   }
+
+  @TsRestHandler(apiContract.teamLoad.taskBoard)
+  tasks(@CurrentActor() actor: Actor) {
+    return tsRestHandler(apiContract.teamLoad.taskBoard, async ({ query }) => {
+      assertCan(actor, 'projects.view_all');
+      return { status: 200, body: await this.team.tasks(query) };
+    });
+  }
 }

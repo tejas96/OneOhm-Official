@@ -16,6 +16,7 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { productViews } from './product-view';
 
 const OWN_RATE_CARD_NAME = 'OneOhm rate card';
 
@@ -42,7 +43,7 @@ export class CatalogAdminService {
       .select()
       .from(products)
       .orderBy(asc(products.category), asc(products.name));
-    return rows.map(withoutStamps);
+    return productViews(this.db, rows);
   }
 
   async createProduct(actor: Actor, input: ProductInput): Promise<Product> {
@@ -51,7 +52,7 @@ export class CatalogAdminService {
     const [row] = await this.db.insert(products).values(input).returning();
     if (!row) throw new Error('Product insert returned nothing.');
     await recordAudit(this.db, actor.userId, 'product.created', 'product', row.id, { ...input });
-    return withoutStamps(row);
+    return this.view(row);
   }
 
   async updateProduct(actor: Actor, id: string, patch: Patch<ProductInput>): Promise<Product> {
@@ -67,7 +68,13 @@ export class CatalogAdminService {
       .returning();
     if (!row) throw notFound('That product');
     await recordAudit(this.db, actor.userId, 'product.updated', 'product', id, changes);
-    return withoutStamps(row);
+    return this.view(row);
+  }
+
+  private async view(row: typeof products.$inferSelect): Promise<Product> {
+    const [product] = await productViews(this.db, [row]);
+    if (!product) throw notFound('That product');
+    return product;
   }
 
   async createDiscom(actor: Actor, input: DiscomInput): Promise<Discom> {

@@ -12,6 +12,7 @@ import { ReportSettingsController } from './report-settings.controller';
 import { ReportSettingsService } from './report-settings.service';
 import { ReportStatusService } from './report-status.service';
 import { ReportsController } from './reports.controller';
+import { SurveyReportService } from './survey-report.service';
 
 /** Report readiness, the statutory report PDFs and the quotation PDF. */
 @Module({
@@ -31,6 +32,7 @@ import { ReportsController } from './reports.controller';
     DocumentChecklistService,
     ReportSettingsService,
     DocumentRequirementsService,
+    SurveyReportService,
   ],
   exports: [
     ReportStatusService,
@@ -39,6 +41,7 @@ import { ReportsController } from './reports.controller';
     ReportPdfService,
     ReportArchiveService,
     ReportSettingsService,
+    SurveyReportService,
   ],
 })
 export class ReportsModule {}

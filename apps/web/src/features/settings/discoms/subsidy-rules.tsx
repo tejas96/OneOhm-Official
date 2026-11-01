@@ -30,7 +30,7 @@ interface EditorState {
 export function SubsidyRules() {
   const t = useTranslations('settings.subsidy');
   const rules = useSubsidyRules();
-  const canManage = useCan('settings.manage');
+  const canManage = useCan('subsidy.manage');
   const [editor, setEditor] = useState<EditorState>({ key: 0, open: false, rule: null });
   const [withdrawing, setWithdrawing] = useState<SubsidyRuleVersion | null>(null);
   const [impactOn, setImpactOn] = useState<string | null>(null);

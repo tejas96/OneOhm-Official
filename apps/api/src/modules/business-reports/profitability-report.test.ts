@@ -40,6 +40,7 @@ describe('actualCost', () => {
       stockPaise: 2_037_500,
       vendorPaise: 240_050,
       contractorPaise: 971_200,
+      travelPaise: 0,
     });
     expect(totalOf(actual)).toBe(3_248_750);
   });
@@ -49,7 +50,56 @@ describe('actualCost', () => {
       [{ party: 'vendor', status: 'paid', amountPaise: 10_563_000, fromReceipt: true }],
       [{ onHandDelta: -8, unitCostPaise: 1_210_000 }],
     );
-    expect(actual).toEqual({ stockPaise: 9_680_000, vendorPaise: 0, contractorPaise: 0 });
+    expect(actual).toEqual({
+      stockPaise: 9_680_000,
+      vendorPaise: 0,
+      contractorPaise: 0,
+      travelPaise: 0,
+    });
+  });
+
+  it('counts material issued straight to the contractor, less what came back, at cost', () => {
+    const actual = actualCost(
+      [],
+      [
+        // Dispatched to site on a challan.
+        { onHandDelta: -8, unitCostPaise: 1_210_000 },
+        // Issued from the store to the contractor: 100 m of DC cable and 2 MCBs.
+        { onHandDelta: -100, unitCostPaise: 4_250 },
+        { onHandDelta: -2, unitCostPaise: 38_000 },
+        // Returned unused: 22.5 m of cable and 1 MCB.
+        { onHandDelta: 22.5, unitCostPaise: 4_250 },
+        { onHandDelta: 1, unitCostPaise: 38_000 },
+      ],
+    );
+    // 9,680,000 + 425,000 + 76,000 − 95,625 − 38,000
+    expect(actual.stockPaise).toBe(10_047_375);
+  });
+
+  it('nets to nothing when everything issued came back', () => {
+    const actual = actualCost(
+      [],
+      [
+        { onHandDelta: -3, unitCostPaise: 12_345 },
+        { onHandDelta: 3, unitCostPaise: 12_345 },
+      ],
+    );
+    expect(actual.stockPaise).toBe(0);
+  });
+
+  it('adds travel claimed for the project while waiting or approved', () => {
+    const actual = actualCost(
+      [{ party: 'contractor', status: 'approved', amountPaise: 500_000, fromReceipt: false }],
+      [],
+      [
+        { status: 'approved', amountPaise: 34_200 },
+        { status: 'pending', amountPaise: 12_600 },
+        { status: 'rejected', amountPaise: 99_900 },
+        { status: 'cancelled', amountPaise: 8_000 },
+      ],
+    );
+    expect(actual.travelPaise).toBe(46_800);
+    expect(totalOf(actual)).toBe(546_800);
   });
 });
 

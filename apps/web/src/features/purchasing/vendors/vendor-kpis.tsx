@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 
 const none = () => '—';
 
-/** The vendor's record in six numbers, each with the count behind it. */
+/** The vendor's record in six numbers; each opens the tab with the records behind it. */
 export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard }) {
   const t = useTranslations('purchasing.profile.kpis');
   const judged = scorecard.onTime + scorecard.late + scorecard.openLate;
@@ -21,6 +21,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
         format={formatInrCompact}
         goodDirection="none"
         detail={t('orderedDetail', { count: scorecard.orders })}
+        href="?tab=orders"
+        hrefLabel={t('openTab', { label: t('ordered') })}
       />
       <KpiTile
         label={t('onTime')}
@@ -36,6 +38,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
                 open: scorecard.openLate,
               })
         }
+        href="?tab=orders"
+        hrefLabel={t('openTab', { label: t('onTime') })}
       />
       <KpiTile
         label={t('days')}
@@ -48,6 +52,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
         }
         goodDirection="down"
         detail={t('daysDetail', { count: scorecard.delivered })}
+        href="?tab=orders"
+        hrefLabel={t('openTab', { label: t('days') })}
       />
       <KpiTile
         label={t('inspection')}
@@ -55,6 +61,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
         value={scorecard.inspectionFailures}
         goodDirection="down"
         detail={t('inspectionDetail', { count: scorecard.receipts })}
+        href="?tab=inspection"
+        hrefLabel={t('openTab', { label: t('inspection') })}
       />
       <KpiTile
         label={t('outstanding')}
@@ -67,6 +75,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
             ? t('overdue', { amount: formatInr(scorecard.overduePaise) })
             : t('nothingOverdue')
         }
+        href="?tab=bills"
+        hrefLabel={t('openTab', { label: t('outstanding') })}
       />
       <KpiTile
         label={t('advances')}
@@ -75,6 +85,8 @@ export function VendorKpis({ scorecard }: { readonly scorecard: VendorScorecard 
         format={formatInrCompact}
         goodDirection="none"
         detail={t('advancesDetail')}
+        href="?tab=advances"
+        hrefLabel={t('openTab', { label: t('advances') })}
       />
     </div>
   );

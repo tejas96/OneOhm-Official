@@ -1,4 +1,14 @@
-import { boolean, doublePrecision, index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  integer,
+  pgTable,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { discoms } from './catalog.schema';
 import { calendarDate, createdAt, instant, primaryId, updatedAt, version } from './columns';
 import {
@@ -98,7 +108,11 @@ export const leads = pgTable(
     subsidyCategory: subsidyCategoryEnum('subsidy_category').notNull().default('individual'),
     nextActionOn: calendarDate('next_action_on'),
     nextActionNote: text('next_action_note'),
+    /** One of LEAD_LOST_REASONS; `lost_reason` holds the words (required for "other"). */
+    lostReasonKey: text('lost_reason_key'),
     lostReason: text('lost_reason'),
+    /** A lost lead worth another try: on this day it shows in the owner's follow-ups. */
+    revisitOn: calendarDate('revisit_on'),
     notes: text('notes'),
     wonAt: instant('won_at'),
     version: version(),
@@ -109,6 +123,11 @@ export const leads = pgTable(
     index('leads_stage_idx').on(table.stage),
     index('leads_owner_idx').on(table.ownerUserId),
     index('leads_phone_idx').on(table.phoneE164),
+    // PRD 3.3: every open lead has an owner.
+    check(
+      'leads_open_has_owner',
+      sql`${table.stage} in ('won', 'lost') or ${table.ownerUserId} is not null`,
+    ),
   ],
 );
 
@@ -122,6 +141,8 @@ export const leadActivities = pgTable(
     kind: leadActivityKindEnum('kind').notNull(),
     note: text('note').notNull(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** Staff-only: never shown to the reseller who brought the lead (PRD 4.8). */
+    internal: boolean('internal').notNull().default(false),
     createdAt: createdAt(),
   },
   (table) => [index('lead_activities_lead_idx').on(table.leadId)],

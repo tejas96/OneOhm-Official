@@ -19,8 +19,8 @@ function Kpis({ data }: { readonly data: ProfitabilityReport }) {
         value={totals.contractPaise}
         format={money}
         detail={t('contractDetail', { count: totals.projects, completed: totals.completed })}
-        href="/projects"
-        hrefLabel={t('contractLink')}
+        href="#by-project"
+        hrefLabel={t('byProjectLink')}
       />
       <KpiTile
         label={t('margin')}
@@ -29,6 +29,8 @@ function Kpis({ data }: { readonly data: ProfitabilityReport }) {
         detail={t('marginDetail', {
           margin: money(totals.contractPaise - totals.estimatedCostPaise),
         })}
+        href="#by-project"
+        hrefLabel={t('byProjectLink')}
       />
       <KpiTile
         label={t('cost')}
@@ -38,6 +40,8 @@ function Kpis({ data }: { readonly data: ProfitabilityReport }) {
           used: formatRate(totals.costUsedRate),
           estimate: money(totals.estimatedCostPaise),
         })}
+        href="#by-project"
+        hrefLabel={t('byProjectLink')}
       />
       <KpiTile
         label={t('over')}
@@ -46,6 +50,8 @@ function Kpis({ data }: { readonly data: ProfitabilityReport }) {
         detail={
           totals.overBudget === 0 ? t('overNone') : t('overDetail', { count: totals.overBudget })
         }
+        href="#by-project"
+        hrefLabel={t('byProjectLink')}
       />
     </div>
   );
@@ -114,7 +120,9 @@ export function ProfitabilityReportView() {
             <Trend data={data} />
             <CostSplit cost={data.cost} />
           </div>
-          <MarginByProject rows={data.byProject} />
+          <div id="by-project" className="scroll-mt-24">
+            <MarginByProject rows={data.byProject} />
+          </div>
           <ReportNote>{t('note')}</ReportNote>
         </>
       )}

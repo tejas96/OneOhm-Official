@@ -3,6 +3,7 @@
 import { Button, PageHeader, pageEnter, TabPanel, Tabs } from '@oneohm/design-system/web';
 import { FilePlus2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -14,11 +15,22 @@ import { useDiscomDesk } from './use-discom';
 
 type Tab = 'desk' | 'requests';
 
+/** The open tab lives in `?tab=`, so "change requests" can open straight on its list. */
+function useDiscomTab(): readonly [Tab, (next: Tab) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab: Tab = params.get('tab') === 'requests' ? 'requests' : 'desk';
+  const set = (next: Tab) =>
+    router.replace(next === 'desk' ? pathname : `${pathname}?tab=${next}`, { scroll: false });
+  return [tab, set];
+}
+
 /** The DISCOM desk: everything waiting on the utility, and the change requests. */
 export function DiscomView() {
   const t = useTranslations('discom');
   const desk = useDiscomDesk();
-  const [tab, setTab] = useState<Tab>('desk');
+  const [tab, setTab] = useDiscomTab();
   const [raising, setRaising] = useState(false);
   const totals = desk.data?.totals;
 

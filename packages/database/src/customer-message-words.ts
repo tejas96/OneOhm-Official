@@ -21,13 +21,23 @@ export const IN_APP_MESSAGES = [
   'change_request_completed',
   'document_requested',
   'maintenance_visit',
+  'survey_scheduled',
   'referral_reward',
+  'stage_rating_request',
+  'installation_started',
+  'commissioning_completed',
+  'project_update_link',
+  'service_visit_booked',
+  'project_waiting',
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
 /** Project steps by task key, as the customer app names them. */
 export const STEP_KEYS = [
   'site_survey',
+  'site_survey_society',
+  'site_survey_commercial',
+  'site_survey_ground',
   'name_change',
   'system_design',
   'loan_approval',
@@ -40,6 +50,7 @@ export const STEP_KEYS = [
   'net_meter_installation',
   'handover',
   'subsidy_application',
+  'subsidy_inspection',
   'subsidy_release',
 ] as const;
 
@@ -140,6 +151,15 @@ export function localWords(language: string | undefined, template: string): Loca
   if (!has(words.messages, template)) return undefined;
   const say = words.messages[template];
   return (payload) => say(localPayload(template, payload, words));
+}
+
+/**
+ * A message's values with OneOhm's own names (steps, payment purposes, service topics) in
+ * the customer's language, for a WhatsApp template approved in Marathi or Hindi.
+ */
+export function localValues(language: string | undefined, template: string, payload: Payload) {
+  const code = customerLanguage(language);
+  return code === 'en-IN' ? payload : localPayload(template, payload, TABLES[code]);
 }
 
 /** The title of an app-only alert in the customer's language; undefined for English. */

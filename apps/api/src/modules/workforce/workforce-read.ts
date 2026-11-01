@@ -14,6 +14,7 @@ import {
 } from '@oneohm/database';
 import type { WorkforcePolicy } from '@oneohm/domain';
 import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { conditionsFor } from './device-conditions';
 
 type LeaveRow = typeof leaveRequests.$inferSelect;
 
@@ -76,6 +77,7 @@ function presentLeave(
     decidedBy: ref(names, row.decidedByUserId),
     decisionNote: row.decisionNote,
     tasksHandedOver: row.tasksHandedOver,
+    handoverSkipped: row.handoverSkipped,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -138,6 +140,11 @@ export async function readDays(
     .from(attendanceDays)
     .leftJoin(workLocations, eq(workLocations.id, attendanceDays.checkInLocationId))
     .where(filter);
+  const devices = await conditionsFor(
+    db,
+    rows.map(({ day }) => day.id),
+    'check_in',
+  );
   return new Map(
     rows.map(({ day, place }) => [
       day.userId,
@@ -152,6 +159,8 @@ export async function readDays(
             : null,
         checkOutInside: day.checkOutInside,
         corrected: day.correctedAt !== null,
+        device: devices.get(day.id) ?? null,
+        autoFromSite: day.autoFromSite,
       },
     ]),
   );

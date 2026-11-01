@@ -18,6 +18,9 @@ export const STAGE_MEANING: Copy<typeof en.STAGE_MEANING> = {
 
 export const MILESTONE: Copy<typeof en.MILESTONE> = {
   site_survey: 'साइट विज़िट और छत की नाप',
+  site_survey_society: 'साइट विज़िट और छत की नाप',
+  site_survey_commercial: 'साइट विज़िट और छत की नाप',
+  site_survey_ground: 'साइट विज़िट और ज़मीन की नाप',
   name_change: 'बिजली कनेक्शन में नाम बदलना',
   system_design: 'आपके सिस्टम का डिज़ाइन मंज़ूर हुआ',
   loan_approval: 'बैंक लोन मंज़ूर हुआ',
@@ -30,6 +33,7 @@ export const MILESTONE: Copy<typeof en.MILESTONE> = {
   net_meter_installation: 'नेट मीटर लग गया',
   handover: 'सिस्टम सौंपा गया, वारंटी के कागज़',
   subsidy_application: 'पीएम सूर्य घर पोर्टल पर सब्सिडी की अर्ज़ी दी गई',
+  subsidy_inspection: 'सब्सिडी के लिए जाँच मंज़ूर हुई',
   subsidy_release: 'सब्सिडी आपके बैंक खाते में आ गई',
 };
 
@@ -71,10 +75,16 @@ export const HOME: Copy<typeof en.HOME> = {
   subsidy: {
     pending: 'नेट मीटर लगने के बाद हम अर्ज़ी देंगे।',
     applied: 'पीएम सूर्य घर पोर्टल पर अर्ज़ी दी गई है। सरकार इसे सीधे आपके बैंक में भेजती है।',
+    inspected: 'जाँच मंज़ूर हो गई। अब सरकार इसे आपके बैंक में भेजेगी।',
     released: 'आपके बैंक खाते में आ गई।',
     not_applicable: 'इस प्रोजेक्ट पर लागू नहीं।',
   },
-  subsidyStatus: { pending: 'अभी अर्ज़ी नहीं दी', applied: 'अर्ज़ी दी गई', released: 'आ गई' },
+  subsidyStatus: {
+    pending: 'अभी अर्ज़ी नहीं दी',
+    applied: 'अर्ज़ी दी गई',
+    inspected: 'जाँच हो गई',
+    released: 'आ गई',
+  },
   contactTitle: 'आपके OneOhm संपर्क',
   contactFallback: 'OneOhm टीम',
   call: 'फ़ोन करें',
@@ -86,4 +96,14 @@ export const HOME: Copy<typeof en.HOME> = {
   feedbackBody: 'आपकी रेटिंग से हमारी टीम अगले घर के लिए और अच्छा काम करेगी।',
   feedbackAction: 'अपना अनुभव बताएँ',
   feedbackThanks: 'रेटिंग के लिए धन्यवाद।',
+  todoTitle: 'आपके करने के काम',
+  todoPay: 'भरें',
+  todoSee: 'देखें',
+  todoSend: 'भेजें',
+  todoRate: 'रेटिंग दें',
+  todoPaymentMeta: (amount) => `${amount} देने हैं`,
+  todoPaperMeta: 'OneOhm को आपसे यह कागज़ चाहिए',
+  todoRatingMeta: 'बस कुछ सेकंड लगेंगे।',
+  todoFeedback: 'आपका सोलर अनुभव कैसा रहा?',
+  todoPayFailed: 'पेमेंट का पेज नहीं खुला। दोबारा कोशिश करें।',
 };

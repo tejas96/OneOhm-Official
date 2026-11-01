@@ -2,9 +2,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { FamilyMember, NewFamilyMember } from '@oneohm/api-contracts';
 import { customerContacts, customerSessions, customers } from '@oneohm/database';
 import { and, eq, isNull } from 'drizzle-orm';
+import { recordAudit } from '../../common/audit';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { familyOf } from './customer-family';
+
+/** The last four digits only, enough to tell people apart in the log. */
+const masked = (phone: string) => `••••${phone.slice(-4)}`;
 
 /** A customer may let this many people into their app. */
 const MAX_FAMILY = 5;
@@ -36,18 +40,28 @@ export class CustomerFamilyService {
     if (current.length >= MAX_FAMILY) {
       throw conflict(`You can add up to ${MAX_FAMILY} people.`, 'too_many');
     }
-    await this.db
-      .insert(customerContacts)
-      .values({
-        customerId: who.customerId,
+    await this.db.transaction(async (tx) => {
+      const [member] = await tx
+        .insert(customerContacts)
+        .values({
+          customerId: who.customerId,
+          name: input.name.trim(),
+          phoneE164: input.phone,
+          relation: input.relation?.trim() ?? '',
+        })
+        .onConflictDoUpdate({
+          target: [customerContacts.customerId, customerContacts.phoneE164],
+          set: { name: input.name.trim(), relation: input.relation?.trim() ?? '', revokedAt: null },
+        })
+        .returning({ id: customerContacts.id });
+      // Who can see the customer's project is a sensitive change (PRD 7.3).
+      await recordAudit(tx, null, 'customer.family_added', 'customer', who.customerId, {
+        contactId: member?.id ?? null,
         name: input.name.trim(),
-        phoneE164: input.phone,
         relation: input.relation?.trim() ?? '',
-      })
-      .onConflictDoUpdate({
-        target: [customerContacts.customerId, customerContacts.phoneE164],
-        set: { name: input.name.trim(), relation: input.relation?.trim() ?? '', revokedAt: null },
+        phone: masked(input.phone),
       });
+    });
     return familyOf(this.db, who.customerId);
   }
 
@@ -66,6 +80,9 @@ export class CustomerFamilyService {
       )
       .returning({ id: customerContacts.id });
     if (removed.length === 0) throw notFound('That family member');
+    await recordAudit(this.db, null, 'customer.family_removed', 'customer', who.customerId, {
+      contactId: id,
+    });
     // Their phones are signed out straight away.
     await this.db
       .update(customerSessions)

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { QUOTE } from '@/copy/quote';
 import { useCan } from '@/session/session-provider';
+import { ExtrasBlock } from './extras-block';
 import { QuoteFooter } from './quote-footer';
 import { type QuoteForm, QuoteInputs } from './quote-inputs';
 import type { QuoteSite } from './quote-options';
@@ -26,6 +27,7 @@ const INITIAL: QuoteForm = {
   households: '',
   distanceKm: '0',
   discount: '',
+  extras: [],
 };
 
 /**
@@ -86,6 +88,7 @@ export function QuoteScreen() {
         suggestedInverterId={suggestedInverterId}
         society={site?.subsidyCategory === 'society'}
       />
+      <ExtrasBlock extras={form.extras} onChange={(extras) => set('extras', extras)} />
       {preview.data && ready ? <QuoteLines lines={preview.data.lines} /> : null}
       <SiteSheet open={picking} onClose={() => setPicking(false)} onPick={setSite} />
     </Screen>

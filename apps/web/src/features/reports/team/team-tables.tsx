@@ -15,7 +15,10 @@ import { decimal, formatRate } from '../parts/report-format';
 
 type PersonRow = TeamReport['people'][number];
 type CrewRow = TeamReport['crews'][number];
-type Work = Pick<PersonRow, 'finished' | 'onTime' | 'late' | 'lateOnOthers' | 'onTimeRate'>;
+type Work = Pick<
+  PersonRow,
+  'finished' | 'onTime' | 'late' | 'lateOnOthers' | 'onTimeRate' | 'reworked' | 'firstTimeRightRate'
+>;
 
 const Count = ({ value, warn = false }: { readonly value: number; readonly warn?: boolean }) => (
   <span className={`${NUM} ${warn && value > 0 ? 'text-overdue' : 'text-ink'}`}>{value}</span>
@@ -51,6 +54,22 @@ function OnTime({ work }: { readonly work: Work }) {
   );
 }
 
+/** Quality (PRD 3.12): the share finished without being sent back for correction. */
+function FirstTimeRight({ work }: { readonly work: Work }) {
+  const t = useTranslations('teamReport.tables');
+  if (work.finished === 0) return <span className="type-body-sm text-ink-faint">—</span>;
+  return (
+    <span className="flex flex-col items-end gap-1">
+      <span className={`${NUM} text-ink`}>{formatRate(work.firstTimeRightRate)}</span>
+      {work.reworked > 0 && (
+        <span className="type-body-sm text-ink-faint">
+          {t('sentBack', { count: work.reworked })}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** The work columns staff and crews share, after their name. */
 function useWorkColumns<T extends Work & { open: number; pastDue: number }>(): TableColumn<T>[] {
   const t = useTranslations('teamReport.tables');
@@ -62,6 +81,12 @@ function useWorkColumns<T extends Work & { open: number; pastDue: number }>(): T
       cell: (row) => <Count value={row.finished} />,
     },
     { key: 'onTime', header: t('onTime'), cell: (row) => <OnTime work={row} /> },
+    {
+      key: 'firstTimeRight',
+      header: t('firstTimeRight'),
+      align: 'end',
+      cell: (row) => <FirstTimeRight work={row} />,
+    },
     { key: 'open', header: t('open'), align: 'end', cell: (row) => <Count value={row.open} /> },
     {
       key: 'pastDue',

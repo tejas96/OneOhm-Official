@@ -70,7 +70,10 @@ export class DiscomDeskService {
         id: row.task.id,
         title: row.task.title,
         subject: `${row.code} · ${row.name}`,
-        href: `/projects/${row.task.projectId}`,
+        href:
+          row.task.status === 'waiting'
+            ? `/command-center/tasks?show=waiting&party=discom&project=${row.task.projectId}`
+            : `/projects/${row.task.projectId}?tab=tasks&layout=list`,
         assignee: userRef(row.task.assigneeUserId, row.assigneeName),
         discomId: row.discomId,
         since: row.task.waitingSince,

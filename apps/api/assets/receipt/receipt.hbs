@@ -48,6 +48,8 @@
       <dl class="q-totals r-details">
         <div class="q-row"><dt>Towards</dt><dd>{{towards}}</dd></div>
         <div class="q-row"><dt>Paid by</dt><dd>{{method}}{{#if reference}} · {{reference}}{{/if}}</dd></div>
+        {{#if tds}}<div class="q-row"><dt>Paid in money</dt><dd>{{tds.money}}</dd></div>
+        <div class="q-row"><dt>TDS deducted by you</dt><dd>{{tds.amount}}</dd></div>{{/if}}
         <div class="q-row"><dt>Total project price</dt><dd>{{totals.price}}</dd></div>
         <div class="q-row"><dt>Received to date, with this receipt</dt><dd>{{totals.received}}</dd></div>
         <div class="q-row q-grand"><dt>Balance on the project</dt><dd>{{totals.balance}}</dd></div>

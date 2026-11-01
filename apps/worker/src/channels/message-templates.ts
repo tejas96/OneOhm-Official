@@ -1,3 +1,4 @@
+import { localValues } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
 
 /**
@@ -30,4 +31,47 @@ export class MissingFieldError extends Error {
   ) {
     super(`Message "${key}" is missing "${field}".`);
   }
+}
+
+interface TemplateNames {
+  readonly metaName: string;
+  readonly language: string;
+  readonly metaNameMr?: string | null;
+  readonly metaNameHi?: string | null;
+}
+
+/**
+ * The approved template to send in the customer's language (PRD 6.2): the Marathi or
+ * Hindi one when the owner has set it up, otherwise the English one.
+ */
+export function templateFor(
+  names: TemplateNames,
+  customerLanguage: string | undefined,
+): { readonly name: string; readonly language: string; readonly local: boolean } {
+  if (customerLanguage === 'mr-IN' && names.metaNameMr)
+    return { name: names.metaNameMr, language: 'mr', local: true };
+  if (customerLanguage === 'hi-IN' && names.metaNameHi)
+    return { name: names.metaNameHi, language: 'hi', local: true };
+  return { name: names.metaName, language: names.language, local: false };
+}
+
+/**
+ * The approved template and its values for one queued message. The customer's language
+ * rides in the payload; a Marathi or Hindi template, when set up, gets the step and
+ * payment names in that language too.
+ */
+export function approvedMessage(
+  key: string,
+  fields: readonly string[],
+  names: TemplateNames,
+  stored: unknown,
+): { readonly name: string; readonly language: string; readonly parameters: string[] } {
+  const payload = (stored ?? {}) as Record<string, string>;
+  const chosen = templateFor(names, payload.language);
+  const values = chosen.local ? localValues(payload.language, key, payload) : payload;
+  return {
+    name: chosen.name,
+    language: chosen.language,
+    parameters: templateParameters(key, fields, values),
+  };
 }

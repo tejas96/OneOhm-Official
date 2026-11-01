@@ -1,6 +1,6 @@
 'use client';
 
-import type { CommandCenter } from '@oneohm/api-contracts';
+import type { CommandCenter, CommandCenterQuery } from '@oneohm/api-contracts';
 import { KpiTile, Sparkline } from '@oneohm/design-system/web';
 import { formatInrCompact, formatKwp } from '@oneohm/shared';
 import {
@@ -14,9 +14,19 @@ import {
   UserX,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { centerHref } from './center-links';
 
-/** Eight live numbers, two rows of four; each opens the records behind it. */
-export function CenterKpis({ data }: { readonly data: CommandCenter }) {
+/**
+ * Eight live numbers, two rows of four; each opens the records behind it with the
+ * command centre's period, manager and type carried along.
+ */
+export function CenterKpis({
+  data,
+  query,
+}: {
+  readonly data: CommandCenter;
+  readonly query: CommandCenterQuery;
+}) {
   const t = useTranslations('commandCenter.kpis');
   const tiles = useTranslations('commandCenter.tiles');
   const { kpis, installed, collections, money } = data;
@@ -29,7 +39,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
         value={kpis.liveProjects}
         icon={<FolderKanban />}
         goodDirection="none"
-        href="/projects"
+        href={centerHref('/projects', query)}
         hrefLabel={open(t('liveProjects'))}
       />
       <KpiTile
@@ -38,7 +48,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
         icon={<TriangleAlert />}
         goodDirection="down"
         detail={t('needingDetail')}
-        href="/projects"
+        href={centerHref('/projects', query, { health: 'attention', sort: 'attention' })}
         hrefLabel={open(t('needingAttention'))}
       />
       <KpiTile
@@ -47,7 +57,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
         icon={<AlarmClock />}
         goodDirection="down"
         detail={t('ofOpen', { open: kpis.openTasks })}
-        href="/projects"
+        href={centerHref('/command-center/tasks', query, { show: 'overdue' })}
         hrefLabel={open(t('overdueTasks'))}
       />
       <KpiTile
@@ -55,7 +65,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
         value={kpis.unassignedTasks}
         icon={<UserX />}
         goodDirection="down"
-        href="/projects"
+        href={centerHref('/command-center/tasks', query, { show: 'unassigned' })}
         hrefLabel={open(t('unassigned'))}
       />
       <KpiTile
@@ -67,7 +77,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
           count: installed.commissioned,
           next: installed.dueThisWeek,
         })}
-        href="/projects"
+        href={centerHref('/reports/delivery', query)}
         hrefLabel={open(t('installed'))}
       />
       <KpiTile
@@ -95,7 +105,7 @@ export function CenterKpis({ data }: { readonly data: CommandCenter }) {
         value={kpis.quotationsAccepted}
         icon={<BadgeCheck />}
         detail={t('acceptedDetail', { sent: kpis.quotationsSent })}
-        href="/quotations"
+        href={centerHref('/reports/sales', query)}
         hrefLabel={open(t('accepted'))}
       />
     </section>

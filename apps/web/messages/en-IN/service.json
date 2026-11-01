@@ -25,6 +25,8 @@
     },
     "resolution": "Resolved: {note}",
     "photos": "{count, plural, one {# photo} other {# photos}} from the customer",
+    "video": "Video",
+    "voiceNote": "Voice note",
     "start": "Start",
     "resolve": "Resolve",
     "resolveTitle": "Resolve this request",
@@ -210,7 +212,8 @@
       "noComment": "No comment.",
       "noRating": "The customer has not rated this yet. They can rate it in the app once it is resolved.",
       "close": "Close",
-      "notePlaceholder": "For example: cleaned all panels and checked the inverter."
+      "notePlaceholder": "For example: cleaned all panels and checked the inverter.",
+      "fromCustomer": "From the customer"
     },
     "fieldWork": {
       "title": "Field work",
@@ -230,6 +233,17 @@
       "workDone": "What they did",
       "reason": "Why it came back",
       "files": "{count, plural, one {# photo, video or voice note} other {# photos, videos and voice notes}}"
+    },
+    "visitDay": {
+      "title": "Technician visit",
+      "label": "Visit day",
+      "hint": "{name} hears on WhatsApp, or by SMS, when you book or move the day.",
+      "book": "Book visit",
+      "move": "Move visit",
+      "clear": "Clear day",
+      "saved": "Visit booked for {date}",
+      "cleared": "Visit day cleared",
+      "failed": "The visit day did not save"
     }
   }
 }

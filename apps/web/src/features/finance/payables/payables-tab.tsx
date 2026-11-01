@@ -9,22 +9,20 @@ import {
   SegmentedControl,
   StatusPill,
   type TableColumn,
-  useToast,
 } from '@oneohm/design-system/web';
-import { formatInr } from '@oneohm/shared';
-import { useMutation } from '@tanstack/react-query';
-import { Check, Plus, ReceiptIndianRupee, Wallet } from 'lucide-react';
+import { ClipboardCheck, Plus, ReceiptIndianRupee, Wallet } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
-import { api, expectStatus } from '@/lib/api/api-client';
-import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
-import { type PayableFilter, useInvalidateFinance, usePayables } from '../use-finance';
+import { type PayableFilter, usePayables } from '../use-finance';
 import { AddBillDialog } from './add-bill-dialog';
 import { latestByBill, PayoutBadge } from './bank/payout-badge';
 import { useRecentPayouts } from './bank/use-payouts';
+import { BillAmount } from './bill-amount';
 import { PayBillDialog } from './pay-bill-dialog';
+import { ReviewBillSheet } from './review-bill-sheet';
 
 const TONE: Readonly<Record<Payable['status'], PillTone>> = {
   pending: 'review',
@@ -33,31 +31,38 @@ const TONE: Readonly<Record<Payable['status'], PillTone>> = {
 };
 const FILTERS = ['open', 'pending', 'approved', 'paid', 'all'] as const;
 
-/** Bills from vendors and crews: approve, then pay. Approval books the cost. */
+/** The chosen status lives in `?filter=`, so "bills to approve" opens exactly those bills. */
+function useBillFilter(): readonly [PayableFilter, (next: PayableFilter) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const asked = params.get('filter');
+  const filter = FILTERS.find((candidate) => candidate === asked) ?? 'open';
+  const set = (next: PayableFilter) => {
+    const search = new URLSearchParams(params);
+    if (next === 'open') search.delete('filter');
+    else search.set('filter', next);
+    router.replace(`${pathname}?${search.toString()}`, { scroll: false });
+  };
+  return [filter, set];
+}
+
+/**
+ * Bills from vendors and crews: review (vendor invoice, TDS), approve, then pay.
+ * Approval books the cost and the TDS held.
+ */
 export function PayablesTab() {
   const t = useTranslations('finance.payables');
   const methodT = useTranslations('finance.methods');
   const format = useFormatter();
-  const toast = useToast();
-  const invalidate = useInvalidateFinance();
   const canAdd = useCan('finance.record_payments');
   const canApprove = useCan('finance.approve_payments');
-  const [filter, setFilter] = useState<PayableFilter>('open');
+  const [filter, setFilter] = useBillFilter();
   const [adding, setAdding] = useState(false);
   const [paying, setPaying] = useState<Payable | null>(null);
+  const [reviewing, setReviewing] = useState<Payable | null>(null);
   const query = usePayables(filter);
   const payouts = latestByBill(useRecentPayouts().data ?? []);
-
-  const approve = useMutation({
-    mutationFn: (bill: Payable) =>
-      expectStatus(api.finance.approvePayable({ params: { id: bill.id } }), 200),
-    onSuccess: async (bill) => {
-      await invalidate();
-      toast({ title: t('approved'), description: bill.partyName, tone: 'success' });
-    },
-    onError: (error) =>
-      toast({ title: t('failed'), description: describeError(error), tone: 'error' }),
-  });
 
   const date = (value: string) =>
     format.dateTime(new Date(`${value}T12:00:00`), { day: 'numeric', month: 'short' });
@@ -90,16 +95,7 @@ export function PayablesTab() {
       key: 'amount',
       header: t('columns.amount'),
       align: 'end',
-      cell: (bill) => (
-        <span className="flex flex-col items-end gap-0.5">
-          <span className="font-mono text-ink tabular-nums">{formatInr(bill.amountPaise)}</span>
-          {bill.advanceAdjustedPaise > 0 && (
-            <span className="whitespace-nowrap type-label text-ink-faint">
-              {t('advanceAdjusted', { amount: formatInr(bill.advanceAdjustedPaise) })}
-            </span>
-          )}
-        </span>
-      ),
+      cell: (bill) => <BillAmount bill={bill} />,
     },
     {
       key: 'due',
@@ -127,15 +123,14 @@ export function PayablesTab() {
         <span className="flex flex-wrap items-center gap-2">
           <StatusPill size="sm" tone={TONE[bill.status]} label={t(`status.${bill.status}`)} />
           <PayoutBadge bill={bill} latest={payouts.get(bill.id)} />
-          {bill.status === 'pending' && canApprove && (
+          {bill.status === 'pending' && (canApprove || canAdd) && (
             <Button
               size="sm"
               variant="secondary"
-              leadingIcon={<Check />}
-              pending={approve.isPending && approve.variables?.id === bill.id}
-              onClick={() => approve.mutate(bill)}
+              leadingIcon={<ClipboardCheck />}
+              onClick={() => setReviewing(bill)}
             >
-              {t('approve')}
+              {canApprove ? t('approve') : t('review.title')}
             </Button>
           )}
           {bill.status === 'approved' && canAdd && (
@@ -189,6 +184,7 @@ export function PayablesTab() {
       )}
       <AddBillDialog open={adding} onOpenChange={setAdding} />
       <PayBillDialog bill={paying} onClose={() => setPaying(null)} />
+      <ReviewBillSheet bill={reviewing} onClose={() => setReviewing(null)} />
     </section>
   );
 }

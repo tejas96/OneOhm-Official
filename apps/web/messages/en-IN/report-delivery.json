@@ -13,11 +13,13 @@
       "lateNone": "Nothing finished late",
       "overdue": "Past due, still open",
       "overdueDetail": "Across {projects} live projects",
-      "overdueLink": "Open today's work",
+      "overdueLink": "Open the overdue tasks",
+      "onTimeLink": "Open the finished tasks",
+      "lateLink": "Open the late tasks",
       "commissioned": "Systems commissioned",
       "commissionedDetail": "{count, plural, one {# project} other {# projects}} · {days} days from start on average",
       "commissionedNone": "No system switched on in this period",
-      "commissionedLink": "Open the projects"
+      "commissionedLink": "Open the finished projects"
     },
     "trend": {
       "title": "Delivery by {unit}",

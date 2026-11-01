@@ -1,13 +1,16 @@
 import type { ContractorSummary } from '@oneohm/api-contracts';
 import {
+  contractorMembers,
   type DatabaseExecutor,
   payables,
   projectTasks,
+  stageRatingPeople,
   workOrderAdvances,
   workOrderRework,
   workOrders,
   workOrderTasks,
 } from '@oneohm/database';
+import { ratingSummary } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { eq, inArray } from 'drizzle-orm';
 
@@ -34,6 +37,7 @@ export async function contractorPerformance(
 ): Promise<Map<string, Performance>> {
   const result = new Map<string, Performance>(contractorIds.map((id) => [id, { ...EMPTY }]));
   if (contractorIds.length === 0) return result;
+  await tallyRatings(db, result);
   const orders = await db
     .select()
     .from(workOrders)
@@ -84,6 +88,37 @@ export async function contractorPerformance(
     if (tally.done > 0) entry.onTimePercent = Math.round((100 * tally.inTime) / tally.done);
   }
   return result;
+}
+
+/**
+ * Customers' stars for the crew members on their stage work (PRD 5.7, Flow G), shown
+ * only once three customers have rated, so one bad day does not decide it.
+ */
+async function tallyRatings(db: DatabaseExecutor, result: Map<string, Performance>) {
+  const members = await db
+    .select({ userId: contractorMembers.userId, contractorId: contractorMembers.contractorId })
+    .from(contractorMembers)
+    .where(inArray(contractorMembers.contractorId, [...result.keys()]));
+  if (members.length === 0) return;
+  const stars = await db
+    .select({ userId: stageRatingPeople.userId, rating: stageRatingPeople.rating })
+    .from(stageRatingPeople)
+    .where(
+      inArray(
+        stageRatingPeople.userId,
+        members.map((member) => member.userId),
+      ),
+    );
+  for (const [contractorId, entry] of result) {
+    const crew = new Set(
+      members.filter((member) => member.contractorId === contractorId).map((m) => m.userId),
+    );
+    const summary = ratingSummary(
+      stars.filter((row) => crew.has(row.userId)).map((row) => row.rating),
+    );
+    entry.rating = summary.average;
+    entry.ratings = summary.count;
+  }
 }
 
 function tallyOrder(entry: Performance | undefined, status: string): void {

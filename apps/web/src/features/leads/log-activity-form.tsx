@@ -4,6 +4,7 @@ import type { LeadDetail } from '@oneohm/api-contracts';
 import {
   Button,
   Card,
+  Checkbox,
   Field,
   Input,
   SegmentedControl,
@@ -15,6 +16,7 @@ import { MapPin, MessageCircle, NotebookPen, PhoneCall } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { useCurrentUser } from '@/providers/current-user';
 import { isOpenLead } from './lead-labels';
 import { useLogActivity, useUpdateLead } from './use-lead-mutations';
 
@@ -33,9 +35,12 @@ export function LogActivityForm({ lead }: { readonly lead: LeadDetail }) {
   const [kind, setKind] = useState<Kind>('call');
   const [note, setNote] = useState('');
   const [error, setError] = useState<ApiError | null>(null);
+  // On a reseller's lead, staff notes stay with staff unless shared (PRD 4.8).
+  const [staffOnly, setStaffOnly] = useState(true);
   const log = useLogActivity(lead.id);
   const update = useUpdateLead(lead.id);
   const open = isOpenLead(lead);
+  const canKeepFromReseller = useCurrentUser().kind !== 'reseller';
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,7 +50,11 @@ export function LogActivityForm({ lead }: { readonly lead: LeadDetail }) {
     const nextNote = String(data.get('nextActionNote') ?? '').trim();
     setError(null);
     try {
-      await log.mutateAsync({ kind, note: note.trim() });
+      await log.mutateAsync({
+        kind,
+        note: note.trim(),
+        ...(lead.fromReseller && canKeepFromReseller ? { internal: staffOnly } : {}),
+      });
       if (open && nextOn && (nextOn !== lead.nextActionOn || nextNote)) {
         await update.mutateAsync({ nextActionOn: nextOn, nextActionNote: nextNote || null });
       }
@@ -106,7 +115,17 @@ export function LogActivityForm({ lead }: { readonly lead: LeadDetail }) {
             {error.message}
           </p>
         )}
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {lead.fromReseller && canKeepFromReseller ? (
+            <Checkbox
+              checked={staffOnly}
+              onCheckedChange={setStaffOnly}
+              label={t('staffOnly')}
+              description={t('staffOnlyHint')}
+            />
+          ) : (
+            <span />
+          )}
           <Button
             type="submit"
             variant="primary"

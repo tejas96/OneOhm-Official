@@ -1,6 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { BusinessReportQuery, TeamReport } from '@oneohm/api-contracts';
-import { bucketIndexOf, onTimeRate, type WorkforcePolicy } from '@oneohm/domain';
+import {
+  bucketIndexOf,
+  firstTimeRightRate,
+  onTimeRate,
+  type WorkforcePolicy,
+} from '@oneohm/domain';
 import { addDays } from '@oneohm/shared';
 import { DATABASE, type Database } from '../../config/core.module';
 import { loadPolicy } from '../workforce/policy';
@@ -61,6 +66,7 @@ export class TeamReportService {
         'Finished',
         'On time',
         'On time %',
+        'First time right %',
         'Open',
         'Past due',
         'Leave days',
@@ -73,6 +79,7 @@ export class TeamReportService {
         row.finished,
         row.onTime,
         percent(row.onTimeRate),
+        percent(row.firstTimeRightRate),
         row.open,
         row.pastDue,
         row.leaveHalfDays / 2,
@@ -94,12 +101,15 @@ export function tally(tasks: readonly TeamTask[], today: string): Work {
   const late = finished.filter((task) => (task.finishedOn ?? '') > task.dueDate);
   const open = tasks.filter((task) => task.open);
   const lateMine = late.filter((task) => task.party === 'internal').length;
+  const reworked = finished.filter((task) => (task.reworks ?? 0) > 0).length;
   return {
     finished: finished.length,
     onTime,
     late: late.length,
     lateOnOthers: late.length - lateMine,
     onTimeRate: onTimeRate(onTime, lateMine),
+    reworked,
+    firstTimeRightRate: firstTimeRightRate(finished.length, reworked),
     open: open.length,
     pastDue: open.filter(
       (task) => task.dueDate < today && !(task.waiting && task.party !== 'internal'),

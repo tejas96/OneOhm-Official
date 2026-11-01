@@ -16,6 +16,7 @@ import { payables } from './finance.schema';
 import { users } from './identity.schema';
 import { stockLocations, vendors } from './inventory.schema';
 import { projects } from './projects.schema';
+import { documents } from './records.schema';
 
 export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', [
   'draft',
@@ -102,6 +103,10 @@ export const goodsReceipts = pgTable(
     payableId: uuid('payable_id').references(() => payables.id),
     receivedByUserId: uuid('received_by_user_id').references(() => users.id),
     createdAt: createdAt(),
+    /** The panel maker's DCR certificate for this delivery, filed with the documents. */
+    dcrCertificateDocumentId: uuid('dcr_certificate_document_id').references(() => documents.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [uniqueIndex('goods_receipts_number_unique').on(table.number)],
 );

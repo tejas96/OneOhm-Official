@@ -13,16 +13,18 @@ import {
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Calculator, MessageCircle, Phone } from 'lucide-react-native';
+import { Calculator, MapPinPlus, MessageCircle, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api/api';
 import { ScreenHeader, SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
-import { LEAD, LEADS } from '@/copy/sales';
-import { relativeDate, shortMoment } from '@/lib/dates';
+import { LEAD, LEAD_SITE, LEADS } from '@/copy/sales';
+import { relativeDate, shortDate, shortMoment } from '@/lib/dates';
 import { useCan } from '@/session/session-provider';
 import { FollowUpSheet } from './follow-up-sheet';
+import { LeadQuotes } from './lead-quotes';
+import { LeadSiteSheet } from './lead-site-sheet';
 
 /** One lead: reach them in a tap, see the history, log the follow-up. */
 export function LeadScreen() {
@@ -56,7 +58,10 @@ export function LeadScreen() {
 function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
   const theme = useTheme();
   const canQuote = useCan('quotations.create');
+  const canAddSite = useCan('quotations.create', 'customers.manage');
   const [logging, setLogging] = useState(false);
+  const [addingSite, setAddingSite] = useState(false);
+  const needsSite = !lead.propertyId && lead.stage !== 'won' && lead.stage !== 'lost';
   const digits = lead.phone.replace(/\D/g, '');
   const details = [
     { label: LEAD.city, value: lead.city },
@@ -74,15 +79,12 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
       <ScreenHeader overline={lead.phone} title={lead.name} />
       <View style={styles.row}>
         <StatusPill tone={lead.overdue ? 'overdue' : 'neutral'} label={LEADS.stage[lead.stage]} />
+        {lead.revisitDue ? <StatusPill tone="atRisk" label={LEAD.revisitDue} /> : null}
         <Text
           variant="label"
           color={lead.overdue ? theme.status.overdue.fg : theme.colors.textSecondary}
         >
-          {lead.overdue
-            ? LEADS.overdue
-            : lead.nextActionOn
-              ? LEADS.next(relativeDate(lead.nextActionOn))
-              : LEADS.noNext}
+          {followUpLine(lead)}
         </Text>
       </View>
       {lead.nextActionNote ? (
@@ -106,6 +108,19 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           onPress={() => void Linking.openURL(`https://wa.me/${digits}`)}
         />
       </View>
+      {canAddSite && needsSite ? (
+        <View style={styles.site}>
+          <Text variant="bodySm" tone="secondary">
+            {LEAD_SITE.needed}
+          </Text>
+          <Button
+            label={LEAD_SITE.add}
+            variant="secondary"
+            icon={<MapPinPlus size={16} color={theme.colors.textPrimary} />}
+            onPress={() => setAddingSite(true)}
+          />
+        </View>
+      ) : null}
       {canQuote ? (
         <Button
           label={LEAD.quote}
@@ -125,6 +140,7 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           </View>
         ))}
       </Card>
+      <LeadQuotes quotations={lead.quotations} />
       <SectionTitle title={LEAD.history} count={lead.activities.length} />
       {lead.activities.length === 0 ? (
         <Text variant="bodySm" tone="tertiary">
@@ -145,12 +161,23 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           </View>
         ))}
       </View>
-      <FollowUpSheet leadId={lead.id} open={logging} onClose={() => setLogging(false)} />
+      <FollowUpSheet lead={lead} open={logging} onClose={() => setLogging(false)} />
+      {canAddSite && needsSite ? (
+        <LeadSiteSheet lead={lead} open={addingSite} onClose={() => setAddingSite(false)} />
+      ) : null}
     </Screen>
   );
 }
 
+/** The follow-up line under the stage: overdue, the next date, or when to try again. */
+function followUpLine(lead: LeadDetail): string {
+  if (lead.stage === 'lost') return lead.revisitOn ? LEAD.revisitOn(shortDate(lead.revisitOn)) : '';
+  if (lead.overdue) return LEADS.overdue;
+  return lead.nextActionOn ? LEADS.next(relativeDate(lead.nextActionOn)) : LEADS.noNext;
+}
+
 const styles = StyleSheet.create({
+  site: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   flex: { flex: 1 },
   details: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },

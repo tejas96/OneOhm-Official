@@ -17,6 +17,9 @@ export const STAGE_MEANING: Readonly<Record<EpcStage, string>> = {
  */
 export const MILESTONE = {
   site_survey: 'Site visit and roof measurements',
+  site_survey_society: 'Site visit and roof measurements',
+  site_survey_commercial: 'Site visit and roof measurements',
+  site_survey_ground: 'Site visit and land measurements',
   name_change: 'Electricity connection name change',
   system_design: 'Your system design is approved',
   loan_approval: 'Bank loan sanctioned',
@@ -29,6 +32,7 @@ export const MILESTONE = {
   net_meter_installation: 'Net meter fitted',
   handover: 'Handover and warranty papers',
   subsidy_application: 'Subsidy applied on the PM Surya Ghar portal',
+  subsidy_inspection: 'Subsidy inspection approved',
   subsidy_release: 'Subsidy released to your bank account',
 } as const;
 
@@ -71,10 +75,16 @@ export const HOME = {
   subsidy: {
     pending: 'We will apply once your net meter is fitted.',
     applied: 'Applied on the PM Surya Ghar portal. The government pays it to your bank.',
+    inspected: 'Inspection approved. The government releases it to your bank next.',
     released: 'Released to your bank account.',
     not_applicable: 'Not applicable to this project.',
   },
-  subsidyStatus: { pending: 'Not applied yet', applied: 'Applied', released: 'Released' },
+  subsidyStatus: {
+    pending: 'Not applied yet',
+    applied: 'Applied',
+    inspected: 'Inspected',
+    released: 'Released',
+  },
   contactTitle: 'Your OneOhm contact',
   contactFallback: 'OneOhm team',
   call: 'Call',
@@ -86,4 +96,15 @@ export const HOME = {
   feedbackBody: 'Your rating helps our team do better for the next home.',
   feedbackAction: 'Rate your experience',
   feedbackThanks: 'Thank you for your rating.',
+  /** The to-do card: what the customer needs to do (PRD 5.1). */
+  todoTitle: 'For you to do',
+  todoPay: 'Pay',
+  todoSee: 'See',
+  todoSend: 'Send',
+  todoRate: 'Rate',
+  todoPaymentMeta: (amount: string) => `${amount} due`,
+  todoPaperMeta: 'A paper OneOhm needs from you',
+  todoRatingMeta: 'It takes a few seconds.',
+  todoFeedback: 'How was your solar experience?',
+  todoPayFailed: 'The payment page could not open. Please try again.',
 } as const;

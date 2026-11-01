@@ -155,7 +155,19 @@ export function ClaimSheet({
     >
       {claim && (
         <div className="flex flex-col gap-7 px-5 py-6 sm:px-6">
-          <p className="type-title-md text-ink tabular-nums">{total}</p>
+          <div className="flex flex-col gap-1">
+            <p className="type-title-md text-ink tabular-nums">{total}</p>
+            {claim.project ? (
+              <Link
+                href={`/projects/${claim.project.id}`}
+                className="self-start type-body-sm text-accent hover:underline"
+              >
+                {t('sheet.project', { code: claim.project.code })}
+              </Link>
+            ) : (
+              <p className="type-body-sm text-ink-faint">{t('sheet.noProject')}</p>
+            )}
+          </div>
           {claim.note && <p className="type-body-sm text-ink-muted">“{claim.note}”</p>}
           {pending && own && <p className="type-body-sm text-ink-faint">{t('sheet.ownClaim')}</p>}
           <Section title={t('sheet.legs')} hint={t('sheet.legsHint')}>

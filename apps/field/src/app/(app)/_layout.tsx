@@ -25,6 +25,7 @@ export default function SignedInLayout() {
         <Stack.Screen name="leads/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="leave/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="alerts" />
+        <Stack.Screen name="rewards" />
       </Stack>
     </UploadQueueProvider>
   );

@@ -15,6 +15,7 @@
       "leave": "Leave taken",
       "leaveDetail": "{away, plural, =0 {No one} one {# person} other {# people}} away today · {ahead, plural, one {# day} other {# days}} approved ahead",
       "leaveLink": "Open leave",
+      "pastDueLink": "Open the overdue tasks",
       "present": "Days present",
       "presentDetail": "{late, plural, =0 {No late check-ins} one {# late check-in} other {# late check-ins}} · {people, plural, one {# person} other {# people}} checked in",
       "presentLink": "Open attendance"
@@ -52,6 +53,8 @@
       "ofFinished": "{onTime} of {finished}",
       "noneFinished": "None finished",
       "lateOnOthers": "{count} late while waiting on others",
+      "firstTimeRight": "First time right",
+      "sentBack": "{count, plural, one {# sent back for correction} other {# sent back for correction}}",
       "open": "Open",
       "pastDue": "Past due",
       "leave": "Leave days",
@@ -66,6 +69,6 @@
       "days": "{days, plural, one {# day} other {# days}}",
       "today": "Away today"
     },
-    "note": "On time = tasks finished in the period on or before their due date (India dates) ÷ tasks finished in the period, counted for the person assigned. A task that ran late while it waited on the customer, bank or DISCOM still counts as late and is marked “late while waiting on others”. Open and past due are as of today, whatever the period. The project type filter narrows tasks; the project manager filter does not apply here. Leave is approved leave inside the period in working days (weekly offs skipped, a half day counts as half); attendance is days checked in, and a check-in is late after the day start plus the grace minutes. Leave and attendance are for staff; a crew's numbers add up its members' tasks."
+    "note": "On time = tasks finished in the period on or before their due date (India dates) ÷ tasks finished in the period, counted for the person assigned. First time right = tasks finished in the period that were never sent back for correction ÷ tasks finished. A task that ran late while it waited on the customer, bank or DISCOM still counts as late and is marked “late while waiting on others”. Open and past due are as of today, whatever the period. The project type filter narrows tasks; the project manager filter does not apply here. Leave is approved leave inside the period in working days (weekly offs skipped, a half day counts as half); attendance is days checked in, and a check-in is late after the day start plus the grace minutes. Leave and attendance are for staff; a crew's numbers add up its members' tasks."
   }
 }

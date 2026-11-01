@@ -73,7 +73,13 @@
       "subsidyClaimed": "Subsidy claimed",
       "edit": "Edit",
       "createQuotation": "Create quotation",
-      "changeRequest": "Change request"
+      "changeRequest": "Change request",
+      "gps": "GPS",
+      "gpsNone": "No GPS yet",
+      "openMap": "Open map",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "gpsHint": "From the site survey. Correct it if the pin is off."
     },
     "editProperty": {
       "title": "Edit site",
@@ -210,13 +216,28 @@
         "change_request_raised": "Change request started",
         "change_request_completed": "Change request done",
         "referral_reward": "Referral reward update",
+        "survey_scheduled": "Site survey date",
         "budget_revision": "Revised quotation"
       },
       "otherTemplate": "Message",
       "alertsTitle": "App alerts",
       "alertsBody": "What they see in the OneOhm app's inbox.",
       "alertsNone": "No app alerts yet.",
-      "unread": "Not opened"
+      "unread": "Not opened",
+      "leadTitle": "Lead history",
+      "leadBody": "Calls, visits, notes and follow-ups from their leads, newest first.",
+      "leadNone": "Nothing was logged on their leads.",
+      "staffOnly": "Staff only",
+      "showAll": "Show all {count}",
+      "showFewer": "Show fewer",
+      "leadKind": {
+        "note": "Note",
+        "call": "Call",
+        "visit": "Visit",
+        "whatsapp": "WhatsApp",
+        "stage_change": "Stage changed",
+        "follow_up": "Follow-up set"
+      }
     },
     "service": {
       "requestsTitle": "Service requests",
@@ -264,7 +285,16 @@
         "won": "Won",
         "lost": "Lost"
       },
-      "becameCustomer": "Now a customer"
+      "becameCustomer": "Now a customer",
+      "aftercareTitle": "Warranty and AMC",
+      "aftercareBody": "What was installed on each project, how long it is covered, and any AMC. Changes are made on the project.",
+      "aftercareNone": "No projects yet, so nothing is covered.",
+      "notRecorded": "Not recorded yet. The installed system is recorded when testing and commissioning is done.",
+      "installed": "Installed",
+      "amc": "AMC",
+      "noAmc": "No AMC on this project.",
+      "amcPeriod": "{from} to {to}",
+      "openProject": "Open project"
     },
     "contact": {
       "label": "How we reach them",
@@ -291,6 +321,31 @@
       "done": "Marked as shared",
       "failed": "Could not mark it",
       "print": "Print paper"
+    },
+    "editCustomer": "Edit",
+    "gstinLine": "GSTIN {gstin}",
+    "accounts": {
+      "hint": "This phone number also belongs to another OneOhm account. The records stay separate.",
+      "staff": "Also staff · {name}",
+      "reseller": "Also a reseller · {name}",
+      "crew": "Also crew · {name}",
+      "contractor": "Also a contractor · {name}",
+      "vendor": "Also a vendor · {name}"
+    },
+    "edit": {
+      "title": "Edit customer",
+      "description": "Who they are on paper. Every change is kept in the audit log.",
+      "name": "Name",
+      "phone": "Mobile number",
+      "phoneHint": "10 digits. No two customers share a number; they sign in to the app with it.",
+      "email": "Email",
+      "emailHint": "Optional. Kept on record only.",
+      "kind": "Customer is",
+      "gstin": "GSTIN",
+      "gstinHint": "Optional. For businesses and societies; printed on tax invoices.",
+      "cancel": "Cancel",
+      "submit": "Save customer",
+      "saved": "Customer updated"
     }
   }
 }

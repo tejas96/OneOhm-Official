@@ -45,6 +45,10 @@ const milestoneLineSchema = z.object({
   dueAt: instantSchema.nullable(),
   /** An open online link for what is still owed (PRD 5.3); null when there is none. */
   payUrl: z.string().nullable(),
+  /** The milestone, for the app's Pay button. */
+  id: idSchema.optional(),
+  /** True when the customer can pay this now online, with or without a link sent. */
+  canPayOnline: z.boolean().optional(),
 });
 
 /** One home as the customer sees it: the journey, the money and who to call. */
@@ -78,7 +82,7 @@ export const customerProjectSchema = z.object({
   }),
   subsidy: z.object({
     amountPaise: paiseSchema,
-    status: z.enum(['not_applicable', 'pending', 'applied', 'released']),
+    status: z.enum(['not_applicable', 'pending', 'applied', 'inspected', 'released']),
   }),
   quotation: z.object({ id: idSchema, number: z.string() }),
   contact: z.object({ name: z.string(), phone: z.string().nullable() }).nullable(),
@@ -158,6 +162,11 @@ export const serviceRequestSchema = z.object({
   rating: ticketRatingSchema.nullable(),
   /** Photos the customer added in the app. */
   photoCount: z.number().int(),
+  /** The customer added a short video, or a voice note. */
+  hasVideo: z.boolean(),
+  hasVoiceNote: z.boolean(),
+  /** The day the service team booked the technician's visit; null until booked. */
+  visitOn: calendarDateSchema.nullable(),
   createdAt: instantSchema,
   resolvedAt: instantSchema.nullable(),
 });

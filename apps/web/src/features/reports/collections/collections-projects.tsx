@@ -21,7 +21,7 @@ export function OwedByProject({ rows }: { readonly rows: readonly ProjectRow[] }
       cell: (row) => (
         <span className="flex min-w-0 flex-col">
           <Link
-            href={`/projects/${row.projectId}`}
+            href={`/projects/${row.projectId}?tab=payments`}
             className="oh-stretched-link font-mono text-[0.875rem] text-ink hover:text-accent"
           >
             {row.code}

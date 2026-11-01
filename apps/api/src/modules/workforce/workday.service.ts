@@ -46,7 +46,8 @@ export class WorkdayService {
       attendance: {
         dayStart: policy.attendance.dayStart,
         dayEnd: policy.attendance.dayEnd,
-        captureLocation: policy.attendance.captureLocation,
+        // On for this person: their own setting, their roles or the company (PRD 4.3).
+        captureLocation: tracking.switchedOn,
         retentionDays: policy.attendance.retentionDays,
       },
       balances: balancesOf(

@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { ApiError, describeError } from '@/lib/api/api-error';
-import { useCan } from '@/providers/current-user';
 import { ChecklistFields } from './checklist-fields';
 import { FactFields } from './fact-fields';
 import { SignaturePad } from './signature-pad';
@@ -36,7 +35,6 @@ export function CompleteTaskDialog({
 }) {
   const t = useTranslations('projects.complete');
   const evidenceT = useTranslations('projects.evidence');
-  const canApprove = useCan('tasks.approve');
   const formId = useId();
   const [facts, setFacts] = useState<Record<string, string>>(() => ({
     ...Object.fromEntries(
@@ -84,12 +82,14 @@ export function CompleteTaskDialog({
             pending={mutation.isPending}
             disabled={uploading}
           >
-            {task.approval && !canApprove ? t('submitReview') : t('submit')}
+            {/* Approvers send their own work for review too (PRD 3.7). */}
+            {task.approval ? t('submitReview') : t('submit')}
           </Button>
         </>
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-5 pb-2">
+        {task.description && <p className="type-body-sm text-ink-muted">{task.description}</p>}
         {task.captureFields.length > 0 && (
           <section className="flex flex-col gap-3">
             <p className="type-overline text-ink-faint uppercase">{t('records')}</p>
@@ -124,7 +124,7 @@ export function CompleteTaskDialog({
         <Field label={t('note')} hint={t('noteHint')}>
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
-        {task.approval && !canApprove && (
+        {task.approval && (
           <p className="flex items-start gap-2 rounded-md bg-review-tint px-3 py-2.5 type-body-sm text-review">
             <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
             {t('approvalNotice')}

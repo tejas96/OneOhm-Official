@@ -1,21 +1,9 @@
 import { MSEDCL, task } from './task-library-helpers';
+import { SURVEY_TEMPLATE_KEYS as SURVEY_KEYS } from './task-library-survey';
 import type { TaskTemplate } from './task-template';
 
-/** Survey, design, paperwork and material: everything before the crew is on the roof. */
+/** Papers, design and material: everything after the survey and before the crew is on site. */
 export const EARLY_TASKS: readonly TaskTemplate[] = [
-  task({
-    key: 'site_survey',
-    title: 'Site survey and measurements',
-    stage: 'survey',
-    roleKey: 'execution',
-    offsetDays: 0,
-    durationDays: 2,
-    dependsOn: [],
-    customerVisible: true,
-    notifyCustomer: true,
-    evidence: ['photo', 'measurement', 'checklist'],
-    captures: ['site_floors', 'structure_type', 'dc_cable_meters', 'ac_cable_meters'],
-  }),
   task({
     key: 'electricity_details',
     title: 'Verify electricity bill, consumer number and sanctioned load',
@@ -60,7 +48,7 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     roleKey: 'execution',
     offsetDays: 1,
     durationDays: 2,
-    dependsOn: ['site_survey'],
+    dependsOn: SURVEY_KEYS,
     approval: true,
     customerVisible: true,
     notifyCustomer: true,

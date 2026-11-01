@@ -43,6 +43,7 @@ export function buildQuoteInput(
     floors,
     distanceKm,
     discountPaise: rupeesToPaise(form.discount),
+    extras: [...form.extras],
   };
 }
 

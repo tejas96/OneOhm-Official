@@ -64,6 +64,24 @@ export function ContractorsTable({ rows }: { readonly rows: readonly ContractorS
       ),
     },
     {
+      key: 'rating',
+      header: t('figures.rating'),
+      align: 'end',
+      cell: (row) =>
+        row.performance.rating ? (
+          <span className="tabular-nums">
+            {t('figures.ratingValue', { value: row.performance.rating })}
+          </span>
+        ) : (
+          <span
+            className="text-ink-faint"
+            title={t('figures.ratingTooFew', { count: row.performance.ratings ?? 0 })}
+          >
+            —
+          </span>
+        ),
+    },
+    {
       key: 'rework',
       header: t('figures.rework'),
       align: 'end',

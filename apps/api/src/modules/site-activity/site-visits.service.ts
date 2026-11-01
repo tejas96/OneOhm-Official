@@ -8,6 +8,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
 import { type Position, trackingFor, usableReading } from '../workforce/tracking';
 import { loadSiteTask, type SiteTask } from './site-task';
 import { noteCheckIn, noteCheckOut, noteSiteSaved } from './site-visit-events';
@@ -67,6 +68,7 @@ export class SiteVisitsService {
       .onConflictDoNothing()
       .returning({ id: siteVisits.id });
     if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
+    await afterSiteCheckIn(this.db, actor, created.id, reading?.position ?? null, now);
     await noteCheckIn(this.db, task, {
       visitId: created.id,
       userId: actor.userId,
@@ -98,6 +100,7 @@ export class SiteVisitsService {
         updatedAt: now,
       })
       .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)));
+    await afterSiteCheckOut(this.db, actor.userId, open.id, reading?.position ?? null);
     await noteCheckOut(this.db, task, {
       visitId: open.id,
       userId: actor.userId,

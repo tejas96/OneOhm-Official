@@ -1,3 +1,4 @@
+import type { LeadDetail } from '@oneohm/api-contracts';
 import {
   Button,
   ChoiceChips,
@@ -16,31 +17,44 @@ import { api, keys } from '@/api/api';
 import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
 import { LEAD } from '@/copy/sales';
+import { useCurrentUser } from '@/session/session-provider';
 import { defaultFollowUp, FollowUpDates } from './follow-up-dates';
 
 const KINDS = ['call', 'visit', 'whatsapp', 'note'] as const;
 type Kind = (typeof KINDS)[number];
 
-/** Log what happened with a lead and when to come back to it, in one sheet. */
+/**
+ * Log what happened with a lead and when to come back to it, in one sheet. On a
+ * reseller's lead, staff notes stay staff-only unless switched off (PRD 4.8).
+ */
 export function FollowUpSheet({
-  leadId,
+  lead,
   open,
   onClose,
 }: {
-  readonly leadId: string;
+  readonly lead: LeadDetail;
   readonly open: boolean;
   readonly onClose: () => void;
 }) {
   const theme = useTheme();
   const client = useQueryClient();
   const toast = useToast();
+  const user = useCurrentUser();
+  const leadId = lead.id;
   const [kind, setKind] = useState<Kind>('call');
   const [note, setNote] = useState('');
   const [next, setNext] = useState(defaultFollowUp());
+  const canHide = lead.fromReseller && user.kind !== 'reseller';
+  const [internal, setInternal] = useState(true);
 
   const save = useMutation({
     mutationFn: async () => {
-      await unwrap(api.crm.addLeadActivity({ params: { id: leadId }, body: { kind, note } }));
+      await unwrap(
+        api.crm.addLeadActivity({
+          params: { id: leadId },
+          body: { kind, note, ...(canHide ? { internal } : {}) },
+        }),
+      );
       return unwrap(api.crm.updateLead({ params: { id: leadId }, body: { nextActionOn: next } }));
     },
     onSuccess: async (lead) => {
@@ -89,6 +103,20 @@ export function FollowUpSheet({
           accessibilityLabel={LEAD.sheet.note}
         />
       </Field>
+      {canHide ? (
+        <Field label={LEAD.sheet.audience} hint={LEAD.staffOnlyHint}>
+          <ChoiceChips
+            kind="segmented"
+            label={LEAD.sheet.audience}
+            choices={[
+              { value: 'staff', label: LEAD.staffOnly },
+              { value: 'shared', label: LEAD.sharedWithReseller },
+            ]}
+            value={internal ? 'staff' : 'shared'}
+            onChange={(value) => setInternal(value === 'staff')}
+          />
+        </Field>
+      ) : null}
       <Field label={LEAD.sheet.next}>
         <FollowUpDates label={LEAD.sheet.next} value={next} onChange={setNext} />
       </Field>

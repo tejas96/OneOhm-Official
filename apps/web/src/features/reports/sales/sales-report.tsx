@@ -34,7 +34,7 @@ function Kpis({ data }: { readonly data: SalesReport }) {
         value={totals.wonPaise}
         format={money}
         detail={t('wonDetail', { count: totals.won, capacity: kwp(totals.wonWp) })}
-        href="/quotations"
+        href="/quotations?filter=accepted"
         hrefLabel={t('wonLink')}
       />
       <KpiTile

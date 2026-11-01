@@ -6,6 +6,7 @@ import { formatInr } from '@oneohm/shared';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { BudgetActions } from '@/features/projects/team/budget-actions';
 
 const TONE: Readonly<Record<ProjectDetail['budget']['status'], PillTone>> = {
   awaiting_survey: 'neutral',
@@ -55,6 +56,7 @@ export function BudgetPanel({ project }: { readonly project: ProjectDetail }) {
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         )}
+        <BudgetActions project={project} />
       </div>
     </Card>
   );

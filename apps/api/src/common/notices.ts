@@ -52,6 +52,27 @@ export const STAFF_NOTICES = {
     subject: taskSubject(task),
     dedupeKey: `task_approved:${task.id}`,
   }),
+  taskReturned: (task: TaskRef, by: string, reason: string, stamp: string): Notice => ({
+    kind: 'task_returned',
+    title: 'Sent back for correction',
+    body: `${task.title}: ${reason} (${by})`,
+    subject: taskSubject(task),
+    dedupeKey: `task_returned:${task.id}:${stamp}`,
+  }),
+  taskHelpAsked: (task: TaskRef, code: string, by: string, stamp: string): Notice => ({
+    kind: 'task_help',
+    title: `Help asked on ${code}`,
+    body: `${by} needs the team's help with ${task.title}.`,
+    subject: taskSubject(task),
+    dedupeKey: `task_help:${task.id}:${stamp}`,
+  }),
+  taskRescheduled: (task: TaskRef, due: string, stamp: string): Notice => ({
+    kind: 'task_rescheduled',
+    title: 'New due date',
+    body: `${task.title} is now due ${daySpan(due, due)}.`,
+    subject: taskSubject(task),
+    dedupeKey: `task_rescheduled:${task.id}:${stamp}`,
+  }),
   leaveRequested: (id: string, name: string, from: string, to: string): Notice => ({
     kind: 'leave_requested',
     title: 'Leave request',

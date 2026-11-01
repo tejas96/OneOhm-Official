@@ -51,6 +51,34 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Your free ${p.visit} visit is on ${p.date}`,
     body: `${p.project}: our service team will call before they come.`,
   }),
+  survey_scheduled: (p) => ({
+    title: `Site survey on ${p.date}`,
+    body: `${p.project}: our team will call before they come.`,
+  }),
+  stage_rating_request: (p) => ({
+    title: 'How did we do?',
+    body: `${p.project}: the ${p.stage} is done. Please rate it in the app.`,
+  }),
+  installation_started: (p) => ({
+    title: 'Installation has started',
+    body: `${p.project}: our crew is fitting your ${p.capacity} system.`,
+  }),
+  commissioning_completed: (p) => ({
+    title: 'Your system is switched on',
+    body: `${p.project}: the final payment is now due. Open Payments to see it.`,
+  }),
+  project_update_link: (p) => ({
+    title: p.milestone ?? 'Project update',
+    body: `${p.project}: the paper is in Documents.`,
+  }),
+  service_visit_booked: (p) => ({
+    title: `Technician visit on ${p.date}`,
+    body: `${p.topic}: our technician will call before they come.`,
+  }),
+  project_waiting: (p) => ({
+    title: `Waiting for ${p.reason}`,
+    body: `${p.project}: ${p.milestone}. We will keep you posted.`,
+  }),
   referral_reward: (p) => ({
     title: 'Referral reward update',
     body: `${p.friend}: ${p.amount} is ${p.status}.`,

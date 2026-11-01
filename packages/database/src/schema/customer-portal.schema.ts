@@ -1,5 +1,5 @@
 import { index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { createdAt, instant, primaryId, updatedAt } from './columns';
+import { calendarDate, createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers } from './crm.schema';
 import { users } from './identity.schema';
 import { projects } from './projects.schema';
@@ -42,6 +42,8 @@ export const serviceRequests = pgTable(
     resolutionDueAt: instant('resolution_due_at'),
     respondedAt: instant('responded_at'),
     resolvedAt: instant('resolved_at'),
+    /** The day the service desk booked the technician's visit (PRD 5.5); null until booked. */
+    visitOn: calendarDate('visit_on'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

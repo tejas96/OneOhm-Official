@@ -63,7 +63,19 @@
       "saved": "Changes saved",
       "cancel": "Cancel",
       "skills": "Skills",
-      "skillsHint": "Tasks that need a skill go first to people in the role who have it."
+      "skillsHint": "Tasks that need a skill go first to people in the role who have it.",
+      "workTitle": "Workload and location",
+      "work": {
+        "limit": "Open-task limit",
+        "limitHint": "{count, plural, one {Leave empty for the company limit of # task.} other {Leave empty for the company limit of # tasks.}}",
+        "limitHintNone": "Leave empty for no limit. The company has none set.",
+        "noLimit": "No limit",
+        "tracking": "Location at check-in",
+        "trackingHint": "Over their roles and the company setting. They still agree in the app first.",
+        "follow": "Follow role and company",
+        "on": "Always ask",
+        "off": "Never ask"
+      }
     },
     "tabsLabel": "Team sections",
     "noAccess": "You do not have permission to see the team.",
@@ -73,7 +85,10 @@
       "leave": "Leave",
       "points": "Points",
       "resellers": "Resellers",
-      "travel": "Travel"
+      "travel": "Travel",
+      "workload": "Workload",
+      "bonuses": "Bonuses",
+      "announcements": "Announcements"
     },
     "decide": {
       "choice": "Your decision",
@@ -118,7 +133,10 @@
         "ofTeam": "of {count} on the team",
         "late": "Late",
         "onLeave": "On leave",
-        "notIn": "Not checked in"
+        "notIn": "Not checked in",
+        "openGroup": "Open the list: {group}",
+        "showing": "Showing: {group}",
+        "showEveryone": "Show everyone"
       },
       "corrections": {
         "title": "Corrections",
@@ -131,10 +149,19 @@
         "decline": "Decline",
         "approved": "Correction approved",
         "declined": "Correction declined"
+      },
+      "device": {
+        "battery": "{value}% battery",
+        "charging": "{value}% charging",
+        "wifi": "Wi-Fi",
+        "cellular": "Mobile data",
+        "none": "Offline",
+        "other": "Other network",
+        "autoFromSite": "Auto, from a site check-in"
       }
     },
     "leave": {
-      "intro": "Leave is counted in working days; a half day counts as 0.5. Approving hands the open tasks in those days to the backup.",
+      "intro": "Leave is counted in working days; a half day counts as 0.5. Approving hands the open work in those days to the backup.",
       "applyAction": "Apply for leave",
       "loading": "Loading leave",
       "halfDay": "Half a day",
@@ -142,7 +169,7 @@
       "emergency": "Emergency",
       "noBackup": "No backup named",
       "coveredBy": "{name} covers",
-      "handedOver": "{count, plural, =0 {no tasks handed over} one {# task handed over} other {# tasks handed over}}",
+      "handedOver": "{count, plural, =0 {nothing handed over} one {# item handed over} other {# items handed over}}",
       "decidedBy": "Decided by {name}.",
       "status": {
         "pending": "Waiting",
@@ -168,7 +195,7 @@
         "decline": "Decline",
         "approved": "Leave approved",
         "declined": "Leave declined",
-        "approvedHandover": "{count, plural, =0 {No open tasks needed handing to {name}.} one {# task handed over to {name}.} other {# tasks handed over to {name}.}}"
+        "approvedHandover": "{count, plural, =0 {Nothing open needed handing to {name}.} one {# item handed over to {name}.} other {# items handed over to {name}.}}"
       },
       "history": {
         "title": "Everyone’s leave",
@@ -243,6 +270,41 @@
         "cancel": "Cancel",
         "submit": "Send request",
         "sent": "Leave requested"
+      },
+      "noHandoverEmergency": "No handover (emergency)",
+      "affected": {
+        "nothing": "Nothing open is due while they are away.",
+        "tasks": "{count, plural, one {# task} other {# tasks}}",
+        "service": "{count, plural, one {# service request} other {# service requests}}",
+        "followUps": "{count, plural, one {# lead follow-up} other {# lead follow-ups}}",
+        "taskDetail": "{code} · due {day}",
+        "followUpOn": "Follow-up {day}",
+        "reason": {
+          "overdue": "Already late",
+          "due": "Due while away",
+          "spans": "Runs through it"
+        },
+        "managersTold": "The managers of {projects} are told when you approve."
+      },
+      "approveDialog": {
+        "choice": "Your decision",
+        "approve": "Approve",
+        "decline": "Decline",
+        "cancel": "Cancel",
+        "confirmApprove": "Approve",
+        "confirmDecline": "Decline",
+        "touches": "What this leave touches",
+        "loading": "Checking their work",
+        "backup": "Who covers",
+        "backupHint": "Approving hands everything above to them. Needed unless it is emergency leave.",
+        "backupHintNothing": "Nothing open is affected; they will know to stand in.",
+        "noOne": "No one",
+        "suggested": "{count, plural, =0 {Suggested · no open tasks} one {Suggested · # open task} other {Suggested · # open tasks}}",
+        "openTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+        "skip": "Approve without a handover",
+        "skipHint": "Emergency leave only. The work stays with them, and their projects’ managers are told nobody covers it.",
+        "note": "Note for them",
+        "noteHint": "Optional. They see it with your decision."
       }
     },
     "points": {
@@ -274,7 +336,8 @@
       "source": {
         "task_on_time": "On-time task",
         "customer_rating": "Customer rating",
-        "recognition": "Recognition"
+        "recognition": "Recognition",
+        "stage_rating": "Stage rating"
       },
       "recent": {
         "title": "Recent points",
@@ -391,6 +454,112 @@
       "loading": "Loading skills",
       "none": "No skills set up yet. Add them in Settings → Workforce.",
       "list": "Skills: {names}"
+    },
+    "capacity": {
+      "over": "Over limit",
+      "full": "At limit",
+      "open": "{count, plural, =0 {None open} other {# open}}",
+      "openOfLimit": "{count} / {limit} open"
+    },
+    "workload": {
+      "loading": "Loading workload",
+      "intro": "Open tasks against each person’s limit, and what falls due in each of the next four weeks. Overdue work counts in this week; leave days show under the week.",
+      "overCount": "{count, plural, one {# person is over their limit.} other {# people are over their limit.}}",
+      "empty": "No staff yet",
+      "caption": "Workload for the next four weeks",
+      "thisWeek": "This week",
+      "leaveDays": "{count, plural, one {# day leave} other {# days leave}}",
+      "columns": {
+        "person": "Person",
+        "open": "Open tasks",
+        "overdue": "Overdue"
+      }
+    },
+    "bonuses": {
+      "intro": "Bonuses and incentives for good work, usually on one project. Someone who approves payments decides each one; finance then pays it like any other bill.",
+      "statusLabel": "Filter by status",
+      "allStatuses": "All statuses",
+      "proposeAction": "Propose a bonus",
+      "loading": "Loading bonuses",
+      "empty": "No bonuses here",
+      "caption": "Bonuses",
+      "columns": {
+        "bonus": "Bonus",
+        "people": "People",
+        "total": "Total",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "withdraw": "Withdraw",
+      "withdrawn": "Bonus withdrawn",
+      "withdrawFailed": "Could not withdraw it",
+      "approve": "Approve",
+      "decline": "Decline",
+      "approved": "Bonus approved",
+      "declined": "Bonus declined",
+      "decideSummary": "{amount} in all. Approving makes each share a payment finance makes to that person.",
+      "paid": "Paid",
+      "paidOn": "Paid {day}",
+      "awaitingPayment": "Awaiting payment",
+      "propose": {
+        "title": "Propose a bonus",
+        "description": "Say what it is for and who shares it. It waits for someone who approves payments.",
+        "cancel": "Cancel",
+        "send": "Send for approval",
+        "sent": "Bonus sent for approval",
+        "project": "Project",
+        "projectHint": "Optional. The bonus counts as a cost of this project.",
+        "noProject": "Not for one project",
+        "reason": "What it is for",
+        "reasonHint": "They see this, for example “Installation finished two days early”.",
+        "amount": "Total amount",
+        "amountHint": "Shared by the people below; up to ₹5,00,000.",
+        "people": "Who shares it",
+        "peopleHint": "Shares split the total: 2 shares get twice as much as 1.",
+        "pickPerson": "Pick a person",
+        "person": "Person {number}",
+        "shares": "Shares",
+        "remove": "Remove",
+        "addPerson": "Add a person",
+        "gets": "Gets {amount}"
+      }
+    },
+    "announcements": {
+      "intro": "Short notices for the team. They show on Today in the field app until their last day, and arrive once as an alert. No email.",
+      "new": "New announcement",
+      "loading": "Loading announcements",
+      "empty": "No announcements yet",
+      "emptyBody": "Post one when the whole team, or a few roles, need to know something.",
+      "caption": "Announcements",
+      "everyone": "Everyone on the staff",
+      "untilTakenDown": "Until taken down",
+      "showing": "Showing",
+      "ended": "Ended",
+      "takeDown": "Take down",
+      "takenDown": "Announcement taken down",
+      "failed": "Could not take it down",
+      "columns": {
+        "announcement": "Announcement",
+        "audience": "For",
+        "until": "Last day",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "form": {
+        "title": "New announcement",
+        "description": "It shows on Today in the field app and is sent once as an alert.",
+        "cancel": "Cancel",
+        "post": "Post",
+        "posted": "Announcement posted",
+        "heading": "Title",
+        "body": "Message",
+        "bodyHint": "A few lines, up to 600 characters.",
+        "endsOn": "Last day",
+        "endsOnHint": "Optional. Leave empty to keep it until you take it down.",
+        "audience": "Who it is for",
+        "everyone": "Everyone on the staff. Pick roles to narrow it.",
+        "onlyRoles": "{count, plural, one {Only people with this role.} other {Only people with one of these # roles.}}"
+      }
     }
   }
 }

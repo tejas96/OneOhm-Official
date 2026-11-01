@@ -17,6 +17,7 @@ import { PointsValuesSection } from './points-values-section';
 import { SkillsSection } from './skills-section';
 import { useWorkforceSettings, WORKFORCE_SETTINGS_KEY } from './use-workforce-settings';
 import { WorkingDaySection } from './working-day-section';
+import { WorkloadSection } from './workload-section';
 
 /**
  * Leave kinds, the working week, location at check-in, site check-ins and travel, point
@@ -79,6 +80,11 @@ export function WorkforcePanel() {
         <SiteTravelSection
           travel={draft.travel}
           onChange={(travel) => setDraft({ ...draft, travel })}
+          errors={form.fieldErrors}
+        />
+        <WorkloadSection
+          capacity={draft.capacity}
+          onChange={(capacity) => setDraft({ ...draft, capacity })}
           errors={form.fieldErrors}
         />
         <PointsValuesSection

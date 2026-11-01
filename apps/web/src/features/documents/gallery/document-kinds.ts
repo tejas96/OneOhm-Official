@@ -1,7 +1,9 @@
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { type DocumentCategory, isDocumentCategory } from '@oneohm/domain';
 import {
+  BadgeCheck,
   BadgeIndianRupee,
+  BookOpen,
   Camera,
   FileCheck,
   Folder,
@@ -38,11 +40,13 @@ export const FOLDER_ICONS: Readonly<Record<FolderChoice, LucideIcon>> = {
   quotation: ScrollText,
   invoice_receipt: Receipt,
   vendor: Package,
+  dcr_certificate: BadgeCheck,
   bank_loan: Landmark,
   discom: UtilityPole,
   subsidy: BadgeIndianRupee,
   commissioning_handover: Handshake,
   warranty: ShieldCheck,
+  product_manual: BookOpen,
   statutory_report: FileCheck,
   other: Folder,
 };

@@ -40,8 +40,15 @@ export function ClaimsTable({
       key: 'visits',
       header: t('columns.visits'),
       cell: (claim) => (
-        <span className="type-body-sm text-ink-muted">
-          {t('visitsCount', { count: claim.visits })}
+        <span className="flex flex-col">
+          <span className="type-body-sm text-ink-muted">
+            {t('visitsCount', { count: claim.visits })}
+          </span>
+          {claim.project && (
+            <span className="type-label text-ink-faint">
+              {t('forProject', { code: claim.project.code })}
+            </span>
+          )}
         </span>
       ),
     },

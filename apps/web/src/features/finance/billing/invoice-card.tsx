@@ -147,6 +147,7 @@ export function InvoiceCard({
 }) {
   const t = useTranslations('finance.billing.invoice');
   const canIssue = useCan('finance.record_payments');
+  const canCancel = useCan('finance.approve_payments');
   const canView = useCan('finance.view') || canIssue;
   const query = useProjectBilling(projectId, canView);
   const [issuing, setIssuing] = useState(false);
@@ -172,7 +173,7 @@ export function InvoiceCard({
       ) : current ? (
         <Issued
           invoice={current}
-          {...(canIssue ? { onCancel: () => setCancelling(current) } : {})}
+          {...(canCancel ? { onCancel: () => setCancelling(current) } : {})}
         />
       ) : (
         <Draft

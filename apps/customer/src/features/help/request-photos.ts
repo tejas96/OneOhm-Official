@@ -39,23 +39,29 @@ export async function pickRequestPhotos(
 const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A video on a weak signal needs longer than the usual two minutes. */
+const MEDIA_TIMEOUT_MS = 10 * 60_000;
+
 /**
- * Sends the photos to a request just raised. A photo that fails for want of signal is
- * tried again a few times; the number that never got through is returned.
+ * Sends files to a request just raised: photos to `photos`, a video or voice note to
+ * `files`. A file that fails for want of signal is tried again a few times; the number
+ * that never got through is returned.
  */
 export async function sendRequestPhotos(
   requestId: string,
   photos: readonly UploadableFile[],
+  route: 'photos' | 'files' = 'photos',
 ): Promise<number> {
   let failed = 0;
   for (const file of photos) {
     for (let attempt = 0; ; attempt += 1) {
       try {
         await uploadFile<ServiceRequest>({
-          url: `${API_BASE_URL.replace(/\/+$/, '')}/v1/customer/service-requests/${requestId}/photos`,
+          url: `${API_BASE_URL.replace(/\/+$/, '')}/v1/customer/service-requests/${requestId}/${route}`,
           token: currentToken(),
           file,
           fields: {},
+          ...(route === 'files' ? { timeoutMs: MEDIA_TIMEOUT_MS } : {}),
         });
         break;
       } catch (error) {

@@ -34,7 +34,9 @@ export function designSystem(input: SystemDesignInput): SystemDesign {
     site.dcCableMeters ?? rates.dcCable.baseMeters + site.floors * rates.dcCable.perFloorMeters;
   const acMeters =
     site.acCableMeters ?? rates.acCable.baseMeters + site.floors * rates.acCable.perFloorMeters;
-  const cableBasis = site.dcCableMeters === undefined ? 'default' : 'survey';
+  // Each run is measured on its own: a measured DC run never makes the AC estimate exact.
+  const dcBasis = site.dcCableMeters === undefined ? 'default' : 'survey';
+  const acBasis = site.acCableMeters === undefined ? 'default' : 'survey';
   const extraKm = Math.max(0, site.distanceKm - rates.transport.baseKm);
 
   const lines: QuoteLineInput[] = [
@@ -95,7 +97,7 @@ export function designSystem(input: SystemDesignInput): SystemDesign {
       rates.dcCable.price,
       rates.dcCable.cost,
       goods(rates),
-      cableBasis,
+      dcBasis,
     ),
     line(
       'ac_cable',
@@ -106,7 +108,7 @@ export function designSystem(input: SystemDesignInput): SystemDesign {
       rates.acCable.price,
       rates.acCable.cost,
       goods(rates),
-      cableBasis,
+      acBasis,
     ),
     line(
       'earthing',

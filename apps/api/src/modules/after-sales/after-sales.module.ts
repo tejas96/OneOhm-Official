@@ -13,5 +13,6 @@ import { ProjectAfterSalesService } from './project-after-sales.service';
   imports: [CustomerPortalModule],
   controllers: [AfterSalesController, CustomerAfterSalesController],
   providers: [AfterSalesSettingsService, ProjectAfterSalesService, CustomerAfterSalesService],
+  exports: [CustomerAfterSalesService],
 })
 export class AfterSalesModule {}

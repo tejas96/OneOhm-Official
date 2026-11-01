@@ -85,7 +85,46 @@ export const LEAD = {
     notePlaceholder: 'e.g. Visited the roof; wants a quote for 5 kW',
     next: 'Next follow-up',
     save: 'Save',
+    audience: 'Who sees this note',
   },
   quote: 'Quick quote',
   logged: 'Follow-up saved',
+  revisitDue: 'Revisit due',
+  revisitOn: (date: string) => `Try again ${date}`,
+  staffOnly: 'Staff only',
+  sharedWithReseller: 'Reseller sees it too',
+  staffOnlyHint: 'Staff-only notes are never shown to the reseller who brought this lead.',
+} as const;
+
+export const LEAD_QUOTES = {
+  title: 'Quotations',
+  none: 'No quotation yet. Use Quick quote once the site is added.',
+  revision: (number: string, revision: number) => `${number} · Rev ${revision}`,
+  open: (number: string) => `Open ${number}`,
+  status: {
+    draft: 'Draft',
+    sent: 'Sent',
+    accepted: 'Accepted',
+    rejected: 'Turned down',
+    superseded: 'Replaced',
+    approval: 'Waiting for discount approval',
+  },
+  pdfFailed: 'The PDF did not open. Check the connection and try again.',
+} as const;
+
+export const LEAD_SITE = {
+  add: 'Add the site',
+  needed: 'Add the site to save a quotation.',
+  title: 'Add the site',
+  description: 'Where the system goes. The rest can come from the survey.',
+  address: 'Address',
+  addressPlaceholder: 'House, street, area',
+  city: 'Town or city',
+  district: 'District',
+  pincode: 'PIN code',
+  consumerNumber: 'Consumer number',
+  consumerHint: 'From the electricity bill, if they have it.',
+  label: { individual: 'Home', society: 'Society', commercial: 'Business' },
+  save: 'Save the site',
+  saved: 'Site saved. You can quote now.',
 } as const;

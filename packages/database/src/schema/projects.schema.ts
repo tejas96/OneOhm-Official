@@ -54,6 +54,8 @@ export const projects = pgTable(
     nameChange: boolean('name_change').notNull().default(false),
     managerUserId: uuid('manager_user_id').references(() => users.id, { onDelete: 'set null' }),
     startDate: calendarDate('start_date').notNull(),
+    /** When the owner wants it finished, if they set one at creation (PRD 3.8). */
+    targetFinishDate: calendarDate('target_finish_date'),
     /**
      * The budget after the site survey (PRD 3.5, Flow A): awaiting_survey, locked,
      * revision_needed while a re-priced revision waits for approval and the customer, or
@@ -85,9 +87,15 @@ export const projectTasks = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     templateKey: text('template_key').notNull(),
     title: text('title').notNull(),
+    /** The template's description when the task was made. */
+    description: text('description'),
     stage: epcStageEnum('stage').notNull(),
     roleKey: text('role_key').notNull(),
     assigneeUserId: uuid('assignee_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** A critical task's suggested person, until a manager confirms (PRD 3.8). */
+    proposedUserId: uuid('proposed_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** Given outside the project's named team because nobody in it fitted. */
+    outsideTeam: boolean('outside_team').notNull().default(false),
     status: taskStatusEnum('status').notNull().default('pending'),
     waitingParty: waitingPartyEnum('waiting_party').notNull().default('internal'),
     startDate: calendarDate('start_date').notNull(),
@@ -100,6 +108,8 @@ export const projectTasks = pgTable(
     notifyCustomer: boolean('notify_customer').notNull().default(false),
     approval: boolean('approval').notNull().default(false),
     approvedByUserId: uuid('approved_by_user_id').references(() => users.id),
+    /** The template's reviewer when the task was made: approvers or project_manager. */
+    reviewer: text('reviewer').notNull().default('approvers'),
     evidence: text('evidence').array().notNull(),
     captures: text('captures').array().notNull(),
     /** The template's checklist when the task was made; null uses the built-in list. */

@@ -7,7 +7,7 @@ import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
 
 type Points = WorkforcePolicyInput['points'];
-const FIELDS = ['onTimeTask', 'goodRating', 'recognitionMax'] as const;
+const FIELDS = ['onTimeTask', 'goodRating', 'stageRating', 'recognitionMax'] as const;
 
 /** How many points each kind of good work is worth. */
 export function PointsValuesSection({
@@ -22,7 +22,7 @@ export function PointsValuesSection({
   const t = useTranslations('settings.workforce.points');
   return (
     <SettingsSection title={t('title')} description={t('description')}>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {FIELDS.map((field) => (
           <Field
             key={field}

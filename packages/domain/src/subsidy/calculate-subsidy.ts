@@ -22,7 +22,9 @@ export type SubsidyIneligibility =
   | 'off_grid'
   | 'meter_not_in_society_name'
   | 'already_subsidised'
-  | 'no_rule';
+  | 'no_rule'
+  /** A society's subsidy is per household: without the count it cannot be worked out. */
+  | 'no_households';
 
 export interface SubsidyResult {
   readonly amountPaise: number;
@@ -37,6 +39,14 @@ const none = (ineligible: SubsidyIneligibility): SubsidyResult => ({
   ineligible,
 });
 
+/** A society needs its meter in its own name, and a household count to size the subsidy. */
+function societyProblem(input: SubsidyInput, rule: SubsidyRule | null): SubsidyResult | null {
+  if (input.category !== 'society') return null;
+  if (input.meterInSocietyName === false) return none('meter_not_in_society_name');
+  if (rule?.perHouseholdWp && !((input.households ?? 0) > 0)) return none('no_households');
+  return null;
+}
+
 /**
  * Expected government subsidy for a quotation. OneOhm never pays or deducts it;
  * the quotation only shows it (PRD 3.5, 3.11).
@@ -46,10 +56,9 @@ export function calculateSubsidy(input: SubsidyInput, rule: SubsidyRule | null):
   if (!input.panelsDcr) return none('non_dcr_panels');
   if (input.systemType === 'off_grid') return none('off_grid');
   if (input.propertyAlreadySubsidised) return none('already_subsidised');
-  if (input.category === 'society' && input.meterInSocietyName === false) {
-    return none('meter_not_in_society_name');
-  }
-  if (!rule) return none('no_rule');
+  if (!rule) return societyProblem(input, null) ?? none('no_rule');
+  const problem = societyProblem(input, rule);
+  if (problem) return problem;
 
   let eligibleWp = input.capacityWp;
   if (input.category === 'society') {

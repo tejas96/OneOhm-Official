@@ -77,6 +77,8 @@ export const quotations = pgTable(
     sentAt: instant('sent_at'),
     acceptedAt: instant('accepted_at'),
     rejectedAt: instant('rejected_at'),
+    /** What the customer said when turning it down (PRD 3.5 rejection tracking). */
+    rejectionReason: text('rejection_reason'),
     createdByUserId: uuid('created_by_user_id').references(() => users.id),
     version: version(),
     createdAt: createdAt(),
@@ -112,6 +114,12 @@ export const quotationLines = pgTable(
     taxPaise: money('tax_paise').notNull(),
     totalPaise: money('total_paise').notNull(),
     costPaise: money('cost_paise').notNull(),
+    /** Lines added by hand: optional, gift, charge or adjustment; null for the engine's own. */
+    extraKind: text('extra_kind'),
+    /** Why a hand-added line is there (PRD 3.9 manual adjustment with reason). */
+    reason: text('reason'),
+    /** The catalog product an optional item or gift was picked from, if any. */
+    productId: uuid('product_id').references(() => products.id),
   },
   (table) => [index('quotation_lines_quotation_idx').on(table.quotationId)],
 );

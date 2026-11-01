@@ -30,7 +30,7 @@ function Kpis({ data }: { readonly data: CollectionsReport }) {
             ? t('collectedReturned', { ...split, returned: money(totals.returnedPaise) })
             : t('collectedDetail', split)
         }
-        href="/finance"
+        href={RECEIVABLES}
         hrefLabel={t('collectedLink')}
       />
       <KpiTile

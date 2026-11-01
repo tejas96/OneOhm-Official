@@ -7,13 +7,13 @@ import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
-import { DecideDialog, type DecisionTarget } from '../decide-dialog';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
+import { LeaveApproveDialog } from './leave-approve-dialog';
 import { LeaveCover, LeaveKind, useLeaveText } from './leave-facts';
 import { useDecideLeave } from './use-leave';
 
-/** Requests waiting for a decision, oldest first; approving hands tasks to the backup. */
+/** Requests waiting for a decision, oldest first; approving hands the work to the backup. */
 export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequestRecord[] }) {
   const t = useTranslations('team.leave.queue');
   const me = useCurrentUser();
@@ -21,32 +21,13 @@ export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequ
   const format = useWorkforceFormat();
   const { when } = useLeaveText();
   const decide = useDecideLeave();
-  const [open, setOpen] = useState<{ item: LeaveRequestRecord; target: DecisionTarget } | null>(
-    null,
-  );
+  const [open, setOpen] = useState<{ item: LeaveRequestRecord; approve: boolean } | null>(null);
   const pending = [...requests]
     // Nobody decides their own leave: those wait for someone else and show under "Your leave".
     .filter((item) => item.status === 'pending' && item.user.id !== me.id)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-  const start = (item: LeaveRequestRecord, approve: boolean) =>
-    setOpen({
-      item,
-      target: {
-        approve,
-        title: t('dialogTitle', { name: item.user.fullName, kind: item.leaveLabel }),
-        summary: (
-          <div className="flex flex-col gap-2">
-            <p className="type-body text-ink">{when(item)}</p>
-            <p className="type-body-sm text-ink-muted">
-              {item.backup
-                ? t('handoverOnApprove', { name: item.backup.fullName })
-                : t('noHandover')}
-            </p>
-          </div>
-        ),
-      },
-    });
+  const start = (item: LeaveRequestRecord, approve: boolean) => setOpen({ item, approve });
 
   return (
     <Card>
@@ -94,12 +75,14 @@ export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequ
           ))}
         </ul>
       )}
-      <DecideDialog
-        target={open?.target ?? null}
+      <LeaveApproveDialog
+        leave={open?.item ?? null}
+        leaning={open?.approve ?? true}
         onClose={() => setOpen(null)}
-        onDecide={async (approve, note) => {
+        onDecide={async (body) => {
           if (!open) return;
-          const decided = await decide(open.item.id, approve, note);
+          const decided = await decide(open.item.id, body);
+          const approve = body.approve;
           toast({
             title: approve ? t('approved') : t('declined'),
             description:

@@ -112,12 +112,27 @@ export const workforceContract = c.router({
     query: z.object({ status: decisionStatusSchema.optional() }),
     responses: { 200: z.array(leaveRequestSchema) },
   },
+  requestImpact: {
+    method: 'GET',
+    path: '/leave/:id/impact',
+    pathParams: idParams,
+    responses: { 200: leaveImpactSchema },
+    summary: 'For the approver: the work a pending request touches and who could cover it.',
+  },
   decideLeave: {
     method: 'POST',
     path: '/leave/:id/decide',
     pathParams: idParams,
-    body: decision,
+    body: decision.and(
+      z.object({
+        /** Who covers the affected work; the approver may pick or change it. */
+        backupUserId: idSchema.nullable().optional(),
+        /** Emergency leave only: approve with work affected and nobody covering it. */
+        skipHandover: z.boolean().optional(),
+      }),
+    ),
     responses: { 200: leaveRequestSchema },
-    summary: 'Approving hands the open tasks in the window to the backup, if one was named.',
+    summary:
+      'Approving hands the affected work to the backup; ordinary leave with affected work needs one.',
   },
 });

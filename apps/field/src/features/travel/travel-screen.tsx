@@ -24,6 +24,7 @@ import { useWorkday } from '@/features/attendance/use-workday';
 import { TrackingStatus } from '@/features/site/tracking-status';
 import { addDays, businessToday, shortDate } from '@/lib/dates';
 import { ClaimCard, stateOf } from './claim-card';
+import { ClaimProject, defaultProject } from './claim-project';
 import { RouteCard } from './route-card';
 import { useClaimActions, useMyClaims, useTravelDay } from './use-travel';
 
@@ -97,6 +98,7 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
   const toast = useToast();
   const { claim, cancel } = useClaimActions();
   const [note, setNote] = useState('');
+  const [projectId, setProjectId] = useState(() => defaultProject(day));
   const live = day.claim && (day.claim.status === 'pending' || day.claim.status === 'approved');
   if (live && day.claim) {
     const state = stateOf(day.claim);
@@ -133,6 +135,7 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
   }
   return (
     <View style={styles.form}>
+      <ClaimProject day={day} value={projectId} onChange={setProjectId} />
       <Field label={TRAVEL.note} hint={TRAVEL.noteHint} optional={COMMON.optional}>
         <Input value={note} onChangeText={setNote} maxLength={500} />
       </Field>
@@ -143,7 +146,7 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
         fullWidth
         onPress={() =>
           claim.mutate(
-            { workDate: day.workDate, note: note.trim() || null },
+            { workDate: day.workDate, note: note.trim() || null, projectId },
             {
               onSuccess: () => toast(TRAVEL.claimed),
               onError: (error) => toast(describeError(error)),

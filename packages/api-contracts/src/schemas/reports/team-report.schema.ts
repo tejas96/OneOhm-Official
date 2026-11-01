@@ -13,6 +13,10 @@ const workSchema = z.object({
   /** Of the late ones, those that were waiting on the customer, bank or DISCOM. */
   lateOnOthers: int,
   onTimeRate: rate,
+  /** Finished tasks whose work was sent back at least once (PRD 3.12 quality). */
+  reworked: int,
+  /** Share finished without being sent back; null with nothing finished. */
+  firstTimeRightRate: rate,
   open: int,
   pastDue: int,
 });

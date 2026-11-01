@@ -263,7 +263,8 @@
         "overdue": "{amount} overdue",
         "nothingOverdue": "Nothing overdue",
         "advances": "Open advances",
-        "advancesDetail": "Paid, not yet used on a bill"
+        "advancesDetail": "Paid, not yet used on a bill",
+        "openTab": "Open the records behind {label}"
       },
       "orders": {
         "caption": "Purchase orders with this vendor",

@@ -62,6 +62,7 @@ export function MoneyEntryRow({
 export function CreditCard({ project }: { readonly project: ProjectDetail }) {
   const t = useTranslations('finance.billing.credit');
   const canRecord = useCan('finance.record_payments');
+  const canRefund = useCan('finance.approve_payments');
   const canView = useCan('finance.view') || canRecord;
   const query = useProjectBilling(project.id, canView);
   const [dialog, setDialog] = useState<'refund' | 'apply' | null>(null);
@@ -105,7 +106,7 @@ export function CreditCard({ project }: { readonly project: ProjectDetail }) {
                     {t('apply')}
                   </Button>
                 )}
-                {(credit > 0 || paidAny) && (
+                {canRefund && (credit > 0 || paidAny) && (
                   <Button
                     size="sm"
                     variant="secondary"
@@ -129,7 +130,7 @@ export function CreditCard({ project }: { readonly project: ProjectDetail }) {
           )}
         </div>
       )}
-      {canRecord && dialog === 'refund' && (
+      {canRefund && dialog === 'refund' && (
         <RefundDialog
           key={session}
           projectId={project.id}

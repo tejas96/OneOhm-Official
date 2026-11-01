@@ -4,11 +4,15 @@ import { reportMetaSchema } from './business-report.schema';
 
 const rate = z.number().nullable();
 
-/** Cost so far from each source: stock sent to site, vendor bills, contractor bills. */
+/**
+ * Cost so far from each source: stock sent to site or handed to the contractor (less what
+ * came back), vendor bills, contractor bills, and employees' travel claimed for the project.
+ */
 const actualCostSchema = z.object({
   stockPaise: paiseSchema,
   vendorPaise: paiseSchema,
   contractorPaise: paiseSchema,
+  travelPaise: paiseSchema,
 });
 
 /**

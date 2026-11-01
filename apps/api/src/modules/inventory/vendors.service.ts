@@ -28,7 +28,8 @@ export class VendorsService {
     const owed = await this.db
       .select({
         vendorId: purchaseOrders.vendorId,
-        amount: sql<string>`coalesce(sum(${payables.amountPaise} - ${payables.advanceAdjustedPaise}), 0)`,
+        // What the vendor is still owed: TDS held goes to the government instead.
+        amount: sql<string>`coalesce(sum(${payables.amountPaise} - ${payables.advanceAdjustedPaise} - ${payables.tdsPaise}), 0)`,
       })
       .from(goodsReceipts)
       .innerJoin(purchaseOrders, eq(purchaseOrders.id, goodsReceipts.purchaseOrderId))

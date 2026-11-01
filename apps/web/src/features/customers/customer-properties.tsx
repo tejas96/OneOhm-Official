@@ -13,6 +13,7 @@ import { RaiseChangeRequestDialog } from '@/features/discom/raise-change-request
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { EditPropertyDialog } from './edit-property-dialog';
+import { GpsLine } from './gps-fields';
 
 /** Each site the customer owns, with its electricity connection set out for DISCOM work. */
 export function CustomerProperties({ properties }: { readonly properties: readonly Property[] }) {
@@ -104,6 +105,7 @@ function PropertyCard({
           </Fact>
         )}
       </dl>
+      <GpsLine property={property} />
       <div className="mt-auto flex flex-wrap gap-2">
         {canQuote && (
           <Button asChild variant="secondary" size="sm" leadingIcon={<FilePlus2 />}>

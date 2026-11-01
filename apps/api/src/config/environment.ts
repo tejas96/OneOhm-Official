@@ -31,6 +31,8 @@ const environmentSchema = z
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
+    /** `log` never calls Meta: photos customers send are stood in by a small sample file. */
+    WHATSAPP_DELIVERY: z.enum(['log', 'live']).default('log'),
     /** Meta webhook: the token typed when subscribing, and the app secret that signs posts. */
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
     WHATSAPP_APP_SECRET: z.string().optional(),
@@ -93,6 +95,9 @@ function missingKeys(env: Raw): Issue[] {
           ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAYX_ACCOUNT_NUMBER'],
           'Needed for RazorpayX payouts.',
         )
+      : []),
+    ...(env.WHATSAPP_DELIVERY === 'live'
+      ? needs(['WHATSAPP_ACCESS_TOKEN'], 'Needed to download photos customers send on WhatsApp.')
       : []),
   ];
 }

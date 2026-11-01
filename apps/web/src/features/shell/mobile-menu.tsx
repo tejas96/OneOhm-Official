@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
 import { AccountMenu } from './account-menu';
+import { useCompanyName } from './company-name';
 import { NavList } from './nav-list';
 import { SearchButton } from './search-button';
 import { ThemeSwitch } from './theme-switch';
@@ -28,6 +29,7 @@ function useOpenOnThisPage() {
 /** Phones: the whole menu in a sheet, opened from the pill with who is signed in. */
 export function MobileMenu() {
   const t = useTranslations('nav');
+  const companyName = useCompanyName();
   const user = useCurrentUser();
   const { open, setOpen } = useOpenOnThisPage();
   const close = () => setOpen(false);
@@ -48,7 +50,7 @@ export function MobileMenu() {
         open={open}
         onOpenChange={setOpen}
         title={t('menu')}
-        description={t('company')}
+        description={companyName || undefined}
         footer={
           <div className="flex w-full flex-col gap-3">
             <ThemeSwitch />

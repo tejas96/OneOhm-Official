@@ -22,8 +22,9 @@ import {
   supplyTypeFor,
   type TaxInvoiceBody,
 } from '@oneohm/domain';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { pricedLinesOnly } from '../quotations/quotation-rows';
 
 /** Everything one project's tax invoice is made from, read in one place. */
 export interface InvoiceSource {
@@ -76,7 +77,7 @@ export async function loadInvoiceSource(
   const priced = await db
     .select()
     .from(quotationLines)
-    .where(eq(quotationLines.quotationId, row.quotation.id))
+    .where(and(eq(quotationLines.quotationId, row.quotation.id), pricedLinesOnly()))
     .orderBy(asc(quotationLines.position));
   const codes = await codesByLineKey(db, row.quotation);
   const [profile] = await db.select().from(companyProfile).limit(1);

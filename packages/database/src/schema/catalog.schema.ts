@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { calendarDate, createdAt, money, primaryId, updatedAt } from './columns';
 import { epcStageEnum, productCategoryEnum, subsidyCategoryEnum, waitingPartyEnum } from './enums';
 
@@ -21,6 +21,13 @@ export const products = pgTable(
     taxRateBp: integer('tax_rate_bp').notNull(),
     /** HSN (goods) or SAC (services) code printed on tax invoices, when known. */
     hsnSac: text('hsn_sac'),
+    /** Specifications printed on quotations (PRD 3.5): panel efficiency in basis points. */
+    efficiencyBp: integer('efficiency_bp'),
+    /** For example Mono PERC bifacial, TOPCon, string inverter, LiFePO4. */
+    technology: text('technology'),
+    warrantyYears: integer('warranty_years'),
+    /** The maker's datasheet, a document filed under `product_datasheet`. */
+    datasheetDocumentId: uuid('datasheet_document_id'),
     active: boolean('active').notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -63,6 +70,8 @@ export const taskTemplates = pgTable(
     id: primaryId(),
     key: text('key').notNull(),
     title: text('title').notNull(),
+    /** What the task is, for the person doing it; copied onto each project task. */
+    description: text('description'),
     stage: epcStageEnum('stage').notNull(),
     roleKey: text('role_key').notNull(),
     /** A skill the assignee should have; people in the role without it are the fallback. */
@@ -77,6 +86,8 @@ export const taskTemplates = pgTable(
     customerVisible: boolean('customer_visible').notNull().default(false),
     notifyCustomer: boolean('notify_customer').notNull().default(false),
     approval: boolean('approval').notNull().default(false),
+    /** Who approves: approvers (anyone with tasks.approve) or project_manager. */
+    reviewer: text('reviewer').notNull().default('approvers'),
     evidence: text('evidence').array().notNull(),
     captures: text('captures').array().notNull(),
     onComplete: text('on_complete'),
@@ -87,8 +98,16 @@ export const taskTemplates = pgTable(
     messageKey: text('message_key').notNull().default('project_milestone'),
     /** The words customers see for this step; staff see `title`. */
     customerTitle: text('customer_title'),
+    /** Who hears the customer message: `customer`, or `customer_and_family` (PRD 6.2). */
+    recipients: text('recipients').notNull().default('customer'),
+    /** A report or paper link the customer message carries: `report:<key>` or `document:<folder>`. */
+    attachment: text('attachment'),
     /** Tell the project manager when this task is done (PRD 3.7 employee notification). */
     notifyManager: boolean('notify_manager').notNull().default(false),
+    /** Critical work: the engine proposes someone and a manager confirms (PRD 3.8). */
+    confirmAssignee: boolean('confirm_assignee').notNull().default(false),
+    /** Days late before the manager hears; null uses the company setting (PRD 3.7). */
+    escalateAfterDays: integer('escalate_after_days'),
     position: integer('position').notNull(),
     active: boolean('active').notNull().default(true),
     createdAt: createdAt(),

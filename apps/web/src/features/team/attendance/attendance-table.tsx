@@ -2,7 +2,7 @@
 
 import type { AttendanceDay, TeamAttendanceRow } from '@oneohm/api-contracts';
 import { Badge, ResponsiveTable, StatusPill, type TableColumn } from '@oneohm/design-system/web';
-import { MapPin, MapPinOff } from 'lucide-react';
+import { BatteryMedium, MapPin, MapPinOff, Signal, Wifi, WifiOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
@@ -40,6 +40,35 @@ function Place({ day }: { readonly day: AttendanceDay }) {
   );
 }
 
+const NETWORK_ICON = { wifi: Wifi, cellular: Signal, none: WifiOff, other: Signal } as const;
+
+/** The phone's battery and connection at check-in, when it told us (PRD 4.3). */
+function Device({ day }: { readonly day: AttendanceDay }) {
+  const t = useTranslations('team.attendance.device');
+  const device = day.device;
+  if (!device && !day.autoFromSite) return null;
+  const Net = device?.network ? NETWORK_ICON[device.network] : null;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-end gap-x-2.5 gap-y-0.5 type-label text-ink-faint md:justify-start">
+      {device?.batteryPercent !== null && device?.batteryPercent !== undefined && (
+        <span className="inline-flex items-center gap-1">
+          <BatteryMedium aria-hidden className="size-3.5" />
+          {device.charging
+            ? t('charging', { value: device.batteryPercent })
+            : t('battery', { value: device.batteryPercent })}
+        </span>
+      )}
+      {Net && device?.network && (
+        <span className="inline-flex items-center gap-1">
+          <Net aria-hidden className="size-3.5" />
+          {t(device.network)}
+        </span>
+      )}
+      {day.autoFromSite && <span>{t('autoFromSite')}</span>}
+    </span>
+  );
+}
+
 /** One row per staff member for the chosen day. */
 export function AttendanceTable({ rows }: { readonly rows: readonly TeamAttendanceRow[] }) {
   const t = useTranslations('team.attendance');
@@ -57,11 +86,14 @@ export function AttendanceTable({ rows }: { readonly rows: readonly TeamAttendan
       header: t('columns.in'),
       cell: ({ day }) =>
         day ? (
-          <span className="inline-flex items-center gap-2">
-            <span className="font-mono text-[0.875rem] text-ink tabular-nums">
-              {format.time(day.checkInAt)}
+          <span className="inline-flex flex-col items-end gap-1 md:items-start">
+            <span className="inline-flex items-center gap-2">
+              <span className="font-mono text-[0.875rem] text-ink tabular-nums">
+                {format.time(day.checkInAt)}
+              </span>
+              {day.late && <StatusPill tone="atRisk" size="sm" label={t('late')} />}
             </span>
-            {day.late && <StatusPill tone="atRisk" size="sm" label={t('late')} />}
+            <Device day={day} />
           </span>
         ) : (
           <Faint>{t('notIn')}</Faint>

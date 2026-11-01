@@ -7,6 +7,7 @@ import {
   properties,
   quotations,
 } from '@oneohm/database';
+import { receivedMoney } from '@oneohm/domain';
 import { amountInWords, formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
@@ -112,6 +113,11 @@ export class ReceiptPdfService {
       towards: row.milestone ?? 'Project payment',
       method: METHOD_LABEL[payment.method],
       reference: payment.reference,
+      // A business customer's TDS settles the milestone too; the receipt shows the split.
+      tds:
+        payment.tdsPaise > 0
+          ? { money: formatInr(receivedMoney(payment)), amount: formatInr(payment.tdsPaise) }
+          : null,
       totals: {
         price: formatInr(row.totalPaise),
         received: formatInr(received),

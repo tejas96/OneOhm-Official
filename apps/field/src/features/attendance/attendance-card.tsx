@@ -1,19 +1,19 @@
 import type { MyWorkday } from '@oneohm/api-contracts';
 import { Button, Card, describeError, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { LogIn, LogOut, Route, Sparkles } from 'lucide-react-native';
+import { LogIn, LogOut, Route } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
 import { TRAVEL } from '@/copy/site';
-import { ATTENDANCE, POINTS } from '@/copy/workforce';
+import { ATTENDANCE } from '@/copy/workforce';
 import { TrackingStatus } from '@/features/site/tracking-status';
 import { ConsentPrompt } from './consent-prompt';
 import { CorrectionSheet } from './correction-sheet';
 import { DayLine } from './day-line';
 import { useAttendanceAction } from './use-workday';
 
-/** Today's check-in and check-out, where they happened, and this month's points. */
+/** Today's check-in and check-out and where they happened; points sit in their own tile. */
 export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
   const theme = useTheme();
   const toast = useToast();
@@ -67,12 +67,6 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
         />
       )}
       <View style={styles.foot}>
-        <View style={styles.place}>
-          <Sparkles size={14} color={theme.colors.accent} />
-          <Text variant="label" tone="secondary">
-            {POINTS.thisMonth(workday.points.thisMonth)} · {POINTS.total(workday.points.total)}
-          </Text>
-        </View>
         <PressableScale accessibilityRole="button" onPress={() => setCorrecting(true)}>
           <Text variant="label" tone="accent">
             {ATTENDANCE.correction}

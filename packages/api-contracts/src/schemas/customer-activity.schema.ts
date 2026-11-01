@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
-import { leadStageSchema } from './crm.schema';
+import { amcContractSchema, installedAssetSchema } from './after-sales.schema';
+import { leadActivitySchema, leadStageSchema } from './crm.schema';
 import { changeRequestSummarySchema } from './discom.schema';
 import { moneyInMethodSchema, payerSchema } from './finance.schema';
 import { SERVICE_STATUSES, serviceCategoryKeySchema } from './service-desk.schema';
@@ -119,6 +120,20 @@ export const customerReferralSchema = z.object({
 });
 export type CustomerReferral = z.infer<typeof customerReferralSchema>;
 
+/** A call, visit, note or follow-up logged on one of the customer's leads (PRD 3.2). */
+export const customerLeadEntrySchema = leadActivitySchema.extend({
+  lead: z.object({ id: idSchema, name: z.string() }),
+});
+export type CustomerLeadEntry = z.infer<typeof customerLeadEntrySchema>;
+
+/** One project's installed items with their warranty, and its AMC contracts (read-only). */
+export const customerAftercareSchema = z.object({
+  project: projectRefSchema,
+  assets: z.array(installedAssetSchema),
+  amcs: z.array(amcContractSchema),
+});
+export type CustomerAftercare = z.infer<typeof customerAftercareSchema>;
+
 /** Everything else the customer 360 shows, read-only (PRD 3.2). */
 export const customerActivitySchema = z.object({
   projects: z.array(customerProjectMoneySchema),
@@ -130,5 +145,8 @@ export const customerActivitySchema = z.object({
   serviceRequests: z.array(customerServiceRequestSchema),
   feedback: z.array(customerFeedbackSchema),
   referrals: z.array(customerReferralSchema),
+  /** Calls, visits, notes and follow-ups from the customer's leads, newest first. */
+  leadHistory: z.array(customerLeadEntrySchema),
+  aftercare: z.array(customerAftercareSchema),
 });
 export type CustomerActivity = z.infer<typeof customerActivitySchema>;

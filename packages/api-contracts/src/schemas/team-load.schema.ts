@@ -17,7 +17,21 @@ const loadFields = {
 /** Who carries the work, and who is falling behind (PRD 3.1 drill-down). */
 export const teamLoadSchema = z.object({
   people: z.array(
-    z.object({ userId: idSchema, name: z.string(), onLeaveToday: z.boolean(), ...loadFields }),
+    z.object({
+      userId: idSchema,
+      name: z.string(),
+      /**
+       * Department for the drill-down. OneOhm has no department field, so this is the
+       * person's main role (the first one given to them), e.g. "Sales" or "Execution".
+       */
+      department: z.string().nullable(),
+      onLeaveToday: z.boolean(),
+      ...loadFields,
+    }),
+  ),
+  /** People grouped by department (their main role); `department` null for no role. */
+  departments: z.array(
+    z.object({ department: z.string().nullable(), people: z.number().int(), ...loadFields }),
   ),
   contractors: z.array(
     z.object({ contractorId: idSchema, name: z.string(), crew: z.number().int(), ...loadFields }),

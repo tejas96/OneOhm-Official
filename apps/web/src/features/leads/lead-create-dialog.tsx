@@ -17,7 +17,7 @@ import {
   type SubsidyCategory,
 } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, CircleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,9 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { kwToWp, leadKeys } from './lead-labels';
+import { PhoneMatchNotice } from './phone-match-notice';
 import { ReferralCodeField } from './referral-code-field';
+import { useLeadOwnerOptions } from './use-lead-owners';
 
 const ME = 'me';
 
@@ -35,9 +37,12 @@ const ME = 'me';
 export function LeadCreateDialog({
   open,
   onOpenChange,
+  initial,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+  /** Starting values, e.g. from a WhatsApp chat with an unknown number. */
+  readonly initial?: { readonly name: string; readonly phone: string; readonly source: LeadSource };
 }) {
   const t = useTranslations('leads.create');
   const sourceT = useTranslations('leads.source');
@@ -46,22 +51,19 @@ export function LeadCreateDialog({
   const toast = useToast();
   const queryClient = useQueryClient();
   const canAssign = useCan('people.view', 'people.manage', 'tasks.assign', 'projects.manage');
-  const [source, setSource] = useState<LeadSource>('manual');
+  const [source, setSource] = useState<LeadSource>(initial?.source ?? 'manual');
+  const [phone, setPhone] = useState(initial?.phone.replace(/^\+91/, '') ?? '');
   const [category, setCategory] = useState<SubsidyCategory>('individual');
   const [owner, setOwner] = useState<string>(ME);
   const [error, setError] = useState<ApiError | null>(null);
-  const people = useQuery({
-    queryKey: ['people'],
-    queryFn: () => expectStatus(api.people.listPeople(), 200),
-    enabled: open && canAssign,
-    staleTime: 60_000,
-  });
+  const owners = useLeadOwnerOptions(open && canAssign);
   const create = useMutation({
     mutationFn: (body: Parameters<typeof api.crm.createLead>[0]['body']) =>
       expectStatus(api.crm.createLead({ body }), 201),
     onSuccess: async (lead) => {
       await queryClient.invalidateQueries({ queryKey: leadKeys.all });
       toast({ tone: 'success', title: t('created', { name: lead.name }) });
+      setPhone('');
       onOpenChange(false);
       router.push(`/leads/${lead.id}`);
     },
@@ -78,7 +80,7 @@ export function LeadCreateDialog({
     setError(null);
     create.mutate({
       name: text('name'),
-      phone: text('phone'),
+      phone,
       email: text('email') || null,
       city: text('city'),
       source,
@@ -94,12 +96,7 @@ export function LeadCreateDialog({
 
   const fieldError = (name: string) => error?.fieldErrors[name];
   const duplicateId = error?.code?.startsWith('duplicate_lead:') ? error.code.slice(15) : null;
-  const ownerOptions = [
-    { value: ME, label: t('ownerMe') },
-    ...(people.data ?? [])
-      .filter((person) => person.status === 'active')
-      .map((person) => ({ value: person.id, label: person.fullName })),
-  ];
+  const ownerOptions = [{ value: ME, label: t('ownerMe') }, ...owners];
 
   return (
     <Dialog
@@ -150,11 +147,19 @@ export function LeadCreateDialog({
           </div>
         )}
         <Field label={t('name')} required error={fieldError('name')}>
-          <Input name="name" autoComplete="name" />
+          <Input name="name" autoComplete="name" defaultValue={initial?.name} />
         </Field>
         <Field label={t('phone')} hint={t('phoneHint')} required error={fieldError('phone')}>
-          <Input name="phone" type="tel" inputMode="tel" autoComplete="tel" />
+          <Input
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+          />
         </Field>
+        <PhoneMatchNotice phone={phone} />
         <Field label={t('city')} required error={fieldError('city')}>
           <Input name="city" autoComplete="address-level2" />
         </Field>

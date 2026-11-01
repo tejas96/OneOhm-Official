@@ -26,6 +26,10 @@ import { LeadRow } from './lead-row';
 
 type Filter = keyof typeof LEADS.filters;
 
+/** A follow-up due today or earlier, or a lost lead whose revisit day has come. */
+const isDue = (lead: Lead, today: string) =>
+  lead.revisitDue || (lead.stage !== 'lost' && (lead.overdue || lead.nextActionOn === today));
+
 function matches(lead: Lead, filter: Filter, search: string, today: string): boolean {
   const term = search.trim().toLowerCase();
   if (
@@ -34,7 +38,7 @@ function matches(lead: Lead, filter: Filter, search: string, today: string): boo
   ) {
     return false;
   }
-  if (filter === 'due') return lead.overdue || lead.nextActionOn === today;
+  if (filter === 'due') return isDue(lead, today);
   if (filter === 'new') return lead.stage === 'new';
   if (filter === 'quoted') return lead.stage === 'quoted';
   return true;
@@ -56,9 +60,7 @@ export function LeadsScreen() {
     .sort((left, right) =>
       (left.nextActionOn ?? '9999').localeCompare(right.nextActionOn ?? '9999'),
     );
-  const due = (query.data ?? []).filter(
-    (lead) => lead.overdue || lead.nextActionOn === today,
-  ).length;
+  const due = (query.data ?? []).filter((lead) => isDue(lead, today)).length;
 
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>

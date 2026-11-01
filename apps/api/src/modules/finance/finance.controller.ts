@@ -64,6 +64,10 @@ export class FinanceController {
         assertCan(actor, 'finance.record_payments');
         return { status: 201, body: await this.payables.create(actor, body) };
       },
+      reviewPayable: async ({ params, body }) => {
+        assertCan(actor, 'finance.record_payments', 'finance.approve_payments');
+        return { status: 200, body: await this.payables.review(actor, params.id, body) };
+      },
       approvePayable: async ({ params }) => {
         assertCan(actor, 'finance.approve_payments');
         return { status: 200, body: await this.payables.approve(actor, params.id) };

@@ -67,3 +67,76 @@ export async function tellTeam(
     await notify(db, { userId }, STAFF_NOTICES.projectTasks(projectId, code, count, userId));
   }
 }
+
+/** The people who may review the work hear that it waits for them. */
+export async function askReviewers(
+  db: DatabaseExecutor,
+  task: TaskRow,
+  actor: { readonly userId: string; readonly fullName: string },
+  reviewers: readonly string[],
+): Promise<void> {
+  const notice = STAFF_NOTICES.taskNeedsApproval(task, actor.fullName, String(Date.now()));
+  for (const userId of reviewers) {
+    if (userId === actor.userId) continue;
+    await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
+  }
+}
+
+/** Whoever sent the work (or the assignee) hears it came back, and why. */
+export async function tellReturned(
+  db: DatabaseExecutor,
+  task: TaskRow,
+  to: string | null,
+  actor: { readonly userId: string; readonly fullName: string },
+  reason: string,
+): Promise<void> {
+  if (!to || to === actor.userId) return;
+  await notify(
+    db,
+    { userId: to },
+    STAFF_NOTICES.taskReturned(task, actor.fullName, reason, String(Date.now())),
+  );
+}
+
+/**
+ * A request for the team's help reaches the project manager straight away (PRD 4.4), or
+ * everyone who manages projects when the project has none, not only after escalation.
+ */
+export async function tellHelpAsked(
+  db: DatabaseExecutor,
+  task: TaskRow,
+  actor: { readonly userId: string; readonly fullName: string },
+): Promise<void> {
+  const [project] = await db
+    .select({ code: projects.code, managerUserId: projects.managerUserId })
+    .from(projects)
+    .where(eq(projects.id, task.projectId))
+    .limit(1);
+  if (!project) return;
+  const notice = STAFF_NOTICES.taskHelpAsked(
+    task,
+    project.code,
+    actor.fullName,
+    String(Date.now()),
+  );
+  if (project.managerUserId && project.managerUserId !== actor.userId) {
+    await notify(db, { userId: project.managerUserId }, notice);
+    return;
+  }
+  await notifyHolders(db, 'projects.manage', notice, actor.userId);
+}
+
+/** The assignee hears about a new due date someone else set. */
+export async function tellRescheduled(
+  db: DatabaseExecutor,
+  task: TaskRow,
+  due: string,
+  actorId: string,
+): Promise<void> {
+  if (!task.assigneeUserId || task.assigneeUserId === actorId) return;
+  await notify(
+    db,
+    { userId: task.assigneeUserId },
+    STAFF_NOTICES.taskRescheduled(task, due, String(Date.now())),
+  );
+}

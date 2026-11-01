@@ -1,6 +1,10 @@
 export const PAYMENTS = {
   payNow: (amount: string) => `Pay ${amount} now`,
   payHint: 'UPI, cards or net banking, through Razorpay.',
+  payFailed: 'The payment page could not open. Please try again, or call your OneOhm contact.',
+  /** Price minus the expected subsidy, in one plain line (PRD 5.3). */
+  effectiveCost: (price: string, subsidy: string, effective: string) =>
+    `${price} price − ${subsidy} expected subsidy = ${effective} your effective cost`,
   title: 'Payments',
   loading: 'Loading your payments',
   paidOf: (paid: string, total: string) => `${paid} paid of ${total}`,
@@ -67,7 +71,8 @@ export const DOCUMENTS = {
   reportsTitle: 'Agreements and reports',
   reportsEmpty: 'Agreements and completion reports appear here when they are ready.',
   filesTitle: 'Your papers',
-  filesEmpty: 'Bills, warranty cards and handover papers that OneOhm shares will appear here.',
+  filesEmpty:
+    'Bills, warranty cards, product manuals and handover papers that OneOhm shares will appear here.',
   open: 'Open',
   opening: 'Opening',
   openFailed: 'This file could not open. Please try again.',
@@ -96,6 +101,7 @@ export const DOCUMENTS = {
     subsidy: 'Subsidy',
     commissioning_handover: 'Handover',
     warranty: 'Warranty',
+    product_manual: 'Product manual',
     statutory_report: 'Report',
     site_photo: 'Site photo',
     other: 'Document',

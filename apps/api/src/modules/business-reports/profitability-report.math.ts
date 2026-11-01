@@ -36,11 +36,28 @@ export interface BillFact {
   readonly fromReceipt: boolean;
 }
 
-/** Stock leaving for the site: on-hand falls, valued at the product's cost. */
-export interface DispatchFact {
+/** Store movements that count as the project's material (PRD Flow F step 5). */
+export const MATERIAL_MOVES = ['dispatch', 'issue', 'return'] as const;
+
+/**
+ * A store movement for the project, valued at the product's cost: stock dispatched to
+ * site or issued straight to the contractor (on-hand falls), or unused material the
+ * contractor returned (on-hand rises, so it comes off the cost).
+ */
+export interface StockMoveFact {
   readonly onHandDelta: number;
   readonly unitCostPaise: number;
 }
+
+/** An employee's travel claim tagged to the project. */
+export interface TravelFact {
+  readonly status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  readonly amountPaise: number;
+}
+
+/** Like a bill, a claim counts while waiting or approved; declined or cancelled does not. */
+export const countsAsTravel = (claim: TravelFact) =>
+  claim.status === 'pending' || claim.status === 'approved';
 
 /**
  * A bill raised from a goods receipt bought stock into the store; that stock is counted
@@ -48,23 +65,35 @@ export interface DispatchFact {
  */
 export const countsAsCost = (bill: BillFact) => !(bill.party === 'vendor' && bill.fromReceipt);
 
-/** Cost so far: stock dispatched at cost, plus every counted bill whatever its status. */
+/**
+ * Cost so far: material out of the store at cost less what came back, every counted bill
+ * whatever its status, and travel claimed for the project.
+ */
 export function actualCost(
   bills: readonly BillFact[],
-  dispatches: readonly DispatchFact[],
+  moves: readonly StockMoveFact[],
+  travel: readonly TravelFact[] = [],
 ): Actual {
   const stockPaise = Math.round(
-    dispatches.reduce((sum, row) => sum - row.onHandDelta * row.unitCostPaise, 0),
+    moves.reduce((sum, row) => sum - row.onHandDelta * row.unitCostPaise, 0),
   );
   const billed = (party: BillFact['party']) =>
     bills
       .filter((bill) => bill.party === party && countsAsCost(bill))
       .reduce((sum, bill) => sum + bill.amountPaise, 0);
-  return { stockPaise, vendorPaise: billed('vendor'), contractorPaise: billed('contractor') };
+  const travelPaise = travel
+    .filter(countsAsTravel)
+    .reduce((sum, claim) => sum + claim.amountPaise, 0);
+  return {
+    stockPaise,
+    vendorPaise: billed('vendor'),
+    contractorPaise: billed('contractor'),
+    travelPaise,
+  };
 }
 
 export const totalOf = (actual: Actual) =>
-  actual.stockPaise + actual.vendorPaise + actual.contractorPaise;
+  actual.stockPaise + actual.vendorPaise + actual.contractorPaise + actual.travelPaise;
 
 /** Contract (without GST) against estimated and actual cost: variance and margins. */
 export function profit(contractPaise: number, estimatedCostPaise: number, actualPaise: number) {

@@ -8,10 +8,18 @@ import {
   quotationLines,
   quotations,
   stockMovements,
+  travelClaims,
 } from '@oneohm/database';
 import type { LineCategory } from '@oneohm/domain';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
-import { acceptedQuotationId, type BillFact, type DispatchFact } from './profitability-report.math';
+import { pricedLinesOnly } from '../quotations/quotation-rows';
+import {
+  acceptedQuotationId,
+  type BillFact,
+  MATERIAL_MOVES,
+  type StockMoveFact,
+  type TravelFact,
+} from './profitability-report.math';
 import type { ReportScope } from './report-scope';
 
 export interface ProjectFact {
@@ -89,7 +97,7 @@ export async function readQuotedLines(
       costPaise: quotationLines.costPaise,
     })
     .from(quotationLines)
-    .where(inArray(quotationLines.quotationId, [...quotationIds]));
+    .where(and(inArray(quotationLines.quotationId, [...quotationIds]), pricedLinesOnly()));
 }
 
 /** Vendor and contractor bills on these projects, marked when a goods receipt raised them. */
@@ -129,11 +137,14 @@ export async function readBills(
   );
 }
 
-/** Stock dispatched to these projects, with each product's cost. */
-export async function readDispatches(
+/**
+ * Stock dispatched to these projects or issued straight to their contractors, and what
+ * the contractors returned unused, with each product's cost.
+ */
+export async function readStockMoves(
   db: DatabaseExecutor,
   projectIds: readonly string[],
-): Promise<(DispatchFact & { projectId: string })[]> {
+): Promise<(StockMoveFact & { projectId: string })[]> {
   if (projectIds.length === 0) return [];
   const rows = await db
     .select({
@@ -144,7 +155,27 @@ export async function readDispatches(
     .from(stockMovements)
     .innerJoin(products, eq(products.id, stockMovements.productId))
     .where(
-      and(eq(stockMovements.kind, 'dispatch'), inArray(stockMovements.projectId, [...projectIds])),
+      and(
+        inArray(stockMovements.kind, [...MATERIAL_MOVES]),
+        inArray(stockMovements.projectId, [...projectIds]),
+      ),
     );
+  return rows.flatMap((row) => (row.projectId ? [{ ...row, projectId: row.projectId }] : []));
+}
+
+/** Employees' travel claims tagged to these projects. */
+export async function readTravel(
+  db: DatabaseExecutor,
+  projectIds: readonly string[],
+): Promise<(TravelFact & { projectId: string })[]> {
+  if (projectIds.length === 0) return [];
+  const rows = await db
+    .select({
+      projectId: travelClaims.projectId,
+      status: travelClaims.status,
+      amountPaise: travelClaims.amountPaise,
+    })
+    .from(travelClaims)
+    .where(inArray(travelClaims.projectId, [...projectIds]));
   return rows.flatMap((row) => (row.projectId ? [{ ...row, projectId: row.projectId }] : []));
 }

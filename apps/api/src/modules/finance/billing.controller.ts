@@ -25,6 +25,8 @@ export class BillingController {
   handler(@CurrentActor() actor: Actor) {
     const view = () => assertCan(actor, 'finance.view', 'finance.record_payments');
     const record = () => assertCan(actor, 'finance.record_payments');
+    // Money going back out, or a tax invoice undone, is a sensitive action (PRD 7.3).
+    const approve = () => assertCan(actor, 'finance.approve_payments');
     return tsRestHandler(apiContract.billing, {
       projectBilling: async ({ params }) => {
         view();
@@ -36,7 +38,7 @@ export class BillingController {
         return { status: 201, body: invoice };
       },
       cancelInvoice: async ({ params, body }) => {
-        record();
+        approve();
         return { status: 200, body: await this.invoices.cancel(actor, params.id, body.reason) };
       },
       listInvoices: async ({ query }) => {
@@ -49,7 +51,7 @@ export class BillingController {
         return { status: 200, body: pdfBody(file, query.disposition) };
       },
       recordRefund: async ({ params, body }) => {
-        record();
+        approve();
         return { status: 201, body: await this.money.refund(actor, params.projectId, body) };
       },
       applyCredit: async ({ params, body }) => {

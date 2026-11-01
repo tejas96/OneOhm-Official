@@ -22,6 +22,9 @@ import { SAMPLE, TEMPLATE_KEYS } from './use-templates';
 interface Draft {
   metaName: string;
   language: string;
+  /** The Marathi and Hindi templates' names; empty sends English (PRD 6.2 language). */
+  metaNameMr: string;
+  metaNameHi: string;
   fields: string;
   preview: string;
   active: boolean;
@@ -48,7 +51,12 @@ export function MessageTemplateDialog({
 
   useEffect(() => {
     if (!template) return;
-    setDraft({ ...template, fields: template.fields.join(', ') });
+    setDraft({
+      ...template,
+      metaNameMr: template.metaNameMr ?? '',
+      metaNameHi: template.metaNameHi ?? '',
+      fields: template.fields.join(', '),
+    });
     reset();
   }, [template, reset]);
 
@@ -65,6 +73,8 @@ export function MessageTemplateDialog({
     const body = {
       metaName: draft.metaName,
       language: draft.language,
+      metaNameMr: draft.metaNameMr.trim() || null,
+      metaNameHi: draft.metaNameHi.trim() || null,
       fields,
       preview: draft.preview,
       active: draft.active,
@@ -110,6 +120,25 @@ export function MessageTemplateDialog({
               className="font-mono"
             />
           </Field>
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label={t('metaNameMr')} error={errors.metaNameMr}>
+              <Input
+                value={draft.metaNameMr}
+                onChange={(e) => set('metaNameMr', e.target.value)}
+                className="font-mono"
+              />
+            </Field>
+            <Field label={t('metaNameHi')} error={errors.metaNameHi}>
+              <Input
+                value={draft.metaNameHi}
+                onChange={(e) => set('metaNameHi', e.target.value)}
+                className="font-mono"
+              />
+            </Field>
+          </div>
+          <p className="type-body-sm text-ink-muted">{t('localHint')}</p>
         </div>
         <Field label={t('preview')} hint={t('previewHint')} error={errors.preview} required>
           <Textarea

@@ -13,11 +13,11 @@ export class AuditController {
   handler(@CurrentActor() actor: Actor) {
     return tsRestHandler(apiContract.audit, {
       activity: async ({ query }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'audit.view');
         return { status: 200, body: await this.audit.activity(query) };
       },
       signIns: async ({ query }) => {
-        assertCan(actor, 'settings.manage');
+        assertCan(actor, 'audit.view');
         return { status: 200, body: await this.audit.signIns(query.failedOnly === 'true') };
       },
     });

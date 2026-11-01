@@ -86,6 +86,8 @@ export const travelClaimSchema = z.object({
   amountPaise: paiseSchema,
   visits: z.number().int(),
   legs: z.array(travelLegSchema),
+  /** The project the travel was for: its cost counts in that project's profitability. */
+  project: z.object({ id: idSchema, code: z.string() }).nullable(),
   note: z.string().nullable(),
   status: decisionStatusSchema,
   /** Once approved: whether finance has paid it out yet. */

@@ -65,7 +65,12 @@ export const siteActivityContract = c.router({
   claimTravel: {
     method: 'POST',
     path: '/me/travel-claims',
-    body: z.object({ workDate: calendarDateSchema, note: noteSchema.nullable().optional() }),
+    body: z.object({
+      workDate: calendarDateSchema,
+      note: noteSchema.nullable().optional(),
+      /** One of the projects visited that day, so the travel counts in its cost. */
+      projectId: idSchema.nullable().optional(),
+    }),
     responses: { 201: travelClaimSchema },
   },
   cancelTravelClaim: {

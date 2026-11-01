@@ -14,7 +14,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PersonChip } from '../person-chip';
 import { daysOf, useWorkforceFormat } from '../workforce-format';
-import { LeaveKind, LeaveStatus } from './leave-facts';
+import { LeaveKind, LeaveStatus, NoHandoverBadge } from './leave-facts';
 
 type When = 'upcoming' | 'past';
 type Status = 'all' | LeaveRequestRecord['status'];
@@ -67,7 +67,9 @@ export function LeaveHistory({ requests }: { readonly requests: readonly LeaveRe
       key: 'backup',
       header: t('columns.backup'),
       cell: (item) =>
-        item.backup ? (
+        item.handoverSkipped ? (
+          <NoHandoverBadge />
+        ) : item.backup ? (
           <span className="type-body-sm text-ink">{item.backup.fullName}</span>
         ) : (
           <span className="type-body-sm text-ink-faint">{t('noBackup')}</span>

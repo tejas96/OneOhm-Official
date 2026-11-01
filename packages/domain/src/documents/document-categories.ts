@@ -11,11 +11,15 @@ export const DOCUMENT_CATEGORIES = [
   'quotation',
   'invoice_receipt',
   'vendor',
+  /** A panel maker's certificate that the cells are made in India (goods receipt). */
+  'dcr_certificate',
   'bank_loan',
   'discom',
   'subsidy',
   'commissioning_handover',
   'warranty',
+  /** Makers' user manuals for the panels, inverter and battery (PRD 5.4). */
+  'product_manual',
   'statutory_report',
   'other',
 ] as const;

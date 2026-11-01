@@ -1,5 +1,9 @@
-import type { TaskTemplateInput } from '@oneohm/api-contracts';
-import { TASK_MESSAGE_FIELDS } from '@oneohm/domain';
+import { REPORT_KEYS, type TaskTemplateInput } from '@oneohm/api-contracts';
+import {
+  isCustomerDocumentCategory,
+  readTaskAttachment,
+  TASK_MESSAGE_FIELDS,
+} from '@oneohm/domain';
 import { invalid } from '../../common/http/errors';
 
 interface Known {
@@ -51,6 +55,7 @@ export function checkTaskTemplate(
       dependsOn: 'A task cannot wait, directly or not, for itself.',
     });
   if (!input.notifyCustomer) return;
+  checkCustomerWording(input);
   if (input.notifyEvent === 'approved' && !input.approval)
     throw invalid('This task has no approval step.', {
       notifyEvent: 'Send on completion, or turn approval on.',
@@ -63,5 +68,42 @@ export function checkTaskTemplate(
   if (extra.length > 0)
     throw invalid('A task cannot fill this message.', {
       messageKey: `It needs ${extra.join(', ')}, which a task does not have.`,
+    });
+  checkAttachment(input.attachment ?? null, fields.includes('link'));
+}
+
+/**
+ * Internal tasks never message customers (PRD 6.2 rule), and a customer message names
+ * the step in the customer's words, never the team's task title (PRD 5.2).
+ */
+function checkCustomerWording(input: { customerVisible: boolean; customerTitle: string | null }) {
+  if (!input.customerVisible)
+    throw invalid('This task is internal. Let customers see it before it can message them.', {
+      notifyCustomer: 'Turn on "Customers see this step in their app" first.',
+    });
+  if (!input.customerTitle?.trim())
+    throw invalid('Write the step the way the customer should read it.', {
+      customerTitle: 'For example "Net meter fitted".',
+    });
+}
+
+/** A linked report or paper must be one customers may see, in a message with a link. */
+function checkAttachment(attachment: string | null, messageHasLink: boolean) {
+  const chosen = readTaskAttachment(attachment);
+  if (attachment && !chosen)
+    throw invalid('Pick a report or a folder from the list.', { attachment: 'Unknown link.' });
+  if (chosen?.kind === 'report' && !(REPORT_KEYS as readonly string[]).includes(chosen.key))
+    throw invalid('Pick a report from the list.', { attachment: 'Unknown report.' });
+  if (chosen?.kind === 'document' && !isCustomerDocumentCategory(chosen.category))
+    throw invalid('Customers cannot see papers in this folder.', {
+      attachment: 'Pick a folder customers can see.',
+    });
+  if (chosen && !messageHasLink)
+    throw invalid('This message has no place for a link.', {
+      messageKey: 'Pick a message with a link, such as "Update with a link".',
+    });
+  if (!chosen && messageHasLink)
+    throw invalid('This message needs a link.', {
+      attachment: 'Pick the report or folder to link.',
     });
 }

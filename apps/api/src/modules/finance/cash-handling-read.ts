@@ -9,7 +9,7 @@ import {
   projects,
   users,
 } from '@oneohm/database';
-import { daysHeld } from '@oneohm/domain';
+import { daysHeld, receivedMoney } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, eq, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -56,7 +56,8 @@ export async function readHandled(
       customer: row.customer,
       milestone: row.milestone,
       method: payment.method === 'cheque' ? 'cheque' : 'cash',
-      amountPaise: payment.amountPaise,
+      // The cash or cheque itself: TDS the customer kept back never reaches the bank.
+      amountPaise: receivedMoney(payment),
       receivedOn: payment.receivedOn,
       receiptNumber: payment.receiptNumber,
       collectedBy:

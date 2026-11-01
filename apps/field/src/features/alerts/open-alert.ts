@@ -14,8 +14,17 @@ export function openAlert(subject: {
     router.push({ pathname: '/service/[id]', params: { id: subject.id } });
     return;
   }
+  if (subject.type === 'lead' && subject.id) {
+    router.push({ pathname: '/leads/[id]', params: { id: subject.id } });
+    return;
+  }
   if (subject.type === 'leave') {
     router.push('/leave');
+    return;
+  }
+  // Points, recognition and bonuses (PRD 4.7).
+  if (subject.type === 'points') {
+    router.push('/rewards');
     return;
   }
   router.push('/');

@@ -1,0 +1,128 @@
+import { MAX_UPLOAD_BYTES } from '@oneohm/domain';
+import type { Environment } from '../../config/environment';
+import type { IncomingMedia } from './whatsapp-events';
+
+export const WHATSAPP_MEDIA = Symbol('WHATSAPP_MEDIA');
+
+/** A file the customer sent, fetched from WhatsApp. The bytes decide its real type later. */
+export interface DownloadedMedia {
+  readonly buffer: Buffer;
+  readonly fileName: string;
+}
+
+export interface MediaGateway {
+  readonly mode: 'log' | 'live';
+  download(media: IncomingMedia): Promise<DownloadedMedia>;
+}
+
+/** A file larger than OneOhm accepts; nothing past the cap is read. */
+export class MediaTooLargeError extends Error {}
+
+/** A 1 × 1 PNG: the stand-in photo when WhatsApp is not live. */
+const SAMPLE_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** A one-page blank PDF with a correct cross-reference table: the stand-in paper. */
+export function samplePdf(): Buffer {
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>',
+  ];
+  let body = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  objects.forEach((object, index) => {
+    offsets.push(body.length);
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = body.length;
+  const rows = offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${rows}`;
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(body, 'latin1');
+}
+
+const EXTENSION: Readonly<Record<IncomingMedia['type'], string>> = {
+  image: 'jpg',
+  document: 'pdf',
+  video: 'mp4',
+  audio: 'ogg',
+};
+
+/** The name to file it under: the customer's own for papers, else "WhatsApp photo.jpg". */
+export function mediaFileName(media: IncomingMedia): string {
+  const given = media.fileName?.trim();
+  if (given) return given;
+  const label = media.type === 'image' ? 'photo' : media.type;
+  return `WhatsApp ${label}.${EXTENSION[media.type]}`;
+}
+
+/** Local and test mode: nothing leaves the machine, and the flow still runs end to end. */
+export function logMediaGateway(log: (line: string) => void): MediaGateway {
+  return {
+    mode: 'log',
+    async download(media) {
+      log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
+      const buffer = media.type === 'document' ? samplePdf() : Buffer.from(SAMPLE_PNG);
+      const fileName = mediaFileName(media).replace(/\.[a-z0-9]{1,5}$/i, '');
+      return { buffer, fileName: `${fileName}.${media.type === 'document' ? 'pdf' : 'png'}` };
+    },
+  };
+}
+
+/** Reads a response body, refusing it once it passes `cap` bytes. */
+async function readCapped(response: Response, cap: number): Promise<Buffer> {
+  const declared = Number(response.headers.get('content-length') ?? 0);
+  if (declared > cap) throw new MediaTooLargeError(`File is ${declared} bytes.`);
+  if (!response.body) return Buffer.alloc(0);
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  const reader = response.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > cap) {
+      await reader.cancel();
+      throw new MediaTooLargeError(`File passed ${cap} bytes.`);
+    }
+    parts.push(value);
+  }
+  return Buffer.concat(parts);
+}
+
+/**
+ * WhatsApp Cloud API: ask Graph for the file's short-lived URL, then fetch it with the
+ * same token. Files above OneOhm's upload cap are refused before they are read in full.
+ */
+export function liveMediaGateway(
+  env: Pick<Environment, 'WHATSAPP_ACCESS_TOKEN' | 'WHATSAPP_API_VERSION'>,
+  cap = MAX_UPLOAD_BYTES,
+): MediaGateway {
+  const headers = { authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` };
+  return {
+    mode: 'live',
+    async download(media) {
+      const meta = await fetch(
+        `https://graph.facebook.com/${env.WHATSAPP_API_VERSION}/${encodeURIComponent(media.id)}`,
+        { headers, signal: AbortSignal.timeout(15_000) },
+      );
+      const info = (await meta.json().catch(() => ({}))) as { url?: string; file_size?: number };
+      if (!meta.ok || !info.url) throw new Error(`WhatsApp media ${meta.status}: no file URL.`);
+      if ((info.file_size ?? 0) > cap)
+        throw new MediaTooLargeError(`File is ${info.file_size} bytes.`);
+      const file = await fetch(info.url, { headers, signal: AbortSignal.timeout(60_000) });
+      if (!file.ok) throw new Error(`WhatsApp media download ${file.status}.`);
+      return { buffer: await readCapped(file, cap), fileName: mediaFileName(media) };
+    },
+  };
+}
+
+export function createMediaGateway(
+  env: Environment,
+  log: (line: string) => void = () => undefined,
+): MediaGateway {
+  return env.WHATSAPP_DELIVERY === 'live' ? liveMediaGateway(env) : logMediaGateway(log);
+}

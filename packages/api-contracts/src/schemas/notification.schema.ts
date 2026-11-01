@@ -14,6 +14,7 @@ export const NOTICE_SUBJECTS = [
   'vendor_advance',
   'stock',
   'travel_claim',
+  'lead',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */

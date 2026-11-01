@@ -11,9 +11,9 @@ import { isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
+  approvedMessage,
   MESSAGE_TEMPLATES,
   MissingFieldError,
-  templateParameters,
 } from '../channels/message-templates';
 import type { SmsSender } from '../channels/sms';
 import {
@@ -97,16 +97,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       return { verdict: 'skipped', note: 'The customer has opted out of WhatsApp messages.' };
     }
     try {
-      return {
-        verdict: 'send',
-        name: config?.metaName ?? row.template,
-        language: config?.language ?? language,
-        parameters: templateParameters(
-          row.template,
-          fields,
-          row.payload as Record<string, unknown>,
-        ),
-      };
+      const names = { metaName: row.template, language, ...config };
+      return { verdict: 'send', ...approvedMessage(row.template, fields, names, row.payload) };
     } catch (error) {
       if (!(error instanceof MissingFieldError)) throw error;
       return { verdict: 'failed', note: error.message };

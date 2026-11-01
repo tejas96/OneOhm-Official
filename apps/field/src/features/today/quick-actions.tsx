@@ -1,16 +1,18 @@
 import { PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { Calculator, UserPlus } from 'lucide-react-native';
+import { Calculator, CalendarPlus, UserPlus } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { QUICK_LEAVE } from '@/copy/engagement';
 import { TODAY } from '@/copy/tasks';
 import { useCan } from '@/session/session-provider';
 
-/** Role-specific shortcuts; crews without sales rights see none. */
+/** Role-specific shortcuts; crews without sales or leave rights see none. */
 export function QuickActions() {
   const canLead = useCan('leads.manage');
   const canQuote = useCan('quotations.create');
-  if (!canLead && !canQuote) return null;
+  const canLeave = useCan('leave.request');
+  if (!canLead && !canQuote && !canLeave) return null;
   return (
     <View style={styles.row}>
       {canLead ? (
@@ -22,6 +24,9 @@ export function QuickActions() {
       ) : null}
       {canQuote ? (
         <Action label={TODAY.quick.quote} onPress={() => router.push('/quote')} icon={Calculator} />
+      ) : null}
+      {canLeave ? (
+        <Action label={QUICK_LEAVE} onPress={() => router.push('/leave/new')} icon={CalendarPlus} />
       ) : null}
     </View>
   );
@@ -56,9 +61,10 @@ function Action({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 12 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   action: {
     flex: 1,
+    minWidth: 140,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

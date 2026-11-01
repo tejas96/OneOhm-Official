@@ -27,6 +27,10 @@ export interface ProductLabel {
   readonly wattageWp: number | null;
   readonly ratedW: number | null;
   readonly dcr: boolean;
+  /** Specifications printed briefly under the product (PRD 3.5). */
+  readonly efficiencyBp?: number | null;
+  readonly technology?: string | null;
+  readonly warrantyYears?: number | null;
 }
 
 const SYSTEM_TYPE = { on_grid: 'On-grid', hybrid: 'Hybrid', off_grid: 'Off-grid' } as const;
@@ -50,6 +54,8 @@ export const SUBSIDY_REASONS: Readonly<Record<string, string>> = {
   meter_not_in_society_name: "The society's electricity meter must be in the society's name.",
   already_subsidised: 'This property has already received a rooftop solar subsidy.',
   no_rule: 'No subsidy rule applies to this category today.',
+  no_households:
+    "A society's subsidy is worked out per household; the number of households is not recorded yet.",
 };
 
 const longDate = new Intl.DateTimeFormat('en-IN', {
@@ -82,6 +88,32 @@ const productLine = (product: ProductLabel) => {
   return named || rating === null ? product.name : `${product.name} · ${rating}`;
 };
 
+/** Efficiency, technology and warranty in one short line, or null when none is known. */
+const specsLine = (product: ProductLabel | null): string | null => {
+  if (!product) return null;
+  const parts = [
+    product.efficiencyBp ? `${percent(product.efficiencyBp)} efficiency` : null,
+    product.technology?.trim() || null,
+    product.warrantyYears ? `${product.warrantyYears}-year warranty` : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
+type Line = QuotationDetail['lines'][number];
+const lineView = (line: Line, index: number) => ({
+  index: index + 1,
+  description: line.description,
+  note: line.extra === 'charge' || line.extra === 'adjustment' ? line.reason : null,
+  quantity: quantity(line.quantity, line.unit),
+  gst: line.extra === 'gift' ? '—' : percent(line.taxRateBp),
+  amount:
+    line.extra === 'gift'
+      ? 'Free'
+      : line.amountPaise < 0
+        ? `− ${formatInr(-line.amountPaise)}`
+        : formatInr(line.amountPaise + line.contingencyPaise),
+});
+
 const totalsView = (totals: QuotationTotals) => ({
   total: formatInr(totals.totalPaise),
   subsidy: formatInr(totals.subsidyPaise),
@@ -99,7 +131,8 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
     company: {
       name: company.legalName,
       brand: company.brandName,
-      address: company.fullAddress,
+      // Appendix A: quotations carry the short address; legal documents the full one.
+      address: company.shortAddress,
       gstin: company.gstin,
       email: company.email,
       phones: company.phones.join(' · '),
@@ -134,14 +167,14 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
       inverter: productLine(extras.inverter),
       battery: extras.battery ? productLine(extras.battery) : null,
       structure: STRUCTURE[input.structureType],
+      panelSpecs: specsLine(extras.panel),
+      inverterSpecs: specsLine(extras.inverter),
+      batterySpecs: specsLine(extras.battery),
     },
-    lines: quotation.lines.map((line, index) => ({
-      index: index + 1,
-      description: line.description,
-      quantity: quantity(line.quantity, line.unit),
-      gst: percent(line.taxRateBp),
-      amount: formatInr(line.amountPaise + line.contingencyPaise),
-    })),
+    lines: quotation.lines.filter((line) => line.extra !== 'optional').map(lineView),
+    optional: quotation.lines
+      .filter((line) => line.extra === 'optional')
+      .map((line, index) => ({ ...lineView(line, index), amount: formatInr(line.totalPaise) })),
     money: {
       items: formatInr(itemsBeforeGst),
       discount: totals.discountPaise > 0 ? formatInr(totals.discountPaise) : null,

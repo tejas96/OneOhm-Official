@@ -34,6 +34,27 @@ const CHECKLISTS: Readonly<Record<string, Items>> = {
     ['cable_route', 'Cable route to the meter agreed with the customer'],
     ['meter_location', 'Meter and distribution board located'],
   ],
+  site_survey_society: [
+    ['terrace_access', 'Terrace access agreed with the society secretary'],
+    ['shadow_check', 'Shadow from water tanks, lift rooms and nearby buildings checked'],
+    ['structure_sound', 'Terrace slab and waterproofing can carry the structure'],
+    ['common_meter', 'Common-area meter located and its sanctioned load noted'],
+    ['cable_route', 'Cable route through the building agreed with the society'],
+  ],
+  site_survey_commercial: [
+    ['roof_access', 'Safe access to the roof, agreed with the facility team'],
+    ['shadow_check', 'Shadow from tanks, chimneys and nearby buildings checked'],
+    ['structure_sound', 'Roof (RCC or sheet) checked for load and leaks'],
+    ['load_profile', 'Connected load and day-time use noted from the bill'],
+    ['panel_room', 'Main LT panel and space for the inverter and ACDB located'],
+  ],
+  site_survey_ground: [
+    ['land_clear', 'Land is level and clear, and the customer owns or leases it'],
+    ['soil_check', 'Soil checked for foundations (no waterlogging or loose fill)'],
+    ['shadow_check', 'Shadow from trees and buildings checked'],
+    ['fencing', 'Fencing and access for cleaning and maintenance agreed'],
+    ['cable_route', 'Cable route to the meter measured and agreed'],
+  ],
   material_reservation: [
     ['quantities_match', 'Quantities match the bill of materials'],
     ['no_damage', 'Panels and inverter checked for damage'],
@@ -68,6 +89,9 @@ const ANY_TASK: Items = [
 
 const MEASUREMENTS: Readonly<Record<string, readonly string[]>> = {
   site_survey: ['roof_length_m', 'roof_width_m', 'shadow_free_area_sqm'],
+  site_survey_society: ['roof_length_m', 'roof_width_m', 'shadow_free_area_sqm'],
+  site_survey_commercial: ['roof_length_m', 'roof_width_m', 'shadow_free_area_sqm'],
+  site_survey_ground: ['land_length_m', 'land_width_m', 'shadow_free_area_sqm'],
   earthing_protection: ['earthing_resistance'],
 };
 

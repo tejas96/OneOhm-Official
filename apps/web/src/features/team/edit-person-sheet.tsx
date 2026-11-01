@@ -6,8 +6,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
+import { useWorkforceSettings } from '@/features/settings/workforce/use-workforce-settings';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import {
+  PersonWorkFields,
+  type WorkDraft,
+  workBodyFrom,
+  workDraftFrom,
+} from './capacity/person-work-fields';
 import { bodyFrom, draftFrom, EMPTY_PERSON, PersonFields } from './person-fields';
 import { SkillsPicker } from './skills/skills-picker';
 import { PEOPLE_KEY, ROLES_KEY } from './use-team';
@@ -31,6 +38,9 @@ export function EditPersonSheet({
   const [onLeave, setOnLeave] = useState(false);
   const [active, setActive] = useState(true);
   const [skills, setSkills] = useState<string[]>([]);
+  const [work, setWork] = useState<WorkDraft>({ limit: '', tracking: 'follow' });
+  const settings = useWorkforceSettings(person !== null);
+  const companyLimit = settings.data?.policy.capacity.defaultOpenTaskLimit || null;
   const { reset } = form;
 
   useEffect(() => {
@@ -39,6 +49,7 @@ export function EditPersonSheet({
     setOnLeave(person.onLeave);
     setActive(person.status === 'active');
     setSkills(person.skills);
+    setWork(workDraftFrom(person));
     reset();
   }, [person, reset]);
 
@@ -50,6 +61,7 @@ export function EditPersonSheet({
       onLeave,
       status: active ? 'active' : 'inactive',
       skills,
+      ...workBodyFrom(work),
     } as const;
     const saved = await form.run(() =>
       expectStatus(api.people.updatePerson({ params: { id: person.id }, body }), 200),
@@ -101,6 +113,15 @@ export function EditPersonSheet({
           <h3 className="type-overline text-ink-faint uppercase">{t('skills')}</h3>
           <p className="type-body-sm text-ink-faint">{t('skillsHint')}</p>
           <SkillsPicker value={skills} onChange={setSkills} error={form.fieldErrors.skills} />
+        </section>
+        <section className="flex flex-col gap-4 border-t border-hairline pt-6">
+          <h3 className="type-overline text-ink-faint uppercase">{t('workTitle')}</h3>
+          <PersonWorkFields
+            draft={work}
+            onChange={setWork}
+            companyLimit={companyLimit}
+            errors={form.fieldErrors}
+          />
         </section>
         <section className="flex flex-col gap-1 border-t border-hairline pt-6">
           <h3 className="mb-2 type-overline text-ink-faint uppercase">{t('access')}</h3>

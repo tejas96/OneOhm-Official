@@ -6,6 +6,7 @@ import { CommandPalette } from '@/features/search/command-palette';
 import { AccountMenu } from './account-menu';
 import { AlertsBell } from './alerts-bell';
 import { BrandLogo } from './brand-logo';
+import { useCompanyName } from './company-name';
 import { NavList } from './nav-list';
 import { SearchButton } from './search-button';
 import { ThemeSwitch } from './theme-switch';
@@ -24,6 +25,7 @@ const ASIDE =
  */
 export function Sidebar() {
   const t = useTranslations('nav');
+  const companyName = useCompanyName();
   return (
     <>
       <aside
@@ -37,7 +39,7 @@ export function Sidebar() {
             <BrandLogo alt={t('logoAlt')} className="h-9" />
             <AlertsBell />
           </div>
-          <p className="type-label text-ink-faint">{t('company')}</p>
+          <p className="type-label text-ink-faint">{companyName}</p>
         </div>
 
         <SearchButton />

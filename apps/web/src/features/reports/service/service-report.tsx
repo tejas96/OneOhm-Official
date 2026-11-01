@@ -20,7 +20,7 @@ function Kpis({ data }: { readonly data: ServiceReport }) {
         format={whole}
         goodDirection="none"
         detail={t('raisedDetail', { resolved: totals.resolved })}
-        href="/service"
+        href="/service?tab=requests&view=all"
         hrefLabel={t('serviceLink')}
       />
       <KpiTile
@@ -29,7 +29,7 @@ function Kpis({ data }: { readonly data: ServiceReport }) {
         format={whole}
         goodDirection="down"
         detail={t('openDetail')}
-        href="/service"
+        href="/service?tab=requests&view=open"
         hrefLabel={t('serviceLink')}
       />
       <KpiTile
@@ -46,6 +46,8 @@ function Kpis({ data }: { readonly data: ServiceReport }) {
           totals.averageRating === null ? '–' : `${decimal(totals.averageRating)} / 5`
         }
         detail={t('ratingDetail', { count: totals.ratings })}
+        href="/service?tab=requests&view=feedback"
+        hrefLabel={t('ratingLink')}
       />
     </div>
   );

@@ -105,8 +105,14 @@ export function ContractorDetailView({ id }: { readonly id: string }) {
 function PerformanceStrip({ contractor }: { readonly contractor: ContractorDetail }) {
   const t = useTranslations('contractors.figures');
   const p = contractor.performance;
-  const items = [
+  const ratings = p.ratings ?? 0;
+  const items: { key: string; value: string; note?: string }[] = [
     { key: 'onTime', value: p.onTimePercent === null ? '—' : `${p.onTimePercent}%` },
+    {
+      key: 'rating',
+      value: p.rating ? t('ratingValue', { value: p.rating }) : '—',
+      note: p.rating ? t('ratingCount', { count: ratings }) : t('ratingTooFew', { count: ratings }),
+    },
     { key: 'openWork', value: String(p.openWorkOrders) },
     { key: 'overdueTasks', value: `${p.overdueTasks} / ${p.openTasks}` },
     { key: 'rework', value: String(p.reworkCount) },
@@ -114,11 +120,12 @@ function PerformanceStrip({ contractor }: { readonly contractor: ContractorDetai
     { key: 'paid', value: formatInrCompact(p.paidPaise) },
   ];
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-y border-hairline py-6 sm:grid-cols-3 lg:grid-cols-6">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-y border-hairline py-6 sm:grid-cols-4 xl:grid-cols-7">
       {items.map((item) => (
         <div key={item.key} className="flex flex-col gap-1">
           <dt className="type-overline text-ink-faint uppercase">{t(item.key)}</dt>
           <dd className="type-display-md text-ink tabular-nums">{item.value}</dd>
+          {item.note && <dd className="type-label text-ink-faint">{item.note}</dd>}
         </div>
       ))}
     </dl>

@@ -8,11 +8,11 @@ import {
   StatusPill,
   type TableColumn,
 } from '@oneohm/design-system/web';
-import { Lock } from 'lucide-react';
+import { Lock, RotateCcw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskActions } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
-import { isBlocked, taskStatusKey, taskTone } from '../tasks/task-status';
+import { isBlocked, isReturned, taskStatusKey, taskTone } from '../tasks/task-status';
 
 function TaskCell({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.task');
@@ -26,7 +26,17 @@ function TaskCell({ task }: { readonly task: ProjectTask }) {
         {isBlocked(task) && (
           <span className="flex min-w-0 items-center gap-1.5 type-body-sm font-normal text-ink-faint">
             <Lock aria-hidden className="size-3 shrink-0" />
-            <span className="truncate">{t('blockedBy', { tasks: task.blockedBy.join(', ') })}</span>
+            <span className="line-clamp-1 [overflow-wrap:anywhere]">
+              {t('blockedBy', { tasks: task.blockedBy.join(', ') })}
+            </span>
+          </span>
+        )}
+        {isReturned(task) && task.returned && (
+          <span className="flex min-w-0 items-center gap-1.5 type-body-sm font-normal text-at-risk">
+            <RotateCcw aria-hidden className="size-3 shrink-0" />
+            <span className="line-clamp-1 [overflow-wrap:anywhere]">
+              {t('returnedNote', { note: task.returned.note })}
+            </span>
           </span>
         )}
       </div>

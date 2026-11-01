@@ -69,7 +69,7 @@ export function PaymentsReceived() {
                 <div className="flex min-w-0 flex-col">
                   <span className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/projects/${payment.projectId}`}
+                      href={`/projects/${payment.projectId}?tab=payments`}
                       className="truncate type-body font-medium text-ink hover:text-accent"
                     >
                       {payment.customerName}
@@ -95,8 +95,15 @@ export function PaymentsReceived() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 sm:justify-end">
-                  <span className="font-mono text-ink tabular-nums">
-                    {formatInr(payment.amountPaise)}
+                  <span className="flex flex-col items-end">
+                    <span className="font-mono text-ink tabular-nums">
+                      {formatInr(payment.amountPaise)}
+                    </span>
+                    {payment.tdsPaise > 0 && (
+                      <span className="whitespace-nowrap type-label text-ink-faint">
+                        {t('tdsIncluded', { amount: formatInr(payment.tdsPaise) })}
+                      </span>
+                    )}
                   </span>
                   {payment.receiptNumber && (
                     <a

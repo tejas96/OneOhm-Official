@@ -1,6 +1,7 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { CHECKLIST_TICKED } from '@oneohm/domain';
 import {
+  Button,
   Card,
   describeError,
   EmptyState,
@@ -13,7 +14,7 @@ import {
   useTheme,
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Lock, ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -24,16 +25,23 @@ import { TASK } from '@/copy/tasks';
 import { CrewMaterialPrompt } from '@/features/crew/crew-material-prompt';
 import { SiteVisitCard } from '@/features/site/site-visit-card';
 import { shortDate } from '@/lib/dates';
+import { useCan, useCurrentUser } from '@/session/session-provider';
 import { ChecklistCard } from './evidence/checklist-card';
 import { completionFacts } from './evidence/evidence-rules';
 import { EvidenceSection } from './evidence/evidence-section';
 import { SignatureCard } from './evidence/signature-card';
 import { useEvidence } from './evidence/use-evidence';
 import { FactsForm } from './facts-form';
+import { NoteSheet } from './note-sheet';
+import { RescheduleSheet } from './reschedule-sheet';
 import { TaskFooter } from './task-footer';
+import { TaskNotes } from './task-notes';
 import { statusLabel, toneOf } from './task-row';
+import { TaskTimeline } from './task-timeline';
 import { useTaskActions } from './use-task-actions';
 import { WaitingSheet } from './waiting-sheet';
+
+type SheetName = 'waiting' | 'reschedule' | 'update' | 'sendBack';
 
 /** One task: what it is, what to record, and the next step in one tap. */
 export function TaskScreen() {
@@ -63,6 +71,9 @@ export function TaskScreen() {
 
 function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const theme = useTheme();
+  const user = useCurrentUser();
+  const manager = useCan('tasks.assign', 'projects.manage');
+  const canWork = task.assignee?.id === user.id || manager;
   const actions = useTaskActions(task);
   const evidence = useEvidence(task);
   const [facts, setFacts] = useState<Record<string, string>>(() => ({ ...task.knownFacts }));
@@ -77,7 +88,20 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       return next;
     });
   const [note, setNote] = useState('');
-  const [waiting, setWaiting] = useState(false);
+  const [sheet, setSheet] = useState<SheetName | null>(null);
+  const close = () => setSheet(null);
+  const closeOnSuccess = { onSuccess: close };
+  const open = (name: SheetName) => {
+    // A new sheet starts without the last attempt's error.
+    for (const mutation of [actions.reschedule, actions.postUpdate, actions.sendBack])
+      mutation.reset();
+    setSheet(name);
+  };
+  // Sent back: the work is the assignee's again, so the reviewer goes back to the list.
+  const leave = () => {
+    close();
+    if (router.canGoBack()) router.back();
+  };
   const blocked = task.blockedBy.length > 0;
   const failure =
     actions.complete.error ?? actions.start.error ?? actions.approve.error ?? actions.wait.error;
@@ -94,7 +118,8 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       facts={completionFacts(facts, ticked, CHECKLIST_TICKED)}
       note={note}
       uploading={evidence.uploading}
-      onWaiting={() => setWaiting(true)}
+      onWaiting={() => open('waiting')}
+      onSendBack={() => open('sendBack')}
     />
   );
 
@@ -111,7 +136,16 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
             <Text variant="bodySm">{item.value}</Text>
           </View>
         ))}
+        {manager && task.status !== 'completed' ? (
+          <Button
+            label={TASK.changeDue}
+            size="sm"
+            variant="quiet"
+            onPress={() => open('reschedule')}
+          />
+        ) : null}
       </View>
+      <TaskNotes task={task} />
       {blocked ? (
         <Card tone="sunken" style={styles.card}>
           <View style={styles.row}>
@@ -129,7 +163,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
         </Card>
       ) : null}
       <SiteVisitCard task={task} />
-      {task.approval ? (
+      {task.approval && task.status !== 'in_review' ? (
         <View style={styles.row}>
           <ShieldCheck size={16} color={theme.status.review.fg} />
           <Text variant="bodySm" color={theme.status.review.fg}>
@@ -161,15 +195,41 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       <EvidenceSection task={task} evidence={evidence} />
       <CrewMaterialPrompt projectId={task.projectId} taskId={task.id} />
       <SignatureCard task={task} evidence={evidence} />
+      <TaskTimeline task={task} canPost={canWork} onPost={() => open('update')} />
       <WaitingSheet
-        open={waiting}
+        open={sheet === 'waiting'}
         pending={actions.wait.isPending}
         initialParty={task.waitingParty}
-        onClose={() => setWaiting(false)}
+        onClose={close}
         onSave={(party, waitingNote) =>
-          actions.wait.mutate({ party, note: waitingNote }, { onSuccess: () => setWaiting(false) })
+          actions.wait.mutate({ party, note: waitingNote }, closeOnSuccess)
         }
       />
+      <RescheduleSheet
+        key={`reschedule-${sheet === 'reschedule'}`}
+        task={task}
+        open={sheet === 'reschedule'}
+        pending={actions.reschedule.isPending}
+        error={actions.reschedule.error}
+        onClose={close}
+        onSave={(input) => actions.reschedule.mutate(input, closeOnSuccess)}
+      />
+      {(['update', 'sendBack'] as const).map((kind) => {
+        const mutation = kind === 'update' ? actions.postUpdate : actions.sendBack;
+        return (
+          <NoteSheet
+            key={`${kind}-${sheet === kind}`}
+            kind={kind}
+            open={sheet === kind}
+            pending={mutation.isPending}
+            error={mutation.error}
+            onClose={close}
+            onSave={(text) =>
+              mutation.mutate(text, { onSuccess: kind === 'sendBack' ? leave : close })
+            }
+          />
+        );
+      })}
     </Screen>
   );
 }

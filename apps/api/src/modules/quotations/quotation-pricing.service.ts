@@ -1,44 +1,44 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  QuotationDetail,
+  QuotationInput,
   QuotationPreview,
   QuotationPreviewInput,
-  QuotationTotals,
 } from '@oneohm/api-contracts';
 import { products, subsidyRules } from '@oneohm/database';
 import {
-  calculateSubsidy,
-  designSystem,
+  atAcceptedPrice,
   type PanelProduct,
   type PricedProduct,
-  priceQuote,
-  type QuoteLineInput,
   type RateCard,
   ruleInForce,
   type SubsidyRule,
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { type AcceptedPricing, acceptedPricing } from './accepted-pricing';
+import { resolveExtras } from './quotation-extras';
+import { type QuotedLine, quoteTotals } from './quotation-totals';
 import { type SiteFacts, siteFactsWithoutProperty } from './site-facts';
+import { type SurveyRepricing, surveyRepricing } from './survey-repricing';
 
 type ProductRow = typeof products.$inferSelect;
 
 export interface PricedQuotation {
   readonly preview: QuotationPreview;
-  readonly lines: readonly (QuoteLineInput & {
-    amountPaise: number;
-    contingencyPaise: number;
-    discountPaise: number;
-    taxPaise: number;
-    totalPaise: number;
-    costPaise: number;
-  })[];
+  readonly lines: readonly QuotedLine[];
   readonly rates: RateCard;
   readonly rule: SubsidyRule | null;
+}
+
+export interface PriceOptions {
+  /** Re-price with an accepted quotation's own rates, product prices and subsidy rule. */
+  readonly against?: AcceptedPricing | undefined;
 }
 
 const asPriced = (row: ProductRow): PricedProduct => ({
@@ -48,6 +48,12 @@ const asPriced = (row: ProductRow): PricedProduct => ({
   pricePaise: row.pricePaise,
   costPaise: row.costPaise,
   taxRateBp: row.taxRateBp,
+});
+
+const asPanel = (row: ProductRow): PanelProduct => ({
+  ...asPriced(row),
+  wattageWp: row.wattageWp ?? 0,
+  dcr: row.dcr,
 });
 
 /** The one place quotation money is calculated (PRD 3.9: no duplicate pricing logic). */
@@ -60,72 +66,40 @@ export class QuotationPricingService {
     private readonly customers: CustomersService,
   ) {}
 
-  async price(input: QuotationPreviewInput): Promise<PricedQuotation> {
-    const property = await this.siteFacts(input);
+  async price(input: QuotationPreviewInput, options: PriceOptions = {}): Promise<PricedQuotation> {
+    const against = options.against;
+    const site = await this.siteFacts(input);
     const panel = await this.product(input.panelProductId, 'panel', 'panelProductId');
     const inverter = await this.product(input.inverterProductId, 'inverter', 'inverterProductId');
     const battery = input.batteryProductId
       ? await this.product(input.batteryProductId, 'battery', 'batteryProductId')
       : undefined;
-    const rates = await this.catalog.rateCard();
-    const rules = (await this.db.select().from(subsidyRules)) as unknown as SubsidyRule[];
-    const rule = ruleInForce(rules, input.subsidyCategory, todayIn());
-
-    const totalsFor = (panelRow: ProductRow, discountPaise: number) => {
-      const design = designSystem({
-        targetWp: input.targetWp,
-        panel: {
-          ...asPriced(panelRow),
-          wattageWp: panelRow.wattageWp ?? 0,
-          dcr: panelRow.dcr,
-        } satisfies PanelProduct,
-        inverter: asPriced(inverter),
-        battery: battery ? asPriced(battery) : undefined,
-        site: {
-          floors: input.floors,
-          structureType: input.structureType,
-          distanceKm: input.distanceKm,
-          dcCableMeters: input.dcCableMeters ?? undefined,
-          acCableMeters: input.acCableMeters ?? undefined,
-        },
-        rates,
-      });
-      const pricing = priceQuote(design.lines, {
-        contingencyBp: rates.contingencyBp,
-        discountPaise,
-      });
-      const subsidy = calculateSubsidy(
-        {
-          category: input.subsidyCategory,
-          capacityWp: design.capacityWp,
-          panelsDcr: panelRow.dcr,
-          systemType: input.systemType,
-          households: input.households ?? property.households ?? undefined,
-          meterInSocietyName: property.meterInSocietyName ?? undefined,
-          propertyAlreadySubsidised: property.subsidyClaimed,
-        },
-        rule,
-      );
-      const totals: QuotationTotals = {
-        moduleCount: design.moduleCount,
-        capacityWp: design.capacityWp,
-        subtotalPaise: pricing.subtotalPaise,
-        contingencyPaise: pricing.contingencyPaise,
-        discountPaise: pricing.discountPaise,
-        taxPaise: pricing.taxPaise,
-        totalPaise: pricing.totalPaise,
-        costPaise: pricing.costPaise,
-        marginPaise: pricing.marginPaise,
-        subsidyPaise: subsidy.amountPaise,
-        subsidyIneligible: subsidy.ineligible,
-        effectivePaise: Math.max(0, pricing.totalPaise - subsidy.amountPaise),
-      };
-      return { totals, lines: pricing.lines };
+    const rates = against?.rates ?? (await this.catalog.rateCard());
+    const rule = against ? against.rule : await this.ruleToday(input);
+    const saved = against?.lines ?? [];
+    const extras = resolveExtras(input.extras ?? [], {
+      rates,
+      products: await this.extraProducts(input),
+      saved: against?.lines,
+    });
+    const parts = {
+      input,
+      site,
+      inverter: atAcceptedPrice(asPriced(inverter), saved, 'inverter'),
+      battery: battery ? atAcceptedPrice(asPriced(battery), saved, 'battery') : undefined,
+      extras,
+      rates,
+      rule,
     };
+    const totalsFor = (panelRow: ProductRow, discountPaise: number) =>
+      quoteTotals(
+        { ...parts, panel: atAcceptedPrice(asPanel(panelRow), saved, 'panel') },
+        discountPaise,
+      );
 
     const chosen = totalsFor(panel, input.discountPaise);
     const undiscounted = totalsFor(panel, 0);
-    const alternative = await this.alternativePanel(panel);
+    const alternative = against ? null : await this.alternativePanel(panel);
     const other = alternative ? totalsFor(alternative, input.discountPaise) : null;
     const comparison = other
       ? panel.dcr
@@ -140,14 +114,38 @@ export class QuotationPricingService {
     return {
       preview: {
         totals: chosen.totals,
-        lines: chosen.lines.map(({ unitCostPaise: _cost, ...line }) => line),
+        lines: chosen.lines.map(({ unitCostPaise: _cost, productId: _product, ...line }) => line),
         comparison,
-        discountNeedsApproval: input.discountPaise > limit,
+        // A downward adjustment counts like a discount (PRD 3.9 approval rules).
+        discountNeedsApproval: chosen.reductionPaise > limit,
       },
       lines: chosen.lines,
       rates,
       rule,
     };
+  }
+
+  /** A survey revision of an accepted quotation, priced as that quotation was. */
+  async priceAgainst(input: QuotationInput, acceptedId: string): Promise<PricedQuotation> {
+    return this.price(input, { against: await acceptedPricing(this.db, acceptedId) });
+  }
+
+  /**
+   * After the survey (PRD 3.5): the accepted quotation re-priced with only what was
+   * measured, and whether the shadow-free area holds the quoted size.
+   */
+  async priceAfterSurvey(
+    accepted: QuotationDetail,
+    input: QuotationInput,
+    projectId: string,
+  ): Promise<SurveyRepricing> {
+    const priced = await this.priceAgainst(input, accepted.id);
+    return surveyRepricing(this.db, this.catalog, { priced, input, projectId });
+  }
+
+  private async ruleToday(input: QuotationPreviewInput): Promise<SubsidyRule | null> {
+    const rules = (await this.db.select().from(subsidyRules)) as unknown as SubsidyRule[];
+    return ruleInForce(rules, input.subsidyCategory, todayIn());
   }
 
   /**
@@ -157,6 +155,19 @@ export class QuotationPricingService {
   private async siteFacts(input: QuotationPreviewInput): Promise<SiteFacts> {
     if (input.propertyId) return this.customers.property(input.propertyId);
     return siteFactsWithoutProperty(input);
+  }
+
+  /** Catalog products picked for optional items and gifts. */
+  private async extraProducts(input: QuotationPreviewInput): Promise<Map<string, ProductRow>> {
+    const ids = [...new Set((input.extras ?? []).flatMap((extra) => extra.productId ?? []))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.db.select().from(products).where(inArray(products.id, ids));
+    if (rows.length !== ids.length) {
+      throw invalid('A product on an extra line is not in the catalog.', {
+        extras: 'Pick the product again.',
+      });
+    }
+    return new Map(rows.map((row) => [row.id, row]));
   }
 
   /** The closest panel of the other kind (DCR ↔ non-DCR), for the side-by-side comparison. */

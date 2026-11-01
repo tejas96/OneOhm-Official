@@ -3,7 +3,6 @@ import type { CustomerHome, Referral, ServiceRequest } from '@oneohm/api-contrac
 import {
   customerFeedback,
   customers,
-  leads,
   notify,
   notifyHolders,
   openServiceRequest,
@@ -12,8 +11,7 @@ import {
   serviceRequests,
 } from '@oneohm/database';
 import { customerLanguage } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { pickableCategory } from '../../common/read-models/service-categories';
 import {
@@ -22,6 +20,7 @@ import {
 } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
+import { LeadIntakeService } from '../crm/lead-intake.service';
 import { customerReferrals } from '../referrals/customer-referrals.read';
 import { resolveReferralCode } from '../referrals/referral-codes';
 import { suggestRatingPoints } from '../workforce/points';
@@ -34,6 +33,7 @@ export class CustomerPortalService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly catalog: CatalogService,
+    private readonly intake: LeadIntakeService,
   ) {}
 
   async home(customerId: string, contactId: string | null = null): Promise<CustomerHome> {
@@ -75,42 +75,30 @@ export class CustomerPortalService {
     return customerReferrals(this.db, customerId);
   }
 
+  /** A friend the customer referred becomes a referral lead with an owner by rule (PRD 5.6). */
   async refer(
     customerId: string,
     input: { name: string; phone: string; city?: string | undefined; note?: string | undefined },
   ): Promise<Referral> {
-    const [open] = await this.db
-      .select({ id: leads.id })
-      .from(leads)
-      .where(and(eq(leads.phoneE164, input.phone), notInArray(leads.stage, ['won', 'lost'])))
-      .limit(1);
+    const open = await this.intake.openLeadByPhone(this.db, input.phone);
     if (open) throw conflict('We are already in touch with this number. Thank you!', 'duplicate');
     const [referrer] = await this.db
       .select({ name: customers.name })
       .from(customers)
       .where(eq(customers.id, customerId));
-    const [lead] = await this.db
-      .insert(leads)
-      .values({
-        name: input.name,
-        phoneE164: input.phone,
-        city: input.city?.trim() || 'Not given',
-        source: 'referral',
-        referredByCustomerId: customerId,
-        nextActionOn: todayIn(),
-        nextActionNote: `Call: referred by ${referrer?.name ?? 'a customer'}`,
-        notes: input.note ?? null,
-      })
-      .returning({ id: leads.id, name: leads.name, createdAt: leads.createdAt });
-    if (!lead) throw new Error('Referral was not saved.');
-    await notifyHolders(this.db, 'leads.manage', {
-      kind: 'referral',
-      title: 'New referral',
-      body: `${lead.name}, referred by ${referrer?.name ?? 'a customer'}. Call them today.`,
-      dedupeKey: `referral:${lead.id}`,
+    const by = referrer?.name ?? 'a customer';
+    const lead = await this.intake.create({
+      name: input.name,
+      phone: input.phone,
+      city: input.city?.trim() || 'Not given',
+      source: 'referral',
+      referredByCustomerId: customerId,
+      nextActionNote: `Call: referred by ${by}`,
+      notes: input.note ?? null,
+      firstNote: `Referred by ${by}${input.note ? `: ${input.note}` : '.'}`,
     });
     return {
-      id: lead.id,
+      id: lead.leadId,
       name: lead.name,
       status: 'received',
       reward: null,
@@ -178,19 +166,31 @@ export class CustomerPortalService {
     return toCustomerRequest(row);
   }
 
+  /**
+   * One rating per project, from the app or WhatsApp. A new rating updates it; the comment
+   * is replaced only by a new one, so rating again never wipes what the customer wrote.
+   */
   async feedback(
     customerId: string,
     input: { projectId: string; rating: number; comment?: string | undefined },
   ): Promise<void> {
     await this.ownProject(customerId, input.projectId);
-    await this.db.delete(customerFeedback).where(eq(customerFeedback.projectId, input.projectId));
-    await this.db.insert(customerFeedback).values({
-      customerId,
-      projectId: input.projectId,
-      rating: input.rating,
-      comment: input.comment ?? null,
+    const comment = input.comment?.trim() || null;
+    await this.db.transaction(async (tx) => {
+      const kept = await tx
+        .update(customerFeedback)
+        .set({ rating: input.rating, createdAt: new Date(), ...(comment ? { comment } : {}) })
+        .where(eq(customerFeedback.projectId, input.projectId))
+        .returning({ id: customerFeedback.id });
+      if (kept.length === 0)
+        await tx.insert(customerFeedback).values({
+          customerId,
+          projectId: input.projectId,
+          rating: input.rating,
+          comment,
+        });
+      await suggestRatingPoints(tx, { projectId: input.projectId, rating: input.rating });
     });
-    await suggestRatingPoints(this.db, { projectId: input.projectId, rating: input.rating });
   }
 
   private async ownProject(customerId: string, projectId: string): Promise<void> {

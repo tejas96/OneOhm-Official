@@ -186,7 +186,24 @@
       "cellHint": "DCR panels: printed on the DCR undertaking.",
       "nothing": "Enter what arrived on at least one line.",
       "save": "Record receipt",
-      "saved": "Goods received on {number}"
+      "saved": "Goods received on {number}",
+      "invoiceAmount": "Vendor invoice total",
+      "invoiceAmountHint": "With GST, as printed. Finance sees it next to the order amount on the bill.",
+      "dcrCellHint": "DCR panel: needed for the subsidy papers.",
+      "certificate": "DCR certificate",
+      "certificateHint": "Optional. The panel maker's certificate, as a PDF or photo.",
+      "certificateFailed": "Received, but the DCR certificate did not upload: {reason}"
+    },
+    "dcr": {
+      "cells": "{item}: cells by {maker}, invoice {invoice}",
+      "notRecorded": "not recorded",
+      "certificate": "DCR certificate",
+      "noCertificate": "No DCR certificate yet",
+      "attach": "Add certificate",
+      "replace": "Replace",
+      "attachLabel": "DCR certificate for {number}",
+      "attached": "DCR certificate added",
+      "failed": "The certificate did not upload"
     },
     "vendors": {
       "loading": "Loading vendors",

@@ -105,8 +105,21 @@ export function LeadsTable({
 export function NextAction({ lead, today }: { readonly lead: Lead; readonly today: string }) {
   const t = useTranslations('leads');
   const format = useFormatter();
+  if (lead.revisitDue) {
+    return (
+      <span className="inline-flex items-center gap-1.5 type-body-sm font-medium text-accent">
+        <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+        {t('lost.revisitDue')}
+      </span>
+    );
+  }
   if (!isOpenLead(lead)) {
-    return <span className="type-body-sm text-ink-faint">{t('closed')}</span>;
+    const revisit = lead.revisitOn
+      ? t('lost.revisitShort', {
+          date: format.dateTime(new Date(lead.revisitOn), { day: 'numeric', month: 'short' }),
+        })
+      : t('closed');
+    return <span className="type-body-sm text-ink-faint">{revisit}</span>;
   }
   if (!lead.nextActionOn) {
     return <span className="type-body-sm text-ink-faint">{t('noNextAction')}</span>;

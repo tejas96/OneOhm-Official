@@ -4,7 +4,6 @@ import {
   goodsReceiptLines,
   goodsReceipts,
   notifyHolders,
-  payables,
   projectActivities,
   purchaseOrderLines,
   purchaseOrders,
@@ -13,13 +12,13 @@ import {
   vendors,
 } from '@oneohm/database';
 import { receiptStage } from '@oneohm/domain';
-import { addDays } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { lineTotal, purchaseOrderDetail } from './purchase-order-read';
+import { purchaseOrderDetail } from './purchase-order-read';
+import { raiseBill, receiptAmounts } from './receipt-bill';
 import { type CheckedLine, loadLines, validateReceipt } from './receipt-checks';
 import { moveStock, nextNumber, resolveLocation } from './stock-ledger';
 
@@ -49,11 +48,15 @@ export class ReceivingService {
       const checked = await validateReceipt(tx, input, lines);
 
       const number = await nextNumber(tx, 'goods_receipts', 'GRN', input.receivedOn);
-      const amount = checked.reduce(
-        (sum, row) => sum + lineTotal({ ...row.line, quantity: row.quantity }),
-        0,
-      );
-      const payableId = await raiseBill(tx, { number, order, vendor, input, amount });
+      const { amountPaise: amount, gstPaise } = receiptAmounts(checked);
+      const payableId = await raiseBill(tx, {
+        number,
+        order,
+        vendor,
+        input,
+        amountPaise: amount,
+        gstPaise,
+      });
       const [receipt] = await tx
         .insert(goodsReceipts)
         .values({
@@ -98,6 +101,7 @@ export class ReceivingService {
       await recordAudit(tx, actor.userId, 'goods_receipt.created', 'purchase_order', orderId, {
         number,
         amount,
+        vendorInvoicePaise: input.vendorInvoicePaise,
       });
       await reportRejections(tx, actor, { number, order, vendor: vendor.name, checked });
     });
@@ -196,33 +200,4 @@ async function reportRejections(
     },
     actor.userId,
   );
-}
-
-/** The vendor's bill for what was accepted, due after their terms; none if nothing was. */
-async function raiseBill(
-  tx: Transaction,
-  context: {
-    readonly number: string;
-    readonly order: typeof purchaseOrders.$inferSelect;
-    readonly vendor: typeof vendors.$inferSelect;
-    readonly input: ReceiptData;
-    readonly amount: number;
-  },
-): Promise<string | null> {
-  const { number, order, vendor, input, amount } = context;
-  if (amount <= 0) return null;
-  const invoice = input.vendorInvoiceNumber ? ` · invoice ${input.vendorInvoiceNumber}` : '';
-  const [payable] = await tx
-    .insert(payables)
-    .values({
-      projectId: order.projectId,
-      party: 'vendor',
-      partyName: vendor.name,
-      description: `${number} against ${order.number}${invoice}`,
-      billNumber: input.vendorInvoiceNumber ?? null,
-      amountPaise: amount,
-      dueOn: addDays(input.receivedOn, vendor.paymentTermsDays),
-    })
-    .returning({ id: payables.id });
-  return payable?.id ?? null;
 }

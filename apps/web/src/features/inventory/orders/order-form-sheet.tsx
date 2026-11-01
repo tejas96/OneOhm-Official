@@ -11,7 +11,7 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useRefreshInventory, useVendors } from '../use-inventory';
-import { type LineDraft, lineTotal, newLineKey, OrderLinesEditor } from './order-lines-editor';
+import { draftTotals, type LineDraft, newLineKey, OrderLinesEditor } from './order-lines-editor';
 
 const NO_PROJECT = 'stock';
 
@@ -103,12 +103,7 @@ export function OrderFormSheet({
     setLines((current) => [...current.filter((line) => line.productId === null), ...next]);
   };
 
-  const subtotal = lines.reduce(
-    (sum, line) =>
-      sum + Math.round((Number(line.quantity.replace(/,/g, '')) || 0) * (line.ratePaise ?? 0)),
-    0,
-  );
-  const total = lines.reduce((sum, line) => sum + lineTotal(line), 0);
+  const { subtotalPaise: subtotal, totalPaise: total } = draftTotals(lines);
   const activeVendors = (vendors.data ?? []).filter((vendor) => vendor.active);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {

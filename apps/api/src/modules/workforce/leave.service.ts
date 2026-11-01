@@ -4,11 +4,12 @@ import {
   leaveRequests,
   notify,
   notifyHolders,
-  projectActivities,
-  projectTasks,
+  roles,
   type Transaction,
+  userRoles,
   users,
 } from '@oneohm/database';
+import { checkHandover } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -16,7 +17,8 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
-import { type LeaveWindow, leaveImpact, tasksInWindow } from './leave-impact';
+import { handOverWork, tellProjectManagers } from './leave-handover';
+import { affectedCount, affectedWork, type LeaveWindow, leaveImpact } from './leave-impact';
 import { loadPolicy } from './policy';
 import { readLeave } from './workforce-read';
 
@@ -25,6 +27,13 @@ export interface LeaveApplication extends LeaveWindow {
   emergency: boolean;
   backupUserId?: string | null | undefined;
   handoverNote?: string | null | undefined;
+}
+
+export interface LeaveDecision {
+  readonly approve: boolean;
+  readonly note?: string | null | undefined;
+  readonly backupUserId?: string | null | undefined;
+  readonly skipHandover?: boolean | undefined;
 }
 
 /**
@@ -106,12 +115,20 @@ export class LeaveService {
     return this.one(id);
   }
 
-  async decide(
-    actor: Actor,
-    id: string,
-    approve: boolean,
-    note?: string | null,
-  ): Promise<LeaveRequestRecord> {
+  /** For the approver: the work a request touches now, and who could cover it. */
+  async requestImpact(id: string): Promise<LeaveImpact> {
+    const [row] = await this.db.select().from(leaveRequests).where(eq(leaveRequests.id, id));
+    if (!row) throw notFound('That leave request');
+    const policy = await loadPolicy(this.db);
+    return leaveImpact(this.db, policy, row.userId, row, row.id);
+  }
+
+  /**
+   * Approving hands the affected work to the backup (the one asked for, or the approver's
+   * pick) and tells the projects' managers. Ordinary leave with affected work needs a
+   * backup; emergency leave may go ahead without one, flagged (PRD 4.6, Flow E).
+   */
+  async decide(actor: Actor, id: string, decision: LeaveDecision): Promise<LeaveRequestRecord> {
     await this.db.transaction(async (tx) => {
       const [row] = await tx
         .select()
@@ -124,35 +141,82 @@ export class LeaveService {
         throw conflict('This request has already been decided.', 'decided');
       if (row.userId === actor.userId)
         throw conflict('Someone else approves your own leave.', 'own');
-      const handed = approve ? await handOver(tx, actor.userId, row) : 0;
+      const outcome = decision.approve
+        ? await this.approve(tx, actor, row, decision)
+        : { handed: 0, skipped: false, backupId: row.backupUserId };
       await notify(
         tx,
         { userId: row.userId },
-        STAFF_NOTICES.leaveDecided(id, approve, row.fromDate, row.toDate),
+        STAFF_NOTICES.leaveDecided(id, decision.approve, row.fromDate, row.toDate),
       );
       await tx
         .update(leaveRequests)
         .set({
-          status: approve ? 'approved' : 'rejected',
+          status: decision.approve ? 'approved' : 'rejected',
           decidedByUserId: actor.userId,
           decidedAt: new Date(),
-          decisionNote: note ?? null,
-          tasksHandedOver: handed,
+          decisionNote: decision.note ?? null,
+          backupUserId: outcome.backupId,
+          tasksHandedOver: outcome.handed,
+          handoverSkipped: outcome.skipped,
           updatedAt: new Date(),
         })
         .where(eq(leaveRequests.id, id));
       await recordAudit(
         tx,
         actor.userId,
-        `leave.${approve ? 'approved' : 'rejected'}`,
+        `leave.${decision.approve ? 'approved' : 'rejected'}`,
         'leave_request',
         id,
         {
-          tasksHandedOver: handed,
+          tasksHandedOver: outcome.handed,
+          backupUserId: outcome.backupId,
+          handoverSkipped: outcome.skipped,
         },
       );
     });
     return this.one(id);
+  }
+
+  private async approve(
+    tx: Transaction,
+    actor: Actor,
+    row: typeof leaveRequests.$inferSelect,
+    decision: LeaveDecision,
+  ) {
+    const backupId = decision.backupUserId === undefined ? row.backupUserId : decision.backupUserId;
+    const work = await affectedWork(tx, row.userId, row);
+    const check = checkHandover({
+      affected: affectedCount(work),
+      backupUserId: backupId,
+      leaveUserId: row.userId,
+      emergency: row.emergency,
+      skip: decision.skipHandover ?? false,
+    });
+    if (check.problem === 'backup_is_self')
+      throw invalid('Pick someone else to cover.', { backupUserId: 'Not the person on leave.' });
+    if (check.problem === 'backup_needed')
+      throw invalid(
+        row.emergency
+          ? 'Pick who covers the work, or approve without a handover.'
+          : 'This leave touches open work. Pick who covers it.',
+        { backupUserId: 'Pick a backup.' },
+      );
+    if (backupId) await this.assertActiveStaff(tx, backupId);
+    const handed = backupId ? await handOverWork(tx, actor.userId, row, backupId, work) : 0;
+    await tellProjectManagers(tx, row, work, backupId);
+    return { handed, skipped: check.skipped, backupId };
+  }
+
+  private async assertActiveStaff(tx: Transaction, userId: string) {
+    const [person] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .innerJoin(userRoles, eq(userRoles.userId, users.id))
+      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.kind, 'staff')))
+      .where(and(eq(users.id, userId), eq(users.status, 'active')))
+      .limit(1);
+    if (!person) throw invalid('Pick an active team member.', { backupUserId: 'Not available.' });
   }
 
   private async one(id: string): Promise<LeaveRequestRecord> {
@@ -165,47 +229,4 @@ export class LeaveService {
     if (!types.some((type) => type.key === key))
       throw invalid('Pick a kind of leave from the list.', { leaveType: 'Unknown.' });
   }
-}
-
-/** On approval, the open tasks in the leave window go to the named backup, with a note on each project. */
-async function handOver(
-  tx: Transaction,
-  approverId: string,
-  row: typeof leaveRequests.$inferSelect,
-): Promise<number> {
-  const backupId = row.backupUserId;
-  if (!backupId) return 0;
-  const tasks = await tasksInWindow(tx, row.userId, row);
-  if (tasks.length === 0) return 0;
-  await tx
-    .update(projectTasks)
-    .set({ assigneeUserId: backupId, updatedAt: new Date() })
-    .where(
-      inArray(
-        projectTasks.id,
-        tasks.map((task) => task.id),
-      ),
-    );
-  const [backup] = await tx
-    .select({ fullName: users.fullName })
-    .from(users)
-    .where(eq(users.id, backupId));
-  for (const task of tasks) {
-    await tx.insert(projectActivities).values({
-      projectId: task.projectId,
-      kind: 'task_handover',
-      message: `${task.title} handed to ${backup?.fullName ?? 'a backup'} during leave.`,
-      userId: approverId,
-    });
-  }
-  const [person] = await tx
-    .select({ fullName: users.fullName })
-    .from(users)
-    .where(eq(users.id, row.userId));
-  await notify(
-    tx,
-    { userId: backupId },
-    STAFF_NOTICES.covering(row.id, person?.fullName ?? 'a colleague', tasks.length),
-  );
-  return tasks.length;
 }

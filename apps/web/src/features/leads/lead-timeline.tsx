@@ -1,7 +1,7 @@
 'use client';
 
 import type { LeadDetail } from '@oneohm/api-contracts';
-import { cn, listItemEnter } from '@oneohm/design-system/web';
+import { Badge, cn, listItemEnter } from '@oneohm/design-system/web';
 import {
   CalendarClock,
   type LucideIcon,
@@ -78,6 +78,11 @@ export function LeadTimeline({ activities }: { readonly activities: readonly Act
                     <span>·</span>
                     <span>{activity.user.fullName}</span>
                   </>
+                )}
+                {activity.internal && (
+                  <Badge variant="soft" className="ml-1">
+                    {t('staffOnly')}
+                  </Badge>
                 )}
               </p>
               <p className="type-body whitespace-pre-line text-ink">{activity.note}</p>

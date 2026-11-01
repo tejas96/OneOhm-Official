@@ -65,6 +65,7 @@ export class PaymentsReadService {
       payer: payment.payer,
       method: payment.method,
       amountPaise: payment.amountPaise,
+      tdsPaise: payment.tdsPaise,
       receivedOn: payment.receivedOn,
       reference: payment.reference,
       reversed: reversed.has(payment.id),

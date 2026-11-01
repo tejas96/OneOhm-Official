@@ -10,12 +10,14 @@ import {
   customerReferrals,
   customerServiceRequests,
 } from './customer-aftercare.read';
+import { customerAftercare, customerLeadHistory } from './customer-history.read';
 import { customerAlerts, customerChat, customerOutbound } from './customer-messages.read';
 import { customerMoney } from './customer-money.read';
 
 /**
  * The rest of the customer 360 (PRD 3.2), read-only: money per project, the WhatsApp
- * chat and messages sent, app alerts, change requests, service, feedback and referrals.
+ * chat and messages sent, app alerts, change requests, service, feedback and referrals,
+ * the lead's calls and visits, and warranty and AMC cover.
  */
 @Injectable()
 export class CustomerActivityService {
@@ -28,17 +30,29 @@ export class CustomerActivityService {
       .where(eq(customers.id, customerId))
       .limit(1);
     if (!customer) throw notFound('That customer');
-    const [money, chat, outbound, alerts, requests, serviceRequests, feedback, referrals] =
-      await Promise.all([
-        customerMoney(this.db, customer.id),
-        customerChat(this.db, customer.phone),
-        customerOutbound(this.db, customer.id, customer.phone),
-        customerAlerts(this.db, customer.id),
-        changeRequestSummaries(this.db, eq(changeRequests.customerId, customer.id)),
-        customerServiceRequests(this.db, customer.id),
-        customerFeedbackList(this.db, customer.id),
-        customerReferrals(this.db, customer.id),
-      ]);
+    const [
+      money,
+      chat,
+      outbound,
+      alerts,
+      requests,
+      serviceRequests,
+      feedback,
+      referrals,
+      leadHistory,
+      aftercare,
+    ] = await Promise.all([
+      customerMoney(this.db, customer.id),
+      customerChat(this.db, customer.phone),
+      customerOutbound(this.db, customer.id, customer.phone),
+      customerAlerts(this.db, customer.id),
+      changeRequestSummaries(this.db, eq(changeRequests.customerId, customer.id)),
+      customerServiceRequests(this.db, customer.id),
+      customerFeedbackList(this.db, customer.id),
+      customerReferrals(this.db, customer.id),
+      customerLeadHistory(this.db, customer),
+      customerAftercare(this.db, customer.id),
+    ]);
     return {
       projects: money.projects,
       payments: money.payments,
@@ -49,6 +63,8 @@ export class CustomerActivityService {
       serviceRequests,
       feedback,
       referrals,
+      leadHistory,
+      aftercare,
     };
   }
 }

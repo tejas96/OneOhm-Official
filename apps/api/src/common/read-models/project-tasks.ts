@@ -12,6 +12,8 @@ import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneo
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
+import { assignmentStates } from './task-assignment-state';
+import { reviewStateOf, reviewStates } from './task-review-state';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
 export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<ProjectTask[]> {
@@ -20,6 +22,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       task: projectTasks,
       code: projects.code,
       name: projects.name,
+      managerUserId: projects.managerUserId,
       assigneeName: users.fullName,
     })
     .from(projectTasks)
@@ -64,6 +67,14 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         .where(inArray(projectFacts.projectId, projectIds))
     : [];
   const changeBlocks = await openChangeRequestBlocks(db, projectIds);
+  const assignment = await assignmentStates(
+    db,
+    rows.map((row) => row.task),
+  );
+  const reviews = await reviewStates(
+    db,
+    rows.map((row) => ({ ...row.task, managerUserId: row.managerUserId })),
+  );
   const today = todayIn();
   return rows.map(({ task, code, name, assigneeName }) => {
     const attached = files.filter((file) => file.taskId === task.id);
@@ -86,12 +97,15 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       projectName: name,
       templateKey: task.templateKey,
       title: task.title,
+      description: task.description,
       stage: task.stage,
       roleKey: task.roleKey,
       assignee:
         task.assigneeUserId && assigneeName
           ? { id: task.assigneeUserId, fullName: assigneeName }
           : null,
+      proposedAssignee: assignment.get(task.id)?.proposedAssignee ?? null,
+      outsideTeam: task.outsideTeam,
       status: task.status,
       waitingParty: task.waitingParty,
       startDate: task.startDate,
@@ -99,6 +113,8 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       overdue: task.status !== 'completed' && task.dueDate < today,
       customerVisible: task.customerVisible,
       approval: task.approval,
+      reviewer: task.reviewer === 'project_manager' ? 'project_manager' : 'approvers',
+      ...reviewStateOf(reviews, task.id),
       evidence: task.evidence,
       captures: task.captures,
       captureFields: fields.map(factField),
@@ -119,6 +135,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
           .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
           .map((dep) => dep.title),
         ...changes,
+        ...[assignment.get(task.id)?.budgetBlock ?? ''].filter(Boolean),
       ],
       changeBlockers: changes,
       completedAt: task.completedAt?.toISOString() ?? null,

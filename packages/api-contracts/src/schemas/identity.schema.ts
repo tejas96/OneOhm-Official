@@ -37,6 +37,13 @@ export const personSchema = z.object({
   /** Skill keys the person holds (PRD 3.7). */
   skills: z.array(z.string()),
   openTasks: z.number().int(),
+  /** Workload (PRD 3.12): the limit that applies (own or company default), null for none. */
+  openTaskLimit: z.number().int().nullable(),
+  /** The person's own limit, over the company default. */
+  personalTaskLimit: z.number().int().nullable(),
+  loadState: z.enum(['ok', 'full', 'over']),
+  /** Location for this person over their roles and the company: on, off, or null to follow. */
+  tracking: z.enum(['on', 'off']).nullable(),
 });
 export type Person = z.infer<typeof personSchema>;
 

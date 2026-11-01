@@ -7,6 +7,7 @@ import { Check, CircleAlert, UserX } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton } from '@/components/query-state';
+import { OverloadBadge } from '@/features/team/capacity/overload-badge';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 
@@ -89,6 +90,7 @@ export function AssignDialog({
                       </span>
                     </span>
                     {person.onLeave && <Badge variant="outline">{t('onLeave')}</Badge>}
+                    <OverloadBadge person={person} />
                     {current && <Check aria-label={t('current')} className="size-4 text-accent" />}
                   </button>
                 </li>

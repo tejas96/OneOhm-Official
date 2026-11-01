@@ -7,9 +7,11 @@ import {
   renderTemplate,
   TASK_MESSAGE_FIELDS,
   TASK_NOTIFY_EVENTS,
+  TASK_REVIEWERS,
 } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import type { SetDraft, TaskDraft } from './task-draft';
+import { TaskMessageReach } from './task-message-reach';
 import { SAMPLE } from './use-templates';
 
 const NONE = 'none';
@@ -47,6 +49,15 @@ export function TaskNotifyFields({
         onCheckedChange={(value) => set('approval', value)}
         label={t('approval')}
       />
+      {draft.approval && (
+        <Field label={t('reviewer')} hint={t('reviewerHint')} error={errors.reviewer}>
+          <Select
+            value={draft.reviewer}
+            onValueChange={(value) => set('reviewer', value)}
+            options={TASK_REVIEWERS.map((value) => ({ value, label: t(`reviewers.${value}`) }))}
+          />
+        </Field>
+      )}
       <Field label={t('onComplete')} error={errors.onComplete}>
         <Select
           value={draft.onComplete ?? NONE}
@@ -106,6 +117,7 @@ export function TaskNotifyFields({
               onChange={(e) => set('customerTitle', e.target.value)}
             />
           </Field>
+          <TaskMessageReach draft={draft} set={set} errors={errors} />
           {preview && (
             <div className="flex flex-col gap-1.5 rounded-lg bg-sunken px-4 py-3">
               <p className="type-label text-ink-faint">{t('preview')}</p>

@@ -1,3 +1,5 @@
+import { STEP_MESSAGE_TEMPLATES } from './customer-steps';
+
 /**
  * Business-initiated WhatsApp messages use templates approved in Meta's WhatsApp
  * Manager (PRD 6.2, 7.2). These are the defaults; owners can change the Meta name,
@@ -89,6 +91,21 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, your free {{2}} visit for {{4}} is on {{3}}. Our service team will call before they come.',
   },
   {
+    key: 'survey_scheduled',
+    audience: 'customer',
+    fields: ['customer', 'project', 'date'],
+    preview:
+      'Hello {{1}}, our team will visit for the site survey of your solar project {{2}} on {{3}}. They will call before they come.',
+  },
+  {
+    key: 'stage_rating_request',
+    audience: 'customer',
+    fields: ['customer', 'stage', 'project'],
+    preview:
+      'Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Please rate it in the OneOhm app.',
+  },
+  ...STEP_MESSAGE_TEMPLATES,
+  {
     key: 'staff_daily_digest',
     audience: 'staff',
     fields: ['name', 'overdue', 'today', 'followUps'],
@@ -97,7 +114,14 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /** Fields a task's customer message can fill; templates needing others cannot be picked. */
-export const TASK_MESSAGE_FIELDS = ['customer', 'project', 'milestone', 'capacity'] as const;
+export const TASK_MESSAGE_FIELDS = [
+  'customer',
+  'project',
+  'milestone',
+  'capacity',
+  // The task's report or paper link, when the template attaches one (PRD 6.2).
+  'link',
+] as const;
 
 /** When a task's customer message goes out. */
 export const TASK_NOTIFY_EVENTS = ['started', 'completed', 'approved'] as const;

@@ -1,20 +1,23 @@
 'use client';
 
-import type { ProjectSummary } from '@oneohm/api-contracts';
+import type { CommandCenterQuery, ProjectSummary } from '@oneohm/api-contracts';
 import { EmptyState } from '@oneohm/design-system/web';
 import { SunMedium } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ProjectColumnsHeader, ProjectRow } from '../projects/project-journey';
+import { centerHref } from './center-links';
 import { SectionHeading } from './section-heading';
 
 /** Every live project on one page, each journey drawn as a metro line. */
 export function ProjectLedger({
   projects,
   total,
+  query,
 }: {
   readonly projects: readonly ProjectSummary[];
   readonly total: number;
+  readonly query: CommandCenterQuery;
 }) {
   const t = useTranslations('commandCenter.projects');
   return (
@@ -23,7 +26,10 @@ export function ProjectLedger({
         index="01"
         title={t('title')}
         action={
-          <Link href="/projects" className="type-body-sm font-medium text-accent hover:underline">
+          <Link
+            href={centerHref('/projects', query)}
+            className="type-body-sm font-medium text-accent hover:underline"
+          >
             {t('all', { count: total })}
           </Link>
         }

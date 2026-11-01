@@ -1,0 +1,81 @@
+{
+  "projectTeam": {
+    "create": {
+      "summary": "What this project is",
+      "type": {
+        "individual": "Residential",
+        "society": "Housing society",
+        "commercial": "Commercial"
+      },
+      "subsidy": "Subsidy {amount}",
+      "noSubsidy": "No subsidy",
+      "subsidyHint": "From the accepted quotation. Subsidy tasks are added only when it applies.",
+      "targetFinish": "Target finish",
+      "targetFinishHint": "Optional. Shown on the project.",
+      "teamTitle": "Team and contractor",
+      "teamHint": "Tasks are assigned within these people. Leave the team empty to use everyone.",
+      "contractor": "Contractor for installation",
+      "contractorAuto": "Let OneOhm pick the least busy",
+      "contractorOff": "{name} (switched off)",
+      "contractorCrew": "{name} · {crew, plural, =0 {no crew yet} one {# crew member} other {# crew members}}",
+      "contractorHint": "All installation work goes to this one contractor's crew.",
+      "team": "Team members",
+      "teamCount": "{count, plural, =0 {Anyone in the company} one {# person picked} other {# people picked}}",
+      "teamEmpty": "No staff to pick yet.",
+      "toConfirm": "{count, plural, one {# critical task waits for a manager to confirm who does it.} other {# critical tasks wait for a manager to confirm who does them.}}"
+    },
+    "panel": {
+      "contractor": "Contractor",
+      "noContractor": "No contractor",
+      "contractorOff": "Switched off",
+      "named": "Named team",
+      "anyone": "Anyone in the company",
+      "outside": "{count, plural, one {# task went outside the team: nobody in it fits} other {# tasks went outside the team: nobody in it fits}}",
+      "change": "Change",
+      "targetFinish": "Target finish"
+    },
+    "sheet": {
+      "title": "Project team",
+      "description": "Changes apply to work assigned from now on.",
+      "manager": "Project manager",
+      "managerHint": "The new manager is told straight away.",
+      "save": "Save",
+      "saved": "Project team saved"
+    },
+    "budget": {
+      "recheck": "Recheck price",
+      "rechecked": "Price checked again",
+      "recheckHint": "The survey is approved but its price check did not finish.",
+      "surveyReport": "Survey report"
+    },
+    "confirm": {
+      "title": "Confirm who does these",
+      "description": "Critical tasks are only proposed. The person is told once you confirm.",
+      "proposed": "Proposed: {name}",
+      "nobody": "Nobody fits yet",
+      "confirm": "Confirm",
+      "pick": "Pick someone else",
+      "person": "Person",
+      "confirmed": "{name} now has {task}"
+    },
+    "escalation": {
+      "title": "When late work is raised",
+      "intro": "Each morning, late and stuck tasks go to the project manager first, then to the owner.",
+      "managerAfterDays": "Tell the manager after",
+      "ownersAfterDays": "Tell the owner after",
+      "stuckInternalDays": "Stuck with our team",
+      "stuckOutsideDays": "Stuck with others",
+      "daysLate": "days late",
+      "daysWaiting": "days waiting",
+      "save": "Save",
+      "saved": "Escalation days saved",
+      "daysWaitingOthers": "days waiting on customer, bank or DISCOM"
+    },
+    "template": {
+      "confirmAssignee": "A manager confirms who does it",
+      "confirmAssigneeHint": "For critical work: the system proposes someone and waits for a manager.",
+      "escalateAfter": "Tell the manager after (days late)",
+      "escalateAfterHint": "Leave empty to use the company setting."
+    }
+  }
+}

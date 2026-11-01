@@ -9,6 +9,7 @@
       "raised": "Requests raised",
       "raisedDetail": "{resolved} resolved in the period",
       "serviceLink": "Open the service desk",
+      "ratingLink": "Open the feedback",
       "open": "Open now",
       "openDetail": "Not resolved yet, whenever raised",
       "speed": "Hours to resolve",

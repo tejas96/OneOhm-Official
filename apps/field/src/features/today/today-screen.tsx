@@ -19,8 +19,10 @@ import { COMMON } from '@/copy/common';
 import { SERVICE } from '@/copy/service';
 import { TODAY } from '@/copy/tasks';
 import { Bell } from '@/features/alerts/bell';
+import { AnnouncementsCard } from '@/features/announcements/announcements-card';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
+import { LeaveAndPoints } from '@/features/rewards/leave-and-points';
 import { ServiceVisitsSection } from '@/features/service/service-visits-section';
 import { useMyServiceVisits } from '@/features/service/use-service-visits';
 import { TaskRow } from '@/features/tasks/task-row';
@@ -75,7 +77,9 @@ export function TodayScreen() {
         ) : null}
       </View>
 
+      <AnnouncementsCard />
       {workday.data ? <AttendanceCard workday={workday.data} /> : null}
+      {workday.data ? <LeaveAndPoints workday={workday.data} /> : null}
       <PendingUploadsCard />
       {query.isPending ? <LoadingState label={TODAY.loading} /> : null}
       {query.isError ? (

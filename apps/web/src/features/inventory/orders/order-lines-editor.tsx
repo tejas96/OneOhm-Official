@@ -2,6 +2,7 @@
 
 import type { Product } from '@oneohm/api-contracts';
 import { Button, Field, IconButton, Input, Select } from '@oneohm/design-system/web';
+import { purchaseLineTotal, purchaseOrderTotals } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { PackagePlus, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -25,12 +26,18 @@ export const newLineKey = () => {
   return `line-${counter}`;
 };
 
-/** Same rounding as the API: amount to the paisa, then GST on it. */
-export function lineTotal(line: LineDraft): number {
-  const quantity = Number(line.quantity.replace(/,/g, '')) || 0;
-  const amount = Math.round(quantity * (line.ratePaise ?? 0));
-  return amount + Math.round((amount * (line.taxRateBp ?? 0)) / 10_000);
-}
+/** A draft line as numbers, for the shared purchase order rules the API also uses. */
+const amounts = (line: LineDraft) => ({
+  quantity: Number(line.quantity.replace(/,/g, '')) || 0,
+  ratePaise: line.ratePaise ?? 0,
+  taxRateBp: line.taxRateBp ?? 0,
+});
+
+/** A draft line's total with GST. */
+export const lineTotal = (line: LineDraft): number => purchaseLineTotal(amounts(line));
+
+/** The draft order's amount before GST, its GST and total. */
+export const draftTotals = (lines: readonly LineDraft[]) => purchaseOrderTotals(lines.map(amounts));
 
 /** The lines of a purchase order: catalog products (stocked) or other site items. */
 export function OrderLinesEditor({

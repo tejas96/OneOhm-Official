@@ -3,7 +3,7 @@ import { Card, StatusPill, Text, type Tone, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
-import { LEADS } from '@/copy/sales';
+import { LEAD, LEADS } from '@/copy/sales';
 import { relativeDate } from '@/lib/dates';
 
 const STAGE_TONE: Readonly<Record<Lead['stage'], Tone>> = {
@@ -39,12 +39,16 @@ export function LeadRow({ lead }: { readonly lead: Lead }) {
       </View>
       <View style={styles.bottom}>
         <StatusPill tone={STAGE_TONE[lead.stage]} label={LEADS.stage[lead.stage]} size="sm" />
-        <Text
-          variant="label"
-          color={lead.overdue ? theme.status.overdue.fg : theme.colors.textSecondary}
-        >
-          {lead.overdue ? LEADS.overdue : next}
-        </Text>
+        {lead.revisitDue ? (
+          <StatusPill tone="atRisk" label={LEAD.revisitDue} size="sm" />
+        ) : (
+          <Text
+            variant="label"
+            color={lead.overdue ? theme.status.overdue.fg : theme.colors.textSecondary}
+          >
+            {lead.overdue ? LEADS.overdue : next}
+          </Text>
+        )}
       </View>
     </Card>
   );

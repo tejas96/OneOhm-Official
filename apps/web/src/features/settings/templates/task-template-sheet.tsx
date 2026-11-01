@@ -8,6 +8,7 @@ import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'reac
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { TaskAssignmentFields } from './task-assignment-fields';
 import { TaskBasicsFields } from './task-basics-fields';
 import { TaskConditionsFields } from './task-conditions-fields';
 import { BLANK_TASK, type TaskDraft, toDraft, toInput } from './task-draft';
@@ -125,6 +126,7 @@ export function TaskTemplateSheet({
             errors={errors}
             messages={messages.data ?? []}
           />
+          <TaskAssignmentFields draft={draft} set={set} errors={errors} />
         </Group>
         <FormError message={form.error} />
       </form>

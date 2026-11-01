@@ -2,6 +2,7 @@
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { InstalledSystemCard } from '@/features/after-sales/installed-system-card';
+import { ConfirmAssigneesCard } from '@/features/projects/team/confirm-assignees-card';
 import type { ProjectSignals } from '../room-signals';
 import { useRoomTab } from '../use-room-tab';
 import { AboutPanel } from './about-panel';
@@ -28,10 +29,11 @@ export function OverviewTab({
   const { hrefFor } = useRoomTab();
   return (
     <div className="flex flex-col gap-6">
-      <OverviewKpis signals={signals} />
+      <OverviewKpis signals={signals} projectId={project.id} />
       {/* Risks come straight after the numbers on phones; on wide screens they head the side column. */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+          <ConfirmAssigneesCard project={project} />
           <NextUp signals={signals} tasksHref={hrefFor('tasks')} />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <PaymentsSummary project={project} href={hrefFor('payments')} />

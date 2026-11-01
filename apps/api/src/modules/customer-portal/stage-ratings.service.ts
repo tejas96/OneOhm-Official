@@ -14,6 +14,7 @@ import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { suggestStageRatingPoints } from '../workforce/points';
 import { customerStageCards, readStageRatings } from './stage-ratings-read';
 
 const STAGE_NAME = {
@@ -67,6 +68,8 @@ export class StageRatingsService {
         await tx
           .insert(stageRatingPeople)
           .values(people.map((person) => ({ ratingId: row.id, ...person })));
+        // Flow G: 4 or 5 stars for named staff suggests points for a manager to approve.
+        await suggestStageRatingPoints(tx, row.id);
       }
       const [project] = await tx
         .select({ manager: projects.managerUserId, customer: customers.name })

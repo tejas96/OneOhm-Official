@@ -1,22 +1,15 @@
 'use client';
 
 import type { LeadDetail } from '@oneohm/api-contracts';
-import {
-  Button,
-  Card,
-  Dialog,
-  Field,
-  Select,
-  StatusPill,
-  Textarea,
-} from '@oneohm/design-system/web';
-import { addDays, todayIn } from '@oneohm/shared';
-import { RotateCcw, XCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Button, Card, Select, StatusPill } from '@oneohm/design-system/web';
+import { todayIn } from '@oneohm/shared';
+import { CalendarClock, RotateCcw, XCircle } from 'lucide-react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useLeadSteps } from '@/features/settings/lead-steps/use-lead-steps';
 import { ApiError } from '@/lib/api/api-error';
 import { STAGE_TONE } from './lead-labels';
+import { LostLeadDialog } from './lost-lead-dialog';
 import { useUpdateLead } from './use-lead-mutations';
 
 /** Where the lead stands, how to move it on, and closing it as lost with a reason. */
@@ -31,7 +24,6 @@ export function LeadStageCard({
   const update = useUpdateLead(lead.id);
   const steps = useLeadSteps();
   const [losing, setLosing] = useState(false);
-  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const lost = lead.stage === 'lost';
 
@@ -41,19 +33,13 @@ export function LeadStageCard({
       onError: (caught) => setError(caught instanceof ApiError ? caught.message : String(caught)),
     });
   };
-  const markLost = () =>
+  const reopen = () =>
     update.mutate(
-      { stage: 'lost', lostReason: reason.trim() },
+      { stage: 'contacted', nextActionOn: todayIn() },
       {
-        onSuccess: () => {
-          setLosing(false);
-          setReason('');
-        },
         onError: (caught) => setError(caught instanceof ApiError ? caught.message : String(caught)),
       },
     );
-  const reopen = () =>
-    update.mutate({ stage: 'contacted', nextActionOn: addDays(todayIn(), 1), lostReason: null });
 
   return (
     <Card className="flex flex-col gap-4 rounded-[28px] p-5">
@@ -67,7 +53,7 @@ export function LeadStageCard({
       </div>
       {lost ? (
         <div className="flex flex-col gap-3">
-          <p className="type-body text-ink-muted">{lead.lostReason}</p>
+          <LostSummary lead={lead} />
           {canManage && (
             <Button
               variant="secondary"
@@ -117,33 +103,38 @@ export function LeadStageCard({
           {error}
         </p>
       )}
-      <Dialog
-        open={losing}
-        onOpenChange={setLosing}
-        title={t('stageCard.lostTitle')}
-        description={t('stageCard.lostDescription')}
-        size="sm"
-        autoFocusField
-        footer={
-          <>
-            <Button variant="quiet" onClick={() => setLosing(false)}>
-              {t('create.cancel')}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={markLost}
-              disabled={!reason.trim()}
-              pending={update.isPending}
-            >
-              {t('stageCard.lostSubmit')}
-            </Button>
-          </>
-        }
-      >
-        <Field label={t('stageCard.lostReason')}>
-          <Textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} />
-        </Field>
-      </Dialog>
+      {canManage && <LostLeadDialog lead={lead} open={losing} onOpenChange={setLosing} />}
     </Card>
+  );
+}
+
+/** Why the lead was lost, and when it comes back to the owner. */
+function LostSummary({ lead }: { readonly lead: LeadDetail }) {
+  const t = useTranslations('leads.lost');
+  const format = useFormatter();
+  const reason = lead.lostReasonKey ? t(`reasons.${lead.lostReasonKey}`) : null;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="type-body text-ink">{reason ?? lead.lostReason}</p>
+      {reason && lead.lostReason && (
+        <p className="type-body-sm text-ink-muted">{lead.lostReason}</p>
+      )}
+      {lead.revisitOn && (
+        <p
+          className={`inline-flex items-center gap-1.5 type-body-sm ${lead.revisitDue ? 'font-medium text-accent' : 'text-ink-muted'}`}
+        >
+          <CalendarClock aria-hidden className="size-4" />
+          {lead.revisitDue
+            ? t('revisitDue')
+            : t('revisitOnDate', {
+                date: format.dateTime(new Date(lead.revisitOn), {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }),
+              })}
+        </p>
+      )}
+    </div>
   );
 }

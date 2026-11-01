@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
+import {
+  deliveryOutlookSchema,
+  materialRisksSchema,
+  projectStatesSchema,
+} from './command-center-risks.schema';
 import { projectSummarySchema, projectTypeSchema, toneSchema } from './project.schema';
 
 const waitingSchema = z.object({
@@ -61,6 +66,13 @@ export const decisionKeySchema = z.enum([
   'change_requests',
   'service_requests',
   'bank_claims',
+  'leave',
+  'attendance_corrections',
+  'travel_claims',
+  'purchase_requests',
+  'vendor_advances',
+  'points',
+  'incentives',
 ]);
 export const deadlineSchema = z.object({
   taskId: idSchema,
@@ -123,12 +135,23 @@ export const commandCenterSchema = z.object({
     accepted: z.number().int(),
   }),
   projects: z.array(projectSummarySchema),
+  /** Projects by state, completed ones for the period. */
+  states: projectStatesSchema,
+  /** When the live projects are expected to finish. */
+  outlook: deliveryOutlookSchema,
+  materials: materialRisksSchema,
   money: z.object({
+    /** Project revenue booked in the ledger in the period (milestones falling due). */
+    revenuePaise: paiseSchema,
     collectedPaise: paiseSchema,
     stillDuePaise: paiseSchema,
     bankPendingPaise: paiseSchema,
+    /** Everything still owed on vendor and contractor bills, whenever it falls due. */
     toVendorsPaise: paiseSchema,
     toContractorsPaise: paiseSchema,
+    /** Of those, what falls due in the coming seven days (or is already late). */
+    dueThisWeekPaise: paiseSchema,
+    /** Crew advances on work orders not yet paid out. */
     advancesPaise: paiseSchema,
   }),
   liveProjects: z.number().int(),

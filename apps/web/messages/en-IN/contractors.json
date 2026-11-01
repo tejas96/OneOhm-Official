@@ -22,7 +22,11 @@
       "overdueTasks": "Overdue / open tasks",
       "rework": "Rework",
       "pending": "Payable",
-      "paid": "Paid so far"
+      "paid": "Paid so far",
+      "rating": "Customer rating",
+      "ratingValue": "{value} / 5",
+      "ratingCount": "{count, plural, one {from # rating} other {from # ratings}}",
+      "ratingTooFew": "{count, plural, =0 {No ratings yet} other {Not enough ratings yet (# of 3)}}"
     },
     "form": {
       "fields": {

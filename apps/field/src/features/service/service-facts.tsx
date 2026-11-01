@@ -7,7 +7,7 @@ import { AttachmentTile } from '@/features/tasks/evidence/evidence-tiles';
 import { shortDate, shortMoment } from '@/lib/dates';
 import { slaTone } from './service-times';
 
-/** What the customer said, with the photos they added when raising it. */
+/** What the customer said, with the photos, video and voice note they added when raising it. */
 export function ProblemCard({ visit }: { readonly visit: ServiceVisit }) {
   return (
     <Card style={styles.card}>
@@ -26,6 +26,24 @@ export function ProblemCard({ visit }: { readonly visit: ServiceVisit }) {
                 key={photo.id}
                 // Customers can add photos only (JPEG, PNG, WebP or HEIC).
                 file={{ ...photo, contentType: 'image/jpeg', sizeBytes: 0, createdAt: '' }}
+                removable={false}
+                removing={false}
+                onRemove={() => undefined}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+      {visit.customerMedia.length > 0 ? (
+        <>
+          <Text variant="label" tone="tertiary">
+            {SERVICE.customerMedia}
+          </Text>
+          <View style={styles.grid}>
+            {visit.customerMedia.map((file) => (
+              <AttachmentTile
+                key={file.id}
+                file={file}
                 removable={false}
                 removing={false}
                 onRemove={() => undefined}
@@ -113,14 +131,16 @@ export function PromisesCard({ visit }: { readonly visit: ServiceVisit }) {
     : visit.responseDueAt
       ? shortMoment(visit.responseDueAt)
       : null;
-  if (!reply && !visit.resolutionDueAt && !visit.scheduledFor) return null;
+  // A planned AMC visit's day, or the day the desk booked for a request.
+  const visitDay = visit.scheduledFor ?? visit.visitOn;
+  if (!reply && !visit.resolutionDueAt && !visitDay) return null;
   return (
     <Card style={styles.card}>
       <Text variant="overline" tone="tertiary">
         {SERVICE.promised.toUpperCase()}
       </Text>
-      {visit.scheduledFor ? (
-        <PromiseLine label={SERVICE.visitDay} when={shortDate(visit.scheduledFor)} state={null} />
+      {visitDay ? (
+        <PromiseLine label={SERVICE.visitDay} when={shortDate(visitDay)} state={null} />
       ) : null}
       {reply ? (
         <PromiseLine label={SERVICE.replyBy} when={reply} state={visit.sla.response} />

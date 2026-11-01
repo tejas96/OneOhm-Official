@@ -1,5 +1,5 @@
 import { type Database, leads, notify, outbox, projectTasks, users } from '@oneohm/database';
-import { and, eq, lte, ne, notInArray, sql } from 'drizzle-orm';
+import { and, eq, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 
 interface DayCounts {
   readonly overdue: number;
@@ -21,8 +21,11 @@ async function countsFor(db: Database, userId: string, today: string): Promise<D
     .where(
       and(
         eq(leads.ownerUserId, userId),
-        lte(leads.nextActionOn, today),
-        notInArray(leads.stage, ['won', 'lost']),
+        or(
+          and(lte(leads.nextActionOn, today), notInArray(leads.stage, ['won', 'lost'])),
+          // A lost lead whose revisit day has come is a follow-up again (PRD 3.3).
+          and(eq(leads.stage, 'lost'), lte(leads.revisitOn, today)),
+        ),
       ),
     );
   return {

@@ -37,6 +37,9 @@ export const contractorPerformanceSchema = z.object({
   overdueTasks: z.number().int(),
   pendingPayablePaise: paiseSchema,
   paidPaise: paiseSchema,
+  /** Customers' stars for the crew's stage work (PRD 5.7); null until 3 ratings. */
+  rating: z.number().nullable().optional(),
+  ratings: z.number().int().optional(),
 });
 
 export const contractorSummarySchema = z.object({

@@ -1,11 +1,14 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export interface SharedFile {
-  readonly kind: 'quotation' | 'receipt' | 'document';
+  /** `report` links point at a project (`id`) and name the report in `key`. */
+  readonly kind: 'quotation' | 'receipt' | 'document' | 'invoice' | 'report';
   readonly id: string;
   readonly customerId: string;
   /** Seconds since 1970 when the link stops working. */
   readonly exp: number;
+  /** Which statutory report, for `report` links only. */
+  readonly key?: string;
 }
 
 const sign = (secret: string, data: string) =>

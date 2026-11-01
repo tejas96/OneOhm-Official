@@ -1,4 +1,6 @@
+import type { Attachment } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, documents } from '@oneohm/database';
+import { isMediaType } from '@oneohm/domain';
 import { and, asc, inArray, isNull } from 'drizzle-orm';
 
 export interface RequestPhoto {
@@ -6,18 +8,24 @@ export interface RequestPhoto {
   readonly name: string;
 }
 
+/** What the customer added to one request: photos, and their short video and voice note. */
+export interface RequestFiles {
+  readonly photos: RequestPhoto[];
+  readonly media: Attachment[];
+}
+
 /**
- * Photos customers added to their help requests, by request, oldest first. Files the
+ * Files customers added to their help requests, by request, oldest first. Files the
  * technician adds on the visit carry their uploader and are left out here.
  */
-export async function photosOfRequests(
+export async function filesOfRequests(
   db: DatabaseExecutor,
   requestIds: readonly string[],
-): Promise<Map<string, RequestPhoto[]>> {
-  const byRequest = new Map<string, RequestPhoto[]>();
+): Promise<Map<string, RequestFiles>> {
+  const byRequest = new Map<string, RequestFiles>();
   if (requestIds.length === 0) return byRequest;
   const rows = await db
-    .select({ id: documents.id, name: documents.name, requestId: documents.serviceRequestId })
+    .select()
     .from(documents)
     .where(
       and(
@@ -28,8 +36,20 @@ export async function photosOfRequests(
     )
     .orderBy(asc(documents.createdAt));
   for (const row of rows) {
-    if (!row.requestId) continue;
-    byRequest.set(row.requestId, [...(byRequest.get(row.requestId) ?? []), row]);
+    if (!row.serviceRequestId) continue;
+    const files = byRequest.get(row.serviceRequestId) ?? { photos: [], media: [] };
+    if (isMediaType(row.contentType)) {
+      files.media.push({
+        id: row.id,
+        name: row.name,
+        contentType: row.contentType,
+        sizeBytes: row.sizeBytes,
+        createdAt: row.createdAt.toISOString(),
+      });
+    } else {
+      files.photos.push({ id: row.id, name: row.name });
+    }
+    byRequest.set(row.serviceRequestId, files);
   }
   return byRequest;
 }

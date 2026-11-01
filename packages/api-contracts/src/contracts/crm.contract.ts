@@ -8,9 +8,12 @@ import {
   noteSchema,
   phoneSchema,
 } from '../common/primitives';
+import { gstinSchema } from '../schemas/billing.schema';
 import {
+  customerAccountSchema,
   customerSchema,
   leadDetailSchema,
+  leadLostReasonSchema,
   leadSchema,
   leadSourceSchema,
   leadStageSchema,
@@ -45,6 +48,9 @@ export const propertyInputSchema = z.object({
   phase: z.enum(['single', 'three']).nullable().optional(),
   meterInSocietyName: z.boolean().nullable().optional(),
   floors: z.number().int().min(0).max(40).default(1),
+  /** GPS of the site; staff correct it when the survey pin was off. */
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 });
 export type PropertyInput = z.infer<typeof propertyInputSchema>;
 
@@ -59,8 +65,14 @@ export const crmContract = c.router({
         .union([z.boolean(), z.enum(['true', 'false'])])
         .transform((value) => value === true || value === 'true')
         .optional(),
+      /** Only open leads that have no owner (managers fix these). */
+      unowned: z
+        .union([z.boolean(), z.enum(['true', 'false'])])
+        .transform((value) => value === true || value === 'true')
+        .optional(),
     }),
     responses: { 200: z.array(leadSchema) },
+    summary: '`open` also brings lost leads whose revisit day has come (`revisitDue`).',
   },
   createLead: {
     method: 'POST',
@@ -100,10 +112,14 @@ export const crmContract = c.router({
       ownerUserId: idSchema.nullable().optional(),
       nextActionOn: calendarDateSchema.nullable().optional(),
       nextActionNote: z.string().trim().max(300).nullable().optional(),
+      lostReasonKey: leadLostReasonSchema.nullable().optional(),
       lostReason: z.string().trim().max(300).nullable().optional(),
+      /** With a lost lead: the day to try again. */
+      revisitOn: calendarDateSchema.nullable().optional(),
       estimatedWp: z.number().int().positive().nullable().optional(),
     }),
     responses: { 200: leadDetailSchema },
+    summary: 'An open lead always keeps an owner; moving a lost lead to a stage reopens it.',
   },
   addLeadActivity: {
     method: 'POST',
@@ -112,6 +128,8 @@ export const crmContract = c.router({
     body: z.object({
       kind: z.enum(['note', 'call', 'visit', 'whatsapp']),
       note: noteSchema.min(1),
+      /** Staff only: kept from the reseller who brought the lead. */
+      internal: z.boolean().optional(),
     }),
     responses: { 201: leadDetailSchema },
   },
@@ -119,12 +137,20 @@ export const crmContract = c.router({
     method: 'POST',
     path: '/leads/:id/customer',
     pathParams: idParams,
-    body: z.object({
-      kind: z.enum(['individual', 'organization']).default('individual'),
-      property: propertyInputSchema,
-    }),
+    body: z
+      .object({
+        kind: z.enum(['individual', 'organization']).default('individual'),
+        /** A new site, or … */
+        property: propertyInputSchema.optional(),
+        /** … a site the matched customer already has. */
+        propertyId: idSchema.optional(),
+      })
+      .refine((body) => Boolean(body.property) !== Boolean(body.propertyId), {
+        message: 'Add the site, or pick one the customer already has.',
+        path: ['property'],
+      }),
     responses: { 201: z.object({ customerId: idSchema, propertyId: idSchema }) },
-    summary: 'Creates (or matches by phone) the customer and their property for a lead.',
+    summary: 'Creates (or matches by phone) the customer, and adds or reuses their property.',
   },
   listCustomers: {
     method: 'GET',
@@ -141,8 +167,23 @@ export const crmContract = c.router({
         properties: z.array(propertySchema),
         quotations: z.array(quotationSummarySchema),
         projects: z.array(projectSummarySchema),
+        accounts: z.array(customerAccountSchema),
       }),
     },
+  },
+  updateCustomer: {
+    method: 'PATCH',
+    path: '/customers/:id',
+    pathParams: idParams,
+    body: z.object({
+      name: nameSchema.optional(),
+      /** Unique: no two customers share a number. */
+      phone: phoneSchema.optional(),
+      email: emailSchema.nullable().optional(),
+      kind: z.enum(['individual', 'organization']).optional(),
+      gstin: gstinSchema.nullable().optional(),
+    }),
+    responses: { 200: customerSchema },
   },
   getCustomerActivity: {
     method: 'GET',

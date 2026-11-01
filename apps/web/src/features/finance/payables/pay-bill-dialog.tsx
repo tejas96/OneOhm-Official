@@ -79,10 +79,13 @@ export function PayBillDialog({
       title={t('title')}
       description={
         bill
-          ? t('description', {
-              amount: formatInr(bill.amountPaise - bill.advanceAdjustedPaise),
-              party: bill.partyName,
-            })
+          ? bill.tdsPaise > 0
+            ? t('descriptionTds', {
+                amount: formatInr(bill.toPayPaise),
+                party: bill.partyName,
+                tds: formatInr(bill.tdsPaise),
+              })
+            : t('description', { amount: formatInr(bill.toPayPaise), party: bill.partyName })
           : undefined
       }
       autoFocusField

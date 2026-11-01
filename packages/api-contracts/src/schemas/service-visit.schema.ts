@@ -32,6 +32,8 @@ export const serviceJobSchema = z.object({
   projectCode: z.string().nullable(),
   /** The planned day of a maintenance visit. */
   scheduledFor: calendarDateSchema.nullable(),
+  /** The day the desk booked the visit to a customer's request. */
+  visitOn: calendarDateSchema.nullable(),
   responseDueAt: instantSchema.nullable(),
   resolutionDueAt: instantSchema.nullable(),
   respondedAt: instantSchema.nullable(),
@@ -74,6 +76,8 @@ export const serviceVisitSchema = serviceJobSchema.extend({
   ...serviceFieldWorkSchema.shape,
   /** Photos the customer added when raising the request. */
   customerPhotos: z.array(z.object({ id: idSchema, name: z.string() })),
+  /** The customer's short video and voice note, if they added them. */
+  customerMedia: z.array(attachmentSchema),
   /** The person's open visit anywhere (it may be another site's). */
   openVisit: siteVisitSchema.nullable(),
   tracking: trackingStatusSchema,

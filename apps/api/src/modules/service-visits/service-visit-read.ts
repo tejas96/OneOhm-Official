@@ -97,6 +97,7 @@ export function toJob(
       : null,
     projectCode: ticket.project?.code ?? null,
     scheduledFor: ticket.scheduledFor,
+    visitOn: ticket.visitOn,
     responseDueAt: ticket.responseDueAt,
     resolutionDueAt: ticket.resolutionDueAt,
     respondedAt: ticket.respondedAt,

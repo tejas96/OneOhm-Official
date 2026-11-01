@@ -1,7 +1,7 @@
 import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
 import { describe, expect, it } from 'vitest';
 import { customerNotice } from './customer-message';
-import { localAlertTitle, localWords } from './customer-message-words';
+import { localAlertTitle, localValues, localWords } from './customer-message-words';
 
 const payload = {
   customer: 'Ramesh',
@@ -87,5 +87,14 @@ describe('in-app alerts in the customer’s language (PRD 5.1)', () => {
     );
     expect(localAlertTitle('stage_rating_reply', 'hi-IN')).toBe('OneOhm ने आपकी राय का जवाब दिया');
     expect(localAlertTitle('stage_rating_reply', 'en-IN')).toBeUndefined();
+  });
+});
+
+describe('WhatsApp values for a Marathi or Hindi template (PRD 6.2)', () => {
+  it('says OneOhm’s own step names in the customer’s language, and leaves English alone', () => {
+    const values = { ...payload, milestone: 'Net meter fitted', step: 'net_meter_installation' };
+    expect(localValues('mr-IN', 'project_milestone', values).milestone).toBe('नेट मीटर बसवला');
+    expect(localValues('en-IN', 'project_milestone', values)).toBe(values);
+    expect(localValues('hi-IN', 'project_milestone', values).customer).toBe('Ramesh');
   });
 });

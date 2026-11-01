@@ -8,6 +8,7 @@ import type { Actor } from '../../common/auth/actor';
 import { notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
+import { productViews } from './product-view';
 
 @Injectable()
 export class CatalogService {
@@ -22,7 +23,7 @@ export class CatalogService {
       .from(products)
       .where(condition)
       .orderBy(asc(products.category), asc(products.name));
-    return rows.map(({ createdAt: _created, updatedAt: _updated, ...row }) => row);
+    return productViews(this.db, rows);
   }
 
   async product(id: string) {

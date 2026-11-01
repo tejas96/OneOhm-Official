@@ -37,9 +37,10 @@ export function LeaveKind({ leave }: { readonly leave: LeaveRequestRecord }) {
   );
 }
 
-/** Who covers, what they were told, and how many tasks moved to them. */
+/** Who covers, what they were told, and how much work moved to them. */
 export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
   const t = useTranslations('team.leave');
+  if (leave.handoverSkipped) return <NoHandoverBadge />;
   if (!leave.backup) return <p className="type-body-sm text-ink-faint">{t('noBackup')}</p>;
   return (
     <div className="flex flex-col gap-1 rounded-md bg-sunken/70 px-3 py-2.5">
@@ -60,6 +61,12 @@ export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
       )}
     </div>
   );
+}
+
+/** Emergency leave approved with work open and nobody covering it. */
+export function NoHandoverBadge() {
+  const t = useTranslations('team.leave');
+  return <Badge variant="energy">{t('noHandoverEmergency')}</Badge>;
 }
 
 /** The approver's answer, when there is one. */

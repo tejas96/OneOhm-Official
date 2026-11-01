@@ -15,8 +15,9 @@ import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked } from './task-guards';
-import { tellCustomerAbout } from './task-messages';
-import { askApprovers, tellApproved, tellAssignee } from './task-notices';
+import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
+import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
+import { assertMayReview, closeReview, sendForReview } from './task-review';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
@@ -113,6 +114,11 @@ export class TasksService {
         message: `${task.title}: waiting on ${WAITING_ON[party]}${note ? ` (${note})` : ''}.`,
         userId: actor.userId,
       });
+      // Asking the team for help reaches the manager now, not after the escalation days.
+      if (party === 'internal' && task.status !== 'waiting') await tellHelpAsked(tx, task, actor);
+      // The customer hears about a new wait on someone outside OneOhm (PRD 5.2), once per wait.
+      if (task.status !== 'waiting' || task.waitingParty !== party)
+        await tellCustomerWaiting(tx, task, party);
     });
     return this.present(id);
   }
@@ -142,7 +148,7 @@ export class TasksService {
       );
     }
     await assertEvidence(this.db, task, facts, knownKeys);
-    await this.db.transaction(async (tx) => {
+    const finished = await this.db.transaction(async (tx) => {
       for (const [key, value] of Object.entries(facts)) {
         if (!value.trim()) continue;
         await tx
@@ -154,32 +160,20 @@ export class TasksService {
           });
       }
       if (note) await tx.update(projectTasks).set({ note }).where(eq(projectTasks.id, id));
-      if (task.approval && !can(actor, 'tasks.approve')) {
-        await tx
-          .update(projectTasks)
-          .set({ status: 'in_review', updatedAt: new Date() })
-          .where(eq(projectTasks.id, id));
-        await tx.insert(projectActivities).values({
-          projectId: task.projectId,
-          taskId: id,
-          kind: 'review',
-          message: `${task.title} sent for approval.`,
-          userId: actor.userId,
-        });
-        await askApprovers(tx, task, actor);
-      } else {
-        await finishTask(tx, task, actor.userId);
-      }
+      // Approval work goes to its reviewer; the rest (or a lone approver's own) finishes.
+      let done = true;
+      if (task.approval) done = await sendForReview(tx, task, actor);
+      else await finishTask(tx, task, actor.userId);
       await recordAudit(tx, actor.userId, 'task.completed', 'task', id, {
         facts: Object.keys(facts),
       });
+      return done;
     });
-    if (!task.approval || can(actor, 'tasks.approve')) await this.afterFinish(actor, task);
+    if (finished) await this.afterFinish(actor, task);
     return this.present(id);
   }
 
   async approve(actor: Actor, id: string): Promise<ProjectTask> {
-    assertCan(actor, 'tasks.approve');
     const [task] = await this.db
       .select()
       .from(projectTasks)
@@ -188,11 +182,13 @@ export class TasksService {
     if (!task) throw notFound('That task');
     if (task.status !== 'in_review')
       throw conflict('This task is not waiting for approval.', 'not_in_review');
+    await assertMayReview(this.db, task, actor);
     await this.db.transaction(async (tx) => {
       await tx
         .update(projectTasks)
         .set({ approvedByUserId: actor.userId })
         .where(eq(projectTasks.id, id));
+      await closeReview(tx, id, 'approved', actor.userId);
       await tellCustomerAbout(tx, task, 'approved');
       await finishTask(tx, task, actor.userId);
       await tellApproved(tx, task, actor.userId);

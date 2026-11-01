@@ -46,6 +46,8 @@ export const SAMPLE = {
   amount: '₹56,349',
   link: 'https://rzp.io/l/example',
   topic: 'Inverter error',
+  date: 'Wed, 4 Nov',
+  reason: 'the electricity board (DISCOM)',
   status: 'resolved',
   request: 'Name change',
   friend: 'Suresh Jadhav',

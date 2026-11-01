@@ -1,26 +1,22 @@
 import {
   type Database,
+  escalationPolicy,
   type Notice,
   notify,
   notifyHolders,
   projects,
   projectTasks,
+  taskTemplates,
   users,
 } from '@oneohm/database';
+import {
+  DEFAULT_ESCALATION,
+  type EscalationPolicy,
+  earliestEscalationDays,
+  lateEscalation,
+} from '@oneohm/domain';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
-
-/** When late or stuck work is pushed to someone (PRD 3.7, 7.1). */
-export const ESCALATION = {
-  /** Days late before the project manager hears. */
-  managerAfterDays: 2,
-  /** Days late before everyone who manages projects hears. */
-  ownersAfterDays: 7,
-  /** Days a task may wait on the OneOhm team before the manager hears. */
-  stuckInternalDays: 3,
-  /** Days a task may wait on the customer, bank or DISCOM before the manager hears. */
-  stuckOutsideDays: 14,
-} as const;
 
 interface LateTask {
   readonly id: string;
@@ -34,13 +30,19 @@ interface LateTask {
 const subject = (task: LateTask) =>
   ({ type: 'task', id: task.id, projectId: task.projectId }) as const;
 
+/** The days set in Settings → Task templates, or the shipped ones (PRD 3.7, 7.2). */
+async function loadPolicy(db: Database): Promise<EscalationPolicy> {
+  const [row] = await db.select().from(escalationPolicy).where(eq(escalationPolicy.id, 'default'));
+  return row ?? DEFAULT_ESCALATION;
+}
+
 /** The manager, or failing that everyone who can assign work. */
 async function tellManager(db: Database, task: LateTask, notice: Notice): Promise<void> {
   if (task.managerUserId) await notify(db, { userId: task.managerUserId }, notice);
   else await notifyHolders(db, 'tasks.assign', notice);
 }
 
-async function lateTasks(db: Database, today: string) {
+async function lateTasks(db: Database, today: string, earliest: number) {
   return db
     .select({
       id: projectTasks.id,
@@ -53,17 +55,19 @@ async function lateTasks(db: Database, today: string) {
       code: projects.code,
       managerUserId: projects.managerUserId,
       assignee: users.fullName,
+      templateDays: taskTemplates.escalateAfterDays,
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
     .leftJoin(users, eq(users.id, projectTasks.assigneeUserId))
+    .leftJoin(taskTemplates, eq(taskTemplates.key, projectTasks.templateKey))
     .where(
       and(
         ne(projectTasks.status, 'completed'),
         // Switched-on projects still have handover and subsidy tasks to chase.
         inArray(projects.status, ['active', 'operational']),
         or(
-          lt(projectTasks.dueDate, addDays(today, -ESCALATION.managerAfterDays + 1)),
+          lt(projectTasks.dueDate, addDays(today, -earliest + 1)),
           isNotNull(projectTasks.waitingSince),
         ),
       ),
@@ -72,15 +76,26 @@ async function lateTasks(db: Database, today: string) {
 
 /**
  * Each morning, late and stuck tasks are pushed up: to the project manager first, then
- * to everyone who manages projects. Each step alerts once, so nobody is spammed.
+ * to everyone who manages projects, after the days set in Settings (a task template
+ * may set its own). Each step alerts once, so nobody is spammed.
  */
 export async function queueEscalations(db: Database, today: string): Promise<number> {
+  const policy = await loadPolicy(db);
+  const overrides = await db
+    .selectDistinct({ days: taskTemplates.escalateAfterDays })
+    .from(taskTemplates)
+    .where(isNotNull(taskTemplates.escalateAfterDays));
+  const earliest = earliestEscalationDays(
+    policy,
+    overrides.map((row) => row.days),
+  );
   let sent = 0;
-  for (const row of await lateTasks(db, today)) {
+  for (const row of await lateTasks(db, today, earliest)) {
     const task: LateTask = row;
     const late = Math.max(0, daysBetween(row.dueDate, today));
     const who = row.assignee ?? 'nobody yet';
-    if (late >= ESCALATION.ownersAfterDays) {
+    const step = lateEscalation(late, policy, row.templateDays);
+    if (step === 'owners') {
       sent += await notifyHolders(db, 'projects.manage', {
         kind: 'task_escalated',
         title: `${late} days late on ${row.code}`,
@@ -88,7 +103,7 @@ export async function queueEscalations(db: Database, today: string): Promise<num
         subject: subject(task),
         dedupeKey: `escalate:${row.id}:owners`,
       });
-    } else if (late >= ESCALATION.managerAfterDays) {
+    } else if (step === 'manager') {
       await tellManager(db, task, {
         kind: 'task_late',
         title: `Late on ${row.code}`,
@@ -102,7 +117,7 @@ export async function queueEscalations(db: Database, today: string): Promise<num
     const since = row.waitingSince.toISOString().slice(0, 10);
     const waited = daysBetween(since, today);
     const internal = row.waitingParty === 'internal';
-    const limit = internal ? ESCALATION.stuckInternalDays : ESCALATION.stuckOutsideDays;
+    const limit = internal ? policy.stuckInternalDays : policy.stuckOutsideDays;
     if (waited < limit) continue;
     await tellManager(db, task, {
       kind: 'task_stuck',

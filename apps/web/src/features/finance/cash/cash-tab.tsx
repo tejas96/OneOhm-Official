@@ -12,16 +12,18 @@ import { type ChequeAction, ChequeDialog } from './cheque-dialog';
 import { DepositSheet } from './deposit-sheet';
 import { DepositsTable } from './deposits-table';
 import { OpenMoneyTable } from './open-money-table';
+import { SettlementsCard } from './settlements-card';
 import { useCashPosition, useDeposits } from './use-cash';
 
 /**
- * Cash and cheques from collection to the bank (PRD 3.11): who holds what and for how
- * long, deposit slips, and cheques waiting to clear.
+ * Cash, cheques and online payments from collection to the bank (PRD 3.11): who holds
+ * what and for how long, deposit slips, cheques waiting to clear, and gateway payouts.
  */
 export function CashTab() {
   const t = useTranslations('finance.cash');
   const canRecord = useCan('finance.record_payments');
   const canBounce = useCan('finance.approve_payments');
+  const canSeeBooks = useCan('finance.view');
   const position = useCashPosition();
   const deposits = useDeposits();
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -100,6 +102,7 @@ export function CashTab() {
           {deposits.data && deposits.data.length > 0 && <DepositsTable deposits={deposits.data} />}
         </div>
       </Card>
+      {canSeeBooks && <SettlementsCard />}
       <DepositSheet
         items={chosen}
         open={depositing}

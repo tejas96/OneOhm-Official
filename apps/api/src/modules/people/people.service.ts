@@ -1,23 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
-import {
-  hashPassword,
-  leaveRequests,
-  projectTasks,
-  roles,
-  sessions,
-  userRoles,
-  users,
-} from '@oneohm/database';
+import { hashPassword, roles, sessions, userRoles, users } from '@oneohm/database';
 import { SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
-import { setSkills, skillsOf } from './person-skills';
+import { setSkills } from './person-skills';
+import { saveWork, type WorkPatch } from './person-work';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -33,56 +26,8 @@ export interface NewPerson {
 export class PeopleService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async list(): Promise<Person[]> {
-    const rows = await this.db.select().from(users).orderBy(asc(users.fullName));
-    const ids = rows.map((row) => row.id);
-    if (ids.length === 0) return [];
-    const roleRows = await this.db
-      .select({
-        userId: userRoles.userId,
-        id: roles.id,
-        key: roles.key,
-        name: roles.name,
-        kind: roles.kind,
-      })
-      .from(userRoles)
-      .innerJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(inArray(userRoles.userId, ids));
-    const loads = await this.db
-      .select({ userId: projectTasks.assigneeUserId, open: sql<number>`count(*)::int` })
-      .from(projectTasks)
-      .where(and(inArray(projectTasks.assigneeUserId, ids), ne(projectTasks.status, 'completed')))
-      .groupBy(projectTasks.assigneeUserId);
-    // "On leave" means marked by hand, or on approved leave today.
-    const today = todayIn();
-    const away = await this.db
-      .select({ userId: leaveRequests.userId })
-      .from(leaveRequests)
-      .where(
-        and(
-          inArray(leaveRequests.userId, ids),
-          eq(leaveRequests.status, 'approved'),
-          lte(leaveRequests.fromDate, today),
-          gte(leaveRequests.toDate, today),
-        ),
-      );
-    const awayIds = new Set(away.map((row) => row.userId));
-    const held = await skillsOf(this.db, ids);
-    return rows.map((row) => ({
-      id: row.id,
-      fullName: row.fullName,
-      email: row.email,
-      phone: row.phoneE164,
-      employeeCode: row.employeeCode,
-      designation: row.designation,
-      status: row.status,
-      onLeave: row.onLeave || awayIds.has(row.id),
-      roles: roleRows
-        .filter((role) => role.userId === row.id)
-        .map(({ userId: _ignored, ...role }) => role),
-      skills: held.get(row.id) ?? [],
-      openTasks: loads.find((load) => load.userId === row.id)?.open ?? 0,
-    }));
+  list(): Promise<Person[]> {
+    return readPeople(this.db);
   }
 
   async create(actor: Actor, input: NewPerson): Promise<Person> {
@@ -123,7 +68,7 @@ export class PeopleService {
     return this.get(id);
   }
 
-  async update(actor: Actor, id: string, patch: PersonPatch): Promise<Person> {
+  async update(actor: Actor, id: string, patch: PersonPatch & WorkPatch): Promise<Person> {
     const [existing] = await this.db
       .select({ id: users.id, email: users.email, phone: users.phoneE164 })
       .from(users)
@@ -148,6 +93,7 @@ export class PeopleService {
         await tx.insert(userRoles).values(patch.roleIds.map((roleId) => ({ userId: id, roleId })));
       }
       if (patch.skills) await setSkills(tx, id, patch.skills);
+      await saveWork(tx, id, patch);
       if (Object.keys(fields).length > 0)
         await tx
           .update(users)

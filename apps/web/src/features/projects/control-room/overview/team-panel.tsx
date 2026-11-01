@@ -1,9 +1,13 @@
 'use client';
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
-import { Avatar, Card, CardHeader, easing, seconds } from '@oneohm/design-system/web';
+import { Avatar, Button, Card, CardHeader, easing, seconds } from '@oneohm/design-system/web';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { TeamSetupSummary } from '@/features/projects/team/team-setup-summary';
+import { TeamSheet } from '@/features/projects/team/team-sheet';
+import { useCan } from '@/providers/current-user';
 import { swatchFor } from '../../tasks/task-card';
 
 interface Member {
@@ -46,6 +50,9 @@ function membersOf(project: ProjectDetail): Member[] {
 /** Who is on the project and how much open work each of them holds here. */
 export function TeamPanel({ project }: { readonly project: ProjectDetail }) {
   const t = useTranslations('projects.overview.team');
+  const panelT = useTranslations('projectTeam.panel');
+  const canManage = useCan('projects.manage');
+  const [editing, setEditing] = useState(false);
   const members = membersOf(project);
   const largest = Math.max(0, ...members.map((member) => member.open));
   const unowned = project.tasks.filter(
@@ -54,7 +61,17 @@ export function TeamPanel({ project }: { readonly project: ProjectDetail }) {
 
   return (
     <Card>
-      <CardHeader title={t('title')} description={t('description', { count: members.length })} />
+      <CardHeader
+        title={t('title')}
+        description={t('description', { count: members.length })}
+        action={
+          canManage ? (
+            <Button variant="quiet" size="sm" onClick={() => setEditing(true)}>
+              {panelT('change')}
+            </Button>
+          ) : undefined
+        }
+      />
       <ul className="flex flex-col gap-3 px-5 pb-5">
         {members.map((member, index) => (
           <li key={member.id} className="flex items-center gap-3">
@@ -92,7 +109,11 @@ export function TeamPanel({ project }: { readonly project: ProjectDetail }) {
             {t('unowned', { count: unowned })}
           </li>
         )}
+        <li>
+          <TeamSetupSummary project={project} />
+        </li>
       </ul>
+      <TeamSheet project={project} open={editing} onClose={() => setEditing(false)} />
     </Card>
   );
 }

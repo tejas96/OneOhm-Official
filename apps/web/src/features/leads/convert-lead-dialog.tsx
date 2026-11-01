@@ -1,6 +1,6 @@
 'use client';
 
-import type { LeadDetail } from '@oneohm/api-contracts';
+import type { LeadDetail, PropertyInput } from '@oneohm/api-contracts';
 import { Button, Dialog, SegmentedControl, useToast } from '@oneohm/design-system/web';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
@@ -10,9 +10,11 @@ import { type FormEvent, useState } from 'react';
 import { PropertyFields, readPropertyForm } from '@/features/customers/property-fields';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { ExistingSitePicker, NEW_SITE, useMatchedSites } from './existing-site-picker';
 import { leadKeys } from './lead-labels';
 
 type Kind = 'individual' | 'organization';
+type ConvertBody = { kind: Kind; property: PropertyInput } | { kind: Kind; propertyId: string };
 
 /**
  * Turns the lead into a customer (matched by phone, never duplicated) with the site's
@@ -35,8 +37,10 @@ export function ConvertLeadDialog({
     lead.subsidyCategory === 'individual' ? 'individual' : 'organization',
   );
   const [error, setError] = useState<ApiError | null>(null);
+  const sites = useMatchedSites(lead, open);
+  const [site, setSite] = useState<string>(NEW_SITE);
   const convert = useMutation({
-    mutationFn: (body: Parameters<typeof api.crm.convertLead>[0]['body']) =>
+    mutationFn: (body: ConvertBody) =>
       expectStatus(api.crm.convertLead({ params: { id: lead.id }, body }), 201),
     onSuccess: async (result) => {
       await Promise.all([
@@ -63,7 +67,11 @@ export function ConvertLeadDialog({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    convert.mutate({ kind, property: readPropertyForm(new FormData(event.currentTarget)) });
+    convert.mutate(
+      site === NEW_SITE
+        ? { kind, property: readPropertyForm(new FormData(event.currentTarget)) }
+        : { kind, propertyId: site },
+    );
   };
 
   return (
@@ -112,11 +120,14 @@ export function ConvertLeadDialog({
             className="self-start"
           />
         </div>
-        <PropertyFields
-          defaultCategory={lead.subsidyCategory}
-          defaultCity={lead.city}
-          errors={(field) => error?.fieldErrors[`property.${field}`]}
-        />
+        <ExistingSitePicker lead={lead} sites={sites} value={site} onValueChange={setSite} />
+        {site === NEW_SITE && (
+          <PropertyFields
+            defaultCategory={lead.subsidyCategory}
+            defaultCity={lead.city}
+            errors={(field) => error?.fieldErrors[`property.${field}`]}
+          />
+        )}
       </form>
     </Dialog>
   );

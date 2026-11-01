@@ -37,7 +37,7 @@ describe('tally', () => {
       [
         task({ finishedOn: '2026-11-10', open: false }),
         task({ finishedOn: '2026-11-12', open: false }),
-        task({ finishedOn: '2026-11-12', open: false, party: 'discom' }),
+        task({ finishedOn: '2026-11-12', open: false, party: 'discom', reworks: 2 }),
         task({ dueDate: '2026-11-19' }),
         task({ dueDate: '2026-11-18', waiting: true, party: 'customer' }),
         task({ dueDate: '2026-11-22' }),
@@ -51,6 +51,8 @@ describe('tally', () => {
       late: 2,
       lateOnOthers: 1,
       onTimeRate: 1 / 2,
+      reworked: 1,
+      firstTimeRightRate: 2 / 3,
       open: 3,
       pastDue: 1,
     });

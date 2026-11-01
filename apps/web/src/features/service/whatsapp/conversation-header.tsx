@@ -5,6 +5,7 @@ import { Avatar, Button, IconButton, useToast } from '@oneohm/design-system/web'
 import { ArrowLeft, Bot, Phone, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { ChatLeadAction } from '@/features/leads/chat-lead-action';
 import { describeError } from '@/lib/api/api-error';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
@@ -64,30 +65,29 @@ export function ConversationHeader({
           </p>
         </div>
       </div>
-      {(chat.customerId || human) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {chat.customerId && (
-            <Button asChild size="sm" variant="quiet">
-              <Link href={`/customers/${chat.customerId}`}>
-                <UserRound aria-hidden className="size-4" />
-                <span className="sm:hidden">{t('customerShort')}</span>
-                <span className="max-sm:hidden">{t('openCustomer')}</span>
-              </Link>
-            </Button>
-          )}
-          {human && (
-            <Button
-              size="sm"
-              variant="secondary"
-              leadingIcon={<Bot />}
-              pending={release.isPending}
-              onClick={handBack}
-            >
-              {t('handBack')}
-            </Button>
-          )}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {!chat.customerId && <ChatLeadAction name={chat.name} phone={chat.phone} />}
+        {chat.customerId && (
+          <Button asChild size="sm" variant="quiet">
+            <Link href={`/customers/${chat.customerId}`}>
+              <UserRound aria-hidden className="size-4" />
+              <span className="sm:hidden">{t('customerShort')}</span>
+              <span className="max-sm:hidden">{t('openCustomer')}</span>
+            </Link>
+          </Button>
+        )}
+        {human && (
+          <Button
+            size="sm"
+            variant="secondary"
+            leadingIcon={<Bot />}
+            pending={release.isPending}
+            onClick={handBack}
+          >
+            {t('handBack')}
+          </Button>
+        )}
+      </div>
     </header>
   );
 }

@@ -21,10 +21,11 @@ export function nextPromise(job: ServiceJob): {
   when: string;
   state: Sla | null;
 } | null {
-  if (job.scheduledFor) {
+  const visitDay = job.scheduledFor ?? job.visitOn;
+  if (visitDay) {
     return {
       label: SERVICE.visitDay,
-      when: shortDate(job.scheduledFor),
+      when: shortDate(visitDay),
       state: job.sla.resolution,
     };
   }

@@ -39,7 +39,10 @@ export function WaitingSheet({
         />
       }
     >
-      <Field label={TASK.waitingSheet.party}>
+      <Field
+        label={TASK.waitingSheet.party}
+        hint={party === 'internal' ? TASK.waitingSheet.helpNote : undefined}
+      >
         <ChoiceChips
           label={TASK.waitingSheet.party}
           choices={WAITING_PARTIES.map((value) => ({ value, label: COMMON.parties[value] }))}

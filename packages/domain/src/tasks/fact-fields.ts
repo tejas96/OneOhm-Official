@@ -21,6 +21,8 @@ const SPECS: Readonly<Record<string, FieldSpec>> = {
   roof_length_m: ['Roof length (m)', 'number'],
   roof_width_m: ['Roof width (m)', 'number'],
   shadow_free_area_sqm: ['Shadow-free area (m²)', 'number'],
+  land_length_m: ['Land length (m)', 'number'],
+  land_width_m: ['Land width (m)', 'number'],
   site_measurements: [
     'Measurements',
     'long',

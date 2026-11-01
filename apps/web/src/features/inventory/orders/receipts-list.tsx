@@ -5,12 +5,21 @@ import { formatInr } from '@oneohm/shared';
 import { PackageCheck } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { formatQuantity } from '../use-inventory';
+import { ReceiptDcr } from './receipt-dcr';
+import { useOrderDcr } from './use-order-dcr';
 
-/** Goods receipts on an order, each with its serial numbers. */
-export function ReceiptsList({ receipts }: { readonly receipts: PurchaseOrderDetail['receipts'] }) {
+/** Goods receipts on an order, each with its serial numbers and DCR papers. */
+export function ReceiptsList({
+  orderId,
+  receipts,
+}: {
+  readonly orderId: string;
+  readonly receipts: PurchaseOrderDetail['receipts'];
+}) {
   const t = useTranslations('inventory.order');
   const tr = useTranslations('purchasing.inspection');
   const format = useFormatter();
+  const dcr = useOrderDcr(orderId).data;
   return (
     <section className="flex flex-col gap-3">
       <h3 className="type-overline text-ink-faint uppercase">{t('receipts')}</h3>
@@ -70,6 +79,10 @@ export function ReceiptsList({ receipts }: { readonly receipts: PurchaseOrderDet
                     </li>
                   ))}
                 </ul>
+                <ReceiptDcr
+                  orderId={orderId}
+                  papers={dcr?.receipts.find((entry) => entry.receiptId === receipt.id)}
+                />
               </div>
             </li>
           ))}

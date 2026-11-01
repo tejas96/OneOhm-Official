@@ -112,6 +112,8 @@ export const receiptInputSchema = z.object({
   receivedOn: calendarDateSchema,
   vendorInvoiceNumber: optional(60),
   vendorInvoiceDate: calendarDateSchema.nullable(),
+  /** The total on the vendor's invoice; checked against the order on the bill. */
+  vendorInvoicePaise: paiseSchema.nonnegative().nullable().default(null),
   notes: optional(500),
   lines: z
     .array(

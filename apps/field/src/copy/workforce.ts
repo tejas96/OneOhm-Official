@@ -109,8 +109,3 @@ export const REQUEST_LEAVE = {
   sent: 'Leave requested. You will hear when it is decided.',
   checking: 'Checking',
 } as const;
-
-export const POINTS = {
-  thisMonth: (points: number) => `${points} points this month`,
-  total: (points: number) => `${points} in all`,
-} as const;

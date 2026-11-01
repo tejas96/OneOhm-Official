@@ -1,5 +1,6 @@
 import type { EpcStage, ProjectType, WaitingParty } from '../epc/stages';
 import { MILESTONE_TRIGGERS, type MilestoneTrigger } from '../finance/payment-milestones';
+import type { TaskReviewer } from './task-review';
 
 /** When a task applies (PRD 3.7). Every listed condition must hold. */
 export interface TaskConditions {
@@ -28,6 +29,8 @@ export const COMPLETION_ACTIONS = [...MILESTONE_TRIGGERS, 'project_operational']
 export interface TaskTemplate {
   readonly key: string;
   readonly title: string;
+  /** What the task is, in a line or two, for the person doing it (PRD 3.7). */
+  readonly description?: string | null;
   readonly stage: EpcStage;
   /** Assigned by role; the engine picks the least-loaded available person. */
   readonly roleKey: string;
@@ -42,6 +45,8 @@ export interface TaskTemplate {
   readonly customerVisible: boolean;
   readonly notifyCustomer: boolean;
   readonly approval: boolean;
+  /** Who approves it: anyone with `tasks.approve` (the default) or the project manager. */
+  readonly reviewer?: TaskReviewer;
   readonly evidence: readonly EvidenceKind[];
   /** Report facts this task captures (the task requires them as evidence). */
   readonly captures: readonly string[];
@@ -50,6 +55,10 @@ export interface TaskTemplate {
   readonly onComplete?: CompletionAction;
   /** Statutory reports that become ready when this task completes. */
   readonly reports?: readonly string[];
+  /** Critical work: the engine only proposes someone and a manager confirms (PRD 3.8). */
+  readonly confirmAssignee?: boolean;
+  /** Days late before the manager hears, instead of the company setting (PRD 3.7). */
+  readonly escalateAfterDays?: number | null;
 }
 
 export interface ProjectFacts {

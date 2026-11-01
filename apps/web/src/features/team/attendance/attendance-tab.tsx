@@ -3,11 +3,17 @@
 import { EmptyState } from '@oneohm/design-system/web';
 import { todayIn } from '@oneohm/shared';
 import { UsersRound } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan, useCurrentUser } from '@/providers/current-user';
-import { AttendanceKpis } from './attendance-kpis';
+import {
+  AttendanceKpis,
+  AttendanceShowChip,
+  attendanceShown,
+  useAttendanceShow,
+} from './attendance-kpis';
 import { AttendanceTable } from './attendance-table';
 import { CorrectionsQueue } from './corrections-queue';
 import { DayPicker } from './day-picker';
@@ -19,7 +25,10 @@ export function AttendanceTab() {
   const canDecide = useCan('leave.approve');
   const me = useCurrentUser();
   const today = todayIn();
-  const [date, setDate] = useState(today);
+  // A tile link (`?date=…&show=late`) reopens the same day with that group listed.
+  const linked = useSearchParams().get('date');
+  const [date, setDate] = useState(linked && /^\d{4}-\d{2}-\d{2}$/.test(linked) ? linked : today);
+  const show = useAttendanceShow();
   const rows = useTeamAttendance(date);
   const corrections = usePendingCorrections(canDecide);
   // Nobody decides their own correction; those wait for someone else.
@@ -39,8 +48,9 @@ export function AttendanceTab() {
       )}
       {rows.data && rows.data.length > 0 && (
         <>
-          <AttendanceKpis rows={rows.data} />
-          <AttendanceTable rows={rows.data} />
+          <AttendanceKpis rows={rows.data} date={date} />
+          <AttendanceShowChip />
+          <AttendanceTable rows={attendanceShown(rows.data, show)} />
         </>
       )}
       {canDecide && corrections.data && waiting.length === 0 && (

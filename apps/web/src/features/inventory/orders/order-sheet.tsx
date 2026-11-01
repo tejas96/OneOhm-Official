@@ -115,7 +115,7 @@ export function OrderSheet({
               </p>
             </section>
             {data.notes && <p className="type-body-sm text-ink-muted">{data.notes}</p>}
-            <ReceiptsList receipts={data.receipts} />
+            <ReceiptsList orderId={data.id} receipts={data.receipts} />
             <OrderAdvances order={data} />
             <ReceiveDialog order={receiving ? data : null} onClose={() => setReceiving(false)} />
           </div>

@@ -26,7 +26,7 @@ export function useClaimActions() {
     await client.invalidateQueries({ queryKey: siteKeys.claims });
   };
   const claim = useMutation({
-    mutationFn: (input: { workDate: string; note: string | null }) =>
+    mutationFn: (input: { workDate: string; note: string | null; projectId: string | null }) =>
       unwrap(api.siteActivity.claimTravel({ body: input })),
     onSuccess: refresh,
   });

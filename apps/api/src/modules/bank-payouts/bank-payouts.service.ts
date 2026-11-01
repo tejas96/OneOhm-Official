@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { BankPayout, PayoutOptions } from '@oneohm/api-contracts';
 import { bankPayouts, payables } from '@oneohm/database';
-import { maskAccount, payoutOpen, transferMode } from '@oneohm/domain';
+import { billToPay, maskAccount, payoutOpen, transferMode } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { desc, eq, gt } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -38,7 +38,8 @@ export class BankPayoutsService {
       .where(eq(bankPayouts.payableId, payableId))
       .orderBy(desc(bankPayouts.createdAt))
       .limit(1);
-    const amountPaise = bill.amountPaise - bill.advanceAdjustedPaise;
+    // The payee gets the bill less TDS (owed to the government) and advances set off.
+    const amountPaise = billToPay(bill);
     return {
       mode: this.gateway.mode,
       payee: payee

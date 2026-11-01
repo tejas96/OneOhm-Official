@@ -1,4 +1,10 @@
-import type { Product, Property, QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
+import type {
+  ExtraLineInput,
+  Product,
+  Property,
+  QuotationDetail,
+  QuotationInput,
+} from '@oneohm/api-contracts';
 import { rupeesToPaise } from '@oneohm/shared';
 
 export type SubsidyCategory = QuotationInput['subsidyCategory'];
@@ -25,6 +31,8 @@ export interface BuilderState {
   readonly dcCableMeters: string;
   readonly acCableMeters: string;
   readonly discountRupees: string;
+  /** Optional items, gifts, site charges and adjustments, each complete as added. */
+  readonly extras: readonly ExtraLineInput[];
   /** Set once sales picks a product by hand; until then the builder suggests one. */
   readonly inverterChosen: boolean;
   readonly panelChosen: boolean;
@@ -46,6 +54,7 @@ export const EMPTY_BUILDER: BuilderState = {
   dcCableMeters: '',
   acCableMeters: '',
   discountRupees: '',
+  extras: [],
   inverterChosen: false,
   panelChosen: false,
 };
@@ -80,6 +89,7 @@ export function fromQuotation(quotation: QuotationDetail): BuilderState {
     dcCableMeters: input.dcCableMeters ? String(input.dcCableMeters) : '',
     acCableMeters: input.acCableMeters ? String(input.acCableMeters) : '',
     discountRupees: input.discountPaise ? String(input.discountPaise / 100) : '',
+    extras: input.extras ?? [],
     inverterChosen: true,
     panelChosen: true,
   };
@@ -126,6 +136,7 @@ export function toInput(state: BuilderState): QuotationInput | null {
     dcCableMeters: positive(state.dcCableMeters),
     acCableMeters: positive(state.acCableMeters),
     discountPaise: rupeesToPaise(discount),
+    extras: [...state.extras],
   };
 }
 

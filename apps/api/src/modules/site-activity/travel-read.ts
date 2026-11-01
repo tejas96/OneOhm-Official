@@ -3,6 +3,7 @@ import {
   attendanceDays,
   type DatabaseExecutor,
   payables,
+  projects,
   siteVisits,
   travelClaims,
   users,
@@ -124,14 +125,16 @@ export async function readClaims(db: DatabaseExecutor, where?: SQL): Promise<Tra
       deciderName: decider.fullName,
       payableStatus: payables.status,
       paidOn: payables.paidOn,
+      projectCode: projects.code,
     })
     .from(travelClaims)
     .innerJoin(users, eq(users.id, travelClaims.userId))
     .leftJoin(decider, eq(decider.id, travelClaims.decidedByUserId))
     .leftJoin(payables, eq(payables.id, travelClaims.payableId))
+    .leftJoin(projects, eq(projects.id, travelClaims.projectId))
     .where(where)
     .orderBy(desc(travelClaims.workDate), desc(travelClaims.createdAt));
-  return rows.map(({ claim, fullName, deciderName, payableStatus, paidOn }) => ({
+  return rows.map(({ claim, fullName, deciderName, payableStatus, paidOn, projectCode }) => ({
     id: claim.id,
     user: { id: claim.userId, fullName },
     workDate: claim.workDate,
@@ -140,6 +143,7 @@ export async function readClaims(db: DatabaseExecutor, where?: SQL): Promise<Tra
     amountPaise: claim.amountPaise,
     visits: claim.visits,
     legs: claim.legs.map((leg) => ({ ...leg })),
+    project: claim.projectId && projectCode ? { id: claim.projectId, code: projectCode } : null,
     note: claim.note,
     status: claim.status,
     paid: payableStatus === 'paid',

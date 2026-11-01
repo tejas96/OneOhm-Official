@@ -5,8 +5,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
 import { useToast } from '@/components/toast';
 import { TASK } from '@/copy/tasks';
+import { activityKey } from './task-timeline';
 
-/** Start, wait, complete and approve, each refreshing the person's list afterwards. */
+/**
+ * Start, wait, complete and approve; managers move the due date, reviewers send work back
+ * and anyone working it posts an update. Each refreshes the list and the task's activity.
+ */
 export function useTaskActions(task: ProjectTask) {
   const client = useQueryClient();
   const toast = useToast();
@@ -19,6 +23,7 @@ export function useTaskActions(task: ProjectTask) {
     toast(message);
     // Refresh in the background; a finished task leaves the list once the screen has closed.
     void client.invalidateQueries({ queryKey: keys.tasks });
+    void client.invalidateQueries({ queryKey: activityKey(updated.id) });
   };
 
   const start = useMutation({
@@ -55,5 +60,20 @@ export function useTaskActions(task: ProjectTask) {
     mutationFn: () => unwrap(api.tasks.approveTask({ params })),
     onSuccess: settle(TASK.done.approved),
   });
-  return { start, wait, complete, approve };
+  const reschedule = useMutation({
+    mutationFn: (input: { dueDate: string; reason: string }) =>
+      unwrap(api.tasks.rescheduleTask({ params, body: { ...input, reason: input.reason.trim() } })),
+    onSuccess: settle(TASK.done.rescheduled),
+  });
+  const sendBack = useMutation({
+    mutationFn: (reason: string) =>
+      unwrap(api.tasks.returnTask({ params, body: { reason: reason.trim() } })),
+    onSuccess: settle(TASK.done.returned),
+  });
+  const postUpdate = useMutation({
+    mutationFn: (note: string) =>
+      unwrap(api.tasks.postTaskUpdate({ params, body: { note: note.trim() } })),
+    onSuccess: settle(TASK.done.updated),
+  });
+  return { start, wait, complete, approve, reschedule, sendBack, postUpdate };
 }

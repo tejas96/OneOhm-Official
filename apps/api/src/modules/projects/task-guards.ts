@@ -6,6 +6,7 @@ import {
   changeRequestsBlocking,
   openChangeRequestBlocks,
 } from '../../common/read-models/change-request-blocks';
+import { assignmentStates } from '../../common/read-models/task-assignment-state';
 
 /** Earlier tasks and open change requests (PRD 3.15) can both hold a task back. */
 export async function assertUnblocked(
@@ -23,6 +24,19 @@ export async function assertUnblocked(
   );
   const titles = [...blockers.map((blocker) => blocker.title), ...changes];
   if (titles.length > 0) throw conflict(`Waiting for: ${titles.join(', ')}.`, 'blocked');
+  await assertBudgetAllows(db, task);
+}
+
+/**
+ * Material is bought and sent only once the budget is locked (PRD 3.5, Flow F): not while
+ * the survey's price check is pending or a revised quote waits for the customer.
+ */
+async function assertBudgetAllows(
+  db: Database,
+  task: typeof projectTasks.$inferSelect,
+): Promise<void> {
+  const [state] = await assignmentStates(db, [task]).then((map) => [...map.values()]);
+  if (state?.budgetBlock) throw conflict(`Waiting for: ${state.budgetBlock}.`, 'budget_not_locked');
 }
 
 const NEEDED: Readonly<Record<EvidenceKind, string>> = {

@@ -38,7 +38,8 @@
         "next": "Next step",
         "due": "Due",
         "tasks": "Tasks",
-        "manager": "Manager"
+        "manager": "Manager",
+        "dueFinish": "Due · finish"
       },
       "summaryFiltered": "{count, plural, =0 {No projects match these filters} one {# project matches these filters · {capacity}} other {# projects match these filters · {capacity}}}",
       "clearFilters": "Clear filters",
@@ -46,6 +47,10 @@
         "any": "Any health",
         "onTrack": "On track",
         "attention": "Needs attention",
+        "overdue": "Overdue",
+        "blocked": "Blocked",
+        "atRisk": "At risk",
+        "waiting": "Waiting",
         "customer": "Waiting on customer",
         "bank": "Waiting on bank",
         "discom": "Waiting on DISCOM"
@@ -74,7 +79,20 @@
         "noManager": "No manager yet",
         "tasksDoneShort": "{done} of {total}"
       },
-      "paperwork": "Statutory paperwork"
+      "paperwork": "Statutory paperwork",
+      "extra": {
+        "label": "More filters from the command centre",
+        "manager": "Manager: {name}",
+        "someone": "one manager",
+        "since": "Completed since {date}",
+        "remove": "Remove this filter",
+        "finish": {
+          "this_month": "Expected to finish this month",
+          "next_month": "Expected to finish next month",
+          "later": "Expected to finish later",
+          "behind": "Running behind plan"
+        }
+      }
     },
     "room": {
       "pageTitle": "Project",
@@ -175,7 +193,8 @@
         "waiting": "Waiting",
         "in_review": "With reviewer",
         "completed": "Done",
-        "queued": "Not started"
+        "queued": "Not started",
+        "returned": "Sent back"
       },
       "actions": {
         "start": "Start",
@@ -184,6 +203,9 @@
         "resume": "Resume work",
         "waiting": "Mark as waiting",
         "assign": "Assign",
+        "sendBack": "Send back for correction",
+        "update": "Post update",
+        "reschedule": "Change due date",
         "more": "More actions"
       },
       "toast": {
@@ -193,8 +215,15 @@
         "completed": "Task completed",
         "sentForReview": "Sent for approval",
         "assigned": "Assignment updated",
+        "rescheduled": "Due date changed",
+        "returned": "Sent back for correction",
+        "updated": "Update posted",
         "failed": "That did not go through"
-      }
+      },
+      "returnedBy": "Sent back by {name}:",
+      "reviewer": "the reviewer",
+      "returnedNote": "Sent back: {note}",
+      "reworkCount": "{count, plural, one {Sent back once} other {Sent back # times}}"
     },
     "complete": {
       "title": "Complete task",
@@ -202,7 +231,7 @@
       "evidence": "Evidence this task asks for",
       "note": "Evidence notes",
       "noteHint": "Where the photos or documents are, readings taken, anything the next person should know.",
-      "approvalNotice": "This task needs a manager's approval. It goes to review when you submit.",
+      "approvalNotice": "This task needs approval. It goes to its reviewer when you submit; nobody approves their own work.",
       "cancel": "Cancel",
       "submit": "Mark complete",
       "submitReview": "Send for approval",
@@ -229,11 +258,40 @@
     "waiting": {
       "title": "Mark as waiting",
       "party": "Waiting on",
-      "partyHint": "Time waiting on the customer, bank or DISCOM is reported apart from the team's own time.",
+      "partyHint": "Time waiting on the customer, bank or DISCOM is reported apart from the team's own time. Choosing OneOhm team asks for help: the project manager hears straight away.",
       "note": "What are we waiting for?",
       "noteHint": "For example: inspection requested at MSEDCL Sangli on 2 November.",
       "cancel": "Cancel",
       "submit": "Mark as waiting"
+    },
+    "reschedule": {
+      "title": "Change due date",
+      "surveyTitle": "Set the site survey date",
+      "dueDate": "New due date",
+      "surveyDate": "Survey date",
+      "current": "Due now: {date}",
+      "reason": "Why it moves",
+      "reasonHint": "Kept in the project history. For example: customer away until Monday.",
+      "chainNote": "Tasks that wait on this one move later too, only as far as they need to.",
+      "surveyNote": "The customer is told the date on WhatsApp, or by SMS if they are not on WhatsApp. Tasks that wait on the survey move later too.",
+      "cancel": "Cancel",
+      "submit": "Save date"
+    },
+    "update": {
+      "title": "Post update",
+      "body": "A short note on progress for the project history. The task stays as it is.",
+      "label": "Update",
+      "hint": "For example: structure fixed on the east side, panels go up tomorrow.",
+      "cancel": "Cancel",
+      "submit": "Post update"
+    },
+    "sendBack": {
+      "title": "Send back for correction",
+      "body": "The task goes back to the person who did it, with your note on what to fix. It counts as rework.",
+      "label": "What needs correcting",
+      "hint": "Be specific. For example: earthing photo is blurred, take it again.",
+      "cancel": "Cancel",
+      "submit": "Send back"
     },
     "assign": {
       "title": "Assign task",
@@ -278,6 +336,9 @@
       "recordSubmit": "Record payment",
       "recorded": "Payment recorded",
       "refundVia": "Refund · {method}",
+      "tds": "TDS deducted by the customer",
+      "tdsHint": "Optional. If a business customer kept back TDS, enter it here; the amount above is the money that arrived.",
+      "tdsSettles": "Together they settle {amount} of the milestone.",
       "collected": {
         "collectedBy": "Collected by",
         "collectedByHint": "Who holds the money until it is deposited in the bank.",
@@ -340,7 +401,8 @@
         "waitingParty": "{party} {count}",
         "waitingNone": "Nothing held by customer, bank or DISCOM",
         "done": "Done",
-        "doneOf": "of {total, plural, one {# task} other {# tasks}}"
+        "doneOf": "of {total, plural, one {# task} other {# tasks}}",
+        "openLink": "List these tasks: {label}"
       },
       "nextUp": {
         "title": "Next up",
@@ -408,6 +470,13 @@
         "lockedOn": "Locked on {date}",
         "openRevision": "Open the revision"
       }
+    },
+    "forecast": {
+      "onPlan": "Expected to finish {date}",
+      "behind": "Expected {date}, {days, plural, one {# day} other {# days}} behind plan",
+      "rule": "Expected finish = the last open task's due date, moved on by how many days the work runs late today.",
+      "short": "Finish {date}",
+      "shortBehind": "Finish {date} · {days, plural, one {# day} other {# days}} behind"
     }
   }
 }

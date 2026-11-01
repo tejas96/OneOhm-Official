@@ -20,10 +20,13 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
 import { COVER } from '@/copy/after-sales';
 import { SUPPORT } from '@/copy/care';
+import { REQUEST_MEDIA } from '@/copy/request-media';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { PhotoStrip } from './photo-strip';
 import { MAX_REQUEST_PHOTOS, pickRequestPhotos, sendRequestPhotos } from './request-photos';
 import { useServiceCategories } from './use-after-sales';
+import { type PickedVideo, VideoField } from './video-field';
+import { type RecordedVoice, VoiceNoteField } from './voice-note-field';
 
 /** One question at a time: what kind of problem, which system, and what is happening. */
 export function NewRequestScreen() {
@@ -40,23 +43,41 @@ export function NewRequestScreen() {
   const [description, setDescription] = useState(asking ? COVER.askDescription : '');
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<readonly UploadableFile[]>([]);
+  const [video, setVideo] = useState<PickedVideo | null>(null);
+  const [voice, setVoice] = useState<RecordedVoice | null>(null);
+  const [recording, setRecording] = useState(false);
   const forProject = projectId ?? chosen?.id ?? null;
+  // Typing is optional with a voice note: the customer may just say it (PRD 5.5).
+  const typed = description.trim().length >= 5;
+  const words = typed || !voice ? description : REQUEST_MEDIA.spokenDescription;
 
   const send = useMutation({
     mutationFn: async () => {
       const request = await unwrap(
         api.customer.createServiceRequest({
-          body: { category: category ?? 'other', projectId: forProject, description },
+          body: { category: category ?? 'other', projectId: forProject, description: words },
         }),
       );
-      return sendRequestPhotos(request.id, photos);
+      const failedPhotos = await sendRequestPhotos(request.id, photos);
+      // The video and the voice note go after the photos, to the route that takes them.
+      const media = [video?.file, voice?.file].filter((file) => file !== undefined);
+      const failedMedia = await sendRequestPhotos(request.id, media, 'files');
+      return { failedPhotos, failedMedia };
     },
-    onSuccess: async (failedPhotos) => {
+    onSuccess: async ({ failedPhotos, failedMedia }) => {
       await client.invalidateQueries({ queryKey: keys.service });
-      toast(failedPhotos > 0 ? SUPPORT.photosFailed(failedPhotos) : SUPPORT.sent);
+      toast(
+        failedMedia > 0
+          ? REQUEST_MEDIA.filesFailed(failedPhotos + failedMedia)
+          : failedPhotos > 0
+            ? SUPPORT.photosFailed(failedPhotos)
+            : SUPPORT.sent,
+      );
       setCategory(null);
       setDescription('');
       setPhotos([]);
+      setVideo(null);
+      setVoice(null);
       setError(null);
       router.back();
     },
@@ -85,7 +106,7 @@ export function NewRequestScreen() {
           label={SUPPORT.submit}
           onPress={() => send.mutate()}
           pending={send.isPending}
-          disabled={!category || description.trim().length < 5}
+          disabled={!category || !(typed || voice) || recording}
           fullWidth
         />
       }
@@ -135,6 +156,8 @@ export function NewRequestScreen() {
           onAdd={(source) => void addPhotos(source)}
           onRemove={(index) => setPhotos((current) => current.filter((_, at) => at !== index))}
         />
+        <VoiceNoteField value={voice} onChange={setVoice} onRecording={setRecording} />
+        <VideoField value={video} onChange={setVideo} />
         <FormAlert message={error && !fieldErrors.description ? error : null} />
       </View>
     </Screen>

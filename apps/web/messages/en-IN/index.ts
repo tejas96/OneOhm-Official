@@ -11,6 +11,7 @@ import documents from './documents.json';
 import finance from './finance.json';
 import inventory from './inventory.json';
 import leads from './leads.json';
+import projectTeam from './project-team.json';
 import projects from './projects.json';
 import purchasing from './purchasing.json';
 import quotations from './quotations.json';
@@ -48,6 +49,7 @@ const messages = {
   ...discom,
   ...leads,
   ...projects,
+  ...projectTeam,
   ...purchasing,
   ...quotations,
   ...reports,

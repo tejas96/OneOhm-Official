@@ -14,6 +14,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, notFound } from '../../common/http/errors';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
+import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
 import { type Position, trackingFor, usableReading } from '../workforce/tracking';
 import { noteServiceCheckIn, noteServiceCheckOut, tellCustomer } from './service-visit-events';
 import { fieldWorkOf, openVisitOf, placesOf, type ServicePlace, toJob } from './service-visit-read';
@@ -97,6 +98,7 @@ export class ServiceVisitsService {
       ...toJob(job.ticket, job.place, open),
       ...work,
       customerPhotos: job.ticket.photos,
+      customerMedia: job.ticket.media,
       openVisit: open,
       tracking: tracking.status,
       farFromSiteM: tracking.policy.travel.farFromSiteM,
@@ -151,6 +153,7 @@ export class ServiceVisitsService {
         .onConflictDoNothing()
         .returning({ id: siteVisits.id });
       if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
+      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now);
       // Reaching the site answers the request, if nothing had answered it yet.
       const changes = checkInChanges(job.request, now);
       if (Object.keys(changes).length > 0) {
@@ -217,6 +220,7 @@ export class ServiceVisitsService {
           updatedAt: now,
         })
         .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)));
+      await afterSiteCheckOut(tx, actor.userId, open.id, reading?.position ?? null);
       await noteServiceCheckOut(tx, job.ticket, {
         visitId: open.id,
         userId: actor.userId,

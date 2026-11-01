@@ -9,6 +9,7 @@ import { REPORT_DEFINITIONS } from './report-definitions';
 import { ReportPdfService } from './report-pdf.service';
 import { reportStatus } from './report-readiness';
 import { ReportStatusService } from './report-status.service';
+import { SurveyReportService } from './survey-report.service';
 
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
@@ -28,6 +29,7 @@ export class ReportArchiveService {
     private readonly catalog: CatalogService,
     private readonly pdf: ReportPdfService,
     private readonly storage: ObjectStorageService,
+    private readonly survey: SurveyReportService,
   ) {}
 
   async refresh(
@@ -97,6 +99,8 @@ export class ReportArchiveService {
       });
       saved += 1;
     }
+    // The approved site survey's report is filed with the papers too (PRD 3.4).
+    if (await this.survey.fileIfApproved(projectId, userId)) saved += 1;
     return { saved, unchanged };
   }
 

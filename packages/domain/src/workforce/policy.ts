@@ -19,6 +19,13 @@ export interface AttendancePolicy {
   readonly captureLocation: boolean;
   /** Location readings are deleted after this many days. */
   readonly retentionDays: number;
+  /** The first site check-in of the day also checks the person in (PRD 4.3). */
+  readonly autoCheckInFromSite: boolean;
+  /**
+   * Location switched on or off for whole roles, by role key, over `captureLocation`.
+   * A person's own setting (in Team) wins over these.
+   */
+  readonly trackingByRole: Readonly<Record<string, boolean>>;
 }
 
 export interface PointsPolicy {
@@ -28,6 +35,13 @@ export interface PointsPolicy {
   readonly goodRating: number;
   /** Most a manager can give in one recognition. */
   readonly recognitionMax: number;
+  /** Suggested for each person a customer names with 4 or 5 stars on a stage rating. */
+  readonly stageRating: number;
+}
+
+/** Workload (PRD 3.12): open tasks one person should carry; 0 means no limit. */
+export interface CapacityPolicy {
+  readonly defaultOpenTaskLimit: number;
 }
 
 /** Site check-ins and travel reimbursement (PRD 4.2, 4.3). */
@@ -47,6 +61,7 @@ export interface WorkforcePolicy {
   readonly attendance: AttendancePolicy;
   readonly points: PointsPolicy;
   readonly travel: SiteTravelPolicy;
+  readonly capacity: CapacityPolicy;
 }
 
 export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
@@ -61,9 +76,12 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     graceMinutes: 15,
     captureLocation: true,
     retentionDays: 90,
+    autoCheckInFromSite: false,
+    trackingByRole: {},
   },
-  points: { onTimeTask: 10, goodRating: 50, recognitionMax: 200 },
+  points: { onTimeTask: 10, goodRating: 50, recognitionMax: 200, stageRating: 20 },
   travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60 },
+  capacity: { defaultOpenTaskLimit: 0 },
 };
 
 /** A saved policy with any section added since it was saved filled from the defaults. */
@@ -77,5 +95,6 @@ export function withPolicyDefaults(
     attendance: { ...DEFAULT_WORKFORCE_POLICY.attendance, ...saved.attendance },
     points: { ...DEFAULT_WORKFORCE_POLICY.points, ...saved.points },
     travel: { ...DEFAULT_WORKFORCE_POLICY.travel, ...saved.travel },
+    capacity: { ...DEFAULT_WORKFORCE_POLICY.capacity, ...saved.capacity },
   };
 }

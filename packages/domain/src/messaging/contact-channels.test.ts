@@ -32,4 +32,10 @@ describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
     expect(long.length).toBeLessThanOrEqual(SMS_MAX);
     expect(long.endsWith('… - OneOhm')).toBe(true);
   });
+
+  it('adds no second stop after a title that ends a sentence', () => {
+    expect(smsText('How did we do?', 'Please rate it.')).toBe(
+      'How did we do? Please rate it. - OneOhm',
+    );
+  });
 });

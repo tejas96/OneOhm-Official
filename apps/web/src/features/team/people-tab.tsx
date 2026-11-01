@@ -15,6 +15,7 @@ import { useMemo, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { AddPersonDialog } from './add-person-dialog';
+import { LoadCell } from './capacity/overload-badge';
 import { EditPersonSheet } from './edit-person-sheet';
 import { PersonContact, PersonIdentity, PersonRoles, PersonStatus } from './person-row';
 import { usePeople, useRoles } from './use-team';
@@ -81,11 +82,7 @@ export function PeopleTab() {
       header: t('columns.load'),
       align: 'end',
       cell: (person) => (
-        <span
-          className={person.openTasks > 0 ? 'text-ink tabular-nums' : 'text-ink-faint tabular-nums'}
-        >
-          {t('openTasks', { count: person.openTasks })}
-        </span>
+        <LoadCell open={person.openTasks} limit={person.openTaskLimit} state={person.loadState} />
       ),
     },
   ];

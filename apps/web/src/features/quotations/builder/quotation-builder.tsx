@@ -15,6 +15,7 @@ import { DcrComparison } from '../dcr-comparison';
 import { PriceStack } from '../price-stack';
 import { QuotationLines } from '../quotation-lines';
 import { BuilderActions } from './builder-actions';
+import { ExtrasField } from './extras-field';
 import { PropertyPicker } from './property-picker';
 import { DiscountField, SiteFields } from './site-fields';
 import { SystemFields } from './system-fields';
@@ -76,7 +77,10 @@ export function QuotationBuilder() {
           <Step index="03" title={t('sections.site')}>
             <SiteFields state={state} patch={patch} errors={errors} />
           </Step>
-          <Step index="04" title={t('sections.discount')}>
+          <Step index="04" title={t('sections.extras')}>
+            <ExtrasField extras={state.extras} onChange={(extras) => patch({ extras })} />
+          </Step>
+          <Step index="05" title={t('sections.discount')}>
             <DiscountField
               state={state}
               patch={patch}
@@ -106,7 +110,7 @@ export function QuotationBuilder() {
         </aside>
       </div>
       {preview && (
-        <Step index="05" title={t('sections.lines')}>
+        <Step index="06" title={t('sections.lines')}>
           <QuotationLines lines={preview.lines} totals={preview.totals} showMargin={showMargin} />
         </Step>
       )}

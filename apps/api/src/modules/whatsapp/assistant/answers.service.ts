@@ -1,18 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { paymentMilestones, payments, projectFacts, projects } from '@oneohm/database';
+import { paymentMilestones, payments, projects } from '@oneohm/database';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { CustomerAfterSalesService } from '../../after-sales/customer-after-sales.service';
 import { CustomerDocumentsService } from '../../customer-portal/customer-documents.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { openLinksFor } from '../../online-payments/open-links';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { type SharedFile, signFileLink } from '../file-links';
-import { WORDS } from './words';
+import { issuedInvoices } from '../shared-invoices';
+import { coverText } from './cover-answer';
+import { fitMessage } from './fit-message';
+import { rewardsText } from './rewards-answer';
+import { FILE_WORDS, WORDS } from './words';
 
 const list = (lines: readonly string[]) => lines.filter(Boolean).join('\n');
+
+/** Each kind of file in the "Documents" answer shows its newest few. */
+const LATEST = 3;
 
 /** The assistant's answers, each built from the customer's live records. */
 @Injectable()
@@ -23,6 +31,7 @@ export class AnswersService {
     private readonly portal: CustomerPortalService,
     private readonly papers: CustomerDocumentsService,
     private readonly links: PaymentLinksService,
+    private readonly after: CustomerAfterSalesService,
   ) {}
 
   async progress(customerId: string): Promise<string> {
@@ -111,11 +120,11 @@ export class AnswersService {
     return `• ${milestone.label}: ${formatInr(left)} due${url ? `\n  ${WORDS.payHere}: ${url}` : ''}`;
   }
 
-  /** The quotation, receipts and shared papers, as links that work for a few days. */
+  /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */
   async documents(customerId: string): Promise<string> {
     const exp = Math.floor(Date.now() / 1000) + this.env.FILE_LINK_HOURS * 3600;
-    const link = (kind: SharedFile['kind'], id: string) =>
-      `${this.env.API_PUBLIC_URL}/v1/files/shared/${signFileLink(this.env.FILE_LINK_SECRET, { kind, id, customerId, exp })}`;
+    const link = (kind: SharedFile['kind'], id: string, key?: string) =>
+      `${this.env.API_PUBLIC_URL}/v1/files/shared/${signFileLink(this.env.FILE_LINK_SECRET, { kind, id, customerId, exp, ...(key ? { key } : {}) })}`;
     const { projects: own } = await this.portal.home(customerId);
     const receipts = await this.db
       .select({ id: payments.id, number: payments.receiptNumber, amount: payments.amountPaise })
@@ -123,23 +132,41 @@ export class AnswersService {
       .innerJoin(projects, eq(projects.id, payments.projectId))
       .where(and(eq(projects.customerId, customerId), isNotNull(payments.receiptNumber)))
       .orderBy(desc(payments.createdAt))
-      .limit(5);
+      .limit(LATEST);
     const papers = (await this.papers.list(customerId))
       .filter((paper) => paper.category !== 'site_photo')
-      .slice(0, 5);
+      .slice(0, LATEST);
+    const invoices = await issuedInvoices(this.db, customerId, LATEST);
+    const reports = (await this.papers.readyReports(customerId)).slice(0, LATEST);
     const lines = [
-      ...own.map(
-        (project) =>
-          `Quotation ${project.quotation.number}: ${link('quotation', project.quotation.id)}`,
+      ...own.map((project) =>
+        FILE_WORDS.quotation(project.quotation.number, link('quotation', project.quotation.id)),
       ),
-      ...receipts.map(
-        (receipt) =>
-          `Receipt ${receipt.number} (${formatInr(receipt.amount)}): ${link('receipt', receipt.id)}`,
+      ...invoices.map((invoice) =>
+        FILE_WORDS.invoice(
+          invoice.number,
+          formatInr(invoice.totalPaise),
+          link('invoice', invoice.id),
+        ),
       ),
-      ...papers.map((paper) => `${paper.name}: ${link('document', paper.id)}`),
+      ...receipts.map((receipt) =>
+        FILE_WORDS.receipt(
+          receipt.number ?? '',
+          formatInr(receipt.amount),
+          link('receipt', receipt.id),
+        ),
+      ),
+      ...reports.map((report) =>
+        FILE_WORDS.report(
+          report.name,
+          report.projectCode,
+          link('report', report.projectId, report.key),
+        ),
+      ),
+      ...papers.map((paper) => FILE_WORDS.paper(paper.name, link('document', paper.id))),
     ];
     if (lines.length === 0) return WORDS.noDocuments;
-    return list([...lines, '', WORDS.linksExpire(this.env.FILE_LINK_HOURS)]);
+    return fitMessage(lines, WORDS.linksExpire(this.env.FILE_LINK_HOURS), FILE_WORDS.more);
   }
 
   async requests(customerId: string): Promise<string> {
@@ -149,39 +176,18 @@ export class AnswersService {
     return rows
       .map(
         (row) =>
-          `• ${row.description.slice(0, 60)} — *${status[row.status]}*${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
+          `• ${row.description.slice(0, 60)} — *${status[row.status]}*${row.visitOn && row.status !== 'resolved' ? `\n  Technician visit: ${daySpan(row.visitOn, row.visitOn)}` : ''}${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
       )
       .join('\n');
   }
 
+  /** Each installed item's warranty and the AMC with its next visit (PRD 6.1). */
   async warranty(customerId: string): Promise<string> {
-    const own = await this.db
-      .select({ id: projects.id, code: projects.code })
-      .from(projects)
-      .where(eq(projects.customerId, customerId));
-    if (own.length === 0) return WORDS.noProject;
-    const facts = await this.db
-      .select()
-      .from(projectFacts)
-      .where(
-        inArray(
-          projectFacts.projectId,
-          own.map((project) => project.id),
-        ),
-      );
-    return own
-      .map((project) => {
-        const fact = (key: string) =>
-          facts.find((row) => row.projectId === project.id && row.key === key)?.value;
-        return list([
-          `*${project.code}*`,
-          fact('module_make')
-            ? `Panels: ${fact('module_count') ?? ''} × ${fact('module_make')}`
-            : '',
-          fact('inverter_make') ? `Inverter: ${fact('inverter_make')}` : '',
-          'Warranty cards from the makers are in your documents. For AMC or a service visit, tap "Report a problem".',
-        ]);
-      })
-      .join('\n\n');
+    return coverText(await this.after.cover(customerId));
+  }
+
+  /** The people this customer referred and their rewards (PRD 5.6). */
+  async rewards(customerId: string): Promise<string> {
+    return rewardsText(await this.portal.referrals(customerId));
   }
 }

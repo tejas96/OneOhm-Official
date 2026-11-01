@@ -81,6 +81,16 @@ describe('housing societies', () => {
   });
 });
 
+describe('society without a household count', () => {
+  it('gives the reason instead of a silent ₹0', () => {
+    const result = calculateSubsidy(
+      { category: 'society', capacityWp: 20_000, panelsDcr: true, systemType: 'on_grid' },
+      rule('society'),
+    );
+    expect(result).toEqual({ amountPaise: 0, eligibleWp: 0, ineligible: 'no_households' });
+  });
+});
+
 describe('commercial', () => {
   it('is never eligible', () => {
     const result = calculateSubsidy(

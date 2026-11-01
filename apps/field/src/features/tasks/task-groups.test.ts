@@ -13,6 +13,8 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     stage: 'survey',
     roleKey: 'execution',
     assignee: null,
+    proposedAssignee: null,
+    outsideTeam: false,
     status: 'ready',
     waitingParty: 'internal',
     startDate: '2026-11-01',
@@ -20,6 +22,11 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     overdue: false,
     customerVisible: false,
     approval: false,
+    description: null,
+    reviewer: 'approvers',
+    reviewerIds: [],
+    returned: null,
+    reworkCount: 0,
     evidence: [],
     captures: [],
     captureFields: [],
@@ -44,10 +51,17 @@ describe('groupOf', () => {
     );
   });
 
-  it('keeps internal waiting as the person’s own work', () => {
+  it('shows waiting on the OneOhm team as help asked, apart from waiting on others', () => {
     expect(
       groupOf(task({ status: 'waiting', waitingParty: 'internal', dueDate: '2026-11-01' }), TODAY),
-    ).toBe('overdue');
+    ).toBe('help');
+  });
+
+  it('puts work sent back for correction first, even when late', () => {
+    const returned = { note: 'Retake the earthing photo', by: null, at: '2026-11-02T10:00:00Z' };
+    expect(groupOf(task({ status: 'in_progress', returned, overdue: true }), TODAY)).toBe(
+      'returned',
+    );
   });
 
   it('sorts by due date', () => {
@@ -64,6 +78,18 @@ describe('onTimeShare', () => {
       TODAY,
     );
     expect(onTimeShare(groups)).toBeCloseTo(2 / 3);
+  });
+
+  it('counts late help requests and returned work as late', () => {
+    const returned = { note: 'Fix', by: null, at: '2026-11-02T10:00:00Z' };
+    const groups = groupTasks(
+      [
+        task({ status: 'waiting', waitingParty: 'internal', overdue: true }),
+        task({ status: 'in_progress', returned }),
+      ],
+      TODAY,
+    );
+    expect(onTimeShare(groups)).toBeCloseTo(1 / 2);
   });
 
   it('is full with nothing assigned', () => {

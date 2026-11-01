@@ -14,6 +14,7 @@ import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useCan } from '@/providers/current-user';
+import { CustomerAftercareCard } from './customer-aftercare-card';
 import { CustomerFeedbackCard, CustomerReferralsCard } from './customer-feedback';
 
 const STATUS_TONE: Readonly<Record<CustomerServiceRequest['status'], PillTone>> = {
@@ -22,11 +23,15 @@ const STATUS_TONE: Readonly<Record<CustomerServiceRequest['status'], PillTone>> 
   resolved: 'done',
 };
 
-/** After-sales: every service request, how the customer rated us, and who they referred. */
+/**
+ * After-sales: every service request, warranty and AMC cover, how the customer rated us,
+ * and who they referred.
+ */
 export function CustomerServiceTab({ activity }: { readonly activity: CustomerActivity }) {
   return (
     <div className="flex flex-col gap-6">
       <ServiceRequestsCard requests={activity.serviceRequests} />
+      <CustomerAftercareCard aftercare={activity.aftercare} />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <CustomerFeedbackCard feedback={activity.feedback} />
         <CustomerReferralsCard referrals={activity.referrals} />

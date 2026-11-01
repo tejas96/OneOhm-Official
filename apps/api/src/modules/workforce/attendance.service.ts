@@ -14,6 +14,7 @@ import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { saveConditions } from './device-conditions';
 import { activeLocations, indiaTime, loadPolicy } from './policy';
 import { consentSummary, type Position, usableReading } from './tracking';
 import { readDays } from './workforce-read';
@@ -101,6 +102,12 @@ export class AttendanceService {
       .onConflictDoNothing({ target: [attendanceDays.userId, attendanceDays.workDate] })
       .returning({ id: attendanceDays.id });
     if (!created) throw conflict('You have already checked in today.', 'checked_in');
+    await saveConditions(this.db, {
+      userId: actor.userId,
+      kind: 'check_in',
+      subjectId: created.id,
+      position: reading?.position,
+    });
   }
 
   async checkOut(actor: Actor, position: Position | null | undefined): Promise<void> {
@@ -127,6 +134,12 @@ export class AttendanceService {
       .returning({ id: attendanceDays.id });
     if (!updated)
       throw conflict('Check in first, or you have already checked out.', 'not_checked_in');
+    await saveConditions(this.db, {
+      userId: actor.userId,
+      kind: 'check_out',
+      subjectId: updated.id,
+      position: reading?.position,
+    });
   }
 
   /** Every active staff member on a day: checked in or not, or away on approved leave. */

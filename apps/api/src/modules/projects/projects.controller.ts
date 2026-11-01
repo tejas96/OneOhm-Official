@@ -7,6 +7,8 @@ import { CommandCenterService } from '../dashboard/command-center.service';
 import { FinanceService } from './finance.service';
 import { ProjectCreationService } from './project-creation.service';
 import { ProjectReadService } from './project-read.service';
+import { taskFlowHandlers } from './task-flow.handlers';
+import { TaskFlowService } from './task-flow.service';
 import { TasksService } from './tasks.service';
 
 @Controller()
@@ -48,7 +50,10 @@ export class ProjectsController {
 
 @Controller()
 export class TasksController {
-  constructor(private readonly tasks: TasksService) {}
+  constructor(
+    private readonly tasks: TasksService,
+    private readonly flow: TaskFlowService,
+  ) {}
 
   @TsRestHandler(apiContract.tasks)
   handler(@CurrentActor() actor: Actor) {
@@ -78,6 +83,7 @@ export class TasksController {
         status: 200,
         body: await this.tasks.assign(actor, params.id, body.userId),
       }),
+      ...taskFlowHandlers(this.flow, actor),
     });
   }
 }

@@ -1,25 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Customer, Property, PropertyInput } from '@oneohm/api-contracts';
-import { customers, projects, properties, quotations } from '@oneohm/database';
-import { asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import {
+  customers,
+  type DatabaseExecutor,
+  projects,
+  properties,
+  quotations,
+} from '@oneohm/database';
+import { and, asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { notFound } from '../../common/http/errors';
+import { invalid, notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
+import { otherAccounts } from './customer-accounts.read';
+import { type CustomerPatch, editCustomer } from './customer-edit';
 import { LeadsService } from './leads.service';
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
-  const {
-    createdAt: _c,
-    updatedAt: _u,
-    version: _v,
-    latitude: _lat,
-    longitude: _lng,
-    ...rest
-  } = row;
+  const { createdAt: _c, updatedAt: _u, version: _v, ...rest } = row;
   return rest;
 };
 
@@ -55,15 +56,27 @@ export class CustomersService {
       properties: propertyRows.map(presentProperty),
       quotations: await quotationSummaries(this.db, eq(quotations.customerId, id)),
       projects: await projectSummaries(this.db, eq(projects.customerId, id)),
+      accounts: await otherAccounts(this.db, row.phoneE164),
     };
   }
 
-  /** Matches the lead to an existing customer by phone (no duplicate identities), adds the property. */
+  async update(actor: Actor, id: string, patch: CustomerPatch): Promise<Customer> {
+    await editCustomer(this.db, actor, id, patch);
+    const rows = await this.db.select().from(customers).where(eq(customers.id, id)).limit(1);
+    const [customer] = await this.present(rows);
+    if (!customer) throw notFound('That customer');
+    return customer;
+  }
+
+  /**
+   * Matches the lead to an existing customer by phone (no duplicate identities), then adds
+   * the site, or reuses one of that customer's sites (PRD 3.3: property matching).
+   */
   async convertLead(
     actor: Actor,
     leadId: string,
     kind: 'individual' | 'organization',
-    property: PropertyInput,
+    site: { property?: PropertyInput | undefined; propertyId?: string | undefined },
   ) {
     const lead = await this.leads.get(actor, leadId);
     const result = await this.db.transaction(async (tx) => {
@@ -85,19 +98,40 @@ export class CustomersService {
           .returning({ id: customers.id });
       }
       if (!customer) throw new Error('Customer insert returned nothing.');
-      const [created] = await tx
-        .insert(properties)
-        .values({ customerId: customer.id, ...property, households: property.households ?? null })
-        .returning({ id: properties.id });
-      if (!created) throw new Error('Property insert returned nothing.');
+      const propertyId = await this.siteFor(tx, customer.id, site);
       await recordAudit(tx, actor.userId, 'lead.converted', 'lead', leadId, {
         customerId: customer.id,
-        propertyId: created.id,
+        propertyId,
+        reusedProperty: Boolean(site.propertyId),
       });
-      return { customerId: customer.id, propertyId: created.id };
+      return { customerId: customer.id, propertyId };
     });
     await this.leads.link(leadId, result.customerId, result.propertyId);
     return result;
+  }
+
+  /** A site of this customer picked by id, or a new one from the form. */
+  private async siteFor(
+    tx: DatabaseExecutor,
+    customerId: string,
+    site: { property?: PropertyInput | undefined; propertyId?: string | undefined },
+  ): Promise<string> {
+    if (site.propertyId) {
+      const [own] = await tx
+        .select({ id: properties.id })
+        .from(properties)
+        .where(and(eq(properties.id, site.propertyId), eq(properties.customerId, customerId)))
+        .limit(1);
+      if (!own) throw invalid('That site belongs to someone else.', { propertyId: 'Pick again.' });
+      return own.id;
+    }
+    if (!site.property) throw invalid('Add the site address.');
+    const [created] = await tx
+      .insert(properties)
+      .values({ customerId, ...site.property, households: site.property.households ?? null })
+      .returning({ id: properties.id });
+    if (!created) throw new Error('Property insert returned nothing.');
+    return created.id;
   }
 
   async property(id: string): Promise<typeof properties.$inferSelect> {
@@ -148,6 +182,7 @@ export class CustomersService {
       name: row.name,
       phone: row.phoneE164,
       email: row.email,
+      gstin: row.gstin,
       createdAt: row.createdAt.toISOString(),
       propertyCount: propertyCounts.find((count) => count.id === row.id)?.count ?? 0,
       projectCount: projectCounts.find((count) => count.id === row.id)?.count ?? 0,

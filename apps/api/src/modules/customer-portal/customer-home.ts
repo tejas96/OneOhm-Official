@@ -8,10 +8,12 @@ import {
   projectTasks,
   properties,
   quotations,
+  taskTemplates,
   users,
 } from '@oneohm/database';
 import { EPC_STAGES } from '@oneohm/domain';
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { environmentOnce } from '../../config/environment-once';
 import { openLinksFor } from '../online-payments/open-links';
 
 const day = (value: Date) => value.toISOString().slice(0, 10);
@@ -58,6 +60,7 @@ function subsidyStatus(enabled: boolean, tasks: readonly TaskRow[]) {
   const done = (key: string) =>
     tasks.some((task) => task.templateKey === key && task.status === 'completed');
   if (done('subsidy_release')) return 'released' as const;
+  if (done('subsidy_inspection')) return 'inspected' as const;
   if (done('subsidy_application')) return 'applied' as const;
   return 'pending' as const;
 }
@@ -93,7 +96,8 @@ export async function customerProjects(
   const tasks: TaskRow[] = await db
     .select({
       projectId: projectTasks.projectId,
-      title: projectTasks.title,
+      // The step in the customer's words; the team's task title only when none is set.
+      title: sql<string>`coalesce(nullif(trim(${taskTemplates.customerTitle}), ''), ${projectTasks.title})`,
       stage: projectTasks.stage,
       templateKey: projectTasks.templateKey,
       status: projectTasks.status,
@@ -104,6 +108,7 @@ export async function customerProjects(
       waitingSince: projectTasks.waitingSince,
     })
     .from(projectTasks)
+    .leftJoin(taskTemplates, eq(taskTemplates.key, projectTasks.templateKey))
     .where(inArray(projectTasks.projectId, ids));
   const milestones = await db
     .select()
@@ -142,6 +147,12 @@ export async function customerProjects(
         status: milestone.status,
         dueAt: milestone.dueAt?.toISOString() ?? null,
         payUrl: links.get(milestone.id)?.url ?? null,
+        id: milestone.id,
+        // The customer's own share, due now, with online payments on (PRD 5.3).
+        canPayOnline:
+          milestone.payer === 'customer' &&
+          (milestone.status === 'due' || milestone.status === 'partly_paid') &&
+          environmentOnce().RAZORPAY_MODE !== 'off',
       }));
     return {
       id: row.id,

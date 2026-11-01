@@ -8,11 +8,18 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { describeError } from '@/lib/api/api-error';
+import { uploadDcrCertificate } from '@/lib/api/upload';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { NumberInput } from '../../settings/number-input';
 import { formatQuantity, useLocations, useRefreshInventory } from '../use-inventory';
 import { type LineEntry, ReceiveLine } from './receive-line';
+import { useOrderDcr, useRefreshOrderDcr } from './use-order-dcr';
 
-/** Records what arrived: quantities, a serial per unit, and the DCR cell details. */
+/**
+ * Records what arrived: quantities, a serial per unit, the vendor's invoice total (checked
+ * against the order on the bill), and for DCR panels the cell details and certificate.
+ */
 export function ReceiveDialog({
   order,
   onClose,
@@ -30,6 +37,10 @@ export function ReceiveDialog({
   const [location, setLocation] = useState<string | undefined>(undefined);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
+  const [invoicePaise, setInvoicePaise] = useState<number | null>(null);
+  const [certificate, setCertificate] = useState<File | null>(null);
+  const dcrLines = new Set(useOrderDcr(order?.id).data?.dcrLineIds ?? []);
+  const refreshDcr = useRefreshOrderDcr();
   const [entries, setEntries] = useState<Record<string, LineEntry>>({});
   const { reset } = form;
   const open = (order?.lines ?? []).filter((line) => line.quantity - line.receivedQuantity > 0);
@@ -39,6 +50,8 @@ export function ReceiveDialog({
     setReceivedOn(todayIn());
     setInvoiceNumber('');
     setInvoiceDate('');
+    setInvoicePaise(null);
+    setCertificate(null);
     setEntries(
       Object.fromEntries(
         order.lines.map((line) => [
@@ -87,6 +100,7 @@ export function ReceiveDialog({
             receivedOn,
             vendorInvoiceNumber: invoiceNumber,
             vendorInvoiceDate: invoiceDate || null,
+            vendorInvoicePaise: invoicePaise,
             notes: '',
             lines,
           },
@@ -95,6 +109,15 @@ export function ReceiveDialog({
       ),
     );
     if (!saved) return;
+    const receipt = saved.receipts.find((row) => !order.receipts.some((old) => old.id === row.id));
+    if (certificate && receipt) {
+      try {
+        await uploadDcrCertificate(receipt.id, certificate);
+      } catch (error) {
+        toast({ tone: 'error', title: t('certificateFailed', { reason: describeError(error) }) });
+      }
+    }
+    await refreshDcr(order.id);
     await refresh(saved.projectId);
     toast({ tone: 'success', title: t('saved', { number: saved.number }) });
     onClose();
@@ -140,6 +163,22 @@ export function ReceiveDialog({
               onChange={(e) => setInvoiceDate(e.target.value)}
             />
           </Field>
+          <Field
+            label={t('invoiceAmount')}
+            hint={t('invoiceAmountHint')}
+            error={errors.vendorInvoicePaise}
+          >
+            <NumberInput unit="paise" value={invoicePaise} onValueChange={setInvoicePaise} />
+          </Field>
+          {open.some((line) => dcrLines.has(line.id)) && (
+            <Field label={t('certificate')} hint={t('certificateHint')}>
+              <Input
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+                onChange={(e) => setCertificate(e.target.files?.[0] ?? null)}
+              />
+            </Field>
+          )}
         </div>
         {open.map((line) => {
           const position = submitted.findIndex((entry) => entry.id === line.id);
@@ -147,6 +186,7 @@ export function ReceiveDialog({
             <ReceiveLine
               key={line.id}
               line={line}
+              dcr={dcrLines.has(line.id)}
               entry={entries[line.id]}
               error={(key) => (position >= 0 ? errors[`lines.${position}.${key}`] : undefined)}
               onChange={(patch) => update(line.id, patch)}

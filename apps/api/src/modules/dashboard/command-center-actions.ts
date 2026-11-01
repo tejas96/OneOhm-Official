@@ -7,9 +7,11 @@ import {
   projects,
   projectTasks,
   quotations,
+  users,
 } from '@oneohm/database';
 import { daysBetween, formatInrCompact } from '@oneohm/shared';
-import { and, eq, inArray, isNotNull, isNull, lte, ne, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { assignmentConfirmations } from './command-center-confirm';
 
 const PAYMENT_GRACE_DAYS = 7;
 const DISCOM_PATIENCE_DAYS = 5;
@@ -27,7 +29,9 @@ export async function buildActions(db: Database, today: string): Promise<ActionI
     pendingDiscounts(db),
     bankClaims(db),
     taskAlerts(db, today),
+    assignmentConfirmations(db),
     leadFollowUps(db, today),
+    unownedLeads(db),
   ]);
   return groups.flat().slice(0, MAX_ACTIONS);
 }
@@ -61,7 +65,7 @@ async function latePayments(db: Database, today: string): Promise<ActionItem[]> 
       detail: `${row.name} · ${formatInrCompact(row.amount)}`,
       action: 'Send reminder',
       party: 'customer' as const,
-      href: `/projects/${row.projectId}`,
+      href: `/projects/${row.projectId}?tab=payments`,
     }));
 }
 
@@ -95,7 +99,7 @@ async function longDiscomWaits(db: Database, today: string): Promise<ActionItem[
       detail: `${row.name} · ${row.discom}`,
       action: `Call ${row.discom}`,
       party: 'discom' as const,
-      href: `/projects/${row.projectId}`,
+      href: `/command-center/tasks?show=waiting&party=discom&project=${row.projectId}`,
     }));
 }
 
@@ -119,7 +123,7 @@ async function pendingDiscounts(db: Database): Promise<ActionItem[]> {
       detail: rows.map((row) => row.number).join(', '),
       action: 'Review',
       party: 'internal',
-      href: '/quotations',
+      href: '/quotations?filter=approval',
     },
   ];
 }
@@ -148,7 +152,7 @@ async function bankClaims(db: Database): Promise<ActionItem[]> {
     detail: `${row.name} · ${row.lender ?? 'Bank'} · ${formatInrCompact(row.loan)}`,
     action: 'Claim',
     party: 'bank' as const,
-    href: `/projects/${row.projectId}`,
+    href: '/finance?tab=loans',
   }));
 }
 
@@ -174,7 +178,7 @@ async function taskAlerts(db: Database, today: string): Promise<ActionItem[]> {
       detail: 'Across live projects',
       action: 'Review',
       party: 'internal',
-      href: '/projects',
+      href: '/command-center/tasks?show=overdue',
     });
   if (unassigned > 0)
     items.push({
@@ -184,7 +188,7 @@ async function taskAlerts(db: Database, today: string): Promise<ActionItem[]> {
       detail: 'Add people to the roles, or assign by hand',
       action: 'Assign',
       party: 'internal',
-      href: '/projects',
+      href: '/command-center/tasks?show=unassigned',
     });
   return items;
 }
@@ -203,7 +207,33 @@ async function leadFollowUps(db: Database, today: string): Promise<ActionItem[]>
       detail: 'Due today or earlier',
       action: 'Open leads',
       party: 'internal',
-      href: '/leads',
+      href: '/leads?filter=due',
+    },
+  ];
+}
+
+/** Open leads with no owner, or whose owner has left: a manager picks one (PRD 3.3). */
+async function unownedLeads(db: Database): Promise<ActionItem[]> {
+  const rows = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .leftJoin(users, eq(users.id, leads.ownerUserId))
+    .where(
+      and(
+        notInArray(leads.stage, ['won', 'lost']),
+        or(isNull(users.id), ne(users.status, 'active')),
+      ),
+    );
+  if (rows.length === 0) return [];
+  return [
+    {
+      id: 'unowned-leads',
+      tone: 'atRisk',
+      title: plural(rows.length, '1 lead has no owner', '# leads have no owner'),
+      detail: 'Pick who follows them up',
+      action: 'Assign',
+      party: 'internal',
+      href: '/leads?filter=unowned',
     },
   ];
 }

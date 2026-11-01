@@ -14,12 +14,13 @@ import {
   type Transaction,
   vendors,
 } from '@oneohm/database';
+import { purchaseOrderTotals } from '@oneohm/domain';
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { lineTotal, purchaseOrderDetail, purchaseOrderSummaries } from './purchase-order-read';
+import { purchaseOrderDetail, purchaseOrderSummaries } from './purchase-order-read';
 import { nextNumber, suggestFacts } from './stock-ledger';
 
 /** Purchase orders from draft to closed (PRD 3.10). Receiving lives in ReceivingService. */
@@ -149,11 +150,7 @@ export async function insertOrder(
   actor: Actor,
   input: PurchaseOrderData,
 ): Promise<{ readonly id: string; readonly number: string }> {
-  const subtotal = input.lines.reduce(
-    (sum, line) => sum + Math.round(line.quantity * line.ratePaise),
-    0,
-  );
-  const total = input.lines.reduce((sum, line) => sum + lineTotal(line), 0);
+  const totals = purchaseOrderTotals(input.lines);
   const number = await nextNumber(tx, 'purchase_orders', 'PO', input.orderDate);
   const [order] = await tx
     .insert(purchaseOrders)
@@ -164,9 +161,9 @@ export async function insertOrder(
       orderDate: input.orderDate,
       expectedOn: input.expectedOn,
       notes: input.notes,
-      subtotalPaise: subtotal,
-      taxPaise: total - subtotal,
-      totalPaise: total,
+      subtotalPaise: totals.subtotalPaise,
+      taxPaise: totals.taxPaise,
+      totalPaise: totals.totalPaise,
       createdByUserId: actor.userId,
     })
     .returning({ id: purchaseOrders.id });
@@ -180,7 +177,7 @@ export async function insertOrder(
   );
   await recordAudit(tx, actor.userId, 'purchase_order.created', 'purchase_order', order.id, {
     number,
-    total,
+    total: totals.totalPaise,
   });
   return { id: order.id, number };
 }

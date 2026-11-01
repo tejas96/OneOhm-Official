@@ -75,16 +75,15 @@ export const SIGN_IN: Copy<typeof en.SIGN_IN> = {
 export const PROFILE: Copy<typeof en.PROFILE> = {
   title: 'मैं',
   phone: 'मोबाइल',
-  email: 'ईमेल',
   refer: 'पड़ोसी को बताएँ',
   referHint: 'किसी को सोलर चाहिए? आगे का सब हम संभाल लेंगे।',
   company: 'OneOhm',
   call: 'OneOhm को फ़ोन करें',
-  mail: 'OneOhm को ईमेल करें',
+  whatsapp: 'OneOhm को WhatsApp करें',
   signOut: 'साइन आउट',
   signOutHint: 'दोबारा साइन इन करने के लिए नया कोड लगेगा।',
   server: 'जुड़ा है:',
   language: 'भाषा',
-  languageHint: 'ऐप और यहाँ के अपडेट इसी भाषा में दिखेंगे। WhatsApp मैसेज अभी अंग्रेज़ी में ही आएँगे।',
+  languageHint: 'ऐप और अपडेट इसी भाषा में दिखेंगे। WhatsApp मैसेज भी, जहाँ वे इस भाषा में तैयार हैं।',
   languageNotSaved: 'इस फ़ोन पर बदल गई। इंटरनेट आने पर आपके खाते में सेव कर देंगे।',
 };

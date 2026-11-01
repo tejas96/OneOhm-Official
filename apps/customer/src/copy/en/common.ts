@@ -73,17 +73,16 @@ export const SIGN_IN = {
 export const PROFILE = {
   title: 'Me',
   phone: 'Mobile',
-  email: 'Email',
   refer: 'Refer a neighbour',
   referHint: 'Know someone who wants solar? We will take it from here.',
   company: 'OneOhm',
   call: 'Call OneOhm',
-  mail: 'Email OneOhm',
+  whatsapp: 'WhatsApp OneOhm',
   signOut: 'Sign out',
   signOutHint: 'You will need a new code to sign in again.',
   server: 'Connected to',
   language: 'Language',
   languageHint:
-    'The app and your updates here use this language. WhatsApp messages stay in English for now.',
+    'The app and your updates use this language. WhatsApp messages use it too where OneOhm has them in it.',
   languageNotSaved: 'Changed on this phone. We will save it to your account when you are online.',
 } as const;

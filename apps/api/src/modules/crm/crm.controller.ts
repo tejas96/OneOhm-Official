@@ -35,14 +35,17 @@ export class CrmController {
         assertCan(actor, 'leads.manage');
         return {
           status: 201,
-          body: await this.leads.addActivity(actor, params.id, body.kind, body.note),
+          body: await this.leads.addActivity(actor, params.id, body.kind, body.note, body.internal),
         };
       },
       convertLead: async ({ params, body }) => {
         assertCan(actor, 'customers.manage', 'quotations.create');
         return {
           status: 201,
-          body: await this.customers.convertLead(actor, params.id, body.kind, body.property),
+          body: await this.customers.convertLead(actor, params.id, body.kind, {
+            property: body.property,
+            propertyId: body.propertyId,
+          }),
         };
       },
       listCustomers: async ({ query }) => {
@@ -52,6 +55,10 @@ export class CrmController {
       getCustomer: async ({ params }) => {
         assertCan(actor, 'customers.view');
         return { status: 200, body: await this.customers.get(params.id) };
+      },
+      updateCustomer: async ({ params, body }) => {
+        assertCan(actor, 'customers.manage');
+        return { status: 200, body: await this.customers.update(actor, params.id, body) };
       },
       getCustomerActivity: async ({ params }) => {
         assertCan(actor, 'customers.view');

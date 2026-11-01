@@ -10,6 +10,10 @@ export interface CenterScope {
   readonly end: string;
   /** Live projects, narrowed by manager and type when those filters are on. */
   readonly projects: SQL;
+  /** Completed projects, narrowed the same way. */
+  readonly completed: SQL;
+  /** Only the manager and type filters, whatever the project status; undefined when off. */
+  readonly filters: SQL | undefined;
   readonly narrowed: boolean;
 }
 
@@ -33,6 +37,7 @@ function periodStart(period: CommandCenterQuery['period'], today: string): strin
 
 export function centerScope(query: CommandCenterQuery, today: string): CenterScope {
   const live = inArray(projects.status, ['active', 'operational']);
+  const completed = eq(projects.status, 'completed');
   const filters = [
     query.managerUserId ? eq(projects.managerUserId, query.managerUserId) : undefined,
     query.projectType ? eq(projects.type, query.projectType) : undefined,
@@ -42,6 +47,8 @@ export function centerScope(query: CommandCenterQuery, today: string): CenterSco
     start: periodStart(query.period ?? 'this_month', today),
     end: today,
     projects: and(live, ...filters) ?? live,
+    completed: and(completed, ...filters) ?? completed,
+    filters: filters.length > 0 ? and(...filters) : undefined,
     narrowed: filters.length > 0,
   };
 }

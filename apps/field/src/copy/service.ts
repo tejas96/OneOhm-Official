@@ -12,6 +12,7 @@ export const SERVICE = {
   problem: 'The problem',
   customerPhotos: (count: number) =>
     `${count} ${count === 1 ? 'photo' : 'photos'} from the customer`,
+  customerMedia: 'Recorded by the customer',
   customer: 'Customer and place',
   call: (name: string) => `Call ${name}`,
   directions: 'Directions',

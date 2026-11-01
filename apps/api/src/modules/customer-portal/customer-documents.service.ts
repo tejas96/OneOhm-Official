@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerDocument, CustomerReport, ReportKey } from '@oneohm/api-contracts';
 import { documents, projects, projectTasks } from '@oneohm/database';
+import { CUSTOMER_DOCUMENT_CATEGORIES } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -13,21 +14,7 @@ import { ReportStatusService } from '../reports/report-status.service';
  * Papers a homeowner should have (PRD 5.4). Internal files (vendor papers, working
  * photos) stay with the team; site photos show only on updates the customer can see.
  */
-const CUSTOMER_FACING = new Set([
-  'site_survey',
-  'customer_kyc',
-  'electricity_bill',
-  'property',
-  'quotation',
-  'invoice_receipt',
-  'bank_loan',
-  'discom',
-  'subsidy',
-  'commissioning_handover',
-  'warranty',
-  'statutory_report',
-  'other',
-]);
+const CUSTOMER_FACING: ReadonlySet<string> = new Set(CUSTOMER_DOCUMENT_CATEGORIES);
 
 @Injectable()
 export class CustomerDocumentsService {

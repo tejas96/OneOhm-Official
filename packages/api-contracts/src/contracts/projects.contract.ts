@@ -8,6 +8,7 @@ import {
   projectTaskSchema,
   waitingPartySchema,
 } from '../schemas/project.schema';
+import { taskFlowRoutes } from './task-flow.routes';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -29,6 +30,12 @@ export const projectsContract = c.router({
       /** Payment terms for this deal; the default plan when left out. */
       paymentPlanId: idSchema.nullable().optional(),
       startDate: calendarDateSchema,
+      /** When the owner wants it finished (optional, PRD 3.8). */
+      targetFinishDate: calendarDateSchema.nullable().optional(),
+      /** The one crew company for crew work; left out, the engine picks one. */
+      contractorId: idSchema.nullable().optional(),
+      /** Staff named for the project; its in-house tasks go to them first. */
+      teamUserIds: z.array(idSchema).max(30).default([]),
     }),
     responses: {
       201: z.object({
@@ -36,6 +43,8 @@ export const projectsContract = c.router({
         code: z.string(),
         tasks: z.number().int(),
         unassigned: z.number().int(),
+        /** Critical tasks with a proposed person for a manager to confirm. */
+        toConfirm: z.number().int(),
       }),
     },
     summary:
@@ -58,7 +67,10 @@ export const projectsContract = c.router({
     pathParams: idParams,
     body: z.object({
       milestoneId: idSchema,
+      /** The money that arrived. */
       amountPaise: paiseSchema.positive(),
+      /** TDS a business customer deducted: settles the milestone with the money. */
+      tdsPaise: paiseSchema.nonnegative().optional(),
       method: z.enum(['cash', 'cheque', 'bank_transfer', 'upi', 'razorpay', 'bank_disbursement']),
       receivedOn: calendarDateSchema,
       reference: z.string().trim().max(120).nullable().optional(),
@@ -126,4 +138,5 @@ export const tasksContract = c.router({
     body: z.object({ userId: idSchema.nullable() }),
     responses: { 200: projectTaskSchema },
   },
+  ...taskFlowRoutes,
 });

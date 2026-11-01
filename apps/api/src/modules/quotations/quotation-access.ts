@@ -58,6 +58,10 @@ export function detailFor(actor: Actor, detail: QuotationDetail): QuotationDetai
   if (seesCost(actor)) return detail;
   return {
     ...detail,
+    input: {
+      ...detail.input,
+      extras: detail.input.extras?.map((extra) => ({ ...extra, unitCostPaise: 0 })),
+    },
     totals: hideTotals(detail.totals),
     lines: detail.lines.map((line) => ({ ...line, costPaise: 0 })),
   };

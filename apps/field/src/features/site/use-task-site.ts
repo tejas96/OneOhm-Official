@@ -2,7 +2,7 @@ import type { TaskSite, TrackingStatus } from '@oneohm/api-contracts';
 import { unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
-import { readLocation } from '@/features/attendance/location';
+import { type Reading, readLocation } from '@/features/attendance/location';
 
 export const siteKeys = {
   task: (taskId: string) => ['site', 'task', taskId] as const,
@@ -25,7 +25,8 @@ export type Missed = 'denied' | 'nofix' | null;
  * on and it is working hours; otherwise nothing is read at all.
  */
 export async function readIfAllowed(tracking: TrackingStatus | undefined): Promise<{
-  position: { latitude: number; longitude: number; accuracyM: number | null } | null;
+  /** With the battery and connection at the reading, when the phone tells us. */
+  position: Reading | null;
   missed: Missed;
 }> {
   if (tracking?.state !== 'on') return { position: null, missed: null };

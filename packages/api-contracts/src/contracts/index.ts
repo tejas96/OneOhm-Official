@@ -16,6 +16,7 @@ import {
   customerAppLanguageContract,
   customerLanguageContract,
 } from './customer-language.contract';
+import { customerPayContract } from './customer-pay.contract';
 import { discomContract } from './discom.contract';
 import { documentBundleContract } from './document-bundle.contract';
 import { documentChecklistContract } from './document-checklist.contract';
@@ -26,14 +27,18 @@ import {
 } from './document-requests.contract';
 import { documentRequirementsContract } from './document-requirements.contract';
 import { documentsContract } from './documents.contract';
+import { engagementContract } from './engagement.contract';
 import { financeContract } from './finance.contract';
 import { gatewayCheckContract } from './gateway-check.contract';
 import { inventoryContract } from './inventory.contract';
+import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
 import { paymentPlansContract } from './payment-plans.contract';
 import { peopleContract } from './people.contract';
+import { productDatasheetContract } from './product-datasheet.contract';
+import { projectTeamContract } from './project-team.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { purchasingContract } from './purchasing.contract';
 import { quotationsContract } from './quotations.contract';
@@ -70,6 +75,7 @@ export type ApiRouterDefinition = {
   readonly finance: typeof financeContract;
   readonly billing: typeof billingContract;
   readonly customerBilling: typeof customerBillingContract;
+  readonly customerPay: typeof customerPayContract;
   readonly contractors: typeof contractorsContract;
   readonly discom: typeof discomContract;
   readonly workforce: typeof workforceContract;
@@ -107,6 +113,10 @@ export type ApiRouterDefinition = {
   readonly stageRatings: typeof stageRatingsContract;
   readonly customerStageRatings: typeof customerStageRatingsContract;
   readonly serviceVisits: typeof serviceVisitsContract;
+  readonly leadIntake: typeof leadIntakeContract;
+  readonly engagement: typeof engagementContract;
+  readonly projectTeam: typeof projectTeamContract;
+  readonly productDatasheet: typeof productDatasheetContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -125,6 +135,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   finance: financeContract,
   billing: billingContract,
   customerBilling: customerBillingContract,
+  customerPay: customerPayContract,
   contractors: contractorsContract,
   discom: discomContract,
   workforce: workforceContract,
@@ -162,11 +173,24 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   stageRatings: stageRatingsContract,
   customerStageRatings: customerStageRatingsContract,
   serviceVisits: serviceVisitsContract,
+  leadIntake: leadIntakeContract,
+  engagement: engagementContract,
+  projectTeam: projectTeamContract,
+  productDatasheet: productDatasheetContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
+export { type CustomerPayLink, customerPayLinkSchema } from './customer-pay.contract';
 export { type ReportSetting, reportSettingSchema } from './document-requests.contract';
+export {
+  type LeadOwner,
+  leadOwnerSchema,
+  type PhoneMatch,
+  phoneMatchSchema,
+  type WebsiteLeadInput,
+  websiteLeadInputSchema,
+} from './lead-intake.contract';
 export {
   REPORT_KEYS,
   type ReportKey,

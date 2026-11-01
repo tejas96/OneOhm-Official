@@ -12,6 +12,14 @@ export function verifyMetaSignature(
   return expected.length === given.length && timingSafeEqual(expected, given);
 }
 
+/** A photo, paper, video or voice note the customer sent; WhatsApp keeps it under `id`. */
+export interface IncomingMedia {
+  readonly type: 'image' | 'document' | 'video' | 'audio';
+  readonly id: string;
+  readonly mimeType: string | null;
+  readonly fileName: string | null;
+}
+
 export interface Incoming {
   readonly from: string;
   readonly waMessageId: string;
@@ -21,6 +29,8 @@ export interface Incoming {
   readonly kind: 'text' | 'choice' | 'media' | 'other';
   readonly text: string;
   readonly choiceId: string | null;
+  /** Set on `media` messages that carry a downloadable file. */
+  readonly media?: IncomingMedia | null;
 }
 
 export interface DeliveryUpdate {
@@ -43,8 +53,31 @@ interface RawMessage {
     list_reply?: { id?: string; title?: string };
   };
   button?: { payload?: string; text?: string };
-  image?: { caption?: string };
-  document?: { caption?: string; filename?: string };
+  image?: RawMedia;
+  document?: RawMedia & { filename?: string };
+  video?: RawMedia;
+  audio?: RawMedia;
+}
+
+interface RawMedia {
+  id?: string;
+  mime_type?: string;
+  caption?: string;
+}
+
+const MEDIA_TYPES = ['image', 'document', 'video', 'audio'] as const;
+
+/** The file in a photo, paper, video or voice-note message, or null for anything else. */
+export function readMedia(message: RawMessage): IncomingMedia | null {
+  const type = MEDIA_TYPES.find((name) => name === message.type);
+  const raw = type ? message[type] : undefined;
+  if (!type || !raw?.id) return null;
+  return {
+    type,
+    id: raw.id,
+    mimeType: raw.mime_type ?? null,
+    fileName: (type === 'document' ? message.document?.filename : undefined) ?? null,
+  };
 }
 
 interface RawStatus {
@@ -83,12 +116,20 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
     };
   if (message.type === 'text')
     return { ...base, kind: 'text', text: message.text?.body?.trim() ?? '', choiceId: null };
-  if (message.type === 'image' || message.type === 'document')
+  const media = readMedia(message);
+  if (media)
     return {
       ...base,
       kind: 'media',
-      text: message.image?.caption ?? message.document?.caption ?? message.document?.filename ?? '',
+      text: (
+        message.image?.caption ??
+        message.video?.caption ??
+        message.document?.caption ??
+        message.document?.filename ??
+        ''
+      ).trim(),
       choiceId: null,
+      media,
     };
   return { ...base, kind: 'other', text: '', choiceId: null };
 }

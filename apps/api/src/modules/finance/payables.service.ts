@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Payable } from '@oneohm/api-contracts';
+import type { Payable, PayableReview } from '@oneohm/api-contracts';
 import {
   applyVendorAdvances,
   goodsReceipts,
@@ -7,17 +7,20 @@ import {
   postPayableApproved,
   postPayablePaid,
   projects,
+  type Transaction,
   users,
+  workOrderAdvances,
+  workOrders,
 } from '@oneohm/database';
-import type { MoneyOutMethod } from '@oneohm/domain';
+import { billTds, type MoneyOutMethod } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
-import { and, asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { presentPayable as present } from './payable-view';
 
-type Row = typeof payables.$inferSelect;
 type StatusFilter = 'open' | 'pending' | 'approved' | 'paid' | 'all';
 
 export interface NewPayable {
@@ -28,6 +31,8 @@ export interface NewPayable {
   billNumber?: string | null | undefined;
   amountPaise: number;
   dueOn: string;
+  /** TDS to hold, in basis points; worked out on the whole amount (no GST known). */
+  tdsBp?: number | undefined;
 }
 
 /**
@@ -91,6 +96,12 @@ export class PayablesService {
           billNumber: input.billNumber ?? null,
           amountPaise: input.amountPaise,
           dueOn: input.dueOn,
+          tdsBp: input.tdsBp ?? 0,
+          tdsPaise: billTds({
+            amountPaise: input.amountPaise,
+            gstPaise: 0,
+            tdsBp: input.tdsBp ?? 0,
+          }),
         })
         .returning({ id: payables.id });
       if (!row) throw new Error('Payable insert returned nothing.');
@@ -99,6 +110,41 @@ export class PayablesService {
         party: input.party,
       });
       return row.id;
+    });
+    return this.get(id);
+  }
+
+  /**
+   * Before approval, finance enters the vendor's invoice total (checked against the
+   * order) and the TDS rate. TDS is fixed once the bill is approved and booked.
+   */
+  async review(actor: Actor, id: string, input: PayableReview): Promise<Payable> {
+    await this.db.transaction(async (tx) => {
+      const [bill] = await tx.select().from(payables).where(eq(payables.id, id)).for('update');
+      if (!bill) throw notFound('That bill');
+      if (bill.status !== 'pending') {
+        throw conflict('Invoice and TDS can be changed only before the bill is approved.');
+      }
+      if (input.tdsBp > 0) await assertTdsHere(tx, bill);
+      const tdsPaise = billTds({
+        amountPaise: bill.amountPaise,
+        gstPaise: bill.gstPaise,
+        tdsBp: input.tdsBp,
+      });
+      await tx
+        .update(payables)
+        .set({
+          vendorInvoicePaise: input.vendorInvoicePaise,
+          tdsBp: input.tdsBp,
+          tdsPaise,
+          updatedAt: new Date(),
+        })
+        .where(eq(payables.id, id));
+      await recordAudit(tx, actor.userId, 'payable.reviewed', 'payable', id, {
+        vendorInvoicePaise: input.vendorInvoicePaise,
+        tdsBp: input.tdsBp,
+        tdsPaise,
+      });
     });
     return this.get(id);
   }
@@ -174,26 +220,27 @@ export class PayablesService {
   }
 }
 
-function present(row: Row, code: string | null, approver: string | null, today: string): Payable {
-  return {
-    id: row.id,
-    projectId: row.projectId,
-    projectCode: code,
-    party: row.party,
-    partyName: row.partyName,
-    description: row.description,
-    billNumber: row.billNumber,
-    amountPaise: row.amountPaise,
-    dueOn: row.dueOn,
-    status: row.status,
-    overdue: row.status !== 'paid' && row.dueOn < today,
-    approvedBy:
-      row.approvedByUserId && approver ? { id: row.approvedByUserId, fullName: approver } : null,
-    approvedAt: row.approvedAt?.toISOString() ?? null,
-    paidOn: row.paidOn,
-    paidMethod: row.paidMethod,
-    paidReference: row.paidReference,
-    createdAt: row.createdAt.toISOString(),
-    advanceAdjustedPaise: row.advanceAdjustedPaise,
-  };
+/**
+ * Staff payments carry no TDS, and a work order's TDS is held when it settles (its
+ * bills are already net), so TDS is set here only on other vendor and crew bills.
+ */
+async function assertTdsHere(tx: Transaction, bill: typeof payables.$inferSelect) {
+  if (bill.party === 'employee') {
+    throw invalid('Staff payments carry no TDS.', { tdsBp: 'Leave at 0.' });
+  }
+  const [order] = await tx
+    .select({ id: workOrders.id })
+    .from(workOrders)
+    .where(or(eq(workOrders.payableId, bill.id), eq(workOrders.retentionPayableId, bill.id)))
+    .limit(1);
+  const [advance] = await tx
+    .select({ id: workOrderAdvances.id })
+    .from(workOrderAdvances)
+    .where(eq(workOrderAdvances.payableId, bill.id))
+    .limit(1);
+  if (order || advance) {
+    throw invalid('TDS on a work order is held when the work order settles.', {
+      tdsBp: 'Already worked out on the work order.',
+    });
+  }
 }

@@ -15,6 +15,7 @@ export type SetDraft = <K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) 
 export const BLANK_TASK: TaskDraft = {
   key: '',
   title: '',
+  description: null,
   stage: 'survey',
   roleKey: '',
   skillKey: null,
@@ -29,8 +30,13 @@ export const BLANK_TASK: TaskDraft = {
   notifyEvent: 'completed',
   messageKey: 'project_milestone',
   customerTitle: null,
+  recipients: 'customer',
+  attachment: null,
   notifyManager: false,
+  confirmAssignee: false,
+  escalateAfterDays: null,
   approval: false,
+  reviewer: 'approvers',
   evidence: [],
   captures: [],
   capturesText: '',
@@ -97,5 +103,6 @@ export function toInput(draft: TaskDraft): TaskTemplateInput {
       ? checklistFrom(checklistText, draft.key)
       : (draft.checklist ?? null),
     customerTitle: draft.customerTitle?.trim() ? draft.customerTitle.trim() : null,
+    description: draft.description?.trim() ? draft.description.trim() : null,
   };
 }

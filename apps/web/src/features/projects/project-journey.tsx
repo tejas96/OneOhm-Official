@@ -8,6 +8,7 @@ import { Hourglass } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { ForecastNote } from './forecast-note';
 
 /** Project · journey · status, shared by the command centre and the projects list. */
 export const PROJECT_COLUMNS =
@@ -151,6 +152,7 @@ export function ProjectStatus({ project }: { readonly project: ProjectSummary })
   return (
     <div className="flex flex-col items-start gap-1.5">
       <StatusPill tone={project.tone} label={project.toneLabel} size="sm" />
+      {project.blockedBy && <p className="type-body-sm text-blocked">{project.blockedBy}</p>}
       {project.next && (
         <p className="type-body-sm text-ink-muted">
           {project.next.label} ·{' '}
@@ -159,6 +161,7 @@ export function ProjectStatus({ project }: { readonly project: ProjectSummary })
           </time>
         </p>
       )}
+      <ForecastNote forecast={project.forecast} />
     </div>
   );
 }

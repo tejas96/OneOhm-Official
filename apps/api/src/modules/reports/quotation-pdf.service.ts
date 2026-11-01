@@ -60,6 +60,9 @@ export class QuotationPdfService {
         wattageWp: product.wattageWp,
         ratedW: product.ratedW,
         dcr: product.dcr,
+        efficiencyBp: product.efficiencyBp,
+        technology: product.technology,
+        warrantyYears: product.warrantyYears,
       };
     };
     const panel = label(detail.input.panelProductId);

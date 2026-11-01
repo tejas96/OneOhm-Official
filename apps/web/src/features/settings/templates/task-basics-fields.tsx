@@ -1,7 +1,14 @@
 'use client';
 
 import type { TaskTemplateRecord } from '@oneohm/api-contracts';
-import { Checkbox, Field, Input, Select, type SelectOption } from '@oneohm/design-system/web';
+import {
+  Checkbox,
+  Field,
+  Input,
+  Select,
+  type SelectOption,
+  Textarea,
+} from '@oneohm/design-system/web';
 import { EPC_STAGES, WAITING_PARTIES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import { useSkills } from '@/features/team/skills/use-skills';
@@ -39,6 +46,13 @@ export function TaskBasicsFields({
     <div className="flex flex-col gap-5">
       <Field label={t('title')} error={errors.title} required>
         <Input value={draft.title} onChange={(e) => set('title', e.target.value)} />
+      </Field>
+      <Field label={t('description')} hint={t('descriptionHint')} error={errors.description}>
+        <Textarea
+          rows={2}
+          value={draft.description ?? ''}
+          onChange={(e) => set('description', e.target.value)}
+        />
       </Field>
       {isNew && (
         <Field label={t('key')} hint={t('keyHint')} error={errors.key} required>

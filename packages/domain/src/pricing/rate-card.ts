@@ -43,6 +43,8 @@ export interface RateCard {
   readonly toleranceBp: number;
   /** Discounts above this share of the price need approval; unset uses the server default. */
   readonly discountApprovalBp?: number;
+  /** Shadow-free m² a rooftop needs per kWp, checked after the survey; 0 switches it off. */
+  readonly sqmPerKwp?: number;
 }
 
 export interface SiteFacts {

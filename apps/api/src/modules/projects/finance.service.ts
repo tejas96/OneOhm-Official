@@ -10,6 +10,7 @@ import {
   projects,
   type Transaction,
 } from '@oneohm/database';
+import { customerTdsProblem } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -23,7 +24,10 @@ import { checkCollected, recordHandling } from './payment-handling';
 
 export interface NewPayment {
   milestoneId: string;
+  /** The money that arrived. */
   amountPaise: number;
+  /** TDS a business customer deducted (PRD 3.11): it settles the milestone too. */
+  tdsPaise?: number | undefined;
   method: 'cash' | 'cheque' | 'bank_transfer' | 'upi' | 'razorpay' | 'bank_disbursement';
   receivedOn: string;
   reference?: string | null | undefined;
@@ -78,11 +82,15 @@ export class FinanceService {
       .from(payments)
       .where(eq(payments.milestoneId, milestone.id));
     let already = Number(paid?.total ?? 0);
+    const tdsPaise = input.tdsPaise ?? 0;
+    // The receipt settles the money and the TDS kept back; both count against the milestone.
+    const settles = input.amountPaise + tdsPaise;
     const tooMuch = () =>
       invalid('This is more than is left on the milestone.', {
         amountPaise: `At most ${formatInr(milestone.amountPaise - already)} is left on this milestone.`,
       });
-    if (already + input.amountPaise > milestone.amountPaise) throw tooMuch();
+    if (already + settles > milestone.amountPaise) throw tooMuch();
+    checkCustomerTds(milestone.payer, input, tdsPaise);
     if (milestone.payer === 'bank' && input.method !== 'bank_disbursement') {
       throw invalid('The bank share is recorded as a bank disbursement.', {
         method: 'Choose bank disbursement.',
@@ -102,7 +110,7 @@ export class FinanceService {
         .from(payments)
         .where(eq(payments.milestoneId, milestone.id));
       already = Number(locked?.total ?? 0);
-      if (already + input.amountPaise > milestone.amountPaise) throw tooMuch();
+      if (already + settles > milestone.amountPaise) throw tooMuch();
       const [payment] = await tx
         .insert(payments)
         .values({
@@ -110,7 +118,8 @@ export class FinanceService {
           milestoneId: milestone.id,
           payer: milestone.payer,
           method: input.method,
-          amountPaise: input.amountPaise,
+          amountPaise: settles,
+          tdsPaise,
           receivedOn: input.receivedOn,
           reference: input.reference ?? null,
           recordedByUserId: actor.userId,
@@ -121,7 +130,7 @@ export class FinanceService {
         })
         .returning({ id: payments.id });
       if (!payment) throw new Error('Payment insert returned nothing.');
-      const total = already + input.amountPaise;
+      const total = already + settles;
       const status = total >= milestone.amountPaise ? 'paid' : 'partly_paid';
       await tx
         .update(paymentMilestones)
@@ -151,7 +160,7 @@ export class FinanceService {
       await tx.insert(projectActivities).values({
         projectId,
         kind: 'payment',
-        message: `${formatInr(input.amountPaise)} received (${milestone.label}).`,
+        message: receivedMessage(input.amountPaise, tdsPaise, milestone.label),
         userId: actor.userId,
       });
       if (project && milestone.payer === 'customer') {
@@ -171,6 +180,7 @@ export class FinanceService {
       await recordAudit(tx, actor.userId, 'payment.recorded', 'project', projectId, {
         milestoneId: milestone.id,
         amountPaise: input.amountPaise,
+        tdsPaise,
         method: input.method,
       });
       await recordHandling(tx, payment.id, input, actor.userId);
@@ -182,4 +192,26 @@ export class FinanceService {
     if (!input.gatewayPaymentId) await closeOpenLinks(this.db, this.gateway, milestone.id);
     return id;
   }
+}
+
+const receivedMessage = (amountPaise: number, tdsPaise: number, label: string) =>
+  tdsPaise > 0
+    ? `${formatInr(amountPaise)} received (${label}), with ${formatInr(tdsPaise)} TDS deducted by the customer.`
+    : `${formatInr(amountPaise)} received (${label}).`;
+
+const TDS_PROBLEM = {
+  not_by_bank: 'TDS is recorded only on a customer payment by bank transfer, UPI or cheque.',
+  too_high: 'That is more than a fifth of the payment. Check the TDS amount.',
+} as const;
+
+/** TDS a customer deducted must come with bank money and look like TDS. */
+function checkCustomerTds(payer: 'customer' | 'bank', input: NewPayment, tdsPaise: number) {
+  const problem = customerTdsProblem({
+    method: input.method,
+    payer,
+    fromCredit: input.paidFromCredit ?? false,
+    receivedPaise: input.amountPaise,
+    tdsPaise,
+  });
+  if (problem) throw invalid(TDS_PROBLEM[problem], { tdsPaise: TDS_PROBLEM[problem] });
 }

@@ -40,7 +40,8 @@
       "off_grid": "Off-grid systems get no subsidy. On-grid and hybrid systems do.",
       "meter_not_in_society_name": "The society's meter must be in the society's name, not the builder's.",
       "already_subsidised": "This property has already received its one subsidy.",
-      "no_rule": "No subsidy rule is in force for this category today."
+      "no_rule": "No subsidy rule is in force for this category today.",
+      "no_households": "A society's subsidy is per household. Add the number of households to work it out."
     },
     "price": {
       "label": "The price",
@@ -122,7 +123,8 @@
         "system": "System",
         "site": "Site defaults",
         "discount": "Discount",
-        "lines": "How the price adds up"
+        "lines": "How the price adds up",
+        "extras": "Extras and adjustments"
       },
       "customer": {
         "search": "Find a customer",
@@ -133,7 +135,11 @@
         "noSites": "This customer has no site yet.",
         "floors": "{count, plural, =0 {Ground floor} one {# floor} other {# floors}}",
         "subsidyClaimed": "Subsidy already claimed",
-        "change": "Change"
+        "change": "Change",
+        "claimedSwitch": "Subsidy already used for this site",
+        "claimedSwitchHint": "One subsidy per property. Set when it was claimed before; quotations then show no subsidy.",
+        "claimedSaved": "Subsidy status saved",
+        "claimedFailed": "The subsidy status was not saved"
       },
       "system": {
         "category": "Customer category",
@@ -174,8 +180,8 @@
         "label": "Discount",
         "hint": "In rupees, before GST. Larger discounts need a manager's approval.",
         "share": "{amount} off, {percent}% of the price before discount.",
-        "needsApproval": "This discount is above the limit. The quotation is saved, and a manager approves it before it can be sent.",
-        "approvedBySaving": "This discount is above the limit. You approve discounts, so it is approved when you save."
+        "needsApproval": "The discount and any price reductions together are above the limit. The quotation is saved, and a manager approves it before it can be sent.",
+        "approvedBySaving": "The discount and any price reductions together are above the limit. You approve discounts, so it is approved when you save."
       },
       "actions": {
         "draft": "Save draft",
@@ -197,7 +203,9 @@
       "dates": "Created {created} · valid until {valid}",
       "customer": "Customer and site",
       "system": "What is quoted",
-      "lines": "How the price adds up"
+      "lines": "How the price adds up",
+      "rejected": "Turned down",
+      "rejectedReason": "Reason given: {reason}"
     },
     "facts": {
       "size": "System size",
@@ -244,7 +252,7 @@
     },
     "project": {
       "title": "Create the project",
-      "description": "Confirm the DISCOM, loan and options. The tasks, team and payment schedule are set up from these.",
+      "description": "Confirm the DISCOM, loan, options and team. The tasks, who does them and the payment schedule are set up from these.",
       "discom": "DISCOM",
       "choose": "Choose…",
       "start": "Start date",
@@ -270,6 +278,61 @@
       "paymentPlanHint": "How the customer pays across the project. The bank's share of a loan is always its own payment.",
       "paymentPlanDefault": "Default: {name}",
       "paymentPlanStandard": "Standard 25 / 65 / 10"
+    },
+    "extras": {
+      "none": "No extras. Add an optional item the customer may choose, a gift, a charge for this site, or an adjustment.",
+      "addLine": "Add a line",
+      "remove": "Remove {item}",
+      "free": "Free",
+      "sheetTitle": "Add a line",
+      "sheetDescription": "Anything that changes the price or our cost needs a reason. A lower price counts toward the discount limit.",
+      "kind": "Kind of line",
+      "kinds": {
+        "optional": "Optional",
+        "gift": "Gift",
+        "charge": "Charge",
+        "adjustment": "Adjustment"
+      },
+      "kindHint": {
+        "optional": "Shown on the quotation for the customer to choose; not in the total.",
+        "gift": "Free to the customer. Its cost still counts against the margin.",
+        "charge": "Extra work this site needs, such as a crane or a longer cable route.",
+        "adjustment": "Raises or lowers the price by hand."
+      },
+      "product": "From the catalog",
+      "productHint": "Pick a product to use its price and cost, or type the item.",
+      "typed": "Type it in",
+      "description": "Item",
+      "quantity": "Quantity",
+      "price": "Price per unit, before GST",
+      "cost": "Our cost per unit",
+      "direction": "Change",
+      "lower": "Lower the price",
+      "raise": "Raise the price",
+      "amount": "Amount, before GST",
+      "amountHint": "GST is added on top.",
+      "reason": "Reason",
+      "reasonHint": {
+        "gift": "For example: festive offer agreed by the manager.",
+        "charge": "For example: fourth-floor roof without stairs, crane needed.",
+        "adjustment": "For example: rounded off on the customer's request."
+      },
+      "cancel": "Cancel",
+      "add": "Add line",
+      "errors": {
+        "description": "Describe the item.",
+        "quantity": "Enter a quantity above zero.",
+        "price": "Enter an amount.",
+        "cost": "Enter a valid cost.",
+        "reason": "Say why this line is here."
+      },
+      "groups": {
+        "charge": "Site charges",
+        "adjustment": "Adjustments",
+        "gift": "Gifts, free to the customer",
+        "optional": "Optional items"
+      },
+      "optionalNote": "Not in the total. Prices are before GST; adding one makes a new revision."
     }
   }
 }

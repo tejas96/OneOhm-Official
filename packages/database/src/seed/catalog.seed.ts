@@ -1,8 +1,11 @@
 import {
+  CUSTOMER_STEP_TITLES,
   DEFAULT_MESSAGE_TEMPLATES,
   DEFAULT_MILESTONES,
   DEFAULT_SUBSIDY_RULES,
   DEFAULT_TASK_LIBRARY,
+  STEP_MESSAGE_DEFAULTS,
+  taskDescription,
 } from '@oneohm/domain';
 import type { Database } from '../client';
 import {
@@ -190,6 +193,7 @@ export async function seedCatalog(db: Database): Promise<void> {
       DEFAULT_TASK_LIBRARY.map((template, position) => ({
         key: template.key,
         title: template.title,
+        description: template.description ?? taskDescription(template.key),
         stage: template.stage,
         roleKey: template.roleKey,
         offsetDays: template.offsetDays,
@@ -200,10 +204,16 @@ export async function seedCatalog(db: Database): Promise<void> {
         customerVisible: template.customerVisible,
         notifyCustomer: template.notifyCustomer,
         approval: template.approval,
+        reviewer: template.reviewer ?? 'approvers',
         evidence: [...template.evidence],
         captures: [...template.captures],
         onComplete: template.onComplete ?? null,
+        confirmAssignee: template.confirmAssignee ?? false,
+        escalateAfterDays: template.escalateAfterDays ?? null,
         reports: [...(template.reports ?? [])],
+        // Customer-facing words and message (PRD 5.2, 6.2); internal steps have none.
+        customerTitle: CUSTOMER_STEP_TITLES[template.key] ?? null,
+        ...STEP_MESSAGE_DEFAULTS[template.key],
         position,
       })),
     )

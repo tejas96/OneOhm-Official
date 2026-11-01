@@ -1,4 +1,9 @@
-import { AGEING_BUCKETS, LEDGER_ACCOUNT_TYPES } from '@oneohm/domain';
+import {
+  AGEING_BUCKETS,
+  INVOICE_MATCH_STATUSES,
+  LEDGER_ACCOUNT_TYPES,
+  TDS_MAX_BP,
+} from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
@@ -48,6 +53,8 @@ export const receivedPaymentSchema = z.object({
   payer: payerSchema,
   method: moneyInMethodSchema,
   amountPaise: paiseSchema,
+  /** TDS the customer deducted; the money that arrived is the amount less this. */
+  tdsPaise: paiseSchema,
   receivedOn: calendarDateSchema,
   reference: z.string().nullable(),
   reversed: z.boolean(),
@@ -78,8 +85,28 @@ export const payableSchema = z.object({
   createdAt: instantSchema,
   /** Vendor advances set against the bill; only the rest is paid out. */
   advanceAdjustedPaise: paiseSchema,
+  /** The vendor's own invoice total, and how it compares with the order (PRD 3.10). */
+  vendorInvoicePaise: paiseSchema.nullable(),
+  invoiceMatch: z.object({
+    status: z.enum(INVOICE_MATCH_STATUSES),
+    differencePaise: z.number().int(),
+  }),
+  /** GST inside the amount, when known; TDS is worked out on the rest. */
+  gstPaise: paiseSchema,
+  /** TDS held for the government (PRD 3.11): rate in basis points and amount. */
+  tdsBp: z.number().int(),
+  tdsPaise: paiseSchema,
+  /** What still goes to the payee: amount less TDS and advances set off. */
+  toPayPaise: paiseSchema,
 });
 export type Payable = z.infer<typeof payableSchema>;
+
+/** Before approval: the vendor's invoice total and the TDS rate on the bill. */
+export const payableReviewSchema = z.object({
+  vendorInvoicePaise: paiseSchema.nonnegative().nullable(),
+  tdsBp: z.number().int().min(0).max(TDS_MAX_BP, 'At most 20%.'),
+});
+export type PayableReview = z.infer<typeof payableReviewSchema>;
 
 const ageingSchema = z.object({
   current: paiseSchema,

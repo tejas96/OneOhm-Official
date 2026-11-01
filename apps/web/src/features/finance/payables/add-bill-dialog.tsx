@@ -19,6 +19,8 @@ const EMPTY = () => ({
   description: '',
   billNumber: '',
   amountPaise: null as number | null,
+  /** TDS to hold, in basis points; blank for none. */
+  tdsBp: null as number | null,
   dueOn: addDays(todayIn(), 15),
   projectId: NO_PROJECT,
 });
@@ -67,6 +69,7 @@ export function AddBillDialog({
             description: draft.description,
             billNumber: draft.billNumber.trim() || null,
             amountPaise: draft.amountPaise ?? 0,
+            tdsBp: draft.tdsBp ?? 0,
             dueOn: draft.dueOn,
             projectId: draft.projectId === NO_PROJECT ? null : draft.projectId,
           },
@@ -127,6 +130,13 @@ export function AddBillDialog({
             unit="paise"
             value={draft.amountPaise}
             onValueChange={(value) => set('amountPaise', value)}
+          />
+        </Field>
+        <Field label={t('tds')} hint={t('tdsHint')} error={form.fieldErrors.tdsBp}>
+          <NumberInput
+            unit="basisPoints"
+            value={draft.tdsBp}
+            onValueChange={(value) => set('tdsBp', value)}
           />
         </Field>
         <Field label={t('dueOn')} required error={form.fieldErrors.dueOn}>

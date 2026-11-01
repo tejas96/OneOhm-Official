@@ -1,6 +1,6 @@
 import type { ReceiptData } from '@oneohm/api-contracts';
 import { products, purchaseOrderLines, stockSerials, type Transaction } from '@oneohm/database';
-import { checkInspection, checkSerials, isSerialised } from '@oneohm/domain';
+import { checkInspection, checkSerials, dcrReceiptProblem, isSerialised } from '@oneohm/domain';
 import { and, eq, inArray } from 'drizzle-orm';
 import { invalid } from '../../common/http/errors';
 
@@ -10,6 +10,16 @@ const RECEIPT_PROBLEM = {
   over_received: 'More than is still due on this order.',
   rejected_not_whole: 'Reject panels, inverters and batteries in whole units.',
   over_delivered: 'Accepted and rejected together are more than is still due.',
+} as const;
+const DCR_PROBLEM = {
+  cell_manufacturer: {
+    field: 'cellManufacturer',
+    message: 'DCR panels need the cell maker, for the subsidy papers.',
+  },
+  cell_invoice: {
+    field: 'cellInvoiceNumber',
+    message: 'DCR panels need the GST invoice number of the cells.',
+  },
 } as const;
 const SERIAL_PROBLEM = {
   count_mismatch: 'Enter one serial number per unit received.',
@@ -40,6 +50,8 @@ export function loadLines(tx: Transaction, orderId: string) {
       ratePaise: purchaseOrderLines.ratePaise,
       taxRateBp: purchaseOrderLines.taxRateBp,
       category: products.category,
+      /** Panels tagged DCR need their cell maker and cell invoice at receipt. */
+      dcr: products.dcr,
     })
     .from(purchaseOrderLines)
     .leftJoin(products, eq(products.id, purchaseOrderLines.productId))
@@ -88,6 +100,8 @@ async function checkLine(tx: Transaction, entry: Entry, line: OrderLine): Promis
   if (entry.rejectedQuantity > 0 && !entry.rejectionReason) {
     return { field: 'rejectionReason', message: 'Say why the units failed inspection.' };
   }
+  const dcr = dcrReceiptProblem({ ...entry, category: line.category, dcr: line.dcr ?? false });
+  if (dcr) return DCR_PROBLEM[dcr];
   let serials: string[] = [];
   if (serialised && line.productId && entry.quantity > 0) {
     const result = await checkLineSerials(tx, line.productId, entry);

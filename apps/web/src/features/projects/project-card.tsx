@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { projectSwatch } from './control-room/room-stages';
+import { ForecastNote } from './forecast-note';
 import { attentionReason, stagesFromSummary } from './project-presentation';
 
 /** A project at a glance: who and where, status with its reason, stage, next step and load. */
@@ -57,6 +58,9 @@ export function ProjectCard({
             )}
           </div>
         </div>
+        {project.blockedBy && (
+          <p className="-mt-2 type-body-sm text-blocked">{project.blockedBy}</p>
+        )}
         {reason && (
           <p className="-mt-2 type-body-sm text-ink-muted">
             {reason.key === 'overdue'
@@ -68,6 +72,7 @@ export function ProjectCard({
           </p>
         )}
         <StageTracker stages={stagesFromSummary(project, stagesT)} />
+        <ForecastNote forecast={project.forecast} className="-mt-2" />
         <div className="mt-auto grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-t border-hairline pt-4">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="type-body-sm text-ink-faint">{t('card.next')}</span>

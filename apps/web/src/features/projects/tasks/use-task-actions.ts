@@ -76,5 +76,21 @@ export function useTaskActions(task: ProjectTask) {
     onSuccess: done(t('assigned')),
   });
 
-  return { start, approve, waiting, complete, assign };
+  const reschedule = useMutation({
+    mutationFn: (input: { dueDate: string; reason: string }) =>
+      expectStatus(api.tasks.rescheduleTask({ params, body: input }), 200),
+    onSuccess: done(t('rescheduled')),
+  });
+  const sendBack = useMutation({
+    mutationFn: (reason: string) =>
+      expectStatus(api.tasks.returnTask({ params, body: { reason } }), 200),
+    onSuccess: done(t('returned')),
+  });
+  const postUpdate = useMutation({
+    mutationFn: (note: string) =>
+      expectStatus(api.tasks.postTaskUpdate({ params, body: { note } }), 200),
+    onSuccess: done(t('updated')),
+  });
+
+  return { start, approve, waiting, complete, assign, reschedule, sendBack, postUpdate };
 }

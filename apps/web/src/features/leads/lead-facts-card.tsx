@@ -3,14 +3,13 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { Card, cn, Select } from '@oneohm/design-system/web';
 import { formatKwp } from '@oneohm/shared';
-import { useQuery } from '@tanstack/react-query';
 import { CalendarClock } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { isOpenLead } from './lead-labels';
 import { useUpdateLead } from './use-lead-mutations';
+import { useLeadOwnerOptions } from './use-lead-owners';
 
 /** The next follow-up, set large so it is never missed (PRD 3.3: no silent leads). */
 export function FollowUpCard({
@@ -66,15 +65,12 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
   const canAssign = useCan('people.view', 'people.manage', 'tasks.assign', 'projects.manage');
   const canManage = useCan('leads.manage');
   const update = useUpdateLead(lead.id);
-  const people = useQuery({
-    queryKey: ['people'],
-    queryFn: () => expectStatus(api.people.listPeople(), 200),
-    enabled: canAssign && canManage,
-    staleTime: 60_000,
-  });
-  const ownerOptions = (people.data ?? [])
-    .filter((person) => person.status === 'active' || person.id === lead.owner?.id)
-    .map((person) => ({ value: person.id, label: person.fullName }));
+  const owners = useLeadOwnerOptions(canAssign && canManage);
+  // The current owner stays listed even if they no longer work on leads.
+  const ownerOptions =
+    lead.owner && !owners.some((owner) => owner.value === lead.owner?.id)
+      ? [{ value: lead.owner.id, label: lead.owner.fullName }, ...owners]
+      : owners;
 
   return (
     <Card className="flex flex-col gap-1 rounded-[28px] p-5">

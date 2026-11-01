@@ -2,6 +2,7 @@
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { Button, Dialog, Field, Input, Select, useToast } from '@oneohm/design-system/web';
+import { CUSTOMER_TDS_METHODS } from '@oneohm/domain';
 import { formatInr, rupeesToPaise, todayIn } from '@oneohm/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
@@ -40,6 +41,9 @@ function collectedBody(method: Method, collected: Collected) {
 
 const remaining = (milestone: Milestone) => milestone.amountPaise - milestone.paidPaise;
 const toRupees = (paise: number) => String(paise / 100);
+const paiseOf = (text: string) => rupeesToPaise(Number(text.replace(/,/g, '')) || 0);
+/** A business customer may deduct TDS when it pays through a bank. */
+const takesTds = (method: Method) => (CUSTOMER_TDS_METHODS as readonly string[]).includes(method);
 
 /** Records money received against one milestone; the bank's share arrives as a disbursement. */
 export function RecordPaymentDialog({
@@ -67,6 +71,7 @@ export function RecordPaymentDialog({
   );
   const [receivedOn, setReceivedOn] = useState(todayIn());
   const [reference, setReference] = useState('');
+  const [tds, setTds] = useState('');
   const [collected, setCollected] = useState<Collected>({
     collectedByUserId: '',
     chequeNumber: '',
@@ -77,6 +82,8 @@ export function RecordPaymentDialog({
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
   const milestone = milestones.find((candidate) => candidate.id === milestoneId);
   const bank = milestone?.payer === 'bank';
+  const withTds = !bank && takesTds(method);
+  const tdsPaise = withTds ? paiseOf(tds) : 0;
 
   const record = useMutation({
     mutationFn: () =>
@@ -86,6 +93,7 @@ export function RecordPaymentDialog({
           body: {
             milestoneId,
             amountPaise: rupeesToPaise(Number(amount.replace(/,/g, ''))),
+            ...(tdsPaise > 0 ? { tdsPaise } : {}),
             method: bank ? 'bank_disbursement' : method,
             receivedOn,
             reference: reference.trim() || null,
@@ -167,6 +175,26 @@ export function RecordPaymentDialog({
             )}
           />
         </Field>
+        {withTds && (
+          <Field
+            label={t('tds')}
+            hint={
+              tdsPaise > 0
+                ? t('tdsSettles', { amount: formatInr(paiseOf(amount) + tdsPaise) })
+                : t('tdsHint')
+            }
+            error={fieldErrors.tdsPaise}
+            className="sm:col-span-2"
+          >
+            <Input
+              inputMode="decimal"
+              value={tds}
+              placeholder="0"
+              onChange={(event) => setTds(event.target.value)}
+              leading={<span className="type-body text-ink-faint">₹</span>}
+            />
+          </Field>
+        )}
         <Field label={t('receivedOn')} required error={fieldErrors.receivedOn}>
           <Input
             type="date"

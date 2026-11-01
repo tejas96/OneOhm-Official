@@ -2,6 +2,7 @@
 
 import type { PurchaseRequest } from '@oneohm/api-contracts';
 import { Badge, Button, Field, Input, Select, Sheet, useToast } from '@oneohm/design-system/web';
+import { purchaseLineTotal } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -15,10 +16,12 @@ import { useRefreshPurchasing, useRequest } from '../use-purchasing';
 
 type Rates = Record<string, { ratePaise: number | null; taxRateBp: number | null }>;
 
-const lineTotal = (quantity: number, rate: Rates[string] | undefined) => {
-  const amount = Math.round(quantity * (rate?.ratePaise ?? 0));
-  return amount + Math.round((amount * (rate?.taxRateBp ?? 0)) / 10_000);
-};
+const lineTotal = (quantity: number, rate: Rates[string] | undefined) =>
+  purchaseLineTotal({
+    quantity,
+    ratePaise: rate?.ratePaise ?? 0,
+    taxRateBp: rate?.taxRateBp ?? 0,
+  });
 
 /** Vendors that supply every item on the request come first, marked as such. */
 function useVendorOptions(request: PurchaseRequest | undefined) {

@@ -111,6 +111,8 @@ export const travelClaims = pgTable(
     amountPaise: money('amount_paise').notNull(),
     legs: jsonb('legs').$type<TravelClaimLeg[]>().notNull(),
     visits: integer('visits').notNull(),
+    /** The project the travel was for, so it counts in that project's actual cost. */
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
     note: text('note'),
     status: decisionStatusEnum('status').notNull().default('pending'),
     decidedByUserId: uuid('decided_by_user_id').references(() => users.id, {
@@ -124,6 +126,7 @@ export const travelClaims = pgTable(
   },
   (table) => [
     index('travel_claims_status_idx').on(table.status),
+    index('travel_claims_project_idx').on(table.projectId),
     // One live claim per person per day; a declined or cancelled one can be made again.
     uniqueIndex('travel_claims_day_unique')
       .on(table.userId, table.workDate)

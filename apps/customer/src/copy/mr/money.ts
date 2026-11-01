@@ -28,6 +28,9 @@ const REPORTS = {
 export const PAYMENTS: Copy<typeof en.PAYMENTS> = {
   payNow: (amount) => `${amount} आता भरा`,
   payHint: 'UPI, कार्ड किंवा नेट बँकिंग, Razorpay द्वारे.',
+  payFailed: 'पेमेंटचे पान उघडले नाही. पुन्हा प्रयत्न करा, किंवा तुमच्या OneOhm संपर्काला फोन करा.',
+  effectiveCost: (price, subsidy, effective) =>
+    `किंमत ${price} − अपेक्षित सबसिडी ${subsidy} = तुमचा खरा खर्च ${effective}`,
   title: 'पेमेंट',
   loading: 'तुमचे पेमेंट लोड होत आहे',
   paidOf: (paid, total) => `${total} पैकी ${paid} भरले`,
@@ -89,7 +92,8 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
   reportsTitle: 'करार आणि रिपोर्ट',
   reportsEmpty: 'करार आणि काम पूर्ण झाल्याचे रिपोर्ट तयार झाले की इथे दिसतील.',
   filesTitle: 'तुमची कागदपत्रे',
-  filesEmpty: 'OneOhm ने पाठवलेली बिले, वॉरंटी कार्ड आणि सिस्टिम ताब्यात दिल्याची कागदपत्रे इथे दिसतील.',
+  filesEmpty:
+    'OneOhm ने पाठवलेली बिले, वॉरंटी कार्ड, वापरण्याच्या पुस्तिका आणि सिस्टिम ताब्यात दिल्याची कागदपत्रे इथे दिसतील.',
   open: 'उघडा',
   opening: 'उघडत आहे',
   openFailed: 'ही फाईल उघडली नाही. कृपया पुन्हा प्रयत्न करा.',
@@ -117,6 +121,7 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
     subsidy: 'सबसिडी',
     commissioning_handover: 'सिस्टिम ताब्यात दिल्याचे',
     warranty: 'वॉरंटी',
+    product_manual: 'वापरण्याची माहिती पुस्तिका',
     statutory_report: 'रिपोर्ट',
     site_photo: 'साईटचा फोटो',
     other: 'कागदपत्र',

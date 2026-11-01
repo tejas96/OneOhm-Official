@@ -1,6 +1,6 @@
 import { Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { Mail, Phone, Star, UserPlus, Users } from 'lucide-react-native';
+import { MessageCircle, Phone, Star, UserPlus, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/api/api';
@@ -36,7 +36,6 @@ export function ProfileScreen() {
           label={PROFILE.phone}
           value={customer.phone.replace(/^\+91(\d{5})(\d{5})$/, '+91 $1 $2')}
         />
-        {customer.email ? <Row label={PROFILE.email} value={customer.email} /> : null}
       </Card>
 
       <LanguageCard />
@@ -100,13 +99,15 @@ export function ProfileScreen() {
                 onPress={() => void Linking.openURL(`tel:+${dialDigits(company.phones[0] ?? '')}`)}
               />
             ) : null}
-            {company.email ? (
+            {company.phones[0] ? (
               <Button
-                label={PROFILE.mail}
+                label={PROFILE.whatsapp}
                 variant="secondary"
                 size="sm"
-                icon={<Mail size={16} color={icon} />}
-                onPress={() => void Linking.openURL(`mailto:${company.email}`)}
+                icon={<MessageCircle size={16} color={icon} />}
+                onPress={() =>
+                  void Linking.openURL(`https://wa.me/${dialDigits(company.phones[0] ?? '')}`)
+                }
               />
             ) : null}
           </View>

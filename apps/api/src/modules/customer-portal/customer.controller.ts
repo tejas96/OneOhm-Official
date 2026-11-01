@@ -20,7 +20,11 @@ function pdf(file: PdfFile): Blob {
 }
 
 /** Uploads have their own controller (multipart); everything else is handled here. */
-const { addServiceRequestPhoto: _upload, ...routes } = apiContract.customer;
+const {
+  addServiceRequestPhoto: _upload,
+  addServiceRequestFile: _uploadFile,
+  ...routes
+} = apiContract.customer;
 
 /**
  * The customer app's API. Staff sessions do not apply here (`@Public` for the staff

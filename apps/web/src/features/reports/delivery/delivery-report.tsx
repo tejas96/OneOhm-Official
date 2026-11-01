@@ -10,6 +10,8 @@ import {
 } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { centerHref } from '../../command-center/center-links';
+import { useCenterFilters } from '../../command-center/use-center-filters';
 import { PeriodNumbers } from '../parts/period-numbers';
 import { ReportBody, ReportNote } from '../parts/report-body';
 import { decimal, formatRate, kwp, useBucketNames, whole } from '../parts/report-format';
@@ -19,6 +21,7 @@ import { DeliveryByProject, DeliveryByStage } from './delivery-tables';
 function Kpis({ data }: { readonly data: DeliveryReport }) {
   const t = useTranslations('deliveryReport.kpis');
   const { tasks } = data.totals;
+  const { query } = useCenterFilters();
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <KpiTile
@@ -26,6 +29,8 @@ function Kpis({ data }: { readonly data: DeliveryReport }) {
         value={tasks.onTimeRate ?? 0}
         format={() => formatRate(tasks.onTimeRate)}
         detail={t('onTimeDetail', { onTime: tasks.onTime, finished: tasks.onTime + tasks.late })}
+        href={centerHref('/command-center/tasks', query, { show: 'done' })}
+        hrefLabel={t('onTimeLink')}
       />
       <KpiTile
         label={t('late')}
@@ -37,6 +42,8 @@ function Kpis({ data }: { readonly data: DeliveryReport }) {
             ? t('lateNone')
             : t('lateDetail', { days: decimal(tasks.averageDaysLate) })
         }
+        href={centerHref('/command-center/tasks', query, { show: 'late' })}
+        hrefLabel={t('lateLink')}
       />
       <KpiTile
         label={t('overdue')}
@@ -44,7 +51,7 @@ function Kpis({ data }: { readonly data: DeliveryReport }) {
         goodDirection="down"
         format={whole}
         detail={t('overdueDetail', { projects: data.totals.liveProjects })}
-        href="/today"
+        href={centerHref('/command-center/tasks', query, { show: 'overdue' })}
         hrefLabel={t('overdueLink')}
       />
       <KpiTile
@@ -59,7 +66,7 @@ function Kpis({ data }: { readonly data: DeliveryReport }) {
                 days: decimal(data.totals.averageDaysToCommission),
               })
         }
-        href="/projects"
+        href={centerHref('/projects', query, { status: 'completed', since: data.meta.range.start })}
         hrefLabel={t('commissionedLink')}
       />
     </div>

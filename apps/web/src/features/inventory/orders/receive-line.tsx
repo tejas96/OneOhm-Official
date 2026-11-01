@@ -18,11 +18,14 @@ export interface LineEntry {
 /** One order line on a goods receipt: accepted units, serials, DCR details and rejects. */
 export function ReceiveLine({
   line,
+  dcr,
   entry,
   error,
   onChange,
 }: {
   readonly line: PurchaseOrderLine;
+  /** A DCR panel: its cell maker and cell invoice are required (subsidy papers). */
+  readonly dcr: boolean;
   readonly entry: LineEntry | undefined;
   readonly error: (key: string) => string | undefined;
   readonly onChange: (patch: Partial<LineEntry>) => void;
@@ -79,13 +82,18 @@ export function ReceiveLine({
       )}
       {line.category === 'panel' && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('cellManufacturer')} hint={t('cellHint')}>
+          <Field
+            label={t('cellManufacturer')}
+            hint={dcr ? t('dcrCellHint') : t('cellHint')}
+            required={dcr}
+            error={error('cellManufacturer')}
+          >
             <Input
               value={entry?.cellManufacturer ?? ''}
               onChange={(e) => onChange({ cellManufacturer: e.target.value })}
             />
           </Field>
-          <Field label={t('cellInvoice')}>
+          <Field label={t('cellInvoice')} required={dcr} error={error('cellInvoiceNumber')}>
             <Input
               value={entry?.cellInvoiceNumber ?? ''}
               onChange={(e) => onChange({ cellInvoiceNumber: e.target.value })}

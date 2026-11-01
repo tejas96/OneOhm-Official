@@ -27,7 +27,8 @@
       "discom": "DISCOM delays",
       "days": "{days, plural, one {# day} other {# days}}",
       "finished": "{count, plural, =0 {No task finished late} one {# finished late · {days} d} other {# finished late · {days} d}}",
-      "open": "{count, plural, =0 {None open past due} one {# open past due · {days} d} other {# open past due · {days} d}}"
+      "open": "{count, plural, =0 {None open past due} one {# open past due · {days} d} other {# open past due · {days} d}}",
+      "openLate": "Open the late tasks: {party}"
     },
     "summary": "{finished, plural, =0 {No task finished in this period} one {# task finished in this period} other {# tasks finished in this period}}, {late, plural, =0 {none of them late} one {# of them late} other {# of them late}}. Today {open, plural, =0 {no open task is past due} one {# open task is past due} other {# open tasks are past due}} and {waiting, plural, =0 {none is marked waiting} one {# is marked waiting} other {# are marked waiting}}.",
     "trend": {

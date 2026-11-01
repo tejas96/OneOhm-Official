@@ -3,6 +3,7 @@ import { todayIn } from '@oneohm/shared';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
+import { forbidden } from '../../common/http/errors';
 import { apiContract } from '../../contract';
 import { CatalogService } from '../catalog/catalog.service';
 import { checklistHtml } from './checklist-pdf';
@@ -20,9 +21,14 @@ export class DocumentChecklistController {
 
   @TsRestHandler(apiContract.documentChecklist)
   handler(@CurrentActor() actor: Actor) {
+    // A project's full paper list is for staff; crews and resellers see only their own files.
+    const staffOnly = () => {
+      assertCan(actor, 'documents.view');
+      if (actor.kind !== 'staff') throw forbidden();
+    };
     return tsRestHandler(apiContract.documentChecklist, {
       checklist: async ({ params }) => {
-        assertCan(actor, 'documents.view');
+        staffOnly();
         const {
           code: _code,
           customer: _customer,
@@ -31,7 +37,7 @@ export class DocumentChecklistController {
         return { status: 200, body };
       },
       checklistPdf: async ({ params }) => {
-        assertCan(actor, 'documents.view');
+        staffOnly();
         const list = await this.checklists.checklist(params.id);
         const company = await this.catalog.company();
         const html = checklistHtml({

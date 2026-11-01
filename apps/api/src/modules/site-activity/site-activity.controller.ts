@@ -52,7 +52,10 @@ export class SiteActivityController {
       },
       claimTravel: async ({ body }) => {
         claims();
-        return { status: 201, body: await this.travel.claim(actor, body.workDate, body.note) };
+        return {
+          status: 201,
+          body: await this.travel.claim(actor, body.workDate, body.note, body.projectId),
+        };
       },
       cancelTravelClaim: async ({ params }) => {
         claims();

@@ -10,6 +10,8 @@ import { DATABASE, type Database } from '../../config/core.module';
 interface MessageTemplateChange {
   metaName: string;
   language: string;
+  metaNameMr: string | null;
+  metaNameHi: string | null;
   fields: string[];
   preview: string;
   active: boolean;
@@ -33,6 +35,8 @@ export class MessageTemplatesService {
       audience: row.audience as MessageTemplate['audience'],
       metaName: row.metaName,
       language: row.language,
+      metaNameMr: row.metaNameMr,
+      metaNameHi: row.metaNameHi,
       fields: row.fields,
       preview: row.preview,
       active: row.active,

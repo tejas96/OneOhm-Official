@@ -11,9 +11,13 @@ import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
+import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
+import { recordSubsidyClaim } from '../quotations/subsidy-claim';
 import { awardOnTimeTask } from '../workforce/points';
+import { askForStageRating } from '../workforce/rating-request';
 import { closeIfSettled } from './financial-closure';
 import { tellCustomerAbout, tellManagerDone } from './task-messages';
+import { followLateFinish } from './task-schedule';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
@@ -71,6 +75,11 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .returning({ id: paymentMilestones.id });
     // The receivable is booked in the same transaction (PRD 3.11, Flow D).
     for (const milestone of due) await postMilestoneDue(tx, milestone.id, userId);
+    // The customer hears that a payment is due, with a pay link when online payments are on.
+    await tellCustomerMilestonesDue(
+      tx,
+      due.map((milestone) => milestone.id),
+    );
   }
 
   // Commissioning records the installed system and starts its warranties (PRD 3.17).
@@ -100,10 +109,16 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     message: `${task.title} completed.`,
     userId,
   });
+  // Late work moves the tasks waiting on it later by the slip (PRD 3.6).
+  await followLateFinish(tx, task, now, userId);
   // A contractor's work order settles into a payable once all its tasks are done.
   await settleWorkOrderForTask(tx, task.id, userId);
+  // One subsidy per property (PRD 3.5): a released subsidy marks the site.
+  await recordSubsidyClaim(tx, task, userId);
   // On-time work earns its owner points (PRD 3.12); late work loses nothing.
   await awardOnTimeTask(tx, task);
+  // A finished customer-visible stage asks the customer how it went (PRD Flow G1).
+  await askForStageRating(tx, task);
 }
 
 /** Facts a task still needs, after what was sent now and what the project already knows. */

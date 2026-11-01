@@ -9,6 +9,7 @@ import {
   workOrderRework,
   workOrders,
 } from '@oneohm/database';
+import { ratingSummary } from '@oneohm/domain';
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -129,9 +130,8 @@ export class CrewPortalService {
           .where(eq(workOrders.contractorId, contractor.id))
           .orderBy(desc(workOrderRework.createdAt))
       : [];
-    const average = ratings.length
-      ? Math.round((ratings.reduce((sum, row) => sum + row.rating, 0) / ratings.length) * 10) / 10
-      : null;
+    // The average shows only from three ratings, as everywhere else (PRD 5.7).
+    const average = ratingSummary(ratings.map((row) => row.rating)).average;
     return {
       completedWorkOrders: performance?.completedWorkOrders ?? 0,
       onTimePercent: performance?.onTimePercent ?? null,

@@ -80,6 +80,8 @@ export const attendanceDays = pgTable(
     checkOutInside: boolean('check_out_inside'),
     /** Set when an approved correction changed the times. */
     correctedAt: instant('corrected_at'),
+    /** Checked in by the day's first site check-in, under the policy (PRD 4.3). */
+    autoFromSite: boolean('auto_from_site').notNull().default(false),
     locationClearedAt: instant('location_cleared_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -137,8 +139,10 @@ export const leaveRequests = pgTable(
     }),
     decidedAt: instant('decided_at'),
     decisionNote: text('decision_note'),
-    /** Open tasks handed to the backup when the leave was approved. */
+    /** Work handed to the backup when the leave was approved (tasks, service, follow-ups). */
     tasksHandedOver: integer('tasks_handed_over').notNull().default(0),
+    /** Emergency leave approved with work affected and nobody covering it (PRD Flow E). */
+    handoverSkipped: boolean('handover_skipped').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -162,7 +166,7 @@ export const pointsEntries = pgTable(
     points: integer('points').notNull(),
     reason: text('reason').notNull(),
     sourceType: text('source_type', {
-      enum: ['task_on_time', 'customer_rating', 'recognition'],
+      enum: ['task_on_time', 'customer_rating', 'recognition', 'stage_rating'],
     }).notNull(),
     sourceId: text('source_id').notNull(),
     status: decisionStatusEnum('status').notNull().default('approved'),

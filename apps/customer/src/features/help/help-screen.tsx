@@ -15,13 +15,14 @@ import {
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { LifeBuoy, Plus, Star } from 'lucide-react-native';
+import { CalendarCheck, LifeBuoy, Plus, Star } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
 import { RATE } from '@/copy/after-sales';
 import { SUPPORT } from '@/copy/care';
 import { COMMON } from '@/copy/common';
+import { REQUEST_MEDIA } from '@/copy/request-media';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { momentDate, shortDate } from '@/lib/dates';
 import { CoverCard, VisitsCard } from './cover-card';
@@ -85,6 +86,20 @@ export function HelpScreen() {
   );
 }
 
+/** The day the service team booked the technician, while the request is open. */
+function VisitLine({ request }: { readonly request: ServiceRequest }) {
+  const theme = useTheme();
+  if (!request.visitOn || request.status === 'resolved') return null;
+  return (
+    <View style={styles.visit}>
+      <CalendarCheck size={16} color={theme.colors.accent} />
+      <Text variant="bodySm" color={theme.colors.accent}>
+        {REQUEST_MEDIA.visitOn(shortDate(request.visitOn))}
+      </Text>
+    </View>
+  );
+}
+
 function RequestCard({ request }: { readonly request: ServiceRequest }) {
   return (
     <Card style={styles.card}>
@@ -97,6 +112,7 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
       <Text variant="body" tone="secondary">
         {request.description}
       </Text>
+      <VisitLine request={request} />
       {request.resolutionNote ? (
         <View style={styles.resolution}>
           <Text variant="overline" tone="tertiary">
@@ -112,6 +128,8 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
             ? RATE.scheduled(shortDate(request.scheduledFor))
             : SUPPORT.raisedOn(momentDate(request.createdAt)),
           request.photoCount > 0 ? SUPPORT.photoCount(request.photoCount) : null,
+          request.hasVideo ? REQUEST_MEDIA.hasVideo : null,
+          request.hasVoiceNote ? REQUEST_MEDIA.hasVoiceNote : null,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -161,6 +179,7 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   grow: { flex: 1 },
   resolution: { gap: 2 },
+  visit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stars: { flexDirection: 'row', gap: 2 },
 });

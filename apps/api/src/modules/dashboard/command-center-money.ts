@@ -1,8 +1,18 @@
-import { type Database, payables, paymentMilestones, payments } from '@oneohm/database';
+import {
+  type Database,
+  journalEntries,
+  journalLines,
+  payables,
+  paymentMilestones,
+  payments,
+  workOrderAdvances,
+} from '@oneohm/database';
+import { ACCOUNT } from '@oneohm/domain';
 import { addDays } from '@oneohm/shared';
 import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 
 export interface MoneyFigures {
+  readonly revenuePaise: number;
   readonly collectedPaise: number;
   readonly duePaise: number;
   readonly weekly: number[];
@@ -10,6 +20,7 @@ export interface MoneyFigures {
   readonly bankPendingPaise: number;
   readonly toVendorsPaise: number;
   readonly toContractorsPaise: number;
+  readonly dueThisWeekPaise: number;
   readonly advancesPaise: number;
 }
 
@@ -86,28 +97,59 @@ export async function moneyFigures(
     bankMilestones.reduce((sum, row) => sum + row.amount, 0) -
     bankPaid.reduce((sum, row) => sum + row.amount, 0);
 
+  return {
+    revenuePaise: await revenueBooked(db, monthStart, today),
+    collectedPaise,
+    duePaise: collectedPaise + stillDuePaise,
+    weekly,
+    stillDuePaise,
+    bankPendingPaise,
+    ...(await goingOut(db, today)),
+  };
+}
+
+/** Project revenue the ledger booked in the period: credits less debits on account 4000. */
+async function revenueBooked(db: Database, from: string, to: string): Promise<number> {
+  const [row] = await db
+    .select({
+      net: sql<number>`coalesce(sum(${journalLines.creditPaise} - ${journalLines.debitPaise}), 0)::float8`,
+    })
+    .from(journalLines)
+    .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
+    .where(
+      and(
+        eq(journalLines.accountCode, ACCOUNT.revenue),
+        gte(journalEntries.entryDate, from),
+        lte(journalEntries.entryDate, to),
+      ),
+    );
+  return Math.round(row?.net ?? 0);
+}
+
+/**
+ * Everything still owed on vendor and contractor bills, what of it falls due within a
+ * week, and crew advances found by their work-order link rather than their wording.
+ */
+async function goingOut(db: Database, today: string) {
   const weekEnd = addDays(today, 7);
   const outgoing = await db
     .select({
       party: payables.party,
       // What is left to pay once any vendor advance is set against the bill.
       amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise})::float8`,
-      description: payables.description,
+      dueOn: payables.dueOn,
+      advance: workOrderAdvances.id,
     })
     .from(payables)
-    .where(and(ne(payables.status, 'paid'), lte(payables.dueOn, weekEnd)));
-  const sumOf = (party: 'vendor' | 'contractor') =>
-    outgoing.filter((row) => row.party === party).reduce((sum, row) => sum + row.amount, 0);
+    .leftJoin(workOrderAdvances, eq(workOrderAdvances.payableId, payables.id))
+    .where(ne(payables.status, 'paid'));
+  const total = (rows: typeof outgoing) => rows.reduce((sum, row) => sum + row.amount, 0);
   return {
-    collectedPaise,
-    duePaise: collectedPaise + stillDuePaise,
-    weekly,
-    stillDuePaise,
-    bankPendingPaise,
-    toVendorsPaise: sumOf('vendor'),
-    toContractorsPaise: sumOf('contractor'),
-    advancesPaise: outgoing
-      .filter((row) => row.description.toLowerCase().startsWith('advance'))
-      .reduce((sum, row) => sum + row.amount, 0),
+    toVendorsPaise: total(outgoing.filter((row) => row.party === 'vendor')),
+    toContractorsPaise: total(outgoing.filter((row) => row.party === 'contractor')),
+    dueThisWeekPaise: total(
+      outgoing.filter((row) => row.party !== 'employee' && row.dueOn <= weekEnd),
+    ),
+    advancesPaise: total(outgoing.filter((row) => row.advance !== null)),
   };
 }

@@ -3,12 +3,15 @@
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { Card, CardHeader } from '@oneohm/design-system/web';
 import {
+  CalendarClock,
   CircleCheck,
   Hourglass,
   IndianRupee,
   type LucideIcon,
   MapPin,
+  MessageSquareText,
   Package,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -25,6 +28,10 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   site_check_in: MapPin,
   site_check_out: MapPin,
   site_location: MapPin,
+  update: MessageSquareText,
+  returned: RotateCcw,
+  rescheduled: CalendarClock,
+  schedule: CalendarClock,
 };
 
 /** What happened on the project, newest first, with who did it and when. */

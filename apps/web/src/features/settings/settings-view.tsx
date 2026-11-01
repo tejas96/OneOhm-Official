@@ -42,7 +42,7 @@ const TABS = [
   { value: 'serviceSla', requires: 'settings.manage', Panel: ServiceCategoriesPanel },
   { value: 'warranty', requires: 'settings.manage', Panel: WarrantyPanel },
   { value: 'amcPlans', requires: 'settings.manage', Panel: AmcPlansPanel },
-  { value: 'activity', requires: 'settings.manage', Panel: ActivityPanel },
+  { value: 'activity', requires: 'audit.view', Panel: ActivityPanel },
 ] as const satisfies readonly {
   value: string;
   requires: Capability;

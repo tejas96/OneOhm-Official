@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { FinanceOverview } from '@oneohm/api-contracts';
 import { payables, payments, vendorAdvances } from '@oneohm/database';
-import { ACCOUNT, AGEING_BUCKETS } from '@oneohm/domain';
+import { ACCOUNT, AGEING_BUCKETS, billToPay } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, gte, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -52,19 +52,22 @@ export class FinanceOverviewService {
     const bills = await this.db.select().from(payables).where(ne(payables.status, 'paid'));
     const weekEnd = addDays(today, 7);
     const billSum = (filter: (bill: (typeof bills)[number]) => boolean) =>
-      bills
-        .filter(filter)
-        .reduce((sum, bill) => sum + bill.amountPaise - bill.advanceAdjustedPaise, 0);
+      bills.filter(filter).reduce((sum, bill) => sum + billToPay(bill), 0);
 
     const received = await this.db
-      .select({ on: payments.receivedOn, amount: payments.amountPaise })
+      // TDS a customer deducted settles the milestone but is not money in.
+      .select({
+        on: payments.receivedOn,
+        amount: sql<number>`(${payments.amountPaise} - ${payments.tdsPaise})::float8`,
+      })
       .from(payments)
       .where(gte(payments.receivedOn, from));
-    // Money out: bills (less any vendor advance set against them) and the advances themselves.
+    // Money out: bills (less any vendor advance set against them and TDS held) and the
+    // advances themselves.
     const billsPaid = await this.db
       .select({
         on: payables.paidOn,
-        amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise})::float8`,
+        amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise} - ${payables.tdsPaise})::float8`,
       })
       .from(payables)
       .where(and(eq(payables.status, 'paid'), gte(payables.paidOn, from)));

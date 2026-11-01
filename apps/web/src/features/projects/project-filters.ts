@@ -1,4 +1,5 @@
 import type { ProjectSummary } from '@oneohm/api-contracts';
+import { ATTENTION_TONES, FINISH_WINDOWS, finishWindow } from '@oneohm/domain';
 
 export const STATUS_FILTERS = ['live', 'completed', 'cancelled', 'all'] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -6,16 +7,24 @@ export type StatusFilter = (typeof STATUS_FILTERS)[number];
 export const TYPE_FILTERS = ['all', 'residential', 'society', 'commercial'] as const;
 export type TypeFilter = (typeof TYPE_FILTERS)[number];
 
-/** Health as the owner reads it: fine, needs attention, or held by someone outside. */
+/** Health as the owner reads it: fine, needs attention (or one kind of it), or held by someone outside. */
 export const HEALTH_FILTERS = [
   'any',
   'onTrack',
   'attention',
+  'overdue',
+  'blocked',
+  'atRisk',
+  'waiting',
   'customer',
   'bank',
   'discom',
 ] as const;
 export type HealthFilter = (typeof HEALTH_FILTERS)[number];
+
+/** When the project is expected to finish (`deliveryForecast`), or running behind plan. */
+export const FINISH_FILTERS = ['any', ...FINISH_WINDOWS, 'behind'] as const;
+export type FinishFilter = (typeof FINISH_FILTERS)[number];
 
 export const SORTS = ['due', 'attention', 'newest', 'name', 'size'] as const;
 export type SortKey = (typeof SORTS)[number];
@@ -30,6 +39,11 @@ export interface ProjectFilters {
   readonly type: TypeFilter;
   readonly sort: SortKey;
   readonly view: Layout;
+  /** A project manager's id, from the command centre; empty for everyone. */
+  readonly manager: string;
+  readonly finish: FinishFilter;
+  /** Completed projects whose work finished on or after this date (YYYY-MM-DD); empty for any. */
+  readonly since: string;
 }
 
 export const DEFAULT_FILTERS: ProjectFilters = {
@@ -39,6 +53,9 @@ export const DEFAULT_FILTERS: ProjectFilters = {
   type: 'all',
   sort: 'due',
   view: 'cards',
+  manager: '',
+  finish: 'any',
+  since: '',
 };
 
 /** Worst first, for "Needs attention first". */
@@ -61,10 +78,22 @@ function matchesStatus(project: ProjectSummary, status: StatusFilter): boolean {
 
 function matchesHealth(project: ProjectSummary, health: HealthFilter): boolean {
   if (health === 'any') return true;
-  if (health === 'onTrack') return project.tone === 'onTrack';
-  if (health === 'attention')
-    return project.tone === 'atRisk' || project.tone === 'overdue' || project.tone === 'blocked';
-  return project.waitingOn === health;
+  // The same tones the command centre counts as "needing attention".
+  if (health === 'attention') return ATTENTION_TONES.includes(project.tone);
+  if (health === 'customer' || health === 'bank' || health === 'discom')
+    return project.waitingOn === health;
+  return project.tone === health;
+}
+
+function matchesFinish(project: ProjectSummary, finish: FinishFilter, today: string): boolean {
+  if (finish === 'any') return true;
+  if (finish === 'behind') return project.forecast.slipDays > 0;
+  const expected = project.forecast.expectedFinish;
+  return expected !== null && finishWindow(expected, today) === finish;
+}
+
+function matchesSince(project: ProjectSummary, since: string): boolean {
+  return !since || (project.completedOn !== null && project.completedOn >= since);
 }
 
 function matchesSearch(project: ProjectSummary, search: string): boolean {
@@ -91,6 +120,7 @@ const COMPARE: Readonly<Record<SortKey, (left: ProjectSummary, right: ProjectSum
 export function filterProjects(
   projects: readonly ProjectSummary[],
   filters: ProjectFilters,
+  today: string,
 ): ProjectSummary[] {
   return projects
     .filter(
@@ -98,7 +128,10 @@ export function filterProjects(
         matchesStatus(project, filters.status) &&
         (filters.type === 'all' || project.type === filters.type) &&
         matchesHealth(project, filters.health) &&
-        matchesSearch(project, filters.search),
+        matchesSearch(project, filters.search) &&
+        (!filters.manager || project.manager?.id === filters.manager) &&
+        matchesFinish(project, filters.finish, today) &&
+        matchesSince(project, filters.since),
     )
     .sort(COMPARE[filters.sort]);
 }
@@ -109,6 +142,9 @@ export function isFiltered(filters: ProjectFilters): boolean {
     filters.search.trim() !== '' ||
     filters.status !== DEFAULT_FILTERS.status ||
     filters.health !== DEFAULT_FILTERS.health ||
-    filters.type !== DEFAULT_FILTERS.type
+    filters.type !== DEFAULT_FILTERS.type ||
+    filters.manager !== '' ||
+    filters.finish !== 'any' ||
+    filters.since !== ''
   );
 }

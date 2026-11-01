@@ -13,6 +13,9 @@ export type SiteVisitKind = (typeof SITE_VISIT_KINDS)[number];
 /** Tasks done at the customer's site, by template. */
 const SITE_TASKS: Readonly<Record<string, SiteVisitKind>> = {
   site_survey: 'survey',
+  site_survey_society: 'survey',
+  site_survey_commercial: 'survey',
+  site_survey_ground: 'survey',
   ground_foundation: 'installation',
   structure_installation: 'installation',
   panel_installation: 'installation',
@@ -24,6 +27,7 @@ const SITE_TASKS: Readonly<Record<string, SiteVisitKind>> = {
   testing_commissioning: 'inspection',
   generation_meter_test: 'inspection',
   discom_inspection: 'inspection',
+  electrical_inspection: 'inspection',
   handover: 'inspection',
 };
 

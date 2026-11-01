@@ -12,13 +12,16 @@ import { businessToday, daysBetween, relativeDate } from '@/lib/dates';
 export function toneOf(task: ProjectTask): Tone {
   if (task.status === 'in_review') return 'review';
   if (task.status === 'waiting') return 'waiting';
+  if (task.returned) return 'atRisk';
   if (task.overdue) return 'overdue';
   if (task.status === 'in_progress') return 'onTrack';
   return 'neutral';
 }
 
 export function statusLabel(task: ProjectTask): string {
+  if (task.status === 'waiting' && task.waitingParty === 'internal') return TASK.helpPill;
   if (task.status === 'waiting') return TASK.waitingOn(COMMON.parties[task.waitingParty]);
+  if (task.returned) return TASK.returnedPill;
   if (task.overdue && task.status !== 'in_review') {
     return TASK.overdueBy(Math.max(1, daysBetween(task.dueDate, businessToday())));
   }

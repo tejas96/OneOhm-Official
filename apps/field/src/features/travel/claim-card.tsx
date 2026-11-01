@@ -36,6 +36,11 @@ export function ClaimCard({ claim }: { readonly claim: TravelClaim }) {
             formatInr(claim.amountPaise),
           )}
         </Text>
+        {claim.project ? (
+          <Text variant="bodySm" tone="secondary">
+            {TRAVEL.forProject(claim.project.code)}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.status}>
         <StatusPill size="sm" tone={TONE[state]} label={TRAVEL.status[state]} />

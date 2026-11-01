@@ -16,17 +16,14 @@ import {
   users,
   vendors,
 } from '@oneohm/database';
-import { isSerialised } from '@oneohm/domain';
+import { isSerialised, purchaseLineTotal } from '@oneohm/domain';
 import { asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 
 type LineRow = typeof purchaseOrderLines.$inferSelect;
 
-/** A line's amount with GST, rounded to the paisa. */
-export function lineTotal(line: { quantity: number; ratePaise: number; taxRateBp: number }) {
-  const amount = Math.round(line.quantity * line.ratePaise);
-  return amount + Math.round((amount * line.taxRateBp) / 10_000);
-}
+/** A line's amount with GST, rounded to the paisa. Kept for receiving; the rule lives in @oneohm/domain. */
+export const lineTotal = purchaseLineTotal;
 
 export async function purchaseOrderSummaries(
   db: DatabaseExecutor,
@@ -128,7 +125,7 @@ function presentLine(line: LineRow, category: PurchaseOrderLine['category']): Pu
     receivedQuantity: line.receivedQuantity,
     ratePaise: line.ratePaise,
     taxRateBp: line.taxRateBp,
-    totalPaise: lineTotal(line),
+    totalPaise: purchaseLineTotal(line),
   };
 }
 
