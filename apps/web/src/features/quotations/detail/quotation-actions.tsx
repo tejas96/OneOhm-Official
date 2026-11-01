@@ -3,7 +3,16 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
 import { Button, useToast } from '@oneohm/design-system/web';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Check, FilePen, FolderPlus, Send, ShieldCheck, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Download,
+  FilePen,
+  FolderPlus,
+  Send,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -48,7 +57,15 @@ export function QuotationActions({ quotation }: { readonly quotation: QuotationD
 
   return (
     <>
-      {/* PDF download: the quotation PDF endpoint (reports work) is wired in here at merge. */}
+      <Button asChild variant="quiet" leadingIcon={<Download />}>
+        <a
+          href={`/api/v1/quotations/${quotation.id}/pdf?disposition=inline`}
+          target="_blank"
+          rel="noopener"
+        >
+          {t('pdf')}
+        </a>
+      </Button>
       {pending && canApprove && (
         <Button
           variant="primary"

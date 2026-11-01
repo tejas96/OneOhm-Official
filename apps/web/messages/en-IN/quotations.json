@@ -230,7 +230,8 @@
         "approve": "Discount approved",
         "send": "Quotation sent",
         "accept": "Quotation accepted"
-      }
+      },
+      "pdf": "PDF"
     },
     "reject": {
       "title": "Mark as rejected",

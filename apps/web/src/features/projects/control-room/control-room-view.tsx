@@ -49,7 +49,7 @@ export function ControlRoomView({ projectId }: { readonly projectId: string }) {
         <TaskBoard project={project} />
         <aside className="flex flex-col gap-6">
           <PaymentPanel project={project} />
-          <ReportReadiness reports={project.reports} />
+          <ReportReadiness projectId={project.id} reports={project.reports} />
           <ActivityTimeline activities={project.activities} />
         </aside>
       </div>

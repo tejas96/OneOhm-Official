@@ -2,8 +2,9 @@
 
 import type { ReportStatus } from '@oneohm/api-contracts';
 import { Card, CardHeader, type PillTone, StatusPill } from '@oneohm/design-system/web';
-import { FileText } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useCan } from '@/providers/current-user';
 
 const TONE: Readonly<Record<ReportStatus['status'], PillTone>> = {
   ready: 'done',
@@ -15,8 +16,15 @@ const TONE: Readonly<Record<ReportStatus['status'], PillTone>> = {
  * The statutory reports this project needs and whether each has every detail it prints.
  * Missing details name the task that records them, so the fix is one click away.
  */
-export function ReportReadiness({ reports }: { readonly reports: readonly ReportStatus[] }) {
+export function ReportReadiness({
+  projectId,
+  reports,
+}: {
+  readonly projectId: string;
+  readonly reports: readonly ReportStatus[];
+}) {
   const t = useTranslations('projects.reports');
+  const canPrint = useCan('reports.generate');
   const ready = reports.filter((report) => report.status === 'ready').length;
   const needed = reports.filter((report) => report.status !== 'not_needed').length;
   return (
@@ -40,8 +48,18 @@ export function ReportReadiness({ reports }: { readonly reports: readonly Report
                       : t(`status.${report.status}`)
                   }
                 />
-                {/* PDF DOWNLOAD SLOT (fork E): when report.status === 'ready', add the
-                    download link for `report.key` here. */}
+                {report.status === 'ready' && canPrint && (
+                  <a
+                    href={`/api/v1/projects/${projectId}/reports/${report.key}/pdf?disposition=inline`}
+                    target="_blank"
+                    rel="noopener"
+                    title={t('openPdf', { name: report.name })}
+                    className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-sunken hover:text-accent"
+                  >
+                    <Download aria-hidden className="size-4" />
+                    <span className="sr-only">{t('openPdf', { name: report.name })}</span>
+                  </a>
+                )}
               </span>
             </div>
             {report.status === 'missing' && (

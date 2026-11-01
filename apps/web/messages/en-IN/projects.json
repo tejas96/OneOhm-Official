@@ -196,7 +196,8 @@
       "status": {
         "ready": "Ready",
         "not_needed": "Not needed"
-      }
+      },
+      "openPdf": "Open {name} as PDF"
     },
     "activity": {
       "title": "Activity",
