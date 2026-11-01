@@ -18,7 +18,8 @@ const SWATCH_CLASSES = [
 ] as const;
 
 function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+  // Words only: "Store (test)" gives "ST", not "S(".
+  const parts = name.match(/\p{L}[\p{L}\p{M}'’-]*/gu) ?? [];
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
   return `${first}${last}`.toUpperCase();

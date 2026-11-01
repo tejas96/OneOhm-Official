@@ -11,6 +11,13 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { factLabel } from './fact-labels';
 import { finishTask, missingCaptures } from './task-completion';
 
+const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
+  discom: 'DISCOM',
+  bank: 'the bank',
+  customer: 'the customer',
+  internal: 'the OneOhm team',
+};
+
 @Injectable()
 export class TasksService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
@@ -62,7 +69,7 @@ export class TasksService {
         projectId: task.projectId,
         taskId: id,
         kind: 'waiting',
-        message: `${task.title}: waiting on ${party}${note ? ` (${note})` : ''}.`,
+        message: `${task.title}: waiting on ${WAITING_ON[party]}${note ? ` (${note})` : ''}.`,
         userId: actor.userId,
       });
     });
