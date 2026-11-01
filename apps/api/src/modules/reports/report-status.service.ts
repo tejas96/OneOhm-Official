@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReportStatus } from '@oneohm/api-contracts';
-import { discoms, projectFacts, projects, projectTasks } from '@oneohm/database';
-import { eq } from 'drizzle-orm';
+import type { ReportOverview, ReportStatus } from '@oneohm/api-contracts';
+import { customers, discoms, properties, projectFacts, projects, projectTasks } from '@oneohm/database';
+import { desc, eq, ne } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
@@ -56,6 +56,33 @@ export class ReportStatusService {
       facts: Object.fromEntries(rows.map((row) => [row.key, row.value])),
       captureTask,
     };
+  }
+
+  /** One row per project (newest first); the company profile is read once. */
+  async overview(): Promise<ReportOverview[]> {
+    const rows = await this.db
+      .select({
+        projectId: projects.id,
+        code: projects.code,
+        name: customers.name,
+        place: properties.city,
+        status: projects.status,
+      })
+      .from(projects)
+      .innerJoin(customers, eq(customers.id, projects.customerId))
+      .innerJoin(properties, eq(properties.id, projects.propertyId))
+      .where(ne(projects.status, 'cancelled'))
+      .orderBy(desc(projects.createdAt));
+    const company = await this.catalog.company();
+    const result: ReportOverview[] = [];
+    for (const row of rows) {
+      const context = await this.context(row.projectId);
+      const reports = REPORT_DEFINITIONS.map((definition) =>
+        reportStatus(definition, context, company),
+      );
+      result.push({ ...row, reports });
+    }
+    return result;
   }
 
   async statuses(projectId: string): Promise<ReportStatus[]> {

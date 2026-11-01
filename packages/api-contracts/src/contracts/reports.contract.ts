@@ -25,7 +25,23 @@ const pdfResponse = c.otherResponse({ contentType: 'application/pdf', body: c.ty
  * Documents made from project facts. A report that is not ready answers 409 with each
  * missing detail in `fieldErrors` (field → "label — captured by task"), never a blank PDF.
  */
+export const reportOverviewSchema = z.object({
+  projectId: idSchema,
+  code: z.string(),
+  name: z.string(),
+  place: z.string(),
+  status: z.enum(['active', 'operational', 'completed', 'cancelled']),
+  reports: z.array(reportStatusSchema),
+});
+export type ReportOverview = z.infer<typeof reportOverviewSchema>;
+
 export const reportsContract = c.router({
+  reportsOverview: {
+    method: 'GET',
+    path: '/reports',
+    responses: { 200: z.array(reportOverviewSchema) },
+    summary: 'Every project that is not cancelled, with the readiness of each statutory report.',
+  },
   listProjectReports: {
     method: 'GET',
     path: '/projects/:id/reports',

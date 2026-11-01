@@ -28,7 +28,7 @@ export function ReportReadiness({
   const ready = reports.filter((report) => report.status === 'ready').length;
   const needed = reports.filter((report) => report.status !== 'not_needed').length;
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card id="reports" className="flex scroll-mt-24 flex-col overflow-hidden">
       <CardHeader title={t('title')} description={t('summary', { ready, needed })} />
       <ul className="flex flex-col divide-y divide-hairline border-t border-hairline">
         {reports.map((report) => (

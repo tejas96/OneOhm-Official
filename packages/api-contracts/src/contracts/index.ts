@@ -33,7 +33,13 @@ export const apiRouterDefinition: ApiRouterDefinition = {
 };
 
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
-export { REPORT_KEYS, type ReportKey, reportKeySchema } from './reports.contract';
+export {
+  REPORT_KEYS,
+  type ReportKey,
+  type ReportOverview,
+  reportKeySchema,
+  reportOverviewSchema,
+} from './reports.contract';
 export {
   authContract,
   catalogContract,

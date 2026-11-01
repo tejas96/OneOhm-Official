@@ -4,6 +4,7 @@ import customers from './customers.json';
 import leads from './leads.json';
 import projects from './projects.json';
 import quotations from './quotations.json';
+import reports from './reports.json';
 import settings from './settings.json';
 import signIn from './sign-in.json';
 import team from './team.json';
@@ -21,6 +22,7 @@ const messages = {
   ...leads,
   ...projects,
   ...quotations,
+  ...reports,
   ...settings,
   ...team,
   ...today,

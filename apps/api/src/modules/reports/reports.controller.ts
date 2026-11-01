@@ -32,6 +32,10 @@ export class ReportsController {
   @TsRestHandler(apiContract.reports)
   handler(@CurrentActor() actor: Actor) {
     return tsRestHandler(apiContract.reports, {
+      reportsOverview: async () => {
+        assertCan(actor, 'reports.generate');
+        return { status: 200, body: await this.statuses.overview() };
+      },
       listProjectReports: async ({ params }) => {
         assertCan(actor, 'reports.generate', 'projects.view_all');
         return { status: 200, body: await this.statuses.statuses(params.id) };

@@ -1,6 +1,10 @@
 'use client';
 
-import { MotionPreferenceProvider, ToastProvider } from '@oneohm/design-system/web';
+import {
+  MotionPreferenceProvider,
+  ToastProvider,
+  TooltipProvider,
+} from '@oneohm/design-system/web';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { createQueryClient } from '@/lib/query/query-client';
@@ -55,7 +59,9 @@ export function AppProviders({ initialTheme, initialCalmMotion, children }: AppP
     <ThemeContext.Provider value={themeValue}>
       <QueryClientProvider client={queryClient}>
         <MotionPreferenceProvider calm={calm} onCalmChange={setCalm}>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </ToastProvider>
         </MotionPreferenceProvider>
       </QueryClientProvider>
     </ThemeContext.Provider>

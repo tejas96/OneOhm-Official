@@ -1,0 +1,31 @@
+{
+  "reports": {
+    "eyebrow": "Paperwork",
+    "title": "Statutory reports",
+    "description": "Agreements, completion reports and DISCOM letters for every project.",
+    "summary": "{ready, plural, =0 {Nothing ready to print yet.} one {# report ready to print.} other {# reports ready to print.}} Missing details name the task that records them.",
+    "loading": "Loading reports",
+    "filterLabel": "Show",
+    "filters": {
+      "all": "All projects",
+      "missing": "Something missing",
+      "ready": "All ready"
+    },
+    "search": "Project code, customer or place",
+    "project": "Project",
+    "download": "Print",
+    "missing": "{count} missing",
+    "notNeeded": "Not needed",
+    "emptyTitle": "No projects yet",
+    "emptyBody": "Reports appear here once a project is created from an accepted quotation.",
+    "noMatch": "No project matches that search",
+    "short": {
+      "model-agreement": "Model agreement",
+      "net-metering-agreement": "Net metering",
+      "wcr": "Completion (WCR)",
+      "dcr": "DCR",
+      "annexure-proforma-a": "Annexure-I",
+      "meter-test-letter": "Meter test letter"
+    }
+  }
+}
