@@ -1,0 +1,159 @@
+/*
+ * Brand surfaces: the hero "solar glass", the page glow, and the logo-gradient
+ * lines and rings. Imported by components.css.
+ */
+
+/*
+ * Glow strengths for the logo-coloured light. Gentle on white (light theme), rich on
+ * the deep ocean (dark theme and `.oh-ocean`).
+ */
+:root {
+  --oh-glow-green: 22%;
+  --oh-glow-teal: 24%;
+  --oh-glow-blue: 16%;
+  --oh-page-glow: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --oh-glow-green: 34%;
+    --oh-glow-teal: 42%;
+    --oh-glow-blue: 34%;
+    --oh-page-glow: 1.5;
+  }
+}
+
+:root[data-theme="dark"],
+.oh-ocean {
+  --oh-glow-green: 34%;
+  --oh-glow-teal: 42%;
+  --oh-glow-blue: 34%;
+  --oh-page-glow: 1.5;
+}
+
+/*
+ * Solar glass: the one hero surface per screen. Bright white in the light theme and
+ * deep ocean in the dark theme, lit from the top right by the logo's green and teal,
+ * with a photovoltaic cell grid (cells, busbars) that only shows where the light
+ * falls, so text on the left stays clean.
+ */
+.oh-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--oh-on-panel);
+  background:
+    radial-gradient(
+      70% 95% at 96% -12%,
+      color-mix(in oklab, var(--color-brand-green) var(--oh-glow-green), transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      110% 130% at 100% 0%,
+      color-mix(in oklab, var(--color-brand-teal) var(--oh-glow-teal), transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      90% 120% at 0% 110%,
+      color-mix(in oklab, var(--color-brand-blue) var(--oh-glow-blue), transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--oh-panel) 0%, var(--oh-panel-deep) 100%);
+}
+
+/*
+ * The page itself: a clean neutral background with a soft wash of the logo's colours
+ * along the top edge, like early light. Stays put while the page scrolls under it.
+ */
+.oh-page-glow {
+  background-color: var(--oh-canvas);
+  background-image:
+    radial-gradient(
+      52rem 26rem at 88% -9rem,
+      color-mix(in oklab, var(--color-brand-teal) calc(9% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      44rem 22rem at 58% -11rem,
+      color-mix(in oklab, var(--color-brand-green) calc(8% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40rem 26rem at 8% -10rem,
+      color-mix(in oklab, var(--color-brand-blue) calc(6% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    );
+  background-repeat: no-repeat;
+}
+
+.oh-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--oh-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--oh-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--oh-panel-line) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    56px 56px,
+    56px 56px,
+    14px 56px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(85% 115% at 88% 0%, #000 0%, rgb(0 0 0 / 0.55) 38%, transparent 72%);
+}
+
+/* A soft glass sheen across the surface. */
+.oh-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 38%,
+    rgb(255 255 255 / 0.05) 47%,
+    rgb(255 255 255 / 0.02) 52%,
+    transparent 60%
+  );
+}
+
+.oh-panel :focus-visible {
+  outline-color: var(--oh-on-panel);
+}
+
+/* The logo gradient as a 2px line, e.g. the active sidebar marker or a hero card's top edge. */
+.oh-brand-line {
+  background: linear-gradient(
+    180deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue)
+  );
+}
+
+.oh-brand-line-x {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue)
+  );
+}
+
+/* A 2px ring in the logo gradient around a round element (use on a wrapper with padding). */
+.oh-brand-ring {
+  background: conic-gradient(
+    from 200deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue),
+    var(--color-brand-green)
+  );
+}
