@@ -48,3 +48,12 @@ export function shortMoment(instant: string): string {
 }
 
 export { addDays, daysBetween };
+
+/** "9:42 am" in India time for an instant. */
+export function clockTime(instant: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: BUSINESS_TIME_ZONE,
+  }).format(new Date(instant));
+}

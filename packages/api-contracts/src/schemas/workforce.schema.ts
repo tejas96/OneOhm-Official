@@ -118,7 +118,8 @@ export type PointsEntry = z.infer<typeof pointsEntrySchema>;
 /** Everything the field app's Today screen shows about the person's own day (PRD 4.1). */
 export const myWorkdaySchema = z.object({
   today: attendanceDaySchema.nullable(),
-  consent: z.object({ given: z.boolean(), at: instantSchema.nullable() }),
+  /** `answered` is false until the person has said yes or no once. */
+  consent: z.object({ given: z.boolean(), answered: z.boolean(), at: instantSchema.nullable() }),
   attendance: z.object({
     dayStart: z.string(),
     dayEnd: z.string(),

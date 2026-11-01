@@ -25,6 +25,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     captureFields: [],
     knownFacts: {},
     blockedBy: [],
+    changeBlockers: [],
     completedAt: null,
     attachments: [],
     missingEvidence: [],

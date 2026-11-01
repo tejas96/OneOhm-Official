@@ -33,7 +33,11 @@ export class WorkdayService {
     const month = today.slice(0, 7);
     return {
       today: days.get(actor.userId) ?? null,
-      consent: { given: consent.given, at: consent.at?.toISOString() ?? null },
+      consent: {
+        given: consent.given,
+        answered: consent.answered,
+        at: consent.at?.toISOString() ?? null,
+      },
       attendance: {
         dayStart: policy.attendance.dayStart,
         dayEnd: policy.attendance.dayEnd,

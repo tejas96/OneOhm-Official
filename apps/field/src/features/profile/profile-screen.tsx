@@ -2,17 +2,10 @@ import { Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/api/api';
+import { initials } from '@/components/initials';
 import { PROFILE } from '@/copy/common';
+import { LocationSharingCard } from '@/features/attendance/location-sharing-card';
 import { useCurrentUser, useSession } from '@/session/session-provider';
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter((part) => /^\p{L}/u.test(part))
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 /** Who is signed in, their roles, and sign out. */
 export function ProfileScreen() {
@@ -42,6 +35,7 @@ export function ProfileScreen() {
           {PROFILE.kind[user.kind]}
         </Text>
       </View>
+      <LocationSharingCard />
       <Card style={styles.card}>
         <Text variant="label" tone="tertiary">
           {PROFILE.roles}

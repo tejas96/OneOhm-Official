@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AttendanceCorrection } from '@oneohm/api-contracts';
-import { attendanceCorrections, attendanceDays, users } from '@oneohm/database';
+import { attendanceCorrections, attendanceDays, type Transaction, users } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -80,30 +80,7 @@ export class CorrectionsService {
       if (!row) throw conflict('This correction has already been decided.', 'decided');
       if (row.userId === actor.userId)
         throw conflict('Someone else decides your own correction.', 'own');
-      if (approve) {
-        const changes = {
-          ...(row.checkInAt ? { checkInAt: row.checkInAt, late: false } : {}),
-          ...(row.checkOutAt ? { checkOutAt: row.checkOutAt } : {}),
-          correctedAt: new Date(),
-          updatedAt: new Date(),
-        };
-        const [day] = await tx
-          .update(attendanceDays)
-          .set(changes)
-          .where(
-            and(eq(attendanceDays.userId, row.userId), eq(attendanceDays.workDate, row.workDate)),
-          )
-          .returning({ id: attendanceDays.id });
-        if (!day && row.checkInAt) {
-          await tx.insert(attendanceDays).values({
-            userId: row.userId,
-            workDate: row.workDate,
-            checkInAt: row.checkInAt,
-            checkOutAt: row.checkOutAt,
-            correctedAt: new Date(),
-          });
-        }
-      }
+      if (approve) await applyCorrection(tx, row);
       await recordAudit(
         tx,
         actor.userId,
@@ -116,4 +93,29 @@ export class CorrectionsService {
     if (!decided) throw notFound('That correction');
     return decided;
   }
+}
+
+/** Writes the approved times onto the day, or makes the day when none was recorded. */
+async function applyCorrection(
+  tx: Transaction,
+  row: typeof attendanceCorrections.$inferSelect,
+): Promise<void> {
+  const [day] = await tx
+    .update(attendanceDays)
+    .set({
+      ...(row.checkInAt ? { checkInAt: row.checkInAt, late: false } : {}),
+      ...(row.checkOutAt ? { checkOutAt: row.checkOutAt } : {}),
+      correctedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(attendanceDays.userId, row.userId), eq(attendanceDays.workDate, row.workDate)))
+    .returning({ id: attendanceDays.id });
+  if (day || !row.checkInAt) return;
+  await tx.insert(attendanceDays).values({
+    userId: row.userId,
+    workDate: row.workDate,
+    checkInAt: row.checkInAt,
+    checkOutAt: row.checkOutAt,
+    correctedAt: new Date(),
+  });
 }

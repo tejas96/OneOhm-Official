@@ -13,7 +13,7 @@ export const COMMON = {
   save: 'Save',
   done: 'Done',
   optional: 'Optional',
-  tabs: { today: 'Today', leads: 'Leads', quote: 'Quote', profile: 'Me' },
+  tabs: { today: 'Today', leads: 'Leads', quote: 'Quote', leave: 'Leave', profile: 'Me' },
   stages: {
     survey: 'Survey',
     design: 'Design',

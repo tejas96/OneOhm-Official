@@ -17,6 +17,8 @@ import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { TODAY } from '@/copy/tasks';
+import { AttendanceCard } from '@/features/attendance/attendance-card';
+import { useWorkday } from '@/features/attendance/use-workday';
 import { TaskRow } from '@/features/tasks/task-row';
 import { BUSINESS_TIME_ZONE, businessToday, longToday } from '@/lib/dates';
 import { useCurrentUser } from '@/session/session-provider';
@@ -29,13 +31,20 @@ export function TodayScreen() {
   const theme = useTheme();
   const user = useCurrentUser();
   const query = useQuery({ queryKey: keys.tasks, queryFn: () => unwrap(api.tasks.myTasks()) });
+  const workday = useWorkday();
   const phase = skyPhase(localHours(new Date(), BUSINESS_TIME_ZONE));
   const firstName = user.fullName.split(' ')[0] ?? user.fullName;
   const tasks = query.data ?? [];
   const groups = groupTasks(tasks, businessToday());
 
   return (
-    <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <Screen
+      refreshing={query.isRefetching}
+      onRefresh={() => {
+        void query.refetch();
+        void workday.refetch();
+      }}
+    >
       <View style={styles.header}>
         <Text variant="mono" tone="tertiary">
           {longToday().toUpperCase()}
@@ -53,6 +62,7 @@ export function TodayScreen() {
         ) : null}
       </View>
 
+      {workday.data ? <AttendanceCard workday={workday.data} /> : null}
       {query.isPending ? <LoadingState label={TODAY.loading} /> : null}
       {query.isError ? (
         <ErrorState

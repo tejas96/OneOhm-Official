@@ -31,14 +31,14 @@ export interface Position {
 export class AttendanceService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async consented(userId: string): Promise<{ given: boolean; at: Date | null }> {
+  async consented(userId: string): Promise<{ given: boolean; answered: boolean; at: Date | null }> {
     const [row] = await this.db
       .select()
       .from(locationConsents)
       .where(eq(locationConsents.userId, userId))
       .limit(1);
     const given = Boolean(row?.consentedAt) && !row?.withdrawnAt;
-    return { given, at: given ? (row?.consentedAt ?? null) : null };
+    return { given, answered: Boolean(row), at: given ? (row?.consentedAt ?? null) : null };
   }
 
   async setConsent(actor: Actor, given: boolean): Promise<void> {

@@ -46,6 +46,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-secure-store',
     [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'OneOhm reads your location only when you check in or out, to confirm you are at an approved place.',
+      },
+    ],
+    [
       'expo-image-picker',
       {
         cameraPermission: 'OneOhm uses the camera to take site photos for your tasks.',
