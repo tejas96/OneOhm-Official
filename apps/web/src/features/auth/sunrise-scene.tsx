@@ -55,7 +55,7 @@ export function SunriseScene({ className }: { readonly className?: string }) {
       className={cn(
         'relative isolate flex flex-col overflow-hidden px-6 pt-5 pb-8',
         night
-          ? 'bg-[linear-gradient(180deg,var(--color-panel-deep)_0%,var(--color-panel)_70%,var(--color-canvas)_100%)]'
+          ? 'oh-ocean bg-[linear-gradient(180deg,var(--oh-panel-deep)_0%,var(--oh-panel)_70%,var(--oh-canvas)_100%)]'
           : 'bg-[linear-gradient(180deg,var(--color-accent-soft)_0%,var(--color-energy-soft)_62%,var(--color-canvas)_100%)]',
         className,
       )}

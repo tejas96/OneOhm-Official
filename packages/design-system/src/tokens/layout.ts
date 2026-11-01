@@ -4,12 +4,12 @@ export const RADIUS = { xs: 6, sm: 8, md: 12, lg: 16, xl: 24, '2xl': 32, full: 9
 /** 4px base spacing scale. */
 export const SPACING = [0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96] as const;
 
-/** Light-theme shadows, tinted with the ink (19,32,31) so they read as daylight, not grey. */
+/** Light-theme shadows: soft, neutral ink (20,23,26); the largest one is tinted ocean. */
 export const ELEVATION = {
   e0: 'none',
-  e1: '0 1px 2px rgba(19,32,31,.06), 0 1px 1px rgba(19,32,31,.04)',
-  e2: '0 2px 4px rgba(19,32,31,.05), 0 12px 24px -12px rgba(19,32,31,.18)',
-  e3: '0 4px 8px rgba(19,32,31,.06), 0 24px 48px -16px rgba(19,32,31,.26)',
+  e1: '0 1px 2px rgba(20,23,26,.06), 0 1px 1px rgba(20,23,26,.04)',
+  e2: '0 2px 4px rgba(20,23,26,.05), 0 12px 24px -12px rgba(20,23,26,.18)',
+  e3: '0 4px 8px rgba(20,23,26,.06), 0 24px 48px -16px rgba(20,23,26,.26)',
   e4: '0 32px 80px -24px rgba(5,52,77,.42)',
 } as const;
 

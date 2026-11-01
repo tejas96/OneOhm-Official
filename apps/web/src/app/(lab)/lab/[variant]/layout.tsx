@@ -22,7 +22,7 @@ export default async function LabLayout({
   if (!isLabVariant(variant)) notFound();
   const look = LAB_VARIANTS.find((entry) => entry.id === variant)?.sidebar ?? 'ink';
   return (
-    <div className="flex min-h-dvh">
+    <div className="oh-page-glow flex min-h-dvh">
       <Sidebar look={look} activeHref={`/lab/${variant}`} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />

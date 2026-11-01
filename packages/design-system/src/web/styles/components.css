@@ -24,32 +24,86 @@
 }
 
 /*
- * Solar glass: the one hero surface per screen. A deep ocean ground lit from the
- * top right by the logo's green and teal, with a photovoltaic cell grid (cells,
- * busbars) that only shows where the light falls, so text on the left stays clean.
+ * Glow strengths for the logo-coloured light. Gentle on white (light theme), rich on
+ * the deep ocean (dark theme and `.oh-ocean`).
+ */
+:root {
+  --oh-glow-green: 22%;
+  --oh-glow-teal: 24%;
+  --oh-glow-blue: 16%;
+  --oh-page-glow: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --oh-glow-green: 34%;
+    --oh-glow-teal: 42%;
+    --oh-glow-blue: 34%;
+    --oh-page-glow: 1.5;
+  }
+}
+
+:root[data-theme="dark"],
+.oh-ocean {
+  --oh-glow-green: 34%;
+  --oh-glow-teal: 42%;
+  --oh-glow-blue: 34%;
+  --oh-page-glow: 1.5;
+}
+
+/*
+ * Solar glass: the one hero surface per screen. Bright white in the light theme and
+ * deep ocean in the dark theme, lit from the top right by the logo's green and teal,
+ * with a photovoltaic cell grid (cells, busbars) that only shows where the light
+ * falls, so text on the left stays clean.
  */
 .oh-panel {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  color: var(--color-on-panel);
+  color: var(--oh-on-panel);
   background:
     radial-gradient(
       70% 95% at 96% -12%,
-      color-mix(in oklab, var(--color-brand-green) 34%, transparent) 0%,
+      color-mix(in oklab, var(--color-brand-green) var(--oh-glow-green), transparent) 0%,
       transparent 58%
     ),
     radial-gradient(
       110% 130% at 100% 0%,
-      color-mix(in oklab, var(--color-brand-teal) 42%, transparent) 0%,
+      color-mix(in oklab, var(--color-brand-teal) var(--oh-glow-teal), transparent) 0%,
       transparent 62%
     ),
     radial-gradient(
       90% 120% at 0% 110%,
-      color-mix(in oklab, var(--color-brand-blue) 34%, transparent) 0%,
+      color-mix(in oklab, var(--color-brand-blue) var(--oh-glow-blue), transparent) 0%,
       transparent 60%
     ),
-    linear-gradient(160deg, var(--color-panel) 0%, var(--color-panel-deep) 100%);
+    linear-gradient(160deg, var(--oh-panel) 0%, var(--oh-panel-deep) 100%);
+}
+
+/*
+ * The page itself: a clean neutral background with a soft wash of the logo's colours
+ * along the top edge, like early light. Stays put while the page scrolls under it.
+ */
+.oh-page-glow {
+  background-color: var(--oh-canvas);
+  background-image:
+    radial-gradient(
+      52rem 26rem at 88% -9rem,
+      color-mix(in oklab, var(--color-brand-teal) calc(9% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      44rem 22rem at 58% -11rem,
+      color-mix(in oklab, var(--color-brand-green) calc(8% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40rem 26rem at 8% -10rem,
+      color-mix(in oklab, var(--color-brand-blue) calc(6% * var(--oh-page-glow)), transparent),
+      transparent 70%
+    );
+  background-repeat: no-repeat;
 }
 
 .oh-panel::before {
@@ -59,11 +113,11 @@
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(var(--color-panel-line) 1.5px, transparent 1.5px),
-    linear-gradient(90deg, var(--color-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(var(--oh-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--oh-panel-line) 1.5px, transparent 1.5px),
     linear-gradient(
       90deg,
-      color-mix(in oklab, var(--color-panel-line) 55%, transparent) 1px,
+      color-mix(in oklab, var(--oh-panel-line) 55%, transparent) 1px,
       transparent 1px
     );
   background-size:
@@ -91,7 +145,7 @@
 }
 
 .oh-panel :focus-visible {
-  outline-color: var(--color-on-panel);
+  outline-color: var(--oh-on-panel);
 }
 
 /* The logo gradient as a 2px line, e.g. the active sidebar marker or a hero card's top edge. */

@@ -15,6 +15,10 @@ describe('buildThemeCss', () => {
     expect(css).toContain('--color-party-discom: var(--oh-party-discom);');
   });
 
+  it('keeps the deep ocean available in any theme', () => {
+    expect(css).toMatch(/\.oh-ocean \{[^}]*--oh-panel: #05344D;/);
+  });
+
   it('switches to dark values by preference or data-theme', () => {
     expect(css).toContain('@media (prefers-color-scheme: dark)');
     expect(css).toContain(":root[data-theme='dark']");

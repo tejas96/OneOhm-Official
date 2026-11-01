@@ -1,10 +1,11 @@
 /**
  * Three sidebar treatments, compared in the design lab:
- * - `ocean`: the brand's deep ocean down the left edge; the current page glows softly.
+ * - `glow`: the hero surface down the left edge (white lit by the logo's glow in light,
+ *   deep ocean in dark); the current page glows softly.
  * - `ink`: paper sidebar; the current page is a solid ink pill.
  * - `tint`: paper sidebar; the current page is a soft Ohm-blue wash.
  */
-export type SidebarLook = 'ocean' | 'ink' | 'tint';
+export type SidebarLook = 'glow' | 'ink' | 'tint';
 
 interface LookClasses {
   readonly aside: string;
@@ -20,7 +21,7 @@ interface LookClasses {
 }
 
 export const SIDEBAR_LOOKS: Readonly<Record<SidebarLook, LookClasses>> = {
-  ocean: {
+  glow: {
     aside: 'oh-panel md:my-2 md:ml-2 md:h-[calc(100dvh-1rem)] md:rounded-2xl',
     muted: 'text-on-panel-muted',
     group: 'text-on-panel-muted/80',

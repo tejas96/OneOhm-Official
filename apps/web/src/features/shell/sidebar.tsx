@@ -32,7 +32,7 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
       )}
     >
       <div className="flex shrink-0 flex-col gap-1.5 px-2">
-        <BrandLogo alt={t('logoAlt')} tone={look === 'ocean' ? 'white' : 'auto'} className="h-9" />
+        <BrandLogo alt={t('logoAlt')} className="h-9" />
         <p className={cn('type-label', styles.muted)}>{t('company')}</p>
       </div>
 
@@ -73,7 +73,7 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
       </nav>
 
       <div className={cn('flex shrink-0 flex-col gap-3 border-t px-1 pt-4', styles.divider)}>
-        <ThemeSwitch onPanel={look === 'ocean'} />
+        <ThemeSwitch onPanel={look === 'glow'} />
         <button
           type="button"
           className={cn(
@@ -86,7 +86,7 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
             <span
               className={cn(
                 'truncate type-body-sm font-medium',
-                look === 'ocean' ? 'text-on-panel' : 'text-ink',
+                look === 'glow' ? 'text-on-panel' : 'text-ink',
               )}
             >
               {t('account.role')}

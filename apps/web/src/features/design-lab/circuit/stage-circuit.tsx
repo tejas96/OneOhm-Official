@@ -74,7 +74,7 @@ function StageNode({
           busiest ? 'oh-brand-ring' : 'bg-on-panel/20',
         )}
       >
-        <span className="flex size-[52px] items-center justify-center rounded-full bg-panel-deep">
+        <span className="flex size-[52px] items-center justify-center rounded-full bg-panel shadow-e1">
           <Icon
             aria-hidden
             className={cn('size-5', busiest ? 'text-on-panel' : 'text-on-panel-muted')}
@@ -83,7 +83,7 @@ function StageNode({
         {load.waiting > 0 && (
           <span
             aria-hidden
-            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-waiting-solid font-mono text-[0.6875rem] text-on-panel ring-2 ring-panel-deep"
+            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-waiting-solid font-mono text-[0.6875rem] text-on-accent ring-2 ring-panel"
           >
             {load.waiting}
           </span>

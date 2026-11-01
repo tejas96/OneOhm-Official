@@ -2,7 +2,7 @@ import type { SidebarLook } from '../shell/sidebar-looks';
 
 /** The three command-centre directions in the design lab, each with its sidebar look. */
 export const LAB_VARIANTS = [
-  { id: 'circuit', sidebar: 'ocean' },
+  { id: 'circuit', sidebar: 'glow' },
   { id: 'editorial', sidebar: 'ink' },
   { id: 'bento', sidebar: 'tint' },
 ] as const satisfies ReadonlyArray<{ id: string; sidebar: SidebarLook }>;

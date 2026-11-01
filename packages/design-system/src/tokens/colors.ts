@@ -31,48 +31,53 @@ export interface ThemeColors {
   readonly panelLine: string;
 }
 
+/**
+ * Light: a clean neutral daylight (white cards on a cool off-white), no tint.
+ * The hero surface (`panel`) is bright here too: white lit by the logo's glow.
+ */
 export const LIGHT_COLORS: ThemeColors = {
-  canvas: '#F3F1EB',
-  surface: '#FAF9F5',
+  canvas: '#F5F6F8',
+  surface: '#FAFBFC',
   surfaceRaised: '#FFFFFF',
-  surfaceSunken: '#E8E5DC',
-  borderSubtle: '#E2DED4',
-  borderStrong: '#C9C3B6',
-  textPrimary: '#13201F',
-  textSecondary: '#4A5654',
-  textTertiary: '#5E6866',
+  surfaceSunken: '#ECEEF1',
+  borderSubtle: '#E3E6EA',
+  borderStrong: '#CDD2D8',
+  textPrimary: '#14171A',
+  textSecondary: '#4D5560',
+  textTertiary: '#5D6570',
   accent: '#006EAA',
   accentHover: '#005F93',
   accentPressed: '#00507C',
   onAccent: '#FFFFFF',
-  accentSoft: '#E0EEF7',
+  accentSoft: '#E1EEF7',
   onAccentSoft: '#00598A',
   energy: '#3F9A45',
   energySoft: '#E3F1DE',
   focusRing: '#006EAA',
-  scrim: 'rgba(12, 20, 22, 0.48)',
-  panel: '#05344D',
-  panelDeep: '#041F2E',
-  onPanel: '#F2F7F6',
-  onPanelMuted: '#B9D2D6',
-  panelLine: 'rgba(185, 210, 214, 0.14)',
+  scrim: 'rgba(20, 23, 26, 0.45)',
+  panel: '#FFFFFF',
+  panelDeep: '#EFF6F8',
+  onPanel: '#14171A',
+  onPanelMuted: '#4D5560',
+  panelLine: 'rgba(0, 110, 170, 0.09)',
 };
 
+/** Dark: a neutral charcoal (no blue cast); the hero surface is the deep ocean. */
 export const DARK_COLORS: ThemeColors = {
-  canvas: '#0C1315',
-  surface: '#11191C',
-  surfaceRaised: '#172125',
-  surfaceSunken: '#080D0F',
-  borderSubtle: '#223034',
-  borderStrong: '#34464B',
-  textPrimary: '#E6EDEB',
-  textSecondary: '#A8B5B3',
-  textTertiary: '#8A9896',
+  canvas: '#0F1113',
+  surface: '#141619',
+  surfaceRaised: '#1A1D21',
+  surfaceSunken: '#0A0B0D',
+  borderSubtle: '#262A30',
+  borderStrong: '#373C44',
+  textPrimary: '#ECEEF0',
+  textSecondary: '#AEB4BC',
+  textTertiary: '#8E959E',
   accent: '#5BB8EC',
   accentHover: '#7CC7F0',
   accentPressed: '#9AD4F3',
   onAccent: '#04202F',
-  accentSoft: '#0F2A3A',
+  accentSoft: '#10283A',
   onAccentSoft: '#A6D8F4',
   energy: '#7DCB6A',
   energySoft: '#15281A',
@@ -84,6 +89,18 @@ export const DARK_COLORS: ThemeColors = {
   onPanelMuted: '#A9C5CA',
   panelLine: 'rgba(169, 197, 202, 0.10)',
 };
+
+/**
+ * The deep ocean, whatever the theme: for brand moments that should always be
+ * dark (the desktop sign-in panel, the night sky). Applied with `.oh-ocean`.
+ */
+export const OCEAN_PANEL = {
+  panel: '#05344D',
+  panelDeep: '#041F2E',
+  onPanel: '#F2F7F6',
+  onPanelMuted: '#B9D2D6',
+  panelLine: 'rgba(185, 210, 214, 0.14)',
+} as const satisfies Partial<ThemeColors>;
 
 /**
  * Who a delay is waiting on. Category colours for charts and chips, never status.

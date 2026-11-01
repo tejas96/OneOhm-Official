@@ -1,5 +1,11 @@
 import { BRAND } from '../tokens/brand';
-import { DARK_COLORS, LIGHT_COLORS, PARTY_SWATCHES, PROJECT_SWATCHES } from '../tokens/colors';
+import {
+  DARK_COLORS,
+  LIGHT_COLORS,
+  OCEAN_PANEL,
+  PARTY_SWATCHES,
+  PROJECT_SWATCHES,
+} from '../tokens/colors';
 import { BREAKPOINTS, DARK_ELEVATION, ELEVATION, RADIUS } from '../tokens/layout';
 import { DURATION, EASING } from '../tokens/motion';
 import { DARK_STATUS, LIGHT_STATUS, STATUS_TONES, type StatusColor } from '../tokens/status';
@@ -140,6 +146,12 @@ export function buildThemeCss(): string {
     block(':root', [...themeVariables('light'), ...durationVariables(false)]),
     `@media (prefers-color-scheme: dark) {\n${block(":root:not([data-theme='light'])", dark, '  ')}\n}`,
     block(":root[data-theme='dark']", dark),
+    block(
+      '.oh-ocean',
+      Object.entries(OCEAN_PANEL).map(
+        ([token, value]) => `--oh-${COLOR_CSS_NAMES[token as keyof typeof OCEAN_PANEL]}: ${value};`,
+      ),
+    ),
     `@media (prefers-reduced-motion: reduce) {\n${block(':root', durationVariables(true), '  ')}\n}`,
     block(":root[data-motion='calm']", durationVariables(true)),
     block('@keyframes oh-shimmer', [

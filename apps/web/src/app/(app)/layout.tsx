@@ -4,13 +4,11 @@ import { Sidebar } from '@/features/shell/sidebar';
 
 export default function AppLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh">
+    <div className="oh-page-glow flex min-h-dvh">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
+      <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
-        <main className="flex-1 bg-surface px-4 py-6 sm:px-6 md:rounded-2xl md:border md:border-hairline md:px-10 md:py-9 md:shadow-e1">
-          {children}
-        </main>
+        <main className="flex-1 px-4 py-6 sm:px-6 md:px-10 md:py-9">{children}</main>
       </div>
     </div>
   );

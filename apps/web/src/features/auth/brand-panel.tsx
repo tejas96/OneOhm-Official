@@ -12,7 +12,7 @@ export function BrandPanel({ className }: { readonly className?: string }) {
     <section
       aria-label={t('label')}
       className={cn(
-        'oh-panel flex min-h-[22rem] flex-col justify-between gap-8 p-6 sm:p-10 lg:min-h-dvh lg:p-12',
+        'oh-panel oh-ocean flex min-h-[22rem] flex-col justify-between gap-8 p-6 sm:p-10 lg:min-h-dvh lg:p-12',
         className,
       )}
     >
