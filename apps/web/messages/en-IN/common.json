@@ -1,0 +1,66 @@
+{
+  "appearance": {
+    "label": "Appearance",
+    "system": "Match this device",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "nav": {
+    "label": "Main",
+    "logoAlt": "OneOhm",
+    "company": "One Ohm Sustainable Green Energy",
+    "search": "Jump to…",
+    "notBuilt": "Not built yet",
+    "leadsBadge": "{count} leads to follow up today",
+    "groups": {
+      "sales": "Sales",
+      "delivery": "Delivery",
+      "business": "Business"
+    },
+    "items": {
+      "today": "Today",
+      "commandCenter": "Command centre",
+      "leads": "Leads",
+      "quotations": "Quotations",
+      "customers": "Customers",
+      "projects": "Projects",
+      "discom": "DISCOM",
+      "contractors": "Contractors",
+      "finance": "Finance",
+      "inventory": "Inventory",
+      "team": "Team",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "account": {
+      "noRole": "No role yet",
+      "signOut": "Sign out",
+      "label": "Your account"
+    }
+  },
+  "stages": {
+    "survey": "Survey",
+    "design": "Design",
+    "material": "Material",
+    "installation": "Installation",
+    "commissioning": "Commissioning",
+    "net_metering": "Net metering",
+    "subsidy": "Subsidy"
+  },
+  "stagesShort": {
+    "survey": "Survey",
+    "design": "Design",
+    "material": "Material",
+    "installation": "Install",
+    "commissioning": "Commission",
+    "net_metering": "Net meter",
+    "subsidy": "Subsidy"
+  },
+  "states": {
+    "loadError": "This could not load",
+    "retry": "Try again",
+    "loading": "Loading",
+    "saving": "Saving",
+    "nothingYet": "Nothing here yet"
+  }
+}

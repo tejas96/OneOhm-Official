@@ -1,7 +1,9 @@
 'use client';
 
-import { MotionPreferenceProvider } from '@oneohm/design-system/web';
+import { MotionPreferenceProvider, ToastProvider } from '@oneohm/design-system/web';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import { createQueryClient } from '@/lib/query/query-client';
 import { MOTION_COOKIE, preferenceCookie, THEME_COOKIE, type ThemePreference } from './preferences';
 
 interface ThemeContextValue {
@@ -26,6 +28,7 @@ interface AppProvidersProps {
 
 /** Appearance preferences: applied to <html> at once and saved for the next visit. */
 export function AppProviders({ initialTheme, initialCalmMotion, children }: AppProvidersProps) {
+  const [queryClient] = useState(createQueryClient);
   const [theme, setThemeState] = useState<ThemePreference>(initialTheme);
   const [calm, setCalmState] = useState(initialCalmMotion);
 
@@ -50,9 +53,11 @@ export function AppProviders({ initialTheme, initialCalmMotion, children }: AppP
   const themeValue = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
   return (
     <ThemeContext.Provider value={themeValue}>
-      <MotionPreferenceProvider calm={calm} onCalmChange={setCalm}>
-        {children}
-      </MotionPreferenceProvider>
+      <QueryClientProvider client={queryClient}>
+        <MotionPreferenceProvider calm={calm} onCalmChange={setCalm}>
+          <ToastProvider>{children}</ToastProvider>
+        </MotionPreferenceProvider>
+      </QueryClientProvider>
     </ThemeContext.Provider>
   );
 }

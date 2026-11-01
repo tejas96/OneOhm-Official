@@ -1,12 +1,20 @@
 'use client';
 
-import { cn, easing, listItemEnter, StatusPill, seconds } from '@oneohm/design-system/web';
+import type { ProjectSummary } from '@oneohm/api-contracts';
+import {
+  cn,
+  EmptyState,
+  easing,
+  listItemEnter,
+  StatusPill,
+  seconds,
+} from '@oneohm/design-system/web';
+import { EPC_STAGES } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
-import { Hourglass } from 'lucide-react';
+import { Hourglass, SunMedium } from 'lucide-react';
 import { motion } from 'motion/react';
+import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type AttentionProject, EPC_STAGES } from './preview-data';
-import { LIVE_PROJECTS } from './preview-more';
 import { SectionHeading } from './section-heading';
 
 const COLUMNS =
@@ -15,7 +23,13 @@ const STEP = 100 / EPC_STAGES.length;
 const centre = (index: number) => STEP * index + STEP / 2;
 
 /** Every live project on one page, each journey drawn as a metro line. */
-export function ProjectLedger() {
+export function ProjectLedger({
+  projects,
+  total,
+}: {
+  readonly projects: readonly ProjectSummary[];
+  readonly total: number;
+}) {
   const t = useTranslations('commandCenter.projects');
   const shortT = useTranslations('stagesShort');
   return (
@@ -24,51 +38,67 @@ export function ProjectLedger() {
         index="01"
         title={t('title')}
         action={
-          <a href="#projects" className="type-body-sm font-medium text-accent hover:underline">
-            {t('all')}
-          </a>
+          <Link href="/projects" className="type-body-sm font-medium text-accent hover:underline">
+            {t('all', { count: total })}
+          </Link>
         }
       />
-      <div className={cn(COLUMNS, 'hidden border-b border-hairline pb-3 md:grid')} aria-hidden>
-        <span className="type-overline text-ink-faint uppercase">{t('project')}</span>
-        <span className="grid grid-cols-7">
-          {EPC_STAGES.map((stage) => (
-            <span
-              key={stage}
-              className="px-0.5 text-center text-[0.6875rem] leading-tight text-ink-faint"
-            >
-              {shortT(stage)}
+      {projects.length === 0 ? (
+        <EmptyState icon={<SunMedium />} title={t('emptyTitle')} description={t('emptyBody')} />
+      ) : (
+        <>
+          <div className={cn(COLUMNS, 'hidden border-b border-hairline pb-3 md:grid')} aria-hidden>
+            <span className="type-overline text-ink-faint uppercase">{t('project')}</span>
+            <span className="grid grid-cols-7">
+              {EPC_STAGES.map((stage) => (
+                <span
+                  key={stage}
+                  className="px-0.5 text-center text-[0.6875rem] leading-tight text-ink-faint"
+                >
+                  {shortT(stage)}
+                </span>
+              ))}
             </span>
-          ))}
-        </span>
-        <span className="type-overline text-ink-faint uppercase">{t('statusNext')}</span>
-      </div>
-      <ul className="flex flex-col divide-y divide-hairline">
-        {LIVE_PROJECTS.map((project, index) => (
-          <motion.li key={project.id} {...listItemEnter(index)} className={cn(COLUMNS, 'py-4')}>
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="font-mono text-[0.75rem] text-ink-faint">
-                {project.id} · {formatKwp(project.capacityWp)}
-              </p>
-              <p className="truncate type-title-lg font-normal text-ink [font-family:var(--font-display)]">
-                {project.name}
-              </p>
-              <p className="truncate type-body-sm text-ink-faint">{project.place}</p>
-            </div>
-            <MetroLine project={project} index={index} />
-            <ProjectStatus project={project} />
-          </motion.li>
-        ))}
-      </ul>
+            <span className="type-overline text-ink-faint uppercase">{t('statusNext')}</span>
+          </div>
+          <ul className="flex flex-col divide-y divide-hairline">
+            {projects.map((project, index) => (
+              <motion.li
+                key={project.id}
+                {...listItemEnter(index)}
+                className={cn(
+                  COLUMNS,
+                  'relative rounded-lg py-4 transition-colors hover:bg-surface/60',
+                )}
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="font-mono text-[0.75rem] text-ink-faint">
+                    {project.code} · {formatKwp(project.capacityWp)}
+                  </p>
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="truncate type-title-lg font-normal text-ink [font-family:var(--font-display)] after:absolute after:inset-0 hover:text-accent"
+                  >
+                    {project.name}
+                  </Link>
+                  <p className="truncate type-body-sm text-ink-faint">{project.place}</p>
+                </div>
+                <MetroLine project={project} index={index} />
+                <ProjectStatus project={project} />
+              </motion.li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
 
-function MetroLine({
+export function MetroLine({
   project,
   index,
 }: {
-  readonly project: AttentionProject;
+  readonly project: ProjectSummary;
   readonly index: number;
 }) {
   const stagesT = useTranslations('stages');
@@ -131,17 +161,19 @@ function MetroLine({
   );
 }
 
-function ProjectStatus({ project }: { readonly project: AttentionProject }) {
+export function ProjectStatus({ project }: { readonly project: ProjectSummary }) {
   const format = useFormatter();
   return (
     <div className="flex flex-col items-start gap-1.5">
       <StatusPill tone={project.tone} label={project.toneLabel} size="sm" />
-      <p className="type-body-sm text-ink-muted">
-        {project.next.label} ·{' '}
-        <time dateTime={project.next.date} className="text-ink">
-          {format.dateTime(new Date(project.next.date), { day: 'numeric', month: 'short' })}
-        </time>
-      </p>
+      {project.next && (
+        <p className="type-body-sm text-ink-muted">
+          {project.next.label} ·{' '}
+          <time dateTime={project.next.date} className="text-ink">
+            {format.dateTime(new Date(project.next.date), { day: 'numeric', month: 'short' })}
+          </time>
+        </p>
+      )}
     </div>
   );
 }

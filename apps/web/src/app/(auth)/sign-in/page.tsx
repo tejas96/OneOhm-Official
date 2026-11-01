@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { BrandPanel } from '@/features/auth/brand-panel';
 import { SignInForm } from '@/features/auth/sign-in-form';
 import { SunriseScene } from '@/features/auth/sunrise-scene';
@@ -18,7 +19,9 @@ export default async function SignInPage() {
       <SunriseScene className="lg:hidden" />
       <div className="relative z-10 -mt-7 flex flex-col items-center justify-between gap-6 rounded-t-[28px] bg-canvas px-6 pt-4 pb-10 shadow-[0_-18px_40px_-24px_rgb(5_52_77/0.35)] sm:px-10 lg:mt-0 lg:gap-10 lg:rounded-none lg:py-10 lg:shadow-none">
         <span aria-hidden className="h-1 w-10 rounded-full bg-rule lg:invisible" />
-        <SignInForm />
+        <Suspense>
+          <SignInForm />
+        </Suspense>
         <p className="max-w-sm text-center type-body-sm text-ink-faint">{t('help')}</p>
       </div>
     </main>

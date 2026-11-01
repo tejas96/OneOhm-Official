@@ -1,0 +1,82 @@
+{
+  "commandCenter": {
+    "title": "Business at a glance",
+    "health": "Health",
+    "healthAria": "Business health {score} out of 100",
+    "newQuotation": "New quotation",
+    "greeting": {
+      "morning": "Good morning",
+      "midday": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good evening"
+    },
+    "brief": {
+      "money": "You have collected <figure>{collected}</figure> this month, with {due} due so far.",
+      "actions": "{count, plural, =0 {Nothing needs you today.} one {<figure># thing</figure> needs you today.} other {<figure># things</figure> need you today.}}",
+      "waiting": "Projects have waited longest on <figure>{party}</figure>."
+    },
+    "actions": {
+      "title": "Needs you today",
+      "description": "One next step each. Done here, the project moves on.",
+      "empty": "Nothing needs you right now. Everything is moving.",
+      "showAll": "Show all {count}",
+      "showFewer": "Show fewer"
+    },
+    "party": {
+      "internal": "OneOhm team",
+      "customer": "Customer",
+      "bank": "Bank",
+      "discom": "DISCOM"
+    },
+    "tiles": {
+      "installed": "Installed this month",
+      "installedNote": "{count, plural, one {# system} other {# systems}} commissioned, {next} more due this week.",
+      "kinds": {
+        "residential": "Homes",
+        "society": "Societies",
+        "commercial": "Commercial"
+      },
+      "collected": "Collected this month",
+      "ofDue": "of {due} due so far",
+      "health": "Business health",
+      "healthAria": "Business health {score} out of 100",
+      "factors": {
+        "delivery": "Delivery",
+        "money": "Money",
+        "team": "Team"
+      },
+      "waiting": "Waiting time",
+      "waitingAria": "{total} waiting days this month, split by who projects waited on",
+      "days": "days",
+      "pipeline": "Sales this month",
+      "steps": {
+        "leads": "Leads",
+        "surveys": "Site surveys",
+        "quotations": "Quotations sent",
+        "accepted": "Accepted"
+      },
+      "weeklyAria": "Money received in each of the last eight weeks",
+      "weeks": "Last 8 weeks"
+    },
+    "projects": {
+      "title": "Projects in motion",
+      "all": "{count, plural, one {All # live project} other {All # live projects}}",
+      "project": "Project",
+      "statusNext": "Status · next",
+      "emptyTitle": "No live projects yet",
+      "emptyBody": "Projects appear here once a quotation is accepted and a project is created."
+    },
+    "money": {
+      "title": "Money",
+      "comingIn": "Coming in",
+      "goingOut": "Going out this week",
+      "collected": "Collected this month",
+      "stillDue": "Still due from customers",
+      "fromBanks": "Bank disbursements pending",
+      "toVendors": "To vendors",
+      "toContractors": "To contractors",
+      "advances": "Advances to crews"
+    },
+    "loading": "Loading the business"
+  }
+}

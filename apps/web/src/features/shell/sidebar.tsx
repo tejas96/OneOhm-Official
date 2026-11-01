@@ -1,10 +1,14 @@
 'use client';
 
-import { Avatar, CountBadge, cn } from '@oneohm/design-system/web';
-import { ChevronsUpDown, Search } from 'lucide-react';
+import { CountBadge, cn } from '@oneohm/design-system/web';
+import { useQuery } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { api, expectStatus } from '@/lib/api/api-client';
+import { useCurrentUser } from '@/providers/current-user';
+import { AccountMenu } from './account-menu';
 import { BrandLogo } from './brand-logo';
 import { NAVIGATION, type NavItem } from './navigation';
 import { ThemeSwitch } from './theme-switch';
@@ -35,6 +39,13 @@ const STYLES = {
 export function Sidebar() {
   const t = useTranslations('nav');
   const styles = STYLES;
+  const user = useCurrentUser();
+  const allowed = (item: NavItem) =>
+    !item.requires || item.requires.some((capability) => user.capabilities.includes(capability));
+  const groups = NAVIGATION.map((group) => ({
+    ...group,
+    items: group.items.filter(allowed),
+  })).filter((group) => group.items.length > 0);
   return (
     <aside
       className={cn(
@@ -65,7 +76,7 @@ export function Sidebar() {
         aria-label={t('label')}
         className="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1"
       >
-        {NAVIGATION.map((group, index) => (
+        {groups.map((group, index) => (
           <div key={group.key ?? `group-${index}`} className="flex shrink-0 flex-col gap-0.5">
             {group.key && (
               <p className="px-3 pb-0.5 type-overline text-ink-faint uppercase">
@@ -85,28 +96,32 @@ export function Sidebar() {
 
       <div className="flex shrink-0 flex-col gap-3 border-t border-hairline px-1 pt-4">
         <ThemeSwitch />
-        <button
-          type="button"
-          className="flex items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-sunken"
-        >
-          <Avatar name={t('account.role')} swatch={1} size="sm" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate type-body-sm font-medium text-ink">{t('account.role')}</span>
-            <span className={cn('truncate type-label', styles.muted)}>{t('account.preview')}</span>
-          </span>
-          <ChevronsUpDown aria-hidden className={cn('size-4', styles.muted)} />
-        </button>
+        <AccountMenu />
       </div>
     </aside>
   );
 }
 
-const LEADS_TO_FOLLOW_UP = 11;
+/** Leads whose next action is due: the one number worth a badge in the menu. */
+function useLeadsToFollowUp(enabled: boolean): number {
+  const { data } = useQuery({
+    queryKey: ['leads', 'open'],
+    queryFn: () => expectStatus(api.crm.listLeads({ query: { open: true } }), 200),
+    enabled,
+    staleTime: 60_000,
+  });
+  return (
+    data?.filter(
+      (lead) => lead.overdue || lead.nextActionOn === new Date().toISOString().slice(0, 10),
+    ).length ?? 0
+  );
+}
 
 function NavLink({ item }: { readonly item: NavItem }) {
   const t = useTranslations('nav');
   const pathname = usePathname();
   const styles = STYLES;
+  const followUps = useLeadsToFollowUp(item.key === 'leads');
   const href = item.href;
   const active = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = item.icon;
@@ -118,10 +133,7 @@ function NavLink({ item }: { readonly item: NavItem }) {
       />
       <span className="flex-1 truncate">{t(`items.${item.key}`)}</span>
       {item.key === 'leads' && (
-        <CountBadge
-          count={LEADS_TO_FOLLOW_UP}
-          label={t('leadsBadge', { count: LEADS_TO_FOLLOW_UP })}
-        />
+        <CountBadge count={followUps} label={t('leadsBadge', { count: followUps })} />
       )}
     </>
   );

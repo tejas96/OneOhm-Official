@@ -1,0 +1,60 @@
+{
+  "signIn": {
+    "pageTitle": "Sign in",
+    "help": "Trouble signing in? Your administrator can reset your password from Team settings.",
+    "panel": {
+      "label": "About OneOhm",
+      "logoAlt": "OneOhm — Energy for everyone",
+      "sheet": "Sheet E-001 · Single line",
+      "headlineOne": "Every rooftop,",
+      "headlineTwo": "wired to plan.",
+      "description": "Leads, quotations, installations, DISCOM work and payments for the whole OneOhm team, in one calm place.",
+      "legend": {
+        "array": {
+          "verb": "Generate",
+          "name": "Solar array"
+        },
+        "inverter": {
+          "verb": "Convert",
+          "name": "Inverter"
+        },
+        "meter": {
+          "verb": "Measure",
+          "name": "Net meter"
+        },
+        "grid": {
+          "verb": "Export",
+          "name": "Grid"
+        }
+      }
+    },
+    "form": {
+      "title": "Sign in",
+      "description": "Use your OneOhm email or employee ID and your password.",
+      "identifier": "Email or employee ID",
+      "identifierHint": "The one your administrator registered for you.",
+      "identifierPlaceholder": "name@oneohm.in or OH-0012",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Sign in",
+      "mobileNote": "Site teams, contractors, resellers and customers sign in on the OneOhm mobile apps with a one-time code."
+    },
+    "sky": {
+      "label": "OneOhm",
+      "logoAlt": "OneOhm — Energy for everyone",
+      "hello": {
+        "morning": "Good morning",
+        "midday": "Good afternoon",
+        "evening": "Good evening",
+        "night": "Good evening"
+      },
+      "line": {
+        "morning": "The panels are waking up.",
+        "midday": "Peak sun over Sangli.",
+        "evening": "Last light on the panels.",
+        "night": "The grid has the night shift."
+      }
+    }
+  }
+}

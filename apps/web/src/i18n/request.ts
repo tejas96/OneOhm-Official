@@ -7,6 +7,6 @@ export default getRequestConfig(async () => {
   const store = await cookies();
   const requested = store.get(LOCALE_COOKIE)?.value;
   const locale = requested && isSupportedLocale(requested) ? requested : DEFAULT_LOCALE;
-  const messages = (await import(`../../messages/${locale}.json`)).default;
+  const messages = (await import(`../../messages/${locale}/index.ts`)).default;
   return { locale, messages, timeZone: 'Asia/Kolkata' };
 });

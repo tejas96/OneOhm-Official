@@ -1,7 +1,7 @@
 'use client';
 
+import type { CommandCenter } from '@oneohm/api-contracts';
 import {
-  Button,
   cn,
   DonutChart,
   easing,
@@ -10,12 +10,9 @@ import {
   useCountUp,
 } from '@oneohm/design-system/web';
 import { formatInrCompact } from '@oneohm/shared';
-import { BellRing } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { PREVIEW } from './preview-data';
-import { MONEY } from './preview-more';
 import { RooftopIllustration } from './rooftop/rooftop-illustration';
 
 export const TILE = 'rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70';
@@ -35,9 +32,15 @@ function Overline({
 }
 
 /** The hero tile: what was installed this month, with the rooftop drawing. */
-export function InstalledTile({ className }: { readonly className?: string }) {
+export function InstalledTile({
+  installed: figures,
+  className,
+}: {
+  readonly installed: CommandCenter['installed'];
+  readonly className?: string;
+}) {
   const t = useTranslations('commandCenter.tiles');
-  const installed = useCountUp(PREVIEW.pulse.installedWp);
+  const installed = useCountUp(figures.wattsPeak);
   return (
     <section
       className={cn(
@@ -53,16 +56,16 @@ export function InstalledTile({ className }: { readonly className?: string }) {
           <span className="ml-2 type-display-md text-ink-faint">kWp</span>
         </p>
         <p className="max-w-[15rem] type-body text-ink-muted">
-          {t('installedNote', { count: PREVIEW.pulse.commissioned, next: 4 })}
+          {t('installedNote', { count: figures.commissioned, next: figures.dueThisWeek })}
         </p>
       </div>
       <ul className="relative z-10 flex flex-wrap gap-2">
-        {(['residential', 'society', 'commercial'] as const).map((kind, index) => (
+        {(['residential', 'society', 'commercial'] as const).map((kind) => (
           <li
             key={kind}
             className="rounded-full bg-raised/80 px-3 py-1.5 type-body-sm text-ink-muted shadow-e1 backdrop-blur"
           >
-            <span className="mr-1.5 font-mono text-ink">{[6, 2, 1][index]}</span>
+            <span className="mr-1.5 font-mono text-ink">{figures.byType[kind]}</span>
             {t(`kinds.${kind}`)}
           </li>
         ))}
@@ -72,28 +75,29 @@ export function InstalledTile({ className }: { readonly className?: string }) {
   );
 }
 
-/** Collections this month on the ocean panel. */
-export function CollectionsTile({ className }: { readonly className?: string }) {
+/** Collections this month on the ocean panel, with the last eight weeks as bars. */
+export function CollectionsTile({
+  collections,
+  className,
+}: {
+  readonly collections: CommandCenter['collections'];
+  readonly className?: string;
+}) {
   const t = useTranslations('commandCenter.tiles');
-  const values = PREVIEW.money.weeklyCollections;
-  const max = Math.max(...values);
+  const values = collections.weekly;
+  const max = Math.max(1, ...values);
   return (
     <section className={cn('oh-panel flex flex-col gap-5 rounded-[28px] p-6 shadow-e3', className)}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Overline light>{t('collected')}</Overline>
-          <p className="type-display-xl text-on-panel tabular-nums">
-            {formatInrCompact(MONEY.collected)}
-          </p>
-          <p className="type-body-sm text-on-panel-muted">
-            {t('ofDue', { due: formatInrCompact(MONEY.due) })}
-          </p>
-        </div>
-        <Button variant="panel" size="sm" leadingIcon={<BellRing />}>
-          {t('remind', { count: 4 })}
-        </Button>
+      <div className="flex flex-col gap-2">
+        <Overline light>{t('collected')}</Overline>
+        <p className="type-display-xl text-on-panel tabular-nums">
+          {formatInrCompact(collections.collectedPaise)}
+        </p>
+        <p className="type-body-sm text-on-panel-muted">
+          {t('ofDue', { due: formatInrCompact(collections.duePaise) })}
+        </p>
       </div>
-      <div className="flex h-20 items-end gap-2" aria-hidden>
+      <div className="flex h-20 items-end gap-2" role="img" aria-label={t('weeklyAria')}>
         {values.map((value, index) => (
           <motion.span
             key={`week-${index + 1}`}
@@ -101,7 +105,7 @@ export function CollectionsTile({ className }: { readonly className?: string }) 
               'flex-1 origin-bottom rounded-t-md',
               index === values.length - 1 ? 'oh-brand-line' : 'bg-on-panel/18',
             )}
-            style={{ height: `${(value / max) * 100}%` }}
+            style={{ height: `${Math.max(4, (value / max) * 100)}%` }}
             initial={{ scaleY: 0 }}
             animate={{ scaleY: 1 }}
             transition={{
@@ -112,44 +116,47 @@ export function CollectionsTile({ className }: { readonly className?: string }) 
           />
         ))}
       </div>
+      <p className="type-label text-on-panel-muted">{t('weeks')}</p>
     </section>
   );
 }
 
-const FACTORS = [
-  { key: 'delivery', value: 86 },
-  { key: 'money', value: 74 },
-  { key: 'team', value: 88 },
-] as const;
+const FACTORS = ['delivery', 'money', 'team'] as const;
 
 /** Business health: the score and the three parts it is made of. */
-export function HealthTile({ className }: { readonly className?: string }) {
+export function HealthTile({
+  health,
+  className,
+}: {
+  readonly health: CommandCenter['health'];
+  readonly className?: string;
+}) {
   const t = useTranslations('commandCenter.tiles');
   return (
     <section className={cn(TILE, 'flex flex-col gap-5', className)}>
       <Overline>{t('health')}</Overline>
       <div className="flex items-center gap-5">
         <ProgressRing
-          value={0.82}
-          label={t('healthAria', { score: 82 })}
+          value={health.score / 100}
+          label={t('healthAria', { score: health.score })}
           size={112}
           thickness={10}
           paint="brand"
           trackClassName="stroke-sunken"
         >
-          <span className="type-display-lg text-ink tabular-nums">82</span>
+          <span className="type-display-lg text-ink tabular-nums">{health.score}</span>
         </ProgressRing>
         <ul className="flex flex-1 flex-col gap-3">
           {FACTORS.map((factor) => (
-            <li key={factor.key} className="flex flex-col gap-1">
+            <li key={factor} className="flex flex-col gap-1">
               <span className="flex justify-between type-label text-ink-muted">
-                {t(`factors.${factor.key}`)}
-                <span className="font-mono text-ink">{factor.value}</span>
+                {t(`factors.${factor}`)}
+                <span className="font-mono text-ink">{health[factor]}</span>
               </span>
               <span className="h-1.5 overflow-hidden rounded-full bg-sunken">
                 <span
                   className="block h-full rounded-full bg-accent"
-                  style={{ width: `${factor.value}%` }}
+                  style={{ width: `${health[factor]}%` }}
                 />
               </span>
             </li>
@@ -175,13 +182,18 @@ const PARTY_FILL = {
 } as const;
 
 /** Waiting days by who the projects waited on. */
-export function WaitingTile({ className }: { readonly className?: string }) {
+export function WaitingTile({
+  days,
+  className,
+}: {
+  readonly days: CommandCenter['waitingDays'];
+  readonly className?: string;
+}) {
   const t = useTranslations('commandCenter.tiles');
   const partyT = useTranslations('commandCenter.party');
-  const days = PREVIEW.waitingDays;
   const total = PARTIES.reduce((sum, party) => sum + days[party], 0);
   return (
-    <section className={cn(TILE, 'flex flex-col gap-5', className)}>
+    <section id="waiting" className={cn(TILE, 'flex scroll-mt-24 flex-col gap-5', className)}>
       <Overline>{t('waiting')}</Overline>
       <div className="flex items-center gap-5">
         <DonutChart

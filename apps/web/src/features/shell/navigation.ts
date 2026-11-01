@@ -1,3 +1,4 @@
+import type { Capability } from '@oneohm/domain';
 import {
   Boxes,
   ChartColumn,
@@ -22,6 +23,8 @@ export interface NavItem {
   readonly icon: LucideIcon;
   /** Screens not built yet stay in the list (the product's shape) but do not link anywhere. */
   readonly built: boolean;
+  /** Shown only to people holding at least one of these. */
+  readonly requires?: readonly Capability[];
 }
 
 export interface NavGroup {
@@ -35,37 +38,111 @@ export const NAVIGATION: readonly NavGroup[] = [
   {
     key: null,
     items: [
-      { key: 'today', href: '/today', icon: Sun, built: false },
-      { key: 'commandCenter', href: '/command-center', icon: CircleGauge, built: true },
+      { key: 'today', href: '/today', icon: Sun, built: true },
+      {
+        key: 'commandCenter',
+        href: '/command-center',
+        icon: CircleGauge,
+        built: true,
+        requires: ['dashboard.view_business'],
+      },
     ],
   },
   {
     key: 'sales',
     items: [
-      { key: 'leads', href: '/leads', icon: Target, built: false },
-      { key: 'quotations', href: '/quotations', icon: FileText, built: false },
-      { key: 'customers', href: '/customers', icon: Users, built: false },
+      {
+        key: 'leads',
+        href: '/leads',
+        icon: Target,
+        built: true,
+        requires: ['leads.view_all', 'leads.view_own', 'leads.manage'],
+      },
+      {
+        key: 'quotations',
+        href: '/quotations',
+        icon: FileText,
+        built: true,
+        requires: ['quotations.view', 'quotations.create'],
+      },
+      {
+        key: 'customers',
+        href: '/customers',
+        icon: Users,
+        built: true,
+        requires: ['customers.view'],
+      },
     ],
   },
   {
     key: 'delivery',
     items: [
-      { key: 'projects', href: '/projects', icon: SolarPanel, built: false },
-      { key: 'discom', href: '/discom', icon: UtilityPole, built: false },
-      { key: 'contractors', href: '/contractors', icon: HardHat, built: false },
+      {
+        key: 'projects',
+        href: '/projects',
+        icon: SolarPanel,
+        built: true,
+        requires: ['projects.view_all'],
+      },
+      {
+        key: 'discom',
+        href: '/discom',
+        icon: UtilityPole,
+        built: false,
+        requires: ['discom.manage', 'settings.manage'],
+      },
+      {
+        key: 'contractors',
+        href: '/contractors',
+        icon: HardHat,
+        built: false,
+        requires: ['contractors.manage'],
+      },
     ],
   },
   {
     key: 'business',
     items: [
-      { key: 'finance', href: '/finance', icon: IndianRupee, built: false },
-      { key: 'inventory', href: '/inventory', icon: Boxes, built: false },
-      { key: 'team', href: '/team', icon: UsersRound, built: false },
-      { key: 'reports', href: '/reports', icon: ChartColumn, built: false },
+      {
+        key: 'finance',
+        href: '/finance',
+        icon: IndianRupee,
+        built: false,
+        requires: ['finance.view'],
+      },
+      {
+        key: 'inventory',
+        href: '/inventory',
+        icon: Boxes,
+        built: false,
+        requires: ['inventory.view'],
+      },
+      {
+        key: 'team',
+        href: '/team',
+        icon: UsersRound,
+        built: true,
+        requires: ['people.view', 'people.manage'],
+      },
+      {
+        key: 'reports',
+        href: '/reports',
+        icon: ChartColumn,
+        built: false,
+        requires: ['reports.generate', 'dashboard.view_business'],
+      },
     ],
   },
   {
     key: null,
-    items: [{ key: 'settings', href: '/settings', icon: Settings2, built: false }],
+    items: [
+      {
+        key: 'settings',
+        href: '/settings',
+        icon: Settings2,
+        built: true,
+        requires: ['settings.manage', 'roles.manage'],
+      },
+    ],
   },
 ];
