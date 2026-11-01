@@ -17,6 +17,7 @@ import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { otherAccounts } from './customer-accounts.read';
 import { type CustomerPatch, editCustomer } from './customer-edit';
+import { logLead } from './lead-history';
 import { LeadsService } from './leads.service';
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
@@ -85,6 +86,7 @@ export class CustomersService {
         .from(customers)
         .where(eq(customers.phoneE164, lead.phone))
         .limit(1);
+      const matched = Boolean(customer);
       if (!customer) {
         [customer] = await tx
           .insert(customers)
@@ -104,6 +106,9 @@ export class CustomersService {
         propertyId,
         reusedProperty: Boolean(site.propertyId),
       });
+      const who = matched ? 'Matched to the existing customer' : 'Converted to a customer';
+      const where = site.propertyId ? 'their site on file' : 'a new site';
+      await logLead(tx, leadId, actor.userId, 'note', `${who}, with ${where}.`);
       return { customerId: customer.id, propertyId };
     });
     await this.leads.link(leadId, result.customerId, result.propertyId);

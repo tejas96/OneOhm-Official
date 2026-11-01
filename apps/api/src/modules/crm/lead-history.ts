@@ -1,9 +1,10 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, leadActivities, notify, users } from '@oneohm/database';
-import type { LeadStage, LeadStep } from '@oneohm/domain';
+import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
+import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
-import { movedNote } from './lead-steps-read';
+import { STAGE_LABEL } from './lead-labels';
+import { loadLeadSteps, movedNote } from './lead-steps-read';
 import { type LeadPatch, type lostColumns, lostNote } from './lead-update';
 
 type ActivityKind = 'note' | 'call' | 'visit' | 'whatsapp' | 'stage_change' | 'follow_up';
@@ -73,4 +74,45 @@ export async function logLeadChanges(
   const note = `Owner set to ${person?.name ?? 'someone new'}.`;
   await logLead(db, current.id, actor.userId, 'note', note, true);
   if (owner !== actor.userId) await tellLeadOwner(db, owner, current, actor.fullName);
+}
+
+/**
+ * A move the system makes on its own (a quotation sent or accepted), written to the
+ * timeline with why. `note` says what happened; the move is added when the stage changes.
+ * Sending never pulls a lead back from won, and never reopens a lost lead.
+ */
+export async function autoMoveLead(
+  db: DatabaseExecutor,
+  leadId: string,
+  userId: string,
+  stage: 'quoted' | 'won',
+  note: string,
+): Promise<void> {
+  const [lead] = await db
+    .select({ stage: leads.stage, stepKey: leads.stepKey })
+    .from(leads)
+    .where(eq(leads.id, leadId))
+    .limit(1);
+  if (!lead) return;
+  const blocked = stage === 'quoted' ? ['quoted', 'won', 'lost'] : ['won'];
+  if (blocked.includes(lead.stage)) {
+    await logLead(db, leadId, userId, 'note', note);
+    return;
+  }
+  const steps = await loadLeadSteps(db);
+  const from = effectiveStep(steps, lead.stage, lead.stepKey);
+  const to = effectiveStep(steps, stage, null);
+  await db
+    .update(leads)
+    .set({
+      stage,
+      stepKey: null,
+      ...(stage === 'won'
+        ? { wonAt: new Date(), lostReasonKey: null, lostReason: null, revisitOn: null }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(leads.id, leadId));
+  const moved = `Moved from ${from?.name ?? STAGE_LABEL[lead.stage]} to ${to?.name ?? STAGE_LABEL[stage]}.`;
+  await logLead(db, leadId, userId, 'stage_change', `${note} ${moved}`);
 }
