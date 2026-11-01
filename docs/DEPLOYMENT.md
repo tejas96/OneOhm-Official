@@ -151,12 +151,18 @@ by bank). The bill is marked paid only when RazorpayX reports the payout process
 its UTR; the payout fee is booked as a bank charge. Sending needs the right to approve
 payments. Vendors get their bank account on the vendor page; crews on the contractor page.
 
-1. In the RazorpayX dashboard, copy the account number (My Account & Settings).
-2. Add a RazorpayX webhook to `https://<domain>/api/v1/webhooks/razorpay` with the events
+1. Switch RazorpayX on first: Razorpay dashboard → More → Banking+ → Get started (until
+   then `x.razorpay.com` says "Access denied" and there is no account number). Live mode
+   also needs Razorpay's KYC for Banking+.
+2. In RazorpayX, copy the account number: My Account & Settings → Banking → Customer
+   Identifier. Test and live modes have different numbers. In test mode, add a dummy
+   balance with "+ Add test balance" before sending a test payout.
+3. Add a RazorpayX webhook to `https://<domain>/api/v1/webhooks/razorpay` with the events
    `payout.processed`, `payout.reversed`, `payout.failed` (and `payout.updated` if offered).
    Use the same secret as the payment-link webhook, or set `RAZORPAYX_WEBHOOK_SECRET`.
-3. Set `RAZORPAYX_ACCOUNT_NUMBER` and `RAZORPAYX_MODE=live`, restart the API, and send one
-   small payout to your own account first.
+4. Set `RAZORPAYX_ACCOUNT_NUMBER` and `RAZORPAYX_MODE=live`, restart the API, and send one
+   small payout to your own account first. If a webhook is missed, OneOhm still asks
+   RazorpayX about open payouts every 5 minutes.
 
 ## 5b. Push notifications
 
