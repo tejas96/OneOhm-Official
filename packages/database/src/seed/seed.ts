@@ -5,6 +5,7 @@ import { seedCatalog } from './catalog.seed';
 import { seedCompany, seedRateCard } from './company.seed';
 import { seedStockLocations } from './inventory.seed';
 import { seedRoles } from './roles.seed';
+import { seedWorkforcePolicy } from './workforce.seed';
 
 /** Everything OneOhm needs on day one. Safe to run again: existing rows are kept. */
 export async function runSeed(db: Database, admin: AdminSeed): Promise<{ adminCreated: boolean }> {
@@ -13,6 +14,7 @@ export async function runSeed(db: Database, admin: AdminSeed): Promise<{ adminCr
   await seedRoles(db);
   await seedCatalog(db);
   await seedStockLocations(db);
+  await seedWorkforcePolicy(db);
   const adminCreated = await seedSuperAdmin(db, admin);
   await backfillLedger(db);
   return { adminCreated };

@@ -11,6 +11,7 @@ import {
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
+import { awardOnTimeTask } from '../workforce/points';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
@@ -110,6 +111,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
   });
   // A contractor's work order settles into a payable once all its tasks are done.
   await settleWorkOrderForTask(tx, task.id, userId);
+  // On-time work earns its owner points (PRD 3.12); late work loses nothing.
+  await awardOnTimeTask(tx, task);
 }
 
 /** Facts a task still needs, after what was sent now and what the project already knows. */

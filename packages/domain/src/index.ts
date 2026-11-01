@@ -8,3 +8,4 @@ export * from './inventory';
 export * from './pricing';
 export * from './subsidy';
 export * from './tasks';
+export * from './workforce';

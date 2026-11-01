@@ -15,6 +15,7 @@ import { conflict, notFound } from '../../common/http/errors';
 import { photosOfRequests } from '../../common/read-models/service-request-photos';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
+import { suggestRatingPoints } from '../workforce/points';
 import { customerProjects } from './customer-home';
 
 const REFERRAL_STATUS: Readonly<Record<LeadStage, Referral['status']>> = {
@@ -171,6 +172,7 @@ export class CustomerPortalService {
       rating: input.rating,
       comment: input.comment ?? null,
     });
+    await suggestRatingPoints(this.db, { projectId: input.projectId, rating: input.rating });
   }
 
   private async ownProject(customerId: string, projectId: string): Promise<void> {

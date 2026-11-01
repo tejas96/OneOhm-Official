@@ -11,7 +11,9 @@ import { peopleContract } from './people.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { quotationsContract } from './quotations.contract';
 import { reportsContract } from './reports.contract';
+import { rewardsContract } from './rewards.contract';
 import { serviceDeskContract } from './service-desk.contract';
+import { workforceContract } from './workforce.contract';
 
 /**
  * The whole public API as module contracts. Each app assembles the router with
@@ -33,6 +35,8 @@ export type ApiRouterDefinition = {
   readonly finance: typeof financeContract;
   readonly contractors: typeof contractorsContract;
   readonly discom: typeof discomContract;
+  readonly workforce: typeof workforceContract;
+  readonly rewards: typeof rewardsContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -51,6 +55,8 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   finance: financeContract,
   contractors: contractorsContract,
   discom: discomContract,
+  workforce: workforceContract,
+  rewards: rewardsContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';
@@ -76,6 +82,8 @@ export {
   projectsContract,
   quotationsContract,
   reportsContract,
+  rewardsContract,
   serviceDeskContract,
   tasksContract,
+  workforceContract,
 };

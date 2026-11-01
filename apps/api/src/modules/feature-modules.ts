@@ -10,6 +10,7 @@ import { PeopleModule } from './people/people.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ServiceDeskModule } from './service-desk/service-desk.module';
+import { WorkforceModule } from './workforce/workforce.module';
 
 /** Every business module the API serves, in one list. */
 export const FEATURE_MODULES = [
@@ -25,4 +26,5 @@ export const FEATURE_MODULES = [
   FinanceModule,
   ContractorsModule,
   DiscomModule,
+  WorkforceModule,
 ];
