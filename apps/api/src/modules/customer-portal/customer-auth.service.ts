@@ -5,6 +5,7 @@ import { customerSessions, customers, otpChallenges } from '@oneohm/database';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { Request } from 'express';
 import { bearerToken } from '../../common/auth/session-cookies';
+import { assertOtpBudget } from '../../common/auth/sign-in-guard';
 import { AppError, unauthenticated } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
@@ -38,6 +39,7 @@ export class CustomerAuthService {
       .where(eq(customers.phoneE164, phoneE164))
       .limit(1);
     if (customer) {
+      await assertOtpBudget(this.db, phoneE164, PURPOSE, this.env.OTP_REQUESTS_PER_10_MIN);
       const code =
         this.env.OTP_DEVELOPMENT_CODE ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
       await this.db.insert(otpChallenges).values({

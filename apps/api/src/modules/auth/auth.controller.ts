@@ -1,6 +1,6 @@
-import { Controller, Inject, Res } from '@nestjs/common';
+import { Controller, Inject, Req, Res } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { Actor } from '../../common/auth/actor';
 import { CurrentActor, Public } from '../../common/auth/auth.decorators';
 import { clearSessionCookies, setSessionCookies } from '../../common/auth/session-cookies';
@@ -24,9 +24,13 @@ export class AuthController {
 
   @Public()
   @TsRestHandler(signIn)
-  signIn(@Res({ passthrough: true }) response: Response) {
+  signIn(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
     return tsRestHandler(signIn, async ({ body }) => {
-      const session = await this.auth.signInWithPassword(body.identifier, body.password);
+      const session = await this.auth.signInWithPassword(
+        body.identifier,
+        body.password,
+        request.ip ?? null,
+      );
       setSessionCookies(response, session.token, session.expiresAt, this.secureCookies);
       return { status: 200, body: { user: session.user } };
     });

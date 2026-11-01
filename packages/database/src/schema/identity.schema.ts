@@ -121,3 +121,24 @@ export const otpChallenges = pgTable(
   },
   (table) => [index('otp_phone_idx').on(table.phoneE164)],
 );
+
+/**
+ * Every sign-in try, right or wrong (PRD 7.3). It is the login audit trail and what the
+ * lockout counts: too many wrong tries for one name or from one address wait a while.
+ */
+export const signInAttempts = pgTable(
+  'sign_in_attempts',
+  {
+    id: primaryId(),
+    identifier: text('identifier').notNull(),
+    method: text('method').notNull(),
+    ip: text('ip'),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    success: boolean('success').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('sign_in_attempts_identifier_idx').on(table.identifier, table.createdAt),
+    index('sign_in_attempts_ip_idx').on(table.ip, table.createdAt),
+  ],
+);

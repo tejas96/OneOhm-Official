@@ -1,3 +1,4 @@
+import { AuditModule } from './audit/audit.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ContractorsModule } from './contractors/contractors.module';
 import { CrmModule } from './crm/crm.module';
@@ -37,4 +38,5 @@ export const FEATURE_MODULES = [
   OnlinePaymentsModule,
   WhatsAppModule,
   TemplatesModule,
+  AuditModule,
 ];

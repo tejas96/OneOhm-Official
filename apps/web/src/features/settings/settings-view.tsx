@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
+import { ActivityPanel } from './activity/activity-panel';
 import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
 import { ProductsPanel } from './products/products-panel';
@@ -26,6 +27,7 @@ const TABS = [
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
   { value: 'tasks', requires: 'settings.manage', Panel: TaskTemplatesPanel },
   { value: 'messages', requires: 'settings.manage', Panel: MessageTemplatesPanel },
+  { value: 'activity', requires: 'settings.manage', Panel: ActivityPanel },
 ] as const satisfies readonly {
   value: string;
   requires: Capability;

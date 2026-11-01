@@ -1,3 +1,4 @@
+import { auditContract } from './audit.contract';
 import { authContract } from './auth.contract';
 import { catalogContract } from './catalog.contract';
 import { contractorsContract } from './contractors.contract';
@@ -45,6 +46,7 @@ export type ApiRouterDefinition = {
   readonly paymentLinks: typeof paymentLinksContract;
   readonly whatsapp: typeof whatsappContract;
   readonly templates: typeof templatesContract;
+  readonly audit: typeof auditContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -69,6 +71,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   paymentLinks: paymentLinksContract,
   whatsapp: whatsappContract,
   templates: templatesContract,
+  audit: auditContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

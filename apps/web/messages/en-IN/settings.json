@@ -11,7 +11,8 @@
       "discoms": "DISCOMs & subsidy",
       "workforce": "Workforce",
       "tasks": "Task templates",
-      "messages": "WhatsApp messages"
+      "messages": "WhatsApp messages",
+      "activity": "Activity log"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -605,6 +606,36 @@
         "sample": "With sample details",
         "active": "Send this message",
         "saved": "{name} saved."
+      }
+    },
+    "activity": {
+      "title": "Activity log",
+      "intro": "Important actions, document changes and money events, with who did them and when. Sign-ins show every try, so you can spot someone guessing passwords.",
+      "viewLabel": "Show",
+      "changes": "Changes",
+      "signIns": "Sign-ins",
+      "search": "Search action, person or record",
+      "loading": "Loading the activity log",
+      "empty": "Nothing recorded yet.",
+      "more": "Show older",
+      "system": "OneOhm (automatic)",
+      "failedOnly": "Only failed tries",
+      "ok": "Signed in",
+      "failed": "Failed",
+      "columns": {
+        "when": "When",
+        "what": "What happened",
+        "who": "Who",
+        "record": "Record",
+        "account": "Account",
+        "method": "How",
+        "address": "Address",
+        "result": "Result"
+      },
+      "methods": {
+        "password": "Password (web)",
+        "otp": "Code (field app)",
+        "customer_otp": "Code (customer app)"
       }
     }
   }

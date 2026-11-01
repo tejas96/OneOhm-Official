@@ -3,7 +3,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { CurrentUser } from '@oneohm/api-contracts';
 import { otpChallenges, sessions, users, verifyPassword } from '@oneohm/database';
 import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { assertNotLocked, assertOtpBudget, recordAttempt } from '../../common/auth/sign-in-guard';
 import { AppError, unauthenticated } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
@@ -32,9 +34,17 @@ export class AuthService {
     this.otp = createOtpSender(env);
   }
 
-  /** Web: email or employee ID with a password. One answer for every failure. */
-  async signInWithPassword(identifier: string, password: string): Promise<IssuedSession> {
+  /**
+   * Web: email or employee ID with a password. One answer for every failure; too many
+   * wrong tries lock the name (and a noisy address) for a while. Every try is recorded.
+   */
+  async signInWithPassword(
+    identifier: string,
+    password: string,
+    ip: string | null = null,
+  ): Promise<IssuedSession> {
     const value = identifier.trim().toLowerCase();
+    await assertNotLocked(this.db, value, ip);
     const [user] = await this.db
       .select({ id: users.id, passwordHash: users.passwordHash, status: users.status })
       .from(users)
@@ -44,8 +54,21 @@ export class AuthService {
       user?.passwordHash &&
       user.status === 'active' &&
       (await verifyPassword(password, user.passwordHash));
-    if (!user || !valid)
+    const attempt = {
+      identifier: value,
+      method: 'password' as const,
+      ip,
+      userId: user?.id ?? null,
+    };
+    if (!user || !valid) {
+      await recordAttempt(this.db, { ...attempt, success: false });
       throw new AppError(401, 'That email or ID and password do not match.', 'bad_credentials');
+    }
+    await recordAttempt(this.db, { ...attempt, success: true });
+    await recordAudit(this.db, user.id, 'auth.signed_in', 'user', user.id, {
+      method: 'password',
+      ip,
+    });
     return this.issueSession(user.id, 'web');
   }
 
@@ -57,6 +80,7 @@ export class AuthService {
       .where(and(eq(users.phoneE164, phoneE164), eq(users.status, 'active')))
       .limit(1);
     if (user) {
+      await assertOtpBudget(this.db, phoneE164, 'staff', this.env.OTP_REQUESTS_PER_10_MIN);
       const code =
         this.env.OTP_DEVELOPMENT_CODE ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
       await this.db.insert(otpChallenges).values({
@@ -88,8 +112,13 @@ export class AuthService {
       'That code is not right or has expired. Ask for a new one.',
       'bad_code',
     );
-    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) throw wrong;
+    const attempt = { identifier: phoneE164, method: 'otp' as const, ip: null, userId: null };
+    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) {
+      await recordAttempt(this.db, { ...attempt, success: false });
+      throw wrong;
+    }
     if (challenge.codeHash !== hash(`${phoneE164}:${code}`)) {
+      await recordAttempt(this.db, { ...attempt, success: false });
       await this.db
         .update(otpChallenges)
         .set({ attempts: challenge.attempts + 1 })
@@ -106,6 +135,8 @@ export class AuthService {
       .where(eq(users.phoneE164, phoneE164))
       .limit(1);
     if (!user) throw wrong;
+    await recordAttempt(this.db, { ...attempt, userId: user.id, success: true });
+    await recordAudit(this.db, user.id, 'auth.signed_in', 'user', user.id, { method: 'otp' });
     return this.issueSession(user.id, 'mobile');
   }
 

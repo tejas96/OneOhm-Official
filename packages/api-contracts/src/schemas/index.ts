@@ -1,3 +1,4 @@
+export * from './audit.schema';
 export * from './catalog.schema';
 export * from './contractor.schema';
 export * from './crm.schema';

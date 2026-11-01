@@ -23,6 +23,8 @@ const environmentSchema = z
       .string()
       .regex(/^\d{6}$/)
       .optional(),
+    /** Sign-in codes one phone may ask for in 10 minutes. */
+    OTP_REQUESTS_PER_10_MIN: z.coerce.number().int().min(1).max(1000).default(3),
     MSG91_AUTH_KEY: z.string().optional(),
     MSG91_SENDER_ID: z.string().optional(),
     MSG91_LOGIN_TEMPLATE_ID: z.string().optional(),
