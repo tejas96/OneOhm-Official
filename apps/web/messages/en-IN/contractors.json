@@ -238,6 +238,17 @@
         "done": "Work order cancelled",
         "text": "Reason"
       }
+    },
+    "columns": {
+      "name": "Contractor",
+      "contact": "Contact",
+      "areas": "Works in",
+      "onTime": "On time"
+    },
+    "layout": {
+      "label": "Show as",
+      "cards": "Cards",
+      "table": "Table"
     }
   }
 }

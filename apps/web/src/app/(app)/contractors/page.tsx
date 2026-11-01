@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { ContractorsView } from '@/features/contractors/contractors-view';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,5 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function ContractorsPage() {
-  return <ContractorsView />;
+  return (
+    <Suspense>
+      <ContractorsView />
+    </Suspense>
+  );
 }

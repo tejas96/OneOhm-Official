@@ -76,7 +76,7 @@ export function MessageTemplatesPanel() {
           <p className="type-body text-ink-muted">{t('intro')}</p>
         </div>
         <Link
-          href="/service?tab=messages"
+          href="/service?tab=log"
           className="inline-flex items-center gap-1 type-body-sm text-accent hover:underline"
         >
           {t('log')}
