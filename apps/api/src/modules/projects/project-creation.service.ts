@@ -3,12 +3,14 @@ import {
   customers,
   discoms,
   paymentMilestones,
+  postMilestoneDue,
   products,
   projectActivities,
   projectFacts,
   projects,
   properties,
   quotations,
+  type Transaction,
 } from '@oneohm/database';
 import {
   DEFAULT_MILESTONES,
@@ -165,20 +167,24 @@ export class ProjectCreationService {
         DEFAULT_MILESTONES,
         input.loan ? input.loanPaise : 0,
       );
-      await tx.insert(paymentMilestones).values(
-        milestones.map((milestone, position) => ({
-          projectId: project.id,
-          key: milestone.key,
-          label: milestone.label,
-          payer: milestone.payer,
-          amountPaise: milestone.amountPaise,
-          trigger: milestone.trigger,
-          status:
-            milestone.trigger === 'quotation_accepted' ? ('due' as const) : ('upcoming' as const),
-          dueAt: milestone.trigger === 'quotation_accepted' ? new Date() : null,
-          position,
-        })),
-      );
+      const createdMilestones = await tx
+        .insert(paymentMilestones)
+        .values(
+          milestones.map((milestone, position) => ({
+            projectId: project.id,
+            key: milestone.key,
+            label: milestone.label,
+            payer: milestone.payer,
+            amountPaise: milestone.amountPaise,
+            trigger: milestone.trigger,
+            status:
+              milestone.trigger === 'quotation_accepted' ? ('due' as const) : ('upcoming' as const),
+            dueAt: milestone.trigger === 'quotation_accepted' ? new Date() : null,
+            position,
+          })),
+        )
+        .returning({ id: paymentMilestones.id, dueAt: paymentMilestones.dueAt });
+      await postDueMilestones(tx, createdMilestones, actor.userId);
 
       const facts = initialFacts(customer, property, quotation, panel, inverter, input.startDate);
       await tx
@@ -205,5 +211,16 @@ export class ProjectCreationService {
       });
       return { id: project.id, code, tasks: generated.length, unassigned };
     });
+  }
+}
+
+/** Milestones due from day one (the advance) are booked in the ledger with the project. */
+async function postDueMilestones(
+  tx: Transaction,
+  milestones: readonly { readonly id: string; readonly dueAt: Date | null }[],
+  userId: string,
+): Promise<void> {
+  for (const milestone of milestones) {
+    if (milestone.dueAt) await postMilestoneDue(tx, milestone.id, userId);
   }
 }

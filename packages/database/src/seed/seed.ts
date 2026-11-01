@@ -1,4 +1,5 @@
 import type { Database } from '../client';
+import { backfillLedger } from '../ledger/backfill';
 import { type AdminSeed, seedSuperAdmin } from './admin.seed';
 import { seedCatalog } from './catalog.seed';
 import { seedCompany, seedRateCard } from './company.seed';
@@ -11,5 +12,6 @@ export async function runSeed(db: Database, admin: AdminSeed): Promise<{ adminCr
   await seedRoles(db);
   await seedCatalog(db);
   const adminCreated = await seedSuperAdmin(db, admin);
+  await backfillLedger(db);
   return { adminCreated };
 }

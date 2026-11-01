@@ -1,0 +1,286 @@
+{
+  "finance": {
+    "title": "Finance",
+    "eyebrow": "Business",
+    "description": "Every rupee received, owed and paid, posted to the books as it happens. The subsidy is never revenue here.",
+    "tabsLabel": "Finance sections",
+    "noAccess": "You don't have access to finance.",
+    "tabs": {
+      "overview": "Overview",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "loans": "Loans",
+      "ledger": "Ledger"
+    },
+    "methods": {
+      "cash": "Cash",
+      "cheque": "Cheque",
+      "bank_transfer": "Bank transfer",
+      "upi": "UPI",
+      "razorpay": "Online payment",
+      "bank_disbursement": "Bank disbursement"
+    },
+    "overview": {
+      "loading": "Loading finance",
+      "bank": "In the bank",
+      "cashInHand": "{amount} cash in hand",
+      "customersOwe": "Customers owe",
+      "notDueYet": "{amount} more falls due as work completes",
+      "banksOwe": "Banks owe",
+      "banksNote": "Loan disbursements to claim",
+      "billsOpen": "Bills to pay",
+      "billsNote": "{count, plural, =0 {None waiting for approval} one {# waiting for approval} other {# waiting for approval}} · {overdue} overdue",
+      "advances": "{amount} received in advance is held until its milestones fall due.",
+      "cashFlow": {
+        "title": "Money in and out",
+        "description": "Received from customers and banks, and bills paid, over six months.",
+        "in": "Money in",
+        "out": "Money out",
+        "showTable": "Show as table",
+        "showChart": "Show as chart",
+        "caption": "Money in and out by month",
+        "month": "Month",
+        "aria": "{month}: {in} in, {out} out"
+      },
+      "ageing": {
+        "title": "How long it has been owed",
+        "description": "Money due now, by days since it fell due.",
+        "current": "Up to 30 days",
+        "days_31_60": "31–60 days",
+        "days_61_90": "61–90 days",
+        "days_over_90": "Over 90 days"
+      }
+    },
+    "receivables": {
+      "title": "Still owed",
+      "filterLabel": "Show",
+      "filters": {
+        "due": "Due now",
+        "not_due": "Not due yet",
+        "all": "All"
+      },
+      "loading": "Loading what is owed",
+      "emptyTitle": "Nothing is owed here",
+      "emptyBody": "Milestones appear when a project is created and fall due as its work completes.",
+      "columns": {
+        "project": "Customer",
+        "milestone": "Milestone",
+        "outstanding": "Outstanding",
+        "due": "Due",
+        "next": "Next step"
+      },
+      "bank": "Bank",
+      "ofAmount": "of {amount}",
+      "daysAgo": "{count, plural, =0 {due today} one {# day ago} other {# days ago}}",
+      "onTrigger": "When its work completes",
+      "next": {
+        "collect_from_customer": "Customer payment pending",
+        "claim_from_bank": "Waiting for bank disbursement",
+        "not_due_yet": "Not due yet"
+      },
+      "record": "Record payment",
+      "claim": "Claim"
+    },
+    "payments": {
+      "title": "Payments received",
+      "description": "The latest 50, newest first. Each has a receipt.",
+      "loading": "Loading payments",
+      "empty": "No payments received yet",
+      "reversed": "Reversed",
+      "reversal": "Reversal",
+      "receipt": "Open receipt {number}",
+      "reverse": "Reverse this payment",
+      "reverseDialog": {
+        "title": "Reverse this payment?",
+        "description": "{amount} from {customer}. The payment stays on record, a reversal is added, the milestone reopens and the books are corrected.",
+        "cancel": "Keep it",
+        "submit": "Reverse payment",
+        "reason": "Why",
+        "reasonHint": "For example: recorded against the wrong project.",
+        "done": "Payment reversed"
+      }
+    },
+    "payables": {
+      "filterLabel": "Show",
+      "filters": {
+        "open": "Open",
+        "pending": "Waiting approval",
+        "approved": "Approved",
+        "paid": "Paid",
+        "all": "All"
+      },
+      "add": "Add bill",
+      "loading": "Loading bills",
+      "emptyTitle": "No bills here",
+      "emptyBody": "Bills from vendors and crews appear here to approve and pay.",
+      "caption": "Bills from vendors and contractors",
+      "columns": {
+        "party": "From",
+        "for": "For",
+        "amount": "Amount",
+        "due": "Due",
+        "status": "Status"
+      },
+      "party": {
+        "vendor": "Vendor",
+        "contractor": "Contractor crew"
+      },
+      "paidOn": "Paid {date}",
+      "overdueSince": "Overdue since {date}",
+      "status": {
+        "pending": "Waiting approval",
+        "approved": "Approved",
+        "paid": "Paid"
+      },
+      "approve": "Approve",
+      "pay": "Pay",
+      "approved": "Bill approved",
+      "failed": "That did not work",
+      "addDialog": {
+        "title": "Add a bill",
+        "description": "A bill from a vendor or crew. It waits for approval before it can be paid.",
+        "submit": "Add bill",
+        "added": "Bill added",
+        "partyName": "Vendor or crew",
+        "party": "Type",
+        "descriptionLabel": "What it is for",
+        "amount": "Amount",
+        "dueOn": "Due on",
+        "billNumber": "Their bill number",
+        "billNumberHint": "As printed on the bill, if there is one.",
+        "project": "Project",
+        "noProject": "Not for one project"
+      },
+      "payDialog": {
+        "title": "Pay this bill",
+        "description": "{amount} to {party}.",
+        "submit": "Mark as paid",
+        "done": "Bill paid",
+        "method": "Paid by",
+        "paidOn": "Paid on",
+        "reference": "Reference",
+        "referenceHint": "UTR, cheque number or UPI reference."
+      }
+    },
+    "loans": {
+      "description": "Bank-financed projects. The bank's share is its own receivable; every disbursement is recorded against it.",
+      "lenders": "Lenders",
+      "loading": "Loading loans",
+      "emptyTitle": "No bank-financed projects yet",
+      "emptyBody": "When a project is created with a loan, it appears here to track documents, sanction and disbursement.",
+      "noLender": "Lender not set",
+      "ofShare": "of {share} from the bank",
+      "sanctioned": "Sanctioned {amount} on {date}",
+      "notSanctioned": "Not sanctioned yet",
+      "mismatch": "The sanction ({sanction}) differs from the bank share in the payment schedule ({share}).",
+      "readyToClaim": "Ready to claim: the completion proof is in. Claim the disbursement from the bank.",
+      "documents": "Documents · {done} of {total} in",
+      "tranche": {
+        "planned": "Planned",
+        "claimed": "Claimed",
+        "received": "Received"
+      },
+      "edit": "Edit",
+      "start": "Set up loan",
+      "receive": "Record disbursement",
+      "status": {
+        "collecting_documents": "Collecting documents",
+        "submitted": "Submitted to bank",
+        "sanctioned": "Sanctioned",
+        "disbursing": "Disbursing",
+        "disbursed": "Fully disbursed",
+        "rejected": "Rejected"
+      },
+      "sheet": {
+        "title": "Loan for {code}",
+        "description": "The bank's share of this project is {share}.",
+        "save": "Save loan",
+        "saved": "Loan saved",
+        "partner": "Lender from the list",
+        "partnerHint": "Adds that lender's usual documents.",
+        "noPartner": "Not in the list",
+        "lenderName": "Lender name",
+        "applicationNumber": "Application number",
+        "status": "Status",
+        "sanctionedAmount": "Sanctioned amount",
+        "sanctionedOn": "Sanctioned on",
+        "documentsTitle": "Documents",
+        "tranchesTitle": "Tranches",
+        "tranchesHint": "Optional. If set, they must add up to the bank share ({share}); planned so far {planned}.",
+        "notes": "Notes",
+        "removeDocument": "Remove document",
+        "newDocument": "Add a document",
+        "addDocument": "Add",
+        "trancheLabel": "Tranche",
+        "trancheAmount": "Amount",
+        "expectedOn": "Expected",
+        "received": "Received",
+        "claimed": "Claimed",
+        "removeTranche": "Remove tranche",
+        "addTranche": "Add tranche"
+      },
+      "disbursement": {
+        "title": "Record a disbursement",
+        "description": "Money received from {lender}. {remaining} of the bank share is still to come.",
+        "submit": "Record disbursement",
+        "done": "Disbursement recorded",
+        "tranche": "Tranche",
+        "unplanned": "Not a planned tranche",
+        "amount": "Amount received",
+        "receivedOn": "Received on",
+        "reference": "Reference",
+        "referenceHint": "The bank's transaction reference."
+      },
+      "lendersDialog": {
+        "title": "Lenders",
+        "description": "Banks and NBFCs OneOhm works with, and the documents each one asks for.",
+        "added": "{name} added",
+        "inactive": "Not in use",
+        "pattern": {
+          "single": "Single disbursement",
+          "tranches": "In tranches"
+        },
+        "deactivate": "Stop using",
+        "activate": "Use again",
+        "none": "No lenders yet. Add the banks you work with.",
+        "name": "Name",
+        "disbursement": "Pays out",
+        "documents": "Documents it needs",
+        "documentsHint": "One per line.",
+        "add": "Add lender"
+      }
+    },
+    "ledger": {
+      "trialBalance": "Trial balance",
+      "entries": "{count, plural, one {# journal entry} other {# journal entries}}",
+      "balanced": "Balanced",
+      "unbalanced": "Out of balance",
+      "loading": "Loading the books",
+      "account": "Account",
+      "debit": "Debit",
+      "credit": "Credit",
+      "total": "Total",
+      "types": {
+        "asset": "Asset",
+        "liability": "Liability",
+        "equity": "Equity",
+        "income": "Income",
+        "expense": "Expense"
+      },
+      "journal": "Journal",
+      "journalHint": "Posted automatically as money moves. Entries are never edited; mistakes are reversed.",
+      "emptyJournal": "No entries yet",
+      "reversedBy": "Reversed by JV-{number}",
+      "linesOf": "Lines of JV-{number}",
+      "older": "Show older entries",
+      "sources": {
+        "milestone_due": "Milestone due",
+        "advance_applied": "Advance applied",
+        "payment": "Payment",
+        "payable_approved": "Bill approved",
+        "payable_paid": "Bill paid",
+        "reversal": "Reversal"
+      }
+    }
+  }
+}

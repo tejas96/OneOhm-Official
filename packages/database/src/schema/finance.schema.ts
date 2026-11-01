@@ -1,4 +1,12 @@
-import { index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import {
+  type AnyPgColumn,
+  index,
+  integer,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { calendarDate, createdAt, instant, money, primaryId, updatedAt } from './columns';
 import {
   milestoneStatusEnum,
@@ -35,7 +43,10 @@ export const paymentMilestones = pgTable(
   (table) => [index('payment_milestones_project_idx').on(table.projectId)],
 );
 
-/** Money received, allocated to a milestone. Never edited; mistakes are reversed. */
+/**
+ * Money received, allocated to a milestone. Never edited: a mistake gets a reversal row
+ * (negative amount, pointing at the original), and the ledger entry is reversed with it.
+ */
 export const payments = pgTable(
   'payments',
   {
@@ -51,11 +62,20 @@ export const payments = pgTable(
     reference: text('reference'),
     recordedByUserId: uuid('recorded_by_user_id').references(() => users.id),
     createdAt: createdAt(),
+    reversesPaymentId: uuid('reverses_payment_id').references((): AnyPgColumn => payments.id),
+    reversalReason: text('reversal_reason'),
   },
-  (table) => [index('payments_project_idx').on(table.projectId)],
+  (table) => [
+    index('payments_project_idx').on(table.projectId),
+    uniqueIndex('payments_reversal_unique').on(table.reversesPaymentId),
+  ],
 );
 
-/** What OneOhm owes vendors and contractor crews (PRD 3.10, 3.13). */
+/**
+ * What OneOhm owes vendors and contractor crews (PRD 3.10, 3.13). Other modules create
+ * rows as `pending` with the first block of columns; finance approves (the cost and the
+ * liability are posted then) and pays (method, date and reference recorded).
+ */
 export const payables = pgTable(
   'payables',
   {
@@ -72,6 +92,13 @@ export const payables = pgTable(
     paidAt: instant('paid_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
+    /** The vendor's or crew's own bill number, when there is one. */
+    billNumber: text('bill_number'),
+    approvedAt: instant('approved_at'),
+    paidOn: calendarDate('paid_on'),
+    paidMethod: paymentMethodEnum('paid_method'),
+    paidReference: text('paid_reference'),
+    paidByUserId: uuid('paid_by_user_id').references(() => users.id),
   },
   (table) => [index('payables_due_idx').on(table.dueOn)],
 );

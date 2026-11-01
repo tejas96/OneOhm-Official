@@ -1,0 +1,37 @@
+/* Receipt additions on top of the quotation's brand styles. */
+.r-amount {
+  margin: 18px 0 14px;
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #eaf5fb 0%, #f1f9ec 100%);
+}
+
+.r-figure {
+  font-family: "Newsreader", serif;
+  font-size: 30pt;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #05344d;
+}
+
+.r-words {
+  margin-top: 4px;
+  color: #3a4149;
+}
+
+.r-details {
+  max-width: none;
+}
+
+.q-number {
+  white-space: nowrap;
+}
+
+.r-cancelled {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fde8e6;
+  color: #9b2c1f;
+  font-weight: 600;
+}

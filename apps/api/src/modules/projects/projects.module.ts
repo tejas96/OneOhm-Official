@@ -17,5 +17,6 @@ import { TasksService } from './tasks.service';
     TasksService,
     CommandCenterService,
   ],
+  exports: [FinanceService],
 })
 export class ProjectsModule {}

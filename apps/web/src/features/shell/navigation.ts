@@ -107,7 +107,7 @@ export const NAVIGATION: readonly NavGroup[] = [
         key: 'finance',
         href: '/finance',
         icon: IndianRupee,
-        built: false,
+        built: true,
         requires: ['finance.view'],
       },
       {

@@ -3,8 +3,10 @@ import {
   customers,
   paymentMilestones,
   payments,
+  postPayment,
   projectActivities,
   projects,
+  type Transaction,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
@@ -27,7 +29,16 @@ export interface NewPayment {
 export class FinanceService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async recordPayment(actor: Actor, projectId: string, input: NewPayment): Promise<void> {
+  /**
+   * Records the payment, its ledger entry and its side effects in one transaction.
+   * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes.
+   */
+  async recordPayment(
+    actor: Actor,
+    projectId: string,
+    input: NewPayment,
+    alsoInTransaction?: (tx: Transaction, paymentId: string) => Promise<void>,
+  ): Promise<string> {
     const [milestone] = await this.db
       .select()
       .from(paymentMilestones)
@@ -54,17 +65,21 @@ export class FinanceService {
         method: 'Choose bank disbursement.',
       });
     }
-    await this.db.transaction(async (tx) => {
-      await tx.insert(payments).values({
-        projectId,
-        milestoneId: milestone.id,
-        payer: milestone.payer,
-        method: input.method,
-        amountPaise: input.amountPaise,
-        receivedOn: input.receivedOn,
-        reference: input.reference ?? null,
-        recordedByUserId: actor.userId,
-      });
+    return this.db.transaction(async (tx) => {
+      const [payment] = await tx
+        .insert(payments)
+        .values({
+          projectId,
+          milestoneId: milestone.id,
+          payer: milestone.payer,
+          method: input.method,
+          amountPaise: input.amountPaise,
+          receivedOn: input.receivedOn,
+          reference: input.reference ?? null,
+          recordedByUserId: actor.userId,
+        })
+        .returning({ id: payments.id });
+      if (!payment) throw new Error('Payment insert returned nothing.');
       const total = already + input.amountPaise;
       const status = total >= milestone.amountPaise ? 'paid' : 'partly_paid';
       await tx
@@ -122,6 +137,9 @@ export class FinanceService {
         amountPaise: input.amountPaise,
         method: input.method,
       });
+      await postPayment(tx, payment.id, actor.userId);
+      if (alsoInTransaction) await alsoInTransaction(tx, payment.id);
+      return payment.id;
     });
   }
 }
