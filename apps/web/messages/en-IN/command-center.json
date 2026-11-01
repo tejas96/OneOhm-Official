@@ -170,6 +170,26 @@
       "empty": "Nothing falls due in the next seven days.",
       "customer": "Customer sees this",
       "unassigned": "Unassigned"
+    },
+    "team": {
+      "title": "Team and crews",
+      "description": "Open work for the projects in view, what is late, and how much was finished on time in the period.",
+      "viewLabel": "Show",
+      "people": "People",
+      "contractors": "Contractor crews",
+      "loading": "Loading the team",
+      "empty": "Nobody has work on these projects.",
+      "onLeave": "On leave today",
+      "crew": "{count, plural, one {# in crew} other {# in crew}}",
+      "columns": {
+        "person": "Person",
+        "contractor": "Contractor",
+        "open": "Open",
+        "overdue": "Late",
+        "today": "Due today",
+        "done": "Done",
+        "onTime": "On time"
+      }
     }
   }
 }

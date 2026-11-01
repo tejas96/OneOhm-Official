@@ -18,6 +18,7 @@ import { MoneyLedger } from './money-ledger';
 import { PipelineTile } from './pipeline-tile';
 import { ProjectLedger } from './project-ledger';
 import { RiskCards } from './risk-cards';
+import { TeamLoadSection } from './team-load';
 import { useCenterFilters } from './use-center-filters';
 import { WaitingTile } from './waiting-tile';
 
@@ -102,6 +103,7 @@ export function CommandCenterView() {
           </div>
           <ProjectLedger projects={data.projects} total={data.liveProjects} />
           <MoneyLedger money={data.money} />
+          <TeamLoadSection query={query} />
         </div>
       )}
     </motion.div>

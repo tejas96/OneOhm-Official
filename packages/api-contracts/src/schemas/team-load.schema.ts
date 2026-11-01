@@ -1,0 +1,23 @@
+import { z } from 'zod';
+import { idSchema } from '../common/primitives';
+
+const loadFields = {
+  open: z.number().int(),
+  overdue: z.number().int(),
+  dueToday: z.number().int(),
+  /** Finished in the chosen period. */
+  done: z.number().int(),
+  /** Share of the period's finished tasks done by their due date; null when none. */
+  onTimePercent: z.number().int().nullable(),
+};
+
+/** Who carries the work, and who is falling behind (PRD 3.1 drill-down). */
+export const teamLoadSchema = z.object({
+  people: z.array(
+    z.object({ userId: idSchema, name: z.string(), onLeaveToday: z.boolean(), ...loadFields }),
+  ),
+  contractors: z.array(
+    z.object({ contractorId: idSchema, name: z.string(), crew: z.number().int(), ...loadFields }),
+  ),
+});
+export type TeamLoad = z.infer<typeof teamLoadSchema>;

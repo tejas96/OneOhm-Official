@@ -21,6 +21,7 @@ export * from './quotation.schema';
 export * from './service-desk.schema';
 export * from './settings.schema';
 export * from './subsidy-rule.schema';
+export * from './team-load.schema';
 export * from './template.schema';
 export * from './whatsapp.schema';
 export * from './workforce.schema';
