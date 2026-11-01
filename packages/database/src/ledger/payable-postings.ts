@@ -1,7 +1,12 @@
-import { type MoneyOutMethod, payableApprovedPosting, payablePaidPosting } from '@oneohm/domain';
+import {
+  contractorTdsPosting,
+  type MoneyOutMethod,
+  payableApprovedPosting,
+  payablePaidPosting,
+} from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from '../client';
-import { payables, projects } from '../schema';
+import { contractors, payables, projects, workOrders } from '../schema';
 import { postJournal } from './post-journal';
 import { businessDate } from './receivable-postings';
 
@@ -58,5 +63,33 @@ export async function postPayablePaid(
     projectId: payable.projectId,
     postedByUserId: userId,
     lines: payablePaidPosting({ party: payable.party, method, amountPaise: payable.amountPaise }),
+  });
+}
+
+/**
+ * A settled work order's TDS: cost of the work, owed to the government (PRD 3.13).
+ * Booked once, on the day the order settled.
+ */
+export async function postWorkOrderTds(
+  db: DatabaseExecutor,
+  workOrderId: string,
+  userId: string | null,
+): Promise<void> {
+  const [row] = await db
+    .select({ order: workOrders, contractor: contractors.name, code: projects.code })
+    .from(workOrders)
+    .innerJoin(contractors, eq(contractors.id, workOrders.contractorId))
+    .innerJoin(projects, eq(projects.id, workOrders.projectId))
+    .where(eq(workOrders.id, workOrderId))
+    .limit(1);
+  if (!row || row.order.status !== 'completed' || row.order.tdsPaise <= 0) return;
+  await postJournal(db, {
+    entryDate: businessDate(row.order.completedAt ?? row.order.updatedAt),
+    memo: `TDS held · ${row.code} · ${row.contractor} · ${row.order.number}`,
+    sourceType: 'work_order_tds',
+    sourceId: row.order.id,
+    projectId: row.order.projectId,
+    postedByUserId: userId,
+    lines: contractorTdsPosting({ amountPaise: row.order.tdsPaise }),
   });
 }

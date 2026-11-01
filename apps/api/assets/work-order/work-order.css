@@ -1,0 +1,41 @@
+/* Work order additions on top of the quotation's brand styles. */
+.w-table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+}
+
+.w-table th {
+  padding: 6px 8px;
+  border-bottom: 1px solid #c9d1d8;
+  color: #5b6570;
+  font-size: 8pt;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.w-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e6eaee;
+  vertical-align: top;
+}
+
+.w-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.q-number {
+  white-space: nowrap;
+}
+
+.w-cancelled {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fde8e6;
+  color: #9b2c1f;
+  font-weight: 600;
+}

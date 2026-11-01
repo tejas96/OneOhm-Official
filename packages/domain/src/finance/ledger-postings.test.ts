@@ -4,6 +4,7 @@ import {
   advanceAppliedPosting,
   allocateTax,
   cashAccountFor,
+  contractorTdsPosting,
   isBalanced,
   type JournalLine,
   milestoneDuePosting,
@@ -28,6 +29,7 @@ describe('posting rules', () => {
       milestoneDue: true,
     }),
     paymentPosting({ payer: 'customer', method: 'cash', amountPaise: 100, milestoneDue: false }),
+    contractorTdsPosting({ amountPaise: 45_000 }),
     paymentPosting({
       payer: 'bank',
       method: 'bank_disbursement',

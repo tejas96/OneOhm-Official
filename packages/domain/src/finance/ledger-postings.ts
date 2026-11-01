@@ -107,6 +107,17 @@ export function payablePaidPosting(input: {
   ];
 }
 
+/**
+ * TDS held back from a contractor's work order: it is part of the work's cost, and
+ * OneOhm owes it to the government, not to the contractor.
+ */
+export function contractorTdsPosting(input: { readonly amountPaise: number }): JournalLine[] {
+  return [
+    debit(ACCOUNT.installationCost, input.amountPaise),
+    credit(ACCOUNT.tdsPayable, input.amountPaise),
+  ];
+}
+
 /** Mistakes are never edited: a reversing entry swaps every debit and credit. */
 export function reversalPosting(lines: readonly JournalLine[]): JournalLine[] {
   return lines.map((line) => ({

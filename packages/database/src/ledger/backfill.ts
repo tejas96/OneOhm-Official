@@ -1,8 +1,8 @@
 import { LEDGER_ACCOUNTS } from '@oneohm/domain';
-import { asc, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull } from 'drizzle-orm';
 import type { Database } from '../client';
-import { ledgerAccounts, payables, paymentMilestones, payments } from '../schema';
-import { postPayableApproved, postPayablePaid } from './payable-postings';
+import { ledgerAccounts, payables, paymentMilestones, payments, workOrders } from '../schema';
+import { postPayableApproved, postPayablePaid, postWorkOrderTds } from './payable-postings';
 import { postMilestoneDue, postPayment } from './receivable-postings';
 
 /** The chart of accounts. Safe to run again: names follow the code, nothing is removed. */
@@ -51,6 +51,13 @@ export async function backfillLedger(db: Database): Promise<BackfillResult> {
       await postPayableApproved(tx, bill.id, null);
       if (bill.status === 'paid') await postPayablePaid(tx, bill.id, null);
     });
+  }
+  const settled = await db
+    .select({ id: workOrders.id })
+    .from(workOrders)
+    .where(and(eq(workOrders.status, 'completed'), gt(workOrders.tdsPaise, 0)));
+  for (const { id } of settled) {
+    await db.transaction((tx) => postWorkOrderTds(tx, id, null));
   }
   return { milestones: due.length, payments: received.length, payables: bills.length };
 }

@@ -1,0 +1,243 @@
+{
+  "contractors": {
+    "eyebrow": "Delivery",
+    "title": "Contractors",
+    "detailTitle": "Contractor",
+    "description": "I&C partners and labour crews: who they are, how they deliver, and what OneOhm owes them.",
+    "add": "Add contractor",
+    "search": "Search by name or contact",
+    "loading": "Loading contractors",
+    "noMatch": "No contractor matches that search",
+    "emptyTitle": "No contractors yet",
+    "emptyBody": "Add your I&C partners here. Their crews then get work orders and payables automatically.",
+    "crewCount": "{count, plural, =0 {No crew yet} one {# crew member} other {# crew members}}",
+    "archived": "Archived",
+    "onTimeNone": "No finished work yet",
+    "onTimeAria": "{value}% of finished tasks were on time",
+    "back": "All contractors",
+    "edit": "Edit details",
+    "figures": {
+      "onTime": "On time",
+      "openWork": "Open work",
+      "overdueTasks": "Overdue / open tasks",
+      "rework": "Rework",
+      "pending": "Payable",
+      "paid": "Paid so far"
+    },
+    "form": {
+      "fields": {
+        "kind": "Contractor type",
+        "name": "Name",
+        "contactName": "Contact person",
+        "phone": "Mobile number",
+        "email": "Email",
+        "gstin": "GSTIN",
+        "pan": "PAN",
+        "address": "Address",
+        "bankAccountName": "Account name",
+        "bankAccountNumber": "Account number",
+        "bankIfsc": "IFSC",
+        "paymentTermsDays": "Pay within (days)",
+        "tdsBp": "TDS (%)",
+        "retentionBp": "Retention (%)",
+        "retentionDays": "Retention held (days)",
+        "serviceAreas": "Service areas",
+        "notes": "Notes"
+      },
+      "kinds": {
+        "company": "Company",
+        "individual": "Individual"
+      },
+      "bank": "Bank details",
+      "terms": "Payment terms",
+      "skills": "Kinds of work their crews take",
+      "serviceAreasHint": "Separate places with commas, for example Sangli, Miraj, Kupwad."
+    },
+    "create": {
+      "title": "Add a contractor",
+      "description": "Profile, bank and payment terms. Add the crew and rate card on the next page.",
+      "submit": "Add contractor",
+      "done": "{name} added"
+    },
+    "editSheet": {
+      "title": "Edit contractor",
+      "save": "Save changes",
+      "saved": "Contractor updated",
+      "active": "Active",
+      "activeHint": "Archived contractors keep their history but get no new work orders."
+    },
+    "issue": {
+      "open": "Issue work order",
+      "title": "Issue a work order",
+      "description": "{name}'s crew lead takes the project's open tasks in their kind of work. Rates come from the rate card.",
+      "submit": "Issue work order",
+      "done": "Work order {number} issued",
+      "noCrew": "Add a crew member first; work orders go to the crew lead.",
+      "project": "Project",
+      "pickProject": "Pick a live project",
+      "loadingProjects": "Loading projects…",
+      "dueDate": "Finish by",
+      "dueHint": "Leave empty to use the tasks' due dates.",
+      "scope": "Scope and instructions"
+    },
+    "workOrders": {
+      "title": "Work orders",
+      "emptyTitle": "No work orders yet",
+      "emptyBody": "Issue one for a project, or assign a task to this contractor's crew from the project.",
+      "columns": {
+        "order": "Work order",
+        "status": "Status",
+        "progress": "Tasks",
+        "due": "Finish by",
+        "amount": "Amount"
+      },
+      "overdue": "Overdue",
+      "status": {
+        "open": "Not started",
+        "in_progress": "In progress",
+        "completed": "Settled",
+        "cancelled": "Cancelled"
+      },
+      "tasksDone": "{done} of {total} done"
+    },
+    "workOrder": {
+      "pageTitle": "Work order",
+      "loading": "Loading the work order",
+      "due": "Finish by {date}",
+      "noDue": "No finish date",
+      "cancelled": "Cancelled: {reason}",
+      "tasks": "Tasks in this work order",
+      "tasksDone": "{done} of {total} done. It settles when every task is done.",
+      "unassigned": "Unassigned",
+      "lines": "What it pays",
+      "linesHint": "Rate lines follow the rate card; lines added by hand stay.",
+      "noLines": "No rate matches these tasks yet. Add rates on the contractor's page.",
+      "manual": "added by hand",
+      "share": {
+        "pdf": "Work order PDF",
+        "whatsapp": "Send on WhatsApp",
+        "message": "Work order {number} for {project} ({site}). Tasks:",
+        "messageDue": "Please finish by {date}."
+      }
+    },
+    "crew": {
+      "title": "Crew",
+      "edit": "Edit crew",
+      "empty": "No crew members yet. Crew members sign in to the field app and see only their own work.",
+      "lead": "Lead",
+      "inactive": "Inactive",
+      "dialogTitle": "Crew members",
+      "dialogDescription": "People with a partner role (for example I&C partner). The lead receives the work orders.",
+      "save": "Save crew",
+      "saved": "Crew updated",
+      "noCandidates": "Nobody with a partner role is free. Add the person in Team with the I&C partner role first."
+    },
+    "rates": {
+      "title": "Rate card",
+      "add": "Add rate",
+      "empty": "No rates yet. Work orders price themselves from these.",
+      "failed": "That did not go through",
+      "activeFor": "Use {label}",
+      "basis": {
+        "per_kwp": "Per kWp installed",
+        "per_job": "Per job",
+        "per_day": "Per day",
+        "per_task": "Per task"
+      },
+      "unit": {
+        "per_kwp": "/kWp",
+        "per_job": "/job",
+        "per_day": "/day",
+        "per_task": "/task"
+      },
+      "types": {
+        "residential": "Homes",
+        "society": "Societies",
+        "commercial": "Commercial"
+      },
+      "addTitle": "Add a rate",
+      "addDescription": "A rate for one project type wins over a rate for every type.",
+      "addSubmit": "Add rate",
+      "added": "Rate added",
+      "fields": {
+        "basis": "How it is charged",
+        "task": "Task",
+        "label": "Name on the work order",
+        "amount": "Rate ({unit})",
+        "projectType": "Project type"
+      },
+      "pickTask": "Pick the task",
+      "anyType": "Every project type"
+    },
+    "terms": {
+      "title": "Terms",
+      "payment": "Payment",
+      "tds": "TDS",
+      "retention": "Retention",
+      "bank": "Bank",
+      "noBank": "Not added",
+      "days": "{count, plural, one {# day} other {# days}}"
+    },
+    "settlement": {
+      "settled": "Payable to the contractor",
+      "preview": "Payable when all tasks are done",
+      "netHint": "After rework, retention, TDS and advances.",
+      "gross": "Work done",
+      "rework": "Less rework",
+      "retention": "Less retention",
+      "tds": "Less TDS",
+      "advances": "Less advances paid",
+      "payableNet": "Work order payment",
+      "payableRetention": "Retention release",
+      "dueOn": "Due {date}",
+      "payable": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "paid": "Paid"
+      },
+      "reworkLog": "Rework",
+      "advanceLog": "Advances",
+      "advance": "Advance"
+    },
+    "actions": {
+      "line": {
+        "open": "Add line",
+        "title": "Add a line",
+        "description": "Per-day labour or an extra agreed with the contractor.",
+        "submit": "Add line",
+        "done": "Line added",
+        "text": "Description",
+        "quantity": "Quantity (days or units)",
+        "amount": "Rate per unit"
+      },
+      "rework": {
+        "open": "Record rework",
+        "title": "Record rework",
+        "description": "What had to be redone, and any amount to deduct from the payout.",
+        "submit": "Record rework",
+        "done": "Rework recorded",
+        "task": "Task",
+        "wholeOrder": "The whole work order",
+        "text": "What had to be redone",
+        "amount": "Deduction (optional)"
+      },
+      "advance": {
+        "open": "Pay advance",
+        "title": "Pay an advance",
+        "description": "Creates a contractor payable now; it is deducted when the work order settles.",
+        "submit": "Record advance",
+        "done": "Advance recorded",
+        "text": "Note",
+        "amount": "Amount"
+      },
+      "cancel": {
+        "open": "Cancel",
+        "title": "Cancel this work order",
+        "description": "Its tasks are freed. Reassign them to whoever takes the work over.",
+        "submit": "Cancel work order",
+        "done": "Work order cancelled",
+        "text": "Reason"
+      }
+    }
+  }
+}

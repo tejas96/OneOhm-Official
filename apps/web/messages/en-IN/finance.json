@@ -280,6 +280,7 @@
         "payment": "Payment",
         "payable_approved": "Bill approved",
         "payable_paid": "Bill paid",
+        "work_order_tds": "TDS held",
         "reversal": "Reversal"
       }
     }

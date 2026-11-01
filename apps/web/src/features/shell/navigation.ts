@@ -89,14 +89,14 @@ export const NAVIGATION: readonly NavGroup[] = [
         key: 'discom',
         href: '/discom',
         icon: UtilityPole,
-        built: false,
-        requires: ['discom.manage', 'settings.manage'],
+        built: true,
+        requires: ['discom.manage'],
       },
       {
         key: 'contractors',
         href: '/contractors',
         icon: HardHat,
-        built: false,
+        built: true,
         requires: ['contractors.manage'],
       },
       {

@@ -23,6 +23,7 @@ export const journalSourceEnum = pgEnum('journal_source', [
   'payment',
   'payable_approved',
   'payable_paid',
+  'work_order_tds',
   'reversal',
 ]);
 

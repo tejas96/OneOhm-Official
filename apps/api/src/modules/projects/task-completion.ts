@@ -10,6 +10,7 @@ import {
 } from '@oneohm/database';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
+import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
@@ -107,6 +108,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     message: `${task.title} completed.`,
     userId,
   });
+  // A contractor's work order settles into a payable once all its tasks are done.
+  await settleWorkOrderForTask(tx, task.id, userId);
 }
 
 /** Facts a task still needs, after what was sent now and what the project already knows. */

@@ -1,7 +1,9 @@
 import { authContract } from './auth.contract';
 import { catalogContract } from './catalog.contract';
+import { contractorsContract } from './contractors.contract';
 import { crmContract } from './crm.contract';
 import { customerContract } from './customer.contract';
+import { discomContract } from './discom.contract';
 import { documentsContract } from './documents.contract';
 import { financeContract } from './finance.contract';
 import { inventoryContract } from './inventory.contract';
@@ -29,6 +31,8 @@ export type ApiRouterDefinition = {
   readonly serviceDesk: typeof serviceDeskContract;
   readonly inventory: typeof inventoryContract;
   readonly finance: typeof financeContract;
+  readonly contractors: typeof contractorsContract;
+  readonly discom: typeof discomContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -45,8 +49,11 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   serviceDesk: serviceDeskContract,
   inventory: inventoryContract,
   finance: financeContract,
+  contractors: contractorsContract,
+  discom: discomContract,
 };
 
+export { type ContractorInput, contractorInputSchema } from './contractors.contract';
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
 export {
   REPORT_KEYS,
@@ -58,8 +65,10 @@ export {
 export {
   authContract,
   catalogContract,
+  contractorsContract,
   crmContract,
   customerContract,
+  discomContract,
   documentsContract,
   financeContract,
   inventoryContract,

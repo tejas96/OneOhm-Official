@@ -25,6 +25,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
+import { syncWorkOrders } from '../contractors/work-order-sync';
 import { initialFacts, writeGeneratedTasks } from './project-setup';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 
@@ -161,6 +162,7 @@ export class ProjectCreationService {
       if (!project) throw new Error('Project insert returned nothing.');
 
       const { unassigned } = await writeGeneratedTasks(tx, project.id, generated, candidates);
+      await syncWorkOrders(tx, project.id, actor.userId);
 
       const milestones = planMilestones(
         quotation.totalPaise,

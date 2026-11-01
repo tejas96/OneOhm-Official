@@ -1,3 +1,5 @@
+export * from './contractors';
+export * from './discom';
 export * from './documents';
 export * from './epc';
 export * from './finance';

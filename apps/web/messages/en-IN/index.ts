@@ -1,6 +1,8 @@
 import commandCenter from './command-center.json';
 import common from './common.json';
+import contractors from './contractors.json';
 import customers from './customers.json';
+import discom from './discom.json';
 import documents from './documents.json';
 import finance from './finance.json';
 import inventory from './inventory.json';
@@ -22,10 +24,12 @@ const messages = {
   ...common,
   ...signIn,
   ...commandCenter,
+  ...contractors,
   ...customers,
   ...documents,
   ...inventory,
   ...finance,
+  ...discom,
   ...leads,
   ...projects,
   ...quotations,

@@ -71,7 +71,8 @@
       "meterInSocietyName": "The meter is in the society's name",
       "subsidyClaimed": "Subsidy claimed",
       "edit": "Edit",
-      "createQuotation": "Create quotation"
+      "createQuotation": "Create quotation",
+      "changeRequest": "Change request"
     },
     "editProperty": {
       "title": "Edit site",

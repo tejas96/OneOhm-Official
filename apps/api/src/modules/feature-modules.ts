@@ -1,6 +1,8 @@
 import { CatalogModule } from './catalog/catalog.module';
+import { ContractorsModule } from './contractors/contractors.module';
 import { CrmModule } from './crm/crm.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
+import { DiscomModule } from './discom/discom.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinanceModule } from './finance/finance.module';
 import { InventoryModule } from './inventory/inventory.module';
@@ -21,4 +23,6 @@ export const FEATURE_MODULES = [
   CustomerPortalModule,
   ServiceDeskModule,
   FinanceModule,
+  ContractorsModule,
+  DiscomModule,
 ];

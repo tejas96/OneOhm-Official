@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Work order {{number}}</title>
+  </head>
+  <body>
+    <header class="q-head">
+      <div class="q-brand">
+        <img class="q-logo" src="{{logo}}" alt="{{company.brand}}" />
+        <p><strong>{{company.name}}</strong></p>
+        <p class="q-muted">{{company.address}}</p>
+        <p class="q-muted">GSTIN {{company.gstin}} · {{company.email}}</p>
+        <p class="q-muted">{{company.phones}}</p>
+      </div>
+      <div class="q-meta">
+        <p class="q-overline">Work order</p>
+        <p class="q-number">{{number}}</p>
+        <dl>
+          <div class="q-row"><dt>Issued</dt><dd>{{issued}}</dd></div>
+          <div class="q-row"><dt>Project</dt><dd>{{project.code}}</dd></div>
+          {{#if due}}<div class="q-row"><dt>Finish by</dt><dd>{{due}}</dd></div>{{/if}}
+        </dl>
+      </div>
+    </header>
+    <div class="q-rule"></div>
+    {{#if cancelled}}<p class="w-cancelled">{{cancelled}}</p>{{/if}}
+
+    <section class="q-parties">
+      <div>
+        <p class="q-overline">Issued to</p>
+        <p class="q-name">{{contractor.name}}</p>
+        {{#if contractor.lead}}<p>Crew lead: {{contractor.lead}}</p>{{/if}}
+        {{#if contractor.phone}}<p>{{contractor.phone}}</p>{{/if}}
+      </div>
+      <div>
+        <p class="q-overline">Site</p>
+        <p class="q-name">{{site.customer}}</p>
+        <p>{{site.address}}</p>
+        {{#if site.phone}}<p>{{site.phone}}</p>{{/if}}
+        <p class="q-muted">{{site.system}}</p>
+      </div>
+    </section>
+
+    {{#if scope}}
+    <section class="q-section">
+      <p class="q-overline">Scope</p>
+      <p>{{scope}}</p>
+    </section>
+    {{/if}}
+
+    <section class="q-section">
+      <p class="q-overline">Tasks</p>
+      <table class="w-table">
+        <thead><tr><th>Task</th><th>Due</th><th>Status</th></tr></thead>
+        <tbody>
+          {{#each tasks}}<tr><td>{{title}}</td><td>{{due}}</td><td>{{status}}</td></tr>{{/each}}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="q-section q-keep">
+      <p class="q-overline">Agreed rates</p>
+      <table class="w-table">
+        <thead><tr><th>Item</th><th class="w-num">Quantity</th><th class="w-num">Rate</th><th class="w-num">Amount</th></tr></thead>
+        <tbody>
+          {{#each lines}}<tr><td>{{description}}</td><td class="w-num">{{quantity}}</td><td class="w-num">{{rate}}</td><td class="w-num">{{amount}}</td></tr>{{/each}}
+        </tbody>
+      </table>
+      <dl class="q-totals">
+        <div class="q-row q-grand"><dt>Work order value</dt><dd>{{gross}}</dd></div>
+        {{#if terms}}<div class="q-row"><dt>Terms</dt><dd>{{terms}}</dd></div>{{/if}}
+      </dl>
+    </section>
+
+    <p class="q-note">Every task needs the photos and checks asked for in the OneOhm field app before it counts as done. Payment follows the agreed terms once the work is approved.</p>
+
+    <section class="q-sign q-keep">
+      <div>
+        <p class="q-muted">For {{company.name}}</p>
+        <img class="q-stamp" src="{{stamp}}" alt="Signature and seal" />
+        <p class="q-name">{{#if company.signatory}}{{company.signatory}}, {{/if}}{{company.designation}}</p>
+      </div>
+      <div class="q-accept">
+        <p class="q-muted">Accepted for {{contractor.name}}</p>
+      </div>
+    </section>
+  </body>
+</html>

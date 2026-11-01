@@ -50,6 +50,13 @@
       "when": 1793515897025,
       "tag": "0006_payment_receipt_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793516600270,
+      "tag": "0007_contractors_discom",
+      "breakpoints": true
     }
   ]
 }
