@@ -36,6 +36,20 @@
       "when": 1793513449463,
       "tag": "0004_inventory_procurement",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793515762015,
+      "tag": "0005_finance_ledger_loans",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793515897025,
+      "tag": "0006_payment_receipt_numbers",
+      "breakpoints": true
     }
   ]
 }

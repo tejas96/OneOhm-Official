@@ -12,7 +12,7 @@ import { ReportStatusService } from './report-status.service';
  * The PDF body. Nest streams a StreamableFile with these headers; the contract types the
  * body as a Blob because that is what the web client receives.
  */
-function pdfBody(file: PdfFile, disposition: 'inline' | 'attachment'): Blob {
+export function pdfBody(file: PdfFile, disposition: 'inline' | 'attachment'): Blob {
   const stream = new StreamableFile(file.content, {
     type: 'application/pdf',
     length: file.content.length,

@@ -1,13 +1,14 @@
 import {
   customers,
   paymentMilestones,
+  postMilestoneDue,
   projectActivities,
   projects,
   projectTasks,
   type Transaction,
   taskDependencies,
 } from '@oneohm/database';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
 
 type TaskRow = typeof projectTasks.$inferSelect;
@@ -48,16 +49,24 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .set({ status: 'operational', operationalAt: now, updatedAt: now })
       .where(eq(projects.id, task.projectId));
   } else if (task.onComplete) {
-    await tx
+    // "Not due yet" is an empty due date: an advance may already have part-paid it.
+    const due = await tx
       .update(paymentMilestones)
-      .set({ status: 'due', dueAt: now, updatedAt: now })
+      .set({
+        status: sql`case when ${paymentMilestones.status} = 'upcoming' then 'due'::milestone_status else ${paymentMilestones.status} end`,
+        dueAt: now,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(paymentMilestones.projectId, task.projectId),
           eq(paymentMilestones.trigger, task.onComplete),
-          eq(paymentMilestones.status, 'upcoming'),
+          isNull(paymentMilestones.dueAt),
         ),
-      );
+      )
+      .returning({ id: paymentMilestones.id });
+    // The receivable is booked in the same transaction (PRD 3.11, Flow D).
+    for (const milestone of due) await postMilestoneDue(tx, milestone.id, userId);
   }
 
   const remaining = await tx

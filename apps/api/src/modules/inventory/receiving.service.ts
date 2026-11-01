@@ -60,6 +60,7 @@ export class ReceivingService {
           party: 'vendor',
           partyName: vendor.name,
           description: `${number} against ${order.number}${invoice}`,
+          billNumber: input.vendorInvoiceNumber ?? null,
           amountPaise: amount,
           dueOn: addDays(input.receivedOn, vendor.paymentTermsDays),
         })

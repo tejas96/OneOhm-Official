@@ -6,6 +6,8 @@ export * from './enums';
 export * from './finance.schema';
 export * from './identity.schema';
 export * from './inventory.schema';
+export * from './ledger.schema';
+export * from './loans.schema';
 export * from './procurement.schema';
 export * from './projects.schema';
 export * from './quotations.schema';

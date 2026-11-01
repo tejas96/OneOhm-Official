@@ -11,6 +11,6 @@ import { ReportsController } from './reports.controller';
   imports: [DocumentsModule],
   controllers: [ReportsController],
   providers: [ReportStatusService, ReportPdfService, QuotationPdfService, PdfRendererService],
-  exports: [ReportStatusService, QuotationPdfService],
+  exports: [ReportStatusService, QuotationPdfService, PdfRendererService],
 })
 export class ReportsModule {}

@@ -3,6 +3,7 @@ export * from './crm.schema';
 export * from './customer-portal.schema';
 export * from './dashboard.schema';
 export * from './document.schema';
+export * from './finance.schema';
 export * from './identity.schema';
 export * from './inventory.schema';
 export * from './procurement.schema';
