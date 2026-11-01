@@ -106,6 +106,19 @@ export class CustomersService {
     return row;
   }
 
+  /** A property with its customer, for screens that start from a property. */
+  async propertyWithCustomer(id: string): Promise<Property & { customer: Customer }> {
+    const row = await this.property(id);
+    const owners = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, row.customerId))
+      .limit(1);
+    const [customer] = await this.present(owners);
+    if (!customer) throw notFound('That customer');
+    return { ...presentProperty(row), customer };
+  }
+
   async updateProperty(actor: Actor, id: string, patch: Patch<PropertyInput>): Promise<Property> {
     await this.property(id);
     await this.db
