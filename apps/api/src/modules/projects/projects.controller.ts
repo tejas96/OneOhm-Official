@@ -38,9 +38,9 @@ export class ProjectsController {
         await this.finance.recordPayment(actor, params.id, body);
         return { status: 201, body: await this.read.get(params.id) };
       },
-      commandCenter: async () => {
+      commandCenter: async ({ query }) => {
         assertCan(actor, 'dashboard.view_business');
-        return { status: 200, body: await this.commandCenter.get() };
+        return { status: 200, body: await this.commandCenter.get(query) };
       },
     });
   }

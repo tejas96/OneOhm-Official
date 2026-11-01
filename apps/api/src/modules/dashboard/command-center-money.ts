@@ -13,14 +13,18 @@ export interface MoneyFigures {
   readonly advancesPaise: number;
 }
 
-/** Collections this month and the last 8 weeks, what is still owed, and what goes out. */
-export async function moneyFigures(db: Database, today: string): Promise<MoneyFigures> {
-  const monthStart = `${today.slice(0, 8)}01`;
+/** Collections in the period and the last 8 weeks, what is still owed, and what goes out. */
+export async function moneyFigures(
+  db: Database,
+  today: string,
+  periodStart = `${today.slice(0, 8)}01`,
+): Promise<MoneyFigures> {
+  const monthStart = periodStart;
   const eightWeeksAgo = addDays(today, -55);
   const received = await db
     .select({ amount: payments.amountPaise, on: payments.receivedOn })
     .from(payments)
-    .where(gte(payments.receivedOn, eightWeeksAgo));
+    .where(gte(payments.receivedOn, monthStart < eightWeeksAgo ? monthStart : eightWeeksAgo));
   const collectedPaise = received
     .filter((payment) => payment.on >= monthStart)
     .reduce((sum, payment) => sum + payment.amount, 0);

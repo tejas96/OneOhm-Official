@@ -1,7 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, noteSchema, paiseSchema } from '../common/primitives';
-import { commandCenterSchema } from '../schemas/dashboard.schema';
+import { commandCenterQuerySchema, commandCenterSchema } from '../schemas/dashboard.schema';
 import {
   projectDetailSchema,
   projectSummarySchema,
@@ -66,6 +66,7 @@ export const projectsContract = c.router({
   commandCenter: {
     method: 'GET',
     path: '/command-center',
+    query: commandCenterQuerySchema,
     responses: { 200: commandCenterSchema },
   },
 });

@@ -4,7 +4,7 @@ import type { CommandCenter } from '@oneohm/api-contracts';
 import { cn, easing, seconds } from '@oneohm/design-system/web';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
-import { TILE } from './overview-tiles';
+import { TILE } from './waiting-tile';
 
 const STEPS = ['leads', 'surveys', 'quotations', 'accepted'] as const;
 const FILLS = ['bg-accent/25', 'bg-accent/45', 'bg-accent/70', 'oh-brand-line-x'] as const;

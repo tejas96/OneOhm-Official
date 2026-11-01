@@ -1,19 +1,12 @@
 {
   "commandCenter": {
     "title": "Business at a glance",
-    "health": "Health",
-    "healthAria": "Business health {score} out of 100",
     "newQuotation": "New quotation",
     "greeting": {
       "morning": "Good morning",
       "midday": "Good afternoon",
       "evening": "Good evening",
       "night": "Good evening"
-    },
-    "brief": {
-      "money": "You have collected <figure>{collected}</figure> this month, with {due} due so far.",
-      "actions": "{count, plural, =0 {Nothing needs you today.} one {<figure># thing</figure> needs you today.} other {<figure># things</figure> need you today.}}",
-      "waiting": "Projects have waited longest on <figure>{party}</figure>."
     },
     "actions": {
       "title": "Needs you today",
@@ -29,34 +22,17 @@
       "discom": "DISCOM"
     },
     "tiles": {
-      "installed": "Installed this month",
-      "installedNote": "{count, plural, one {# system} other {# systems}} commissioned, {next} more due this week.",
-      "kinds": {
-        "residential": "Homes",
-        "society": "Societies",
-        "commercial": "Commercial"
-      },
-      "collected": "Collected this month",
-      "ofDue": "of {due} due so far",
-      "health": "Business health",
-      "healthAria": "Business health {score} out of 100",
-      "factors": {
-        "delivery": "Delivery",
-        "money": "Money",
-        "team": "Team"
-      },
       "waiting": "Waiting time",
-      "waitingAria": "{total} waiting days this month, split by who projects waited on",
+      "waitingAria": "{total} waiting days, split by who projects waited on",
       "days": "days",
-      "pipeline": "Sales this month",
+      "pipeline": "Sales in this period",
       "steps": {
         "leads": "Leads",
         "surveys": "Site surveys",
         "quotations": "Quotations sent",
         "accepted": "Accepted"
       },
-      "weeklyAria": "Money received in each of the last eight weeks",
-      "weeks": "Last 8 weeks"
+      "weeklyAria": "Money received in each of the last eight weeks"
     },
     "projects": {
       "title": "Projects in motion",
@@ -70,13 +46,130 @@
       "title": "Money",
       "comingIn": "Coming in",
       "goingOut": "Going out this week",
-      "collected": "Collected this month",
+      "collected": "Collected in this period",
       "stillDue": "Still due from customers",
       "fromBanks": "Bank disbursements pending",
       "toVendors": "To vendors",
       "toContractors": "To contractors",
       "advances": "Advances to crews"
     },
-    "loading": "Loading the business"
+    "loading": "Loading the business",
+    "description": "Live from {scope}, {start} to {end}. Updated {updated}.",
+    "scope": {
+      "all": "every project, payment and person",
+      "narrowed": "the projects in this view"
+    },
+    "filters": {
+      "label": "Filter the command centre",
+      "period": {
+        "this_month": "This month",
+        "last_30_days": "Last 30 days",
+        "this_quarter": "This quarter",
+        "this_year": "This financial year"
+      },
+      "anyManager": "Any manager",
+      "everyType": "Every type",
+      "types": {
+        "residential": "Homes",
+        "society": "Housing societies",
+        "commercial": "Commercial"
+      },
+      "clear": "Clear filters"
+    },
+    "healthCard": {
+      "title": "Business health",
+      "healthy": "Healthy",
+      "atRisk": "At risk",
+      "critical": "Critical",
+      "explain": "Overdue work, money not yet collected and work nobody owns, counted from live records. 100 means nothing in view needs attention.",
+      "how": "How it’s scored",
+      "formula": "Score = 40% delivery (open tasks not overdue) + 35% money (collected of what is due) + 25% team (open tasks with an owner).",
+      "contributors": "Biggest contributors",
+      "none": "Nothing is pulling the score down.",
+      "delivery": {
+        "title": "Overdue work",
+        "detail": "{overdue} of {open} open tasks are overdue.",
+        "link": "Open projects"
+      },
+      "money": {
+        "title": "Money not collected",
+        "detail": "{collected} collected of {due} due.",
+        "link": "Open receivables"
+      },
+      "team": {
+        "title": "Work nobody owns",
+        "detail": "{unassigned} of {open} open tasks have no one assigned.",
+        "link": "Assign tasks"
+      }
+    },
+    "kpis": {
+      "liveProjects": "Live projects",
+      "needingAttention": "Projects needing attention",
+      "needingDetail": "At risk, overdue or waiting",
+      "overdueTasks": "Overdue tasks",
+      "ofOpen": "of {open} open",
+      "unassigned": "Tasks with no one assigned",
+      "installed": "Installed",
+      "installedDetail": "{count, plural, one {# system} other {# systems}} switched on, {next} due this week",
+      "collected": "Collected",
+      "collectedDetail": "of {due} due",
+      "stillDue": "Still due from customers",
+      "bankPending": "Bank disbursements pending",
+      "accepted": "Quotations accepted",
+      "acceptedDetail": "of {sent} sent",
+      "open": "Open {label}"
+    },
+    "risks": {
+      "title": "What could slip, and what to do",
+      "count": "{count, plural, one {# risk} other {# risks}}, most pressing first",
+      "empty": "Nothing in view is slipping. Every open task is on time and owned.",
+      "kind": {
+        "overdue": "Overdue",
+        "waiting": "Waiting",
+        "unassigned": "Nobody assigned"
+      },
+      "pill": {
+        "overdue": "Slipping",
+        "waiting": "Waiting",
+        "unassigned": "At risk"
+      },
+      "due": "due {date}",
+      "story": {
+        "overdue": "Due {date} and still open, {days, plural, one {# day} other {# days}} late.",
+        "waiting": "Waiting on the {party} for {days, plural, =0 {less than a day} one {# day} other {# days}}.",
+        "unassigned": "Ready to start and due {date}, but no one owns it."
+      },
+      "next": "Next action",
+      "action": {
+        "overdue": "Push “{task}” forward or agree a new date",
+        "waiting_customer": "Call the customer so “{task}” can move",
+        "waiting_bank": "Follow up with the bank on “{task}”",
+        "waiting_discom": "Chase the DISCOM office on “{task}”",
+        "waiting_internal": "Unblock “{task}” inside the team",
+        "unassigned": "Assign someone to “{task}”"
+      },
+      "owner": "Task owner",
+      "manager": "Project manager",
+      "nobody": "No one yet"
+    },
+    "decisions": {
+      "title": "Waiting on decisions",
+      "empty": "No decisions are waiting.",
+      "items": {
+        "discounts": "Discounts to approve",
+        "task_reviews": "Tasks waiting for sign-off",
+        "bills": "Bills to approve",
+        "change_requests": "DISCOM change requests open",
+        "service_requests": "Customer help requests open",
+        "bank_claims": "Bank disbursements to claim"
+      }
+    },
+    "deadlines": {
+      "title": "Deadlines in the next 7 days",
+      "range": "{start} to {end}",
+      "empty": "Nothing falls due in the next seven days.",
+      "customer": "Customer sees this",
+      "unassigned": "Unassigned"
+    }
   }
 }
