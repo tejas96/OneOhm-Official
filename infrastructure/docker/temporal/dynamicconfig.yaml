@@ -1,0 +1,4 @@
+# Temporal dynamic configuration for production (defaults suit OneOhm's scale).
+limit.maxIDLength:
+  - value: 255
+    constraints: {}

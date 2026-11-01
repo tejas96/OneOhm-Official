@@ -1,0 +1,18 @@
+# TLS (automatic Let's Encrypt) and same-origin routing: the web app and the API share
+# one origin, so the session cookie stays first-party.
+{$ONEOHM_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	request_body /api/* {
+		max_size 25MB
+	}
+	handle_path /api/* {
+		reverse_proxy api:4200
+	}
+	handle {
+		reverse_proxy web:3200
+	}
+}

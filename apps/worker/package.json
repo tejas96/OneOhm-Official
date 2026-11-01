@@ -1,0 +1,32 @@
+{
+  "name": "@oneohm/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Temporal worker and outbox relay: WhatsApp delivery with retries, daily reminders.",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "bundle": "node dist/bundle-workflows.js",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput & node --watch-path=dist --enable-source-maps --env-file=../../.env dist/main.js",
+    "start": "node --enable-source-maps dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests src"
+  },
+  "dependencies": {
+    "@oneohm/database": "workspace:*",
+    "@oneohm/shared": "workspace:*",
+    "@temporalio/activity": "1.24.0",
+    "@temporalio/client": "1.24.0",
+    "@temporalio/common": "1.24.0",
+    "@temporalio/worker": "1.24.0",
+    "@temporalio/workflow": "1.24.0",
+    "drizzle-orm": "0.45.4",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@oneohm/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
