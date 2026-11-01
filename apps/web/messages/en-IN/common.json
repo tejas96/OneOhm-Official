@@ -10,6 +10,8 @@
     "logoAlt": "OneOhm",
     "company": "One Ohm Sustainable Green Energy",
     "search": "Jump to…",
+    "menu": "Menu",
+    "menuOpen": "Open the menu",
     "notBuilt": "Not built yet",
     "leadsBadge": "{count} leads to follow up today",
     "groups": {
@@ -37,6 +39,36 @@
       "noRole": "No role yet",
       "signOut": "Sign out",
       "label": "Your account"
+    }
+  },
+  "search": {
+    "title": "Jump to",
+    "open": "Search and jump to",
+    "label": "Search pages, projects, customers, leads and quotations",
+    "placeholder": "Search or jump to…",
+    "close": "Close search",
+    "results": "Results",
+    "startHint": "Type a project code, a customer’s name or phone, or a quotation number.",
+    "emptyTitle": "Nothing matches “{query}”",
+    "emptyHint": "Try a project code like OH-2026-002, part of a name, or a phone number.",
+    "loading": "Looking through records…",
+    "loadError": "Some records could not load; the rest are still searched.",
+    "projectCount": "{count, plural, one {# project} other {# projects}}",
+    "revision": "R{revision}",
+    "shortcutApple": "⌘K",
+    "shortcutOther": "Ctrl K",
+    "groups": {
+      "pages": "Pages",
+      "projects": "Projects",
+      "customers": "Customers",
+      "leads": "Leads",
+      "quotations": "Quotations"
+    },
+    "keys": {
+      "move": "to move",
+      "open": "to open",
+      "close": "to close",
+      "escKey": "esc"
     }
   },
   "stages": {

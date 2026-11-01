@@ -3,6 +3,7 @@
 import { cn } from '@oneohm/design-system/web';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useId } from 'react';
 import { useThemePreference } from '@/providers/app-providers';
 import { THEME_PREFERENCES } from '@/providers/preferences';
 
@@ -12,6 +13,8 @@ const ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 export function ThemeSwitch({ className }: { readonly className?: string }) {
   const t = useTranslations('appearance');
   const { theme, setTheme } = useThemePreference();
+  // The sidebar and the phone menu each hold a switch; their radio groups must not merge.
+  const name = useId();
   return (
     <fieldset
       className={cn('flex rounded-lg border p-0.5', 'border-hairline bg-sunken/60', className)}
@@ -34,7 +37,7 @@ export function ThemeSwitch({ className }: { readonly className?: string }) {
           >
             <input
               type="radio"
-              name="theme"
+              name={name}
               value={option}
               checked={selected}
               onChange={() => setTheme(option)}
