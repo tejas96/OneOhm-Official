@@ -12,6 +12,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { loadQuotationDetail } from './quotation-detail';
+import { leadForQuotation } from './quotation-lead';
 import { QuotationPricingService } from './quotation-pricing.service';
 
 @Injectable()
@@ -47,13 +48,14 @@ export class QuotationsService {
           .set({ status: 'superseded', updatedAt: new Date() })
           .where(eq(quotations.id, previous.id));
       const totals = priced.preview.totals;
+      const leadId = await leadForQuotation(tx, input.leadId, property.customerId);
       const [created] = await tx
         .insert(quotations)
         .values({
           number,
           revision: (previous?.revision ?? 0) + 1,
           previousQuotationId: previous?.id ?? null,
-          leadId: input.leadId ?? null,
+          leadId,
           customerId: property.customerId,
           propertyId: property.id,
           subsidyCategory: input.subsidyCategory,
@@ -118,11 +120,11 @@ export class QuotationsService {
           costPaise: line.costPaise,
         })),
       );
-      if (input.leadId)
+      if (leadId)
         await tx
           .update(leads)
           .set({ stage: 'quoted', updatedAt: new Date() })
-          .where(and(eq(leads.id, input.leadId), ne(leads.stage, 'won')));
+          .where(and(eq(leads.id, leadId), ne(leads.stage, 'won')));
       await recordAudit(tx, actor.userId, 'quotation.created', 'quotation', created.id, {
         number,
         totalPaise: totals.totalPaise,

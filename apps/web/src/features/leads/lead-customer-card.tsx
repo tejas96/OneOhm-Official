@@ -29,7 +29,7 @@ export function LeadCustomerCard({ lead }: { readonly lead: LeadDetail }) {
         <div className="flex flex-wrap gap-2">
           {canQuote && lead.propertyId && (
             <Button asChild variant="panel" size="sm" leadingIcon={<FilePlus2 />}>
-              <Link href={`/quotations/new?propertyId=${lead.propertyId}`}>
+              <Link href={`/quotations/new?propertyId=${lead.propertyId}&leadId=${lead.id}`}>
                 {t('createQuotation')}
               </Link>
             </Button>
