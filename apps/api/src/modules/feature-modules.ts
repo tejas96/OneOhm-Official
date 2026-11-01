@@ -1,5 +1,6 @@
 import { CatalogModule } from './catalog/catalog.module';
 import { CrmModule } from './crm/crm.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { PeopleModule } from './people/people.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotationsModule } from './quotations/quotations.module';
@@ -9,6 +10,7 @@ export const FEATURE_MODULES = [
   CatalogModule,
   PeopleModule,
   CrmModule,
+  InventoryModule,
   QuotationsModule,
   ProjectsModule,
 ];
