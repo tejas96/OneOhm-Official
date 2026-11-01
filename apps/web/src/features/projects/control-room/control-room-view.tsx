@@ -34,7 +34,7 @@ export function ControlRoomView({ projectId }: { readonly projectId: string }) {
         className="mx-auto flex w-full max-w-[90rem] flex-col gap-6"
       >
         <Skeleton className="h-36 w-full rounded-2xl" />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
           <Skeleton className="h-[32rem] rounded-2xl" />
           <Skeleton className="h-[32rem] rounded-2xl" />
         </div>
@@ -47,7 +47,7 @@ export function ControlRoomView({ projectId }: { readonly projectId: string }) {
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-10 py-2">
       <RoomHeader project={project} />
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
         <TaskBoard project={project} />
         <aside className="flex flex-col gap-6">
           <PaymentPanel project={project} />
