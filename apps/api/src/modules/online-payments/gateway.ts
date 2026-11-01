@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Environment } from '../../config/environment';
+import type { GatewayPayment } from './gateway-payments.service';
 
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
@@ -16,11 +17,19 @@ export interface LinkRequest {
   readonly notes: Readonly<Record<string, string>>;
 }
 
+/** What Razorpay says about one link now: its status and the payments captured on it. */
+export interface LinkCheck {
+  readonly status: string;
+  readonly payments: readonly GatewayPayment[];
+}
+
 export interface PaymentGateway {
   readonly mode: 'off' | 'sandbox' | 'live';
   readonly provider: 'razorpay' | 'sandbox';
   create(request: LinkRequest): Promise<{ providerLinkId: string; url: string }>;
   cancel(providerLinkId: string): Promise<void>;
+  /** Asks Razorpay directly, for when a webhook never arrived; null when not live. */
+  check(providerLinkId: string): Promise<LinkCheck | null>;
 }
 
 /** Razorpay Payment Links over HTTPS with the key pair (PRD 3.11). */
@@ -38,6 +47,18 @@ function razorpay(env: Environment): PaymentGateway {
       short_url?: string;
       error?: { description?: string };
     };
+    if (!response.ok)
+      throw new Error(
+        `Razorpay ${response.status}: ${json.error?.description ?? 'request failed'}`,
+      );
+    return json;
+  };
+  const get = async (path: string): Promise<unknown> => {
+    const response = await fetch(`https://api.razorpay.com/v1${path}`, {
+      headers: { authorization: auth },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const json = (await response.json().catch(() => ({}))) as { error?: { description?: string } };
     if (!response.ok)
       throw new Error(
         `Razorpay ${response.status}: ${json.error?.description ?? 'request failed'}`,
@@ -71,6 +92,30 @@ function razorpay(env: Environment): PaymentGateway {
     async cancel(providerLinkId) {
       await call(`/payment_links/${providerLinkId}/cancel`);
     },
+    async check(providerLinkId) {
+      const link = (await get(`/payment_links/${providerLinkId}`)) as {
+        status?: string;
+        payments?: { payment_id?: string; status?: string }[] | null;
+      };
+      const payments: GatewayPayment[] = [];
+      for (const listed of link.payments ?? []) {
+        if (listed.status !== 'captured' || !listed.payment_id) continue;
+        const payment = (await get(`/payments/${listed.payment_id}`)) as {
+          amount?: number;
+          fee?: number;
+          created_at?: number;
+        };
+        if (!payment.amount) continue;
+        payments.push({
+          providerLinkId,
+          gatewayPaymentId: listed.payment_id,
+          amountPaise: payment.amount,
+          feePaise: payment.fee ?? 0,
+          paidAt: new Date((payment.created_at ?? Date.now() / 1000) * 1000),
+        });
+      }
+      return { status: link.status ?? 'created', payments };
+    },
   };
 }
 
@@ -84,6 +129,9 @@ function sandbox(env: Environment): PaymentGateway {
       return { providerLinkId, url: `${env.API_PUBLIC_URL}/v1/pay/sandbox/${providerLinkId}` };
     },
     async cancel() {},
+    async check() {
+      return null;
+    },
   };
 }
 
@@ -95,6 +143,9 @@ function off(): PaymentGateway {
       throw new Error('Online payments are off.');
     },
     async cancel() {},
+    async check() {
+      return null;
+    },
   };
 }
 

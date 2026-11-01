@@ -30,6 +30,8 @@ export interface PayoutGateway {
   }): Promise<string>;
   createFundAccount(contactId: string, bank: BankDetails): Promise<string>;
   createPayout(payout: NewPayout): Promise<{ id: string; status: PayoutStatus }>;
+  /** The payout as RazorpayX sees it now, for when a webhook never arrived; null if not live. */
+  fetchPayout(providerPayoutId: string): Promise<Record<string, unknown> | null>;
 }
 
 /** RazorpayX keeps the narration to 30 letters, digits and spaces. */
@@ -102,6 +104,14 @@ function razorpayx(env: Environment): PayoutGateway {
       );
       return { id: created.id, status: (created.status as PayoutStatus) ?? 'processing' };
     },
+    async fetchPayout(providerPayoutId) {
+      const response = await fetch(`https://api.razorpay.com/v1/payouts/${providerPayoutId}`, {
+        headers: { authorization: auth },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) throw new Error(`RazorpayX ${response.status}: could not read the payout`);
+      return (await response.json()) as Record<string, unknown>;
+    },
   };
 }
 
@@ -114,6 +124,7 @@ function sandbox(mode: 'off' | 'sandbox'): PayoutGateway {
     createContact: async () => id('cont'),
     createFundAccount: async () => id('fa'),
     createPayout: async () => ({ id: id('pout'), status: 'processing' }),
+    fetchPayout: async () => null,
   };
 }
 

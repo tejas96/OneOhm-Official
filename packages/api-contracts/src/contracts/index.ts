@@ -27,6 +27,7 @@ import {
 import { documentRequirementsContract } from './document-requirements.contract';
 import { documentsContract } from './documents.contract';
 import { financeContract } from './finance.contract';
+import { gatewayCheckContract } from './gateway-check.contract';
 import { inventoryContract } from './inventory.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { notificationsContract } from './notifications.contract';
@@ -102,6 +103,7 @@ export type ApiRouterDefinition = {
   readonly customerLanguage: typeof customerLanguageContract;
   readonly customerContact: typeof customerContactContract;
   readonly bankPayouts: typeof bankPayoutsContract;
+  readonly gatewayCheck: typeof gatewayCheckContract;
   readonly stageRatings: typeof stageRatingsContract;
   readonly customerStageRatings: typeof customerStageRatingsContract;
   readonly serviceVisits: typeof serviceVisitsContract;
@@ -156,6 +158,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   customerLanguage: customerLanguageContract,
   customerContact: customerContactContract,
   bankPayouts: bankPayoutsContract,
+  gatewayCheck: gatewayCheckContract,
   stageRatings: stageRatingsContract,
   customerStageRatings: customerStageRatingsContract,
   serviceVisits: serviceVisitsContract,

@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { PaymentLinkAction } from '../payment-link-action';
 import { useReceivables } from '../use-finance';
+import { GatewayCheckButton } from './gateway-check-button';
 import { PaymentsReceived } from './payments-received';
 
 type Filter = 'due' | 'not_due' | 'all';
@@ -133,16 +134,19 @@ export function ReceivablesTab() {
       <section className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">{t('title')}</h2>
-          <SegmentedControl
-            value={filter}
-            onValueChange={setFilter}
-            label={t('filterLabel')}
-            size="sm"
-            options={(['due', 'not_due', 'all'] as const).map((value) => ({
-              value,
-              label: t(`filters.${value}`),
-            }))}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <GatewayCheckButton />
+            <SegmentedControl
+              value={filter}
+              onValueChange={setFilter}
+              label={t('filterLabel')}
+              size="sm"
+              options={(['due', 'not_due', 'all'] as const).map((value) => ({
+                value,
+                label: t(`filters.${value}`),
+              }))}
+            />
+          </div>
         </div>
         {query.isPending ? (
           <ListSkeleton label={t('loading')} />

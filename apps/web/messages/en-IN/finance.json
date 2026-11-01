@@ -351,7 +351,10 @@
       "copyShort": "Copy",
       "copied": "Pay link copied.",
       "cancel": "Cancel pay link",
-      "cancelled": "Pay link cancelled."
+      "cancelled": "Pay link cancelled.",
+      "check": "Check Razorpay",
+      "checkFound": "{count, plural, one {# new online payment recorded.} other {# new online payments recorded.}}",
+      "checkNothing": "Razorpay has no new payments."
     },
     "billing": {
       "supply": {
