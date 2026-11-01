@@ -21,13 +21,6 @@ export type EpcStage = (typeof EPC_STAGES)[number];
 
 export type Party = 'internal' | 'customer' | 'bank' | 'discom';
 
-export interface NeedsYouItem {
-  readonly id: string;
-  readonly tone: PillTone;
-  readonly title: string;
-  readonly detail: string;
-}
-
 export interface AttentionProject {
   readonly id: string;
   readonly name: string;
@@ -53,37 +46,6 @@ export const PREVIEW = {
     duePaise: rupeesToPaise(2_610_000),
     installedWp: 46_800,
     commissioned: 9,
-    needsYou: [
-      {
-        id: 'n1',
-        tone: 'review',
-        title: '2 discounts waiting for your approval',
-        detail: 'Quotations for 3.3 kWp and 5.4 kWp homes',
-      },
-      {
-        id: 'n2',
-        tone: 'waiting',
-        title: 'Bank disbursement ready to claim',
-        detail: 'Installation proof uploaded · ₹2.1 L',
-      },
-      {
-        id: 'n3',
-        tone: 'overdue',
-        title: 'Net-meter inspection overdue',
-        detail: 'MSEDCL Sangli · requested 9 days ago',
-      },
-    ] satisfies readonly NeedsYouItem[],
-  },
-  kpis: {
-    activeProjects: { value: 24, previous: 21, atRisk: 3, waitingOnDiscom: 2 },
-    openLeads: {
-      value: 38,
-      previous: 32,
-      followUpToday: 11,
-      trend: [18, 22, 21, 27, 25, 30, 34, 38],
-    },
-    quotations: { value: 17, previous: 13, acceptedPercent: 41 },
-    crew: { onSite: 14, available: 18, onLeave: 2 },
   },
   projects: [
     {

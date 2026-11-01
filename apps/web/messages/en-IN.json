@@ -105,176 +105,39 @@
     "netMetering": "Net metering",
     "subsidy": "Subsidy"
   },
+  "stagesShort": {
+    "survey": "Survey",
+    "design": "Design",
+    "material": "Material",
+    "installation": "Install",
+    "commissioning": "Commission",
+    "netMetering": "Net meter",
+    "subsidy": "Subsidy"
+  },
   "commandCenter": {
     "title": "Business at a glance",
-    "description": "Live from every project, payment and crew. Exceptions first, so you only look where it matters.",
     "previewBadge": "Design preview · sample figures",
-    "weeklyCollections": "Collections, last 8 weeks",
-    "weeklyCollectionsAria": "Weekly collections over the last 8 weeks, from {first} to {last} lakh rupees",
-    "period": "This month",
+    "health": "Health",
+    "healthAria": "Business health {score} out of 100",
     "newQuotation": "New quotation",
-    "insightsLabel": "Waiting time, money and sales",
-    "pulse": {
-      "title": "Business pulse",
-      "healthLabel": "Business health",
-      "healthAria": "Business health {score} out of 100",
-      "outOf": "of 100",
-      "healthy": "Healthy",
-      "healthSentence": "3 projects need you today. Waiting on DISCOM is this month's biggest drag.",
-      "reviewProjects": "Review the 3 projects",
-      "howScored": "How it's scored",
-      "collectedLabel": "Collected this month",
-      "collectedOf": "of {due} due by 30 November",
-      "installed": "Installed this month",
-      "commissioned": "Commissioned",
-      "systems": "{count, plural, one {# system} other {# systems}}",
-      "needsYou": "Needs you first"
-    },
-    "kpis": {
-      "label": "Key numbers",
-      "activeProjects": "Active projects",
-      "activeProjectsDetail": "{atRisk} at risk · {discom} waiting on DISCOM",
-      "openLeads": "Open leads",
-      "openLeadsDetail": "{count} need a follow-up today",
-      "leadsTrend": "Open leads over the last 8 weeks, rising",
-      "quotations": "Quotations this month",
-      "quotationsDetail": "{percent}% accepted so far",
-      "crew": "Crew on site today",
-      "crewDetail": "of {available} available · {onLeave} on leave"
-    },
-    "attention": {
-      "title": "Projects needing attention",
-      "description": "Off track, waiting too long or waiting for money — most urgent first.",
-      "viewAll": "All projects",
-      "waitingOn": "{party} · {days, plural, one {# day} other {# days}}",
-      "kind": {
-        "residential": "Residential",
-        "society": "Housing society",
-        "commercial": "Commercial"
-      },
-      "party": {
-        "internal": "OneOhm team",
-        "customer": "Customer",
-        "bank": "Bank",
-        "discom": "DISCOM"
-      }
-    },
-    "waiting": {
-      "title": "Where waiting time goes",
-      "description": "Days projects spent waiting this month, by who they waited on.",
-      "headline": "{party} holds {percent}% of all waiting time.",
-      "aria": "{total} waiting days this month, split by who projects waited on",
-      "days": "{count, plural, one {# day} other {# days}}",
-      "footnote": "Only OneOhm team time counts against employee and contractor performance."
-    },
-    "money": {
-      "title": "Money",
-      "description": "Owed to OneOhm, and what OneOhm pays out this week.",
-      "receivables": "To collect",
-      "receivablesAria": "Money to collect, split between customers and banks",
-      "fromCustomers": "Customers",
-      "fromBanks": "Bank disbursements",
-      "payables": "To pay this week",
-      "payablesAria": "Money to pay this week, split between vendors and contractors",
-      "toVendors": "Vendors",
-      "toContractors": "Contractors"
-    },
-    "pipeline": {
-      "title": "Sales pipeline",
-      "description": "This month, from first call to accepted quotation.",
-      "leads": "Leads",
-      "surveys": "Site surveys",
-      "quotations": "Quotations sent",
-      "accepted": "Accepted"
-    }
-  },
-  "lab": {
     "greeting": {
       "morning": "Good morning",
       "midday": "Good afternoon",
       "evening": "Good evening",
       "night": "Good evening"
     },
-    "circuit": {
-      "previewBadge": "Design preview · sample figures",
-      "circuitLabel": "Live projects by stage",
-      "nodeLabel": "{stage}: {count, plural, one {# project} other {# projects}}",
-      "waitingOn": "{count} · {party}",
-      "summary": "{live} projects are live. {needYou} things need you today.",
-      "period": "This month",
-      "newQuotation": "New quotation",
-      "healthAria": "Business health {score} out of 100",
-      "health": "Business health",
-      "healthy": "Healthy",
-      "collected": "Collected this month",
-      "ofDue": "of {due} due",
-      "installed": "Installed this month",
-      "systems": "{count, plural, one {# system} other {# systems}} commissioned"
-    },
+    "brief": "You have collected <figure>{collected}</figure> of {due} due this month. <figure>{actions} things</figure> need you today, and <figure>{party}</figure> holds nearly half of all the time projects spent waiting.",
     "actions": {
       "title": "Needs you today",
       "description": "One next step each. Done here, the project moves on."
     },
-    "money": {
-      "title": "Money this month",
-      "description": "Collections against what is due, and what is still moving.",
-      "ringAria": "{percent}% of this month's dues collected",
-      "ofDue": "of {due} due",
-      "stillDue": "Still due from customers",
-      "bankPending": "Bank disbursements pending",
-      "payThisWeek": "To pay this week"
+    "party": {
+      "internal": "OneOhm team",
+      "customer": "Customer",
+      "bank": "Bank",
+      "discom": "DISCOM"
     },
-    "strip": {
-      "leads": "Open leads",
-      "leadsNote": "{count} need a follow-up today",
-      "leadsTrend": "Open leads over 8 weeks, rising",
-      "quotations": "Quotations this month",
-      "quotationsNote": "{percent}% accepted so far",
-      "conversion": "Lead to order",
-      "conversionNote": "{accepted} of {leads} leads accepted a quotation",
-      "crew": "Crew on site",
-      "crewNote": "{count} on leave today"
-    },
-    "editorial": {
-      "previewBadge": "Design preview · sample figures",
-      "healthAria": "Business health {score} out of 100",
-      "health": "Health",
-      "newQuotation": "New quotation",
-      "brief": "You have collected <figure>{collected}</figure> of {due} due this month. <figure>{actions} things</figure> need you today, and <figure>{party}</figure> holds nearly half of all the time projects spent waiting.",
-      "projectsTitle": "Projects in motion",
-      "allProjects": "All 24 projects",
-      "project": "Project",
-      "statusNext": "Status · next",
-      "moneyTitle": "Money",
-      "money": {
-        "collected": "Collected this month",
-        "stillDue": "Still due this month",
-        "fromBanks": "Bank disbursements pending",
-        "toVendors": "To vendors this week",
-        "toContractors": "To contractors this week"
-      },
-      "waitingTitle": "Waiting",
-      "waitingHeadline": "DISCOM holds {percent}% of waiting time. Only the OneOhm team's share counts against people.",
-      "waitingAria": "{total} waiting days this month, split by who projects waited on",
-      "days": "{count, plural, one {# day} other {# days}}",
-      "figures": {
-        "collected": "Collected",
-        "collectedNote": "of {due} due by 30 November",
-        "collectedTrend": "Weekly collections, last 8 weeks",
-        "installed": "Installed",
-        "installedNote": "{count, plural, one {# system} other {# systems}} commissioned this month",
-        "projects": "Live projects",
-        "projectsNote": "Split by stage, survey to subsidy",
-        "projectsAria": "Live projects split by stage",
-        "leads": "Open leads",
-        "leadsNote": "{count} need a follow-up today",
-        "leadsTrend": "Open leads over 8 weeks, rising"
-      }
-    },
-    "bento": {
-      "previewBadge": "Design preview · sample figures",
-      "period": "This month",
-      "newQuotation": "New quotation",
+    "tiles": {
       "installed": "Installed this month",
       "installedNote": "{count, plural, one {# system} other {# systems}} commissioned, {next} more due this week.",
       "kinds": {
@@ -296,8 +159,29 @@
       "waitingAria": "{total} waiting days this month, split by who projects waited on",
       "days": "days",
       "pipeline": "Sales this month",
-      "projects": "Live projects",
-      "allProjects": "All projects"
+      "steps": {
+        "leads": "Leads",
+        "surveys": "Site surveys",
+        "quotations": "Quotations sent",
+        "accepted": "Accepted"
+      }
+    },
+    "projects": {
+      "title": "Projects in motion",
+      "all": "All 24 projects",
+      "project": "Project",
+      "statusNext": "Status · next"
+    },
+    "money": {
+      "title": "Money",
+      "comingIn": "Coming in",
+      "goingOut": "Going out this week",
+      "collected": "Collected this month",
+      "stillDue": "Still due this month",
+      "fromBanks": "Bank disbursements pending",
+      "toVendors": "To vendors",
+      "toContractors": "To contractors",
+      "advances": "Advances to crews"
     }
   }
 }

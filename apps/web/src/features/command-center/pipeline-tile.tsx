@@ -3,16 +3,16 @@
 import { cn, easing, seconds } from '@oneohm/design-system/web';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
-import { PREVIEW } from '../../command-center/preview-data';
-import { TILE } from './bento-tiles';
+import { TILE } from './overview-tiles';
+import { PREVIEW } from './preview-data';
 
 const STEPS = ['leads', 'surveys', 'quotations', 'accepted'] as const;
 const FILLS = ['bg-accent/25', 'bg-accent/45', 'bg-accent/70', 'oh-brand-line-x'] as const;
 
 /** The sales funnel as a real funnel: centred bars narrowing to the accepted quotations. */
 export function PipelineTile({ className }: { readonly className?: string }) {
-  const t = useTranslations('lab.bento');
-  const stepT = useTranslations('commandCenter.pipeline');
+  const t = useTranslations('commandCenter.tiles');
+  const stepT = useTranslations('commandCenter.tiles.steps');
   const { pipeline } = PREVIEW;
   return (
     <section className={cn(TILE, 'flex flex-col gap-5', className)}>

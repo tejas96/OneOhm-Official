@@ -14,9 +14,9 @@ import { BellRing } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { PREVIEW } from '../../command-center/preview-data';
-import { MONEY } from '../lab-data';
-import { RooftopIllustration } from './rooftop-illustration';
+import { PREVIEW } from './preview-data';
+import { MONEY } from './preview-more';
+import { RooftopIllustration } from './rooftop/rooftop-illustration';
 
 export const TILE = 'rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70';
 
@@ -36,7 +36,7 @@ function Overline({
 
 /** The hero tile: what was installed this month, with the rooftop drawing. */
 export function InstalledTile({ className }: { readonly className?: string }) {
-  const t = useTranslations('lab.bento');
+  const t = useTranslations('commandCenter.tiles');
   const installed = useCountUp(PREVIEW.pulse.installedWp);
   return (
     <section
@@ -74,7 +74,7 @@ export function InstalledTile({ className }: { readonly className?: string }) {
 
 /** Collections this month on the ocean panel. */
 export function CollectionsTile({ className }: { readonly className?: string }) {
-  const t = useTranslations('lab.bento');
+  const t = useTranslations('commandCenter.tiles');
   const values = PREVIEW.money.weeklyCollections;
   const max = Math.max(...values);
   return (
@@ -124,7 +124,7 @@ const FACTORS = [
 
 /** Business health: the score and the three parts it is made of. */
 export function HealthTile({ className }: { readonly className?: string }) {
-  const t = useTranslations('lab.bento');
+  const t = useTranslations('commandCenter.tiles');
   return (
     <section className={cn(TILE, 'flex flex-col gap-5', className)}>
       <Overline>{t('health')}</Overline>
@@ -176,8 +176,8 @@ const PARTY_FILL = {
 
 /** Waiting days by who the projects waited on. */
 export function WaitingTile({ className }: { readonly className?: string }) {
-  const t = useTranslations('lab.bento');
-  const partyT = useTranslations('commandCenter.attention.party');
+  const t = useTranslations('commandCenter.tiles');
+  const partyT = useTranslations('commandCenter.party');
   const days = PREVIEW.waitingDays;
   const total = PARTIES.reduce((sum, party) => sum + days[party], 0);
   return (

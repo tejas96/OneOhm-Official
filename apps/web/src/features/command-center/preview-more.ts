@@ -1,30 +1,11 @@
 /**
- * DESIGN PREVIEW ONLY. Extra sample figures for the three command-centre
- * alternatives in the design lab. Not OneOhm business data; deleted together
- * with the lab once a direction is chosen and the API exists.
+ * DESIGN PREVIEW ONLY. More sample figures for the command centre (actions, more
+ * projects, money). Not OneOhm business data; deleted when the API exists.
  */
 import type { PillTone } from '@oneohm/design-system/web';
 import { rupeesToPaise } from '@oneohm/shared';
-import type { AttentionProject, EpcStage, Party } from '../command-center/preview-data';
-import { PREVIEW } from '../command-center/preview-data';
-
-export interface StageLoad {
-  readonly stage: EpcStage;
-  readonly projects: number;
-  readonly waiting: number;
-  readonly waitingOn: Party | null;
-}
-
-/** Live projects in each EPC stage (24 in all). */
-export const STAGE_LOAD: readonly StageLoad[] = [
-  { stage: 'survey', projects: 5, waiting: 0, waitingOn: null },
-  { stage: 'design', projects: 3, waiting: 1, waitingOn: 'customer' },
-  { stage: 'material', projects: 4, waiting: 1, waitingOn: 'internal' },
-  { stage: 'installation', projects: 6, waiting: 0, waitingOn: null },
-  { stage: 'commissioning', projects: 2, waiting: 0, waitingOn: null },
-  { stage: 'netMetering', projects: 3, waiting: 2, waitingOn: 'discom' },
-  { stage: 'subsidy', projects: 1, waiting: 1, waitingOn: 'bank' },
-];
+import type { AttentionProject, Party } from './preview-data';
+import { PREVIEW } from './preview-data';
 
 export interface ActionItem {
   readonly id: string;
@@ -133,8 +114,8 @@ const MORE_PROJECTS: readonly AttentionProject[] = [
   },
 ];
 
-/** Every live project shown in the lab: the three that need attention, then three more. */
-export const LAB_PROJECTS: readonly AttentionProject[] = [...PREVIEW.projects, ...MORE_PROJECTS];
+/** Live projects on the command centre: the three that need attention, then three more. */
+export const LIVE_PROJECTS: readonly AttentionProject[] = [...PREVIEW.projects, ...MORE_PROJECTS];
 
 export const MONEY = {
   collected: PREVIEW.pulse.collectedPaise,

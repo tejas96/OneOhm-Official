@@ -12,7 +12,7 @@ import {
 } from '@oneohm/design-system/web';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
-import { ACTIONS } from './lab-data';
+import { ACTIONS } from './preview-more';
 
 const TONE_DISC: Readonly<Record<PillTone, string>> = {
   onTrack: 'bg-on-track-tint text-on-track',
@@ -53,8 +53,8 @@ export function ActionList({
   readonly limit?: number;
   readonly className?: string;
 }) {
-  const t = useTranslations('lab.actions');
-  const partyT = useTranslations('commandCenter.attention.party');
+  const t = useTranslations('commandCenter.actions');
+  const partyT = useTranslations('commandCenter.party');
   const items = limit ? ACTIONS.slice(0, limit) : ACTIONS;
   return (
     <Card className={cn('flex flex-col overflow-hidden', className)}>

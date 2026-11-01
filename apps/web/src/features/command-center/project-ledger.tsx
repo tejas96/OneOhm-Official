@@ -5,8 +5,8 @@ import { formatKwp } from '@oneohm/shared';
 import { Hourglass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type AttentionProject, EPC_STAGES } from '../../command-center/preview-data';
-import { LAB_PROJECTS } from '../lab-data';
+import { type AttentionProject, EPC_STAGES } from './preview-data';
+import { LIVE_PROJECTS } from './preview-more';
 import { SectionHeading } from './section-heading';
 
 const COLUMNS =
@@ -16,16 +16,16 @@ const centre = (index: number) => STEP * index + STEP / 2;
 
 /** Every live project on one page, each journey drawn as a metro line. */
 export function ProjectLedger() {
-  const t = useTranslations('lab.editorial');
-  const stagesT = useTranslations('stages');
+  const t = useTranslations('commandCenter.projects');
+  const shortT = useTranslations('stagesShort');
   return (
-    <section id="ledger" aria-label={t('projectsTitle')} className="flex flex-col gap-5">
+    <section id="projects" aria-label={t('title')} className="flex flex-col gap-5">
       <SectionHeading
         index="01"
-        title={t('projectsTitle')}
+        title={t('title')}
         action={
-          <a href="#ledger" className="type-body-sm font-medium text-accent hover:underline">
-            {t('allProjects')}
+          <a href="#projects" className="type-body-sm font-medium text-accent hover:underline">
+            {t('all')}
           </a>
         }
       />
@@ -37,14 +37,14 @@ export function ProjectLedger() {
               key={stage}
               className="px-0.5 text-center text-[0.6875rem] leading-tight text-ink-faint"
             >
-              {stagesT(stage)}
+              {shortT(stage)}
             </span>
           ))}
         </span>
         <span className="type-overline text-ink-faint uppercase">{t('statusNext')}</span>
       </div>
       <ul className="flex flex-col divide-y divide-hairline">
-        {LAB_PROJECTS.map((project, index) => (
+        {LIVE_PROJECTS.map((project, index) => (
           <motion.li key={project.id} {...listItemEnter(index)} className={cn(COLUMNS, 'py-4')}>
             <div className="flex min-w-0 flex-col gap-1">
               <p className="font-mono text-[0.75rem] text-ink-faint">

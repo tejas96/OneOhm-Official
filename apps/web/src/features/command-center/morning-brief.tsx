@@ -5,13 +5,13 @@ import { formatInrCompact } from '@oneohm/shared';
 import { FlaskConical, Plus } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { PREVIEW } from '../../command-center/preview-data';
-import { MONEY } from '../lab-data';
-import { useGreeting } from '../use-greeting';
+import { PREVIEW } from './preview-data';
+import { MONEY } from './preview-more';
+import { useGreeting } from './use-greeting';
 
 const figure = (chunks: ReactNode) => (
   <a
-    href="#ledger"
+    href="#projects"
     className="text-ink underline decoration-accent/45 decoration-2 underline-offset-[6px] transition-colors hover:decoration-accent"
   >
     {chunks}
@@ -19,8 +19,8 @@ const figure = (chunks: ReactNode) => (
 );
 
 /** The morning brief: the whole business in one paragraph, every figure a way in. */
-export function Lede() {
-  const t = useTranslations('lab.editorial');
+export function MorningBrief() {
+  const t = useTranslations('commandCenter');
   const format = useFormatter();
   const now = useNow();
   const greeting = useGreeting();
@@ -60,7 +60,7 @@ export function Lede() {
       </div>
       <div className="flex flex-col gap-5">
         <h1 className="type-display-xl text-ink md:type-hero">{greeting}.</h1>
-        <p className="max-w-4xl type-display-md text-pretty text-ink-muted">
+        <p className="max-w-4xl text-[1.375rem] leading-8 text-pretty text-ink-muted [font-family:var(--font-display)] md:type-display-md">
           {t.rich('brief', {
             figure,
             collected: formatInrCompact(MONEY.collected),

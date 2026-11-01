@@ -7,23 +7,34 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BrandLogo } from './brand-logo';
 import { NAVIGATION, type NavItem } from './navigation';
-import { SIDEBAR_LOOKS, type SidebarLook } from './sidebar-looks';
 import { ThemeSwitch } from './theme-switch';
 
-interface SidebarProps {
-  readonly look?: SidebarLook;
-  /** Where links point, so the design lab can keep visitors inside the variant they chose. */
-  readonly activeHref?: string;
-}
+/**
+ * One look in both themes, as chosen: on light paper the current page is a solid
+ * ink pill; in the dark the sidebar floats as a card and the current page is a soft
+ * Ohm-blue wash.
+ */
+const STYLES = {
+  aside:
+    'dark:md:my-2 dark:md:ml-2 dark:md:h-[calc(100dvh-1rem)] dark:md:rounded-2xl dark:md:border dark:md:border-hairline dark:md:bg-raised dark:md:shadow-e1',
+  muted: 'text-ink-faint',
+  search:
+    'border-hairline bg-raised/70 text-ink-faint shadow-e1 hover:border-rule hover:text-ink-muted dark:bg-surface',
+  item: 'text-ink-muted hover:bg-sunken/70 hover:text-ink',
+  itemActive:
+    'bg-ink font-medium text-canvas shadow-e2 dark:bg-accent-soft dark:text-on-accent-soft dark:shadow-none',
+  icon: 'text-ink-faint',
+  iconActive: 'text-canvas dark:text-accent',
+} as const;
 
 /**
  * Wide screens: the business's map down the left edge. Every row keeps its height
  * (`shrink-0`); when the list is taller than the window, the list scrolls instead
  * of squashing the search box and menu items.
  */
-export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
+export function Sidebar() {
   const t = useTranslations('nav');
-  const styles = SIDEBAR_LOOKS[look];
+  const styles = STYLES;
   return (
     <aside
       className={cn(
@@ -57,14 +68,14 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
         {NAVIGATION.map((group, index) => (
           <div key={group.key ?? `group-${index}`} className="flex shrink-0 flex-col gap-0.5">
             {group.key && (
-              <p className={cn('px-3 pb-0.5 type-overline uppercase', styles.group)}>
+              <p className="px-3 pb-0.5 type-overline text-ink-faint uppercase">
                 {t(`groups.${group.key}`)}
               </p>
             )}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => (
                 <li key={item.key}>
-                  <NavLink item={item} look={look} activeHref={activeHref} />
+                  <NavLink item={item} />
                 </li>
               ))}
             </ul>
@@ -72,25 +83,15 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
         ))}
       </nav>
 
-      <div className={cn('flex shrink-0 flex-col gap-3 border-t px-1 pt-4', styles.divider)}>
-        <ThemeSwitch onPanel={look === 'glow'} />
+      <div className="flex shrink-0 flex-col gap-3 border-t border-hairline px-1 pt-4">
+        <ThemeSwitch />
         <button
           type="button"
-          className={cn(
-            'flex items-center gap-3 rounded-lg p-2 text-left transition-colors',
-            styles.account,
-          )}
+          className="flex items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-sunken"
         >
           <Avatar name={t('account.role')} swatch={1} size="sm" />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span
-              className={cn(
-                'truncate type-body-sm font-medium',
-                look === 'glow' ? 'text-on-panel' : 'text-ink',
-              )}
-            >
-              {t('account.role')}
-            </span>
+            <span className="truncate type-body-sm font-medium text-ink">{t('account.role')}</span>
             <span className={cn('truncate type-label', styles.muted)}>{t('account.preview')}</span>
           </span>
           <ChevronsUpDown aria-hidden className={cn('size-4', styles.muted)} />
@@ -102,19 +103,11 @@ export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
 
 const LEADS_TO_FOLLOW_UP = 11;
 
-function NavLink({
-  item,
-  look,
-  activeHref,
-}: {
-  readonly item: NavItem;
-  readonly look: SidebarLook;
-  readonly activeHref: string | undefined;
-}) {
+function NavLink({ item }: { readonly item: NavItem }) {
   const t = useTranslations('nav');
   const pathname = usePathname();
-  const styles = SIDEBAR_LOOKS[look];
-  const href = item.key === 'commandCenter' && activeHref ? activeHref : item.href;
+  const styles = STYLES;
+  const href = item.href;
   const active = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = item.icon;
   const content = (
