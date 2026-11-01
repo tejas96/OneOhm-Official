@@ -49,7 +49,8 @@ export function ConvertLeadDialog({
         title: t('done', { name: lead.name }),
         action: {
           label: t('createQuotation'),
-          onSelect: () => router.push(`/quotations/new?propertyId=${result.propertyId}&leadId=${lead.id}`),
+          onSelect: () =>
+            router.push(`/quotations/new?propertyId=${result.propertyId}&leadId=${lead.id}`),
         },
       });
     },
