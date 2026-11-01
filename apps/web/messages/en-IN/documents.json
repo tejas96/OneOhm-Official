@@ -61,6 +61,109 @@
         "signature": "Signature",
         "stamp": "Stamp"
       }
+    },
+    "gallery": {
+      "intro": {
+        "project": "Site photos, papers, quotations and reports for the whole project, in one place.",
+        "customer": "Every file for this customer, across their sites and projects, in one place."
+      },
+      "add": "Add a document",
+      "addFirst": "Add the first document",
+      "folders": "Folders",
+      "folder": "Folder",
+      "allDocuments": "All documents",
+      "folderOption": "{label} ({count})",
+      "search": "Search titles and file names",
+      "searchLabel": "Search documents by title or file name",
+      "kind": "Kind of file",
+      "kinds": {
+        "all": "All",
+        "image": "Images",
+        "pdf": "PDFs",
+        "other": "Others"
+      },
+      "kindLabels": {
+        "image": "Photo",
+        "pdf": "PDF",
+        "other": "File"
+      },
+      "loading": "Loading documents",
+      "shown": "{count, plural, one {# document} other {# documents}} shown.",
+      "empty": {
+        "title": "No documents yet",
+        "description": "Keep site photos, KYC papers, bills, quotations and reports here, so the office and the crew work from the same files.",
+        "readOnly": "Photos added to tasks and files uploaded by the office appear here."
+      },
+      "noMatch": {
+        "search": "Nothing matches “{search}”",
+        "folder": "Nothing in {folder}",
+        "kind": "No {kind} here",
+        "description": "Try another folder or kind of file, or clear the search.",
+        "reset": "Show every document"
+      },
+      "card": {
+        "meta": "{kind} · {size}",
+        "addedBy": "{name}, {time}",
+        "added": "Added {time}",
+        "madeBy": "OneOhm, {time}",
+        "filed": "Filed in {folder}."
+      },
+      "badges": {
+        "report": "Report",
+        "system": "Made by OneOhm"
+      },
+      "sources": {
+        "upload": "Uploaded",
+        "system": "Made by OneOhm",
+        "report": "Report made by OneOhm"
+      },
+      "preview": {
+        "description": "{folder} · {kind} · {size}",
+        "addedBy": "Added by",
+        "added": "Added",
+        "folder": "Folder",
+        "fileName": "File name",
+        "task": "Task",
+        "project": "Project",
+        "source": "Source",
+        "oneohm": "OneOhm",
+        "notRecorded": "Not recorded",
+        "openFull": "Open full size",
+        "download": "Download",
+        "replace": "Replace",
+        "remove": "Remove",
+        "replacing": "Uploading the new file… {percent}%",
+        "replacedNote": "This file replaced an earlier one. The earlier file is kept in the audit trail.",
+        "pdfLoading": "Loading the PDF",
+        "noInline": "This file cannot be shown here. Open it full size or download it.",
+        "confirm": {
+          "body": "Removing takes the document out of this list and it can no longer be opened here. The record of who added and removed it stays in the audit trail.",
+          "keep": "Keep it",
+          "remove": "Remove document"
+        },
+        "removed": "Document removed",
+        "removeFailed": "Could not remove the document"
+      },
+      "upload": {
+        "description": "One photo or PDF, filed in a folder so the team can find it.",
+        "file": "File",
+        "choose": "Choose a file or drop it here",
+        "accepted": "Photos (JPEG, PNG, WebP, HEIC) or PDF, up to 25 MB",
+        "chooseAnother": "{size} · choose another file",
+        "title": "Title",
+        "titleHint": "How the team will find it. Taken from the file name if left empty.",
+        "folder": "Folder",
+        "cancel": "Cancel",
+        "submit": "Add document",
+        "progress": "Uploading… {percent}%",
+        "added": "Document added",
+        "errors": {
+          "missing": "Choose a file to add.",
+          "type": "This kind of file cannot be added. Choose a photo (JPEG, PNG, WebP, HEIC) or a PDF.",
+          "size": "This file is {size}. The limit is 25 MB.",
+          "failed": "The upload did not finish. {reason}"
+        }
+      }
     }
   }
 }
