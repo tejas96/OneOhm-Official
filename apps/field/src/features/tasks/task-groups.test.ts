@@ -24,6 +24,8 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     captures: [],
     blockedBy: [],
     completedAt: null,
+    attachments: [],
+    missingEvidence: [],
     ...overrides,
   };
 }
