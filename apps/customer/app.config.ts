@@ -47,6 +47,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-sharing',
     [
+      'expo-image-picker',
+      {
+        cameraPermission:
+          'OneOhm uses the camera so you can show us a problem with your solar system.',
+        photosPermission:
+          'OneOhm uses your photos so you can show us a problem with your solar system.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-icon.png',

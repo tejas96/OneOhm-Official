@@ -105,6 +105,15 @@ export const customerContract = c.router({
     body: serviceRequestInputSchema,
     responses: { 201: serviceRequestSchema },
   },
+  addServiceRequestPhoto: {
+    method: 'POST',
+    path: '/customer/service-requests/:id/photos',
+    pathParams: z.object({ id: idSchema }),
+    contentType: 'multipart/form-data',
+    body: c.type<FormData>(),
+    responses: { 201: serviceRequestSchema },
+    summary: 'One photo of the problem (field "file"), added to the customer’s own request.',
+  },
   giveFeedback: {
     method: 'POST',
     path: '/customer/feedback',

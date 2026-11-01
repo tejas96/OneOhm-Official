@@ -30,6 +30,7 @@
       "other": "Something else"
     },
     "resolution": "Resolved: {note}",
+    "photos": "{count, plural, one {# photo} other {# photos}} from the customer",
     "start": "Start",
     "resolve": "Resolve",
     "resolveTitle": "Resolve this request",

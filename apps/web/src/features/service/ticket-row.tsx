@@ -19,6 +19,7 @@ import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
+import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 
 const TONE: Readonly<Record<ServiceTicket['status'], PillTone>> = {
@@ -75,6 +76,31 @@ export function TicketRow({
           )}
         </div>
         <p className="type-body text-ink-muted">{ticket.description}</p>
+        {ticket.photos.length > 0 && (
+          <ul
+            className="flex flex-wrap gap-2"
+            aria-label={t('photos', { count: ticket.photos.length })}
+          >
+            {ticket.photos.map((photo) => (
+              <li key={photo.id}>
+                <a
+                  href={`/api/v1/documents/${photo.id}/file?disposition=inline`}
+                  target="_blank"
+                  rel="noopener"
+                  className="block size-16 overflow-hidden rounded-lg ring-1 ring-hairline hover:ring-accent"
+                >
+                  {/* biome-ignore lint/performance/noImgElement: streamed from the API after its access check, not Next's image loader. */}
+                  <img
+                    src={`/api/v1/documents/${photo.id}/file?disposition=inline`}
+                    alt={photo.name}
+                    className="size-full object-cover"
+                    loading="lazy"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
         {ticket.resolutionNote && (
           <p className="type-body-sm text-on-track">
             {t('resolution', { note: ticket.resolutionNote })}
@@ -92,7 +118,7 @@ export function TicketRow({
             className="inline-flex items-center gap-1 hover:text-accent"
           >
             <Phone aria-hidden className="size-3.5" />
-            {ticket.customer.phone}
+            {formatPhone(ticket.customer.phone)}
           </a>
           <span>{format.relativeTime(new Date(ticket.createdAt), now)}</span>
         </p>

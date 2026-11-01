@@ -124,6 +124,8 @@ export const serviceRequestSchema = z.object({
   description: z.string(),
   status: z.enum(['open', 'in_progress', 'resolved']),
   resolutionNote: z.string().nullable(),
+  /** Photos the customer added in the app. */
+  photoCount: z.number().int(),
   createdAt: instantSchema,
   resolvedAt: instantSchema.nullable(),
 });

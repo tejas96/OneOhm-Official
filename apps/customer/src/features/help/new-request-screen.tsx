@@ -8,6 +8,7 @@ import {
   Input,
   Screen,
   Text,
+  type UploadableFile,
   unwrap,
 } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +21,8 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
 import { SUPPORT } from '@/copy/care';
 import { useChosenProject, useHome } from '@/features/home/use-home';
+import { PhotoStrip } from './photo-strip';
+import { MAX_REQUEST_PHOTOS, pickRequestPhotos, sendRequestPhotos } from './request-photos';
 
 type Category = ServiceRequest['category'];
 
@@ -34,26 +37,44 @@ export function NewRequestScreen() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<readonly UploadableFile[]>([]);
   const forProject = projectId ?? chosen?.id ?? null;
 
   const send = useMutation({
-    mutationFn: () =>
-      unwrap(
+    mutationFn: async () => {
+      const request = await unwrap(
         api.customer.createServiceRequest({
           body: { category: category ?? 'other', projectId: forProject, description },
         }),
-      ),
-    onSuccess: async () => {
+      );
+      return sendRequestPhotos(request.id, photos);
+    },
+    onSuccess: async (failedPhotos) => {
       await client.invalidateQueries({ queryKey: keys.service });
-      toast(SUPPORT.sent);
+      toast(failedPhotos > 0 ? SUPPORT.photosFailed(failedPhotos) : SUPPORT.sent);
       setCategory(null);
       setDescription('');
+      setPhotos([]);
       setError(null);
       router.back();
     },
     onError: (failure) => setError(describeError(failure)),
   });
   const fieldErrors = send.error ? fieldErrorsOf(send.error) : {};
+  const addPhotos = async (source: 'camera' | 'library') => {
+    const picked = await pickRequestPhotos(source, MAX_REQUEST_PHOTOS - photos.length);
+    if (picked === 'denied') {
+      setError(source === 'camera' ? SUPPORT.cameraDenied : SUPPORT.libraryDenied);
+      return;
+    }
+    // The same photo picked twice is kept once.
+    setPhotos((current) =>
+      [
+        ...current,
+        ...picked.filter((photo) => !current.some((had) => had.uri === photo.uri)),
+      ].slice(0, MAX_REQUEST_PHOTOS),
+    );
+  };
 
   return (
     <Screen
@@ -104,6 +125,11 @@ export function NewRequestScreen() {
             invalid={Boolean(fieldErrors.description)}
           />
         </Field>
+        <PhotoStrip
+          photos={photos}
+          onAdd={(source) => void addPhotos(source)}
+          onRemove={(index) => setPhotos((current) => current.filter((_, at) => at !== index))}
+        />
         <FormAlert message={error && !fieldErrors.description ? error : null} />
       </View>
     </Screen>

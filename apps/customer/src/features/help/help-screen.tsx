@@ -100,7 +100,11 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
         </View>
       ) : null}
       <Text variant="label" tone="tertiary">
-        {[request.projectCode, SUPPORT.raisedOn(momentDate(request.createdAt))]
+        {[
+          request.projectCode,
+          SUPPORT.raisedOn(momentDate(request.createdAt)),
+          request.photoCount > 0 ? SUPPORT.photoCount(request.photoCount) : null,
+        ]
           .filter(Boolean)
           .join(' · ')}
       </Text>

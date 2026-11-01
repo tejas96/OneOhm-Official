@@ -12,6 +12,7 @@ import type { LeadStage } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, notInArray } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
+import { photosOfRequests } from '../../common/read-models/service-request-photos';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { customerProjects } from './customer-home';
@@ -122,6 +123,10 @@ export class CustomerPortalService {
       .leftJoin(projects, eq(projects.id, serviceRequests.projectId))
       .where(eq(serviceRequests.customerId, customerId))
       .orderBy(desc(serviceRequests.createdAt));
+    const photos = await photosOfRequests(
+      this.db,
+      rows.map(({ request }) => request.id),
+    );
     return rows.map(({ request, projectCode }) => ({
       id: request.id,
       projectCode,
@@ -129,6 +134,7 @@ export class CustomerPortalService {
       description: request.description,
       status: request.status as Status,
       resolutionNote: request.resolutionNote,
+      photoCount: photos.get(request.id)?.length ?? 0,
       createdAt: request.createdAt.toISOString(),
       resolvedAt: request.resolvedAt?.toISOString() ?? null,
     }));

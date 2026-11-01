@@ -1,6 +1,7 @@
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId } from './columns';
 import { customers, properties } from './crm.schema';
+import { serviceRequests } from './customer-portal.schema';
 import { documentSourceEnum, outboxChannelEnum, outboxStatusEnum } from './enums';
 import { users } from './identity.schema';
 import { projects, projectTasks } from './projects.schema';
@@ -36,9 +37,14 @@ export const documents = pgTable(
     uploadedByUserId: uuid('uploaded_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /** Photos a customer added to a help request in the app (PRD 5.5). */
+    serviceRequestId: uuid('service_request_id').references(() => serviceRequests.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (table) => [
+    index('documents_service_request_idx').on(table.serviceRequestId),
     index('documents_project_idx').on(table.projectId),
     index('documents_task_idx').on(table.taskId),
     index('documents_customer_idx').on(table.customerId),

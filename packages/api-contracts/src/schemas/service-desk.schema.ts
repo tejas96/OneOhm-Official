@@ -14,6 +14,8 @@ export const serviceTicketSchema = z.object({
   project: z.object({ id: idSchema, code: z.string() }).nullable(),
   assignee: z.object({ id: idSchema, name: z.string() }).nullable(),
   resolutionNote: z.string().nullable(),
+  /** Photos the customer added in the app, oldest first. */
+  photos: z.array(z.object({ id: idSchema, name: z.string() })),
   createdAt: instantSchema,
   resolvedAt: instantSchema.nullable(),
 });

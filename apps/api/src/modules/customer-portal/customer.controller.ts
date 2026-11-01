@@ -2,12 +2,10 @@ import { Controller, Req, StreamableFile } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import type { Request } from 'express';
 import { Public } from '../../common/auth/auth.decorators';
-import { bearerToken } from '../../common/auth/session-cookies';
-import { unauthenticated } from '../../common/http/errors';
 import { apiContract } from '../../contract';
 import { QuotationPdfService } from '../reports/quotation-pdf.service';
 import type { PdfFile } from '../reports/report-pdf.service';
-import { CustomerAuthService } from './customer-auth.service';
+import { CustomerAuthService, customerSession } from './customer-auth.service';
 import { CustomerDocumentsService } from './customer-documents.service';
 import { CustomerPortalService } from './customer-portal.service';
 
@@ -20,6 +18,9 @@ function pdf(file: PdfFile): Blob {
   });
   return stream as unknown as Blob;
 }
+
+/** Uploads have their own controller (multipart); everything else is handled here. */
+const { addServiceRequestPhoto: _upload, ...routes } = apiContract.customer;
 
 /**
  * The customer app's API. Staff sessions do not apply here (`@Public` for the staff
@@ -35,15 +36,10 @@ export class CustomerController {
     private readonly papers: CustomerDocumentsService,
   ) {}
 
-  @TsRestHandler(apiContract.customer)
+  @TsRestHandler(routes)
   handler(@Req() request: Request) {
-    const session = async () => {
-      const token = bearerToken(request);
-      const found = token ? await this.auth.authenticate(token) : null;
-      if (!found) throw unauthenticated();
-      return found;
-    };
-    return tsRestHandler(apiContract.customer, {
+    const session = () => customerSession(this.auth, request);
+    return tsRestHandler(routes, {
       requestCode: async ({ body }) => ({
         status: 202,
         body: await this.auth.requestCode(body.phone),

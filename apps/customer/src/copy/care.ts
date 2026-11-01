@@ -29,6 +29,18 @@ export const SUPPORT = {
   status: { open: 'Received', in_progress: 'Being handled', resolved: 'Resolved' },
   raisedOn: (date: string) => `Raised ${date}`,
   resolution: 'What we did',
+  photosLabel: 'Photos',
+  photosHint: 'Optional. A photo of the inverter screen or the panels helps us come prepared.',
+  takePhoto: 'Take photo',
+  choosePhotos: 'Choose photos',
+  removePhoto: 'Remove photo',
+  photoCount: (count: number) => (count === 1 ? '1 photo' : `${count} photos`),
+  photosFailed: (count: number) =>
+    count === 1
+      ? 'Sent, but 1 photo could not be uploaded.'
+      : `Sent, but ${count} photos could not be uploaded.`,
+  cameraDenied: 'Allow camera access in your phone settings to take a photo.',
+  libraryDenied: 'Allow photo access in your phone settings to attach photos.',
 } as const;
 
 export const REFER = {

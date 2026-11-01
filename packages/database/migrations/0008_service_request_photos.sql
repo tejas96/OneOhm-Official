@@ -1,0 +1,3 @@
+ALTER TABLE "documents" ADD COLUMN "service_request_id" uuid;--> statement-breakpoint
+ALTER TABLE "documents" ADD CONSTRAINT "documents_service_request_id_service_requests_id_fk" FOREIGN KEY ("service_request_id") REFERENCES "public"."service_requests"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "documents_service_request_idx" ON "documents" USING btree ("service_request_id");

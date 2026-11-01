@@ -46,6 +46,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-secure-store',
     [
+      'expo-image-picker',
+      {
+        cameraPermission: 'OneOhm uses the camera to take site photos for your tasks.',
+        photosPermission: 'OneOhm uses your photos to attach site photos to your tasks.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-icon.png',

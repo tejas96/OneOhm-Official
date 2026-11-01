@@ -3,7 +3,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerProfile } from '@oneohm/api-contracts';
 import { customerSessions, customers, otpChallenges } from '@oneohm/database';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
-import { AppError } from '../../common/http/errors';
+import type { Request } from 'express';
+import { bearerToken } from '../../common/auth/session-cookies';
+import { AppError, unauthenticated } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { createOtpSender, type OtpSender } from '../auth/otp-sender';
@@ -131,4 +133,12 @@ export class CustomerAuthService {
       .set({ revokedAt: new Date() })
       .where(eq(customerSessions.id, sessionId));
   }
+}
+
+/** The signed-in customer behind a request's bearer token, or 401. */
+export async function customerSession(auth: CustomerAuthService, request: Request) {
+  const token = bearerToken(request);
+  const found = token ? await auth.authenticate(token) : null;
+  if (!found) throw unauthenticated();
+  return found;
 }

@@ -5,6 +5,7 @@ import { desc, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
+import { photosOfRequests } from '../../common/read-models/service-request-photos';
 import { DATABASE, type Database } from '../../config/core.module';
 
 type Ticket = ServiceTicket;
@@ -49,6 +50,10 @@ export class ServiceDeskService {
       .leftJoin(users, eq(users.id, serviceRequests.assigneeUserId))
       .where(where)
       .orderBy(desc(serviceRequests.createdAt));
+    const photos = await photosOfRequests(
+      this.db,
+      rows.map(({ request }) => request.id),
+    );
     return rows.map(({ request, customer, projectCode, assigneeName }) => ({
       id: request.id,
       category: request.category as Ticket['category'],
@@ -62,6 +67,7 @@ export class ServiceDeskService {
           ? { id: request.assigneeUserId, name: assigneeName }
           : null,
       resolutionNote: request.resolutionNote,
+      photos: photos.get(request.id) ?? [],
       createdAt: request.createdAt.toISOString(),
       resolvedAt: request.resolvedAt?.toISOString() ?? null,
     }));

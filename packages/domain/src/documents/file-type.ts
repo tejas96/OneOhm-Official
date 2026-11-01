@@ -8,6 +8,14 @@ export const ACCEPTED_FILE_TYPES = [
 ] as const;
 export type AcceptedFileType = (typeof ACCEPTED_FILE_TYPES)[number];
 
+/** Photos only: what a phone camera produces. */
+export const PHOTO_FILE_TYPES: readonly AcceptedFileType[] = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+];
+
 /** Logos, signatures and stamps are embedded in PDFs, which cannot show HEIC. */
 export const COMPANY_ASSET_FILE_TYPES: readonly AcceptedFileType[] = [
   'image/jpeg',
