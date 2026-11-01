@@ -1,0 +1,29 @@
+{
+  "today": {
+    "pageTitle": "Today",
+    "greeting": "{greeting}, {name}.",
+    "brief": "{overdue, plural, =0 {Nothing is overdue} one {# task is overdue} other {# tasks are overdue}}, {today, plural, =0 {nothing is due today} one {# is due today} other {# are due today}} and {upcoming, plural, =0 {nothing is coming up} one {# is coming up} other {# are coming up}}.",
+    "jump": "Jump to a group",
+    "loading": "Loading your tasks",
+    "clearTitle": "A clear day",
+    "clearBody": "Nothing is assigned to you right now. New work appears here as projects move.",
+    "groups": {
+      "overdue": {
+        "title": "Overdue",
+        "empty": "Nothing is late. Well kept."
+      },
+      "today": {
+        "title": "Due today",
+        "empty": "Nothing is due today."
+      },
+      "waiting": {
+        "title": "Waiting on others",
+        "empty": "Nothing of yours is on hold."
+      },
+      "upcoming": {
+        "title": "Coming up",
+        "empty": "Nothing else is scheduled for you yet."
+      }
+    }
+  }
+}

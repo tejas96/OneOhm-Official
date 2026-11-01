@@ -1,0 +1,245 @@
+{
+  "projects": {
+    "list": {
+      "eyebrow": "Delivery",
+      "title": "Projects",
+      "summary": "{count, plural, =0 {No projects match} one {# project} other {# projects}} · {capacity}",
+      "loading": "Loading projects",
+      "emptyTitle": "No projects yet",
+      "emptyBody": "A project starts when an accepted quotation is turned into one.",
+      "noMatchTitle": "No projects match these filters",
+      "noMatchBody": "Clear the search or choose another status, type or waiting party.",
+      "filters": {
+        "status": "Project status",
+        "search": "Search by name, code, place or DISCOM",
+        "type": "Project type",
+        "waiting": "Waiting on"
+      },
+      "status": {
+        "live": "Live",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "all": "All"
+      },
+      "type": {
+        "all": "All types",
+        "residential": "Residential",
+        "society": "Housing society",
+        "commercial": "Commercial"
+      },
+      "waiting": {
+        "all": "Waiting on anyone",
+        "internal": "Waiting on OneOhm team",
+        "customer": "Waiting on customer",
+        "bank": "Waiting on bank",
+        "discom": "Waiting on DISCOM",
+        "none": "Not waiting"
+      },
+      "columns": {
+        "project": "Project",
+        "statusNext": "Status · next"
+      }
+    },
+    "room": {
+      "pageTitle": "Project",
+      "loading": "Loading the project",
+      "back": "All projects",
+      "next": "Next: {label}",
+      "facts": {
+        "customer": "Customer",
+        "manager": "Project manager",
+        "noManager": "Not set",
+        "value": "Project value",
+        "subsidy": "Expected subsidy",
+        "effective": "Effective cost",
+        "started": "Started",
+        "quotation": "From quotation {number}"
+      },
+      "options": {
+        "loan": "Bank loan",
+        "loanWith": "Loan with {lender}",
+        "battery": "Battery",
+        "groundMount": "Ground mount",
+        "subsidy": "PM Surya Ghar subsidy"
+      }
+    },
+    "board": {
+      "title": "Work",
+      "summary": "{open} open of {total} tasks",
+      "view": "Show tasks",
+      "views": {
+        "open": "Open",
+        "mine": "Mine",
+        "all": "All"
+      },
+      "stageDone": "Everything in this stage is done.",
+      "empty": {
+        "open": "Every task on this project is done.",
+        "mine": "Nothing on this project is assigned to you.",
+        "all": "This project has no tasks."
+      }
+    },
+    "task": {
+      "unassigned": "Unassigned",
+      "dueOn": "Due {date}",
+      "overdueOn": "Overdue · due {date}",
+      "doneOn": "Done {date}",
+      "waitingOn": "Waiting on {party}",
+      "needsApproval": "Needs approval",
+      "customerSees": "Customer sees this",
+      "blockedBy": "Waiting for: {tasks}",
+      "records": "Records: {facts}",
+      "status": {
+        "pending": "Not started",
+        "ready": "Ready",
+        "in_progress": "In progress",
+        "waiting": "Waiting",
+        "in_review": "With reviewer",
+        "completed": "Done",
+        "queued": "Not started"
+      },
+      "actions": {
+        "start": "Start",
+        "complete": "Complete",
+        "approve": "Approve",
+        "resume": "Resume work",
+        "waiting": "Mark as waiting",
+        "assign": "Assign",
+        "more": "More actions"
+      },
+      "toast": {
+        "started": "Task started",
+        "approved": "Task approved",
+        "waiting": "Marked as waiting",
+        "completed": "Task completed",
+        "sentForReview": "Sent for approval",
+        "assigned": "Assignment updated",
+        "failed": "That did not go through"
+      }
+    },
+    "complete": {
+      "title": "Complete task",
+      "records": "Details this task records",
+      "evidence": "Evidence this task asks for",
+      "note": "Evidence notes",
+      "noteHint": "Where the photos or documents are, readings taken, anything the next person should know.",
+      "serialHint": "One serial number per line or separated by commas.",
+      "approvalNotice": "This task needs a manager's approval. It goes to review when you submit.",
+      "cancel": "Cancel",
+      "submit": "Mark complete",
+      "submitReview": "Send for approval"
+    },
+    "evidence": {
+      "photo": "Photos",
+      "document": "Documents",
+      "measurement": "Measurements",
+      "checklist": "Checklist",
+      "signature": "Customer signature"
+    },
+    "waiting": {
+      "title": "Mark as waiting",
+      "party": "Waiting on",
+      "partyHint": "Time waiting on the customer, bank or DISCOM is reported apart from the team's own time.",
+      "note": "What are we waiting for?",
+      "noteHint": "For example: inspection requested at MSEDCL Sangli on 2 November.",
+      "cancel": "Cancel",
+      "submit": "Mark as waiting"
+    },
+    "assign": {
+      "title": "Assign task",
+      "everyone": "Show everyone, not only this task's role",
+      "loading": "Loading people",
+      "nobody": "Nobody active holds this task's role. Show everyone to pick someone else.",
+      "load": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+      "onLeave": "On leave",
+      "current": "Assigned now",
+      "unassign": "Remove the assignee"
+    },
+    "money": {
+      "title": "Received",
+      "ofTotal": "of {total} scheduled",
+      "record": "Record payment",
+      "received": "Payments received",
+      "bank": "Bank",
+      "paidSoFar": "{amount} paid so far",
+      "status": {
+        "upcoming": "Not due yet",
+        "due": "Due",
+        "partly_paid": "Part paid",
+        "paid": "Paid"
+      },
+      "methods": {
+        "upi": "UPI",
+        "bank_transfer": "Bank transfer",
+        "cheque": "Cheque",
+        "cash": "Cash",
+        "razorpay": "Online (Razorpay)",
+        "bank_disbursement": "Bank disbursement"
+      },
+      "recordTitle": "Record a payment",
+      "milestone": "Against milestone",
+      "left": "{amount} left",
+      "amount": "Amount received",
+      "method": "How it was paid",
+      "receivedOn": "Received on",
+      "reference": "Reference",
+      "referenceHint": "UTR, cheque number or receipt number.",
+      "cancel": "Cancel",
+      "recordSubmit": "Record payment",
+      "recorded": "Payment recorded"
+    },
+    "reports": {
+      "title": "Statutory reports",
+      "summary": "{ready} of {needed} ready to print",
+      "missingCount": "{count, plural, one {# detail missing} other {# details missing}}",
+      "recordedBy": "recorded in “{task}”",
+      "status": {
+        "ready": "Ready",
+        "not_needed": "Not needed"
+      }
+    },
+    "activity": {
+      "title": "Activity",
+      "empty": "Nothing has happened on this project yet."
+    },
+    "facts": {
+      "site_floors": "Number of floors",
+      "structure_type": "Structure type",
+      "dc_cable_meters": "DC cable length (m)",
+      "ac_cable_meters": "AC cable length (m)",
+      "consumer_number": "Consumer number",
+      "sanctioned_capacity_kw": "Sanctioned load (kW)",
+      "meter_holder_name": "Meter holder name",
+      "sanction_number": "DISCOM sanction number",
+      "sanction_date": "DISCOM sanction date",
+      "purchase_order_number": "Purchase order number",
+      "purchase_order_date": "Purchase order date",
+      "module_make": "Panel make",
+      "module_wattage": "Panel wattage (Wp)",
+      "cell_manufacturer_name": "Cell manufacturer",
+      "cell_gst_invoice_no": "Cell GST invoice number",
+      "module_serial_numbers": "Panel serial numbers",
+      "module_count": "Number of panels",
+      "inverter_make": "Inverter make",
+      "inverter_serial_number": "Inverter serial number",
+      "earthing_resistance": "Earthing resistance (Ω)",
+      "meter_serial_number": "Generation meter serial number",
+      "meter_make": "Meter make",
+      "meter_capacity": "Meter capacity",
+      "installed_capacity_kw": "Installed capacity (kW)",
+      "inverter_total_kw": "Inverter capacity (kW)",
+      "module_total_kw": "Module capacity (kW)",
+      "consumer_name": "Consumer name",
+      "consumer_phone": "Consumer mobile",
+      "consumer_email": "Consumer email",
+      "site_address": "Site address",
+      "site_city": "District",
+      "site_state": "State",
+      "system_cost": "System cost",
+      "project_onboarded_date": "Onboarding date",
+      "module_model_number": "Panel model number",
+      "module_efficiency": "Panel efficiency (%)",
+      "inverter_make_model": "Inverter make and model"
+    }
+  }
+}
