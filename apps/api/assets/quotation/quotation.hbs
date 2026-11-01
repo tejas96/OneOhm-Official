@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quotation {{number}}</title>
+  </head>
+  <body>
+    {{#if draft}}<div class="q-draft">Draft · not yet sent</div>{{/if}}
+
+    <header class="q-head">
+      <div class="q-brand">
+        <img class="q-logo" src="{{logo}}" alt="{{company.brand}}" />
+        <p><strong>{{company.name}}</strong></p>
+        <p class="q-muted">{{company.address}}</p>
+        <p class="q-muted">GSTIN {{company.gstin}} · {{company.email}}</p>
+        <p class="q-muted">{{company.phones}}</p>
+      </div>
+      <div class="q-meta">
+        <p class="q-overline">Quotation</p>
+        <p class="q-number">{{number}}</p>
+        <dl>
+          <div class="q-row"><dt>Date</dt><dd>{{date}}</dd></div>
+          <div class="q-row"><dt>Valid until</dt><dd>{{validUntil}}</dd></div>
+        </dl>
+      </div>
+    </header>
+    <div class="q-rule"></div>
+
+    <section class="q-parties">
+      <div>
+        <p class="q-overline">Prepared for</p>
+        <p class="q-name">{{customer.name}}</p>
+        <p>{{customer.phone}}{{#if customer.email}} · {{customer.email}}{{/if}}</p>
+      </div>
+      <div>
+        <p class="q-overline">Site · {{site.label}}</p>
+        <p>{{site.address}}</p>
+        <p class="q-muted">
+          {{site.category}}{{#if site.discom}} · {{site.discom}}{{/if}}{{#if site.consumerNumber}} · Consumer no. {{site.consumerNumber}}{{/if}}{{#if site.sanctionedLoad}} · Sanctioned load {{site.sanctionedLoad}}{{/if}}
+        </p>
+      </div>
+    </section>
+
+    <section class="q-hero">
+      <div class="q-capacity">
+        <p class="q-overline">Your solar system</p>
+        <p class="q-kwp">{{system.capacity}}</p>
+        <p class="q-muted">{{system.type}} rooftop solar</p>
+      </div>
+      <div class="q-money">
+        <div class="q-step"><span>Total project price</span><strong>{{money.total}}</strong></div>
+        <div class="q-arrow">↓</div>
+        <div class="q-step q-subsidy"><span>Expected government subsidy</span><strong>− {{money.subsidy}}</strong></div>
+        <div class="q-arrow">↓</div>
+        <div class="q-step q-effective"><span>Effective cost to you</span><strong>{{money.effective}}</strong></div>
+      </div>
+    </section>
+    <p class="q-note">
+      {{#if money.subsidyReason}}{{money.subsidyReason}}{{else}}The subsidy is credited by the government directly to your bank account after commissioning and DISCOM inspection, under PM Surya Ghar rules. OneOhm invoices and collects the full project price.{{/if}}
+    </p>
+
+    {{#if comparison}}
+    <section class="q-section q-keep">
+      <h2>DCR and non-DCR panels, side by side</h2>
+      <table class="q-compare">
+        <thead><tr><th></th><th class="q-num">DCR panels</th><th class="q-num">Non-DCR panels</th></tr></thead>
+        <tbody>
+          <tr><td>Total project price</td><td class="q-num">{{comparison.dcr.total}}</td><td class="q-num">{{comparison.nonDcr.total}}</td></tr>
+          <tr><td>Expected subsidy</td><td class="q-num">{{comparison.dcr.subsidy}}</td><td class="q-num">{{comparison.nonDcr.subsidy}}</td></tr>
+          <tr class="q-strong"><td>Effective cost</td><td class="q-num">{{comparison.dcr.effective}}</td><td class="q-num">{{comparison.nonDcr.effective}}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    {{/if}}
+
+    <section class="q-section q-keep">
+      <h2>System details</h2>
+      <dl class="q-specs">
+        <div class="q-spec"><dt>Solar panels</dt><dd>{{system.modules}} <span class="q-muted">· {{system.panelKind}}</span></dd></div>
+        <div class="q-spec"><dt>Inverter</dt><dd>{{system.inverter}}</dd></div>
+        {{#if system.battery}}<div class="q-spec"><dt>Battery</dt><dd>{{system.battery}}</dd></div>{{/if}}
+        <div class="q-spec"><dt>Mounting</dt><dd>{{system.structure}}</dd></div>
+      </dl>
+    </section>
+
+    <section class="q-section">
+      <h2>What is included</h2>
+      <table class="q-lines">
+        <thead><tr><th class="q-index">#</th><th>Item</th><th class="q-num">Quantity</th><th class="q-num">GST</th><th class="q-num">Amount</th></tr></thead>
+        <tbody>
+          {{#each lines}}
+          <tr><td class="q-index">{{index}}</td><td>{{description}}</td><td class="q-num">{{quantity}}</td><td class="q-num">{{gst}}</td><td class="q-num">{{amount}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <dl class="q-totals q-keep">
+        <div class="q-row"><dt>Items, before GST</dt><dd>{{money.items}}</dd></div>
+        {{#if money.discount}}<div class="q-row"><dt>Discount</dt><dd>− {{money.discount}}</dd></div>{{/if}}
+        <div class="q-row"><dt>GST</dt><dd>{{money.gst}}</dd></div>
+        <div class="q-row q-grand"><dt>Total project price</dt><dd>{{money.total}}</dd></div>
+      </dl>
+    </section>
+
+    <section class="q-section q-keep">
+      <h2>Payment schedule</h2>
+      <table class="q-schedule">
+        <tbody>
+          {{#each schedule}}
+          <tr><td class="q-index">{{index}}</td><td>{{label}}</td><td class="q-num">{{share}}</td><td class="q-num">{{amount}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="q-section q-keep">
+      <h2>Terms</h2>
+      <ol class="q-terms">
+        <li>Prices include GST. This quotation is valid until {{validUntil}}.</li>
+        <li>Cable lengths, structure and labour are estimated from your site type. After the site survey, a difference within our tolerance is absorbed by OneOhm; a larger difference is shared with you as a revised quotation for your approval.</li>
+        <li>The expected subsidy follows the PM Surya Ghar rules in force today and is paid by the government, not by OneOhm. It depends on approval of your application and inspection by the DISCOM.</li>
+        <li>Net-metering approval and the meter are arranged with the DISCOM on your behalf; DISCOM fees, if any, are as per their schedule.</li>
+      </ol>
+    </section>
+
+    <section class="q-sign q-keep">
+      <div>
+        <p class="q-muted">For {{company.name}}</p>
+        <img class="q-stamp" src="{{stamp}}" alt="Signature and seal" />
+        <p class="q-name">{{#if company.signatory}}{{company.signatory}}, {{/if}}{{company.designation}}</p>
+      </div>
+      <div class="q-accept">
+        <p class="q-muted">Accepted by {{customer.name}} · date</p>
+      </div>
+    </section>
+  </body>
+</html>

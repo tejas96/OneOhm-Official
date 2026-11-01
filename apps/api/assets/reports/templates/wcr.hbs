@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Work Completion Report for Solar Power Plant</title>
+    <style>
+      /* fonts via base-report.css */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Open Sans', 'Noto Sans', Arial, sans-serif;
+        font-size: 9pt;
+        color: #1a1a1a;
+        background: #fff;
+      }
+
+      /*
+       * Layout margins/padding: report-print-base.css (injected at render time).
+       * Logical pages are separated by .pdf-page-break markers.
+       */
+      .pdf-page {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+
+      table.main-table {
+        font-size: 8.5pt;
+      }
+
+      /*
+       * Background is set on th/td (not tr) — html2canvas (used for client-side
+       * PDF export) unreliably paints background-color set on <tr>/<thead>
+       * elements, especially combined with border-collapse. Cell-level
+       * background is rendered correctly by both the browser preview and
+       * html2canvas.
+       *
+       * NOTE: all rules below are scoped to `table.main-table` (rather than
+       * bare `thead`/`tbody`) so they cannot leak onto other tables via the
+       * browser's implicit <tbody> insertion.
+       */
+      table.main-table thead th {
+        padding: 5px 7px;
+        font-weight: 600;
+        font-size: 8.5pt;
+        text-align: left;
+        border: 1px solid #1a1a1a;
+        background-color: #1a1a1a;
+        color: #ffffff;
+      }
+
+      table.main-table thead th:first-child {
+        width: 8%;
+        text-align: center;
+      }
+
+      table.main-table thead th:nth-child(2) {
+        width: 36%;
+      }
+
+      table.main-table thead th:nth-child(3) {
+        width: 56%;
+      }
+
+      table.main-table tbody tr {
+        /* prevent any single row from splitting across pages */
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      table.main-table tbody td {
+        padding: 3px 7px;
+        border: 1px solid #cccccc;
+        vertical-align: top;
+        line-height: 1.45;
+        background: #ffffff;
+      }
+
+      table.main-table tbody tr:nth-child(even) td {
+        background: #f5f5f5;
+      }
+
+      table.main-table tbody td:first-child {
+        text-align: center;
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      table.main-table tbody td.label {
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      table.main-table tbody td.label-sub {
+        font-weight: 400;
+        color: #444444;
+        padding-left: 18px;
+      }
+
+      table.main-table tbody td.no {
+        color: #888;
+      }
+
+      /* ── PARAGRAPHS BELOW TABLE ── */
+      .text-block {
+        font-size: 8.5pt;
+        line-height: 1.5;
+        color: #1a1a1a;
+        margin-top: 5px;
+        text-align: justify;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .text-block strong {
+        font-weight: 700;
+        color: #1a1a1a;
+      }
+
+      /* ── GUARANTEE SECTION ── */
+      .guarantee-text {
+        font-size: 9pt;
+        line-height: 1.65;
+        color: #1a1a1a;
+        text-align: justify;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .guarantee-text strong {
+        font-weight: 700;
+        color: #1a1a1a;
+      }
+
+      .identity-block {
+        margin-top: 24px;
+        font-size: 9pt;
+        line-height: 1.9;
+        color: #1a1a1a;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .identity-block strong {
+        font-weight: 700;
+        color: #1a1a1a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pdf-wrapper">
+
+      <!-- PAGE 1 — details, certifications, signatures -->
+      <div class="pdf-page">
+        {{> docTitle title="Work Completion Report for Solar Power Plant" subtitle=vendor_name}}
+
+        <table class="main-table">
+          <colgroup>
+            <col style="width: 8%" />
+            <col style="width: 36%" />
+            <col style="width: 56%" />
+          </colgroup>
+          <thead>
+            <tr><th>Sr.No</th><th>Component</th><th>Observation</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td class="label">Name</td><td><strong>{{consumer_name}}</strong></td></tr>
+            <tr><td>2</td><td class="label">Consumer number</td><td><strong>{{consumer_number}}</strong></td></tr>
+            <tr><td>3</td><td class="label">Site/Location With Complete Address</td><td><strong>{{site_address}}</strong></td></tr>
+            <tr><td>4</td><td class="label">Category</td><td><strong>{{site_category}}</strong></td></tr>
+            <tr><td>5</td><td class="label">Sanction number and date</td><td><strong>{{sanction_number}}{{#if sanction_date}} dated {{formatDate sanction_date}}{{/if}}</strong></td></tr>
+            <tr><td>6</td><td class="label">Sanctioned Capacity of solar PV system (KW)</td><td><strong>{{sanctioned_capacity_kw}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label">Installed Capacity of solar PV system (KW)</td><td><strong>{{installed_capacity_kw}}</strong></td></tr>
+
+            <tr><td>7</td><td class="label" colspan="2">Specification of the Modules</td></tr>
+            <tr><td class="no"></td><td class="label-sub">Make of Module</td><td><strong>{{module_make}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">ALMM Model Number</td><td><strong>{{module_model_number}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Wattage per module</td><td><strong>{{withUnit module_wattage "Wp"}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">No. of Module</td><td><strong>{{module_count}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Total Capacity (KWP)</td><td><strong>{{module_total_kw}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Warranty Details (Product + Performance)</td><td><strong>{{module_warranty}}</strong></td></tr>
+
+            <tr><td>8</td><td class="label" colspan="2">PCU</td></tr>
+            <tr><td class="no"></td><td class="label-sub">Make &amp; Model number of Inverter</td><td><strong>{{inverter_make_model}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Rating (KW)</td><td><strong>{{inverter_total_kw}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Type of charge controller/ MPPT</td><td><strong>{{charge_controller_type}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Capacity of Inverter (KW)</td><td><strong>{{inverter_total_kw}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">HPD</td><td><strong>{{inverter_hpd}}</strong></td></tr>
+            <tr><td class="no"></td><td class="label-sub">Year of manufacturing</td><td><strong>{{inverter_year_of_manufacturing}}</strong></td></tr>
+
+            <tr><td>9</td><td class="label">No of Separate Earthings with earth Resistance</td><td><strong>{{earthing_details}}</strong></td></tr>
+          </tbody>
+        </table>
+
+        <p class="text-block">
+          It is certified that the Earth Resistance measure in presence of Licensed Electrical
+          Contractor/Supervisor and found in order i.e. &lt; 5 Ohms as per MNRE OM Dtd. 07.06.24
+          for CFA Component.
+        </p>
+
+        {{#if lightning_arrester_text}}
+        <p class="text-block">Lightning arrester: <strong>{{lightning_arrester_text}}</strong></p>
+        {{/if}}
+
+        <p class="text-block">
+          We <strong>{{dash vendor_name}}</strong> &amp; <strong>{{dash consumer_name}}</strong>
+          Consumer Number <strong>{{dash consumer_number}}</strong> Ensured structural stability of
+          installed solar power plant and obtained requisite permissions from the concerned authority.
+        </p>
+
+        <p class="text-block">
+          If in future, by virtue of any means due to collapsing or damage to installed solar power
+          plant, MSEDCL will not be held responsible for any loss to property or human life, if any.
+        </p>
+
+        <p class="text-block">
+          This is to Certified above Installed Solar PV System is working properly with electrical
+          safety &amp; Islanding switch in case of any presence of backup inverter an arrangement
+          should be made in such way the backup inverter supply should never be synchronized with
+          solar inverter to avoid any electrical accident due to back feeding. We will be held
+          responsible for non-working of islanding mechanism and back feed to the de-energized grid.
+        </p>
+
+        <div class="rpt-sig-row">
+          {{> vendorSignature name=vendor_name role="Vendor"}}
+          {{> signature name=consumer_name role="Consumer"}}
+        </div>
+      </div>
+
+      <div class="pdf-page-break"></div>
+
+      <!-- PAGE 2 — guarantee and identity -->
+      <div class="pdf-page">
+        {{> docTitle title="Guarantee Certificate Undertaking" subtitle="To be submitted by the vendor"}}
+
+        <p class="guarantee-text">
+          The undersigned will provide the services to the consumers for repairs/maintenance of the
+          RTS plant for <strong>{{cmc_period_years}} years</strong> of the comprehensive Maintenance
+          Contract (CMC) period from the date of commissioning of the plant. Non
+          performing/under-performing system component will be replaced/repaired in the CMC period.
+        </p>
+
+        <div class="rpt-sig-row" style="margin-top: 36px">
+          {{> vendorSignature name=vendor_name role="Vendor"}}
+          <div></div>
+        </div>
+
+        <div class="identity-block">
+          <div>Identity details of consumer: &nbsp;<strong>{{consumer_name}}</strong></div>
+          <div>Aadhaar number: &nbsp;<strong>{{formatAadhaar consumer_aadhaar_number}}</strong></div>
+        </div>
+      </div>
+
+    </div>
+  </body>
+</html>
