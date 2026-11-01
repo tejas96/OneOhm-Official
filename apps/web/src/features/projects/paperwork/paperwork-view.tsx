@@ -28,7 +28,7 @@ const hasMissing = (row: ReportOverview) => row.reports.some((r) => r.status ===
  * Every project's statutory paperwork in one grid: print what is ready, and see exactly
  * which detail (and which task) holds back the rest.
  */
-export function ReportsView() {
+export function PaperworkView() {
   const t = useTranslations('reports');
   const shortName = (report: ReportOverview['reports'][number]) =>
     t.has(`short.${report.key}`) ? t(`short.${report.key}`) : report.name;

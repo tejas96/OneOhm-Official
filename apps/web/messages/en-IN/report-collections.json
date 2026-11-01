@@ -1,0 +1,83 @@
+{
+  "collectionsReport": {
+    "loading": "Loading the collections report",
+    "empty": {
+      "title": "No money in and nothing owed",
+      "body": "No payment came in during this period and no live project has anything left to collect. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "collected": "Collected",
+      "collectedDetail": "Customers {customer} · bank {bank}",
+      "collectedReturned": "Customers {customer} · bank {bank} · {returned} reversed or refunded",
+      "collectedLink": "Open finance",
+      "owed": "Owed now",
+      "owedDetail": "Customers {customer} · bank {bank} · {later} not due yet",
+      "owedLink": "Open the receivables",
+      "overdue": "Overdue",
+      "overdueDetail": "{count, plural, one {# milestone} other {# milestones}} · oldest {days, plural, one {# day} other {# days}} past due",
+      "overdueNone": "Nothing is past its due date",
+      "overdueLink": "Open the receivables",
+      "rate": "Collection rate",
+      "rateDetail": "{paid} paid of {due} that fell due in this period",
+      "rateNone": "No payment fell due in this period"
+    },
+    "trend": {
+      "title": "Collected by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "body": "New money by the {unit} it came in, net of reversals and refunds.",
+      "customer": "Customers",
+      "bank": "Bank",
+      "total": "Total",
+      "chartLabel": "Money collected by {unit}, customers and bank"
+    },
+    "projects": {
+      "title": "Still to collect, by project",
+      "body": "Live projects with money left to collect, the oldest overdue first. Contract is the accepted price with GST; paid so far nets reversals and refunds.",
+      "project": "Project",
+      "contract": "Contract",
+      "paid": "Paid so far",
+      "owed": "Owed now",
+      "later": "+{amount} not due yet",
+      "oldest": "Oldest overdue",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "notOverdue": "Not overdue",
+      "none": "Every live project is paid up."
+    },
+    "ageing": {
+      "title": "How old the money owed is",
+      "body": "What has fallen due and is unpaid today, by days since its due date.",
+      "age": "Days since due",
+      "customer": "Customers",
+      "bank": "Bank",
+      "total": "Total",
+      "milestones": "{count, plural, =0 {None} one {# milestone} other {# milestones}}",
+      "buckets": {
+        "current": "0–30 days",
+        "days_31_60": "31–60 days",
+        "days_61_90": "61–90 days",
+        "days_over_90": "Over 90 days"
+      }
+    },
+    "methods": {
+      "title": "Collected by method",
+      "body": "Money in this period by how it was paid. Returned is what went back out: reversals (bounced cheques, mistakes) and refunds.",
+      "method": "Method",
+      "received": "Received",
+      "returned": "Returned",
+      "net": "Net",
+      "none": "No money moved in this period.",
+      "names": {
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "bank_transfer": "Bank transfer",
+        "upi": "UPI",
+        "razorpay": "Razorpay (online)",
+        "bank_disbursement": "Bank loan disbursement"
+      }
+    },
+    "note": "Collected = payments received in the period, less reversals and refunds, plus money paid above what was owed (held as customer credit), less credit paid back. A payment taken from credit is not new money and is not counted again. Money on projects later cancelled still counts as collected. Owed now = unpaid on milestones whose event has happened (due date set), for customers and the bank; overdue = those whose due date is before today. Collection rate = of the milestones that fell due in the period, the share paid by now. The subsidy is never a receivable."
+  }
+}

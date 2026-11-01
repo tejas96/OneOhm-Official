@@ -1,0 +1,62 @@
+{
+  "deliveryReport": {
+    "loading": "Loading the delivery report",
+    "empty": {
+      "title": "Nothing was due or delivered in this period",
+      "body": "No task was finished and nothing is past due. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "onTime": "Tasks on time",
+      "onTimeDetail": "{onTime} of {finished} finished tasks",
+      "late": "Finished late",
+      "lateDetail": "By {days} days on average",
+      "lateNone": "Nothing finished late",
+      "overdue": "Past due, still open",
+      "overdueDetail": "Across {projects} live projects",
+      "overdueLink": "Open today's work",
+      "commissioned": "Systems commissioned",
+      "commissionedDetail": "{count, plural, one {# project} other {# projects}} · {days} days from start on average",
+      "commissionedNone": "No system switched on in this period",
+      "commissionedLink": "Open the projects"
+    },
+    "trend": {
+      "title": "Delivery by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "show": "Show",
+      "tasks": "Tasks",
+      "onTime": "On time",
+      "late": "Late",
+      "commissioned": "Commissioned",
+      "tasksBody": "Finished tasks by the {unit} they were completed. On time means on or before the due date.",
+      "commissionedBody": "Capacity switched on (project made operational) by {unit}.",
+      "chartLabel": "Tasks on time and late, and capacity commissioned, by {unit}"
+    },
+    "tables": {
+      "byProject": "By project",
+      "byProjectBody": "Live projects and any that finished work in the period. Lowest on-time rate first.",
+      "byStage": "By stage",
+      "byStageBody": "Where in the journey work runs late.",
+      "project": "Project",
+      "stage": "Stage",
+      "tasks": "Tasks finished",
+      "overdue": "Past due, open",
+      "days": "Days running",
+      "daysLate": "Avg days late",
+      "tally": "{onTime} on time · {late} late",
+      "noneFinished": "None finished"
+    },
+    "stages": {
+      "survey": "Survey",
+      "design": "Design",
+      "material": "Material",
+      "installation": "Installation",
+      "commissioning": "Commissioning",
+      "net_metering": "Net metering",
+      "subsidy": "Subsidy"
+    },
+    "note": "On-time rate = tasks finished on or before their due date ÷ tasks finished in the period. Past due, still open counts tasks not finished whose due date has passed, today. Days running = start date to today, or to the day the system was switched on."
+  }
+}

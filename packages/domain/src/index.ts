@@ -7,6 +7,7 @@ export * from './identity';
 export * from './inventory';
 export * from './messaging';
 export * from './pricing';
+export * from './reports';
 export * from './subsidy';
 export * from './tasks';
 export * from './workforce';

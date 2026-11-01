@@ -1,7 +1,7 @@
 {
   "reports": {
-    "eyebrow": "Paperwork",
-    "title": "Statutory reports",
+    "eyebrow": "Projects",
+    "title": "Statutory paperwork",
     "description": "Agreements, completion reports and DISCOM letters for every project.",
     "summary": "{ready, plural, =0 {Nothing ready to print yet.} one {# report ready to print.} other {# reports ready to print.}} Missing details name the task that records them.",
     "loading": "Loading reports",

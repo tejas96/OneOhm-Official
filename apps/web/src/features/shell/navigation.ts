@@ -137,7 +137,7 @@ export const NAVIGATION: readonly NavGroup[] = [
         href: '/reports',
         icon: ChartColumn,
         built: true,
-        requires: ['reports.generate', 'dashboard.view_business'],
+        requires: ['dashboard.view_business'],
       },
     ],
   },

@@ -10,12 +10,14 @@ import {
 } from '@oneohm/design-system/web';
 import { formatKwp } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
-import { SearchX, SunMedium } from 'lucide-react';
+import { FileCheck2, SearchX, SunMedium } from 'lucide-react';
 import { motion } from 'motion/react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { useCan } from '@/providers/current-user';
 import { ProjectCard } from './project-card';
 import { DEFAULT_FILTERS, filterProjects, isFiltered } from './project-filters';
 import { ProjectsFilterBar } from './projects-filter-bar';
@@ -59,6 +61,7 @@ export function ProjectsListView() {
       <PageHeader
         eyebrow={t('eyebrow')}
         title={t('title')}
+        actions={<PaperworkLink label={t('paperwork')} />}
         description={
           query.data
             ? t(isFiltered(filters) ? 'summaryFiltered' : 'summary', {
@@ -104,5 +107,19 @@ export function ProjectsListView() {
         </ul>
       )}
     </motion.div>
+  );
+}
+
+/** The statutory paperwork of every project (PRD 3.18) sits with Projects, not Reports. */
+function PaperworkLink({ label }: { readonly label: string }) {
+  const allowed = useCan('reports.generate', 'documents.view');
+  if (!allowed) return null;
+  return (
+    <Button asChild variant="secondary">
+      <Link href="/projects/paperwork">
+        <FileCheck2 aria-hidden className="size-4" />
+        {label}
+      </Link>
+    </Button>
   );
 }

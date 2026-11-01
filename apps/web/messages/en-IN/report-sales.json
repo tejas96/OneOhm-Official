@@ -1,0 +1,75 @@
+{
+  "salesReport": {
+    "loading": "Loading the sales report",
+    "empty": {
+      "title": "No sales activity in this period",
+      "body": "No lead came in and no quotation was sent or won. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "leads": "Leads in",
+      "leadsDetail": "{quoted} quoted · {lost} lost",
+      "leadsLink": "Open the leads",
+      "won": "Orders won",
+      "wonDetail": "{count, plural, one {# order} other {# orders}} · {capacity}",
+      "wonLink": "Open the quotations",
+      "conversion": "Lead to order",
+      "conversionDetail": "{won} of {leads} leads from this period won so far",
+      "winRate": "Quotation win rate",
+      "winRateDetail": "Average order {average} · {days} days from lead to order",
+      "winRateNone": "No order won in this period"
+    },
+    "trend": {
+      "title": "Sales by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "show": "Show",
+      "leads": "Leads in",
+      "won": "Value won",
+      "orders": "Orders won",
+      "leadsBody": "New leads by the {unit} they came in.",
+      "wonBody": "Orders by the {unit} the customer accepted the quotation, at its current value with GST.",
+      "chartLabel": "Leads and orders by {unit}"
+    },
+    "tables": {
+      "byOwner": "By salesperson",
+      "byOwnerBody": "The lead's owner; a walk-in quotation counts for whoever made it. Highest value won first.",
+      "bySource": "By lead source",
+      "bySourceBody": "Leads from this period and how many became orders so far.",
+      "person": "Salesperson",
+      "unassigned": "No owner",
+      "source": "Source",
+      "leads": "Leads",
+      "quotesSent": "Quotations sent",
+      "won": "Won",
+      "wonValue": "Value won",
+      "conversion": "Lead to order",
+      "ofLeads": "{won} of {leads}",
+      "orders": "{count, plural, =0 {No orders} one {# order} other {# orders}}"
+    },
+    "sources": {
+      "manual": "Office",
+      "website": "Website",
+      "whatsapp": "WhatsApp",
+      "employee": "Employee",
+      "reseller": "Reseller",
+      "referral": "Customer referral"
+    },
+    "funnel": {
+      "title": "Pipeline",
+      "body": "Of the leads that came in this period: how far each has gone by now.",
+      "leads": "Leads in",
+      "quoted": "Quotation sent",
+      "won": "Order won",
+      "projects": "Project started"
+    },
+    "lost": {
+      "title": "Why leads were lost",
+      "body": "Leads from this period marked lost, by the reason given.",
+      "none": "No lead from this period was lost.",
+      "noReason": "No reason given"
+    },
+    "note": "Lead to order = leads from this period that are won by now ÷ leads from this period, so it rises as recent leads close. Quotation win rate = accepted ÷ accepted or rejected in the period. A revised quotation is the same order, counted once at its current value."
+  }
+}

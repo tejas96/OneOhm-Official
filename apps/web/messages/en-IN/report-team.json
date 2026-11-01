@@ -1,0 +1,71 @@
+{
+  "teamReport": {
+    "loading": "Loading the team report",
+    "empty": {
+      "title": "No team activity in this period",
+      "body": "No one finished or holds an open task, checked in or took leave, and no leave is coming. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "days": "{days, plural, one {# day} other {# days}}",
+      "onTime": "Finished on time",
+      "onTimeDetail": "{onTime} of {finished} assigned tasks finished by their due date",
+      "onTimeNone": "No assigned task finished in this period",
+      "pastDue": "Past due now",
+      "pastDueDetail": "{open} open tasks · {people, plural, =0 {no one behind} one {# person behind} other {# people behind}}",
+      "leave": "Leave taken",
+      "leaveDetail": "{away, plural, =0 {No one} one {# person} other {# people}} away today · {ahead, plural, one {# day} other {# days}} approved ahead",
+      "leaveLink": "Open leave",
+      "present": "Days present",
+      "presentDetail": "{late, plural, =0 {No late check-ins} one {# late check-in} other {# late check-ins}} · {people, plural, one {# person} other {# people}} checked in",
+      "presentLink": "Open attendance"
+    },
+    "trend": {
+      "title": "Tasks finished by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "show": "Show",
+      "staff": "Staff",
+      "crew": "Crews",
+      "staffBody": "Tasks staff finished, by the {unit} they finished: on or before the due date, or late.",
+      "crewBody": "Tasks contractor crew members finished, by the {unit} they finished: on or before the due date, or late.",
+      "onTime": "On time",
+      "late": "Late",
+      "rate": "On time %",
+      "none": "No task was finished by this group in this period.",
+      "chartLabel": "Tasks finished on time and late by {unit}"
+    },
+    "tables": {
+      "people": "By person",
+      "peopleBody": "Staff with work, leave or attendance in this period. Most past due first.",
+      "noPeople": "No staff member has work, leave or attendance in this period.",
+      "crews": "By contractor crew",
+      "crewsBody": "The tasks of each crew's members. Most past due first.",
+      "noCrews": "No contractor crew has tasks in this period.",
+      "person": "Person",
+      "crew": "Crew",
+      "members": "{count, plural, =0 {No members} one {# member} other {# members}}",
+      "onLeaveToday": "On leave today",
+      "finished": "Finished",
+      "onTime": "On time",
+      "ofFinished": "{onTime} of {finished}",
+      "noneFinished": "None finished",
+      "lateOnOthers": "{count} late while waiting on others",
+      "open": "Open",
+      "pastDue": "Past due",
+      "leave": "Leave days",
+      "present": "Days present",
+      "lateCheckIns": "Late check-ins"
+    },
+    "away": {
+      "title": "Away today and ahead",
+      "body": "Approved leave from today on, soonest first.",
+      "none": "No approved leave today or ahead.",
+      "open": "Open leave",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "today": "Away today"
+    },
+    "note": "On time = tasks finished in the period on or before their due date (India dates) ÷ tasks finished in the period, counted for the person assigned. A task that ran late while it waited on the customer, bank or DISCOM still counts as late and is marked “late while waiting on others”. Open and past due are as of today, whatever the period. The project type filter narrows tasks; the project manager filter does not apply here. Leave is approved leave inside the period in working days (weekly offs skipped, a half day counts as half); attendance is days checked in, and a check-in is late after the day start plus the grace minutes. Leave and attendance are for staff; a crew's numbers add up its members' tasks."
+  }
+}

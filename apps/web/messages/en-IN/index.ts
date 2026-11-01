@@ -1,4 +1,5 @@
 import alerts from './alerts.json';
+import businessReports from './business-reports.json';
 import commandCenter from './command-center.json';
 import common from './common.json';
 import contractors from './contractors.json';
@@ -10,6 +11,13 @@ import inventory from './inventory.json';
 import leads from './leads.json';
 import projects from './projects.json';
 import quotations from './quotations.json';
+import reportCollections from './report-collections.json';
+import reportDelays from './report-delays.json';
+import reportDelivery from './report-delivery.json';
+import reportProfitability from './report-profitability.json';
+import reportSales from './report-sales.json';
+import reportService from './report-service.json';
+import reportTeam from './report-team.json';
 import reports from './reports.json';
 import service from './service.json';
 import settings from './settings.json';
@@ -36,6 +44,14 @@ const messages = {
   ...projects,
   ...quotations,
   ...reports,
+  ...businessReports,
+  ...reportSales,
+  ...reportDelivery,
+  ...reportDelays,
+  ...reportCollections,
+  ...reportProfitability,
+  ...reportTeam,
+  ...reportService,
   ...service,
   ...settings,
   ...team,

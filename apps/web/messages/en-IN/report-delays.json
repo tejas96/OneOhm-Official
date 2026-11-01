@@ -1,0 +1,84 @@
+{
+  "delaysReport": {
+    "loading": "Loading the delays report",
+    "empty": {
+      "title": "No work finished or late in this period",
+      "body": "No task finished in this period, and nothing is past due or waiting today. Choose a longer period or clear the filters."
+    },
+    "party": {
+      "internal": "Internal",
+      "customer": "Customer",
+      "bank": "Bank",
+      "discom": "DISCOM"
+    },
+    "stages": {
+      "survey": "Survey",
+      "design": "Design",
+      "material": "Material",
+      "installation": "Installation",
+      "commissioning": "Commissioning",
+      "net_metering": "Net metering",
+      "subsidy": "Subsidy"
+    },
+    "kpis": {
+      "internal": "Internal delays",
+      "customer": "Customer delays",
+      "bank": "Bank delays",
+      "discom": "DISCOM delays",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "finished": "{count, plural, =0 {No task finished late} one {# finished late · {days} d} other {# finished late · {days} d}}",
+      "open": "{count, plural, =0 {None open past due} one {# open past due · {days} d} other {# open past due · {days} d}}"
+    },
+    "summary": "{finished, plural, =0 {No task finished in this period} one {# task finished in this period} other {# tasks finished in this period}}, {late, plural, =0 {none of them late} one {# of them late} other {# of them late}}. Today {open, plural, =0 {no open task is past due} one {# open task is past due} other {# open tasks are past due}} and {waiting, plural, =0 {none is marked waiting} one {# is marked waiting} other {# are marked waiting}}.",
+    "trend": {
+      "titleDays": "Days late by {unit}",
+      "titleTasks": "Tasks finished late by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "show": "Show",
+      "days": "Days",
+      "tasks": "Tasks",
+      "total": "Total",
+      "body": "Tasks finished late, by the {unit} they finished, split by who the step waited on. Open tasks are not in the chart.",
+      "chartLabel": "Late work by {unit} and cause",
+      "none": "No task finished late in this period, so there is nothing to chart."
+    },
+    "steps": {
+      "title": "Slowest steps",
+      "body": "Steps that finished late in this period or are open past due today. Most days lost first.",
+      "none": "No step ran late in this period.",
+      "step": "Step",
+      "cause": "Cause",
+      "late": "Times late",
+      "stillOpen": "{count} still open",
+      "days": "Days lost",
+      "average": "Average days late"
+    },
+    "discoms": {
+      "title": "DISCOM time",
+      "body": "Utility time, kept apart from internal time: steps that wait on the DISCOM, per DISCOM.",
+      "none": "No DISCOM step finished in this period or is open with the DISCOM now.",
+      "discom": "DISCOM",
+      "finished": "Steps finished",
+      "lateOf": "{late} of {finished} late",
+      "lateDays": "Days late",
+      "average": "Average days per step",
+      "open": "Open now",
+      "openLate": "{count} past due"
+    },
+    "waiting": {
+      "title": "Late or waiting right now",
+      "body": "Open tasks past their due date or marked waiting today, longest first. Each opens its project's tasks.",
+      "none": "Nothing is past due or waiting today.",
+      "task": "Task",
+      "cause": "Cause",
+      "late": "Days past due",
+      "notDue": "Not due yet",
+      "due": "Due {date}",
+      "waitingDays": "Days waiting"
+    },
+    "note": "Days late are counted two ways. Finished: for every task finished in this period, the date it finished (India time) minus its due date, when that is positive. Open: for every open task already past its due date, today minus its due date, whatever the period. The cause is the party the step waits on (set by its template, or by whoever marked it waiting); DISCOM time is utility time and is shown apart from internal time. The chart shows finished tasks only, in the week or month they finished. A DISCOM step's days run from the day it was started (or its planned start) to the day it finished."
+  }
+}

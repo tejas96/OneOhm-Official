@@ -73,7 +73,8 @@
         "tasksDone": "{done} of {total} tasks done",
         "noManager": "No manager yet",
         "tasksDoneShort": "{done} of {total}"
-      }
+      },
+      "paperwork": "Statutory paperwork"
     },
     "room": {
       "pageTitle": "Project",

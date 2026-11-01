@@ -1,0 +1,40 @@
+{
+  "businessReports": {
+    "eyebrow": "Business",
+    "title": "Reports",
+    "description": "How OneOhm is doing, counted from the records: sales, delivery, delays by cause, money collected, profit per project, the team and service.",
+    "tabsLabel": "Reports",
+    "tabs": {
+      "sales": "Sales",
+      "delivery": "Delivery",
+      "delays": "Delays",
+      "collections": "Collections",
+      "profitability": "Profitability",
+      "team": "Team",
+      "service": "Service"
+    },
+    "titles": {
+      "sales": "Sales report",
+      "delivery": "Delivery report",
+      "delays": "Delays report",
+      "collections": "Collections report",
+      "profitability": "Profitability report",
+      "team": "Team report",
+      "service": "Service report"
+    },
+    "csv": "Download CSV",
+    "csvLabel": "Download the {report} report as CSV",
+    "noAccess": {
+      "title": "Reports are for the owner and leadership",
+      "body": "Your own work is on Today. Ask an admin if you need the business reports."
+    },
+    "bucket": {
+      "week": "Week of {date}"
+    },
+    "numbers": {
+      "show": "Show the numbers",
+      "hide": "Hide the numbers",
+      "period": "Period"
+    }
+  }
+}

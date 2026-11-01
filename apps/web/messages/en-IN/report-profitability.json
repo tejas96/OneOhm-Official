@@ -1,0 +1,70 @@
+{
+  "profitabilityReport": {
+    "loading": "Loading the profitability report",
+    "empty": {
+      "title": "No project started in this period",
+      "body": "Profit is counted for projects by their start date. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "contract": "Contract value",
+      "contractDetail": "Without GST · {count, plural, one {# project} other {# projects}}, {completed} completed",
+      "contractLink": "Open the projects",
+      "margin": "Estimated margin",
+      "marginDetail": "{margin} on the accepted quotations",
+      "cost": "Actual cost so far",
+      "costDetail": "{used} of the {estimate} estimated cost",
+      "over": "Over budget",
+      "overDetail": "{count, plural, one {Project} other {Projects}} whose actual cost is already above the estimate",
+      "overNone": "No project has cost more than estimated so far"
+    },
+    "trend": {
+      "title": "Projects started by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "body": "Contract value without GST of the projects started each {unit}, split into estimated cost and estimated margin.",
+      "cost": "Estimated cost",
+      "margin": "Estimated margin",
+      "projects": "Projects",
+      "contract": "Contract value",
+      "marginRate": "Margin %",
+      "actual": "Actual so far",
+      "chartLabel": "Contract value by {unit} the project started, estimated cost and margin"
+    },
+    "cost": {
+      "title": "Where the cost went",
+      "body": "Actual cost so far, by where it came from, against the estimate for the same projects.",
+      "spentOf": "{actual} of {estimate} estimated",
+      "stock": "Material from stock",
+      "stockBody": "Dispatched to site, at catalogue cost",
+      "vendor": "Vendor bills",
+      "vendorBody": "Bought for the project directly",
+      "contractor": "Contractor bills",
+      "contractorBody": "Installation work orders, advances and retention",
+      "billsStatus": "Bills {paid} paid · {approved} approved · {pending} waiting approval",
+      "estimate": "Estimated cost by kind",
+      "material": "Material: panels, inverters, structure, cable, electrical",
+      "installation": "Installation labour",
+      "other": "Transport, liaisoning and other"
+    },
+    "projects": {
+      "title": "Margin by project",
+      "body": "Lowest margin so far first. Variance is actual minus estimated cost; red means over budget.",
+      "project": "Project",
+      "status": "Status",
+      "contract": "Contract value",
+      "estimate": "Estimated cost",
+      "estimateMargin": "{rate} margin",
+      "actual": "Actual so far",
+      "used": "{rate} of estimate",
+      "variance": "Variance",
+      "margin": "Margin so far",
+      "statuses": {
+        "in_progress": "In progress",
+        "completed": "Completed"
+      }
+    },
+    "note": "Projects counted: not cancelled, started in the period, for the chosen manager and type. Contract value is the accepted quotation's price without GST (the survey revision once the customer accepts it); the estimated cost and margin come from the same quotation. Actual cost so far = material dispatched from stock at the product's catalogue cost + vendor bills + contractor bills on the project, whether waiting approval, approved or paid. A vendor bill raised from a goods receipt bought stock into the store, so it counts when that stock is dispatched, not twice. Margin so far = (contract value − actual cost) ÷ contract value. Projects still in progress have not had all their costs yet, so their actual cost is incomplete and their margin so far will come down."
+  }
+}

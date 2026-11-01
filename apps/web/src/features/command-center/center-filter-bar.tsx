@@ -10,8 +10,11 @@ import { type Period, type ProjectType, useCenterFilters } from './use-center-fi
 
 const ANY = 'any';
 
-/** Period, project manager and project type, like the reports. */
-export function CenterFilterBar() {
+/**
+ * Period, project manager and project type, shared by the command centre and the
+ * reports. `hideManager` drops the manager choice where it does not apply.
+ */
+export function CenterFilterBar({ hideManager = false }: { readonly hideManager?: boolean }) {
   const t = useTranslations('commandCenter.filters');
   const { query, active, setPeriod, setManager, setType, clear } = useCenterFilters();
   const people = usePeople();
@@ -28,16 +31,18 @@ export function CenterFilterBar() {
         onValueChange={setPeriod}
         options={COMMAND_CENTER_PERIODS.map((value) => ({ value, label: t(`period.${value}`) }))}
       />
-      <Select<string>
-        className="w-full sm:w-56"
-        label={t('anyManager')}
-        value={query.managerUserId ?? ANY}
-        onValueChange={(value) => setManager(value === ANY ? null : value)}
-        options={[
-          { value: ANY, label: t('anyManager') },
-          ...managers.map((person) => ({ value: person.id, label: person.fullName })),
-        ]}
-      />
+      {!hideManager && (
+        <Select<string>
+          className="w-full sm:w-56"
+          label={t('anyManager')}
+          value={query.managerUserId ?? ANY}
+          onValueChange={(value) => setManager(value === ANY ? null : value)}
+          options={[
+            { value: ANY, label: t('anyManager') },
+            ...managers.map((person) => ({ value: person.id, label: person.fullName })),
+          ]}
+        />
+      )}
       <Select<ProjectType | typeof ANY>
         className="w-full sm:w-52"
         label={t('everyType')}

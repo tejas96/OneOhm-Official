@@ -1,0 +1,56 @@
+{
+  "serviceReport": {
+    "loading": "Loading the service report",
+    "empty": {
+      "title": "No service work in this period",
+      "body": "No request was raised or resolved, none is open and no customer rated us. Choose a longer period or clear the filters."
+    },
+    "kpis": {
+      "raised": "Requests raised",
+      "raisedDetail": "{resolved} resolved in the period",
+      "serviceLink": "Open the service desk",
+      "open": "Open now",
+      "openDetail": "Not resolved yet, whenever raised",
+      "speed": "Hours to resolve",
+      "speedDetail": "Average · {rate} within two days",
+      "rating": "Customer rating",
+      "ratingDetail": "{count, plural, =0 {No rating in this period} one {From # rating} other {From # ratings}}"
+    },
+    "trend": {
+      "title": "Service by {unit}",
+      "unit": {
+        "week": "week",
+        "month": "month"
+      },
+      "body": "Requests by the {unit} they were raised, split into resolved in the same {unit} and still open after it.",
+      "raised": "Raised",
+      "resolved": "Resolved",
+      "stillOpen": "Not resolved that {unit}",
+      "chartLabel": "Service requests raised and resolved by {unit}"
+    },
+    "tables": {
+      "byCategory": "By problem",
+      "byCategoryBody": "What customers ask for help with. Most work first.",
+      "byAssignee": "By person",
+      "byAssigneeBody": "Who resolved requests in the period and who has open ones now.",
+      "category": "Problem",
+      "person": "Person",
+      "unassigned": "Not assigned",
+      "raised": "Raised",
+      "resolved": "Resolved",
+      "open": "Open now",
+      "hours": "Avg hours"
+    },
+    "categories": {
+      "no_generation": "No generation",
+      "low_generation": "Low generation",
+      "inverter_error": "Inverter error",
+      "physical_damage": "Physical damage",
+      "cleaning": "Panel cleaning",
+      "billing_net_meter": "Billing or net meter",
+      "subsidy": "Subsidy",
+      "other": "Something else"
+    },
+    "note": "Hours to resolve = resolved time − raised time, for requests resolved in the period, counted around the clock. Customer rating = the average of handover ratings given in the period (1 to 5). Requests without a project count only when no manager or type is chosen."
+  }
+}
