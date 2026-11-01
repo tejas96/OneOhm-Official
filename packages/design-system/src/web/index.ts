@@ -2,6 +2,7 @@ export { Button, buttonStyles, IconButton } from './controls/button';
 export { controlSurface, Field, useField } from './controls/field';
 export { Input, Textarea } from './controls/input';
 export { Avatar } from './data/avatar';
+export { DonutChart, type DonutSegment } from './data/donut-chart';
 export { KpiTile } from './data/kpi-tile';
 export { ProgressRing } from './data/progress-ring';
 export { ShareBar, type ShareSegment } from './data/share-bar';

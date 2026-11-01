@@ -7,41 +7,64 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BrandLogo } from './brand-logo';
 import { NAVIGATION, type NavItem } from './navigation';
+import { SIDEBAR_LOOKS, type SidebarLook } from './sidebar-looks';
 import { ThemeSwitch } from './theme-switch';
 
-/** Wide screens: the business's map down the left edge. */
-export function Sidebar() {
+interface SidebarProps {
+  readonly look?: SidebarLook;
+  /** Where links point, so the design lab can keep visitors inside the variant they chose. */
+  readonly activeHref?: string;
+}
+
+/**
+ * Wide screens: the business's map down the left edge. Every row keeps its height
+ * (`shrink-0`); when the list is taller than the window, the list scrolls instead
+ * of squashing the search box and menu items.
+ */
+export function Sidebar({ look = 'ink', activeHref }: SidebarProps) {
   const t = useTranslations('nav');
+  const styles = SIDEBAR_LOOKS[look];
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-5 overflow-y-auto px-3 py-5 md:flex">
-      <div className="flex flex-col gap-1.5 px-2">
-        <BrandLogo alt={t('logoAlt')} className="h-9" />
-        <p className="type-label text-ink-faint">{t('company')}</p>
+    <aside
+      className={cn(
+        'sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-4 px-3 py-5 md:flex',
+        styles.aside,
+      )}
+    >
+      <div className="flex shrink-0 flex-col gap-1.5 px-2">
+        <BrandLogo alt={t('logoAlt')} tone={look === 'ocean' ? 'white' : 'auto'} className="h-9" />
+        <p className={cn('type-label', styles.muted)}>{t('company')}</p>
       </div>
 
       <button
         type="button"
-        className="flex h-10 items-center gap-2 rounded-md border border-hairline bg-raised/70 px-3 type-body-sm text-ink-faint shadow-e1 transition-colors hover:border-rule hover:text-ink-muted"
+        className={cn(
+          'flex h-10 shrink-0 items-center gap-2 rounded-lg border px-3 type-body-sm transition-colors',
+          styles.search,
+        )}
       >
-        <Search aria-hidden className="size-4" />
+        <Search aria-hidden className="size-4 shrink-0" />
         <span className="flex-1 text-left">{t('search')}</span>
-        <kbd className="rounded-sm border border-hairline px-1.5 font-mono text-[0.6875rem]">
+        <kbd className="rounded-sm border border-current/20 px-1.5 font-mono text-[0.6875rem]">
           ⌘K
         </kbd>
       </button>
 
-      <nav aria-label={t('label')} className="flex flex-1 flex-col gap-4">
+      <nav
+        aria-label={t('label')}
+        className="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1"
+      >
         {NAVIGATION.map((group, index) => (
-          <div key={group.key ?? `group-${index}`} className="flex flex-col gap-0.5">
+          <div key={group.key ?? `group-${index}`} className="flex shrink-0 flex-col gap-0.5">
             {group.key && (
-              <p className="px-3 pb-1 type-overline text-ink-faint uppercase">
+              <p className={cn('px-3 pb-0.5 type-overline uppercase', styles.group)}>
                 {t(`groups.${group.key}`)}
               </p>
             )}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => (
                 <li key={item.key}>
-                  <NavLink item={item} />
+                  <NavLink item={item} look={look} activeHref={activeHref} />
                 </li>
               ))}
             </ul>
@@ -49,18 +72,28 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="flex flex-col gap-3 border-t border-hairline px-1 pt-4">
-        <ThemeSwitch />
+      <div className={cn('flex shrink-0 flex-col gap-3 border-t px-1 pt-4', styles.divider)}>
+        <ThemeSwitch onPanel={look === 'ocean'} />
         <button
           type="button"
-          className="flex items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-sunken"
+          className={cn(
+            'flex items-center gap-3 rounded-lg p-2 text-left transition-colors',
+            styles.account,
+          )}
         >
           <Avatar name={t('account.role')} swatch={1} size="sm" />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate type-body-sm font-medium text-ink">{t('account.role')}</span>
-            <span className="truncate type-label text-ink-faint">{t('account.preview')}</span>
+            <span
+              className={cn(
+                'truncate type-body-sm font-medium',
+                look === 'ocean' ? 'text-on-panel' : 'text-ink',
+              )}
+            >
+              {t('account.role')}
+            </span>
+            <span className={cn('truncate type-label', styles.muted)}>{t('account.preview')}</span>
           </span>
-          <ChevronsUpDown aria-hidden className="size-4 text-ink-faint" />
+          <ChevronsUpDown aria-hidden className={cn('size-4', styles.muted)} />
         </button>
       </div>
     </aside>
@@ -69,24 +102,28 @@ export function Sidebar() {
 
 const LEADS_TO_FOLLOW_UP = 11;
 
-function NavLink({ item }: { readonly item: NavItem }) {
+function NavLink({
+  item,
+  look,
+  activeHref,
+}: {
+  readonly item: NavItem;
+  readonly look: SidebarLook;
+  readonly activeHref: string | undefined;
+}) {
   const t = useTranslations('nav');
   const pathname = usePathname();
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const styles = SIDEBAR_LOOKS[look];
+  const href = item.key === 'commandCenter' && activeHref ? activeHref : item.href;
+  const active = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = item.icon;
   const content = (
     <>
-      {active && (
-        <span
-          aria-hidden
-          className="oh-brand-line absolute inset-y-2 left-0 w-[3px] rounded-full"
-        />
-      )}
       <Icon
         aria-hidden
-        className={cn('size-[1.125rem]', active ? 'text-accent' : 'text-ink-faint')}
+        className={cn('size-[1.125rem] shrink-0', active ? styles.iconActive : styles.icon)}
       />
-      <span className="flex-1">{t(`items.${item.key}`)}</span>
+      <span className="flex-1 truncate">{t(`items.${item.key}`)}</span>
       {item.key === 'leads' && (
         <CountBadge
           count={LEADS_TO_FOLLOW_UP}
@@ -96,10 +133,8 @@ function NavLink({ item }: { readonly item: NavItem }) {
     </>
   );
   const classes = cn(
-    'relative flex h-9 items-center gap-3 rounded-md px-3 type-body-sm transition-colors duration-(--duration-fast)',
-    active
-      ? 'bg-raised font-medium text-ink shadow-e1'
-      : 'text-ink-muted hover:bg-sunken hover:text-ink',
+    'relative flex h-[2.125rem] shrink-0 items-center gap-3 rounded-lg px-3 type-body-sm transition-[background-color,color,box-shadow] duration-(--duration-fast)',
+    active ? styles.itemActive : styles.item,
   );
   if (!item.built) {
     return (
@@ -109,7 +144,7 @@ function NavLink({ item }: { readonly item: NavItem }) {
     );
   }
   return (
-    <Link href={item.href} aria-current={active ? 'page' : undefined} className={classes}>
+    <Link href={href} aria-current={active ? 'page' : undefined} className={classes}>
       {content}
     </Link>
   );

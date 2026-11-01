@@ -1,0 +1,214 @@
+'use client';
+
+import {
+  Button,
+  cn,
+  DonutChart,
+  easing,
+  ProgressRing,
+  seconds,
+  useCountUp,
+} from '@oneohm/design-system/web';
+import { formatInrCompact } from '@oneohm/shared';
+import { BellRing } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
+import { PREVIEW } from '../../command-center/preview-data';
+import { MONEY } from '../lab-data';
+import { RooftopIllustration } from './rooftop-illustration';
+
+export const TILE = 'rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70';
+
+function Overline({
+  children,
+  light = false,
+}: {
+  readonly children: ReactNode;
+  readonly light?: boolean;
+}) {
+  return (
+    <p className={cn('type-overline uppercase', light ? 'text-on-panel-muted' : 'text-ink-faint')}>
+      {children}
+    </p>
+  );
+}
+
+/** The hero tile: what was installed this month, with the rooftop drawing. */
+export function InstalledTile({ className }: { readonly className?: string }) {
+  const t = useTranslations('lab.bento');
+  const installed = useCountUp(PREVIEW.pulse.installedWp);
+  return (
+    <section
+      className={cn(
+        'relative flex min-h-[26rem] flex-col justify-between overflow-hidden rounded-[28px] p-7 ring-1 ring-hairline/70',
+        'bg-[linear-gradient(155deg,var(--color-accent-soft)_0%,var(--color-raised)_55%,var(--color-energy-soft)_100%)]',
+        className,
+      )}
+    >
+      <div className="relative z-10 flex flex-col gap-2">
+        <Overline>{t('installed')}</Overline>
+        <p className="type-hero text-ink tabular-nums">
+          {(installed / 1000).toFixed(1)}
+          <span className="ml-2 type-display-md text-ink-faint">kWp</span>
+        </p>
+        <p className="max-w-[15rem] type-body text-ink-muted">
+          {t('installedNote', { count: PREVIEW.pulse.commissioned, next: 4 })}
+        </p>
+      </div>
+      <ul className="relative z-10 flex flex-wrap gap-2">
+        {(['residential', 'society', 'commercial'] as const).map((kind, index) => (
+          <li
+            key={kind}
+            className="rounded-full bg-raised/80 px-3 py-1.5 type-body-sm text-ink-muted shadow-e1 backdrop-blur"
+          >
+            <span className="mr-1.5 font-mono text-ink">{[6, 2, 1][index]}</span>
+            {t(`kinds.${kind}`)}
+          </li>
+        ))}
+      </ul>
+      <RooftopIllustration className="pointer-events-none absolute -right-6 bottom-0 w-[68%] max-w-[34rem]" />
+    </section>
+  );
+}
+
+/** Collections this month on the ocean panel. */
+export function CollectionsTile({ className }: { readonly className?: string }) {
+  const t = useTranslations('lab.bento');
+  const values = PREVIEW.money.weeklyCollections;
+  const max = Math.max(...values);
+  return (
+    <section className={cn('oh-panel flex flex-col gap-5 rounded-[28px] p-6 shadow-e3', className)}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <Overline light>{t('collected')}</Overline>
+          <p className="type-display-xl text-on-panel tabular-nums">
+            {formatInrCompact(MONEY.collected)}
+          </p>
+          <p className="type-body-sm text-on-panel-muted">
+            {t('ofDue', { due: formatInrCompact(MONEY.due) })}
+          </p>
+        </div>
+        <Button variant="panel" size="sm" leadingIcon={<BellRing />}>
+          {t('remind', { count: 4 })}
+        </Button>
+      </div>
+      <div className="flex h-20 items-end gap-2" aria-hidden>
+        {values.map((value, index) => (
+          <motion.span
+            key={`week-${index + 1}`}
+            className={cn(
+              'flex-1 origin-bottom rounded-t-md',
+              index === values.length - 1 ? 'oh-brand-line' : 'bg-on-panel/18',
+            )}
+            style={{ height: `${(value / max) * 100}%` }}
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{
+              duration: seconds('data'),
+              ease: easing('outExpo'),
+              delay: 0.2 + index * 0.04,
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const FACTORS = [
+  { key: 'delivery', value: 86 },
+  { key: 'money', value: 74 },
+  { key: 'team', value: 88 },
+] as const;
+
+/** Business health: the score and the three parts it is made of. */
+export function HealthTile({ className }: { readonly className?: string }) {
+  const t = useTranslations('lab.bento');
+  return (
+    <section className={cn(TILE, 'flex flex-col gap-5', className)}>
+      <Overline>{t('health')}</Overline>
+      <div className="flex items-center gap-5">
+        <ProgressRing
+          value={0.82}
+          label={t('healthAria', { score: 82 })}
+          size={112}
+          thickness={10}
+          paint="brand"
+          trackClassName="stroke-sunken"
+        >
+          <span className="type-display-lg text-ink tabular-nums">82</span>
+        </ProgressRing>
+        <ul className="flex flex-1 flex-col gap-3">
+          {FACTORS.map((factor) => (
+            <li key={factor.key} className="flex flex-col gap-1">
+              <span className="flex justify-between type-label text-ink-muted">
+                {t(`factors.${factor.key}`)}
+                <span className="font-mono text-ink">{factor.value}</span>
+              </span>
+              <span className="h-1.5 overflow-hidden rounded-full bg-sunken">
+                <span
+                  className="block h-full rounded-full bg-accent"
+                  style={{ width: `${factor.value}%` }}
+                />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+const PARTIES = ['discom', 'internal', 'customer', 'bank'] as const;
+const PARTY_STROKE = {
+  internal: 'stroke-party-internal',
+  customer: 'stroke-party-customer',
+  bank: 'stroke-party-bank',
+  discom: 'stroke-party-discom',
+} as const;
+const PARTY_FILL = {
+  internal: 'bg-party-internal',
+  customer: 'bg-party-customer',
+  bank: 'bg-party-bank',
+  discom: 'bg-party-discom',
+} as const;
+
+/** Waiting days by who the projects waited on. */
+export function WaitingTile({ className }: { readonly className?: string }) {
+  const t = useTranslations('lab.bento');
+  const partyT = useTranslations('commandCenter.attention.party');
+  const days = PREVIEW.waitingDays;
+  const total = PARTIES.reduce((sum, party) => sum + days[party], 0);
+  return (
+    <section className={cn(TILE, 'flex flex-col gap-5', className)}>
+      <Overline>{t('waiting')}</Overline>
+      <div className="flex items-center gap-5">
+        <DonutChart
+          size={112}
+          thickness={12}
+          label={t('waitingAria', { total })}
+          segments={PARTIES.map((party) => ({
+            key: party,
+            value: days[party],
+            strokeClassName: PARTY_STROKE[party],
+          }))}
+        >
+          <span className="type-display-md text-ink tabular-nums">{total}</span>
+          <span className="mt-1 type-label text-ink-faint">{t('days')}</span>
+        </DonutChart>
+        <ul className="flex flex-1 flex-col gap-2">
+          {PARTIES.map((party) => (
+            <li key={party} className="flex items-center justify-between gap-2 type-body-sm">
+              <span className="inline-flex items-center gap-2 text-ink-muted">
+                <span aria-hidden className={cn('size-2.5 rounded-[3px]', PARTY_FILL[party])} />
+                {partyT(party)}
+              </span>
+              <span className="font-mono text-ink">{days[party]}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}

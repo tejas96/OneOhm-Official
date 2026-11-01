@@ -1,3 +1,4 @@
+import { cn } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { SolarLineArt } from './solar-line-art';
 
@@ -5,12 +6,15 @@ const LEGEND = ['array', 'inverter', 'meter', 'grid'] as const;
 const LETTERS = { array: 'A', inverter: 'B', meter: 'C', grid: 'D' } as const;
 
 /** The left half of sign-in: solar glass, the single-line drawing and what OneOhm is for. */
-export function BrandPanel() {
+export function BrandPanel({ className }: { readonly className?: string }) {
   const t = useTranslations('signIn.panel');
   return (
     <section
       aria-label={t('label')}
-      className="oh-panel flex min-h-[22rem] flex-col justify-between gap-8 p-6 sm:p-10 lg:min-h-dvh lg:p-12"
+      className={cn(
+        'oh-panel flex min-h-[22rem] flex-col justify-between gap-8 p-6 sm:p-10 lg:min-h-dvh lg:p-12',
+        className,
+      )}
     >
       <header className="flex items-start justify-between gap-6">
         {/* biome-ignore lint/performance/noImgElement: a static brand asset, already sized. */}

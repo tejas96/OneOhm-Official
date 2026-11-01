@@ -172,3 +172,40 @@
   inset: 0;
   border-radius: inherit;
 }
+
+/* Current along a straight horizontal wire drawn with CSS (scales without stretching dashes). */
+@keyframes oh-flow-x {
+  to {
+    background-position-x: 18px;
+  }
+}
+
+.oh-flow-x {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-brand-green) 0 6px,
+    transparent 6px 18px
+  );
+  animation: oh-flow-x calc(var(--duration-ambient) * 0.9) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oh-flow-x {
+    animation: none;
+  }
+}
+
+:root[data-motion="calm"] .oh-flow-x {
+  animation: none;
+}
+
+/* A 2px ring in the logo gradient around a round element (use on a wrapper with padding). */
+.oh-brand-ring {
+  background: conic-gradient(
+    from 200deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue),
+    var(--color-brand-green)
+  );
+}

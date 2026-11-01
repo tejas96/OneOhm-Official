@@ -9,12 +9,23 @@ import { THEME_PREFERENCES } from '@/providers/preferences';
 const ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
 /** Light, dark or follow the device — saved for the next visit. */
-export function ThemeSwitch({ className }: { readonly className?: string }) {
+export function ThemeSwitch({
+  className,
+  onPanel = false,
+}: {
+  readonly className?: string;
+  /** On the ocean sidebar: glassy track, white selection. */
+  readonly onPanel?: boolean;
+}) {
   const t = useTranslations('appearance');
   const { theme, setTheme } = useThemePreference();
   return (
     <fieldset
-      className={cn('flex rounded-md border border-hairline bg-sunken/60 p-0.5', className)}
+      className={cn(
+        'flex rounded-lg border p-0.5',
+        onPanel ? 'border-on-panel/15 bg-on-panel/[0.06]' : 'border-hairline bg-sunken/60',
+        className,
+      )}
     >
       <legend className="sr-only">{t('label')}</legend>
       {THEME_PREFERENCES.map((option) => {
@@ -25,10 +36,12 @@ export function ThemeSwitch({ className }: { readonly className?: string }) {
             key={option}
             title={t(option)}
             className={cn(
-              'relative flex h-8 flex-1 cursor-pointer items-center justify-center rounded-[6px] text-ink-faint',
-              'transition-colors duration-(--duration-fast) hover:text-ink',
+              'relative flex h-8 flex-1 cursor-pointer items-center justify-center rounded-md',
+              'transition-colors duration-(--duration-fast)',
               'has-focus-visible:outline-2 has-focus-visible:outline-focus',
-              selected && 'bg-raised text-ink shadow-e1',
+              onPanel ? 'text-on-panel-muted hover:text-on-panel' : 'text-ink-faint hover:text-ink',
+              selected &&
+                (onPanel ? 'bg-on-panel/15 text-on-panel' : 'bg-raised text-ink shadow-e1'),
             )}
           >
             <input

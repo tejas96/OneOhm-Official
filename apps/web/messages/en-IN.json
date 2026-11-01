@@ -16,10 +16,22 @@
       "headlineTwo": "wired to plan.",
       "description": "Leads, quotations, installations, DISCOM work and payments for the whole OneOhm team, in one calm place.",
       "legend": {
-        "array": { "verb": "Generate", "name": "Solar array" },
-        "inverter": { "verb": "Convert", "name": "Inverter" },
-        "meter": { "verb": "Measure", "name": "Net meter" },
-        "grid": { "verb": "Export", "name": "Grid" }
+        "array": {
+          "verb": "Generate",
+          "name": "Solar array"
+        },
+        "inverter": {
+          "verb": "Convert",
+          "name": "Inverter"
+        },
+        "meter": {
+          "verb": "Measure",
+          "name": "Net meter"
+        },
+        "grid": {
+          "verb": "Export",
+          "name": "Grid"
+        }
       }
     },
     "form": {
@@ -34,6 +46,22 @@
       "submit": "Sign in",
       "notConnected": "Sign-in is not connected yet. It switches on when the API is built in the next step.",
       "mobileNote": "Site teams, contractors, resellers and customers sign in on the OneOhm mobile apps with a one-time code."
+    },
+    "sky": {
+      "label": "OneOhm",
+      "logoAlt": "OneOhm — Energy for everyone",
+      "hello": {
+        "morning": "Good morning",
+        "midday": "Good afternoon",
+        "evening": "Good evening",
+        "night": "Good evening"
+      },
+      "line": {
+        "morning": "The panels are waking up.",
+        "midday": "Peak sun over Sangli.",
+        "evening": "Last light on the panels.",
+        "night": "The grid has the night shift."
+      }
     }
   },
   "nav": {
@@ -158,6 +186,118 @@
       "surveys": "Site surveys",
       "quotations": "Quotations sent",
       "accepted": "Accepted"
+    }
+  },
+  "lab": {
+    "greeting": {
+      "morning": "Good morning",
+      "midday": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good evening"
+    },
+    "circuit": {
+      "previewBadge": "Design preview · sample figures",
+      "circuitLabel": "Live projects by stage",
+      "nodeLabel": "{stage}: {count, plural, one {# project} other {# projects}}",
+      "waitingOn": "{count} · {party}",
+      "summary": "{live} projects are live. {needYou} things need you today.",
+      "period": "This month",
+      "newQuotation": "New quotation",
+      "healthAria": "Business health {score} out of 100",
+      "health": "Business health",
+      "healthy": "Healthy",
+      "collected": "Collected this month",
+      "ofDue": "of {due} due",
+      "installed": "Installed this month",
+      "systems": "{count, plural, one {# system} other {# systems}} commissioned"
+    },
+    "actions": {
+      "title": "Needs you today",
+      "description": "One next step each. Done here, the project moves on."
+    },
+    "money": {
+      "title": "Money this month",
+      "description": "Collections against what is due, and what is still moving.",
+      "ringAria": "{percent}% of this month's dues collected",
+      "ofDue": "of {due} due",
+      "stillDue": "Still due from customers",
+      "bankPending": "Bank disbursements pending",
+      "payThisWeek": "To pay this week"
+    },
+    "strip": {
+      "leads": "Open leads",
+      "leadsNote": "{count} need a follow-up today",
+      "leadsTrend": "Open leads over 8 weeks, rising",
+      "quotations": "Quotations this month",
+      "quotationsNote": "{percent}% accepted so far",
+      "conversion": "Lead to order",
+      "conversionNote": "{accepted} of {leads} leads accepted a quotation",
+      "crew": "Crew on site",
+      "crewNote": "{count} on leave today"
+    },
+    "editorial": {
+      "previewBadge": "Design preview · sample figures",
+      "healthAria": "Business health {score} out of 100",
+      "health": "Health",
+      "newQuotation": "New quotation",
+      "brief": "You have collected <figure>{collected}</figure> of {due} due this month. <figure>{actions} things</figure> need you today, and <figure>{party}</figure> holds nearly half of all the time projects spent waiting.",
+      "projectsTitle": "Projects in motion",
+      "allProjects": "All 24 projects",
+      "project": "Project",
+      "statusNext": "Status · next",
+      "moneyTitle": "Money",
+      "money": {
+        "collected": "Collected this month",
+        "stillDue": "Still due this month",
+        "fromBanks": "Bank disbursements pending",
+        "toVendors": "To vendors this week",
+        "toContractors": "To contractors this week"
+      },
+      "waitingTitle": "Waiting",
+      "waitingHeadline": "DISCOM holds {percent}% of waiting time. Only the OneOhm team's share counts against people.",
+      "waitingAria": "{total} waiting days this month, split by who projects waited on",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "figures": {
+        "collected": "Collected",
+        "collectedNote": "of {due} due by 30 November",
+        "collectedTrend": "Weekly collections, last 8 weeks",
+        "installed": "Installed",
+        "installedNote": "{count, plural, one {# system} other {# systems}} commissioned this month",
+        "projects": "Live projects",
+        "projectsNote": "Split by stage, survey to subsidy",
+        "projectsAria": "Live projects split by stage",
+        "leads": "Open leads",
+        "leadsNote": "{count} need a follow-up today",
+        "leadsTrend": "Open leads over 8 weeks, rising"
+      }
+    },
+    "bento": {
+      "previewBadge": "Design preview · sample figures",
+      "period": "This month",
+      "newQuotation": "New quotation",
+      "installed": "Installed this month",
+      "installedNote": "{count, plural, one {# system} other {# systems}} commissioned, {next} more due this week.",
+      "kinds": {
+        "residential": "Homes",
+        "society": "Societies",
+        "commercial": "Commercial"
+      },
+      "collected": "Collected this month",
+      "ofDue": "of {due} due by 30 November",
+      "remind": "Remind {count}",
+      "health": "Business health",
+      "healthAria": "Business health {score} out of 100",
+      "factors": {
+        "delivery": "Delivery",
+        "money": "Money",
+        "team": "Team"
+      },
+      "waiting": "Waiting time",
+      "waitingAria": "{total} waiting days this month, split by who projects waited on",
+      "days": "days",
+      "pipeline": "Sales this month",
+      "projects": "Live projects",
+      "allProjects": "All projects"
     }
   }
 }
