@@ -28,6 +28,8 @@ export interface NewPayment {
   /** Online payments only: the gateway's payment ID and the fee it kept. */
   gatewayPaymentId?: string | null | undefined;
   gatewayFeePaise?: number | null | undefined;
+  /** Paid out of the customer's credit (an earlier overpayment), not new money. */
+  paidFromCredit?: boolean | undefined;
 }
 
 /** Who records a payment: a person, or no one for a gateway webhook. */
@@ -94,6 +96,7 @@ export class FinanceService {
           receiptNumber: await nextReceiptNumber(tx, input.receivedOn),
           gatewayPaymentId: input.gatewayPaymentId ?? null,
           gatewayFeePaise: input.gatewayFeePaise ?? null,
+          paidFromCredit: input.paidFromCredit ?? false,
         })
         .returning({ id: payments.id });
       if (!payment) throw new Error('Payment insert returned nothing.');

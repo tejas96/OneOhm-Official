@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { CustomerDetailView } from '@/features/customers/customer-detail-view';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,5 +10,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function CustomerPage({ params }: PageProps<'/customers/[id]'>) {
   const { id } = await params;
-  return <CustomerDetailView id={id} />;
+  return (
+    <Suspense>
+      <CustomerDetailView id={id} />
+    </Suspense>
+  );
 }

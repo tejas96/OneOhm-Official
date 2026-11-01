@@ -1,5 +1,5 @@
 import type { Company, QuotationDetail, QuotationTotals } from '@oneohm/api-contracts';
-import { DEFAULT_MILESTONES, planMilestones } from '@oneohm/domain';
+import { DEFAULT_MILESTONES, type MilestoneShare, planMilestones } from '@oneohm/domain';
 import { formatInr, formatKwp } from '@oneohm/shared';
 
 /** What the quotation document needs beyond the quotation itself. */
@@ -16,6 +16,8 @@ export interface QuotationExtras {
   readonly inverter: ProductLabel;
   readonly battery: ProductLabel | null;
   readonly comparison: { readonly dcr: QuotationTotals; readonly nonDcr: QuotationTotals } | null;
+  /** The default payment terms shown on the quotation (Settings → Payment terms). */
+  readonly paymentSteps?: readonly MilestoneShare[];
   readonly logo: string;
   readonly stamp: string;
 }
@@ -91,7 +93,8 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
   const { totals, input } = quotation;
   const company = extras.company;
   const itemsBeforeGst = totals.totalPaise - totals.taxPaise + totals.discountPaise;
-  const schedule = planMilestones(totals.totalPaise);
+  const steps = extras.paymentSteps ?? DEFAULT_MILESTONES;
+  const schedule = planMilestones(totals.totalPaise, steps);
   return {
     company: {
       name: company.legalName,
@@ -152,7 +155,7 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
     schedule: schedule.map((milestone, index) => ({
       index: index + 1,
       label: milestone.label,
-      share: percent(DEFAULT_MILESTONES.find((entry) => entry.key === milestone.key)?.shareBp ?? 0),
+      share: percent(steps.find((entry) => entry.key === milestone.key)?.shareBp ?? 0),
       amount: formatInr(milestone.amountPaise),
     })),
   };

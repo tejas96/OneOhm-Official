@@ -43,7 +43,7 @@ export function useTaskColumns({
       key: 'when',
       header: t('columns.when'),
       cell: (row) => (
-        <span className="type-body-sm text-ink-muted tabular-nums">
+        <span className="whitespace-nowrap type-body-sm text-ink-muted tabular-nums">
           {t('when', { offset: row.offsetDays, count: row.durationDays })}
         </span>
       ),

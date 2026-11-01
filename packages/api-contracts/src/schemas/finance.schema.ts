@@ -53,6 +53,8 @@ export const receivedPaymentSchema = z.object({
   reversed: z.boolean(),
   reversesPaymentId: idSchema.nullable(),
   reversalReason: z.string().nullable(),
+  /** When it was recorded, to order it among refunds and credit on the same day. */
+  createdAt: instantSchema,
 });
 export type ReceivedPayment = z.infer<typeof receivedPaymentSchema>;
 

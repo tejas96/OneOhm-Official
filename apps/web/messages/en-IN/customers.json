@@ -100,6 +100,169 @@
     },
     "projects": {
       "none": "No projects yet."
+    },
+    "tabs": {
+      "label": "Customer sections",
+      "overview": "Overview",
+      "money": "Projects & money",
+      "conversations": "Conversations",
+      "service": "Service & feedback",
+      "documents": "Documents"
+    },
+    "activityLoading": "Loading the customer's history",
+    "money": {
+      "scheduled": "Scheduled",
+      "received": "Received",
+      "outstanding": "Still to collect",
+      "subsidy": "Expected subsidy",
+      "subsidyHint": "The expected subsidy is credited to the customer by the government after commissioning; OneOhm never collects it.",
+      "none": "No projects yet, so no payments are scheduled.",
+      "projectBody": "{received} of {scheduled} received · {outstanding} still to collect",
+      "projectSettled": "{received} received · fully paid",
+      "cancelled": "Cancelled",
+      "openProject": "Open project",
+      "noMilestones": "No payment schedule on this project yet.",
+      "columns": {
+        "milestone": "Payment",
+        "status": "Status",
+        "amount": "Amount",
+        "paid": "Paid",
+        "outstanding": "Left"
+      },
+      "bank": "From the bank loan",
+      "dueOn": "Due {date}",
+      "notDueYet": "Falls due at its event",
+      "status": {
+        "upcoming": "Not due yet",
+        "due": "Due",
+        "partly_paid": "Part paid",
+        "paid": "Paid"
+      },
+      "paymentsTitle": "Payments received",
+      "paymentsBody": "Money in against their projects, newest first, with receipt numbers.",
+      "paymentsNone": "No payments received yet.",
+      "paymentColumns": {
+        "receipt": "Receipt",
+        "for": "For",
+        "method": "How",
+        "date": "Received",
+        "amount": "Amount"
+      },
+      "noReceipt": "No receipt",
+      "general": "General payment",
+      "reversed": "Reversed",
+      "reversal": "Reversal",
+      "methods": {
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "bank_transfer": "Bank transfer",
+        "upi": "UPI",
+        "razorpay": "Online payment",
+        "bank_disbursement": "Bank disbursement"
+      }
+    },
+    "changeRequests": {
+      "title": "Change requests",
+      "body": "DISCOM changes for their sites and projects.",
+      "none": "No change requests for this customer.",
+      "steps": "{done} of {total} steps",
+      "status": {
+        "open": "Open",
+        "completed": "Done",
+        "cancelled": "Cancelled"
+      },
+      "types": {
+        "consumer_name_change": "Consumer name change",
+        "name_spelling_correction": "Name spelling correction",
+        "property_type_change": "Property type change",
+        "load_change": "Load change",
+        "new_ev_meter": "New EV meter",
+        "new_connection": "New connection"
+      }
+    },
+    "conversations": {
+      "chatTitle": "WhatsApp chat",
+      "chatBody": "{count, plural, one {# message} other {# messages}} · they last wrote {when}",
+      "chatBodyNoInbound": "{count, plural, one {# message} other {# messages}}",
+      "showingLatest": "Showing the latest {shown} of {count}. The inbox has the full chat.",
+      "openInbox": "Open in inbox",
+      "withTeam": "A team member is answering",
+      "noChat": "No WhatsApp chat yet",
+      "noChatBody": "When they write to OneOhm's WhatsApp number from {phone}, the chat shows here.",
+      "sentTitle": "Messages sent",
+      "sentBody": "WhatsApp updates and app alerts sent to them. Chat replies are in the chat.",
+      "sentNone": "Nothing sent to them yet.",
+      "channels": {
+        "whatsapp": "WhatsApp",
+        "sms": "SMS",
+        "push": "Phone alert"
+      },
+      "templates": {
+        "quotation_sent": "Quotation sent",
+        "project_started": "Project started",
+        "project_milestone": "Project update",
+        "payment_received": "Payment received",
+        "payment_reminder": "Payment reminder",
+        "payment_link": "Payment link",
+        "service_update": "Service request update",
+        "service_request": "Service request",
+        "change_request_raised": "Change request started",
+        "change_request_completed": "Change request done",
+        "budget_revision": "Revised quotation"
+      },
+      "otherTemplate": "Message",
+      "alertsTitle": "App alerts",
+      "alertsBody": "What they see in the OneOhm app's inbox.",
+      "alertsNone": "No app alerts yet.",
+      "unread": "Not opened"
+    },
+    "service": {
+      "requestsTitle": "Service requests",
+      "requestsBody": "Help they asked for, newest first.",
+      "requestsNone": "No service requests from this customer.",
+      "openDesk": "Open service desk",
+      "columns": {
+        "request": "Request",
+        "status": "Status",
+        "project": "Project",
+        "raised": "Raised",
+        "handledBy": "With"
+      },
+      "status": {
+        "open": "New",
+        "in_progress": "In progress",
+        "resolved": "Resolved"
+      },
+      "categories": {
+        "no_generation": "No generation",
+        "low_generation": "Low generation",
+        "inverter_error": "Inverter error",
+        "physical_damage": "Physical damage",
+        "cleaning": "Panel cleaning",
+        "billing_net_meter": "Billing or net meter",
+        "subsidy": "Subsidy",
+        "other": "Something else"
+      },
+      "unassigned": "Not assigned",
+      "noProject": "—",
+      "resolution": "Resolved: {note}",
+      "feedbackTitle": "Feedback",
+      "feedbackNone": "No ratings yet. Customers can rate after handover.",
+      "average": "{average} out of 5 from {count, plural, one {# rating} other {# ratings}}",
+      "stars": "{rating} out of 5",
+      "noComment": "No comment",
+      "referralsTitle": "Referrals",
+      "referralsBody": "People they referred to OneOhm.",
+      "referralsNone": "No referrals yet.",
+      "stages": {
+        "new": "New",
+        "contacted": "Contacted",
+        "survey_scheduled": "Survey booked",
+        "quoted": "Quoted",
+        "won": "Won",
+        "lost": "Lost"
+      },
+      "becameCustomer": "Now a customer"
     }
   }
 }

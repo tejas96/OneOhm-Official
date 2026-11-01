@@ -19,15 +19,22 @@ import { PAYMENTS } from '@/copy/money';
 import { ProjectSwitcher } from '@/features/home/project-switcher';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { dialDigits, percentPaid } from '@/lib/journey';
+import { BillingSection } from './billing-section';
 import { MilestoneRow } from './milestone-row';
+import { useBilling } from './use-billing';
 
 /** What the project costs, what is paid, what is due, and how to pay. */
 export function PaymentsScreen() {
   const theme = useTheme();
   const query = useHome();
+  const billing = useBilling();
   const { project, choose } = useChosenProject(query.data?.projects);
+  const refresh = () => {
+    void query.refetch();
+    void billing.refetch();
+  };
   return (
-    <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <Screen refreshing={query.isRefetching || billing.isRefetching} onRefresh={refresh}>
       <Text variant="displayLg" style={styles.title}>
         {PAYMENTS.title}
       </Text>
@@ -58,6 +65,7 @@ export function PaymentsScreen() {
               ))}
             </Card>
           </View>
+          <BillingSection projectId={project.id} />
           <HowToPay home={query.data} project={project} />
           {project.subsidy.status !== 'not_applicable' && project.subsidy.amountPaise > 0 ? (
             <Text variant="bodySm" tone="tertiary">

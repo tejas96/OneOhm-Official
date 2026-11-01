@@ -51,6 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-secure-store',
     ['expo-notifications', { color: '#0B6FA4', defaultChannel: 'default' }],
+    'expo-sharing',
     [
       'expo-location',
       {

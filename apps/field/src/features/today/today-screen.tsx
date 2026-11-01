@@ -21,6 +21,7 @@ import { Bell } from '@/features/alerts/bell';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { TaskRow } from '@/features/tasks/task-row';
+import { PendingUploadsCard } from '@/features/uploads/pending-uploads-card';
 import { BUSINESS_TIME_ZONE, businessToday, longToday } from '@/lib/dates';
 import { useCurrentUser } from '@/session/session-provider';
 import { groupTasks, onTimeShare, TASK_GROUPS } from '../tasks/task-groups';
@@ -67,6 +68,7 @@ export function TodayScreen() {
       </View>
 
       {workday.data ? <AttendanceCard workday={workday.data} /> : null}
+      <PendingUploadsCard />
       {query.isPending ? <LoadingState label={TODAY.loading} /> : null}
       {query.isError ? (
         <ErrorState

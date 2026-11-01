@@ -1,13 +1,14 @@
 'use client';
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
-import { Badge, Button, cn, type PillTone, StatusPill } from '@oneohm/design-system/web';
+import { Badge, Button, type PillTone, StatusPill } from '@oneohm/design-system/web';
 import { formatInr, formatInrCompact } from '@oneohm/shared';
 import { IndianRupee } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PaymentLinkAction } from '@/features/finance/payment-link-action';
 import { useCan } from '@/providers/current-user';
+import { PaymentHistory } from './payment-history';
 import { RecordPaymentDialog } from './record-payment-dialog';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -22,8 +23,6 @@ const STATUS_TONE: Readonly<Record<Milestone['status'], PillTone>> = {
 /** The payment schedule (25 / 65 / 10 and the bank's share), what came in, and recording more. */
 export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
   const t = useTranslations('projects.money');
-  const methodT = useTranslations('projects.money.methods');
-  const format = useFormatter();
   const canRecord = useCan('finance.record_payments');
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
@@ -88,34 +87,7 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
           </li>
         ))}
       </ul>
-      {project.payments.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="type-overline text-on-panel-muted uppercase">{t('received')}</p>
-          <ul className="flex flex-col divide-y divide-on-panel/12">
-            {project.payments.map((payment) => (
-              <li key={payment.id} className="flex items-center justify-between gap-3 py-2">
-                <span className="flex min-w-0 flex-col">
-                  <span className="type-body-sm text-on-panel">
-                    {format.dateTime(new Date(payment.receivedOn), {
-                      day: 'numeric',
-                      month: 'short',
-                    })}{' '}
-                    · {methodT(payment.method)}
-                  </span>
-                  {payment.reference && (
-                    <span className="truncate font-mono text-[0.6875rem] text-on-panel-muted">
-                      {payment.reference}
-                    </span>
-                  )}
-                </span>
-                <span className={cn('type-body-sm font-medium text-on-panel tabular-nums')}>
-                  {formatInr(payment.amountPaise)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <PaymentHistory project={project} />
       {canRecord && (
         <RecordPaymentDialog
           key={session}

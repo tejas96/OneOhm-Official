@@ -1,7 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { projectActivities, projectFacts, projectTasks } from '@oneohm/database';
-import { factLabel, type WaitingParty } from '@oneohm/domain';
+import { factLabel, measurementsFor, type WaitingParty } from '@oneohm/domain';
 import { and, eq, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
@@ -10,6 +10,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked } from './task-guards';
@@ -25,7 +26,22 @@ const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
 
 @Injectable()
 export class TasksService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  private readonly log = new Logger('Tasks');
+
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly budget: BudgetCheckService,
+  ) {}
+
+  /** A finished survey re-prices the quote; a pricing problem never undoes the task. */
+  private async afterFinish(actor: Actor, task: { projectId: string; captures: string[] }) {
+    if (!task.captures.some((key) => SURVEY_FACTS.includes(key))) return;
+    try {
+      await this.budget.afterSurvey(actor, task.projectId);
+    } catch (error) {
+      this.log.error(`Budget check failed for ${task.projectId}: ${String(error)}`);
+    }
+  }
 
   /** What the person should do: their open tasks, soonest first. */
   async mine(actor: Actor): Promise<ProjectTask[]> {
@@ -109,14 +125,17 @@ export class TasksService {
       .select({ key: projectFacts.key })
       .from(projectFacts)
       .where(eq(projectFacts.projectId, task.projectId));
-    const missing = missingCaptures(task.captures, facts, new Set(known.map((fact) => fact.key)));
+    const knownKeys = new Set(known.map((fact) => fact.key));
+    // Measurements are facts too: one message names every empty field at once.
+    const fields = [...new Set([...task.captures, ...measurementsFor(task)])];
+    const missing = missingCaptures(fields, facts, knownKeys);
     if (missing.length > 0) {
       throw invalid(
         'Add the details this task records before completing it.',
         Object.fromEntries(missing.map((key) => [key, `${factLabel(key)} is required.`])),
       );
     }
-    await assertEvidence(this.db, id, task.evidence);
+    await assertEvidence(this.db, task, facts, knownKeys);
     await this.db.transaction(async (tx) => {
       for (const [key, value] of Object.entries(facts)) {
         if (!value.trim()) continue;
@@ -149,6 +168,7 @@ export class TasksService {
         facts: Object.keys(facts),
       });
     });
+    if (!task.approval || can(actor, 'tasks.approve')) await this.afterFinish(actor, task);
     return this.present(id);
   }
 
@@ -171,6 +191,7 @@ export class TasksService {
       await finishTask(tx, task, actor.userId);
       await tellApproved(tx, task, actor.userId);
     });
+    await this.afterFinish(actor, task);
     return this.present(id);
   }
 

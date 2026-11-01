@@ -1,4 +1,5 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
+import { CHECKLIST_TICKED } from '@oneohm/domain';
 import {
   Card,
   describeError,
@@ -21,7 +22,11 @@ import { ScreenHeader } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
 import { shortDate } from '@/lib/dates';
-import { EvidenceSection } from './evidence-section';
+import { ChecklistCard } from './evidence/checklist-card';
+import { completionFacts } from './evidence/evidence-rules';
+import { EvidenceSection } from './evidence/evidence-section';
+import { SignatureCard } from './evidence/signature-card';
+import { useEvidence } from './evidence/use-evidence';
 import { FactsForm } from './facts-form';
 import { TaskFooter } from './task-footer';
 import { statusLabel, toneOf } from './task-row';
@@ -57,8 +62,18 @@ export function TaskScreen() {
 function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const theme = useTheme();
   const actions = useTaskActions(task);
+  const evidence = useEvidence(task);
   const [facts, setFacts] = useState<Record<string, string>>(() => ({ ...task.knownFacts }));
-  const [uploading, setUploading] = useState(false);
+  const [ticked, setTicked] = useState<ReadonlySet<string>>(
+    () => new Set(task.checklist.filter((item) => item.done).map((item) => item.key)),
+  );
+  const toggle = (key: string) =>
+    setTicked((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const [note, setNote] = useState('');
   const [waiting, setWaiting] = useState(false);
   const blocked = task.blockedBy.length > 0;
@@ -74,9 +89,9 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
     <TaskFooter
       task={task}
       actions={actions}
-      facts={facts}
+      facts={completionFacts(facts, ticked, CHECKLIST_TICKED)}
       note={note}
-      uploading={uploading}
+      uploading={evidence.uploading}
       onWaiting={() => setWaiting(true)}
     />
   );
@@ -139,7 +154,9 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
           onNote={setNote}
         />
       ) : null}
-      <EvidenceSection task={task} onBusyChange={setUploading} />
+      <ChecklistCard task={task} ticked={ticked} onToggle={toggle} />
+      <EvidenceSection task={task} evidence={evidence} />
+      <SignatureCard task={task} evidence={evidence} />
       <WaitingSheet
         open={waiting}
         pending={actions.wait.isPending}

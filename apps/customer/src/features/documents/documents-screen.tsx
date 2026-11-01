@@ -14,7 +14,8 @@ import { SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { DOCUMENTS } from '@/copy/money';
 import { useHome } from '@/features/home/use-home';
-import { momentDate } from '@/lib/dates';
+import { useBilling } from '@/features/payments/use-billing';
+import { longDate, momentDate } from '@/lib/dates';
 import { FileRow } from './file-row';
 
 /** The quotation, the agreements and reports that are ready, and the papers OneOhm shared. */
@@ -28,8 +29,15 @@ export function DocumentsScreen() {
     queryKey: keys.documents,
     queryFn: () => unwrap(api.customer.listDocuments()),
   });
+  const billing = useBilling();
   const failed = home.error ?? reports.error ?? files.error;
+  const invoices = (billing.data ?? []).flatMap((entry) =>
+    entry.invoices
+      .filter((invoice) => invoice.status === 'issued')
+      .map((invoice) => ({ ...invoice, projectCode: entry.projectCode })),
+  );
   const refresh = () => {
+    void billing.refetch();
     void home.refetch();
     void reports.refetch();
     void files.refetch();
@@ -65,6 +73,27 @@ export function DocumentsScreen() {
               file={{
                 path: `/v1/customer/quotations/${project.quotation.id}/pdf`,
                 fileName: `${project.quotation.number}.pdf`,
+                mimeType: 'application/pdf',
+              }}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {invoices.length > 0 ? (
+        <Section title={DOCUMENTS.invoiceTitle}>
+          {invoices.map((invoice, index) => (
+            <FileRow
+              key={invoice.id}
+              first={index === 0}
+              title={invoice.number}
+              meta={DOCUMENTS.invoiceBody(
+                longDate(invoice.invoiceDate),
+                many ? invoice.projectCode : null,
+              )}
+              file={{
+                path: `/v1/customer/invoices/${invoice.id}/pdf`,
+                fileName: `${invoice.number.replaceAll('/', '-')}.pdf`,
                 mimeType: 'application/pdf',
               }}
             />

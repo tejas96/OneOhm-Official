@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReceivedPayment } from '@oneohm/api-contracts';
 import {
+  customerRefunds,
   loanTranches,
   paymentMilestones,
   payments,
@@ -19,7 +20,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { PaymentsReadService } from './payments-read.service';
 
 /** The milestone's status follows what is now paid against it. */
-async function reopenMilestone(tx: Transaction, milestoneId: string) {
+export async function reopenMilestone(tx: Transaction, milestoneId: string) {
   const [milestone] = await tx
     .select()
     .from(paymentMilestones)
@@ -96,6 +97,8 @@ export class PaymentReversalService {
         .limit(1);
       if (!original) throw notFound('That payment');
       if (original.reversesPaymentId) throw conflict('A reversal cannot itself be reversed.');
+      if (original.amountPaise < 0) throw conflict('A refund is not reversed here.');
+      await this.refuseIfRefunded(tx, original.milestoneId);
       const [already] = await tx
         .select({ id: payments.id })
         .from(payments)
@@ -116,6 +119,7 @@ export class PaymentReversalService {
           recordedByUserId: actor.userId,
           reversesPaymentId: original.id,
           reversalReason: reason,
+          paidFromCredit: original.paidFromCredit,
         })
         .returning({ id: payments.id });
       if (!reversal) throw new Error('Reversal insert returned nothing.');
@@ -140,5 +144,18 @@ export class PaymentReversalService {
       return reversal.id;
     });
     return this.read.get(id);
+  }
+
+  /** After a refund of milestone money, reversing the original would count it twice. */
+  private async refuseIfRefunded(tx: Transaction, milestoneId: string | null): Promise<void> {
+    if (!milestoneId) return;
+    const [refund] = await tx
+      .select({ id: customerRefunds.id })
+      .from(customerRefunds)
+      .where(eq(customerRefunds.milestoneId, milestoneId))
+      .limit(1);
+    if (refund) {
+      throw conflict('Money on this milestone was refunded, so its payments cannot be reversed.');
+    }
   }
 }

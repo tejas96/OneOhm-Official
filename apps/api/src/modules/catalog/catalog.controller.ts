@@ -5,12 +5,16 @@ import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import { CatalogService } from './catalog.service';
 import { CatalogAdminService } from './catalog-admin.service';
+import { SubsidyImpactService } from './subsidy-impact.service';
+import { SubsidyRulesService } from './subsidy-rules.service';
 
 @Controller()
 export class CatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly admin: CatalogAdminService,
+    private readonly subsidy: SubsidyRulesService,
+    private readonly impact: SubsidyImpactService,
   ) {}
 
   @TsRestHandler(apiContract.catalog)
@@ -48,7 +52,24 @@ export class CatalogController {
         assertCan(actor, 'settings.manage');
         return { status: 200, body: await this.admin.updateRateCard(actor, body) };
       },
-      listSubsidyRules: async () => ({ status: 200, body: await this.admin.subsidyRules() }),
+      listSubsidyRules: async () => ({ status: 200, body: await this.subsidy.list() }),
+      createSubsidyRule: async ({ body }) => {
+        assertCan(actor, 'settings.manage');
+        return { status: 201, body: await this.subsidy.create(actor, body) };
+      },
+      updateSubsidyRule: async ({ params, body }) => {
+        assertCan(actor, 'settings.manage');
+        return { status: 200, body: await this.subsidy.update(actor, params.id, body) };
+      },
+      deleteSubsidyRule: async ({ params }) => {
+        assertCan(actor, 'settings.manage');
+        await this.subsidy.remove(actor, params.id);
+        return { status: 204, body: undefined };
+      },
+      subsidyRuleImpact: async ({ query }) => {
+        assertCan(actor, 'settings.manage');
+        return { status: 200, body: await this.impact.impact(query.asOf) };
+      },
       getCompany: async () => ({ status: 200, body: await this.catalog.company() }),
       updateCompany: async ({ body }) => {
         assertCan(actor, 'settings.manage');

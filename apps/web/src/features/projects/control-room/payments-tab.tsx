@@ -4,6 +4,8 @@ import type { ProjectDetail } from '@oneohm/api-contracts';
 import { Card, CardHeader, cn } from '@oneohm/design-system/web';
 import { formatInr } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
+import { CreditCard } from '@/features/finance/billing/credit-card';
+import { InvoiceCard } from '@/features/finance/billing/invoice-card';
 import { PaymentPanel } from './payment-panel';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -48,24 +50,33 @@ export function PaymentsTab({ project }: { readonly project: ProjectDetail }) {
   const bank = milestones.filter((milestone) => milestone.payer === 'bank');
 
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <PaymentPanel project={project} />
-      <Card>
-        <CardHeader title={t('positionTitle')} description={t('positionBody')} />
-        <dl className="flex flex-col divide-y divide-hairline border-t border-hairline">
-          <Row
-            label={t('scheduled')}
-            paise={sum(milestones, (milestone) => milestone.amountPaise)}
-          />
-          <Row label={t('received')} paise={sum(milestones, (milestone) => milestone.paidPaise)} />
-          <Row label={t('dueNow')} paise={sum(dueNow, left)} tone="due" />
-          <Row label={t('later')} paise={sum(later, left)} />
-          {bank.length > 0 && (
-            <Row label={t('bankShare')} paise={sum(bank, (milestone) => milestone.amountPaise)} />
-          )}
-          <Row label={t('subsidy')} paise={project.quotation.subsidyPaise} tone="muted" />
-        </dl>
-      </Card>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <PaymentPanel project={project} />
+        <Card>
+          <CardHeader title={t('positionTitle')} description={t('positionBody')} />
+          <dl className="flex flex-col divide-y divide-hairline border-t border-hairline">
+            <Row
+              label={t('scheduled')}
+              paise={sum(milestones, (milestone) => milestone.amountPaise)}
+            />
+            <Row
+              label={t('received')}
+              paise={sum(milestones, (milestone) => milestone.paidPaise)}
+            />
+            <Row label={t('dueNow')} paise={sum(dueNow, left)} tone="due" />
+            <Row label={t('later')} paise={sum(later, left)} />
+            {bank.length > 0 && (
+              <Row label={t('bankShare')} paise={sum(bank, (milestone) => milestone.amountPaise)} />
+            )}
+            <Row label={t('subsidy')} paise={project.quotation.subsidyPaise} tone="muted" />
+          </dl>
+        </Card>
+      </div>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <InvoiceCard projectId={project.id} customerName={project.customer.name} />
+        <CreditCard project={project} />
+      </div>
     </div>
   );
 }

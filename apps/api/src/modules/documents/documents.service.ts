@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { type DocumentRecord, uploadFieldsSchema } from '@oneohm/api-contracts';
 import { documents, projectTasks } from '@oneohm/database';
+import { COMPANY_ASSET_FILE_TYPES, SIGNATURE_CATEGORY } from '@oneohm/domain';
 import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -64,7 +65,12 @@ export class DocumentsService {
     if (!canAttach(actor, links.taskAssigneeId)) {
       throw forbidden('Only the person doing this task or the office can add files to it.');
     }
-    const checked = checkFile(file, undefined, fields.name);
+    // A sign-off is drawn on a task and printed on PDFs later: a task's PNG, JPEG or WebP.
+    const signature = fields.category === SIGNATURE_CATEGORY;
+    if (signature && !links.taskId) {
+      throw invalid('A customer signature belongs to a task.', { taskId: 'Required.' });
+    }
+    const checked = checkFile(file, signature ? COMPANY_ASSET_FILE_TYPES : undefined, fields.name);
     const storageKey = `${storageScope(links)}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     const id = await this.db.transaction(async (tx) => {

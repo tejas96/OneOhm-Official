@@ -20,6 +20,8 @@ export const customers = pgTable(
     name: text('name').notNull(),
     phoneE164: text('phone_e164').notNull(),
     email: text('email'),
+    /** The customer's GSTIN, for businesses and societies that have one (printed on invoices). */
+    gstin: text('gstin'),
     whatsappOptIn: boolean('whatsapp_opt_in').notNull().default(true),
     preferredLanguage: text('preferred_language').notNull().default('en-IN'),
     createdByUserId: uuid('created_by_user_id').references(() => users.id, {

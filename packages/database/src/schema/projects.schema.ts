@@ -54,6 +54,16 @@ export const projects = pgTable(
     nameChange: boolean('name_change').notNull().default(false),
     managerUserId: uuid('manager_user_id').references(() => users.id, { onDelete: 'set null' }),
     startDate: calendarDate('start_date').notNull(),
+    /**
+     * The budget after the site survey (PRD 3.5, Flow A): awaiting_survey, locked,
+     * revision_needed while a re-priced revision waits for approval and the customer, or
+     * revised once the customer accepted it (also locked).
+     */
+    budgetStatus: text('budget_status').notNull().default('awaiting_survey'),
+    surveyVariancePaise: money('survey_variance_paise'),
+    surveyVarianceBp: integer('survey_variance_bp'),
+    budgetLockedAt: instant('budget_locked_at'),
+    revisionQuotationId: uuid('revision_quotation_id'),
     operationalAt: instant('operational_at'),
     financiallyClosedAt: instant('financially_closed_at'),
     version: version(),

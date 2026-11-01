@@ -12,7 +12,8 @@
       "workforce": "Workforce",
       "tasks": "Task templates",
       "messages": "WhatsApp messages",
-      "activity": "Activity log"
+      "activity": "Activity log",
+      "payments": "Payment terms"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -336,7 +337,7 @@
     "subsidy": {
       "loading": "Loading subsidy rules",
       "title": "Subsidy rules",
-      "intro": "PM Surya Ghar central financial assistance as the price engine applies it. A new rule with a later start date replaces the old one.",
+      "intro": "PM Surya Ghar central financial assistance as the price engine applies it. A change is a new version from a start date; versions already in force stay as history, and accepted quotations keep the subsidy they were accepted with.",
       "validFrom": "From {date}",
       "categories": {
         "individual": "Homes",
@@ -349,7 +350,70 @@
       "cap": "Capped at {amount}",
       "perHousehold": "Up to {capacity} per household",
       "maxEligible": "Eligible capacity at most {capacity}",
-      "none": "No subsidy"
+      "none": "No subsidy",
+      "add": "Add rule version",
+      "check": "Check open quotations",
+      "inForceSince": "In force since {date}",
+      "startsOn": "Starts {date}",
+      "noneInForce": "No rule in force yet.",
+      "earlier": "{count, plural, one {# earlier version} other {# earlier versions}}",
+      "edit": "Edit",
+      "withdraw": "Withdraw",
+      "affected": "Open quotations",
+      "form": {
+        "createTitle": "New subsidy rule version",
+        "editTitle": "Edit scheduled version",
+        "intro": "The price engine uses the newest version that has started. Until this one starts you can still change or withdraw it.",
+        "category": "Customer category",
+        "validFrom": "Starts on",
+        "validFromHint": "Today or later. Earlier dates are history.",
+        "slabs": "Slabs",
+        "slabsHint": "Each slab pays its amount for every kW inside it. Leave the last slab's end empty for no upper limit.",
+        "slabFrom": "From {from}",
+        "upTo": "Up to (kW)",
+        "noLimit": "No limit",
+        "rate": "Per kW",
+        "slabLabel": "Slab {number}",
+        "removeSlab": "Remove slab {number}",
+        "addSlab": "Add a slab",
+        "noSlabs": "No slabs: customers in this category get no subsidy.",
+        "cap": "Most a customer can get",
+        "perHousehold": "Per household (kW)",
+        "perHouseholdHint": "Eligible capacity is at most this for each home in the society.",
+        "maxEligible": "Most eligible capacity (kW)",
+        "maxEligibleHint": "Leave empty for no limit.",
+        "cancel": "Cancel",
+        "save": "Save version",
+        "saved": "{category} rule saved. It applies from {date}."
+      },
+      "withdrawDialog": {
+        "title": "Withdraw this version?",
+        "body": "The {category} rule starting {date} has not come into force, so no quotation has used it. The rule in force now stays.",
+        "confirm": "Withdraw version",
+        "cancel": "Keep it",
+        "done": "Version withdrawn"
+      },
+      "impact": {
+        "title": "Open quotations to review",
+        "asOf": "Under the rules in force on {date}",
+        "loading": "Pricing open quotations",
+        "summary": "{checked, plural, =0 {There are no draft or sent quotations to check.} one {Checked # draft or sent quotation:} other {Checked # draft or sent quotations:}} {changed, plural, =0 {none would change.} one {# would change.} other {# would change.}}",
+        "note": "Each one is priced afresh and compared with the subsidy it saved. Nothing is changed here: revise a quotation to update it. Accepted quotations always keep their subsidy.",
+        "noneTitle": "No open quotation changes",
+        "noneBody": "Every draft and sent quotation keeps the same expected subsidy under these rules.",
+        "columns": {
+          "quotation": "Quotation",
+          "subsidy": "Expected subsidy",
+          "effective": "Customer pays",
+          "validUntil": "Valid until"
+        },
+        "was": "was {amount}",
+        "statuses": {
+          "draft": "Draft",
+          "sent": "Sent"
+        },
+        "done": "Done"
+      }
     },
     "workforce": {
       "title": "Workforce rules",
@@ -637,6 +701,42 @@
         "otp": "Code (field app)",
         "customer_otp": "Code (customer app)"
       }
+    },
+    "paymentPlans": {
+      "title": "Payment terms",
+      "intro": "How customers pay across a project: each payment is a share of the price and falls due at an event. New projects use the default unless someone picks another plan. Projects already created keep their amounts.",
+      "add": "Add terms",
+      "loading": "Loading payment terms",
+      "default": "Default",
+      "off": "Not offered",
+      "edit": "Edit",
+      "makeDefault": "Make default",
+      "nowDefault": "{name} is now the default.",
+      "createTitle": "New payment terms",
+      "editTitle": "Edit payment terms",
+      "dialogHint": "The shares must make 100%. A bank loan's share is always added as its own payment.",
+      "create": "Add terms",
+      "saved": "{name} saved.",
+      "name": "Name",
+      "stepLabel": "Payment, e.g. Advance",
+      "stepShare": "Share (%)",
+      "stepTrigger": "Falls due",
+      "removeStep": "Remove this payment",
+      "addStep": "Add a payment",
+      "total": "Total {percent}%",
+      "active": "Offer these terms on new projects",
+      "triggers": {
+        "quotation_accepted": "When the quotation is accepted",
+        "material_dispatch": "When material is dispatched",
+        "commissioning_completed": "After commissioning"
+      }
+    },
+    "sectionLabel": "Settings section",
+    "groups": {
+      "organisation": "Organisation",
+      "selling": "Selling and pricing",
+      "operations": "Projects and messages",
+      "security": "Security"
     }
   }
 }

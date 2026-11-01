@@ -4,7 +4,8 @@ import { FileText, ImageIcon, RotateCw, X } from 'lucide-react-native';
 import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 import { API_BASE_URL, currentToken } from '@/api/api';
 import { TASK } from '@/copy/tasks';
-import type { PendingPhoto } from './use-evidence';
+import type { QueuedUpload } from '@/features/uploads/queue-logic';
+import { previewUri } from '@/features/uploads/upload-store';
 
 const SIZE = 96;
 
@@ -52,7 +53,7 @@ export function AttachmentTile({
           <PressableScale
             onPress={onRemove}
             accessibilityRole="button"
-            accessibilityLabel={`${TASK.evidence.remove}: ${file.name}`}
+            accessibilityLabel={`${image ? TASK.evidence.remove : TASK.evidence.removeFile}: ${file.name}`}
             style={[styles.cornerButton, { backgroundColor: theme.colors.surfaceRaised }]}
           >
             {removing ? (
@@ -67,63 +68,75 @@ export function AttachmentTile({
   );
 }
 
-/** A photo picked on this phone: its thumbnail with upload progress, or a retry. */
+/**
+ * A file kept on this phone: its thumbnail with upload progress, "waiting" while it
+ * has no signal, or a retry when it was refused.
+ */
 export function PendingTile({
-  photo,
+  item,
+  progress,
   onRetry,
   onDiscard,
 }: {
-  readonly photo: PendingPhoto;
+  readonly item: QueuedUpload;
+  readonly progress: number | undefined;
   readonly onRetry: () => void;
   readonly onDiscard: () => void;
 }) {
   const theme = useTheme();
-  const failed = photo.error !== null;
-  const percent = Math.round(photo.progress * 100);
+  const failed = item.error !== null;
+  const sending = progress !== undefined;
+  const percent = Math.round((progress ?? 0) * 100);
+  const image = item.type.startsWith('image/');
   return (
     <View style={[styles.tile, { backgroundColor: theme.colors.surfaceSunken }]}>
-      <Image source={{ uri: photo.file.uri }} style={[styles.image, styles.dim]} />
+      {image ? (
+        <Image source={{ uri: previewUri(item) }} style={[styles.image, styles.dim]} />
+      ) : (
+        <View style={styles.placeholder}>
+          <FileText size={22} color={theme.colors.textSecondary} />
+          <Text variant="label" tone="secondary" numberOfLines={2} style={styles.name}>
+            {item.name}
+          </Text>
+        </View>
+      )}
       <View
         style={[
           styles.overlay,
-          { backgroundColor: failed ? theme.status.overdue.tint : 'transparent' },
+          {
+            // No signal is not a fault: the waiting tone; a refused file is red.
+            backgroundColor:
+              failed && !sending
+                ? theme.status[item.autoRetry ? 'waiting' : 'overdue'].tint
+                : 'transparent',
+          },
         ]}
       >
-        {failed ? (
-          <PressableScale
-            onPress={onRetry}
-            accessibilityRole="button"
-            accessibilityLabel={
-              photo.autoRetry
-                ? `${TASK.evidence.retrying} ${TASK.evidence.retryNow}`
-                : `${TASK.evidence.retry}: ${photo.error}`
-            }
-            style={styles.retry}
-          >
-            <RotateCw size={18} color={theme.status.overdue.fg} />
-            <Text variant="label" color={theme.status.overdue.fg}>
-              {photo.autoRetry ? TASK.evidence.retryNow : TASK.evidence.retry}
-            </Text>
-          </PressableScale>
+        {failed && !sending ? (
+          <FailedBadge item={item} onRetry={onRetry} />
         ) : (
-          <Text variant="label" color={theme.colors.textPrimary} style={styles.badge}>
-            {TASK.evidence.uploading(percent)}
+          <Text
+            variant="label"
+            color={theme.colors.textPrimary}
+            style={[styles.badge, { backgroundColor: theme.colors.surfaceRaised }]}
+          >
+            {sending ? TASK.evidence.uploading(percent) : TASK.evidence.queued}
           </Text>
         )}
       </View>
-      {failed ? null : (
+      {sending ? (
         <View style={[styles.bar, { backgroundColor: theme.colors.borderSubtle }]}>
           <View
             style={[styles.fill, { width: `${percent}%`, backgroundColor: theme.colors.accent }]}
           />
         </View>
-      )}
-      {failed ? (
+      ) : null}
+      {failed && !sending ? (
         <View style={styles.corner}>
           <PressableScale
             onPress={onDiscard}
             accessibilityRole="button"
-            accessibilityLabel={TASK.evidence.remove}
+            accessibilityLabel={`${TASK.evidence.removeFile}: ${item.name}`}
             style={[styles.cornerButton, { backgroundColor: theme.colors.surfaceRaised }]}
           >
             <X size={14} color={theme.colors.textPrimary} />
@@ -131,6 +144,34 @@ export function PendingTile({
         </View>
       ) : null}
     </View>
+  );
+}
+
+function FailedBadge({
+  item,
+  onRetry,
+}: {
+  readonly item: QueuedUpload;
+  readonly onRetry: () => void;
+}) {
+  const theme = useTheme();
+  const tone = theme.status[item.autoRetry ? 'waiting' : 'overdue'];
+  return (
+    <PressableScale
+      onPress={onRetry}
+      accessibilityRole="button"
+      accessibilityLabel={
+        item.autoRetry
+          ? `${TASK.evidence.retrying} ${TASK.evidence.retryNow}`
+          : `${TASK.evidence.retry}: ${item.error}`
+      }
+      style={styles.retry}
+    >
+      <RotateCw size={18} color={tone.fg} />
+      <Text variant="label" color={tone.fg}>
+        {item.autoRetry ? TASK.evidence.retryNow : TASK.evidence.retry}
+      </Text>
+    </PressableScale>
   );
 }
 

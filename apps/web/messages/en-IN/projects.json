@@ -187,7 +187,19 @@
       "approvalNotice": "This task needs a manager's approval. It goes to review when you submit.",
       "cancel": "Cancel",
       "submit": "Mark complete",
-      "submitReview": "Send for approval"
+      "submitReview": "Send for approval",
+      "checklist": "Checklist",
+      "signature": {
+        "title": "Customer signature",
+        "area": "Signature area: sign with a finger, pen or mouse",
+        "needed": "Signature needed",
+        "signed": "Signed",
+        "clear": "Clear",
+        "save": "Save signature",
+        "replace": "Save a new signature",
+        "saved": "Signature saved.",
+        "failed": "The signature could not be saved."
+      }
     },
     "evidence": {
       "photo": "Photos",
@@ -246,7 +258,8 @@
       "referenceHint": "UTR, cheque number or receipt number.",
       "cancel": "Cancel",
       "recordSubmit": "Record payment",
-      "recorded": "Payment recorded"
+      "recorded": "Payment recorded",
+      "refundVia": "Refund · {method}"
     },
     "reports": {
       "title": "Statutory reports",
@@ -349,6 +362,24 @@
         "site": "Site",
         "system": "System",
         "quotation": "Quotation"
+      },
+      "budget": {
+        "title": "Budget",
+        "status": {
+          "awaiting_survey": "Waiting for survey",
+          "locked": "Locked",
+          "revision_needed": "Revision needed",
+          "revised": "Locked after revision"
+        },
+        "explain": {
+          "awaiting_survey": "The price is checked again when the site survey records its measurements.",
+          "locked": "The survey confirmed the price within the tolerance band. The customer saw no change.",
+          "revision_needed": "The survey moved the price beyond the tolerance band. Approve and send the revision; the budget locks when the customer accepts it.",
+          "revised": "The survey changed the price beyond the tolerance band. The customer accepted the revised quotation, and the budget is locked on it."
+        },
+        "variance": "Survey difference",
+        "lockedOn": "Locked on {date}",
+        "openRevision": "Open the revision"
       }
     }
   }

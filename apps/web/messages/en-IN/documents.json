@@ -34,7 +34,8 @@
       "commissioning_handover": "Commissioning and handover",
       "warranty": "Warranty and manuals",
       "statutory_report": "Statutory report",
-      "other": "Other"
+      "other": "Other",
+      "customer_signature": "Customer signature"
     },
     "evidence": {
       "title": "Photos and files",

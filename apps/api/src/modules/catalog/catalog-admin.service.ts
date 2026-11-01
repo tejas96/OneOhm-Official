@@ -6,15 +6,8 @@ import type {
   ProductInput,
   RateCardSettings,
   RateCardValues,
-  SubsidyRuleView,
 } from '@oneohm/api-contracts';
-import {
-  discoms,
-  products,
-  rateCards,
-  STARTER_RATE_CARD_NAME,
-  subsidyRules,
-} from '@oneohm/database';
+import { discoms, products, rateCards, STARTER_RATE_CARD_NAME } from '@oneohm/database';
 import type { RateCard } from '@oneohm/domain';
 import { and, asc, desc, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -33,8 +26,9 @@ const withoutStamps = <T extends { createdAt: Date; updatedAt: Date }>({
 }: T) => row;
 
 /**
- * Settings → Catalog & rates: products, DISCOMs, the rate card and subsidy rules
- * (PRD 3.9, 7.2). Every change is audited; accepted quotations keep their own snapshot.
+ * Settings → Catalog & rates: products, DISCOMs and the rate card (PRD 3.9, 7.2); subsidy
+ * rules have their own service. Every change is audited; accepted quotations keep their
+ * own snapshot.
  */
 @Injectable()
 export class CatalogAdminService {
@@ -143,17 +137,6 @@ export class CatalogAdminService {
       ...rates,
     });
     return this.rateCard();
-  }
-
-  async subsidyRules(): Promise<SubsidyRuleView[]> {
-    const rows = await this.db
-      .select()
-      .from(subsidyRules)
-      .orderBy(asc(subsidyRules.category), desc(subsidyRules.validFrom));
-    return rows.map(({ createdAt: _created, ...row }) => ({
-      ...row,
-      slabs: row.slabs as SubsidyRuleView['slabs'],
-    }));
   }
 
   private async assertSkuFree(sku: string, exceptId?: string): Promise<void> {

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tax invoice {{number}}</title>
+  </head>
+  <body>
+    <header class="q-head">
+      <div class="q-brand">
+        <img class="q-logo" src="{{logo}}" alt="{{seller.brand}}" />
+        <p><strong>{{seller.name}}</strong></p>
+        <p class="q-muted">{{seller.address}}</p>
+        <p class="q-muted">GSTIN {{seller.gstin}} · State {{seller.state}}</p>
+        <p class="q-muted">{{seller.email}} · {{seller.phones}}</p>
+      </div>
+      <div class="q-meta">
+        <p class="q-overline">Tax invoice</p>
+        <p class="q-number">{{number}}</p>
+        <dl>
+          <div class="q-row"><dt>Date</dt><dd>{{date}}</dd></div>
+          <div class="q-row"><dt>Project</dt><dd>{{project}}</dd></div>
+          <div class="q-row"><dt>Quotation</dt><dd>{{quotation}}</dd></div>
+        </dl>
+      </div>
+    </header>
+    <div class="q-rule"></div>
+    {{#if cancelled}}<p class="r-cancelled">{{cancelled}}</p>{{/if}}
+    {{#if replaces}}<p class="i-replaces">{{replaces}}</p>{{/if}}
+
+    <section class="i-parties">
+      <div>
+        <p class="q-overline">Billed to</p>
+        <p class="q-name">{{buyer.name}}</p>
+        <p>{{buyer.phone}}{{#if buyer.email}} · {{buyer.email}}{{/if}}</p>
+        <p class="q-muted">Site: {{buyer.address}}</p>
+        {{#if buyer.gstin}}<p>GSTIN {{buyer.gstin}}</p>{{else}}<p class="q-muted">Unregistered (no GSTIN)</p>{{/if}}
+      </div>
+      <div>
+        <p class="q-overline">Supply</p>
+        <dl class="i-facts">
+          <div class="q-row"><dt>Place of supply</dt><dd>{{placeOfSupply}}</dd></div>
+          <div class="q-row"><dt>Tax</dt><dd>{{supplyLabel}}</dd></div>
+          <div class="q-row"><dt>Reverse charge</dt><dd>No</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="q-section">
+      <table class="q-lines i-lines">
+        <thead>
+          <tr>
+            <th class="q-index">#</th>
+            <th>Item</th>
+            {{#if showCodes}}<th>HSN/SAC</th>{{/if}}
+            <th class="q-num">Qty</th>
+            <th class="q-num">Taxable ₹</th>
+            <th class="q-num">GST</th>
+            {{#if intra}}<th class="q-num">CGST ₹</th><th class="q-num">SGST ₹</th>{{else}}<th class="q-num">IGST ₹</th>{{/if}}
+            <th class="q-num">Amount ₹</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each lines}}
+          <tr>
+            <td class="q-index">{{index}}</td>
+            <td>{{description}}</td>
+            {{#if ../showCodes}}<td class="i-code">{{code}}</td>{{/if}}
+            <td class="q-num">{{quantity}}</td>
+            <td class="q-num">{{taxable}}</td>
+            <td class="q-num">{{rate}}</td>
+            {{#if ../intra}}<td class="q-num">{{cgst}}</td><td class="q-num">{{sgst}}</td>{{else}}<td class="q-num">{{igst}}</td>{{/if}}
+            <td class="q-num">{{total}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="i-bottom q-keep">
+      <div>
+        <p class="q-overline">Tax by rate</p>
+        <table class="i-rates">
+          <thead>
+            <tr>
+              <th>GST</th>
+              <th class="q-num">Taxable ₹</th>
+              {{#if intra}}<th class="q-num">CGST ₹</th><th class="q-num">SGST ₹</th>{{else}}<th class="q-num">IGST ₹</th>{{/if}}
+              <th class="q-num">Tax ₹</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each rates}}
+            <tr>
+              <td>{{rate}}</td>
+              <td class="q-num">{{taxable}}</td>
+              {{#if ../intra}}<td class="q-num">{{cgst}}</td><td class="q-num">{{sgst}}</td>{{else}}<td class="q-num">{{igst}}</td>{{/if}}
+              <td class="q-num">{{tax}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        <div class="r-amount i-words">
+          <p class="q-overline">Amount in words</p>
+          <p class="r-words">{{amountInWords}}</p>
+        </div>
+      </div>
+      <dl class="q-totals i-totals">
+        {{#if totals.discount}}
+        <div class="q-row"><dt>Value of supply</dt><dd>{{totals.value}}</dd></div>
+        <div class="q-row"><dt>Discount</dt><dd>− {{totals.discount}}</dd></div>
+        {{/if}}
+        <div class="q-row"><dt>Taxable value</dt><dd>{{totals.taxable}}</dd></div>
+        {{#if intra}}
+        <div class="q-row"><dt>CGST</dt><dd>{{totals.cgst}}</dd></div>
+        <div class="q-row"><dt>SGST</dt><dd>{{totals.sgst}}</dd></div>
+        {{else}}
+        <div class="q-row"><dt>IGST</dt><dd>{{totals.igst}}</dd></div>
+        {{/if}}
+        <div class="q-row q-grand"><dt>Invoice total</dt><dd>{{totals.total}}</dd></div>
+      </dl>
+    </section>
+
+    <p class="q-note">Payments are collected in milestones as agreed in quotation {{quotation}}; each payment has its own receipt.{{#if subsidyNote}} {{subsidyNote}}{{/if}}</p>
+
+    <section class="q-sign i-sign q-keep">
+      <div>
+        <p class="q-muted">For {{seller.name}}</p>
+        <img class="q-stamp" src="{{stamp}}" alt="Signature and seal" />
+        <p class="q-name">{{#if seller.signatory}}{{seller.signatory}}, {{/if}}{{seller.designation}} <span class="q-muted i-role">· Authorised signatory</span></p>
+      </div>
+      <div class="q-accept">
+        <p class="q-muted">Certified that the particulars given above are true and correct. This invoice is generated by OneOhm and is valid with the seal above.</p>
+      </div>
+    </section>
+  </body>
+</html>

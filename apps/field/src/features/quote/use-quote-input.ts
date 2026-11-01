@@ -72,6 +72,7 @@ export function useQuotePreview(site: QuoteSite | null, form: QuoteForm) {
     panels,
     inverters,
     suggestedInverterId: suggested?.id ?? null,
+    input,
     ready: input !== null,
     preview,
   };

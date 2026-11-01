@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
 import { leads, quotationLines, quotations } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
-import { and, eq, inArray, like, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
@@ -13,7 +13,9 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { loadQuotationDetail } from './quotation-detail';
 import { leadForQuotation } from './quotation-lead';
+import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
+import { applyAcceptedRevision } from './revision-accept';
 
 @Injectable()
 export class QuotationsService {
@@ -24,37 +26,26 @@ export class QuotationsService {
     private readonly customers: CustomersService,
   ) {}
 
-  async create(actor: Actor, input: QuotationInput): Promise<QuotationDetail> {
+  /** `revisionOf` re-prices an accepted quotation (after the survey) under its number. */
+  async create(
+    actor: Actor,
+    input: QuotationInput,
+    revisionOf?: RevisionOf,
+  ): Promise<QuotationDetail> {
     const property = await this.customers.property(input.propertyId);
     const priced = await this.pricing.price(input);
     const company = await this.catalog.company();
     const today = todayIn();
     const id = await this.db.transaction(async (tx) => {
-      const [previous] = await tx
-        .select({ id: quotations.id, number: quotations.number, revision: quotations.revision })
-        .from(quotations)
-        .where(
-          and(
-            eq(quotations.propertyId, input.propertyId),
-            inArray(quotations.status, ['draft', 'sent']),
-          ),
-        )
-        .orderBy(sql`${quotations.revision} desc`)
-        .limit(1);
-      const number = previous?.number ?? (await this.nextNumber(tx, today));
-      if (previous)
-        await tx
-          .update(quotations)
-          .set({ status: 'superseded', updatedAt: new Date() })
-          .where(eq(quotations.id, previous.id));
+      const slot = await numberFor(tx, input.propertyId, today, revisionOf);
       const totals = priced.preview.totals;
       const leadId = await leadForQuotation(tx, input.leadId, property.customerId);
       const [created] = await tx
         .insert(quotations)
         .values({
-          number,
-          revision: (previous?.revision ?? 0) + 1,
-          previousQuotationId: previous?.id ?? null,
+          number: slot.number,
+          revision: slot.revision,
+          previousQuotationId: slot.previousId,
           leadId,
           customerId: property.customerId,
           propertyId: property.id,
@@ -126,7 +117,8 @@ export class QuotationsService {
           .set({ stage: 'quoted', updatedAt: new Date() })
           .where(and(eq(leads.id, leadId), ne(leads.stage, 'won')));
       await recordAudit(tx, actor.userId, 'quotation.created', 'quotation', created.id, {
-        number,
+        number: slot.number,
+        revisionOf: revisionOf?.id ?? null,
         totalPaise: totals.totalPaise,
       });
       return created.id;
@@ -207,6 +199,7 @@ export class QuotationsService {
           .update(leads)
           .set({ stage: 'won', wonAt: new Date(), updatedAt: new Date() })
           .where(eq(leads.id, quotation.input.leadId));
+      await applyAcceptedRevision(tx, id, quotation.totalPaise, actor.userId);
       await recordAudit(tx, actor.userId, 'quotation.accepted', 'quotation', id, {
         totalPaise: quotation.totalPaise,
       });
@@ -221,17 +214,5 @@ export class QuotationsService {
       .where(eq(quotations.id, id));
     await recordAudit(this.db, actor.userId, 'quotation.rejected', 'quotation', id, { reason });
     return this.get(id);
-  }
-
-  private async nextNumber(
-    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    today: string,
-  ): Promise<string> {
-    const prefix = `OH-Q-${today.slice(0, 4)}-`;
-    const [row] = await tx
-      .select({ count: sql<number>`count(distinct ${quotations.number})::int` })
-      .from(quotations)
-      .where(like(quotations.number, `${prefix}%`));
-    return `${prefix}${String((row?.count ?? 0) + 1).padStart(4, '0')}`;
   }
 }

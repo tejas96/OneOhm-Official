@@ -1,4 +1,4 @@
-import { COMPANY_ASSET_KINDS, DOCUMENT_CATEGORIES } from '@oneohm/domain';
+import { COMPANY_ASSET_KINDS, DOCUMENT_CATEGORIES, TASK_EVIDENCE_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { idSchema, instantSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
@@ -58,7 +58,8 @@ const optionalId = z
 
 export const uploadFieldsSchema = z
   .object({
-    category: documentCategorySchema,
+    /** A library folder, or `customer_signature` for a sign-off drawn on a task. */
+    category: z.enum([...DOCUMENT_CATEGORIES, ...TASK_EVIDENCE_CATEGORIES]),
     projectId: optionalId,
     taskId: optionalId,
     customerId: optionalId,

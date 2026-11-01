@@ -87,6 +87,13 @@ export class ProjectReadService {
       battery: project.battery,
       groundMount: project.groundMount,
       subsidy: project.subsidy,
+      budget: {
+        status: project.budgetStatus as ProjectDetail['budget']['status'],
+        variancePaise: project.surveyVariancePaise,
+        varianceBp: project.surveyVarianceBp,
+        lockedAt: project.budgetLockedAt?.toISOString() ?? null,
+        revisionQuotationId: project.revisionQuotationId,
+      },
       quotation: {
         id: quotation.id,
         number: quotation.number,

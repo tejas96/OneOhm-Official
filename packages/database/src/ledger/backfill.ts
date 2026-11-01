@@ -1,7 +1,16 @@
 import { LEDGER_ACCOUNTS } from '@oneohm/domain';
 import { and, asc, eq, gt, inArray, isNotNull } from 'drizzle-orm';
 import type { Database } from '../client';
-import { ledgerAccounts, payables, paymentMilestones, payments, workOrders } from '../schema';
+import {
+  customerCredits,
+  customerRefunds,
+  ledgerAccounts,
+  payables,
+  paymentMilestones,
+  payments,
+  workOrders,
+} from '../schema';
+import { postCustomerCredit, postCustomerRefund } from './customer-credit-postings';
 import { postPayableApproved, postPayablePaid, postWorkOrderTds } from './payable-postings';
 import { postMilestoneDue, postPayment } from './receivable-postings';
 
@@ -59,5 +68,24 @@ export async function backfillLedger(db: Database): Promise<BackfillResult> {
   for (const { id } of settled) {
     await db.transaction((tx) => postWorkOrderTds(tx, id, null));
   }
+  await backfillCustomerMoney(db);
   return { milestones: due.length, payments: received.length, payables: bills.length };
+}
+
+/** Customer credit held and refunds paid, oldest first. */
+async function backfillCustomerMoney(db: Database): Promise<void> {
+  const credits = await db
+    .select({ id: customerCredits.id })
+    .from(customerCredits)
+    .orderBy(asc(customerCredits.createdAt));
+  for (const { id } of credits) {
+    await db.transaction((tx) => postCustomerCredit(tx, id, null));
+  }
+  const refunds = await db
+    .select({ id: customerRefunds.id })
+    .from(customerRefunds)
+    .orderBy(asc(customerRefunds.createdAt));
+  for (const { id } of refunds) {
+    await db.transaction((tx) => postCustomerRefund(tx, id, null));
+  }
 }

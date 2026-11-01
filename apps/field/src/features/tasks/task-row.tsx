@@ -1,10 +1,12 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { Card, StatusPill, Text, type Tone, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { ChevronRight, Lock } from 'lucide-react-native';
+import { ChevronRight, CloudUpload, Lock } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
+import { UPLOADS } from '@/copy/uploads';
+import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { businessToday, daysBetween, relativeDate } from '@/lib/dates';
 
 export function toneOf(task: ProjectTask): Tone {
@@ -27,6 +29,7 @@ export function statusLabel(task: ProjectTask): string {
 export function TaskRow({ task }: { readonly task: ProjectTask }) {
   const theme = useTheme();
   const blocked = task.blockedBy.length > 0;
+  const waiting = useUploadQueue().items.filter((item) => item.taskId === task.id).length;
   return (
     <Card
       onPress={() => router.push(`/tasks/${task.id}`)}
@@ -45,6 +48,14 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
       <Text variant="bodySm" tone="secondary" numberOfLines={1}>
         {task.projectName}
       </Text>
+      {waiting > 0 ? (
+        <View style={styles.due}>
+          <CloudUpload size={14} color={theme.status.waiting.fg} />
+          <Text variant="label" color={theme.status.waiting.fg}>
+            {UPLOADS.waitingShort(waiting)}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.bottom}>
         <StatusPill tone={toneOf(task)} label={statusLabel(task)} size="sm" />
         <View style={styles.due}>

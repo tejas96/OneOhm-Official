@@ -8,7 +8,9 @@ import { type FormEvent, useId, useState } from 'react';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
+import { ChecklistFields } from './checklist-fields';
 import { FactFields } from './fact-fields';
+import { SignaturePad } from './signature-pad';
 import type { CompleteInput } from './use-task-actions';
 
 interface CompleteMutation {
@@ -36,9 +38,14 @@ export function CompleteTaskDialog({
   const evidenceT = useTranslations('projects.evidence');
   const canApprove = useCan('tasks.approve');
   const formId = useId();
-  const [facts, setFacts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(task.captures.map((key) => [key, task.knownFacts[key] ?? ''])),
-  );
+  const [facts, setFacts] = useState<Record<string, string>>(() => ({
+    ...Object.fromEntries(
+      task.captureFields.map((field) => [field.key, task.knownFacts[field.key] ?? '']),
+    ),
+    ...Object.fromEntries(task.checklist.map((item) => [item.key, item.done ? 'yes' : ''])),
+  }));
+  const setFact = (key: string, value: string) =>
+    setFacts((current) => ({ ...current, [key]: value }));
   const [note, setNote] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,15 +90,21 @@ export function CompleteTaskDialog({
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-5 pb-2">
-        {task.captures.length > 0 && (
+        {task.captureFields.length > 0 && (
           <section className="flex flex-col gap-3">
             <p className="type-overline text-ink-faint uppercase">{t('records')}</p>
             <FactFields
               fields={task.captureFields}
               values={facts}
               errors={fieldErrors}
-              onChange={(key, value) => setFacts((current) => ({ ...current, [key]: value }))}
+              onChange={setFact}
             />
+          </section>
+        )}
+        {task.checklist.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <p className="type-overline text-ink-faint uppercase">{t('checklist')}</p>
+            <ChecklistFields items={task.checklist} values={facts} onChange={setFact} />
           </section>
         )}
         {task.evidence.length > 0 && (
@@ -107,6 +120,7 @@ export function CompleteTaskDialog({
           </section>
         )}
         <EvidenceUploader task={task} onBusyChange={setUploading} />
+        {task.evidence.includes('signature') && <SignaturePad task={task} />}
         <Field label={t('note')} hint={t('noteHint')}>
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>

@@ -11,6 +11,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { useDiscoms, useProperty } from '../builder/property-summary';
+import { DEFAULT_PLAN, PaymentPlanField } from './payment-plan-field';
 
 const LATER = 'later';
 
@@ -49,6 +50,7 @@ export function CreateProjectDialog({
   const [groundMount, setGroundMount] = useState(quotation.input.structureType === 'ground_mount');
   const [nameChange, setNameChange] = useState(false);
   const [manager, setManager] = useState<string>(LATER);
+  const [plan, setPlan] = useState<string>(DEFAULT_PLAN);
 
   const site = property.data;
   useEffect(() => {
@@ -72,6 +74,7 @@ export function CreateProjectDialog({
             groundMount,
             nameChange,
             managerUserId: manager === LATER ? null : manager,
+            paymentPlanId: plan === DEFAULT_PLAN ? null : plan,
             startDate,
           },
         }),
@@ -139,6 +142,12 @@ export function CreateProjectDialog({
             />
           </Field>
         </div>
+        <PaymentPlanField
+          value={plan}
+          onChange={setPlan}
+          error={errors.paymentPlanId}
+          enabled={open}
+        />
         {canSeePeople && (
           <Field label={t('manager')} hint={t('managerHint')} error={errors.managerUserId}>
             <Select

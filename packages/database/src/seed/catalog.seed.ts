@@ -1,10 +1,18 @@
 import {
   DEFAULT_MESSAGE_TEMPLATES,
+  DEFAULT_MILESTONES,
   DEFAULT_SUBSIDY_RULES,
   DEFAULT_TASK_LIBRARY,
 } from '@oneohm/domain';
 import type { Database } from '../client';
-import { discoms, messageTemplates, products, subsidyRules, taskTemplates } from '../schema';
+import {
+  discoms,
+  messageTemplates,
+  paymentPlans,
+  products,
+  subsidyRules,
+  taskTemplates,
+} from '../schema';
 
 const rupees = (value: number) => value * 100;
 
@@ -214,4 +222,13 @@ export async function seedCatalog(db: Database): Promise<void> {
       })),
     )
     .onConflictDoNothing();
+
+  // The standard terms, once; owners add or change plans in Settings.
+  const [plan] = await db.select({ id: paymentPlans.id }).from(paymentPlans).limit(1);
+  if (!plan)
+    await db.insert(paymentPlans).values({
+      name: 'Standard 25 / 65 / 10',
+      steps: DEFAULT_MILESTONES.map((step) => ({ ...step })),
+      isDefault: true,
+    });
 }

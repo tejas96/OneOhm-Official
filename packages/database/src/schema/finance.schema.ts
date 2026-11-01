@@ -1,5 +1,6 @@
 import {
   type AnyPgColumn,
+  boolean,
   index,
   integer,
   pgTable,
@@ -70,6 +71,8 @@ export const payments = pgTable(
     gatewayPaymentId: text('gateway_payment_id'),
     /** What the gateway kept (fee plus GST on it), booked as an expense. */
     gatewayFeePaise: money('gateway_fee_paise'),
+    /** The money came out of the customer's credit (an earlier overpayment), not in afresh. */
+    paidFromCredit: boolean('paid_from_credit').notNull().default(false),
   },
   (table) => [
     index('payments_project_idx').on(table.projectId),

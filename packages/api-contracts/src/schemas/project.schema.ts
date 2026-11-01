@@ -81,13 +81,26 @@ export const projectTaskSchema = z.object({
   evidence: z.array(z.string()),
   /** Facts this task must capture before it can complete. */
   captures: z.array(z.string()),
-  /** The same facts with their label, input kind and hint, ready to render as a form. */
+  /**
+   * The same facts with their label, input kind and hint, ready to render as a form,
+   * followed by the measurements the task records (evidence 'measurement').
+   */
   captureFields: z.array(factFieldSchema),
+  /** The keys in `captureFields` that are the task's measurements. */
+  measurements: z.array(z.string()),
   /** Values the project already has for those facts, to pre-fill the form. */
   knownFacts: z.record(z.string(), z.string()),
-  /** Files attached to this task (photos and documents), oldest first. */
-  attachments: z.array(attachmentSchema),
-  /** Evidence still needed before the task can complete, e.g. ['photo']. */
+  /**
+   * Items to tick before completing (evidence 'checklist'). A tick is sent with the
+   * completion as the fact `key` (any value, e.g. 'yes'); `done` once it is saved.
+   */
+  checklist: z.array(z.object({ key: z.string(), label: z.string(), done: z.boolean() })),
+  /** Files attached to this task (photos, documents, the signature), oldest first. */
+  attachments: z.array(attachmentSchema.extend({ category: z.string() })),
+  /**
+   * Evidence still needed before the task can complete, e.g. ['photo']. Checklist and
+   * measurements count once saved, so an open task lists them until it is completed.
+   */
   missingEvidence: z.array(z.string()),
   blockedBy: z.array(z.string()),
   /** The part of `blockedBy` that is open DISCOM change requests, not earlier tasks. */
@@ -147,6 +160,14 @@ export const projectDetailSchema = projectSummarySchema.extend({
   tasks: z.array(projectTaskSchema),
   milestones: z.array(milestoneSchema),
   payments: z.array(paymentSchema),
+  /** The budget after the site survey (PRD 3.5, Flow A). */
+  budget: z.object({
+    status: z.enum(['awaiting_survey', 'locked', 'revision_needed', 'revised']),
+    variancePaise: paiseSchema.nullable(),
+    varianceBp: z.number().int().nullable(),
+    lockedAt: instantSchema.nullable(),
+    revisionQuotationId: idSchema.nullable(),
+  }),
   facts: z.record(z.string(), z.string()),
   activities: z.array(
     z.object({

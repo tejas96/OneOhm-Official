@@ -1,7 +1,7 @@
 import { LINE_CATEGORIES } from '@oneohm/domain';
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { idSchema } from '../common/primitives';
+import { calendarDateSchema, idSchema } from '../common/primitives';
 import { companySchema, discomSchema, productSchema } from '../schemas/catalog.schema';
 import {
   companyInputSchema,
@@ -9,8 +9,12 @@ import {
   productInputSchema,
   rateCardSchema,
   rateCardSettingsSchema,
-  subsidyRuleSchema,
 } from '../schemas/settings.schema';
+import {
+  subsidyImpactSchema,
+  subsidyRuleInputSchema,
+  subsidyRuleVersionSchema,
+} from '../schemas/subsidy-rule.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -67,7 +71,38 @@ export const catalogContract = c.router({
   listSubsidyRules: {
     method: 'GET',
     path: '/settings/subsidy-rules',
-    responses: { 200: z.array(subsidyRuleSchema) },
+    responses: { 200: z.array(subsidyRuleVersionSchema) },
+  },
+  createSubsidyRule: {
+    method: 'POST',
+    path: '/settings/subsidy-rules',
+    body: subsidyRuleInputSchema,
+    responses: { 201: subsidyRuleVersionSchema },
+    summary: 'A new rule version from a start date (today or later); earlier versions stay.',
+  },
+  updateSubsidyRule: {
+    method: 'PUT',
+    path: '/settings/subsidy-rules/:id',
+    pathParams: idParams,
+    body: subsidyRuleInputSchema,
+    responses: { 200: subsidyRuleVersionSchema },
+    summary: 'Only a version that is not yet in force can change.',
+  },
+  deleteSubsidyRule: {
+    method: 'DELETE',
+    path: '/settings/subsidy-rules/:id',
+    pathParams: idParams,
+    body: c.noBody(),
+    responses: { 204: c.noBody() },
+    summary: 'Withdraws a version that is not yet in force.',
+  },
+  subsidyRuleImpact: {
+    method: 'GET',
+    path: '/settings/subsidy-rules/impact',
+    query: z.object({ asOf: calendarDateSchema.optional() }),
+    responses: { 200: subsidyImpactSchema },
+    summary:
+      'Open quotations whose subsidy differs under the rules in force on `asOf` (default today), priced afresh. Nothing is changed.',
   },
   getCompany: { method: 'GET', path: '/settings/company', responses: { 200: companySchema } },
   updateCompany: {

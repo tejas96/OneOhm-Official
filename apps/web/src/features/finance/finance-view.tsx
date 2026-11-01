@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
+import { InvoicesTab } from './billing/invoices-tab';
 import { LedgerTab } from './ledger/ledger-tab';
 import { LoansTab } from './loans/loans-tab';
 import { OverviewTab } from './overview/overview-tab';
@@ -18,6 +19,7 @@ const VIEW: readonly Capability[] = ['finance.view', 'finance.record_payments'];
 const TABS = [
   { value: 'overview', requires: VIEW, Panel: OverviewTab },
   { value: 'receivables', requires: VIEW, Panel: ReceivablesTab },
+  { value: 'invoices', requires: VIEW, Panel: InvoicesTab },
   { value: 'payables', requires: VIEW, Panel: PayablesTab },
   { value: 'loans', requires: [...VIEW, 'loans.manage'], Panel: LoansTab },
   { value: 'ledger', requires: VIEW, Panel: LedgerTab },

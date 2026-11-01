@@ -96,6 +96,8 @@ export async function postMilestoneDue(
 /**
  * Money received. Against a milestone that is already due it settles the receivable;
  * before then it is held as an advance. A reversal row undoes its original's entry.
+ * A row paid from credit draws on customer credit; a negative row that reverses
+ * nothing is a refund's release, which its refund posts (`postCustomerRefund`).
  */
 export async function postPayment(
   db: DatabaseExecutor,
@@ -122,11 +124,12 @@ export async function postPayment(
     await postPaymentReversal(db, payment.reversesPaymentId, userId, payment.reversalReason);
     return;
   }
+  if (payment.amountPaise <= 0) return;
   const milestoneDue = row.dueAt !== null && row.dueAt <= payment.createdAt;
   const from = payment.payer === 'bank' ? `the bank for ${row.customer}` : row.customer;
   await postJournal(db, {
     entryDate: payment.receivedOn,
-    memo: `${row.code} · ${formatInr(payment.amountPaise)} received from ${from}${row.label ? ` (${row.label})` : ''}`,
+    memo: `${row.code} · ${formatInr(payment.amountPaise)} ${payment.paidFromCredit ? 'of credit applied for' : 'received from'} ${from}${row.label ? ` (${row.label})` : ''}`,
     sourceType: 'payment',
     sourceId: payment.id,
     projectId: payment.projectId,
@@ -136,6 +139,7 @@ export async function postPayment(
       method: payment.method,
       amountPaise: payment.amountPaise,
       milestoneDue,
+      fromCredit: payment.paidFromCredit,
     }),
   });
 }

@@ -1,5 +1,6 @@
 import { auditContract } from './audit.contract';
 import { authContract } from './auth.contract';
+import { billingContract, customerBillingContract } from './billing.contract';
 import { catalogContract } from './catalog.contract';
 import { contractorsContract } from './contractors.contract';
 import { crmContract } from './crm.contract';
@@ -10,6 +11,7 @@ import { financeContract } from './finance.contract';
 import { inventoryContract } from './inventory.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
+import { paymentPlansContract } from './payment-plans.contract';
 import { peopleContract } from './people.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { quotationsContract } from './quotations.contract';
@@ -38,6 +40,8 @@ export type ApiRouterDefinition = {
   readonly serviceDesk: typeof serviceDeskContract;
   readonly inventory: typeof inventoryContract;
   readonly finance: typeof financeContract;
+  readonly billing: typeof billingContract;
+  readonly customerBilling: typeof customerBillingContract;
   readonly contractors: typeof contractorsContract;
   readonly discom: typeof discomContract;
   readonly workforce: typeof workforceContract;
@@ -47,6 +51,7 @@ export type ApiRouterDefinition = {
   readonly whatsapp: typeof whatsappContract;
   readonly templates: typeof templatesContract;
   readonly audit: typeof auditContract;
+  readonly paymentPlans: typeof paymentPlansContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -63,6 +68,8 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   serviceDesk: serviceDeskContract,
   inventory: inventoryContract,
   finance: financeContract,
+  billing: billingContract,
+  customerBilling: customerBillingContract,
   contractors: contractorsContract,
   discom: discomContract,
   workforce: workforceContract,
@@ -72,6 +79,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   whatsapp: whatsappContract,
   templates: templatesContract,
   audit: auditContract,
+  paymentPlans: paymentPlansContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';
@@ -85,9 +93,11 @@ export {
 } from './reports.contract';
 export {
   authContract,
+  billingContract,
   catalogContract,
   contractorsContract,
   crmContract,
+  customerBillingContract,
   customerContract,
   discomContract,
   documentsContract,

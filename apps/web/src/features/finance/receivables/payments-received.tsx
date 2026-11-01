@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReceivedPayment } from '@oneohm/api-contracts';
+import type { CustomerMoneyEntry, ReceivedPayment } from '@oneohm/api-contracts';
 import { Badge, Card, CardHeader, cn, EmptyState } from '@oneohm/design-system/web';
 import { formatInr } from '@oneohm/shared';
 import { FileDown, Receipt, Undo2 } from 'lucide-react';
@@ -9,8 +9,27 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
+import { useCustomerMoney } from '../billing/use-billing';
 import { usePaymentsReceived } from '../use-finance';
+import { MoneyEntryItem } from './money-entry-item';
 import { ReversePaymentDialog } from './reverse-payment-dialog';
+
+type Item =
+  | { readonly key: string; readonly at: string; readonly payment: ReceivedPayment }
+  | { readonly key: string; readonly at: string; readonly entry: CustomerMoneyEntry };
+
+/**
+ * Payments with refunds and credit held, newest first (as recorded). Credit applied to a milestone
+ * is already a payment with its receipt, so it is not listed twice.
+ */
+function merge(paid: readonly ReceivedPayment[], money: readonly CustomerMoneyEntry[]): Item[] {
+  return [
+    ...paid.map((payment) => ({ key: payment.id, at: payment.createdAt, payment })),
+    ...money
+      .filter((entry) => entry.kind !== 'credit_applied')
+      .map((entry) => ({ key: entry.id, at: entry.createdAt, entry })),
+  ].sort((left, right) => right.at.localeCompare(left.at));
+}
 
 /** The latest money received, each with its receipt; a mistake can be reversed, never edited. */
 export function PaymentsReceived() {
@@ -19,6 +38,7 @@ export function PaymentsReceived() {
   const format = useFormatter();
   const canReverse = useCan('finance.approve_payments');
   const query = usePaymentsReceived();
+  const money = useCustomerMoney();
   const [reversing, setReversing] = useState<ReceivedPayment | null>(null);
 
   return (
@@ -30,11 +50,13 @@ export function PaymentsReceived() {
         </div>
       ) : query.isError ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} className="m-5" />
-      ) : query.data.length === 0 ? (
+      ) : query.data.length === 0 && !money.data?.length ? (
         <EmptyState icon={<Receipt />} title={t('empty')} className="m-5" />
       ) : (
         <ul className="flex flex-col divide-y divide-hairline border-t border-hairline">
-          {query.data.map((payment) => {
+          {merge(query.data, money.data ?? []).map((item) => {
+            if ('entry' in item) return <MoneyEntryItem key={item.key} entry={item.entry} />;
+            const { payment } = item;
             const reversal = payment.reversesPaymentId !== null;
             return (
               <li

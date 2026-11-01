@@ -57,15 +57,23 @@ export function milestoneDuePosting(input: {
   ];
 }
 
-/** Money received. Before its milestone is due it is an advance, not a settlement. */
+/**
+ * Money received. Before its milestone is due it is an advance, not a settlement.
+ * `fromCredit`: the customer's credit (an earlier overpayment) is applied, so the money
+ * comes out of customer credit instead of arriving in the bank again.
+ */
 export function paymentPosting(input: {
   readonly payer: Payer;
   readonly method: MoneyInMethod;
   readonly amountPaise: number;
   readonly milestoneDue: boolean;
+  readonly fromCredit?: boolean;
 }): JournalLine[] {
   return [
-    debit(cashAccountFor(input.method), input.amountPaise),
+    debit(
+      input.fromCredit ? ACCOUNT.customerCredit : cashAccountFor(input.method),
+      input.amountPaise,
+    ),
     credit(
       input.milestoneDue ? receivableFor(input.payer) : ACCOUNT.advancesReceived,
       input.amountPaise,

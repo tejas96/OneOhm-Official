@@ -15,14 +15,14 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
-import { SectionHeading } from '@/features/command-center/section-heading';
-import { CustomerDocumentsSection } from '@/features/documents/customer-documents-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, swatchFor, whatsappHref } from '@/lib/format/contact';
-import { CustomerProperties } from './customer-properties';
-import { CustomerProjects, CustomerQuotations } from './customer-records';
+import { CustomerTabs } from './customer-tabs';
 
-/** The customer 360: who they are, their sites, every quotation and every project. */
+/**
+ * The customer 360 (PRD 3.2): who they are on top, then their sites and projects, money,
+ * conversations, service and documents in tabs (`?tab=`).
+ */
 export function CustomerDetailView({ id }: { readonly id: string }) {
   const t = useTranslations('customers');
   const format = useFormatter();
@@ -119,19 +119,7 @@ export function CustomerDetailView({ id }: { readonly id: string }) {
           />
         </dl>
       </header>
-      <section aria-label={t('sections.properties')} className="flex flex-col gap-5">
-        <SectionHeading index="01" title={t('sections.properties')} />
-        <CustomerProperties properties={customer.properties} />
-      </section>
-      <section aria-label={t('sections.projects')} className="flex flex-col gap-5">
-        <SectionHeading index="02" title={t('sections.projects')} />
-        <CustomerProjects projects={customer.projects} />
-      </section>
-      <section aria-label={t('sections.quotations')} className="flex flex-col gap-5">
-        <SectionHeading index="03" title={t('sections.quotations')} />
-        <CustomerQuotations quotations={customer.quotations} />
-      </section>
-      <CustomerDocumentsSection customerId={customer.id} index="04" />
+      <CustomerTabs customer={customer} />
     </motion.div>
   );
 }

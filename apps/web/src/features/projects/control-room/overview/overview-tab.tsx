@@ -4,6 +4,7 @@ import type { ProjectDetail } from '@oneohm/api-contracts';
 import type { ProjectSignals } from '../room-signals';
 import { useRoomTab } from '../use-room-tab';
 import { AboutPanel } from './about-panel';
+import { BudgetPanel } from './budget-panel';
 import { NextUp } from './next-up';
 import { OverviewKpis } from './overview-kpis';
 import { PaymentsSummary } from './payments-summary';
@@ -39,6 +40,7 @@ export function OverviewTab({
           <RisksPanel signals={signals} />
         </div>
         <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-2">
+          <BudgetPanel project={project} />
           <TeamPanel project={project} />
           <AboutPanel project={project} />
         </div>

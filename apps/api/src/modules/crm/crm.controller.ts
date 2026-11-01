@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
+import { CustomerActivityService } from './customer-activity.service';
 import { CustomersService } from './customers.service';
 import { LeadsService } from './leads.service';
 
@@ -11,6 +12,7 @@ export class CrmController {
   constructor(
     private readonly leads: LeadsService,
     private readonly customers: CustomersService,
+    private readonly activity: CustomerActivityService,
   ) {}
 
   @TsRestHandler(apiContract.crm)
@@ -50,6 +52,10 @@ export class CrmController {
       getCustomer: async ({ params }) => {
         assertCan(actor, 'customers.view');
         return { status: 200, body: await this.customers.get(params.id) };
+      },
+      getCustomerActivity: async ({ params }) => {
+        assertCan(actor, 'customers.view');
+        return { status: 200, body: await this.activity.get(params.id) };
       },
       getProperty: async ({ params }) => {
         assertCan(actor, 'customers.view', 'quotations.create');

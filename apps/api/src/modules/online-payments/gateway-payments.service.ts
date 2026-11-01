@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  customerCredits,
   gatewaySettlements,
   notifyHolders,
   paymentLinks,
@@ -11,6 +12,7 @@ import {
 import { formatInr, todayIn } from '@oneohm/shared';
 import { eq, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
+import { recordGatewayExcess } from '../finance/customer-credit-excess';
 import { FinanceService } from '../projects/finance.service';
 
 export interface GatewayPayment {
@@ -55,15 +57,23 @@ export class GatewayPaymentsService {
       .select({ id: payments.id })
       .from(payments)
       .where(eq(payments.gatewayPaymentId, paid.gatewayPaymentId));
-    if (seen) return 'already recorded';
+    const [held] = await this.db
+      .select({ id: customerCredits.id })
+      .from(customerCredits)
+      .where(eq(customerCredits.gatewayPaymentId, paid.gatewayPaymentId));
+    if (seen || held) return 'already recorded';
     const milestone = link.link.milestoneId;
+    // Two plain queries: inside a correlated subquery Drizzle prints the milestone's
+    // id as a bare "id", which would bind to payments.id and ignore earlier payments.
     const [owed] = await this.db
-      .select({
-        left: sql<string>`${paymentMilestones.amountPaise} - coalesce((select sum(p.amount_paise) from payments p where p.milestone_id = ${paymentMilestones.id}), 0)`,
-      })
+      .select({ amount: paymentMilestones.amountPaise })
       .from(paymentMilestones)
       .where(eq(paymentMilestones.id, milestone));
-    const left = Math.max(0, Number(owed?.left ?? 0));
+    const [paidSoFar] = await this.db
+      .select({ total: sql<string>`coalesce(sum(${payments.amountPaise}), 0)` })
+      .from(payments)
+      .where(eq(payments.milestoneId, milestone));
+    const left = Math.max(0, (owed?.amount ?? 0) - Number(paidSoFar?.total ?? 0));
     const recorded = Math.min(left, paid.amountPaise);
     if (recorded > 0)
       await this.finance.recordPayment({ userId: null }, link.link.projectId, {
@@ -86,15 +96,36 @@ export class GatewayPaymentsService {
       })
       .where(eq(paymentLinks.id, link.link.id));
     const excess = paid.amountPaise - recorded;
-    if (excess > 0)
-      await notifyHolders(this.db, 'finance.record_payments', {
-        kind: 'payment_excess',
-        title: 'Online payment needs a refund',
-        body: `${formatInr(excess)} more than was owed on ${link.code} · ${link.label} (${paid.gatewayPaymentId}).`,
-        subject: { type: 'payment', id: link.link.id, projectId: link.link.projectId },
-        dedupeKey: `payment_excess:${paid.gatewayPaymentId}`,
-      });
-    return excess > 0 ? `recorded with ${excess} paise extra` : 'recorded';
+    if (excess > 0) await this.holdExcess(link, paid, excess, recorded === 0);
+    return excess > 0 ? `recorded with ${excess} paise extra held as credit` : 'recorded';
+  }
+
+  /**
+   * The part above what was owed is kept as the customer's credit (with its ledger
+   * entry), and finance is asked to refund it or apply it to the next milestone.
+   */
+  private async holdExcess(
+    link: { link: typeof paymentLinks.$inferSelect; code: string; label: string },
+    paid: GatewayPayment,
+    excess: number,
+    nothingOwed: boolean,
+  ): Promise<void> {
+    await recordGatewayExcess(this.db, {
+      projectId: link.link.projectId,
+      milestoneId: link.link.milestoneId,
+      amountPaise: excess,
+      receivedOn: todayIn('Asia/Kolkata', paid.paidAt),
+      gatewayPaymentId: paid.gatewayPaymentId,
+      // With no payment row, the fee rides on the credit so it is still booked.
+      feePaise: nothingOwed ? paid.feePaise : null,
+    });
+    await notifyHolders(this.db, 'finance.record_payments', {
+      kind: 'payment_excess',
+      title: 'Online payment above what was owed',
+      body: `${formatInr(excess)} more than was owed on ${link.code} · ${link.label} (${paid.gatewayPaymentId}). It is held as customer credit: refund it or apply it to the next milestone.`,
+      subject: { type: 'payment', id: link.link.id, projectId: link.link.projectId },
+      dedupeKey: `payment_excess:${paid.gatewayPaymentId}`,
+    });
   }
 
   async markLink(providerLinkId: string, status: 'expired' | 'cancelled'): Promise<string> {

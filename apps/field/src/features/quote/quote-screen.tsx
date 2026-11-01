@@ -4,12 +4,16 @@ import { MapPin } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { QUOTE } from '@/copy/quote';
+import { useCan } from '@/session/session-provider';
+import { QuoteFooter } from './quote-footer';
 import { type QuoteForm, QuoteInputs } from './quote-inputs';
 import type { QuoteSite } from './quote-options';
 import { QuoteLines, QuotePreviewBlock } from './quote-preview';
+import { SavedQuoteCard } from './saved-quote-card';
 import { SiteSheet } from './site-sheet';
 import { useQuotePreview } from './use-quote-input';
 import { useQuoteSite } from './use-quote-site';
+import { toQuotationInput, useSaveQuote } from './use-save-quote';
 
 const INITIAL: QuoteForm = {
   sizeKw: '',
@@ -24,7 +28,10 @@ const INITIAL: QuoteForm = {
   discount: '',
 };
 
-/** Live price → subsidy → what the customer pays, from the same engine the office uses. */
+/**
+ * Live price → subsidy → what the customer pays, from the same engine the office uses;
+ * then save it as a quotation, open or share the PDF, and send it (PRD 4.5).
+ */
 export function QuoteScreen() {
   const params = useLocalSearchParams<{ leadId?: string }>();
   const { site, setSite } = useQuoteSite(params.leadId);
@@ -42,10 +49,19 @@ export function QuoteScreen() {
     }));
   }, [site]);
 
-  const { panels, inverters, suggestedInverterId, ready, preview } = useQuotePreview(site, form);
+  const { panels, inverters, suggestedInverterId, input, ready, preview } = useQuotePreview(
+    site,
+    form,
+  );
+  const saveInput = toQuotationInput(input);
+  const quote = useSaveQuote(saveInput);
+  const priced = ready && preview.data !== undefined && !preview.error;
+  const canCreate = useCan('quotations.create');
 
   return (
-    <Screen>
+    <Screen
+      footer={canCreate && priced ? <QuoteFooter input={saveInput} quote={quote} /> : undefined}
+    >
       <View style={styles.header}>
         <Text variant="displayLg">{QUOTE.title}</Text>
         <Text variant="bodySm" tone="secondary">
@@ -53,12 +69,14 @@ export function QuoteScreen() {
         </Text>
       </View>
       <SiteCard site={site} onPress={() => setPicking(true)} />
+      <SavedQuoteCard quote={quote} />
       <QuotePreviewBlock
         data={preview.data}
         ready={ready}
         fetching={preview.isFetching}
         error={preview.error}
         dcr={form.dcr}
+        approved={quote.approved}
       />
       <QuoteInputs
         form={form}

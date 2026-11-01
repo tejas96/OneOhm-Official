@@ -6,6 +6,7 @@ import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CompanyAssetsService } from '../documents/company-assets.service';
+import { planSteps } from '../payment-plans/payment-plans.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { PdfRendererService } from './pdf-renderer.service';
 import { type ProductLabel, quotationView } from './quotation-document';
@@ -82,6 +83,7 @@ export class QuotationPdfService {
       inverter,
       battery: label(detail.input.batteryProductId),
       comparison: (row.snapshot as Snapshot | null)?.comparison ?? null,
+      paymentSteps: await planSteps(this.db, null),
       logo: images.logo ?? logoDataUri(),
       stamp: images.signature ?? images.stamp ?? stampDataUri(),
     });

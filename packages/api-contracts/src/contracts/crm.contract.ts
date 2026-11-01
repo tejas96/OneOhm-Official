@@ -17,6 +17,7 @@ import {
   propertySchema,
   subsidyCategorySchema,
 } from '../schemas/crm.schema';
+import { customerActivitySchema } from '../schemas/customer-activity.schema';
 import { projectSummarySchema } from '../schemas/project.schema';
 import { quotationSummarySchema } from '../schemas/quotation.schema';
 
@@ -138,6 +139,14 @@ export const crmContract = c.router({
         projects: z.array(projectSummarySchema),
       }),
     },
+  },
+  getCustomerActivity: {
+    method: 'GET',
+    path: '/customers/:id/activity',
+    pathParams: idParams,
+    responses: { 200: customerActivitySchema },
+    summary:
+      'The rest of the customer 360: money per project, chat and messages, change requests, service, feedback and referrals.',
   },
   getProperty: {
     method: 'GET',

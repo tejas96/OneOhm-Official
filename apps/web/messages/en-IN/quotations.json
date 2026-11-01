@@ -265,7 +265,11 @@
       "cancel": "Cancel",
       "confirm": "Create project",
       "created": "Project {code} created",
-      "createdDetail": "{tasks, plural, one {# task} other {# tasks}} set up, {unassigned} without an owner yet."
+      "createdDetail": "{tasks, plural, one {# task} other {# tasks}} set up, {unassigned} without an owner yet.",
+      "paymentPlan": "Payment terms",
+      "paymentPlanHint": "How the customer pays across the project. The bank's share of a loan is always its own payment.",
+      "paymentPlanDefault": "Default: {name}",
+      "paymentPlanStandard": "Standard 25 / 65 / 10"
     }
   }
 }

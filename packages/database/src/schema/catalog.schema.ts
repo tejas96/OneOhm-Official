@@ -19,6 +19,8 @@ export const products = pgTable(
     pricePaise: money('price_paise').notNull(),
     costPaise: money('cost_paise').notNull(),
     taxRateBp: integer('tax_rate_bp').notNull(),
+    /** HSN (goods) or SAC (services) code printed on tax invoices, when known. */
+    hsnSac: text('hsn_sac'),
     active: boolean('active').notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

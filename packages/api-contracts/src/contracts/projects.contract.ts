@@ -26,6 +26,8 @@ export const projectsContract = c.router({
       groundMount: z.boolean().default(false),
       nameChange: z.boolean().default(false),
       managerUserId: idSchema.nullable().optional(),
+      /** Payment terms for this deal; the default plan when left out. */
+      paymentPlanId: idSchema.nullable().optional(),
       startDate: calendarDateSchema,
     }),
     responses: {

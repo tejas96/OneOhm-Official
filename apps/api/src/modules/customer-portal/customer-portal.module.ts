@@ -20,6 +20,6 @@ import { CustomerUploadsController } from './customer-uploads.controller';
     CustomerDocumentsService,
     CustomerRequestPhotosService,
   ],
-  exports: [CustomerPortalService, CustomerDocumentsService],
+  exports: [CustomerPortalService, CustomerDocumentsService, CustomerAuthService],
 })
 export class CustomerPortalModule {}

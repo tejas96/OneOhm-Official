@@ -12,12 +12,7 @@ import {
   quotations,
   type Transaction,
 } from '@oneohm/database';
-import {
-  DEFAULT_MILESTONES,
-  generateTasks,
-  type ProjectType,
-  planMilestones,
-} from '@oneohm/domain';
+import { generateTasks, type ProjectType, planMilestones } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
 import { eq, like, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -26,6 +21,7 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { planSteps } from '../payment-plans/payment-plans.service';
 import { initialFacts, writeGeneratedTasks } from './project-setup';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 import { tellTeam } from './task-notices';
@@ -40,6 +36,7 @@ export interface NewProject {
   groundMount: boolean;
   nameChange: boolean;
   managerUserId?: string | null | undefined;
+  paymentPlanId?: string | null | undefined;
   startDate: string;
 }
 
@@ -172,7 +169,7 @@ export class ProjectCreationService {
 
       const milestones = planMilestones(
         quotation.totalPaise,
-        DEFAULT_MILESTONES,
+        await planSteps(tx, input.paymentPlanId),
         input.loan ? input.loanPaise : 0,
       );
       const createdMilestones = await tx

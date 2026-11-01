@@ -12,12 +12,15 @@ export function QuotePreviewBlock({
   fetching,
   error,
   dcr,
+  approved,
 }: {
   readonly data: QuotationPreview | undefined;
   readonly ready: boolean;
   readonly fetching: boolean;
   readonly error: unknown;
   readonly dcr: boolean;
+  /** The saved quotation's discount is already approved: no approval note. */
+  readonly approved: boolean;
 }) {
   const theme = useTheme();
   if (!data || !ready) {
@@ -37,7 +40,7 @@ export function QuotePreviewBlock({
           {describeError(error)}
         </Text>
       ) : null}
-      {data.discountNeedsApproval ? (
+      {data.discountNeedsApproval && !approved ? (
         <Text variant="bodySm" color={theme.status.atRisk.fg}>
           {QUOTE.needsApproval}
         </Text>

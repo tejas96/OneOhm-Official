@@ -10,6 +10,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GatewayModule } from './online-payments/gateway.module';
 import { OnlinePaymentsModule } from './online-payments/online-payments.module';
+import { PaymentPlansModule } from './payment-plans/payment-plans.module';
 import { PeopleModule } from './people/people.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotationsModule } from './quotations/quotations.module';
@@ -39,4 +40,5 @@ export const FEATURE_MODULES = [
   WhatsAppModule,
   TemplatesModule,
   AuditModule,
+  PaymentPlansModule,
 ];

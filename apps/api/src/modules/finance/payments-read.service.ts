@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReceivedPayment } from '@oneohm/api-contracts';
 import { customers, paymentMilestones, payments, projects } from '@oneohm/database';
-import { desc, eq, isNotNull } from 'drizzle-orm';
+import { desc, eq, gt, isNotNull, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 
@@ -10,8 +10,12 @@ import { DATABASE, type Database } from '../../config/core.module';
 export class PaymentsReadService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
+  /** A refund's release row (negative, reversing nothing) shows as its refund instead. */
   async list(limit: number): Promise<ReceivedPayment[]> {
-    const rows = await this.query().orderBy(desc(payments.createdAt)).limit(limit);
+    const rows = await this.query()
+      .where(or(gt(payments.amountPaise, 0), isNotNull(payments.reversesPaymentId)))
+      .orderBy(desc(payments.createdAt))
+      .limit(limit);
     return this.present(rows);
   }
 
@@ -66,6 +70,7 @@ export class PaymentsReadService {
       reversed: reversed.has(payment.id),
       reversesPaymentId: payment.reversesPaymentId,
       reversalReason: payment.reversalReason,
+      createdAt: payment.createdAt.toISOString(),
     }));
   }
 }

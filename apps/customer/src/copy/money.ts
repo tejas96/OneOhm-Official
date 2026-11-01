@@ -29,11 +29,39 @@ export const PAYMENTS = {
   noProject: 'Payments appear here once your project starts.',
 } as const;
 
+/** Invoice, receipts and refunds on the Payments screen (PRD 5.3). */
+export const BILLING = {
+  title: 'Invoice and receipts',
+  loading: 'Loading your invoice and receipts',
+  invoice: (total: string) => `Tax invoice · ${total}`,
+  invoiceMeta: (number: string, date: string) => `${number} · ${date}`,
+  noInvoice: 'Your GST tax invoice for the full project price will appear here once it is issued.',
+  receipt: (amount: string) => `Receipt · ${amount}`,
+  receiptMeta: (number: string, date: string, purpose: string | null) =>
+    [number, date, purpose].filter(Boolean).join(' · '),
+  reversed: 'Cancelled',
+  refundsTitle: 'Refunds to you',
+  refund: (amount: string) => `${amount} refunded`,
+  refundMeta: (date: string, method: string) => `${date} · ${method}`,
+  refundMethod: {
+    bank_transfer: 'Bank transfer',
+    upi: 'UPI',
+    razorpay: 'Back to your card or UPI',
+    cheque: 'Cheque',
+    cash: 'Cash',
+  },
+  credit: (amount: string) =>
+    `${amount} you paid above what was due is held for you. OneOhm will set it against your next payment or refund it.`,
+} as const;
+
 export const DOCUMENTS = {
   title: 'Documents',
   loading: 'Loading your documents',
   quotationTitle: 'Your quotation',
   quotationBody: (number: string) => `Quotation ${number} with price, subsidy and effective cost.`,
+  invoiceTitle: 'Your tax invoice',
+  invoiceBody: (date: string, project: string | null) =>
+    [project, 'GST tax invoice', date].filter(Boolean).join(' · '),
   reportsTitle: 'Agreements and reports',
   reportsEmpty: 'Agreements and completion reports appear here when they are ready.',
   filesTitle: 'Your papers',

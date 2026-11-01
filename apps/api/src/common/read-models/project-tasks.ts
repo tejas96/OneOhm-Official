@@ -8,7 +8,7 @@ import {
   taskDependencies,
   users,
 } from '@oneohm/database';
-import { factField, missingEvidence } from '@oneohm/domain';
+import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
@@ -71,8 +71,13 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       task.status === 'completed'
         ? []
         : changeRequestsBlocking(changeBlocks.get(task.projectId), task);
+    const measurements = measurementsFor(task).filter((key) => !task.captures.includes(key));
+    const fields = [...task.captures, ...measurements];
+    const recorded = new Set(
+      facts.filter((fact) => fact.projectId === task.projectId).map((fact) => fact.key),
+    );
     const known = facts.filter(
-      (fact) => fact.projectId === task.projectId && task.captures.includes(fact.key),
+      (fact) => fact.projectId === task.projectId && fields.includes(fact.key),
     );
     return {
       id: task.id,
@@ -96,22 +101,19 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       approval: task.approval,
       evidence: task.evidence,
       captures: task.captures,
-      captureFields: task.captures.map(factField),
+      captureFields: fields.map(factField),
+      measurements: measurementsFor(task),
       knownFacts: Object.fromEntries(known.map((fact) => [fact.key, fact.value])),
+      checklist: checklistFor(task).map((item) => ({ ...item, done: recorded.has(item.key) })),
       attachments: attached.map((file) => ({
         id: file.id,
         name: file.name,
         contentType: file.contentType,
+        category: file.category,
         sizeBytes: file.sizeBytes,
         createdAt: file.createdAt.toISOString(),
       })),
-      missingEvidence:
-        task.status === 'completed'
-          ? []
-          : missingEvidence(
-              task.evidence,
-              attached.map((file) => file.contentType),
-            ),
+      missingEvidence: task.status === 'completed' ? [] : missingEvidence(task, attached, recorded),
       blockedBy: [
         ...deps
           .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')

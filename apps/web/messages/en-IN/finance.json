@@ -8,6 +8,7 @@
     "tabs": {
       "overview": "Overview",
       "receivables": "Receivables",
+      "invoices": "Invoices",
       "payables": "Payables",
       "loans": "Loans",
       "ledger": "Ledger"
@@ -83,9 +84,9 @@
     },
     "payments": {
       "title": "Payments received",
-      "description": "The latest 50, newest first. Each has a receipt.",
+      "description": "The latest 50, newest first, with refunds and overpayments held as credit. Each payment has a receipt.",
       "loading": "Loading payments",
-      "empty": "No payments received yet",
+      "empty": "No payments or refunds yet",
       "reversed": "Reversed",
       "reversal": "Reversal",
       "receipt": "Open receipt {number}",
@@ -294,6 +295,137 @@
       "copied": "Pay link copied.",
       "cancel": "Cancel pay link",
       "cancelled": "Pay link cancelled."
+    },
+    "billing": {
+      "supply": {
+        "intra_state": "Within the state: CGST + SGST",
+        "inter_state": "To another state: IGST"
+      },
+      "invoice": {
+        "title": "Tax invoice",
+        "description": "One GST invoice for the full project price, made from the accepted quotation.",
+        "loading": "Loading the invoice",
+        "issued": "Issued",
+        "cancelled": "Cancelled",
+        "notYet": "Not issued yet",
+        "preview": "What the invoice will say",
+        "issuedOn": "Issued {date}",
+        "replaces": "replaces {number}",
+        "placeOfSupply": "Place of supply",
+        "tax": "Tax",
+        "taxable": "Taxable value",
+        "cgst": "CGST",
+        "sgst": "SGST",
+        "igst": "IGST",
+        "total": "Invoice total",
+        "customerGstin": "Customer GSTIN",
+        "unregistered": "not registered",
+        "open": "Open PDF",
+        "issue": "Issue tax invoice",
+        "reissue": "Issue a new invoice",
+        "cancel": "Cancel invoice",
+        "codesMissing": "{count} of {total} lines have no HSN/SAC code in the catalog. Codes print where the catalog has them.",
+        "scheduleLess": "The payment schedule adds up to {schedule}, which is {amount} less than this invoice. Revenue and GST are booked from the schedule, so the difference is not posted.",
+        "scheduleMore": "The payment schedule adds up to {schedule}, which is {amount} more than this invoice. Revenue and GST are booked from the schedule, so the difference is not posted.",
+        "blocker": {
+          "quotation_not_accepted": "The quotation is not accepted yet, so there is nothing to invoice.",
+          "property_state_unknown": "The site’s state is not one GST recognises. Correct the property’s state first.",
+          "company_gstin": "The company GSTIN in Settings is not valid, so the invoice cannot name its state."
+        },
+        "history": "Cancelled invoices",
+        "cancelledOn": "Cancelled {date}: {reason}"
+      },
+      "issueDialog": {
+        "title": "Issue the tax invoice?",
+        "description": "{total} for {customer}. Once issued it is fixed: it can only be cancelled with a reason and issued again under a new number.",
+        "placeOfSupply": "Place of supply",
+        "tax": "Tax",
+        "gstin": "Customer GSTIN",
+        "gstinHint": "Only for customers registered for GST; leave empty otherwise. It is saved on the customer.",
+        "cancel": "Not yet",
+        "submit": "Issue invoice",
+        "done": "Tax invoice issued"
+      },
+      "cancelDialog": {
+        "title": "Cancel this invoice?",
+        "description": "{number} stays on record, marked cancelled. You can then issue a new invoice under a new number.",
+        "reason": "Why",
+        "reasonHint": "For example: the customer’s GSTIN was missing.",
+        "cancel": "Keep it",
+        "submit": "Cancel invoice",
+        "done": "Invoice cancelled"
+      },
+      "invoices": {
+        "title": "Tax invoices",
+        "description": "Issued from each project’s Payments tab. Never edited: cancelled with a reason, then issued again.",
+        "filterLabel": "Show",
+        "filters": {
+          "issued": "Issued",
+          "cancelled": "Cancelled",
+          "all": "All"
+        },
+        "loading": "Loading invoices",
+        "emptyTitle": "No invoices here",
+        "emptyBody": "Open a project’s Payments tab to issue its tax invoice.",
+        "columns": {
+          "invoice": "Customer",
+          "date": "Date",
+          "tax": "Supply and tax",
+          "total": "Total",
+          "status": "Status"
+        },
+        "differs": "{amount} off the schedule",
+        "open": "Open invoice {number}"
+      },
+      "credit": {
+        "title": "Refunds and credit",
+        "description": "Money paid above what was owed is held as credit, to refund or set against the next milestone.",
+        "loading": "Loading refunds and credit",
+        "held": "Credit held",
+        "apply": "Apply to a milestone",
+        "refund": "Record refund",
+        "empty": "No refunds or credit on this project.",
+        "kind": {
+          "refund": "Refund",
+          "credit_received": "Held as credit",
+          "credit_applied": "Credit applied"
+        }
+      },
+      "refundDialog": {
+        "title": "Record a refund",
+        "description": "Money paid back to the customer. It is booked as money out of the bank, cash or Razorpay.",
+        "source": "Refund from",
+        "fromCredit": "Credit held",
+        "available": "{amount} available",
+        "reopens": "Refunding money paid towards a milestone reopens that milestone for the amount refunded.",
+        "amount": "Amount refunded",
+        "method": "Paid back by",
+        "paidOn": "Paid on",
+        "reference": "Reference",
+        "referenceHint": "UTR, cheque number or Razorpay refund ID.",
+        "reason": "Why",
+        "reasonHint": "For example: paid twice online.",
+        "cancel": "Cancel",
+        "submit": "Record refund",
+        "done": "Refund recorded"
+      },
+      "applyDialog": {
+        "title": "Apply credit to a milestone",
+        "description": "{amount} is held as credit. Applying it pays the milestone and issues a receipt.",
+        "milestone": "Milestone",
+        "left": "{amount} left",
+        "amount": "Amount to apply",
+        "cancel": "Cancel",
+        "submit": "Apply credit",
+        "done": "Credit applied"
+      },
+      "refundMethods": {
+        "bank_transfer": "Bank transfer",
+        "upi": "UPI",
+        "razorpay": "Back through Razorpay",
+        "cheque": "Cheque",
+        "cash": "Cash"
+      }
     }
   }
 }
