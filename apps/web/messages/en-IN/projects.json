@@ -37,7 +37,8 @@
         "status": "Status",
         "next": "Next step",
         "due": "Due",
-        "tasks": "Tasks"
+        "tasks": "Tasks",
+        "manager": "Manager"
       },
       "summaryFiltered": "{count, plural, =0 {No projects match these filters} one {# project matches these filters · {capacity}} other {# projects match these filters · {capacity}}}",
       "clearFilters": "Clear filters",
@@ -68,7 +69,10 @@
         "nothingNext": "Nothing scheduled",
         "noDate": "No date",
         "openTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
-        "overdueTasks": "{count} overdue"
+        "overdueTasks": "{count} overdue",
+        "tasksDone": "{done} of {total} tasks done",
+        "noManager": "No manager yet",
+        "tasksDoneShort": "{done} of {total}"
       }
     },
     "room": {

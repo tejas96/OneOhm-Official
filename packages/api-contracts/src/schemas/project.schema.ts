@@ -54,6 +54,9 @@ export const projectSummarySchema = z.object({
   next: z.object({ label: z.string(), date: calendarDateSchema }).nullable(),
   openTasks: z.number().int(),
   overdueTasks: z.number().int(),
+  tasksDone: z.number().int(),
+  tasksTotal: z.number().int(),
+  manager: z.object({ id: idSchema, fullName: z.string() }).nullable(),
 });
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 
@@ -86,6 +89,8 @@ export const projectTaskSchema = z.object({
   /** Evidence still needed before the task can complete, e.g. ['photo']. */
   missingEvidence: z.array(z.string()),
   blockedBy: z.array(z.string()),
+  /** The part of `blockedBy` that is open DISCOM change requests, not earlier tasks. */
+  changeBlockers: z.array(z.string()),
   completedAt: instantSchema.nullable(),
 });
 export type ProjectTask = z.infer<typeof projectTaskSchema>;

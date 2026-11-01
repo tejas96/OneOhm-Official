@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectSummary } from '@oneohm/api-contracts';
-import { cn, listItemEnter, StageTracker, StatusPill } from '@oneohm/design-system/web';
+import { Avatar, cn, listItemEnter, StageTracker, StatusPill } from '@oneohm/design-system/web';
 import { formatKwp } from '@oneohm/shared';
 import { motion } from 'motion/react';
 import Link from 'next/link';
@@ -47,7 +47,7 @@ export function ProjectCard({
               </Link>
             </h2>
             <p className="truncate type-body-sm text-ink-muted">
-              {project.place} · {project.discom}
+              {project.place} · {project.discom} · {formatKwp(project.capacityWp)}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -87,11 +87,18 @@ export function ProjectCard({
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 type-body-sm">
-          <span className="font-mono text-[0.75rem] text-ink-muted tabular-nums">
-            {formatKwp(project.capacityWp)}
+          <span className="flex min-w-0 items-center gap-2 text-ink-muted">
+            {project.manager ? (
+              <>
+                <Avatar name={project.manager.fullName} swatch={1} size="sm" />
+                <span className="truncate">{project.manager.fullName}</span>
+              </>
+            ) : (
+              <span className="text-ink-faint">{t('card.noManager')}</span>
+            )}
           </span>
-          <span className="text-ink-faint tabular-nums">
-            {t('card.openTasks', { count: project.openTasks })}
+          <span className="shrink-0 text-ink-faint tabular-nums">
+            {t('card.tasksDone', { done: project.tasksDone, total: project.tasksTotal })}
             {project.overdueTasks > 0 && (
               <span className="text-overdue">
                 {' · '}

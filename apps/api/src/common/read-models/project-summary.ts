@@ -6,6 +6,7 @@ import {
   projects,
   projectTasks,
   properties,
+  users,
 } from '@oneohm/database';
 import { EPC_STAGES, type EpcStage, type WaitingParty } from '@oneohm/domain';
 import { daysBetween, todayIn } from '@oneohm/shared';
@@ -41,10 +42,16 @@ export async function projectSummaries(
   where?: SQL,
 ): Promise<ProjectSummary[]> {
   const query = db
-    .select({ project: projects, city: properties.city, discom: discoms.code })
+    .select({
+      project: projects,
+      city: properties.city,
+      discom: discoms.code,
+      managerName: users.fullName,
+    })
     .from(projects)
     .innerJoin(properties, eq(properties.id, projects.propertyId))
     .innerJoin(discoms, eq(discoms.id, projects.discomId))
+    .leftJoin(users, eq(users.id, projects.managerUserId))
     .orderBy(desc(projects.createdAt));
   const rows = where ? await query.where(where) : await query;
   const ids = rows.map((row) => row.project.id);
@@ -72,11 +79,12 @@ export async function projectSummaries(
     .from(paymentMilestones)
     .where(inArray(paymentMilestones.projectId, ids));
   const today = todayIn();
-  return rows.map(({ project, city, discom }) =>
+  return rows.map(({ project, city, discom, managerName }) =>
     summarise(
       project,
       city,
       discom,
+      managerName,
       tasks.filter((task) => task.projectId === project.id),
       milestones.filter((milestone) => milestone.projectId === project.id),
       today,
@@ -88,6 +96,7 @@ function summarise(
   project: typeof projects.$inferSelect,
   city: string,
   discom: string,
+  managerName: string | null,
   tasks: readonly TaskRow[],
   milestones: readonly MilestoneRow[],
   today: string,
@@ -160,5 +169,11 @@ function summarise(
         : null,
     openTasks: open.length,
     overdueTasks: overdue.length,
+    tasksDone: tasks.length - open.length,
+    tasksTotal: tasks.length,
+    manager:
+      project.managerUserId && managerName
+        ? { id: project.managerUserId, fullName: managerName }
+        : null,
   };
 }

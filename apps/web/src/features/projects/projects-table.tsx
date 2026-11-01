@@ -47,20 +47,22 @@ export function ProjectsTable({ projects }: { readonly projects: readonly Projec
       cell: (project) => (
         <span className="flex flex-col">
           <span className="text-ink-muted">{project.place}</span>
-          <span className="type-label text-ink-faint">{project.discom}</span>
+          <span className="type-label whitespace-nowrap text-ink-faint">
+            {project.discom} · {formatKwp(project.capacityWp)}
+          </span>
         </span>
       ),
     },
     {
-      key: 'size',
-      header: t('columns.size'),
-      align: 'end',
+      key: 'manager',
+      header: t('columns.manager'),
       hideOnPhone: true,
-      cell: (project) => (
-        <span className="font-mono text-[0.8125rem] whitespace-nowrap text-ink tabular-nums">
-          {formatKwp(project.capacityWp)}
-        </span>
-      ),
+      cell: (project) =>
+        project.manager ? (
+          <span className="whitespace-nowrap text-ink-muted">{project.manager.fullName}</span>
+        ) : (
+          <span className="text-ink-faint">{t('card.noManager')}</span>
+        ),
     },
     {
       key: 'stage',
@@ -113,7 +115,7 @@ export function ProjectsTable({ projects }: { readonly projects: readonly Projec
       cell: (project) => (
         <span className="flex flex-col items-end whitespace-nowrap type-body-sm tabular-nums">
           <span className="text-ink-muted">
-            {t('card.openTasks', { count: project.openTasks })}
+            {t('card.tasksDoneShort', { done: project.tasksDone, total: project.tasksTotal })}
           </span>
           {project.overdueTasks > 0 && (
             <span className="text-overdue">

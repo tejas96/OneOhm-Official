@@ -25,15 +25,11 @@ export interface ProjectSignals {
 
 const byDue = (left: ProjectTask, right: ProjectTask) => left.dueDate.localeCompare(right.dueDate);
 
-/**
- * `blockedBy` mixes earlier tasks (normal sequencing) with open change requests. A
- * blocker that is not the title of a task on this project is a change request.
- */
+/** Open tasks, and those an open DISCOM change request holds back (from the API). */
 export function projectSignals(project: ProjectDetail, today = todayIn()): ProjectSignals {
-  const titles = new Set(project.tasks.map((task) => task.title));
   const open = project.tasks.filter((task) => task.status !== 'completed').sort(byDue);
   const heldByChange = open
-    .map((task) => ({ task, requests: task.blockedBy.filter((name) => !titles.has(name)) }))
+    .map((task) => ({ task, requests: task.changeBlockers }))
     .filter((held) => held.requests.length > 0);
   return {
     open,

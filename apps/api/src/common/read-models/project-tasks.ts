@@ -67,6 +67,10 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
   const today = todayIn();
   return rows.map(({ task, code, name, assigneeName }) => {
     const attached = files.filter((file) => file.taskId === task.id);
+    const changes =
+      task.status === 'completed'
+        ? []
+        : changeRequestsBlocking(changeBlocks.get(task.projectId), task);
     const known = facts.filter(
       (fact) => fact.projectId === task.projectId && task.captures.includes(fact.key),
     );
@@ -112,10 +116,9 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         ...deps
           .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
           .map((dep) => dep.title),
-        ...(task.status === 'completed'
-          ? []
-          : changeRequestsBlocking(changeBlocks.get(task.projectId), task)),
+        ...changes,
       ],
+      changeBlockers: changes,
       completedAt: task.completedAt?.toISOString() ?? null,
     };
   });
