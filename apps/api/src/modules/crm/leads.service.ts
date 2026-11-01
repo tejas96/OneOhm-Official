@@ -127,6 +127,12 @@ export class LeadsService {
     const step = patch.stepKey ? await pickStep(this.db, patch.stepKey) : null;
     const stage = step?.stage ?? patch.stage ?? current.stage;
     assertOpenLeadComplete(current, patch, stage);
+    // Won means a customer: convert first, so the site and quotation have a home.
+    if (stage === 'won' && current.stage !== 'won' && !current.customerId) {
+      throw invalid('Convert this lead to a customer before marking it won.', {
+        stage: 'Convert the lead first.',
+      });
+    }
     if (patch.ownerUserId && patch.ownerUserId !== current.owner?.id) {
       await assertCanOwnLeads(this.db, patch.ownerUserId);
     }

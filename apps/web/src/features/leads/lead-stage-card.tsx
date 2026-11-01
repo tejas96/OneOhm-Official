@@ -82,7 +82,10 @@ export function LeadStageCard({
                     label: step.name,
                     description: t(`stage.${step.stage}`),
                   })),
-                { value: 'won', label: t('stage.won') },
+                // Won needs a customer; the quotation's acceptance marks it won on its own.
+                ...(lead.customerId || lead.stage === 'won'
+                  ? [{ value: 'won', label: t('stage.won') }]
+                  : []),
               ]}
               disabled={update.isPending}
             />

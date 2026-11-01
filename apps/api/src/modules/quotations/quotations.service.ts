@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
-import { leads, quotationLines, quotations } from '@oneohm/database';
+import { quotationLines, quotations } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -11,6 +11,7 @@ import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { autoMoveLead } from '../crm/lead-history';
 import { applyAcceptedChange } from '../project-changes/change-accept';
 import {
   changeAwaiting,
@@ -75,11 +76,6 @@ export class QuotationsService {
       if (!created) throw new Error('Quotation insert returned nothing.');
       if (redraft) await linkRevision(tx, redraft.projectId, created.id);
       await tx.insert(quotationLines).values(lineRows(created.id, priced));
-      if (leadId)
-        await tx
-          .update(leads)
-          .set({ stage: 'quoted', updatedAt: new Date() })
-          .where(and(eq(leads.id, leadId), ne(leads.stage, 'won')));
       await recordAudit(tx, actor.userId, 'quotation.created', 'quotation', created.id, {
         number: slot.number,
         revisionOf: revisionOf?.id ?? null,
@@ -137,6 +133,11 @@ export class QuotationsService {
         },
         `quotation_sent:${id}`,
       );
+      if (quotation.input.leadId) {
+        const again = quotation.status === 'sent' ? ' again' : '';
+        const note = `Quotation ${quotation.number} sent${again}.`;
+        await autoMoveLead(tx, quotation.input.leadId, actor.userId, 'quoted', note);
+      }
       await recordAudit(tx, actor.userId, 'quotation.sent', 'quotation', id);
     });
     return this.get(id);
@@ -165,11 +166,10 @@ export class QuotationsService {
             inArray(quotations.status, ['draft', 'sent', 'accepted']),
           ),
         );
-      if (quotation.input.leadId)
-        await tx
-          .update(leads)
-          .set({ stage: 'won', wonAt: new Date(), updatedAt: new Date() })
-          .where(eq(leads.id, quotation.input.leadId));
+      if (quotation.input.leadId) {
+        const note = `Quotation ${quotation.number} accepted.`;
+        await autoMoveLead(tx, quotation.input.leadId, actor.userId, 'won', note);
+      }
       await applyAcceptedRevision(tx, id, quotation.totalPaise, actor.userId);
       // A revision carrying a project change applies it (PRD 3.15); other open changes lapse.
       await applyAcceptedChange(tx, id, actor.userId);
