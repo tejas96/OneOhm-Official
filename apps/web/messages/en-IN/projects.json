@@ -365,7 +365,8 @@
         "share": "{percent}% of the schedule received",
         "next": "Next to collect",
         "noSchedule": "No payment schedule yet.",
-        "allPaid": "Every milestone is paid."
+        "allPaid": "Every milestone is paid.",
+        "closedOn": "Paid in full. Closed on {date}."
       },
       "reports": {
         "title": "Statutory reports",

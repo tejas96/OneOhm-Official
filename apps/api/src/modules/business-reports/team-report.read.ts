@@ -20,6 +20,8 @@ export interface TeamTask {
   /** India date it finished inside the period; null while open. */
   readonly finishedOn: string | null;
   readonly open: boolean;
+  /** Paused now, waiting on `party`. */
+  readonly waiting: boolean;
 }
 
 export interface TeamPerson {
@@ -79,6 +81,7 @@ export async function readTeamTasks(db: DatabaseExecutor, scope: ReportScope): P
         dueDate: row.dueDate,
         finishedOn: done && row.completedAt ? indiaDate(row.completedAt) : null,
         open: !done,
+        waiting: row.status === 'waiting',
       },
     ];
   });

@@ -48,13 +48,14 @@ export async function tellCustomerAbout(
       capacityWp: projects.capacityWp,
       phone: customers.phoneE164,
       name: customers.name,
-      optIn: customers.whatsappOptIn,
     })
     .from(projects)
     .innerJoin(customers, eq(customers.id, projects.customerId))
     .where(eq(projects.id, task.projectId))
     .limit(1);
-  if (!project?.optIn) return;
+  // No WhatsApp opt-in check here: the message router sends SMS (or a printed paper)
+  // to customers who said no to WhatsApp, so they still hear about their project.
+  if (!project) return;
   await queueWhatsApp(
     db,
     project.phone,

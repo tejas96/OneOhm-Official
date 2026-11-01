@@ -13,6 +13,12 @@ import { payeeOf } from './payees';
 import { PAYOUT_GATEWAY, type PayoutGateway } from './payout-gateway';
 import { PROBLEM_TEXT, presentPayout, problemFor } from './payout-rules';
 
+const isUniqueViolation = (error: unknown): boolean => {
+  const code = (value: unknown) =>
+    typeof value === 'object' && value !== null ? (value as { code?: string }).code : undefined;
+  return code(error) === '23505' || code((error as { cause?: unknown })?.cause) === '23505';
+};
+
 /** Paying approved bills straight to the payee's bank through RazorpayX (PRD 3.11). */
 @Injectable()
 export class BankPayoutsService {
@@ -84,7 +90,13 @@ export class BankPayoutsService {
         accountMasked: maskAccount(bank.accountNumber),
         requestedByUserId: actor.userId,
       })
-      .returning();
+      .returning()
+      .catch((error: unknown) => {
+        // Two clicks at once: the database allows one open transfer per bill.
+        if (isUniqueViolation(error))
+          throw conflict(PROBLEM_TEXT.already_sending, 'already_sending');
+        throw error;
+      });
     if (!row) throw new Error('Payout insert returned nothing');
     try {
       const created = await this.gateway.createPayout({

@@ -339,7 +339,8 @@
         "vendor_advance_paid": "Vendor advance paid",
         "vendor_advance_adjusted": "Vendor advance used on a bill",
         "cash_deposit": "Cash deposit",
-        "cheque_cleared": "Cheque cleared"
+        "cheque_cleared": "Cheque cleared",
+        "payout_fee": "Bank transfer fee"
       }
     },
     "links": {

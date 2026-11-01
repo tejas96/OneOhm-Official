@@ -83,20 +83,27 @@ export class TeamReportService {
   }
 }
 
-/** Finished on time or late (late on others: waiting on customer, bank or DISCOM), open, past due. */
+/**
+ * Finished on time or late (late on others: waiting on customer, bank or DISCOM), open,
+ * past due. Delays caused by others never count against the person (PRD 3.12): they are
+ * left out of the on-time rate and of past due while the task waits on them.
+ */
 export function tally(tasks: readonly TeamTask[], today: string): Work {
   const finished = tasks.filter((task) => task.finishedOn !== null);
   const onTime = finished.filter((task) => (task.finishedOn ?? '') <= task.dueDate).length;
   const late = finished.filter((task) => (task.finishedOn ?? '') > task.dueDate);
   const open = tasks.filter((task) => task.open);
+  const lateMine = late.filter((task) => task.party === 'internal').length;
   return {
     finished: finished.length,
     onTime,
     late: late.length,
-    lateOnOthers: late.filter((task) => task.party !== 'internal').length,
-    onTimeRate: onTimeRate(onTime, late.length),
+    lateOnOthers: late.length - lateMine,
+    onTimeRate: onTimeRate(onTime, lateMine),
     open: open.length,
-    pastDue: open.filter((task) => task.dueDate < today).length,
+    pastDue: open.filter(
+      (task) => task.dueDate < today && !(task.waiting && task.party !== 'internal'),
+    ).length,
   };
 }
 

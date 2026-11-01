@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "bank_payouts_one_open" ON "bank_payouts" USING btree ("payable_id") WHERE "bank_payouts"."status" in ('queued', 'pending', 'processing');

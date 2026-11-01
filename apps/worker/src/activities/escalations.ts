@@ -8,7 +8,7 @@ import {
   users,
 } from '@oneohm/database';
 import { addDays, daysBetween } from '@oneohm/shared';
-import { and, eq, isNotNull, lt, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
 
 /** When late or stuck work is pushed to someone (PRD 3.7, 7.1). */
 export const ESCALATION = {
@@ -60,7 +60,8 @@ async function lateTasks(db: Database, today: string) {
     .where(
       and(
         ne(projectTasks.status, 'completed'),
-        eq(projects.status, 'active'),
+        // Switched-on projects still have handover and subsidy tasks to chase.
+        inArray(projects.status, ['active', 'operational']),
         or(
           lt(projectTasks.dueDate, addDays(today, -ESCALATION.managerAfterDays + 1)),
           isNotNull(projectTasks.waitingSince),

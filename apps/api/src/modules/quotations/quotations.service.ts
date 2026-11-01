@@ -2,15 +2,16 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
 import { leads, quotationLines, quotations } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { type Actor, can } from '../../common/auth/actor';
+import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import { loadQuotationDetail } from './quotation-detail';
 import { leadForQuotation } from './quotation-lead';
 import { numberFor, type RevisionOf } from './quotation-numbering';
@@ -36,8 +37,10 @@ export class QuotationsService {
     const priced = await this.pricing.price(input);
     const company = await this.catalog.company();
     const today = todayIn();
+    // A project whose survey revision was turned down takes this quote as its next one.
+    const redraft = revisionOf ? null : await redraftFor(this.db, input.propertyId);
     const id = await this.db.transaction(async (tx) => {
-      const slot = await numberFor(tx, input.propertyId, today, revisionOf);
+      const slot = await numberFor(tx, input.propertyId, today, revisionOf ?? redraft?.revisionOf);
       const totals = priced.preview.totals;
       const leadId = await leadForQuotation(tx, input.leadId, property.customerId);
       const [created] = await tx
@@ -90,6 +93,7 @@ export class QuotationsService {
         })
         .returning({ id: quotations.id });
       if (!created) throw new Error('Quotation insert returned nothing.');
+      if (redraft) await linkRevision(tx, redraft.projectId, created.id);
       await tx.insert(quotationLines).values(
         priced.lines.map((line, position) => ({
           quotationId: created.id,
@@ -126,8 +130,12 @@ export class QuotationsService {
     return this.get(id);
   }
 
-  async list(status?: QuotationDetail['status']) {
-    return quotationSummaries(this.db, status ? eq(quotations.status, status) : undefined);
+  /** `scope` narrows the list for people who may only see their own (resellers). */
+  async list(status?: QuotationDetail['status'], scope?: SQL) {
+    return quotationSummaries(
+      this.db,
+      and(status ? eq(quotations.status, status) : undefined, scope),
+    );
   }
 
   async get(id: string): Promise<QuotationDetail> {
@@ -135,6 +143,7 @@ export class QuotationsService {
   }
 
   async approveDiscount(actor: Actor, id: string): Promise<QuotationDetail> {
+    await this.assertOpen(id);
     await this.db
       .update(quotations)
       .set({ discountApprovedByUserId: actor.userId, updatedAt: new Date() })
@@ -149,6 +158,7 @@ export class QuotationsService {
       throw conflict('The discount needs approval before sending.', 'discount_pending');
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be sent.', 'not_open');
+    await this.assertManagerFor(actor, id);
     await this.db.transaction(async (tx) => {
       await tx
         .update(quotations)
@@ -179,6 +189,7 @@ export class QuotationsService {
       throw conflict('The discount needs approval first.', 'discount_pending');
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be accepted.', 'not_open');
+    await this.assertManagerFor(actor, id);
     await this.db.transaction(async (tx) => {
       await tx
         .update(quotations)
@@ -208,11 +219,29 @@ export class QuotationsService {
   }
 
   async reject(actor: Actor, id: string, reason: string): Promise<QuotationDetail> {
-    await this.db
-      .update(quotations)
-      .set({ status: 'rejected', rejectedAt: new Date(), updatedAt: new Date() })
-      .where(eq(quotations.id, id));
-    await recordAudit(this.db, actor.userId, 'quotation.rejected', 'quotation', id, { reason });
+    const quotation = await this.assertOpen(id);
+    const project = await projectAwaiting(this.db, id);
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(quotations)
+        .set({ status: 'rejected', rejectedAt: new Date(), updatedAt: new Date() })
+        .where(eq(quotations.id, id));
+      if (project) await revisionTurnedDown(tx, project, quotation, reason, actor.userId);
+      await recordAudit(tx, actor.userId, 'quotation.rejected', 'quotation', id, { reason });
+    });
     return this.get(id);
+  }
+
+  /** Accepted, rejected and replaced quotations are locked (PRD 3.5). */
+  private async assertOpen(id: string): Promise<QuotationDetail> {
+    const quotation = await this.get(id);
+    if (!['draft', 'sent'].includes(quotation.status))
+      throw conflict('This quotation is closed. Make a new revision instead.', 'not_open');
+    return quotation;
+  }
+
+  /** A survey revision needs a project manager to send it and record the customer's OK. */
+  private async assertManagerFor(actor: Actor, id: string): Promise<void> {
+    if (await projectAwaiting(this.db, id)) assertCan(actor, 'projects.manage');
   }
 }

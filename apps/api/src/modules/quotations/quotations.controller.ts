@@ -1,14 +1,17 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Inject } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
+import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { assertQuotationAccess, detailFor, previewFor, quotationScope } from './quotation-access';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { QuotationsService } from './quotations.service';
 
 @Controller()
 export class QuotationsController {
   constructor(
+    @Inject(DATABASE) private readonly db: Database,
     private readonly quotations: QuotationsService,
     private readonly pricing: QuotationPricingService,
   ) {}
@@ -18,19 +21,23 @@ export class QuotationsController {
     return tsRestHandler(apiContract.quotations, {
       previewQuotation: async ({ body }) => {
         assertCan(actor, 'quotations.create');
-        return { status: 200, body: (await this.pricing.price(body)).preview };
+        return { status: 200, body: previewFor(actor, (await this.pricing.price(body)).preview) };
       },
       createQuotation: async ({ body }) => {
         assertCan(actor, 'quotations.create');
-        return { status: 201, body: await this.quotations.create(actor, body) };
+        return { status: 201, body: detailFor(actor, await this.quotations.create(actor, body)) };
       },
       listQuotations: async ({ query }) => {
         assertCan(actor, 'quotations.view', 'quotations.create');
-        return { status: 200, body: await this.quotations.list(query.status) };
+        return {
+          status: 200,
+          body: await this.quotations.list(query.status, quotationScope(actor)),
+        };
       },
       getQuotation: async ({ params }) => {
         assertCan(actor, 'quotations.view', 'quotations.create');
-        return { status: 200, body: await this.quotations.get(params.id) };
+        await assertQuotationAccess(this.db, actor, params.id);
+        return { status: 200, body: detailFor(actor, await this.quotations.get(params.id)) };
       },
       approveDiscount: async ({ params }) => {
         assertCan(actor, 'quotations.approve_discount');
@@ -38,15 +45,25 @@ export class QuotationsController {
       },
       sendQuotation: async ({ params }) => {
         assertCan(actor, 'quotations.create');
-        return { status: 200, body: await this.quotations.send(actor, params.id) };
+        await assertQuotationAccess(this.db, actor, params.id);
+        return {
+          status: 200,
+          body: detailFor(actor, await this.quotations.send(actor, params.id)),
+        };
       },
       acceptQuotation: async ({ params }) => {
         assertCan(actor, 'quotations.create');
-        return { status: 200, body: await this.quotations.accept(actor, params.id) };
+        await assertQuotationAccess(this.db, actor, params.id);
+        return {
+          status: 200,
+          body: detailFor(actor, await this.quotations.accept(actor, params.id)),
+        };
       },
       rejectQuotation: async ({ params, body }) => {
         assertCan(actor, 'quotations.create');
-        return { status: 200, body: await this.quotations.reject(actor, params.id, body.reason) };
+        await assertQuotationAccess(this.db, actor, params.id);
+        const rejected = await this.quotations.reject(actor, params.id, body.reason);
+        return { status: 200, body: detailFor(actor, rejected) };
       },
     });
   }

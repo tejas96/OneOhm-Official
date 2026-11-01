@@ -21,10 +21,14 @@ interface Counts {
   dueToday: number;
   done: number;
   onTime: number;
+  lateOnOthers: number;
 }
 
-const percent = (counts: Counts) =>
-  counts.done > 0 ? Math.round((counts.onTime * 100) / counts.done) : null;
+/** On-time share of finished work, leaving out work made late by others (PRD 3.12). */
+const percent = (counts: Counts) => {
+  const rated = counts.done - counts.lateOnOthers;
+  return rated > 0 ? Math.round((counts.onTime * 100) / rated) : null;
+};
 
 /**
  * Work per person and per contractor crew over the command centre's projects and period,
@@ -41,9 +45,12 @@ export class TeamLoadService {
       .select({
         userId: projectTasks.assigneeUserId,
         open: sql<number>`count(*) filter (where ${projectTasks.status} <> 'completed')::int`,
-        overdue: sql<number>`count(*) filter (where ${projectTasks.status} <> 'completed' and ${projectTasks.dueDate} < ${today})::int`,
+        // Waiting on the customer, bank or DISCOM is not the person's delay (PRD 3.12).
+        overdue: sql<number>`count(*) filter (where ${projectTasks.status} <> 'completed' and ${projectTasks.dueDate} < ${today} and not (${projectTasks.status} = 'waiting' and ${projectTasks.waitingParty} <> 'internal'))::int`,
         dueToday: sql<number>`count(*) filter (where ${projectTasks.status} <> 'completed' and ${projectTasks.dueDate} = ${today})::int`,
         done: sql<number>`count(*) filter (where ${projectTasks.completedAt} >= ${`${scope.start}T00:00:00+05:30`}::timestamptz)::int`,
+        // Finished late because of the customer, bank or DISCOM: left out of the rate.
+        lateOnOthers: sql<number>`count(*) filter (where ${projectTasks.completedAt} >= ${`${scope.start}T00:00:00+05:30`}::timestamptz and (${projectTasks.completedAt} at time zone 'Asia/Kolkata')::date > ${projectTasks.dueDate} and ${projectTasks.waitingParty} <> 'internal')::int`,
         onTime: sql<number>`count(*) filter (where ${projectTasks.completedAt} >= ${`${scope.start}T00:00:00+05:30`}::timestamptz and (${projectTasks.completedAt} at time zone 'Asia/Kolkata')::date <= ${projectTasks.dueDate})::int`,
       })
       .from(projectTasks)
@@ -75,7 +82,7 @@ export class TeamLoadService {
       ratingSummary(stars.filter((row) => ids.includes(row.userId)).map((row) => row.rating));
     const byUser = new Map(rows.map((row) => [row.userId, row]));
     const awayIds = new Set(away.map((row) => row.userId));
-    const empty: Counts = { open: 0, overdue: 0, dueToday: 0, done: 0, onTime: 0 };
+    const empty: Counts = { open: 0, overdue: 0, dueToday: 0, done: 0, onTime: 0, lateOnOthers: 0 };
     const staff = people
       .filter((person) => !person.contractorId)
       .map((person) => {
@@ -105,6 +112,7 @@ export class TeamLoadService {
             dueToday: sum.dueToday + row.dueToday,
             done: sum.done + row.done,
             onTime: sum.onTime + row.onTime,
+            lateOnOthers: sum.lateOnOthers + row.lateOnOthers,
           };
         }, empty);
         return {

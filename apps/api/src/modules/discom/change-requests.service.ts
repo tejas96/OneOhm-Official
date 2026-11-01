@@ -171,15 +171,14 @@ export class ChangeRequestsService {
           userId: actor.userId,
         });
       }
-      if (row.customer.whatsappOptIn) {
-        await queueWhatsApp(
-          tx,
-          row.customer.phoneE164,
-          'change_request_raised',
-          { customer: row.customer.name, request: definition.title, number },
-          `change_request_raised:${request.id}`,
-        );
-      }
+      // Routed WhatsApp, then SMS, then in person: opted-out customers still hear.
+      await queueWhatsApp(
+        tx,
+        row.customer.phoneE164,
+        'change_request_raised',
+        { customer: row.customer.name, request: definition.title, number },
+        `change_request_raised:${request.id}`,
+      );
       await recordAudit(tx, actor.userId, 'change_request.created', 'change_request', request.id, {
         type: input.type,
         values,

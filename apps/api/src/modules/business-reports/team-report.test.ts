@@ -16,6 +16,7 @@ const task = (patch: Partial<TeamTask>): TeamTask => ({
   dueDate: '2026-11-10',
   finishedOn: null,
   open: true,
+  waiting: false,
   ...patch,
 });
 const leave = (patch: Partial<TeamLeave>): TeamLeave => ({
@@ -38,17 +39,19 @@ describe('tally', () => {
         task({ finishedOn: '2026-11-12', open: false }),
         task({ finishedOn: '2026-11-12', open: false, party: 'discom' }),
         task({ dueDate: '2026-11-19' }),
+        task({ dueDate: '2026-11-18', waiting: true, party: 'customer' }),
         task({ dueDate: '2026-11-22' }),
       ],
       scope.today,
     );
+    // The DISCOM's delay and the task waiting on the customer do not count against Asha.
     expect(counts).toEqual({
       finished: 3,
       onTime: 1,
       late: 2,
       lateOnOthers: 1,
-      onTimeRate: 1 / 3,
-      open: 2,
+      onTimeRate: 1 / 2,
+      open: 3,
       pastDue: 1,
     });
   });

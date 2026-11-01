@@ -239,6 +239,20 @@
       "when": 1793538082274,
       "tag": "0033_bank_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793541847124,
+      "tag": "0034_financial_closure",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793542129931,
+      "tag": "0035_one_open_payout",
+      "breakpoints": true
     }
   ]
 }

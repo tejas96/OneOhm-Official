@@ -89,15 +89,14 @@ export async function applyChangeRequest(
       userId,
     });
   }
-  if (row.customer.whatsappOptIn) {
-    await queueWhatsApp(
-      tx,
-      row.customer.phoneE164,
-      'change_request_completed',
-      { customer: row.customer.name, request: definition.title, number: request.number },
-      `change_request_completed:${request.id}`,
-    );
-  }
+  // Routed WhatsApp, then SMS, then in person: opted-out customers still hear.
+  await queueWhatsApp(
+    tx,
+    row.customer.phoneE164,
+    'change_request_completed',
+    { customer: row.customer.name, request: definition.title, number: request.number },
+    `change_request_completed:${request.id}`,
+  );
   await recordAudit(tx, userId, 'property.updated_by_change_request', 'property', row.property.id, {
     changeRequest: request.number,
     previous,

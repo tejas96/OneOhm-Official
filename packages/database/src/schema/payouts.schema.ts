@@ -1,4 +1,5 @@
 import { PAYOUT_STATUSES } from '@oneohm/domain';
+import { sql } from 'drizzle-orm';
 import { index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, money, primaryId, updatedAt } from './columns';
 import { payables } from './finance.schema';
@@ -36,6 +37,10 @@ export const bankPayouts = pgTable(
   (table) => [
     index('bank_payouts_payable_idx').on(table.payableId),
     uniqueIndex('bank_payouts_provider_unique').on(table.providerPayoutId),
+    // One transfer on its way per bill: a double click can never send money twice.
+    uniqueIndex('bank_payouts_one_open')
+      .on(table.payableId)
+      .where(sql`${table.status} in ('queued', 'pending', 'processing')`),
   ],
 );
 

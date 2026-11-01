@@ -12,6 +12,7 @@ import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { awardOnTimeTask } from '../workforce/points';
+import { closeIfSettled } from './financial-closure';
 import { tellCustomerAbout, tellManagerDone } from './task-messages';
 
 type TaskRow = typeof projectTasks.$inferSelect;
@@ -86,6 +87,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .update(projects)
       .set({ status: 'completed', updatedAt: now })
       .where(eq(projects.id, task.projectId));
+    // Usually the money is in before the last task (subsidy release), so close here too.
+    await closeIfSettled(tx, task.projectId);
   }
 
   await tellCustomerAbout(tx, task, 'completed');

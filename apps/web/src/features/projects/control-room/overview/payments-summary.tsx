@@ -3,7 +3,7 @@
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { Card, CardHeader, type PillTone, StatusPill } from '@oneohm/design-system/web';
 import { formatInr, formatInrCompact } from '@oneohm/shared';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { TabLink } from './tab-link';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -25,6 +25,7 @@ export function PaymentsSummary({
 }) {
   const t = useTranslations('projects.overview.payments');
   const moneyT = useTranslations('projects.money');
+  const format = useFormatter();
   const total = project.milestones.reduce((sum, milestone) => sum + milestone.amountPaise, 0);
   const paid = project.milestones.reduce((sum, milestone) => sum + milestone.paidPaise, 0);
   const unpaid = project.milestones.filter((milestone) => milestone.status !== 'paid');
@@ -72,7 +73,17 @@ export function PaymentsSummary({
           </div>
         ) : (
           <p className="border-t border-hairline pt-4 type-body-sm text-ink-muted">
-            {project.milestones.length === 0 ? t('noSchedule') : t('allPaid')}
+            {project.financiallyClosedAt
+              ? t('closedOn', {
+                  date: format.dateTime(new Date(project.financiallyClosedAt), {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  }),
+                })
+              : project.milestones.length === 0
+                ? t('noSchedule')
+                : t('allPaid')}
           </p>
         )}
       </div>

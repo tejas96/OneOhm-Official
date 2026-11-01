@@ -1,8 +1,10 @@
-import { Controller, StreamableFile } from '@nestjs/common';
+import { Controller, Inject, StreamableFile } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
+import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { assertQuotationAccess } from '../quotations/quotation-access';
 import { QuotationPdfService } from './quotation-pdf.service';
 import { ReportArchiveService } from './report-archive.service';
 import type { PdfFile } from './report-pdf.service';
@@ -25,6 +27,7 @@ export function pdfBody(file: PdfFile, disposition: 'inline' | 'attachment'): Bl
 @Controller()
 export class ReportsController {
   constructor(
+    @Inject(DATABASE) private readonly db: Database,
     private readonly statuses: ReportStatusService,
     private readonly reports: ReportPdfService,
     private readonly quotations: QuotationPdfService,
@@ -53,6 +56,7 @@ export class ReportsController {
       },
       quotationPdf: async ({ params, query }) => {
         assertCan(actor, 'quotations.view', 'quotations.create');
+        await assertQuotationAccess(this.db, actor, params.id);
         const file = await this.quotations.render(params.id);
         return { status: 200, body: pdfBody(file, query.disposition) };
       },

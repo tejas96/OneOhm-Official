@@ -94,6 +94,8 @@
     "retry": "Try again",
     "loading": "Loading",
     "saving": "Saving",
-    "nothingYet": "Nothing here yet"
+    "nothingYet": "Nothing here yet",
+    "noAccessTitle": "Not part of your role",
+    "noAccessBody": "Your role does not include this. Ask an admin if you need it."
   }
 }

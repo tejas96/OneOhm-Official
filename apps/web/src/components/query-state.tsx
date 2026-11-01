@@ -1,11 +1,11 @@
 'use client';
 
 import { Button, EmptyState, Skeleton, SkeletonGroup } from '@oneohm/design-system/web';
-import { CircleAlert, RotateCw } from 'lucide-react';
+import { CircleAlert, LockKeyhole, RotateCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { describeError } from '@/lib/api/api-error';
+import { ApiError, describeError } from '@/lib/api/api-error';
 
-/** Shown when a screen could not load; says why and offers a retry. */
+/** Shown when a screen could not load; says why and offers a retry when it can help. */
 export function LoadError({
   error,
   onRetry,
@@ -16,6 +16,16 @@ export function LoadError({
   readonly className?: string;
 }) {
   const t = useTranslations('states');
+  // A role without the right gets a calm "not for you" note: retrying cannot help.
+  if (error instanceof ApiError && error.status === 403)
+    return (
+      <EmptyState
+        icon={<LockKeyhole />}
+        title={t('noAccessTitle')}
+        description={t('noAccessBody')}
+        {...(className ? { className } : {})}
+      />
+    );
   return (
     <EmptyState
       icon={<CircleAlert />}

@@ -18,6 +18,7 @@ import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
+import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
 
 export interface NewPayment {
@@ -76,12 +77,12 @@ export class FinanceService {
       .select({ total: sql<number>`coalesce(sum(${payments.amountPaise}), 0)::bigint` })
       .from(payments)
       .where(eq(payments.milestoneId, milestone.id));
-    const already = Number(paid?.total ?? 0);
-    if (already + input.amountPaise > milestone.amountPaise) {
-      throw invalid('This is more than is left on the milestone.', {
+    let already = Number(paid?.total ?? 0);
+    const tooMuch = () =>
+      invalid('This is more than is left on the milestone.', {
         amountPaise: `At most ${formatInr(milestone.amountPaise - already)} is left on this milestone.`,
       });
-    }
+    if (already + input.amountPaise > milestone.amountPaise) throw tooMuch();
     if (milestone.payer === 'bank' && input.method !== 'bank_disbursement') {
       throw invalid('The bank share is recorded as a bank disbursement.', {
         method: 'Choose bank disbursement.',
@@ -89,6 +90,19 @@ export class FinanceService {
     }
     checkCollected(input);
     const id = await this.db.transaction(async (tx) => {
+      // Lock the milestone and count again: a webhook and a person recording at the
+      // same moment must not overpay it.
+      await tx
+        .select({ id: paymentMilestones.id })
+        .from(paymentMilestones)
+        .where(eq(paymentMilestones.id, milestone.id))
+        .for('update');
+      const [locked] = await tx
+        .select({ total: sql<number>`coalesce(sum(${payments.amountPaise}), 0)::bigint` })
+        .from(payments)
+        .where(eq(payments.milestoneId, milestone.id));
+      already = Number(locked?.total ?? 0);
+      if (already + input.amountPaise > milestone.amountPaise) throw tooMuch();
       const [payment] = await tx
         .insert(payments)
         .values({
@@ -133,12 +147,7 @@ export class FinanceService {
         .innerJoin(customers, eq(customers.id, projects.customerId))
         .where(eq(projects.id, projectId))
         .limit(1);
-      if (open.length === 0 && project?.status === 'completed') {
-        await tx
-          .update(projects)
-          .set({ financiallyClosedAt: new Date(), updatedAt: new Date() })
-          .where(eq(projects.id, projectId));
-      }
+      if (open.length === 0) await closeIfSettled(tx, projectId);
       await tx.insert(projectActivities).values({
         projectId,
         kind: 'payment',

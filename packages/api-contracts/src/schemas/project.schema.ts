@@ -150,6 +150,8 @@ export const projectDetailSchema = projectSummarySchema.extend({
   battery: z.boolean(),
   groundMount: z.boolean(),
   subsidy: z.boolean(),
+  /** Work complete and every milestone paid (PRD 3.11); null until both are true. */
+  financiallyClosedAt: instantSchema.nullable(),
   quotation: z.object({
     id: idSchema,
     number: z.string(),
