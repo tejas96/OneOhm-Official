@@ -1,7 +1,15 @@
 'use client';
 
 import type { Payable } from '@oneohm/api-contracts';
-import { Button, Dialog, Field, Input, Select, useToast } from '@oneohm/design-system/web';
+import {
+  Button,
+  Dialog,
+  Field,
+  Input,
+  SegmentedControl,
+  Select,
+  useToast,
+} from '@oneohm/design-system/web';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
@@ -9,6 +17,8 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useInvalidateFinance } from '../use-finance';
+import { BankTransferPanel } from './bank/bank-transfer-panel';
+import { usePayoutOptions } from './bank/use-payouts';
 
 const METHODS = ['bank_transfer', 'upi', 'cheque', 'cash'] as const;
 type Method = (typeof METHODS)[number];
@@ -30,10 +40,16 @@ export function PayBillDialog({
   const [method, setMethod] = useState<Method>('bank_transfer');
   const [paidOn, setPaidOn] = useState(todayIn());
   const [reference, setReference] = useState('');
+  // RazorpayX on: send by bank first; recording a payment made elsewhere stays one tap away.
+  const payouts = usePayoutOptions(bill?.id ?? null);
+  const bankOn = (payouts.data?.mode ?? 'off') !== 'off';
+  const [way, setWay] = useState<'bank' | 'record'>('bank');
+  const recording = !bankOn || way === 'record';
 
   const close = () => {
     setReference('');
     setPaidOn(todayIn());
+    setWay('bank');
     form.reset();
     onClose();
   };
@@ -71,34 +87,52 @@ export function PayBillDialog({
       }
       autoFocusField
       footer={
-        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
-          {t('submit')}
-        </Button>
+        recording ? (
+          <Button type="submit" form={formId} variant="primary" pending={form.pending}>
+            {t('submit')}
+          </Button>
+        ) : undefined
       }
     >
-      <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('method')} error={form.fieldErrors.method}>
-          <Select
-            value={method}
-            onValueChange={setMethod}
-            options={METHODS.map((value) => ({ value, label: methodT(value) }))}
-          />
-        </Field>
-        <Field label={t('paidOn')} required error={form.fieldErrors.paidOn}>
-          <Input type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} />
-        </Field>
-        <Field
-          label={t('reference')}
-          hint={t('referenceHint')}
-          error={form.fieldErrors.reference}
-          className="sm:col-span-2"
-        >
-          <Input value={reference} onChange={(event) => setReference(event.target.value)} />
-        </Field>
-        <div className="sm:col-span-2">
-          <FormError message={form.error} />
-        </div>
-      </form>
+      {bankOn && (
+        <SegmentedControl<'bank' | 'record'>
+          label={t('way')}
+          size="sm"
+          value={way}
+          onValueChange={setWay}
+          options={[
+            { value: 'bank', label: t('ways.bank') },
+            { value: 'record', label: t('ways.record') },
+          ]}
+          className="mb-4"
+        />
+      )}
+      {bill && !recording && <BankTransferPanel bill={bill} onSent={close} />}
+      {recording && (
+        <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('method')} error={form.fieldErrors.method}>
+            <Select
+              value={method}
+              onValueChange={setMethod}
+              options={METHODS.map((value) => ({ value, label: methodT(value) }))}
+            />
+          </Field>
+          <Field label={t('paidOn')} required error={form.fieldErrors.paidOn}>
+            <Input type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} />
+          </Field>
+          <Field
+            label={t('reference')}
+            hint={t('referenceHint')}
+            error={form.fieldErrors.reference}
+            className="sm:col-span-2"
+          >
+            <Input value={reference} onChange={(event) => setReference(event.target.value)} />
+          </Field>
+          <div className="sm:col-span-2">
+            <FormError message={form.error} />
+          </div>
+        </form>
+      )}
     </Dialog>
   );
 }

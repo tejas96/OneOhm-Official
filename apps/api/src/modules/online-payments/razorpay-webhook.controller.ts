@@ -15,6 +15,7 @@ import type { Request } from 'express';
 import { Public } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { applyPayoutEvent } from '../bank-payouts/payout-events';
 import { GatewayPaymentsService } from './gateway-payments.service';
 import { readEvent, verifySignature } from './razorpay-events';
 
@@ -38,16 +39,20 @@ export class RazorpayWebhookController {
     @Headers('x-razorpay-signature') signature: string | undefined,
     @Headers('x-razorpay-event-id') eventId: string | undefined,
   ): Promise<{ outcome: string }> {
-    const secret = this.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!secret) throw new NotFoundException();
-    if (!request.rawBody || !verifySignature(request.rawBody, signature, secret))
+    // RazorpayX webhooks may be signed with their own secret.
+    const secrets = [this.env.RAZORPAY_WEBHOOK_SECRET, this.env.RAZORPAYX_WEBHOOK_SECRET].filter(
+      (value): value is string => Boolean(value),
+    );
+    if (secrets.length === 0) throw new NotFoundException();
+    const raw = request.rawBody;
+    if (!raw || !secrets.some((secret) => verifySignature(raw, signature, secret)))
       throw new UnauthorizedException('Bad signature.');
     const body = request.body as { event?: string };
     const [stored] = await this.db
       .insert(gatewayEvents)
       .values({
         provider: 'razorpay',
-        eventId: eventId ?? `${body.event}:${request.rawBody.length}:${signature}`,
+        eventId: eventId ?? `${body.event}:${raw.length}:${signature}`,
         event: body.event ?? 'unknown',
         payload: body,
       })
@@ -67,6 +72,9 @@ export class RazorpayWebhookController {
   }
 
   private async handle(body: unknown): Promise<string> {
+    // Bank transfers to vendors and crews (RazorpayX).
+    if ((body as { event?: string }).event?.startsWith('payout.'))
+      return applyPayoutEvent(this.db, body);
     const news = readEvent(body);
     if (news.kind === 'paid') return this.payments.recordLinkPayment(news.payment);
     if (news.kind === 'closed') return this.payments.markLink(news.providerLinkId, news.status);

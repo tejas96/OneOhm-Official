@@ -1,5 +1,6 @@
 import { AfterSalesModule } from './after-sales/after-sales.module';
 import { AuditModule } from './audit/audit.module';
+import { BankPayoutsModule } from './bank-payouts/bank-payouts.module';
 import { BusinessReportsModule } from './business-reports/business-reports.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CommissionsModule } from './commissions/commissions.module';
@@ -51,6 +52,7 @@ export const FEATURE_MODULES = [
   WhatsAppModule,
   TemplatesModule,
   AuditModule,
+  BankPayoutsModule,
   BusinessReportsModule,
   PaymentPlansModule,
   ReferralsModule,

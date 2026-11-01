@@ -48,6 +48,10 @@ export const vendorSchema = z.object({
   email: z.string().nullable(),
   address: z.string().nullable(),
   paymentTermsDays: z.number().int(),
+  /** Bank details for bank transfers; the account number is shown masked only. */
+  bankAccountName: z.string().nullable(),
+  bankIfsc: z.string().nullable(),
+  bankAccountMasked: z.string().nullable(),
   notes: z.string().nullable(),
   active: z.boolean(),
   productIds: z.array(idSchema),
@@ -82,6 +86,28 @@ export const vendorInputSchema = z.object({
     .nullable(),
   address: optional(400),
   paymentTermsDays: z.number().int().min(0).max(180),
+  bankAccountName: optional(120).optional(),
+  bankIfsc: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .refine(
+      (value) => value === '' || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value),
+      'Enter an 11-character IFSC.',
+    )
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
+  /** Write-only: leave empty to keep the saved number. */
+  bankAccountNumber: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/\s+/g, ''))
+    .refine(
+      (value) => value === '' || /^\d{9,18}$/.test(value),
+      'Enter the 9 to 18 digit account number.',
+    )
+    .optional(),
   notes: optional(1000),
   active: z.boolean().default(true),
   productIds: z.array(idSchema).max(200).default([]),

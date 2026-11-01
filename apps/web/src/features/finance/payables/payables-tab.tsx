@@ -22,6 +22,8 @@ import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { type PayableFilter, useInvalidateFinance, usePayables } from '../use-finance';
 import { AddBillDialog } from './add-bill-dialog';
+import { latestByBill, PayoutBadge } from './bank/payout-badge';
+import { useRecentPayouts } from './bank/use-payouts';
 import { PayBillDialog } from './pay-bill-dialog';
 
 const TONE: Readonly<Record<Payable['status'], PillTone>> = {
@@ -44,6 +46,7 @@ export function PayablesTab() {
   const [adding, setAdding] = useState(false);
   const [paying, setPaying] = useState<Payable | null>(null);
   const query = usePayables(filter);
+  const payouts = latestByBill(useRecentPayouts().data ?? []);
 
   const approve = useMutation({
     mutationFn: (bill: Payable) =>
@@ -123,6 +126,7 @@ export function PayablesTab() {
       cell: (bill) => (
         <span className="flex flex-wrap items-center gap-2">
           <StatusPill size="sm" tone={TONE[bill.status]} label={t(`status.${bill.status}`)} />
+          <PayoutBadge bill={bill} latest={payouts.get(bill.id)} />
           {bill.status === 'pending' && canApprove && (
             <Button
               size="sm"

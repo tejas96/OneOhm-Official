@@ -54,6 +54,10 @@ export const vendors = pgTable('vendors', {
   address: text('address'),
   /** Days after the goods receipt that the vendor expects payment. */
   paymentTermsDays: integer('payment_terms_days').notNull().default(30),
+  /** Where bills are paid by bank transfer (RazorpayX payouts, PRD 3.11). */
+  bankAccountName: text('bank_account_name'),
+  bankAccountNumber: text('bank_account_number'),
+  bankIfsc: text('bank_ifsc'),
   notes: text('notes'),
   active: boolean('active').notNull().default(true),
   createdAt: createdAt(),

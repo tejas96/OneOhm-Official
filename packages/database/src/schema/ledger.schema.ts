@@ -31,6 +31,7 @@ export const journalSourceEnum = pgEnum('journal_source', [
   'customer_refund',
   'cash_deposit',
   'cheque_cleared',
+  'payout_fee',
   'referral_reward_approved',
   'referral_reward_paid',
   'commission_approved',

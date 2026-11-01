@@ -144,6 +144,20 @@ customer page (How we reach them). When WhatsApp rejects a number as "not on Wha
    is the same key used for sign-in codes. Restart the worker.
 3. SMS text is English for now; Marathi and Hindi SMS need their own DLT templates.
 
+## 5d. RazorpayX payouts to vendors and crews
+
+Approved bills can be sent straight to the payee's bank (Finance → Payables → Pay → Send
+by bank). The bill is marked paid only when RazorpayX reports the payout processed, with
+its UTR; the payout fee is booked as a bank charge. Sending needs the right to approve
+payments. Vendors get their bank account on the vendor page; crews on the contractor page.
+
+1. In the RazorpayX dashboard, copy the account number (My Account & Settings).
+2. Add a RazorpayX webhook to `https://<domain>/api/v1/webhooks/razorpay` with the events
+   `payout.processed`, `payout.reversed`, `payout.failed` (and `payout.updated` if offered).
+   Use the same secret as the payment-link webhook, or set `RAZORPAYX_WEBHOOK_SECRET`.
+3. Set `RAZORPAYX_ACCOUNT_NUMBER` and `RAZORPAYX_MODE=live`, restart the API, and send one
+   small payout to your own account first.
+
 ## 5b. Push notifications
 
 1. Create the Expo project for each app (`eas init`).

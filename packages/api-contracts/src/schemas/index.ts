@@ -1,5 +1,6 @@
 export * from './after-sales.schema';
 export * from './audit.schema';
+export * from './bank-payout.schema';
 export * from './billing.schema';
 export * from './cash-handling.schema';
 export * from './catalog.schema';

@@ -165,7 +165,47 @@
         "method": "Paid by",
         "paidOn": "Paid on",
         "reference": "Reference",
-        "referenceHint": "UTR, cheque number or UPI reference."
+        "referenceHint": "UTR, cheque number or UPI reference.",
+        "way": "How to pay",
+        "ways": {
+          "bank": "Send by bank",
+          "record": "Record a payment made"
+        }
+      },
+      "bank": {
+        "loading": "Checking the bank details",
+        "practice": "Practice mode: no real money moves",
+        "to": "Paid to",
+        "account": "Account",
+        "how": "Transfer",
+        "mode": {
+          "IMPS": "IMPS, usually within minutes",
+          "NEFT": "NEFT, usually within hours"
+        },
+        "send": "Send {amount} now",
+        "sent": "Bank transfer started",
+        "needsApprover": "Someone who approves payments can send this.",
+        "problem": {
+          "not_enabled": "Bank transfers are not switched on.",
+          "not_approved": "Approve the bill first.",
+          "no_payee": "This bill is not linked to a vendor or crew. Record a payment made instead.",
+          "no_bank_details": "Add the payee’s bank account (name, number and IFSC) on their vendor or contractor page first.",
+          "bad_bank_details": "The payee’s IFSC or account number does not look right. Check it on their page.",
+          "nothing_due": "Nothing is left to pay on this bill.",
+          "already_sending": "A bank transfer for this bill is already on its way."
+        },
+        "latest": {
+          "queued": "{amount} is waiting for funds in RazorpayX ({when}).",
+          "pending": "{amount} is waiting for approval in RazorpayX ({when}).",
+          "processing": "{amount} is on its way ({when}).",
+          "processed": "{amount} reached them {when}. UTR {utr}.",
+          "reversed": "The last transfer of {amount} came back: {reason}",
+          "failed": "The last transfer of {amount} did not go through: {reason}",
+          "cancelled": "The last transfer of {amount} was cancelled.",
+          "rejected": "The last transfer of {amount} was rejected: {reason}"
+        },
+        "onItsWay": "Bank transfer on its way",
+        "failedShort": "Bank transfer failed"
       }
     },
     "loans": {

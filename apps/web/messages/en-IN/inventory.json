@@ -223,7 +223,15 @@
       "create": "Add vendor",
       "save": "Save",
       "created": "{name} added",
-      "updated": "{name} saved"
+      "updated": "{name} saved",
+      "bank": {
+        "title": "Bank account for transfers",
+        "hint": "Used to pay this vendor’s approved bills straight from Finance.",
+        "name": "Account holder name",
+        "ifsc": "IFSC",
+        "number": "Account number",
+        "keep": "Saved: {account}. Leave empty to keep it."
+      }
     },
     "dispatches": {
       "loading": "Loading dispatches",

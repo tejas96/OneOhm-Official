@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Vendor, VendorData } from '@oneohm/api-contracts';
 import { goodsReceipts, payables, purchaseOrders, vendorProducts, vendors } from '@oneohm/database';
+import { maskAccount } from '@oneohm/domain';
 import { asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -115,6 +116,10 @@ function columns(values: Patch<VendorValues>): Partial<typeof vendors.$inferInse
   if (values.address !== undefined) out.address = values.address;
   if (values.paymentTermsDays !== undefined) out.paymentTermsDays = values.paymentTermsDays;
   if (values.notes !== undefined) out.notes = values.notes;
+  if (values.bankAccountName !== undefined) out.bankAccountName = values.bankAccountName;
+  if (values.bankIfsc !== undefined) out.bankIfsc = values.bankIfsc;
+  // The number is write-only: empty keeps what is saved.
+  if (values.bankAccountNumber) out.bankAccountNumber = values.bankAccountNumber;
   if (values.active !== undefined) out.active = values.active;
   return out;
 }
@@ -132,6 +137,9 @@ function present(
     email: row.email,
     address: row.address,
     paymentTermsDays: row.paymentTermsDays,
+    bankAccountName: row.bankAccountName,
+    bankIfsc: row.bankIfsc,
+    bankAccountMasked: row.bankAccountNumber ? maskAccount(row.bankAccountNumber) : null,
     notes: row.notes,
     active: row.active,
     ...extra,

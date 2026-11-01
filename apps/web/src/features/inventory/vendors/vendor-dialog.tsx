@@ -18,6 +18,7 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useRefreshInventory } from '../use-inventory';
+import { VendorBankFields } from './vendor-bank-fields';
 
 interface Draft {
   name: string;
@@ -27,6 +28,9 @@ interface Draft {
   email: string;
   address: string;
   paymentTermsDays: string;
+  bankAccountName: string;
+  bankIfsc: string;
+  bankAccountNumber: string;
   notes: string;
   active: boolean;
   productIds: string[];
@@ -40,6 +44,9 @@ const BLANK: Draft = {
   email: '',
   address: '',
   paymentTermsDays: '30',
+  bankAccountName: '',
+  bankIfsc: '',
+  bankAccountNumber: '',
   notes: '',
   active: true,
   productIds: [],
@@ -53,6 +60,10 @@ const draftFrom = (vendor: Vendor): Draft => ({
   email: vendor.email ?? '',
   address: vendor.address ?? '',
   paymentTermsDays: String(vendor.paymentTermsDays),
+  bankAccountName: vendor.bankAccountName ?? '',
+  bankIfsc: vendor.bankIfsc ?? '',
+  // Never shown in full; typing a new number replaces the saved one.
+  bankAccountNumber: '',
   notes: vendor.notes ?? '',
   active: vendor.active,
   productIds: [...vendor.productIds],
@@ -156,6 +167,11 @@ export function VendorDialog({
         <Field label={t('address')} error={errors.address}>
           <Textarea rows={2} {...text('address')} />
         </Field>
+        <VendorBankFields
+          text={text}
+          errors={errors}
+          savedAccount={vendor?.bankAccountMasked ?? null}
+        />
         {(products.data?.length ?? 0) > 0 && (
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 type-label font-medium text-ink">{t('products')}</legend>

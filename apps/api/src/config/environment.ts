@@ -53,62 +53,81 @@ const environmentSchema = z
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    /** RazorpayX payouts to vendors and crews: off, sandbox (local practice) or live. */
+    RAZORPAYX_MODE: z.enum(['off', 'sandbox', 'live']).default('off'),
+    /** The RazorpayX account the money is paid from (Dashboard → My Account). */
+    RAZORPAYX_ACCOUNT_NUMBER: z.string().optional(),
+    /** RazorpayX webhooks may use their own secret; the payment-link secret also works. */
+    RAZORPAYX_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
     /** Where customers reach this API from outside; sandbox payment pages live here. */
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
   })
   .superRefine((env, context) => {
-    if (env.RAZORPAY_MODE === 'live')
-      for (const key of [
-        'RAZORPAY_KEY_ID',
-        'RAZORPAY_KEY_SECRET',
-        'RAZORPAY_WEBHOOK_SECRET',
-      ] as const)
-        if (!env[key])
-          context.addIssue({
-            code: 'custom',
-            path: [key],
-            message: 'Needed for live payment links.',
-          });
-    if (env.NODE_ENV !== 'production') return;
-    if (env.RAZORPAY_MODE === 'sandbox')
-      context.addIssue({
-        code: 'custom',
-        path: ['RAZORPAY_MODE'],
-        message: 'The sandbox is for testing only.',
-      });
-    // Test keys on the real server would take no real money: a silent loss.
-    if (env.RAZORPAY_MODE === 'live' && env.RAZORPAY_KEY_ID?.startsWith('rzp_test_'))
-      context.addIssue({
-        code: 'custom',
-        path: ['RAZORPAY_KEY_ID'],
-        message: 'Use live Razorpay keys (rzp_live_) in production.',
-      });
-    if (env.OTP_DEVELOPMENT_CODE)
-      context.addIssue({
-        code: 'custom',
-        path: ['OTP_DEVELOPMENT_CODE'],
-        message: 'Not allowed in production.',
-      });
-    if (env.FILE_LINK_SECRET.startsWith('oneohm-local'))
-      context.addIssue({
-        code: 'custom',
-        path: ['FILE_LINK_SECRET'],
-        message: 'Set a real secret in production.',
-      });
-    for (const key of ['STORAGE_ACCESS_KEY', 'STORAGE_SECRET_KEY'] as const) {
-      if (env[key].startsWith('oneohm-local'))
-        context.addIssue({ code: 'custom', path: [key], message: 'Set a real key in production.' });
-    }
-    if (env.OTP_PROVIDER !== 'msg91')
-      context.addIssue({
-        code: 'custom',
-        path: ['OTP_PROVIDER'],
-        message: 'Use msg91 in production.',
-      });
+    const issues = [
+      ...missingKeys(env),
+      ...(env.NODE_ENV === 'production' ? productionIssues(env) : []),
+    ];
+    for (const [path, message] of issues)
+      context.addIssue({ code: 'custom', path: [path], message });
   });
 
 export type Environment = z.infer<typeof environmentSchema>;
+
+type Issue = readonly [key: string, message: string];
+type Raw = Readonly<Record<string, unknown>>;
+
+/** Keys a chosen mode cannot work without. */
+function missingKeys(env: Raw): Issue[] {
+  const needs = (keys: readonly string[], message: string) =>
+    keys.filter((key) => !env[key]).map((key): Issue => [key, message]);
+  return [
+    ...(env.RAZORPAY_MODE === 'live'
+      ? needs(
+          ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'],
+          'Needed for live payment links.',
+        )
+      : []),
+    ...(env.RAZORPAYX_MODE === 'live'
+      ? needs(
+          ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAYX_ACCOUNT_NUMBER'],
+          'Needed for RazorpayX payouts.',
+        )
+      : []),
+  ];
+}
+
+/** Settings that are fine on a laptop but dangerous on the real server. */
+function productionIssues(env: Raw): Issue[] {
+  const rules: readonly [boolean, string, string][] = [
+    [env.RAZORPAY_MODE === 'sandbox', 'RAZORPAY_MODE', 'The sandbox is for testing only.'],
+    [env.RAZORPAYX_MODE === 'sandbox', 'RAZORPAYX_MODE', 'The payout sandbox is for testing only.'],
+    // Test keys on the real server would take no real money: a silent loss.
+    [
+      env.RAZORPAY_MODE === 'live' && String(env.RAZORPAY_KEY_ID ?? '').startsWith('rzp_test_'),
+      'RAZORPAY_KEY_ID',
+      'Use live Razorpay keys (rzp_live_) in production.',
+    ],
+    [Boolean(env.OTP_DEVELOPMENT_CODE), 'OTP_DEVELOPMENT_CODE', 'Not allowed in production.'],
+    [
+      String(env.FILE_LINK_SECRET ?? '').startsWith('oneohm-local'),
+      'FILE_LINK_SECRET',
+      'Set a real secret in production.',
+    ],
+    [
+      String(env.STORAGE_ACCESS_KEY ?? '').startsWith('oneohm-local'),
+      'STORAGE_ACCESS_KEY',
+      'Set a real key in production.',
+    ],
+    [
+      String(env.STORAGE_SECRET_KEY ?? '').startsWith('oneohm-local'),
+      'STORAGE_SECRET_KEY',
+      'Set a real key in production.',
+    ],
+    [env.OTP_PROVIDER !== 'msg91', 'OTP_PROVIDER', 'Use msg91 in production.'],
+  ];
+  return rules.filter(([broken]) => broken).map(([, key, message]): Issue => [key, message]);
+}
 
 /** Blank lines in an env file (`KEY=`) mean "not set", not an empty value. */
 function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

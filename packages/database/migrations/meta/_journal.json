@@ -232,6 +232,13 @@
       "when": 1793534982972,
       "tag": "0032_service_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793538082274,
+      "tag": "0033_bank_payouts",
+      "breakpoints": true
     }
   ]
 }

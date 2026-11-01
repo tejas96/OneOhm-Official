@@ -1,3 +1,4 @@
+export * from './bank-payouts';
 export * from './cash-handling';
 export * from './customer-credit-postings';
 export * from './gst-states';

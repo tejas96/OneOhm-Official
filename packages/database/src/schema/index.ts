@@ -24,6 +24,7 @@ export * from './message-templates.schema';
 export * from './notifications.schema';
 export * from './payment-links.schema';
 export * from './payment-plans.schema';
+export * from './payouts.schema';
 export * from './procurement.schema';
 export * from './projects.schema';
 export * from './purchasing.schema';
