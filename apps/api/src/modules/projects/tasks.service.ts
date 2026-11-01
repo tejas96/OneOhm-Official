@@ -7,7 +7,7 @@ import {
   projectTasks,
   taskDependencies,
 } from '@oneohm/database';
-import { missingEvidence, type WaitingParty } from '@oneohm/domain';
+import { factLabel, missingEvidence, type WaitingParty } from '@oneohm/domain';
 import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
@@ -20,7 +20,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
-import { factLabel } from './fact-labels';
+import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
@@ -41,6 +41,17 @@ export class TasksService {
       and(eq(projectTasks.assigneeUserId, actor.userId), ne(projectTasks.status, 'completed')) ??
         eq(projectTasks.assigneeUserId, actor.userId),
     );
+  }
+
+  /** One task, for its assignee, approvers and people who see every project. */
+  async get(actor: Actor, id: string): Promise<ProjectTask> {
+    const [row] = await this.db
+      .select({ assigneeUserId: projectTasks.assigneeUserId })
+      .from(projectTasks)
+      .where(eq(projectTasks.id, id))
+      .limit(1);
+    if (!row || !canViewTask(actor, row)) throw notFound('That task');
+    return this.present(id);
   }
 
   async start(actor: Actor, id: string): Promise<ProjectTask> {

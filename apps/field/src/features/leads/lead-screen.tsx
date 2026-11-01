@@ -107,17 +107,11 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
         />
       </View>
       {canQuote ? (
-        lead.propertyId ? (
-          <Button
-            label={LEAD.quote}
-            icon={<Calculator size={16} color={theme.colors.onAccent} />}
-            onPress={() => router.push({ pathname: '/quote', params: { leadId: lead.id } })}
-          />
-        ) : (
-          <Text variant="bodySm" tone="tertiary">
-            {LEAD.quoteNeedsSite}
-          </Text>
-        )
+        <Button
+          label={LEAD.quote}
+          icon={<Calculator size={16} color={theme.colors.onAccent} />}
+          onPress={() => router.push({ pathname: '/quote', params: { leadId: lead.id } })}
+        />
       ) : null}
       <Card style={styles.details}>
         {details.map((item) => (

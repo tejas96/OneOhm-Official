@@ -87,6 +87,5 @@ export const LEAD = {
     save: 'Save',
   },
   quote: 'Quick quote',
-  quoteNeedsSite: 'A quick quote needs the customer and site added by the office first.',
   logged: 'Follow-up saved',
 } as const;

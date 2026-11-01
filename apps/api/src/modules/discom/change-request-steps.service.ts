@@ -1,13 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChangeRequestDetail } from '@oneohm/api-contracts';
 import { changeRequestSteps, changeRequests, type Transaction } from '@oneohm/database';
-import type { WaitingParty } from '@oneohm/domain';
+import { factLabel, type WaitingParty } from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { factLabel } from '../projects/fact-labels';
 import { applyChangeRequest } from './change-request-apply';
 import { presentChangeRequest } from './change-request-read';
 

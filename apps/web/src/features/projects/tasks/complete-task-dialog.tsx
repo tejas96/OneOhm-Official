@@ -17,18 +17,17 @@ interface CompleteMutation {
 }
 
 /**
- * Completing a task records the facts it captures (they feed the statutory reports)
- * and a note about the evidence. Approval tasks go to a manager first.
+ * Completing a task records the facts it captures (they feed the statutory reports),
+ * pre-filled with what the project already knows, and a note about the evidence.
+ * Approval tasks go to a manager first.
  */
 export function CompleteTaskDialog({
   task,
-  knownFacts,
   open,
   onOpenChange,
   mutation,
 }: {
   readonly task: ProjectTask;
-  readonly knownFacts: Readonly<Record<string, string>>;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly mutation: CompleteMutation;
@@ -38,7 +37,7 @@ export function CompleteTaskDialog({
   const canApprove = useCan('tasks.approve');
   const formId = useId();
   const [facts, setFacts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(task.captures.map((key) => [key, knownFacts[key] ?? ''])),
+    Object.fromEntries(task.captures.map((key) => [key, task.knownFacts[key] ?? ''])),
   );
   const [note, setNote] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -88,7 +87,7 @@ export function CompleteTaskDialog({
           <section className="flex flex-col gap-3">
             <p className="type-overline text-ink-faint uppercase">{t('records')}</p>
             <FactFields
-              keys={task.captures}
+              fields={task.captureFields}
               values={facts}
               errors={fieldErrors}
               onChange={(key, value) => setFacts((current) => ({ ...current, [key]: value }))}

@@ -1,9 +1,12 @@
 import type { Product } from '@oneohm/api-contracts';
 import { useEffect, useState } from 'react';
 
-/** A site a quick quote can be priced for: a property, with what pricing needs from it. */
+/**
+ * What a quick quote is priced for: a property on record, or (propertyId null) a fresh
+ * lead or new site, priced from the category and the numbers typed on the phone.
+ */
 export interface QuoteSite {
-  readonly propertyId: string;
+  readonly propertyId: string | null;
   readonly leadId: string | null;
   readonly title: string;
   readonly subtitle: string;

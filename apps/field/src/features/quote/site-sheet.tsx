@@ -1,4 +1,13 @@
-import { Card, Input, LoadingState, Sheet, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
+import {
+  Card,
+  ChoiceChips,
+  Input,
+  LoadingState,
+  Sheet,
+  Text,
+  unwrap,
+  useTheme,
+} from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
 import { useState } from 'react';
@@ -9,9 +18,14 @@ import { COMMON } from '@/copy/common';
 import { QUOTE } from '@/copy/quote';
 import { useCan } from '@/session/session-provider';
 import type { QuoteSite } from './quote-options';
-import { siteFromLead, siteFromProperty } from './use-quote-site';
+import { newSite, siteFromLead, siteFromProperty } from './use-quote-site';
 
-/** Pick the site: from the person's leads that have one, or (office staff) any customer. */
+const CATEGORIES = ['individual', 'society', 'commercial'] as const;
+
+/**
+ * Pick what to price: one of the person's leads (with or without a site on record), a
+ * customer's site (office staff), or a new site priced from its category alone.
+ */
 export function SiteSheet({
   open,
   onClose,
@@ -41,7 +55,7 @@ export function SiteSheet({
     queryFn: () => unwrap(api.crm.getCustomer({ params: { id: customerId ?? '' } })),
     enabled: Boolean(customerId),
   });
-  const leadSites = (leads.data ?? []).flatMap((lead) => siteFromLead(lead) ?? []);
+  const leadSites = (leads.data ?? []).map((lead) => siteFromLead(lead));
   const pick = (site: QuoteSite) => {
     onPick(site);
     onClose();
@@ -55,12 +69,28 @@ export function SiteSheet({
       description={QUOTE.siteSheet.description}
       closeLabel={COMMON.close}
     >
+      <View style={styles.block}>
+        <SectionTitle title={QUOTE.siteSheet.newSite} />
+        <Text variant="bodySm" tone="secondary">
+          {QUOTE.siteSheet.newSiteBody}
+        </Text>
+        <ChoiceChips
+          label={QUOTE.siteSheet.newSite}
+          choices={CATEGORIES.map((value) => ({ value, label: QUOTE.siteSheet.categories[value] }))}
+          value={null}
+          onChange={(category) =>
+            pick(
+              newSite(category, QUOTE.siteSheet.newSiteTitle, QUOTE.siteSheet.categories[category]),
+            )
+          }
+        />
+      </View>
       {leads.isPending ? <LoadingState label={COMMON.loading} /> : null}
       {leadSites.length > 0 ? (
         <SectionTitle title={QUOTE.siteSheet.fromLeads} count={leadSites.length} />
       ) : null}
       {leadSites.map((site) => (
-        <SiteRow key={site.propertyId} site={site} onPress={() => pick(site)} />
+        <SiteRow key={site.leadId ?? site.title} site={site} onPress={() => pick(site)} />
       ))}
       {canSeeCustomers ? (
         <View style={styles.block}>
@@ -97,11 +127,6 @@ export function SiteSheet({
           ))}
         </View>
       ) : null}
-      {!leads.isPending && leadSites.length === 0 && !canSeeCustomers ? (
-        <Text variant="bodySm" tone="secondary">
-          {QUOTE.siteSheet.none}
-        </Text>
-      ) : null}
     </Sheet>
   );
 }
@@ -113,7 +138,9 @@ function SiteRow({ site, onPress }: { readonly site: QuoteSite; readonly onPress
         {site.title}
       </Text>
       <Text variant="bodySm" tone="secondary" numberOfLines={1}>
-        {site.subtitle}
+        {site.propertyId || !site.leadId
+          ? site.subtitle
+          : `${site.subtitle} · ${QUOTE.siteSheet.noSiteYet}`}
       </Text>
     </Card>
   );

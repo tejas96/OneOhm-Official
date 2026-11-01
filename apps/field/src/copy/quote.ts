@@ -6,11 +6,16 @@ export const QUOTE = {
   changeSite: 'Change',
   siteSheet: {
     title: 'Choose a site',
-    description: 'Leads and customers whose site is already added.',
+    description: 'One of your leads, a customer on record, or a new site.',
     fromLeads: 'From your leads',
     fromCustomers: 'Customers',
     search: 'Search customers',
-    none: 'No sites yet. The office adds the site when a lead becomes a customer.',
+    newSite: 'New site',
+    newSiteBody:
+      'Price it from the type of site now; the details are added when it becomes a customer.',
+    newSiteTitle: 'New site',
+    noSiteYet: 'Site not added yet',
+    categories: { individual: 'Home', society: 'Housing society', commercial: 'Business' },
   },
   size: 'System size',
   sizeLabel: (kw: string) => `${kw} kW`,

@@ -17,9 +17,10 @@ const INITIAL: QuoteForm = {
   panelId: null,
   inverterId: null,
   structure: 'rcc_elevated',
-  floors: '',
+  // A quick quote prices from defaults straight away (PRD 3.5); sales adjusts on site.
+  floors: '1',
   households: '',
-  distanceKm: '',
+  distanceKm: '0',
   discount: '',
 };
 

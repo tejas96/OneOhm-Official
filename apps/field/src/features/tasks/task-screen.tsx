@@ -1,6 +1,5 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import {
-  Button,
   Card,
   describeError,
   EmptyState,
@@ -13,7 +12,7 @@ import {
   useTheme,
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Lock, ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,8 +21,9 @@ import { ScreenHeader } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
 import { shortDate } from '@/lib/dates';
-import { useCan } from '@/session/session-provider';
-import { EvidenceNotice, FactsForm } from './facts-form';
+import { EvidenceSection } from './evidence-section';
+import { FactsForm } from './facts-form';
+import { TaskFooter } from './task-footer';
 import { statusLabel, toneOf } from './task-row';
 import { useTaskActions } from './use-task-actions';
 import { WaitingSheet } from './waiting-sheet';
@@ -31,8 +31,12 @@ import { WaitingSheet } from './waiting-sheet';
 /** One task: what it is, what to record, and the next step in one tap. */
 export function TaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const query = useQuery({ queryKey: keys.tasks, queryFn: () => unwrap(api.tasks.myTasks()) });
-  const task = query.data?.find((item) => item.id === id);
+  const query = useQuery({
+    queryKey: keys.task(id),
+    queryFn: () => unwrap(api.tasks.getTask({ params: { id } })),
+    retry: false,
+  });
+  const task = query.data;
   if (query.isPending)
     return (
       <Screen>
@@ -52,18 +56,12 @@ export function TaskScreen() {
 
 function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const theme = useTheme();
-  const canApprove = useCan('tasks.approve');
   const actions = useTaskActions(task);
-  const [facts, setFacts] = useState<Record<string, string>>({});
+  const [facts, setFacts] = useState<Record<string, string>>(() => ({ ...task.knownFacts }));
+  const [uploading, setUploading] = useState(false);
   const [note, setNote] = useState('');
   const [waiting, setWaiting] = useState(false);
   const blocked = task.blockedBy.length > 0;
-  const leaveWhenDone = (updated: ProjectTask) => {
-    if (updated.status === 'completed' || updated.status === 'in_review') {
-      if (router.canGoBack()) router.back();
-      else router.replace('/');
-    }
-  };
   const failure =
     actions.complete.error ?? actions.start.error ?? actions.approve.error ?? actions.wait.error;
   const errors = fieldErrorsOf(actions.complete.error);
@@ -72,46 +70,16 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
     { label: TASK.dueDate, value: shortDate(task.dueDate) },
   ];
 
-  const footer =
-    task.status === 'in_review' ? (
-      canApprove ? (
-        <Button
-          label={TASK.approve}
-          size="lg"
-          fullWidth
-          pending={actions.approve.isPending}
-          onPress={() => actions.approve.mutate(undefined, { onSuccess: leaveWhenDone })}
-        />
-      ) : null
-    ) : (
-      <>
-        {task.status === 'in_progress' ? (
-          <Button
-            label={task.approval && !canApprove ? TASK.sendForApproval : TASK.complete}
-            size="lg"
-            fullWidth
-            disabled={blocked}
-            pending={actions.complete.isPending}
-            onPress={() => actions.complete.mutate({ facts, note }, { onSuccess: leaveWhenDone })}
-          />
-        ) : (
-          <Button
-            label={task.status === 'waiting' ? TASK.resume : TASK.start}
-            size="lg"
-            fullWidth
-            disabled={blocked}
-            pending={actions.start.isPending}
-            onPress={() => actions.start.mutate()}
-          />
-        )}
-        <Button
-          label={TASK.markWaiting}
-          variant="secondary"
-          fullWidth
-          onPress={() => setWaiting(true)}
-        />
-      </>
-    );
+  const footer = (
+    <TaskFooter
+      task={task}
+      actions={actions}
+      facts={facts}
+      note={note}
+      uploading={uploading}
+      onWaiting={() => setWaiting(true)}
+    />
+  );
 
   return (
     <Screen footer={footer}>
@@ -171,7 +139,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
           onNote={setNote}
         />
       ) : null}
-      <EvidenceNotice task={task} />
+      <EvidenceSection task={task} onBusyChange={setUploading} />
       <WaitingSheet
         open={waiting}
         pending={actions.wait.isPending}

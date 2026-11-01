@@ -33,13 +33,7 @@ interface MenuEntry {
  * person may do is offered: the assignee or a manager works the task, `tasks.assign`
  * hands it over and `tasks.approve` signs off reviews.
  */
-export function TaskActions({
-  task,
-  knownFacts = {},
-}: {
-  readonly task: ProjectTask;
-  readonly knownFacts?: Readonly<Record<string, string>>;
-}) {
+export function TaskActions({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.task.actions');
   const user = useCurrentUser();
   const manager = useCan('tasks.assign', 'projects.manage');
@@ -145,7 +139,6 @@ export function TaskActions({
       <CompleteTaskDialog
         key={`complete-${session}`}
         task={task}
-        knownFacts={knownFacts}
         open={dialog === 'complete'}
         onOpenChange={(next) => setDialog(next ? 'complete' : null)}
         mutation={actions.complete}

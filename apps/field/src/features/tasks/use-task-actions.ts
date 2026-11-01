@@ -15,6 +15,7 @@ export function useTaskActions(task: ProjectTask) {
     client.setQueryData<ProjectTask[]>(keys.tasks, (current) =>
       current?.map((item) => (item.id === updated.id ? updated : item)),
     );
+    client.setQueryData<ProjectTask>(keys.task(updated.id), updated);
     toast(message);
     // Refresh in the background; a finished task leaves the list once the screen has closed.
     void client.invalidateQueries({ queryKey: keys.tasks });
