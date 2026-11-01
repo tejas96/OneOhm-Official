@@ -2,7 +2,7 @@
   "service": {
     "eyebrow": "After-sales",
     "title": "Service",
-    "description": "Requests customers raise in the OneOhm app, and how they rated their installation.",
+    "description": "Requests customers raise in the OneOhm app, their WhatsApp chats, and every message we send them.",
     "viewLabel": "Show",
     "views": {
       "open": "Open",
@@ -18,7 +18,11 @@
       "all": "No service requests yet."
     },
     "loading": "Loading service requests",
-    "status": { "open": "New", "in_progress": "In progress", "resolved": "Resolved" },
+    "status": {
+      "open": "New",
+      "in_progress": "In progress",
+      "resolved": "Resolved"
+    },
     "category": {
       "no_generation": "No generation",
       "low_generation": "Low generation",
@@ -46,6 +50,106 @@
       "loading": "Loading ratings",
       "empty": "No ratings yet. Customers can rate after handover in the OneOhm app.",
       "average": "{count, plural, one {average from # rating} other {average from # ratings}}"
+    },
+    "tabsLabel": "Service sections",
+    "tabs": {
+      "requests": "Requests",
+      "whatsapp": "WhatsApp",
+      "log": "Message log"
+    },
+    "noAccess": "You do not have access to service.",
+    "whatsapp": {
+      "loading": "Loading chats",
+      "listLabel": "WhatsApp chats",
+      "filterLabel": "Show chats",
+      "filter": {
+        "all": "All",
+        "human": "Waiting for a person · {count}"
+      },
+      "withPerson": "With a person",
+      "empty": {
+        "all": "No WhatsApp chats yet. When a customer writes to the OneOhm number, the chat appears here.",
+        "human": "No one is waiting for a person. The assistant is answering every chat."
+      },
+      "noMessages": "No messages yet",
+      "fromUs": "OneOhm: {text}",
+      "pickTitle": "Pick a chat",
+      "pickBody": "Choose a chat to read it and reply.",
+      "back": "All chats",
+      "openCustomer": "Open customer",
+      "customerShort": "Customer",
+      "call": "Call",
+      "handBack": "Hand back to assistant",
+      "handedBack": "The assistant is answering this chat again",
+      "handBackFailed": "Could not hand the chat back",
+      "assistantOn": "The assistant is answering",
+      "personSince": "A person took over {time}",
+      "loadingChat": "Loading the chat",
+      "messagesLabel": "Messages with {name}",
+      "emptyChat": "No messages in this chat yet.",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "assistant": "Assistant",
+      "picked": "Picked from the menu",
+      "delivery": {
+        "pending": "Sending",
+        "skipped": "Not sent",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "read": "Read",
+        "failed": "Not delivered"
+      },
+      "reply": {
+        "label": "Reply on WhatsApp",
+        "placeholder": "Write a reply",
+        "send": "Send",
+        "hint": "Ctrl or ⌘ + Enter sends.",
+        "closed": "WhatsApp allows replies only within 24 hours of the customer’s last message — call them instead.",
+        "failed": "The reply did not go",
+        "takeOver": "Replying takes this chat over from the assistant until you hand it back."
+      }
+    },
+    "log": {
+      "loading": "Loading messages",
+      "caption": "Business messages and how far they got",
+      "filterLabel": "Show messages",
+      "all": "All states",
+      "count": "{count, plural, one {# message} other {# messages}}",
+      "columns": {
+        "message": "Message",
+        "recipient": "To",
+        "state": "State",
+        "attempts": "Tries",
+        "error": "Last error",
+        "times": "When",
+        "action": "Action"
+      },
+      "channel": {
+        "whatsapp": "WhatsApp",
+        "sms": "SMS",
+        "push": "App alert"
+      },
+      "appUser": "App user {id}",
+      "state": {
+        "pending": "Sending",
+        "skipped": "Not sent",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "read": "Read",
+        "failed": "Failed"
+      },
+      "queued": "Queued {time}",
+      "sentAt": "Sent {time}",
+      "deliveredAt": "Delivered {time}",
+      "readAt": "Read {time}",
+      "noError": "None",
+      "retry": "Send again",
+      "retried": "Queued to send again",
+      "retryFailed": "Could not queue it again",
+      "empty": {
+        "all": "No business messages yet. WhatsApp replies and app alerts appear here as they go out.",
+        "filtered": "No messages in this state."
+      }
     }
   }
 }

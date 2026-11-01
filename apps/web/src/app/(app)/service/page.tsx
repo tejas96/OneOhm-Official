@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { ServiceDeskView } from '@/features/service/service-desk-view';
+import { Suspense } from 'react';
+import { ServiceView } from '@/features/service/service-view';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('service');
@@ -8,5 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function ServicePage() {
-  return <ServiceDeskView />;
+  return (
+    <Suspense>
+      <ServiceView />
+    </Suspense>
+  );
 }
