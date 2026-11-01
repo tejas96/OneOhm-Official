@@ -16,7 +16,7 @@
     "cancel": "Cancel",
     "roles": {
       "loading": "Loading roles",
-      "intro": "Roles are bundles of permissions. Add, rename or change them at any time; people pick up the change on their next action.",
+      "intro": "Each role is a bundle of permissions. Turn one on or off in its cell, or open a role from its name to rename or archive it; people pick up the change on their next action.",
       "add": "New role",
       "members": "{count, plural, =0 {No one} one {# person} other {# people}}",
       "permissions": "{count, plural, one {# permission} other {# permissions}}",
@@ -47,6 +47,28 @@
         "create": "Create role",
         "created": "Role {name} created",
         "updated": "Role {name} saved"
+      },
+      "kindsShort": {
+        "staff": "Staff",
+        "partner": "Partner",
+        "reseller": "Reseller"
+      },
+      "views": {
+        "label": "Show roles as",
+        "grid": "Permissions",
+        "cards": "Roles"
+      },
+      "grid": {
+        "caption": "Permissions by role",
+        "can": "Can",
+        "cell": "{role} can {capability}",
+        "lockedCell": "{role} can always {capability} (protected)",
+        "protected": "Protected: always holds every permission.",
+        "noDescription": "No description yet.",
+        "granted": "{role} can now {capability}",
+        "revoked": "{role} can no longer {capability}",
+        "failed": "Could not change {role}",
+        "stale": "This role has changed. Reload and try again."
       }
     },
     "areas": {
