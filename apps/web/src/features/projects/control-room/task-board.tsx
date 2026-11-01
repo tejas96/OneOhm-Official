@@ -85,7 +85,7 @@ export function TaskBoard({ project }: { readonly project: ProjectDetail }) {
               ) : (
                 <ul className="flex flex-col divide-y divide-hairline">
                   {group.shown.map((task, index) => (
-                    <TaskCard key={task.id} task={task} index={index} knownFacts={project.facts} />
+                    <TaskCard key={task.id} task={task} index={index} />
                   ))}
                 </ul>
               )}

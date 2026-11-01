@@ -72,6 +72,13 @@ export const projectsContract = c.router({
 
 export const tasksContract = c.router({
   myTasks: { method: 'GET', path: '/tasks/mine', responses: { 200: z.array(projectTaskSchema) } },
+  getTask: {
+    method: 'GET',
+    path: '/tasks/:id',
+    pathParams: idParams,
+    responses: { 200: projectTaskSchema },
+    summary: 'One task for its assignee, approvers and people who see every project.',
+  },
   startTask: {
     method: 'POST',
     path: '/tasks/:id/start',

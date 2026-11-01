@@ -1,4 +1,4 @@
-import type { QuotationInput } from '@oneohm/api-contracts';
+import type { QuotationPreviewInput } from '@oneohm/api-contracts';
 import { unwrap } from '@oneohm/mobile-ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
@@ -22,7 +22,7 @@ export function buildQuoteInput(
   form: QuoteForm,
   panelId: string | null,
   inverterId: string | null,
-): QuotationInput | null {
+): QuotationPreviewInput | null {
   const targetWp = parseKw(form.sizeKw);
   const floors = whole(form.floors);
   const distanceKm = whole(form.distanceKm);
@@ -62,7 +62,8 @@ export function useQuotePreview(site: QuoteSite | null, form: QuoteForm) {
   const settled = useDebounced(input);
   const preview = useQuery({
     queryKey: ['quote-preview', settled],
-    queryFn: () => unwrap(api.quotations.previewQuotation({ body: settled as QuotationInput })),
+    queryFn: () =>
+      unwrap(api.quotations.previewQuotation({ body: settled as QuotationPreviewInput })),
     enabled: settled !== null,
     placeholderData: keepPreviousData,
     retry: false,

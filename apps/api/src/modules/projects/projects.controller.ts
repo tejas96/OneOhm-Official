@@ -54,6 +54,10 @@ export class TasksController {
   handler(@CurrentActor() actor: Actor) {
     return tsRestHandler(apiContract.tasks, {
       myTasks: async () => ({ status: 200, body: await this.tasks.mine(actor) }),
+      getTask: async ({ params }) => ({
+        status: 200,
+        body: await this.tasks.get(actor, params.id),
+      }),
       startTask: async ({ params }) => ({
         status: 200,
         body: await this.tasks.start(actor, params.id),

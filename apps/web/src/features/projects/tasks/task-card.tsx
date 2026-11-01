@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
 import { useCan } from '@/providers/current-user';
-import { useFactLabel } from './fact-fields';
 import { TaskActions } from './task-actions';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
 
@@ -35,17 +34,14 @@ export function TaskCard({
   task,
   index = 0,
   showProject = false,
-  knownFacts,
 }: {
   readonly task: ProjectTask;
   readonly index?: number;
   readonly showProject?: boolean;
-  readonly knownFacts?: Readonly<Record<string, string>>;
 }) {
   const t = useTranslations('projects.task');
   const partyT = useTranslations('commandCenter.party');
   const format = useFormatter();
-  const factLabel = useFactLabel();
   const canOpenProject = useCan('projects.view_all');
   const tone = taskTone(task);
   const done = task.status === 'completed';
@@ -77,11 +73,7 @@ export function TaskCard({
           ))}
         <div className="flex items-start justify-between gap-3">
           <p className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}>{task.title}</p>
-          {knownFacts ? (
-            <TaskActions task={task} knownFacts={knownFacts} />
-          ) : (
-            <TaskActions task={task} />
-          )}
+          <TaskActions task={task} />
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 type-body-sm text-ink-muted">
           <StatusPill
@@ -139,7 +131,7 @@ export function TaskCard({
         {!done && task.captures.length > 0 && (
           <p className="flex items-start gap-1.5 type-body-sm text-ink-faint">
             <ClipboardList aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-            {t('records', { facts: task.captures.map(factLabel).join(', ') })}
+            {t('records', { facts: task.captureFields.map((field) => field.label).join(', ') })}
           </p>
         )}
         <TaskEvidenceLine task={task} />

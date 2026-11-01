@@ -1,6 +1,6 @@
 import type { ReportStatus } from '@oneohm/api-contracts';
+import { factLabel } from '@oneohm/domain';
 import { AppError } from '../../common/http/errors';
-import { factLabel } from '../projects/fact-labels';
 import { COMPANY_FIELD_LABELS, type ReportDefinition } from './report-definitions';
 
 /** What readiness needs to know about a project; facts are captured by tasks. */

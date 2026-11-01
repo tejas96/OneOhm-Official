@@ -41,6 +41,17 @@ export const quotationInputSchema = z.object({
 });
 export type QuotationInput = z.infer<typeof quotationInputSchema>;
 
+/**
+ * A preview can price a fresh lead before any site is on record: without `propertyId`,
+ * the site facts that affect the subsidy come from these fields instead.
+ */
+export const quotationPreviewInputSchema = quotationInputSchema.extend({
+  propertyId: idSchema.nullable().optional(),
+  meterInSocietyName: z.boolean().nullable().optional(),
+  subsidyClaimed: z.boolean().optional(),
+});
+export type QuotationPreviewInput = z.infer<typeof quotationPreviewInputSchema>;
+
 export const quotationLineSchema = z.object({
   key: z.string(),
   description: z.string(),

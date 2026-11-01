@@ -4,6 +4,7 @@ import { idSchema } from '../common/primitives';
 import {
   quotationDetailSchema,
   quotationInputSchema,
+  quotationPreviewInputSchema,
   quotationPreviewSchema,
   quotationStatusSchema,
   quotationSummarySchema,
@@ -16,9 +17,10 @@ export const quotationsContract = c.router({
   previewQuotation: {
     method: 'POST',
     path: '/quotations/preview',
-    body: quotationInputSchema,
+    body: quotationPreviewInputSchema,
     responses: { 200: quotationPreviewSchema },
-    summary: 'Price, subsidy and effective cost instantly, with the DCR / non-DCR comparison.',
+    summary:
+      'Price, subsidy and effective cost instantly, with the DCR / non-DCR comparison. Works without a site on record.',
   },
   createQuotation: {
     method: 'POST',

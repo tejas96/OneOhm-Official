@@ -12,6 +12,11 @@ export function setToken(next: string | null): void {
   token = next;
 }
 
+/** The current bearer token, for requests made outside the typed client (uploads). */
+export function currentToken(): string | null {
+  return token;
+}
+
 export function onSessionExpired(listener: () => void): () => void {
   expiryListeners.add(listener);
   return () => {
@@ -42,6 +47,7 @@ export const queryClient = new QueryClient({
 export const keys = {
   me: ['me'] as const,
   tasks: ['tasks', 'mine'] as const,
+  task: (id: string) => ['tasks', 'one', id] as const,
   leads: ['leads', 'mine'] as const,
   products: ['catalog', 'products'] as const,
   discoms: ['discoms'] as const,

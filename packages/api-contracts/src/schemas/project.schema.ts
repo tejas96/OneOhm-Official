@@ -7,6 +7,15 @@ import { attachmentSchema } from './document.schema';
 export const epcStageSchema = z.enum(EPC_STAGES);
 export const waitingPartySchema = z.enum(WAITING_PARTIES);
 export const projectTypeSchema = z.enum(PROJECT_TYPES);
+
+/** One fact a task records: key, readable label, input kind and an optional hint. */
+export const factFieldSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  input: z.enum(['text', 'number', 'date', 'long']),
+  hint: z.string().optional(),
+});
+export type FactFieldInfo = z.infer<typeof factFieldSchema>;
 export const taskStatusSchema = z.enum([
   'pending',
   'ready',
@@ -68,6 +77,10 @@ export const projectTaskSchema = z.object({
   evidence: z.array(z.string()),
   /** Facts this task must capture before it can complete. */
   captures: z.array(z.string()),
+  /** The same facts with their label, input kind and hint, ready to render as a form. */
+  captureFields: z.array(factFieldSchema),
+  /** Values the project already has for those facts, to pre-fill the form. */
+  knownFacts: z.record(z.string(), z.string()),
   /** Files attached to this task (photos and documents), oldest first. */
   attachments: z.array(attachmentSchema),
   /** Evidence still needed before the task can complete, e.g. ['photo']. */

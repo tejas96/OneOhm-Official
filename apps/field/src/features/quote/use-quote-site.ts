@@ -6,8 +6,8 @@ import { api } from '@/api/api';
 import { useCan } from '@/session/session-provider';
 import type { QuoteSite } from './quote-options';
 
-export function siteFromLead(lead: Lead, property?: Property): QuoteSite | null {
-  if (!lead.propertyId) return null;
+/** A lead's site; a lead without one is priced from its category until the site is added. */
+export function siteFromLead(lead: Lead, property?: Property): QuoteSite {
   return {
     propertyId: lead.propertyId,
     leadId: lead.id,
@@ -16,6 +16,23 @@ export function siteFromLead(lead: Lead, property?: Property): QuoteSite | null 
     subsidyCategory: property?.subsidyCategory ?? lead.subsidyCategory,
     households: property?.households ?? null,
     floors: property?.floors ?? null,
+  };
+}
+
+/** A site not on record yet: priced from the category alone (floors and size typed in). */
+export function newSite(
+  category: QuoteSite['subsidyCategory'],
+  title: string,
+  subtitle: string,
+): QuoteSite {
+  return {
+    propertyId: null,
+    leadId: null,
+    title,
+    subtitle,
+    subsidyCategory: category,
+    households: null,
+    floors: null,
   };
 }
 

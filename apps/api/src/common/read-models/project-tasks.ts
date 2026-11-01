@@ -2,12 +2,13 @@ import type { ProjectTask } from '@oneohm/api-contracts';
 import {
   type DatabaseExecutor,
   documents,
+  projectFacts,
   projects,
   projectTasks,
   taskDependencies,
   users,
 } from '@oneohm/database';
-import { missingEvidence } from '@oneohm/domain';
+import { factField, missingEvidence } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 
@@ -50,9 +51,23 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         )
         .orderBy(asc(documents.createdAt))
     : [];
+  const projectIds = [...new Set(rows.map((row) => row.task.projectId))];
+  const facts = projectIds.length
+    ? await db
+        .select({
+          projectId: projectFacts.projectId,
+          key: projectFacts.key,
+          value: projectFacts.value,
+        })
+        .from(projectFacts)
+        .where(inArray(projectFacts.projectId, projectIds))
+    : [];
   const today = todayIn();
   return rows.map(({ task, code, name, assigneeName }) => {
     const attached = files.filter((file) => file.taskId === task.id);
+    const known = facts.filter(
+      (fact) => fact.projectId === task.projectId && task.captures.includes(fact.key),
+    );
     return {
       id: task.id,
       projectId: task.projectId,
@@ -75,6 +90,8 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       approval: task.approval,
       evidence: task.evidence,
       captures: task.captures,
+      captureFields: task.captures.map(factField),
+      knownFacts: Object.fromEntries(known.map((fact) => [fact.key, fact.value])),
       attachments: attached.map((file) => ({
         id: file.id,
         name: file.name,

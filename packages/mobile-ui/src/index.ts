@@ -3,6 +3,7 @@ export { formatInr, formatInrCompact, formatKwp, formatWp } from '@oneohm/shared
 export * from './api/api-client';
 export * from './api/api-error';
 export * from './api/token-store';
+export * from './api/upload';
 export * from './auth/code-boxes';
 export * from './auth/otp-sign-in';
 export * from './brand/sun-path';

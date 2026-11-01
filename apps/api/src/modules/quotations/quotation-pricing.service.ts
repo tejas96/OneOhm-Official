@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { QuotationInput, QuotationPreview, QuotationTotals } from '@oneohm/api-contracts';
+import type {
+  QuotationPreview,
+  QuotationPreviewInput,
+  QuotationTotals,
+} from '@oneohm/api-contracts';
 import { products, subsidyRules } from '@oneohm/database';
 import {
   calculateSubsidy,
@@ -19,6 +23,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { type SiteFacts, siteFactsWithoutProperty } from './site-facts';
 
 type ProductRow = typeof products.$inferSelect;
 
@@ -55,8 +60,8 @@ export class QuotationPricingService {
     private readonly customers: CustomersService,
   ) {}
 
-  async price(input: QuotationInput): Promise<PricedQuotation> {
-    const property = await this.customers.property(input.propertyId);
+  async price(input: QuotationPreviewInput): Promise<PricedQuotation> {
+    const property = await this.siteFacts(input);
     const panel = await this.product(input.panelProductId, 'panel', 'panelProductId');
     const inverter = await this.product(input.inverterProductId, 'inverter', 'inverterProductId');
     const battery = input.batteryProductId
@@ -143,6 +148,15 @@ export class QuotationPricingService {
       rates,
       rule,
     };
+  }
+
+  /**
+   * The site facts the subsidy depends on: from the property when there is one, else
+   * from the preview's own fields (a fresh lead quoted in the field).
+   */
+  private async siteFacts(input: QuotationPreviewInput): Promise<SiteFacts> {
+    if (input.propertyId) return this.customers.property(input.propertyId);
+    return siteFactsWithoutProperty(input);
   }
 
   /** The closest panel of the other kind (DCR ↔ non-DCR), for the side-by-side comparison. */
