@@ -40,3 +40,6 @@ test-results/
 
 # agent worktrees
 .claude/worktrees/
+
+# sandbox-only build certificate (never commit)
+.sandbox-ca.crt
