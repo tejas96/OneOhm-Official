@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vitest';
+import { generateTasks, pickAssignee } from './generate-tasks';
+import { DEFAULT_TASK_LIBRARY } from './task-library';
+import type { ProjectFacts } from './task-template';
+
+const residential: ProjectFacts = {
+  projectType: 'residential',
+  discomCode: 'MSEDCL',
+  loan: false,
+  battery: false,
+  groundMount: false,
+  subsidy: true,
+  nameChange: false,
+};
+
+describe('generateTasks', () => {
+  it('builds a residential MSEDCL subsidy project without manual task picking', () => {
+    const tasks = generateTasks(DEFAULT_TASK_LIBRARY, residential, '2026-11-02');
+    const keys = tasks.map((task) => task.key);
+    expect(keys).toContain('discom_application');
+    expect(keys).toContain('subsidy_application');
+    expect(keys).not.toContain('loan_documents');
+    expect(keys).not.toContain('society_documents');
+    expect(tasks.length).toBeGreaterThan(20);
+  });
+
+  it('adds loan, battery and ground-mount work only when selected', () => {
+    const tasks = generateTasks(
+      DEFAULT_TASK_LIBRARY,
+      { ...residential, loan: true, battery: true, groundMount: true, subsidy: false },
+      '2026-11-02',
+    );
+    const keys = tasks.map((task) => task.key);
+    expect(keys).toEqual(
+      expect.arrayContaining(['loan_documents', 'battery_installation', 'ground_foundation']),
+    );
+    expect(keys).not.toContain('dcr_undertaking');
+  });
+
+  it('drops dependencies on tasks that do not apply and dates each task after what it waits for', () => {
+    const tasks = generateTasks(DEFAULT_TASK_LIBRARY, residential, '2026-11-02');
+    const byKey = new Map(tasks.map((task) => [task.key, task]));
+    expect(byKey.get('discom_application')?.dependsOn).toEqual(['electricity_details']);
+    const design = byKey.get('system_design');
+    const survey = byKey.get('site_survey');
+    expect(survey?.dueDate).toBe('2026-11-04');
+    expect(design && survey && design.startDate >= survey.dueDate).toBe(true);
+  });
+
+  it('skips other DISCOMs’ tasks', () => {
+    const tasks = generateTasks(
+      DEFAULT_TASK_LIBRARY,
+      { ...residential, discomCode: 'TATA' },
+      '2026-11-02',
+    );
+    expect(tasks.some((task) => task.key === 'discom_application')).toBe(false);
+  });
+});
+
+describe('pickAssignee', () => {
+  it('picks the least-loaded person in the role who is not on leave', () => {
+    const picked = pickAssignee(
+      [
+        { userId: 'a', roleKeys: ['execution'], openTasks: 2, onLeave: false },
+        { userId: 'b', roleKeys: ['execution'], openTasks: 0, onLeave: true },
+        { userId: 'c', roleKeys: ['execution', 'sales'], openTasks: 1, onLeave: false },
+      ],
+      'execution',
+    );
+    expect(picked?.userId).toBe('c');
+    expect(pickAssignee([], 'execution')).toBeNull();
+  });
+});
