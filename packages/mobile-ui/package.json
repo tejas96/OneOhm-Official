@@ -1,0 +1,49 @@
+{
+  "name": "@oneohm/mobile-ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OneOhm mobile UI kit shared by the field and customer apps: theme, components, API client and OTP sign-in.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests src"
+  },
+  "dependencies": {
+    "@oneohm/api-contracts": "workspace:*",
+    "@oneohm/design-system": "workspace:*",
+    "@oneohm/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@expo-google-fonts/geist": "*",
+    "@expo-google-fonts/geist-mono": "*",
+    "@expo-google-fonts/newsreader": "*",
+    "@ts-rest/core": "*",
+    "expo-secure-store": "*",
+    "lucide-react-native": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*"
+  },
+  "devDependencies": {
+    "@expo-google-fonts/geist": "0.4.2",
+    "@expo-google-fonts/geist-mono": "0.4.3",
+    "@expo-google-fonts/newsreader": "0.4.1",
+    "@ts-rest/core": "3.52.1",
+    "@types/react": "19.3.0",
+    "expo": "58.0.22",
+    "expo-secure-store": "58.0.2",
+    "lucide-react-native": "1.60.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "5.10.1",
+    "react-native-svg": "15.16.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
