@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meter Test Covering Letter</title>
+    <style>
+      /* fonts via base-report.css; margins via report-print-base.css */
+      /* No letterhead: the client's letter is a plain page with the company stamp. */
+
+      body {
+        font-size: 10.5pt;
+        line-height: 1.7;
+      }
+
+      .letter-date {
+        text-align: right;
+        margin-bottom: 18px;
+      }
+
+      .letter-to {
+        margin-bottom: 18px;
+      }
+
+      .letter-subject {
+        padding-left: 36px;
+        margin-bottom: 16px;
+      }
+
+      .letter-body p {
+        text-align: justify;
+        margin-bottom: 12px;
+      }
+
+      .letter-close {
+        margin-top: 4px;
+        margin-bottom: 12px;
+      }
+
+      .details div {
+        margin-bottom: 6px;
+      }
+
+      .details .gap {
+        display: inline-block;
+        width: 28px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pdf-wrapper">
+      <div class="pdf-page">
+        <div class="letter-date">Date: {{generated_on}}</div>
+
+        <div class="letter-to">
+          To,<br />
+          The Executive Engineer,<br />
+          M.S.E.D.C.L
+        </div>
+
+        <div class="letter-subject">Subject: Testing of Generation meter with/without CT</div>
+
+        <div class="letter-body">
+          <p>Respected Sir,</p>
+          <p>
+            I undersigned, <strong>{{vendor_name}}</strong>, installing for Mr/Mrs/Miss
+            <strong>{{consumer_name}}</strong>, who has received sanction for solar roof top net
+            metering ref no <strong>{{sanction_number}}</strong> dated
+            <strong>{{formatDate sanction_date}}</strong>.
+          </p>
+          <p>So I request you to test the Generation Meter with/without CT.</p>
+          <p>Kindly do the needful.</p>
+        </div>
+
+        {{> vendorStamp}}
+
+        <div class="letter-close">Yours Faithfully,</div>
+
+        <div class="details">
+          <div>Name: <strong>{{consumer_name}}</strong></div>
+          <div>MSEDCL Consumer No: <strong>{{consumer_number}}</strong></div>
+          <div>
+            Meter Serial No: <strong>{{meter_serial_number}}</strong><span class="gap"></span>Make:
+            <strong>{{meter_make}}</strong>
+          </div>
+          <div>Capacity: <strong>{{meter_capacity}}</strong></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

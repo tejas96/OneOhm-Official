@@ -5,18 +5,17 @@ import { eq } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
-import { factLabel } from '../projects/fact-labels';
-import {
-  COMPANY_FIELD_LABELS,
-  REPORT_DEFINITIONS,
-  type ReportDefinition,
-} from './report-definitions';
+import { REPORT_DEFINITIONS } from './report-definitions';
+import { type ReportContext, reportStatus } from './report-readiness';
 
-export interface ReportContext {
-  readonly facts: Readonly<Record<string, string>>;
-  readonly subsidy: boolean;
-  readonly discomCode: string;
-  readonly captureTask: ReadonlyMap<string, string>;
+export type { ReportContext } from './report-readiness';
+
+/** The project details a printed report needs beyond its facts. */
+export interface ReportProject extends ReportContext {
+  readonly code: string;
+  readonly type: 'residential' | 'society' | 'commercial';
+  readonly groundMount: boolean;
+  readonly discomName: string;
 }
 
 /** Ready, missing (which field, captured by which task) or not needed — before any PDF. */
@@ -27,9 +26,16 @@ export class ReportStatusService {
     private readonly catalog: CatalogService,
   ) {}
 
-  async context(projectId: string): Promise<ReportContext> {
+  async context(projectId: string): Promise<ReportProject> {
     const [project] = await this.db
-      .select({ subsidy: projects.subsidy, discomCode: discoms.code })
+      .select({
+        code: projects.code,
+        type: projects.type,
+        groundMount: projects.groundMount,
+        subsidy: projects.subsidy,
+        discomCode: discoms.code,
+        discomName: discoms.name,
+      })
       .from(projects)
       .innerJoin(discoms, eq(discoms.id, projects.discomId))
       .where(eq(projects.id, projectId))
@@ -46,9 +52,8 @@ export class ReportStatusService {
     const captureTask = new Map<string, string>();
     for (const task of tasks) for (const key of task.captures) captureTask.set(key, task.title);
     return {
+      ...project,
       facts: Object.fromEntries(rows.map((row) => [row.key, row.value])),
-      subsidy: project.subsidy,
-      discomCode: project.discomCode,
       captureTask,
     };
   }
@@ -56,33 +61,6 @@ export class ReportStatusService {
   async statuses(projectId: string): Promise<ReportStatus[]> {
     const context = await this.context(projectId);
     const company = await this.catalog.company();
-    return REPORT_DEFINITIONS.map((definition) => this.status(definition, context, company));
-  }
-
-  status(
-    definition: ReportDefinition,
-    context: ReportContext,
-    company: Record<string, unknown>,
-  ): ReportStatus {
-    const base = { key: definition.key, name: definition.name };
-    if (
-      (definition.onlyWithSubsidy && !context.subsidy) ||
-      (definition.discomCodes && !definition.discomCodes.includes(context.discomCode))
-    ) {
-      return { ...base, status: 'not_needed', missing: [] };
-    }
-    const missing = [
-      ...definition.required
-        .filter((key) => !context.facts[key]?.trim())
-        .map((key) => ({
-          field: key,
-          label: factLabel(key),
-          taskTitle: context.captureTask.get(key) ?? null,
-        })),
-      ...(definition.company ?? [])
-        .filter((field) => typeof company[field] !== 'string' || !(company[field] as string).trim())
-        .map((field) => ({ field, label: COMPANY_FIELD_LABELS[field], taskTitle: null })),
-    ];
-    return { ...base, status: missing.length ? 'missing' : 'ready', missing };
+    return REPORT_DEFINITIONS.map((definition) => reportStatus(definition, context, company));
   }
 }

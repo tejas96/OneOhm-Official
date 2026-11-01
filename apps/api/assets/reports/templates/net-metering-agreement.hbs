@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Net Metering Agreement</title>
+    <style>
+      /* fonts via base-report.css */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Open Sans', 'Noto Sans', Arial, sans-serif;
+        font-size: 9.5pt;
+        color: #1a1a1a;
+        background: #fff;
+      }
+
+      /*
+       * Layout margins/padding: report-print-base.css (injected at render time).
+       * No fixed page breaks: the clauses flow, and html2pdf keeps each one whole.
+       */
+
+      /* The title prints once, on page 1 only. */
+      .doc-title {
+        font-size: 12pt;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+
+      .clause-block,
+      .sub-clause,
+      .bullet-item {
+        line-height: 1.6;
+        text-align: justify;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .clause-block {
+        margin-bottom: 9px;
+      }
+
+      .clause-block strong {
+        font-weight: 700;
+      }
+
+      .clause-heading {
+        font-weight: 700;
+        margin-top: 10px;
+        margin-bottom: 3px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      .sub-clause {
+        margin-bottom: 7px;
+      }
+
+      /*
+       * Bullets are real characters: the PDF export (html2canvas) draws no list markers.
+       * No list wrapper: the first bullet must follow its heading, so the PDF keeps them together.
+       */
+      .bullet-item {
+        display: flex;
+        gap: 8px;
+        margin: 0 0 4px 6px;
+      }
+
+      .bullet-item .bullet {
+        flex: none;
+      }
+
+      /* Clause 11.0 and the closing line stay together, never a lone line on the last page. */
+      .closing {
+        margin-top: 10px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .and-separator {
+        font-weight: 700;
+        margin: 10px 0;
+      }
+
+      .closing-rule {
+        border-top: 1px dashed #1a1a1a;
+        margin: 14px 0 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pdf-wrapper">
+      <div class="doc-title">Net Metering Agreement</div>
+
+      <p class="clause-block">
+        This Agreement is made and entered into at <strong>{{dash site_address}}</strong> on this
+        ________ day of ________________ 20______ between the Eligible Consumer
+        <strong>{{dash consumer_name}}</strong> having premises at <strong>{{dash site_address}}</strong>
+        and Consumer No <strong>{{dash consumer_number}}</strong> as the first Party,
+      </p>
+
+      <p class="and-separator">AND</p>
+
+      <p class="clause-block">
+        The Distribution Licensee <strong>Maharashtra State Electricity Distribution Co. Ltd</strong>
+        (hereinafter referred to as 'the Licensee') and having its Registered Office at
+        <strong>Prakashgad, Anant Kanekar Marg, Station road, Bandra (E), Mumbai–400051</strong> as
+        second Party of this Agreement.
+      </p>
+
+      <p class="clause-block">
+        Whereas, the Eligible Consumer has applied to the Licensee for approval of a Net Metering
+        Arrangement under the provisions of the concerned SERC (State Electricity Regulatory
+        Commission) regulations.
+      </p>
+
+      <p class="clause-block">
+        And whereas, the Licensee has agreed to provide Network connectivity to the Eligible
+        Consumer for injection of electricity generated from its Roof-top Renewable Energy
+        Generating System of <strong>{{dash installed_capacity_kw}}</strong> kilowatt (kW)
+      </p>
+
+      <p class="clause-block">Both Parties hereby agree as follows:-</p>
+
+      <p class="clause-heading">1. Eligibility:</p>
+      <p class="clause-block">
+        The Roof-top Renewable Energy Generating System meets the applicable norms for being
+        integrated into the Distribution Network, and that the Eligible Consumer shall maintain the
+        System accordingly for the duration of this Agreement.
+      </p>
+
+      <p class="clause-heading">2. Technical and Inter-connection Requirements:</p>
+      <p class="sub-clause">
+        2.1 The metering arrangement and the inter-connection of the Roof-top Renewable Energy
+        Generating System with the Network of the Licensee shall be as per the provisions of the Net
+        Metering Regulations and the technical standards and norms specified by the Central
+        Electricity Authority for connectivity of distributed generation resources and for the
+        installation and operation of meters.
+      </p>
+      <p class="sub-clause">
+        2.2. The Eligible Consumer agrees that he shall install, prior to connection of the Roof-top
+        Renewable Energy Generating System to the Network of the Licensee, an isolation device (both
+        automatic and in built within inverter and external manual relays); and the Licensee shall
+        have access to it if required for the repair and maintenance of the Distribution Network.
+      </p>
+      <p class="sub-clause">
+        2.3. The Licensee shall specify the interface/inter-connection point and metering point.
+      </p>
+      <p class="sub-clause">
+        2.4. The Eligible Consumer shall furnish all relevant data, such as voltage, frequency,
+        circuit breaker, isolator position in his System, as and when required by the Licensee.
+      </p>
+      <p class="sub-clause">
+        2.5. All the equipment connected to Network of the Licensee at the time of installation
+        shall be compliant with the Technical Specifications for rooftop system as Published by
+        MNRE.
+      </p>
+
+      <p class="clause-heading">3. Safety:</p>
+      <p class="sub-clause">
+        3.1 The consumer shall comply with the Central Electricity Authority (Measures Relating to
+        Safety and Electricity Supply) Regulations 2010
+      </p>
+      <p class="sub-clause">
+        3.2. The equipment connected to the Licensee's Distribution System shall be compliant with
+        relevant International (IEEE/IEC) or Indian Standards (BIS), as the case may be, and the
+        installation of electrical equipment shall comply with the requirements specified by the
+        Central Electricity Authority regarding safety and electricity supply.
+      </p>
+      <p class="sub-clause">
+        3.3. The design, installation, maintenance and operation of the Roof-top Renewable Energy
+        Generating System shall be undertaken in a manner conducive to the safety of the Roof-top
+        Renewable Energy Generating System as well as the Licensee's Network.
+      </p>
+      <p class="sub-clause">
+        3.4. If, at any time, the Licensee determines that the Eligible Consumer's Roof-top
+        Renewable Energy Generating System is causing or may cause damage to and/or results in the
+        Licensee's other consumers or its assets, the Eligible Consumer shall disconnect the
+        Roof-top Renewable Energy Generating System from the distribution Network upon direction
+        from the Licensee and shall undertake corrective measures at his own expense prior to
+        re-connection.
+      </p>
+      <p class="sub-clause">
+        3.5. The Licensee shall not be responsible for any accident resulting in injury to human
+        beings or animals or damage to property that may occur due to back- feeding from the
+        Roof-top Renewable Energy Generating System when the grid supply is off. The Licensee may
+        disconnect the installation at any time in the event of such exigencies to prevent such
+        accident.
+      </p>
+
+      <p class="clause-heading">4. Other Clearances and Approvals:</p>
+      <p class="clause-block">
+        The Eligible Consumer shall obtain any statutory approvals and clearances that may be
+        required, such as from the Electrical Inspector or the municipal or other authorities,
+        before connecting the Roof-top Renewable Energy Generating System to the distribution
+        Network.
+      </p>
+
+      <p class="clause-heading">5. Period of Agreement, and Termination:</p>
+      <p class="clause-block">
+        This Agreement shall be for a period for 25 years, but may be terminated prematurely.
+      </p>
+      <p class="sub-clause">(a) By mutual consent; or</p>
+      <p class="sub-clause">(b) By the Eligible Consumer, by giving 30 days' notice to the Licensee.</p>
+      <p class="sub-clause">
+        (c) By the Licensee, by giving 30 days' notice, if the Eligible Consumer breaches any terms
+        of this Agreement or the provisions of the Net Metering Regulations and does not remedy such
+        breach within 30 days, or such other reasonable period as may be provided, of receiving
+        notice of such breach, or for any other valid reason communicated by the Licensee in
+        writing.
+      </p>
+
+      <p class="clause-heading">6. Access and Disconnection:</p>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The Eligible Consumer shall provide access to the Licensee to the metering equipment and
+          disconnecting devices of Roof-top Renewable Energy Generating System, both automatic and
+          manual, by the Eligible Consumer.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          If, in an emergent or outage situation, the Licensee cannot access the disconnecting
+          devices of the Roof-top Renewable Energy Generating System, both automatic and manual, it
+          may disconnect power supply to the premises.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          Upon termination of this Agreement under Clause 5, the Eligible Consumer shall disconnect
+          the Roof-top Renewable Energy Generating System forthwith from the Network of the
+          Licensee.
+      </div></div>
+
+      <p class="clause-heading">7. Liabilities:</p>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The Parties shall indemnify each other for damages or adverse effects of either Party's
+          negligence or misconduct during the installation of the Roof-top Renewable Energy
+          Generating System, connectivity with the distribution Network and operation of the System.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The Parties shall not be liable to each other for any loss of profits or revenues,
+          business interruption losses, loss of contract or goodwill, or for indirect,
+          consequential, incidental or special damages including, but not limited to, punitive or
+          exemplary damages, whether any of these liabilities, losses or damages arise in contract,
+          or otherwise.
+      </div></div>
+
+      <p class="clause-heading">8. Commercial Settlement:</p>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The commercial settlements under this Agreement shall be in accordance with the Net
+          Metering Regulations.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The Licensee shall not be liable to compensate the Eligible Consumer if his Rooftop
+          Renewable Energy Generating System is unable to inject surplus power generated into the
+          Licensee's Network on account of failure of power supply in the grid/Network.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The existing metering System, if not in accordance with the Net Metering Regulations,
+          shall be replaced by a bi-directional meter (whole current/CT operated) or a pair of
+          meters (as per the definition of 'Net Meter' in the Regulations), and a separate
+          generation meter may be provided to measure Solar power generation. The bi-directional
+          meter (whole current/CT operated) or pair of meters shall be installed at the
+          inter-connection point to the Licensee's Network for recording export and import of
+          energy.
+      </div></div>
+      <div class="bullet-item"><span class="bullet">•</span><div>
+          The uni-directional and bi-directional or pair of meters shall be fixed in separate meter
+          boxes in the same proximity.
+      </div></div>
+
+      <p class="clause-heading">9. Connection Costs:</p>
+      <p class="clause-block">
+        The Eligible Consumer shall bear all costs related to the setting up of the Roof-top
+        Renewable Energy Generating System and the cost of Net Meters.
+      </p>
+
+      <p class="clause-heading">10. Dispute Resolution:</p>
+      <p class="sub-clause">
+        10.1 Any dispute arising under this Agreement shall be resolved promptly, in good faith and
+        in an equitable manner by both the Parties.
+      </p>
+      <p class="sub-clause">
+        10.2. The Eligible Consumer shall have recourse to the concerned Consumer Grievance
+        Redressal Forum constituted under the relevant Regulations in respect of any grievance
+        regarding billing which has not been redressed by the Licensee.
+      </p>
+
+      <div class="closing">
+        <p class="clause-block">
+          <strong>11.0</strong> This agreement stands valid upto my sanctioned electrical load
+          capacity.
+        </p>
+
+        <div class="closing-rule"></div>
+        <p class="clause-block">
+          Submission of this document by the consumer shall be deemed as an automatic agreement to
+          the terms, conditions, and declarations specified above.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

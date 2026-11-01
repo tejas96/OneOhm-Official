@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DCR Undertaking / Self-Declaration</title>
+    <style>
+      /* fonts via base-report.css */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Open Sans', 'Noto Sans', Arial, sans-serif;
+        font-size: 9pt;
+        color: #1a1a1a;
+        background: #fff;
+      }
+
+      /*
+       * Layout margins/padding: report-print-base.css (injected at render time).
+       */
+      .pdf-page {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+
+      /* ── HEADER ── */
+      .doc-header {
+        text-align: center;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+        border-bottom: 2px solid #1a1a1a;
+      }
+
+      .doc-header .annexure-label {
+        text-align: right;
+        font-size: 10pt;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .doc-header .doc-title {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #1a1a1a;
+        line-height: 1.4;
+      }
+
+      /* ── NUMBERED CLAUSES ── */
+      .clause {
+        font-size: 9pt;
+        line-height: 1.7;
+        color: #1a1a1a;
+        text-align: justify;
+        margin-bottom: 12px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .clause strong {
+        font-weight: 700;
+        color: #1a1a1a;
+      }
+
+      /* ── MODULE DETAILS LIST ── */
+      .module-list {
+        margin: 8px 0 8px 16px;
+        font-size: 9pt;
+        line-height: 1.75;
+        color: #1a1a1a;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        list-style: none;
+        padding: 0;
+      }
+
+      .module-list li {
+        margin-bottom: 4px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .module-list li strong {
+        font-weight: 700;
+      }
+
+      /* ── SIGNATURE BLOCK ── */
+      .sig-block {
+        margin-top: 28px;
+        font-size: 9pt;
+        line-height: 1.8;
+        color: #1a1a1a;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .sig-block .sig-label {
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .sig-block .rpt-stamp {
+        margin-bottom: 2px;
+      }
+
+      .sig-block .for-company {
+        font-weight: 700;
+        font-size: 9.5pt;
+        margin-bottom: 8px;
+      }
+
+      .sig-detail-row {
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 6px;
+        font-size: 9pt;
+        line-height: 1.8;
+      }
+
+      .sig-detail-row .detail-label {
+        font-weight: 600;
+        min-width: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pdf-wrapper">
+
+      <!-- ═══════════════════════════ PAGE 1 ═══════════════════════════ -->
+      <div class="pdf-page">
+
+        <div class="doc-header">
+          <div class="annexure-label">Annexure-I</div>
+          <div class="doc-title">
+            Undertaking/Self-Declaration for Domestic Content Requirement (DCR) fulfillment (On a
+            plain Paper)
+          </div>
+        </div>
+
+        <!-- Clause 1 -->
+        <p class="clause">
+          1. This is to certify that M/S <strong>{{vendor_name}}</strong> has installed
+          <strong>{{installed_capacity_kw}} KW</strong> Grid Connected Rooftop Solar PV Power Plant for
+          <strong>{{consumer_name}}</strong> at <strong>{{site_address}}</strong> under
+          sanction number <strong>{{sanction_number}}</strong> dated
+          <strong>{{formatDate sanction_date}}</strong> issued by Maharashtra State Electricity
+          Distribution Co. Ltd.
+        </p>
+
+        <!-- Clause 2 -->
+        <p class="clause">
+          2. It is hereby undertaken that the PV modules installed for the above-mentioned project
+          are domestically manufactured using domestic manufactured solar cells. The details of
+          installed PV Modules are as follows:
+        </p>
+
+        <ul class="module-list">
+          <li>1. <strong>PV Module Capacity:</strong> <strong>{{withUnit module_wattage "Wp"}}</strong></li>
+          <li>2. <strong>Number of PV Modules:</strong> <strong>{{module_count}}</strong></li>
+          <li>3. <strong>Sr No of PV Module:</strong> <strong>{{module_serial_numbers}}</strong></li>
+          <li>4. <strong>PV Module Make:</strong> <strong>{{module_make}}</strong></li>
+          <li>5. <strong>Purchase Order Number:</strong> <strong>{{purchase_order_number}}</strong></li>
+          <li>6. <strong>Purchase Order Date:</strong> <strong>{{formatDate purchase_order_date}}</strong></li>
+          <li>7. <strong>Cell manufacturer's name:</strong> <strong>{{cell_manufacturer_name}}</strong></li>
+          <li>8. <strong>Cell GST invoice No:</strong> <strong>{{cell_gst_invoice_no}}</strong></li>
+        </ul>
+
+        <!-- Clause 3 -->
+        <p class="clause">
+          3. The above undertaking is based on the certificate issued by PV Module
+          manufacturer/supplier while supplying the above mentioned order.
+        </p>
+
+        <!-- Clause 4 -->
+        <p class="clause">
+          4. I, <strong>{{signatory_name}}</strong> on behalf of M/S <strong>{{vendor_name}}</strong> further declare that the
+          information given above is true and correct and nothing has been concealed therein. If
+          anything is found incorrect at any stage then the due Central Financial Assistance (CFA)
+          that I have not charged from the consumer can be withheld and appropriate action may be
+          taken against me and my company for wrong declaration. Supporting documents and proof of
+          the above information will be provided as and when requested by MNRE.
+        </p>
+
+        <!-- Signature block -->
+        <div class="sig-block">
+          {{> vendorStamp}}
+          <div class="sig-label">(Signature With Official Seal)</div>
+
+          <div class="for-company">For M/S <strong>{{vendor_name}}</strong></div>
+
+          <div class="sig-detail-row">
+            <span class="detail-label">Name:</span>
+            <span><strong>{{signatory_name}}</strong></span>
+          </div>
+          <div class="sig-detail-row">
+            <span class="detail-label">Designation:</span>
+            <span><strong>{{signatory_designation}}</strong></span>
+          </div>
+          <div class="sig-detail-row">
+            <span class="detail-label">Phone:</span>
+            <span><strong>{{signatory_phone}}</strong></span>
+          </div>
+          <div class="sig-detail-row">
+            <span class="detail-label">Email:</span>
+            <span><strong>{{signatory_email}}</strong></span>
+          </div>
+        </div>
+
+      </div><!-- end page 1 -->
+
+    </div><!-- end pdf-wrapper -->
+  </body>
+</html>

@@ -1,0 +1,249 @@
+/* The OneOhm quotation: brand blue and ocean, Newsreader for figures, Geist for text. */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: "Geist", "DejaVu Sans", sans-serif;
+  font-size: 9pt;
+  line-height: 1.5;
+  color: #14171a;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+h2,
+.q-name,
+.q-kwp,
+.q-step strong {
+  font-family: "Newsreader", serif;
+  font-weight: 500;
+}
+
+h2 {
+  font-size: 13pt;
+  margin-bottom: 6px;
+}
+
+.q-muted,
+.q-terms,
+.q-spec dt,
+.q-row dt {
+  color: #5d6570;
+}
+
+.q-overline,
+th {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.q-overline {
+  color: #006eaa;
+  margin-bottom: 3px;
+}
+
+.q-draft {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #fff4dc;
+  color: #8a5a00;
+  font-weight: 600;
+}
+
+.q-head,
+.q-sign,
+.q-row,
+.q-step {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.q-logo {
+  height: 15mm;
+  margin-bottom: 6px;
+}
+
+.q-brand {
+  font-size: 8pt;
+}
+
+.q-meta {
+  min-width: 55mm;
+}
+
+.q-number {
+  font-family: "Geist Mono", monospace;
+  font-size: 13pt;
+  text-align: right;
+  margin-bottom: 6px;
+}
+
+.q-rule {
+  height: 3px;
+  margin: 12px 0 14px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #56bd39, #21998c 50%, #0078b9);
+}
+
+.q-parties {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.q-name {
+  font-size: 13pt;
+}
+
+.q-hero {
+  display: grid;
+  grid-template-columns: 0.9fr 1.6fr;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  background: linear-gradient(150deg, #e1eef7, #fff 55%, #e3f1de);
+}
+
+.q-kwp {
+  font-size: 34pt;
+  line-height: 1.05;
+}
+
+.q-step {
+  align-items: baseline;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.85);
+}
+
+.q-step strong {
+  font-size: 14pt;
+}
+
+.q-subsidy strong {
+  color: #3f9a45;
+}
+
+.q-effective {
+  background: #035a82;
+  color: #fff;
+}
+
+.q-effective strong {
+  font-size: 17pt;
+}
+
+.q-arrow {
+  text-align: center;
+  color: #8a9199;
+  font-size: 8pt;
+  line-height: 1.2;
+}
+
+.q-note {
+  margin: 8px 2px 4px;
+  font-size: 8pt;
+  color: #4d5560;
+}
+
+.q-section {
+  margin-top: 16px;
+}
+
+.q-keep,
+.q-hero,
+.q-sign {
+  break-inside: avoid;
+}
+
+th {
+  color: #5d6570;
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #cdd2d8;
+}
+
+td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eceef1;
+  vertical-align: top;
+}
+
+.q-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.q-index {
+  width: 8mm;
+  color: #8a9199;
+}
+
+.q-strong {
+  font-weight: 600;
+}
+
+.q-spec {
+  display: flex;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.q-spec dt {
+  width: 30mm;
+}
+
+.q-totals {
+  width: 80mm;
+  margin: 6px 0 0 auto;
+}
+
+.q-row {
+  padding: 3px 8px;
+}
+
+.q-grand {
+  margin-top: 3px;
+  border-top: 1.5px solid #14171a;
+  font-size: 10.5pt;
+  font-weight: 600;
+}
+
+.q-terms {
+  padding-left: 14px;
+  font-size: 8pt;
+}
+
+.q-sign {
+  align-items: flex-end;
+  margin-top: 22px;
+}
+
+.q-stamp {
+  height: 22mm;
+  margin: 4px 0;
+}
+
+.q-accept {
+  width: 70mm;
+  border-top: 1px solid #14171a;
+  padding-top: 4px;
+}

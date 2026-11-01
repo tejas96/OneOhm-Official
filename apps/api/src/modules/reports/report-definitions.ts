@@ -1,9 +1,11 @@
+import type { ReportKey } from '@oneohm/api-contracts';
+
 /**
  * The six statutory reports (PRD 3.18). Each lists the project facts it needs; facts are
  * captured once by tasks and reused. A report whose condition fails reads "Not needed".
  */
 export interface ReportDefinition {
-  readonly key: string;
+  readonly key: ReportKey;
   readonly name: string;
   readonly required: readonly string[];
   /** Company profile fields the report needs (signatory details for undertakings). */

@@ -1,0 +1,141 @@
+/*
+ * OneOhm print base for the statutory reports. Loaded before each template's own
+ * styles, so a template can override anything here. Page size and margins come from
+ * the renderer (A4, with room for the page-number footer).
+ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: "Open Sans", "Noto Sans", "DejaVu Sans", Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.55;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+strong {
+  font-weight: 700;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+img {
+  max-width: 100%;
+}
+
+.pdf-page-break {
+  break-after: page;
+  page-break-after: always;
+  height: 0;
+}
+
+/* Document title (docTitle partial) */
+.rpt-doc-head {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.rpt-doc-title {
+  font-size: 13pt;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.rpt-doc-subtitle {
+  font-size: 9.5pt;
+  font-weight: 600;
+  color: #333;
+  margin-top: 3px;
+}
+
+/* Signature blocks (signature and vendorSignature partials) */
+.rpt-sig-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 16px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.rpt-sig {
+  flex: 0 0 44%;
+  max-width: 44%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.rpt-sig-space {
+  height: 17mm;
+  display: flex;
+  align-items: flex-end;
+}
+
+.rpt-sig-name {
+  min-height: 14px;
+  font-size: 9pt;
+  font-weight: 700;
+}
+
+.rpt-sig-rule {
+  border-top: 1px solid #1a1a1a;
+  margin-top: 4px;
+}
+
+.rpt-sig-role {
+  font-size: 8.5pt;
+  color: #444;
+  margin-top: 3px;
+}
+
+/* The director's signature with the company seal */
+.rpt-stamp {
+  display: block;
+  height: 17mm;
+  width: auto;
+  object-fit: contain;
+}
+
+.rpt-stamp-block {
+  margin: 10px 0 6px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Hand-filled blanks */
+.rpt-date-blank {
+  display: inline-block;
+  min-width: 30mm;
+  border-bottom: 1px solid #1a1a1a;
+  text-align: center;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
+.rpt-date-hint {
+  font-size: 6.5pt;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #9a9a9a;
+}
+
+.rpt-fill {
+  display: inline-block;
+  min-width: 38mm;
+  height: 1.05em;
+  border-bottom: 1px solid #1a1a1a;
+  vertical-align: baseline;
+}
