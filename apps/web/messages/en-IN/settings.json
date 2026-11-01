@@ -9,7 +9,9 @@
       "products": "Products",
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
-      "workforce": "Workforce"
+      "workforce": "Workforce",
+      "tasks": "Task templates",
+      "messages": "WhatsApp messages"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -86,7 +88,9 @@
       "admin": "Administration"
     },
     "capabilities": {
-      "dashboard": { "view_business": "See the business command centre" },
+      "dashboard": {
+        "view_business": "See the business command centre"
+      },
       "leads": {
         "view_all": "See every lead",
         "view_own": "See own leads",
@@ -96,7 +100,9 @@
         "view": "See customers and properties",
         "manage": "Edit customers and properties"
       },
-      "surveys": { "perform": "Carry out site surveys" },
+      "surveys": {
+        "perform": "Carry out site surveys"
+      },
       "quotations": {
         "view": "See quotations",
         "create": "Create and send quotations",
@@ -113,29 +119,69 @@
         "complete": "Complete tasks",
         "approve": "Approve tasks that need sign-off"
       },
-      "loans": { "manage": "Manage bank loans" },
-      "discom": { "manage": "Manage DISCOM applications" },
-      "subsidy": { "manage": "Manage subsidy claims" },
-      "inventory": { "view": "See stock", "manage": "Adjust stock" },
-      "procurement": { "manage": "Raise purchase orders" },
-      "dispatch": { "manage": "Dispatch material to sites" },
+      "loans": {
+        "manage": "Manage bank loans"
+      },
+      "discom": {
+        "manage": "Manage DISCOM applications"
+      },
+      "subsidy": {
+        "manage": "Manage subsidy claims"
+      },
+      "inventory": {
+        "view": "See stock",
+        "manage": "Adjust stock"
+      },
+      "procurement": {
+        "manage": "Raise purchase orders"
+      },
+      "dispatch": {
+        "manage": "Dispatch material to sites"
+      },
       "finance": {
         "view": "See money in and out",
         "record_payments": "Record payments",
         "approve_payments": "Approve outgoing payments"
       },
-      "contractors": { "manage": "Manage contractors and crews" },
-      "service": { "manage": "Handle service requests" },
-      "documents": { "view": "See documents", "manage": "Upload and verify documents" },
-      "reports": { "generate": "Generate statutory reports" },
-      "people": { "view": "See the team", "manage": "Add and edit people" },
-      "leave": { "request": "Request leave", "approve": "Approve leave" },
-      "attendance": { "mark": "Mark attendance" },
-      "commission": { "view_own": "See own commission" },
-      "work_orders": { "view_own": "See own work orders" },
-      "settings": { "manage": "Change company settings, catalog and rates" },
-      "roles": { "manage": "Manage roles and permissions" },
-      "audit": { "view": "See the audit log" }
+      "contractors": {
+        "manage": "Manage contractors and crews"
+      },
+      "service": {
+        "manage": "Handle service requests"
+      },
+      "documents": {
+        "view": "See documents",
+        "manage": "Upload and verify documents"
+      },
+      "reports": {
+        "generate": "Generate statutory reports"
+      },
+      "people": {
+        "view": "See the team",
+        "manage": "Add and edit people"
+      },
+      "leave": {
+        "request": "Request leave",
+        "approve": "Approve leave"
+      },
+      "attendance": {
+        "mark": "Mark attendance"
+      },
+      "commission": {
+        "view_own": "See own commission"
+      },
+      "work_orders": {
+        "view_own": "See own work orders"
+      },
+      "settings": {
+        "manage": "Change company settings, catalog and rates"
+      },
+      "roles": {
+        "manage": "Manage roles and permissions"
+      },
+      "audit": {
+        "view": "See the audit log"
+      }
     },
     "company": {
       "loading": "Loading the company profile",
@@ -409,6 +455,156 @@
           "added": "Place added",
           "updated": "Place saved"
         }
+      }
+    },
+    "taskTemplates": {
+      "title": "Task templates",
+      "intro": "Every new project gets these tasks, in this order, when its conditions match. Changes apply to projects created from now on; tasks already on projects stay as they are.",
+      "add": "Add task",
+      "loading": "Loading task templates",
+      "search": "Search tasks",
+      "allStages": "All stages",
+      "stageFilter": "Stage",
+      "showOff": "Show tasks turned off",
+      "empty": "No tasks match.",
+      "count": "{count, plural, one {# task} other {# tasks}}",
+      "columns": {
+        "task": "Task",
+        "stage": "Stage",
+        "who": "Who does it",
+        "when": "When",
+        "customer": "Customer",
+        "order": "Order"
+      },
+      "when": "Day {offset} · {count, plural, one {# day} other {# days}}",
+      "internal": "Internal",
+      "visible": "Visible",
+      "messages": "Message on {event}",
+      "approval": "Approval",
+      "off": "Off",
+      "moveUp": "Move {title} up",
+      "moveDown": "Move {title} down",
+      "events": {
+        "started": "start",
+        "completed": "completion",
+        "approved": "approval"
+      },
+      "sheet": {
+        "createTitle": "Add a task",
+        "editTitle": "Edit task",
+        "create": "Add task",
+        "created": "{title} added.",
+        "updated": "{title} saved.",
+        "basics": "The task",
+        "title": "Task name",
+        "key": "Key",
+        "keyHint": "Lowercase words joined by underscores. It cannot change later.",
+        "stage": "Stage",
+        "role": "Who does it",
+        "offset": "Starts on day",
+        "offsetHint": "Days after the project start.",
+        "duration": "Takes (days)",
+        "waiting": "Usually waiting on",
+        "dependsOn": "Waits for",
+        "dependsOnHint": "This task opens when these are done.",
+        "conditions": "Only on projects that",
+        "conditionsHint": "Leave everything open to add the task to every project.",
+        "projectTypes": "Project types",
+        "anyType": "Every type leaves this open.",
+        "flags": {
+          "loan": "Have a bank loan",
+          "battery": "Have a battery",
+          "groundMount": "Are ground mounted",
+          "subsidy": "Claim subsidy",
+          "nameChange": "Need a name change"
+        },
+        "tri": {
+          "any": "Any",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "discoms": "DISCOM codes",
+        "discomsHint": "Comma separated, for example MSEDCL. Empty means every DISCOM.",
+        "proof": "Proof and approval",
+        "evidence": "Proof needed",
+        "captures": "Details it records",
+        "capturesHint": "Report fact keys, comma separated.",
+        "approval": "Needs approval before it counts as done",
+        "onComplete": "When done, also",
+        "onCompleteNone": "Nothing else",
+        "onCompleteOptions": {
+          "quotation_accepted": "Make the advance due",
+          "material_dispatch": "Make the dispatch payment due",
+          "commissioning_completed": "Make the final payment due",
+          "loan_disbursement": "Make the bank share due",
+          "project_operational": "Mark the project operational"
+        },
+        "people": "Who is told",
+        "customerVisible": "Customers see this step in their app",
+        "notifyCustomer": "Send the customer a WhatsApp message",
+        "notifyEvent": "Send it on",
+        "message": "Message",
+        "customerTitle": "Words the customer sees",
+        "customerTitleHint": "Leave empty to use the task name.",
+        "preview": "Preview",
+        "notifyManager": "Tell the project manager when it is done",
+        "active": "In use for new projects",
+        "parties": {
+          "internal": "OneOhm team",
+          "customer": "Customer",
+          "bank": "Bank",
+          "discom": "DISCOM"
+        },
+        "eventOptions": {
+          "started": "When it starts",
+          "completed": "When it is done",
+          "approved": "When it is approved"
+        }
+      }
+    },
+    "messageTemplates": {
+      "title": "WhatsApp messages",
+      "intro": "Messages OneOhm starts must use templates approved in Meta's WhatsApp Manager. Match each one here: the template name, its language, and which detail fills '{{'1'}}', '{{'2'}}' and so on.",
+      "log": "See every message sent",
+      "loading": "Loading messages",
+      "columns": {
+        "message": "Message",
+        "template": "Template in WhatsApp",
+        "language": "Language",
+        "used": "Used by",
+        "status": "Status"
+      },
+      "usedBy": "{count, plural, =0 {—} one {# task} other {# tasks}}",
+      "on": "On",
+      "off": "Off",
+      "audience": {
+        "customer": "To customers",
+        "staff": "To staff"
+      },
+      "names": {
+        "quotation_sent": "Quotation sent",
+        "project_started": "Project started",
+        "project_milestone": "Project update",
+        "payment_received": "Payment received",
+        "payment_reminder": "Payment reminder",
+        "payment_link": "Payment link",
+        "service_update": "Service request update",
+        "change_request_raised": "Change request started",
+        "change_request_completed": "Change request done",
+        "staff_daily_digest": "Morning summary for staff"
+      },
+      "dialog": {
+        "title": "Edit {name}",
+        "metaName": "Template name in WhatsApp Manager",
+        "language": "Language code",
+        "languageHint": "For example en, hi or mr.",
+        "fields": "Fills '{{'1'}}', '{{'2'}}'… in this order",
+        "fieldsHint": "Comma separated. Available: {available}.",
+        "preview": "Approved wording",
+        "previewHint": "Copy it from WhatsApp Manager, with '{{'1'}}', '{{'2'}}' where details go.",
+        "sample": "With sample details",
+        "active": "Send this message",
+        "saved": "{name} saved."
       }
     }
   }

@@ -13,6 +13,8 @@ import { DiscomsPanel } from './discoms/discoms-panel';
 import { ProductsPanel } from './products/products-panel';
 import { RatesPanel } from './rates/rates-panel';
 import { RolesPanel } from './roles/roles-panel';
+import { MessageTemplatesPanel } from './templates/message-templates-panel';
+import { TaskTemplatesPanel } from './templates/task-templates-panel';
 import { WorkforcePanel } from './workforce/workforce-panel';
 
 const TABS = [
@@ -22,6 +24,8 @@ const TABS = [
   { value: 'rates', requires: 'settings.manage', Panel: RatesPanel },
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
+  { value: 'tasks', requires: 'settings.manage', Panel: TaskTemplatesPanel },
+  { value: 'messages', requires: 'settings.manage', Panel: MessageTemplatesPanel },
 ] as const satisfies readonly {
   value: string;
   requires: Capability;
@@ -29,7 +33,7 @@ const TABS = [
 }[];
 type TabValue = (typeof TABS)[number]['value'];
 
-/** Roles, company, catalog, rates and workforce rules; the open tab lives in `?tab=`. */
+/** Roles, company, catalog, rates, workforce rules and templates; the open tab lives in `?tab=`. */
 export function SettingsView() {
   const t = useTranslations('settings');
   const user = useCurrentUser();
