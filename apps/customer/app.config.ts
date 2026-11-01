@@ -8,6 +8,9 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * https://app.oneohm.in/api in production or http://<laptop-ip>:4200 on a phone in dev.
  */
 const APP_ID = 'in.oneohm.customer';
+/** Set in EAS (or .env) once the Expo project exists; push updates need both. */
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID;
+const GOOGLE_SERVICES_JSON = process.env.GOOGLE_SERVICES_JSON;
 const LIGHT_CANVAS = '#F5F6F8';
 const DARK_CANVAS = '#0F1113';
 
@@ -30,6 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: APP_ID,
     versionCode: 1,
+    ...(GOOGLE_SERVICES_JSON ? { googleServicesFile: GOOGLE_SERVICES_JSON } : {}),
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#FFFFFF',
@@ -41,10 +45,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   web: { favicon: './assets/images/favicon.png', output: 'single' },
+  extra: { ...config.extra, ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}) },
   plugins: [
     'expo-router',
     'expo-font',
     'expo-secure-store',
+    ['expo-notifications', { color: '#0B6FA4', defaultChannel: 'default' }],
     'expo-sharing',
     [
       'expo-image-picker',

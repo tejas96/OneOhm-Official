@@ -50,4 +50,5 @@ export const keys = {
   reports: ['customer', 'reports'] as const,
   referrals: ['customer', 'referrals'] as const,
   service: ['customer', 'service'] as const,
+  inbox: ['customer', 'inbox'] as const,
 };

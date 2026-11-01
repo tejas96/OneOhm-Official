@@ -17,6 +17,7 @@ import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { TODAY } from '@/copy/tasks';
+import { Bell } from '@/features/alerts/bell';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { TaskRow } from '@/features/tasks/task-row';
@@ -46,9 +47,12 @@ export function TodayScreen() {
       }}
     >
       <View style={styles.header}>
-        <Text variant="mono" tone="tertiary">
-          {longToday().toUpperCase()}
-        </Text>
+        <View style={styles.dateRow}>
+          <Text variant="mono" tone="tertiary">
+            {longToday().toUpperCase()}
+          </Text>
+          <Bell />
+        </View>
         <View>
           <Text variant="displayXl">{TODAY.greeting[phase]},</Text>
           <Text variant="displayXl" italic color={theme.colors.accent}>
@@ -106,5 +110,6 @@ export function TodayScreen() {
 
 const styles = StyleSheet.create({
   header: { gap: 8, paddingTop: 8 },
+  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   group: { gap: 10 },
 });

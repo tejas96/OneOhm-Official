@@ -13,6 +13,7 @@ import { SunMedium } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { HOME } from '@/copy/home';
+import { Bell } from '@/features/alerts/bell';
 import { BUSINESS_TIME_ZONE, longToday } from '@/lib/dates';
 import { asksForFeedback } from '@/lib/journey';
 import { useCustomer } from '@/session/session-provider';
@@ -34,9 +35,12 @@ export function HomeScreen() {
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.header}>
-        <Text variant="mono" tone="tertiary">
-          {longToday().toUpperCase()}
-        </Text>
+        <View style={styles.dateRow}>
+          <Text variant="mono" tone="tertiary">
+            {longToday().toUpperCase()}
+          </Text>
+          <Bell />
+        </View>
         <View>
           <Text variant="displayXl">{HOME.greeting[phase]},</Text>
           <Text variant="displayXl" italic color={theme.colors.accent}>
@@ -81,4 +85,7 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({ header: { gap: 8, paddingTop: 8 } });
+const styles = StyleSheet.create({
+  header: { gap: 8, paddingTop: 8 },
+  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+});

@@ -39,3 +39,14 @@ export function longToday(now = new Date()): string {
     timeZone: BUSINESS_TIME_ZONE,
   }).format(now);
 }
+
+/** "4 Nov, 4:30 pm" for a moment in time, in India. */
+export function shortMoment(instant: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: BUSINESS_TIME_ZONE,
+  }).format(new Date(instant));
+}

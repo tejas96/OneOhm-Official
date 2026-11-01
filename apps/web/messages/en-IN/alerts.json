@@ -1,0 +1,12 @@
+{
+  "alerts": {
+    "bell": "Alerts",
+    "bellUnread": "Alerts, {count} unread",
+    "title": "Alerts",
+    "markAll": "Mark all read",
+    "loading": "Loading alerts",
+    "emptyTitle": "Nothing new",
+    "emptyBody": "New tasks, approvals and leave decisions show up here.",
+    "loadError": "Alerts could not load."
+  }
+}

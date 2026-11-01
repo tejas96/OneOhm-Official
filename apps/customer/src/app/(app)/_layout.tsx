@@ -1,12 +1,14 @@
 import { useTheme } from '@oneohm/mobile-ui';
 import { Stack } from 'expo-router';
+import { PushAlerts } from '@/features/alerts/push-alerts';
 import { ProjectChoiceProvider } from '@/features/home/use-home';
 
-/** Signed-in routes: the tabs, then refer, feedback and a new help request on top. */
+/** Signed-in routes: the tabs, then refer, feedback, a new help request and updates on top. */
 export default function SignedInLayout() {
   const theme = useTheme();
   return (
     <ProjectChoiceProvider>
+      <PushAlerts />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -17,6 +19,7 @@ export default function SignedInLayout() {
         <Stack.Screen name="refer" />
         <Stack.Screen name="feedback/[projectId]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="help/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="alerts" />
       </Stack>
     </ProjectChoiceProvider>
   );

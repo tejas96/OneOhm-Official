@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCurrentUser } from '@/providers/current-user';
 import { AccountMenu } from './account-menu';
+import { AlertsBell } from './alerts-bell';
 import { BrandLogo } from './brand-logo';
 import { NAVIGATION, type NavItem } from './navigation';
 import { ThemeSwitch } from './theme-switch';
@@ -54,7 +55,10 @@ export function Sidebar() {
       )}
     >
       <div className="flex shrink-0 flex-col gap-1.5 px-2">
-        <BrandLogo alt={t('logoAlt')} className="h-9" />
+        <div className="flex items-center justify-between gap-2">
+          <BrandLogo alt={t('logoAlt')} className="h-9" />
+          <AlertsBell />
+        </div>
         <p className={cn('type-label', styles.muted)}>{t('company')}</p>
       </div>
 

@@ -1,3 +1,4 @@
+import alerts from './alerts.json';
 import commandCenter from './command-center.json';
 import common from './common.json';
 import contractors from './contractors.json';
@@ -22,6 +23,7 @@ import today from './today.json';
  */
 const messages = {
   ...common,
+  ...alerts,
   ...signIn,
   ...commandCenter,
   ...contractors,

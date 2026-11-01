@@ -52,4 +52,5 @@ export const keys = {
   products: ['catalog', 'products'] as const,
   discoms: ['discoms'] as const,
   workday: ['me', 'workday'] as const,
+  inbox: ['me', 'inbox'] as const,
 };

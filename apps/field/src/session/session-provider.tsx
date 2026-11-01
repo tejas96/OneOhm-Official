@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@oneohm/api-contracts';
 import type { Capability } from '@oneohm/domain';
-import { ApiError, NetworkError, unwrap } from '@oneohm/mobile-ui';
+import { ApiError, NetworkError, registeredPushToken, unwrap } from '@oneohm/mobile-ui';
 import {
   createContext,
   type ReactNode,
@@ -74,6 +74,8 @@ export function SessionProvider({ children }: { readonly children: ReactNode }) 
       },
       signOut: async () => {
         try {
+          const phone = registeredPushToken();
+          if (phone) await api.notifications.forgetDevice({ body: { token: phone } });
           await api.auth.signOut();
         } catch {
           // Signing out locally is enough when the server cannot be reached.

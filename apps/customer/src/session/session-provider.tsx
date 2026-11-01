@@ -1,5 +1,5 @@
 import type { CustomerProfile } from '@oneohm/api-contracts';
-import { ApiError, NetworkError, unwrap } from '@oneohm/mobile-ui';
+import { ApiError, NetworkError, registeredPushToken, unwrap } from '@oneohm/mobile-ui';
 import {
   createContext,
   type ReactNode,
@@ -74,6 +74,8 @@ export function SessionProvider({ children }: { readonly children: ReactNode }) 
       },
       signOut: async () => {
         try {
+          const phone = registeredPushToken();
+          if (phone) await api.notifications.customerForgetDevice({ body: { token: phone } });
           await api.customer.signOut();
         } catch {
           // Signing out on the phone is enough when OneOhm cannot be reached.
