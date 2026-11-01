@@ -12,7 +12,7 @@ import {
   parseThemePreference,
   THEME_COOKIE,
 } from '@/providers/preferences';
-import { displayFace, monoFace, uiFace } from './fonts';
+import { FONT_CLASS } from './fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
       lang={isSupportedLocale(locale) ? locale : DEFAULT_LOCALE}
       data-theme={theme === 'system' ? undefined : theme}
       data-motion={calmMotion ? 'calm' : undefined}
-      className={`${displayFace.variable} ${uiFace.variable} ${monoFace.variable}`}
+      className={FONT_CLASS}
       suppressHydrationWarning
     >
       <body>

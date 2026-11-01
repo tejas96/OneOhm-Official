@@ -1,25 +1,12 @@
-import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
-
 /*
- * The three faces from the type tokens (same as Lintel). The CSS variable names
- * must match FONT_FACE_VARIABLES in packages/design-system/src/theme-css.
+ * The three faces from the type tokens (same as Lintel), bundled with the app so builds
+ * and pages never depend on Google Fonts. Newsreader keeps its optical-size axis.
+ * `.oh-fonts` (globals.css) maps them onto the variables named in FONT_FACE_VARIABLES
+ * (packages/design-system/src/theme-css).
  */
-export const displayFace = Newsreader({
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
-  axes: ['opsz'],
-  variable: '--font-face-display',
-  display: 'swap',
-});
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
+import '@fontsource-variable/newsreader/standard.css';
+import '@fontsource-variable/newsreader/standard-italic.css';
 
-export const uiFace = Geist({
-  subsets: ['latin'],
-  variable: '--font-face-ui',
-  display: 'swap',
-});
-
-export const monoFace = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-face-mono',
-  display: 'swap',
-});
+export const FONT_CLASS = 'oh-fonts';

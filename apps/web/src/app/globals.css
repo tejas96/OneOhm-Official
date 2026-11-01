@@ -62,3 +62,10 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* The bundled faces (src/app/fonts.ts) behind the theme's font variables. */
+.oh-fonts {
+  --font-face-display: "Newsreader Variable";
+  --font-face-ui: "Geist Variable";
+  --font-face-mono: "Geist Mono Variable";
+}
