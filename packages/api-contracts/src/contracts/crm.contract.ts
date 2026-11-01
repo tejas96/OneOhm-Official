@@ -139,6 +139,13 @@ export const crmContract = c.router({
       }),
     },
   },
+  getProperty: {
+    method: 'GET',
+    path: '/properties/:id',
+    pathParams: idParams,
+    responses: { 200: propertySchema.extend({ customer: customerSchema }) },
+    summary: 'One property with its customer (the quotation builder starts from a property).',
+  },
   updateProperty: {
     method: 'PATCH',
     path: '/properties/:id',

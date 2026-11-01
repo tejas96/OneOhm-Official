@@ -51,6 +51,10 @@ export class CrmController {
         assertCan(actor, 'customers.view');
         return { status: 200, body: await this.customers.get(params.id) };
       },
+      getProperty: async ({ params }) => {
+        assertCan(actor, 'customers.view', 'quotations.create');
+        return { status: 200, body: await this.customers.propertyWithCustomer(params.id) };
+      },
       updateProperty: async ({ params, body }) => {
         assertCan(actor, 'customers.manage', 'surveys.perform', 'discom.manage');
         return { status: 200, body: await this.customers.updateProperty(actor, params.id, body) };
