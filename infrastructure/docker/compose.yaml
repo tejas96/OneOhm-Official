@@ -1,0 +1,86 @@
+# Local development infrastructure for OneOhm. Same images as production.
+#
+#   pnpm infra:up      start PostgreSQL, RustFS (S3 object storage) and the Temporal dev server
+#   pnpm infra:down    stop them (named volumes keep the data)
+#
+# Ports avoid clashes with other local projects. Everything binds to 127.0.0.1 only.
+name: oneohm
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: oneohm-postgres
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${ONEOHM_POSTGRES_USER:-oneohm}
+      POSTGRES_PASSWORD: ${ONEOHM_POSTGRES_PASSWORD:-oneohm-local-only}
+      POSTGRES_DB: ${ONEOHM_POSTGRES_DB:-oneohm}
+    ports:
+      - "127.0.0.1:${ONEOHM_POSTGRES_PORT:-5460}:5432"
+    volumes:
+      - oneohm-pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ONEOHM_POSTGRES_USER:-oneohm} -d ${ONEOHM_POSTGRES_DB:-oneohm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Photos, survey evidence, documents and generated report PDFs (S3-compatible API).
+  object-store:
+    image: rustfs/rustfs:1.0.0
+    container_name: oneohm-object-store
+    restart: unless-stopped
+    logging: *default-logging
+    command: ["/data"]
+    environment:
+      RUSTFS_ACCESS_KEY: ${ONEOHM_STORAGE_ACCESS_KEY:-oneohm-local}
+      RUSTFS_SECRET_KEY: ${ONEOHM_STORAGE_SECRET_KEY:-oneohm-local-secret}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: warn
+    ports:
+      - "127.0.0.1:${ONEOHM_STORAGE_PORT:-9120}:9000"
+      - "127.0.0.1:${ONEOHM_STORAGE_CONSOLE_PORT:-9121}:9001"
+    volumes:
+      - oneohm-objects:/data
+
+  # Workflows, reminders, escalations and scheduled jobs. Local-only dev server with
+  # SQLite on a named volume; production runs temporalio/server on PostgreSQL.
+  temporal:
+    image: temporalio/admin-tools:1.30.6
+    container_name: oneohm-temporal
+    restart: unless-stopped
+    logging: *default-logging
+    user: "0:0"
+    entrypoint: ["temporal"]
+    command:
+      - server
+      - start-dev
+      - --ip=0.0.0.0
+      - --db-filename=/var/lib/temporal/oneohm-dev.db
+      - --namespace=oneohm
+      - --ui-port=8233
+      - --log-level=warn
+    ports:
+      - "127.0.0.1:${ONEOHM_TEMPORAL_PORT:-7250}:7233"
+      - "127.0.0.1:${ONEOHM_TEMPORAL_UI_PORT:-8250}:8233"
+    volumes:
+      - oneohm-temporal:/var/lib/temporal
+    healthcheck:
+      test: ["CMD-SHELL", "temporal operator namespace describe -n oneohm --address 127.0.0.1:7233 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  oneohm-pgdata:
+  oneohm-objects:
+  oneohm-temporal:

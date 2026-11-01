@@ -1,0 +1,163 @@
+{
+  "appearance": {
+    "label": "Appearance",
+    "system": "Match this device",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "signIn": {
+    "pageTitle": "Sign in",
+    "help": "Trouble signing in? Your administrator can reset your password from Team settings.",
+    "panel": {
+      "label": "About OneOhm",
+      "logoAlt": "OneOhm — Energy for everyone",
+      "sheet": "Sheet E-001 · Single line",
+      "headlineOne": "Every rooftop,",
+      "headlineTwo": "wired to plan.",
+      "description": "Leads, quotations, installations, DISCOM work and payments for the whole OneOhm team, in one calm place.",
+      "legend": {
+        "array": { "verb": "Generate", "name": "Solar array" },
+        "inverter": { "verb": "Convert", "name": "Inverter" },
+        "meter": { "verb": "Measure", "name": "Net meter" },
+        "grid": { "verb": "Export", "name": "Grid" }
+      }
+    },
+    "form": {
+      "title": "Sign in",
+      "description": "Use your OneOhm email or employee ID and your password.",
+      "identifier": "Email or employee ID",
+      "identifierHint": "The one your administrator registered for you.",
+      "identifierPlaceholder": "name@oneohm.in or OH-0012",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Sign in",
+      "notConnected": "Sign-in is not connected yet. It switches on when the API is built in the next step.",
+      "mobileNote": "Site teams, contractors, resellers and customers sign in on the OneOhm mobile apps with a one-time code."
+    }
+  },
+  "nav": {
+    "label": "Main",
+    "logoAlt": "OneOhm",
+    "company": "One Ohm Sustainable Green Energy",
+    "search": "Jump to…",
+    "notBuilt": "Not built yet",
+    "leadsBadge": "{count} leads to follow up today",
+    "groups": {
+      "sales": "Sales",
+      "delivery": "Delivery",
+      "business": "Business"
+    },
+    "items": {
+      "today": "Today",
+      "commandCenter": "Command centre",
+      "leads": "Leads",
+      "quotations": "Quotations",
+      "customers": "Customers",
+      "projects": "Projects",
+      "discom": "DISCOM",
+      "contractors": "Contractors",
+      "finance": "Finance",
+      "inventory": "Inventory",
+      "team": "Team",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "account": {
+      "role": "Owner",
+      "preview": "Design preview"
+    }
+  },
+  "stages": {
+    "survey": "Survey",
+    "design": "Design",
+    "material": "Material",
+    "installation": "Installation",
+    "commissioning": "Commissioning",
+    "netMetering": "Net metering",
+    "subsidy": "Subsidy"
+  },
+  "commandCenter": {
+    "title": "Business at a glance",
+    "description": "Live from every project, payment and crew. Exceptions first, so you only look where it matters.",
+    "previewBadge": "Design preview · sample figures",
+    "weeklyCollections": "Collections, last 8 weeks",
+    "weeklyCollectionsAria": "Weekly collections over the last 8 weeks, from {first} to {last} lakh rupees",
+    "period": "This month",
+    "newQuotation": "New quotation",
+    "insightsLabel": "Waiting time, money and sales",
+    "pulse": {
+      "title": "Business pulse",
+      "healthLabel": "Business health",
+      "healthAria": "Business health {score} out of 100",
+      "outOf": "of 100",
+      "healthy": "Healthy",
+      "healthSentence": "3 projects need you today. Waiting on DISCOM is this month's biggest drag.",
+      "reviewProjects": "Review the 3 projects",
+      "howScored": "How it's scored",
+      "collectedLabel": "Collected this month",
+      "collectedOf": "of {due} due by 30 November",
+      "installed": "Installed this month",
+      "commissioned": "Commissioned",
+      "systems": "{count, plural, one {# system} other {# systems}}",
+      "needsYou": "Needs you first"
+    },
+    "kpis": {
+      "label": "Key numbers",
+      "activeProjects": "Active projects",
+      "activeProjectsDetail": "{atRisk} at risk · {discom} waiting on DISCOM",
+      "openLeads": "Open leads",
+      "openLeadsDetail": "{count} need a follow-up today",
+      "leadsTrend": "Open leads over the last 8 weeks, rising",
+      "quotations": "Quotations this month",
+      "quotationsDetail": "{percent}% accepted so far",
+      "crew": "Crew on site today",
+      "crewDetail": "of {available} available · {onLeave} on leave"
+    },
+    "attention": {
+      "title": "Projects needing attention",
+      "description": "Off track, waiting too long or waiting for money — most urgent first.",
+      "viewAll": "All projects",
+      "waitingOn": "{party} · {days, plural, one {# day} other {# days}}",
+      "kind": {
+        "residential": "Residential",
+        "society": "Housing society",
+        "commercial": "Commercial"
+      },
+      "party": {
+        "internal": "OneOhm team",
+        "customer": "Customer",
+        "bank": "Bank",
+        "discom": "DISCOM"
+      }
+    },
+    "waiting": {
+      "title": "Where waiting time goes",
+      "description": "Days projects spent waiting this month, by who they waited on.",
+      "headline": "{party} holds {percent}% of all waiting time.",
+      "aria": "{total} waiting days this month, split by who projects waited on",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "footnote": "Only OneOhm team time counts against employee and contractor performance."
+    },
+    "money": {
+      "title": "Money",
+      "description": "Owed to OneOhm, and what OneOhm pays out this week.",
+      "receivables": "To collect",
+      "receivablesAria": "Money to collect, split between customers and banks",
+      "fromCustomers": "Customers",
+      "fromBanks": "Bank disbursements",
+      "payables": "To pay this week",
+      "payablesAria": "Money to pay this week, split between vendors and contractors",
+      "toVendors": "Vendors",
+      "toContractors": "Contractors"
+    },
+    "pipeline": {
+      "title": "Sales pipeline",
+      "description": "This month, from first call to accepted quotation.",
+      "leads": "Leads",
+      "surveys": "Site surveys",
+      "quotations": "Quotations sent",
+      "accepted": "Accepted"
+    }
+  }
+}

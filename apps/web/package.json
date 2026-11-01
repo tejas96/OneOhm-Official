@@ -1,0 +1,33 @@
+{
+  "name": "@oneohm/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OneOhm business web app (Next.js App Router) for owners, managers and the office team.",
+  "scripts": {
+    "dev": "next dev --port ${PORT:-3200}",
+    "build": "next build",
+    "start": "next start --port ${PORT:-3200}",
+    "typecheck": "next typegen && tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@oneohm/design-system": "workspace:*",
+    "@oneohm/shared": "workspace:*",
+    "lucide-react": "1.60.0",
+    "motion": "14.4.0",
+    "next": "16.4.2",
+    "next-intl": "4.14.9",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@oneohm/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,174 @@
+/*
+ * Handwritten component CSS that Tailwind utilities cannot express well:
+ * the "solar glass" hero surface, energy-flow wiring, popover keyframes,
+ * the skeleton shimmer and hatching. Durations come from theme.css, so calm
+ * and reduced motion collapse them automatically.
+ */
+
+@keyframes oh-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--oh-pop-offset, 4px)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.oh-pop[data-state="open"],
+.oh-pop[data-state="delayed-open"],
+.oh-pop[data-state="instant-open"] {
+  animation: oh-pop-in var(--duration-base) var(--ease-out-quint);
+  transform-origin: var(--radix-popper-transform-origin, top);
+}
+
+/*
+ * Solar glass: the one hero surface per screen. A deep ocean ground lit from the
+ * top right by the logo's green and teal, with a photovoltaic cell grid (cells,
+ * busbars) that only shows where the light falls, so text on the left stays clean.
+ */
+.oh-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--color-on-panel);
+  background:
+    radial-gradient(
+      70% 95% at 96% -12%,
+      color-mix(in oklab, var(--color-brand-green) 34%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      110% 130% at 100% 0%,
+      color-mix(in oklab, var(--color-brand-teal) 42%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      90% 120% at 0% 110%,
+      color-mix(in oklab, var(--color-brand-blue) 34%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--color-panel) 0%, var(--color-panel-deep) 100%);
+}
+
+.oh-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--color-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--color-panel-line) 1.5px, transparent 1.5px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-panel-line) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    56px 56px,
+    56px 56px,
+    14px 56px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(85% 115% at 88% 0%, #000 0%, rgb(0 0 0 / 0.55) 38%, transparent 72%);
+}
+
+/* A soft glass sheen across the surface. */
+.oh-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 38%,
+    rgb(255 255 255 / 0.05) 47%,
+    rgb(255 255 255 / 0.02) 52%,
+    transparent 60%
+  );
+}
+
+.oh-panel :focus-visible {
+  outline-color: var(--color-on-panel);
+}
+
+/* The logo gradient as a 2px line, e.g. the active sidebar marker or a hero card's top edge. */
+.oh-brand-line {
+  background: linear-gradient(
+    180deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue)
+  );
+}
+
+.oh-brand-line-x {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-green),
+    var(--color-brand-teal),
+    var(--color-brand-blue)
+  );
+}
+
+/* Current flowing along a wire: dashes travel from source to load. */
+@keyframes oh-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.oh-flow {
+  stroke-dasharray: 3 9;
+  animation: oh-flow calc(var(--duration-ambient) * 1.2) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oh-flow {
+    animation: none;
+  }
+}
+
+:root[data-motion="calm"] .oh-flow {
+  animation: none;
+}
+
+.oh-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-sunken) 30%,
+    color-mix(in oklab, var(--color-raised) 70%, var(--color-sunken)) 50%,
+    var(--color-sunken) 70%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oh-shimmer {
+    animation: none;
+  }
+}
+
+:root[data-motion="calm"] .oh-shimmer {
+  animation: none;
+}
+
+/* Diagonal hatching for leave days, skipped stages and unavailable time. */
+.oh-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--color-ink-faint) 28%, transparent) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+/* Makes a link cover its nearest positioned ancestor (a table row or card). */
+.oh-stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
