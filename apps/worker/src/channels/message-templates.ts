@@ -11,6 +11,7 @@ export const MESSAGE_TEMPLATES = {
   payment_received: ['customer', 'amount', 'milestone', 'project'],
   payment_reminder: ['customer', 'amount', 'milestone', 'project'],
   staff_daily_digest: ['name', 'overdue', 'today', 'followUps'],
+  service_update: ['customer', 'topic', 'status'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type MessageKey = keyof typeof MESSAGE_TEMPLATES;

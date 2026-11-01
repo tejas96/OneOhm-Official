@@ -6,4 +6,5 @@ export * from './document.schema';
 export * from './identity.schema';
 export * from './project.schema';
 export * from './quotation.schema';
+export * from './service-desk.schema';
 export * from './settings.schema';

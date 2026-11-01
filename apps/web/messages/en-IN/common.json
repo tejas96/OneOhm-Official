@@ -30,7 +30,8 @@
       "inventory": "Inventory",
       "team": "Team",
       "reports": "Reports",
-      "settings": "Settings"
+      "settings": "Settings",
+      "service": "Service"
     },
     "account": {
       "noRole": "No role yet",

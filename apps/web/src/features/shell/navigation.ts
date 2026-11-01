@@ -14,6 +14,7 @@ import {
   Users,
   UsersRound,
   UtilityPole,
+  Wrench,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -97,6 +98,13 @@ export const NAVIGATION: readonly NavGroup[] = [
         icon: HardHat,
         built: false,
         requires: ['contractors.manage'],
+      },
+      {
+        key: 'service',
+        href: '/service',
+        icon: Wrench,
+        built: true,
+        requires: ['service.manage', 'customers.view'],
       },
     ],
   },

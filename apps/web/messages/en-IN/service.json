@@ -1,0 +1,50 @@
+{
+  "service": {
+    "eyebrow": "After-sales",
+    "title": "Service",
+    "description": "Requests customers raise in the OneOhm app, and how they rated their installation.",
+    "viewLabel": "Show",
+    "views": {
+      "open": "Open",
+      "in_progress": "In progress",
+      "resolved": "Resolved",
+      "all": "All",
+      "feedback": "Ratings"
+    },
+    "empty": {
+      "open": "No open requests. Every customer is looked after.",
+      "in_progress": "Nothing in progress right now.",
+      "resolved": "No resolved requests yet.",
+      "all": "No service requests yet."
+    },
+    "loading": "Loading service requests",
+    "status": { "open": "New", "in_progress": "In progress", "resolved": "Resolved" },
+    "category": {
+      "no_generation": "No generation",
+      "low_generation": "Low generation",
+      "inverter_error": "Inverter error",
+      "physical_damage": "Physical damage",
+      "cleaning": "Panel cleaning",
+      "billing_net_meter": "Billing or net meter",
+      "subsidy": "Subsidy",
+      "other": "Something else"
+    },
+    "resolution": "Resolved: {note}",
+    "start": "Start",
+    "resolve": "Resolve",
+    "resolveTitle": "Resolve this request",
+    "resolveBody": "{name} gets a WhatsApp update that the request is resolved.",
+    "resolutionLabel": "What was done",
+    "done": {
+      "open": "Updated",
+      "in_progress": "Marked in progress",
+      "resolved": "Resolved — the customer has been told"
+    },
+    "failed": "That did not save",
+    "feedback": {
+      "loading": "Loading ratings",
+      "empty": "No ratings yet. Customers can rate after handover in the OneOhm app.",
+      "average": "{count, plural, one {average from # rating} other {average from # ratings}}"
+    }
+  }
+}

@@ -100,6 +100,7 @@ Business-initiated WhatsApp messages need templates approved in **WhatsApp Manag
    | `payment_received` | customer, amount, milestone, project code |
    | `payment_reminder` | customer, amount due, milestone, project code |
    | `staff_daily_digest` | name, overdue tasks, tasks due today, lead follow-ups |
+   | `service_update` | customer, what the request is about, new status |
 
 2. Once they are approved, set `WHATSAPP_DELIVERY=live` and restart the worker:
 
