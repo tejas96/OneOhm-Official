@@ -85,6 +85,13 @@
       "when": 1793522340902,
       "tag": "0011_payment_links",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793523134931,
+      "tag": "0012_whatsapp_assistant",
+      "breakpoints": true
     }
   ]
 }

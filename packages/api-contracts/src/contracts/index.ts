@@ -15,6 +15,7 @@ import { quotationsContract } from './quotations.contract';
 import { reportsContract } from './reports.contract';
 import { rewardsContract } from './rewards.contract';
 import { serviceDeskContract } from './service-desk.contract';
+import { whatsappContract } from './whatsapp.contract';
 import { workforceContract } from './workforce.contract';
 
 /**
@@ -41,6 +42,7 @@ export type ApiRouterDefinition = {
   readonly rewards: typeof rewardsContract;
   readonly notifications: typeof notificationsContract;
   readonly paymentLinks: typeof paymentLinksContract;
+  readonly whatsapp: typeof whatsappContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -63,6 +65,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   rewards: rewardsContract,
   notifications: notificationsContract,
   paymentLinks: paymentLinksContract,
+  whatsapp: whatsappContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

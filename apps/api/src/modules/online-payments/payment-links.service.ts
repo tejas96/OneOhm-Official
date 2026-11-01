@@ -35,7 +35,11 @@ export class PaymentLinksService {
   }
 
   /** Returns the open link when there is one; otherwise makes one for what is left. */
-  async create(actor: Actor, milestoneId: string): Promise<PaymentLink> {
+  /** `actor` is null-user when the WhatsApp assistant asks on the customer's behalf. */
+  async create(
+    actor: { readonly userId: string | null },
+    milestoneId: string,
+  ): Promise<PaymentLink> {
     if (this.gateway.mode === 'off')
       throw conflict('Online payments are not set up yet. Add the Razorpay keys.', 'off');
     const [row] = await this.db

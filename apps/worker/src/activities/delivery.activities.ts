@@ -2,7 +2,12 @@ import { customers, type Database, outbox } from '@oneohm/database';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import { isMessageKey, MissingFieldError, templateParameters } from '../channels/message-templates';
-import { PermanentSendError, type WhatsAppSender } from '../channels/whatsapp-cloud';
+import {
+  PermanentSendError,
+  type SendResult,
+  type SessionMessage,
+  type WhatsAppSender,
+} from '../channels/whatsapp-cloud';
 import { deliverPush } from './push-delivery';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
@@ -19,10 +24,21 @@ interface DeliveryDeps {
  * outbox row; temporary failures throw so Temporal retries with backoff.
  */
 export function deliveryActivities({ db, sender, push, language }: DeliveryDeps) {
-  const finish = async (id: string, status: 'sent' | 'skipped' | 'failed', note: string | null) => {
+  const finish = async (
+    id: string,
+    status: 'sent' | 'skipped' | 'failed',
+    note: string | null,
+    providerMessageId: string | null = null,
+  ) => {
     await db
       .update(outbox)
-      .set({ status, lastError: note, ...(status === 'sent' ? { sentAt: new Date() } : {}) })
+      .set({
+        status,
+        lastError: note,
+        ...(status === 'sent'
+          ? { sentAt: new Date(), providerMessageId, deliveryStatus: 'sent' }
+          : {}),
+      })
       .where(eq(outbox.id, id));
   };
 
@@ -58,19 +74,14 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
     }
   };
 
-  const send = async (row: typeof outbox.$inferSelect, parameters: string[]) => {
+  const send = async (row: typeof outbox.$inferSelect, call: () => Promise<SendResult>) => {
     try {
-      const result = await sender.send({
-        toE164: row.recipient,
-        template: row.template,
-        language,
-        parameters,
-      });
+      const result = await call();
       if (result.outcome === 'logged') {
         await finish(row.id, 'skipped', 'Not sent: WhatsApp delivery is in log mode.');
         return 'skipped';
       }
-      await finish(row.id, 'sent', result.providerId ? `message ${result.providerId}` : null);
+      await finish(row.id, 'sent', null, result.providerId);
       return 'sent';
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -96,12 +107,18 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
         await finish(id, outcome.status, outcome.note);
         return outcome.status;
       }
+      // A chat reply (the customer wrote first), so no template and no opt-in check.
+      if (row.template.startsWith('session:'))
+        return send(row, () => sender.sendSession(row.recipient, row.payload as SessionMessage));
       const prepared = await prepare(row);
       if (prepared.verdict !== 'send') {
         await finish(id, prepared.verdict, prepared.note);
         return prepared.verdict;
       }
-      return send(row, prepared.parameters);
+      const parameters = prepared.parameters;
+      return send(row, () =>
+        sender.send({ toE164: row.recipient, template: row.template, language, parameters }),
+      );
     },
 
     /** Called once retries run out, so the failure is visible to the office. */

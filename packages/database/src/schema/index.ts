@@ -16,4 +16,5 @@ export * from './procurement.schema';
 export * from './projects.schema';
 export * from './quotations.schema';
 export * from './records.schema';
+export * from './whatsapp.schema';
 export * from './workforce.schema';

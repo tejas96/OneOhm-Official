@@ -11,5 +11,6 @@ import { SandboxPayController } from './sandbox-pay.controller';
   imports: [ProjectsModule],
   controllers: [PaymentLinksController, RazorpayWebhookController, SandboxPayController],
   providers: [PaymentLinksService, GatewayPaymentsService],
+  exports: [PaymentLinksService],
 })
 export class OnlinePaymentsModule {}

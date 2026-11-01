@@ -84,10 +84,17 @@ export const outbox = pgTable(
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
     sentAt: instant('sent_at'),
+    /** The provider's ID for the sent message, to match delivery receipts. */
+    providerMessageId: text('provider_message_id'),
+    /** From delivery receipts: sent, delivered, read or failed. */
+    deliveryStatus: text('delivery_status'),
+    deliveredAt: instant('delivered_at'),
+    readAt: instant('read_at'),
     createdAt: createdAt(),
   },
   (table) => [
     index('outbox_status_idx').on(table.status),
     uniqueIndex('outbox_dedupe_unique').on(table.dedupeKey),
+    index('outbox_provider_message_idx').on(table.providerMessageId),
   ],
 );

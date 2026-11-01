@@ -29,6 +29,12 @@ const environmentSchema = z
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
+    /** Meta webhook: the token typed when subscribing, and the app secret that signs posts. */
+    WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+    WHATSAPP_APP_SECRET: z.string().optional(),
+    /** Signs the short-lived links the WhatsApp assistant sends for quotations and receipts. */
+    FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
+    FILE_LINK_HOURS: z.coerce.number().int().min(1).max(168).default(72),
     CHROMIUM_PATH: z.string().optional(),
     /** S3-compatible object storage (RustFS) for photos, documents and company assets. */
     STORAGE_ENDPOINT: z.string().url().default('http://127.0.0.1:9120'),
@@ -74,6 +80,12 @@ const environmentSchema = z
         code: 'custom',
         path: ['OTP_DEVELOPMENT_CODE'],
         message: 'Not allowed in production.',
+      });
+    if (env.FILE_LINK_SECRET.startsWith('oneohm-local'))
+      context.addIssue({
+        code: 'custom',
+        path: ['FILE_LINK_SECRET'],
+        message: 'Set a real secret in production.',
       });
     for (const key of ['STORAGE_ACCESS_KEY', 'STORAGE_SECRET_KEY'] as const) {
       if (env[key].startsWith('oneohm-local'))

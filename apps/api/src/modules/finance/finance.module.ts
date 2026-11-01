@@ -29,5 +29,6 @@ import { ReceivablesService } from './receivables.service';
     LedgerReadService,
     LedgerSyncService,
   ],
+  exports: [ReceiptPdfService],
 })
 export class FinanceModule {}
