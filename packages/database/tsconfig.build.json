@@ -1,0 +1,6 @@
+{
+  "extends": "@oneohm/tsconfig/library.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

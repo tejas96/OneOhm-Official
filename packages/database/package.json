@@ -1,0 +1,42 @@
+{
+  "name": "@oneohm/database",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PostgreSQL 17 schema, migrations and seed data (Drizzle ORM).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests src",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/migrate.cli.ts",
+    "db:seed": "tsx src/seed/seed.cli.ts"
+  },
+  "dependencies": {
+    "@oneohm/domain": "workspace:*",
+    "@oneohm/shared": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@oneohm/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
