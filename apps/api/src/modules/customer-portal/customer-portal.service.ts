@@ -13,6 +13,7 @@ import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, notInArray } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { CatalogService } from '../catalog/catalog.service';
 import { customerProjects } from './customer-home';
 
 const REFERRAL_STATUS: Readonly<Record<LeadStage, Referral['status']>> = {
@@ -30,7 +31,10 @@ type Status = ServiceRequest['status'];
 /** What a signed-in customer can see and do; every query is scoped to that customer. */
 @Injectable()
 export class CustomerPortalService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly catalog: CatalogService,
+  ) {}
 
   async home(customerId: string): Promise<CustomerHome> {
     const [customer] = await this.db
@@ -43,7 +47,12 @@ export class CustomerPortalService {
       .from(customers)
       .where(eq(customers.id, customerId));
     if (!customer) throw notFound('Your account');
-    return { customer, projects: await customerProjects(this.db, customerId) };
+    const company = await this.catalog.company();
+    return {
+      customer,
+      projects: await customerProjects(this.db, customerId),
+      company: { name: company.brandName, phones: company.phones, email: company.email },
+    };
   }
 
   /** The quotation id, only when it belongs to this customer. */

@@ -2,14 +2,17 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { idSchema, phoneSchema } from '../common/primitives';
 import {
+  customerDocumentSchema,
   customerHomeSchema,
   customerProfileSchema,
+  customerReportSchema,
   feedbackInputSchema,
   referralInputSchema,
   referralSchema,
   serviceRequestInputSchema,
   serviceRequestSchema,
 } from '../schemas/customer-portal.schema';
+import { reportKeySchema } from './reports.contract';
 
 const c = initContract();
 const pdfResponse = c.otherResponse({ contentType: 'application/pdf', body: c.type<Blob>() });
@@ -51,6 +54,32 @@ export const customerContract = c.router({
     method: 'GET',
     path: '/customer/quotations/:id/pdf',
     pathParams: z.object({ id: idSchema }),
+    responses: { 200: pdfResponse },
+  },
+  listDocuments: {
+    method: 'GET',
+    path: '/customer/documents',
+    responses: { 200: z.array(customerDocumentSchema) },
+    summary: 'Customer-facing files on the customer and their projects; never internal evidence.',
+  },
+  documentFile: {
+    method: 'GET',
+    path: '/customer/documents/:id/file',
+    pathParams: z.object({ id: idSchema }),
+    responses: {
+      200: c.otherResponse({ contentType: 'application/octet-stream', body: c.type<Blob>() }),
+    },
+  },
+  listReports: {
+    method: 'GET',
+    path: '/customer/reports',
+    responses: { 200: z.array(customerReportSchema) },
+    summary: "The statutory reports that are ready on the customer's projects.",
+  },
+  reportPdf: {
+    method: 'GET',
+    path: '/customer/projects/:id/reports/:reportKey/pdf',
+    pathParams: z.object({ id: idSchema, reportKey: reportKeySchema }),
     responses: { 200: pdfResponse },
   },
   listReferrals: {
