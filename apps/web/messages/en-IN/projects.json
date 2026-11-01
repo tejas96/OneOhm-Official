@@ -3,23 +3,25 @@
     "list": {
       "eyebrow": "Delivery",
       "title": "Projects",
-      "summary": "{count, plural, =0 {No projects match} one {# project} other {# projects}} · {capacity}",
+      "summary": "{count, plural, =0 {No live projects} one {# project · {capacity}} other {# projects · {capacity}}}",
       "loading": "Loading projects",
       "emptyTitle": "No projects yet",
       "emptyBody": "A project starts when an accepted quotation is turned into one.",
       "noMatchTitle": "No projects match these filters",
-      "noMatchBody": "Clear the search or choose another status, type or waiting party.",
+      "noMatchBody": "Clear the search or choose another status, health or type.",
       "filters": {
         "status": "Project status",
         "search": "Search by name, code, place or DISCOM",
         "type": "Project type",
-        "waiting": "Waiting on"
+        "health": "Health",
+        "sort": "Sort",
+        "layout": "Layout"
       },
       "status": {
-        "live": "Live",
+        "live": "Live projects",
         "completed": "Completed",
         "cancelled": "Cancelled",
-        "all": "All"
+        "all": "All projects"
       },
       "type": {
         "all": "All types",
@@ -27,17 +29,46 @@
         "society": "Housing society",
         "commercial": "Commercial"
       },
-      "waiting": {
-        "all": "Waiting on anyone",
-        "internal": "Waiting on OneOhm team",
-        "customer": "Waiting on customer",
-        "bank": "Waiting on bank",
-        "discom": "Waiting on DISCOM",
-        "none": "Not waiting"
-      },
       "columns": {
         "project": "Project",
-        "statusNext": "Status · next"
+        "place": "Place",
+        "size": "Size",
+        "stage": "Stage",
+        "status": "Status",
+        "next": "Next step",
+        "due": "Due",
+        "tasks": "Tasks"
+      },
+      "summaryFiltered": "{count, plural, =0 {No projects match these filters} one {# project matches these filters · {capacity}} other {# projects match these filters · {capacity}}}",
+      "clearFilters": "Clear filters",
+      "health": {
+        "any": "Any health",
+        "onTrack": "On track",
+        "attention": "Needs attention",
+        "customer": "Waiting on customer",
+        "bank": "Waiting on bank",
+        "discom": "Waiting on DISCOM"
+      },
+      "sort": {
+        "due": "Next step soonest",
+        "attention": "Needs attention first",
+        "newest": "Newest first",
+        "name": "Name",
+        "size": "Largest system"
+      },
+      "layout": {
+        "cards": "Cards",
+        "table": "Table"
+      },
+      "card": {
+        "overdue": "{count, plural, one {# task is overdue.} other {# tasks are overdue.}}",
+        "waiting": "Waiting on {party} {days, plural, =0 {since today} one {for # day} other {for # days}}.",
+        "next": "Next step",
+        "due": "Due",
+        "nothingNext": "Nothing scheduled",
+        "noDate": "No date",
+        "openTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+        "overdueTasks": "{count} overdue"
       }
     },
     "room": {
@@ -53,7 +84,7 @@
         "subsidy": "Expected subsidy",
         "effective": "Effective cost",
         "started": "Started",
-        "quotation": "From quotation {number}"
+        "discom": "DISCOM"
       },
       "options": {
         "loan": "Bank loan",
@@ -61,6 +92,32 @@
         "battery": "Battery",
         "groundMount": "Ground mount",
         "subsidy": "PM Surya Ghar subsidy"
+      },
+      "projectStatus": {
+        "active": "Active",
+        "operational": "Operational",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "alerts": {
+        "label": "What needs attention",
+        "critical": "Critical: ",
+        "risk": "Risk: ",
+        "overdue": "{count, plural, one {# task is overdue.} other {# tasks are overdue.}}",
+        "heldByChange": "{request} is holding {count, plural, one {# task} other {# tasks}}.",
+        "waiting": "Waiting on {party} {days, plural, =0 {since today} one {for # day} other {for # days}}.",
+        "dueSoonOne": "“{task}” is due {date} and has not started.",
+        "dueSoonMany": "{count} tasks are due by tomorrow and have not started."
+      },
+      "tabs": {
+        "label": "Project sections",
+        "overview": "Overview",
+        "tasks": "Tasks",
+        "payments": "Payments",
+        "material": "Material",
+        "documents": "Documents",
+        "reports": "Reports",
+        "activity": "Activity"
       }
     },
     "board": {
@@ -194,13 +251,101 @@
       "recordedBy": "recorded in “{task}”",
       "status": {
         "ready": "Ready",
-        "not_needed": "Not needed"
+        "not_needed": "Not needed",
+        "missing": "Missing details"
       },
       "openPdf": "Open {name} as PDF"
     },
     "activity": {
       "title": "Activity",
       "empty": "Nothing has happened on this project yet."
+    },
+    "tasksTab": {
+      "label": "Project tasks",
+      "layout": "Task layout",
+      "board": "By stage",
+      "list": "List",
+      "columns": {
+        "caption": "Tasks on this project",
+        "task": "Task",
+        "stage": "Stage",
+        "assignee": "Assignee",
+        "due": "Due",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
+    "paymentsTab": {
+      "positionTitle": "Money position",
+      "positionBody": "Worked out from the payment schedule.",
+      "scheduled": "Scheduled",
+      "received": "Received",
+      "dueNow": "Due now",
+      "later": "Not due yet",
+      "bankShare": "Bank's share",
+      "subsidy": "Expected subsidy"
+    },
+    "overview": {
+      "kpi": {
+        "open": "Open tasks",
+        "openUnassigned": "{count, plural, one {# has no owner yet} other {# have no owner yet}}",
+        "openOwned": "Every open task has an owner",
+        "overdue": "Overdue",
+        "overdueSome": "Past their due date",
+        "overdueNone": "Nothing late",
+        "waiting": "Waiting on others",
+        "waitingParty": "{party} {count}",
+        "waitingNone": "Nothing held by customer, bank or DISCOM",
+        "done": "Done",
+        "doneOf": "of {total, plural, one {# task} other {# tasks}}"
+      },
+      "nextUp": {
+        "title": "Next up",
+        "description": "{count, plural, one {# open task} other {# open tasks}}, soonest due first",
+        "allDone": "Every task on this project is done.",
+        "all": "All tasks"
+      },
+      "risks": {
+        "title": "Risks and blockers",
+        "none": "Nothing is threatening the dates.",
+        "more": "and {count} more",
+        "overdue": "{count, plural, one {# task is overdue} other {# tasks are overdue}}",
+        "overdueTask": "{task}, due {date}",
+        "heldByChange": "{request} holds {count, plural, one {# task} other {# tasks}}",
+        "waiting": "Waiting on {party}",
+        "needsOwner": "{count, plural, one {# ready task has no owner} other {# ready tasks have no owner}}"
+      },
+      "payments": {
+        "title": "Payments",
+        "open": "Open payments",
+        "ofTotal": "received of {total}",
+        "share": "{percent}% of the schedule received",
+        "next": "Next to collect",
+        "noSchedule": "No payment schedule yet.",
+        "allPaid": "Every milestone is paid."
+      },
+      "reports": {
+        "title": "Statutory reports",
+        "open": "Open reports",
+        "ofTotal": "of {total} ready to print",
+        "ready": "{ready} of {total} reports ready",
+        "allReady": "Every report has the details it prints.",
+        "more": "and {count} more missing details"
+      },
+      "team": {
+        "title": "Team",
+        "description": "{count, plural, one {# person} other {# people}} on this project",
+        "open": "{count} open",
+        "manager": "Project manager",
+        "done": "{count, plural, =0 {Nothing done yet} other {# done}}",
+        "unowned": "{count, plural, one {# open task has no owner yet} other {# open tasks have no owner yet}}"
+      },
+      "about": {
+        "title": "About this project",
+        "site": "Site",
+        "system": "System",
+        "quotation": "Quotation"
+      }
     }
   }
 }

@@ -60,7 +60,7 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
           style={{ width: `${total ? Math.min(100, (paid / total) * 100) : 0}%` }}
         />
       </span>
-      <ul className="flex flex-col gap-2">
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {project.milestones.map((milestone) => (
           <li key={milestone.id} className="flex flex-col gap-2 rounded-xl bg-raised p-4 text-ink">
             <div className="flex items-start justify-between gap-3">
