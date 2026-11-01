@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "outbox_dedupe_unique" ON "outbox" USING btree ("dedupe_key");

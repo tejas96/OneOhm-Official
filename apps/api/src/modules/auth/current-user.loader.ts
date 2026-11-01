@@ -8,7 +8,7 @@ const KIND_ORDER: readonly RoleKind[] = ['staff', 'partner', 'reseller'];
 /** A person with their active roles and the union of those roles' capabilities. */
 export async function loadCurrentUser(db: Database, userId: string): Promise<CurrentUser | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user || user.status !== 'active') return null;
+  if (user?.status !== 'active') return null;
   const roleRows = await db
     .select({ id: roles.id, key: roles.key, name: roles.name, kind: roles.kind })
     .from(userRoles)

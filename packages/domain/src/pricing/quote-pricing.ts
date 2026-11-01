@@ -53,6 +53,8 @@ export interface QuotePricing {
 }
 
 const BP = 10_000;
+/** Quotations show whole rupees: every computed amount is rounded to the rupee. */
+const toRupee = (paise: number) => Math.round(paise / 100) * 100;
 
 /** Prices every line, spreads the discount by value before tax, then adds tax per line. */
 export function priceQuote(
@@ -60,21 +62,21 @@ export function priceQuote(
   options: { readonly contingencyBp: number; readonly discountPaise: number },
 ): QuotePricing {
   const staged = lines.map((line) => {
-    const amountPaise = Math.round(line.quantity * line.unitPricePaise);
+    const amountPaise = toRupee(line.quantity * line.unitPricePaise);
     const contingencyPaise =
-      line.basis === 'default' ? Math.round((amountPaise * options.contingencyBp) / BP) : 0;
+      line.basis === 'default' ? toRupee((amountPaise * options.contingencyBp) / BP) : 0;
     return { line, amountPaise, contingencyPaise, base: amountPaise + contingencyPaise };
   });
   const base = staged.reduce((sum, entry) => sum + entry.base, 0);
-  const discount = Math.min(Math.max(0, options.discountPaise), base);
+  const discount = toRupee(Math.min(Math.max(0, options.discountPaise), base));
 
   let discountLeft = discount;
   const priced = staged.map((entry, index): PricedLine => {
     const last = index === staged.length - 1;
-    const share = last ? discountLeft : base > 0 ? Math.round((discount * entry.base) / base) : 0;
+    const share = last ? discountLeft : base > 0 ? toRupee((discount * entry.base) / base) : 0;
     discountLeft -= share;
     const net = entry.base - share;
-    const taxPaise = Math.round((net * entry.line.taxRateBp) / BP);
+    const taxPaise = toRupee((net * entry.line.taxRateBp) / BP);
     return {
       ...entry.line,
       amountPaise: entry.amountPaise,

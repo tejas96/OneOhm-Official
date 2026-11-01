@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId } from './columns';
 import { customers } from './crm.schema';
 import { documentSourceEnum, outboxChannelEnum, outboxStatusEnum } from './enums';
@@ -64,5 +64,8 @@ export const outbox = pgTable(
     sentAt: instant('sent_at'),
     createdAt: createdAt(),
   },
-  (table) => [index('outbox_status_idx').on(table.status)],
+  (table) => [
+    index('outbox_status_idx').on(table.status),
+    uniqueIndex('outbox_dedupe_unique').on(table.dedupeKey),
+  ],
 );

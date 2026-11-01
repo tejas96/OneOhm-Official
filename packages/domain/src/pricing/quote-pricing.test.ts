@@ -34,6 +34,15 @@ describe('priceQuote', () => {
     expect(result.contingencyPaise).toBe(1_000_00);
   });
 
+  it('keeps every amount in whole rupees', () => {
+    const result = priceQuote([line({ key: 'a', quantity: 3.33, unitPricePaise: 1_234_56 })], {
+      contingencyBp: 0,
+      discountPaise: 0,
+    });
+    expect(result.totalPaise % 100).toBe(0);
+    expect(result.taxPaise % 100).toBe(0);
+  });
+
   it('spreads a discount before tax and never below zero', () => {
     const result = priceQuote([line({ key: 'a' }), line({ key: 'b' })], {
       contingencyBp: 0,

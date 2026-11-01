@@ -1,0 +1,164 @@
+import type { ProjectSummary } from '@oneohm/api-contracts';
+import {
+  type DatabaseExecutor,
+  discoms,
+  paymentMilestones,
+  projects,
+  projectTasks,
+  properties,
+} from '@oneohm/database';
+import { EPC_STAGES, type EpcStage, type WaitingParty } from '@oneohm/domain';
+import { daysBetween, todayIn } from '@oneohm/shared';
+import { desc, eq, inArray, type SQL } from 'drizzle-orm';
+
+const PARTY_LABEL: Readonly<Record<WaitingParty, string>> = {
+  discom: 'Waiting on DISCOM',
+  bank: 'Waiting on bank',
+  customer: 'Waiting on customer',
+  internal: 'Waiting on OneOhm team',
+};
+const PAYMENT_GRACE_DAYS = 7;
+
+type TaskRow = Pick<
+  typeof projectTasks.$inferSelect,
+  | 'projectId'
+  | 'status'
+  | 'stage'
+  | 'dueDate'
+  | 'waitingParty'
+  | 'waitingSince'
+  | 'title'
+  | 'customerVisible'
+>;
+type MilestoneRow = Pick<
+  typeof paymentMilestones.$inferSelect,
+  'projectId' | 'status' | 'dueAt' | 'label'
+>;
+
+/** Project cards: stage, progress, who it waits on, what is next, and how worried to be. */
+export async function projectSummaries(
+  db: DatabaseExecutor,
+  where?: SQL,
+): Promise<ProjectSummary[]> {
+  const query = db
+    .select({ project: projects, city: properties.city, discom: discoms.code })
+    .from(projects)
+    .innerJoin(properties, eq(properties.id, projects.propertyId))
+    .innerJoin(discoms, eq(discoms.id, projects.discomId))
+    .orderBy(desc(projects.createdAt));
+  const rows = where ? await query.where(where) : await query;
+  const ids = rows.map((row) => row.project.id);
+  if (ids.length === 0) return [];
+  const tasks: TaskRow[] = await db
+    .select({
+      projectId: projectTasks.projectId,
+      status: projectTasks.status,
+      stage: projectTasks.stage,
+      dueDate: projectTasks.dueDate,
+      waitingParty: projectTasks.waitingParty,
+      waitingSince: projectTasks.waitingSince,
+      title: projectTasks.title,
+      customerVisible: projectTasks.customerVisible,
+    })
+    .from(projectTasks)
+    .where(inArray(projectTasks.projectId, ids));
+  const milestones: MilestoneRow[] = await db
+    .select({
+      projectId: paymentMilestones.projectId,
+      status: paymentMilestones.status,
+      dueAt: paymentMilestones.dueAt,
+      label: paymentMilestones.label,
+    })
+    .from(paymentMilestones)
+    .where(inArray(paymentMilestones.projectId, ids));
+  const today = todayIn();
+  return rows.map(({ project, city, discom }) =>
+    summarise(
+      project,
+      city,
+      discom,
+      tasks.filter((task) => task.projectId === project.id),
+      milestones.filter((milestone) => milestone.projectId === project.id),
+      today,
+    ),
+  );
+}
+
+function summarise(
+  project: typeof projects.$inferSelect,
+  city: string,
+  discom: string,
+  tasks: readonly TaskRow[],
+  milestones: readonly MilestoneRow[],
+  today: string,
+): ProjectSummary {
+  const open = tasks.filter((task) => task.status !== 'completed');
+  const stagesWithTasks = new Set(tasks.map((task) => task.stage));
+  const currentStage: EpcStage =
+    EPC_STAGES.find((stage) => open.some((task) => task.stage === stage)) ?? project.currentStage;
+  const inStage = tasks.filter((task) => task.stage === currentStage);
+  const stageProgress = inStage.length
+    ? inStage.filter((task) => task.status === 'completed').length / inStage.length
+    : 1;
+  const overdue = open.filter((task) => task.dueDate < today);
+  const waitingTasks = open
+    .filter((task) => task.status === 'waiting' && task.waitingSince)
+    .sort(
+      (left, right) => (left.waitingSince?.getTime() ?? 0) - (right.waitingSince?.getTime() ?? 0),
+    );
+  const longest = waitingTasks[0];
+  const waitingDays = longest?.waitingSince
+    ? Math.max(0, daysBetween(longest.waitingSince.toISOString().slice(0, 10), today))
+    : 0;
+  const nextTask = [...open].sort((left, right) => left.dueDate.localeCompare(right.dueDate))[0];
+  const latePayment = milestones.find(
+    (milestone) =>
+      milestone.status !== 'paid' &&
+      milestone.dueAt &&
+      daysBetween(milestone.dueAt.toISOString().slice(0, 10), today) > PAYMENT_GRACE_DAYS,
+  );
+
+  let tone: ProjectSummary['tone'] = 'onTrack';
+  let toneLabel = 'On track';
+  if (project.status === 'completed') [tone, toneLabel] = ['done', 'Completed'];
+  else if (latePayment) [tone, toneLabel] = ['overdue', 'Payment overdue'];
+  else if (longest && longest.waitingParty !== 'internal')
+    [tone, toneLabel] = ['waiting', PARTY_LABEL[longest.waitingParty]];
+  else if (overdue.length > 0)
+    [tone, toneLabel] = [
+      'overdue',
+      overdue.length === 1 ? '1 task overdue' : `${overdue.length} tasks overdue`,
+    ];
+  else if (
+    nextTask &&
+    daysBetween(today, nextTask.dueDate) <= 1 &&
+    nextTask.status !== 'in_progress'
+  )
+    [tone, toneLabel] = ['atRisk', 'At risk'];
+  else if (project.status === 'operational') [tone, toneLabel] = ['onTrack', 'Operational'];
+
+  return {
+    id: project.id,
+    code: project.code,
+    name: project.name,
+    place: city,
+    type: project.type,
+    capacityWp: project.capacityWp,
+    discom,
+    status: project.status,
+    currentStage,
+    stageProgress,
+    skippedStages: EPC_STAGES.filter((stage) => !stagesWithTasks.has(stage)),
+    tone,
+    toneLabel,
+    waitingOn: longest?.waitingParty ?? null,
+    waitingDays,
+    next: latePayment
+      ? { label: latePayment.label, date: latePayment.dueAt?.toISOString().slice(0, 10) ?? today }
+      : nextTask
+        ? { label: nextTask.title, date: nextTask.dueDate }
+        : null,
+    openTasks: open.length,
+    overdueTasks: overdue.length,
+  };
+}
