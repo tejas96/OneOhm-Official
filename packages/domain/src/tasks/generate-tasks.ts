@@ -39,16 +39,36 @@ export interface AssigneeCandidate {
   readonly userId: string;
   readonly roleKeys: readonly string[];
   readonly openTasks: number;
+  /** Marked unavailable by hand (for example a long absence). */
   readonly onLeave: boolean;
+  /** Approved leave, as inclusive `YYYY-MM-DD` ranges. */
+  readonly away?: readonly { readonly from: string; readonly to: string }[];
 }
 
-/** The least-loaded person in the role who is not on leave; null leaves the task unassigned. */
+/** True when any approved leave touches the days the task runs. */
+export function awayDuring(
+  candidate: AssigneeCandidate,
+  when: { readonly from: string; readonly to: string },
+): boolean {
+  return (candidate.away ?? []).some((leave) => leave.from <= when.to && leave.to >= when.from);
+}
+
+/**
+ * The least-loaded person in the role who is available; null leaves the task unassigned.
+ * With `when`, people on approved leave during those days are skipped (PRD 3.8, Flow E).
+ */
 export function pickAssignee(
   candidates: readonly AssigneeCandidate[],
   roleKey: string,
+  when?: { readonly from: string; readonly to: string },
 ): AssigneeCandidate | null {
   const eligible = candidates
-    .filter((candidate) => candidate.roleKeys.includes(roleKey) && !candidate.onLeave)
+    .filter(
+      (candidate) =>
+        candidate.roleKeys.includes(roleKey) &&
+        !candidate.onLeave &&
+        !(when && awayDuring(candidate, when)),
+    )
     .sort(
       (left, right) => left.openTasks - right.openTasks || left.userId.localeCompare(right.userId),
     );

@@ -71,3 +71,28 @@ describe('pickAssignee', () => {
     expect(pickAssignee([], 'execution')).toBeNull();
   });
 });
+
+describe('pickAssignee with leave', () => {
+  const people = [
+    {
+      userId: 'a',
+      roleKeys: ['execution'],
+      openTasks: 0,
+      onLeave: false,
+      away: [{ from: '2026-11-09', to: '2026-11-10' }],
+    },
+    { userId: 'b', roleKeys: ['execution'], openTasks: 3, onLeave: false },
+  ];
+
+  it('skips someone on approved leave during the task', () => {
+    expect(
+      pickAssignee(people, 'execution', { from: '2026-11-08', to: '2026-11-09' })?.userId,
+    ).toBe('b');
+  });
+
+  it('picks them again when the task is outside their leave', () => {
+    expect(
+      pickAssignee(people, 'execution', { from: '2026-11-11', to: '2026-11-12' })?.userId,
+    ).toBe('a');
+  });
+});

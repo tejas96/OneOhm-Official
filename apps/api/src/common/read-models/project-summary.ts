@@ -33,7 +33,7 @@ type TaskRow = Pick<
 >;
 type MilestoneRow = Pick<
   typeof paymentMilestones.$inferSelect,
-  'projectId' | 'status' | 'dueAt' | 'label'
+  'projectId' | 'status' | 'dueAt' | 'label' | 'payer'
 >;
 
 /** Project cards: stage, progress, who it waits on, what is next, and how worried to be. */
@@ -73,6 +73,7 @@ export async function projectSummaries(
     .select({
       projectId: paymentMilestones.projectId,
       status: paymentMilestones.status,
+      payer: paymentMilestones.payer,
       dueAt: paymentMilestones.dueAt,
       label: paymentMilestones.label,
     })
@@ -130,6 +131,7 @@ function summarise(
   const [tone, toneLabel] = projectTone({
     status: project.status,
     latePayment: Boolean(latePayment),
+    unpaid: milestones.find((milestone) => milestone.status !== 'paid')?.payer ?? null,
     longest,
     overdue: overdue.length,
     nextTask,
@@ -172,12 +174,19 @@ function summarise(
 function projectTone(facts: {
   readonly status: (typeof projects.$inferSelect)['status'];
   readonly latePayment: boolean;
+  /** Who still owes money, if anyone: the customer or the bank. */
+  readonly unpaid: 'customer' | 'bank' | null;
   readonly longest: TaskRow | undefined;
   readonly overdue: number;
   readonly nextTask: TaskRow | undefined;
   readonly today: string;
 }): [ProjectSummary['tone'], string] {
   const { status, longest, nextTask } = facts;
+  // Work done is not the end: the PRD keeps unpaid completed projects in view (Flow D).
+  if (status === 'completed' && facts.unpaid === 'customer')
+    return ['overdue', 'Completed — payment outstanding'];
+  if (status === 'completed' && facts.unpaid === 'bank')
+    return ['waiting', 'Completed — waiting for bank disbursement'];
   if (status === 'completed') return ['done', 'Completed'];
   if (facts.latePayment) return ['overdue', 'Payment overdue'];
   if (longest && longest.waitingParty !== 'internal')

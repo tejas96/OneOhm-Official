@@ -1,8 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
-import { hashPassword, projectTasks, roles, sessions, userRoles, users } from '@oneohm/database';
+import {
+  hashPassword,
+  leaveRequests,
+  projectTasks,
+  roles,
+  sessions,
+  userRoles,
+  users,
+} from '@oneohm/database';
 import { SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { todayIn } from '@oneohm/shared';
+import { and, asc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -43,6 +52,20 @@ export class PeopleService {
       .from(projectTasks)
       .where(and(inArray(projectTasks.assigneeUserId, ids), ne(projectTasks.status, 'completed')))
       .groupBy(projectTasks.assigneeUserId);
+    // "On leave" means marked by hand, or on approved leave today.
+    const today = todayIn();
+    const away = await this.db
+      .select({ userId: leaveRequests.userId })
+      .from(leaveRequests)
+      .where(
+        and(
+          inArray(leaveRequests.userId, ids),
+          eq(leaveRequests.status, 'approved'),
+          lte(leaveRequests.fromDate, today),
+          gte(leaveRequests.toDate, today),
+        ),
+      );
+    const awayIds = new Set(away.map((row) => row.userId));
     return rows.map((row) => ({
       id: row.id,
       fullName: row.fullName,
@@ -51,7 +74,7 @@ export class PeopleService {
       employeeCode: row.employeeCode,
       designation: row.designation,
       status: row.status,
-      onLeave: row.onLeave,
+      onLeave: row.onLeave || awayIds.has(row.id),
       roles: roleRows
         .filter((role) => role.userId === row.id)
         .map(({ userId: _ignored, ...role }) => role),

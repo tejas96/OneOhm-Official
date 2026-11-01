@@ -66,6 +66,7 @@ export async function writeGeneratedTasks(
     const assignee = pickAssignee(
       candidates.map((candidate) => ({ ...candidate, openTasks: load.get(candidate.userId) ?? 0 })),
       task.roleKey,
+      { from: task.startDate, to: task.dueDate },
     );
     if (assignee) {
       load.set(assignee.userId, (load.get(assignee.userId) ?? 0) + 1);

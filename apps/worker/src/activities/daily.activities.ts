@@ -8,6 +8,7 @@ import {
 } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { queueEscalations } from './escalations';
 import { queueStaffDigests } from './staff-digest';
 
 /** A customer is reminded about an unpaid milestone at most once a week. */
@@ -78,6 +79,10 @@ export function dailyActivities(db: Database, timeZone: string) {
         if (fresh) queued += 1;
       }
       return queued;
+    },
+
+    async queueEscalations(): Promise<number> {
+      return queueEscalations(db, todayIn(timeZone));
     },
 
     async queueStaffDigests(): Promise<number> {

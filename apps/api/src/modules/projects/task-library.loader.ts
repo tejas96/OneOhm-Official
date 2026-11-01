@@ -1,5 +1,6 @@
 import {
   type DatabaseExecutor,
+  leaveRequests,
   projectTasks,
   roles,
   taskTemplates,
@@ -7,7 +8,8 @@ import {
   users,
 } from '@oneohm/database';
 import type { AssigneeCandidate, TaskConditions, TaskTemplate } from '@oneohm/domain';
-import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { todayIn } from '@oneohm/shared';
+import { and, asc, eq, gte, isNull, ne, sql } from 'drizzle-orm';
 
 /** The active task templates, in library order, as the domain engine expects them. */
 export async function loadTaskLibrary(db: DatabaseExecutor): Promise<TaskTemplate[]> {
@@ -38,7 +40,7 @@ export async function loadTaskLibrary(db: DatabaseExecutor): Promise<TaskTemplat
   }));
 }
 
-/** Everyone who could take a task: active people, their role keys, open work and leave. */
+/** Everyone who could take a task: active people, their role keys, open work and approved leave. */
 export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<AssigneeCandidate[]> {
   const people = await db
     .select({ userId: users.id, onLeave: users.onLeave, roleKey: roles.key })
@@ -51,6 +53,14 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
     .from(projectTasks)
     .where(ne(projectTasks.status, 'completed'))
     .groupBy(projectTasks.assigneeUserId);
+  const leave = await db
+    .select({
+      userId: leaveRequests.userId,
+      from: leaveRequests.fromDate,
+      to: leaveRequests.toDate,
+    })
+    .from(leaveRequests)
+    .where(and(eq(leaveRequests.status, 'approved'), gte(leaveRequests.toDate, todayIn())));
   const byUser = new Map<string, AssigneeCandidate>();
   for (const person of people) {
     const existing = byUser.get(person.userId);
@@ -59,6 +69,7 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
       userId: person.userId,
       roleKeys,
       onLeave: person.onLeave,
+      away: leave.filter((row) => row.userId === person.userId),
       openTasks: loads.find((load) => load.userId === person.userId)?.open ?? 0,
     });
   }

@@ -147,8 +147,9 @@ export class ChangeRequestsService {
       if (!request) throw new Error('Change request insert returned nothing.');
       let due = today;
       for (const [position, step] of definition.steps.entries()) {
+        const starts = due;
         due = addDays(due, step.durationDays);
-        const assignee = pickAssignee(candidates, step.roleKey);
+        const assignee = pickAssignee(candidates, step.roleKey, { from: starts, to: due });
         await tx.insert(changeRequestSteps).values({
           changeRequestId: request.id,
           key: step.key,
