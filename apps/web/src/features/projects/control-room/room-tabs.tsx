@@ -4,6 +4,7 @@ import type { ProjectDetail } from '@oneohm/api-contracts';
 import { TabPanel, Tabs } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { DocumentChecklistCard } from '@/features/documents/document-checklist-card';
 import { DocumentsGallery } from '@/features/documents/gallery/documents-gallery';
 import { ProjectMaterialCard } from '@/features/inventory/material/project-material-card';
 import { ActivityTimeline } from './activity-timeline';
@@ -41,7 +42,12 @@ export function RoomTabs({
           </div>
         );
       case 'documents':
-        return <DocumentsGallery scope={{ projectId: project.id }} />;
+        return (
+          <div className="flex flex-col gap-8">
+            <DocumentChecklistCard projectId={project.id} />
+            <DocumentsGallery scope={{ projectId: project.id }} bundleName={project.code} />
+          </div>
+        );
       case 'reports':
         return (
           <div className="max-w-4xl">

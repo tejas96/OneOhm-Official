@@ -10,6 +10,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { ReportArchiveService } from '../reports/report-archive.service';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
@@ -31,10 +32,15 @@ export class TasksService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly budget: BudgetCheckService,
+    private readonly archive: ReportArchiveService,
   ) {}
 
-  /** A finished survey re-prices the quote; a pricing problem never undoes the task. */
+  /**
+   * After a task finishes: reports whose data changed are saved again (in the background),
+   * and a finished survey re-prices the quote. Neither ever undoes the task.
+   */
   private async afterFinish(actor: Actor, task: { projectId: string; captures: string[] }) {
+    this.archive.refreshLater(task.projectId, actor.userId);
     if (!task.captures.some((key) => SURVEY_FACTS.includes(key))) return;
     try {
       await this.budget.afterSurvey(actor, task.projectId);

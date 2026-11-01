@@ -2,7 +2,7 @@
 
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { Badge, listItemEnter } from '@oneohm/design-system/web';
-import { FileCheck, ListChecks, Sparkles } from 'lucide-react';
+import { Check, FileCheck, ListChecks, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { folderOf, titleOf } from './document-kinds';
@@ -27,12 +27,17 @@ export function DocumentCard({
   index,
   showProject,
   onOpen,
+  selected,
+  onToggle,
 }: {
   readonly document: DocumentRecord;
   readonly index: number;
   /** Customer galleries span projects, so each card names its project. */
   readonly showProject: boolean;
   readonly onOpen: (document: DocumentRecord) => void;
+  /** In select mode a tap picks the file instead of opening it. */
+  readonly selected?: boolean | undefined;
+  readonly onToggle?: ((document: DocumentRecord) => void) | undefined;
 }) {
   const t = useTranslations('documents.gallery.card');
   const added = useAddedLine();
@@ -43,8 +48,9 @@ export function DocumentCard({
     <motion.li {...listItemEnter(index)} className="min-w-0">
       <button
         type="button"
-        onClick={() => onOpen(document)}
-        className="group flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-raised text-left transition-[box-shadow,border-color] duration-(--duration-fast) hover:border-rule hover:shadow-e2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        onClick={() => (onToggle ? onToggle(document) : onOpen(document))}
+        aria-pressed={onToggle ? Boolean(selected) : undefined}
+        className={`${selected ? 'border-accent ring-2 ring-accent/40 ' : ''}group flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-raised text-left transition-[box-shadow,border-color] duration-(--duration-fast) hover:border-rule hover:shadow-e2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
       >
         <span className="relative block aspect-[4/3] overflow-hidden border-b border-hairline">
           <DocumentTile
@@ -52,6 +58,14 @@ export function DocumentCard({
             className="transition-transform duration-(--duration-slow) group-hover:scale-[1.02]"
           />
           <SourceBadge document={document} />
+          {onToggle && (
+            <span
+              aria-hidden
+              className={`absolute top-2 right-2 flex size-6 items-center justify-center rounded-full border-2 ${selected ? 'border-accent bg-accent text-on-accent' : 'border-white/90 bg-black/20'}`}
+            >
+              {selected && <Check className="size-3.5" />}
+            </span>
+          )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1 p-3">
           <span className="line-clamp-2 break-words type-body-sm font-medium text-ink">

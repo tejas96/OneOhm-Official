@@ -7,6 +7,7 @@ export * from './customer-activity.schema';
 export * from './customer-portal.schema';
 export * from './dashboard.schema';
 export * from './discom.schema';
+export * from './document-checklist.schema';
 export * from './document.schema';
 export * from './finance.schema';
 export * from './identity.schema';

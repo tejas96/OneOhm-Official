@@ -2,7 +2,7 @@
 
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { Button } from '@oneohm/design-system/web';
-import { Plus } from 'lucide-react';
+import { CheckSquare, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadError } from '@/components/query-state';
@@ -14,6 +14,7 @@ import { FolderRail } from './folder-rail';
 import { GALLERY_GRID, GalleryEmpty, GalleryNoMatch, GallerySkeleton } from './gallery-states';
 import { GalleryToolbar } from './gallery-toolbar';
 import { PreviewSheet } from './preview-sheet';
+import { SelectionBar } from './selection-bar';
 import { type GalleryScope, useGallery } from './use-gallery';
 import { useFolderLabel } from './use-labels';
 
@@ -22,13 +23,33 @@ import { useFolderLabel } from './use-labels';
  * counts, search and type chips, photo thumbnails and paper tiles, a preview sheet with
  * open, download, replace and remove, and an "Add a document" sheet.
  */
-export function DocumentsGallery({ scope }: { readonly scope: GalleryScope }) {
+export function DocumentsGallery({
+  scope,
+  bundleName,
+}: {
+  readonly scope: GalleryScope;
+  /** File name for ZIP/PDF downloads, e.g. the project code. */
+  readonly bundleName?: string;
+}) {
   const t = useTranslations('documents.gallery');
   const folderLabel = useFolderLabel();
   const canManage = useCan('documents.manage');
   const [filters, setFilters] = useState<GalleryFilters>(DEFAULT_FILTERS);
   const [adding, setAdding] = useState(false);
   const [open, setOpen] = useState<DocumentRecord | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (document: DocumentRecord) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(document.id)) next.delete(document.id);
+      else next.add(document.id);
+      return next;
+    });
+  const stopSelecting = () => {
+    setSelecting(false);
+    setPicked(new Set());
+  };
   const { query, folders, kinds, shown, total } = useGallery(scope, filters);
   const update = (patch: Partial<GalleryFilters>) =>
     setFilters((current) => ({ ...current, ...patch }));
@@ -42,16 +63,27 @@ export function DocumentsGallery({ scope }: { readonly scope: GalleryScope }) {
         <p className="max-w-xl type-body-sm text-ink-muted">
           {t(isCustomer ? 'intro.customer' : 'intro.project')}
         </p>
-        {add && (
-          <Button
-            variant="primary"
-            leadingIcon={<Plus aria-hidden />}
-            onClick={add}
-            className="self-start sm:self-auto"
-          >
-            {t('add')}
-          </Button>
-        )}
+        <span className="flex flex-wrap gap-2 self-start sm:self-auto">
+          {total > 0 && !selecting && (
+            <Button
+              variant="secondary"
+              leadingIcon={<CheckSquare aria-hidden />}
+              onClick={() => setSelecting(true)}
+            >
+              {t('select.start')}
+            </Button>
+          )}
+          {add && (
+            <Button
+              variant="primary"
+              leadingIcon={<Plus aria-hidden />}
+              onClick={add}
+              className="self-start sm:self-auto"
+            >
+              {t('add')}
+            </Button>
+          )}
+        </span>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
         <FolderRail
@@ -90,12 +122,21 @@ export function DocumentsGallery({ scope }: { readonly scope: GalleryScope }) {
                   index={index}
                   showProject={isCustomer}
                   onOpen={setOpen}
+                  selected={picked.has(document.id)}
+                  onToggle={selecting ? toggle : undefined}
                 />
               ))}
             </ul>
           )}
         </div>
       </div>
+      {selecting && (
+        <SelectionBar
+          ids={[...picked]}
+          name={bundleName ?? t('select.defaultName')}
+          onClear={stopSelecting}
+        />
+      )}
       <AddDocumentSheet
         scope={scope}
         open={adding}

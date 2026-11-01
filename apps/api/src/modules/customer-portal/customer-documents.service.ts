@@ -58,27 +58,32 @@ export class CustomerDocumentsService {
         sizeBytes: documents.sizeBytes,
         createdAt: documents.createdAt,
         visibleTask: projectTasks.customerVisible,
+        source: documents.source,
       })
       .from(documents)
       .leftJoin(projectTasks, eq(projectTasks.id, documents.taskId))
       .where(and(scope, isNull(documents.replacedAt), isNull(documents.removedAt)))
       .orderBy(desc(documents.createdAt));
     const code = new Map(own.map((project) => [project.id, project.code]));
-    return rows
-      .filter(
-        (row) =>
-          CUSTOMER_FACING.has(row.category) ||
-          (row.category === 'site_photo' && row.visibleTask === true),
-      )
-      .map((row) => ({
-        id: row.id,
-        name: row.name,
-        category: row.category,
-        projectCode: row.projectId ? (code.get(row.projectId) ?? null) : null,
-        contentType: row.contentType,
-        sizeBytes: row.sizeBytes,
-        createdAt: row.createdAt.toISOString(),
-      }));
+    return (
+      rows
+        // Saved statutory reports have their own Reports section in the app.
+        .filter((row) => row.source !== 'report')
+        .filter(
+          (row) =>
+            CUSTOMER_FACING.has(row.category) ||
+            (row.category === 'site_photo' && row.visibleTask === true),
+        )
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          category: row.category,
+          projectCode: row.projectId ? (code.get(row.projectId) ?? null) : null,
+          contentType: row.contentType,
+          sizeBytes: row.sizeBytes,
+          createdAt: row.createdAt.toISOString(),
+        }))
+    );
   }
 
   /** The stored file, only when it is one of this customer's visible documents. */

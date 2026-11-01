@@ -57,6 +57,15 @@ export const reportsContract = c.router({
     responses: { 200: pdfResponse },
     summary: 'The statutory report as a PDF, signed and stamped.',
   },
+  archiveProjectReports: {
+    method: 'POST',
+    path: '/projects/:id/reports/archive',
+    pathParams: z.object({ id: idSchema }),
+    body: z.object({}).optional(),
+    responses: { 200: z.object({ saved: z.number().int(), unchanged: z.number().int() }) },
+    summary:
+      'Saves every ready report to the project documents; refreshes those whose data changed.',
+  },
   quotationPdf: {
     method: 'GET',
     path: '/quotations/:id/pdf',

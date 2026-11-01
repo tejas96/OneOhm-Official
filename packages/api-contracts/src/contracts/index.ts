@@ -6,6 +6,8 @@ import { contractorsContract } from './contractors.contract';
 import { crmContract } from './crm.contract';
 import { customerContract } from './customer.contract';
 import { discomContract } from './discom.contract';
+import { documentBundleContract } from './document-bundle.contract';
+import { documentChecklistContract } from './document-checklist.contract';
 import { documentsContract } from './documents.contract';
 import { financeContract } from './finance.contract';
 import { inventoryContract } from './inventory.contract';
@@ -52,6 +54,8 @@ export type ApiRouterDefinition = {
   readonly templates: typeof templatesContract;
   readonly audit: typeof auditContract;
   readonly paymentPlans: typeof paymentPlansContract;
+  readonly documentChecklist: typeof documentChecklistContract;
+  readonly documentBundle: typeof documentBundleContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -80,6 +84,8 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   templates: templatesContract,
   audit: auditContract,
   paymentPlans: paymentPlansContract,
+  documentChecklist: documentChecklistContract,
+  documentBundle: documentBundleContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

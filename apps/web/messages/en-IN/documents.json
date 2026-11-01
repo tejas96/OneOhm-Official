@@ -164,6 +164,30 @@
           "size": "This file is {size}. The limit is 25 MB.",
           "failed": "The upload did not finish. {reason}"
         }
+      },
+      "select": {
+        "start": "Select",
+        "count": "{count, plural, =0 {Pick documents} one {# document picked} other {# documents picked}}",
+        "zip": "Download ZIP",
+        "pdf": "Print as one PDF",
+        "done": "Done",
+        "failed": "The download did not work.",
+        "defaultName": "OneOhm documents"
+      }
+    },
+    "checklist": {
+      "title": "Document checklist",
+      "loading": "Checking the papers",
+      "summary": "{present} of {total} on file",
+      "saveReports": "Save ready reports",
+      "saved": "{saved, plural, =0 {No report changed} one {# report saved} other {# reports saved}}{unchanged, plural, =0 {} other {; # already up to date}}.",
+      "print": "Print checklist",
+      "needs": "Needs: {what}",
+      "status": {
+        "present": "On file",
+        "missing": "Missing",
+        "ready_to_save": "Ready to save",
+        "not_ready": "Not ready"
       }
     }
   }
