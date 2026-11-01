@@ -82,7 +82,7 @@ export async function postWorkOrderTds(
     .innerJoin(projects, eq(projects.id, workOrders.projectId))
     .where(eq(workOrders.id, workOrderId))
     .limit(1);
-  if (!row || row.order.status !== 'completed' || row.order.tdsPaise <= 0) return;
+  if (row?.order.status !== 'completed' || row.order.tdsPaise <= 0) return;
   await postJournal(db, {
     entryDate: businessDate(row.order.completedAt ?? row.order.updatedAt),
     memo: `TDS held · ${row.code} · ${row.contractor} · ${row.order.number}`,
