@@ -7,6 +7,7 @@ import { discomContract } from './discom.contract';
 import { documentsContract } from './documents.contract';
 import { financeContract } from './finance.contract';
 import { inventoryContract } from './inventory.contract';
+import { notificationsContract } from './notifications.contract';
 import { peopleContract } from './people.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { quotationsContract } from './quotations.contract';
@@ -37,6 +38,7 @@ export type ApiRouterDefinition = {
   readonly discom: typeof discomContract;
   readonly workforce: typeof workforceContract;
   readonly rewards: typeof rewardsContract;
+  readonly notifications: typeof notificationsContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -57,6 +59,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   discom: discomContract,
   workforce: workforceContract,
   rewards: rewardsContract,
+  notifications: notificationsContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { LeaveImpact, LeaveRequestRecord } from '@oneohm/api-contracts';
 import {
   leaveRequests,
+  notify,
+  notifyHolders,
   projectActivities,
   projectTasks,
   type Transaction,
@@ -12,6 +14,7 @@ import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
+import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { type LeaveWindow, leaveImpact, tasksInWindow } from './leave-impact';
 import { loadPolicy } from './policy';
@@ -77,6 +80,13 @@ export class LeaveService {
         handoverNote: input.handoverNote ?? null,
       })
       .returning({ id: leaveRequests.id });
+    if (row)
+      await notifyHolders(
+        this.db,
+        'leave.approve',
+        STAFF_NOTICES.leaveRequested(row.id, actor.fullName, input.fromDate, input.toDate),
+        actor.userId,
+      );
     return this.one(row?.id ?? '');
   }
 
@@ -115,6 +125,11 @@ export class LeaveService {
       if (row.userId === actor.userId)
         throw conflict('Someone else approves your own leave.', 'own');
       const handed = approve ? await handOver(tx, actor.userId, row) : 0;
+      await notify(
+        tx,
+        { userId: row.userId },
+        STAFF_NOTICES.leaveDecided(id, approve, row.fromDate, row.toDate),
+      );
       await tx
         .update(leaveRequests)
         .set({
@@ -183,5 +198,14 @@ async function handOver(
       userId: approverId,
     });
   }
+  const [person] = await tx
+    .select({ fullName: users.fullName })
+    .from(users)
+    .where(eq(users.id, row.userId));
+  await notify(
+    tx,
+    { userId: backupId },
+    STAFF_NOTICES.covering(row.id, person?.fullName ?? 'a colleague', tasks.length),
+  );
   return tasks.length;
 }

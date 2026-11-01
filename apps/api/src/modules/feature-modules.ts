@@ -6,6 +6,7 @@ import { DiscomModule } from './discom/discom.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinanceModule } from './finance/finance.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PeopleModule } from './people/people.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotationsModule } from './quotations/quotations.module';
@@ -27,4 +28,5 @@ export const FEATURE_MODULES = [
   ContractorsModule,
   DiscomModule,
   WorkforceModule,
+  NotificationsModule,
 ];

@@ -1,16 +1,14 @@
 import {
   customers,
   type Database,
-  leads,
-  outbox,
   paymentMilestones,
   payments,
   projects,
-  projectTasks,
-  users,
+  queueCustomerMessage,
 } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
-import { and, eq, inArray, isNotNull, lte, ne, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { queueStaffDigests } from './staff-digest';
 
 /** A customer is reminded about an unpaid milestone at most once a week. */
 const REMINDER_GRACE_DAYS = 3;
@@ -45,7 +43,6 @@ export function dailyActivities(db: Database, timeZone: string) {
             inArray(paymentMilestones.status, ['due', 'partly_paid']),
             isNotNull(paymentMilestones.dueAt),
             lte(paymentMilestones.dueAt, cutoff),
-            eq(customers.whatsappOptIn, true),
           ),
         );
       if (due.length === 0) return 0;
@@ -66,78 +63,25 @@ export function dailyActivities(db: Database, timeZone: string) {
           .reduce((sum, payment) => sum + payment.amount, 0);
         const outstanding = row.amount - received;
         if (outstanding <= 0) continue;
-        const inserted = await db
-          .insert(outbox)
-          .values({
-            channel: 'whatsapp',
-            recipient: row.phone,
-            template: 'payment_reminder',
-            payload: {
-              customer: row.customer,
-              amount: formatInr(outstanding),
-              milestone: row.label,
-              project: row.projectCode,
-            },
-            dedupeKey: `payment_reminder:${row.id}:${week}`,
-          })
-          .onConflictDoNothing()
-          .returning({ id: outbox.id });
-        queued += inserted.length;
+        const fresh = await queueCustomerMessage(
+          db,
+          row.phone,
+          'payment_reminder',
+          {
+            customer: row.customer,
+            amount: formatInr(outstanding),
+            milestone: row.label,
+            project: row.projectCode,
+          },
+          `payment_reminder:${row.id}:${week}`,
+        );
+        if (fresh) queued += 1;
       }
       return queued;
     },
 
     async queueStaffDigests(): Promise<number> {
-      const today = todayIn(timeZone);
-      const people = await db
-        .select({ id: users.id, name: users.fullName, phone: users.phoneE164 })
-        .from(users)
-        .where(and(eq(users.status, 'active'), isNotNull(users.phoneE164)));
-      let queued = 0;
-      for (const person of people) {
-        if (!person.phone) continue;
-        const [counts] = await db
-          .select({
-            overdue: sql<number>`count(*) filter (where ${projectTasks.dueDate} < ${today})`,
-            today: sql<number>`count(*) filter (where ${projectTasks.dueDate} = ${today})`,
-          })
-          .from(projectTasks)
-          .where(
-            and(eq(projectTasks.assigneeUserId, person.id), ne(projectTasks.status, 'completed')),
-          );
-        const [followUps] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(leads)
-          .where(
-            and(
-              eq(leads.ownerUserId, person.id),
-              lte(leads.nextActionOn, today),
-              notInArray(leads.stage, ['won', 'lost']),
-            ),
-          );
-        const overdue = Number(counts?.overdue ?? 0);
-        const dueToday = Number(counts?.today ?? 0);
-        const leadsDue = Number(followUps?.count ?? 0);
-        if (overdue + dueToday + leadsDue === 0) continue;
-        const inserted = await db
-          .insert(outbox)
-          .values({
-            channel: 'whatsapp',
-            recipient: person.phone,
-            template: 'staff_daily_digest',
-            payload: {
-              name: person.name,
-              overdue: String(overdue),
-              today: String(dueToday),
-              followUps: String(leadsDue),
-            },
-            dedupeKey: `staff_digest:${person.id}:${today}`,
-          })
-          .onConflictDoNothing()
-          .returning({ id: outbox.id });
-        queued += inserted.length;
-      }
-      return queued;
+      return queueStaffDigests(db, todayIn(timeZone));
     },
   };
 }

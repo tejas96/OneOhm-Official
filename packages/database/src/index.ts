@@ -1,6 +1,8 @@
 export * from './client';
+export * from './customer-message';
 export * from './ledger';
 export * from './migrate';
+export * from './notify';
 export * as schema from './schema';
 export * from './schema';
 export * from './security/password';

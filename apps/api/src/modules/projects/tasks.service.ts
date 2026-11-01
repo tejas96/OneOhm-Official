@@ -13,6 +13,7 @@ import { syncWorkOrders } from '../contractors/work-order-sync';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked } from './task-guards';
+import { askApprovers, tellApproved, tellAssignee } from './task-notices';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
@@ -137,6 +138,7 @@ export class TasksService {
           message: `${task.title} sent for approval.`,
           userId: actor.userId,
         });
+        await askApprovers(tx, task, actor);
       } else {
         await finishTask(tx, task, actor.userId);
       }
@@ -163,6 +165,7 @@ export class TasksService {
         .set({ approvedByUserId: actor.userId })
         .where(eq(projectTasks.id, id));
       await finishTask(tx, task, actor.userId);
+      await tellApproved(tx, task, actor.userId);
     });
     return this.present(id);
   }
@@ -183,6 +186,7 @@ export class TasksService {
       // A task given to a contractor's crew joins that contractor's work order.
       await syncWorkOrders(tx, task.projectId, actor.userId);
       await recordAudit(tx, actor.userId, 'task.assigned', 'task', id, { userId });
+      await tellAssignee(tx, task, userId, actor.userId);
     });
     return this.present(id);
   }

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Worker settings from the environment. WhatsApp sending is off ("log") unless
- * WHATSAPP_DELIVERY=live, so development never messages real customers.
+ * Worker settings from the environment. WhatsApp and push sending are off ("log") unless
+ * WHATSAPP_DELIVERY=live or PUSH_DELIVERY=live, so development never messages real people.
  */
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -17,6 +17,9 @@ const schema = z.object({
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_API_VERSION: z.string().default('v25.0'),
   WHATSAPP_TEMPLATE_LANGUAGE: z.string().default('en'),
+  /** Phone alerts go through Expo's push service (Firebase for Android, Apple for iOS). */
+  PUSH_DELIVERY: z.enum(['log', 'live']).default('log'),
+  EXPO_ACCESS_TOKEN: z.string().optional(),
 });
 
 export type WorkerConfig = z.infer<typeof schema>;

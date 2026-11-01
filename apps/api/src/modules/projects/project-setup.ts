@@ -57,17 +57,20 @@ export async function writeGeneratedTasks(
   projectId: string,
   generated: readonly GeneratedTask[],
   candidates: AssigneeCandidate[],
-): Promise<{ unassigned: number }> {
+): Promise<{ unassigned: number; perPerson: Map<string, number> }> {
   const ids = new Map<string, string>();
   const load = new Map(candidates.map((candidate) => [candidate.userId, candidate.openTasks]));
+  const perPerson = new Map<string, number>();
   let unassigned = 0;
   for (const [position, task] of generated.entries()) {
     const assignee = pickAssignee(
       candidates.map((candidate) => ({ ...candidate, openTasks: load.get(candidate.userId) ?? 0 })),
       task.roleKey,
     );
-    if (assignee) load.set(assignee.userId, (load.get(assignee.userId) ?? 0) + 1);
-    else unassigned += 1;
+    if (assignee) {
+      load.set(assignee.userId, (load.get(assignee.userId) ?? 0) + 1);
+      perPerson.set(assignee.userId, (perPerson.get(assignee.userId) ?? 0) + 1);
+    } else unassigned += 1;
     const [row] = await tx
       .insert(projectTasks)
       .values({
@@ -102,5 +105,5 @@ export async function writeGeneratedTasks(
     }),
   );
   if (links.length > 0) await tx.insert(taskDependencies).values(links);
-  return { unassigned };
+  return { unassigned, perPerson };
 }

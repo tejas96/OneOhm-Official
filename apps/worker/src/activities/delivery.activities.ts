@@ -1,13 +1,16 @@
 import { customers, type Database, outbox } from '@oneohm/database';
 import { eq, sql } from 'drizzle-orm';
+import type { PushSender } from '../channels/expo-push';
 import { isMessageKey, MissingFieldError, templateParameters } from '../channels/message-templates';
 import { PermanentSendError, type WhatsAppSender } from '../channels/whatsapp-cloud';
+import { deliverPush } from './push-delivery';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
 interface DeliveryDeps {
   readonly db: Database;
   readonly sender: WhatsAppSender;
+  readonly push: PushSender;
   readonly language: string;
 }
 
@@ -15,7 +18,7 @@ interface DeliveryDeps {
  * Sends one queued message. Final outcomes (sent, skipped, failed) are written to the
  * outbox row; temporary failures throw so Temporal retries with backoff.
  */
-export function deliveryActivities({ db, sender, language }: DeliveryDeps) {
+export function deliveryActivities({ db, sender, push, language }: DeliveryDeps) {
   const finish = async (id: string, status: 'sent' | 'skipped' | 'failed', note: string | null) => {
     await db
       .update(outbox)
@@ -88,6 +91,11 @@ export function deliveryActivities({ db, sender, language }: DeliveryDeps) {
         .update(outbox)
         .set({ attempts: sql`${outbox.attempts} + 1` })
         .where(eq(outbox.id, id));
+      if (row.channel === 'push') {
+        const outcome = await deliverPush(db, push, row.recipient);
+        await finish(id, outcome.status, outcome.note);
+        return outcome.status;
+      }
       const prepared = await prepare(row);
       if (prepared.verdict !== 'send') {
         await finish(id, prepared.verdict, prepared.note);

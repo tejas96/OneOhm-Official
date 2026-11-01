@@ -71,6 +71,13 @@
       "when": 1793518611725,
       "tag": "0009_workforce",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793521233362,
+      "tag": "0010_notifications",
+      "breakpoints": true
     }
   ]
 }

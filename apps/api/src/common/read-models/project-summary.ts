@@ -127,24 +127,14 @@ function summarise(
       daysBetween(milestone.dueAt.toISOString().slice(0, 10), today) > PAYMENT_GRACE_DAYS,
   );
 
-  let tone: ProjectSummary['tone'] = 'onTrack';
-  let toneLabel = 'On track';
-  if (project.status === 'completed') [tone, toneLabel] = ['done', 'Completed'];
-  else if (latePayment) [tone, toneLabel] = ['overdue', 'Payment overdue'];
-  else if (longest && longest.waitingParty !== 'internal')
-    [tone, toneLabel] = ['waiting', PARTY_LABEL[longest.waitingParty]];
-  else if (overdue.length > 0)
-    [tone, toneLabel] = [
-      'overdue',
-      overdue.length === 1 ? '1 task overdue' : `${overdue.length} tasks overdue`,
-    ];
-  else if (
-    nextTask &&
-    daysBetween(today, nextTask.dueDate) <= 1 &&
-    nextTask.status !== 'in_progress'
-  )
-    [tone, toneLabel] = ['atRisk', 'At risk'];
-  else if (project.status === 'operational') [tone, toneLabel] = ['onTrack', 'Operational'];
+  const [tone, toneLabel] = projectTone({
+    status: project.status,
+    latePayment: Boolean(latePayment),
+    longest,
+    overdue: overdue.length,
+    nextTask,
+    today,
+  });
 
   return {
     id: project.id,
@@ -176,4 +166,30 @@ function summarise(
         ? { id: project.managerUserId, fullName: managerName }
         : null,
   };
+}
+
+/** The one word on a project card: the most urgent thing about it, or that it is fine. */
+function projectTone(facts: {
+  readonly status: (typeof projects.$inferSelect)['status'];
+  readonly latePayment: boolean;
+  readonly longest: TaskRow | undefined;
+  readonly overdue: number;
+  readonly nextTask: TaskRow | undefined;
+  readonly today: string;
+}): [ProjectSummary['tone'], string] {
+  const { status, longest, nextTask } = facts;
+  if (status === 'completed') return ['done', 'Completed'];
+  if (facts.latePayment) return ['overdue', 'Payment overdue'];
+  if (longest && longest.waitingParty !== 'internal')
+    return ['waiting', PARTY_LABEL[longest.waitingParty]];
+  if (facts.overdue > 0)
+    return ['overdue', facts.overdue === 1 ? '1 task overdue' : `${facts.overdue} tasks overdue`];
+  if (
+    nextTask &&
+    daysBetween(facts.today, nextTask.dueDate) <= 1 &&
+    nextTask.status !== 'in_progress'
+  )
+    return ['atRisk', 'At risk'];
+  if (status === 'operational') return ['onTrack', 'Operational'];
+  return ['onTrack', 'On track'];
 }

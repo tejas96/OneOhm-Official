@@ -1,11 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AttendanceCorrection } from '@oneohm/api-contracts';
-import { attendanceCorrections, attendanceDays, type Transaction, users } from '@oneohm/database';
+import {
+  attendanceCorrections,
+  attendanceDays,
+  notify,
+  notifyHolders,
+  type Transaction,
+  users,
+} from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
+import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 
 interface CorrectionInput {
@@ -57,6 +65,12 @@ export class CorrectionsService {
       .returning({ id: attendanceCorrections.id });
     const [created] = await this.list(eq(attendanceCorrections.id, row?.id ?? ''));
     if (!created) throw new Error('Correction was not saved.');
+    await notifyHolders(
+      this.db,
+      'leave.approve',
+      STAFF_NOTICES.correctionRequested(created.id, actor.fullName, created.workDate),
+      actor.userId,
+    );
     return created;
   }
 
@@ -81,6 +95,11 @@ export class CorrectionsService {
       if (row.userId === actor.userId)
         throw conflict('Someone else decides your own correction.', 'own');
       if (approve) await applyCorrection(tx, row);
+      await notify(
+        tx,
+        { userId: row.userId },
+        STAFF_NOTICES.correctionDecided(id, approve, row.workDate),
+      );
       await recordAudit(
         tx,
         actor.userId,

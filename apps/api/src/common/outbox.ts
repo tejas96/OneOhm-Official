@@ -1,8 +1,8 @@
-import { type DatabaseExecutor, outbox } from '@oneohm/database';
+import { type DatabaseExecutor, queueCustomerMessage } from '@oneohm/database';
 
 /**
  * Queues a customer message in the same transaction as the change that causes it; the
- * worker sends it with retries. The dedupe key stops the same event messaging twice.
+ * worker sends it with retries, and the customer's app inbox gets the same news.
  */
 export async function queueWhatsApp(
   db: DatabaseExecutor,
@@ -11,8 +11,5 @@ export async function queueWhatsApp(
   payload: Record<string, string>,
   dedupeKey: string,
 ): Promise<void> {
-  await db
-    .insert(outbox)
-    .values({ channel: 'whatsapp', recipient: recipientE164, template, payload, dedupeKey })
-    .onConflictDoNothing();
+  await queueCustomerMessage(db, recipientE164, template, payload, dedupeKey);
 }

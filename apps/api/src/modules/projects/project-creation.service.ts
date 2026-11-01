@@ -28,6 +28,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { initialFacts, writeGeneratedTasks } from './project-setup';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
+import { tellTeam } from './task-notices';
 
 export interface NewProject {
   quotationId: string;
@@ -161,7 +162,12 @@ export class ProjectCreationService {
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
 
-      const { unassigned } = await writeGeneratedTasks(tx, project.id, generated, candidates);
+      const { unassigned, perPerson } = await writeGeneratedTasks(
+        tx,
+        project.id,
+        generated,
+        candidates,
+      );
       await syncWorkOrders(tx, project.id, actor.userId);
 
       const milestones = planMilestones(
@@ -207,6 +213,7 @@ export class ProjectCreationService {
         { customer: customer.name, project: code, capacity: formatKwp(quotation.capacityWp) },
         `project_started:${project.id}`,
       );
+      await tellTeam(tx, project.id, code, perPerson, actor.userId);
       await recordAudit(tx, actor.userId, 'project.created', 'project', project.id, {
         code,
         tasks: generated.length,

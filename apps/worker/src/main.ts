@@ -2,6 +2,7 @@ import { createDatabaseConnection } from '@oneohm/database';
 import { Client, Connection } from '@temporalio/client';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { createActivities } from './activities';
+import { createPushSender } from './channels/expo-push';
 import { createWhatsAppSender } from './channels/whatsapp-cloud';
 import { loadConfig } from './config';
 import { OutboxRelay } from './relay/outbox-relay';
@@ -29,6 +30,7 @@ async function main(): Promise<void> {
     activities: createActivities({
       db: database.db,
       sender,
+      push: createPushSender(config, log),
       language: config.WHATSAPP_TEMPLATE_LANGUAGE,
       timeZone: config.BUSINESS_TIMEZONE,
     }),
@@ -49,7 +51,9 @@ async function main(): Promise<void> {
     log,
   );
   relay.start();
-  log(`[worker] running · WhatsApp delivery: ${config.WHATSAPP_DELIVERY}`);
+  log(
+    `[worker] running · WhatsApp delivery: ${config.WHATSAPP_DELIVERY} · push: ${config.PUSH_DELIVERY}`,
+  );
 
   let stopping = false;
   const shutdown = async (reason: string) => {

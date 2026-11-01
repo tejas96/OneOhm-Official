@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { PointsEntry, PointsStanding } from '@oneohm/api-contracts';
-import { pointsEntries, users } from '@oneohm/database';
+import { notify, pointsEntries, users } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, ne, type SQL, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
+import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { loadPolicy } from './policy';
 import { readPoints } from './workforce-read';
@@ -87,8 +88,18 @@ export class PointsService {
           ne(pointsEntries.userId, actor.userId),
         ),
       )
-      .returning({ userId: pointsEntries.userId });
+      .returning({
+        userId: pointsEntries.userId,
+        points: pointsEntries.points,
+        reason: pointsEntries.reason,
+      });
     if (!row) throw conflict('This suggestion was already decided, or it is for you.', 'decided');
+    if (approve)
+      await notify(
+        this.db,
+        { userId: row.userId },
+        STAFF_NOTICES.pointsApproved(id, row.points, row.reason),
+      );
     await recordAudit(
       this.db,
       actor.userId,
