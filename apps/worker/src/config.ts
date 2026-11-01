@@ -22,7 +22,10 @@ const schema = z.object({
 export type WorkerConfig = z.infer<typeof schema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
-  const parsed = schema.safeParse(env);
+  // Blank lines in an env file (`KEY=`) mean "not set".
+  const parsed = schema.safeParse(
+    Object.fromEntries(Object.entries(env).filter(([, value]) => value !== '')),
+  );
   if (!parsed.success) {
     const fields = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ');
     throw new Error(`Worker settings are invalid or missing: ${fields}`);

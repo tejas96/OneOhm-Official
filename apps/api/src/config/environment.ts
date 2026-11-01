@@ -51,8 +51,13 @@ const environmentSchema = z
 
 export type Environment = z.infer<typeof environmentSchema>;
 
+/** Blank lines in an env file (`KEY=`) mean "not set", not an empty value. */
+function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''));
+}
+
 export function loadEnvironment(source: NodeJS.ProcessEnv = process.env): Environment {
-  const parsed = environmentSchema.safeParse(source);
+  const parsed = environmentSchema.safeParse(withoutBlanks(source));
   if (!parsed.success) {
     const problems = parsed.error.issues.map(
       (issue) => `${issue.path.join('.')}: ${issue.message}`,
