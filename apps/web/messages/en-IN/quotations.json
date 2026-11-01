@@ -1,0 +1,270 @@
+{
+  "quotations": {
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "superseded": "Replaced"
+    },
+    "category": {
+      "individual": "Home",
+      "society": "Society",
+      "commercial": "Commercial"
+    },
+    "systemType": {
+      "on_grid": "On-grid",
+      "hybrid": "Hybrid",
+      "off_grid": "Off-grid"
+    },
+    "structure": {
+      "rcc_elevated": "RCC roof",
+      "tin_shed": "Tin shed",
+      "ground_mount": "Ground mount"
+    },
+    "categories": {
+      "panel": "Solar panels",
+      "inverter": "Inverter",
+      "battery": "Battery",
+      "structure": "Mounting structure",
+      "cable": "Cables",
+      "electrical": "Electrical",
+      "installation": "Installation",
+      "transport": "Transport",
+      "liaisoning": "DISCOM and liaisoning",
+      "other": "Other"
+    },
+    "ineligible": {
+      "commercial": "Commercial and industrial sites are not eligible for the PM Surya Ghar subsidy.",
+      "non_dcr_panels": "Non-DCR panels get no subsidy. Choose DCR panels to claim it.",
+      "off_grid": "Off-grid systems get no subsidy. On-grid and hybrid systems do.",
+      "meter_not_in_society_name": "The society's meter must be in the society's name, not the builder's.",
+      "already_subsidised": "This property has already received its one subsidy.",
+      "no_rule": "No subsidy rule is in force for this category today."
+    },
+    "price": {
+      "label": "The price",
+      "modules": "{count, plural, one {# panel} other {# panels}}",
+      "total": "Total project price",
+      "totalHint": "Invoiced and collected by OneOhm, GST included",
+      "subsidy": "Expected government subsidy",
+      "subsidyHint": "Credited by the government to the customer's bank account after commissioning",
+      "effective": "Effective cost to the customer"
+    },
+    "compare": {
+      "title": "DCR or non-DCR",
+      "subtitle": "Same system, side by side",
+      "dcr": "DCR panels",
+      "nonDcr": "Non-DCR panels",
+      "lower": "Lower cost",
+      "price": "Price",
+      "subsidy": "Subsidy",
+      "effective": "Effective cost",
+      "switchTo": "Switch the quotation to {kind}"
+    },
+    "lines": {
+      "item": "Item",
+      "quantity": "Quantity",
+      "rate": "Rate",
+      "amount": "Amount",
+      "subtotal": "Subtotal",
+      "contingency": "Contingency",
+      "contingencyHint": "On estimated quantities, until the survey measures them",
+      "discount": "Discount",
+      "tax": "GST",
+      "total": "Total project price",
+      "cost": "Our cost",
+      "margin": "Margin",
+      "basis": {
+        "default": "Estimated",
+        "survey": "Measured"
+      }
+    },
+    "list": {
+      "title": "Quotations",
+      "description": "Every quotation, its price and subsidy, and where it stands with the customer.",
+      "new": "New quotation",
+      "filter": "Show quotations",
+      "filters": {
+        "all": "All",
+        "draft": "Drafts",
+        "sent": "Sent",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      },
+      "approvalFilter": "Approval · {count}",
+      "approvalCallout": "{count, plural, one {# discount is} other {# discounts are}} waiting for approval before the quotation can go out.",
+      "approvalBadge": "Discount approval",
+      "search": "Find by number, customer or site",
+      "loading": "Loading quotations",
+      "emptyTitle": "No quotations yet",
+      "emptyBody": "Start one from a lead or a customer, or with New quotation.",
+      "noMatchTitle": "Nothing matches",
+      "noMatchBody": "Try another status or search.",
+      "columns": {
+        "quotation": "Quotation",
+        "site": "Site",
+        "size": "Size",
+        "effective": "Effective · price",
+        "status": "Status",
+        "date": "Created"
+      }
+    },
+    "builder": {
+      "back": "Quotations",
+      "title": "New quotation",
+      "reviseTitle": "Revise {number}",
+      "description": "Pick the site, size and panels. The price, subsidy and effective cost update as you go.",
+      "waiting": "Choose a site, a size and a panel to see the price.",
+      "effectiveShort": "Effective cost",
+      "sections": {
+        "customer": "Customer and site",
+        "system": "System",
+        "site": "Site defaults",
+        "discount": "Discount",
+        "lines": "How the price adds up"
+      },
+      "customer": {
+        "search": "Find a customer",
+        "searchPlaceholder": "Name or mobile number",
+        "none": "No customer found.",
+        "fromLead": "Convert a lead into a customer first.",
+        "sites": "{count, plural, =0 {no sites} one {# site} other {# sites}}",
+        "noSites": "This customer has no site yet.",
+        "floors": "{count, plural, =0 {Ground floor} one {# floor} other {# floors}}",
+        "subsidyClaimed": "Subsidy already claimed",
+        "change": "Change"
+      },
+      "system": {
+        "category": "Customer category",
+        "categoryHint": "From the property; it decides the subsidy rule.",
+        "systemType": "System type",
+        "systemTypeHint": {
+          "on_grid": "Exports to the grid through a net meter. Subsidy eligible.",
+          "hybrid": "Grid-tied with battery backup. Subsidy eligible.",
+          "off_grid": "Battery only, no grid export. No subsidy."
+        },
+        "households": "Households in the society",
+        "householdsHint": "Eligible capacity is 3 kW per household.",
+        "size": "System size",
+        "sizeHint": "Rounded to whole panels.",
+        "panel": "Panels",
+        "panelHint": "The subsidy needs DCR panels.",
+        "nonDcr": "non-DCR",
+        "choose": "Choose…",
+        "inverter": "Inverter",
+        "inverterHint": "Suggested for this size. Change it if needed.",
+        "battery": "Battery",
+        "batteryHint": "For hybrid and off-grid systems.",
+        "noBattery": "No battery"
+      },
+      "site": {
+        "structure": "Mounting structure",
+        "structureHint": "Sets the structure and labour lines.",
+        "floors": "Floors to the roof",
+        "floorsHint": "Sets the default cable run and labour.",
+        "distance": "Distance from our base",
+        "distanceHint": "Charged once for travel and transport.",
+        "measured": "Use measured cable lengths",
+        "dcCable": "DC cable",
+        "acCable": "AC cable",
+        "cableHint": "Leave blank to use the site-type default."
+      },
+      "discount": {
+        "label": "Discount",
+        "hint": "In rupees, before GST. Larger discounts need a manager's approval.",
+        "share": "{amount} off, {percent}% of the price before discount.",
+        "needsApproval": "This discount is above the limit. The quotation is saved, and a manager approves it before it can be sent.",
+        "approvedBySaving": "This discount is above the limit. You approve discounts, so it is approved when you save."
+      },
+      "actions": {
+        "draft": "Save draft",
+        "send": "Save and send",
+        "saveForApproval": "Save for approval",
+        "sendNote": "Sending shares the quotation with the customer on WhatsApp.",
+        "approvalNote": "A manager approves the discount first; then it can be sent.",
+        "saved": "Quotation saved",
+        "sent": "Quotation sent",
+        "waitingApproval": "Waiting for discount approval before it can be sent.",
+        "failed": "The quotation was not saved"
+      }
+    },
+    "detail": {
+      "pageTitle": "Quotation",
+      "loading": "Loading the quotation",
+      "back": "Quotations",
+      "approvalPending": "Discount waiting for approval",
+      "dates": "Created {created} · valid until {valid}",
+      "customer": "Customer and site",
+      "system": "What is quoted",
+      "lines": "How the price adds up"
+    },
+    "facts": {
+      "size": "System size",
+      "systemType": "System type",
+      "category": "Customer category",
+      "households": "{count, plural, one {# household} other {# households}}",
+      "panel": "Panels",
+      "nonDcr": "non-DCR",
+      "inverter": "Inverter",
+      "battery": "Battery",
+      "structure": "Structure",
+      "site": "Site",
+      "siteValue": "{floors, plural, =0 {Ground floor} one {# floor} other {# floors}} · {km} km away",
+      "cables": "Cables",
+      "cablesDefault": "Site-type defaults, until the survey",
+      "cablesMeasured": "Measured: DC {dc} m · AC {ac} m",
+      "unknownProduct": "No longer in the catalog"
+    },
+    "actions": {
+      "approve": "Approve discount",
+      "revise": "Revise",
+      "reject": "Mark rejected",
+      "send": "Send",
+      "sendAgain": "Send again",
+      "accept": "Mark accepted",
+      "createProject": "Create project",
+      "openProject": "Open project",
+      "failed": "That did not go through",
+      "done": {
+        "approve": "Discount approved",
+        "send": "Quotation sent",
+        "accept": "Quotation accepted"
+      }
+    },
+    "reject": {
+      "title": "Mark as rejected",
+      "description": "Record why the customer said no to {number}.",
+      "reason": "Reason",
+      "reasonHint": "For example: price, timing, or chose another installer.",
+      "cancel": "Cancel",
+      "confirm": "Mark rejected",
+      "done": "Quotation marked rejected"
+    },
+    "project": {
+      "title": "Create the project",
+      "description": "Confirm the DISCOM, loan and options. The tasks, team and payment schedule are set up from these.",
+      "discom": "DISCOM",
+      "choose": "Choose…",
+      "start": "Start date",
+      "manager": "Project manager",
+      "managerHint": "Optional. Tasks are assigned to the team either way.",
+      "managerLater": "Decide later",
+      "loan": "Loan",
+      "loanHint": "Adds the loan tasks and a bank share in the payment schedule.",
+      "lender": "Lending bank",
+      "loanAmount": "Loan amount",
+      "loanAmountHint": "Paid by the bank as a separate receivable.",
+      "battery": "Battery",
+      "batteryHint": "Adds battery installation tasks.",
+      "groundMount": "Ground mount",
+      "groundMountHint": "Adds foundation and fabrication tasks.",
+      "nameChange": "Meter name change",
+      "nameChangeHint": "The meter is in someone else's name; adds the DISCOM name-change tasks.",
+      "cancel": "Cancel",
+      "confirm": "Create project",
+      "created": "Project {code} created",
+      "createdDetail": "{tasks, plural, one {# task} other {# tasks}} set up, {unassigned} without an owner yet."
+    }
+  }
+}
