@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MissingFieldError, templateParameters } from './message-templates';
+import { MESSAGE_TEMPLATES, MissingFieldError, templateParameters } from './message-templates';
 import { isRetryableStatus, templateRequestBody } from './whatsapp-cloud';
 
 describe('templateParameters', () => {
   it('orders values as the template expects', () => {
     expect(
-      templateParameters('payment_received', {
+      templateParameters('payment_received', MESSAGE_TEMPLATES.payment_received ?? [], {
         project: 'OH-2026-001',
         customer: 'A. Patil',
         milestone: 'Advance',
@@ -15,9 +15,12 @@ describe('templateParameters', () => {
   });
 
   it('refuses to send with a missing value', () => {
-    expect(() => templateParameters('project_started', { customer: 'A', project: 'P' })).toThrow(
-      MissingFieldError,
-    );
+    expect(() =>
+      templateParameters('project_started', MESSAGE_TEMPLATES.project_started ?? [], {
+        customer: 'A',
+        project: 'P',
+      }),
+    ).toThrow(MissingFieldError);
   });
 });
 

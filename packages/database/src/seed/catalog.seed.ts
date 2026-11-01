@@ -1,6 +1,10 @@
-import { DEFAULT_SUBSIDY_RULES, DEFAULT_TASK_LIBRARY } from '@oneohm/domain';
+import {
+  DEFAULT_MESSAGE_TEMPLATES,
+  DEFAULT_SUBSIDY_RULES,
+  DEFAULT_TASK_LIBRARY,
+} from '@oneohm/domain';
 import type { Database } from '../client';
-import { discoms, products, subsidyRules, taskTemplates } from '../schema';
+import { discoms, messageTemplates, products, subsidyRules, taskTemplates } from '../schema';
 
 const rupees = (value: number) => value * 100;
 
@@ -193,6 +197,20 @@ export async function seedCatalog(db: Database): Promise<void> {
         onComplete: template.onComplete ?? null,
         reports: [...(template.reports ?? [])],
         position,
+      })),
+    )
+    .onConflictDoNothing();
+
+  // Owners may have changed these in Settings, so existing rows are left alone.
+  await db
+    .insert(messageTemplates)
+    .values(
+      DEFAULT_MESSAGE_TEMPLATES.map((template) => ({
+        key: template.key,
+        audience: template.audience,
+        metaName: template.key,
+        fields: [...template.fields],
+        preview: template.preview,
       })),
     )
     .onConflictDoNothing();

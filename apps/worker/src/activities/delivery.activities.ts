@@ -1,7 +1,11 @@
-import { customers, type Database, outbox } from '@oneohm/database';
+import { customers, type Database, messageTemplates, outbox } from '@oneohm/database';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
-import { isMessageKey, MissingFieldError, templateParameters } from '../channels/message-templates';
+import {
+  MESSAGE_TEMPLATES,
+  MissingFieldError,
+  templateParameters,
+} from '../channels/message-templates';
 import {
   PermanentSendError,
   type SendResult,
@@ -42,18 +46,32 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
       .where(eq(outbox.id, id));
   };
 
-  /** Why a message cannot go out as is, or the template values it needs. */
+  /** Why a message cannot go out as is, or the approved template and values it needs. */
   const prepare = async (
     row: typeof outbox.$inferSelect,
   ): Promise<
     | { readonly verdict: 'skipped' | 'failed'; readonly note: string }
-    | { readonly verdict: 'send'; readonly parameters: string[] }
+    | {
+        readonly verdict: 'send';
+        readonly name: string;
+        readonly language: string;
+        readonly parameters: string[];
+      }
   > => {
     if (row.channel !== 'whatsapp') {
       return { verdict: 'skipped', note: `The ${row.channel} channel is not connected yet.` };
     }
-    if (!isMessageKey(row.template)) {
+    const [config] = await db
+      .select()
+      .from(messageTemplates)
+      .where(eq(messageTemplates.key, row.template))
+      .limit(1);
+    const fields = config?.fields ?? MESSAGE_TEMPLATES[row.template];
+    if (!fields) {
       return { verdict: 'failed', note: `No WhatsApp template is set up for "${row.template}".` };
+    }
+    if (config && !config.active) {
+      return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
     }
     const [customer] = await db
       .select({ optIn: customers.whatsappOptIn })
@@ -66,7 +84,13 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
     try {
       return {
         verdict: 'send',
-        parameters: templateParameters(row.template, row.payload as Record<string, unknown>),
+        name: config?.metaName ?? row.template,
+        language: config?.language ?? language,
+        parameters: templateParameters(
+          row.template,
+          fields,
+          row.payload as Record<string, unknown>,
+        ),
       };
     } catch (error) {
       if (!(error instanceof MissingFieldError)) throw error;
@@ -115,9 +139,14 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
         await finish(id, prepared.verdict, prepared.note);
         return prepared.verdict;
       }
-      const parameters = prepared.parameters;
+      const { name, parameters } = prepared;
       return send(row, () =>
-        sender.send({ toE164: row.recipient, template: row.template, language, parameters }),
+        sender.send({
+          toE164: row.recipient,
+          template: name,
+          language: prepared.language,
+          parameters,
+        }),
       );
     },
 

@@ -1,34 +1,20 @@
+import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
+
 /**
- * Business-initiated WhatsApp messages must use templates approved in Meta's
- * WhatsApp Manager. Each OneOhm message key maps to a template of the same name and
- * the order of its {{1}}, {{2}}… body parameters. Create these in WhatsApp Manager
- * before switching WHATSAPP_DELIVERY to live.
+ * The default field order per message key. Settings can change it (and the Meta name and
+ * language) in the message_templates table; these are used when no row exists.
  */
-export const MESSAGE_TEMPLATES = {
-  quotation_sent: ['customer', 'number', 'total', 'subsidy', 'effective'],
-  project_started: ['customer', 'project', 'capacity'],
-  project_milestone: ['customer', 'project', 'milestone'],
-  payment_received: ['customer', 'amount', 'milestone', 'project'],
-  payment_reminder: ['customer', 'amount', 'milestone', 'project'],
-  payment_link: ['customer', 'amount', 'milestone', 'project', 'link'],
-  staff_daily_digest: ['name', 'overdue', 'today', 'followUps'],
-  service_update: ['customer', 'topic', 'status'],
-  change_request_raised: ['customer', 'request', 'number'],
-  change_request_completed: ['customer', 'request', 'number'],
-} as const satisfies Record<string, readonly string[]>;
-
-export type MessageKey = keyof typeof MESSAGE_TEMPLATES;
-
-export function isMessageKey(value: string): value is MessageKey {
-  return Object.hasOwn(MESSAGE_TEMPLATES, value);
-}
+export const MESSAGE_TEMPLATES: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  DEFAULT_MESSAGE_TEMPLATES.map((template) => [template.key, template.fields]),
+);
 
 /** Body parameters in template order; fails when a required value is missing. */
 export function templateParameters(
-  key: MessageKey,
+  key: string,
+  fields: readonly string[],
   payload: Readonly<Record<string, unknown>>,
 ): string[] {
-  return MESSAGE_TEMPLATES[key].map((field) => {
+  return fields.map((field) => {
     const value = payload[field];
     if (value === undefined || value === null || String(value).trim() === '') {
       throw new MissingFieldError(key, field);

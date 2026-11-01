@@ -13,6 +13,7 @@ import { syncWorkOrders } from '../contractors/work-order-sync';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked } from './task-guards';
+import { tellCustomerAbout } from './task-messages';
 import { askApprovers, tellApproved, tellAssignee } from './task-notices';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
@@ -60,6 +61,8 @@ export class TasksService {
       })
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
+    // Only the first start counts; resuming after a wait does not message again.
+    if (!task.startedAt) await tellCustomerAbout(this.db, task, 'started');
     return this.present(id);
   }
 
@@ -164,6 +167,7 @@ export class TasksService {
         .update(projectTasks)
         .set({ approvedByUserId: actor.userId })
         .where(eq(projectTasks.id, id));
+      await tellCustomerAbout(tx, task, 'approved');
       await finishTask(tx, task, actor.userId);
       await tellApproved(tx, task, actor.userId);
     });

@@ -480,6 +480,9 @@ importers:
       '@oneohm/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@oneohm/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@oneohm/shared':
         specifier: workspace:*
         version: link:../../packages/shared

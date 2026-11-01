@@ -75,6 +75,14 @@ export const taskTemplates = pgTable(
     captures: text('captures').array().notNull(),
     onComplete: text('on_complete'),
     reports: text('reports').array().notNull(),
+    /** When the customer message goes: started, completed or approved (PRD 6.2). */
+    notifyEvent: text('notify_event').notNull().default('completed'),
+    /** The WhatsApp template used for the customer message. */
+    messageKey: text('message_key').notNull().default('project_milestone'),
+    /** The words customers see for this step; staff see `title`. */
+    customerTitle: text('customer_title'),
+    /** Tell the project manager when this task is done (PRD 3.7 employee notification). */
+    notifyManager: boolean('notify_manager').notNull().default(false),
     position: integer('position').notNull(),
     active: boolean('active').notNull().default(true),
     createdAt: createdAt(),

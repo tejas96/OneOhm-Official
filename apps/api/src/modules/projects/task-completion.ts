@@ -1,5 +1,4 @@
 import {
-  customers,
   paymentMilestones,
   postMilestoneDue,
   projectActivities,
@@ -9,9 +8,9 @@ import {
   taskDependencies,
 } from '@oneohm/database';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
-import { queueWhatsApp } from '../../common/outbox';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { awardOnTimeTask } from '../workforce/points';
+import { tellCustomerAbout, tellManagerDone } from './task-messages';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
@@ -82,26 +81,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .where(eq(projects.id, task.projectId));
   }
 
-  const [project] = await tx
-    .select({
-      code: projects.code,
-      phone: customers.phoneE164,
-      name: customers.name,
-      optIn: customers.whatsappOptIn,
-    })
-    .from(projects)
-    .innerJoin(customers, eq(customers.id, projects.customerId))
-    .where(eq(projects.id, task.projectId))
-    .limit(1);
-  if (project && task.notifyCustomer && project.optIn) {
-    await queueWhatsApp(
-      tx,
-      project.phone,
-      'project_milestone',
-      { customer: project.name, project: project.code, milestone: task.title },
-      `task_done:${task.id}`,
-    );
-  }
+  await tellCustomerAbout(tx, task, 'completed');
+  await tellManagerDone(tx, task, userId);
   await tx.insert(projectActivities).values({
     projectId: task.projectId,
     taskId: task.id,

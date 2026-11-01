@@ -15,5 +15,6 @@ export * from './project.schema';
 export * from './quotation.schema';
 export * from './service-desk.schema';
 export * from './settings.schema';
+export * from './template.schema';
 export * from './whatsapp.schema';
 export * from './workforce.schema';

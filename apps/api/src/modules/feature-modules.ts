@@ -13,6 +13,7 @@ import { PeopleModule } from './people/people.module';
 import { ProjectsModule } from './projects/projects.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ServiceDeskModule } from './service-desk/service-desk.module';
+import { TemplatesModule } from './templates/templates.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { WorkforceModule } from './workforce/workforce.module';
 
@@ -35,4 +36,5 @@ export const FEATURE_MODULES = [
   GatewayModule,
   OnlinePaymentsModule,
   WhatsAppModule,
+  TemplatesModule,
 ];

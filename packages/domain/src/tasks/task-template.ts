@@ -1,5 +1,5 @@
 import type { EpcStage, ProjectType, WaitingParty } from '../epc/stages';
-import type { MilestoneTrigger } from '../finance/payment-milestones';
+import { MILESTONE_TRIGGERS, type MilestoneTrigger } from '../finance/payment-milestones';
 
 /** When a task applies (PRD 3.7). Every listed condition must hold. */
 export interface TaskConditions {
@@ -12,10 +12,18 @@ export interface TaskConditions {
   readonly nameChange?: boolean;
 }
 
-export type EvidenceKind = 'photo' | 'document' | 'measurement' | 'checklist' | 'signature';
+export const EVIDENCE_KINDS = [
+  'photo',
+  'document',
+  'measurement',
+  'checklist',
+  'signature',
+] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 
 /** What completing a task sets off besides unlocking the next tasks. */
 export type CompletionAction = MilestoneTrigger | 'project_operational';
+export const COMPLETION_ACTIONS = [...MILESTONE_TRIGGERS, 'project_operational'] as const;
 
 export interface TaskTemplate {
   readonly key: string;
