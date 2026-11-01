@@ -1,0 +1,5 @@
+{
+  "extends": "@oneohm/tsconfig/nestjs.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "include": ["src"]
+}

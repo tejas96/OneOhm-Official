@@ -1,0 +1,34 @@
+{
+  "name": "@oneohm/api-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The OneOhm HTTP API as ts-rest contracts with Zod schemas, shared by the API, web and mobile apps.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@oneohm/domain": "workspace:*",
+    "@ts-rest/core": "3.52.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@oneohm/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
