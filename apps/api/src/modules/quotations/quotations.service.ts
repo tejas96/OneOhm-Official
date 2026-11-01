@@ -1,16 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
-import { customers, leads, quotationLines, quotations } from '@oneohm/database';
+import { leads, quotationLines, quotations } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray, like, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, like, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
-import { conflict, notFound } from '../../common/http/errors';
+import { conflict } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { loadQuotationDetail } from './quotation-detail';
 import { QuotationPricingService } from './quotation-pricing.service';
 
 @Injectable()
@@ -136,59 +137,7 @@ export class QuotationsService {
   }
 
   async get(id: string): Promise<QuotationDetail> {
-    const [summary] = await quotationSummaries(this.db, eq(quotations.id, id));
-    const [row] = await this.db.select().from(quotations).where(eq(quotations.id, id)).limit(1);
-    if (!summary || !row) throw notFound('That quotation');
-    const [customer] = await this.db
-      .select({ phone: customers.phoneE164 })
-      .from(customers)
-      .where(eq(customers.id, row.customerId))
-      .limit(1);
-    const lines = await this.db
-      .select()
-      .from(quotationLines)
-      .where(eq(quotationLines.quotationId, id))
-      .orderBy(asc(quotationLines.position));
-    const snapshot = row.snapshot as { households?: number | null };
-    return {
-      ...summary,
-      customerPhone: customer?.phone ?? '',
-      input: {
-        propertyId: row.propertyId,
-        leadId: row.leadId,
-        subsidyCategory: row.subsidyCategory,
-        households: snapshot.households ?? null,
-        systemType: row.systemType,
-        targetWp: row.targetWp,
-        panelProductId: row.panelProductId,
-        inverterProductId: row.inverterProductId,
-        batteryProductId: row.batteryProductId,
-        structureType: row.structureType,
-        floors: row.floors,
-        distanceKm: row.distanceKm,
-        dcCableMeters: row.dcCableMeters,
-        acCableMeters: row.acCableMeters,
-        discountPaise: row.discountPaise,
-      },
-      totals: {
-        moduleCount: row.moduleCount,
-        capacityWp: row.capacityWp,
-        subtotalPaise: row.subtotalPaise,
-        contingencyPaise: row.contingencyPaise,
-        discountPaise: row.discountPaise,
-        taxPaise: row.taxPaise,
-        totalPaise: row.totalPaise,
-        costPaise: row.costPaise,
-        marginPaise: row.marginPaise,
-        subsidyPaise: row.subsidyPaise,
-        subsidyIneligible:
-          (row.subsidyIneligible as QuotationDetail['totals']['subsidyIneligible']) ?? null,
-        effectivePaise: row.effectivePaise,
-      },
-      lines: lines.map(
-        ({ id: _id, quotationId: _q, position: _p, unitCostPaise: _c, ...line }) => line,
-      ),
-    };
+    return loadQuotationDetail(this.db, id);
   }
 
   async approveDiscount(actor: Actor, id: string): Promise<QuotationDetail> {

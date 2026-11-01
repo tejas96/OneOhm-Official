@@ -91,15 +91,13 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       `task_done:${task.id}`,
     );
   }
-  await tx
-    .insert(projectActivities)
-    .values({
-      projectId: task.projectId,
-      taskId: task.id,
-      kind: 'task_completed',
-      message: `${task.title} completed.`,
-      userId,
-    });
+  await tx.insert(projectActivities).values({
+    projectId: task.projectId,
+    taskId: task.id,
+    kind: 'task_completed',
+    message: `${task.title} completed.`,
+    userId,
+  });
 }
 
 /** Facts a task still needs, after what was sent now and what the project already knows. */

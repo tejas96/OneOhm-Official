@@ -62,14 +62,12 @@ export class RolesService {
         .returning({ id: roles.id });
       if (!created) throw new Error('Role insert returned nothing.');
       if (input.capabilities.length > 0) {
-        await tx
-          .insert(roleCapabilities)
-          .values(
-            [...new Set(input.capabilities)].map((capability) => ({
-              roleId: created.id,
-              capability,
-            })),
-          );
+        await tx.insert(roleCapabilities).values(
+          [...new Set(input.capabilities)].map((capability) => ({
+            roleId: created.id,
+            capability,
+          })),
+        );
       }
       await recordAudit(tx, actor.userId, 'role.created', 'role', created.id, { name: input.name });
       return created.id;

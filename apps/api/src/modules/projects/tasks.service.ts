@@ -58,15 +58,13 @@ export class TasksService {
           updatedAt: new Date(),
         })
         .where(eq(projectTasks.id, id));
-      await tx
-        .insert(projectActivities)
-        .values({
-          projectId: task.projectId,
-          taskId: id,
-          kind: 'waiting',
-          message: `${task.title}: waiting on ${party}${note ? ` (${note})` : ''}.`,
-          userId: actor.userId,
-        });
+      await tx.insert(projectActivities).values({
+        projectId: task.projectId,
+        taskId: id,
+        kind: 'waiting',
+        message: `${task.title}: waiting on ${party}${note ? ` (${note})` : ''}.`,
+        userId: actor.userId,
+      });
     });
     return this.present(id);
   }
@@ -109,15 +107,13 @@ export class TasksService {
           .update(projectTasks)
           .set({ status: 'in_review', updatedAt: new Date() })
           .where(eq(projectTasks.id, id));
-        await tx
-          .insert(projectActivities)
-          .values({
-            projectId: task.projectId,
-            taskId: id,
-            kind: 'review',
-            message: `${task.title} sent for approval.`,
-            userId: actor.userId,
-          });
+        await tx.insert(projectActivities).values({
+          projectId: task.projectId,
+          taskId: id,
+          kind: 'review',
+          message: `${task.title} sent for approval.`,
+          userId: actor.userId,
+        });
       } else {
         await finishTask(tx, task, actor.userId);
       }

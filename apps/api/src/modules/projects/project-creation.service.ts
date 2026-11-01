@@ -7,16 +7,13 @@ import {
   projectActivities,
   projectFacts,
   projects,
-  projectTasks,
   properties,
   quotations,
-  taskDependencies,
 } from '@oneohm/database';
 import {
   DEFAULT_MILESTONES,
   generateTasks,
   type ProjectType,
-  pickAssignee,
   planMilestones,
 } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
@@ -26,6 +23,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
+import { initialFacts, writeGeneratedTasks } from './project-setup';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 
 export interface NewProject {
@@ -160,47 +158,7 @@ export class ProjectCreationService {
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
 
-      const ids = new Map<string, string>();
-      let unassigned = 0;
-      for (const [position, task] of generated.entries()) {
-        const assignee = pickAssignee(candidates, task.roleKey);
-        if (assignee) {
-          const picked = candidates.find((candidate) => candidate.userId === assignee.userId);
-          if (picked) picked.openTasks += 1;
-        } else unassigned += 1;
-        const [row] = await tx
-          .insert(projectTasks)
-          .values({
-            projectId: project.id,
-            templateKey: task.key,
-            title: task.title,
-            stage: task.stage,
-            roleKey: task.roleKey,
-            assigneeUserId: assignee?.userId ?? null,
-            status: task.dependsOn.length === 0 ? 'ready' : 'pending',
-            waitingParty: task.waitingParty,
-            startDate: task.startDate,
-            dueDate: task.dueDate,
-            customerVisible: task.customerVisible,
-            notifyCustomer: task.notifyCustomer,
-            approval: task.approval,
-            evidence: [...task.evidence],
-            captures: [...task.captures],
-            onComplete: task.onComplete ?? null,
-            reports: [...(task.reports ?? [])],
-            position,
-          })
-          .returning({ id: projectTasks.id });
-        if (!row) throw new Error('Task insert returned nothing.');
-        ids.set(task.key, row.id);
-      }
-      const links = generated.flatMap((task) =>
-        task.dependsOn.map((key) => ({
-          taskId: ids.get(task.key) ?? '',
-          dependsOnTaskId: ids.get(key) ?? '',
-        })),
-      );
-      if (links.length > 0) await tx.insert(taskDependencies).values(links);
+      const { unassigned } = await writeGeneratedTasks(tx, project.id, generated, candidates);
 
       const milestones = planMilestones(
         quotation.totalPaise,
@@ -222,32 +180,12 @@ export class ProjectCreationService {
         })),
       );
 
-      const facts: Record<string, string> = {
-        consumer_name: customer.name,
-        consumer_phone: customer.phoneE164,
-        consumer_email: customer.email ?? '',
-        site_address: `${property.addressLine}, ${property.city}`,
-        site_city: property.district,
-        site_state: property.state,
-        installed_capacity_kw: String(quotation.capacityWp / 1000),
-        module_count: String(quotation.moduleCount),
-        module_wattage: String(panel.wattageWp ?? ''),
-        module_total_kw: String(quotation.capacityWp / 1000),
-        module_make: `${panel.brand === 'Starter catalog' ? '' : `${panel.brand} `}${panel.name}`,
-        inverter_make: `${inverter.brand === 'Starter catalog' ? '' : `${inverter.brand} `}${inverter.name}`,
-        inverter_total_kw: String((inverter.ratedW ?? 0) / 1000),
-        system_cost: String(quotation.totalPaise),
-        project_onboarded_date: input.startDate,
-        ...(property.consumerNumber ? { consumer_number: property.consumerNumber } : {}),
-        ...(property.sanctionedLoadW
-          ? { sanctioned_capacity_kw: String(property.sanctionedLoadW / 1000) }
-          : {}),
-      };
-      await tx.insert(projectFacts).values(
-        Object.entries(facts)
-          .filter(([, value]) => value !== '')
-          .map(([key, value]) => ({ projectId: project.id, key, value })),
-      );
+      const facts = initialFacts(customer, property, quotation, panel, inverter, input.startDate);
+      await tx
+        .insert(projectFacts)
+        .values(
+          Object.entries(facts).map(([key, value]) => ({ projectId: project.id, key, value })),
+        );
       await tx.insert(projectActivities).values({
         projectId: project.id,
         kind: 'created',
