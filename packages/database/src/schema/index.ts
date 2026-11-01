@@ -11,6 +11,7 @@ export * from './inventory.schema';
 export * from './ledger.schema';
 export * from './loans.schema';
 export * from './notifications.schema';
+export * from './payment-links.schema';
 export * from './procurement.schema';
 export * from './projects.schema';
 export * from './quotations.schema';

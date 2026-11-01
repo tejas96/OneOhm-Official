@@ -12,6 +12,7 @@ import {
 } from '@oneohm/database';
 import { EPC_STAGES } from '@oneohm/domain';
 import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { openLinksFor } from '../online-payments/open-links';
 
 const day = (value: Date) => value.toISOString().slice(0, 10);
 
@@ -113,6 +114,10 @@ export async function customerProjects(
     .select({ milestoneId: payments.milestoneId, amount: payments.amountPaise })
     .from(payments)
     .where(inArray(payments.projectId, ids));
+  const links = await openLinksFor(
+    db,
+    milestones.map((milestone) => milestone.id),
+  );
   const feedback = await db
     .select({ projectId: customerFeedback.projectId })
     .from(customerFeedback)
@@ -135,6 +140,7 @@ export async function customerProjects(
           .reduce((sum, payment) => sum + payment.amount, 0),
         status: milestone.status,
         dueAt: milestone.dueAt?.toISOString() ?? null,
+        payUrl: links.get(milestone.id)?.url ?? null,
       }));
     return {
       id: row.id,

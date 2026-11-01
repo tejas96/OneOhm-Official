@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { PaymentLinkAction } from '../payment-link-action';
 import { useReceivables } from '../use-finance';
 import { PaymentsReceived } from './payments-received';
 
@@ -106,9 +107,12 @@ export function ReceivablesTab() {
             label={t(`next.${row.nextAction}`)}
           />
           {row.nextAction === 'collect_from_customer' && (
-            <Button asChild size="sm" variant="secondary" className="relative z-[2]">
-              <Link href={`/projects/${row.projectId}`}>{t('record')}</Link>
-            </Button>
+            <>
+              <PaymentLinkAction milestoneId={row.milestoneId} link={row.link} />
+              <Button asChild size="sm" variant="secondary" className="relative z-[2]">
+                <Link href={`/projects/${row.projectId}`}>{t('record')}</Link>
+              </Button>
+            </>
           )}
           {row.nextAction === 'claim_from_bank' && (
             <Button asChild size="sm" variant="secondary" className="relative z-[2]">

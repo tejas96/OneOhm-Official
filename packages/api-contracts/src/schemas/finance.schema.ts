@@ -2,6 +2,7 @@ import { AGEING_BUCKETS, LEDGER_ACCOUNT_TYPES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
+import { openLinkSchema } from './payment-link.schema';
 
 export const payerSchema = z.enum(['customer', 'bank']);
 export const moneyInMethodSchema = z.enum([
@@ -32,6 +33,7 @@ export const receivableSchema = z.object({
   bucket: ageingBucketSchema.nullable(),
   /** "Customer payment pending" vs "Waiting for bank disbursement" vs not due yet. */
   nextAction: z.enum(['collect_from_customer', 'claim_from_bank', 'not_due_yet']),
+  link: openLinkSchema,
 });
 export type Receivable = z.infer<typeof receivableSchema>;
 

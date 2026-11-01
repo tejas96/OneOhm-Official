@@ -9,6 +9,7 @@ export * from './finance.schema';
 export * from './identity.schema';
 export * from './inventory.schema';
 export * from './notification.schema';
+export * from './payment-link.schema';
 export * from './procurement.schema';
 export * from './project.schema';
 export * from './quotation.schema';

@@ -27,6 +27,7 @@ export const LEDGER_ACCOUNTS = [
   { code: '4000', name: 'Project revenue', type: 'income' },
   { code: '5000', name: 'Material cost', type: 'expense' },
   { code: '5010', name: 'Installation and labour cost', type: 'expense' },
+  { code: '5020', name: 'Payment gateway fees', type: 'expense' },
 ] as const satisfies readonly LedgerAccount[];
 
 export type LedgerAccountCode = (typeof LEDGER_ACCOUNTS)[number]['code'];
@@ -46,6 +47,7 @@ export const ACCOUNT = {
   revenue: '4000',
   materialCost: '5000',
   installationCost: '5010',
+  gatewayFees: '5020',
 } as const satisfies Record<string, LedgerAccountCode>;
 
 /** Assets and expenses grow with debits; liabilities, equity and income with credits. */

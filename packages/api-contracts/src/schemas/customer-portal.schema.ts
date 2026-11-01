@@ -30,6 +30,8 @@ const milestoneLineSchema = z.object({
   paidPaise: paiseSchema,
   status: z.enum(['upcoming', 'due', 'partly_paid', 'paid']),
   dueAt: instantSchema.nullable(),
+  /** An open online link for what is still owed (PRD 5.3); null when there is none. */
+  payUrl: z.string().nullable(),
 });
 
 /** One home as the customer sees it: the journey, the money and who to call. */

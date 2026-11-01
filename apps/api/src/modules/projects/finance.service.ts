@@ -4,6 +4,7 @@ import {
   nextReceiptNumber,
   paymentMilestones,
   payments,
+  postGatewayFee,
   postPayment,
   projectActivities,
   projects,
@@ -12,10 +13,11 @@ import {
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import type { Actor } from '../../common/auth/actor';
 import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
+import { closeOpenLinks } from '../online-payments/close-links';
+import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
 
 export interface NewPayment {
   milestoneId: string;
@@ -23,19 +25,30 @@ export interface NewPayment {
   method: 'cash' | 'cheque' | 'bank_transfer' | 'upi' | 'razorpay' | 'bank_disbursement';
   receivedOn: string;
   reference?: string | null | undefined;
+  /** Online payments only: the gateway's payment ID and the fee it kept. */
+  gatewayPaymentId?: string | null | undefined;
+  gatewayFeePaise?: number | null | undefined;
+}
+
+/** Who records a payment: a person, or no one for a gateway webhook. */
+export interface PaymentRecorder {
+  readonly userId: string | null;
 }
 
 /** Every rupee received is recorded against a milestone and reconciled (PRD 3.11). */
 @Injectable()
 export class FinanceService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+  ) {}
 
   /**
    * Records the payment, its ledger entry and its side effects in one transaction.
    * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes.
    */
   async recordPayment(
-    actor: Actor,
+    actor: PaymentRecorder,
     projectId: string,
     input: NewPayment,
     alsoInTransaction?: (tx: Transaction, paymentId: string) => Promise<void>,
@@ -66,7 +79,7 @@ export class FinanceService {
         method: 'Choose bank disbursement.',
       });
     }
-    return this.db.transaction(async (tx) => {
+    const id = await this.db.transaction(async (tx) => {
       const [payment] = await tx
         .insert(payments)
         .values({
@@ -79,6 +92,8 @@ export class FinanceService {
           reference: input.reference ?? null,
           recordedByUserId: actor.userId,
           receiptNumber: await nextReceiptNumber(tx, input.receivedOn),
+          gatewayPaymentId: input.gatewayPaymentId ?? null,
+          gatewayFeePaise: input.gatewayFeePaise ?? null,
         })
         .returning({ id: payments.id });
       if (!payment) throw new Error('Payment insert returned nothing.');
@@ -140,8 +155,11 @@ export class FinanceService {
         method: input.method,
       });
       await postPayment(tx, payment.id, actor.userId);
+      await postGatewayFee(tx, payment.id, actor.userId);
       if (alsoInTransaction) await alsoInTransaction(tx, payment.id);
       return payment.id;
     });
+    if (!input.gatewayPaymentId) await closeOpenLinks(this.db, this.gateway, milestone.id);
+    return id;
   }
 }

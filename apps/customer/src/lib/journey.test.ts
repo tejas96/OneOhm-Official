@@ -71,6 +71,7 @@ describe('payments', () => {
         paidPaise: 100,
         status: 'paid',
         dueAt: null,
+        payUrl: null,
       },
       {
         label: 'Loan',
@@ -79,6 +80,7 @@ describe('payments', () => {
         paidPaise: 0,
         status: 'upcoming',
         dueAt: null,
+        payUrl: null,
       },
     ];
     expect(percentPaid({ totalPaise: 300, paidPaise: 100, milestones })).toBe(33);

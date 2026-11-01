@@ -1,4 +1,6 @@
 export const PAYMENTS = {
+  payNow: (amount: string) => `Pay ${amount} now`,
+  payHint: 'UPI, cards or net banking, through Razorpay.',
   title: 'Payments',
   loading: 'Loading your payments',
   paidOf: (paid: string, total: string) => `${paid} paid of ${total}`,

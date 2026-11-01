@@ -73,6 +73,19 @@ export function paymentPosting(input: {
   ];
 }
 
+/**
+ * The gateway kept its fee (and the GST on it) from an online payment: an expense, and
+ * less money waiting in gateway clearing. GST input credit is for the accountant to claim.
+ */
+export function gatewayFeePosting(input: { readonly feePaise: number }): JournalLine[] {
+  return [debit(ACCOUNT.gatewayFees, input.feePaise), credit(ACCOUNT.gateway, input.feePaise)];
+}
+
+/** The gateway paid its collected money (after fees) into the bank. */
+export function settlementPosting(input: { readonly amountPaise: number }): JournalLine[] {
+  return [debit(ACCOUNT.bank, input.amountPaise), credit(ACCOUNT.gateway, input.amountPaise)];
+}
+
 /** An advance is set against its milestone once that milestone falls due. */
 export function advanceAppliedPosting(input: {
   readonly payer: Payer;

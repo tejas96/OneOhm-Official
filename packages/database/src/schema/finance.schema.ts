@@ -66,11 +66,16 @@ export const payments = pgTable(
     reversalReason: text('reversal_reason'),
     /** Set once when the payment is recorded, e.g. OH/RCPT/2026-27/0001. Reversals have none. */
     receiptNumber: text('receipt_number'),
+    /** The gateway's payment ID for online payments: a repeat webhook never records twice. */
+    gatewayPaymentId: text('gateway_payment_id'),
+    /** What the gateway kept (fee plus GST on it), booked as an expense. */
+    gatewayFeePaise: money('gateway_fee_paise'),
   },
   (table) => [
     index('payments_project_idx').on(table.projectId),
     uniqueIndex('payments_reversal_unique').on(table.reversesPaymentId),
     uniqueIndex('payments_receipt_number_unique').on(table.receiptNumber),
+    uniqueIndex('payments_gateway_payment_unique').on(table.gatewayPaymentId),
   ],
 );
 

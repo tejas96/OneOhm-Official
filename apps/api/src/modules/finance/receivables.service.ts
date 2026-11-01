@@ -5,6 +5,7 @@ import { ageingBucket } from '@oneohm/domain';
 import { daysBetween, todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
+import { openLinksFor } from '../online-payments/open-links';
 
 /**
  * Everything still owed to OneOhm, milestone by milestone (PRD 3.11). A milestone is
@@ -42,6 +43,10 @@ export class ReceivablesService {
       )
       .groupBy(payments.milestoneId);
     const paidBy = new Map(paid.map((row) => [row.milestoneId, Number(row.total)]));
+    const links = await openLinksFor(
+      this.db,
+      rows.map((row) => row.milestone.id),
+    );
     const today = todayIn();
     return rows
       .map(({ milestone, projectCode, customerName }): Receivable => {
@@ -69,6 +74,7 @@ export class ReceivablesService {
               : milestone.payer === 'bank'
                 ? 'claim_from_bank'
                 : 'collect_from_customer',
+          link: links.get(milestone.id) ?? null,
         };
       })
       .filter((receivable) => receivable.outstandingPaise > 0)

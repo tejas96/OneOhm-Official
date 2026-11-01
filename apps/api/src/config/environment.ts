@@ -40,9 +40,35 @@ const environmentSchema = z
     STORAGE_AUTO_CREATE_BUCKET: flag,
     /** Above this share of the price, a discount waits for an approver. */
     DISCOUNT_APPROVAL_BP: z.coerce.number().int().default(300),
+    /** Online payment links: off, a local sandbox for testing, or live Razorpay. */
+    RAZORPAY_MODE: z.enum(['off', 'sandbox', 'live']).default('off'),
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
+    /** Where customers reach this API from outside; sandbox payment pages live here. */
+    API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
   })
   .superRefine((env, context) => {
+    if (env.RAZORPAY_MODE === 'live')
+      for (const key of [
+        'RAZORPAY_KEY_ID',
+        'RAZORPAY_KEY_SECRET',
+        'RAZORPAY_WEBHOOK_SECRET',
+      ] as const)
+        if (!env[key])
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'Needed for live payment links.',
+          });
     if (env.NODE_ENV !== 'production') return;
+    if (env.RAZORPAY_MODE === 'sandbox')
+      context.addIssue({
+        code: 'custom',
+        path: ['RAZORPAY_MODE'],
+        message: 'The sandbox is for testing only.',
+      });
     if (env.OTP_DEVELOPMENT_CODE)
       context.addIssue({
         code: 'custom',

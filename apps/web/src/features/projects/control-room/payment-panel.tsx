@@ -6,6 +6,7 @@ import { formatInr, formatInrCompact } from '@oneohm/shared';
 import { IndianRupee } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { PaymentLinkAction } from '@/features/finance/payment-link-action';
 import { useCan } from '@/providers/current-user';
 import { RecordPaymentDialog } from './record-payment-dialog';
 
@@ -80,6 +81,10 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
                   t('paidSoFar', { amount: formatInr(milestone.paidPaise) })}
               </span>
             </div>
+            {milestone.payer === 'customer' &&
+              (milestone.status === 'due' || milestone.status === 'partly_paid') && (
+                <PaymentLinkAction milestoneId={milestone.id} link={milestone.link} />
+              )}
           </li>
         ))}
       </ul>

@@ -1,7 +1,7 @@
 import type { CustomerProject } from '@oneohm/api-contracts';
-import { formatInr, StatusPill, Text, useTheme } from '@oneohm/mobile-ui';
-import { Landmark, UserRound } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Button, formatInr, StatusPill, Text, useTheme } from '@oneohm/mobile-ui';
+import { CreditCard, Landmark, UserRound } from 'lucide-react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { PAYMENTS } from '@/copy/money';
 import { momentDate } from '@/lib/dates';
 
@@ -54,6 +54,27 @@ export function MilestoneRow({ line, first }: { readonly line: Line; readonly fi
           </Text>
         ) : null}
       </View>
+      {line.payUrl && line.payer === 'customer' ? (
+        <PayNow url={line.payUrl} owed={line.amountPaise - line.paidPaise} />
+      ) : null}
+    </View>
+  );
+}
+
+/** Opens the Razorpay page for what is still owed on this milestone. */
+function PayNow({ url, owed }: { readonly url: string; readonly owed: number }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.pay}>
+      <Button
+        label={PAYMENTS.payNow(formatInr(owed))}
+        icon={<CreditCard size={18} color={theme.colors.onAccent} />}
+        onPress={() => void Linking.openURL(url)}
+        fullWidth
+      />
+      <Text variant="label" tone="tertiary">
+        {PAYMENTS.payHint}
+      </Text>
     </View>
   );
 }
@@ -64,4 +85,5 @@ const styles = StyleSheet.create({
   fill: { flex: 1, gap: 4 },
   payer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bottom: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  pay: { gap: 6, paddingTop: 4 },
 });

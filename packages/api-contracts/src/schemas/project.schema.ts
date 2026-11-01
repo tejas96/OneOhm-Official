@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
 import { attachmentSchema } from './document.schema';
+import { openLinkSchema } from './payment-link.schema';
 
 export const epcStageSchema = z.enum(EPC_STAGES);
 export const waitingPartySchema = z.enum(WAITING_PARTIES);
@@ -103,6 +104,7 @@ export const milestoneSchema = z.object({
   paidPaise: paiseSchema,
   status: z.enum(['upcoming', 'due', 'partly_paid', 'paid']),
   trigger: z.string(),
+  link: openLinkSchema,
 });
 
 export const paymentSchema = z.object({

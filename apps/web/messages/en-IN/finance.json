@@ -283,6 +283,17 @@
         "work_order_tds": "TDS held",
         "reversal": "Reversal"
       }
+    },
+    "links": {
+      "send": "Send pay link",
+      "sent": "Pay link sent to the customer on WhatsApp and in their app.",
+      "linkSent": "Link sent",
+      "sentTest": "Test link sent",
+      "copy": "Copy pay link",
+      "copyShort": "Copy",
+      "copied": "Pay link copied.",
+      "cancel": "Cancel pay link",
+      "cancelled": "Pay link cancelled."
     }
   }
 }

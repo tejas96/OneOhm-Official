@@ -25,6 +25,10 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: 'Payment received',
     body: `${p.amount} for ${p.milestone}. Thank you.`,
   }),
+  payment_link: (p) => ({
+    title: 'Pay online',
+    body: `${p.amount} for ${p.milestone} on ${p.project}. Open Payments to pay by UPI or card.`,
+  }),
   payment_reminder: (p) => ({
     title: 'Payment due',
     body: `${p.amount} for ${p.milestone} on ${p.project}.`,

@@ -17,6 +17,7 @@ import { notFound } from '../../common/http/errors';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
+import { openLinksFor } from '../online-payments/open-links';
 import { ReportStatusService } from '../reports/report-status.service';
 
 /** The project control room: everything about one project in one answer. */
@@ -55,6 +56,10 @@ export class ProjectReadService {
       .from(paymentMilestones)
       .where(eq(paymentMilestones.projectId, id))
       .orderBy(asc(paymentMilestones.position));
+    const links = await openLinksFor(
+      this.db,
+      milestones.map((milestone) => milestone.id),
+    );
     const paymentRows = await this.db
       .select()
       .from(payments)
@@ -102,6 +107,7 @@ export class ProjectReadService {
           paidPaise: paid,
           status: milestone.status,
           trigger: milestone.trigger,
+          link: links.get(milestone.id) ?? null,
         };
       }),
       payments: paymentRows.map((payment) => ({

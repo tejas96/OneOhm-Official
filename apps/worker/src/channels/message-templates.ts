@@ -10,6 +10,7 @@ export const MESSAGE_TEMPLATES = {
   project_milestone: ['customer', 'project', 'milestone'],
   payment_received: ['customer', 'amount', 'milestone', 'project'],
   payment_reminder: ['customer', 'amount', 'milestone', 'project'],
+  payment_link: ['customer', 'amount', 'milestone', 'project', 'link'],
   staff_daily_digest: ['name', 'overdue', 'today', 'followUps'],
   service_update: ['customer', 'topic', 'status'],
   change_request_raised: ['customer', 'request', 'number'],

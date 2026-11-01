@@ -7,7 +7,8 @@ import { configureApp } from './configure-app';
 
 async function bootstrap(): Promise<void> {
   const env = loadEnvironment();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Raw bodies are kept so gateway webhooks can check their signatures.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   configureApp(app, env);
   await app.listen(env.API_PORT, '0.0.0.0');
 }
