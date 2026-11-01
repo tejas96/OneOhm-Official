@@ -20,7 +20,7 @@ describe('detectFileType', () => {
   it('refuses anything else, whatever the name says', () => {
     expect(detectFileType(bytes('<svg xmlns="http://www.w3.org/2000/svg">'))).toBeNull();
     expect(detectFileType(bytes('MZ', [0x90, 0]))).toBeNull();
-    expect(detectFileType(bytes([0, 0, 0, 24], 'ftypmp42', [0, 0, 0, 0]))).toBeNull();
+    expect(detectFileType(bytes([0, 0, 0, 24], 'ftyp3gp4', [0, 0, 0, 0]))).toBeNull();
     expect(detectFileType(new Uint8Array())).toBeNull();
   });
 });

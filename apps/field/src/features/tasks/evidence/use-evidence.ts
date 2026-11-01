@@ -1,9 +1,10 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
-import { SIGNATURE_CATEGORY } from '@oneohm/domain';
+import { SIGNATURE_CATEGORY, VOICE_NOTE_CATEGORY } from '@oneohm/domain';
 import { type UploadableFile, unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
 import { TASK } from '@/copy/tasks';
+import type { PickedVideo } from '@/features/media/pick-video';
 import { onItsWay } from '@/features/uploads/queue-logic';
 import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { documentCategoryFor } from './evidence-rules';
@@ -53,6 +54,32 @@ export function useEvidence(task: ProjectTask) {
       })),
     );
 
+  /** A short site video: a site photo in motion, geotagged the same way (PRD 4.2). */
+  const addVideo = (video: PickedVideo) =>
+    queue.add([
+      {
+        taskId: task.id,
+        kind: 'video',
+        category: 'site_photo',
+        name: video.file.name,
+        type: video.file.type,
+        file: video.file,
+        geotag: video.geotag,
+      },
+    ]);
+
+  const addVoice = (file: UploadableFile) =>
+    queue.add([
+      {
+        taskId: task.id,
+        kind: 'voice',
+        category: VOICE_NOTE_CATEGORY,
+        name: file.name,
+        type: file.type,
+        file,
+      },
+    ]);
+
   const addSignature = (bytes: Uint8Array) =>
     queue.add([
       {
@@ -72,6 +99,8 @@ export function useEvidence(task: ProjectTask) {
     uploading: pending.some(onItsWay),
     addPhotos,
     addDocuments,
+    addVideo,
+    addVoice,
     addSignature,
     retry: queue.retry,
     discard: queue.discard,

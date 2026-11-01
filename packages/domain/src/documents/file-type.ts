@@ -1,4 +1,15 @@
-/** Every file OneOhm accepts. The type comes from the file's bytes, never its name. */
+import {
+  AUDIO_FILE_TYPES,
+  detectMediaType,
+  type MediaFileType,
+  maxBytesFor,
+  VIDEO_FILE_TYPES,
+} from './media-type';
+
+/**
+ * Every paper and photo OneOhm accepts. The type comes from the file's bytes, never its
+ * name. Voice notes and videos are accepted only as field evidence (`EVIDENCE_FILE_TYPES`).
+ */
 export const ACCEPTED_FILE_TYPES = [
   'image/jpeg',
   'image/png',
@@ -25,14 +36,35 @@ export const COMPANY_ASSET_FILE_TYPES: readonly AcceptedFileType[] = [
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
+/** Any type OneOhm can recognise: papers and photos, voice notes and videos. */
+export type DetectedFileType = AcceptedFileType | MediaFileType;
+
+/** A task's or service visit's evidence: photos and papers, voice notes and short videos. */
+export const EVIDENCE_FILE_TYPES: readonly DetectedFileType[] = [
+  ...ACCEPTED_FILE_TYPES,
+  ...AUDIO_FILE_TYPES,
+  ...VIDEO_FILE_TYPES,
+];
+
+/** The size cap of one file of this type (papers and photos 25 MB). */
+export const uploadLimitOf = (contentType: string): number =>
+  maxBytesFor(contentType, MAX_UPLOAD_BYTES);
+
+/** The largest file any of these types may be: the cap the upload route reads up to. */
+export const uploadLimitFor = (types: readonly string[]): number =>
+  Math.max(MAX_UPLOAD_BYTES, ...types.map(uploadLimitOf));
+
 const HEIC_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1']);
 
 function ascii(bytes: Uint8Array, start: number, length: number): string {
   return String.fromCharCode(...bytes.subarray(start, start + length));
 }
 
-/** Detects JPEG, PNG, WebP, HEIC/HEIF and PDF from their signatures; anything else is null. */
-export function detectFileType(bytes: Uint8Array): AcceptedFileType | null {
+/**
+ * Detects JPEG, PNG, WebP, HEIC/HEIF and PDF, and the accepted audio and video formats,
+ * from their signatures; anything else is null.
+ */
+export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
     return 'image/jpeg';
   }
@@ -52,7 +84,7 @@ export function detectFileType(bytes: Uint8Array): AcceptedFileType | null {
     return 'image/heic';
   }
   if (bytes.length >= 5 && ascii(bytes, 0, 5) === '%PDF-') return 'application/pdf';
-  return null;
+  return detectMediaType(bytes);
 }
 
 export const isImageType = (contentType: string): boolean => contentType.startsWith('image/');

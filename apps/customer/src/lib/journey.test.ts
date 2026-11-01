@@ -65,6 +65,7 @@ describe('payments', () => {
   it('rounds the paid share down and splits own and bank shares', () => {
     const milestones: CustomerProject['payments']['milestones'] = [
       {
+        key: 'advance',
         label: 'Advance',
         payer: 'customer',
         amountPaise: 100,
@@ -74,6 +75,7 @@ describe('payments', () => {
         payUrl: null,
       },
       {
+        key: 'bank_disbursement',
         label: 'Loan',
         payer: 'bank',
         amountPaise: 200,

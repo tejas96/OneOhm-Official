@@ -5,9 +5,11 @@ import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { DocumentKind, KindFilter } from './document-kinds';
 
-const KIND_ORDER: readonly DocumentKind[] = ['image', 'pdf', 'other'];
+const KIND_ORDER: readonly DocumentKind[] = ['image', 'pdf', 'media', 'other'];
+/** Images and PDFs always show; voice and video, and others, only when there are some. */
+const ALWAYS: ReadonlySet<DocumentKind> = new Set(['image', 'pdf']);
 
-/** Search by title or file name, and the type chips (Others only when there are any). */
+/** Search by title or file name, and the type chips (rarer kinds only when there are any). */
 export function GalleryToolbar({
   search,
   onSearchChange,
@@ -25,7 +27,7 @@ export function GalleryToolbar({
   const t = useTranslations('documents.gallery');
   const options = [
     { value: 'all' as const, label: t('kinds.all') },
-    ...KIND_ORDER.filter((value) => value !== 'other' || kinds.has('other') || kind === value).map(
+    ...KIND_ORDER.filter((value) => ALWAYS.has(value) || kinds.has(value) || kind === value).map(
       (value) => ({ value, label: t(`kinds.${value}`) }),
     ),
   ];

@@ -52,10 +52,10 @@ export class CustomerController {
         await this.auth.signOut((await session()).sessionId);
         return { status: 204, body: undefined };
       },
-      home: async () => ({
-        status: 200,
-        body: await this.portal.home((await session()).customerId),
-      }),
+      home: async () => {
+        const who = await session();
+        return { status: 200, body: await this.portal.home(who.customerId, who.contactId) };
+      },
       quotationPdf: async ({ params }) => {
         const id = await this.portal.ownQuotation((await session()).customerId, params.id);
         return { status: 200, body: pdf(await this.quotationPdf.render(id)) };

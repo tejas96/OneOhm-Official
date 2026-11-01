@@ -9,6 +9,7 @@ import {
   paiseSchema,
   phoneSchema,
 } from '../common/primitives';
+import { customerLanguageSchema } from './customer-language.schema';
 import {
   SERVICE_KINDS,
   SERVICE_STATUSES,
@@ -23,6 +24,8 @@ export const customerProfileSchema = z.object({
   email: z.string().nullable(),
   /** A family member signed in on the customer's behalf (PRD 5.1); absent for the customer. */
   viewer: z.object({ name: z.string(), relation: z.string() }).nullable().optional(),
+  /** The language saved on the customer record; a new phone opens in it. */
+  language: customerLanguageSchema,
 });
 export type CustomerProfile = z.infer<typeof customerProfileSchema>;
 
@@ -32,6 +35,8 @@ const journeyStageSchema = z.object({
 });
 
 const milestoneLineSchema = z.object({
+  /** The plan's key (advance, before_dispatch…): the app says it in the customer's words. */
+  key: z.string(),
   label: z.string(),
   payer: z.enum(['customer', 'bank']),
   amountPaise: paiseSchema,

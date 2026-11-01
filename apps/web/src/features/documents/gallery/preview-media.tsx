@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { documentUrl } from '@/lib/api/upload';
 import { kindOf, showsInline, titleOf } from './document-kinds';
 import { PaperTile } from './document-tile';
+import { PreviewPlayback } from './preview-playback';
 
 const WIDE = '(min-width: 640px)';
 
@@ -51,14 +52,17 @@ function usePdfUrl(document: DocumentRecord) {
   return state;
 }
 
-/** The large preview at the top of the sheet: the photo, the PDF itself, or a tile. */
+/** The large preview at the top of the sheet: the photo, the PDF, the player, or a tile. */
 export function PreviewMedia({ document }: { readonly document: DocumentRecord }) {
   const t = useTranslations('documents.gallery.preview');
   const pdf = usePdfUrl(document);
   const [imageFailed, setImageFailed] = useState(false);
+  const [playFailed, setPlayFailed] = useState(false);
   const isPdf = kindOf(document.contentType) === 'pdf';
   let body: ReactNode;
-  if (showsInline(document.contentType) && !imageFailed) {
+  if (kindOf(document.contentType) === 'media' && !playFailed) {
+    body = <PreviewPlayback document={document} onFailed={() => setPlayFailed(true)} />;
+  } else if (showsInline(document.contentType) && !imageFailed) {
     body = (
       // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
       <img

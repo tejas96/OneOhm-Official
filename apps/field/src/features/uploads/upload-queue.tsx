@@ -13,10 +13,9 @@ import {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
-import { API_BASE_URL, currentToken, keys } from '@/api/api';
+import { API_BASE_URL, currentToken } from '@/api/api';
 import { UPLOADS } from '@/copy/uploads';
 import { useCurrentUser } from '@/session/session-provider';
-import { geotagFields } from './geotag-fields';
 import {
   afterFailure,
   type Failure,
@@ -30,10 +29,12 @@ import {
   wakeAll,
 } from './queue-logic';
 import { dropFile, keepBytes, keepFile, loadQueue, saveQueue, uploadableFor } from './upload-store';
+import { refreshedBy, uploadRequestOf } from './upload-target';
 
-/** A file to queue: picked from the camera, gallery or files, or drawn (bytes). */
+/** A file to queue: picked from the camera, gallery or files, recorded, or drawn (bytes). */
 export type NewUpload = {
-  readonly taskId: string;
+  readonly taskId?: string | undefined;
+  readonly serviceRequestId?: string | undefined;
   readonly kind: UploadKind;
   readonly category: string;
   readonly name: string;
@@ -103,8 +104,7 @@ export function UploadQueueProvider({ children }: { readonly children: ReactNode
     async (item: QueuedUpload) => {
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       await dropFile(item);
-      await client.invalidateQueries({ queryKey: keys.task(item.taskId) });
-      await client.invalidateQueries({ queryKey: keys.tasks });
+      for (const queryKey of refreshedBy(item)) await client.invalidateQueries({ queryKey });
     },
     [client],
   );
@@ -132,15 +132,9 @@ export function UploadQueueProvider({ children }: { readonly children: ReactNode
       }
       try {
         await uploadFile<DocumentRecord>({
-          url: `${API_BASE_URL.replace(/\/+$/, '')}/v1/documents`,
+          ...uploadRequestOf(item, API_BASE_URL),
           token: currentToken(),
           file,
-          fields: {
-            category: item.category,
-            taskId: item.taskId,
-            name: item.name,
-            ...geotagFields(item.geotag),
-          },
           onProgress: (fraction) => setProgress((current) => ({ ...current, [item.id]: fraction })),
         });
         settle();
@@ -175,6 +169,7 @@ export function UploadQueueProvider({ children }: { readonly children: ReactNode
           id,
           userId: user.id,
           taskId: upload.taskId,
+          serviceRequestId: upload.serviceRequestId,
           kind: upload.kind,
           category: upload.category,
           name: upload.name,

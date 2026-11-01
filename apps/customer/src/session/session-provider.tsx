@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { api, keys, onSessionExpired, queryClient, setToken, tokenStore } from '@/api/api';
+import { settleWithAccount } from '@/i18n/account-language';
 
 export type SessionState =
   | { readonly status: 'restoring' }
@@ -49,6 +50,7 @@ export function SessionProvider({ children }: { readonly children: ReactNode }) 
     try {
       const home = await unwrap(api.customer.home());
       queryClient.setQueryData(keys.home, home);
+      await settleWithAccount(home.customer);
       setState({ status: 'signedIn', customer: home.customer });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) await clear();
@@ -70,6 +72,7 @@ export function SessionProvider({ children }: { readonly children: ReactNode }) 
       signIn: async (token, customer) => {
         setToken(token);
         await tokenStore.write(token);
+        await settleWithAccount(customer);
         setState({ status: 'signedIn', customer });
       },
       signOut: async () => {

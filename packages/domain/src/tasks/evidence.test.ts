@@ -16,6 +16,8 @@ const photo = { contentType: 'image/jpeg', category: 'site_photo' };
 const pdf = { contentType: 'application/pdf', category: 'site_photo' };
 const bill = { contentType: 'image/jpeg', category: 'electricity_bill' };
 const signature = { contentType: 'image/png', category: 'customer_signature' };
+const voice = { contentType: 'audio/mp4', category: 'voice_note' };
+const video = { contentType: 'video/mp4', category: 'site_photo' };
 const none = new Set<string>();
 
 describe('missingEvidence', () => {
@@ -33,6 +35,14 @@ describe('missingEvidence', () => {
     expect(missingEvidence(task(['document']), [signature], none)).toEqual(['document']);
     expect(missingEvidence(task(['document']), [pdf], none)).toEqual([]);
     expect(missingEvidence(task(['document']), [bill], none)).toEqual([]);
+  });
+
+  it('never takes a voice note or a video as the required photo or paper', () => {
+    expect(missingEvidence(task(['photo', 'document']), [voice, video], none)).toEqual([
+      'photo',
+      'document',
+    ]);
+    expect(missingEvidence(task(['photo']), [video, photo], none)).toEqual([]);
   });
 
   it('needs the signature file for a sign-off', () => {

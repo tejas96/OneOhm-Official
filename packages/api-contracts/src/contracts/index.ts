@@ -9,7 +9,12 @@ import { commissionsContract } from './commissions.contract';
 import { contractorsContract } from './contractors.contract';
 import { crmContract } from './crm.contract';
 import { customerContract } from './customer.contract';
+import { customerContactContract } from './customer-contact.contract';
 import { customerFamilyContract } from './customer-family.contract';
+import {
+  customerAppLanguageContract,
+  customerLanguageContract,
+} from './customer-language.contract';
 import { discomContract } from './discom.contract';
 import { documentBundleContract } from './document-bundle.contract';
 import { documentChecklistContract } from './document-checklist.contract';
@@ -34,6 +39,7 @@ import { customerReferralsContract, referralsContract } from './referrals.contra
 import { reportsContract } from './reports.contract';
 import { rewardsContract } from './rewards.contract';
 import { serviceDeskContract } from './service-desk.contract';
+import { serviceVisitsContract } from './service-visits.contract';
 import { siteActivityContract } from './site-activity.contract';
 import { skillsContract } from './skills.contract';
 import { customerStageRatingsContract, stageRatingsContract } from './stage-ratings.contract';
@@ -91,8 +97,12 @@ export type ApiRouterDefinition = {
   readonly leadSteps: typeof leadStepsContract;
   readonly documentRequirements: typeof documentRequirementsContract;
   readonly customerFamily: typeof customerFamilyContract;
+  readonly customerAppLanguage: typeof customerAppLanguageContract;
+  readonly customerLanguage: typeof customerLanguageContract;
+  readonly customerContact: typeof customerContactContract;
   readonly stageRatings: typeof stageRatingsContract;
   readonly customerStageRatings: typeof customerStageRatingsContract;
+  readonly serviceVisits: typeof serviceVisitsContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -140,8 +150,12 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   leadSteps: leadStepsContract,
   documentRequirements: documentRequirementsContract,
   customerFamily: customerFamilyContract,
+  customerAppLanguage: customerAppLanguageContract,
+  customerLanguage: customerLanguageContract,
+  customerContact: customerContactContract,
   stageRatings: stageRatingsContract,
   customerStageRatings: customerStageRatingsContract,
+  serviceVisits: serviceVisitsContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

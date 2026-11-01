@@ -12,7 +12,15 @@ export type SendResult =
   | { readonly outcome: 'logged' };
 
 /** A send that will never succeed as is (bad number, unknown template): do not retry. */
-export class PermanentSendError extends Error {}
+export class PermanentSendError extends Error {
+  /** The provider's own error code, e.g. Meta's 131026 for "not on WhatsApp". */
+  constructor(
+    message: string,
+    readonly code: number | null = null,
+  ) {
+    super(message);
+  }
+}
 
 /** Builds the Cloud API body for a template message. Numbers go without the "+". */
 export function templateRequestBody(message: WhatsAppTemplateMessage) {
@@ -127,7 +135,7 @@ export function createWhatsAppSender(
     if (response.ok) return { outcome: 'sent', providerId: body.messages?.[0]?.id ?? null };
     const reason = `WhatsApp ${response.status}: ${body.error?.message ?? 'request failed'}`;
     if (isRetryableStatus(response.status)) throw new Error(reason);
-    throw new PermanentSendError(reason);
+    throw new PermanentSendError(reason, body.error?.code ?? null);
   };
   return {
     send: (message) => post(templateRequestBody(message)),

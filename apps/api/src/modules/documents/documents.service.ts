@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { type DocumentRecord, uploadFieldsSchema } from '@oneohm/api-contracts';
 import { documents, projectTasks } from '@oneohm/database';
-import { COMPANY_ASSET_FILE_TYPES, SIGNATURE_CATEGORY } from '@oneohm/domain';
+import { COMPANY_ASSET_FILE_TYPES, EVIDENCE_FILE_TYPES, SIGNATURE_CATEGORY } from '@oneohm/domain';
 import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -72,7 +72,13 @@ export class DocumentsService {
     if (signature && !links.taskId) {
       throw invalid('A customer signature belongs to a task.', { taskId: 'Required.' });
     }
-    const checked = checkFile(file, signature ? COMPANY_ASSET_FILE_TYPES : undefined, fields.name);
+    // Task evidence may also be a voice note or a short video (PRD 4.2); papers may not.
+    const allowed = signature
+      ? COMPANY_ASSET_FILE_TYPES
+      : links.taskId
+        ? EVIDENCE_FILE_TYPES
+        : undefined;
+    const checked = checkFile(file, allowed, fields.name);
     const storageKey = `${storageScope(links)}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     const id = await this.db.transaction(async (tx) => {
@@ -115,13 +121,14 @@ export class DocumentsService {
     actor: Actor,
     id: string,
     disposition: 'inline' | 'attachment' = 'inline',
+    range?: string,
   ): Promise<StoredObject & { name: string; type: string }> {
     const { row, links } = await this.load(id);
     if (!canViewDocument(actor, links)) throw forbidden();
     if (disposition === 'attachment' && !canDownloadDocument(actor, links)) {
       throw forbidden('You may look at this file but not download it.');
     }
-    const stored = await this.storage.get(row.storageKey);
+    const stored = await this.storage.get(row.storageKey, range);
     return { ...stored, name: row.name, type: row.contentType };
   }
 
@@ -129,7 +136,7 @@ export class DocumentsService {
     const { row, links } = await this.load(id);
     if (row.replacedAt || row.removedAt) throw invalid('This file has already been replaced.');
     if (!canChangeDocument(actor, links)) throw forbidden();
-    const checked = checkFile(file, undefined, row.name);
+    const checked = checkFile(file, row.taskId ? EVIDENCE_FILE_TYPES : undefined, row.name);
     const scope = storageScope({ projectId: row.projectId, customerId: row.customerId });
     const storageKey = `${scope}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);

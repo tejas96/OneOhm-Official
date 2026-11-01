@@ -2,6 +2,7 @@ import { boolean, doublePrecision, index, integer, pgTable, text, uuid } from 'd
 import { discoms } from './catalog.schema';
 import { calendarDate, createdAt, instant, primaryId, updatedAt, version } from './columns';
 import {
+  contactChannelEnum,
   customerKindEnum,
   leadActivityKindEnum,
   leadSourceEnum,
@@ -25,6 +26,10 @@ export const customers = pgTable(
     gstin: text('gstin'),
     whatsappOptIn: boolean('whatsapp_opt_in').notNull().default(true),
     preferredLanguage: text('preferred_language').notNull().default('en-IN'),
+    /** WhatsApp first; SMS or in person when they are not on WhatsApp (owner's rule). */
+    contactChannel: contactChannelEnum('contact_channel').notNull().default('whatsapp'),
+    /** When WhatsApp said this number is not on WhatsApp; messages then go by SMS. */
+    whatsappUnreachableAt: instant('whatsapp_unreachable_at'),
     createdByUserId: uuid('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),

@@ -20,6 +20,7 @@ import { PurchasingModule } from './purchasing/purchasing.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { ServiceDeskModule } from './service-desk/service-desk.module';
+import { ServiceVisitsModule } from './service-visits/service-visits.module';
 import { SiteActivityModule } from './site-activity/site-activity.module';
 import { TemplatesModule } from './templates/templates.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
@@ -37,6 +38,7 @@ export const FEATURE_MODULES = [
   ProjectsModule,
   CustomerPortalModule,
   ServiceDeskModule,
+  ServiceVisitsModule,
   AfterSalesModule,
   FinanceModule,
   ContractorsModule,

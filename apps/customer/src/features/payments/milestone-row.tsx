@@ -27,7 +27,7 @@ export function MilestoneRow({ line, first }: { readonly line: Line; readonly fi
     >
       <View style={styles.top}>
         <View style={styles.fill}>
-          <Text variant="body">{line.label}</Text>
+          <Text variant="body">{PAYMENTS.milestone(line.key, line.label)}</Text>
           <View style={styles.payer}>
             <Icon size={14} color={theme.colors.textTertiary} />
             <Text variant="label" tone="tertiary">

@@ -2,11 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import { SectionHeading } from '@/features/command-center/section-heading';
+import { ContactSection } from './contact/contact-section';
 import { CustomerProperties } from './customer-properties';
 import { CustomerProjects, CustomerQuotations } from './customer-records';
 import type { CustomerRecord } from './customer-tabs';
+import { CustomerLanguageSetting } from './language/customer-language';
 
-/** Who they are on paper: every site, every project and every quotation. */
+/** Who they are on paper: every site, project and quotation, and how we reach them. */
 export function CustomerOverviewTab({ customer }: { readonly customer: CustomerRecord }) {
   const t = useTranslations('customers.sections');
   return (
@@ -22,6 +24,11 @@ export function CustomerOverviewTab({ customer }: { readonly customer: CustomerR
       <section aria-label={t('quotations')} className="flex flex-col gap-5">
         <SectionHeading index="03" title={t('quotations')} />
         <CustomerQuotations quotations={customer.quotations} />
+      </section>
+      <section aria-label={t('contact')} className="flex flex-col gap-5">
+        <SectionHeading index="04" title={t('contact')} />
+        <ContactSection customerId={customer.id} />
+        <CustomerLanguageSetting customerId={customer.id} />
       </section>
     </div>
   );

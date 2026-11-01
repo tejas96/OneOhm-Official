@@ -9,6 +9,7 @@ import { FormAlert } from '@/components/form-alert';
 import { SectionTitle } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
 import { DOCUMENTS } from '@/copy/money';
+import { lookup } from '@/i18n/copy';
 import { momentDate } from '@/lib/dates';
 import { type FileSource, pickRequestedFile, sendRequestedFile } from './requested-files';
 
@@ -63,7 +64,7 @@ function RequestCard({ request }: { readonly request: CustomerDocumentRequest })
         failure instanceof Error && failure.message ? describeError(failure) : DOCUMENTS.sendFailed,
       ),
   });
-  const kind = DOCUMENTS.category[request.category] ?? DOCUMENTS.category.other;
+  const kind = lookup(DOCUMENTS.category, request.category) ?? DOCUMENTS.category.other;
   const busy = send.isPending;
   return (
     <Card style={styles.card}>

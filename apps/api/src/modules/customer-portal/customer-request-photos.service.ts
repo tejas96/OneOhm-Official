@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ServiceRequest } from '@oneohm/api-contracts';
 import { documents, serviceRequests } from '@oneohm/database';
 import { PHOTO_FILE_TYPES } from '@oneohm/domain';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { ObjectStorageService } from '../documents/object-storage.service';
@@ -41,7 +41,8 @@ export class CustomerRequestPhotosService {
     const existing = await this.db
       .select({ id: documents.id })
       .from(documents)
-      .where(eq(documents.serviceRequestId, requestId));
+      // The customer's own photos only; the technician's visit files do not count.
+      .where(and(eq(documents.serviceRequestId, requestId), isNull(documents.uploadedByUserId)));
     if (existing.length >= MAX_PHOTOS)
       throw conflict(`A request can have up to ${MAX_PHOTOS} photos.`, 'too_many');
     const checked = checkFile(file, PHOTO_FILE_TYPES);

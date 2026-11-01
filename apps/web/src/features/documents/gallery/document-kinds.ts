@@ -22,8 +22,10 @@ import {
 
 /** "All documents" or one of the fixed categories. */
 export type FolderChoice = DocumentCategory | 'all';
-/** How the library groups files for the type chips. */
-export type DocumentKind = 'image' | 'pdf' | 'other';
+/** How the library groups files for the type chips: voice notes and videos are "media". */
+export type DocumentKind = 'image' | 'pdf' | 'media' | 'other';
+/** The finer word on a card: a voice note and a video are both media. */
+export type KindLabel = 'image' | 'pdf' | 'audio' | 'video' | 'other';
 export type KindFilter = DocumentKind | 'all';
 
 export const FOLDER_ICONS: Readonly<Record<FolderChoice, LucideIcon>> = {
@@ -53,7 +55,18 @@ export function folderOf(document: DocumentRecord): DocumentCategory {
 export function kindOf(contentType: string): DocumentKind {
   if (contentType.startsWith('image/')) return 'image';
   if (contentType === 'application/pdf') return 'pdf';
+  if (isAudio(contentType) || isVideo(contentType)) return 'media';
   return 'other';
+}
+
+export const isAudio = (contentType: string) => contentType.startsWith('audio/');
+export const isVideo = (contentType: string) => contentType.startsWith('video/');
+
+export function kindLabelOf(contentType: string): KindLabel {
+  if (isAudio(contentType)) return 'audio';
+  if (isVideo(contentType)) return 'video';
+  const kind = kindOf(contentType);
+  return kind === 'media' ? 'other' : kind;
 }
 
 /** Browsers show JPEG, PNG and WebP; HEIC photos get a tile and download instead. */

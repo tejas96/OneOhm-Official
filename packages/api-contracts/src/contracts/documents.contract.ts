@@ -18,8 +18,9 @@ const dispositionQuery = z.object({
 
 /**
  * Every document in one place (PRD 3.14). Uploads go through the API as multipart form
- * data: a `file` part (JPEG, PNG, WebP, HEIC or PDF, up to 25 MB, checked by its bytes)
- * plus the fields of `uploadFieldsSchema`. Works with the web cookie and the mobile token.
+ * data: a `file` part (JPEG, PNG, WebP, HEIC or PDF, up to 25 MB, checked by its bytes;
+ * on a task also voice notes up to 10 MB and videos up to 60 MB) plus the fields of
+ * `uploadFieldsSchema`. Works with the web cookie and the mobile token.
  */
 export const documentsContract = c.router({
   listDocuments: {
@@ -42,8 +43,9 @@ export const documentsContract = c.router({
     path: '/documents/:id/file',
     pathParams: z.object({ id: idSchema }),
     query: dispositionQuery,
-    responses: { 200: fileResponse },
-    summary: 'The file itself, streamed from storage after the access check.',
+    responses: { 200: fileResponse, 206: fileResponse },
+    summary:
+      'The file itself, streamed from storage after the access check. A `Range` header gets one part (206), so videos can seek.',
   },
   replaceDocument: {
     method: 'POST',

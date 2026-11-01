@@ -1,9 +1,11 @@
 import type { Attachment } from '@oneohm/api-contracts';
+import { isMediaType } from '@oneohm/domain';
 import { PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
 import { FileText, ImageIcon, RotateCw, X } from 'lucide-react-native';
 import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 import { API_BASE_URL, currentToken } from '@/api/api';
 import { TASK } from '@/copy/tasks';
+import { fileIconOf, MediaBody } from '@/features/media/media-tiles';
 import type { QueuedUpload } from '@/features/uploads/queue-logic';
 import { previewUri } from '@/features/uploads/upload-store';
 
@@ -31,7 +33,9 @@ export function AttachmentTile({
   const Icon = image ? ImageIcon : FileText;
   return (
     <View style={[styles.tile, { backgroundColor: theme.colors.surfaceSunken }]}>
-      {showPhoto ? (
+      {isMediaType(file.contentType) ? (
+        <MediaBody file={file} />
+      ) : showPhoto ? (
         <Image
           source={{
             uri: `${API_BASE_URL.replace(/\/+$/, '')}/v1/documents/${file.id}/file`,
@@ -88,13 +92,14 @@ export function PendingTile({
   const sending = progress !== undefined;
   const percent = Math.round((progress ?? 0) * 100);
   const image = item.type.startsWith('image/');
+  const PendingIcon = fileIconOf(item.type);
   return (
     <View style={[styles.tile, { backgroundColor: theme.colors.surfaceSunken }]}>
       {image ? (
         <Image source={{ uri: previewUri(item) }} style={[styles.image, styles.dim]} />
       ) : (
         <View style={styles.placeholder}>
-          <FileText size={22} color={theme.colors.textSecondary} />
+          <PendingIcon size={22} color={theme.colors.textSecondary} />
           <Text variant="label" tone="secondary" numberOfLines={2} style={styles.name}>
             {item.name}
           </Text>

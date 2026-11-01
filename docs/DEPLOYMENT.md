@@ -131,6 +131,19 @@ Until then, messages are recorded in the outbox as "not sent (log mode)", so not
 2. Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET`, then `RAZORPAY_MODE=live`, and restart the API.
 3. Test once with Razorpay test keys before using live keys.
 
+## 5c. SMS for customers not on WhatsApp
+
+WhatsApp is the main channel. A customer can be set to **SMS** or **In person** on their
+customer page (How we reach them). When WhatsApp rejects a number as "not on WhatsApp"
+(error 131026), OneOhm switches that customer to SMS by itself and sends the same news by SMS.
+**In person** sends nothing: the update appears under *Customers → to share in person*.
+
+1. In MSG91, register a DLT transactional template with one variable, for example
+   `OneOhm: ##message##`, and create a flow for it.
+2. Set `SMS_DELIVERY=msg91` and `MSG91_SMS_TEMPLATE_ID` (the flow ID); `MSG91_AUTH_KEY`
+   is the same key used for sign-in codes. Restart the worker.
+3. SMS text is English for now; Marathi and Hindi SMS need their own DLT templates.
+
 ## 5b. Push notifications
 
 1. Create the Expo project for each app (`eas init`).

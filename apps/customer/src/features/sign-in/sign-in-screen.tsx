@@ -3,6 +3,8 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/api/api';
 import { SIGN_IN } from '@/copy/common';
+import { LanguageSwitch } from '@/features/language/language-switch';
+import { chooseBeforeSignIn } from '@/i18n/account-language';
 import { useSession } from '@/session/session-provider';
 
 const LOGO = require('../../../assets/images/logo.png');
@@ -31,6 +33,12 @@ export function SignInScreen() {
             hello={SIGN_IN.hello}
             line={SIGN_IN.line}
           />
+          <View style={[styles.language, { top: insets.top + 14 }]}>
+            <LanguageSwitch
+              label={SIGN_IN.language}
+              onChange={(language) => void chooseBeforeSignIn(language)}
+            />
+          </View>
         </View>
         <View
           style={[
@@ -61,6 +69,7 @@ export function SignInScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { flexGrow: 1 },
+  language: { position: 'absolute', right: 16 },
   sheet: {
     flexGrow: 1,
     marginTop: -28,

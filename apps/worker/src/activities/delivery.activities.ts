@@ -1,4 +1,13 @@
-import { customers, type Database, messageTemplates, outbox } from '@oneohm/database';
+import {
+  customerNotice,
+  customers,
+  type Database,
+  fallBackToSms,
+  GENERIC_WORDS,
+  messageTemplates,
+  outbox,
+} from '@oneohm/database';
+import { isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
@@ -6,6 +15,7 @@ import {
   MissingFieldError,
   templateParameters,
 } from '../channels/message-templates';
+import type { SmsSender } from '../channels/sms';
 import {
   PermanentSendError,
   type SendResult,
@@ -20,14 +30,19 @@ interface DeliveryDeps {
   readonly db: Database;
   readonly sender: WhatsAppSender;
   readonly push: PushSender;
+  readonly sms: SmsSender;
   readonly language: string;
 }
+
+/** The plain words of a customer message, for its SMS version. */
+const wordsFor = (template: string, payload: Record<string, string>) =>
+  customerNotice(template, payload, 'sms') ?? GENERIC_WORDS;
 
 /**
  * Sends one queued message. Final outcomes (sent, skipped, failed) are written to the
  * outbox row; temporary failures throw so Temporal retries with backoff.
  */
-export function deliveryActivities({ db, sender, push, language }: DeliveryDeps) {
+export function deliveryActivities({ db, sender, push, sms, language }: DeliveryDeps) {
   const finish = async (
     id: string,
     status: 'sent' | 'skipped' | 'failed',
@@ -102,7 +117,8 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
     try {
       const result = await call();
       if (result.outcome === 'logged') {
-        await finish(row.id, 'skipped', 'Not sent: WhatsApp delivery is in log mode.');
+        const channel = row.channel === 'sms' ? 'SMS' : 'WhatsApp';
+        await finish(row.id, 'skipped', `Not sent: ${channel} delivery is in log mode.`);
         return 'skipped';
       }
       await finish(row.id, 'sent', null, result.providerId);
@@ -110,6 +126,12 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       if (error instanceof PermanentSendError) {
+        // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
+        if (row.channel === 'whatsapp' && isNotOnWhatsApp(error.code)) {
+          await fallBackToSms(db, row.id, wordsFor);
+          await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
+          return 'skipped';
+        }
         await finish(row.id, 'failed', reason);
         return 'failed';
       }
@@ -130,6 +152,14 @@ export function deliveryActivities({ db, sender, push, language }: DeliveryDeps)
         const outcome = await deliverPush(db, push, row.recipient);
         await finish(id, outcome.status, outcome.note);
         return outcome.status;
+      }
+      if (row.channel === 'sms') {
+        const text = (row.payload as { text?: string } | null)?.text;
+        if (!text) {
+          await finish(id, 'failed', 'No SMS text was written for this message.');
+          return 'failed';
+        }
+        return send(row, () => sms.send(row.recipient, text));
       }
       // A chat reply (the customer wrote first), so no template and no opt-in check.
       if (row.template.startsWith('session:'))

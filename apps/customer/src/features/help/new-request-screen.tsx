@@ -97,7 +97,10 @@ export function NewRequestScreen() {
       <View style={styles.form}>
         <ChoiceChips
           label={SUPPORT.categoryLabel}
-          choices={categories.map((item) => ({ value: item.key, label: item.label }))}
+          choices={categories.map((item) => ({
+            value: item.key,
+            label: SUPPORT.category(item.key, item.label),
+          }))}
           value={category}
           onChange={setCategory}
         />

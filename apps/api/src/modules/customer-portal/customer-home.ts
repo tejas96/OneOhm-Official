@@ -132,6 +132,7 @@ export async function customerProjects(
     const lines = milestones
       .filter((milestone) => milestone.projectId === row.id)
       .map((milestone) => ({
+        key: milestone.key,
         label: milestone.label,
         payer: milestone.payer,
         amountPaise: milestone.amountPaise,

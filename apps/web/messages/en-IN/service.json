@@ -211,6 +211,25 @@
       "noRating": "The customer has not rated this yet. They can rate it in the app once it is resolved.",
       "close": "Close",
       "notePlaceholder": "For example: cleaned all panels and checked the inverter."
+    },
+    "fieldWork": {
+      "title": "Field work",
+      "loading": "Loading the field work",
+      "empty": "No one has checked in for this request yet. Visits, notes, photos, videos and voice notes from the field app show here.",
+      "visits": "Visits",
+      "visitLine": "{day} · {from} to {to}",
+      "visitOpen": "{day} · in at {from}",
+      "onSite": "On site now",
+      "reports": "Notes from the field",
+      "outcome": {
+        "done": "Marked done",
+        "handed_back": "Handed back"
+      },
+      "byLine": "{name}, {time}",
+      "found": "What they found",
+      "workDone": "What they did",
+      "reason": "Why it came back",
+      "files": "{count, plural, one {# photo, video or voice note} other {# photos, videos and voice notes}}"
     }
   }
 }

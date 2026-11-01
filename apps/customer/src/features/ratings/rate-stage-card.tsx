@@ -2,6 +2,7 @@ import { Button, Card, Text } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { STAGE_RATING } from '@/copy/ratings';
+import { lookup } from '@/i18n/copy';
 import { useStageRatings } from './use-stage-ratings';
 
 /** On Home: the first finished stage of this project the customer has not rated yet. */
@@ -9,7 +10,7 @@ export function RateStageCard({ projectId }: { readonly projectId: string }) {
   const query = useStageRatings();
   const next = (query.data ?? []).find((card) => card.projectId === projectId && !card.rating);
   if (!next) return null;
-  const stage = STAGE_RATING.stage[next.stage] ?? next.stage;
+  const stage = lookup(STAGE_RATING.stage, next.stage) ?? next.stage;
   return (
     <Card style={styles.card}>
       <View style={styles.text}>

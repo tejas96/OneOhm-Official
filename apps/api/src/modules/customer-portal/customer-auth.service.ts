@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerProfile } from '@oneohm/api-contracts';
 import { customerSessions, otpChallenges } from '@oneohm/database';
+import { customerLanguage } from '@oneohm/domain';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { Request } from 'express';
 import { bearerToken } from '../../common/auth/session-cookies';
@@ -96,6 +97,7 @@ export class CustomerAuthService {
       token,
       customer: {
         ...who.customer,
+        language: customerLanguage(who.customer.language),
         viewer: who.contact ? { name: who.contact.name, relation: who.contact.relation } : null,
       },
     };

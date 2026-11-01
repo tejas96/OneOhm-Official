@@ -8,6 +8,7 @@ export * from './finance';
 export * from './identity';
 export * from './incentives';
 export * from './inventory';
+export * from './language';
 export * from './messaging';
 export * from './pricing';
 export * from './purchasing';

@@ -2,16 +2,32 @@
 
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { cn } from '@oneohm/design-system/web';
-import { File, FileCheck, FileImage, FileText, type LucideIcon } from 'lucide-react';
+import {
+  File,
+  FileAudio,
+  FileCheck,
+  FileImage,
+  FileText,
+  FileVideo,
+  type LucideIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { documentUrl } from '@/lib/api/upload';
-import { extensionOf, kindOf, showsInline } from './document-kinds';
+import { extensionOf, isVideo, kindLabelOf, showsInline } from './document-kinds';
+import { VideoFrame } from './video-frame';
+
+const ICONS: Readonly<Record<ReturnType<typeof kindLabelOf>, LucideIcon>> = {
+  image: FileImage,
+  pdf: FileText,
+  audio: FileAudio,
+  video: FileVideo,
+  other: File,
+};
 
 function iconFor(document: DocumentRecord): LucideIcon {
-  const kind = kindOf(document.contentType);
-  if (kind === 'image') return FileImage;
-  if (kind === 'pdf') return document.source === 'upload' ? FileText : FileCheck;
-  return File;
+  const label = kindLabelOf(document.contentType);
+  if (label === 'pdf' && document.source !== 'upload') return FileCheck;
+  return ICONS[label];
 }
 
 /** A calm paper tile: the kind's glyph and the extension, like a label on a file. */
@@ -43,7 +59,8 @@ export function PaperTile({
 
 /**
  * The preview area of a document card: the photo itself (loaded lazily through the
- * access-checked file route), or the paper tile when the browser cannot show it.
+ * access-checked file route), a video's first frame, or the paper tile when the browser
+ * cannot show it (voice notes, HEIC, PDFs).
  */
 export function DocumentTile({
   document,
@@ -53,6 +70,15 @@ export function DocumentTile({
   readonly className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  if (isVideo(document.contentType) && !failed) {
+    return (
+      <VideoFrame
+        src={documentUrl(document.id)}
+        onFailed={() => setFailed(true)}
+        {...(className ? { className } : {})}
+      />
+    );
+  }
   if (!showsInline(document.contentType) || failed) {
     return <PaperTile document={document} {...(className ? { className } : {})} />;
   }

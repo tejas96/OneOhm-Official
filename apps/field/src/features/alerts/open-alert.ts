@@ -1,13 +1,17 @@
 import type { AlertData } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
 
-/** Opens the screen an alert is about: a task, leave, or Today for the rest. */
+/** Opens the screen an alert is about: a task, a service visit, leave, or Today for the rest. */
 export function openAlert(subject: {
   readonly type?: string | undefined;
   readonly id?: string | undefined;
 }) {
   if (subject.type === 'task' && subject.id) {
     router.push({ pathname: '/tasks/[id]', params: { id: subject.id } });
+    return;
+  }
+  if (subject.type === 'service_request' && subject.id) {
+    router.push({ pathname: '/service/[id]', params: { id: subject.id } });
     return;
   }
   if (subject.type === 'leave') {

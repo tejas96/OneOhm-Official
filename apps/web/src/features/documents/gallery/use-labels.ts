@@ -3,7 +3,7 @@
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { fileSize } from '../document-row';
-import { type FolderChoice, kindOf } from './document-kinds';
+import { type FolderChoice, kindLabelOf } from './document-kinds';
 
 /** "All documents", "Site photo", "DISCOM"… */
 export function useFolderLabel() {
@@ -12,10 +12,10 @@ export function useFolderLabel() {
     folder === 'all' ? t('gallery.allDocuments') : t(`categories.${folder}`);
 }
 
-/** "Photo", "PDF" or "File". */
+/** "Photo", "PDF", "Voice note", "Video" or "File". */
 export function useKindLabel() {
   const t = useTranslations('documents.gallery.kindLabels');
-  return (document: DocumentRecord) => t(kindOf(document.contentType));
+  return (document: DocumentRecord) => t(kindLabelOf(document.contentType));
 }
 
 /** "Photo · 3 KB", "PDF · 1.2 MB". */

@@ -1,4 +1,5 @@
 import {
+  CONTACT_CHANNELS,
   EPC_STAGES,
   LEAD_SOURCES,
   LEAD_STAGES,
@@ -78,3 +79,6 @@ export const payableStatusEnum = pgEnum('payable_status', ['pending', 'approved'
 export const documentSourceEnum = pgEnum('document_source', ['upload', 'system', 'report']);
 export const outboxChannelEnum = pgEnum('outbox_channel', ['whatsapp', 'sms', 'push']);
 export const outboxStatusEnum = pgEnum('outbox_status', ['pending', 'sent', 'failed', 'skipped']);
+
+/** How OneOhm reaches a customer: WhatsApp first, SMS, or papers handed over in person. */
+export const contactChannelEnum = pgEnum('contact_channel', CONTACT_CHANNELS);

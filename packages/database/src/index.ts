@@ -1,5 +1,7 @@
 export * from './client';
+export * from './customer-channel';
 export * from './customer-message';
+export { localAlertTitle } from './customer-message-words';
 export * from './ledger';
 export * from './location-retention';
 export * from './migrate';

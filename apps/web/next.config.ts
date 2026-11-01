@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   agentRules: false,
+  experimental: {
+    // Uploads pass through this server to the API; the largest is a 60 MB site video.
+    proxyClientMaxBodySize: '64mb',
+  },
   // The design system's web components ship as TypeScript source.
   transpilePackages: ['@oneohm/design-system'],
   async rewrites() {

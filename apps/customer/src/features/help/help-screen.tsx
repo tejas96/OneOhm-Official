@@ -90,7 +90,7 @@ function RequestCard({ request }: { readonly request: ServiceRequest }) {
     <Card style={styles.card}>
       <View style={styles.cardHead}>
         <Text variant="titleMd" style={styles.grow}>
-          {request.categoryLabel}
+          {SUPPORT.category(request.category, request.categoryLabel)}
         </Text>
         <StatusPill size="sm" tone={TONE[request.status]} label={SUPPORT.status[request.status]} />
       </View>

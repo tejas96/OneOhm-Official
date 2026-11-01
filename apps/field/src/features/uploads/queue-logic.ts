@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 /** What a queued file is evidence of; decides its document category and its tile. */
-export type UploadKind = 'photo' | 'document' | 'signature';
+export const UPLOAD_KINDS = ['photo', 'document', 'signature', 'video', 'voice'] as const;
+export type UploadKind = (typeof UPLOAD_KINDS)[number];
 
 /**
  * Where and when a photo was taken: from its EXIF when the picker gives it, or the
@@ -25,7 +26,9 @@ export interface QueuedUpload {
   readonly id: string;
   /** Whose upload it is; another person signing in on the phone never sends it. */
   readonly userId: string;
-  readonly taskId: string;
+  /** Evidence for a task, or (`serviceRequestId`) for a service visit (PRD 5.5). */
+  readonly taskId?: string | undefined;
+  readonly serviceRequestId?: string | undefined;
   readonly kind: UploadKind;
   readonly category: string;
   readonly name: string;
@@ -120,6 +123,12 @@ export function nextWake(
   return times.length > 0 ? Math.min(...times) : null;
 }
 
+/** The screen a queued file belongs to: its task, or its service visit. */
+export function screenOf(item: Pick<QueuedUpload, 'taskId' | 'serviceRequestId'>): string {
+  if (item.serviceRequestId) return `/service/${item.serviceRequestId}`;
+  return `/tasks/${item.taskId ?? ''}`;
+}
+
 export function mine(
   items: readonly QueuedUpload[],
   userId: string,
@@ -144,8 +153,9 @@ const geotagSchema = z.object({
 const queuedSchema = z.object({
   id: z.string().min(1),
   userId: z.string().min(1),
-  taskId: z.string().min(1),
-  kind: z.enum(['photo', 'document', 'signature']),
+  taskId: z.string().min(1).optional(),
+  serviceRequestId: z.string().min(1).optional(),
+  kind: z.enum(UPLOAD_KINDS),
   category: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
@@ -166,7 +176,9 @@ export function parseQueue(raw: unknown): QueuedUpload[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((entry) => {
     const parsed = queuedSchema.safeParse(entry);
-    return parsed.success ? [parsed.data] : [];
+    // Every file belongs to a task or a service visit; one with neither is dropped.
+    const target = parsed.success && (parsed.data.taskId || parsed.data.serviceRequestId);
+    return parsed.success && target ? [parsed.data] : [];
   });
 }
 

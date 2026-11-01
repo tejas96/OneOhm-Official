@@ -1,7 +1,13 @@
-import { Controller, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Req, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { MAX_UPLOAD_BYTES, safeFileName } from '@oneohm/domain';
+import {
+  EVIDENCE_FILE_TYPES,
+  MAX_UPLOAD_BYTES,
+  safeFileName,
+  uploadLimitFor,
+} from '@oneohm/domain';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import type { Request } from 'express';
 import type { Actor } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
@@ -11,8 +17,15 @@ import type { IncomingFile } from './upload-file';
 
 const routes = apiContract.documents;
 /** One file per request, held in memory; the size cap answers 413 before it is read fully. */
-const singleFile = () =>
-  UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }));
+const singleFile = (fileSize = MAX_UPLOAD_BYTES) =>
+  UseInterceptors(FileInterceptor('file', { limits: { fileSize, files: 1 } }));
+/** Task evidence may be a video (60 MB); each type's own cap is checked after reading. */
+const evidenceFile = () => singleFile(uploadLimitFor(EVIDENCE_FILE_TYPES));
+
+/** One plain byte range ("bytes=0-1023", "bytes=500-", "bytes=-500"); anything else is ignored. */
+export function byteRange(header: string | undefined): string | undefined {
+  return header && /^bytes=(\d+-\d*|-\d+)$/.test(header.trim()) ? header.trim() : undefined;
+}
 
 function contentDisposition(kind: 'inline' | 'attachment', name: string): string {
   return `${kind}; filename="${safeFileName(name)}"; filename*=UTF-8''${encodeURIComponent(name)}`;
@@ -31,7 +44,7 @@ export class DocumentsController {
     removeDocument: routes.removeDocument,
     companyAssets: routes.companyAssets,
   })
-  handler(@CurrentActor() actor: Actor) {
+  handler(@CurrentActor() actor: Actor, @Req() request: Request) {
     return tsRestHandler(
       {
         listDocuments: routes.listDocuments,
@@ -45,12 +58,20 @@ export class DocumentsController {
           body: await this.documents.list(actor, query),
         }),
         documentFile: async ({ params, query }) => {
-          const file = await this.documents.file(actor, params.id, query.disposition);
+          const range = byteRange(request.headers.range);
+          const file = await this.documents.file(actor, params.id, query.disposition, range);
           const stream = new StreamableFile(file.body, {
             type: file.type,
             ...(file.length === undefined ? {} : { length: file.length }),
             disposition: contentDisposition(query.disposition, file.name),
           });
+          // Browsers seek in a video or voice note by asking for one part at a time.
+          // (`@Res` would switch Nest to manual responses, so the headers go on `req.res`.)
+          request.res?.setHeader('Accept-Ranges', 'bytes');
+          if (file.contentRange) {
+            request.res?.setHeader('Content-Range', file.contentRange);
+            return { status: 206, body: stream as unknown as Blob };
+          }
           return { status: 200, body: stream as unknown as Blob };
         },
         removeDocument: async ({ params }) => {
@@ -63,7 +84,7 @@ export class DocumentsController {
   }
 
   @TsRestHandler(routes.uploadDocument)
-  @singleFile()
+  @evidenceFile()
   upload(@CurrentActor() actor: Actor, @UploadedFile() file: IncomingFile | undefined) {
     return tsRestHandler(routes.uploadDocument, async ({ body }) => ({
       status: 201,
@@ -72,7 +93,7 @@ export class DocumentsController {
   }
 
   @TsRestHandler(routes.replaceDocument)
-  @singleFile()
+  @evidenceFile()
   replace(@CurrentActor() actor: Actor, @UploadedFile() file: IncomingFile | undefined) {
     return tsRestHandler(routes.replaceDocument, async ({ params }) => ({
       status: 201,

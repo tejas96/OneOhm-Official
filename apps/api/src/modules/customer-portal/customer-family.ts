@@ -12,6 +12,7 @@ export async function whoSignsIn(db: DatabaseExecutor, phoneE164: string) {
     name: customers.name,
     phone: customers.phoneE164,
     email: customers.email,
+    language: customers.preferredLanguage,
   };
   const [own] = await db
     .select(profile)
@@ -50,4 +51,18 @@ export async function familyOf(db: DatabaseExecutor, customerId: string): Promis
     relation: row.relation,
     createdAt: row.createdAt.toISOString(),
   }));
+}
+
+/** The family member signed in on the customer's behalf, or null for the customer. */
+export async function viewerOf(
+  db: DatabaseExecutor,
+  contactId: string | null,
+): Promise<{ name: string; relation: string } | null> {
+  if (!contactId) return null;
+  const [contact] = await db
+    .select({ name: customerContacts.name, relation: customerContacts.relation })
+    .from(customerContacts)
+    .where(eq(customerContacts.id, contactId))
+    .limit(1);
+  return contact ?? null;
 }

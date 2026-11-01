@@ -1,5 +1,6 @@
 import { SIGNATURE_CATEGORY } from '../documents/document-categories';
 import { isImageType } from '../documents/file-type';
+import { isMediaType } from '../documents/media-type';
 import { checklistFor, type EvidenceTask, measurementsFor } from './task-checklists';
 import { EVIDENCE_KINDS, type EvidenceKind } from './task-template';
 
@@ -11,9 +12,14 @@ export interface EvidenceFile {
 
 const isSignature = (file: EvidenceFile) => file.category === SIGNATURE_CATEGORY;
 const isPhoto = (file: EvidenceFile) => isImageType(file.contentType) && !isSignature(file);
-/** A PDF, or any file filed as a paper (not a site photo, not the signature). */
+/**
+ * A PDF, or any file filed as a paper (not a site photo, not the signature). Voice notes
+ * and videos add to the record but never stand in for a required photo or paper.
+ */
 const isDocument = (file: EvidenceFile) =>
-  file.contentType === 'application/pdf' || (file.category !== 'site_photo' && !isSignature(file));
+  !isMediaType(file.contentType) &&
+  (file.contentType === 'application/pdf' ||
+    (file.category !== 'site_photo' && !isSignature(file)));
 
 type Check = (
   task: EvidenceTask,

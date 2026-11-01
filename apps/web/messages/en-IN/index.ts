@@ -4,6 +4,7 @@ import businessReports from './business-reports.json';
 import commandCenter from './command-center.json';
 import common from './common.json';
 import contractors from './contractors.json';
+import customerLanguage from './customer-language.json';
 import customers from './customers.json';
 import discom from './discom.json';
 import documents from './documents.json';
@@ -40,6 +41,7 @@ const messages = {
   ...commandCenter,
   ...contractors,
   ...customers,
+  ...customerLanguage,
   ...documents,
   ...inventory,
   ...finance,

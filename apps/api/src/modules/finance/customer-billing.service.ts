@@ -39,7 +39,7 @@ export class CustomerBillingService {
       .where(inArray(customerInvoices.projectId, ids))
       .orderBy(desc(customerInvoices.createdAt));
     const receipts = await this.db
-      .select({ payment: payments, label: paymentMilestones.label })
+      .select({ payment: payments, label: paymentMilestones.label, key: paymentMilestones.key })
       .from(payments)
       .leftJoin(paymentMilestones, eq(paymentMilestones.id, payments.milestoneId))
       .where(and(inArray(payments.projectId, ids), isNotNull(payments.receiptNumber)))
@@ -71,12 +71,13 @@ export class CustomerBillingService {
           })),
         receipts: receipts
           .filter((row) => row.payment.projectId === project.id)
-          .map(({ payment, label }) => ({
+          .map(({ payment, label, key }) => ({
             id: payment.id,
             number: payment.receiptNumber ?? '',
             receivedOn: payment.receivedOn,
             amountPaise: payment.amountPaise,
             milestoneLabel: label,
+            milestoneKey: key,
             reversed: undone.has(payment.id),
           })),
         refunds: refunds

@@ -9,6 +9,11 @@ import { CustomerDocumentRequestsService } from './customer-document-requests.se
 import { CustomerDocumentsService } from './customer-documents.service';
 import { CustomerFamilyController } from './customer-family.controller';
 import { CustomerFamilyService } from './customer-family.service';
+import {
+  CustomerAppLanguageController,
+  CustomerLanguageController,
+} from './customer-language.controller';
+import { CustomerLanguageService } from './customer-language.service';
 import { CustomerNotificationsController } from './customer-notifications.controller';
 import { CustomerPortalService } from './customer-portal.service';
 import { CustomerRequestPhotosService } from './customer-request-photos.service';
@@ -27,6 +32,8 @@ import { StageRatingsService } from './stage-ratings.service';
     CustomerStageRatingsController,
     StageRatingsController,
     CustomerFamilyController,
+    CustomerAppLanguageController,
+    CustomerLanguageController,
   ],
   providers: [
     CustomerAuthService,
@@ -36,6 +43,7 @@ import { StageRatingsService } from './stage-ratings.service';
     CustomerDocumentRequestsService,
     StageRatingsService,
     CustomerFamilyService,
+    CustomerLanguageService,
   ],
   exports: [CustomerPortalService, CustomerDocumentsService, CustomerAuthService],
 })

@@ -74,7 +74,10 @@ export class CustomerDocumentsService {
         .filter(
           (row) =>
             CUSTOMER_FACING.has(row.category) ||
-            (row.category === 'site_photo' && row.visibleTask === true),
+            // Site photos on updates the customer sees; site videos stay with the team.
+            (row.category === 'site_photo' &&
+              row.visibleTask === true &&
+              row.contentType.startsWith('image/')),
         )
         .map((row) => ({
           id: row.id,

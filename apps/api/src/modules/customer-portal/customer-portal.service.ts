@@ -11,6 +11,7 @@ import {
   quotations,
   serviceRequests,
 } from '@oneohm/database';
+import { customerLanguage } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, notInArray } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
@@ -24,6 +25,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { customerReferrals } from '../referrals/customer-referrals.read';
 import { resolveReferralCode } from '../referrals/referral-codes';
 import { suggestRatingPoints } from '../workforce/points';
+import { viewerOf } from './customer-family';
 import { customerProjects } from './customer-home';
 
 /** What a signed-in customer can see and do; every query is scoped to that customer. */
@@ -34,20 +36,25 @@ export class CustomerPortalService {
     private readonly catalog: CatalogService,
   ) {}
 
-  async home(customerId: string): Promise<CustomerHome> {
+  async home(customerId: string, contactId: string | null = null): Promise<CustomerHome> {
     const [customer] = await this.db
       .select({
         id: customers.id,
         name: customers.name,
         phone: customers.phoneE164,
         email: customers.email,
+        language: customers.preferredLanguage,
       })
       .from(customers)
       .where(eq(customers.id, customerId));
     if (!customer) throw notFound('Your account');
     const company = await this.catalog.company();
     return {
-      customer,
+      customer: {
+        ...customer,
+        language: customerLanguage(customer.language),
+        viewer: await viewerOf(this.db, contactId),
+      },
       projects: await customerProjects(this.db, customerId),
       company: { name: company.brandName, phones: company.phones, email: company.email },
     };

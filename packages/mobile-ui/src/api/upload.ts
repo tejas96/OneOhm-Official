@@ -15,6 +15,8 @@ export interface UploadRequest {
   readonly file: UploadableFile;
   readonly fields: Readonly<Record<string, string | undefined>>;
   readonly onProgress?: (fraction: number) => void;
+  /** How long the whole upload may take; a video on a weak signal needs longer. */
+  readonly timeoutMs?: number | undefined;
 }
 
 const UPLOAD_TIMEOUT_MS = 120_000;
@@ -24,7 +26,14 @@ const UPLOAD_TIMEOUT_MS = 120_000;
  * XMLHttpRequest, which React Native and browsers both provide). Resolves with the
  * JSON body of a 2xx answer; anything else rejects with an `ApiError`.
  */
-export function uploadFile<T>({ url, token, file, fields, onProgress }: UploadRequest): Promise<T> {
+export function uploadFile<T>({
+  url,
+  token,
+  file,
+  fields,
+  onProgress,
+  timeoutMs = UPLOAD_TIMEOUT_MS,
+}: UploadRequest): Promise<T> {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) if (value) form.append(key, value);
   if (file.file) form.append('file', file.file, file.name);
@@ -33,7 +42,7 @@ export function uploadFile<T>({ url, token, file, fields, onProgress }: UploadRe
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('POST', url);
-    request.timeout = UPLOAD_TIMEOUT_MS;
+    request.timeout = timeoutMs;
     request.setRequestHeader('accept', 'application/json');
     if (token) request.setRequestHeader('authorization', `Bearer ${token}`);
     request.upload.onprogress = (event) => {

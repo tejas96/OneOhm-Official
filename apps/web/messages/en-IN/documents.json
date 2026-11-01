@@ -35,7 +35,8 @@
       "warranty": "Warranty and manuals",
       "statutory_report": "Statutory report",
       "other": "Other",
-      "customer_signature": "Customer signature"
+      "customer_signature": "Customer signature",
+      "voice_note": "Voice note"
     },
     "evidence": {
       "title": "Photos and files",
@@ -46,6 +47,12 @@
       "hint": "Photos upload as soon as you pick them. JPEG, PNG, WebP, HEIC or PDF, up to 25 MB each.",
       "files": "{count, plural, one {# file attached} other {# files attached}}",
       "removeFailed": "Could not remove the file"
+    },
+    "media": {
+      "voiceNote": "Voice note",
+      "play": "Play {name}",
+      "pause": "Pause {name}",
+      "openVideo": "Play {name} in a new tab"
     },
     "company": {
       "title": "Logo, signature and stamp",
@@ -81,11 +88,14 @@
         "all": "All",
         "image": "Images",
         "pdf": "PDFs",
+        "media": "Voice and video",
         "other": "Others"
       },
       "kindLabels": {
         "image": "Photo",
         "pdf": "PDF",
+        "audio": "Voice note",
+        "video": "Video",
         "other": "File"
       },
       "loading": "Loading documents",
@@ -138,6 +148,7 @@
         "replacedNote": "This file replaced an earlier one. The earlier file is kept in the audit trail.",
         "pdfLoading": "Loading the PDF",
         "noInline": "This file cannot be shown here. Open it full size or download it.",
+        "voiceNote": "Voice note",
         "confirm": {
           "body": "Removing takes the document out of this list and it can no longer be opened here. The record of who added and removed it stays in the audit trail.",
           "keep": "Keep it",

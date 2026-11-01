@@ -9,7 +9,7 @@ import { printDocument } from '@/lib/api/print';
 import { documentUrl } from '@/lib/api/upload';
 import { fileSize } from '../document-row';
 import type { DocumentRights } from '../use-document-rights';
-import { folderOf, titleOf } from './document-kinds';
+import { folderOf, kindOf, titleOf } from './document-kinds';
 import { ACCEPT } from './file-drop-zone';
 import { PreviewDetails } from './preview-details';
 import { PreviewMedia } from './preview-media';
@@ -96,7 +96,7 @@ export function PreviewSheet({
           </Button>
         </>
       )}
-      {rights.print && (
+      {rights.print && kindOf(shown.contentType) !== 'media' && (
         <Button
           variant="secondary"
           leadingIcon={<Printer aria-hidden />}

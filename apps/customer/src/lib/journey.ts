@@ -1,5 +1,6 @@
 import type { CustomerProject } from '@oneohm/api-contracts';
 import { MILESTONE } from '@/copy/home';
+import { lookup } from '@/i18n/copy';
 
 type Stage = CustomerProject['stages'][number];
 type Milestone = CustomerProject['payments']['milestones'][number];
@@ -26,7 +27,7 @@ export function asksForFeedback(project: CustomerProject): boolean {
 
 /** A milestone in the customer's words, falling back to OneOhm's title. */
 export function milestoneLabel(step: { readonly key: string; readonly title: string }): string {
-  return MILESTONE[step.key] ?? step.title;
+  return lookup(MILESTONE, step.key) ?? step.title;
 }
 
 /** Whole percent of the project price received (0–100). */

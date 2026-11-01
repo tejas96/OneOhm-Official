@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { calendarDate, createdAt, instant, money, primaryId, updatedAt } from './columns';
 import { properties } from './crm.schema';
+import { serviceRequests } from './customer-portal.schema';
 import { payables } from './finance.schema';
 import { users } from './identity.schema';
 import { projects, projectTasks } from './projects.schema';
@@ -33,6 +34,10 @@ export const siteVisits = pgTable(
     taskId: uuid('task_id').references(() => projectTasks.id, { onDelete: 'set null' }),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),
+    /** A service visit's request (PRD 5.5); a visit is for a task or a request. */
+    serviceRequestId: uuid('service_request_id').references(() => serviceRequests.id, {
+      onDelete: 'set null',
+    }),
     kind: text('kind', { enum: ['survey', 'installation', 'inspection', 'service'] }).notNull(),
     /** India date of the check-in: the day whose travel this visit is part of. */
     workDate: calendarDate('work_date').notNull(),
@@ -57,6 +62,7 @@ export const siteVisits = pgTable(
     index('site_visits_user_date_idx').on(table.userId, table.workDate),
     index('site_visits_task_idx').on(table.taskId),
     index('site_visits_project_idx').on(table.projectId),
+    index('site_visits_service_request_idx').on(table.serviceRequestId),
     // One open visit per person: check out of one site before checking in at the next.
     uniqueIndex('site_visits_open_unique').on(table.userId).where(sql`${table.checkOutAt} is null`),
   ],

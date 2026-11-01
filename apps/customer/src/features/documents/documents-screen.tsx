@@ -15,6 +15,7 @@ import { COMMON } from '@/copy/common';
 import { DOCUMENTS } from '@/copy/money';
 import { useHome } from '@/features/home/use-home';
 import { useBilling } from '@/features/payments/use-billing';
+import { lookup } from '@/i18n/copy';
 import { longDate, momentDate } from '@/lib/dates';
 import { FileRow } from './file-row';
 import { RequestedSection, requestsKey } from './requested-section';
@@ -112,7 +113,7 @@ export function DocumentsScreen() {
             <FileRow
               key={`${report.projectId}-${report.key}`}
               first={index === 0}
-              title={report.name}
+              title={DOCUMENTS.report(report.key, report.name)}
               meta={many ? report.projectCode : 'PDF'}
               file={{
                 path: `/v1/customer/projects/${report.projectId}/reports/${report.key}/pdf`,
@@ -132,7 +133,7 @@ export function DocumentsScreen() {
               first={index === 0}
               title={doc.name}
               meta={[
-                DOCUMENTS.category[doc.category] ?? DOCUMENTS.category.other,
+                lookup(DOCUMENTS.category, doc.category) ?? DOCUMENTS.category.other,
                 momentDate(doc.createdAt),
                 DOCUMENTS.size(Math.round(doc.sizeBytes / 1024)),
               ].join(' · ')}

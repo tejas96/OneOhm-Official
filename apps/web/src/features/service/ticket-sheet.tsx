@@ -8,6 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { formatPhone } from '@/lib/format/contact';
 import { SlaCell } from './sla-pill';
+import { TicketFieldWork } from './ticket-field-work';
 import { TicketWork } from './ticket-work';
 import { STATUS_TONE } from './tickets-table';
 import { useAgo } from './use-ago';
@@ -205,6 +206,7 @@ export function TicketSheet({
               {t('resolution', { note: ticket.resolutionNote })}
             </p>
           )}
+          <TicketFieldWork requestId={ticket.id} />
           <Rating ticket={ticket} />
           <TicketWork key={ticket.id} ticket={ticket} />
         </div>

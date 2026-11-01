@@ -77,6 +77,13 @@ const environmentSchema = z
         path: ['RAZORPAY_MODE'],
         message: 'The sandbox is for testing only.',
       });
+    // Test keys on the real server would take no real money: a silent loss.
+    if (env.RAZORPAY_MODE === 'live' && env.RAZORPAY_KEY_ID?.startsWith('rzp_test_'))
+      context.addIssue({
+        code: 'custom',
+        path: ['RAZORPAY_KEY_ID'],
+        message: 'Use live Razorpay keys (rzp_live_) in production.',
+      });
     if (env.OTP_DEVELOPMENT_CODE)
       context.addIssue({
         code: 'custom',

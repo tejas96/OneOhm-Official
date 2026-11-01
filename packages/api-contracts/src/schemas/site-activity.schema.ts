@@ -30,7 +30,10 @@ export const siteVisitSchema = z.object({
   user: userRef,
   kind: siteVisitKindSchema,
   taskId: idSchema.nullable(),
+  /** What the visit was for: the task's title, or the service request's category. */
   taskTitle: z.string().nullable(),
+  /** A service visit's request (PRD 5.5); null on task visits. */
+  serviceRequestId: idSchema.nullable().optional(),
   projectId: idSchema.nullable(),
   projectCode: z.string().nullable(),
   siteLabel: z.string().nullable(),

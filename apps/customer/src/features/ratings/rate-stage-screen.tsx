@@ -10,6 +10,7 @@ import { StarRow } from '@/components/star-row';
 import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
 import { STAGE_RATING } from '@/copy/ratings';
+import { lookup } from '@/i18n/copy';
 import { STAGE_RATINGS_KEY, useStageRatings } from './use-stage-ratings';
 
 /** Stars for one finished stage, a comment, and optional stars per person (PRD 5.7). */
@@ -45,7 +46,7 @@ export function RateStageScreen() {
       router.back();
     },
   });
-  const stage = card ? (STAGE_RATING.stage[card.stage] ?? card.stage) : '';
+  const stage = card ? (lookup(STAGE_RATING.stage, card.stage) ?? card.stage) : '';
   return (
     <Screen
       footer={

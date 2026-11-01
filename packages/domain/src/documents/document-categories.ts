@@ -23,12 +23,14 @@ export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 
 /**
  * Files that are a task's evidence rather than a project paper: the customer's
- * sign-off drawn on the phone (PRD 3.17). Kept apart from the library's folders, which
- * file anything outside `DOCUMENT_CATEGORIES` under Other.
+ * sign-off drawn on the phone (PRD 3.17) and voice notes recorded at the site (PRD 4.2).
+ * Kept apart from the library's folders, which file anything outside
+ * `DOCUMENT_CATEGORIES` under Other; neither is shown in the customer app.
  */
-export const TASK_EVIDENCE_CATEGORIES = ['customer_signature'] as const;
+export const TASK_EVIDENCE_CATEGORIES = ['customer_signature', 'voice_note'] as const;
 export type TaskEvidenceCategory = (typeof TASK_EVIDENCE_CATEGORIES)[number];
 export const SIGNATURE_CATEGORY: TaskEvidenceCategory = 'customer_signature';
+export const VOICE_NOTE_CATEGORY: TaskEvidenceCategory = 'voice_note';
 
 /** Images printed on every quotation and report (Settings → Company). */
 export const COMPANY_ASSET_KINDS = ['logo', 'signature', 'stamp'] as const;

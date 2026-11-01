@@ -20,6 +20,10 @@ const schema = z.object({
   /** Phone alerts go through Expo's push service (Firebase for Android, Apple for iOS). */
   PUSH_DELIVERY: z.enum(['log', 'live']).default('log'),
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  /** SMS for customers not on WhatsApp; "log" never texts anyone. */
+  SMS_DELIVERY: z.enum(['log', 'msg91']).default('log'),
+  MSG91_AUTH_KEY: z.string().optional(),
+  MSG91_SMS_TEMPLATE_ID: z.string().optional(),
 });
 
 export type WorkerConfig = z.infer<typeof schema>;
@@ -41,6 +45,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     throw new Error(
       'WHATSAPP_DELIVERY=live needs WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID.',
     );
+  }
+  if (
+    config.SMS_DELIVERY === 'msg91' &&
+    (!config.MSG91_AUTH_KEY || !config.MSG91_SMS_TEMPLATE_ID)
+  ) {
+    throw new Error('SMS_DELIVERY=msg91 needs MSG91_AUTH_KEY and MSG91_SMS_TEMPLATE_ID.');
   }
   return config;
 }

@@ -14,6 +14,8 @@ export interface StoredObject {
   readonly body: Readable;
   readonly contentType: string | undefined;
   readonly length: number | undefined;
+  /** "bytes 0-1023/52000" when only part of the file was asked for and sent. */
+  readonly contentRange?: string | undefined;
 }
 
 /**
@@ -66,12 +68,24 @@ export class ObjectStorageService implements OnModuleInit {
     );
   }
 
-  async get(key: string): Promise<StoredObject> {
-    const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+  /**
+   * The stored file, or one byte range of it ("bytes=0-1023") so a video can seek. A
+   * range past the end is ignored and the whole file is sent, as HTTP allows.
+   */
+  async get(key: string, range?: string): Promise<StoredObject> {
+    const send = (part?: string) =>
+      this.client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: key, ...(part ? { Range: part } : {}) }),
+      );
+    const result = await send(range).catch((error: unknown) => {
+      if (range && (error as { name?: string }).name === 'InvalidRange') return send();
+      throw error;
+    });
     return {
       body: result.Body as Readable,
       contentType: result.ContentType,
       length: result.ContentLength,
+      contentRange: range ? result.ContentRange : undefined,
     };
   }
 

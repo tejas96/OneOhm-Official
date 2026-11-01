@@ -46,9 +46,12 @@ export class ErrorFilter implements ExceptionFilter {
     }
     if (exception instanceof HttpException) {
       if (exception.getStatus() === 413) {
-        response
-          .status(413)
-          .json({ message: 'This file is larger than 25 MB.', code: 'too_large' });
+        // The upload route stopped reading at its cap (videos 60 MB, others 25 MB).
+        response.status(413).json({
+          message:
+            'This file is too large. Photos and papers: 25 MB, voice notes: 10 MB, videos: 60 MB.',
+          code: 'too_large',
+        });
         return;
       }
       response.status(exception.getStatus()).json({ message: exception.message, code: 'http' });

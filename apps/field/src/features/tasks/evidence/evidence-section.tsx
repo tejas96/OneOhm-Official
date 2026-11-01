@@ -1,15 +1,13 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
-import { Button, Card, Text, useTheme } from '@oneohm/mobile-ui';
-import { Camera, FilePlus, Images } from 'lucide-react-native';
+import { Card, Text, useTheme } from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { TASK } from '@/copy/tasks';
 import { UPLOADS } from '@/copy/uploads';
 import { useTaskSite } from '@/features/site/use-task-site';
+import { EvidenceActions } from './evidence-actions';
 import { isSignatureFile, splitQueued } from './evidence-rules';
 import { AttachmentTile, PendingTile } from './evidence-tiles';
-import { pickDocuments } from './pick-documents';
-import { type PhotoSource, pickPhotos } from './pick-photos';
 import { RequirementRow, type RequirementState } from './requirement-row';
 import type { Evidence } from './use-evidence';
 
@@ -19,7 +17,7 @@ function stateOf(missing: boolean, waiting: boolean): RequirementState {
 }
 
 /**
- * Site photos and documents for the task: take, choose or attach them, watch them
+ * Site photos, videos, voice notes and documents for the task: add them, watch them
  * upload (or wait for signal), retry a refused one, remove one while the task is open.
  */
 export function EvidenceSection({
@@ -32,29 +30,17 @@ export function EvidenceSection({
   const theme = useTheme();
   const [notice, setNotice] = useState<string | null>(null);
   // Photos carry their location only with consent, in working hours (PRD 4.2, 4.3).
-  const locate = useTaskSite(task.id).data?.tracking.state === 'on';
+  const site = useTaskSite(task.id).data;
+  const locate = site?.tracking.state === 'on';
+  // Site work can always add voice notes and videos, required or not.
+  const onSite = Boolean(site?.kind);
   const open = task.status !== 'completed';
   const wantsPhoto = task.evidence.includes('photo');
   const wantsDocument = task.evidence.includes('document');
   const files = task.attachments.filter((file) => !isSignatureFile(file));
   const queued = splitQueued(evidence.pending).files;
-  if (!wantsPhoto && !wantsDocument && files.length === 0 && queued.length === 0) return null;
-
-  const choose = async (source: PhotoSource) => {
-    setNotice(null);
-    const picked = await pickPhotos(source, locate);
-    if (picked === 'denied') {
-      setNotice(source === 'camera' ? TASK.evidence.cameraDenied : TASK.evidence.libraryDenied);
-      return;
-    }
-    await evidence.addPhotos(picked);
-  };
-  const attach = async () => {
-    setNotice(null);
-    const picked = await pickDocuments();
-    if (picked.tooLarge.length > 0) setNotice(TASK.evidence.tooLarge(picked.tooLarge.join(', ')));
-    await evidence.addDocuments(picked.files);
-  };
+  const empty = files.length === 0 && queued.length === 0;
+  if (!wantsPhoto && !wantsDocument && !onSite && empty) return null;
 
   const waitingPhoto = queued.some((item) => item.kind === 'photo');
   const waitingDocument = queued.some((item) => item.kind === 'document');
@@ -118,35 +104,14 @@ export function EvidenceSection({
         </Text>
       ) : null}
       {open ? (
-        <View style={styles.actions}>
-          {wantsPhoto || !wantsDocument ? (
-            <View style={styles.row}>
-              <Button
-                label={TASK.evidence.takePhoto}
-                variant="secondary"
-                icon={<Camera size={16} color={theme.colors.textPrimary} />}
-                onPress={() => void choose('camera')}
-                style={styles.flex}
-              />
-              <Button
-                label={TASK.evidence.choose}
-                variant="secondary"
-                icon={<Images size={16} color={theme.colors.textPrimary} />}
-                onPress={() => void choose('library')}
-                style={styles.flex}
-              />
-            </View>
-          ) : null}
-          {wantsDocument ? (
-            <Button
-              label={TASK.evidence.addDocument}
-              variant="secondary"
-              icon={<FilePlus size={16} color={theme.colors.textPrimary} />}
-              onPress={() => void attach()}
-              fullWidth
-            />
-          ) : null}
-        </View>
+        <EvidenceActions
+          evidence={evidence}
+          wantsPhoto={wantsPhoto}
+          wantsDocument={wantsDocument}
+          onSite={onSite}
+          locate={locate}
+          onNotice={setNotice}
+        />
       ) : null}
       {notice ? (
         <Text variant="bodySm" color={theme.status.overdue.fg}>
@@ -161,7 +126,4 @@ const styles = StyleSheet.create({
   card: { gap: 14 },
   heading: { gap: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  actions: { gap: 10 },
-  row: { flexDirection: 'row', gap: 10 },
-  flex: { flex: 1 },
 });

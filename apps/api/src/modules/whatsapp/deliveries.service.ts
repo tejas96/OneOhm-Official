@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Delivery } from '@oneohm/api-contracts';
-import { outbox } from '@oneohm/database';
+import { customerNotice, fallBackToSms, GENERIC_WORDS, outbox } from '@oneohm/database';
+import { isNotOnWhatsApp } from '@oneohm/domain';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -76,6 +77,14 @@ export class DeliveriesService {
             : {}),
         })
         .where(eq(outbox.id, row.id));
+      // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
+      if (update.status === 'failed' && isNotOnWhatsApp(update.errorCode)) {
+        await fallBackToSms(
+          this.db,
+          row.id,
+          (template, payload) => customerNotice(template, payload, 'sms') ?? GENERIC_WORDS,
+        );
+      }
       applied += 1;
     }
     return applied;

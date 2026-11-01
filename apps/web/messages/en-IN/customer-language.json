@@ -1,0 +1,8 @@
+{
+  "customerLanguage": {
+    "label": "Language",
+    "about": "The customer app and its updates use this language. The customer can change it in the app. WhatsApp messages stay in English until Meta approves Marathi and Hindi templates.",
+    "saved": "Language saved",
+    "failed": "Could not save the language"
+  }
+}

@@ -21,6 +21,15 @@ const EXTENSIONS: Readonly<Record<string, string>> = {
   'image/webp': 'webp',
   'image/heic': 'heic',
   'application/pdf': 'pdf',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/aac': 'aac',
+  'audio/webm': 'weba',
+  'audio/ogg': 'ogg',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
 };
 
 const extensionOf = (type: string) => EXTENSIONS[type] ?? 'bin';

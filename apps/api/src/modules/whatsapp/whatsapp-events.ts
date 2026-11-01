@@ -28,6 +28,8 @@ export interface DeliveryUpdate {
   readonly status: 'sent' | 'delivered' | 'read' | 'failed';
   readonly at: Date;
   readonly error: string | null;
+  /** Meta's error code on a failed receipt (131026: not on WhatsApp). */
+  readonly errorCode: number | null;
 }
 
 interface RawMessage {
@@ -101,6 +103,7 @@ function readStatus(status: RawStatus): DeliveryUpdate | null {
     status: status.status as DeliveryUpdate['status'],
     at: when(status.timestamp),
     error: error ? `${error.code ?? ''} ${error.title ?? error.message ?? ''}`.trim() : null,
+    errorCode: error?.code ?? null,
   };
 }
 

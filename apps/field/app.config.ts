@@ -62,8 +62,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        cameraPermission: 'OneOhm uses the camera to take site photos for your tasks.',
-        photosPermission: 'OneOhm uses your photos to attach site photos to your tasks.',
+        cameraPermission: 'OneOhm uses the camera to take site photos and videos for your work.',
+        photosPermission: 'OneOhm uses your photos to attach site photos and videos to your work.',
+        microphonePermission: 'OneOhm records sound with the site videos you take.',
+      },
+    ],
+    [
+      'expo-audio',
+      {
+        microphonePermission:
+          'OneOhm uses the microphone to record voice notes about your site work.',
       },
     ],
     [

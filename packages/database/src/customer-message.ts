@@ -1,8 +1,9 @@
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
+import { languageOf, localWords } from './customer-message-words';
 import { type Notice, notify } from './notify';
 import { customers } from './schema/crm.schema';
-import { outbox } from './schema/records.schema';
 
 type Payload = Readonly<Record<string, string>>;
 type Words = (payload: Payload) => { readonly title: string; readonly body: string };
@@ -56,13 +57,17 @@ const WORDS: Readonly<Record<string, Words>> = {
   }),
 };
 
-/** The in-app alert for a customer message, or null when the message has none. */
+/**
+ * The in-app alert for a customer message, or null when the message has none. With the
+ * customer's language (mr-IN, hi-IN) the words are Marathi or Hindi; English otherwise.
+ */
 export function customerNotice(
   template: string,
   payload: Payload,
   dedupeKey: string,
+  language?: string,
 ): Notice | null {
-  const words = WORDS[template];
+  const words = localWords(language, template) ?? WORDS[template];
   if (!words) return null;
   return { kind: template, ...words(payload), dedupeKey: `notice:${dedupeKey}` };
 }
@@ -79,23 +84,28 @@ export async function queueCustomerMessage(
   payload: Record<string, string>,
   dedupeKey: string,
 ): Promise<boolean> {
-  const inserted = await db
-    .insert(outbox)
-    .values({ channel: 'whatsapp', recipient: recipientE164, template, payload, dedupeKey })
-    .onConflictDoNothing()
-    .returning({ id: outbox.id });
   const notice = customerNotice(template, payload, dedupeKey);
-  if (!notice) return inserted.length > 0;
+  // WhatsApp first; SMS or in person when the customer is not on WhatsApp.
+  const queued = await routeCustomerMessage(db, {
+    recipient: recipientE164,
+    template,
+    // The customer's language rides along for the worker (WhatsApp stays in its approved one).
+    payload: { ...payload, language: await languageOf(db, recipientE164) },
+    dedupeKey,
+    words: notice ?? GENERIC_WORDS,
+  });
+  if (!notice) return queued;
   const owners = await db
-    .select({ id: customers.id })
+    .select({ id: customers.id, language: customers.preferredLanguage })
     .from(customers)
     .where(eq(customers.phoneE164, recipientE164));
   for (const owner of owners) {
+    const said = customerNotice(template, payload, dedupeKey, owner.language) ?? notice;
     await notify(
       db,
       { customerId: owner.id },
-      { ...notice, dedupeKey: `${notice.dedupeKey}:${owner.id}` },
+      { ...said, dedupeKey: `${notice.dedupeKey}:${owner.id}` },
     );
   }
-  return inserted.length > 0;
+  return queued;
 }

@@ -64,6 +64,8 @@ export async function tellCustomerAbout(
       project: project.code,
       milestone: template?.customerTitle ?? task.title,
       capacity: formatKwp(project.capacityWp),
+      // The step's key, so the in-app alert can name it in the customer's language.
+      step: task.templateKey,
     },
     `task_${event}:${task.id}`,
   );

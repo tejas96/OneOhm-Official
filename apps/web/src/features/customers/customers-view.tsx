@@ -4,6 +4,8 @@ import type { Customer } from '@oneohm/api-contracts';
 import {
   Avatar,
   Badge,
+  Card,
+  CardHeader,
   EmptyState,
   Input,
   PageHeader,
@@ -21,6 +23,8 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { HandoverList } from './contact/handover-list';
+import { useHandovers } from './contact/use-contact';
 
 /** Every customer once, however many sites and projects they have (PRD 3.2). */
 export function CustomersView() {
@@ -112,6 +116,7 @@ export function CustomersView() {
           />
         }
       />
+      <ShareInPerson />
       {query.isPending ? (
         <ListSkeleton label={t('loading')} />
       ) : query.isError ? (
@@ -131,5 +136,20 @@ export function CustomersView() {
         />
       )}
     </motion.div>
+  );
+}
+
+/** News for customers on neither WhatsApp nor SMS, waiting to be shared in person. */
+function ShareInPerson() {
+  const t = useTranslations('customers.handovers');
+  const handovers = useHandovers();
+  if (!handovers.data || handovers.data.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader title={t('title', { count: handovers.data.length })} description={t('intro')} />
+      <div className="px-5 pb-3">
+        <HandoverList items={handovers.data} showCustomer />
+      </div>
+    </Card>
   );
 }

@@ -51,7 +51,7 @@ export const TASK = {
   noCaptures: 'Nothing to record for this task. Add a note if it helps the next person.',
   note: 'Note',
   notePlaceholder: 'What happened, what is next',
-  evidenceTitle: 'Photos and documents',
+  evidenceTitle: 'Photos, videos and files',
   evidenceCount: (count: number) => `${count} ${count === 1 ? 'file' : 'files'}`,
   evidenceKinds: {
     photo: 'Site photos',

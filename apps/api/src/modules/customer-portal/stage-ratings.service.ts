@@ -1,6 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerStageCard, NewStageRating, StageRating } from '@oneohm/api-contracts';
-import { customers, notify, projects, stageRatingPeople, stageRatings } from '@oneohm/database';
+import {
+  customers,
+  localAlertTitle,
+  notify,
+  projects,
+  stageRatingPeople,
+  stageRatings,
+} from '@oneohm/database';
 import { checkRating, LOW_RATING } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -96,8 +103,13 @@ export class StageRatingsService {
   async reply(actor: Actor, id: string, reply: string): Promise<StageRating> {
     assertCan(actor, 'projects.manage', 'customers.manage');
     const [rating] = await this.db
-      .select({ customerId: stageRatings.customerId, stage: stageRatings.stage })
+      .select({
+        customerId: stageRatings.customerId,
+        stage: stageRatings.stage,
+        language: customers.preferredLanguage,
+      })
       .from(stageRatings)
+      .innerJoin(customers, eq(customers.id, stageRatings.customerId))
       .where(eq(stageRatings.id, id));
     if (!rating) throw notFound('That rating');
     await this.db.transaction(async (tx) => {
@@ -110,7 +122,9 @@ export class StageRatingsService {
         { customerId: rating.customerId },
         {
           kind: 'stage_rating_reply',
-          title: 'OneOhm replied to your feedback',
+          title:
+            localAlertTitle('stage_rating_reply', rating.language) ??
+            'OneOhm replied to your feedback',
           body: reply.trim().slice(0, 200),
           dedupeKey: `stage_rating_reply:${id}:${Date.now()}`,
         },

@@ -38,7 +38,8 @@
     "sections": {
       "properties": "Sites",
       "projects": "Projects",
-      "quotations": "Quotations"
+      "quotations": "Quotations",
+      "contact": "How we reach them"
     },
     "property": {
       "none": "No sites yet.",
@@ -264,6 +265,32 @@
         "lost": "Lost"
       },
       "becameCustomer": "Now a customer"
+    },
+    "contact": {
+      "label": "How we reach them",
+      "channel": {
+        "whatsapp": "WhatsApp",
+        "sms": "SMS",
+        "in_person": "In person"
+      },
+      "about": {
+        "whatsapp": "Updates, papers and payment links go on WhatsApp.",
+        "sms": "Updates go by SMS. Papers are printed or shared in person.",
+        "in_person": "No messages are sent. The team shares updates and papers in person."
+      },
+      "unreachable": "WhatsApp said this number is not on WhatsApp ({date}), so messages go by SMS.",
+      "tryAgain": "Try WhatsApp again",
+      "toShare": "To share in person",
+      "saved": "Saved",
+      "failed": "Could not save"
+    },
+    "handovers": {
+      "title": "{count, plural, one {# update} other {# updates}} to share in person",
+      "intro": "These customers are on neither WhatsApp nor SMS. Tell them in person or hand over the printed paper, then tick it off.",
+      "markDone": "Shared",
+      "done": "Marked as shared",
+      "failed": "Could not mark it",
+      "print": "Print paper"
     }
   }
 }

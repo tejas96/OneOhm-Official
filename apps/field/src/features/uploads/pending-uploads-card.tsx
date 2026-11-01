@@ -1,9 +1,9 @@
 import { Card, Text, useTheme } from '@oneohm/mobile-ui';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { CloudUpload } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { UPLOADS } from '@/copy/uploads';
-import { onItsWay } from './queue-logic';
+import { onItsWay, screenOf } from './queue-logic';
 import { useUploadQueue } from './upload-queue';
 
 /**
@@ -19,7 +19,7 @@ export function PendingUploadsCard() {
   const tone = refused.length > 0 ? theme.status.atRisk : theme.status.waiting;
   return (
     <Card
-      onPress={() => router.push(`/tasks/${first.taskId}`)}
+      onPress={() => router.push(screenOf(first) as Href)}
       accessibilityLabel={`${UPLOADS.waiting(items.length)}. ${UPLOADS.openTask}`}
       style={styles.card}
     >

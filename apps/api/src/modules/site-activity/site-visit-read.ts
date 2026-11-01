@@ -4,6 +4,8 @@ import {
   projects,
   projectTasks,
   properties,
+  serviceCategories,
+  serviceRequests,
   siteVisits,
   users,
 } from '@oneohm/database';
@@ -44,6 +46,7 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
       visit: siteVisits,
       fullName: users.fullName,
       taskTitle: projectTasks.title,
+      serviceLabel: serviceCategories.label,
       projectCode: projects.code,
       siteLabel: properties.label,
       siteLatitude: properties.latitude,
@@ -52,6 +55,8 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
     .from(siteVisits)
     .innerJoin(users, eq(users.id, siteVisits.userId))
     .leftJoin(projectTasks, eq(projectTasks.id, siteVisits.taskId))
+    .leftJoin(serviceRequests, eq(serviceRequests.id, siteVisits.serviceRequestId))
+    .leftJoin(serviceCategories, eq(serviceCategories.key, serviceRequests.category))
     .leftJoin(projects, eq(projects.id, siteVisits.projectId))
     .leftJoin(properties, eq(properties.id, siteVisits.propertyId))
     .where(where)
@@ -70,7 +75,8 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
         user: { id: row.userId, fullName: entry.fullName },
         kind: row.kind,
         taskId: row.taskId,
-        taskTitle: entry.taskTitle,
+        taskTitle: entry.taskTitle ?? entry.serviceLabel,
+        serviceRequestId: row.serviceRequestId,
         projectId: row.projectId,
         projectCode: entry.projectCode,
         siteLabel: entry.siteLabel,

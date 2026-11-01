@@ -4,7 +4,10 @@ import type { Attachment } from '@oneohm/api-contracts';
 import { cn } from '@oneohm/design-system/web';
 import { FileText, ImageOff, LoaderCircle, RotateCw, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { documentUrl } from '@/lib/api/upload';
+import { VideoFrame } from './gallery/video-frame';
+import { VoiceNoteThumb } from './voice-note-thumb';
 
 /** Browsers show JPEG, PNG and WebP; HEIC and PDF get a labelled tile instead. */
 export const previewable = (contentType: string) =>
@@ -13,7 +16,10 @@ export const previewable = (contentType: string) =>
 const TILE =
   'group relative flex aspect-square overflow-hidden rounded-xl bg-sunken ring-1 ring-hairline';
 
-/** A stored file: photo thumbnail or a file tile, opening the file in a new tab. */
+/**
+ * A stored file: photo thumbnail, a video's first frame, or a file tile, opening the
+ * file in a new tab; a voice note plays right in its tile.
+ */
 export function DocumentThumb({
   file,
   onRemove,
@@ -24,34 +30,47 @@ export function DocumentThumb({
   readonly removing?: boolean;
 }) {
   const t = useTranslations('documents');
+  const [videoFailed, setVideoFailed] = useState(false);
+  const video = file.contentType.startsWith('video/') && !videoFailed;
   return (
     <li className={TILE}>
-      <a
-        href={documentUrl(file.id)}
-        target="_blank"
-        rel="noopener"
-        title={file.name}
-        className="flex size-full items-center justify-center"
-      >
-        {previewable(file.contentType) ? (
-          // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
-          <img
-            src={documentUrl(file.id)}
-            alt={file.name}
-            loading="lazy"
-            className="size-full object-cover transition-transform duration-(--duration-base) group-hover:scale-[1.03]"
-          />
-        ) : (
-          <span className="flex flex-col items-center gap-1.5 px-2 text-center">
-            {file.contentType === 'application/pdf' ? (
-              <FileText aria-hidden className="size-6 text-accent" />
-            ) : (
-              <ImageOff aria-hidden className="size-6 text-ink-faint" />
-            )}
-            <span className="line-clamp-2 type-label break-all text-ink-muted">{file.name}</span>
-          </span>
-        )}
-      </a>
+      {file.contentType.startsWith('audio/') ? (
+        <VoiceNoteThumb id={file.id} name={file.name} />
+      ) : (
+        <a
+          href={documentUrl(file.id)}
+          target="_blank"
+          rel="noopener"
+          title={file.name}
+          aria-label={video ? t('media.openVideo', { name: file.name }) : undefined}
+          className="flex size-full items-center justify-center"
+        >
+          {video ? (
+            <VideoFrame
+              src={documentUrl(file.id)}
+              badge="sm"
+              onFailed={() => setVideoFailed(true)}
+            />
+          ) : previewable(file.contentType) ? (
+            // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
+            <img
+              src={documentUrl(file.id)}
+              alt={file.name}
+              loading="lazy"
+              className="size-full object-cover transition-transform duration-(--duration-base) group-hover:scale-[1.03]"
+            />
+          ) : (
+            <span className="flex flex-col items-center gap-1.5 px-2 text-center">
+              {file.contentType === 'application/pdf' ? (
+                <FileText aria-hidden className="size-6 text-accent" />
+              ) : (
+                <ImageOff aria-hidden className="size-6 text-ink-faint" />
+              )}
+              <span className="line-clamp-2 type-label break-all text-ink-muted">{file.name}</span>
+            </span>
+          )}
+        </a>
+      )}
       {onRemove && (
         <button
           type="button"

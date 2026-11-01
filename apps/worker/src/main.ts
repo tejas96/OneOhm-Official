@@ -3,6 +3,7 @@ import { Client, Connection } from '@temporalio/client';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { createActivities } from './activities';
 import { createPushSender } from './channels/expo-push';
+import { createSmsSender } from './channels/sms';
 import { createWhatsAppSender } from './channels/whatsapp-cloud';
 import { loadConfig } from './config';
 import { OutboxRelay } from './relay/outbox-relay';
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
       db: database.db,
       sender,
       push: createPushSender(config, log),
+      sms: createSmsSender(config, log),
       language: config.WHATSAPP_TEMPLATE_LANGUAGE,
       timeZone: config.BUSINESS_TIMEZONE,
     }),

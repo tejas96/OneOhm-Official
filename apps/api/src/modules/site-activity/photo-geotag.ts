@@ -41,7 +41,8 @@ export async function recordPhotoGeotag(
   },
 ): Promise<void> {
   const { fields } = input;
-  if (!input.contentType.startsWith('image/')) return;
+  // Photos and videos carry where they were taken; papers and voice notes do not.
+  if (!input.contentType.startsWith('image/') && !input.contentType.startsWith('video/')) return;
   const position =
     fields.latitude !== undefined && fields.longitude !== undefined
       ? { latitude: fields.latitude, longitude: fields.longitude, accuracyM: fields.accuracyM }

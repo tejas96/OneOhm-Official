@@ -4,18 +4,26 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/api';
 import { ToastProvider } from '@/components/toast';
+import { useLanguage } from '@/i18n/language';
+import { phoneLanguageReady } from '@/i18n/phone-language';
 import { SessionProvider, useSession } from '@/session/session-provider';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
+  const language = useLanguage();
+  const [languageRead, setLanguageRead] = useState(false);
+  useEffect(() => {
+    void phoneLanguageReady.then(() => setLanguageRead(true));
+  }, []);
+  const ready = (fontsLoaded || fontError !== null) && languageRead;
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
@@ -24,7 +32,8 @@ export default function RootLayout() {
             <SessionProvider>
               <ToastProvider>
                 {/* Text is measured with the real faces only: render once fonts are in. */}
-                {fontsLoaded || fontError !== null ? <RootNavigator /> : null}
+                {/* A new language re-mounts the screens; navigation state is kept. */}
+                {ready ? <RootNavigator key={language} /> : null}
               </ToastProvider>
             </SessionProvider>
           </QueryClientProvider>

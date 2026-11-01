@@ -9,6 +9,7 @@ import { PROFILE } from '@/copy/common';
 import { FAMILY } from '@/copy/family';
 import { CoverCard } from '@/features/help/cover-card';
 import { useChosenProject, useHome } from '@/features/home/use-home';
+import { LanguageCard } from '@/features/language/language-card';
 import { dialDigits } from '@/lib/journey';
 import { useCustomer, useSession } from '@/session/session-provider';
 import { ReferralList } from './refer-screen';
@@ -37,6 +38,8 @@ export function ProfileScreen() {
         />
         {customer.email ? <Row label={PROFILE.email} value={customer.email} /> : null}
       </Card>
+
+      <LanguageCard />
 
       <CoverCard projectId={project?.id ?? null} />
 

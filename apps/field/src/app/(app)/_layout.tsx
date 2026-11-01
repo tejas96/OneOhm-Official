@@ -20,6 +20,7 @@ export default function SignedInLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="tasks/[id]" />
+        <Stack.Screen name="service/[id]" />
         <Stack.Screen name="leads/[id]" />
         <Stack.Screen name="leads/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="leave/new" options={{ presentation: 'modal' }} />

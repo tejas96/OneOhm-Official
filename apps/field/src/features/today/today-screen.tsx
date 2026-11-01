@@ -16,10 +16,13 @@ import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
+import { SERVICE } from '@/copy/service';
 import { TODAY } from '@/copy/tasks';
 import { Bell } from '@/features/alerts/bell';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
+import { ServiceVisitsSection } from '@/features/service/service-visits-section';
+import { useMyServiceVisits } from '@/features/service/use-service-visits';
 import { TaskRow } from '@/features/tasks/task-row';
 import { PendingUploadsCard } from '@/features/uploads/pending-uploads-card';
 import { BUSINESS_TIME_ZONE, businessToday, longToday } from '@/lib/dates';
@@ -37,6 +40,9 @@ export function TodayScreen() {
   const phase = skyPhase(localHours(new Date(), BUSINESS_TIME_ZONE));
   const firstName = user.fullName.split(' ')[0] ?? user.fullName;
   const tasks = query.data ?? [];
+  // Service visits count as work too: no "nothing assigned" while one is waiting.
+  const services = useMyServiceVisits().data?.length ?? 0;
+  const onlyService = tasks.length === 0 && services > 0;
   const groups = groupTasks(tasks, businessToday());
 
   return (
@@ -62,7 +68,9 @@ export function TodayScreen() {
         </View>
         {query.data ? (
           <Text variant="body" tone="secondary">
-            {TODAY.summary(tasks.length, groups.overdue.length)}
+            {onlyService
+              ? SERVICE.summary(services)
+              : TODAY.summary(tasks.length, groups.overdue.length)}
           </Text>
         ) : null}
       </View>
@@ -88,7 +96,8 @@ export function TodayScreen() {
             upcoming={groups.upcoming.length}
           />
           <QuickActions />
-          {tasks.length === 0 ? (
+          <ServiceVisitsSection />
+          {onlyService ? null : tasks.length === 0 ? (
             <EmptyState
               icon={<Sun size={22} color={theme.colors.accent} />}
               title={TODAY.emptyTitle}

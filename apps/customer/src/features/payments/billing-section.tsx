@@ -3,12 +3,20 @@ import { Card, formatInr, LoadingState, Text, useTheme } from '@oneohm/mobile-ui
 import { Undo2 } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { SectionTitle } from '@/components/screen-header';
-import { BILLING } from '@/copy/money';
+import { BILLING, PAYMENTS } from '@/copy/money';
 import { FileRow } from '@/features/documents/file-row';
 import { longDate } from '@/lib/dates';
 import { useBilling } from './use-billing';
 
 type ProjectBilling = CustomerBilling[number];
+
+type Receipt = ProjectBilling['receipts'][number];
+
+/** What a receipt paid for, in the customer's language when it is one of OneOhm's steps. */
+const receiptPurpose = (receipt: Receipt) =>
+  receipt.milestoneLabel === null
+    ? null
+    : PAYMENTS.milestone(receipt.milestoneKey ?? '', receipt.milestoneLabel);
 
 function RefundRow({
   refund,
@@ -70,7 +78,7 @@ function Papers({ billing }: { readonly billing: ProjectBilling }) {
           meta={BILLING.receiptMeta(
             receipt.number,
             longDate(receipt.receivedOn),
-            receipt.reversed ? BILLING.reversed : receipt.milestoneLabel,
+            receipt.reversed ? BILLING.reversed : receiptPurpose(receipt),
           )}
           file={{
             path: `/v1/customer/receipts/${receipt.id}/pdf`,

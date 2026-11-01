@@ -117,6 +117,8 @@ export const customerBillingSchema = z.array(
         receivedOn: calendarDateSchema,
         amountPaise: paiseSchema,
         milestoneLabel: z.string().nullable(),
+        /** The plan key of that milestone, so the app can name it in the customer's language. */
+        milestoneKey: z.string().nullable(),
         reversed: z.boolean(),
       }),
     ),

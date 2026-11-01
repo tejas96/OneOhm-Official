@@ -70,10 +70,16 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       {elsewhere ? (
         <PressableScale
           accessibilityRole="button"
-          onPress={() =>
-            elsewhere.taskId &&
-            router.push({ pathname: '/tasks/[id]', params: { id: elsewhere.taskId } })
-          }
+          onPress={() => {
+            if (elsewhere.serviceRequestId) {
+              router.push({
+                pathname: '/service/[id]',
+                params: { id: elsewhere.serviceRequestId },
+              });
+            } else if (elsewhere.taskId) {
+              router.push({ pathname: '/tasks/[id]', params: { id: elsewhere.taskId } });
+            }
+          }}
         >
           <Text variant="bodySm" tone="accent">
             {SITE.elsewhere(elsewhere.taskTitle ?? '')}
