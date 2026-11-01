@@ -41,6 +41,8 @@ export interface RateCard {
   readonly serviceTaxBp: number;
   readonly contingencyBp: number;
   readonly toleranceBp: number;
+  /** Discounts above this share of the price need approval; unset uses the server default. */
+  readonly discountApprovalBp?: number;
 }
 
 export interface SiteFacts {

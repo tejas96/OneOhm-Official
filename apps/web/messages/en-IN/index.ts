@@ -3,7 +3,9 @@ import common from './common.json';
 import customers from './customers.json';
 import leads from './leads.json';
 import projects from './projects.json';
+import settings from './settings.json';
 import signIn from './sign-in.json';
+import team from './team.json';
 import today from './today.json';
 
 /**
@@ -17,6 +19,8 @@ const messages = {
   ...customers,
   ...leads,
   ...projects,
+  ...settings,
+  ...team,
   ...today,
 };
 export default messages;

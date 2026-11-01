@@ -1,0 +1,285 @@
+{
+  "settings": {
+    "title": "Settings",
+    "description": "How OneOhm works: who can do what, the company details on every document, and the products and rates behind every price.",
+    "tabsLabel": "Settings sections",
+    "tabs": {
+      "roles": "Roles & permissions",
+      "company": "Company",
+      "products": "Products",
+      "rates": "Rate card",
+      "discoms": "DISCOMs & subsidy"
+    },
+    "noAccess": "You do not have permission to change settings.",
+    "save": "Save changes",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "roles": {
+      "loading": "Loading roles",
+      "intro": "Roles are bundles of permissions. Add, rename or change them at any time; people pick up the change on their next action.",
+      "add": "New role",
+      "members": "{count, plural, =0 {No one} one {# person} other {# people}}",
+      "permissions": "{count, plural, one {# permission} other {# permissions}}",
+      "system": "Protected",
+      "archived": "Archived",
+      "showArchived": "Show archived roles",
+      "kinds": {
+        "staff": "Staff",
+        "partner": "I&C partner",
+        "reseller": "Reseller"
+      },
+      "editor": {
+        "createTitle": "New role",
+        "editTitle": "Edit role",
+        "name": "Role name",
+        "description": "What this role does",
+        "kind": "Who it is for",
+        "kindHint": "Staff see company data by permission. Partners and resellers only ever see their own work.",
+        "kindLocked": "The kind is fixed once a role is created.",
+        "permissions": "Permissions",
+        "selected": "{count} of {total} selected",
+        "selectAll": "Select all",
+        "clear": "Clear",
+        "protectedNote": "Super Admin always holds every permission and cannot be changed or archived, so there is always someone who can fix access.",
+        "archive": "Archive role",
+        "archiveHint": "Archived roles cannot be given to anyone new. People who hold it keep it until you change their roles.",
+        "restore": "Restore role",
+        "create": "Create role",
+        "created": "Role {name} created",
+        "updated": "Role {name} saved"
+      }
+    },
+    "areas": {
+      "dashboard": "Business overview",
+      "sales": "Leads, customers and quotations",
+      "delivery": "Projects and tasks",
+      "liaisoning": "Loans, DISCOM and subsidy",
+      "materials": "Inventory, procurement and dispatch",
+      "finance": "Finance",
+      "field": "Contractors and service",
+      "documents": "Documents and reports",
+      "people": "People, leave and attendance",
+      "partners": "Partner and reseller self-service",
+      "admin": "Administration"
+    },
+    "capabilities": {
+      "dashboard": { "view_business": "See the business command centre" },
+      "leads": {
+        "view_all": "See every lead",
+        "view_own": "See own leads",
+        "manage": "Create and update leads"
+      },
+      "customers": {
+        "view": "See customers and properties",
+        "manage": "Edit customers and properties"
+      },
+      "surveys": { "perform": "Carry out site surveys" },
+      "quotations": {
+        "view": "See quotations",
+        "create": "Create and send quotations",
+        "approve_discount": "Approve discounts above the limit"
+      },
+      "projects": {
+        "view_all": "See every project",
+        "create": "Create projects",
+        "manage": "Manage project settings"
+      },
+      "tasks": {
+        "view_assigned": "See own tasks",
+        "assign": "Assign and reassign tasks",
+        "complete": "Complete tasks",
+        "approve": "Approve tasks that need sign-off"
+      },
+      "loans": { "manage": "Manage bank loans" },
+      "discom": { "manage": "Manage DISCOM applications" },
+      "subsidy": { "manage": "Manage subsidy claims" },
+      "inventory": { "view": "See stock", "manage": "Adjust stock" },
+      "procurement": { "manage": "Raise purchase orders" },
+      "dispatch": { "manage": "Dispatch material to sites" },
+      "finance": {
+        "view": "See money in and out",
+        "record_payments": "Record payments",
+        "approve_payments": "Approve outgoing payments"
+      },
+      "contractors": { "manage": "Manage contractors and crews" },
+      "service": { "manage": "Handle service requests" },
+      "documents": { "view": "See documents", "manage": "Upload and verify documents" },
+      "reports": { "generate": "Generate statutory reports" },
+      "people": { "view": "See the team", "manage": "Add and edit people" },
+      "leave": { "request": "Request leave", "approve": "Approve leave" },
+      "attendance": { "mark": "Mark attendance" },
+      "commission": { "view_own": "See own commission" },
+      "work_orders": { "view_own": "See own work orders" },
+      "settings": { "manage": "Change company settings, catalog and rates" },
+      "roles": { "manage": "Manage roles and permissions" },
+      "audit": { "view": "See the audit log" }
+    },
+    "company": {
+      "loading": "Loading the company profile",
+      "intro": "These details appear on quotations, invoices, statutory reports and WhatsApp messages.",
+      "identity": "Company",
+      "legalName": "Legal name",
+      "brandName": "Brand name",
+      "gstin": "GSTIN",
+      "contact": "Contact",
+      "fullAddress": "Full address",
+      "shortAddress": "Short address",
+      "shortAddressHint": "Used where space is tight, like report footers.",
+      "email": "Email",
+      "phones": "Phone numbers",
+      "phonesHint": "One per line. The first is shown on documents.",
+      "signatory": "Authorised signatory",
+      "signatoryHint": "Printed under the signature and stamp on quotations and reports.",
+      "signatoryMissing": "The signatory's name is still blank, so documents will print without it.",
+      "signatoryName": "Name",
+      "signatoryDesignation": "Designation",
+      "signatoryPhone": "Phone",
+      "signatoryEmail": "Email",
+      "documents": "Documents",
+      "quotationValidityDays": "Quotations valid for (days)"
+    },
+    "starter": {
+      "title": "Starter values: review and replace",
+      "rates": "These rates were filled in so pricing works on day one. They are not OneOhm's rates. Check every figure and save to make this OneOhm's own rate card.",
+      "products": "{count, plural, one {# product is} other {# products are}} from the starter catalog, not OneOhm's real price list. Edit them with your real products and prices, or archive them."
+    },
+    "products": {
+      "loading": "Loading products",
+      "intro": "Every product a quotation can use. Each panel is tagged DCR or non-DCR, which decides subsidy eligibility.",
+      "add": "Add product",
+      "all": "All",
+      "showArchived": "Show archived",
+      "emptyTitle": "No products here",
+      "emptyBody": "Add the products OneOhm sells so quotations can use them.",
+      "columns": {
+        "product": "Product",
+        "category": "Category",
+        "rating": "Rating",
+        "price": "Price",
+        "cost": "Cost",
+        "margin": "Margin",
+        "status": "Status"
+      },
+      "active": "Active",
+      "archived": "Archived",
+      "dcr": "DCR",
+      "nonDcr": "Non-DCR",
+      "categories": {
+        "panel": "Panels",
+        "inverter": "Inverters",
+        "battery": "Batteries",
+        "structure": "Structure",
+        "cable": "Cables",
+        "electrical": "Electrical",
+        "installation": "Installation",
+        "transport": "Transport",
+        "liaisoning": "Liaisoning",
+        "other": "Other"
+      },
+      "dialog": {
+        "createTitle": "Add product",
+        "editTitle": "Edit product",
+        "name": "Name",
+        "brand": "Brand",
+        "sku": "SKU",
+        "category": "Category",
+        "unit": "Unit",
+        "wattageWp": "Panel wattage (Wp)",
+        "ratedW": "Rated output (W)",
+        "dcr": "Domestic content (DCR)",
+        "dcrHint": "Only DCR panels qualify for PM Surya Ghar subsidy.",
+        "price": "Selling price (₹, before tax)",
+        "cost": "Cost price (₹, before tax)",
+        "taxRate": "GST (%)",
+        "active": "Available for new quotations",
+        "create": "Add product",
+        "created": "{name} added",
+        "updated": "{name} saved"
+      }
+    },
+    "rates": {
+      "loading": "Loading the rate card",
+      "intro": "The price engine builds every quotation from these rates. A change applies to new quotations only; accepted ones keep their own figures.",
+      "lastSaved": "Last saved {date}",
+      "price": "Price (₹)",
+      "cost": "Cost (₹)",
+      "margin": "Margin",
+      "groups": {
+        "structure": "Mounting structure, per kW",
+        "cables": "Cable runs (default lengths used until the site survey measures them)",
+        "kits": "Kits and labour",
+        "transport": "Transport",
+        "rules": "Margins, tax and approval rules"
+      },
+      "fields": {
+        "rcc_elevated": "RCC roof, elevated",
+        "tin_shed": "Tin shed",
+        "ground_mount": "Ground mount",
+        "dcCable": "DC cable, per metre",
+        "acCable": "AC cable, per metre",
+        "baseMeters": "Base length (m)",
+        "perFloorMeters": "Extra per floor (m)",
+        "earthingKit": "Earthing kit",
+        "protectionKit": "Protection kit (ACDB/DCDB)",
+        "installationPerKw": "Installation labour, per kW",
+        "extraFloorPerKw": "Extra floor charge, per kW",
+        "freeFloors": "Floors included before the extra charge",
+        "liaisoning": "DISCOM liaisoning",
+        "baseKm": "Distance included (km)",
+        "perKm": "Charge per extra km (₹)",
+        "flat": "Flat transport charge (₹)",
+        "goodsTaxBp": "GST on goods (%)",
+        "serviceTaxBp": "GST on services (%)",
+        "contingencyBp": "Contingency on default quantities (%)",
+        "contingencyHint": "Added to cables and labour priced from defaults, to cover what the survey may find.",
+        "toleranceBp": "Survey tolerance (%)",
+        "toleranceHint": "Cost changes within this band after the survey are absorbed; beyond it, a revision needs approval.",
+        "discountApprovalBp": "Discount approval threshold (%)",
+        "discountApprovalHint": "Discounts larger than this share of the price need a manager's approval."
+      }
+    },
+    "discoms": {
+      "loading": "Loading DISCOMs",
+      "title": "DISCOMs",
+      "intro": "Each DISCOM has its own task set and report formats. Expected days drive the waiting alerts on projects.",
+      "add": "Add DISCOM",
+      "columns": {
+        "discom": "DISCOM",
+        "state": "State",
+        "expectedDays": "Expected days",
+        "status": "Status"
+      },
+      "days": "{count, plural, one {# day} other {# days}}",
+      "dialog": {
+        "createTitle": "Add DISCOM",
+        "editTitle": "Edit DISCOM",
+        "code": "Short code",
+        "name": "Full name",
+        "state": "State",
+        "expectedDays": "Expected days for net metering",
+        "active": "Available for new properties",
+        "create": "Add DISCOM",
+        "created": "{name} added",
+        "updated": "{name} saved"
+      }
+    },
+    "subsidy": {
+      "loading": "Loading subsidy rules",
+      "title": "Subsidy rules",
+      "intro": "PM Surya Ghar central financial assistance as the price engine applies it. A new rule with a later start date replaces the old one.",
+      "validFrom": "From {date}",
+      "categories": {
+        "individual": "Homes",
+        "society": "Housing societies",
+        "commercial": "Commercial"
+      },
+      "slab": "{from} to {to}: {rate} per kW",
+      "slabOpen": "Above {from}: {rate} per kW",
+      "slabAll": "{rate} per kW of eligible capacity",
+      "cap": "Capped at {amount}",
+      "perHousehold": "Up to {capacity} per household",
+      "maxEligible": "Eligible capacity at most {capacity}",
+      "none": "No subsidy"
+    }
+  }
+}

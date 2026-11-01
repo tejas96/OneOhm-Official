@@ -17,9 +17,12 @@ const SWATCH_CLASSES = [
   'bg-swatch-5',
 ] as const;
 
+/** Initials from the words that start with a letter or digit ("Sales (test)" → "S"). */
 function initialsOf(name: string): string {
-  // Words only: "Store (test)" gives "ST", not "S(".
-  const parts = name.match(/\p{L}[\p{L}\p{M}'’-]*/gu) ?? [];
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter((part) => /^[\p{L}\p{N}]/u.test(part));
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
   return `${first}${last}`.toUpperCase();

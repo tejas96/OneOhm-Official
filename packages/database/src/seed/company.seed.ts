@@ -49,10 +49,11 @@ export const STARTER_RATE_CARD: RateCard = {
   toleranceBp: 300,
 };
 
+/** The seeded card's name; Settings renames the card when someone saves real rates. */
+export const STARTER_RATE_CARD_NAME = 'Starter rate card (replace with OneOhm rates)';
+
 export async function seedRateCard(db: Database): Promise<void> {
   const existing = await db.select({ id: rateCards.id }).from(rateCards).limit(1);
   if (existing.length > 0) return;
-  await db
-    .insert(rateCards)
-    .values({ name: 'Starter rate card (replace with OneOhm rates)', rates: STARTER_RATE_CARD });
+  await db.insert(rateCards).values({ name: STARTER_RATE_CARD_NAME, rates: STARTER_RATE_CARD });
 }
