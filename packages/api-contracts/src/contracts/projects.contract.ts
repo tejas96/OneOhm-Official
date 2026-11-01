@@ -22,6 +22,8 @@ export const projectsContract = c.router({
       discomId: idSchema,
       loan: z.boolean().default(false),
       lenderName: z.string().trim().max(120).nullable().optional(),
+      /** The lender from the list; its disbursement pattern plans the bank's tranches. */
+      lendingPartnerId: idSchema.nullable().optional(),
       loanPaise: paiseSchema.min(0).default(0),
       battery: z.boolean().default(false),
       groundMount: z.boolean().default(false),
@@ -120,6 +122,8 @@ export const tasksContract = c.router({
     body: z.object({
       facts: z.record(z.string(), z.string().trim().max(2000)).default({}),
       note: noteSchema.nullable().optional(),
+      /** A manager's reason to hand over before the material is reconciled (PRD 3.17). */
+      materialOverride: z.string().trim().max(500).nullable().optional(),
     }),
     responses: { 200: projectTaskSchema },
     summary: 'Needs every fact the task captures; tasks needing approval go to review first.',

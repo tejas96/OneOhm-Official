@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { idSchema } from '../common/primitives';
+import { siteDistanceSchema } from '../schemas/costing.schema';
 import {
   quotationDetailSchema,
   quotationInputSchema,
@@ -61,6 +62,14 @@ export const quotationsContract = c.router({
     pathParams: idParams,
     body: c.noBody(),
     responses: { 200: quotationDetailSchema },
+  },
+  siteDistance: {
+    method: 'GET',
+    path: '/properties/:id/site-distance',
+    pathParams: idParams,
+    responses: { 200: siteDistanceSchema },
+    summary:
+      'Road distance from the company base to the site, from GPS × the road factor; null when either point is unknown.',
   },
   setSubsidyClaimed: {
     method: 'PUT',

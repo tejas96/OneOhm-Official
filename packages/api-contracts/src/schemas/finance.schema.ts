@@ -141,6 +141,8 @@ export const lendingPartnerSchema = z.object({
   name: z.string(),
   requiredDocuments: z.array(z.string()),
   disbursement: z.enum(['single', 'tranches']),
+  /** A parts lender's split; new loan projects plan their tranches by it (PRD 7.2). */
+  tranchePattern: z.array(z.object({ label: z.string(), shareBp: z.number().int() })),
   notes: z.string().nullable(),
   active: z.boolean(),
 });

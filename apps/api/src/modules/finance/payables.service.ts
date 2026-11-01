@@ -19,6 +19,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertBillWithinLimit } from '../business-settings/approval-limit';
 import { presentPayable as present } from './payable-view';
 
 type StatusFilter = 'open' | 'pending' | 'approved' | 'paid' | 'all';
@@ -150,6 +151,7 @@ export class PayablesService {
   }
 
   async approve(actor: Actor, id: string): Promise<Payable> {
+    await assertBillWithinLimit(this.db, actor, id);
     await this.db.transaction(async (tx) => {
       const [updated] = await tx
         .update(payables)

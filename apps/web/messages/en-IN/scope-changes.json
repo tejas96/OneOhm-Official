@@ -1,0 +1,179 @@
+{
+  "stateSupport": {
+    "title": "Maharashtra state top-up",
+    "intro": "Maharashtra gives no general top-up, only a separate scheme for low-income households. It is off until you add a version. Then a low-income home's quotation shows it as “Expected state support”, on its own line under the central subsidy. The state pays it; you still invoice the full price.",
+    "loading": "Loading the state top-up",
+    "lowIncome": "Low-income households",
+    "inForceSince": "In force since {date}",
+    "off": "Off",
+    "offHint": "No state support is shown on any quotation.",
+    "add": "Add version",
+    "startsOn": "Starts {date}",
+    "edit": "Edit",
+    "withdraw": "Withdraw",
+    "earlier": "{count, plural, one {# earlier version} other {# earlier versions}}",
+    "validFrom": "From {date}",
+    "rate": "{rate} per kW",
+    "cap": "At most {amount} per household",
+    "form": {
+      "createTitle": "New state top-up version",
+      "editTitle": "Edit scheduled version",
+      "intro": "Quotations use the newest version that has started. Accepted quotations keep the one they were accepted with.",
+      "validFrom": "Starts on",
+      "validFromHint": "Today or later. Earlier dates are history.",
+      "perKw": "Per kW",
+      "perKwHint": "For each kW of the system.",
+      "cap": "Most a household can get",
+      "capHint": "The amount never goes above this.",
+      "who": "Only homes marked as a low-income household get it, and only when the system also qualifies for the central subsidy (DCR panels, on-grid or hybrid).",
+      "cancel": "Cancel",
+      "save": "Save version",
+      "saved": "State top-up saved"
+    },
+    "withdrawDialog": {
+      "title": "Withdraw this version?",
+      "body": "The version starting {date} has not come into force, so no quotation has used it.",
+      "cancel": "Keep it",
+      "confirm": "Withdraw version",
+      "done": "Version withdrawn"
+    },
+    "household": {
+      "switch": "Low-income household",
+      "switchHint": "The state top-up may apply. File the ration card or income certificate under Income proof.",
+      "saved": "Household saved",
+      "failed": "Could not save the household",
+      "badge": "Low-income household"
+    },
+    "price": {
+      "label": "Expected state support",
+      "hint": "Paid by the state for low-income households",
+      "reasons": {
+        "not_residential": "Only for a household's own home",
+        "other_state": "Only for homes in Maharashtra",
+        "no_central_subsidy": "Needs a system that gets the central subsidy"
+      }
+    }
+  },
+  "scopeChanges": {
+    "button": "Change scope",
+    "blocked": {
+      "open": "Change {number} is still open. Finish or withdraw it before raising another.",
+      "revision": "A survey revision is waiting for the customer. Settle it first, then change the scope."
+    },
+    "form": {
+      "title": "Change scope",
+      "intro": "Change the size, a product or add a line. The site, discount and measurements stay as on {number}.",
+      "cancel": "Cancel",
+      "raise": "Raise change",
+      "raised": "Change {number} raised. A project manager approves it next.",
+      "size": "System size",
+      "structure": "Structure",
+      "panel": "Panels",
+      "panelHint": "Non-DCR panels get no subsidy.",
+      "dcr": "DCR",
+      "nonDcr": "non-DCR",
+      "inverter": "Inverter",
+      "battery": "Battery",
+      "noBattery": "No battery",
+      "extras": "Extra lines",
+      "extrasHint": "Lines already on the quotation stay. Add new ones here.",
+      "addExtra": "Add a line",
+      "removeExtra": "Remove {item}",
+      "reason": "Why",
+      "reasonHint": "For the approver and the project history.",
+      "impact": "Impact",
+      "nothingYet": "Change the size, a product or add a line to see what it does to the price, subsidy, dates and material."
+    },
+    "impact": {
+      "scope": "What changes",
+      "money": "Price and subsidy",
+      "price": "Project price",
+      "subsidy": "Expected subsidy",
+      "stateSupport": "Expected state support",
+      "effective": "Effective cost to the customer",
+      "effectiveNote": "Subsidy is shown only; the invoice is the full price.",
+      "paymentTakes": "{label} becomes {amount}.",
+      "paymentFinance": "The last payment cannot take it; finance adjusts the schedule.",
+      "timeline": "Timeline",
+      "finishSame": "The finish date stays ({date}).",
+      "finishLater": "The finish moves {days, plural, one {# day} other {# days}} later: {from} → {to}.",
+      "finishSooner": "The finish moves {days, plural, one {# day} other {# days}} sooner: {from} → {to}.",
+      "noTasks": "No tasks are added or taken off.",
+      "added": "Added",
+      "removed": "Taken off",
+      "kept": "Started, kept",
+      "moved": "{count, plural, one {# waiting task moves later.} other {# waiting tasks move later.}}",
+      "material": "Material",
+      "reserved": "{count} reserved"
+    },
+    "scope": {
+      "size": "Size",
+      "panels": "Panels",
+      "inverter": "Inverter",
+      "battery": "Battery",
+      "structure": "Structure",
+      "extra": "New line",
+      "none": "None",
+      "dcr": "DCR",
+      "nonDcr": "non-DCR"
+    },
+    "kinds": {
+      "capacity": "Size",
+      "battery_added": "Battery added",
+      "battery_removed": "Battery removed",
+      "battery_changed": "Battery changed",
+      "panel": "Panels",
+      "inverter": "Inverter",
+      "structure": "Structure",
+      "extra_lines": "Extra lines"
+    },
+    "card": {
+      "title": "Scope changes",
+      "number": "Change {number}",
+      "stage": {
+        "toApprove": "To approve",
+        "toSend": "Send to customer",
+        "withCustomer": "With the customer",
+        "accepted": "Accepted",
+        "rejected": "Customer said no",
+        "withdrawn": "Withdrawn"
+      },
+      "next": {
+        "toApprove": "A project manager approves it. The customer then confirms the new revision.",
+        "toSend": "Open the revision and send it to the customer.",
+        "withCustomer": "Record the customer's answer on the revision. Accepting it applies the change.",
+        "accepted": "",
+        "rejected": "",
+        "withdrawn": ""
+      },
+      "raisedBy": "Raised by {name} {when}",
+      "impact": "Impact ({difference})",
+      "approve": "Approve",
+      "approved": "Approved. Revision R{revision} is drafted.",
+      "approveFailed": "Could not approve the change",
+      "openRevision": "Open revision R{revision}",
+      "openSent": "Revision R{revision}",
+      "withdraw": "Withdraw"
+    },
+    "withdraw": {
+      "title": "Withdraw change {number}?",
+      "body": "The project stays as it is. A revision already drafted or sent closes with it.",
+      "reason": "Why",
+      "cancel": "Keep it",
+      "confirm": "Withdraw change",
+      "done": "Change {number} withdrawn"
+    },
+    "quotation": {
+      "carries": "Change {number} on {project}: {kinds}.",
+      "whenAccepted": "Accepting this revision applies the change to the project: price, payments, tasks and material. Sending and accepting it need a project manager.",
+      "closed": {
+        "raised": "",
+        "approved": "",
+        "accepted": "The customer accepted it; the project runs on this revision.",
+        "rejected": "The customer said no; the project stayed as it was.",
+        "withdrawn": "The change was withdrawn; the project stayed as it was."
+      },
+      "openProject": "Open the project"
+    }
+  }
+}

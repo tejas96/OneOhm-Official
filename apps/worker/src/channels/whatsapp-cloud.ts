@@ -53,6 +53,8 @@ export type SessionMessage =
       readonly kind: 'list';
       readonly body: string;
       readonly button: string;
+      /** The heading over the rows, such as the company's name; none when left out. */
+      readonly section?: string;
       readonly rows: readonly {
         readonly id: string;
         readonly title: string;
@@ -84,7 +86,15 @@ export function sessionRequestBody(toE164: string, message: SessionMessage) {
     interactive: {
       type: 'list',
       body: { text: message.body },
-      action: { button: message.button, sections: [{ title: 'OneOhm', rows: message.rows }] },
+      action: {
+        button: message.button,
+        // One section needs no title (Meta's rule); a title is kept to 24 characters.
+        sections: [
+          message.section
+            ? { title: message.section.slice(0, 24), rows: message.rows }
+            : { rows: message.rows },
+        ],
+      },
     },
   };
 }

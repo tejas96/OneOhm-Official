@@ -5,6 +5,7 @@ export * from './capacity';
 export * from './leave';
 export * from './leave-handover';
 export * from './policy';
+export * from './reporting-line';
 export * from './site-visits';
 export * from './tracking-switch';
 export * from './travel';

@@ -5,18 +5,25 @@ import { Button } from '@oneohm/design-system/web';
 import { CheckSquare, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { LoadError } from '@/components/query-state';
+import { useProgressiveList } from '@/lib/use-progressive-list';
 import { useDocumentRights } from '../use-document-rights';
 import { AddDocumentSheet } from './add-document-sheet';
 import { DocumentCard } from './document-card';
-import { DEFAULT_FILTERS, type GalleryFilters } from './document-kinds';
+import { DEFAULT_FILTERS, type GalleryFilters, isFiltered } from './document-kinds';
 import { FolderRail } from './folder-rail';
+import { hasMoreFilters } from './gallery-filters';
+import { GalleryMoreFilters } from './gallery-more-filters';
 import { GALLERY_GRID, GalleryEmpty, GalleryNoMatch, GallerySkeleton } from './gallery-states';
 import { GalleryToolbar } from './gallery-toolbar';
 import { PreviewSheet } from './preview-sheet';
 import { SelectionBar } from './selection-bar';
-import { type GalleryScope, useGallery } from './use-gallery';
+import { type GalleryScope, SCOPE_FOLDER, scopeKindOf, useGallery } from './use-gallery';
 import { useFolderLabel } from './use-labels';
+
+/** Tiles drawn at a time: a few screens of a photo-heavy project. */
+const TILES_PER_STEP = 48;
 
 /**
  * Every file of a project or customer as a gallery (PRD 3.14): folders by category with
@@ -50,20 +57,22 @@ export function DocumentsGallery({
     setSelecting(false);
     setPicked(new Set());
   };
-  const { query, folders, kinds, shown, total } = useGallery(scope, filters);
+  const { query, folders, kinds, shown, total, uploaders } = useGallery(scope, filters);
+  // Large galleries draw a few rows of tiles first and add more as the person scrolls.
+  const tiles = useProgressiveList(shown, TILES_PER_STEP, JSON.stringify(filters));
   const update = (patch: Partial<GalleryFilters>) =>
     setFilters((current) => ({ ...current, ...patch }));
-  const filtered = filters.folder !== 'all' || filters.kind !== 'all' || filters.search !== '';
-  const isCustomer = 'customerId' in scope;
+  const filtered = isFiltered(filters);
+  const kind = scopeKindOf(scope);
+  // Outside a project, each card says which project a file belongs to.
+  const isCustomer = kind !== 'project';
   const add = rights.upload ? () => setAdding(true) : null;
   const canBundle = rights.download || rights.print;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-xl type-body-sm text-ink-muted">
-          {t(isCustomer ? 'intro.customer' : 'intro.project')}
-        </p>
+        <p className="max-w-xl type-body-sm text-ink-muted">{t(`intro.${kind}`)}</p>
         <span className="flex flex-wrap gap-2 self-start sm:self-auto">
           {total > 0 && !selecting && canBundle && (
             <Button
@@ -100,6 +109,9 @@ export function DocumentsGallery({
             onKindChange={(kind) => update({ kind })}
             kinds={kinds}
           />
+          {total > 0 && (
+            <GalleryMoreFilters value={filters} onChange={update} uploaders={uploaders} />
+          )}
           {query.isPending && <GallerySkeleton />}
           {query.isError && <LoadError error={query.error} onRetry={() => query.refetch()} />}
           {query.data && total === 0 && <GalleryEmpty onAdd={add} />}
@@ -108,6 +120,7 @@ export function DocumentsGallery({
               search={filters.search}
               folderLabel={filters.folder === 'all' ? null : folderLabel(filters.folder)}
               kindLabel={filters.kind === 'all' ? null : t(`kinds.${filters.kind}`)}
+              filtersOn={hasMoreFilters(filters)}
               onReset={() => setFilters(DEFAULT_FILTERS)}
             />
           )}
@@ -116,7 +129,7 @@ export function DocumentsGallery({
           </p>
           {shown.length > 0 && (
             <ul className={GALLERY_GRID}>
-              {shown.map((document, index) => (
+              {tiles.items.map((document, index) => (
                 <DocumentCard
                   key={document.id}
                   document={document}
@@ -129,6 +142,13 @@ export function DocumentsGallery({
               ))}
             </ul>
           )}
+          <LoadMore
+            shown={tiles.items.length}
+            total={tiles.total}
+            hasMore={tiles.hasMore}
+            loading={false}
+            onMore={tiles.loadMore}
+          />
         </div>
       </div>
       {selecting && (
@@ -143,7 +163,7 @@ export function DocumentsGallery({
         scope={scope}
         open={adding}
         onOpenChange={setAdding}
-        defaultFolder={filters.folder === 'all' ? null : filters.folder}
+        defaultFolder={filters.folder === 'all' ? (SCOPE_FOLDER[kind] ?? null) : filters.folder}
       />
       <PreviewSheet document={open} rights={rights} showProject={isCustomer} onChange={setOpen} />
     </div>

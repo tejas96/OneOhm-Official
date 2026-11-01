@@ -1,47 +1,13 @@
 import { LINE_CATEGORIES, SUBSIDY_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, nameSchema } from '../common/primitives';
+import { costingCardSchema } from './costing.schema';
 
 const amountSchema = z.number().int().nonnegative('Use zero or more.');
 /** Basis points: 100 = 1%. */
 const basisPointsSchema = z.number().int().min(0).max(10_000, 'Use at most 100%.');
-const metersSchema = z.number().int().min(0).max(2000);
-const pairSchema = z.object({ price: amountSchema, cost: amountSchema });
-const cableSchema = z.object({
-  baseMeters: metersSchema,
-  perFloorMeters: metersSchema,
-  price: amountSchema,
-  cost: amountSchema,
-});
-
-/** The price engine's configurable rates (PRD 3.9). Amounts are paise. */
-export const rateCardSchema = z.object({
-  structurePerKw: z.object({
-    rcc_elevated: pairSchema,
-    tin_shed: pairSchema,
-    ground_mount: pairSchema,
-  }),
-  dcCable: cableSchema,
-  acCable: cableSchema,
-  earthingKit: pairSchema,
-  protectionKit: pairSchema,
-  installationPerKw: pairSchema,
-  extraFloorPerKw: pairSchema,
-  freeFloors: z.number().int().min(0).max(40),
-  transport: z.object({
-    baseKm: z.number().int().min(0).max(2000),
-    perKm: amountSchema,
-    flat: amountSchema,
-  }),
-  liaisoning: pairSchema,
-  goodsTaxBp: basisPointsSchema,
-  serviceTaxBp: basisPointsSchema,
-  contingencyBp: basisPointsSchema,
-  toleranceBp: basisPointsSchema,
-  discountApprovalBp: basisPointsSchema,
-  /** Shadow-free m² a rooftop needs per kWp, checked after the survey; 0 switches it off. */
-  sqmPerKwp: z.number().min(0).max(50).optional(),
-});
+/** The price engine's configurable rates (PRD 3.9): the costing card. Amounts are paise. */
+export const rateCardSchema = costingCardSchema;
 export type RateCardValues = z.infer<typeof rateCardSchema>;
 
 export const rateCardSettingsSchema = z.object({
@@ -113,6 +79,9 @@ export const companyInputSchema = z.object({
       message: 'Enter a valid email address.',
     }),
   quotationValidityDays: z.number().int().min(1).max(180),
+  /** Where crews and material leave from: distances to sites are measured from here. */
+  baseLatitude: z.number().min(-90).max(90).nullable().optional(),
+  baseLongitude: z.number().min(-180).max(180).nullable().optional(),
 });
 export type CompanyInput = z.infer<typeof companyInputSchema>;
 

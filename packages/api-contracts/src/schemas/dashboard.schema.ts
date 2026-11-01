@@ -72,6 +72,7 @@ export const decisionKeySchema = z.enum([
   'purchase_requests',
   'vendor_advances',
   'points',
+  'bonuses',
   'incentives',
 ]);
 export const deadlineSchema = z.object({

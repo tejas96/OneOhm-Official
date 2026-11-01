@@ -9,7 +9,9 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
+import { ChangeRequestNotice } from '@/features/discom/change-request-notice';
 import { RaiseChangeRequestDialog } from '@/features/discom/raise-change-request-dialog';
+import { LowIncomeBadge } from '@/features/state-support/low-income-badge';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { EditPropertyDialog } from './edit-property-dialog';
@@ -63,6 +65,7 @@ function PropertyCard({
             </h3>
             <Badge variant="soft">{categoryT(property.subsidyCategory)}</Badge>
             {property.subsidyClaimed && <Badge variant="energy">{t('subsidyClaimed')}</Badge>}
+            {property.lowIncomeHousehold && <LowIncomeBadge />}
           </div>
           <p className="flex items-start gap-1.5 type-body-sm text-ink-muted">
             <MapPin aria-hidden className="mt-0.5 size-3.5 shrink-0" />
@@ -104,8 +107,14 @@ function PropertyCard({
             {property.households}
           </Fact>
         )}
+        {property.evMeterNumber && (
+          <Fact label={t('evMeter')} mono>
+            {property.evMeterNumber}
+          </Fact>
+        )}
       </dl>
       <GpsLine property={property} />
+      <ChangeRequestNotice scope={{ propertyId: property.id }} />
       <div className="mt-auto flex flex-wrap gap-2">
         {canQuote && (
           <Button asChild variant="secondary" size="sm" leadingIcon={<FilePlus2 />}>

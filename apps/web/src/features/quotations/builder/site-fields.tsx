@@ -1,7 +1,8 @@
 'use client';
 
-import type { QuotationPreview } from '@oneohm/api-contracts';
-import { cn, Field, Input, SegmentedControl } from '@oneohm/design-system/web';
+import type { QuotationPreview, SiteDistance } from '@oneohm/api-contracts';
+import { cn, Field, Input, Select } from '@oneohm/design-system/web';
+import { STRUCTURE_TYPES } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { ChevronRight, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -9,7 +10,7 @@ import { useState } from 'react';
 import { useCan } from '@/providers/current-user';
 import type { BuilderState, StructureType } from './builder-state';
 
-const STRUCTURES: readonly StructureType[] = ['rcc_elevated', 'tin_shed', 'ground_mount'];
+const STRUCTURES: readonly StructureType[] = STRUCTURE_TYPES;
 
 type Patch = (patch: Partial<BuilderState>) => void;
 const digits = (text: string) => text.replace(/\D/g, '');
@@ -24,12 +25,22 @@ export function SiteFields({
   state,
   patch,
   errors,
+  distance,
 }: {
   readonly state: BuilderState;
   readonly patch: Patch;
   readonly errors: Readonly<Record<string, string>>;
+  readonly distance?: SiteDistance | undefined;
 }) {
   const t = useTranslations('quotations.builder.site');
+  const costingT = useTranslations('costing.builder');
+  const gps = distance?.distanceKm ?? null;
+  const distanceHint =
+    gps !== null && !state.distanceTouched
+      ? costingT('gpsDistance', { km: gps })
+      : distance?.missing === 'base'
+        ? costingT('noBase')
+        : t('distanceHint');
   const structureT = useTranslations('quotations.structure');
   const [measured, setMeasured] = useState(
     state.dcCableMeters !== '' || state.acCableMeters !== '',
@@ -37,12 +48,11 @@ export function SiteFields({
   return (
     <div className="flex flex-col gap-6">
       <Field label={t('structure')} hint={t('structureHint')}>
-        <SegmentedControl
-          label={t('structure')}
+        <Select
           value={state.structureType}
           onValueChange={(value) => patch({ structureType: value })}
           options={STRUCTURES.map((value) => ({ value, label: structureT(value) }))}
-          className="w-full sm:w-auto [&>*]:flex-1"
+          className="w-full sm:max-w-sm"
         />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
@@ -54,11 +64,13 @@ export function SiteFields({
             className="font-mono"
           />
         </Field>
-        <Field label={t('distance')} hint={t('distanceHint')} error={errors.distanceKm} required>
+        <Field label={t('distance')} hint={distanceHint} error={errors.distanceKm} required>
           <Input
             inputMode="numeric"
             value={state.distanceKm}
-            onChange={(event) => patch({ distanceKm: digits(event.target.value) })}
+            onChange={(event) =>
+              patch({ distanceKm: digits(event.target.value), distanceTouched: true })
+            }
             trailing={<span className="pr-2 type-body-sm text-ink-faint">km</span>}
             className="font-mono"
           />

@@ -16,7 +16,11 @@ import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
 import { SETTINGS_KEYS, useCompany } from '../use-settings';
 
-type TextKey = Exclude<keyof Company, 'phones' | 'quotationValidityDays'>;
+/** The base location is set with the travel rates (Settings → Rates), not here. */
+type TextKey = Exclude<
+  keyof Company,
+  'phones' | 'quotationValidityDays' | 'baseLatitude' | 'baseLongitude'
+>;
 
 /** The company details printed on every quotation, invoice and report. */
 export function CompanyPanel() {

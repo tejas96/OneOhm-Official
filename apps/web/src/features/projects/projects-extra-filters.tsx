@@ -1,6 +1,5 @@
 'use client';
 
-import type { ProjectSummary } from '@oneohm/api-contracts';
 import { X } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ProjectFilters } from './project-filters';
@@ -11,18 +10,17 @@ import type { ProjectFilters } from './project-filters';
  */
 export function ProjectsExtraFilters({
   filters,
-  projects,
+  managerName: named,
   onChange,
 }: {
   readonly filters: ProjectFilters;
-  readonly projects: readonly ProjectSummary[];
+  /** The manager asked for, as the API names them; null while loading or unknown. */
+  readonly managerName: string | null;
   readonly onChange: (patch: Partial<ProjectFilters>) => void;
 }) {
   const t = useTranslations('projects.list.extra');
   const format = useFormatter();
-  const managerName =
-    projects.find((project) => project.manager?.id === filters.manager)?.manager?.fullName ??
-    t('someone');
+  const managerName = named ?? t('someone');
   const chips = [
     filters.manager && {
       key: 'manager',

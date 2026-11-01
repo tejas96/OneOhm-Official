@@ -78,11 +78,12 @@ export const REWARDS = {
 } as const;
 
 export const CONTACT = {
-  title: 'Contact OneOhm',
+  title: (company: string) => `Contact ${company}`,
+  titleOffice: 'Contact the office',
   body: 'Questions about a lead, a quotation or your commission? Call or WhatsApp the office.',
   call: 'Call',
   whatsapp: 'WhatsApp',
-  noNumber: 'The office number is not set up yet. Ask your OneOhm contact.',
+  noNumber: 'The office number is not set up yet. Ask your contact.',
 } as const;
 
 export const QUICK_LEAVE = 'Request leave';

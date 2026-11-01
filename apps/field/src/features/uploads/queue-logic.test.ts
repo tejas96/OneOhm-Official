@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { geotagFromExif } from './geotag';
 import {
   afterFailure,
+  hasTarget,
   isPassing,
   MAX_PARALLEL,
   mine,
@@ -13,6 +14,7 @@ import {
   readyToSend,
   retriedNow,
   retryDelay,
+  screenOf,
   wakeAll,
 } from './queue-logic';
 
@@ -114,6 +116,35 @@ describe('parseQueue', () => {
     const saved = JSON.parse(JSON.stringify([item(), { id: 'broken' }, 'junk']));
     expect(parseQueue(saved)).toEqual([item()]);
     expect(parseQueue(null)).toEqual([]);
+  });
+});
+
+describe('papers for a lead or a customer', () => {
+  const paper = item({
+    taskId: undefined,
+    leadId: 'lead-1',
+    customerId: 'cust-1',
+    propertyId: 'site-1',
+    kind: 'document',
+    category: 'electricity_bill',
+  });
+
+  it('keeps them after a restart, retrying like task evidence', () => {
+    const [saved] = parseQueue([paper, item({ taskId: undefined, customerId: 'cust-2' })]);
+    expect(saved).toMatchObject({ leadId: 'lead-1', customerId: 'cust-1', propertyId: 'site-1' });
+    expect(parseQueue([paper, item({ taskId: undefined })])).toHaveLength(1);
+    const failed = afterFailure(paper, { status: 0, message: 'offline' }, NOW);
+    expect(failed.autoRetry).toBe(true);
+    expect(
+      readyToSend([failed], { userId: 'asha', now: NOW + 2_000, sending: new Set() }),
+    ).toHaveLength(1);
+  });
+
+  it('opens the lead, else Today for a customer’s paper', () => {
+    expect(screenOf(paper)).toBe('/leads/lead-1');
+    expect(screenOf({ customerId: 'cust-1' })).toBe('/');
+    expect(hasTarget({ customerId: 'cust-1' })).toBe(true);
+    expect(hasTarget({})).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@
 import type { ServiceTicket } from '@oneohm/api-contracts';
 import { useTranslations } from 'next-intl';
 import { DocumentThumb } from '@/features/documents/document-thumb';
-import { documentUrl } from '@/lib/api/upload';
+import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
 
 /**
  * What the customer added when raising the request (PRD 5.5): photos open full size in a
@@ -28,7 +28,7 @@ export function TicketCustomerFiles({ ticket }: { readonly ticket: ServiceTicket
             >
               {/* biome-ignore lint/performance/noImgElement: streamed from the API after its access check, not Next's image loader. */}
               <img
-                src={documentUrl(photo.id)}
+                src={documentThumbUrl(photo.id)}
                 alt={photo.name}
                 className="size-full object-cover"
                 loading="lazy"

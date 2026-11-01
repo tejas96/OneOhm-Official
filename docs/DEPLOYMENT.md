@@ -218,3 +218,52 @@ Copy `/opt/oneohm/backups` off the VM, for example to an OCI Object Storage buck
 - Logs: `docker compose -f infrastructure/docker/compose.production.yaml logs -f api worker`
 - Status: `docker compose -f infrastructure/docker/compose.production.yaml ps`
 - The Temporal UI is not exposed publicly. When needed, run it temporarily and reach it over an SSH tunnel.
+
+## 8. Release checks
+
+Release happens only when the PRD section 13 acceptance criteria pass end to end. Run the
+acceptance suite on a development machine (not on the server), from the repo root:
+
+```bash
+pnpm infra:up          # PostgreSQL and RustFS; Temporal is not needed
+pnpm install
+pnpm test:acceptance
+```
+
+What it does:
+
+1. Builds the API and the packages it uses.
+2. Drops and recreates the database `oneohm_acceptance` on the PostgreSQL server named in
+   `.env` (`DATABASE_URL`: same host, user and password). It never touches any other
+   database.
+3. Applies the migrations and the day-one seed.
+4. Starts a separate API on port 4300 from `apps/api/dist`, with `.env` plus test-safe
+   settings: WhatsApp and SMS in log mode, local sign-in codes, Razorpay and RazorpayX in
+   sandbox with known webhook secrets, no real gateway keys, and uploads in their own
+   `oneohm-acceptance` bucket. The dev API on 4200 and the worker are left alone.
+5. Runs one scenario per PRD row (`apps/api/test/acceptance/scenarios`) through the real
+   HTTP API, signed in as the right people: admin and staff by password, field staff,
+   crews, resellers and customers by sign-in code. Every record it makes carries "(test)".
+6. Stops the API and prints a pass/fail table with one line per row. The command exits
+   with 0 only when every automated row passes.
+
+It needs Node 22.12 or later, pnpm, PostgreSQL and RustFS from `pnpm infra:up`, Chrome or
+Chromium at `CHROMIUM_PATH` (for the PDFs), and port 4300 free. A full run takes about
+two minutes.
+
+Useful options:
+
+- `pnpm test:acceptance 05-discom`: run one row.
+- `--skip-build`: use the current `dist` folders.
+- `--keep`, then `--reuse`: leave the API on 4300 running and rerun scenarios against it
+  while writing them. `--stop` stops it.
+
+Two parts are checked another way:
+
+- **UX** is manual. Before release, run
+  [UX-ACCEPTANCE-CHECKLIST.md](UX-ACCEPTANCE-CHECKLIST.md) with real OneOhm staff and
+  keep the filled-in sheet.
+- **Upload retry** belongs to the field app. Its unit tests
+  (`apps/field/src/features/uploads/queue-logic.test.ts`) run with `pnpm test`.
+
+The suite is not part of `pnpm check`, because it needs the database and a running API.

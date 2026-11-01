@@ -1,6 +1,6 @@
 'use client';
 
-import type { Customer } from '@oneohm/api-contracts';
+import type { Customer, CustomerPage } from '@oneohm/api-contracts';
 import {
   Avatar,
   Badge,
@@ -13,15 +13,16 @@ import {
   ResponsiveTable,
   type TableColumn,
 } from '@oneohm/design-system/web';
-import { useQuery } from '@tanstack/react-query';
 import { Search, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
+import { usePagedList } from '@/lib/query/use-paged-list';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { HandoverList } from './contact/handover-list';
 import { useHandovers } from './contact/use-contact';
@@ -32,13 +33,16 @@ export function CustomersView() {
   const format = useFormatter();
   const [search, setSearch] = useState('');
   const term = useDebouncedValue(search.trim());
-  const query = useQuery({
-    queryKey: ['customers', 'list', term],
-    queryFn: () =>
-      expectStatus(api.crm.listCustomers({ query: term ? { search: term } : {} }), 200),
-    placeholderData: (previous) => previous,
-  });
-  const rows = query.data ?? [];
+  // The API finds and pages them (PRD 9.3); more load as the person scrolls.
+  const list = usePagedList<Customer, CustomerPage>(['customers', 'page', term], (cursor) =>
+    expectStatus(
+      api.lists.customers({
+        query: { limit: 30, ...(term ? { q: term } : {}), ...(cursor ? { cursor } : {}) },
+      }),
+      200,
+    ),
+  );
+  const { query, items: rows } = list;
 
   const columns: TableColumn<Customer>[] = [
     {
@@ -119,7 +123,7 @@ export function CustomersView() {
       <ShareInPerson />
       {query.isPending ? (
         <ListSkeleton label={t('loading')} />
-      ) : query.isError ? (
+      ) : query.isError && rows.length === 0 ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState
@@ -128,12 +132,21 @@ export function CustomersView() {
           description={term ? t('empty.searchBody', { term }) : t('empty.body')}
         />
       ) : (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={rows}
-          rowKey={(customer) => customer.id}
-        />
+        <div className="flex flex-col gap-6">
+          <ResponsiveTable
+            caption={t('title')}
+            columns={columns}
+            rows={rows}
+            rowKey={(customer) => customer.id}
+          />
+          <LoadMore
+            shown={rows.length}
+            total={list.total}
+            hasMore={list.hasMore}
+            loading={list.loadingMore}
+            onMore={list.loadMore}
+          />
+        </div>
       )}
     </motion.div>
   );

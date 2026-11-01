@@ -47,6 +47,14 @@ export const documentsContract = c.router({
     summary:
       'The file itself, streamed from storage after the access check. A `Range` header gets one part (206), so videos can seek.',
   },
+  documentThumbnail: {
+    method: 'GET',
+    path: '/documents/:id/thumbnail',
+    pathParams: z.object({ id: idSchema }),
+    responses: { 200: fileResponse },
+    summary:
+      "A photo's small preview (WebP, 400 px long edge) for galleries and tiles, made on upload or on first view; files without one (HEIC, PDF, video) come back as they are. Same access as the file; cacheable, since a document's file never changes.",
+  },
   replaceDocument: {
     method: 'POST',
     path: '/documents/:id/replace',

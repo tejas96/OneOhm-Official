@@ -11,6 +11,10 @@ import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { skillsOf } from './person-skills';
 import { workOf } from './person-work';
+import { managersOf } from './reporting-line';
+
+const reportsTo = (manager: { id: string; fullName: string } | undefined) =>
+  manager ? { id: manager.id, fullName: manager.fullName } : null;
 
 /**
  * Everyone with their roles, skills, open tasks against their limit, and whether they
@@ -21,7 +25,7 @@ export async function readPeople(db: DatabaseExecutor): Promise<Person[]> {
   const ids = rows.map((row) => row.id);
   if (ids.length === 0) return [];
   const today = todayIn();
-  const [roleRows, loads, away, held, work] = await Promise.all([
+  const [roleRows, loads, away, held, work, managers] = await Promise.all([
     db
       .select({
         userId: userRoles.userId,
@@ -51,6 +55,7 @@ export async function readPeople(db: DatabaseExecutor): Promise<Person[]> {
       ),
     skillsOf(db, ids),
     workOf(db, ids),
+    managersOf(db, ids),
   ]);
   const awayIds = new Set(away.map((row) => row.userId));
   return rows.map((row) => {
@@ -70,6 +75,7 @@ export async function readPeople(db: DatabaseExecutor): Promise<Person[]> {
       skills: held.get(row.id) ?? [],
       openTasks: open,
       ...work(row.id, open),
+      reportsTo: reportsTo(managers.get(row.id)),
     };
   });
 }

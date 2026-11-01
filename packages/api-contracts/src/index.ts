@@ -1,6 +1,7 @@
 import { commonErrorResponses } from './common/errors';
 
 export * from './common/errors';
+export * from './common/paging';
 export * from './common/primitives';
 export * from './contracts';
 export * from './schemas';

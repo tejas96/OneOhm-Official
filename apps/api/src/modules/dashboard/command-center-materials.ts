@@ -19,8 +19,6 @@ import type { CenterScope } from './command-center-scope';
 
 /** Rows each list shows; the counts say how many there are in all. */
 const MAX_ROWS = 6;
-/** Material counts as a risk once its material or installation work is this close. */
-const LOOK_AHEAD_DAYS = 14;
 
 /** Material shortages and procurement risks for the command centre (PRD 3.1). */
 export async function materialRisks(db: Database, scope: CenterScope): Promise<MaterialRisks> {
@@ -118,7 +116,7 @@ async function projectsShort(db: Database, scope: CenterScope) {
         scope.projects,
         ne(projectTasks.status, 'completed'),
         inArray(projectTasks.stage, ['material', 'installation']),
-        lte(projectTasks.dueDate, addDays(scope.today, LOOK_AHEAD_DAYS)),
+        lte(projectTasks.dueDate, addDays(scope.today, scope.settings.materialLookAheadDays)),
       ),
     );
   if (live.length === 0) return [];

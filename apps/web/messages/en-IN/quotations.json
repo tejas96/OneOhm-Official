@@ -20,7 +20,9 @@
     "structure": {
       "rcc_elevated": "RCC roof",
       "tin_shed": "Tin shed",
-      "ground_mount": "Ground mount"
+      "aluminium_rail": "Aluminium rail",
+      "ground_mount": "Ground mount",
+      "custom": "Custom"
     },
     "categories": {
       "panel": "Solar panels",
@@ -47,7 +49,7 @@
       "label": "The price",
       "modules": "{count, plural, one {# panel} other {# panels}}",
       "total": "Total project price",
-      "totalHint": "Invoiced and collected by OneOhm, GST included",
+      "totalHint": "Invoiced and collected by {company}, GST included",
       "subsidy": "Expected government subsidy",
       "subsidyHint": "Credited by the government to the customer's bank account after commissioning",
       "effective": "Effective cost to the customer"
@@ -262,6 +264,10 @@
       "loan": "Loan",
       "loanHint": "Adds the loan tasks and a bank share in the payment schedule.",
       "lender": "Lending bank",
+      "lenderOther": "Other lender",
+      "lenderName": "Lender's name",
+      "lenderPlan": "The bank's share will be planned as {parts}.",
+      "lenderPlanSingle": "The bank's share will be planned as one full disbursement.",
       "loanAmount": "Loan amount",
       "loanAmountHint": "Paid by the bank as a separate receivable.",
       "battery": "Battery",

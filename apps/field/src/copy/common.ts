@@ -33,7 +33,7 @@ export const COMMON = {
     subsidy: 'Subsidy',
   },
   parties: {
-    internal: 'OneOhm team',
+    internal: 'Our team',
     customer: 'Customer',
     bank: 'Bank',
     discom: 'DISCOM',
@@ -80,7 +80,7 @@ export const PROFILE = {
   title: 'Me',
   roles: 'Roles',
   noRoles: 'No role yet. Ask your administrator.',
-  kind: { staff: 'OneOhm team', partner: 'I&C partner crew', reseller: 'Reseller' },
+  kind: { staff: 'Staff', partner: 'I&C partner crew', reseller: 'Reseller' },
   phone: 'Mobile',
   email: 'Email',
   server: 'Connected to',

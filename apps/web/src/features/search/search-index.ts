@@ -1,8 +1,9 @@
+import { SEARCH_TYPES, type SearchType } from '@oneohm/api-contracts';
 import type { LucideIcon } from 'lucide-react';
 
-/** Result groups, in the order the palette shows them. */
-export const SEARCH_GROUPS = ['pages', 'projects', 'customers', 'leads', 'quotations'] as const;
-export type SearchGroup = (typeof SEARCH_GROUPS)[number];
+/** Result groups, in the order the palette shows them: pages, then every kind of record. */
+export const SEARCH_GROUPS = ['pages', ...SEARCH_TYPES] as const;
+export type SearchGroup = 'pages' | SearchType;
 
 export interface SearchEntry {
   /** Unique across groups, e.g. `projects:<id>`. */
@@ -13,9 +14,9 @@ export interface SearchEntry {
   readonly detail: string;
   readonly href: string;
   readonly icon: LucideIcon;
-  /** Lower-cased text that every word of the query must appear in. */
+  /** Lower-cased text that every word of the query must appear in (pages only). */
   readonly haystack: string;
-  /** Lower-cased names and codes; a query they start with ranks first. */
+  /** Lower-cased names; a query they start with ranks first (pages only). */
   readonly keys: readonly string[];
 }
 
@@ -24,31 +25,19 @@ export interface ResultGroup {
   readonly entries: readonly SearchEntry[];
 }
 
-/** Records shown per group; enough to find one, few enough to scan. Pages are never cut. */
-const PER_GROUP = 5;
-
 export function normalise(text: string): string {
   return text.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/**
- * Searchable text for an entry: the fields as written, plus phone numbers as bare
- * digits and codes without dashes, so "98765 43210", "+919876543210" and
- * "oh2026002" all find their record.
- */
+/** Searchable text for a page: its name, its group and its key. */
 export function haystackOf(fields: readonly (string | null | undefined)[]): string {
-  const parts: string[] = [];
-  for (const field of fields) {
-    if (!field) continue;
-    parts.push(field.toLowerCase());
-    const digits = field.replace(/\D/g, '');
-    if (digits.length >= 6) parts.push(digits);
-    if (/[-/]/.test(field)) parts.push(field.toLowerCase().replace(/[-/\s]/g, ''));
-  }
-  return parts.join(' \u0000 ');
+  return fields
+    .filter((field): field is string => Boolean(field))
+    .map((field) => field.toLowerCase())
+    .join(' \u0000 ');
 }
 
-/** 0: a name or code starts with the query; 1: it contains it; 2: a word starts with it; 3: the rest. */
+/** 0: a name starts with the query; 1: it contains it; 2: a word starts with it; 3: the rest. */
 function rank(entry: SearchEntry, query: string): number {
   if (entry.keys.some((key) => key.startsWith(query))) return 0;
   if (entry.keys.some((key) => key.includes(query))) return 1;
@@ -56,31 +45,33 @@ function rank(entry: SearchEntry, query: string): number {
   return 3;
 }
 
-function matches(entry: SearchEntry, words: readonly string[]): boolean {
-  return words.every((word) => entry.haystack.includes(word));
+function matchingPages(pages: readonly SearchEntry[], query: string): SearchEntry[] {
+  const words = query.split(' ');
+  return pages
+    .filter((entry) => words.every((word) => entry.haystack.includes(word)))
+    .map((entry, index) => ({ entry, index, score: rank(entry, query) }))
+    .sort((a, b) => a.score - b.score || a.index - b.index)
+    .map(({ entry }) => entry);
 }
 
 /**
- * The palette's results for a query, grouped and ranked. With no query only pages
- * show; records appear once the person starts typing.
+ * The palette's results. With no query only pages show. With one, the pages that match
+ * come first, then the records the server found (already matched, ranked and limited to
+ * what the person may open), grouped by kind in a fixed order.
  */
-export function searchEntries(entries: readonly SearchEntry[], rawQuery: string): ResultGroup[] {
+export function searchEntries(
+  pages: readonly SearchEntry[],
+  records: readonly SearchEntry[],
+  rawQuery: string,
+): ResultGroup[] {
   const query = normalise(rawQuery);
-  const words = query ? query.split(' ') : [];
+  if (!query) return pages.length > 0 ? [{ group: 'pages', entries: pages }] : [];
   const groups: ResultGroup[] = [];
-  for (const group of SEARCH_GROUPS) {
-    const inGroup = entries.filter((entry) => entry.group === group);
-    if (!query) {
-      if (group === 'pages' && inGroup.length > 0) groups.push({ group, entries: inGroup });
-      continue;
-    }
-    const found = inGroup
-      .filter((entry) => matches(entry, words))
-      .map((entry, index) => ({ entry, index, score: rank(entry, query) }))
-      .sort((a, b) => a.score - b.score || a.index - b.index)
-      .map(({ entry }) => entry);
-    const shown = group === 'pages' ? found : found.slice(0, PER_GROUP);
-    if (shown.length > 0) groups.push({ group, entries: shown });
+  const found = matchingPages(pages, query);
+  if (found.length > 0) groups.push({ group: 'pages', entries: found });
+  for (const group of SEARCH_TYPES) {
+    const entries = records.filter((entry) => entry.group === group);
+    if (entries.length > 0) groups.push({ group, entries });
   }
   return groups;
 }

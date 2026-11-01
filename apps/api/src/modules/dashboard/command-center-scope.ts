@@ -1,5 +1,6 @@
 import type { CommandCenterQuery } from '@oneohm/api-contracts';
 import { projects } from '@oneohm/database';
+import { type DashboardSettings, DEFAULT_DASHBOARD_SETTINGS } from '@oneohm/domain';
 import { addDays } from '@oneohm/shared';
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
 
@@ -15,6 +16,8 @@ export interface CenterScope {
   /** Only the manager and type filters, whatever the project status; undefined when off. */
   readonly filters: SQL | undefined;
   readonly narrowed: boolean;
+  /** Thresholds and list sizes from Settings → Dashboard (PRD 7.2). */
+  readonly settings: DashboardSettings;
 }
 
 /** India's financial year starts in April; its quarters are Apr–Jun, Jul–Sep, Oct–Dec, Jan–Mar. */
@@ -35,7 +38,11 @@ function periodStart(period: CommandCenterQuery['period'], today: string): strin
   }
 }
 
-export function centerScope(query: CommandCenterQuery, today: string): CenterScope {
+export function centerScope(
+  query: CommandCenterQuery,
+  today: string,
+  settings: DashboardSettings = DEFAULT_DASHBOARD_SETTINGS,
+): CenterScope {
   const live = inArray(projects.status, ['active', 'operational']);
   const completed = eq(projects.status, 'completed');
   const filters = [
@@ -50,6 +57,7 @@ export function centerScope(query: CommandCenterQuery, today: string): CenterSco
     completed: and(completed, ...filters) ?? completed,
     filters: filters.length > 0 ? and(...filters) : undefined,
     narrowed: filters.length > 0,
+    settings,
   };
 }
 

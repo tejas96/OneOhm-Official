@@ -17,6 +17,8 @@ export const auditPageSchema = z.object({
   items: z.array(auditEntrySchema),
   /** Pass as `before` for the next, older page; null at the end. */
   next: instantSchema.nullable(),
+  /** Pass as `cursor` for the next, older page (preferred over `before`); null at the end. */
+  cursor: z.string().nullable(),
 });
 
 export const signInAttemptSchema = z.object({

@@ -9,7 +9,7 @@ export const MENU_ROWS = [
   { id: 'service', title: 'Report a problem', description: 'Raise a service request' },
   { id: 'requests', title: 'My requests', description: 'Status of service requests' },
   { id: 'warranty', title: 'Warranty and AMC', description: 'Your equipment and cover' },
-  { id: 'refer', title: 'Refer a friend', description: 'Share OneOhm and earn rewards' },
+  { id: 'refer', title: 'Refer a friend', description: 'Tell friends, earn rewards' },
   { id: 'rewards', title: 'My rewards', description: 'Your referrals and rewards' },
   { id: 'feedback', title: 'Rate us', description: 'Tell us how we did' },
   { id: 'human', title: 'Talk to a person', description: 'A team member replies here' },
@@ -18,13 +18,13 @@ export const MENU_ROWS = [
 export type MenuChoice = (typeof MENU_ROWS)[number]['id'];
 
 export const WORDS = {
-  menu: (name: string) =>
-    `Hello ${name}! I am the OneOhm assistant. What would you like to see? You can type "menu" at any time.`,
+  menu: (name: string, company: string) =>
+    `Hello ${name}! I am the ${company ? `${company} ` : ''}assistant. What would you like to see? You can type "menu" at any time.`,
   menuButton: 'Choose',
   unknownNumber:
-    'Hello! This number is not linked to a OneOhm customer yet. If you are interested in solar, tap "Call me back". If you are a customer with another number, please write from that number.',
+    'Hello! This number is not linked to any of our customers yet. If you are interested in solar, tap "Call me back". If you are a customer with another number, please write from that number.',
   callMeBack: 'Call me back',
-  callbackNoted: 'Thank you! Someone from OneOhm will call you soon.',
+  callbackNoted: 'Thank you! Someone from our team will call you soon.',
   noProject:
     'We do not have a project for you yet. Tap "Talk to a person" in the menu to speak to us.',
   stage: {
@@ -62,12 +62,12 @@ export const WORDS = {
   referralSaved: (name: string) =>
     `Thank you! We will call ${name}. You earn a reward when their solar is installed.`,
   referralUnclear: 'I could not find a name and a 10-digit mobile number. Please try again.',
-  referredWelcome: (referrer: string) =>
-    `Welcome to OneOhm! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,
-  askRating: 'How happy are you with OneOhm so far?',
+  referredWelcome: (referrer: string, company: string) =>
+    `Welcome${company ? ` to ${company}` : ''}! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,
+  askRating: 'How happy are you with us so far?',
   ratingSaved: 'Thank you for rating us! It helps the team.',
   humanSoon:
-    'A OneOhm team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Type "menu" to go back to the assistant.',
+    'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Type "menu" to go back to the assistant.',
   notUnderstood: 'Sorry, I did not get that. Here is what I can help with.',
 } as const;
 
@@ -141,7 +141,7 @@ export const COVER_WORDS = {
 
 /** "My rewards": the people the customer referred and what they earned (PRD 5.6). */
 export const REWARD_WORDS = {
-  none: 'You have not referred anyone yet. Tap "Refer a friend" to share OneOhm. You earn a reward when their solar is installed.',
+  none: 'You have not referred anyone yet. Tap "Refer a friend" to tell your friends about us. You earn a reward when their solar is installed.',
   title: '*Your referrals*',
   status: {
     received: 'we will call them soon',

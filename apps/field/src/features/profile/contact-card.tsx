@@ -22,11 +22,12 @@ export function ContactCard() {
     queryFn: () => unwrap(api.catalog.getCompany()),
   });
   const phone = company.data?.phones.find((value) => value.trim().length > 0) ?? null;
+  const brand = company.data?.brandName;
   if (company.isPending) return null;
   return (
     <Card style={styles.card}>
       <Text variant="overline" tone="tertiary">
-        {CONTACT.title.toUpperCase()}
+        {(brand ? CONTACT.title(brand) : CONTACT.titleOffice).toUpperCase()}
       </Text>
       <Text variant="body" tone="secondary">
         {phone ? CONTACT.body : CONTACT.noNumber}

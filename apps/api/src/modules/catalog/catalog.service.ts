@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Company, Discom, Product } from '@oneohm/api-contracts';
 import { companyProfile, discoms, products, rateCards } from '@oneohm/database';
-import type { LineCategory, RateCard } from '@oneohm/domain';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { type LineCategory, type RateCard, toCostingCard, withCatalogPrices } from '@oneohm/domain';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { notFound } from '../../common/http/errors';
@@ -44,7 +44,18 @@ export class CatalogService {
       .orderBy(desc(rateCards.updatedAt))
       .limit(1);
     if (!row) throw notFound('The rate card');
-    return row.rates as RateCard;
+    return toCostingCard(row.rates);
+  }
+
+  /** Today's card with each linked product's catalog price, cost and GST: what new quotes use. */
+  async pricedRateCard(): Promise<RateCard> {
+    const card = await this.rateCard();
+    const ids = [...new Set(card.rateLines.flatMap((line) => line.productId ?? []))];
+    if (ids.length === 0) return card;
+    return withCatalogPrices(
+      card,
+      await this.db.select().from(products).where(inArray(products.id, ids)),
+    );
   }
 
   async company(): Promise<Company> {

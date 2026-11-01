@@ -1,4 +1,5 @@
 import { addDays } from '@oneohm/shared';
+import { type AssignmentRules, DEFAULT_ASSIGNMENT_RULES } from '../settings/assignment-rules';
 import { appliesTo, type ProjectFacts, type TaskTemplate } from './task-template';
 
 export interface GeneratedTask extends TaskTemplate {
@@ -45,6 +46,8 @@ export interface AssigneeCandidate {
   readonly onLeave: boolean;
   /** Approved leave, as inclusive `YYYY-MM-DD` ranges. */
   readonly away?: readonly { readonly from: string; readonly to: string }[];
+  /** When they were last given work (ISO time), for round robin; null if never. */
+  readonly lastAssignedAt?: string | null;
 }
 
 /** True when any approved leave touches the days the task runs. */
@@ -55,29 +58,41 @@ export function awayDuring(
   return (candidate.away ?? []).some((leave) => leave.from <= when.to && leave.to >= when.from);
 }
 
+/** Least busy: fewest open tasks. Round robin: given work longest ago (never first). */
+function byStrategy(rules: AssignmentRules) {
+  return (left: AssigneeCandidate, right: AssigneeCandidate): number => {
+    if (rules.strategy === 'round_robin') {
+      const turn = (left.lastAssignedAt ?? '').localeCompare(right.lastAssignedAt ?? '');
+      if (turn !== 0) return turn;
+    }
+    return left.openTasks - right.openTasks || left.userId.localeCompare(right.userId);
+  };
+}
+
 /**
- * The least-loaded person in the role who is available; null leaves the task unassigned.
- * With `when`, people on approved leave during those days are skipped (PRD 3.8, Flow E).
- * With `skillKey`, people in the role who hold the skill come first; when nobody free
- * has it, the task still goes to the role so it never waits unassigned (PRD 3.7).
+ * The next available person in the role; null leaves the task unassigned. The rules in
+ * Settings choose least busy or round robin (PRD 3.8, 7.2). With `when`, people on
+ * approved leave during those days are skipped unless the rules say otherwise; people
+ * marked unavailable by hand are always skipped. With `skillKey`, people in the role who
+ * hold the skill come first; when nobody free has it, the task still goes to the role so
+ * it never waits unassigned (PRD 3.7).
  */
 export function pickAssignee(
   candidates: readonly AssigneeCandidate[],
   roleKey: string,
   when?: { readonly from: string; readonly to: string },
   skillKey?: string | null,
+  rules: AssignmentRules = DEFAULT_ASSIGNMENT_RULES,
 ): AssigneeCandidate | null {
   const eligible = candidates
     .filter(
       (candidate) =>
         candidate.roleKeys.includes(roleKey) &&
         !candidate.onLeave &&
-        !(when && awayDuring(candidate, when)),
+        !(rules.skipLeave && when && awayDuring(candidate, when)),
     )
-    .sort(
-      (left, right) => left.openTasks - right.openTasks || left.userId.localeCompare(right.userId),
-    );
-  if (skillKey) {
+    .sort(byStrategy(rules));
+  if (skillKey && rules.preferSkill) {
     const skilled = eligible.find((candidate) => candidate.skills?.includes(skillKey));
     if (skilled) return skilled;
   }

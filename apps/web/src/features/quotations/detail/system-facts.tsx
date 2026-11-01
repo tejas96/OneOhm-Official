@@ -19,6 +19,7 @@ export function SystemFacts({
   const categoryT = useTranslations('quotations.category');
   const typeT = useTranslations('quotations.systemType');
   const structureT = useTranslations('quotations.structure');
+  const costingT = useTranslations('costing.facts');
   const catalog = useCatalog();
   const all = catalog.data
     ? [...catalog.data.panels, ...catalog.data.inverters, ...catalog.data.batteries]
@@ -28,8 +29,11 @@ export function SystemFacts({
     return product ? productName(product) : t('unknownProduct');
   };
   const panel = all.find((entry) => entry.id === input.panelProductId);
-  const cables =
-    input.dcCableMeters || input.acCableMeters
+  const runs = input.costing?.runs?.length ?? 0;
+  const where = [input.costing?.arrayLocation, input.costing?.inverterLocation].filter(Boolean);
+  const cables = runs
+    ? costingT('runsMeasured', { count: runs })
+    : input.dcCableMeters || input.acCableMeters
       ? t('cablesMeasured', { dc: input.dcCableMeters ?? 0, ac: input.acCableMeters ?? 0 })
       : t('cablesDefault');
   return (
@@ -56,6 +60,7 @@ export function SystemFacts({
         value={t('siteValue', { floors: input.floors, km: input.distanceKm })}
       />
       <Fact label={t('cables')} value={cables} />
+      {where.length > 0 && <Fact label={costingT('locations')} value={where.join(' · ')} />}
     </dl>
   );
 }

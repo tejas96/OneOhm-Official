@@ -1,24 +1,40 @@
-import { Text, useReducedMotion, useTheme } from '@oneohm/mobile-ui';
+import {
+  canShowIllustrations,
+  Illustration,
+  type IllustrationName,
+  Text,
+  useReducedMotion,
+  useTheme,
+} from '@oneohm/mobile-ui';
 import * as Haptics from 'expo-haptics';
 import { CircleCheck } from 'lucide-react-native';
 import { createContext, type ReactNode, use, useCallback, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const ToastContext = createContext<(message: string) => void>(() => undefined);
+export interface ToastOptions {
+  /** A small illustration in place of the tick, for moments worth marking. */
+  readonly illustration?: IllustrationName;
+}
+
+type ShowToast = (message: string, options?: ToastOptions) => void;
+
+const ToastContext = createContext<ShowToast>(() => undefined);
 
 /** A short confirmation at the top of the screen, with a success tap on the phone. */
 export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
+  const [illustration, setIllustration] = useState<IllustrationName | null>(null);
   const shown = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const show = useCallback(
-    (next: string) => {
+    (next: string, options?: ToastOptions) => {
       setMessage(next);
+      setIllustration(options?.illustration ?? null);
       if (Platform.OS !== 'web')
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (timer.current) clearTimeout(timer.current);
@@ -61,7 +77,17 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
           ]}
         >
           <View style={[styles.toast, { backgroundColor: theme.colors.textPrimary }]}>
-            <CircleCheck size={18} color={theme.colors.energy} />
+            {illustration && canShowIllustrations() ? (
+              // The toast is inverted (dark on a light theme), so are its colours.
+              <Illustration
+                name={illustration}
+                size={28}
+                scheme={theme.scheme === 'dark' ? 'light' : 'dark'}
+                style={styles.art}
+              />
+            ) : (
+              <CircleCheck size={18} color={theme.colors.energy} />
+            )}
             <Text variant="bodySm" color={theme.colors.canvas}>
               {message}
             </Text>
@@ -72,12 +98,13 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
   );
 }
 
-export function useToast(): (message: string) => void {
+export function useToast(): ShowToast {
   return use(ToastContext);
 }
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  art: { marginVertical: -4, marginLeft: -6 },
   toast: {
     flexDirection: 'row',
     alignItems: 'center',

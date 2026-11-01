@@ -141,5 +141,5 @@ export const HINDI_WORDS: LanguageWords = {
     paid: 'आपको दे दिया गया',
     rejected: 'मंज़ूर नहीं हुआ',
   },
-  alerts: { stage_rating_reply: 'OneOhm ने आपकी राय का जवाब दिया' },
+  alerts: { stage_rating_reply: 'हमने आपकी राय का जवाब दिया' },
 };

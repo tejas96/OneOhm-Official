@@ -28,6 +28,7 @@ function hrefOf(subject: NotificationItem['subject']): string {
   if (subject.type === 'vendor_advance') return '/finance?tab=advances';
   if (subject.type === 'stock') return '/inventory?tab=stock';
   if (subject.type === 'lead') return `/leads/${subject.id}`;
+  if (subject.type === 'approval') return '/today?tab=approvals';
   return '/';
 }
 

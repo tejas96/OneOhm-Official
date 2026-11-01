@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { defaultChangeRequestType } from './change-request-defaults';
 import {
   changeRequestUpdate,
   type PropertyUtilityDetails,
@@ -6,18 +7,22 @@ import {
 } from './change-request-effects';
 import { validateChangeRequestValues } from './change-request-types';
 
+/** The site details each starting type updates, as a DISCOM's copy has them. */
+const updatesOf = (key: string) => defaultChangeRequestType(key)?.updates ?? [];
+
 const property: PropertyUtilityDetails = {
   meterHolderName: 'Ramesh Patil',
   subsidyCategory: 'individual',
   phase: 'single',
   sanctionedLoadW: 3000,
   consumerNumber: '279990012345',
+  evMeterNumber: null,
 };
 
 describe('changeRequestUpdate', () => {
   it('writes the new consumer name and keeps the old one for history', () => {
     const { patch, previous } = changeRequestUpdate(
-      'consumer_name_change',
+      updatesOf('consumer_name_change'),
       { newName: 'Sunita Patil' },
       {},
       property,
@@ -28,7 +33,7 @@ describe('changeRequestUpdate', () => {
 
   it('sets phase and sanctioned load in watts for a load change', () => {
     const { patch, previous } = changeRequestUpdate(
-      'load_change',
+      updatesOf('load_change'),
       { phase: 'three', newLoadKw: '7.5' },
       {},
       property,
@@ -39,7 +44,7 @@ describe('changeRequestUpdate', () => {
 
   it('takes the new consumer number recorded by the last step of a new connection', () => {
     const { patch } = changeRequestUpdate(
-      'new_connection',
+      updatesOf('new_connection'),
       { phase: 'three' },
       { consumer_number: '279990099999' },
       { ...property, consumerNumber: null },
@@ -47,14 +52,31 @@ describe('changeRequestUpdate', () => {
     expect(patch).toEqual({ phase: 'three', consumerNumber: '279990099999' });
   });
 
-  it('changes nothing on the property for a new EV meter', () => {
-    expect(changeRequestUpdate('new_ev_meter', {}, {}, property).patch).toEqual({});
+  it('keeps the EV meter number recorded by the last step on the site', () => {
+    const { patch, previous } = changeRequestUpdate(
+      updatesOf('new_ev_meter'),
+      { note: 'Garage' },
+      { ev_meter_number: 'EV-7781' },
+      property,
+    );
+    expect(patch).toEqual({ evMeterNumber: 'EV-7781' });
+    expect(previous).toEqual({ evMeterNumber: null });
+  });
+
+  it('changes nothing on the property for an EV meter with no number yet', () => {
+    expect(changeRequestUpdate(updatesOf('new_ev_meter'), {}, {}, property).patch).toEqual({});
   });
 });
 
 describe('validateChangeRequestValues', () => {
   it('requires the typed fields and checks the load', () => {
-    const result = validateChangeRequestValues('load_change', { phase: 'three', newLoadKw: 'x' });
+    const result = validateChangeRequestValues(
+      defaultChangeRequestType('load_change')?.fields ?? [],
+      {
+        phase: 'three',
+        newLoadKw: 'x',
+      },
+    );
     expect(result.errors).toEqual({ newLoadKw: 'Enter the load in kW, for example 5 or 7.5.' });
   });
 });

@@ -1,3 +1,4 @@
+import type { PatternPart } from '@oneohm/domain';
 import {
   boolean,
   index,
@@ -40,6 +41,8 @@ export const lendingPartners = pgTable(
     disbursement: text('disbursement', { enum: ['single', 'tranches'] })
       .notNull()
       .default('single'),
+    /** For a parts lender: each part's name and share; new loans plan tranches by it. */
+    tranchePattern: jsonb('tranche_pattern').$type<PatternPart[]>().notNull().default([]),
     notes: text('notes'),
     active: boolean('active').notNull().default(true),
     createdAt: createdAt(),

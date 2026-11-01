@@ -9,6 +9,14 @@ export function useHome() {
   return useQuery({ queryKey: keys.home, queryFn: () => unwrap(api.customer.home()) });
 }
 
+/**
+ * The name the company trades under, from its profile (never hard-coded), for sentences
+ * that name it. Empty until Home has loaded.
+ */
+export function useBrand(): string {
+  return useHome().data?.company.name ?? '';
+}
+
 interface Choice {
   readonly chosenId: string | null;
   readonly choose: (id: string) => void;

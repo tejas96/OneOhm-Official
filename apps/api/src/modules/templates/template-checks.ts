@@ -12,6 +12,8 @@ interface Known {
   readonly messages: ReadonlyMap<string, readonly string[]>;
   /** Active skill keys a template may ask for. */
   readonly skills?: ReadonlySet<string>;
+  /** Report keys any DISCOM prints (Settings → DISCOMs); OneOhm's six when not given. */
+  readonly reports?: ReadonlySet<string>;
 }
 
 /** True when following `dependsOn` from `start` comes back to it. */
@@ -41,6 +43,12 @@ export function checkTaskTemplate(
   const lineKeys = (input.checklist ?? []).map((line) => line.key);
   if (new Set(lineKeys).size !== lineKeys.length)
     throw invalid('Two checklist lines say the same thing.', { checklist: 'Remove the repeat.' });
+  const reports = known.reports ?? new Set<string>(REPORT_KEYS);
+  const unknownReports = input.reports.filter((key) => !reports.has(key));
+  if (unknownReports.length > 0)
+    throw invalid('Pick reports from the list.', {
+      reports: `Unknown: ${unknownReports.join(', ')}.`,
+    });
   if (input.skillKey && known.skills && !known.skills.has(input.skillKey))
     throw invalid('Pick a skill from the list.', { skillKey: 'Unknown or switched-off skill.' });
   const missing = input.dependsOn.filter((key) => !known.keys.has(key) || key === input.key);
@@ -69,7 +77,7 @@ export function checkTaskTemplate(
     throw invalid('A task cannot fill this message.', {
       messageKey: `It needs ${extra.join(', ')}, which a task does not have.`,
     });
-  checkAttachment(input.attachment ?? null, fields.includes('link'));
+  checkAttachment(input.attachment ?? null, fields.includes('link'), reports);
 }
 
 /**
@@ -88,11 +96,15 @@ function checkCustomerWording(input: { customerVisible: boolean; customerTitle: 
 }
 
 /** A linked report or paper must be one customers may see, in a message with a link. */
-function checkAttachment(attachment: string | null, messageHasLink: boolean) {
+function checkAttachment(
+  attachment: string | null,
+  messageHasLink: boolean,
+  reports: ReadonlySet<string>,
+) {
   const chosen = readTaskAttachment(attachment);
   if (attachment && !chosen)
     throw invalid('Pick a report or a folder from the list.', { attachment: 'Unknown link.' });
-  if (chosen?.kind === 'report' && !(REPORT_KEYS as readonly string[]).includes(chosen.key))
+  if (chosen?.kind === 'report' && !reports.has(chosen.key))
     throw invalid('Pick a report from the list.', { attachment: 'Unknown report.' });
   if (chosen?.kind === 'document' && !isCustomerDocumentCategory(chosen.category))
     throw invalid('Customers cannot see papers in this folder.', {

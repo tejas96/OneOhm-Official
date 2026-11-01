@@ -75,14 +75,13 @@ export const PROFILE = {
   phone: 'Mobile',
   refer: 'Refer a neighbour',
   referHint: 'Know someone who wants solar? We will take it from here.',
-  company: 'OneOhm',
-  call: 'Call OneOhm',
-  whatsapp: 'WhatsApp OneOhm',
+  call: (company: string) => `Call ${company}`,
+  whatsapp: (company: string) => `WhatsApp ${company}`,
   signOut: 'Sign out',
   signOutHint: 'You will need a new code to sign in again.',
   server: 'Connected to',
   language: 'Language',
   languageHint:
-    'The app and your updates use this language. WhatsApp messages use it too where OneOhm has them in it.',
+    'The app and your updates use this language. WhatsApp messages use it too where we have them in it.',
   languageNotSaved: 'Changed on this phone. We will save it to your account when you are online.',
 } as const;

@@ -1,13 +1,20 @@
 'use client';
 
-import { SERVICE_KINDS, type ServiceTicket, SLA_FILTERS } from '@oneohm/api-contracts';
+import {
+  SERVICE_KINDS,
+  type ServicePage,
+  type ServiceTicket,
+  SLA_FILTERS,
+} from '@oneohm/api-contracts';
 import { EmptyState, SegmentedControl, Select } from '@oneohm/design-system/web';
 import { useQuery } from '@tanstack/react-query';
 import { Headset } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { usePagedList } from '@/lib/query/use-paged-list';
 import { FeedbackPanel } from './feedback-panel';
 import { TicketSheet } from './ticket-sheet';
 import { TicketsTable } from './tickets-table';
@@ -48,23 +55,25 @@ export function ServiceRequestsPanel() {
   const t = useTranslations('service');
   const desk = useDeskParams();
   const status = desk.view === 'all' || desk.view === 'feedback' ? undefined : desk.view;
-  const query = useQuery({
-    queryKey: [...SERVICE_KEY, status ?? 'all', desk.sla, desk.kind],
-    queryFn: () =>
+  const asked = {
+    ...(status ? { status } : {}),
+    ...(desk.sla === 'all' ? {} : { sla: desk.sla }),
+    ...(desk.kind === 'all' ? {} : { kind: desk.kind }),
+  };
+  // Newest first, a page at a time (PRD 9.3).
+  const list = usePagedList<ServiceTicket, ServicePage>(
+    [...SERVICE_KEY, 'page', asked],
+    (cursor) =>
       expectStatus(
-        api.serviceDesk.listTickets({
-          query: {
-            ...(status ? { status } : {}),
-            ...(desk.sla === 'all' ? {} : { sla: desk.sla }),
-            ...(desk.kind === 'all' ? {} : { kind: desk.kind }),
-          },
+        api.lists.serviceRequests({
+          query: { ...asked, limit: 30, ...(cursor ? { cursor } : {}) },
         }),
         200,
       ),
-    enabled: desk.view !== 'feedback',
-  });
+    { enabled: desk.view !== 'feedback' },
+  );
   const filtered = desk.sla !== 'all' || desk.kind !== 'all';
-  const open = query.data?.find((ticket) => ticket.id === desk.request) ?? null;
+  const open = useOpenTicket(list.items, desk.request);
 
   return (
     <div className="flex flex-col gap-5">
@@ -105,7 +114,7 @@ export function ServiceRequestsPanel() {
         <FeedbackPanel />
       ) : (
         <Tickets
-          query={query}
+          list={list}
           empty={filtered ? t('emptyFiltered') : t(`empty.${desk.view}`)}
           onOpen={(request) => desk.set({ request })}
         />
@@ -115,23 +124,48 @@ export function ServiceRequestsPanel() {
   );
 }
 
+/**
+ * The request open in the sheet: from the rows already loaded, or fetched on its own
+ * when a link (an alert) names one further down the list.
+ */
+function useOpenTicket(loaded: readonly ServiceTicket[], id: string | null) {
+  const here = id ? (loaded.find((ticket) => ticket.id === id) ?? null) : null;
+  const alone = useQuery({
+    queryKey: [...SERVICE_KEY, 'one', id],
+    queryFn: () =>
+      expectStatus(api.lists.serviceRequests({ query: { id: id ?? '', limit: 1 } }), 200),
+    enabled: Boolean(id) && !here,
+  });
+  return here ?? alone.data?.items[0] ?? null;
+}
+
 function Tickets({
-  query,
+  list,
   empty,
   onOpen,
 }: {
-  readonly query: ReturnType<typeof useQuery<ServiceTicket[]>>;
+  readonly list: ReturnType<typeof usePagedList<ServiceTicket, ServicePage>>;
   readonly empty: string;
   readonly onOpen: (id: string) => void;
 }) {
   const t = useTranslations('service');
+  const { query, items } = list;
   if (query.isPending) return <ListSkeleton label={t('loading')} />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
-  if (query.data.length === 0) return <EmptyState icon={<Headset />} title={empty} />;
+  if (query.isError && items.length === 0)
+    return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+  if (items.length === 0) return <EmptyState icon={<Headset />} title={empty} />;
   return (
     <div className="flex flex-col gap-3">
-      <p className="type-body-sm text-ink-faint">{t('count', { count: query.data.length })}</p>
-      <TicketsTable tickets={query.data} onOpen={onOpen} />
+      <p className="type-body-sm text-ink-faint">{t('count', { count: list.total })}</p>
+      <TicketsTable tickets={items} onOpen={onOpen} />
+      <LoadMore
+        shown={items.length}
+        total={list.total}
+        hasMore={list.hasMore}
+        loading={list.loadingMore}
+        onMore={list.loadMore}
+        className="pt-4"
+      />
     </div>
   );
 }

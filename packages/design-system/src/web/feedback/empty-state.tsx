@@ -9,12 +9,21 @@ interface EmptyStateProps {
   readonly title: string;
   readonly description?: ReactNode;
   readonly icon?: ReactNode;
+  /** A small illustration shown instead of the icon (see `Illustration`). */
+  readonly illustration?: ReactNode;
   readonly action?: ReactNode;
   readonly className?: string;
 }
 
 /** A calm message where data will be, with the one action that fills it. */
-export function EmptyState({ title, description, icon, action, className }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  icon,
+  illustration,
+  action,
+  className,
+}: EmptyStateProps) {
   return (
     <motion.div
       {...pageEnter}
@@ -23,7 +32,8 @@ export function EmptyState({ title, description, icon, action, className }: Empt
         className,
       )}
     >
-      {icon && (
+      {illustration}
+      {icon && !illustration && (
         <span className="flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent [&_svg]:size-5">
           {icon}
         </span>

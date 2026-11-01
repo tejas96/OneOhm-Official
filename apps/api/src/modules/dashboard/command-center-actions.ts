@@ -9,23 +9,26 @@ import {
   quotations,
   users,
 } from '@oneohm/database';
+import type { DashboardSettings } from '@oneohm/domain';
 import { daysBetween, formatInrCompact } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { waitsForApproval } from '../lists/quotation-page';
 import { assignmentConfirmations } from './command-center-confirm';
 
-const PAYMENT_GRACE_DAYS = 7;
-const DISCOM_PATIENCE_DAYS = 5;
-const MAX_ACTIONS = 6;
 const plural = (count: number, one: string, many: string) =>
   count === 1 ? one : many.replace('#', String(count));
 const daysSince = (date: Date | null, today: string) =>
   date ? daysBetween(date.toISOString().slice(0, 10), today) : 0;
 
 /** What needs the owner, most urgent first; each item has one next action (PRD 3.1). */
-export async function buildActions(db: Database, today: string): Promise<ActionItem[]> {
+export async function buildActions(
+  db: Database,
+  today: string,
+  settings: DashboardSettings,
+): Promise<ActionItem[]> {
   const groups = await Promise.all([
-    latePayments(db, today),
-    longDiscomWaits(db, today),
+    latePayments(db, today, settings.paymentLateDays),
+    longDiscomWaits(db, today, settings.discomWaitDays),
     pendingDiscounts(db),
     bankClaims(db),
     taskAlerts(db, today),
@@ -33,10 +36,10 @@ export async function buildActions(db: Database, today: string): Promise<ActionI
     leadFollowUps(db, today),
     unownedLeads(db),
   ]);
-  return groups.flat().slice(0, MAX_ACTIONS);
+  return groups.flat().slice(0, settings.actionsShown);
 }
 
-async function latePayments(db: Database, today: string): Promise<ActionItem[]> {
+async function latePayments(db: Database, today: string, lateDays: number): Promise<ActionItem[]> {
   const rows = await db
     .select({
       id: paymentMilestones.id,
@@ -57,7 +60,7 @@ async function latePayments(db: Database, today: string): Promise<ActionItem[]> 
     );
   return rows
     .map((row) => ({ row, days: daysSince(row.dueAt, today) }))
-    .filter(({ days }) => days > PAYMENT_GRACE_DAYS)
+    .filter(({ days }) => days > lateDays)
     .map(({ row, days }) => ({
       id: `pay-${row.id}`,
       tone: 'overdue' as const,
@@ -69,7 +72,11 @@ async function latePayments(db: Database, today: string): Promise<ActionItem[]> 
     }));
 }
 
-async function longDiscomWaits(db: Database, today: string): Promise<ActionItem[]> {
+async function longDiscomWaits(
+  db: Database,
+  today: string,
+  patienceDays: number,
+): Promise<ActionItem[]> {
   const rows = await db
     .select({
       id: projectTasks.id,
@@ -91,7 +98,7 @@ async function longDiscomWaits(db: Database, today: string): Promise<ActionItem[
     );
   return rows
     .map((row) => ({ row, days: daysSince(row.since, today) }))
-    .filter(({ days }) => days >= DISCOM_PATIENCE_DAYS)
+    .filter(({ days }) => days >= patienceDays)
     .map(({ row, days }) => ({
       id: `discom-${row.id}`,
       tone: 'waiting' as const,
@@ -108,11 +115,8 @@ async function pendingDiscounts(db: Database): Promise<ActionItem[]> {
     .select({ number: quotations.number })
     .from(quotations)
     .where(
-      and(
-        inArray(quotations.status, ['draft', 'sent']),
-        isNull(quotations.discountApprovedByUserId),
-        ne(quotations.discountPaise, 0),
-      ),
+      // Only discounts above the limit wait for an approver (same rule as the inbox).
+      and(inArray(quotations.status, ['draft', 'sent']), waitsForApproval),
     );
   if (rows.length === 0) return [];
   return [

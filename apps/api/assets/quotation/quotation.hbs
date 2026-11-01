@@ -51,12 +51,17 @@
         <div class="q-step"><span>Total project price</span><strong>{{money.total}}</strong></div>
         <div class="q-arrow">↓</div>
         <div class="q-step q-subsidy"><span>Expected government subsidy</span><strong>− {{money.subsidy}}</strong></div>
+        {{#if money.stateSupport}}
+        <div class="q-arrow">↓</div>
+        <div class="q-step q-subsidy"><span>Expected state support</span><strong>− {{money.stateSupport}}</strong></div>
+        {{/if}}
         <div class="q-arrow">↓</div>
         <div class="q-step q-effective"><span>Effective cost to you</span><strong>{{money.effective}}</strong></div>
       </div>
     </section>
     <p class="q-note">
       {{#if money.subsidyReason}}{{money.subsidyReason}}{{else}}The subsidy is credited by the government directly to your bank account after commissioning and DISCOM inspection, under PM Surya Ghar rules. {{company.brand}} invoices and collects the full project price.{{/if}}
+      {{#if money.stateSupport}}The state support for low-income households is paid by the state government, not by {{company.brand}}, once the household's eligibility is confirmed.{{/if}}
     </p>
 
     {{#if comparison}}

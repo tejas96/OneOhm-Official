@@ -8,10 +8,12 @@ import type {
 import { products, subsidyRules } from '@oneohm/database';
 import {
   atAcceptedPrice,
+  detailProblems,
   type PanelProduct,
   type PricedProduct,
   type RateCard,
   ruleInForce,
+  type StateTopUpRule,
   type SubsidyRule,
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
@@ -21,10 +23,11 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
-import { type AcceptedPricing, acceptedPricing } from './accepted-pricing';
+import { type AcceptedPricing, acceptedPricing, savedFor } from './accepted-pricing';
 import { resolveExtras } from './quotation-extras';
-import { type QuotedLine, quoteTotals } from './quotation-totals';
+import { costingView, type QuotedLine, quoteTotals } from './quotation-totals';
 import { type SiteFacts, siteFactsWithoutProperty } from './site-facts';
+import { stateRuleToday } from './state-support-line';
 import { type SurveyRepricing, surveyRepricing } from './survey-repricing';
 
 type ProductRow = typeof products.$inferSelect;
@@ -34,6 +37,7 @@ export interface PricedQuotation {
   readonly lines: readonly QuotedLine[];
   readonly rates: RateCard;
   readonly rule: SubsidyRule | null;
+  readonly stateRule: StateTopUpRule | null;
 }
 
 export interface PriceOptions {
@@ -56,6 +60,16 @@ const asPanel = (row: ProductRow): PanelProduct => ({
   dcr: row.dcr,
 });
 
+/** A quotation's own detail may only name rates the card still has. */
+function assertDetailPriceable(rates: RateCard, input: QuotationPreviewInput): void {
+  const problems = input.costing ? detailProblems(rates, input.costing) : [];
+  if (problems.length === 0) return;
+  throw invalid(
+    'Some of this quotation’s detail names rates that are no longer on the rate card.',
+    Object.fromEntries(problems.map((problem) => [problem.path.join('.'), problem.message])),
+  );
+}
+
 /** The one place quotation money is calculated (PRD 3.9: no duplicate pricing logic). */
 @Injectable()
 export class QuotationPricingService {
@@ -74,9 +88,10 @@ export class QuotationPricingService {
     const battery = input.batteryProductId
       ? await this.product(input.batteryProductId, 'battery', 'batteryProductId')
       : undefined;
-    const rates = against?.rates ?? (await this.catalog.rateCard());
+    const rates = against?.rates ?? (await this.catalog.pricedRateCard());
+    assertDetailPriceable(rates, input);
     const rule = against ? against.rule : await this.ruleToday(input);
-    const saved = against?.lines ?? [];
+    const stateRule = against ? against.stateRule : await stateRuleToday(this.db, site);
     const extras = resolveExtras(input.extras ?? [], {
       rates,
       products: await this.extraProducts(input),
@@ -85,15 +100,29 @@ export class QuotationPricingService {
     const parts = {
       input,
       site,
-      inverter: atAcceptedPrice(asPriced(inverter), saved, 'inverter'),
-      battery: battery ? atAcceptedPrice(asPriced(battery), saved, 'battery') : undefined,
+      inverter: atAcceptedPrice(
+        asPriced(inverter),
+        savedFor(against, 'inverter', inverter.id),
+        'inverter',
+      ),
+      battery: battery
+        ? atAcceptedPrice(asPriced(battery), savedFor(against, 'battery', battery.id), 'battery')
+        : undefined,
       extras,
       rates,
       rule,
+      stateRule,
     };
     const totalsFor = (panelRow: ProductRow, discountPaise: number) =>
       quoteTotals(
-        { ...parts, panel: atAcceptedPrice(asPanel(panelRow), saved, 'panel') },
+        {
+          ...parts,
+          panel: atAcceptedPrice(
+            asPanel(panelRow),
+            savedFor(against, 'panel', panelRow.id),
+            'panel',
+          ),
+        },
         discountPaise,
       );
 
@@ -118,10 +147,12 @@ export class QuotationPricingService {
         comparison,
         // A downward adjustment counts like a discount (PRD 3.9 approval rules).
         discountNeedsApproval: chosen.reductionPaise > limit,
+        costing: costingView(rates, chosen),
       },
       lines: chosen.lines,
       rates,
       rule,
+      stateRule,
     };
   }
 

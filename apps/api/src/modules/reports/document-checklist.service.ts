@@ -5,8 +5,8 @@ import { customerCategoryFor, requirementsFor } from '@oneohm/domain';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { fileSystemPapers } from '../documents/system-papers-hook';
 import { loadRequirements } from './document-requirements.service';
-import { ReportSettingsService } from './report-settings.service';
 import { ReportStatusService } from './report-status.service';
 
 /**
@@ -18,12 +18,13 @@ export class DocumentChecklistService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly statuses: ReportStatusService,
-    private readonly settings: ReportSettingsService,
   ) {}
 
   async checklist(
     projectId: string,
   ): Promise<DocumentChecklist & { code: string; customer: string }> {
+    // The accepted quotation, invoices and receipts count once they are printed and filed.
+    await fileSystemPapers({ projectId });
     const [project] = await this.db
       .select({ project: projects, customer: customers.name, discomCode: discoms.code })
       .from(projects)
@@ -46,7 +47,6 @@ export class DocumentChecklistService {
         ),
       );
     const asked = await this.openRequests(project.project.customerId);
-    const shared = await this.settings.customerVisible();
     const needed = requirementsFor(await loadRequirements(this.db), {
       ...project.project,
       discomCode: project.discomCode,
@@ -80,16 +80,25 @@ export class DocumentChecklistService {
         return {
           key: `report_${status.key}`,
           label: status.name,
-          why: shared.has(status.key)
+          why: status.customerVisible
             ? 'Statutory report, shared with the customer.'
             : 'Statutory report.',
           kind: 'report',
+          // A copy made before the report was complete does not count; a submitted one does.
           status:
-            ids.length > 0 ? 'present' : status.status === 'ready' ? 'ready_to_save' : 'not_ready',
+            status.filing?.submittedAt || (ids.length > 0 && status.status === 'ready')
+              ? 'present'
+              : status.status === 'ready'
+                ? 'ready_to_save'
+                : 'not_ready',
           documentIds: ids,
-          missing: status.missing.map((field) =>
-            field.taskTitle ? `${field.label} (${field.taskTitle})` : field.label,
-          ),
+          missing: [
+            ...status.missing.map((field) =>
+              field.taskTitle ? `${field.label} (${field.taskTitle})` : field.label,
+            ),
+            // Made only once the task it certifies is done (PRD 3.18 triggers).
+            ...(status.waitingFor ? [`“${status.waitingFor}” to be done`] : []),
+          ],
           askCategory: null,
           requested: false,
         };

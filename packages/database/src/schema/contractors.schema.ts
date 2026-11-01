@@ -42,8 +42,8 @@ export const contractors = pgTable(
     bankAccountNumber: text('bank_account_number'),
     bankIfsc: text('bank_ifsc'),
     paymentTermsDays: integer('payment_terms_days').notNull().default(15),
-    /** TDS withheld, in basis points (100 = 1%). */
-    tdsBp: integer('tds_bp').notNull().default(100),
+    /** TDS withheld, in basis points (100 = 1%); null follows the company's tax setting. */
+    tdsBp: integer('tds_bp'),
     /** Held back until the defect period ends, in basis points. */
     retentionBp: integer('retention_bp').notNull().default(0),
     retentionDays: integer('retention_days').notNull().default(90),
@@ -118,6 +118,8 @@ export const workOrders = pgTable(
     reworkDeductionsPaise: money('rework_deductions_paise').notNull().default(0),
     retentionPaise: money('retention_paise').notNull().default(0),
     tdsPaise: money('tds_paise').notNull().default(0),
+    /** TDS rate set when the order was issued; null on older orders (the contractor's). */
+    tdsBp: integer('tds_bp'),
     advancesPaise: money('advances_paise').notNull().default(0),
     netPayablePaise: money('net_payable_paise').notNull().default(0),
     payableId: uuid('payable_id').references(() => payables.id),

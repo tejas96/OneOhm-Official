@@ -166,6 +166,23 @@ export const reportStatusSchema = z.object({
   missing: z.array(
     z.object({ field: z.string(), label: z.string(), taskTitle: z.string().nullable() }),
   ),
+  /** The task this report waits for before it can be made (its trigger), if any. */
+  waitingFor: z.string().nullable().optional(),
+  /** The customer sees it in their app once ready (its DISCOM's format, Settings → DISCOMs). */
+  customerVisible: z.boolean().optional(),
+  /**
+   * Its copy in the project documents (PRD 3.18): when saved, when handed in, and whether
+   * the data behind it changed after that (a submitted report is not saved again by itself).
+   */
+  filing: z
+    .object({
+      documentId: idSchema.nullable(),
+      savedAt: instantSchema.nullable(),
+      submittedAt: instantSchema.nullable(),
+      changedSinceSaved: z.boolean(),
+      changedAfterSubmission: z.boolean(),
+    })
+    .optional(),
 });
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
 

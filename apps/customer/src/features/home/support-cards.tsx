@@ -5,6 +5,7 @@ import { HandCoins, MessageCircle, Phone, UsersRound } from 'lucide-react-native
 import { Linking, StyleSheet, View } from 'react-native';
 import { HOME } from '@/copy/home';
 import { dialDigits } from '@/lib/journey';
+import { useBrand } from './use-home';
 
 const SUBSIDY_TONE = {
   pending: 'neutral',
@@ -45,7 +46,8 @@ export function SubsidyCard({ subsidy }: { readonly subsidy: CustomerProject['su
 /** The person to call, with call and WhatsApp. */
 export function ContactCard({ contact }: { readonly contact: CustomerProject['contact'] }) {
   const theme = useTheme();
-  const name = contact?.name ?? HOME.contactFallback;
+  const brand = useBrand();
+  const name = contact?.name ?? HOME.contactFallback(brand);
   const phone = contact?.phone ?? null;
   return (
     <Card style={styles.card}>

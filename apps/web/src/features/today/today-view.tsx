@@ -1,40 +1,66 @@
 'use client';
 
-import { cn, EmptyState, pageEnter } from '@oneohm/design-system/web';
+import { cn, pageEnter, TabPanel, Tabs } from '@oneohm/design-system/web';
 import { todayIn } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Coffee } from 'lucide-react';
 import { motion } from 'motion/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
-import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { useCurrentUser } from '@/providers/current-user';
+import { useCan, useCurrentUser } from '@/providers/current-user';
 import { useGreeting } from '../command-center/use-greeting';
-import { TaskCard } from '../projects/tasks/task-card';
-import { groupTasks, TODAY_GROUPS, type TodayGroup } from './group-tasks';
+import { ApprovalsInbox } from './approvals/approvals-inbox';
+import { groupTasks, TODAY_GROUPS } from './group-tasks';
+import { ACCENT, MyWork } from './my-work';
 
-const ACCENT: Readonly<Record<TodayGroup, string>> = {
-  overdue: 'text-overdue',
-  today: 'text-accent',
-  waiting: 'text-waiting',
-  upcoming: 'text-ink-faint',
-};
+type View = 'work' | 'approvals';
 
-/** The signed-in person's work: what is late, what is due today, what is held, what is next. */
+/**
+ * The signed-in person's day: their own work (late, due, held, next) and, for anyone
+ * who approves things, everything waiting for their yes (`?tab=approvals`).
+ */
 export function TodayView() {
   const t = useTranslations('today');
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   const greeting = useGreeting();
   const user = useCurrentUser();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const approver = useCan(
+    'tasks.approve',
+    'tasks.assign',
+    'quotations.approve_discount',
+    'leave.approve',
+    'procurement.manage',
+    'finance.approve_payments',
+    'finance.record_payments',
+    'people.manage',
+  );
   const query = useQuery({
     queryKey: ['tasks', 'mine'],
     queryFn: () => expectStatus(api.tasks.myTasks(), 200),
     refetchInterval: 60_000,
   });
+  const approvals = useQuery({
+    queryKey: ['approvals', 'mine'],
+    queryFn: () => expectStatus(api.businessSettings.myApprovals(), 200),
+    refetchInterval: 60_000,
+  });
   const groups = groupTasks(query.data ?? [], todayIn());
   const firstName = user.fullName.split(/\s+/)[0] ?? user.fullName;
   const total = TODAY_GROUPS.reduce((sum, group) => sum + groups[group].length, 0);
+  const waiting = approvals.data?.length ?? 0;
+  const showApprovals = approver || waiting > 0;
+  const view: View = showApprovals && params.get('tab') === 'approvals' ? 'approvals' : 'work';
+  const select = (next: View) => {
+    const search = new URLSearchParams(params);
+    if (next === 'work') search.delete('tab');
+    else search.set('tab', next);
+    search.delete('kind');
+    router.replace(`${pathname}${search.size ? `?${search.toString()}` : ''}`, { scroll: false });
+  };
 
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-5xl flex-col gap-10 py-2">
@@ -52,9 +78,10 @@ export function TodayView() {
               today: groups.today.length,
               upcoming: groups.upcoming.length,
             })}
+            {waiting > 0 && ` ${t('approvals.brief', { count: waiting })}`}
           </p>
         )}
-        {query.data && total > 0 && (
+        {view === 'work' && query.data && total > 0 && (
           <nav aria-label={t('jump')} className="flex flex-wrap gap-2">
             {TODAY_GROUPS.map((group) => (
               <a
@@ -71,39 +98,26 @@ export function TodayView() {
           </nav>
         )}
       </header>
-      {query.isPending ? (
-        <ListSkeleton label={t('loading')} />
-      ) : query.isError ? (
-        <LoadError error={query.error} onRetry={() => query.refetch()} />
-      ) : total === 0 ? (
-        <EmptyState icon={<Coffee />} title={t('clearTitle')} description={t('clearBody')} />
+      {showApprovals ? (
+        <Tabs<View>
+          label={t('views')}
+          value={view}
+          onValueChange={select}
+          items={[
+            { value: 'work', label: t('myWork'), count: total },
+            { value: 'approvals', label: t('approvals.title'), count: waiting },
+          ]}
+          className="flex flex-col gap-8"
+        >
+          <TabPanel value="work" className="flex flex-col gap-10">
+            <MyWork query={query} groups={groups} />
+          </TabPanel>
+          <TabPanel value="approvals">
+            <ApprovalsInbox query={approvals} />
+          </TabPanel>
+        </Tabs>
       ) : (
-        TODAY_GROUPS.map((group) => (
-          <section
-            key={group}
-            id={group}
-            aria-labelledby={`${group}-title`}
-            className="flex scroll-mt-24 flex-col"
-          >
-            <div className="flex items-baseline gap-3 border-b border-hairline pb-2.5">
-              <h2 id={`${group}-title`} className="type-display-md text-ink">
-                {t(`groups.${group}.title`)}
-              </h2>
-              <span className={cn('font-mono text-[0.8125rem]', ACCENT[group])}>
-                {groups[group].length}
-              </span>
-            </div>
-            {groups[group].length === 0 ? (
-              <p className="py-4 type-body-sm text-ink-faint">{t(`groups.${group}.empty`)}</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-hairline">
-                {groups[group].map((task, index) => (
-                  <TaskCard key={task.id} task={task} index={index} showProject />
-                ))}
-              </ul>
-            )}
-          </section>
-        ))
+        <MyWork query={query} groups={groups} />
       )}
     </motion.div>
   );

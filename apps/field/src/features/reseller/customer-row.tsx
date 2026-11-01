@@ -1,5 +1,6 @@
 import type { ResellerCustomer } from '@oneohm/api-contracts';
 import { Card, formatInr, StatusPill, Text, type Tone } from '@oneohm/mobile-ui';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { RESELLER_CUSTOMERS } from '@/copy/reseller';
@@ -58,11 +59,18 @@ function ProjectLine({ customer }: { readonly customer: ResellerCustomer }) {
   );
 }
 
-/** One of the reseller's customers: who, the project's progress and their commission. */
+/**
+ * One of the reseller's customers: who, the project's progress and their commission.
+ * Opens the lead, where its site, bills and papers are kept.
+ */
 export function CustomerRow({ customer }: { readonly customer: ResellerCustomer }) {
   const project = customer.project;
   return (
-    <Card style={styles.card} accessibilityLabel={customer.name}>
+    <Card
+      style={styles.card}
+      accessibilityLabel={customer.name}
+      onPress={() => router.push({ pathname: '/leads/[id]', params: { id: customer.leadId } })}
+    >
       <View style={styles.flex}>
         <Text variant="titleMd" numberOfLines={1}>
           {customer.name}

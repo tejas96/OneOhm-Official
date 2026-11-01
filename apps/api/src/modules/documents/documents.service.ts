@@ -19,13 +19,18 @@ import {
 } from './document-access';
 import { resolveLinks, storageScope } from './document-links';
 import { currentProjectFiles, presentDocuments } from './document-read';
+import { leadFilesScope, leadUploadLinks } from './lead-files';
 import { ObjectStorageService, type StoredObject } from './object-storage.service';
+import { partyFilesScope, partyScope, partyUploadLinks } from './party-files';
 import { checkFile, type IncomingFile } from './upload-file';
 
 export interface DocumentFilter {
   readonly projectId?: string | undefined;
   readonly taskId?: string | undefined;
   readonly customerId?: string | undefined;
+  readonly leadId?: string | undefined;
+  readonly vendorId?: string | undefined;
+  readonly contractorId?: string | undefined;
   readonly category?: string | undefined;
 }
 
@@ -38,11 +43,13 @@ export class DocumentsService {
   ) {}
 
   async list(actor: Actor, filter: DocumentFilter): Promise<DocumentRecord[]> {
-    if (!canViewAllDocuments(actor)) {
+    if (filter.leadId) return this.leadFiles(actor, filter.leadId, filter.category);
+    const party = partyFilesScope(actor, filter);
+    if (!party && !canViewAllDocuments(actor)) {
       const assignee = filter.taskId ? (await this.taskOf(filter.taskId)).assignee : null;
       if (!filter.taskId || assignee !== actor.userId) throw forbidden();
     }
-    const conditions: SQL[] = [currentProjectFiles];
+    const conditions: SQL[] = [currentProjectFiles, ...(party ? [party] : [])];
     if (filter.projectId) conditions.push(eq(documents.projectId, filter.projectId));
     if (filter.taskId) conditions.push(eq(documents.taskId, filter.taskId));
     if (filter.customerId) conditions.push(eq(documents.customerId, filter.customerId));
@@ -63,8 +70,14 @@ export class DocumentsService {
       throw invalid('Some details need fixing.', fieldErrors);
     }
     const fields = parsed.data;
-    const links = await resolveLinks(this.db, fields);
-    if (!canAttach(actor, links.taskAssigneeId)) {
+    // A lead's paper goes on its customer and site; working the lead allows it.
+    const lead = fields.leadId
+      ? await leadUploadLinks(this.db, actor, fields.leadId, fields)
+      : null;
+    const links = await resolveLinks(this.db, lead ? { ...fields, ...lead } : fields);
+    // A contractor's or vendor's own paper is kept on them (office only).
+    const party = await partyUploadLinks(this.db, actor, fields);
+    if (!lead && !party && !canAttach(actor, links.taskAssigneeId)) {
       throw forbidden('Only the person doing this task or the office can add files to it.');
     }
     // A sign-off is drawn on a task and printed on PDFs later: a task's PNG, JPEG or WebP.
@@ -79,7 +92,8 @@ export class DocumentsService {
         ? EVIDENCE_FILE_TYPES
         : undefined;
     const checked = checkFile(file, allowed, fields.name);
-    const storageKey = `${storageScope(links)}/${randomUUID()}/${checked.keyName}`;
+    const scope = party ? partyScope(party) : storageScope(links);
+    const storageKey = `${scope}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     const id = await this.db.transaction(async (tx) => {
       const [row] = await tx
@@ -89,6 +103,9 @@ export class DocumentsService {
           taskId: links.taskId,
           customerId: links.customerId,
           propertyId: links.propertyId,
+          leadId: fields.leadId ?? null,
+          contractorId: party?.contractorId ?? null,
+          vendorId: party?.vendorId ?? null,
           category: fields.category,
           source: 'upload',
           name: checked.name,
@@ -111,6 +128,7 @@ export class DocumentsService {
         name: checked.name,
         category: fields.category,
         taskId: links.taskId,
+        ...(fields.leadId ? { leadId: fields.leadId } : {}),
       });
       return row.id;
     });
@@ -187,6 +205,18 @@ export class DocumentsService {
         .where(eq(documents.id, id));
       await recordAudit(tx, actor.userId, 'document.removed', 'document', id, { name: row.name });
     });
+  }
+
+  private async leadFiles(
+    actor: Actor,
+    leadId: string,
+    category?: string,
+  ): Promise<DocumentRecord[]> {
+    const scope = await leadFilesScope(this.db, actor, leadId);
+    if (!scope) return [];
+    const conditions: SQL[] = [currentProjectFiles, scope];
+    if (category) conditions.push(eq(documents.category, category));
+    return presentDocuments(this.db, and(...conditions) as SQL);
   }
 
   private async one(id: string): Promise<DocumentRecord> {

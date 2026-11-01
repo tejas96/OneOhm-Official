@@ -3,6 +3,7 @@
 import type { ChatSummary } from '@oneohm/api-contracts';
 import { Avatar, Badge, cn } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import { useBrandName } from '@/features/shell/company-name';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
 
@@ -50,10 +51,11 @@ function ChatRow({
 }) {
   const t = useTranslations('service.whatsapp');
   const ago = useAgo('short');
+  const brand = useBrandName();
   const last = chat.lastMessage;
   const preview = last
-    ? last.direction === 'out'
-      ? t('fromUs', { text: plainLine(last.body) })
+    ? last.direction === 'out' && brand
+      ? t('fromUs', { company: brand, text: plainLine(last.body) })
       : plainLine(last.body)
     : t('noMessages');
   return (

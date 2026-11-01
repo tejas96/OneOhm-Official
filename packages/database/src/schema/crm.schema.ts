@@ -74,7 +74,11 @@ export const properties = pgTable(
     sanctionedLoadW: integer('sanctioned_load_w'),
     phase: phaseEnum('phase'),
     meterInSocietyName: boolean('meter_in_society_name'),
+    /** The EV charging meter's number, from a completed New EV meter request (PRD 3.15). */
+    evMeterNumber: text('ev_meter_number'),
     subsidyClaimed: boolean('subsidy_claimed').notNull().default(false),
+    /** A low-income household: the state top-up may apply (PRD 3.5); proof filed as Income proof. */
+    lowIncomeHousehold: boolean('low_income_household').notNull().default(false),
     floors: integer('floors').notNull().default(1),
     version: version(),
     createdAt: createdAt(),

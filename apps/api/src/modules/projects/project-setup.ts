@@ -5,6 +5,7 @@ import {
   projectTasks,
   type properties,
   type quotations,
+  readBusinessSetting,
   type Transaction,
   taskDependencies,
 } from '@oneohm/database';
@@ -103,19 +104,29 @@ export async function writeGeneratedTasks(
 ): Promise<{ unassigned: number; toConfirm: number; perPerson: Map<string, number> }> {
   const ids = new Map<string, string>();
   const load = new Map(candidates.map((candidate) => [candidate.userId, candidate.openTasks]));
+  // Round robin moves each person to the back of the queue as they get work (PRD 7.2).
+  const turn = new Map(candidates.map((candidate) => [candidate.userId, candidate.lastAssignedAt]));
+  const rules = await readBusinessSetting(tx, 'assignment');
+  const now = Date.now();
   const perPerson = new Map<string, number>();
   let unassigned = 0;
   let toConfirm = 0;
   for (const [position, task] of generated.entries()) {
     const picked = pickProjectAssignee(
-      candidates.map((candidate) => ({ ...candidate, openTasks: load.get(candidate.userId) ?? 0 })),
+      candidates.map((candidate) => ({
+        ...candidate,
+        openTasks: load.get(candidate.userId) ?? 0,
+        lastAssignedAt: turn.get(candidate.userId) ?? null,
+      })),
       pool,
       task,
+      rules,
     );
     const proposed = task.confirmAssignee === true;
     if (!picked.userId) unassigned += 1;
     else {
       load.set(picked.userId, (load.get(picked.userId) ?? 0) + 1);
+      turn.set(picked.userId, new Date(now + position).toISOString());
       if (proposed) toConfirm += 1;
       else perPerson.set(picked.userId, (perPerson.get(picked.userId) ?? 0) + 1);
     }

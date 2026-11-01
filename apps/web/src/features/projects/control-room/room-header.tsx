@@ -5,6 +5,7 @@ import { cn, StageTracker, StatusPill } from '@oneohm/design-system/web';
 import { formatKwp } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ProjectChangeRequestButton } from '@/features/discom/project-change-request-button';
+import { ChangeScopeButton } from '@/features/project-changes/change-scope-button';
 import { RoomAlerts } from './room-alerts';
 import { RoomFacts } from './room-facts';
 import type { ProjectSignals } from './room-signals';
@@ -61,6 +62,7 @@ export function RoomHeader({
         <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
           <StatusPill tone={project.tone} label={project.toneLabel} />
           <ProjectChangeRequestButton projectId={project.id} />
+          <ChangeScopeButton project={project} />
         </div>
       </div>
       <RoomFacts project={project} />

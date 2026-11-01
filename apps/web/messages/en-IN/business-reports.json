@@ -2,7 +2,7 @@
   "businessReports": {
     "eyebrow": "Business",
     "title": "Reports",
-    "description": "How OneOhm is doing, counted from the records: sales, delivery, delays by cause, money collected, profit per project, the team and service.",
+    "description": "How the business is doing, counted from the records: sales, delivery, delays by cause, money collected, profit per project, the team and service.",
     "tabsLabel": "Reports",
     "tabs": {
       "sales": "Sales",

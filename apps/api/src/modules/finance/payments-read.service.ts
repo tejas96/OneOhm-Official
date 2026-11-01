@@ -1,9 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReceivedPayment } from '@oneohm/api-contracts';
 import { customers, paymentMilestones, payments, projects } from '@oneohm/database';
-import { desc, eq, gt, isNotNull, or } from 'drizzle-orm';
+import { desc, eq, gt, isNotNull, or, sql } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+
+/** Money in and reversals; a refund's release row shows as its refund instead. */
+const SHOWN = or(gt(payments.amountPaise, 0), isNotNull(payments.reversesPaymentId));
 
 /** Money received, newest first, with receipt numbers and reversals marked. */
 @Injectable()
@@ -11,12 +14,22 @@ export class PaymentsReadService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /** A refund's release row (negative, reversing nothing) shows as its refund instead. */
-  async list(limit: number): Promise<ReceivedPayment[]> {
+  async list(limit: number, offset = 0): Promise<ReceivedPayment[]> {
     const rows = await this.query()
-      .where(or(gt(payments.amountPaise, 0), isNotNull(payments.reversesPaymentId)))
-      .orderBy(desc(payments.createdAt))
-      .limit(limit);
+      .where(SHOWN)
+      .orderBy(desc(payments.createdAt), desc(payments.id))
+      .limit(limit)
+      .offset(offset);
     return this.present(rows);
+  }
+
+  /** How many rows `list` can show in all, for a paged list. */
+  async count(): Promise<number> {
+    const [row] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(payments)
+      .where(SHOWN);
+    return row?.total ?? 0;
   }
 
   async get(id: string): Promise<ReceivedPayment> {

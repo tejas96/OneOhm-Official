@@ -5,7 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import { paymentLinks } from '@oneohm/database';
+import { noteBackgroundRun, paymentLinks } from '@oneohm/database';
 import { and, eq, inArray } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { PAYMENT_GATEWAY, type PaymentGateway } from './gateway';
@@ -67,8 +67,10 @@ export class LinkSyncService implements OnApplicationBootstrap, OnModuleDestroy 
       }
       if (recorded || closed)
         this.logger.log(`Recorded ${recorded} payments, closed ${closed} links.`);
+      await noteBackgroundRun(this.db, 'payment_link_sync', { count: recorded + closed });
     } catch (error) {
       this.logger.error(`Razorpay check failed: ${error instanceof Error ? error.message : error}`);
+      await noteBackgroundRun(this.db, 'payment_link_sync', { error });
     }
     return { recorded, closed };
   }

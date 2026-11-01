@@ -24,7 +24,7 @@ export const LEDGER_ACCOUNTS = [
   { code: '2000', name: 'Vendor payables', type: 'liability' },
   { code: '2010', name: 'Contractor payables', type: 'liability' },
   { code: '2020', name: 'Referral and commission payables', type: 'liability' },
-  { code: '2030', name: 'Employee reimbursements payable', type: 'liability' },
+  { code: '2030', name: 'Employee payables (claims and bonuses)', type: 'liability' },
   { code: '2100', name: 'Advances received', type: 'liability' },
   { code: '2110', name: 'Customer credit', type: 'liability' },
   { code: '2200', name: 'GST output', type: 'liability' },

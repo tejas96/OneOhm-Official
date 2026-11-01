@@ -43,8 +43,8 @@ export const EARNINGS = {
   rule: (amount: string, event: Event) => `${amount} ${EVENT_WORDS[event]}.`,
   percentOfValue: (percent: string) => `${percent}% of the project value`,
   perKw: (amount: string) => `${amount} for every kW installed`,
-  ruleOff: 'Commission is not set up yet. Your OneOhm contact will share the terms.',
-  ruleNote: 'OneOhm approves each commission before paying it.',
+  ruleOff: 'Commission is not set up yet. Your contact will share the terms.',
+  ruleNote: 'Each commission is approved before it is paid.',
   tiles: {
     earned: 'Earned',
     pending: 'Waiting for approval',

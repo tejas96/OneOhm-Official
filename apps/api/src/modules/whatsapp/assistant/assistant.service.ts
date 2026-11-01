@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { customers, notifyHolders, waConversations } from '@oneohm/database';
+import { brandName, customers, notifyHolders, waConversations } from '@oneohm/database';
 import { findReferralCode } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
@@ -107,10 +107,12 @@ export class AssistantService {
       : [];
     if (!customer) return this.stranger(chat, '');
     const first = customer.name.split(/\s+/)[0] ?? customer.name;
+    const brand = await brandName(this.db);
     await this.say(chat, {
       kind: 'list',
-      body: WORDS.menu(first),
+      body: WORDS.menu(first, brand),
       button: WORDS.menuButton,
+      ...(brand ? { section: brand } : {}),
       rows: MENU_ROWS,
     });
   }
@@ -150,7 +152,8 @@ export class AssistantService {
         phone: chat.phone,
       });
       if (!saved) return this.stranger(chat, word);
-      return this.say(chat, { kind: 'text', body: WORDS.referredWelcome(saved.referrer) });
+      const welcome = WORDS.referredWelcome(saved.referrer, await brandName(this.db));
+      return this.say(chat, { kind: 'text', body: welcome });
     } catch (error) {
       if (error instanceof AppError) return this.say(chat, { kind: 'text', body: error.message });
       throw error;

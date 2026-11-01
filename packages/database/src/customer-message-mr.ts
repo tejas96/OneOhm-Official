@@ -141,5 +141,5 @@ export const MARATHI_WORDS: LanguageWords = {
     paid: 'तुम्हाला दिले',
     rejected: 'मंजूर झाले नाही',
   },
-  alerts: { stage_rating_reply: 'OneOhm ने तुमच्या अभिप्रायाला उत्तर दिले' },
+  alerts: { stage_rating_reply: 'आम्ही तुमच्या अभिप्रायाला उत्तर दिले' },
 };

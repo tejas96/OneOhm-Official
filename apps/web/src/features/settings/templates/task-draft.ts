@@ -1,11 +1,9 @@
 import type { TaskTemplateInput, TaskTemplateRecord } from '@oneohm/api-contracts';
 import { checklistLineKey, defaultChecklist } from '@oneohm/domain';
 
-/** The form's copy of a template; list fields typed as text are kept as text. */
+/** The form's copy of a template; the checklist is kept as text, one line per check. */
 export type TaskDraft = Omit<TaskTemplateInput, 'conditions'> & {
   conditions: NonNullable<TaskTemplateInput['conditions']>;
-  discomText: string;
-  capturesText: string;
   /** One checklist line per row of text. */
   checklistText: string;
 };
@@ -23,7 +21,6 @@ export const BLANK_TASK: TaskDraft = {
   durationDays: 1,
   dependsOn: [],
   conditions: {},
-  discomText: '',
   waitingParty: 'internal',
   customerVisible: false,
   notifyCustomer: false,
@@ -39,7 +36,6 @@ export const BLANK_TASK: TaskDraft = {
   reviewer: 'approvers',
   evidence: [],
   captures: [],
-  capturesText: '',
   checklist: null,
   checklistText: '',
   onComplete: null,
@@ -52,8 +48,6 @@ export function toDraft(template: TaskTemplateRecord): TaskDraft {
   return {
     ...rest,
     conditions: template.conditions ?? {},
-    discomText: (template.conditions?.discomCodes ?? []).join(', '),
-    capturesText: template.captures.join(', '),
     checklistText: (template.checklist ?? defaultChecklist(template.key))
       .map((line) => line.label)
       .join('\n'),
@@ -80,16 +74,13 @@ function checklistFrom(text: string, templateKey: string): TaskTemplateInput['ch
   });
 }
 
-const list = (text: string) =>
-  text
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+/** Each item once, in the order first picked. */
+const unique = (items: readonly string[] | undefined) => [...new Set(items ?? [])];
 
-/** What the API takes: empty conditions become none, text lists become arrays. */
+/** What the API takes: empty conditions become none, picked lists keep one of each. */
 export function toInput(draft: TaskDraft): TaskTemplateInput {
-  const { discomText, capturesText, checklistText, ...rest } = draft;
-  const discomCodes = list(discomText).map((code) => code.toUpperCase());
+  const { checklistText, ...rest } = draft;
+  const discomCodes = unique(draft.conditions.discomCodes);
   const conditions = Object.fromEntries(
     Object.entries({ ...draft.conditions, discomCodes }).filter(([, value]) =>
       Array.isArray(value) ? value.length > 0 : value !== undefined,
@@ -98,7 +89,7 @@ export function toInput(draft: TaskDraft): TaskTemplateInput {
   return {
     ...rest,
     conditions: Object.keys(conditions).length > 0 ? conditions : null,
-    captures: list(capturesText),
+    captures: unique(draft.captures),
     checklist: draft.evidence.includes('checklist')
       ? checklistFrom(checklistText, draft.key)
       : (draft.checklist ?? null),

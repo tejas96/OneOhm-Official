@@ -1,4 +1,5 @@
 import {
+  brandName,
   type Database,
   leads,
   notifyHolders,
@@ -105,10 +106,13 @@ export function summaryLine(numbers: PeriodNumbers): string {
  */
 export async function queueOwnerSummaries(db: Database, today: string): Promise<number> {
   const yesterday = addDays(today, -1);
+  const company = await brandName(db);
   const daily = await periodNumbers(db, yesterday, today, today);
+  // "Yesterday at <brand>", with the name from the company profile.
+  const at = (when: string) => (company ? `${when} at ${company}` : when);
   let sent = await notifyHolders(db, 'projects.view_all', {
     kind: 'owner_daily',
-    title: 'Yesterday at OneOhm',
+    title: at('Yesterday'),
     body: summaryLine(daily),
     dedupeKey: `owner_daily:${today}`,
   });
@@ -117,7 +121,7 @@ export async function queueOwnerSummaries(db: Database, today: string): Promise<
     const weekly = await periodNumbers(db, addDays(today, -7), today, today);
     sent += await notifyHolders(db, 'projects.view_all', {
       kind: 'owner_weekly',
-      title: 'Last week at OneOhm',
+      title: at('Last week'),
       body: summaryLine(weekly),
       dedupeKey: `owner_weekly:${today}`,
     });

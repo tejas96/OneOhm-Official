@@ -1,8 +1,10 @@
 'use client';
 
+import type { PaymentPage, ReceivedPayment } from '@oneohm/api-contracts';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { usePagedList } from '@/lib/query/use-paged-list';
 
 export const FINANCE_KEY = ['finance'] as const;
 export type PayableFilter = 'open' | 'pending' | 'approved' | 'paid' | 'all';
@@ -19,11 +21,11 @@ export const useReceivables = () =>
     queryFn: () => expectStatus(api.finance.listReceivables(), 200),
   });
 
+/** Money received, newest first, 30 at a time (more as the person scrolls; PRD 9.3). */
 export const usePaymentsReceived = () =>
-  useQuery({
-    queryKey: [...FINANCE_KEY, 'payments'],
-    queryFn: () => expectStatus(api.finance.listPayments({ query: { limit: 50 } }), 200),
-  });
+  usePagedList<ReceivedPayment, PaymentPage>([...FINANCE_KEY, 'payments', 'page'], (cursor) =>
+    expectStatus(api.lists.payments({ query: { limit: 30, ...(cursor ? { cursor } : {}) } }), 200),
+  );
 
 export const usePayables = (status: PayableFilter) =>
   useQuery({

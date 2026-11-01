@@ -29,6 +29,10 @@ export const documentSchema = attachmentSchema.extend({
   customerId: idSchema.nullable(),
   propertyId: idSchema.nullable(),
   reportKey: z.string().nullable(),
+  /** Filed while the customer was a lead, or kept on a vendor or contractor (PRD 3.14). */
+  leadId: idSchema.nullable().optional(),
+  vendorId: idSchema.nullable().optional(),
+  contractorId: idSchema.nullable().optional(),
   uploadedBy: userRefSchema.nullable(),
   /** True when this file replaced an earlier one (the earlier file is not shown). */
   replaced: z.boolean(),
@@ -42,11 +46,27 @@ export const documentFilterSchema = z
     projectId: idSchema.optional(),
     taskId: idSchema.optional(),
     customerId: idSchema.optional(),
+    /**
+     * The papers kept on the lead's customer and site (not project files). People who
+     * cannot see every document get only the files they added themselves.
+     */
+    leadId: idSchema.optional(),
+    /** A vendor's or a contractor's own papers (PRD 3.13, 3.14). */
+    vendorId: idSchema.optional(),
+    contractorId: idSchema.optional(),
     category: z.string().optional(),
   })
   .refine(
-    (filter) => Boolean(filter.projectId || filter.taskId || filter.customerId),
-    'Choose a project, task or customer.',
+    (filter) =>
+      Boolean(
+        filter.projectId ||
+          filter.taskId ||
+          filter.customerId ||
+          filter.leadId ||
+          filter.vendorId ||
+          filter.contractorId,
+      ),
+    'Choose a project, task, customer, lead, vendor or contractor.',
   );
 
 /**
@@ -67,12 +87,25 @@ export const uploadFieldsSchema = z
     taskId: optionalId,
     customerId: optionalId,
     propertyId: optionalId,
+    /** A paper for a lead (an electricity bill, ID proof): kept on its customer and site. */
+    leadId: optionalId,
+    /** A vendor's or a contractor's own paper: agreement, licence, insurance, certificates. */
+    vendorId: optionalId,
+    contractorId: optionalId,
     name: z.string().trim().max(160).optional(),
     ...geotagFieldsSchema.shape,
   })
   .refine(
-    (fields) => Boolean(fields.projectId || fields.taskId || fields.customerId),
-    'Link the file to a project, task or customer.',
+    (fields) =>
+      Boolean(
+        fields.projectId ||
+          fields.taskId ||
+          fields.customerId ||
+          fields.leadId ||
+          fields.vendorId ||
+          fields.contractorId,
+      ),
+    'Link the file to a project, task, customer, lead, vendor or contractor.',
   );
 export type UploadFields = z.infer<typeof uploadFieldsSchema>;
 

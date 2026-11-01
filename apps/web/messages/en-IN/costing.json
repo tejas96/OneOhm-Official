@@ -1,0 +1,294 @@
+{
+  "costing": {
+    "common": {
+      "save": "Save",
+      "remove": "Remove"
+    },
+    "kinds": {
+      "structure": "Structure part",
+      "cable": "Cable",
+      "routing": "Cable routing",
+      "electrical": "Electrical",
+      "labour": "Labour",
+      "equipment": "Equipment hire",
+      "service": "Service",
+      "other": "Other"
+    },
+    "routes": {
+      "dc": "DC",
+      "ac": "AC",
+      "earth": "Earthing"
+    },
+    "settings": {
+      "loading": "Loading the rates",
+      "intro": "Every quotation is priced from these rates. Sales still quote in a minute from the defaults; the survey and managers fill in the detail. A change applies to new quotations only; accepted ones keep their own figures.",
+      "lastSaved": "Last saved {date}",
+      "viewsLabel": "Parts of the rate card",
+      "views": {
+        "lines": "Rate lines",
+        "sites": "Site types",
+        "labour": "Labour and travel",
+        "rules": "Pricing rules"
+      }
+    },
+    "lines": {
+      "intro": "One line for everything you price: each cable size, conduit or tray, structure part, kit, crew day, equipment hire and service. Add a line here and it can be used on any site type or quotation.",
+      "add": "Add a rate",
+      "allKinds": "All kinds",
+      "caption": "Rate lines",
+      "unused": "Not used yet",
+      "everyJob": "Every job",
+      "sites": "{count, plural, one {# site type} other {# site types}}",
+      "fromCatalog": "Catalog price",
+      "emptyTitle": "No rates of this kind",
+      "emptyBody": "Add one with “Add a rate”.",
+      "columns": {
+        "rate": "Rate",
+        "kind": "Kind",
+        "price": "Price",
+        "cost": "Cost",
+        "margin": "Margin",
+        "used": "Used on"
+      },
+      "sheet": {
+        "addTitle": "Add a rate",
+        "editTitle": "Edit rate",
+        "description": "What it is, how it is counted, and what it costs and sells for.",
+        "label": "Name",
+        "labelHint": "As it should read on the bill of materials, e.g. DC cable 6 sq mm.",
+        "kind": "Kind",
+        "kindHint": "Decides where it sits on the quotation and in the cost build-up.",
+        "unit": "Unit",
+        "unitHint": "m, nos, set, day, kW or job.",
+        "tax": "GST",
+        "goods": "Goods",
+        "service": "Service",
+        "product": "Catalog product",
+        "productHint": "When it is a stock item: the store reserves it for the project and its catalog price applies.",
+        "noProduct": "Not a catalog product",
+        "catalogPrice": "Priced from the catalog: {price} per {unit}, cost {cost}. Change it in Settings → Products.",
+        "price": "Price per unit",
+        "cost": "Cost per unit",
+        "delete": "Delete",
+        "inUse": "Used in {count, plural, one {# place} other {# places}}; remove it there before deleting it."
+      }
+    },
+    "editors": {
+      "rate": "Rate",
+      "part": "Part",
+      "per": "Counted per",
+      "qty": "Quantity",
+      "perHeight": "× height",
+      "perOptions": {
+        "job": "Job",
+        "kw": "kW",
+        "panel": "Panel",
+        "row": "Row",
+        "gap": "Gap"
+      },
+      "addPart": "Add a part",
+      "noParts": "No parts: the structure is priced per kW from its benchmark.",
+      "route": "Route",
+      "cable": "Cable",
+      "routing": "Routing",
+      "noRouting": "None",
+      "across": "Across",
+      "upPerFloor": "Down a floor",
+      "up": "Up",
+      "floor": "Floor",
+      "runs": "Runs",
+      "addRoute": "Add a route",
+      "noRoutes": "No cable routes.",
+      "skill": "Skill",
+      "workers": "People",
+      "addCrew": "Add to the crew",
+      "noCrew": "No crew: labour is priced per kW on every job.",
+      "equipment": "Equipment",
+      "fromFloor": "From floor",
+      "addEquipment": "Add equipment",
+      "noEquipment": "No equipment hired."
+    },
+    "sites": {
+      "intro": "What a quick quote assumes about each kind of site until the survey measures it. A structure with parts is priced from its real components; without parts it uses its per-kW benchmark.",
+      "caption": "Site types",
+      "types": {
+        "rcc_elevated": "RCC roof, elevated",
+        "tin_shed": "Tin shed",
+        "aluminium_rail": "Aluminium rail on RCC roof",
+        "ground_mount": "Ground mount",
+        "custom": "Custom"
+      },
+      "columns": {
+        "type": "Site type",
+        "structure": "Structure",
+        "routes": "Cable routes",
+        "crew": "Crew",
+        "equipment": "Equipment"
+      },
+      "parts": "{count, plural, one {# part} other {# parts}}",
+      "perKw": "{price} per kW (benchmark)",
+      "route": "{kind} {across} m + {up} m a floor, × {runs}",
+      "crew": "{people, plural, one {# person} other {# people}}, {pace} kW a day",
+      "noCrew": "Priced per kW",
+      "sheet": {
+        "description": "Defaults for this kind of site. The survey or a manager can change any of them on a quotation.",
+        "structure": "Mounting structure",
+        "structureHint": "Its parts, counted per panel, per row of panels, per gap between two panels in a row, per kW or per job. Legs can grow with the height.",
+        "label": "Name on the quotation",
+        "labelHint": "Used when the structure is priced per kW.",
+        "height": "Height",
+        "tilt": "Tilt",
+        "panelsPerRow": "Panels in a row",
+        "benchmarkPrice": "Benchmark price per kW",
+        "benchmarkHint": "Used only when the structure has no parts.",
+        "benchmarkCost": "Benchmark cost per kW",
+        "routes": "Cable routes",
+        "routesHint": "Before the survey: metres across the roof, plus a drop for every floor, times the cables sharing the route.",
+        "crew": "Crew and days",
+        "crewHint": "People by skill, paid per person-day. Days follow the size of the system, never fewer than the minimum.",
+        "kwPerDay": "kW installed a day",
+        "kwPerDayHint": "0 means always the minimum days.",
+        "minDays": "Fewest days",
+        "equipment": "Equipment hire",
+        "equipmentHint": "Scaffolding, lifting and the like, needed from a floor up (0 for every job)."
+      }
+    },
+    "labour": {
+      "jobItems": "On every job",
+      "jobItemsHint": "Kits, per-kW installation and the DISCOM work every system needs.",
+      "addJobItem": "Add an item",
+      "noJobItems": "Nothing is added to every job.",
+      "floors": "Extra floors",
+      "floorsHint": "Extra labour per kW for each floor above the free floors.",
+      "floorRate": "Labour rate",
+      "noFloorRate": "No extra charge",
+      "freeFloors": "Floors included",
+      "travel": "Travel",
+      "travelHint": "Charged once for each site visit, on its own line: never inside labour, so no distance is charged twice.",
+      "travelLabel": "Name on the quotation",
+      "flat": "Flat charge per trip",
+      "baseKm": "Kilometres included",
+      "perKm": "Per extra kilometre",
+      "visits": "Visits per job",
+      "visitsHint": "Delivery, installation and commissioning trips.",
+      "roadFactor": "Road distance",
+      "roadFactorHint": "Times the straight line from the base to the site.",
+      "baseLatitude": "Base latitude",
+      "baseLongitude": "Base longitude",
+      "baseHint": "Where crews and material leave from. With it, quotations fill in the distance to any site that has GPS. In Google Maps, right-click the office to copy its numbers.",
+      "access": "Site access",
+      "accessHint": "Extra labour when a site is hard to work on. Easy sites add nothing.",
+      "accessLevels": {
+        "moderate": "Moderate (narrow stairs, long carry)",
+        "difficult": "Difficult (no stairs, crane or rope work)"
+      }
+    },
+    "rules": {
+      "pricing": "How prices are set",
+      "pricingHint": "Either each rate and product carries its own selling price, or the price follows from cost.",
+      "modes": {
+        "rates": "Price on each rate",
+        "margin": "Cost plus target margin"
+      },
+      "modeHints": {
+        "rates": "Each rate line and catalog product sells at its own price. Overhead and the target margin are used to show the true margin.",
+        "margin": "Every engine line sells at cost × (1 + overhead) ÷ (1 − target margin). Hand-added lines keep their own prices."
+      },
+      "allowances": "Allowances and approvals",
+      "allowancesHint": "What covers the unknown before the survey, and what needs a manager.",
+      "taxes": "GST",
+      "fields": {
+        "marginBp": "Target margin (%)",
+        "overheadBp": "Overhead (%)",
+        "contingencyBp": "Contingency on default quantities (%)",
+        "toleranceBp": "Survey tolerance (%)",
+        "discountApprovalBp": "Discount approval threshold (%)",
+        "wastageBp": "Cable wastage (%)",
+        "sqmPerKwp": "Shadow-free area per kWp (m²)",
+        "goodsTaxBp": "GST on goods (%)",
+        "serviceTaxBp": "GST on services (%)"
+      },
+      "hints": {
+        "marginBp": "Share of the price before GST left after all cost and overhead.",
+        "overheadBp": "Office and running costs, added on top of the direct cost of each job.",
+        "contingencyBp": "Added to quantities from site-type defaults, to cover what the survey may find.",
+        "toleranceBp": "Cost changes within this band after the survey are absorbed; beyond it, a revision needs approval.",
+        "discountApprovalBp": "Discounts larger than this share of the price need a manager's approval.",
+        "wastageBp": "Added to every metre of cable and routing for cuts and loops.",
+        "sqmPerKwp": "After the survey, a roof with less shadow-free area than this per kWp gets a revision sized to fit. 0 switches the check off.",
+        "goodsTaxBp": "On panels, structure, cable and kits.",
+        "serviceTaxBp": "On labour, travel and services."
+      }
+    },
+    "builder": {
+      "gpsDistance": "Filled in from GPS: about {km} km by road. Change it if the road is longer.",
+      "noBase": "Set the base location in Settings → Rates to fill this in from the site's GPS."
+    },
+    "detail": {
+      "toggle": "Site detail: cable runs, structure, crew and visits",
+      "measured": "Measured",
+      "defaults": "Site defaults",
+      "reset": "Use defaults",
+      "waiting": "The detail appears once the price is worked out.",
+      "intro": "What the price assumes for this site. Change anything the survey measured; that part then counts as measured and carries no contingency.",
+      "arrayLocation": "Panel array location",
+      "arrayPlaceholder": "e.g. Terrace, south side",
+      "inverterLocation": "Inverter location",
+      "inverterPlaceholder": "e.g. Ground floor, near the meter",
+      "runs": "Cable runs",
+      "runsHint": "Floor by floor and route by route; wastage is added. {metres} m of cable in all.",
+      "runCheck": {
+        "notANumber": {
+          "floor": "Type the floor as a whole number, like 2.",
+          "acrossM": "Type metres as a number, like 12.5.",
+          "upM": "Type metres as a number, like 6.",
+          "runs": "Type how many cables as a whole number, like 2."
+        },
+        "too_small": "Use {min} or more.",
+        "too_big": "Use at most {max}.",
+        "not_whole": "Use a whole number."
+      },
+      "structure": "Mounting structure",
+      "structurePerKw": "No parts on this site type, so it is priced per kW. Add parts to price it from its components.",
+      "structureHint": "{rows, plural, one {# row} other {# rows}} of up to {perRow} panels, priced from its parts.",
+      "height": "Height",
+      "tilt": "Tilt",
+      "panelsPerRow": "Panels in a row",
+      "labour": "Labour, visits and equipment",
+      "labourHint": "Crew days are added to the labour on every job. Each visit is one trip from base ({trip}), charged once.",
+      "days": "Days on site",
+      "daysHint": "Half days are fine.",
+      "visits": "Site visits",
+      "visitsHint": "Each is one trip from base.",
+      "access": "Site access",
+      "accessLevels": {
+        "easy": "Easy",
+        "moderate": "Moderate",
+        "difficult": "Difficult"
+      }
+    },
+    "buildup": {
+      "title": "How the cost is built",
+      "modes": {
+        "rates": "Prices from each rate and product.",
+        "margin": "Prices from cost plus the target margin."
+      },
+      "parts": {
+        "materialPaise": "Material",
+        "labourPaise": "Labour",
+        "equipmentPaise": "Equipment hire",
+        "travelPaise": "Travel",
+        "servicesPaise": "Services and other"
+      },
+      "direct": "Direct cost",
+      "overhead": "Overhead",
+      "fullCost": "Full cost",
+      "netPrice": "Price before GST",
+      "margin": "Margin ({percent})"
+    },
+    "facts": {
+      "runsMeasured": "Measured run by run ({count, plural, one {# run} other {# runs}})",
+      "locations": "Panels and inverter"
+    }
+  }
+}

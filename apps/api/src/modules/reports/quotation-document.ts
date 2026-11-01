@@ -1,6 +1,7 @@
 import type { Company, QuotationDetail, QuotationTotals } from '@oneohm/api-contracts';
 import { DEFAULT_MILESTONES, type MilestoneShare, planMilestones } from '@oneohm/domain';
 import { formatInr, formatKwp } from '@oneohm/shared';
+import { customerLines, lineView, percent } from './quotation-lines-view';
 
 /** What the quotation document needs beyond the quotation itself. */
 export interface QuotationExtras {
@@ -37,7 +38,9 @@ const SYSTEM_TYPE = { on_grid: 'On-grid', hybrid: 'Hybrid', off_grid: 'Off-grid'
 const STRUCTURE = {
   rcc_elevated: 'Elevated structure on RCC roof',
   tin_shed: 'Structure on tin shed',
+  aluminium_rail: 'Aluminium rail structure on RCC roof',
   ground_mount: 'Ground-mounted structure',
+  custom: 'Custom structure designed for the site',
 } as const;
 const CATEGORY = {
   individual: 'Individual home',
@@ -70,11 +73,6 @@ export const formatPhone = (e164: string) => {
   return match ? `+91 ${match[1]} ${match[2]}` : e164;
 };
 
-const quantity = (value: number, unit: string) =>
-  `${Number.isInteger(value) ? value : value.toFixed(2).replace(/\.?0+$/, '')} ${unit}`;
-
-const percent = (bp: number) => `${(bp / 100).toFixed(bp % 100 === 0 ? 0 : 1)}%`;
-
 /** Rated output in kW (inverters, batteries, sanctioned load), not panel kWp. */
 const kilowatts = (watts: number) => `${Number((watts / 1000).toFixed(2))} kW`;
 
@@ -98,21 +96,6 @@ const specsLine = (product: ProductLabel | null): string | null => {
   ].filter((part): part is string => part !== null);
   return parts.length > 0 ? parts.join(' · ') : null;
 };
-
-type Line = QuotationDetail['lines'][number];
-const lineView = (line: Line, index: number) => ({
-  index: index + 1,
-  description: line.description,
-  note: line.extra === 'charge' || line.extra === 'adjustment' ? line.reason : null,
-  quantity: quantity(line.quantity, line.unit),
-  gst: line.extra === 'gift' ? '—' : percent(line.taxRateBp),
-  amount:
-    line.extra === 'gift'
-      ? 'Free'
-      : line.amountPaise < 0
-        ? `− ${formatInr(-line.amountPaise)}`
-        : formatInr(line.amountPaise + line.contingencyPaise),
-});
 
 const totalsView = (totals: QuotationTotals) => ({
   total: formatInr(totals.totalPaise),
@@ -171,7 +154,7 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
       inverterSpecs: specsLine(extras.inverter),
       batterySpecs: specsLine(extras.battery),
     },
-    lines: quotation.lines.filter((line) => line.extra !== 'optional').map(lineView),
+    lines: customerLines(quotation.lines),
     optional: quotation.lines
       .filter((line) => line.extra === 'optional')
       .map((line, index) => ({ ...lineView(line, index), amount: formatInr(line.totalPaise) })),
@@ -181,6 +164,8 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
       gst: formatInr(totals.taxPaise),
       ...totalsView(totals),
       subsidyReason: totals.subsidyIneligible ? SUBSIDY_REASONS[totals.subsidyIneligible] : null,
+      // The state's low-income top-up, its own line (PRD 3.5); none unless a rule applies.
+      stateSupport: totals.stateSupportPaise ? formatInr(totals.stateSupportPaise) : null,
     },
     comparison: extras.comparison
       ? { dcr: totalsView(extras.comparison.dcr), nonDcr: totalsView(extras.comparison.nonDcr) }

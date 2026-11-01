@@ -55,6 +55,9 @@ export async function presentDocuments(
     customerId: document.customerId,
     propertyId: document.propertyId,
     reportKey: document.reportKey,
+    leadId: document.leadId,
+    vendorId: document.vendorId,
+    contractorId: document.contractorId,
     uploadedBy:
       document.uploadedByUserId && uploaderName
         ? { id: document.uploadedByUserId, fullName: uploaderName }

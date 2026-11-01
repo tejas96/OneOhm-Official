@@ -1,4 +1,5 @@
 import type {
+  CostingDetailInput,
   ExtraLineInput,
   Product,
   Property,
@@ -36,6 +37,10 @@ export interface BuilderState {
   /** Set once sales picks a product by hand; until then the builder suggests one. */
   readonly inverterChosen: boolean;
   readonly panelChosen: boolean;
+  /** Measured runs, structure, crew and visits; null means the site type's defaults. */
+  readonly costing: CostingDetailInput | null;
+  /** Set once the distance is typed; until then it follows the site's GPS. */
+  readonly distanceTouched: boolean;
 }
 
 export const EMPTY_BUILDER: BuilderState = {
@@ -57,6 +62,8 @@ export const EMPTY_BUILDER: BuilderState = {
   extras: [],
   inverterChosen: false,
   panelChosen: false,
+  costing: null,
+  distanceTouched: false,
 };
 
 /** Category, households and floors come from the property (PRD 3.5: usually pre-filled). */
@@ -92,6 +99,8 @@ export function fromQuotation(quotation: QuotationDetail): BuilderState {
     extras: input.extras ?? [],
     inverterChosen: true,
     panelChosen: true,
+    costing: input.costing ?? null,
+    distanceTouched: true,
   };
 }
 
@@ -137,6 +146,7 @@ export function toInput(state: BuilderState): QuotationInput | null {
     acCableMeters: positive(state.acCableMeters),
     discountPaise: rupeesToPaise(discount),
     extras: [...state.extras],
+    costing: state.costing,
   };
 }
 

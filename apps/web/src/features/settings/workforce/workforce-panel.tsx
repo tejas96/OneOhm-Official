@@ -13,15 +13,14 @@ import { useApiForm } from '@/lib/forms/use-api-form';
 import { LeaveKindsSection } from './leave-kinds-section';
 import { LocationSection } from './location-section';
 import { PlacesSection } from './places-section';
-import { PointsValuesSection } from './points-values-section';
 import { SkillsSection } from './skills-section';
 import { useWorkforceSettings, WORKFORCE_SETTINGS_KEY } from './use-workforce-settings';
 import { WorkingDaySection } from './working-day-section';
 import { WorkloadSection } from './workload-section';
 
 /**
- * Leave kinds, the working week, location at check-in, site check-ins and travel, point
- * values and authorised places.
+ * Leave kinds, the working week, location at check-in, site check-ins and travel, and
+ * authorised places. Point values live in Settings → Rewards.
  */
 export function WorkforcePanel() {
   const t = useTranslations('settings.workforce');
@@ -85,11 +84,6 @@ export function WorkforcePanel() {
         <WorkloadSection
           capacity={draft.capacity}
           onChange={(capacity) => setDraft({ ...draft, capacity })}
-          errors={form.fieldErrors}
-        />
-        <PointsValuesSection
-          points={draft.points}
-          onChange={(points) => setDraft({ ...draft, points })}
           errors={form.fieldErrors}
         />
         <div className="flex flex-col gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-end">

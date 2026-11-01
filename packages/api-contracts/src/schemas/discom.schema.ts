@@ -1,10 +1,11 @@
-import { CHANGE_REQUEST_TYPES, EPC_STAGES } from '@oneohm/domain';
+import { CHANGE_REQUEST_KEY_PATTERN, EPC_STAGES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
-import { userRefSchema } from './crm.schema';
+import { subsidyCategorySchema, userRefSchema } from './crm.schema';
 import { waitingPartySchema } from './project.schema';
 
-export const changeRequestTypeSchema = z.enum(CHANGE_REQUEST_TYPES);
+/** A change request type's key; each DISCOM has its own set (Settings → DISCOMs). */
+export const changeRequestTypeSchema = z.string().regex(CHANGE_REQUEST_KEY_PATTERN);
 export const changeRequestStatusSchema = z.enum(['open', 'completed', 'cancelled']);
 export const changeRequestStepStatusSchema = z.enum([
   'pending',
@@ -53,6 +54,15 @@ export const discomDeskSchema = z.object({
       samples: z.number().int(),
     }),
   ),
+  /** The same by DISCOM office (as recorded on follow-ups), so a slow office shows. */
+  officeAverages: z.array(
+    z.object({
+      discomCode: z.string(),
+      office: z.string(),
+      averageDays: z.number(),
+      samples: z.number().int(),
+    }),
+  ),
   totals: z.object({
     waiting: z.number().int(),
     followUpsDue: z.number().int(),
@@ -65,6 +75,8 @@ export const changeRequestSummarySchema = z.object({
   id: idSchema,
   number: z.string(),
   type: changeRequestTypeSchema,
+  /** The type's name at its DISCOM, e.g. "Load change". */
+  title: z.string(),
   status: changeRequestStatusSchema,
   customer: z.object({ id: idSchema, name: z.string() }),
   property: z.object({ id: idSchema, label: z.string(), city: z.string() }),
@@ -110,11 +122,33 @@ export const changeRequestDetailSchema = changeRequestSummarySchema.extend({
   note: z.string().nullable(),
   cancelledReason: z.string().nullable(),
   steps: z.array(changeRequestStepSchema),
-  blocks: z.object({ stages: z.array(z.enum(EPC_STAGES)), taskKeys: z.array(z.string()) }),
+  blocks: z.object({
+    stages: z.array(z.enum(EPC_STAGES)),
+    taskKeys: z.array(z.string()),
+    /** The held tasks' names, from the task templates. */
+    taskTitles: z.array(z.string()).optional(),
+  }),
 });
 export type ChangeRequestDetail = z.infer<typeof changeRequestDetailSchema>;
 
 export const changeRequestSuggestionSchema = z.object({
   type: changeRequestTypeSchema,
+  /** The type's name at the site's DISCOM. */
+  title: z.string(),
   reason: z.string(),
 });
+
+/**
+ * What a site's details suggest (PRD 3.15, step 2): change requests worth raising, and
+ * whether this quotation was priced for another property type than the site now has.
+ */
+export const changeRequestNoticesSchema = z.object({
+  propertyId: idSchema,
+  /** The project a request raised from here belongs to, when there is one. */
+  projectId: idSchema.nullable(),
+  suggestions: z.array(changeRequestSuggestionSchema),
+  repricing: z
+    .object({ pricedAs: subsidyCategorySchema, siteIs: subsidyCategorySchema })
+    .nullable(),
+});
+export type ChangeRequestNotices = z.infer<typeof changeRequestNoticesSchema>;

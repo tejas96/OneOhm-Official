@@ -14,6 +14,8 @@ export const auditContract = c.router({
       entity: z.string().trim().max(60).optional(),
       search: z.string().trim().max(120).optional(),
       before: instantSchema.optional(),
+      /** The `cursor` of the page before: exact, so entries sharing a time are never skipped. */
+      cursor: z.string().trim().max(120).optional(),
     }),
     responses: { 200: auditPageSchema },
   },

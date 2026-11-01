@@ -3,6 +3,9 @@ import { Card, Field, Input, Text } from '@oneohm/mobile-ui';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
+import { DictationInput } from '@/features/dictation/dictation-input';
+import { TaskDiscomField } from '@/features/discom/task-discom-field';
+import { CableRunsField } from './cable-runs-field';
 
 const KEYBOARD = { number: 'decimal-pad', date: 'numbers-and-punctuation' } as const;
 
@@ -67,6 +70,7 @@ export function FactsForm({
         </Text>
       </View>
       <FactFields fields={captures} facts={facts} errors={errors} onFact={onFact} />
+      <TaskDiscomField task={task} />
       {measurements.length > 0 ? (
         <View style={styles.heading}>
           <Text variant="label" tone="secondary">
@@ -78,8 +82,9 @@ export function FactsForm({
         </View>
       ) : null}
       <FactFields fields={measurements} facts={facts} errors={errors} onFact={onFact} />
+      <CableRunsField task={task} facts={facts} onFact={onFact} />
       <Field label={TASK.note} optional={COMMON.optional}>
-        <Input
+        <DictationInput
           value={note}
           onChangeText={onNote}
           placeholder={TASK.notePlaceholder}

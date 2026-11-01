@@ -44,7 +44,7 @@ export class CustomerDocumentRequestsService {
       throw conflict(
         asked.status === 'received'
           ? 'You have already sent this. Thank you.'
-          : 'OneOhm no longer needs this paper.',
+          : 'This paper is no longer needed.',
         asked.status,
       );
     }

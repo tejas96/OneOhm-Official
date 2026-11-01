@@ -28,7 +28,7 @@ export const COVER: Copy<typeof en.COVER> = {
   count: (count) => `${count} ×`,
   since: (date) => `${date} ला सुरू झाली. संरक्षण त्या दिवसापासून मोजले जाते.`,
   amcTitle: 'वार्षिक देखभाल (AMC)',
-  noAmc: 'अजून AMC नाही. दरवर्षी मोफत साफसफाई आणि तपासणी भेटींबद्दल OneOhm ला विचारा.',
+  noAmc: 'अजून AMC नाही. दरवर्षी मोफत साफसफाई आणि तपासणी भेटींबद्दल आम्हाला विचारा.',
   amcState: {
     upcoming: 'लवकरच सुरू',
     active: 'चालू',

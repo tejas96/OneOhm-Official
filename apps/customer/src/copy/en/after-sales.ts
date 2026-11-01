@@ -22,7 +22,7 @@ export const COVER = {
   count: (count: number) => `${count} ×`,
   since: (date: string) => `Switched on ${date}. Cover counts from that day.`,
   amcTitle: 'Annual maintenance (AMC)',
-  noAmc: 'No AMC yet. Ask OneOhm about free cleaning and check-up visits every year.',
+  noAmc: 'No AMC yet. Ask us about free cleaning and check-up visits every year.',
   amcState: {
     upcoming: 'Starts soon',
     active: 'Active',

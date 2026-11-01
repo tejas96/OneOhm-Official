@@ -39,12 +39,14 @@ export interface InvoiceSource {
   readonly scheduleTotalPaise: number;
 }
 
-/** Catalog products behind quotation lines: the panel, inverter and battery picks. */
+/** HSN/SAC codes of the products behind quotation lines: any line naming one, and the picks. */
 async function codesByLineKey(
   db: DatabaseExecutor,
   quotation: typeof quotations.$inferSelect,
+  lines: readonly { readonly key: string; readonly productId: string | null }[],
 ): Promise<Map<string, string | null>> {
   const picks: [string, string | null][] = [
+    ...lines.map((line): [string, string | null] => [line.key, line.productId]),
     ['panel', quotation.panelProductId],
     ['inverter', quotation.inverterProductId],
     ['battery', quotation.batteryProductId],
@@ -79,7 +81,7 @@ export async function loadInvoiceSource(
     .from(quotationLines)
     .where(and(eq(quotationLines.quotationId, row.quotation.id), pricedLinesOnly()))
     .orderBy(asc(quotationLines.position));
-  const codes = await codesByLineKey(db, row.quotation);
+  const codes = await codesByLineKey(db, row.quotation, priced);
   const [profile] = await db.select().from(companyProfile).limit(1);
   const [schedule] = await db
     .select({ total: sql<string>`coalesce(sum(${paymentMilestones.amountPaise}), 0)` })

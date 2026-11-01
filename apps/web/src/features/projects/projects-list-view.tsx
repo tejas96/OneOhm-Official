@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProjectSummary } from '@oneohm/api-contracts';
+import type { ProjectPage, ProjectSummary } from '@oneohm/api-contracts';
 import {
   Button,
   EmptyState,
@@ -9,22 +9,26 @@ import {
   Skeleton,
   SkeletonGroup,
 } from '@oneohm/design-system/web';
-import { formatKwp, todayIn } from '@oneohm/shared';
-import { type UseQueryResult, useQuery } from '@tanstack/react-query';
+import { formatKwp } from '@oneohm/shared';
 import { FileCheck2, SearchX, SunMedium } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { usePagedList } from '@/lib/query/use-paged-list';
 import { useCan } from '@/providers/current-user';
 import { ProjectCard } from './project-card';
-import { DEFAULT_FILTERS, filterProjects, isFiltered, type Layout } from './project-filters';
+import { DEFAULT_FILTERS, isFiltered, type Layout, pageQueryOf } from './project-filters';
 import { ProjectsExtraFilters } from './projects-extra-filters';
 import { ProjectsFilterBar } from './projects-filter-bar';
 import { ProjectsTable } from './projects-table';
 import { useProjectFilters } from './use-project-filters';
+
+/** Cards per page: four rows of three on a wide screen. */
+const PAGE = 24;
 
 function ProjectsSkeleton({ label }: { readonly label: string }) {
   return (
@@ -36,20 +40,21 @@ function ProjectsSkeleton({ label }: { readonly label: string }) {
   );
 }
 
-/** Every project as cards or as a table, filtered by status, health and type. */
+/**
+ * Projects as cards or as a table, filtered by status, health and type. The API filters,
+ * orders and pages them (PRD 9.3); more arrive as the person scrolls.
+ */
 export function ProjectsListView() {
   const t = useTranslations('projects.list');
   const [filters, setFilters] = useProjectFilters();
   const [search, setSearch] = useState(filters.search);
-  const query = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => expectStatus(api.projects.listProjects(), 200),
-  });
-  const shown = useMemo(
-    () => (query.data ? filterProjects(query.data, filters, todayIn()) : []),
-    [query.data, filters],
+  const asked = pageQueryOf(filters);
+  const list = usePagedList<ProjectSummary, ProjectPage>(['projects', 'page', asked], (cursor) =>
+    expectStatus(
+      api.lists.projects({ query: { ...asked, limit: PAGE, ...(cursor ? { cursor } : {}) } }),
+      200,
+    ),
   );
-  const capacity = shown.reduce((sum, project) => sum + project.capacityWp, 0);
   const clear = () => {
     setSearch('');
     setFilters({ ...DEFAULT_FILTERS, sort: filters.sort, view: filters.view });
@@ -65,10 +70,10 @@ export function ProjectsListView() {
         title={t('title')}
         actions={<PaperworkLink label={t('paperwork')} />}
         description={
-          query.data
+          list.first
             ? t(isFiltered(filters) ? 'summaryFiltered' : 'summary', {
-                count: shown.length,
-                capacity: formatKwp(capacity),
+                count: list.total,
+                capacity: formatKwp(list.first.capacityWp),
               })
             : undefined
         }
@@ -79,30 +84,55 @@ export function ProjectsListView() {
         search={search}
         onSearch={setSearch}
       />
-      <ProjectsExtraFilters filters={filters} projects={query.data ?? []} onChange={setFilters} />
-      <ProjectsBody query={query} shown={shown} layout={filters.view} onClear={clear} />
+      <ProjectsExtraFilters
+        filters={filters}
+        managerName={list.first?.managerName ?? null}
+        onChange={setFilters}
+      />
+      <ProjectsBody
+        list={list}
+        filtered={isFiltered(filters)}
+        layout={filters.view}
+        onClear={clear}
+        onShowAll={() => setFilters({ status: 'all' })}
+      />
     </motion.div>
   );
 }
 
 /** Loading, error, empty, no match, or the projects as cards or a table. */
 function ProjectsBody({
-  query,
-  shown,
+  list,
+  filtered,
   layout,
   onClear,
+  onShowAll,
 }: {
-  readonly query: UseQueryResult<ProjectSummary[]>;
-  readonly shown: readonly ProjectSummary[];
+  readonly list: ReturnType<typeof usePagedList<ProjectSummary, ProjectPage>>;
+  readonly filtered: boolean;
   readonly layout: Layout;
   readonly onClear: () => void;
+  readonly onShowAll: () => void;
 }) {
   const t = useTranslations('projects.list');
+  const { query, items } = list;
   if (query.isPending) return <ProjectsSkeleton label={t('loading')} />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
-  if (query.data.length === 0)
-    return <EmptyState icon={<SunMedium />} title={t('emptyTitle')} description={t('emptyBody')} />;
-  if (shown.length === 0)
+  if (query.isError && items.length === 0)
+    return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+  if (items.length === 0 && !filtered)
+    return (
+      <EmptyState
+        icon={<SunMedium />}
+        title={t('emptyLiveTitle')}
+        description={t('emptyLiveBody')}
+        action={
+          <Button variant="secondary" size="sm" onClick={onShowAll}>
+            {t('showAll')}
+          </Button>
+        }
+      />
+    );
+  if (items.length === 0)
     return (
       <EmptyState
         icon={<SearchX />}
@@ -115,13 +145,28 @@ function ProjectsBody({
         }
       />
     );
-  if (layout === 'table') return <ProjectsTable projects={shown} />;
   return (
-    <ul aria-label={t('title')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {shown.map((project, index) => (
-        <ProjectCard key={project.id} project={project} index={index} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-6">
+      {layout === 'table' ? (
+        <ProjectsTable projects={items} />
+      ) : (
+        <ul
+          aria-label={t('title')}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        >
+          {items.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </ul>
+      )}
+      <LoadMore
+        shown={items.length}
+        total={list.total}
+        hasMore={list.hasMore}
+        loading={list.loadingMore}
+        onMore={list.loadMore}
+      />
+    </div>
   );
 }
 

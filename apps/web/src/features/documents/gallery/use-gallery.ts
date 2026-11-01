@@ -5,7 +5,7 @@ import { DOCUMENT_CATEGORIES, type DocumentCategory } from '@oneohm/domain';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useDeferredValue, useMemo } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { documentsQueryKey } from '../documents-panel';
+import { type DocumentScope, documentsQueryKey } from '../documents-panel';
 import {
   type DocumentKind,
   type FolderChoice,
@@ -14,8 +14,24 @@ import {
   kindOf,
   matchesSearchAndKind,
 } from './document-kinds';
+import { uploadersOf } from './gallery-filters';
 
-export type GalleryScope = { readonly projectId: string } | { readonly customerId: string };
+export type GalleryScope = DocumentScope;
+export type ScopeKind = 'project' | 'customer' | 'lead' | 'contractor' | 'vendor';
+
+/** Whose gallery this is, for its intro line and the folder new files go in. */
+export function scopeKindOf(scope: GalleryScope): ScopeKind {
+  if ('projectId' in scope) return 'project';
+  if ('customerId' in scope) return 'customer';
+  if ('leadId' in scope) return 'lead';
+  return 'contractorId' in scope ? 'contractor' : 'vendor';
+}
+
+/** A contractor's or vendor's papers start in their own folder. */
+export const SCOPE_FOLDER: Readonly<Partial<Record<ScopeKind, DocumentCategory>>> = {
+  contractor: 'contractor',
+  vendor: 'vendor',
+};
 
 export interface FolderEntry {
   readonly folder: FolderChoice;
@@ -50,7 +66,8 @@ export function useGallery(scope: GalleryScope, filters: GalleryFilters) {
 
   const derived = useMemo(() => {
     const documents: readonly DocumentRecord[] = all ?? [];
-    const rest = { kind: filters.kind, search };
+    const { folder: _folder, ...others } = filters;
+    const rest = { ...others, search };
     const matching = documents.filter((document) => matchesSearchAndKind(document, rest));
     const present = new Set<DocumentCategory>(documents.map(folderOf));
     if (filters.folder !== 'all') present.add(filters.folder);
@@ -66,8 +83,8 @@ export function useGallery(scope: GalleryScope, filters: GalleryFilters) {
       filters.folder === 'all'
         ? matching
         : matching.filter((document) => folderOf(document) === filters.folder);
-    return { folders, kinds, shown, total: documents.length };
-  }, [all, filters.folder, filters.kind, search]);
+    return { folders, kinds, shown, total: documents.length, uploaders: uploadersOf(documents) };
+  }, [all, filters, search]);
 
   return { query, ...derived };
 }

@@ -61,10 +61,14 @@ export const reportSettingSchema = z.object({
   customerVisible: z.boolean(),
   /** The built-in choice, used until someone changes it. */
   defaultVisible: z.boolean(),
+  /** Saved to the project documents by itself when its trigger task is done. */
+  autoGenerate: z.boolean(),
+  /** The tasks that trigger it in the task library (Settings → Task templates). */
+  triggers: z.array(z.string()),
 });
 export type ReportSetting = z.infer<typeof reportSettingSchema>;
 
-/** Which statutory reports the customer sees in their app (PRD 3.18). */
+/** Which statutory reports the customer sees, and which are saved by themselves (PRD 3.18). */
 export const reportSettingsContract = c.router({
   listReportSettings: {
     method: 'GET',
@@ -75,7 +79,10 @@ export const reportSettingsContract = c.router({
     method: 'PATCH',
     path: '/report-settings/:key',
     pathParams: z.object({ key: reportKeySchema }),
-    body: z.object({ customerVisible: z.boolean() }),
+    body: z.object({
+      customerVisible: z.boolean().optional(),
+      autoGenerate: z.boolean().optional(),
+    }),
     responses: { 200: reportSettingSchema },
   },
 });

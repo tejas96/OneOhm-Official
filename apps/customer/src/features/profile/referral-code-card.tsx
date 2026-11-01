@@ -6,6 +6,7 @@ import { Linking, Share, StyleSheet, View } from 'react-native';
 import { api } from '@/api/api';
 import { useToast } from '@/components/toast';
 import { REFER } from '@/copy/care';
+import { useBrand } from '@/features/home/use-home';
 
 export const referralProgramKey = ['customer', 'referral-program'] as const;
 
@@ -17,12 +18,12 @@ function terms(program: CustomerReferralProgram): string {
     : REFER.terms(amount, program.qualifyingEvent);
 }
 
-/** The message a friend gets: the code, and a WhatsApp link to OneOhm with it typed in. */
-function shareText(program: CustomerReferralProgram): string {
+/** The message a friend gets: the code, and a WhatsApp link to the company with it typed in. */
+function shareText(program: CustomerReferralProgram, company: string): string {
   const link = program.whatsappNumber
-    ? `https://wa.me/${program.whatsappNumber}?text=${encodeURIComponent(REFER.friendMessage(program.code))}`
+    ? `https://wa.me/${program.whatsappNumber}?text=${encodeURIComponent(REFER.friendMessage(program.code, company))}`
     : null;
-  return REFER.shareText(program.code, link);
+  return REFER.shareText(program.code, link, company);
 }
 
 function Totals({ program }: { readonly program: CustomerReferralProgram }) {
@@ -53,9 +54,11 @@ export function ReferralCodeCard() {
     queryKey: referralProgramKey,
     queryFn: () => unwrap(api.customerReferrals.referralProgram()),
   });
+  const brand = useBrand();
   const program = query.data;
-  if (!program) return null;
-  const text = shareText(program);
+  // The message names the company, so it waits for the profile as well as the program.
+  if (!program || !brand) return null;
+  const text = shareText(program, brand);
   const onWhatsApp = () =>
     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(() =>
       toast(REFER.shareFailed),

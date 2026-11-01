@@ -18,7 +18,7 @@ export const CREW = {
   orders: {
     title: 'Work orders',
     emptyTitle: 'No work orders yet',
-    emptyBody: 'When OneOhm gives your crew a project, its work order shows here.',
+    emptyBody: 'When your crew is given a project, its work order shows here.',
     status: {
       open: 'Open',
       in_progress: 'In progress',

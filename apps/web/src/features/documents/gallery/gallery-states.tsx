@@ -1,6 +1,12 @@
 'use client';
 
-import { Button, EmptyState, Skeleton, SkeletonGroup } from '@oneohm/design-system/web';
+import {
+  Button,
+  EmptyState,
+  Illustration,
+  Skeleton,
+  SkeletonGroup,
+} from '@oneohm/design-system/web';
 import { FolderOpen, Plus, SearchX } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -37,6 +43,7 @@ export function GalleryEmpty({ onAdd }: { readonly onAdd: (() => void) | null })
   return (
     <EmptyState
       icon={<FolderOpen />}
+      illustration={<Illustration name="emptyFolder" size={112} />}
       title={t('empty.title')}
       description={onAdd ? t('empty.description') : t('empty.readOnly')}
       {...(onAdd
@@ -57,6 +64,7 @@ export function GalleryNoMatch({
   search,
   folderLabel,
   kindLabel,
+  filtersOn = false,
   onReset,
 }: {
   readonly search: string;
@@ -64,10 +72,12 @@ export function GalleryNoMatch({
   readonly folderLabel: string | null;
   /** The chosen type chip ("PDFs"), or null for all kinds. */
   readonly kindLabel: string | null;
+  /** A date, source or person filter is set. */
+  readonly filtersOn?: boolean;
   readonly onReset: () => void;
 }) {
   const t = useTranslations('documents.gallery.noMatch');
-  let title = t('kind', { kind: kindLabel ?? '' });
+  let title = kindLabel || !filtersOn ? t('kind', { kind: kindLabel ?? '' }) : t('filters');
   if (search.trim()) title = t('search', { search: search.trim() });
   else if (folderLabel) title = t('folder', { folder: folderLabel });
   return (

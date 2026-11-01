@@ -3,7 +3,7 @@ import type { WaitingParty } from '@oneohm/domain';
 import { unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
-import { useToast } from '@/components/toast';
+import { type ToastOptions, useToast } from '@/components/toast';
 import { TASK } from '@/copy/tasks';
 import { activityKey } from './task-timeline';
 
@@ -15,12 +15,12 @@ export function useTaskActions(task: ProjectTask) {
   const client = useQueryClient();
   const toast = useToast();
   const params = { id: task.id };
-  const settle = (message: string) => (updated: ProjectTask) => {
+  const settle = (message: string, options?: ToastOptions) => (updated: ProjectTask) => {
     client.setQueryData<ProjectTask[]>(keys.tasks, (current) =>
       current?.map((item) => (item.id === updated.id ? updated : item)),
     );
     client.setQueryData<ProjectTask>(keys.task(updated.id), updated);
-    toast(message);
+    toast(message, options);
     // Refresh in the background; a finished task leaves the list once the screen has closed.
     void client.invalidateQueries({ queryKey: keys.tasks });
     void client.invalidateQueries({ queryKey: activityKey(updated.id) });
@@ -53,12 +53,15 @@ export function useTaskActions(task: ProjectTask) {
           },
         }),
       ),
+    // A finished task gets the small success illustration (PRD 9.2).
     onSuccess: (updated) =>
-      settle(updated.status === 'in_review' ? TASK.done.review : TASK.done.completed)(updated),
+      updated.status === 'in_review'
+        ? settle(TASK.done.review)(updated)
+        : settle(TASK.done.completed, { illustration: 'success' })(updated),
   });
   const approve = useMutation({
     mutationFn: () => unwrap(api.tasks.approveTask({ params })),
-    onSuccess: settle(TASK.done.approved),
+    onSuccess: settle(TASK.done.approved, { illustration: 'success' }),
   });
   const reschedule = useMutation({
     mutationFn: (input: { dueDate: string; reason: string }) =>

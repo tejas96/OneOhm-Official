@@ -1,8 +1,9 @@
 import { WAITING_PARTIES, type WaitingParty } from '@oneohm/domain';
-import { Button, ChoiceChips, Field, Input, Sheet } from '@oneohm/mobile-ui';
+import { Button, ChoiceChips, Field, Sheet } from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
+import { DictationInput } from '@/features/dictation/dictation-input';
 
 /** Who the task is waiting on, and why; DISCOM and bank time is reported separately. */
 export function WaitingSheet({
@@ -51,7 +52,7 @@ export function WaitingSheet({
         />
       </Field>
       <Field label={TASK.waitingSheet.note} optional={COMMON.optional}>
-        <Input
+        <DictationInput
           value={note}
           onChangeText={setNote}
           placeholder={TASK.waitingSheet.notePlaceholder}

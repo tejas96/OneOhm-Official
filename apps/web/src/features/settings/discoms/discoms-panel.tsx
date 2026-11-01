@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useDiscoms } from '../use-settings';
 import { DiscomDialog } from './discom-dialog';
+import { DiscomSetup } from './setup/discom-setup';
 import { SubsidyRules } from './subsidy-rules';
 
 /** DISCOM master data and the subsidy rules the price engine applies. */
@@ -81,6 +82,7 @@ export function DiscomsPanel() {
           />
         )}
       </section>
+      <DiscomSetup />
       <SubsidyRules />
       <DiscomDialog
         open={adding || editing !== null}

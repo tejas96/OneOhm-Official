@@ -9,7 +9,12 @@ import {
 } from '@oneohm/domain';
 import { daysBetween, todayIn } from '@oneohm/shared';
 import { desc, eq, type SQL } from 'drizzle-orm';
-import { type MilestoneRow, summaryFacts, type TaskRow } from './project-summary-facts';
+import {
+  type MilestoneRow,
+  type StageCount,
+  summaryFacts,
+  type TaskRow,
+} from './project-summary-facts';
 
 const PAYMENT_GRACE_DAYS = 7;
 
@@ -44,19 +49,42 @@ export async function projectSummaries(
   const ids = rows.map((row) => row.project.id);
   if (ids.length === 0) return [];
   const today = todayIn();
-  const { tasks, milestones, blocked } = await summaryFacts(db, ids, today);
+  // The same projects, for the fact queries to ask by subquery when there are many.
+  const scope = db
+    .select({ id: projects.id })
+    .from(projects)
+    .innerJoin(properties, eq(properties.id, projects.propertyId))
+    .innerJoin(discoms, eq(discoms.id, projects.discomId))
+    .leftJoin(users, eq(users.id, projects.managerUserId))
+    .where(where);
+  const { tasks, stages, milestones, blocked } = await summaryFacts(db, ids, today, scope);
+  const open = byProject(tasks);
+  const counts = byProject(stages);
+  const money = byProject(milestones);
   return rows.map(({ project, city, discom, managerName }) =>
     summarise({
       project,
       city,
       discom,
       managerName,
-      tasks: tasks.filter((task) => task.projectId === project.id),
-      milestones: milestones.filter((milestone) => milestone.projectId === project.id),
+      open: open.get(project.id) ?? [],
+      stages: counts.get(project.id) ?? [],
+      milestones: money.get(project.id) ?? [],
       blockedBy: blocked.get(project.id) ?? null,
       today,
     }),
   );
+}
+
+/** Rows grouped by their project, read once rather than filtered per card. */
+function byProject<T extends { readonly projectId: string }>(rows: readonly T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.projectId);
+    if (list) list.push(row);
+    else grouped.set(row.projectId, [row]);
+  }
+  return grouped;
 }
 
 const isoDate = (instant: Date) => todayIn('Asia/Kolkata', instant);
@@ -79,20 +107,20 @@ function summarise(input: {
   readonly city: string;
   readonly discom: string;
   readonly managerName: string | null;
-  readonly tasks: readonly TaskRow[];
+  /** The project's open tasks only; finished work arrives as `stages` counts. */
+  readonly open: readonly TaskRow[];
+  readonly stages: readonly StageCount[];
   readonly milestones: readonly MilestoneRow[];
   readonly blockedBy: ProjectBlock | null;
   readonly today: string;
 }): ProjectSummary {
-  const { project, tasks, milestones, today } = input;
-  const open = tasks.filter((task) => task.status !== 'completed');
-  const stagesWithTasks = new Set(tasks.map((task) => task.stage));
+  const { project, open, stages, milestones, today } = input;
+  const stagesWithTasks = new Set(stages.map((count) => count.stage));
   const currentStage: EpcStage =
     EPC_STAGES.find((stage) => open.some((task) => task.stage === stage)) ?? project.currentStage;
-  const inStage = tasks.filter((task) => task.stage === currentStage);
-  const stageProgress = inStage.length
-    ? inStage.filter((task) => task.status === 'completed').length / inStage.length
-    : 1;
+  const inStage = stages.find((count) => count.stage === currentStage);
+  const stageProgress = inStage?.total ? inStage.done / inStage.total : 1;
+  const tasksTotal = stages.reduce((sum, count) => sum + count.total, 0);
   const overdue = open.filter((task) => task.dueDate < today);
   const longest = open
     .filter((task) => task.status === 'waiting' && task.waitingSince)
@@ -142,15 +170,15 @@ function summarise(input: {
         : null,
     openTasks: open.length,
     overdueTasks: overdue.length,
-    tasksDone: tasks.length - open.length,
-    tasksTotal: tasks.length,
+    tasksDone: tasksTotal - open.length,
+    tasksTotal,
     manager:
       project.managerUserId && input.managerName
         ? { id: project.managerUserId, fullName: input.managerName }
         : null,
     blockedBy: state.tone === 'blocked' ? (input.blockedBy?.detail ?? null) : null,
     forecast: deliveryForecast(open, today),
-    completedOn: project.status === 'completed' ? finishedOn(tasks) : null,
+    completedOn: project.status === 'completed' ? finishedOn(stages) : null,
   };
 }
 
@@ -172,10 +200,10 @@ function moneyFacts(milestones: readonly MilestoneRow[], today: string) {
 }
 
 /** The India date the last task finished, or null when none has. */
-function finishedOn(tasks: readonly TaskRow[]): string | null {
-  const latest = tasks.reduce<Date | null>(
-    (last, task) =>
-      task.completedAt && (!last || task.completedAt > last) ? task.completedAt : last,
+function finishedOn(stages: readonly StageCount[]): string | null {
+  const latest = stages.reduce<Date | null>(
+    (last, count) =>
+      count.lastDoneAt && (!last || count.lastDoneAt > last) ? count.lastDoneAt : last,
     null,
   );
   return latest ? isoDate(latest) : null;

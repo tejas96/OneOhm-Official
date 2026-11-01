@@ -16,7 +16,7 @@
       "showFewer": "Show fewer"
     },
     "party": {
-      "internal": "OneOhm team",
+      "internal": "Our team",
       "customer": "Customer",
       "bank": "Bank",
       "discom": "DISCOM"
@@ -171,7 +171,8 @@
         "purchase_requests": "Purchase requests to approve",
         "vendor_advances": "Vendor advances to approve",
         "points": "Points to approve",
-        "incentives": "Commissions and referral rewards to approve"
+        "incentives": "Commissions and referral rewards to approve",
+        "bonuses": "Bonuses to approve"
       }
     },
     "deadlines": {
@@ -210,7 +211,7 @@
       "departments": "Departments",
       "noDepartment": "No role yet",
       "peopleCount": "{count, plural, one {# person} other {# people}}",
-      "departmentNote": "OneOhm has no separate departments, so each person counts under their main role (the first role they were given).",
+      "departmentNote": "There are no separate departments, so each person counts under their main role (the first role they were given).",
       "inDepartment": "Department: {name}",
       "showEveryone": "Show everyone"
     },

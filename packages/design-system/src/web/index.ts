@@ -14,6 +14,7 @@ export { StageTracker, type TrackerStage } from './data/stage-tracker';
 export { StatusGlyph, type StatusGlyphName } from './data/status-glyph';
 export { Badge, CountBadge, type PillTone, StatusPill } from './data/status-pill';
 export * from './feedback/empty-state';
+export { Illustration } from './feedback/illustration';
 export * from './feedback/skeleton';
 export * from './feedback/toast';
 export { Card, CardHeader, PageHeader } from './layout/card';

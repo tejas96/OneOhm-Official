@@ -16,6 +16,7 @@
     "format": "biome format --write .",
     "check:file-size": "node infrastructure/scripts/check-file-size.mjs",
     "check": "pnpm lint && pnpm check:file-size && pnpm typecheck && pnpm test",
+    "test:acceptance": "node apps/api/test/acceptance/run.mjs",
     "infra:up": "docker compose -f infrastructure/docker/compose.yaml up -d",
     "infra:down": "docker compose -f infrastructure/docker/compose.yaml down",
     "infra:ps": "docker compose -f infrastructure/docker/compose.yaml ps"

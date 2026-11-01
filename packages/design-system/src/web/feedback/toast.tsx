@@ -4,8 +4,10 @@ import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Toast as ToastPrimitive } from 'radix-ui';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import type { IllustrationName } from '../../illustrations';
 import { cn } from '../lib/cn';
 import { easing, layoutSpring, seconds } from '../motion/presets';
+import { Illustration } from './illustration';
 
 export type ToastTone = 'success' | 'error' | 'info';
 
@@ -17,6 +19,8 @@ export interface ToastInput {
   readonly reference?: string | undefined;
   readonly action?: { readonly label: string; readonly onSelect: () => void } | undefined;
   readonly durationMs?: number | undefined;
+  /** A small illustration in place of the icon, for moments worth marking (a payment). */
+  readonly illustration?: IllustrationName | undefined;
 }
 
 interface ToastEntry extends ToastInput {
@@ -95,7 +99,11 @@ function ToastItem({
         transition={layoutSpring}
         className="flex items-start gap-3 rounded-lg border border-hairline bg-raised p-3.5 pr-2 shadow-e3"
       >
-        <Icon aria-hidden className={cn('mt-0.5 size-[1.125rem] shrink-0', tone.className)} />
+        {toast.illustration ? (
+          <Illustration name={toast.illustration} size={40} className="-my-1" />
+        ) : (
+          <Icon aria-hidden className={cn('mt-0.5 size-[1.125rem] shrink-0', tone.className)} />
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <ToastPrimitive.Title className="type-title-md text-ink">
             {toast.title}

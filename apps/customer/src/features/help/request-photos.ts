@@ -1,5 +1,11 @@
 import type { ServiceRequest } from '@oneohm/api-contracts';
-import { ApiError, NetworkError, type UploadableFile, uploadFile } from '@oneohm/mobile-ui';
+import {
+  ApiError,
+  NetworkError,
+  shrinkPhoto,
+  type UploadableFile,
+  uploadFile,
+} from '@oneohm/mobile-ui';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL, currentToken } from '@/api/api';
 
@@ -28,12 +34,20 @@ export async function pickRequestPhotos(
       : await ImagePicker.launchImageLibraryAsync(options);
   if (result.canceled) return [];
   const stamp = Date.now();
-  return result.assets.slice(0, room).map((asset, index) => ({
-    uri: asset.uri,
-    name: asset.fileName ?? `problem-photo-${stamp}-${index + 1}.jpg`,
-    type: asset.mimeType ?? 'image/jpeg',
-    ...(asset.file ? { file: asset.file } : {}),
-  }));
+  // Sent at upload size (long edge 2000 px, JPEG 0.7): quicker on a weak signal.
+  return Promise.all(
+    result.assets.slice(0, room).map((asset, index) =>
+      shrinkPhoto(
+        {
+          uri: asset.uri,
+          name: asset.fileName ?? `problem-photo-${stamp}-${index + 1}.jpg`,
+          type: asset.mimeType ?? 'image/jpeg',
+          ...(asset.file ? { file: asset.file } : {}),
+        },
+        asset,
+      ),
+    ),
+  );
 }
 
 const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];

@@ -49,6 +49,8 @@ export const documentRequests = pgTable(
 export const reportSettings = pgTable('report_settings', {
   key: text('key').primaryKey(),
   customerVisible: boolean('customer_visible').notNull(),
+  /** Saved to the project's documents by itself when its trigger task finishes (PRD 3.18). */
+  autoGenerate: boolean('auto_generate').notNull().default(true),
   updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
     onDelete: 'set null',
   }),

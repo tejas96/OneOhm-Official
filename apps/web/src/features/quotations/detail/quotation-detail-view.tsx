@@ -16,9 +16,12 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
+import { ChangeRequestNotice } from '@/features/discom/change-request-notice';
+import { QuotationChangeNote } from '@/features/project-changes/quotation-change-note';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { PropertySummary } from '../builder/property-summary';
+import { CostBuildup } from '../cost-buildup';
 import { PriceStack } from '../price-stack';
 import { QuotationLines } from '../quotation-lines';
 import { STATUS_TONE } from '../quotation-status';
@@ -103,6 +106,10 @@ function Detail({ quotation }: { readonly quotation: QuotationDetail }) {
           </span>
         </p>
       )}
+      <ChangeRequestNotice scope={{ quotationId: quotation.id }} className="-mt-4 max-w-3xl" />
+      <div className="-mt-4 max-w-3xl empty:hidden">
+        <QuotationChangeNote quotationId={quotation.id} />
+      </div>
       <div className="grid gap-10 lg:grid-cols-[minmax(22rem,27rem)_minmax(0,1fr)] lg:items-start">
         <PriceStack totals={quotation.totals} className="lg:sticky lg:top-6" />
         <div className="flex flex-col gap-10">
@@ -121,6 +128,7 @@ function Detail({ quotation }: { readonly quotation: QuotationDetail }) {
               totals={quotation.totals}
               showMargin={showMargin}
             />
+            {showMargin && quotation.costing && <CostBuildup costing={quotation.costing} />}
           </section>
         </div>
       </div>

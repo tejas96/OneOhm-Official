@@ -51,7 +51,8 @@ export class EngagementController {
         return { status: 201, body: await this.bonuses.propose(actor, body) };
       },
       decideBonus: async ({ params, body }) => {
-        assertCan(actor, 'finance.approve_payments');
+        // Managers decide bonuses within the limit in Settings → Approvals.
+        assertCan(actor, 'finance.approve_payments', 'people.manage');
         return {
           status: 200,
           body: await this.bonuses.decide(actor, params.id, body.approve, body.note),

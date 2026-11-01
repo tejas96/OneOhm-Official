@@ -68,6 +68,9 @@ export interface UploadLinks {
   readonly taskId?: string;
   readonly customerId?: string;
   readonly propertyId?: string;
+  readonly leadId?: string;
+  readonly contractorId?: string;
+  readonly vendorId?: string;
   readonly name?: string;
 }
 
@@ -98,3 +101,9 @@ export const uploadProductDatasheet = (productId: string, file: File) =>
 /** Where the browser reads a document (the API checks access on every request). */
 export const documentUrl = (id: string, disposition: 'inline' | 'attachment' = 'inline') =>
   `/api/v1/documents/${id}/file?disposition=${disposition}`;
+
+/**
+ * A photo's small preview (WebP, 400 px) for tiles and galleries; the original stays on
+ * `documentUrl` for viewing and downloading. Files without one come back as they are.
+ */
+export const documentThumbUrl = (id: string) => `/api/v1/documents/${id}/thumbnail`;

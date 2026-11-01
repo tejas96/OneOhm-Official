@@ -8,6 +8,7 @@ import {
   projects,
   purchaseOrderLines,
   purchaseOrders,
+  quotationLines,
   quotations,
   stockLevels,
   stockLocations,
@@ -16,13 +17,19 @@ import {
   users,
 } from '@oneohm/database';
 import { roundQuantity } from '@oneohm/domain';
-import { and, asc, desc, eq, inArray, notInArray, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, notInArray, type SQL } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { pricedLinesOnly } from '../quotations/quotation-rows';
 import { purchaseOrderSummaries } from './purchase-order-read';
+import { quotationNeeds } from './quotation-needs';
 
 type ProductRow = typeof products.$inferSelect;
 
-/** What the accepted quotation needs from the store: panels, inverter and battery. */
+/**
+ * What the accepted quotation needs from the store (PRD 3.10, C26): panels, inverter and
+ * battery, plus every other priced line that names its product: cable, structure parts,
+ * electrical kits and gifts. Lines naming the same product add up.
+ */
 export async function projectNeeds(db: DatabaseExecutor, projectId: string) {
   const [row] = await db
     .select({ project: projects, quotation: quotations })
@@ -31,11 +38,21 @@ export async function projectNeeds(db: DatabaseExecutor, projectId: string) {
     .where(eq(projects.id, projectId));
   if (!row) throw notFound('That project');
   const { project, quotation } = row;
-  const needs = [
-    { productId: quotation.panelProductId, quantity: quotation.moduleCount },
-    { productId: quotation.inverterProductId, quantity: 1 },
-    ...(quotation.batteryProductId ? [{ productId: quotation.batteryProductId, quantity: 1 }] : []),
-  ];
+  const stocked = await db
+    .select({
+      key: quotationLines.key,
+      productId: quotationLines.productId,
+      quantity: quotationLines.quantity,
+    })
+    .from(quotationLines)
+    .where(
+      and(
+        eq(quotationLines.quotationId, quotation.id),
+        isNotNull(quotationLines.productId),
+        pricedLinesOnly(),
+      ),
+    );
+  const needs = quotationNeeds(quotation, stocked);
   const catalog = await db
     .select()
     .from(products)

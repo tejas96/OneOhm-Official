@@ -33,7 +33,7 @@ export class CustomerPayService {
     // Another customer's milestone is simply not found.
     if (!row) throw notFound('That payment');
     if (row.payer !== 'customer')
-      throw conflict('The bank pays this share to OneOhm directly.', 'bank_share');
+      throw conflict('The bank pays this share directly.', 'bank_share');
     // Two quick taps make one link: the second waits, then finds the first one open.
     const link = await this.db.transaction(async (tx) => {
       await tx.execute(

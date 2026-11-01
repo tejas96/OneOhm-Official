@@ -7,9 +7,11 @@ import { apiContract } from '../../contract';
 import { assertQuotationAccess } from '../quotations/quotation-access';
 import { QuotationPdfService } from './quotation-pdf.service';
 import { ReportArchiveService } from './report-archive.service';
+import { ReportFactsService } from './report-facts.service';
 import type { PdfFile } from './report-pdf.service';
 import { ReportPdfService } from './report-pdf.service';
 import { ReportStatusService } from './report-status.service';
+import { ReportSubmissionsService } from './report-submissions.service';
 
 /**
  * The PDF body. Nest streams a StreamableFile with these headers; the contract types the
@@ -32,6 +34,8 @@ export class ReportsController {
     private readonly reports: ReportPdfService,
     private readonly quotations: QuotationPdfService,
     private readonly archive: ReportArchiveService,
+    private readonly submissions: ReportSubmissionsService,
+    private readonly facts: ReportFactsService,
   ) {}
 
   @TsRestHandler(apiContract.reports)
@@ -49,6 +53,14 @@ export class ReportsController {
         assertCan(actor, 'reports.generate');
         return { status: 200, body: await this.archive.refresh(params.id, actor.userId) };
       },
+      markReportSubmitted: async ({ params, body }) => ({
+        status: 200,
+        body: await this.submissions.mark(actor, params.id, params.reportKey, body.submitted),
+      }),
+      recordReportFacts: async ({ params, body }) => ({
+        status: 200,
+        body: await this.facts.record(actor, params.id, body.facts),
+      }),
       projectReportPdf: async ({ params, query }) => {
         assertCan(actor, 'reports.generate');
         const file = await this.reports.render(params.id, params.reportKey);

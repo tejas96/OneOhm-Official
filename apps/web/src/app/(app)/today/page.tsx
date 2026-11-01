@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { TodayView } from '@/features/today/today-view';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,5 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function TodayPage() {
-  return <TodayView />;
+  return (
+    <Suspense>
+      <TodayView />
+    </Suspense>
+  );
 }

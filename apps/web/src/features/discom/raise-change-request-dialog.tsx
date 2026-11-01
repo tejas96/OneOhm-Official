@@ -9,11 +9,6 @@ import {
   Textarea,
   useToast,
 } from '@oneohm/design-system/web';
-import {
-  CHANGE_REQUEST_DEFINITIONS,
-  CHANGE_REQUEST_TYPES,
-  type ChangeRequestType,
-} from '@oneohm/domain';
 import { useQuery } from '@tanstack/react-query';
 import { Lightbulb } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,6 +17,8 @@ import { type FormEvent, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { useDiscoms } from '../settings/use-settings';
+import { RaiseOptionDetails } from './raise-option-details';
 import { type SiteChoice, SitePicker } from './site-picker';
 import { useRefreshDiscom } from './use-discom';
 
@@ -34,21 +31,25 @@ export function RaiseChangeRequestDialog({
   onOpenChange,
   propertyId,
   projectId,
+  initialType,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly propertyId?: string;
   readonly projectId?: string;
+  /** The type a suggestion picked; the person can still change it. */
+  readonly initialType?: string;
 }) {
   const t = useTranslations('discom.raise');
-  const typeT = useTranslations('discom.types');
   const fieldT = useTranslations('discom.fields');
   const formId = useId();
   const toast = useToast();
   const router = useRouter();
   const refresh = useRefreshDiscom();
   const form = useApiForm();
-  const [type, setType] = useState<ChangeRequestType>('consumer_name_change');
+  const [type, setType] = useState<string>(initialType ?? 'consumer_name_change');
+  const [discomId, setDiscomId] = useState<string | null>(null);
+  const discoms = useDiscoms();
   const [values, setValues] = useState<Record<string, string>>({});
   const [note, setNote] = useState('');
   const [site, setSite] = useState<SiteChoice | null>(null);
@@ -63,6 +64,21 @@ export function RaiseChangeRequestDialog({
       ),
     enabled: open && Boolean(sitePropertyId),
   });
+  const options = useQuery({
+    queryKey: ['change-requests', 'options', sitePropertyId, projectId, discomId],
+    queryFn: () =>
+      expectStatus(
+        api.changeRequestTypes.changeRequestOptions({
+          query: {
+            ...(sitePropertyId ? { propertyId: sitePropertyId } : {}),
+            ...(projectId ? { projectId } : {}),
+            ...(discomId ? { discomId } : {}),
+          },
+        }),
+        200,
+      ),
+    enabled: open && Boolean(sitePropertyId || projectId),
+  });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,9 +86,10 @@ export function RaiseChangeRequestDialog({
       expectStatus(
         api.discom.createChangeRequest({
           body: {
-            type,
+            type: definition?.key ?? type,
             values,
             note: note.trim() || null,
+            ...(discomId ? { discomId } : {}),
             ...(sitePropertyId ? { propertyId: sitePropertyId } : {}),
             projectId: projectId ?? site?.projectId ?? null,
           },
@@ -93,7 +110,8 @@ export function RaiseChangeRequestDialog({
     router.push(`/discom/change-requests/${created.id}`);
   };
 
-  const definition = CHANGE_REQUEST_DEFINITIONS[type];
+  const choices = options.data?.options ?? [];
+  const definition = choices.find((option) => option.key === type) ?? choices[0];
   return (
     <Dialog
       open={open}
@@ -123,7 +141,7 @@ export function RaiseChangeRequestDialog({
                   <Lightbulb aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />
                   <span>
                     <span className="font-medium">
-                      {t('suggested', { type: typeT(suggestion.type) })}
+                      {t('suggested', { type: suggestion.title })}
                     </span>{' '}
                     <span className="text-ink-muted">{suggestion.reason}</span>
                   </span>
@@ -132,22 +150,36 @@ export function RaiseChangeRequestDialog({
             ))}
           </ul>
         )}
-        <Field label={t('type')} error={form.fieldErrors.type}>
-          <Select
-            value={type}
-            onValueChange={(next) => {
-              setType(next);
-              setValues({});
-            }}
-            options={CHANGE_REQUEST_TYPES.map((value) => ({
-              value,
-              label: typeT(value),
-              description: t(`purpose.${value}`),
-            }))}
-          />
-        </Field>
+        {options.data?.askDiscom && (
+          <Field label={t('discom')} hint={t('discomHint')} error={form.fieldErrors.discomId}>
+            <Select
+              value={discomId ?? options.data.discom?.id}
+              onValueChange={setDiscomId}
+              placeholder={t('choose')}
+              options={(discoms.data ?? [])
+                .filter((discom) => discom.active)
+                .map((discom) => ({ value: discom.id, label: `${discom.code} · ${discom.name}` }))}
+            />
+          </Field>
+        )}
+        {definition && (
+          <Field label={t('type')} error={form.fieldErrors.type}>
+            <Select
+              value={definition.key}
+              onValueChange={(next) => {
+                setType(next);
+                setValues({});
+              }}
+              options={choices.map((option) => ({
+                value: option.key,
+                label: option.title,
+                description: option.description,
+              }))}
+            />
+          </Field>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
-          {definition.fields.map((field) => (
+          {definition?.fields.map((field) => (
             <Field
               key={field.key}
               label={fieldT(field.key)}
@@ -159,7 +191,7 @@ export function RaiseChangeRequestDialog({
                   value={values[field.key]}
                   onValueChange={(value) => setValues({ ...values, [field.key]: value })}
                   placeholder={t('choose')}
-                  options={field.options.map((option) => ({
+                  options={(field.options ?? []).map((option) => ({
                     value: option,
                     label: fieldT(`options.${option}`),
                   }))}
@@ -177,11 +209,9 @@ export function RaiseChangeRequestDialog({
         <Field label={t('note')}>
           <Textarea value={note} rows={2} onChange={(event) => setNote(event.target.value)} />
         </Field>
-        <p className="type-body-sm text-ink-muted">
-          {t('steps', { count: definition.steps.length })}
-          {definition.blocks.stages.length + definition.blocks.taskKeys.length > 0 &&
-            ` ${t('blocks')}`}
-        </p>
+        {definition && (
+          <RaiseOptionDetails option={definition} error={form.fieldErrors.documents} />
+        )}
         <FormError message={form.error} />
       </form>
     </Dialog>

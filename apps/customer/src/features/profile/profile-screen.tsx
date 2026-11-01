@@ -92,7 +92,7 @@ export function ProfileScreen() {
           <View style={styles.actions}>
             {company.phones[0] ? (
               <Button
-                label={PROFILE.call}
+                label={PROFILE.call(company.name)}
                 variant="secondary"
                 size="sm"
                 icon={<Phone size={16} color={icon} />}
@@ -101,7 +101,7 @@ export function ProfileScreen() {
             ) : null}
             {company.phones[0] ? (
               <Button
-                label={PROFILE.whatsapp}
+                label={PROFILE.whatsapp(company.name)}
                 variant="secondary"
                 size="sm"
                 icon={<MessageCircle size={16} color={icon} />}

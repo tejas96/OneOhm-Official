@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Download, ExternalLink, FileText, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { describeError } from '@/lib/api/api-error';
-import { documentUrl, replaceDocument } from '@/lib/api/upload';
+import { documentThumbUrl, documentUrl, replaceDocument } from '@/lib/api/upload';
 import { previewable } from './document-thumb';
 
 const ACTION =
@@ -53,7 +53,7 @@ export function DocumentRow({
         {previewable(document.contentType) ? (
           // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
           <img
-            src={documentUrl(document.id)}
+            src={documentThumbUrl(document.id)}
             alt=""
             loading="lazy"
             className="size-full object-cover"

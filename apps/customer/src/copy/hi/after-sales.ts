@@ -28,7 +28,7 @@ export const COVER: Copy<typeof en.COVER> = {
   count: (count) => `${count} ×`,
   since: (date) => `${date} को चालू हुआ। सुरक्षा उसी दिन से गिनी जाती है।`,
   amcTitle: 'सालाना मेंटेनेंस (AMC)',
-  noAmc: 'अभी AMC नहीं है। हर साल मुफ़्त सफ़ाई और जाँच विज़िट के बारे में OneOhm से पूछें।',
+  noAmc: 'अभी AMC नहीं है। हर साल मुफ़्त सफ़ाई और जाँच विज़िट के बारे में हमसे पूछें।',
   amcState: {
     upcoming: 'जल्द शुरू',
     active: 'चालू',

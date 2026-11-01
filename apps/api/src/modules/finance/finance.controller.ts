@@ -69,7 +69,8 @@ export class FinanceController {
         return { status: 200, body: await this.payables.review(actor, params.id, body) };
       },
       approvePayable: async ({ params }) => {
-        assertCan(actor, 'finance.approve_payments');
+        // Small bills: accounts may approve within the limit in Settings → Approvals.
+        assertCan(actor, 'finance.approve_payments', 'finance.record_payments');
         return { status: 200, body: await this.payables.approve(actor, params.id) };
       },
       payPayable: async ({ params, body }) => {

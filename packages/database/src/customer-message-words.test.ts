@@ -82,10 +82,8 @@ describe('in-app alerts in the customer’s language (PRD 5.1)', () => {
   });
 
   it('titles app-only alerts in the language, and leaves English to the caller', () => {
-    expect(localAlertTitle('stage_rating_reply', 'mr-IN')).toBe(
-      'OneOhm ने तुमच्या अभिप्रायाला उत्तर दिले',
-    );
-    expect(localAlertTitle('stage_rating_reply', 'hi-IN')).toBe('OneOhm ने आपकी राय का जवाब दिया');
+    expect(localAlertTitle('stage_rating_reply', 'mr-IN')).toBe('आम्ही तुमच्या अभिप्रायाला उत्तर दिले');
+    expect(localAlertTitle('stage_rating_reply', 'hi-IN')).toBe('हमने आपकी राय का जवाब दिया');
     expect(localAlertTitle('stage_rating_reply', 'en-IN')).toBeUndefined();
   });
 });

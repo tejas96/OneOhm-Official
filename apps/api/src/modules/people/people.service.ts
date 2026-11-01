@@ -11,6 +11,7 @@ import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 import { setSkills } from './person-skills';
 import { saveWork, type WorkPatch } from './person-work';
+import { saveReportingLine } from './reporting-line';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -68,7 +69,11 @@ export class PeopleService {
     return this.get(id);
   }
 
-  async update(actor: Actor, id: string, patch: PersonPatch & WorkPatch): Promise<Person> {
+  async update(
+    actor: Actor,
+    id: string,
+    patch: PersonPatch & WorkPatch & { reportsToUserId?: string | null | undefined },
+  ): Promise<Person> {
     const [existing] = await this.db
       .select({ id: users.id, email: users.email, phone: users.phoneE164 })
       .from(users)
@@ -94,6 +99,7 @@ export class PeopleService {
       }
       if (patch.skills) await setSkills(tx, id, patch.skills);
       await saveWork(tx, id, patch);
+      await saveReportingLine(tx, id, patch.reportsToUserId, actor.userId);
       if (Object.keys(fields).length > 0)
         await tx
           .update(users)

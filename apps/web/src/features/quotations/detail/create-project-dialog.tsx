@@ -13,6 +13,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { useDiscoms, useProperty } from '../builder/property-summary';
 import { CreateTeamSection, MANAGER_LATER } from './create-team-section';
+import { type LenderChoice, LoanFields, lenderFields, NO_LENDER } from './loan-fields';
 import { DEFAULT_PLAN, PaymentPlanField } from './payment-plan-field';
 import { ProjectFactsSummary } from './project-facts-summary';
 
@@ -43,7 +44,7 @@ export function CreateProjectDialog({
   const [startDate, setStartDate] = useState(() => todayIn());
   const [targetFinish, setTargetFinish] = useState('');
   const [loan, setLoan] = useState(false);
-  const [lender, setLender] = useState('');
+  const [lender, setLender] = useState<LenderChoice>(NO_LENDER);
   const [loanRupees, setLoanRupees] = useState('');
   const [battery, setBattery] = useState(Boolean(quotation.input.batteryProductId));
   const [groundMount, setGroundMount] = useState(quotation.input.structureType === 'ground_mount');
@@ -69,7 +70,7 @@ export function CreateProjectDialog({
             quotationId: quotation.id,
             discomId: discomId ?? '',
             loan,
-            lenderName: loan ? lender.trim() || null : null,
+            ...lenderFields(loan, lender),
             loanPaise: loan && loanRupees ? rupeesToPaise(Number(loanRupees)) : 0,
             battery,
             groundMount,
@@ -187,24 +188,13 @@ export function CreateProjectDialog({
             description={t('loanHint')}
           />
           {loan && (
-            <div className="grid gap-4 py-4 sm:grid-cols-2">
-              <Field label={t('lender')} error={errors.lenderName}>
-                <Input
-                  value={lender}
-                  maxLength={120}
-                  onChange={(event) => setLender(event.target.value)}
-                />
-              </Field>
-              <Field label={t('loanAmount')} hint={t('loanAmountHint')} error={errors.loanPaise}>
-                <Input
-                  inputMode="decimal"
-                  value={loanRupees}
-                  onChange={(event) => setLoanRupees(event.target.value.replace(/[^\d.]/g, ''))}
-                  leading={<span className="type-body text-ink-faint">₹</span>}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
+            <LoanFields
+              lender={lender}
+              onLender={setLender}
+              loanRupees={loanRupees}
+              onLoanRupees={setLoanRupees}
+              errors={errors}
+            />
           )}
           <Switch
             className="py-3"

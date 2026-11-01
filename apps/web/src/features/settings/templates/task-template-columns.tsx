@@ -24,17 +24,15 @@ export function useTaskColumns({
       key: 'task',
       header: t('columns.task'),
       primary: true,
+      // Plain words only: the internal key made the table wider than the panel (PRD 7.2).
       cell: (row) => (
-        <span className="flex min-w-0 flex-col">
-          <button
-            type="button"
-            onClick={() => onEdit(row)}
-            className="oh-stretched-link text-left type-body font-medium text-ink hover:text-accent"
-          >
-            {row.title}
-          </button>
-          <span className="truncate font-mono text-[0.75rem] text-ink-faint">{row.key}</span>
-        </span>
+        <button
+          type="button"
+          onClick={() => onEdit(row)}
+          className="oh-stretched-link text-left type-body font-medium text-ink hover:text-accent"
+        >
+          {row.title}
+        </button>
       ),
     },
     { key: 'stage', header: t('columns.stage'), cell: (row) => stageT(row.stage) },

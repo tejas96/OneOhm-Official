@@ -19,6 +19,7 @@ import { conflict, notFound } from '../../common/http/errors';
 import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { contractorPerformance } from './contractor-performance';
+import { contractorTdsBp } from './contractor-tds';
 import { workOrderSummaries } from './work-order-read';
 
 type Row = typeof contractors.$inferSelect;
@@ -93,7 +94,7 @@ export class ContractorsService {
       bankAccountNumber: row.bankAccountNumber,
       bankIfsc: row.bankIfsc,
       paymentTermsDays: row.paymentTermsDays,
-      tdsBp: row.tdsBp,
+      tdsBp: await contractorTdsBp(this.db, row.tdsBp),
       retentionBp: row.retentionBp,
       retentionDays: row.retentionDays,
       notes: row.notes,

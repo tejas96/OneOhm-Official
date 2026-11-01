@@ -17,7 +17,8 @@ export type NoticeSubject =
   | 'vendor_advance'
   | 'stock'
   | 'travel_claim'
-  | 'lead';
+  | 'lead'
+  | 'approval';
 
 export interface Notice {
   readonly kind: string;

@@ -1,127 +1,127 @@
-import type { ReportKey } from '@oneohm/api-contracts';
+import { type ReportCompanyField, reportRequirements } from '@oneohm/domain';
+import { assetText } from './report-assets';
+import { conditionVariables, templateVariables } from './report-handlebars';
 
 /**
- * The six statutory reports (PRD 3.18). Each lists the project facts it needs; facts are
- * captured once by tasks and reused. A report whose condition fails reads "Not needed".
+ * A statutory report as one DISCOM prints it (PRD 3.18). The template body lives in
+ * Settings → DISCOMs; what it needs is read from the body itself, so every printed field
+ * is checked before a PDF is made and none prints blank. When it becomes ready is set by
+ * the tasks that name it (Settings → Task templates); none means at project set-up.
  */
 export interface ReportDefinition {
-  readonly key: ReportKey;
+  /** The stored format's id; empty for OneOhm's bundled originals. */
+  readonly id: string;
+  readonly discomId: string;
+  readonly key: string;
   readonly name: string;
+  /** The Handlebars source that prints. */
+  readonly body: string;
+  /** Project facts the template prints. */
   readonly required: readonly string[];
-  /** Company profile fields the report needs (signatory details for undertakings). */
-  readonly company?: readonly ('signatoryName' | 'signatoryPhone' | 'signatoryEmail')[];
+  /** Company profile details the template prints (vendor, signatory). */
+  readonly company?: readonly ReportCompanyField[];
   readonly onlyWithSubsidy?: boolean;
-  readonly discomCodes?: readonly string[];
   /** Visible to the customer in their app once generated. */
   readonly customerVisible: boolean;
+  /** Changes whenever the stored format changes, for the compiled-template cache. */
+  readonly version: string;
+}
+
+/** OneOhm's own report formats, bundled with the API, that every DISCOM starts from. */
+export interface BuiltInReport {
+  readonly key: string;
+  readonly name: string;
+  readonly onlyWithSubsidy: boolean;
+  readonly customerVisible: boolean;
+  /** Only DISCOMs with these codes get it; every DISCOM when left out. */
+  readonly discomCodes?: readonly string[];
 }
 
 const MSEDCL = ['MSEDCL'];
 
-export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
+export const BUILT_IN_REPORTS: readonly BuiltInReport[] = [
   {
     key: 'model-agreement',
     name: 'Model Agreement',
-    required: [
-      'project_onboarded_date',
-      'consumer_name',
-      'consumer_number',
-      'site_address',
-      'module_total_kw',
-      'module_make',
-      'module_wattage',
-      'inverter_total_kw',
-      'system_cost',
-    ],
+    onlyWithSubsidy: false,
     customerVisible: true,
   },
   {
     key: 'net-metering-agreement',
     name: 'Net Metering Agreement',
-    required: ['consumer_name', 'consumer_number', 'site_address', 'installed_capacity_kw'],
+    onlyWithSubsidy: false,
+    customerVisible: true,
     discomCodes: MSEDCL,
-    customerVisible: true,
   },
-  {
-    key: 'wcr',
-    name: 'Work Completion Report',
-    required: [
-      'consumer_name',
-      'consumer_number',
-      'site_address',
-      'sanction_number',
-      'sanctioned_capacity_kw',
-      'installed_capacity_kw',
-      'module_make',
-      'module_wattage',
-      'module_count',
-      'module_total_kw',
-      'inverter_make',
-      'inverter_total_kw',
-    ],
-    customerVisible: true,
-  },
-  {
-    key: 'dcr',
-    name: 'DCR Undertaking',
-    required: [
-      'installed_capacity_kw',
-      'consumer_name',
-      'site_address',
-      'sanction_number',
-      'sanction_date',
-      'module_wattage',
-      'module_count',
-      'module_serial_numbers',
-      'module_make',
-      'purchase_order_number',
-      'purchase_order_date',
-      'cell_manufacturer_name',
-      'cell_gst_invoice_no',
-    ],
-    company: ['signatoryName', 'signatoryPhone', 'signatoryEmail'],
-    onlyWithSubsidy: true,
-    customerVisible: false,
-  },
+  { key: 'wcr', name: 'Work Completion Report', onlyWithSubsidy: false, customerVisible: true },
+  { key: 'dcr', name: 'DCR Undertaking', onlyWithSubsidy: true, customerVisible: false },
   {
     key: 'annexure-proforma-a',
     name: 'Annexure-I & Proforma-A',
-    required: [
-      'consumer_name',
-      'consumer_number',
-      'consumer_phone',
-      'site_address',
-      'sanctioned_capacity_kw',
-      'installed_capacity_kw',
-      'inverter_total_kw',
-      'inverter_make',
-      'module_count',
-      'module_total_kw',
-      'site_city',
-      'site_state',
-    ],
-    discomCodes: MSEDCL,
+    onlyWithSubsidy: false,
     customerVisible: true,
+    discomCodes: MSEDCL,
   },
   {
     key: 'meter-test-letter',
     name: 'Meter Test Covering Letter',
-    required: [
-      'consumer_name',
-      'consumer_number',
-      'sanction_number',
-      'sanction_date',
-      'meter_serial_number',
-      'meter_make',
-      'meter_capacity',
-    ],
-    discomCodes: MSEDCL,
+    onlyWithSubsidy: false,
     customerVisible: false,
+    discomCodes: MSEDCL,
   },
 ];
 
-export const COMPANY_FIELD_LABELS = {
+/** OneOhm's bundled template for a key, or null for a report the owner added. */
+export function builtInTemplate(key: string): string | null {
+  return BUILT_IN_REPORTS.some((report) => report.key === key)
+    ? assetText('reports', 'templates', `${key}.hbs`)
+    : null;
+}
+
+const needs = new Map<string, ReturnType<typeof reportRequirements>>();
+
+/** What a body needs; read once per body. */
+export function requirementsOf(body: string) {
+  let found = needs.get(body);
+  if (!found) {
+    found = reportRequirements(templateVariables(body), conditionVariables(body));
+    needs.set(body, found);
+  }
+  return found;
+}
+
+/** A definition from a stored (or bundled) format. */
+export function definitionOf(format: {
+  readonly id: string;
+  readonly discomId: string;
+  readonly key: string;
+  readonly name: string;
+  readonly body: string;
+  readonly onlyWithSubsidy: boolean;
+  readonly customerVisible: boolean;
+  readonly version: string;
+}): ReportDefinition {
+  const found = requirementsOf(format.body);
+  return { ...format, required: found.facts, company: found.company };
+}
+
+/** The bundled originals as definitions (tests, and the defaults' own checks). */
+export const builtInDefinitions = (): ReportDefinition[] =>
+  BUILT_IN_REPORTS.map((report) =>
+    definitionOf({
+      ...report,
+      id: '',
+      discomId: '',
+      body: builtInTemplate(report.key) ?? '',
+      version: 'built-in',
+    }),
+  );
+
+export const COMPANY_FIELD_LABELS: Readonly<Record<ReportCompanyField, string>> = {
+  legalName: 'Company legal name (Settings → Company)',
+  fullAddress: 'Company address (Settings → Company)',
   signatoryName: 'Signatory name (Settings → Company)',
+  signatoryDesignation: 'Signatory designation (Settings → Company)',
   signatoryPhone: 'Signatory phone (Settings → Company)',
   signatoryEmail: 'Signatory email (Settings → Company)',
-} as const;
+};

@@ -16,6 +16,7 @@ import { settleWorkOrder } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { contractorTdsBp } from './contractor-tds';
 
 /** Work orders as list rows, newest first, with how many of their tasks are done. */
 export async function workOrderSummaries(
@@ -119,7 +120,7 @@ export async function presentWorkOrder(db: DatabaseExecutor, id: string): Promis
         reworkDeductionsPaise: rework.reduce((sum, item) => sum + item.row.deductionPaise, 0),
         advancesPaise: order.advancesPaise,
         retentionBp: contractor.retentionBp,
-        tdsBp: contractor.tdsBp,
+        tdsBp: await contractorTdsBp(db, contractor.tdsBp),
       });
   return {
     ...summary,

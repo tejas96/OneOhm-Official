@@ -1,86 +1,42 @@
 'use client';
 
-import type { Customer, Lead, ProjectSummary, QuotationSummary } from '@oneohm/api-contracts';
-import type { Capability } from '@oneohm/domain';
-import { type UseQueryResult, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import type { SearchHit } from '@oneohm/api-contracts';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { useCurrentUser } from '@/providers/current-user';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 
-/** A small business: the whole list is a few hundred rows, so the palette filters locally. */
-const STALE_MS = 60_000;
-const NONE: readonly never[] = [];
+/** The server needs two letters; one letter would match half the business. */
+export const MIN_QUERY = 2;
+const NONE: readonly SearchHit[] = [];
 
 export interface SearchRecords {
-  readonly projects: readonly ProjectSummary[];
-  readonly customers: readonly Customer[];
-  readonly leads: readonly Lead[];
-  readonly quotations: readonly QuotationSummary[];
-  /** At least one list the person may see is still on its way. */
+  readonly hits: readonly SearchHit[];
+  /** A search is on its way for what was typed (or still settling). */
   readonly loading: boolean;
-  /** At least one list could not load; the rest still search. */
+  /** The search could not run; pages still match. */
   readonly failed: boolean;
-  /** The person may see at least one kind of record (else the palette finds pages only). */
-  readonly searchable: boolean;
 }
 
 /**
- * The lists behind the palette, fetched only for what this person may open (the API
- * guards the same capabilities). Mounted with the open palette, so nothing loads until
- * it is first used. The keys match the list screens, so a visited screen answers at once.
+ * Universal search (PRD 10): what was typed, once it settles for 200 ms, goes to the
+ * server, which searches every kind of record the person may open and narrows
+ * resellers and crews to their own. Earlier results stay while the next ones arrive.
  */
-export function useSearchRecords(): SearchRecords {
-  const user = useCurrentUser();
-  const can = (...capabilities: Capability[]) =>
-    capabilities.some((capability) => user.capabilities.includes(capability));
-
-  const allowed = {
-    projects: can('projects.view_all'),
-    customers: can('customers.view'),
-    leads: can('leads.view_all', 'leads.view_own', 'leads.manage'),
-    quotations: can('quotations.view', 'quotations.create'),
+export function useSearchRecords(query: string): SearchRecords {
+  const typed = query.trim();
+  const settled = useDebouncedValue(typed, 200);
+  const asks = settled.length >= MIN_QUERY;
+  const result = useQuery({
+    queryKey: ['search', settled],
+    queryFn: () => expectStatus(api.search.search({ query: { q: settled, limit: 5 } }), 200),
+    enabled: asks,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+  const waiting = typed.length >= MIN_QUERY && (typed !== settled || result.isFetching);
+  return {
+    hits: asks && typed.length >= MIN_QUERY ? (result.data?.hits ?? NONE) : NONE,
+    loading: waiting,
+    failed: asks && result.isError,
   };
-
-  const projects = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => expectStatus(api.projects.listProjects(), 200),
-    enabled: allowed.projects,
-    staleTime: STALE_MS,
-  });
-  const customers = useQuery({
-    queryKey: ['customers', 'list', ''],
-    queryFn: () => expectStatus(api.crm.listCustomers({ query: {} }), 200),
-    enabled: allowed.customers,
-    staleTime: STALE_MS,
-  });
-  const leads = useQuery({
-    queryKey: ['leads', 'list', 'all', ''],
-    queryFn: () => expectStatus(api.crm.listLeads({ query: {} }), 200),
-    enabled: allowed.leads,
-    staleTime: STALE_MS,
-  });
-  const quotations = useQuery({
-    queryKey: ['quotations'],
-    queryFn: () => expectStatus(api.quotations.listQuotations({ query: {} }), 200),
-    enabled: allowed.quotations,
-    staleTime: STALE_MS,
-  });
-
-  const sources: readonly UseQueryResult<unknown>[] = [projects, customers, leads, quotations];
-  // A disabled query stays "pending" without fetching; only count the ones on their way.
-  const loading = sources.some((source) => source.isPending && source.fetchStatus === 'fetching');
-  const failed = sources.some((source) => source.isError);
-  const searchable = Object.values(allowed).some(Boolean);
-  return useMemo(
-    () => ({
-      projects: projects.data ?? NONE,
-      customers: customers.data ?? NONE,
-      leads: leads.data ?? NONE,
-      quotations: quotations.data ?? NONE,
-      loading,
-      failed,
-      searchable,
-    }),
-    [projects.data, customers.data, leads.data, quotations.data, loading, failed, searchable],
-  );
 }

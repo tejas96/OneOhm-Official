@@ -2,6 +2,7 @@ import {
   describeError,
   EmptyState,
   ErrorState,
+  Illustration,
   LoadingState,
   localHours,
   Screen,
@@ -23,6 +24,7 @@ import { AnnouncementsCard } from '@/features/announcements/announcements-card';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { LeaveAndPoints } from '@/features/rewards/leave-and-points';
+import { SearchButton } from '@/features/search/search-button';
 import { ServiceVisitsSection } from '@/features/service/service-visits-section';
 import { useMyServiceVisits } from '@/features/service/use-service-visits';
 import { TaskRow } from '@/features/tasks/task-row';
@@ -60,7 +62,10 @@ export function TodayScreen() {
           <Text variant="mono" tone="tertiary">
             {longToday().toUpperCase()}
           </Text>
-          <Bell />
+          <View style={styles.actions}>
+            <SearchButton />
+            <Bell />
+          </View>
         </View>
         <View>
           <Text variant="displayXl">{TODAY.greeting[phase]},</Text>
@@ -104,6 +109,7 @@ export function TodayScreen() {
           {onlyService ? null : tasks.length === 0 ? (
             <EmptyState
               icon={<Sun size={22} color={theme.colors.accent} />}
+              illustration={<Illustration name="clearDay" size={112} />}
               title={TODAY.emptyTitle}
               description={TODAY.emptyBody}
             />
@@ -126,5 +132,6 @@ export function TodayScreen() {
 const styles = StyleSheet.create({
   header: { gap: 8, paddingTop: 8 },
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   group: { gap: 10 },
 });

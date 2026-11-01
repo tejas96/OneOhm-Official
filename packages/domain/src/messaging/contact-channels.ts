@@ -27,9 +27,12 @@ export function routeFor(customer: {
 /** Longest SMS text: two standard parts, so it stays cheap and reads in one glance. */
 export const SMS_MAX = 300;
 
-/** The SMS version of a message: one plain line, signed, never cut mid-word. */
-export function smsText(title: string, body: string): string {
-  const sign = ' - OneOhm';
+/**
+ * The SMS version of a message: one plain line, signed with the company's name from its
+ * profile (no sign when there is none yet), never cut mid-word.
+ */
+export function smsText(title: string, body: string, brand: string): string {
+  const sign = brand.trim() ? ` - ${brand.trim()}` : '';
   // A title that already ends a sentence ("How did we do?") gets no extra full stop.
   const head = title.trim();
   const joiner = /[.?!:]$/.test(head) ? ' ' : '. ';

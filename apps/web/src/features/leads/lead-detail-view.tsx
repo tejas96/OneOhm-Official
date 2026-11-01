@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
+import { PapersSection } from '@/features/documents/papers-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, whatsappHref } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
@@ -118,6 +119,8 @@ export function LeadDetailView({ id }: { readonly id: string }) {
           <LeadFactsCard lead={lead} />
         </aside>
       </div>
+      {/* Papers collected at the lead stage (PRD 3.14), once the lead has its site. */}
+      {lead.customerId && <PapersSection scope={{ leadId: lead.id }} name={lead.name} />}
     </motion.div>
   );
 }

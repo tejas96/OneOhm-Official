@@ -162,7 +162,7 @@ export const TASK = {
     description:
       'Time waiting on customers, banks and DISCOM is reported separately from the team.',
     party: 'Waiting on',
-    helpNote: 'Choosing OneOhm team asks for help: your project manager hears straight away.',
+    helpNote: 'Choosing “Our team” asks for help: your project manager hears straight away.',
     note: 'What are you waiting for?',
     notePlaceholder: 'e.g. Customer to share the latest electricity bill',
     save: 'Mark as waiting',

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { BankPayout, PayoutOptions } from '@oneohm/api-contracts';
-import { bankPayouts, payables } from '@oneohm/database';
+import { bankPayouts, brandName, payables } from '@oneohm/database';
 import { billToPay, maskAccount, payoutOpen, transferMode } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { desc, eq, gt } from 'drizzle-orm';
@@ -105,7 +105,8 @@ export class BankPayoutsService {
         amountPaise: options.amountPaise,
         mode: options.transferMode,
         referenceId: row.id,
-        narration: `OneOhm ${payee.name}`,
+        // The company's name from its profile, then the payee (RazorpayX keeps 30 characters).
+        narration: `${await brandName(this.db)} ${payee.name}`.trim(),
       });
       await this.db
         .update(bankPayouts)

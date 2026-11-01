@@ -1,6 +1,8 @@
 import { type DatabaseExecutor, notify, notifyHolders, projects } from '@oneohm/database';
+import { helpRecipients } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { STAFF_NOTICES } from '../../common/notices';
+import { managerOf } from '../people/reporting-line';
 
 interface TaskRow {
   readonly id: string;
@@ -101,6 +103,7 @@ export async function tellReturned(
 /**
  * A request for the team's help reaches the project manager straight away (PRD 4.4), or
  * everyone who manages projects when the project has none, not only after escalation.
+ * The asker's own manager hears too, when they have one (PRD 3.12).
  */
 export async function tellHelpAsked(
   db: DatabaseExecutor,
@@ -119,11 +122,15 @@ export async function tellHelpAsked(
     actor.fullName,
     String(Date.now()),
   );
-  if (project.managerUserId && project.managerUserId !== actor.userId) {
-    await notify(db, { userId: project.managerUserId }, notice);
-    return;
-  }
-  await notifyHolders(db, 'projects.manage', notice, actor.userId);
+  const manager = await managerOf(db, actor.userId);
+  const reach = helpRecipients({
+    askerUserId: actor.userId,
+    projectManagerUserId: project.managerUserId,
+    askerManagerUserId: manager?.active ? manager.id : null,
+  });
+  for (const userId of reach.userIds)
+    await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
+  if (reach.projectManagers) await notifyHolders(db, 'projects.manage', notice, actor.userId);
 }
 
 /** The assignee hears about a new due date someone else set. */

@@ -10,12 +10,12 @@ import { readPayToken } from './pay-token';
 /** What the customer reads when a pay link cannot open a payment page. */
 const WORDS = {
   expired: 'This link has expired. Open the OneOhm app, or ask us on WhatsApp for a new one.',
-  title: 'OneOhm payment',
+  title: 'Solar payment',
   byCode: {
     not_due: 'This payment is not due yet. We will tell you when it is.',
     paid: 'This is already paid. Thank you!',
-    bank_share: 'Your bank pays this share to OneOhm directly. Nothing to pay here.',
-    off: 'Online payment is not available right now. Please call your OneOhm contact.',
+    bank_share: 'Your bank pays this share directly. Nothing to pay here.',
+    off: 'Online payment is not available right now. Please call your contact.',
   } as Readonly<Record<string, string>>,
 } as const;
 

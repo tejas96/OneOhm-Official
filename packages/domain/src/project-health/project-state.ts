@@ -51,7 +51,7 @@ const PARTY_LABEL: Readonly<Record<WaitingParty, string>> = {
   discom: 'Waiting on DISCOM',
   bank: 'Waiting on bank',
   customer: 'Waiting on customer',
-  internal: 'Waiting on OneOhm team',
+  internal: 'Waiting on our team',
 };
 
 /** Finished work: closed when paid, otherwise it stays in view until the money is in (Flow D). */

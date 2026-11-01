@@ -242,7 +242,8 @@
         "orders": "Orders · {count}",
         "bills": "Bills to pay · {count}",
         "advances": "Advances · {count}",
-        "inspection": "Inspection · {count}"
+        "inspection": "Inspection · {count}",
+        "papers": "Papers"
       },
       "ageing": {
         "title": "To pay, by age of the bill",

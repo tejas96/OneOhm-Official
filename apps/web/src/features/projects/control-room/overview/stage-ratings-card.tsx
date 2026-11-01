@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { useBrandName } from '@/features/shell/company-name';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
@@ -44,6 +45,7 @@ function RatingItem({
   const t = useTranslations('projects.room.ratings');
   const format = useFormatter();
   const now = useNow();
+  const brand = useBrandName();
   const toast = useToast();
   const client = useQueryClient();
   const canReply = useCan('projects.manage', 'customers.manage');
@@ -86,7 +88,7 @@ function RatingItem({
       </p>
       {rating.reply ? (
         <p className="rounded-md bg-sunken px-3 py-2 type-body-sm text-ink-muted">
-          {t('replyBy', { name: rating.repliedBy ?? 'OneOhm' })} {rating.reply}
+          {t('replyBy', { name: rating.repliedBy ?? brand })} {rating.reply}
         </p>
       ) : (
         canReply && (

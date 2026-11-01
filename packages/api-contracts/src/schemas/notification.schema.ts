@@ -15,6 +15,8 @@ export const NOTICE_SUBJECTS = [
   'stock',
   'travel_claim',
   'lead',
+  /** Something waiting for approval too long; opens "Waiting for my approval". */
+  'approval',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */

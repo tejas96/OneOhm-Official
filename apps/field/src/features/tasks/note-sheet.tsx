@@ -1,7 +1,8 @@
-import { Button, describeError, Field, fieldErrorsOf, Input, Sheet } from '@oneohm/mobile-ui';
+import { Button, describeError, Field, fieldErrorsOf, Sheet } from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
+import { DictationInput } from '@/features/dictation/dictation-input';
 
 const WORDS = { update: TASK.updateSheet, sendBack: TASK.sendBackSheet } as const;
 
@@ -47,7 +48,7 @@ export function NoteSheet({
       }
     >
       <Field label={words.label} error={field ?? (error ? describeError(error) : undefined)}>
-        <Input
+        <DictationInput
           value={text}
           onChangeText={setText}
           placeholder={words.placeholder}

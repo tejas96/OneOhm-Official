@@ -29,6 +29,7 @@ export async function moneyFigures(
   db: Database,
   today: string,
   periodStart = `${today.slice(0, 8)}01`,
+  dueSoonDays = 7,
 ): Promise<MoneyFigures> {
   const monthStart = periodStart;
   const eightWeeksAgo = addDays(today, -55);
@@ -104,7 +105,7 @@ export async function moneyFigures(
     weekly,
     stillDuePaise,
     bankPendingPaise,
-    ...(await goingOut(db, today)),
+    ...(await goingOut(db, today, dueSoonDays)),
   };
 }
 
@@ -130,8 +131,8 @@ async function revenueBooked(db: Database, from: string, to: string): Promise<nu
  * Everything still owed on vendor and contractor bills, what of it falls due within a
  * week, and crew advances found by their work-order link rather than their wording.
  */
-async function goingOut(db: Database, today: string) {
-  const weekEnd = addDays(today, 7);
+async function goingOut(db: Database, today: string, dueSoonDays: number) {
+  const weekEnd = addDays(today, dueSoonDays);
   const outgoing = await db
     .select({
       party: payables.party,

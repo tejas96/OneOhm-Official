@@ -22,9 +22,10 @@ const ENTER = {
 } as const;
 
 /**
- * "Jump to…": one search over the pages this person may open and the projects,
- * customers, leads and quotations they may see. Opens from the sidebar, the phone
- * bar and menu, and with ⌘K / Ctrl+K anywhere. Mount once.
+ * "Jump to…": the pages this person may open, and universal search over every record
+ * they may see (projects, customers, leads, quotations, tasks, payments, service
+ * requests, files, contractors, vendors). Opens from the sidebar, the phone bar and
+ * menu, and with ⌘K / Ctrl+K anywhere. Mount once.
  */
 export function CommandPalette() {
   const open = useSearchOpen();
@@ -58,15 +59,18 @@ export function CommandPalette() {
   );
 }
 
-/** Mounted only while open, so the record lists load the first time someone searches. */
+/** Mounted only while open; records are searched on the server as the person types. */
 function PaletteBody() {
   const t = useTranslations('search');
   const router = useRouter();
   const [query, setQuery] = useState('');
   // The highlight follows an entry, not a position, so it stays put as lists arrive.
   const [activeId, setActiveId] = useState<string | null>(null);
-  const source = useSearchEntries();
-  const groups = useMemo(() => searchEntries(source.entries, query), [source.entries, query]);
+  const source = useSearchEntries(query);
+  const groups = useMemo(
+    () => searchEntries(source.pages, source.records, query),
+    [source.pages, source.records, query],
+  );
   const flat = useMemo(() => groups.flatMap((group) => group.entries), [groups]);
   const current = Math.max(
     flat.findIndex((entry) => entry.id === activeId),

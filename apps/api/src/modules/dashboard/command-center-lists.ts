@@ -5,8 +5,6 @@ import { and, asc, eq, gte, lte, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { CenterScope } from './command-center-scope';
 
-const MAX_RISKS = 6;
-const MAX_DEADLINES = 12;
 const manager = alias(users, 'manager');
 
 /**
@@ -36,7 +34,8 @@ export async function risksIn(db: Database, scope: CenterScope): Promise<RiskIte
     .leftJoin(users, eq(users.id, projectTasks.assigneeUserId))
     .leftJoin(manager, eq(manager.id, projects.managerUserId))
     .where(and(scope.projects, ne(projectTasks.status, 'completed')));
-  const soon = addDays(scope.today, 7);
+  const { dueSoonDays, riskLateDays, risksShown } = scope.settings;
+  const soon = addDays(scope.today, dueSoonDays);
   const items = rows.flatMap(({ task, code, name, owner, managerName }): RiskItem[] => {
     const base = {
       taskId: task.id,
@@ -54,6 +53,8 @@ export async function risksIn(db: Database, scope: CenterScope): Promise<RiskIte
     }
     if (task.dueDate < scope.today) {
       const days = daysBetween(task.dueDate, scope.today);
+      // Only late enough to count, per Settings → Dashboard (PRD 7.2).
+      if (days < riskLateDays) return [];
       return [{ ...base, kind: 'overdue', days, party: 'internal' }];
     }
     if (!task.assigneeUserId && task.dueDate <= soon && task.status === 'ready') {
@@ -67,7 +68,7 @@ export async function risksIn(db: Database, scope: CenterScope): Promise<RiskIte
       (a, b) =>
         rank[a.kind] - rank[b.kind] || b.days - a.days || a.dueDate.localeCompare(b.dueDate),
     )
-    .slice(0, MAX_RISKS);
+    .slice(0, risksShown);
 }
 
 /** Open tasks due in the next seven days on the projects in view, soonest first. */
@@ -95,11 +96,11 @@ export async function deadlinesIn(
         scope.projects,
         ne(projectTasks.status, 'completed'),
         gte(projectTasks.dueDate, scope.today),
-        lte(projectTasks.dueDate, addDays(scope.today, 7)),
+        lte(projectTasks.dueDate, addDays(scope.today, scope.settings.dueSoonDays)),
       ),
     )
     .orderBy(asc(projectTasks.dueDate), asc(projectTasks.position))
-    .limit(MAX_DEADLINES);
+    .limit(scope.settings.deadlinesShown);
   return rows.map(({ task, code, assignee }) => ({
     taskId: task.id,
     projectId: task.projectId,

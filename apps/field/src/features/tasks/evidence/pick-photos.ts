@@ -1,4 +1,4 @@
-import type { UploadableFile } from '@oneohm/mobile-ui';
+import { shrinkPhoto, type UploadableFile } from '@oneohm/mobile-ui';
 import * as ImagePicker from 'expo-image-picker';
 import { readLocation } from '@/features/attendance/location';
 import { exifTakenAt, geotagFromExif } from '@/features/uploads/geotag';
@@ -79,14 +79,16 @@ export async function pickPhotos(
     return reading;
   };
   return Promise.all(
-    result.assets.map(async (asset, index) => ({
-      file: {
+    result.assets.map(async (asset, index) => {
+      // EXIF first: the resized copy (long edge 2000 px, JPEG 0.7) carries none.
+      const geotag = await tagOf(asset.exif, source, locate, here);
+      const picked: UploadableFile = {
         uri: asset.uri,
         name: asset.fileName ?? `site-photo-${stamp}-${index + 1}.jpg`,
         type: asset.mimeType ?? 'image/jpeg',
         ...(asset.file ? { file: asset.file } : {}),
-      },
-      geotag: await tagOf(asset.exif, source, locate, here),
-    })),
+      };
+      return { file: await shrinkPhoto(picked, asset), geotag };
+    }),
   );
 }

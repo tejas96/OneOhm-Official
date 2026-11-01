@@ -29,6 +29,13 @@ export interface QueuedUpload {
   /** Evidence for a task, or (`serviceRequestId`) for a service visit (PRD 5.5). */
   readonly taskId?: string | undefined;
   readonly serviceRequestId?: string | undefined;
+  /**
+   * A paper for a lead, a customer or one of their sites (PRD 4.5: bills, ID proof).
+   * A lead's paper is kept on the lead's customer and site by the server.
+   */
+  readonly leadId?: string | undefined;
+  readonly customerId?: string | undefined;
+  readonly propertyId?: string | undefined;
   readonly kind: UploadKind;
   readonly category: string;
   readonly name: string;
@@ -123,10 +130,22 @@ export function nextWake(
   return times.length > 0 ? Math.min(...times) : null;
 }
 
-/** The screen a queued file belongs to: its task, or its service visit. */
-export function screenOf(item: Pick<QueuedUpload, 'taskId' | 'serviceRequestId'>): string {
+type Target = Pick<QueuedUpload, 'taskId' | 'serviceRequestId' | 'leadId' | 'customerId'>;
+
+/** Where a queued file goes: a task, a service visit, a lead, or a customer (and site). */
+export function hasTarget(item: Target): boolean {
+  return Boolean(item.taskId || item.serviceRequestId || item.leadId || item.customerId);
+}
+
+/**
+ * The screen a queued file belongs to: its task, service visit or lead. A customer's
+ * paper has no screen of its own in the app, so it opens Today.
+ */
+export function screenOf(item: Target): string {
   if (item.serviceRequestId) return `/service/${item.serviceRequestId}`;
-  return `/tasks/${item.taskId ?? ''}`;
+  if (item.taskId) return `/tasks/${item.taskId}`;
+  if (item.leadId) return `/leads/${item.leadId}`;
+  return '/';
 }
 
 export function mine(
@@ -155,6 +174,9 @@ const queuedSchema = z.object({
   userId: z.string().min(1),
   taskId: z.string().min(1).optional(),
   serviceRequestId: z.string().min(1).optional(),
+  leadId: z.string().min(1).optional(),
+  customerId: z.string().min(1).optional(),
+  propertyId: z.string().min(1).optional(),
   kind: z.enum(UPLOAD_KINDS),
   category: z.string().min(1),
   name: z.string().min(1),
@@ -176,9 +198,8 @@ export function parseQueue(raw: unknown): QueuedUpload[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((entry) => {
     const parsed = queuedSchema.safeParse(entry);
-    // Every file belongs to a task or a service visit; one with neither is dropped.
-    const target = parsed.success && (parsed.data.taskId || parsed.data.serviceRequestId);
-    return parsed.success && target ? [parsed.data] : [];
+    // Every file belongs somewhere (task, visit, lead, customer); one with nowhere is dropped.
+    return parsed.success && hasTarget(parsed.data) ? [parsed.data] : [];
   });
 }
 

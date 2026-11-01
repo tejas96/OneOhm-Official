@@ -1,11 +1,13 @@
 import type { ExtraLineInput, Product } from '@oneohm/api-contracts';
+import { STRUCTURE_TYPES, type StructureType } from '@oneohm/domain';
 import { ChoiceChips, Field, Input } from '@oneohm/mobile-ui';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { QUOTE } from '@/copy/quote';
 import { SIZE_CHOICES_KW } from './quote-options';
 
-export type Structure = 'rcc_elevated' | 'tin_shed' | 'ground_mount';
+/** Every kind of site the costing engine prices (PRD 3.9). */
+export type Structure = StructureType;
 
 export interface QuoteForm {
   readonly sizeKw: string;
@@ -93,9 +95,8 @@ export function QuoteInputs({
       </Field>
       <Field label={QUOTE.structure}>
         <ChoiceChips
-          kind="segmented"
           label={QUOTE.structure}
-          choices={(Object.keys(QUOTE.structures) as Structure[]).map((value) => ({
+          choices={STRUCTURE_TYPES.map((value) => ({
             value,
             label: QUOTE.structures[value],
           }))}

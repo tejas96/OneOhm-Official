@@ -25,16 +25,22 @@ describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
   });
 
   it('writes a short signed SMS and trims long ones at a word', () => {
-    expect(smsText('Payment received', '₹40,000 for the advance.')).toBe(
-      'Payment received. ₹40,000 for the advance. - OneOhm',
+    expect(smsText('Payment received', '₹40,000 for the advance.', 'Surya Power')).toBe(
+      'Payment received. ₹40,000 for the advance. - Surya Power',
     );
-    const long = smsText('Update', 'word '.repeat(100));
+    const long = smsText('Update', 'word '.repeat(100), 'Surya Power');
     expect(long.length).toBeLessThanOrEqual(SMS_MAX);
-    expect(long.endsWith('… - OneOhm')).toBe(true);
+    expect(long.endsWith('… - Surya Power')).toBe(true);
+  });
+
+  it('signs with the company name from its profile, or not at all before one is set', () => {
+    expect(smsText('Update', 'All set.', ' OneOhm ')).toBe('Update. All set. - OneOhm');
+    expect(smsText('Update', 'All set.', '')).toBe('Update. All set.');
+    expect(smsText('Update', 'word '.repeat(100), '').length).toBeLessThanOrEqual(SMS_MAX);
   });
 
   it('adds no second stop after a title that ends a sentence', () => {
-    expect(smsText('How did we do?', 'Please rate it.')).toBe(
+    expect(smsText('How did we do?', 'Please rate it.', 'OneOhm')).toBe(
       'How did we do? Please rate it. - OneOhm',
     );
   });

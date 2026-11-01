@@ -5,7 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import { bankPayouts } from '@oneohm/database';
+import { bankPayouts, noteBackgroundRun } from '@oneohm/database';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { applyPayoutEvent } from './payout-events';
@@ -64,10 +64,12 @@ export class PayoutSyncService implements OnApplicationBootstrap, OnModuleDestro
           updated += 1;
       }
       if (updated) this.logger.log(`Updated ${updated} payouts.`);
+      await noteBackgroundRun(this.db, 'payout_sync', { count: updated });
     } catch (error) {
       this.logger.error(
         `RazorpayX check failed: ${error instanceof Error ? error.message : error}`,
       );
+      await noteBackgroundRun(this.db, 'payout_sync', { error });
     }
     return { updated };
   }

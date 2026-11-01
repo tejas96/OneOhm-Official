@@ -41,7 +41,7 @@ export const SUPPORT: Copy<typeof en.SUPPORT> = {
   projectLabel: 'कौन-सा सिस्टम',
   descriptionLabel: 'क्या हो रहा है?',
   descriptionHint: 'जैसे: आज सुबह से इन्वर्टर पर लाल बत्ती जल रही है।',
-  submit: 'OneOhm को भेजें',
+  submit: 'अनुरोध भेजें',
   sent: 'भेज दिया। हमारी सर्विस टीम आपको फ़ोन करेगी।',
   historyTitle: 'आपकी रिक्वेस्ट',
   emptyTitle: 'अभी कोई रिक्वेस्ट नहीं',
@@ -77,7 +77,7 @@ export const REFER: Copy<typeof en.REFER> = {
   emptyBody: 'आपके बताए लोग और उनका काम कहाँ तक पहुँचा, यहाँ दिखेगा।',
   status: {
     received: 'मिल गया',
-    in_progress: 'OneOhm से बात चल रही है',
+    in_progress: 'हमारी टीम से बात चल रही है',
     ordered: 'सोलर लगवा रहे हैं',
     installed: 'सोलर लग गया',
     closed: 'बंद',
@@ -89,15 +89,16 @@ export const REFER: Copy<typeof en.REFER> = {
   terms: (amount, event) => `${WHEN_FRIEND[event]} आपको ${amount} मिलेंगे।`,
   termsPerKw: (amount, event) => `${WHEN_FRIEND[event]} उनके हर kW के लिए आपको ${amount} मिलेंगे।`,
   termsOff: 'सोलर चाहने वाले किसी को भी अपना कोड दें। हम उन्हें फ़ोन करेंगे और आपको बताते रहेंगे।',
-  approvalNote: 'हर इनाम OneOhm मंज़ूर करता है, फिर आपको देता है।',
+  approvalNote: 'हर इनाम हम मंज़ूर करते हैं, फिर आपको देते हैं।',
   shareWhatsApp: 'WhatsApp पर भेजें',
   shareOther: 'दूसरे तरीके से भेजें',
   shareFailed: 'शेयर नहीं खुला। अपने दोस्त को कोड बता दें।',
-  shareText: (code, link) =>
+  shareText: (code, link, company) =>
     link
-      ? `मैंने OneOhm से सोलर लगवाया और मेरा बिजली बिल कम हो गया। आपको भी सोलर चाहिए? मेरे रेफ़रल कोड ${code} के साथ OneOhm को WhatsApp करें: ${link}`
-      : `मैंने OneOhm से सोलर लगवाया और मेरा बिजली बिल कम हो गया। आपको भी सोलर चाहिए? OneOhm को फ़ोन करें और मेरा रेफ़रल कोड ${code} बताएँ।`,
-  friendMessage: (code) => `नमस्ते OneOhm, मुझे अपने घर के लिए सोलर चाहिए। मेरा रेफ़रल कोड ${code} है।`,
+      ? `मैंने ${company} से सोलर लगवाया और मेरा बिजली बिल कम हो गया। आपको भी सोलर चाहिए? मेरे रेफ़रल कोड ${code} के साथ ${company} को WhatsApp करें: ${link}`
+      : `मैंने ${company} से सोलर लगवाया और मेरा बिजली बिल कम हो गया। आपको भी सोलर चाहिए? ${company} को फ़ोन करें और मेरा रेफ़रल कोड ${code} बताएँ।`,
+  friendMessage: (code, company) =>
+    `नमस्ते ${company}, मुझे अपने घर के लिए सोलर चाहिए। मेरा रेफ़रल कोड ${code} है।`,
   totals: {
     earned: 'कमाए',
     pending: 'मंज़ूरी का इंतज़ार',
@@ -116,7 +117,7 @@ export const REFER: Copy<typeof en.REFER> = {
 
 export const FEEDBACK: Copy<typeof en.FEEDBACK> = {
   title: 'अपना अनुभव बताएँ',
-  intro: 'पहली विज़िट से सिस्टम चालू होने तक, OneOhm के साथ आपकी सोलर यात्रा कैसी रही?',
+  intro: 'पहली विज़िट से सिस्टम चालू होने तक, हमारे साथ आपकी सोलर यात्रा कैसी रही?',
   ratingLabel: 'आपकी रेटिंग',
   stars: STARS,
   commentLabel: 'और बताएँ',

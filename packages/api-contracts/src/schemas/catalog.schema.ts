@@ -48,5 +48,8 @@ export const companySchema = z.object({
   signatoryPhone: z.string(),
   signatoryEmail: z.string(),
   quotationValidityDays: z.number().int(),
+  /** The base location distances to sites are measured from (PRD 3.9 B). */
+  baseLatitude: z.number().nullable().optional(),
+  baseLongitude: z.number().nullable().optional(),
 });
 export type Company = z.infer<typeof companySchema>;

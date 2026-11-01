@@ -36,11 +36,11 @@ export function ChangesTable({ search }: { readonly search: string }) {
     queryFn: ({ pageParam }) =>
       expectStatus(
         api.audit.activity({
-          query: { ...(search ? { search } : {}), ...(pageParam ? { before: pageParam } : {}) },
+          query: { ...(search ? { search } : {}), ...(pageParam ? { cursor: pageParam } : {}) },
         }),
         200,
       ),
-    getNextPageParam: (page) => page.next ?? undefined,
+    getNextPageParam: (page) => page.cursor ?? undefined,
   });
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
   const columns: readonly TableColumn<AuditEntry>[] = [

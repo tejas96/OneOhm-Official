@@ -92,7 +92,11 @@ export const propertySchema = z.object({
   sanctionedLoadW: z.number().int().nullable(),
   phase: z.enum(['single', 'three']).nullable(),
   meterInSocietyName: z.boolean().nullable(),
+  /** The EV charging meter, from a completed New EV meter request (PRD 3.15). */
+  evMeterNumber: z.string().nullable().optional(),
   subsidyClaimed: z.boolean(),
+  /** A low-income household: the state top-up may apply (PRD 3.5). */
+  lowIncomeHousehold: z.boolean().optional(),
   floors: z.number().int(),
   /** The site's GPS point; photos and check-ins are checked against it. */
   latitude: z.number().nullable(),

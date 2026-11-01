@@ -23,8 +23,11 @@ import { LEAD, LEAD_SITE, LEADS } from '@/copy/sales';
 import { relativeDate, shortDate, shortMoment } from '@/lib/dates';
 import { useCan } from '@/session/session-provider';
 import { FollowUpSheet } from './follow-up-sheet';
+import { LeadConnection } from './lead-connection';
+import { LeadPapers } from './lead-papers';
 import { LeadQuotes } from './lead-quotes';
 import { LeadSiteSheet } from './lead-site-sheet';
+import { LostLeadCard } from './lost-lead-card';
 
 /** One lead: reach them in a tap, see the history, log the follow-up. */
 export function LeadScreen() {
@@ -108,6 +111,7 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           onPress={() => void Linking.openURL(`https://wa.me/${digits}`)}
         />
       </View>
+      {lead.stage === 'lost' ? <LostLeadCard lead={lead} /> : null}
       {canAddSite && needsSite ? (
         <View style={styles.site}>
           <Text variant="bodySm" tone="secondary">
@@ -140,6 +144,8 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           </View>
         ))}
       </Card>
+      <LeadConnection lead={lead} />
+      <LeadPapers lead={lead} />
       <LeadQuotes quotations={lead.quotations} />
       <SectionTitle title={LEAD.history} count={lead.activities.length} />
       {lead.activities.length === 0 ? (

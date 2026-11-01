@@ -4,13 +4,16 @@ import businessReports from './business-reports.json';
 import commandCenter from './command-center.json';
 import common from './common.json';
 import contractors from './contractors.json';
+import costing from './costing.json';
 import customerLanguage from './customer-language.json';
 import customers from './customers.json';
 import discom from './discom.json';
+import discomSetup from './discom-setup.json';
 import documents from './documents.json';
 import finance from './finance.json';
 import inventory from './inventory.json';
 import leads from './leads.json';
+import lists from './lists.json';
 import projectTeam from './project-team.json';
 import projects from './projects.json';
 import purchasing from './purchasing.json';
@@ -23,6 +26,7 @@ import reportSales from './report-sales.json';
 import reportService from './report-service.json';
 import reportTeam from './report-team.json';
 import reports from './reports.json';
+import scopeChanges from './scope-changes.json';
 import service from './service.json';
 import settings from './settings.json';
 import signIn from './sign-in.json';
@@ -41,13 +45,16 @@ const messages = {
   ...signIn,
   ...commandCenter,
   ...contractors,
+  ...costing,
   ...customers,
   ...customerLanguage,
   ...documents,
   ...inventory,
   ...finance,
   ...discom,
+  ...discomSetup,
   ...leads,
+  ...lists,
   ...projects,
   ...projectTeam,
   ...purchasing,
@@ -62,6 +69,7 @@ const messages = {
   ...reportTeam,
   ...reportService,
   ...service,
+  ...scopeChanges,
   ...settings,
   ...siteActivity,
   ...team,

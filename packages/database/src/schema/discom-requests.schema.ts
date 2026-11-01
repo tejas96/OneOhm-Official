@@ -1,4 +1,3 @@
-import { CHANGE_REQUEST_TYPES } from '@oneohm/domain';
 import {
   index,
   integer,
@@ -12,11 +11,11 @@ import {
 import { discoms } from './catalog.schema';
 import { calendarDate, createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers, properties } from './crm.schema';
+import { changeRequestTypes } from './discom-setup.schema';
 import { waitingPartyEnum } from './enums';
 import { users } from './identity.schema';
 import { projects, projectTasks } from './projects.schema';
 
-export const changeRequestTypeEnum = pgEnum('change_request_type', CHANGE_REQUEST_TYPES);
 export const changeRequestStatusEnum = pgEnum('change_request_status', [
   'open',
   'completed',
@@ -39,7 +38,9 @@ export const changeRequests = pgTable(
   {
     id: primaryId(),
     number: text('number').notNull(),
-    type: changeRequestTypeEnum('type').notNull(),
+    /** The type's key, e.g. `load_change`; its DISCOM's definition is `typeId`. */
+    type: text('type').notNull(),
+    typeId: uuid('type_id').references(() => changeRequestTypes.id, { onDelete: 'set null' }),
     status: changeRequestStatusEnum('status').notNull().default('open'),
     customerId: uuid('customer_id')
       .notNull()

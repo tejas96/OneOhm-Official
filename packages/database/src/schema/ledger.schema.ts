@@ -38,6 +38,7 @@ export const journalSourceEnum = pgEnum('journal_source', [
   'commission_paid',
   'vendor_advance_paid',
   'vendor_advance_adjusted',
+  'tds_deposit',
 ]);
 
 /** The chart of accounts (seeded from `LEDGER_ACCOUNTS` in the domain package). */

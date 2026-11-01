@@ -47,6 +47,8 @@ export const peopleContract = c.router({
       openTaskLimit: z.number().int().min(1).max(500).nullable().optional(),
       /** Location on or off for this person; null follows their roles and the company. */
       tracking: z.enum(['on', 'off']).nullable().optional(),
+      /** Who the person reports to; null for no one. */
+      reportsToUserId: idSchema.nullable().optional(),
     }),
     responses: { 200: personSchema },
   },

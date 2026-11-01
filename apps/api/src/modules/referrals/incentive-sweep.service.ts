@@ -5,6 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
+import { noteBackgroundRun } from '@oneohm/database';
 import { DATABASE, type Database } from '../../config/core.module';
 import { evaluateCommissions } from '../commissions/commission-evaluation';
 import { evaluateReferralRewards } from './referral-evaluation';
@@ -39,10 +40,12 @@ export class IncentiveSweepService implements OnApplicationBootstrap, OnModuleDe
       if (rewards || commissions) {
         this.logger.log(`Earned ${rewards} referral rewards and ${commissions} commissions.`);
       }
+      await noteBackgroundRun(this.db, 'incentive_sweep', { count: rewards + commissions });
     } catch (error) {
       this.logger.error(
         `Incentive check failed: ${error instanceof Error ? error.message : error}`,
       );
+      await noteBackgroundRun(this.db, 'incentive_sweep', { error });
     }
   }
 }

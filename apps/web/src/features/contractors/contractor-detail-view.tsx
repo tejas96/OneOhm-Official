@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadError } from '@/components/query-state';
+import { PapersSection } from '@/features/documents/papers-section';
 import { formatPhone } from '@/lib/format/contact';
 import { ContractorCrewCard } from './contractor-crew-card';
 import { ContractorEditSheet } from './contractor-edit-sheet';
@@ -96,6 +97,7 @@ export function ContractorDetailView({ id }: { readonly id: string }) {
           <TermsCard contractor={contractor} />
         </div>
       </div>
+      <PapersSection scope={{ contractorId: contractor.id }} name={contractor.name} />
       <ContractorEditSheet contractor={contractor} open={editing} onOpenChange={setEditing} />
       <IssueWorkOrderDialog contractor={contractor} open={issuing} onOpenChange={setIssuing} />
     </motion.div>

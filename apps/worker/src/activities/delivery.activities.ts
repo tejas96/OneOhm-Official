@@ -6,6 +6,7 @@ import {
   GENERIC_WORDS,
   messageTemplates,
   outbox,
+  recordDeliveryFailure,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
@@ -174,10 +175,13 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
 
     /** Called once retries run out, so the failure is visible to the office. */
     async markOutboxFailed(id: string, reason: string): Promise<void> {
-      await db
+      const failed = await db
         .update(outbox)
         .set({ status: 'failed', lastError: reason })
-        .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`);
+        .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`)
+        .returning({ id: outbox.id });
+      // Kept in Settings → Automation runs with a retry (PRD 7.1 failure visibility).
+      if (failed.length > 0) await recordDeliveryFailure(db, id, reason);
     },
   };
 }

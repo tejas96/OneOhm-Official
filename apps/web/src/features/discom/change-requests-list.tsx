@@ -27,7 +27,6 @@ export const REQUEST_TONE: Readonly<Record<ChangeRequestSummary['status'], PillT
 /** Utility change requests, open first, with the step each is on. */
 export function ChangeRequestsList() {
   const t = useTranslations('discom.requests');
-  const typeT = useTranslations('discom.types');
   const format = useFormatter();
   const [filter, setFilter] = useState<Filter>('open');
   const query = useChangeRequests({ status: filter });
@@ -43,7 +42,7 @@ export function ChangeRequestsList() {
             href={`/discom/change-requests/${request.id}`}
             className="type-body-sm font-medium text-ink hover:text-accent"
           >
-            {typeT(request.type)}
+            {request.title}
           </Link>
           <span className="font-mono text-[0.75rem] text-ink-faint">
             {request.number}

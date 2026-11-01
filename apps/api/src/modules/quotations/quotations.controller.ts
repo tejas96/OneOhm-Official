@@ -4,9 +4,11 @@ import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { CatalogService } from '../catalog/catalog.service';
 import { assertQuotationAccess, detailFor, previewFor, quotationScope } from './quotation-access';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { QuotationsService } from './quotations.service';
+import { siteDistance } from './site-distance';
 import { setSubsidyClaimed } from './subsidy-claim';
 
 @Controller()
@@ -15,6 +17,7 @@ export class QuotationsController {
     @Inject(DATABASE) private readonly db: Database,
     private readonly quotations: QuotationsService,
     private readonly pricing: QuotationPricingService,
+    private readonly catalog: CatalogService,
   ) {}
 
   @TsRestHandler(apiContract.quotations)
@@ -59,6 +62,10 @@ export class QuotationsController {
           status: 200,
           body: detailFor(actor, await this.quotations.accept(actor, params.id)),
         };
+      },
+      siteDistance: async ({ params }) => {
+        assertCan(actor, 'quotations.create');
+        return { status: 200, body: await siteDistance(this.db, this.catalog, params.id) };
       },
       setSubsidyClaimed: async ({ params, body }) => {
         assertCan(actor, 'subsidy.manage', 'customers.manage');

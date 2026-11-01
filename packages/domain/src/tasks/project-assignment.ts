@@ -1,3 +1,4 @@
+import { type AssignmentRules, DEFAULT_ASSIGNMENT_RULES } from '../settings/assignment-rules';
 import { type AssigneeCandidate, awayDuring, pickAssignee } from './generate-tasks';
 
 /** A contractor (crew company) as the assignment engine sees it (PRD 3.13). */
@@ -79,13 +80,14 @@ function crewAssignee(
   candidates: readonly AssigneeCandidate[],
   pool: ProjectPool & { readonly contractor: ContractorOption },
   need: TaskNeed,
+  rules: AssignmentRules,
 ): string | null {
   const when = { from: need.startDate, to: need.dueDate };
   const crew = candidates.filter((person) => pool.crewOf.get(person.userId) === pool.contractor.id);
   const lead = crew.find((person) => person.userId === pool.contractor.leadUserId);
-  if (lead?.roleKeys.includes(need.roleKey) && !lead.onLeave && !awayDuring(lead, when))
-    return lead.userId;
-  return pickAssignee(crew, need.roleKey, when, need.skillKey)?.userId ?? null;
+  const leadAway = lead && rules.skipLeave && awayDuring(lead, when);
+  if (lead?.roleKeys.includes(need.roleKey) && !lead.onLeave && !leadAway) return lead.userId;
+  return pickAssignee(crew, need.roleKey, when, need.skillKey, rules)?.userId ?? null;
 }
 
 /**
@@ -97,18 +99,23 @@ export function pickProjectAssignee(
   candidates: readonly AssigneeCandidate[],
   pool: ProjectPool,
   need: TaskNeed,
+  rules: AssignmentRules = DEFAULT_ASSIGNMENT_RULES,
 ): Assignment {
   const contractor = pool.contractor;
   if (contractor?.roleKeys.includes(need.roleKey)) {
-    return { userId: crewAssignee(candidates, { ...pool, contractor }, need), outsideTeam: false };
+    const userId = crewAssignee(candidates, { ...pool, contractor }, need, rules);
+    return { userId, outsideTeam: false };
   }
   const when = { from: need.startDate, to: need.dueDate };
   const staff = candidates.filter((person) => !pool.crewOf.has(person.userId));
-  if (pool.team.length > 0) {
+  // With "project team first" off, the whole company is one pool (PRD 7.2).
+  const teamFirst = rules.teamFirst && pool.team.length > 0;
+  if (teamFirst) {
     const team = staff.filter((person) => pool.team.includes(person.userId));
-    const inTeam = pickAssignee(team, need.roleKey, when, need.skillKey);
+    const inTeam = pickAssignee(team, need.roleKey, when, need.skillKey, rules);
     if (inTeam) return { userId: inTeam.userId, outsideTeam: false };
   }
-  const anyone = pickAssignee(staff, need.roleKey, when, need.skillKey);
-  return { userId: anyone?.userId ?? null, outsideTeam: anyone !== null && pool.team.length > 0 };
+  const anyone = pickAssignee(staff, need.roleKey, when, need.skillKey, rules);
+  const outside = anyone !== null && pool.team.length > 0 && !pool.team.includes(anyone.userId);
+  return { userId: anyone?.userId ?? null, outsideTeam: outside };
 }

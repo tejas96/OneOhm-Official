@@ -43,15 +43,15 @@
   "search": {
     "title": "Jump to",
     "open": "Search and jump to",
-    "label": "Search pages, projects, customers, leads and quotations",
+    "label": "Search pages, projects, customers, leads, quotations, tasks, receipts, service requests, files, contractors and vendors",
     "placeholder": "Search or jump to…",
     "close": "Close search",
     "results": "Results",
-    "startHint": "Type a project code, a customer’s name or phone, or a quotation number.",
+    "startHint": "Type a project code, a name or phone, a quotation or receipt number, a task or a file name.",
     "emptyTitle": "Nothing matches “{query}”",
-    "emptyHint": "Try a project code like OH-2026-002, part of a name, or a phone number.",
+    "emptyHint": "Try a project code like OH-2026-002, part of a name, a phone number or a receipt number.",
     "loading": "Looking through records…",
-    "loadError": "Some records could not load; the rest are still searched.",
+    "loadError": "Records could not be searched just now; pages still are.",
     "projectCount": "{count, plural, one {# project} other {# projects}}",
     "revision": "R{revision}",
     "shortcutApple": "⌘K",
@@ -61,7 +61,36 @@
       "projects": "Projects",
       "customers": "Customers",
       "leads": "Leads",
-      "quotations": "Quotations"
+      "quotations": "Quotations",
+      "tasks": "Tasks",
+      "payments": "Payments and receipts",
+      "service": "Service requests",
+      "documents": "Files",
+      "contractors": "Contractors",
+      "vendors": "Vendors"
+    },
+    "states": {
+      "projects": {
+        "active": "Active",
+        "operational": "Operational",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "tasks": {
+        "pending": "Not started",
+        "ready": "Ready",
+        "in_progress": "In progress",
+        "waiting": "Waiting",
+        "in_review": "In review",
+        "completed": "Done"
+      },
+      "service": {
+        "open": "Received",
+        "in_progress": "Being worked on",
+        "resolved": "Resolved"
+      },
+      "contractors": { "archived": "Archived" },
+      "vendors": { "archived": "Archived" }
     },
     "keys": {
       "move": "to move",

@@ -12,7 +12,9 @@ import type { Actor } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import { CompanyAssetsService } from './company-assets.service';
+import { canViewAllDocuments } from './document-access';
 import { DocumentsService } from './documents.service';
+import { fileSystemPapers } from './system-papers-hook';
 import type { IncomingFile } from './upload-file';
 
 const routes = apiContract.documents;
@@ -53,10 +55,11 @@ export class DocumentsController {
         companyAssets: routes.companyAssets,
       },
       {
-        listDocuments: async ({ query }) => ({
-          status: 200,
-          body: await this.documents.list(actor, query),
-        }),
+        listDocuments: async ({ query }) => {
+          // New receipts, invoices and work orders are on file before the list is read.
+          if (canViewAllDocuments(actor)) await fileSystemPapers(query);
+          return { status: 200, body: await this.documents.list(actor, query) };
+        },
         documentFile: async ({ params, query }) => {
           const range = byteRange(request.headers.range);
           const file = await this.documents.file(actor, params.id, query.disposition, range);

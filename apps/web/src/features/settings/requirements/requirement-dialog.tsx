@@ -15,6 +15,7 @@ import { DOCUMENT_CATEGORIES, type DocumentCategory, PROJECT_TYPES } from '@oneo
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { useFolderLabel } from '@/features/documents/gallery/use-labels';
+import { DiscomPick } from '../templates/discom-pick';
 import { useChangeRequirements } from './use-requirements';
 
 type Rule = DocumentRequirementInput['conditions'] & {};
@@ -30,7 +31,7 @@ interface Draft {
   category: DocumentCategory;
   fromCustomer: boolean;
   rule: NonNullable<Rule>;
-  discomText: string;
+  discomCodes: string[];
 }
 
 const draftOf = (item: DocumentRequirementRecord | null): Draft => ({
@@ -39,7 +40,7 @@ const draftOf = (item: DocumentRequirementRecord | null): Draft => ({
   category: item?.categories[0] ?? 'other',
   fromCustomer: item?.fromCustomer ?? false,
   rule: item?.conditions ?? {},
-  discomText: (item?.conditions.discomCodes ?? []).join(', '),
+  discomCodes: [...(item?.conditions.discomCodes ?? [])],
 });
 
 /** Name a required paper, its folder, and the rule for which projects need it. */
@@ -67,10 +68,7 @@ export function RequirementDialog({
     setDraft((current) => ({ ...current, rule: { ...current.rule, ...patch } }));
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const codes = draft.discomText
-      .split(',')
-      .map((code) => code.trim().toUpperCase())
-      .filter(Boolean);
+    const codes = draft.discomCodes;
     const { discomCodes: _old, ...rule } = draft.rule;
     const body = {
       label: draft.label.trim(),
@@ -165,13 +163,7 @@ export function RequirementDialog({
             />
           </div>
         ))}
-        <Field label={t('discoms')} hint={t('discomsHint')}>
-          <Input
-            value={draft.discomText}
-            className="font-mono uppercase"
-            onChange={(e) => set({ discomText: e.target.value })}
-          />
-        </Field>
+        <DiscomPick value={draft.discomCodes} onChange={(discomCodes) => set({ discomCodes })} />
       </form>
     </Dialog>
   );

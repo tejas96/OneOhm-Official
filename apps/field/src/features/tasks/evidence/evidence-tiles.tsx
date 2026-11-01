@@ -12,8 +12,9 @@ import { previewUri } from '@/features/uploads/upload-store';
 const SIZE = 96;
 
 /**
- * A file already on the task. Phones show the photo itself (the request carries the
- * token); the web preview cannot send headers with an image, so it shows a tile.
+ * A file already on the task. Phones show the photo's small preview (400 px WebP; the
+ * request carries the token); the web preview cannot send headers with an image, so it
+ * shows a tile.
  */
 export function AttachmentTile({
   file,
@@ -38,7 +39,7 @@ export function AttachmentTile({
       ) : showPhoto ? (
         <Image
           source={{
-            uri: `${API_BASE_URL.replace(/\/+$/, '')}/v1/documents/${file.id}/file`,
+            uri: `${API_BASE_URL.replace(/\/+$/, '')}/v1/documents/${file.id}/thumbnail`,
             headers: { authorization: `Bearer ${token}` },
           }}
           style={styles.image}

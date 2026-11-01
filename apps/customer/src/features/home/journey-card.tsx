@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { HOME, STAGE_MEANING } from '@/copy/home';
 import { isLive, stepProgress } from '@/lib/journey';
+import { useBrand } from './use-home';
 
 type Stage = CustomerProject['stages'][number];
 
@@ -15,6 +16,7 @@ type Stage = CustomerProject['stages'][number];
  */
 export function JourneyCard({ project }: { readonly project: CustomerProject }) {
   const theme = useTheme();
+  const brand = useBrand();
   const steps = project.stages.filter((stage) => stage.state !== 'skipped');
   const { done, total } = stepProgress(project.stages);
   const live = isLive(project);
@@ -52,7 +54,7 @@ export function JourneyCard({ project }: { readonly project: CustomerProject }) 
               {HOME.live}
             </Text>
             <Text variant="bodySm" tone="secondary">
-              {HOME.liveBody}
+              {HOME.liveBody(brand)}
             </Text>
           </View>
         </View>

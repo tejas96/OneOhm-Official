@@ -6,6 +6,7 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import {
+  noteBackgroundRun,
   paymentLinks,
   paymentMilestones,
   payments,
@@ -63,8 +64,10 @@ export class FinalLinkService implements OnApplicationBootstrap, OnModuleDestroy
         if (Date.now() - (this.failedAt.get(milestone.id) ?? 0) < RETRY_AFTER_MS) continue;
         if (await this.send(milestone)) sent += 1;
       }
+      await noteBackgroundRun(this.db, 'final_payment_links', { count: sent });
     } catch (error) {
       this.logger.error(`Final link check failed: ${message(error)}`);
+      await noteBackgroundRun(this.db, 'final_payment_links', { error });
     } finally {
       this.running = false;
     }

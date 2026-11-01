@@ -6,6 +6,8 @@ import { formatInr, formatKwp } from '@oneohm/shared';
 import { Landmark, LoaderCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { useBrandName } from '@/features/shell/company-name';
+import { StateSupportRow } from '@/features/state-support/state-support-row';
 
 /**
  * The quotation's hero, in the order the PRD fixes for the customer: total project
@@ -27,6 +29,7 @@ export function PriceStack({
   const t = useTranslations('quotations.price');
   const reasonT = useTranslations('quotations.ineligible');
   const effective = useCountUp(totals.effectivePaise);
+  const brand = useBrandName();
   return (
     <section
       aria-label={t('label')}
@@ -42,7 +45,7 @@ export function PriceStack({
       </div>
 
       <dl className="flex flex-col gap-4">
-        <Row label={t('total')} hint={t('totalHint')}>
+        <Row label={t('total')} hint={brand ? t('totalHint', { company: brand }) : ''}>
           <span className="type-display-md text-on-panel tabular-nums">
             {formatInr(totals.totalPaise)}
           </span>
@@ -65,6 +68,7 @@ export function PriceStack({
             {totals.subsidyPaise > 0 ? `− ${formatInr(totals.subsidyPaise)}` : formatInr(0)}
           </span>
         </Row>
+        <StateSupportRow totals={totals} />
       </dl>
 
       <div className="flex flex-col gap-2 border-t border-on-panel/15 pt-5">

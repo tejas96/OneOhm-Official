@@ -1,3 +1,7 @@
+import type { CostingCard, StructureType } from './costing-card';
+
+export type { StructureType } from './costing-card';
+
 /** A catalog product as the price engine needs it. */
 export interface PricedProduct {
   readonly id: string;
@@ -13,39 +17,8 @@ export interface PanelProduct extends PricedProduct {
   readonly dcr: boolean;
 }
 
-export type StructureType = 'rcc_elevated' | 'tin_shed' | 'ground_mount';
-
-/** Configurable rates and site-type defaults (Settings → Rate cards). */
-export interface RateCard {
-  readonly structurePerKw: Readonly<Record<StructureType, { price: number; cost: number }>>;
-  readonly dcCable: {
-    readonly baseMeters: number;
-    readonly perFloorMeters: number;
-    readonly price: number;
-    readonly cost: number;
-  };
-  readonly acCable: {
-    readonly baseMeters: number;
-    readonly perFloorMeters: number;
-    readonly price: number;
-    readonly cost: number;
-  };
-  readonly earthingKit: { readonly price: number; readonly cost: number };
-  readonly protectionKit: { readonly price: number; readonly cost: number };
-  readonly installationPerKw: { readonly price: number; readonly cost: number };
-  readonly extraFloorPerKw: { readonly price: number; readonly cost: number };
-  readonly freeFloors: number;
-  readonly transport: { readonly baseKm: number; readonly perKm: number; readonly flat: number };
-  readonly liaisoning: { readonly price: number; readonly cost: number };
-  readonly goodsTaxBp: number;
-  readonly serviceTaxBp: number;
-  readonly contingencyBp: number;
-  readonly toleranceBp: number;
-  /** Discounts above this share of the price need approval; unset uses the server default. */
-  readonly discountApprovalBp?: number;
-  /** Shadow-free m² a rooftop needs per kWp, checked after the survey; 0 switches it off. */
-  readonly sqmPerKwp?: number;
-}
+/** Configurable rates and site-type defaults (Settings → Rates): the costing card. */
+export type RateCard = CostingCard;
 
 export interface SiteFacts {
   readonly floors: number;

@@ -16,6 +16,7 @@ export const CUSTOMER_REQUESTABLE_CATEGORIES = [
   'bank_loan',
   'discom',
   'subsidy',
+  'income_proof',
   'other',
 ] as const satisfies readonly DocumentCategory[];
 export type CustomerRequestableCategory = (typeof CUSTOMER_REQUESTABLE_CATEGORIES)[number];

@@ -8,6 +8,7 @@ import {
   FileCheck,
   Folder,
   Handshake,
+  HardHat,
   House,
   IdCard,
   Landmark,
@@ -19,8 +20,10 @@ import {
   ScrollText,
   ShieldCheck,
   UtilityPole,
+  Wallet,
   Zap,
 } from 'lucide-react';
+import { hasMoreFilters, type MoreFilters, matchesMore, NO_MORE_FILTERS } from './gallery-filters';
 
 /** "All documents" or one of the fixed categories. */
 export type FolderChoice = DocumentCategory | 'all';
@@ -40,10 +43,12 @@ export const FOLDER_ICONS: Readonly<Record<FolderChoice, LucideIcon>> = {
   quotation: ScrollText,
   invoice_receipt: Receipt,
   vendor: Package,
+  contractor: HardHat,
   dcr_certificate: BadgeCheck,
   bank_loan: Landmark,
   discom: UtilityPole,
   subsidy: BadgeIndianRupee,
+  income_proof: Wallet,
   commissioning_handover: Handshake,
   warranty: ShieldCheck,
   product_manual: BookOpen,
@@ -90,7 +95,7 @@ export function extensionOf(name: string): string {
   return extension.length > 0 && extension.length <= 5 ? extension.toUpperCase() : 'FILE';
 }
 
-export interface GalleryFilters {
+export interface GalleryFilters extends MoreFilters {
   readonly folder: FolderChoice;
   readonly kind: KindFilter;
   readonly search: string;
@@ -103,13 +108,32 @@ function matchesSearch(document: DocumentRecord, needle: string): boolean {
   );
 }
 
-/** Applies the search and the type chip; the folder is applied separately so counts can use the rest. */
+/**
+ * Applies the search, the type chip, the dates and the source or person; the folder is
+ * applied separately so counts can use the rest.
+ */
 export function matchesSearchAndKind(
   document: DocumentRecord,
   filters: Omit<GalleryFilters, 'folder'>,
 ): boolean {
   const kindMatches = filters.kind === 'all' || kindOf(document.contentType) === filters.kind;
-  return kindMatches && matchesSearch(document, filters.search.trim().toLowerCase());
+  return (
+    kindMatches &&
+    matchesMore(document, filters) &&
+    matchesSearch(document, filters.search.trim().toLowerCase())
+  );
 }
 
-export const DEFAULT_FILTERS: GalleryFilters = { folder: 'all', kind: 'all', search: '' };
+/** Any folder, type, search, date, source or person filter is set. */
+export const isFiltered = (filters: GalleryFilters): boolean =>
+  filters.folder !== 'all' ||
+  filters.kind !== 'all' ||
+  filters.search !== '' ||
+  hasMoreFilters(filters);
+
+export const DEFAULT_FILTERS: GalleryFilters = {
+  folder: 'all',
+  kind: 'all',
+  search: '',
+  ...NO_MORE_FILTERS,
+};

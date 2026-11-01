@@ -6,14 +6,12 @@ import {
   properties,
   type Transaction,
 } from '@oneohm/database';
-import {
-  CHANGE_REQUEST_DEFINITIONS,
-  changeRequestUpdate,
-  type PropertyUtilityPatch,
-} from '@oneohm/domain';
+import { changeRequestUpdate, type PropertyUtilityPatch } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { queueWhatsApp } from '../../common/outbox';
+import { definitionOf } from '../../common/read-models/change-request-type-store';
+import { applyPropertyTypeChange } from './property-type-effects';
 
 type RequestRow = typeof changeRequests.$inferSelect;
 
@@ -42,14 +40,21 @@ export async function applyChangeRequest(
     .innerJoin(customers, eq(customers.id, properties.customerId))
     .where(eq(properties.id, request.propertyId));
   if (!row) throw new Error('Change request property is missing.');
-  const definition = CHANGE_REQUEST_DEFINITIONS[request.type];
-  const { patch, previous } = changeRequestUpdate(request.type, request.values, request.captured, {
-    meterHolderName: row.property.meterHolderName,
-    subsidyCategory: row.property.subsidyCategory,
-    phase: row.property.phase,
-    sanctionedLoadW: row.property.sanctionedLoadW,
-    consumerNumber: row.property.consumerNumber,
-  });
+  // The site details its DISCOM's type says to update (Settings → DISCOMs).
+  const definition = await definitionOf(tx, request);
+  const { patch, previous } = changeRequestUpdate(
+    definition.updates,
+    request.values,
+    request.captured,
+    {
+      meterHolderName: row.property.meterHolderName,
+      subsidyCategory: row.property.subsidyCategory,
+      phase: row.property.phase,
+      sanctionedLoadW: row.property.sanctionedLoadW,
+      consumerNumber: row.property.consumerNumber,
+      evMeterNumber: row.property.evMeterNumber,
+    },
+  );
   const now = new Date();
   if (Object.keys(patch).length > 0) {
     await tx
@@ -78,16 +83,26 @@ export async function applyChangeRequest(
           set: { value, updatedAt: now },
         });
     }
-    const recheck =
-      request.type === 'property_type_change'
-        ? ' Check subsidy eligibility and any open quotations for this site.'
-        : '';
     await tx.insert(projectActivities).values({
       projectId: request.projectId,
       kind: 'change_request',
-      message: `${definition.title} ${request.number} completed; the site details are updated.${recheck}`,
+      message: `${definition.title} ${request.number} completed; the site details are updated.`,
       userId,
     });
+  }
+  // A new property type re-checks the subsidy and flags open quotations (PRD 3.15).
+  if (patch.subsidyCategory && patch.subsidyCategory !== row.property.subsidyCategory) {
+    await applyPropertyTypeChange(
+      tx,
+      {
+        requestId: request.id,
+        number: request.number,
+        propertyId: row.property.id,
+        from: row.property.subsidyCategory,
+        to: patch.subsidyCategory,
+      },
+      userId,
+    );
   }
   // Routed WhatsApp, then SMS, then in person: opted-out customers still hear.
   await queueWhatsApp(

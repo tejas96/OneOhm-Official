@@ -5,7 +5,7 @@ import { cn } from '@oneohm/design-system/web';
 import { FileText, ImageOff, LoaderCircle, RotateCw, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { documentUrl } from '@/lib/api/upload';
+import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
 import { VideoFrame } from './gallery/video-frame';
 import { VoiceNoteThumb } from './voice-note-thumb';
 
@@ -54,7 +54,7 @@ export function DocumentThumb({
           ) : previewable(file.contentType) ? (
             // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
             <img
-              src={documentUrl(file.id)}
+              src={documentThumbUrl(file.id)}
               alt={file.name}
               loading="lazy"
               className="size-full object-cover transition-transform duration-(--duration-base) group-hover:scale-[1.03]"

@@ -9,6 +9,7 @@ import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { ChecklistFields } from './checklist-fields';
 import { FactFields } from './fact-fields';
+import { MaterialOverride } from './material-override';
 import { SignaturePad } from './signature-pad';
 import type { CompleteInput } from './use-task-actions';
 
@@ -48,18 +49,29 @@ export function CompleteTaskDialog({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
+  // Handover with material still with a contractor (PRD 3.17): a manager may override.
+  const [materialHeld, setMaterialHeld] = useState(false);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const finish = async (materialOverride?: string) => {
     setError(null);
     setFieldErrors({});
     try {
-      await mutation.mutateAsync({ facts, note: note.trim() || null });
+      await mutation.mutateAsync({
+        facts,
+        note: note.trim() || null,
+        ...(materialOverride === undefined ? {} : { materialOverride }),
+      });
       onOpenChange(false);
     } catch (caught) {
       setError(describeError(caught));
-      if (caught instanceof ApiError) setFieldErrors(caught.fieldErrors);
+      if (!(caught instanceof ApiError)) return;
+      setFieldErrors(caught.fieldErrors);
+      if (caught.code === 'material_unaccounted') setMaterialHeld(true);
     }
+  };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void finish();
   };
 
   return (
@@ -129,6 +141,13 @@ export function CompleteTaskDialog({
             <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
             {t('approvalNotice')}
           </p>
+        )}
+        {materialHeld && (
+          <MaterialOverride
+            pending={mutation.isPending}
+            error={fieldErrors.materialOverride}
+            onOverride={(reason) => void finish(reason)}
+          />
         )}
         {error && (
           <p

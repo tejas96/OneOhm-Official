@@ -1,6 +1,6 @@
 'use client';
 
-import type { Lead } from '@oneohm/api-contracts';
+import type { Lead, LeadListFilter, LeadPage } from '@oneohm/api-contracts';
 import {
   Button,
   EmptyState,
@@ -9,25 +9,28 @@ import {
   pageEnter,
   SegmentedControl,
 } from '@oneohm/design-system/web';
-import type { LeadStage } from '@oneohm/domain';
 import { LEAD_STAGES } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, Target } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { usePagedList } from '@/lib/query/use-paged-list';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useCan } from '@/providers/current-user';
 import { LeadCreateDialog } from './lead-create-dialog';
-import { isOpenLead, leadKeys } from './lead-labels';
+import { leadKeys } from './lead-labels';
 import { LeadsTable } from './leads-table';
 
-type Filter = 'open' | 'due' | 'unowned' | LeadStage | 'all';
+type Filter = LeadListFilter;
 const FILTERS: readonly Filter[] = ['open', 'due', 'unowned', ...LEAD_STAGES, 'all'];
+
+/** Leads per page; more load as the person scrolls. */
+const PAGE = 30;
 
 /** The chosen filter lives in `?filter=`, so a link from a count opens exactly those leads. */
 function useLeadFilter(): readonly [Filter, (next: Filter) => void] {
@@ -54,18 +57,9 @@ export function LeadsView() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const term = useDebouncedValue(search.trim());
-  const query = useLeadList(filter, term);
+  const list = useLeadList(filter, term);
   const today = todayIn();
-  const rows = (query.data ?? []).filter(
-    (lead) =>
-      filter !== 'due' ||
-      lead.revisitDue ||
-      (isOpenLead(lead) && lead.nextActionOn !== null && lead.nextActionOn <= today),
-  );
-  const overdue = rows.filter((lead) => lead.overdue).length;
-  const dueToday = rows.filter(
-    (lead) => isOpenLead(lead) && !lead.overdue && lead.nextActionOn === today,
-  ).length;
+  const counts = list.first;
 
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-8">
@@ -84,9 +78,9 @@ export function LeadsView() {
         }
       />
       <dl className="flex flex-wrap gap-x-10 gap-y-3 border-y border-hairline py-4">
-        <Figure label={t('figures.showing')} value={rows.length} />
-        <Figure label={t('figures.overdue')} value={overdue} tone="overdue" />
-        <Figure label={t('figures.today')} value={dueToday} tone="accent" />
+        <Figure label={t('figures.showing')} value={counts?.total ?? 0} />
+        <Figure label={t('figures.overdue')} value={counts?.overdue ?? 0} tone="overdue" />
+        <Figure label={t('figures.today')} value={counts?.dueToday ?? 0} tone="accent" />
       </dl>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -109,8 +103,7 @@ export function LeadsView() {
         />
       </div>
       <LeadsBody
-        rows={rows}
-        query={query}
+        list={list}
         term={term}
         today={today}
         onCreate={canManage ? () => setCreating(true) : undefined}
@@ -120,44 +113,47 @@ export function LeadsView() {
   );
 }
 
+/** The leads the API filters, orders and pages (PRD 9.3), with the late and today counts. */
 function useLeadList(filter: Filter, term: string) {
-  return useQuery({
-    queryKey: [...leadKeys.all, 'list', filter, term],
-    queryFn: () =>
-      expectStatus(
-        api.crm.listLeads({
-          query: {
-            ...(filter === 'open' || filter === 'due' ? { open: true } : {}),
-            ...(filter === 'unowned' ? { unowned: true } : {}),
-            ...(filter !== 'open' && filter !== 'all' && filter !== 'due' && filter !== 'unowned'
-              ? { stage: filter }
-              : {}),
-            ...(term ? { search: term } : {}),
-          },
-        }),
-        200,
-      ),
-    placeholderData: (previous) => previous,
-  });
+  return usePagedList<Lead, LeadPage>([...leadKeys.all, 'page', filter, term], (cursor) =>
+    expectStatus(
+      api.lists.leads({
+        query: { filter, limit: PAGE, ...(term ? { q: term } : {}), ...(cursor ? { cursor } : {}) },
+      }),
+      200,
+    ),
+  );
 }
 
 function LeadsBody({
-  rows,
-  query,
+  list,
   term,
   today,
   onCreate,
 }: {
-  readonly rows: readonly Lead[];
-  readonly query: ReturnType<typeof useLeadList>;
+  readonly list: ReturnType<typeof useLeadList>;
   readonly term: string;
   readonly today: string;
   readonly onCreate: (() => void) | undefined;
 }) {
   const t = useTranslations('leads');
+  const { query, items } = list;
   if (query.isPending) return <ListSkeleton label={t('loading')} />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
-  if (rows.length > 0) return <LeadsTable leads={rows} today={today} />;
+  if (query.isError && items.length === 0)
+    return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+  if (items.length > 0)
+    return (
+      <div className="flex flex-col gap-6">
+        <LeadsTable leads={items} today={today} />
+        <LoadMore
+          shown={items.length}
+          total={list.total}
+          hasMore={list.hasMore}
+          loading={list.loadingMore}
+          onMore={list.loadMore}
+        />
+      </div>
+    );
   return (
     <EmptyState
       icon={<Target />}

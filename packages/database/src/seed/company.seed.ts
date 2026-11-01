@@ -1,6 +1,8 @@
-import type { RateCard } from '@oneohm/domain';
+import { cardFromLegacy, type LegacyRateCard, toCostingCard } from '@oneohm/domain';
+import { eq } from 'drizzle-orm';
 import type { Database } from '../client';
 import { companyProfile, rateCards } from '../schema';
+import { withStarterBom } from './costing.seed';
 
 const rupees = (value: number) => value * 100;
 
@@ -26,9 +28,10 @@ export async function seedCompany(db: Database): Promise<void> {
 
 /**
  * STARTER VALUES. OneOhm's real rate card was not provided; these keep the price engine
- * working until they are replaced in Settings → Rate card.
+ * working until they are replaced in Settings → Rates. Kept in the old flat shape: the
+ * costing card is made from it exactly as existing cards are upgraded.
  */
-export const STARTER_RATE_CARD: RateCard = {
+export const STARTER_LEGACY_RATE_CARD: LegacyRateCard = {
   structurePerKw: {
     rcc_elevated: { price: rupees(6_000), cost: rupees(4_500) },
     tin_shed: { price: rupees(3_500), cost: rupees(2_600) },
@@ -49,11 +52,28 @@ export const STARTER_RATE_CARD: RateCard = {
   toleranceBp: 300,
 };
 
+/** The starter costing card: the flat starter rates plus starter BOM rate lines. */
+export const STARTER_RATE_CARD = withStarterBom(cardFromLegacy(STARTER_LEGACY_RATE_CARD));
+
 /** The seeded card's name; Settings renames the card when someone saves real rates. */
 export const STARTER_RATE_CARD_NAME = 'Starter rate card (replace with OneOhm rates)';
 
+/**
+ * Seeds the starter card, or upgrades a flat card to the costing card (PRD 3.9 data
+ * migration): the same mapping old quotation snapshots are read with, so every quotation
+ * prices exactly as before. Its saved time is kept: nobody changed a rate.
+ */
 export async function seedRateCard(db: Database): Promise<void> {
-  const existing = await db.select({ id: rateCards.id }).from(rateCards).limit(1);
-  if (existing.length > 0) return;
-  await db.insert(rateCards).values({ name: STARTER_RATE_CARD_NAME, rates: STARTER_RATE_CARD });
+  const rows = await db.select({ id: rateCards.id, rates: rateCards.rates }).from(rateCards);
+  if (rows.length === 0) {
+    await db.insert(rateCards).values({ name: STARTER_RATE_CARD_NAME, rates: STARTER_RATE_CARD });
+    return;
+  }
+  for (const row of rows) {
+    if ((row.rates as { version?: number }).version === 2) continue;
+    await db
+      .update(rateCards)
+      .set({ rates: withStarterBom(toCostingCard(row.rates)) })
+      .where(eq(rateCards.id, row.id));
+  }
 }

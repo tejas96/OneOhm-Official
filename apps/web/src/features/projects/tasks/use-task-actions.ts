@@ -23,6 +23,8 @@ export function useInvalidateWork() {
 export interface CompleteInput {
   readonly facts: Record<string, string>;
   readonly note: string | null;
+  /** A manager's reason to hand over before the material is reconciled (PRD 3.17). */
+  readonly materialOverride?: string;
 }
 
 /**

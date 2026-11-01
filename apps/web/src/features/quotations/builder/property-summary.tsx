@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MapPin, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
+import { LowIncomeSwitch } from '@/features/state-support/low-income-switch';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
 import { SubsidyClaimedSwitch } from './subsidy-claimed-switch';
@@ -38,6 +39,7 @@ export function PropertySummary({
 }) {
   const t = useTranslations('quotations.builder.customer');
   const categoryT = useTranslations('quotations.category');
+  const lowIncomeT = useTranslations('stateSupport.household');
   const property = useProperty(propertyId);
   const discoms = useDiscoms();
   const canMarkSubsidy = useCan('subsidy.manage', 'customers.manage');
@@ -72,9 +74,13 @@ export function PropertySummary({
             </Badge>
           )}
           {site.subsidyClaimed && <Badge variant="accent">{t('subsidyClaimed')}</Badge>}
+          {site.lowIncomeHousehold && <Badge variant="soft">{lowIncomeT('badge')}</Badge>}
         </div>
         {onChange && canMarkSubsidy && (
           <SubsidyClaimedSwitch propertyId={site.id} claimed={site.subsidyClaimed} />
+        )}
+        {onChange && canMarkSubsidy && site.subsidyCategory === 'individual' && (
+          <LowIncomeSwitch propertyId={site.id} lowIncome={site.lowIncomeHousehold ?? false} />
         )}
       </div>
       {onChange && (

@@ -1,4 +1,5 @@
 export * from './after-sales';
+export * from './approvals';
 export * from './contractors';
 export * from './discom';
 export * from './documents';
@@ -11,9 +12,11 @@ export * from './inventory';
 export * from './language';
 export * from './messaging';
 export * from './pricing';
+export * from './project-changes';
 export * from './project-health';
 export * from './purchasing';
 export * from './reports';
+export * from './settings';
 export * from './subsidy';
 export * from './tasks';
 export * from './workforce';

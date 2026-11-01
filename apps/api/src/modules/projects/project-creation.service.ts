@@ -17,7 +17,10 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertVariantOffered } from '../business-settings/project-variant-check';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { raiseProjectNameChange } from '../discom/change-request-raise';
+import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
 import { resolveProjectTeam, saveProjectTeam, type TeamChoice } from './project-team';
@@ -29,6 +32,7 @@ export interface NewProject extends TeamChoice {
   discomId: string;
   loan: boolean;
   lenderName?: string | null | undefined;
+  lendingPartnerId?: string | null | undefined;
   loanPaise: number;
   battery: boolean;
   groundMount: boolean;
@@ -119,11 +123,13 @@ export class ProjectCreationService {
       throw invalid('The target finish comes after the start.', {
         targetFinishDate: 'Pick a date on or after the start date.',
       });
+    const partner = await loadLoanPartner(this.db, input);
     const { property, customer, panel, inverter } = await this.parts(quotation);
 
     const type = PROJECT_TYPE[quotation.subsidyCategory];
     const battery = input.battery || quotation.batteryProductId !== null;
     const groundMount = input.groundMount || quotation.structureType === 'ground_mount';
+    await assertVariantOffered(this.db, type, groundMount);
     const generated = generateTasks(
       await loadTaskLibrary(this.db),
       {
@@ -159,7 +165,7 @@ export class ProjectCreationService {
           discomId: discom.id,
           capacityWp: quotation.capacityWp,
           loan: input.loan,
-          lenderName: input.lenderName ?? null,
+          lenderName: partner?.name ?? input.lenderName ?? null,
           loanPaise: input.loan ? input.loanPaise : 0,
           battery,
           groundMount,
@@ -181,6 +187,16 @@ export class ProjectCreationService {
         team.pool,
       );
       await syncWorkOrders(tx, project.id, actor.userId);
+      // A name change is the DISCOM change request, linked here: one track (PRD 3.15).
+      if (input.nameChange) {
+        const site = { propertyId: property.id, discomId: property.discomId ?? discom.id };
+        await raiseProjectNameChange(
+          tx,
+          actor.userId,
+          { ...site, customer, projectId: project.id, projectCode: code },
+          candidates,
+        );
+      }
       await activateMilestones(
         tx,
         project.id,
@@ -191,6 +207,7 @@ export class ProjectCreationService {
         },
         actor.userId,
       );
+      if (partner) await setUpProjectLoan(tx, project.id, partner, actor.userId);
 
       const facts = initialFacts(customer, property, quotation, panel, inverter, input.startDate);
       await tx

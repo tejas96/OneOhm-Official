@@ -11,10 +11,12 @@ import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
 import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
+import { CostBuildup } from '../cost-buildup';
 import { DcrComparison } from '../dcr-comparison';
 import { PriceStack } from '../price-stack';
 import { QuotationLines } from '../quotation-lines';
 import { BuilderActions } from './builder-actions';
+import { CostingDetail } from './costing-detail';
 import { ExtrasField } from './extras-field';
 import { PropertyPicker } from './property-picker';
 import { DiscountField, SiteFields } from './site-fields';
@@ -75,7 +77,8 @@ export function QuotationBuilder() {
             <SystemFields state={state} patch={patch} catalog={products} errors={errors} />
           </Step>
           <Step index="03" title={t('sections.site')}>
-            <SiteFields state={state} patch={patch} errors={errors} />
+            <SiteFields state={state} patch={patch} errors={errors} distance={builder.distance} />
+            <CostingDetail state={state} patch={patch} costing={preview?.costing} />
           </Step>
           <Step index="04" title={t('sections.extras')}>
             <ExtrasField extras={state.extras} onChange={(extras) => patch({ extras })} />
@@ -111,7 +114,10 @@ export function QuotationBuilder() {
       </div>
       {preview && (
         <Step index="06" title={t('sections.lines')}>
-          <QuotationLines lines={preview.lines} totals={preview.totals} showMargin={showMargin} />
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+            <QuotationLines lines={preview.lines} totals={preview.totals} showMargin={showMargin} />
+            {showMargin && preview.costing && <CostBuildup costing={preview.costing} />}
+          </div>
         </Step>
       )}
       {preview && (

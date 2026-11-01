@@ -75,6 +75,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      // Notes spoken instead of typed (PRD 4.4); the browser's Web Speech API on the web.
+      'expo-speech-recognition',
+      {
+        microphonePermission:
+          'OneOhm uses the microphone to record voice notes and to turn what you say into text for your notes.',
+        speechRecognitionPermission:
+          'OneOhm turns what you say into text for your task notes. You can check and edit it before saving.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-icon.png',

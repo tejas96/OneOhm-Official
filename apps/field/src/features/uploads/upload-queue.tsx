@@ -35,6 +35,9 @@ import { refreshedBy, uploadRequestOf } from './upload-target';
 export type NewUpload = {
   readonly taskId?: string | undefined;
   readonly serviceRequestId?: string | undefined;
+  readonly leadId?: string | undefined;
+  readonly customerId?: string | undefined;
+  readonly propertyId?: string | undefined;
   readonly kind: UploadKind;
   readonly category: string;
   readonly name: string;
@@ -170,6 +173,9 @@ export function UploadQueueProvider({ children }: { readonly children: ReactNode
           userId: user.id,
           taskId: upload.taskId,
           serviceRequestId: upload.serviceRequestId,
+          leadId: upload.leadId,
+          customerId: upload.customerId,
+          propertyId: upload.propertyId,
           kind: upload.kind,
           category: upload.category,
           name: upload.name,

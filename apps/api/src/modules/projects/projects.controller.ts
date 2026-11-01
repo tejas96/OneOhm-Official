@@ -73,7 +73,13 @@ export class TasksController {
       }),
       completeTask: async ({ params, body }) => ({
         status: 200,
-        body: await this.tasks.complete(actor, params.id, body.facts, body.note),
+        body: await this.tasks.complete(
+          actor,
+          params.id,
+          body.facts,
+          body.note,
+          body.materialOverride,
+        ),
       }),
       approveTask: async ({ params }) => ({
         status: 200,

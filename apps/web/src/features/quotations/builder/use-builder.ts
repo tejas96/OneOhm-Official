@@ -125,8 +125,23 @@ export function useBuilder() {
     patch({ propertyId: null });
   }, [patch]);
 
+  // The distance from base follows the site's GPS until someone types it (PRD 3.9 B).
+  const distance = useQuery({
+    queryKey: ['site-distance', state.propertyId],
+    queryFn: () =>
+      expectStatus(api.quotations.siteDistance({ params: { id: state.propertyId ?? '' } }), 200),
+    enabled: state.propertyId !== null,
+    staleTime: 5 * 60_000,
+  });
+  const gpsKm = distance.data?.distanceKm ?? null;
+  useEffect(() => {
+    if (gpsKm === null || state.distanceTouched) return;
+    if (state.distanceKm !== String(gpsKm)) patch({ distanceKm: String(gpsKm) });
+  }, [gpsKm, state.distanceTouched, state.distanceKm, patch]);
+
   const input = useMemo(() => toInput(state), [state]);
   return {
+    distance: distance.data,
     state,
     patch,
     input,

@@ -40,6 +40,8 @@ export interface QuoteLineInput {
   readonly basis: QuantityBasis;
   /** Set only on lines added by hand. */
   readonly extra?: ExtraKind | undefined;
+  /** The catalog product the line is, so the store and purchasing see every item. */
+  readonly productId?: string | null | undefined;
 }
 
 export interface PricedLine extends QuoteLineInput {

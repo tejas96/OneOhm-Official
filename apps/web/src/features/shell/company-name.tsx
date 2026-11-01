@@ -10,3 +10,13 @@ export function useCompanyName(): string {
   const company = useCompany();
   return company.data?.legalName ?? '';
 }
+
+/**
+ * The name the company trades under, for sentences that name it ("Invoiced and
+ * collected by …"). Empty until the profile loads; callers leave the sentence out
+ * until then, for the same reason as above.
+ */
+export function useBrandName(): string {
+  const company = useCompany();
+  return company.data?.brandName ?? '';
+}

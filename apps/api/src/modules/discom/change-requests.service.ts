@@ -1,31 +1,34 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChangeRequestDetail, ChangeRequestSummary } from '@oneohm/api-contracts';
 import {
-  changeRequestSteps,
   changeRequests,
-  customers,
-  projectActivities,
-  projects,
+  changeRequestTypes,
+  ensureChangeRequestTypes,
   properties,
   quotations,
 } from '@oneohm/database';
 import {
-  CHANGE_REQUEST_DEFINITIONS,
   type ChangeRequestSuggestion,
-  type ChangeRequestType,
-  pickAssignee,
+  missingChangeRequestDocuments,
   suggestChangeRequests,
   validateChangeRequestValues,
 } from '@oneohm/domain';
-import { addDays, todayIn } from '@oneohm/shared';
-import { and, desc, eq, like, type SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
-import { queueWhatsApp } from '../../common/outbox';
+import { typeAt } from '../../common/read-models/change-request-type-store';
 import { DATABASE, type Database } from '../../config/core.module';
 import { loadAssigneeCandidates } from '../projects/task-library.loader';
+import { raiseChangeRequest } from './change-request-raise';
 import { changeRequestSummaries, presentChangeRequest } from './change-request-read';
+import {
+  papersOnFile,
+  type RequestScope,
+  type RequestSite,
+  requestSite,
+} from './change-request-site';
+import { siteUtility } from './site-utility';
 
 @Injectable()
 export class ChangeRequestsService {
@@ -49,158 +52,115 @@ export class ChangeRequestsService {
     return presentChangeRequest(this.db, id);
   }
 
-  /** Mismatches on a property worth a change request (PRD 3.15, step 2). */
-  async suggestions(propertyId: string): Promise<ChangeRequestSuggestion[]> {
-    const [row] = await this.db
-      .select({ property: properties, customerName: customers.name })
-      .from(properties)
-      .innerJoin(customers, eq(customers.id, properties.customerId))
-      .where(eq(properties.id, propertyId));
-    if (!row) throw notFound('That site');
-    const [latest] = await this.db
-      .select({ capacityWp: quotations.capacityWp })
-      .from(quotations)
-      .where(eq(quotations.propertyId, propertyId))
-      .orderBy(desc(quotations.createdAt))
-      .limit(1);
+  /**
+   * Mismatches on a property worth a change request (PRD 3.15, step 2), limited to the
+   * changes the site's DISCOM offers. The system's size is the one given (a project or
+   * quotation), else the site's latest quotation.
+   */
+  async suggestions(
+    propertyId: string,
+    capacityWp?: number,
+  ): Promise<(ChangeRequestSuggestion & { title: string })[]> {
+    const site = await requestSite(this.db, { propertyId });
+    const [latest] =
+      capacityWp === undefined
+        ? await this.db
+            .select({ capacityWp: quotations.capacityWp })
+            .from(quotations)
+            .where(eq(quotations.propertyId, propertyId))
+            .orderBy(desc(quotations.createdAt))
+            .limit(1)
+        : [{ capacityWp }];
+    const offered = await this.offered(site);
     const open = await this.list({ propertyId, status: 'open' });
     return suggestChangeRequests({
-      customerName: row.customerName,
-      meterHolderName: row.property.meterHolderName,
-      sanctionedLoadW: row.property.sanctionedLoadW,
-      consumerNumber: row.property.consumerNumber,
+      customerName: site.customer.name,
+      ...(await siteUtility(this.db, site.property)),
       proposedCapacityWp: latest?.capacityWp ?? null,
-    }).filter((suggestion) => !open.some((request) => request.type === suggestion.type));
+    }).flatMap((suggestion) => {
+      const title = offered.get(suggestion.type);
+      if (!title || open.some((request) => request.type === suggestion.type)) return [];
+      return [{ ...suggestion, title }];
+    });
   }
 
-  /** One step: pick the type, fill its fields; the DISCOM steps are generated and assigned. */
+  /** Active change types at the site's DISCOM, key → title (all six when it has none). */
+  private async offered(site: RequestSite): Promise<Map<string, string>> {
+    if (!site.discom) return new Map();
+    await ensureChangeRequestTypes(this.db, site.discom.id);
+    const rows = await this.db
+      .select({ key: changeRequestTypes.key, title: changeRequestTypes.title })
+      .from(changeRequestTypes)
+      .where(
+        and(eq(changeRequestTypes.discomId, site.discom.id), eq(changeRequestTypes.active, true)),
+      );
+    return new Map(rows.map((row) => [row.key, row.title]));
+  }
+
+  /**
+   * One step: pick the type, fill its fields; the DISCOM steps are generated and assigned
+   * (PRD 3.15). The type is the site's DISCOM's own, and its required papers must be on
+   * file for the customer or the site first.
+   */
   async create(
     actor: Actor,
-    request: {
-      type: ChangeRequestType;
-      propertyId?: string | undefined;
-      projectId?: string | null | undefined;
+    request: RequestScope & {
+      type: string;
       values: Record<string, string>;
       note?: string | null | undefined;
     },
   ): Promise<ChangeRequestDetail> {
-    const input = { ...request, propertyId: await this.siteOf(request) };
-    const definition = CHANGE_REQUEST_DEFINITIONS[input.type];
-    const { values, errors } = validateChangeRequestValues(input.type, input.values);
+    const site = await requestSite(this.db, request);
+    if (!site.discom)
+      throw invalid('Pick the DISCOM this site is with.', { discomId: 'Pick the DISCOM.' });
+    const definition = await typeAt(this.db, site.discom.id, request.type);
+    if (!definition.active)
+      throw invalid(
+        `${site.discom.code} does not take ${definition.title.toLowerCase()} requests.`,
+        {
+          type: 'Switched off in Settings → DISCOMs.',
+        },
+      );
+    const { values, errors } = validateChangeRequestValues(definition.fields, request.values);
     if (Object.keys(errors).length > 0)
       throw invalid('Fill in the details this request needs.', errors);
-    const [row] = await this.db
-      .select({ property: properties, customer: customers })
-      .from(properties)
-      .innerJoin(customers, eq(customers.id, properties.customerId))
-      .where(eq(properties.id, input.propertyId));
-    if (!row) throw notFound('That site');
-    // The site's DISCOM, or else the one its project was set up with (the latest project).
-    const [project] = await this.db
-      .select({ id: projects.id, propertyId: projects.propertyId, discomId: projects.discomId })
-      .from(projects)
-      .where(
-        input.projectId
-          ? eq(projects.id, input.projectId)
-          : eq(projects.propertyId, input.propertyId),
-      )
-      .orderBy(desc(projects.createdAt))
-      .limit(1);
-    if (input.projectId) {
-      if (!project) throw notFound('That project');
-      if (project.propertyId !== input.propertyId)
-        throw invalid('That project is on a different site.');
-    }
-    const discomId = row.property.discomId ?? project?.discomId ?? null;
-    const duplicate = await this.list({ propertyId: input.propertyId, status: 'open' });
-    if (duplicate.some((request) => request.type === input.type))
+    const onFile = await papersOnFile(this.db, site, definition.documents);
+    const missing = missingChangeRequestDocuments(definition.documents, onFile);
+    if (missing.length > 0)
+      throw invalid('Add the papers this request needs to the customer first.', {
+        documents: missing.join(','),
+      });
+    const duplicate = await this.list({ propertyId: site.property.id, status: 'open' });
+    if (duplicate.some((open) => open.type === definition.key))
       throw conflict(
         `An open ${definition.title.toLowerCase()} request already exists for this site.`,
         'duplicate',
       );
-
     const candidates = await loadAssigneeCandidates(this.db);
-    const today = todayIn();
-    const id = await this.db.transaction(async (tx) => {
-      const year = today.slice(0, 4);
-      // Serialised, so two requests raised together never get the same number.
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:change_request'))`);
-      const [count] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(changeRequests)
-        .where(like(changeRequests.number, `CR-${year}-%`));
-      const number = `CR-${year}-${String((count?.count ?? 0) + 1).padStart(4, '0')}`;
-      const [request] = await tx
-        .insert(changeRequests)
-        .values({
-          number,
-          type: input.type,
-          customerId: row.customer.id,
-          propertyId: row.property.id,
-          projectId: input.projectId ?? null,
-          discomId,
-          values,
-          note: input.note ?? null,
-          createdByUserId: actor.userId,
-        })
-        .returning({ id: changeRequests.id });
-      if (!request) throw new Error('Change request insert returned nothing.');
-      let due = today;
-      for (const [position, step] of definition.steps.entries()) {
-        const starts = due;
-        due = addDays(due, step.durationDays);
-        const assignee = pickAssignee(candidates, step.roleKey, { from: starts, to: due });
-        await tx.insert(changeRequestSteps).values({
-          changeRequestId: request.id,
-          key: step.key,
-          title: step.title,
-          roleKey: step.roleKey,
-          assigneeUserId: assignee?.userId ?? null,
-          status: position === 0 ? 'ready' : 'pending',
-          waitingParty: step.waitingParty,
-          captures: [...step.captures],
-          dueDate: due,
-          position,
-        });
+    const discomId = site.discom.id;
+    const { id } = await this.db.transaction(async (tx) => {
+      // The DISCOM picked for a site that had none is kept on the site.
+      if (site.siteHasNoDiscom && !site.project) {
+        await tx
+          .update(properties)
+          .set({ discomId, updatedAt: new Date() })
+          .where(eq(properties.id, site.property.id));
       }
-      if (input.projectId) {
-        await tx.insert(projectActivities).values({
-          projectId: input.projectId,
-          kind: 'change_request',
-          message: `${definition.title} ${number} raised.`,
-          userId: actor.userId,
-        });
-      }
-      // Routed WhatsApp, then SMS, then in person: opted-out customers still hear.
-      await queueWhatsApp(
+      return raiseChangeRequest(
         tx,
-        row.customer.phoneE164,
-        'change_request_raised',
-        { customer: row.customer.name, request: definition.title, number },
-        `change_request_raised:${request.id}`,
+        actor.userId,
+        {
+          definition,
+          customer: site.customer,
+          propertyId: site.property.id,
+          projectId: request.projectId ?? null,
+          values,
+          note: request.note ?? null,
+        },
+        candidates,
       );
-      await recordAudit(tx, actor.userId, 'change_request.created', 'change_request', request.id, {
-        type: input.type,
-        values,
-      });
-      return request.id;
     });
     return this.get(id);
-  }
-
-  /** The site: as given, or the project's when only the project is named. */
-  private async siteOf(request: {
-    propertyId?: string | undefined;
-    projectId?: string | null | undefined;
-  }): Promise<string> {
-    if (request.propertyId) return request.propertyId;
-    if (!request.projectId) throw invalid('Pick the site.', { propertyId: 'Pick the site.' });
-    const [project] = await this.db
-      .select({ propertyId: projects.propertyId })
-      .from(projects)
-      .where(eq(projects.id, request.projectId));
-    if (!project) throw notFound('That project');
-    return project.propertyId;
   }
 
   async cancel(actor: Actor, id: string, reason: string): Promise<ChangeRequestDetail> {

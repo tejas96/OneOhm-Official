@@ -7,6 +7,7 @@ import { FileDown, Receipt, Undo2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { useCustomerMoney } from '../billing/use-billing';
@@ -22,11 +23,17 @@ type Item =
  * Payments with refunds and credit held, newest first (as recorded). Credit applied to a milestone
  * is already a payment with its receipt, so it is not listed twice.
  */
-function merge(paid: readonly ReceivedPayment[], money: readonly CustomerMoneyEntry[]): Item[] {
+function merge(
+  paid: readonly ReceivedPayment[],
+  money: readonly CustomerMoneyEntry[],
+  more: boolean,
+): Item[] {
+  // While older payments wait to load, older refunds wait with them, so the order holds.
+  const from = more ? (paid.at(-1)?.createdAt ?? '') : '';
   return [
     ...paid.map((payment) => ({ key: payment.id, at: payment.createdAt, payment })),
     ...money
-      .filter((entry) => entry.kind !== 'credit_applied')
+      .filter((entry) => entry.kind !== 'credit_applied' && entry.createdAt >= from)
       .map((entry) => ({ key: entry.id, at: entry.createdAt, entry })),
   ].sort((left, right) => right.at.localeCompare(left.at));
 }
@@ -37,7 +44,8 @@ export function PaymentsReceived() {
   const methodT = useTranslations('finance.methods');
   const format = useFormatter();
   const canReverse = useCan('finance.approve_payments');
-  const query = usePaymentsReceived();
+  const list = usePaymentsReceived();
+  const { query, items: paid } = list;
   const money = useCustomerMoney();
   const [reversing, setReversing] = useState<ReceivedPayment | null>(null);
 
@@ -48,13 +56,13 @@ export function PaymentsReceived() {
         <div className="px-5 pb-5">
           <ListSkeleton label={t('loading')} rows={4} />
         </div>
-      ) : query.isError ? (
+      ) : query.isError && paid.length === 0 ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} className="m-5" />
-      ) : query.data.length === 0 && !money.data?.length ? (
+      ) : paid.length === 0 && !money.data?.length ? (
         <EmptyState icon={<Receipt />} title={t('empty')} className="m-5" />
       ) : (
         <ul className="flex flex-col divide-y divide-hairline border-t border-hairline">
-          {merge(query.data, money.data ?? []).map((item) => {
+          {merge(paid, money.data ?? [], list.hasMore).map((item) => {
             if ('entry' in item) return <MoneyEntryItem key={item.key} entry={item.entry} />;
             const { payment } = item;
             const reversal = payment.reversesPaymentId !== null;
@@ -136,6 +144,14 @@ export function PaymentsReceived() {
           })}
         </ul>
       )}
+      <LoadMore
+        shown={paid.length}
+        total={list.total}
+        hasMore={list.hasMore}
+        loading={list.loadingMore}
+        onMore={list.loadMore}
+        className="border-t border-hairline pt-4"
+      />
       <ReversePaymentDialog payment={reversing} onClose={() => setReversing(null)} />
     </Card>
   );

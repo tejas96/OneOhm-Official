@@ -302,6 +302,55 @@
       "when": 1793544549056,
       "tag": "0042_quotation_extras_specs",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793547013467,
+      "tag": "0043_docs_reports_discom",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793547288666,
+      "tag": "0044_settings_automation",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793547589546,
+      "tag": "0045_document_thumbnails",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793547679471,
+      "tag": "0046_costing_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793550287354,
+      "tag": "0047_project_changes_state_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793550654567,
+      "tag": "0048_discom_change_requests_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793551722446,
+      "tag": "0049_reports_to_tds_register",
+      "breakpoints": true
     }
   ]
 }

@@ -12,18 +12,20 @@ import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { ReportArchiveService } from '../reports/report-archive.service';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
+import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked } from './task-guards';
 import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
+import { keepFinishedWait } from './task-waits';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
   bank: 'the bank',
   customer: 'the customer',
-  internal: 'the OneOhm team',
+  internal: 'our team',
 };
 
 @Injectable()
@@ -74,6 +76,7 @@ export class TasksService {
     const task = await this.load(actor, id);
     await assertUnblocked(this.db, task);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
+    await keepFinishedWait(this.db, task);
     await this.db
       .update(projectTasks)
       .set({
@@ -129,10 +132,12 @@ export class TasksService {
     id: string,
     facts: Record<string, string>,
     note: string | null | undefined,
+    materialOverride?: string | null,
   ): Promise<ProjectTask> {
     const task = await this.load(actor, id);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
     await assertUnblocked(this.db, task);
+    const handover = await checkHandoverMaterial(this.db, task, actor, materialOverride);
     const known = await this.db
       .select({ key: projectFacts.key })
       .from(projectFacts)
@@ -160,6 +165,7 @@ export class TasksService {
           });
       }
       if (note) await tx.update(projectTasks).set({ note }).where(eq(projectTasks.id, id));
+      if (handover) await recordHandoverOverride(tx, task, actor.userId, handover);
       // Approval work goes to its reviewer; the rest (or a lone approver's own) finishes.
       let done = true;
       if (task.approval) done = await sendForReview(tx, task, actor);
@@ -182,13 +188,14 @@ export class TasksService {
     if (!task) throw notFound('That task');
     if (task.status !== 'in_review')
       throw conflict('This task is not waiting for approval.', 'not_in_review');
-    await assertMayReview(this.db, task, actor);
+    const submittedBy = await assertMayReview(this.db, task, actor);
     await this.db.transaction(async (tx) => {
       await tx
         .update(projectTasks)
         .set({ approvedByUserId: actor.userId })
         .where(eq(projectTasks.id, id));
       await closeReview(tx, id, 'approved', actor.userId);
+      await recordAudit(tx, actor.userId, 'task.approved', 'task', id, { submittedBy });
       await tellCustomerAbout(tx, task, 'approved');
       await finishTask(tx, task, actor.userId);
       await tellApproved(tx, task, actor.userId);

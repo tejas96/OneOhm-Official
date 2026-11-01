@@ -1,9 +1,11 @@
 import { index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId } from './columns';
-import { customers, properties } from './crm.schema';
+import { contractors } from './contractors.schema';
+import { customers, leads, properties } from './crm.schema';
 import { serviceRequests } from './customer-portal.schema';
 import { documentSourceEnum, outboxChannelEnum, outboxStatusEnum } from './enums';
 import { users } from './identity.schema';
+import { vendors } from './inventory.schema';
 import { projects, projectTasks } from './projects.schema';
 
 /** Every document, wherever it came from, linked to its customer and project (PRD 3.14). */
@@ -20,6 +22,11 @@ export const documents = pgTable(
     storageKey: text('storage_key').notNull(),
     contentType: text('content_type').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
+    /**
+     * A photo's small WebP preview (400 px long edge) in storage; the storage key itself
+     * when no preview can be made, so the original is shown. Filled on first view.
+     */
+    thumbnailKey: text('thumbnail_key'),
     reportKey: text('report_key'),
     propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),
     /** The earlier file this one replaced; the old row keeps `replacedAt` and who did it. */
@@ -41,10 +48,21 @@ export const documents = pgTable(
     serviceRequestId: uuid('service_request_id').references(() => serviceRequests.id, {
       onDelete: 'set null',
     }),
+    /** Papers filed while the customer was still a lead (PRD 3.14 lead capture). */
+    leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+    /** A vendor's submissions, such as test certificates and agreements. */
+    vendorId: uuid('vendor_id').references(() => vendors.id, { onDelete: 'set null' }),
+    /** A contractor's papers: agreement, licence, insurance, ID (PRD 3.13). */
+    contractorId: uuid('contractor_id').references(() => contractors.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (table) => [
     index('documents_service_request_idx').on(table.serviceRequestId),
+    index('documents_lead_idx').on(table.leadId),
+    index('documents_vendor_idx').on(table.vendorId),
+    index('documents_contractor_idx').on(table.contractorId),
     index('documents_project_idx').on(table.projectId),
     index('documents_task_idx').on(table.taskId),
     index('documents_customer_idx').on(table.customerId),

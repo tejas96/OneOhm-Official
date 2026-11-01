@@ -11,6 +11,12 @@ import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
+import { applyAcceptedChange } from '../project-changes/change-accept';
+import {
+  changeAwaiting,
+  changeTurnedDown,
+  closeStaleChanges,
+} from '../project-changes/change-close';
 import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import { loadQuotationDetail } from './quotation-detail';
 import { leadForQuotation } from './quotation-lead';
@@ -165,6 +171,9 @@ export class QuotationsService {
           .set({ stage: 'won', wonAt: new Date(), updatedAt: new Date() })
           .where(eq(leads.id, quotation.input.leadId));
       await applyAcceptedRevision(tx, id, quotation.totalPaise, actor.userId);
+      // A revision carrying a project change applies it (PRD 3.15); other open changes lapse.
+      await applyAcceptedChange(tx, id, actor.userId);
+      await closeStaleChanges(tx, id, quotation.number, actor.userId);
       await recordAudit(tx, actor.userId, 'quotation.accepted', 'quotation', id, {
         totalPaise: quotation.totalPaise,
       });
@@ -186,6 +195,7 @@ export class QuotationsService {
         })
         .where(eq(quotations.id, id));
       if (project) await revisionTurnedDown(tx, project, quotation, reason, actor.userId);
+      await changeTurnedDown(tx, id, reason, actor.userId);
       await recordAudit(tx, actor.userId, 'quotation.rejected', 'quotation', id, { reason });
     });
     return this.get(id);
@@ -201,6 +211,7 @@ export class QuotationsService {
 
   /** A survey revision needs a project manager to send it and record the customer's OK. */
   private async assertManagerFor(actor: Actor, id: string): Promise<void> {
-    if (await projectAwaiting(this.db, id)) assertCan(actor, 'projects.manage');
+    if ((await projectAwaiting(this.db, id)) || (await changeAwaiting(this.db, id)))
+      assertCan(actor, 'projects.manage');
   }
 }

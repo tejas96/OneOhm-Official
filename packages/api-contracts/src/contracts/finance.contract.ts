@@ -25,6 +25,11 @@ const lenderBody = z.object({
   name: z.string().trim().min(2, 'Use at least 2 characters.').max(120),
   requiredDocuments: z.array(shortText(120).min(1)).max(30).default([]),
   disbursement: z.enum(['single', 'tranches']).default('single'),
+  /** Each part's name and share in basis points; the parts add up to 100%. */
+  tranchePattern: z
+    .array(z.object({ label: shortText(60).min(1), shareBp: z.number().int().min(1).max(10_000) }))
+    .max(6)
+    .default([]),
   notes: noteSchema.nullable().optional(),
   active: z.boolean().default(true),
 });

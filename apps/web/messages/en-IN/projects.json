@@ -7,6 +7,9 @@
       "loading": "Loading projects",
       "emptyTitle": "No projects yet",
       "emptyBody": "A project starts when an accepted quotation is turned into one.",
+      "emptyLiveTitle": "No live projects",
+      "emptyLiveBody": "A project starts when an accepted quotation is turned into one. Finished and cancelled projects are under All.",
+      "showAll": "Show all projects",
       "noMatchTitle": "No projects match these filters",
       "noMatchBody": "Clear the search or choose another status, health or type.",
       "filters": {
@@ -246,6 +249,13 @@
         "replace": "Save a new signature",
         "saved": "Signature saved.",
         "failed": "The signature could not be saved."
+      },
+      "material": {
+        "managerIntro": "Material is still with the contractor. Record what was used or returned on the Material tab, or hand over now and say why.",
+        "staffIntro": "Material is still with the contractor. Record what was used or returned on the Material tab, or ask a manager to hand over.",
+        "reason": "Why hand over now",
+        "reasonHint": "Kept in the project history and the audit trail.",
+        "override": "Hand over anyway"
       }
     },
     "evidence": {
@@ -258,7 +268,7 @@
     "waiting": {
       "title": "Mark as waiting",
       "party": "Waiting on",
-      "partyHint": "Time waiting on the customer, bank or DISCOM is reported apart from the team's own time. Choosing OneOhm team asks for help: the project manager hears straight away.",
+      "partyHint": "Time waiting on the customer, bank or DISCOM is reported apart from the team's own time. Choosing “Our team” asks for help: the project manager hears straight away.",
       "note": "What are we waiting for?",
       "noteHint": "For example: inspection requested at MSEDCL Sangli on 2 November.",
       "cancel": "Cancel",
@@ -356,9 +366,32 @@
       "status": {
         "ready": "Ready",
         "not_needed": "Not needed",
-        "missing": "Missing details"
+        "missing": "Missing details",
+        "waiting": "Waits for a task"
       },
-      "openPdf": "Open {name} as PDF"
+      "openPdf": "Open {name} as PDF",
+      "waitsFor": "Made once “{task}” is done.",
+      "fillIn": "Fill in details",
+      "factsSaved": "Report details saved",
+      "submittedDone": "{name} marked as submitted",
+      "undone": "{name} is no longer marked as submitted",
+      "fill": {
+        "title": "Details for {name}",
+        "description": "For details its task did not record. Each change is kept in the audit trail.",
+        "save": "Save details",
+        "empty": "Fill in at least one detail.",
+        "audit": "Saved details are reused by every report that prints them. Company details are set in Settings → Company."
+      },
+      "filing": {
+        "saved": "Saved in documents {date}",
+        "notSaved": "Not saved yet",
+        "submitted": "submitted {date}",
+        "markSubmitted": "Mark submitted",
+        "undo": "Undo submitted",
+        "changedSinceSaved": "Its details changed since it was saved; a new copy is saved shortly.",
+        "earlierCopy": "An earlier copy from {date} is in the documents; it is replaced once this report is ready.",
+        "changedAfterSubmission": "Its details changed after it was submitted. The submitted copy stays as it was."
+      }
     },
     "activity": {
       "title": "Activity",

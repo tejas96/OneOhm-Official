@@ -3,6 +3,7 @@ import {
   Card,
   describeError,
   ErrorState,
+  Illustration,
   LoadingState,
   Screen,
   Text,
@@ -47,12 +48,16 @@ function Rewards({ rewards }: { readonly rewards: MyRewards }) {
   return (
     <>
       <Card tone="ocean" style={styles.hero}>
-        <Text variant="displayXl" color={theme.ocean.onPanel}>
-          {rewards.points.total}
-        </Text>
-        <Text variant="label" color={theme.ocean.onPanelMuted}>
-          {REWARDS.total} · {REWARDS.thisMonth(rewards.points.thisMonth)}
-        </Text>
+        <View style={styles.heroText}>
+          <Text variant="displayXl" color={theme.ocean.onPanel}>
+            {rewards.points.total}
+          </Text>
+          <Text variant="label" color={theme.ocean.onPanelMuted}>
+            {REWARDS.total} · {REWARDS.thisMonth(rewards.points.thisMonth)}
+          </Text>
+        </View>
+        {/* The ocean panel is dark in both themes. */}
+        <Illustration name="reward" size={76} scheme="dark" />
       </Card>
       <Section title={REWARDS.sections.achievements}>
         <AchievementBadges achievements={rewards.achievements} />
@@ -88,6 +93,7 @@ function Section({
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: 20, gap: 4 },
+  hero: { padding: 20, gap: 12, flexDirection: 'row', alignItems: 'center' },
+  heroText: { flex: 1, gap: 4 },
   section: { gap: 10 },
 });

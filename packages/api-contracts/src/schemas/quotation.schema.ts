@@ -1,10 +1,11 @@
-import { EXTRA_KINDS, LINE_CATEGORIES } from '@oneohm/domain';
+import { EXTRA_KINDS, LINE_CATEGORIES, STRUCTURE_TYPES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
+import { costingDetailSchema, quotationCostingSchema } from './costing.schema';
 import { subsidyCategorySchema } from './crm.schema';
 
 export const systemTypeSchema = z.enum(['on_grid', 'hybrid', 'off_grid']);
-export const structureTypeSchema = z.enum(['rcc_elevated', 'tin_shed', 'ground_mount']);
+export const structureTypeSchema = z.enum(STRUCTURE_TYPES);
 export const quotationStatusSchema = z.enum([
   'draft',
   'sent',
@@ -20,6 +21,15 @@ export const subsidyIneligibleSchema = z.enum([
   'already_subsidised',
   'no_rule',
   'no_households',
+]);
+
+/** Why the state top-up is ₹0 (PRD 3.5); `no_rule` means no state scheme is set up. */
+export const stateSupportIneligibleSchema = z.enum([
+  'no_rule',
+  'not_low_income',
+  'not_residential',
+  'other_state',
+  'no_central_subsidy',
 ]);
 
 export const extraKindSchema = z.enum(EXTRA_KINDS);
@@ -73,6 +83,8 @@ export const quotationInputSchema = z.object({
   acCableMeters: z.number().positive().nullable().optional(),
   discountPaise: paiseSchema.min(0).default(0),
   extras: z.array(extraLineInputSchema).max(20).optional(),
+  /** Measured runs, structure, crew and site detail; left out, the site type's defaults apply. */
+  costing: costingDetailSchema.nullable().optional(),
 });
 export type QuotationInput = z.infer<typeof quotationInputSchema>;
 
@@ -122,6 +134,9 @@ export const quotationTotalsSchema = z.object({
   effectivePaise: paiseSchema,
   /** Optional items offered, with GST; never part of the total. */
   optionalPaise: paiseSchema.optional(),
+  /** Expected state support for a low-income household (PRD 3.5); shown only, never revenue. */
+  stateSupportPaise: paiseSchema.optional(),
+  stateSupportIneligible: stateSupportIneligibleSchema.nullable().optional(),
 });
 export type QuotationTotals = z.infer<typeof quotationTotalsSchema>;
 
@@ -132,6 +147,8 @@ export const quotationPreviewSchema = z.object({
   comparison: z.object({ dcr: quotationTotalsSchema, nonDcr: quotationTotalsSchema }).nullable(),
   /** Discounts above the limit wait for an approver. */
   discountNeedsApproval: z.boolean(),
+  /** How the price was reached, and the detail the engine used. */
+  costing: quotationCostingSchema.optional(),
 });
 export type QuotationPreview = z.infer<typeof quotationPreviewSchema>;
 
@@ -160,5 +177,7 @@ export const quotationDetailSchema = quotationSummarySchema.extend({
   customerPhone: z.string(),
   /** What the customer said when turning it down. */
   rejectionReason: z.string().nullable().optional(),
+  /** How the price was reached, from its saved lines and the rates it snapshotted. */
+  costing: quotationCostingSchema.optional(),
 });
 export type QuotationDetail = z.infer<typeof quotationDetailSchema>;

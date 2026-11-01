@@ -29,7 +29,7 @@ export async function installed(
       and(
         commissioning,
         ne(projectTasks.status, 'completed'),
-        sql`${projectTasks.dueDate} <= ${addDays(scope.today, 7)}`,
+        sql`${projectTasks.dueDate} <= ${addDays(scope.today, scope.settings.dueSoonDays)}`,
       ),
     );
   const ofType = (type: string) => done.filter((row) => row.type === type).length;

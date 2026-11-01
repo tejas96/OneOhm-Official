@@ -8,7 +8,7 @@ import {
   searchEntries,
 } from './search-index';
 
-function entry(group: SearchGroup, id: string, title: string, fields: string[]): SearchEntry {
+function entry(group: SearchGroup, id: string, title: string, fields: string[] = []): SearchEntry {
   return {
     id: `${group}:${id}`,
     group,
@@ -17,52 +17,44 @@ function entry(group: SearchGroup, id: string, title: string, fields: string[]):
     href: `/${group}/${id}`,
     icon: Sun,
     haystack: haystackOf([title, ...fields]),
-    keys: [normalise(title), ...fields.map(normalise)],
+    keys: [normalise(title)],
   };
 }
 
-const ENTRIES = [
-  entry('pages', 'projects', 'Projects', []),
-  entry('pages', 'customers', 'Customers', []),
-  entry('projects', 'p2', 'Patil residence', ['OH-2026-002', 'Miraj']),
-  entry('projects', 'p12', 'Kulkarni society', ['OH-2026-012', 'Sangli']),
-  entry('customers', 'c1', 'Anil Patil', ['+919876543210']),
-  entry('quotations', 'q1', 'OQ-2026-0002', ['Anil Patil']),
+const PAGES = [
+  entry('pages', 'projects', 'Projects', ['Work']),
+  entry('pages', 'customers', 'Customers', ['Sales']),
+  entry('pages', 'service', 'Service desk', ['After-sales']),
 ];
 
-const ids = (query: string) =>
-  searchEntries(ENTRIES, query).flatMap((group) => group.entries.map((found) => found.id));
+const ids = (groups: ReturnType<typeof searchEntries>) =>
+  groups.flatMap((group) => group.entries.map((found) => found.id));
 
 describe('palette search', () => {
   it('shows only pages before anything is typed', () => {
-    const groups = searchEntries(ENTRIES, '  ');
+    const groups = searchEntries(PAGES, [entry('projects', 'p1', 'Patil residence')], '  ');
     expect(groups.map((group) => group.group)).toEqual(['pages']);
   });
 
-  it('finds a project by its code, with or without dashes', () => {
-    expect(ids('OH-2026-002')).toEqual(['projects:p2']);
-    expect(ids('oh2026012')).toEqual(['projects:p12']);
+  it('matches pages by every word and ranks a name that starts with the query first', () => {
+    expect(ids(searchEntries(PAGES, [], 'serv'))).toEqual(['pages:service']);
+    expect(ids(searchEntries(PAGES, [], 'cus sales'))).toEqual(['pages:customers']);
   });
 
-  it('matches every word anywhere in the record', () => {
-    expect(ids('patil miraj')).toEqual(['projects:p2']);
+  it('keeps the server order of records and groups them in a fixed order', () => {
+    const records = [
+      entry('tasks', 't1', 'Install inverter'),
+      entry('projects', 'p2', 'Patil residence'),
+      entry('projects', 'p1', 'Patil farm'),
+      entry('customers', 'c1', 'Anil Patil'),
+    ];
+    const groups = searchEntries(PAGES, records, 'patil');
+    expect(groups.map((group) => group.group)).toEqual(['projects', 'customers', 'tasks']);
+    expect(ids(groups)).toEqual(['projects:p2', 'projects:p1', 'customers:c1', 'tasks:t1']);
   });
 
-  it('finds a phone number typed with spaces or without the country code', () => {
-    expect(ids('98765 43210')).toEqual(['customers:c1']);
-    expect(ids('9876543210')).toEqual(['customers:c1']);
-  });
-
-  it('keeps the group order and ranks names that start with the query first', () => {
-    const groups = searchEntries(ENTRIES, 'patil');
-    expect(groups.map((group) => group.group)).toEqual(['projects', 'customers', 'quotations']);
-  });
-
-  it('caps records per group but never pages', () => {
-    const many = Array.from({ length: 9 }, (_, index) =>
-      entry('leads', `l${index}`, `Lead ${index}`, []),
-    );
-    const [leads] = searchEntries(many, 'lead');
-    expect(leads?.entries).toHaveLength(5);
+  it('shows pages before records when both match', () => {
+    const groups = searchEntries(PAGES, [entry('customers', 'c1', 'Customers Ltd')], 'customers');
+    expect(groups.map((group) => group.group)).toEqual(['pages', 'customers']);
   });
 });

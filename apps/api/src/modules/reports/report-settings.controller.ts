@@ -18,7 +18,7 @@ export class ReportSettingsController {
       },
       updateReportSetting: async ({ params, body }) => ({
         status: 200,
-        body: await this.settings.update(actor, params.key, body.customerVisible),
+        body: await this.settings.update(actor, params.key, body),
       }),
     });
   }

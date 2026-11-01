@@ -86,6 +86,16 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
   const held = await db
     .select({ userId: userSkills.userId, key: userSkills.skillKey })
     .from(userSkills);
+  // When each person last got new work, for round robin (PRD 7.2 assignment rules).
+  const turns = await db
+    .select({
+      userId: projectTasks.assigneeUserId,
+      last: sql<
+        string | null
+      >`to_char(max(${projectTasks.createdAt}) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`,
+    })
+    .from(projectTasks)
+    .groupBy(projectTasks.assigneeUserId);
   const byUser = new Map<string, AssigneeCandidate>();
   for (const person of people) {
     const existing = byUser.get(person.userId);
@@ -97,6 +107,7 @@ export async function loadAssigneeCandidates(db: DatabaseExecutor): Promise<Assi
       onLeave: person.onLeave,
       away: leave.filter((row) => row.userId === person.userId),
       openTasks: loads.find((load) => load.userId === person.userId)?.open ?? 0,
+      lastAssignedAt: turns.find((row) => row.userId === person.userId)?.last ?? null,
     });
   }
   // The Super Admin is a safety net, not a default assignee.

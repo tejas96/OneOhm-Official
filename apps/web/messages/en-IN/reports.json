@@ -16,6 +16,8 @@
     "download": "Print",
     "missing": "{count} missing",
     "notNeeded": "Not needed",
+    "waiting": "Not yet due",
+    "waitsFor": "Made once “{task}” is done",
     "emptyTitle": "No projects yet",
     "emptyBody": "Reports appear here once a project is created from an accepted quotation.",
     "noMatch": "No project matches that search",

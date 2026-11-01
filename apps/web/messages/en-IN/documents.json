@@ -28,10 +28,12 @@
       "quotation": "Quotation",
       "invoice_receipt": "Invoice or receipt",
       "vendor": "Vendor document",
+      "contractor": "Contractor papers",
       "dcr_certificate": "DCR certificate",
       "bank_loan": "Bank and loan",
       "discom": "DISCOM",
       "subsidy": "Subsidy",
+      "income_proof": "Income proof",
       "commissioning_handover": "Commissioning and handover",
       "warranty": "Warranty",
       "product_manual": "Product manuals",
@@ -75,7 +77,10 @@
     "gallery": {
       "intro": {
         "project": "Site photos, papers, quotations and reports for the whole project, in one place.",
-        "customer": "Every file for this customer, across their sites and projects, in one place."
+        "customer": "Every file for this customer, across their sites and projects, in one place.",
+        "lead": "Papers collected for this lead, such as the electricity bill and ID proof. They stay with the customer when the lead becomes a project.",
+        "contractor": "This contractor's agreement, licence, insurance and ID papers, with the work orders we issued them.",
+        "vendor": "This vendor's papers: agreements, test certificates and other submissions."
       },
       "add": "Add a document",
       "addFirst": "Add the first document",
@@ -92,6 +97,20 @@
         "pdf": "PDFs",
         "media": "Voice and video",
         "other": "Others"
+      },
+      "more": {
+        "source": "Source",
+        "uploader": "Added by",
+        "anyone": "Anyone",
+        "from": "From",
+        "to": "To",
+        "clear": "Clear filters",
+        "sources": {
+          "all": "All sources",
+          "upload": "Uploaded",
+          "system": "Made by OneOhm",
+          "report": "Reports"
+        }
       },
       "kindLabels": {
         "image": "Photo",
@@ -111,6 +130,7 @@
         "search": "Nothing matches “{search}”",
         "folder": "Nothing in {folder}",
         "kind": "No {kind} here",
+        "filters": "Nothing matches these filters",
         "description": "Try another folder or kind of file, or clear the search.",
         "reset": "Show every document"
       },
@@ -238,13 +258,20 @@
       }
     },
     "reportVisibility": {
-      "title": "Reports the customer sees",
-      "description": "Ready reports switched on here appear in the customer app. The team always sees every report.",
+      "title": "Statutory reports",
+      "description": "Which reports customers see in their app, and which are saved to the project documents by themselves when their task is done, and again if their details change before they are submitted. The team always sees every report.",
       "loading": "Loading report settings",
+      "trigger": "Made when this is done: {tasks}",
+      "noTrigger": "No task makes it; save it from the project's document checklist.",
+      "customerSees": "Customer sees it",
       "defaultShown": "Shown to customers by default",
       "defaultHidden": "Kept internal by default",
+      "autoGenerate": "Saves by itself",
+      "autoGenerateHint": "When its task is done",
       "shown": "{name} is now shown to customers",
       "hidden": "{name} is now internal only",
+      "autoOn": "{name} now saves by itself",
+      "autoOff": "{name} is now saved only by hand",
       "failed": "Could not change the report setting"
     }
   }

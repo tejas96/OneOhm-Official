@@ -28,7 +28,7 @@ const REPORTS = {
 export const PAYMENTS: Copy<typeof en.PAYMENTS> = {
   payNow: (amount) => `${amount} आता भरा`,
   payHint: 'UPI, कार्ड किंवा नेट बँकिंग, Razorpay द्वारे.',
-  payFailed: 'पेमेंटचे पान उघडले नाही. पुन्हा प्रयत्न करा, किंवा तुमच्या OneOhm संपर्काला फोन करा.',
+  payFailed: 'पेमेंटचे पान उघडले नाही. पुन्हा प्रयत्न करा, किंवा तुमच्या संपर्काला फोन करा.',
   effectiveCost: (price, subsidy, effective) =>
     `किंमत ${price} − अपेक्षित सबसिडी ${subsidy} = तुमचा खरा खर्च ${effective}`,
   title: 'पेमेंट',
@@ -50,8 +50,7 @@ export const PAYMENTS: Copy<typeof en.PAYMENTS> = {
   paidSoFar: (amount) => `${amount} मिळाले`,
   dueOn: (date) => `${date} पर्यंत भरायचे`,
   howToPayTitle: 'पैसे कसे भरायचे',
-  howToPayBody:
-    'तुमचे OneOhm संपर्क पेमेंटची माहिती देतील. पैसे भरण्याआधी खात्याची खात्री त्यांच्याकडून नक्की करून घ्या.',
+  howToPayBody: 'तुमचे संपर्क पेमेंटची माहिती देतील. पैसे भरण्याआधी खात्याची खात्री त्यांच्याकडून नक्की करून घ्या.',
   callContact: (name) => `${name} यांना फोन करा`,
   subsidyNote: (amount) =>
     `अपेक्षित ${amount} सरकारी सबसिडी सरकार थेट तुमच्या बँक खात्यात जमा करते; ती या पेमेंटमध्ये धरलेली नाही.`,
@@ -79,7 +78,7 @@ export const BILLING: Copy<typeof en.BILLING> = {
     cash: 'रोख',
   },
   credit: (amount) =>
-    `भरायच्यापेक्षा जास्त भरलेले ${amount} तुमच्यासाठी राखून ठेवले आहेत. OneOhm ते पुढच्या पेमेंटमध्ये धरेल किंवा परत करेल.`,
+    `भरायच्यापेक्षा जास्त भरलेले ${amount} तुमच्यासाठी राखून ठेवले आहेत. आम्ही ते पुढच्या पेमेंटमध्ये धरू किंवा परत करू.`,
 };
 
 export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
@@ -93,11 +92,11 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
   reportsEmpty: 'करार आणि काम पूर्ण झाल्याचे रिपोर्ट तयार झाले की इथे दिसतील.',
   filesTitle: 'तुमची कागदपत्रे',
   filesEmpty:
-    'OneOhm ने पाठवलेली बिले, वॉरंटी कार्ड, वापरण्याच्या पुस्तिका आणि सिस्टिम ताब्यात दिल्याची कागदपत्रे इथे दिसतील.',
+    'आम्ही पाठवलेली बिले, वॉरंटी कार्ड, वापरण्याच्या पुस्तिका आणि सिस्टिम ताब्यात दिल्याची कागदपत्रे इथे दिसतील.',
   open: 'उघडा',
   opening: 'उघडत आहे',
   openFailed: 'ही फाईल उघडली नाही. कृपया पुन्हा प्रयत्न करा.',
-  requestsTitle: 'OneOhm ला तुमच्याकडून हवे',
+  requestsTitle: 'आम्हाला तुमच्याकडून हवे',
   requestsIntro: 'स्पष्ट फोटो किंवा PDF पाठवा. ते थेट तुमच्या प्रकल्पाच्या फाईलमध्ये जाते.',
   requestMeta: (project, kind) => [kind, project].filter(Boolean).join(' · '),
   takePhoto: 'कॅमेरा',
@@ -119,6 +118,7 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
     bank_loan: 'बँक कर्ज',
     discom: 'वीज मंडळ',
     subsidy: 'सबसिडी',
+    income_proof: 'उत्पन्नाचा पुरावा',
     commissioning_handover: 'सिस्टिम ताब्यात दिल्याचे',
     warranty: 'वॉरंटी',
     product_manual: 'वापरण्याची माहिती पुस्तिका',

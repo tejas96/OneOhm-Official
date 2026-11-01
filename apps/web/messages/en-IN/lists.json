@@ -1,0 +1,6 @@
+{
+  "lists": {
+    "showing": "Showing {shown} of {total}",
+    "more": "Show more"
+  }
+}

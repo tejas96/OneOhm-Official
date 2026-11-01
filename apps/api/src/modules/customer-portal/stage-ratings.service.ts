@@ -126,8 +126,7 @@ export class StageRatingsService {
         {
           kind: 'stage_rating_reply',
           title:
-            localAlertTitle('stage_rating_reply', rating.language) ??
-            'OneOhm replied to your feedback',
+            localAlertTitle('stage_rating_reply', rating.language) ?? 'We replied to your feedback',
           body: reply.trim().slice(0, 200),
           dedupeKey: `stage_rating_reply:${id}:${Date.now()}`,
         },

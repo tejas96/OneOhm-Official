@@ -5,7 +5,11 @@ import { reportStatusSchema } from '../schemas/project.schema';
 
 const c = initContract();
 
-/** The six statutory reports (PRD 3.18), by the key used in URLs. */
+/**
+ * The six statutory reports OneOhm ships with (PRD 3.18), by the key used in URLs. Each
+ * DISCOM's formats live in Settings → DISCOMs, where owners add others, so a report key
+ * is any short slug, not only these.
+ */
 export const REPORT_KEYS = [
   'model-agreement',
   'net-metering-agreement',
@@ -14,7 +18,7 @@ export const REPORT_KEYS = [
   'annexure-proforma-a',
   'meter-test-letter',
 ] as const;
-export const reportKeySchema = z.enum(REPORT_KEYS);
+export const reportKeySchema = z.string().regex(/^[a-z][a-z0-9-]{1,59}$/);
 export type ReportKey = z.infer<typeof reportKeySchema>;
 
 /** `inline` opens in the browser tab; `attachment` downloads. */
@@ -65,6 +69,26 @@ export const reportsContract = c.router({
     responses: { 200: z.object({ saved: z.number().int(), unchanged: z.number().int() }) },
     summary:
       'Saves every ready report to the project documents; refreshes those whose data changed.',
+  },
+  markReportSubmitted: {
+    method: 'POST',
+    path: '/projects/:id/reports/:reportKey/submission',
+    pathParams: z.object({ id: idSchema, reportKey: reportKeySchema }),
+    body: z.object({ submitted: z.boolean() }),
+    responses: { 200: z.array(reportStatusSchema) },
+    summary:
+      'Marks the saved report as handed in (it is then never saved again by itself), or undoes it.',
+  },
+  recordReportFacts: {
+    method: 'PUT',
+    path: '/projects/:id/report-facts',
+    pathParams: z.object({ id: idSchema }),
+    body: z.object({
+      facts: z.record(z.string().regex(/^[a-z][a-z0-9_]{1,60}$/), z.string().trim().max(2000)),
+    }),
+    responses: { 200: z.array(reportStatusSchema) },
+    summary:
+      'Records report details a finished task did not capture, or corrects one; audited with the old value.',
   },
   quotationPdf: {
     method: 'GET',

@@ -45,6 +45,24 @@ describe('service visit uploads', () => {
     expect(screenOf(onTask)).toBe('/tasks/task-1');
   });
 
+  it('sends a lead’s or a customer’s paper to documents with its links', () => {
+    const paper = { ...base, kind: 'document' as const, category: 'electricity_bill' };
+    const lead = { ...paper, leadId: 'lead-1', customerId: 'cust-1', propertyId: 'site-1' };
+    const request = uploadRequestOf(lead, 'http://api.test');
+    expect(request.url).toBe('http://api.test/v1/documents');
+    expect(request.fields).toMatchObject({
+      category: 'electricity_bill',
+      leadId: 'lead-1',
+      customerId: 'cust-1',
+      propertyId: 'site-1',
+    });
+    expect(request.fields).not.toHaveProperty('taskId', expect.anything());
+    expect(refreshedBy(lead)).toEqual([['documents', 'lead', 'lead-1']]);
+    expect(refreshedBy({ ...paper, customerId: 'cust-1' })).toEqual([
+      ['documents', 'customer', 'cust-1'],
+    ]);
+  });
+
   it('keeps saved voice notes and videos, and drops a file with nowhere to go', () => {
     const saved = parseQueue([onService, { ...onTask, kind: 'video', type: 'video/mp4' }, base]);
     expect(saved.map((item) => item.kind)).toEqual(['voice', 'video']);

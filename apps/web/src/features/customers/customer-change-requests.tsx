@@ -38,7 +38,7 @@ export function CustomerChangeRequests({
                   href={`/discom/change-requests/${request.id}`}
                   className="oh-stretched-link type-body font-medium text-ink hover:text-accent"
                 >
-                  {t(`types.${request.type}`)}
+                  {request.title}
                 </Link>
                 <StatusPill
                   tone={TONE[request.status]}

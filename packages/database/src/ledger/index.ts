@@ -10,4 +10,5 @@ export * from './payout-postings';
 export * from './post-journal';
 export * from './receipt-number';
 export * from './receivable-postings';
+export * from './tds-postings';
 export * from './vendor-advance-postings';

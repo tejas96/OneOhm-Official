@@ -6,9 +6,11 @@ import { createPushSender } from './channels/expo-push';
 import { createSmsSender } from './channels/sms';
 import { createWhatsAppSender } from './channels/whatsapp-cloud';
 import { loadConfig } from './config';
+import { JobRetryLoop } from './relay/job-retry';
 import { OutboxRelay } from './relay/outbox-relay';
 import { ensureDailyOperationsSchedule } from './schedules/daily-operations.schedule';
 import { ensureServiceSlaSchedule } from './schedules/service-sla.schedule';
+import { ensureTimedRemindersSchedule } from './schedules/timed-reminders.schedule';
 import { workflowSource } from './workflow-source';
 
 /**
@@ -50,6 +52,10 @@ async function main(): Promise<void> {
     taskQueue: config.TEMPORAL_TASK_QUEUE,
     timeZone: config.BUSINESS_TIMEZONE,
   });
+  await ensureTimedRemindersSchedule(client, {
+    taskQueue: config.TEMPORAL_TASK_QUEUE,
+    timeZone: config.BUSINESS_TIMEZONE,
+  });
   const relay = new OutboxRelay(
     database.db,
     client,
@@ -58,6 +64,9 @@ async function main(): Promise<void> {
     log,
   );
   relay.start();
+  // Retries asked for in Settings → Automation runs (PRD 7.1).
+  const retries = new JobRetryLoop(database.db, config.BUSINESS_TIMEZONE, 20_000, log);
+  retries.start();
   log(
     `[worker] running · WhatsApp delivery: ${config.WHATSAPP_DELIVERY} · push: ${config.PUSH_DELIVERY}`,
   );
@@ -68,6 +77,7 @@ async function main(): Promise<void> {
     stopping = true;
     log(`[worker] stopping (${reason})`);
     await relay.stop();
+    await retries.stop();
     worker.shutdown();
   };
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -77,6 +87,7 @@ async function main(): Promise<void> {
     await worker.run();
   } finally {
     await relay.stop();
+    await retries.stop();
     await clientConnection.close();
     await nativeConnection.close();
     await database.close();

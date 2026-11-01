@@ -40,6 +40,8 @@ export const structureTypeEnum = pgEnum('structure_type', [
   'rcc_elevated',
   'tin_shed',
   'ground_mount',
+  'aluminium_rail',
+  'custom',
 ]);
 export const quantityBasisEnum = pgEnum('quantity_basis', ['catalog', 'default', 'survey']);
 export const projectTypeEnum = pgEnum('project_type', PROJECT_TYPES);

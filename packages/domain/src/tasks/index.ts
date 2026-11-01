@@ -7,6 +7,7 @@ export * from './project-assignment';
 export * from './task-checklists';
 export * from './task-descriptions';
 export * from './task-library';
+export * from './task-library-discoms';
 export * from './task-library-survey';
 export * from './task-review';
 export * from './task-schedule';

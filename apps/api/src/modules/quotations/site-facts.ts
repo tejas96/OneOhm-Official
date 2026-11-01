@@ -5,6 +5,9 @@ export interface SiteFacts {
   readonly households: number | null;
   readonly meterInSocietyName: boolean | null;
   readonly subsidyClaimed: boolean;
+  /** The state top-up (PRD 3.5) reads these; a fresh lead without a site has neither. */
+  readonly lowIncomeHousehold?: boolean;
+  readonly state?: string;
 }
 
 /**

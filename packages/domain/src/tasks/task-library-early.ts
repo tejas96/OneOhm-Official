@@ -1,3 +1,4 @@
+import { OTHER_DISCOM_EARLY_TASKS } from './task-library-discoms';
 import { MSEDCL, task } from './task-library-helpers';
 import { SURVEY_TEMPLATE_KEYS as SURVEY_KEYS } from './task-library-survey';
 import type { TaskTemplate } from './task-template';
@@ -13,7 +14,13 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     durationDays: 1,
     dependsOn: [],
     evidence: ['document'],
-    captures: ['consumer_number', 'sanctioned_capacity_kw', 'meter_holder_name'],
+    captures: [
+      'consumer_number',
+      'sanctioned_capacity_kw',
+      'meter_holder_name',
+      // Printed on the Work Completion Report's identity block (PRD 3.18).
+      'consumer_aadhaar_number',
+    ],
   }),
   task({
     key: 'society_documents',
@@ -27,20 +34,8 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     waitingParty: 'customer',
     evidence: ['document'],
   }),
-  task({
-    key: 'name_change',
-    title: 'MSEDCL consumer name change',
-    stage: 'survey',
-    roleKey: 'liaisoning',
-    offsetDays: 0,
-    durationDays: 15,
-    dependsOn: ['electricity_details'],
-    when: { nameChange: true },
-    waitingParty: 'discom',
-    customerVisible: true,
-    notifyCustomer: true,
-    evidence: ['document'],
-  }),
+  // A consumer name change is a DISCOM change request linked to the project (PRD 3.15),
+  // raised when the project is created; it holds net metering and subsidy until done.
   task({
     key: 'system_design',
     title: 'System design and layout approval',
@@ -53,6 +48,8 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     customerVisible: true,
     notifyCustomer: true,
     evidence: ['document'],
+    // The chosen panel, as the model agreement and WCR print it (PRD 3.18).
+    captures: ['module_model_number', 'module_efficiency', 'module_warranty'],
   }),
   task({
     key: 'loan_documents',
@@ -99,7 +96,7 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     roleKey: 'liaisoning',
     offsetDays: 1,
     durationDays: 2,
-    dependsOn: ['electricity_details', 'name_change'],
+    dependsOn: ['electricity_details'],
     when: { discomCodes: MSEDCL },
     customerVisible: true,
     notifyCustomer: true,
@@ -117,8 +114,10 @@ export const EARLY_TASKS: readonly TaskTemplate[] = [
     waitingParty: 'discom',
     evidence: ['document'],
     captures: ['sanction_number', 'sanction_date'],
-    reports: ['model-agreement', 'net-metering-agreement'],
+    // The model agreement is made at onboarding (PRD 3.18), not here.
+    reports: ['net-metering-agreement'],
   }),
+  ...OTHER_DISCOM_EARLY_TASKS,
   task({
     key: 'purchase_order',
     title: 'Raise purchase orders for panels and inverter',

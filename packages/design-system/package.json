@@ -16,11 +16,13 @@
       "style": "./src/web/styles/components.css",
       "default": "./src/web/styles/components.css"
     },
-    "./web": "./src/web/index.ts"
+    "./web": "./src/web/index.ts",
+    "./illustrations": "./src/illustrations/index.ts"
   },
   "files": [
     "dist",
-    "src/web"
+    "src/web",
+    "src/illustrations"
   ],
   "sideEffects": [
     "*.css"
@@ -34,6 +36,7 @@
   "dependencies": {
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "lottie-web": "5.13.0",
     "lucide-react": "1.60.0",
     "motion": "14.4.0",
     "radix-ui": "1.8.1",

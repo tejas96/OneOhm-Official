@@ -1,5 +1,5 @@
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
-import { type UploadableFile, uploadFile } from '@oneohm/mobile-ui';
+import { shrinkPhoto, type UploadableFile, uploadFile } from '@oneohm/mobile-ui';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL, currentToken } from '@/api/api';
@@ -41,12 +41,16 @@ export async function pickRequestedFile(
       : await ImagePicker.launchImageLibraryAsync(options);
   const asset = result.canceled ? undefined : result.assets[0];
   if (!asset) return null;
-  return {
-    uri: asset.uri,
-    name: asset.fileName ?? `paper-${Date.now()}.jpg`,
-    type: asset.mimeType ?? 'image/jpeg',
-    ...(asset.file ? { file: asset.file } : {}),
-  };
+  // A photo of a paper still reads clearly at 2000 px; much quicker to send.
+  return shrinkPhoto(
+    {
+      uri: asset.uri,
+      name: asset.fileName ?? `paper-${Date.now()}.jpg`,
+      type: asset.mimeType ?? 'image/jpeg',
+      ...(asset.file ? { file: asset.file } : {}),
+    },
+    asset,
+  );
 }
 
 /** Sends the file; OneOhm files it with the project and the request closes. */

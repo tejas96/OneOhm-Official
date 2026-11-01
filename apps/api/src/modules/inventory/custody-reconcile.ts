@@ -24,7 +24,7 @@ import {
 
 type QuoteLine = typeof quotationLines.$inferSelect;
 
-/** The accepted quotation's goods lines, and the stock items it names for some of them. */
+/** The accepted quotation's goods lines, and the stock items it names for them. */
 export async function quoteMaterial(db: DatabaseExecutor, projectId: string) {
   const [row] = await db
     .select({ project: projects, quotation: quotations })
@@ -37,7 +37,11 @@ export async function quoteMaterial(db: DatabaseExecutor, projectId: string) {
     .from(quotationLines)
     .where(and(eq(quotationLines.quotationId, row.quotation.id), pricedLinesOnly()))
     .orderBy(asc(quotationLines.position));
+  // The quotation's own picks, then every other line that names its product (C26).
   const quoteProducts: Readonly<Record<string, string | null>> = {
+    ...Object.fromEntries(
+      lines.flatMap((line) => (line.productId ? [[line.key, line.productId]] : [])),
+    ),
     panel: row.quotation.panelProductId,
     inverter: row.quotation.inverterProductId,
     battery: row.quotation.batteryProductId,

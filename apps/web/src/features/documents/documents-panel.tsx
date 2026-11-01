@@ -15,7 +15,14 @@ import { useUploads } from './use-uploads';
 
 type Scope = { readonly projectId: string } | { readonly customerId: string };
 
-export const documentsQueryKey = (scope: Scope) => ['documents', scope] as const;
+/** Whose files a list shows: a project's, a customer's, a lead's, a contractor's or a vendor's. */
+export type DocumentScope =
+  | Scope
+  | { readonly leadId: string }
+  | { readonly contractorId: string }
+  | { readonly vendorId: string };
+
+export const documentsQueryKey = (scope: DocumentScope) => ['documents', scope] as const;
 
 /**
  * Every file of a project or customer in one place (PRD 3.14): search by name, filter by

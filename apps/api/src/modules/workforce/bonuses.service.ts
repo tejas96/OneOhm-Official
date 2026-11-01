@@ -21,6 +21,7 @@ import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertWithinApprovalLimit } from '../business-settings/approval-limit';
 import { readBonuses } from './bonus-read';
 
 const PROBLEMS: Readonly<Record<BonusProblem, [string, string, string]>> = {
@@ -113,6 +114,7 @@ export class BonusesService {
   async decide(actor: Actor, id: string, approve: boolean, note?: string | null): Promise<Bonus> {
     await this.db.transaction(async (tx) => {
       const bonus = await this.pending(tx, id);
+      await assertWithinApprovalLimit(tx, actor, 'bonus', bonus.totalPaise);
       const shares = await tx
         .select()
         .from(projectBonusShares)

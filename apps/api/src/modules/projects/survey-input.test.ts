@@ -25,6 +25,28 @@ describe('surveyedInput', () => {
     });
   });
 
+  it('reads cable runs floor by floor and keeps runs of kinds it did not measure', () => {
+    const accepted = {
+      ...quote,
+      costing: { visits: 2, runs: [{ kind: 'ac', acrossM: 9, upM: 3, runs: 1 }] },
+    } as unknown as QuotationInput;
+    const facts = new Map([
+      ['structure_type', 'Aluminium rail on the RCC roof'],
+      ['cable_runs', 'DC, floor 3: 12 m across, 2 runs\nDC, floor 2: 6 m up, 2 runs'],
+    ]);
+    expect(surveyedInput(accepted, facts)).toMatchObject({
+      structureType: 'aluminium_rail',
+      costing: {
+        visits: 2,
+        runs: [
+          { kind: 'ac', acrossM: 9, upM: 3, runs: 1 },
+          { kind: 'dc', floor: 3, acrossM: 12, upM: 0, runs: 2 },
+          { kind: 'dc', floor: 2, acrossM: 0, upM: 6, runs: 2 },
+        ],
+      },
+    });
+  });
+
   it('keeps the quote where the survey said nothing usable', () => {
     expect(surveyedInput(quote, new Map([['site_floors', 'two']]))).toMatchObject({
       floors: 1,

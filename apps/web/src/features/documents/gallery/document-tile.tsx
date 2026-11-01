@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
-import { documentUrl } from '@/lib/api/upload';
+import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
 import { extensionOf, isVideo, kindLabelOf, showsInline } from './document-kinds';
 import { VideoFrame } from './video-frame';
 
@@ -85,7 +85,7 @@ export function DocumentTile({
   return (
     // biome-ignore lint/performance/noImgElement: authenticated API files cannot go through next/image.
     <img
-      src={documentUrl(document.id)}
+      src={documentThumbUrl(document.id)}
       alt=""
       loading="lazy"
       decoding="async"

@@ -310,7 +310,7 @@
       },
       "lendersDialog": {
         "title": "Lenders",
-        "description": "Banks and NBFCs OneOhm works with, and the documents each one asks for.",
+        "description": "Banks and NBFCs we work with, the documents each one asks for and how it pays.",
         "added": "{name} added",
         "inactive": "Not in use",
         "pattern": {
@@ -324,7 +324,25 @@
         "disbursement": "Pays out",
         "documents": "Documents it needs",
         "documentsHint": "One per line.",
-        "add": "Add lender"
+        "add": "Add lender",
+        "edit": "Edit",
+        "newTitle": "Add a lender",
+        "editTitle": "Change {name}",
+        "save": "Save changes",
+        "cancel": "Cancel",
+        "saved": "{name} saved",
+        "summary": "{kind}: {parts}",
+        "parts": {
+          "title": "How it pays",
+          "hint": "Each part's share of the bank's amount. New loan projects plan their tranches this way.",
+          "name": "Part",
+          "share": "Share",
+          "remove": "Remove this part",
+          "add": "Add a part",
+          "total": "Adds up to {total}",
+          "totalOff": "Adds up to {total}. The parts must make 100%.",
+          "item": "{share} {label}"
+        }
       }
     },
     "ledger": {
@@ -520,7 +538,7 @@
     },
     "payouts": {
       "intro": {
-        "commissions": "Commission resellers earned on projects they sold. Approving books it as a cost and what OneOhm owes; paying records the bank or cash movement. The reseller sees each step in the field app.",
+        "commissions": "Commission resellers earned on projects they sold. Approving books it as a cost and what we owe; paying records the bank or cash movement. The reseller sees each step in the field app.",
         "referrals": "Rewards customers earned for referring friends. Approving books a marketing expense; paying records the bank or cash movement. The customer is told on WhatsApp and in their app at each step."
       },
       "viewLabel": "Show",

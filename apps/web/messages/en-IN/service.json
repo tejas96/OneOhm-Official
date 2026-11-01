@@ -60,11 +60,11 @@
       },
       "withPerson": "With a person",
       "empty": {
-        "all": "No WhatsApp chats yet. When a customer writes to the OneOhm number, the chat appears here.",
+        "all": "No WhatsApp chats yet. When a customer writes to our number, the chat appears here.",
         "human": "No one is waiting for a person. The assistant is answering every chat."
       },
       "noMessages": "No messages yet",
-      "fromUs": "OneOhm: {text}",
+      "fromUs": "{company}: {text}",
       "pickTitle": "Pick a chat",
       "pickBody": "Choose a chat to read it and reply.",
       "back": "All chats",

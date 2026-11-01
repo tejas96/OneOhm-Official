@@ -1,7 +1,7 @@
 {
   "team": {
     "title": "Team",
-    "description": "Everyone who works on OneOhm projects: staff, I&C partner crews and resellers. Roles decide what each person can see and do.",
+    "description": "Everyone who works on our projects: staff, I&C partner crews and resellers. Roles decide what each person can see and do.",
     "loading": "Loading the team",
     "add": "Add person",
     "search": "Search by name, phone, email or ID",

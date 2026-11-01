@@ -4,6 +4,7 @@ import { authContract } from './auth.contract';
 import { bankPayoutsContract } from './bank-payouts.contract';
 import { billingContract, customerBillingContract } from './billing.contract';
 import { businessReportsContract } from './business-reports.contract';
+import { businessSettingsContract } from './business-settings.contract';
 import { cashHandlingContract } from './cash-handling.contract';
 import { catalogContract } from './catalog.contract';
 import { commissionsContract } from './commissions.contract';
@@ -18,6 +19,7 @@ import {
 } from './customer-language.contract';
 import { customerPayContract } from './customer-pay.contract';
 import { discomContract } from './discom.contract';
+import { changeRequestTypesContract, reportFormatsContract } from './discom-setup.contract';
 import { documentBundleContract } from './document-bundle.contract';
 import { documentChecklistContract } from './document-checklist.contract';
 import {
@@ -33,11 +35,13 @@ import { gatewayCheckContract } from './gateway-check.contract';
 import { inventoryContract } from './inventory.contract';
 import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
+import { listsContract } from './lists.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
 import { paymentPlansContract } from './payment-plans.contract';
 import { peopleContract } from './people.contract';
 import { productDatasheetContract } from './product-datasheet.contract';
+import { projectChangesContract } from './project-changes.contract';
 import { projectTeamContract } from './project-team.contract';
 import { projectsContract, tasksContract } from './projects.contract';
 import { purchasingContract } from './purchasing.contract';
@@ -45,11 +49,14 @@ import { quotationsContract } from './quotations.contract';
 import { customerReferralsContract, referralsContract } from './referrals.contract';
 import { reportsContract } from './reports.contract';
 import { rewardsContract } from './rewards.contract';
+import { searchContract } from './search.contract';
 import { serviceDeskContract } from './service-desk.contract';
 import { serviceVisitsContract } from './service-visits.contract';
 import { siteActivityContract } from './site-activity.contract';
+import { siteConnectionContract } from './site-connection.contract';
 import { skillsContract } from './skills.contract';
 import { customerStageRatingsContract, stageRatingsContract } from './stage-ratings.contract';
+import { stateSupportContract } from './state-support.contract';
 import { teamLoadContract } from './team-load.contract';
 import { templatesContract } from './templates.contract';
 import { whatsappContract } from './whatsapp.contract';
@@ -78,6 +85,8 @@ export type ApiRouterDefinition = {
   readonly customerPay: typeof customerPayContract;
   readonly contractors: typeof contractorsContract;
   readonly discom: typeof discomContract;
+  readonly changeRequestTypes: typeof changeRequestTypesContract;
+  readonly reportFormats: typeof reportFormatsContract;
   readonly workforce: typeof workforceContract;
   readonly rewards: typeof rewardsContract;
   readonly notifications: typeof notificationsContract;
@@ -99,6 +108,7 @@ export type ApiRouterDefinition = {
   readonly customerDocumentRequests: typeof customerDocumentRequestsContract;
   readonly reportSettings: typeof reportSettingsContract;
   readonly siteActivity: typeof siteActivityContract;
+  readonly siteConnection: typeof siteConnectionContract;
   readonly purchasing: typeof purchasingContract;
   readonly cashHandling: typeof cashHandlingContract;
   readonly skills: typeof skillsContract;
@@ -117,6 +127,11 @@ export type ApiRouterDefinition = {
   readonly engagement: typeof engagementContract;
   readonly projectTeam: typeof projectTeamContract;
   readonly productDatasheet: typeof productDatasheetContract;
+  readonly lists: typeof listsContract;
+  readonly search: typeof searchContract;
+  readonly businessSettings: typeof businessSettingsContract;
+  readonly projectChanges: typeof projectChangesContract;
+  readonly stateSupport: typeof stateSupportContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -138,6 +153,8 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   customerPay: customerPayContract,
   contractors: contractorsContract,
   discom: discomContract,
+  changeRequestTypes: changeRequestTypesContract,
+  reportFormats: reportFormatsContract,
   workforce: workforceContract,
   rewards: rewardsContract,
   notifications: notificationsContract,
@@ -159,6 +176,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   customerDocumentRequests: customerDocumentRequestsContract,
   reportSettings: reportSettingsContract,
   siteActivity: siteActivityContract,
+  siteConnection: siteConnectionContract,
   purchasing: purchasingContract,
   cashHandling: cashHandlingContract,
   skills: skillsContract,
@@ -177,6 +195,11 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   engagement: engagementContract,
   projectTeam: projectTeamContract,
   productDatasheet: productDatasheetContract,
+  lists: listsContract,
+  search: searchContract,
+  businessSettings: businessSettingsContract,
+  projectChanges: projectChangesContract,
+  stateSupport: stateSupportContract,
 };
 
 export { type ContractorInput, contractorInputSchema } from './contractors.contract';

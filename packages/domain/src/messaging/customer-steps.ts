@@ -1,3 +1,4 @@
+import { OTHER_DISCOM_CUSTOMER_TITLES } from '../tasks/task-library-discoms';
 import type { MessageTemplateDefault } from './message-templates';
 
 /**
@@ -24,6 +25,7 @@ export const CUSTOMER_STEP_TITLES: Readonly<Record<string, string>> = {
   subsidy_application: 'Subsidy applied on the PM Surya Ghar portal',
   subsidy_inspection: 'Subsidy inspection approved',
   subsidy_release: 'Subsidy released to your bank account',
+  ...OTHER_DISCOM_CUSTOMER_TITLES,
 };
 
 /**

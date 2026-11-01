@@ -11,6 +11,7 @@
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
       "workforce": "Workforce",
+      "rewards": "Rewards",
       "tasks": "Task templates",
       "documents": "Required documents",
       "messages": "WhatsApp messages",
@@ -19,7 +20,13 @@
       "referrals": "Refer and earn",
       "serviceSla": "Service and SLAs",
       "warranty": "Warranty",
-      "amcPlans": "AMC plans"
+      "amcPlans": "AMC plans",
+      "projectTypes": "Project types",
+      "approvals": "Approvals",
+      "assignment": "Assignment rules",
+      "reminders": "Reminders",
+      "dashboard": "Dashboard",
+      "automation": "Automation runs"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -289,49 +296,6 @@
         "datasheetFailed": "The datasheet was not saved"
       }
     },
-    "rates": {
-      "loading": "Loading the rate card",
-      "intro": "The price engine builds every quotation from these rates. A change applies to new quotations only; accepted ones keep their own figures.",
-      "lastSaved": "Last saved {date}",
-      "price": "Price (₹)",
-      "cost": "Cost (₹)",
-      "margin": "Margin",
-      "groups": {
-        "structure": "Mounting structure, per kW",
-        "cables": "Cable runs (default lengths used until the site survey measures them)",
-        "kits": "Kits and labour",
-        "transport": "Transport",
-        "rules": "Margins, tax and approval rules"
-      },
-      "fields": {
-        "rcc_elevated": "RCC roof, elevated",
-        "tin_shed": "Tin shed",
-        "ground_mount": "Ground mount",
-        "dcCable": "DC cable, per metre",
-        "acCable": "AC cable, per metre",
-        "baseMeters": "Base length (m)",
-        "perFloorMeters": "Extra per floor (m)",
-        "earthingKit": "Earthing kit",
-        "protectionKit": "Protection kit (ACDB/DCDB)",
-        "installationPerKw": "Installation labour, per kW",
-        "extraFloorPerKw": "Extra floor charge, per kW",
-        "freeFloors": "Floors included before the extra charge",
-        "liaisoning": "DISCOM liaisoning",
-        "baseKm": "Distance included (km)",
-        "perKm": "Charge per extra km (₹)",
-        "flat": "Flat transport charge (₹)",
-        "goodsTaxBp": "GST on goods (%)",
-        "serviceTaxBp": "GST on services (%)",
-        "contingencyBp": "Contingency on default quantities (%)",
-        "contingencyHint": "Added to cables and labour priced from defaults, to cover what the survey may find.",
-        "toleranceBp": "Survey tolerance (%)",
-        "toleranceHint": "Cost changes within this band after the survey are absorbed; beyond it, a revision needs approval.",
-        "discountApprovalBp": "Discount approval threshold (%)",
-        "discountApprovalHint": "Discounts larger than this share of the price need a manager's approval.",
-        "sqmPerKwp": "Shadow-free area per kWp (m²)",
-        "sqmPerKwpHint": "After the survey, a roof with less shadow-free area than this per kWp gets a revision sized to fit. 0 switches the check off."
-      }
-    },
     "discoms": {
       "loading": "Loading DISCOMs",
       "title": "DISCOMs",
@@ -441,7 +405,7 @@
     "workforce": {
       "title": "Workforce rules",
       "loading": "Loading workforce rules",
-      "intro": "How leave, attendance and points work. These rules guide requests and check-ins; people still decide every approval.",
+      "intro": "How leave, attendance and check-in location work. These rules guide requests and check-ins; people still decide every approval.",
       "unsaved": "You have unsaved changes.",
       "discard": "Discard",
       "leaveKinds": {
@@ -515,18 +479,6 @@
           "on": "On",
           "off": "Off"
         }
-      },
-      "points": {
-        "title": "Points",
-        "description": "What each kind of good work is worth.",
-        "onTimeTask": "Task done on time",
-        "onTimeTaskHint": "Given automatically.",
-        "goodRating": "Good customer rating",
-        "goodRatingHint": "Suggested; a manager approves it.",
-        "recognitionMax": "Most recognition at once",
-        "recognitionMaxHint": "The limit when a manager gives points.",
-        "stageRating": "Named on a 4–5 star stage rating",
-        "stageRatingHint": "Suggested for each person a customer names; a manager approves it."
       },
       "places": {
         "title": "Authorised places",
@@ -657,12 +609,22 @@
           "yes": "Yes",
           "no": "No"
         },
-        "discoms": "DISCOM codes",
-        "discomsHint": "Comma separated, for example MSEDCL. Empty means every DISCOM.",
+        "discoms": "DISCOMs",
+        "discomsHint": "No DISCOM picked means every DISCOM.",
+        "discomsLoading": "Loading DISCOMs…",
+        "discomsNone": "No DISCOMs yet. Add them under DISCOMs & subsidy.",
+        "discomInactive": "{code} · switched off",
+        "discomUnlisted": "No longer in your DISCOM list",
         "proof": "Proof and approval",
         "evidence": "Proof needed",
         "captures": "Details it records",
-        "capturesHint": "Report fact keys, comma separated.",
+        "capturesHint": "What the person fills in when they finish. These feed the reports.",
+        "reports": "Reports it makes",
+        "reportsHint": "Saved to the project documents once this task is done and the report's details are complete.",
+        "capturesPicked": "Details picked",
+        "capturesNone": "No details recorded.",
+        "addFact": "Add a detail…",
+        "removeFact": "Remove {label}",
         "approval": "Needs approval before it counts as done",
         "reviewer": "Who approves",
         "reviewerHint": "Nobody approves their own work while someone else can.",
@@ -840,7 +802,69 @@
       "selling": "Selling and pricing",
       "operations": "Projects and messages",
       "security": "Security",
-      "afterSales": "After-sales"
+      "afterSales": "After-sales",
+      "rules": "Rules and automation"
+    },
+    "rewards": {
+      "intro": "Everything OneOhm gives for good work, in one place. Points are a thank-you to staff; referral rewards, reseller commission and project bonuses are money, and each is approved before anyone is paid.",
+      "loading": "Loading point values",
+      "unsaved": "You have unsaved changes.",
+      "discard": "Discard",
+      "points": {
+        "title": "What earns points",
+        "description": "Points go to staff only; partner crews and resellers are paid, not scored. Set 0 to stop giving that kind of points.",
+        "caption": "What earns points, how many, and who approves them",
+        "columns": {
+          "event": "Good work",
+          "points": "Points",
+          "approval": "Who approves"
+        },
+        "events": {
+          "onTimeTask": "A task finished on time",
+          "onTimeTaskDetail": "For whoever finishes a task by its due date. Late work earns nothing and loses nothing.",
+          "goodRating": "A 4 or 5 star customer rating",
+          "goodRatingDetail": "Suggested for the project's manager.",
+          "stageRating": "Named on a 4 or 5 star stage rating",
+          "stageRatingDetail": "Suggested for each staff member the customer names on a survey, installation or switch-on rating.",
+          "recognitionMax": "Recognition from a manager",
+          "recognitionMaxDetail": "Given with a reason, never for the manager's own work. This is the most one recognition can give."
+        },
+        "upTo": "Up to",
+        "pointsLabel": "Points for: {event}",
+        "approval": {
+          "automatic": "Automatic",
+          "manager": "A manager approves",
+          "given": "Given by a manager"
+        }
+      },
+      "meaning": {
+        "title": "What points mean",
+        "description": "A simple, fair record of dependable work.",
+        "where": "Team → Points lists everyone's points this month and in all, the suggestions waiting for a manager, and recent points.",
+        "app": "In the OneOhm app, each person sees their own points, history and achievements, such as five tasks on time in a row or the 500 club.",
+        "noCash": "Points have no cash value and are not part of pay. Money for good work is a project bonus, below.",
+        "fair": "Only verified work counts: nobody gives points to themselves, and delays caused by customers, banks or the DISCOM never count against anyone.",
+        "open": "Open Team → Points"
+      },
+      "other": {
+        "title": "Other rewards",
+        "description": "These pay money. Each has its own settings; this is how they stand today.",
+        "loading": "Loading…",
+        "unavailable": "Could not load this just now.",
+        "on": "On",
+        "off": "Off",
+        "referrals": "Refer and earn",
+        "referralPerReferral": "Customers earn {amount} for each friend who goes solar, {event}.",
+        "referralPerKw": "Customers earn {amount} per kW a friend installs, {event}.",
+        "referralOffDetail": "Switched off. Codes still work and referrals are recorded, but nothing is earned.",
+        "referralsOpen": "Open Refer and earn",
+        "commission": "Reseller commission",
+        "commissionDetail": "The usual rule: {rule}. A reseller can have their own rule.",
+        "commissionOpen": "Open Team → Resellers",
+        "bonuses": "Project bonuses",
+        "bonusesDetail": "Proposed for good work on a project under Team → Bonuses. Someone who approves payments decides each one, within their limit in Approvals; finance then pays it.",
+        "bonusesOpen": "Open Approvals"
+      }
     },
     "referrals": {
       "title": "Refer and earn",
@@ -981,6 +1005,234 @@
         "save": "Save",
         "add": "Add paper"
       }
-    }
+    },
+    "rules": {
+      "unsaved": "You have changes that are not saved.",
+      "discard": "Discard changes",
+      "reminders": {
+        "title": "Reminders",
+        "loading": "Loading reminder times",
+        "intro": "When customers are reminded to pay, when the team gets its morning list, and how early lead follow-ups are flagged. Changes apply from the next run.",
+        "payments": {
+          "title": "Payment reminders",
+          "description": "Sent to the customer on WhatsApp while a payment stays unpaid.",
+          "grace": "First reminder after (days)",
+          "graceHint": "Days after the payment falls due. 0 sends it on the due day.",
+          "repeat": "Then every (days)",
+          "repeatHint": "Until it is paid. Each reminder goes once.",
+          "preview": "For a payment due on {due}: reminders on {first}, {second}, {third} and so on until it is paid."
+        },
+        "daily": {
+          "title": "Daily messages",
+          "description": "Sent once a day at these times, India time.",
+          "staff": "Team's morning list",
+          "staffHint": "Each person's overdue work, today's work and follow-ups.",
+          "owner": "Owner's summary",
+          "ownerHint": "Yesterday's work and money, and on Mondays the week."
+        },
+        "followUps": {
+          "title": "Lead follow-ups",
+          "description": "The lead owner gets an alert ahead of each follow-up date.",
+          "lead": "Remind this many days before",
+          "leadHint": "0 reminds on the day itself.",
+          "preview": "{days, plural, =0 {A follow-up planned for {date} is reminded that morning at {time}.} one {A follow-up planned for {date} is reminded on {remind} at {time}, a day before.} other {A follow-up planned for {date} is reminded on {remind} at {time}, # days before.}}"
+        }
+      },
+      "assignment": {
+        "title": "Assignment rules",
+        "loading": "Loading assignment rules",
+        "intro": "How a new project's tasks find a person. Crew work always goes to the project's contractor, and tasks marked critical still wait for a manager to confirm the person.",
+        "who": {
+          "title": "Who gets the next task",
+          "description": "Among the people in the task's role.",
+          "least_busy": "Least busy",
+          "round_robin": "Take turns",
+          "explain": {
+            "least_busy": "The person with the fewest open tasks gets it, so work spreads to whoever has room.",
+            "round_robin": "The person who was given work longest ago gets it, so everyone in the role takes turns."
+          }
+        },
+        "checks": {
+          "title": "Who is skipped or preferred",
+          "description": "People marked unavailable in Team are always skipped.",
+          "skipLeave": "Skip people on leave",
+          "skipLeaveHint": "Someone with approved leave on the task's days is passed over.",
+          "preferSkill": "Prefer the right skill",
+          "preferSkillHint": "When a task template names a skill, someone who has it comes first.",
+          "teamFirst": "Use the project team first",
+          "teamFirstHint": "When a project has a named team, its tasks go to them before anyone else."
+        }
+      },
+      "approvals": {
+        "title": "Approvals",
+        "loading": "Loading approval rules",
+        "intro": "Who must say yes before money moves or a price changes, and when a waiting approval goes up to the owner. Everything waiting for someone shows in their Today → Waiting for my approval.",
+        "limitHint": "₹0 means each one needs someone who approves payments.",
+        "discount": {
+          "title": "Discounts",
+          "description": "Set with the rate card, shown here so every approval rule is in one place.",
+          "rule": "A salesperson may give up to {percent}% off without approval. A bigger discount waits for someone who approves discounts before the quotation is sent.",
+          "change": "Change in Rate card"
+        },
+        "bill": {
+          "title": "Bills to pay",
+          "description": "Vendor, contractor and staff bills before they are paid.",
+          "limit": "Accounts may approve bills up to",
+          "within": "Bills up to {amount} can be approved by people who record payments. Bigger bills need someone who approves payments.",
+          "always": "Every bill needs someone who approves payments."
+        },
+        "bonus": {
+          "title": "Project bonuses",
+          "description": "Bonuses proposed for a project team.",
+          "limit": "Managers may approve bonuses up to",
+          "within": "Bonuses up to {amount} in total can be approved by managers who manage people. Bigger ones need someone who approves payments.",
+          "always": "Every bonus needs someone who approves payments."
+        },
+        "refunds": {
+          "title": "Refunds and cancellations",
+          "description": "Money back to a customer, a reversed payment or a cancelled tax invoice.",
+          "fixed": "Always",
+          "rule": "Only someone who approves payments can do these, whatever the amount.",
+          "who": "See who approves payments"
+        },
+        "waiting": {
+          "title": "Waiting too long",
+          "description": "Approvals that wait are raised to the owner once.",
+          "days": "Tell the owner after (days)",
+          "daysHint": "Counted from the day it was asked for.",
+          "open": "Open Waiting for my approval"
+        }
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "loading": "Loading dashboard settings",
+        "intro": "What the command centre counts as late or coming up, and how many items its lists show.",
+        "late": {
+          "title": "When something is late",
+          "description": "Before this, it does not show as a problem."
+        },
+        "ahead": {
+          "title": "How far ahead to look",
+          "description": "Deadlines, installs, bills due and material checks."
+        },
+        "lists": {
+          "title": "List sizes",
+          "description": "The most items each list shows; counts always include everything."
+        },
+        "fields": {
+          "riskLateDays": "Task counts as at risk after (days late)",
+          "riskLateDaysHint": "{count, plural, one {Shown in What could slip from 1 day late.} other {Shown in What could slip from # days late.}}",
+          "paymentLateDays": "Payment needs a reminder call after (days)",
+          "paymentLateDaysHint": "Days past the due date.",
+          "discomWaitDays": "Call the DISCOM after (days waiting)",
+          "discomWaitDaysHint": "A task waiting on the DISCOM this long becomes an action.",
+          "dueSoonDays": "Coming up means within (days)",
+          "dueSoonDaysHint": "Deadlines, installs and bills due in this window.",
+          "materialLookAheadDays": "Check material for installs within (days)",
+          "materialLookAheadDaysHint": "Projects short of material for work due in this window.",
+          "actionsShown": "Actions shown",
+          "actionsShownHint": "Most urgent first.",
+          "risksShown": "Risks shown",
+          "risksShownHint": "Late work first, then waiting, then unowned.",
+          "deadlinesShown": "Deadlines shown",
+          "deadlinesShownHint": "Soonest first."
+        }
+      },
+      "projectTypes": {
+        "title": "Project types",
+        "loading": "Loading project types",
+        "intro": "The kinds of project OneOhm builds. Rename them, describe them for the team, or switch one off so no new project of that kind can start. Projects already running carry on.",
+        "columns": {
+          "name": "Type",
+          "projects": "Projects",
+          "status": "Offered",
+          "edit": "Edit"
+        },
+        "on": "Offered",
+        "off": "Switched off",
+        "edit": "Edit",
+        "newKind": "A brand-new kind of project needs its own task list and rules, so ask for it to be added; task templates already know every kind listed here.",
+        "dialog": {
+          "title": "Edit {name}",
+          "description": "The name and note show to the team when they create projects.",
+          "name": "Name",
+          "about": "What it is",
+          "aboutHint": "One or two plain sentences.",
+          "offered": "Offered for new projects",
+          "offeredHint": "{count, plural, =0 {No projects of this kind yet.} one {1 project of this kind keeps running either way.} other {# projects of this kind keep running either way.}}"
+        }
+      }
+    },
+    "automation": {
+      "title": "Automation runs",
+      "loading": "Loading recent runs",
+      "intro": "Every automatic job OneOhm runs: reminders, escalations, summaries, messages and payment checks. Failures come first; the ones that are safe to run again have a retry.",
+      "allWell": "Everything ran as planned in the last 7 days.",
+      "failedWeek": "{count, plural, one {1 run failed in the last 7 days.} other {# runs failed in the last 7 days.}}",
+      "show": "Show",
+      "showAll": "All runs",
+      "showFailed": "Failed only",
+      "empty": "No runs yet. Jobs record here from their next run.",
+      "noFailures": "Nothing failed. Good.",
+      "kept": "Runs are kept for 30 days. Payment and payout checks that run every few minutes are listed only when they did something or failed.",
+      "retry": "Run again",
+      "retryQueued": "Queued to run again within a minute",
+      "retried": "Run again since.",
+      "took": "Took {seconds} s",
+      "tookUnderSecond": "Took under a second",
+      "columns": {
+        "job": "Job",
+        "when": "When",
+        "result": "Result"
+      },
+      "triggers": {
+        "schedule": "On schedule",
+        "background": "In the background",
+        "retry": "Run again by hand"
+      },
+      "status": {
+        "succeeded": "Done",
+        "failed": "Failed",
+        "running": "Running",
+        "queued": "Waiting to run"
+      },
+      "jobs": {
+        "payment_reminders": "Payment reminders",
+        "staff_digests": "Team's morning list",
+        "owner_summaries": "Owner's summary",
+        "follow_up_reminders": "Lead follow-up reminders",
+        "escalations": "Late and stuck tasks raised",
+        "approval_escalations": "Long-waiting approvals raised",
+        "maintenance_visits": "AMC visits opened",
+        "cash_reminders": "Cash held too long",
+        "location_cleanup": "Old locations cleared",
+        "service_sla": "Service time alerts",
+        "job_runs_cleanup": "Old runs cleared",
+        "message_delivery": "Message sending",
+        "payment_link_sync": "Online payment check",
+        "final_payment_links": "Final payment links",
+        "incentive_sweep": "Referral and commission check",
+        "payout_sync": "Bank payout check"
+      },
+      "results": {
+        "payment_reminders": "{count, plural, =0 {Nobody to remind} one {1 reminder queued} other {# reminders queued}}",
+        "staff_digests": "{count, plural, =0 {In-app lists only} one {1 WhatsApp list queued} other {# WhatsApp lists queued}}",
+        "owner_summaries": "{count, plural, =0 {No owner to send to} one {Sent to 1 person} other {Sent to # people}}",
+        "follow_up_reminders": "{count, plural, =0 {No follow-ups coming up} one {1 follow-up flagged} other {# follow-ups flagged}}",
+        "escalations": "{count, plural, =0 {Nothing to raise} one {1 task raised} other {# tasks raised}}",
+        "approval_escalations": "{count, plural, =0 {Nothing waiting too long} one {1 approval raised} other {# approvals raised}}",
+        "maintenance_visits": "{count, plural, =0 {No visits due} one {1 visit opened} other {# visits opened}}",
+        "cash_reminders": "{count, plural, =0 {No cash held too long} one {1 reminder} other {# reminders}}",
+        "location_cleanup": "{count, plural, =0 {Nothing to clear} one {1 reading cleared} other {# readings cleared}}",
+        "service_sla": "{count, plural, =0 {All on time} one {1 alert} other {# alerts}}",
+        "job_runs_cleanup": "{count, plural, =0 {Nothing to clear} one {1 old run cleared} other {# old runs cleared}}",
+        "message_delivery": "{count, plural, =0 {Nothing to send} other {Sent back to the outbox}}",
+        "payment_link_sync": "{count, plural, one {1 change recorded} other {# changes recorded}}",
+        "final_payment_links": "{count, plural, one {1 link sent} other {# links sent}}",
+        "incentive_sweep": "{count, plural, one {1 reward earned} other {# rewards earned}}",
+        "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}"
+      }
+    },
+    "loading": "Loading this section"
   }
 }

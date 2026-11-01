@@ -1,6 +1,18 @@
-import type { ExtraLineInput, QuotationDetail } from '@oneohm/api-contracts';
+import {
+  type CostingDetailInput,
+  costingDetailSchema,
+  type ExtraLineInput,
+  type QuotationCosting,
+  type QuotationDetail,
+} from '@oneohm/api-contracts';
 import { customers, type Database, quotationLines, quotations } from '@oneohm/database';
-import { EXTRA_KINDS, type ExtraKind } from '@oneohm/domain';
+import {
+  costBuildup,
+  EXTRA_KINDS,
+  type ExtraKind,
+  type PricedLine,
+  toCostingCard,
+} from '@oneohm/domain';
 import { asc, eq } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
@@ -22,7 +34,11 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
     .from(quotationLines)
     .where(eq(quotationLines.quotationId, id))
     .orderBy(asc(quotationLines.position));
-  const snapshot = row.snapshot as { households?: number | null };
+  const snapshot = row.snapshot as {
+    households?: number | null;
+    rates?: unknown;
+    stateSupportIneligible?: QuotationDetail['totals']['stateSupportIneligible'];
+  };
   return {
     ...summary,
     customerPhone: customer?.phone ?? '',
@@ -41,6 +57,7 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
       distanceKm: row.distanceKm,
       dcCableMeters: row.dcCableMeters,
       acCableMeters: row.acCableMeters,
+      costing: costingOf(row.costing),
       discountPaise: row.discountPaise,
       extras: extrasOf(lines),
     },
@@ -58,6 +75,8 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
       subsidyIneligible:
         (row.subsidyIneligible as QuotationDetail['totals']['subsidyIneligible']) ?? null,
       effectivePaise: row.effectivePaise,
+      stateSupportPaise: row.stateSupportPaise,
+      stateSupportIneligible: snapshot.stateSupportIneligible ?? null,
       optionalPaise: lines
         .filter((line) => line.extraKind === 'optional')
         .reduce((sum, line) => sum + line.totalPaise, 0),
@@ -74,6 +93,28 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
       }) => ({ ...line, extra: asExtraKind(extraKind) }),
     ),
     rejectionReason: row.rejectionReason,
+    costing: savedCosting(snapshot.rates, lines),
+  };
+}
+
+/** The detail a quotation was priced with, or null for site-type defaults. */
+export function costingOf(raw: unknown): CostingDetailInput | null {
+  if (raw === null || raw === undefined) return null;
+  const parsed = costingDetailSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/** How a saved quotation's price was reached: its own lines against the rates it kept. */
+function savedCosting(rates: unknown, lines: readonly LineRow[]): QuotationCosting | undefined {
+  if (!rates) return undefined;
+  const card = toCostingCard(rates);
+  const priced = lines.map(
+    (line) => ({ ...line, extra: asExtraKind(line.extraKind) ?? undefined }) as PricedLine,
+  );
+  return {
+    build: costBuildup(card, priced),
+    rates: card.rateLines.map(({ key, label, kind, unit }) => ({ key, label, kind, unit })),
+    pricingMode: card.pricing.mode,
   };
 }
 

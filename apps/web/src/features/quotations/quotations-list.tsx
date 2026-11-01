@@ -1,6 +1,11 @@
 'use client';
 
-import type { QuotationSummary } from '@oneohm/api-contracts';
+import {
+  QUOTATION_LIST_FILTERS,
+  type QuotationListFilter,
+  type QuotationPage,
+  type QuotationSummary,
+} from '@oneohm/api-contracts';
 import {
   Badge,
   Button,
@@ -15,28 +20,22 @@ import {
   type TableColumn,
 } from '@oneohm/design-system/web';
 import { formatInr, formatKwp } from '@oneohm/shared';
-import { useQuery } from '@tanstack/react-query';
 import { FileText, Plus, Search, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { usePagedList } from '@/lib/query/use-paged-list';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useCan } from '@/providers/current-user';
 import { STATUS_TONE } from './quotation-status';
 
-const FILTERS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'approval'] as const;
-type Filter = (typeof FILTERS)[number];
-
-function matches(quotation: QuotationSummary, filter: Filter, term: string): boolean {
-  if (filter === 'approval' && !quotation.discountPendingApproval) return false;
-  if (filter !== 'all' && filter !== 'approval' && quotation.status !== filter) return false;
-  if (!term) return true;
-  const haystack = `${quotation.number} ${quotation.customer.name} ${quotation.propertyLabel}`;
-  return haystack.toLowerCase().includes(term.toLowerCase());
-}
+const FILTERS = QUOTATION_LIST_FILTERS;
+type Filter = QuotationListFilter;
 
 /** The chosen status lives in `?filter=`, so a link from a count opens exactly those quotations. */
 function useQuotationFilter(): readonly [Filter, (next: Filter) => void] {
@@ -63,19 +62,10 @@ export function QuotationsList() {
   const canCreate = useCan('quotations.create');
   const [filter, setFilter] = useQuotationFilter();
   const [term, setTerm] = useState('');
-  const query = useQuery({
-    queryKey: ['quotations'],
-    queryFn: () => expectStatus(api.quotations.listQuotations({ query: {} }), 200),
-  });
-  const all = query.data ?? [];
-  const rows = useMemo(
-    () =>
-      all
-        .filter((quotation) => matches(quotation, filter, term.trim()))
-        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
-    [all, filter, term],
-  );
-  const waiting = all.filter((quotation) => quotation.discountPendingApproval).length;
+  const search = useDebouncedValue(term.trim());
+  const list = useQuotationPage(filter, search);
+  const waiting = list.first?.waitingApproval ?? 0;
+  const none = filter === 'all' && !search;
 
   const columns: readonly TableColumn<QuotationSummary>[] = [
     {
@@ -188,24 +178,68 @@ export function QuotationsList() {
           {t('approvalCallout', { count: waiting })}
         </button>
       )}
-      {query.isPending ? (
-        <ListSkeleton label={t('loading')} />
-      ) : query.isError ? (
-        <LoadError error={query.error} onRetry={() => query.refetch()} />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon={<FileText />}
-          title={all.length === 0 ? t('emptyTitle') : t('noMatchTitle')}
-          description={all.length === 0 ? t('emptyBody') : t('noMatchBody')}
-        />
-      ) : (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.id}
-        />
-      )}
+      <QuotationRows list={list} columns={columns} unfiltered={none} />
     </motion.div>
+  );
+}
+
+/** Newest first, filtered and paged by the API (PRD 9.3). */
+function useQuotationPage(filter: Filter, search: string) {
+  return usePagedList<QuotationSummary, QuotationPage>(
+    ['quotations', 'page', filter, search],
+    (cursor) =>
+      expectStatus(
+        api.lists.quotations({
+          query: {
+            filter,
+            limit: 30,
+            ...(search ? { q: search } : {}),
+            ...(cursor ? { cursor } : {}),
+          },
+        }),
+        200,
+      ),
+  );
+}
+
+/** Loading, error, none yet, no match, or the table with "Show more". */
+function QuotationRows({
+  list,
+  columns,
+  unfiltered,
+}: {
+  readonly list: ReturnType<typeof useQuotationPage>;
+  readonly columns: readonly TableColumn<QuotationSummary>[];
+  readonly unfiltered: boolean;
+}) {
+  const t = useTranslations('quotations.list');
+  const { query, items: rows } = list;
+  if (query.isPending) return <ListSkeleton label={t('loading')} />;
+  if (query.isError && rows.length === 0)
+    return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+  if (rows.length === 0)
+    return (
+      <EmptyState
+        icon={<FileText />}
+        title={unfiltered ? t('emptyTitle') : t('noMatchTitle')}
+        description={unfiltered ? t('emptyBody') : t('noMatchBody')}
+      />
+    );
+  return (
+    <div className="flex flex-col gap-6">
+      <ResponsiveTable
+        caption={t('title')}
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.id}
+      />
+      <LoadMore
+        shown={rows.length}
+        total={list.total}
+        hasMore={list.hasMore}
+        loading={list.loadingMore}
+        onMore={list.loadMore}
+      />
+    </div>
   );
 }

@@ -21,6 +21,8 @@ export type ChatReply =
       readonly kind: 'list';
       readonly body: string;
       readonly button: string;
+      /** The heading over the rows (WhatsApp keeps 24 characters); none when left out. */
+      readonly section?: string;
       readonly rows: readonly {
         readonly id: string;
         readonly title: string;

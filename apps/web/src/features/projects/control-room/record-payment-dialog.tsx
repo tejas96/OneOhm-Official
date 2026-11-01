@@ -105,7 +105,12 @@ export function RecordPaymentDialog({
     onSuccess: async (project) => {
       client.setQueryData(['project', projectId], project);
       await invalidate();
-      toast({ title: t('recorded'), description: milestone?.label, tone: 'success' });
+      toast({
+        title: t('recorded'),
+        description: milestone?.label,
+        tone: 'success',
+        illustration: 'payment',
+      });
       onOpenChange(false);
     },
     onError: (caught) => {

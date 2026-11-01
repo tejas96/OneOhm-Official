@@ -70,9 +70,13 @@ export const quotations = pgTable(
     marginPaise: money('margin_paise').notNull(),
     subsidyPaise: money('subsidy_paise').notNull(),
     subsidyIneligible: text('subsidy_ineligible'),
+    /** Expected state support on top of the central subsidy; shown only, never revenue. */
+    stateSupportPaise: money('state_support_paise').notNull().default(0),
     effectivePaise: money('effective_paise').notNull(),
     /** Rates and subsidy rule used, kept so the price can always be explained. */
     snapshot: jsonb('snapshot').notNull(),
+    /** Measured cable runs, structure, crew and site detail; null means site-type defaults. */
+    costing: jsonb('costing'),
     validUntil: calendarDate('valid_until').notNull(),
     sentAt: instant('sent_at'),
     acceptedAt: instant('accepted_at'),

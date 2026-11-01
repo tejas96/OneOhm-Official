@@ -25,7 +25,6 @@ import { useChangeRequest } from './use-discom';
 /** One change request: what changes, the DISCOM steps, and what was applied. */
 export function ChangeRequestView({ id }: { readonly id: string }) {
   const t = useTranslations('discom.request');
-  const typeT = useTranslations('discom.types');
   const statusT = useTranslations('discom.requests.status');
   const canManage = useCan('discom.manage');
   const query = useChangeRequest(id);
@@ -64,7 +63,7 @@ export function ChangeRequestView({ id }: { readonly id: string }) {
               label={statusT(request.status)}
             />
           </p>
-          <h1 className="type-display-lg text-balance text-ink">{typeT(request.type)}</h1>
+          <h1 className="type-display-lg text-balance text-ink">{request.title}</h1>
           <p className="type-body text-ink-muted">
             <Link href={`/customers/${request.customer.id}`} className="text-ink hover:text-accent">
               {request.customer.name}
@@ -155,7 +154,8 @@ function ImpactCard({ request }: { readonly request: ChangeRequestDetail }) {
   const stageT = useTranslations('stages');
   const held = [
     ...request.blocks.stages.map((stage) => stageT(stage)),
-    ...request.blocks.taskKeys.map(() => t('netMeteringApplication')),
+    ...(request.blocks.taskTitles ??
+      request.blocks.taskKeys.map(() => t('netMeteringApplication'))),
   ];
   return (
     <section className="flex flex-col gap-2 rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70">

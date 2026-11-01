@@ -2,7 +2,7 @@
 
 import type { ReportStatus } from '@oneohm/api-contracts';
 import { cn, Tooltip } from '@oneohm/design-system/web';
-import { CircleAlert, Download, Minus } from 'lucide-react';
+import { CircleAlert, Clock, Download, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
@@ -43,10 +43,26 @@ export function ReportChip({
       </a>
     );
   }
+  // Every detail is in; it is made once the task it certifies is done (PRD 3.18).
+  if (report.missing.length === 0 && report.waitingFor) {
+    return (
+      <Tooltip content={t('waitsFor', { task: report.waitingFor })}>
+        <Link
+          href={`/projects/${projectId}?tab=reports`}
+          className={cn(BASE, 'bg-sunken text-ink-muted hover:ring-1 hover:ring-hairline')}
+        >
+          <Clock aria-hidden className="size-3.5 shrink-0" />
+          <span className="truncate">{t('waiting')}</span>
+          <span className="sr-only">{report.name}</span>
+        </Link>
+      </Tooltip>
+    );
+  }
   return (
     <Tooltip
       content={
         <ul className="flex flex-col gap-0.5">
+          {report.waitingFor && <li>{t('waitsFor', { task: report.waitingFor })}</li>}
           {report.missing.map((field) => (
             <li key={field.field}>{field.label}</li>
           ))}

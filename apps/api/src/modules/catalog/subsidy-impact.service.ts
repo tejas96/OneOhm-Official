@@ -5,6 +5,7 @@ import { calculateSubsidy, ruleInForce, type SubsidyRule } from '@oneohm/domain'
 import { todayIn } from '@oneohm/shared';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
+import { costingOf } from '../quotations/quotation-detail';
 import { QuotationPricingService } from '../quotations/quotation-pricing.service';
 
 type QuotationRow = typeof quotations.$inferSelect;
@@ -35,6 +36,7 @@ function pricingInput(row: QuotationRow): QuotationPreviewInput {
     distanceKm: row.distanceKm,
     dcCableMeters: row.dcCableMeters,
     acCableMeters: row.acCableMeters,
+    costing: costingOf(row.costing),
     discountPaise: row.discountPaise,
   };
 }

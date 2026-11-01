@@ -8,8 +8,8 @@ import type {
   RateCardValues,
 } from '@oneohm/api-contracts';
 import { discoms, products, rateCards, STARTER_RATE_CARD_NAME } from '@oneohm/database';
-import type { RateCard } from '@oneohm/domain';
-import { and, asc, desc, eq, ne } from 'drizzle-orm';
+import { toCostingCard } from '@oneohm/domain';
+import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -117,7 +117,7 @@ export class CatalogAdminService {
       .orderBy(desc(rateCards.updatedAt))
       .limit(1);
     if (!row) throw notFound('The rate card');
-    const rates = row.rates as RateCard;
+    const rates = toCostingCard(row.rates);
     return {
       name: row.name,
       starter: row.name === STARTER_RATE_CARD_NAME,
@@ -125,7 +125,7 @@ export class CatalogAdminService {
       rates: {
         ...rates,
         discountApprovalBp: rates.discountApprovalBp ?? this.env.DISCOUNT_APPROVAL_BP,
-      },
+      } as RateCardValues,
     };
   }
 
@@ -136,14 +136,39 @@ export class CatalogAdminService {
       .orderBy(desc(rateCards.updatedAt))
       .limit(1);
     if (!row) throw notFound('The rate card');
+    await this.assertRateProducts(rates);
+    // A linked product's GST is read from the catalog when pricing, never stored here.
+    const saved = {
+      ...rates,
+      rateLines: rates.rateLines.map(({ taxRateBp: _tax, ...line }) => line),
+    };
     await this.db
       .update(rateCards)
-      .set({ name: OWN_RATE_CARD_NAME, rates, updatedAt: new Date() })
+      .set({ name: OWN_RATE_CARD_NAME, rates: saved, updatedAt: new Date() })
       .where(eq(rateCards.id, row.id));
     await recordAudit(this.db, actor.userId, 'rate_card.updated', 'rate_card', row.id, {
       ...rates,
     });
     return this.rateCard();
+  }
+
+  /** Every product a rate line names must be in the catalog. */
+  private async assertRateProducts(rates: RateCardValues): Promise<void> {
+    const ids = [...new Set(rates.rateLines.flatMap((line) => line.productId ?? []))];
+    if (ids.length === 0) return;
+    const found = await this.db
+      .select({ id: products.id })
+      .from(products)
+      .where(inArray(products.id, ids));
+    const known = new Set(found.map((product) => product.id));
+    const index = rates.rateLines.findIndex(
+      (line) => line.productId !== null && !known.has(line.productId),
+    );
+    if (index >= 0) {
+      throw invalid('A rate names a product that is not in the catalog.', {
+        [`rateLines.${index}.productId`]: 'Pick the product again.',
+      });
+    }
   }
 
   private async assertSkuFree(sku: string, exceptId?: string): Promise<void> {

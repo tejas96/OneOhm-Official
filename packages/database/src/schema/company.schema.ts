@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
+import { doublePrecision, integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { createdAt, primaryId, updatedAt } from './columns';
 
 /**
@@ -23,14 +23,18 @@ export const companyProfile = pgTable('company_profile', {
   signatureKey: text('signature_key'),
   stampKey: text('stamp_key'),
   quotationValidityDays: integer('quotation_validity_days').notNull().default(15),
+  /** The base crews and material leave from; site distances are measured from it (PRD 3.9 B). */
+  baseLatitude: doublePrecision('base_latitude'),
+  baseLongitude: doublePrecision('base_longitude'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
 /**
- * Configurable rate cards and site-type defaults for the price engine (PRD 3.9), as
- * the domain `RateCard` shape. One active row; a change never alters accepted quotes,
- * because quotations keep their own snapshot.
+ * Configurable rate cards and site-type defaults for the price engine (PRD 3.9), as the
+ * domain `CostingCard` shape (rows saved before it hold the flat card; `toCostingCard`
+ * reads both). One active row; a change never alters accepted quotes, because quotations
+ * keep their own snapshot.
  */
 export const rateCards = pgTable('rate_cards', {
   id: primaryId(),

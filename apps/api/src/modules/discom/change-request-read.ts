@@ -2,17 +2,20 @@ import type { ChangeRequestDetail, ChangeRequestSummary } from '@oneohm/api-cont
 import {
   changeRequestSteps,
   changeRequests,
+  changeRequestTypes,
   customers,
   type DatabaseExecutor,
   discoms,
   projects,
   properties,
+  taskTemplates,
   users,
 } from '@oneohm/database';
-import { CHANGE_REQUEST_DEFINITIONS } from '@oneohm/domain';
+import { defaultChangeRequestType } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { definitionOf } from '../../common/read-models/change-request-type-store';
 
 /** Change requests as list rows, newest first, with the step they are on. */
 export async function changeRequestSummaries(
@@ -28,12 +31,14 @@ export async function changeRequestSummaries(
       projectCode: projects.code,
       projectName: projects.name,
       discomCode: discoms.code,
+      typeTitle: changeRequestTypes.title,
     })
     .from(changeRequests)
     .innerJoin(customers, eq(customers.id, changeRequests.customerId))
     .innerJoin(properties, eq(properties.id, changeRequests.propertyId))
     .leftJoin(projects, eq(projects.id, changeRequests.projectId))
     .leftJoin(discoms, eq(discoms.id, changeRequests.discomId))
+    .leftJoin(changeRequestTypes, eq(changeRequestTypes.id, changeRequests.typeId))
     .where(where)
     .orderBy(desc(changeRequests.createdAt));
   const ids = rows.map((row) => row.request.id);
@@ -55,6 +60,7 @@ export async function changeRequestSummaries(
       id: row.request.id,
       number: row.request.number,
       type: row.request.type,
+      title: row.typeTitle ?? defaultChangeRequestType(row.request.type)?.title ?? row.request.type,
       status: row.request.status,
       customer: { id: row.request.customerId, name: row.customerName },
       property: { id: row.request.propertyId, label: row.propertyLabel, city: row.propertyCity },
@@ -87,7 +93,13 @@ export async function presentChangeRequest(
     .where(eq(changeRequestSteps.changeRequestId, id))
     .orderBy(asc(changeRequestSteps.position));
   const today = todayIn();
-  const definition = CHANGE_REQUEST_DEFINITIONS[request.type];
+  const definition = await definitionOf(db, request);
+  const held = definition.blocks.taskKeys.length
+    ? await db
+        .select({ key: taskTemplates.key, title: taskTemplates.title })
+        .from(taskTemplates)
+        .where(inArray(taskTemplates.key, [...definition.blocks.taskKeys]))
+    : [];
   return {
     ...summary,
     values: request.values,
@@ -96,7 +108,13 @@ export async function presentChangeRequest(
     appliedValues: request.appliedValues ?? null,
     note: request.note,
     cancelledReason: request.cancelledReason,
-    blocks: { stages: [...definition.blocks.stages], taskKeys: [...definition.blocks.taskKeys] },
+    blocks: {
+      stages: [...definition.blocks.stages],
+      taskKeys: [...definition.blocks.taskKeys],
+      taskTitles: definition.blocks.taskKeys.map(
+        (key) => held.find((task) => task.key === key)?.title ?? key,
+      ),
+    },
     steps: steps.map(({ step, assigneeName }) => ({
       id: step.id,
       key: step.key,

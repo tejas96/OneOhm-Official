@@ -9,6 +9,8 @@ import { LeadIntakeService } from './lead-intake.service';
 import { LeadStepsController } from './lead-steps.controller';
 import { LeadStepsService } from './lead-steps.service';
 import { LeadsService } from './leads.service';
+import { SiteConnectionController } from './site-connection.controller';
+import { SiteConnectionService } from './site-connection.service';
 
 @Global()
 @Module({
@@ -18,6 +20,7 @@ import { LeadsService } from './leads.service';
     CustomerContactController,
     PhoneMatchController,
     WebsiteLeadController,
+    SiteConnectionController,
   ],
   providers: [
     LeadsService,
@@ -26,6 +29,7 @@ import { LeadsService } from './leads.service';
     LeadStepsService,
     CustomerContactService,
     LeadIntakeService,
+    SiteConnectionService,
   ],
   exports: [CustomersService, LeadsService, LeadIntakeService],
 })

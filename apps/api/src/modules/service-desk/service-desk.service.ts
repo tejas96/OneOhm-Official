@@ -39,7 +39,7 @@ const STATUS_LABEL: Readonly<Record<Ticket['status'], string>> = {
   resolved: 'resolved',
 };
 
-function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
+export function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
   if (!filter) return true;
   if (filter === 'breached') return slaBreached(ticket.sla);
   return ticket.sla.response === 'due_soon' || ticket.sla.resolution === 'due_soon';

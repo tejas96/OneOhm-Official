@@ -6,7 +6,8 @@ import {
   slaDueDates,
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { readBusinessSetting } from './business-settings';
 import type { DatabaseExecutor } from './client';
 import { serviceCategories } from './schema/after-sales.schema';
 import { serviceRequests } from './schema/customer-portal.schema';
@@ -33,11 +34,14 @@ export async function serviceAssignee(
   if (people.length === 0) return null;
   const ids = people.map((person) => person.id);
   const loads = await db
-    .select({ userId: serviceRequests.assigneeUserId, open: sql<number>`count(*)::int` })
+    .select({
+      userId: serviceRequests.assigneeUserId,
+      open: sql<number>`count(*) filter (where ${serviceRequests.status} <> 'resolved')::int`,
+      // For "take turns": when each person last got a request.
+      last: sql<string | null>`max(${serviceRequests.createdAt})::text`,
+    })
     .from(serviceRequests)
-    .where(
-      and(ne(serviceRequests.status, 'resolved'), inArray(serviceRequests.assigneeUserId, ids)),
-    )
+    .where(inArray(serviceRequests.assigneeUserId, ids))
     .groupBy(serviceRequests.assigneeUserId);
   const leave = await db
     .select({
@@ -60,8 +64,12 @@ export async function serviceAssignee(
     onLeave: person.onLeave,
     away: leave.filter((row) => row.userId === person.id),
     openTasks: loads.find((load) => load.userId === person.id)?.open ?? 0,
+    lastAssignedAt: loads.find((load) => load.userId === person.id)?.last ?? null,
   }));
-  return pickAssignee(candidates, SERVICE_ROLE_KEY, { from: onDate, to: onDate })?.userId ?? null;
+  // The same assignment rules as project work, from Settings (PRD 7.2).
+  const rules = await readBusinessSetting(db, 'assignment');
+  const day = { from: onDate, to: onDate };
+  return pickAssignee(candidates, SERVICE_ROLE_KEY, day, null, rules)?.userId ?? null;
 }
 
 /** The promised hours for a category, from Settings or the shipped defaults. */

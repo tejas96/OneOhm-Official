@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "thumbnail_key" text;

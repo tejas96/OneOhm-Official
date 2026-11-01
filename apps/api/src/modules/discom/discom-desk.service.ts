@@ -8,15 +8,19 @@ import {
   discoms,
   projects,
   projectTasks,
+  taskWaits,
   users,
 } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { buildDiscomDesk, type DiscomWait } from './discom-desk-build';
+
+const userRef = (id: string | null, name: string | null) =>
+  id && name ? { id, fullName: name } : null;
 
 /**
  * Everything waiting on a DISCOM, per DISCOM, with ageing, reference numbers and the
@@ -28,7 +32,23 @@ export class DiscomDeskService {
 
   async desk(): Promise<DiscomDesk> {
     const master = await this.db.select().from(discoms);
-    const taskRows = await this.db
+    const waits = [...(await this.taskWaitsOnDiscom()), ...(await this.stepWaitsOnDiscom())];
+    const [openRequests] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(changeRequests)
+      .where(eq(changeRequests.status, 'open'));
+    return buildDiscomDesk(waits, master, todayIn(), openRequests?.count ?? 0);
+  }
+
+  /** Project tasks waiting on a DISCOM now, or that did before they were resumed. */
+  private async taskWaitsOnDiscom(): Promise<DiscomWait[]> {
+    // Earlier DISCOM waits of tasks that were resumed, so they still count (PRD 3.16).
+    const earlier = await this.db
+      .select({ taskId: taskWaits.taskId, from: taskWaits.startedAt, to: taskWaits.endedAt })
+      .from(taskWaits)
+      .where(eq(taskWaits.party, 'discom'));
+    const resumed = [...new Set(earlier.map((row) => row.taskId))];
+    const rows = await this.db
       .select({
         task: projectTasks,
         code: projects.code,
@@ -41,8 +61,41 @@ export class DiscomDeskService {
       .innerJoin(projects, eq(projects.id, projectTasks.projectId))
       .leftJoin(users, eq(users.id, projectTasks.assigneeUserId))
       .leftJoin(discomFollowUps, eq(discomFollowUps.taskId, projectTasks.id))
-      .where(and(eq(projectTasks.waitingParty, 'discom'), isNotNull(projectTasks.waitingSince)));
-    const stepRows = await this.db
+      .where(
+        or(
+          and(eq(projectTasks.waitingParty, 'discom'), isNotNull(projectTasks.waitingSince)),
+          resumed.length > 0 ? inArray(projectTasks.id, resumed) : undefined,
+        ),
+      );
+    return rows.map(({ task, followUp, ...row }) => {
+      const current = task.waitingParty === 'discom' ? task.waitingSince : null;
+      return {
+        kind: 'task',
+        id: task.id,
+        title: task.title,
+        subject: `${row.code} · ${row.name}`,
+        href:
+          task.status === 'waiting'
+            ? `/command-center/tasks?show=waiting&party=discom&project=${task.projectId}`
+            : `/projects/${task.projectId}?tab=tasks&layout=list`,
+        assignee: userRef(task.assigneeUserId, row.assigneeName),
+        discomId: row.discomId,
+        since: current,
+        until: task.status === 'completed' ? task.completedAt : null,
+        earlier: earlier.filter((wait) => wait.taskId === task.id),
+        finished: task.status === 'completed',
+        waitingNow: task.status === 'waiting' && current !== null,
+        referenceNumber: followUp?.referenceNumber ?? null,
+        office: followUp?.office ?? null,
+        nextFollowUpOn: followUp?.nextFollowUpOn ?? null,
+        note: followUp?.note ?? task.note,
+      };
+    });
+  }
+
+  /** Change-request steps that wait (or waited) on a DISCOM. */
+  private async stepWaitsOnDiscom(): Promise<DiscomWait[]> {
+    const rows = await this.db
       .select({
         step: changeRequestSteps,
         request: changeRequests,
@@ -59,56 +112,24 @@ export class DiscomDeskService {
           isNotNull(changeRequestSteps.waitingSince),
         ),
       );
-
-    const userRef = (id: string | null, name: string | null) =>
-      id && name ? { id, fullName: name } : null;
-    const waits: DiscomWait[] = [];
-    for (const row of taskRows) {
-      if (!row.task.waitingSince) continue;
-      waits.push({
-        kind: 'task',
-        id: row.task.id,
-        title: row.task.title,
-        subject: `${row.code} · ${row.name}`,
-        href:
-          row.task.status === 'waiting'
-            ? `/command-center/tasks?show=waiting&party=discom&project=${row.task.projectId}`
-            : `/projects/${row.task.projectId}?tab=tasks&layout=list`,
-        assignee: userRef(row.task.assigneeUserId, row.assigneeName),
-        discomId: row.discomId,
-        since: row.task.waitingSince,
-        until: row.task.status === 'completed' ? row.task.completedAt : null,
-        waitingNow: row.task.status === 'waiting',
-        referenceNumber: row.followUp?.referenceNumber ?? null,
-        office: row.followUp?.office ?? null,
-        nextFollowUpOn: row.followUp?.nextFollowUpOn ?? null,
-        note: row.followUp?.note ?? row.task.note,
-      });
-    }
-    for (const row of stepRows) {
-      if (!row.step.waitingSince) continue;
-      waits.push({
-        kind: 'change_request',
-        id: row.step.id,
-        title: row.step.title,
-        subject: `${row.request.number} · ${row.customerName}`,
-        href: `/discom/change-requests/${row.request.id}`,
-        assignee: userRef(row.step.assigneeUserId, row.assigneeName),
-        discomId: row.request.discomId,
-        since: row.step.waitingSince,
-        until: row.step.status === 'completed' ? row.step.completedAt : null,
-        waitingNow: row.step.status === 'waiting' && row.request.status === 'open',
-        referenceNumber: row.request.referenceNumber,
-        office: null,
-        nextFollowUpOn: row.step.nextFollowUpOn,
-        note: row.step.note,
-      });
-    }
-    const [openRequests] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(changeRequests)
-      .where(eq(changeRequests.status, 'open'));
-    return buildDiscomDesk(waits, master, todayIn(), openRequests?.count ?? 0);
+    return rows.map(({ step, request, ...row }) => ({
+      kind: 'change_request',
+      id: step.id,
+      title: step.title,
+      subject: `${request.number} · ${row.customerName}`,
+      href: `/discom/change-requests/${request.id}`,
+      assignee: userRef(step.assigneeUserId, row.assigneeName),
+      discomId: request.discomId,
+      since: step.waitingSince,
+      until: step.status === 'completed' ? step.completedAt : null,
+      earlier: [],
+      finished: step.status === 'completed',
+      waitingNow: step.status === 'waiting' && request.status === 'open',
+      referenceNumber: request.referenceNumber,
+      office: null,
+      nextFollowUpOn: step.nextFollowUpOn,
+      note: step.note,
+    }));
   }
 
   async updateFollowUp(

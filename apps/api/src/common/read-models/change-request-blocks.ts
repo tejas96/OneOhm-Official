@@ -1,6 +1,7 @@
 import { changeRequests, type DatabaseExecutor } from '@oneohm/database';
-import { CHANGE_REQUEST_DEFINITIONS, type EpcStage } from '@oneohm/domain';
+import type { EpcStage } from '@oneohm/domain';
 import { and, eq, inArray } from 'drizzle-orm';
+import { definitionsOf } from './change-request-type-store';
 
 export interface ChangeRequestBlock {
   readonly title: string;
@@ -22,15 +23,18 @@ export async function openChangeRequestBlocks(
     .select({
       projectId: changeRequests.projectId,
       type: changeRequests.type,
+      typeId: changeRequests.typeId,
       number: changeRequests.number,
     })
     .from(changeRequests)
     .where(
       and(inArray(changeRequests.projectId, [...projectIds]), eq(changeRequests.status, 'open')),
     );
-  for (const row of rows) {
-    if (!row.projectId) continue;
-    const definition = CHANGE_REQUEST_DEFINITIONS[row.type];
+  // Each DISCOM's own impact rules (Settings → DISCOMs), read as they are now.
+  const definitions = await definitionsOf(db, rows);
+  for (const [index, row] of rows.entries()) {
+    const definition = definitions[index];
+    if (!row.projectId || !definition) continue;
     if (definition.blocks.stages.length === 0 && definition.blocks.taskKeys.length === 0) continue;
     blocks.set(row.projectId, [
       ...(blocks.get(row.projectId) ?? []),

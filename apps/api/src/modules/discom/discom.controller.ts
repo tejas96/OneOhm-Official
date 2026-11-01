@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
+import { ChangeRequestNoticesService } from './change-request-notices';
 import { ChangeRequestStepsService } from './change-request-steps.service';
 import { ChangeRequestsService } from './change-requests.service';
 import { DiscomDeskService } from './discom-desk.service';
@@ -13,6 +14,7 @@ export class DiscomController {
     private readonly desk: DiscomDeskService,
     private readonly requests: ChangeRequestsService,
     private readonly steps: ChangeRequestStepsService,
+    private readonly notices: ChangeRequestNoticesService,
   ) {}
 
   @TsRestHandler(apiContract.discom)
@@ -43,6 +45,10 @@ export class DiscomController {
       changeRequestSuggestions: async ({ params }) => {
         view();
         return { status: 200, body: await this.requests.suggestions(params.id) };
+      },
+      changeRequestNotices: async ({ query }) => {
+        view();
+        return { status: 200, body: await this.notices.notices(actor, query) };
       },
       startChangeRequestStep: async ({ params }) => ({
         status: 200,

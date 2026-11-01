@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CommandCenter, CommandCenterQuery, ProjectSummary } from '@oneohm/api-contracts';
-import { projects, projectTasks } from '@oneohm/database';
+import { projects, projectTasks, readBusinessSetting } from '@oneohm/database';
 import { ATTENTION_TONES, finishWindow } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, ne } from 'drizzle-orm';
@@ -36,14 +36,14 @@ export class CommandCenterService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async get(query: CommandCenterQuery = {}): Promise<CommandCenter> {
-    const scope = centerScope(query, todayIn());
+    const scope = centerScope(query, todayIn(), await readBusinessSetting(this.db, 'dashboard'));
     const [live, completed] = await Promise.all([
       projectSummaries(this.db, scope.projects),
       projectSummaries(this.db, scope.completed),
     ]);
     live.sort((left, right) => SEVERITY[left.tone] - SEVERITY[right.tone]);
     const [money, open, flows, lists] = await Promise.all([
-      moneyFigures(this.db, scope.today, scope.start),
+      moneyFigures(this.db, scope.today, scope.start, scope.settings.dueSoonDays),
       this.openTasks(scope),
       Promise.all([
         installed(this.db, scope),
@@ -54,7 +54,7 @@ export class CommandCenterService {
         risksIn(this.db, scope),
         deadlinesIn(this.db, scope),
         decisionsWaiting(this.db),
-        buildActions(this.db, scope.today),
+        buildActions(this.db, scope.today, scope.settings),
         materialRisks(this.db, scope),
       ]),
     ]);

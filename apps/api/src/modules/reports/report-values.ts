@@ -36,6 +36,8 @@ export function reportValues(
     re_installed_capacity_rooftop_kw: project.groundMount ? '0' : installed,
     re_installed_capacity_ground_kw: project.groundMount ? installed : '0',
     re_installed_capacity_rooftop_ground_kw: installed,
+    // The model agreement is made at onboarding (PRD 3.18): the day the project started.
+    project_onboarded_date: project.startDate,
   };
   return {
     ...derived,

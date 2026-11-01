@@ -14,6 +14,7 @@ export const CUSTOMER_DOCUMENT_CATEGORIES = [
   'bank_loan',
   'discom',
   'subsidy',
+  'income_proof',
   'commissioning_handover',
   'warranty',
   'product_manual',

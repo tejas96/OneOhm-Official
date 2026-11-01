@@ -1,6 +1,7 @@
 import { routeFor, smsText } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { brandName } from './company-brand';
 import { customers } from './schema/crm.schema';
 import { customerHandovers } from './schema/customer-handovers.schema';
 import { projects } from './schema/projects.schema';
@@ -55,7 +56,10 @@ export async function routeCustomerMessage(
       recipient: message.recipient,
       template: message.template,
       payload: sms
-        ? { ...message.payload, text: smsText(message.words.title, message.words.body) }
+        ? {
+            ...message.payload,
+            text: smsText(message.words.title, message.words.body, await brandName(db)),
+          }
         : message.payload,
       dedupeKey: sms ? `${message.dedupeKey}:sms` : message.dedupeKey,
     })
@@ -111,7 +115,7 @@ export async function fallBackToSms(
       channel: 'sms',
       recipient: row.recipient,
       template: row.template,
-      payload: { ...payload, text: smsText(said.title, said.body) },
+      payload: { ...payload, text: smsText(said.title, said.body, await brandName(db)) },
       dedupeKey: `${row.dedupeKey ?? row.id}:sms`,
     })
     .onConflictDoNothing()

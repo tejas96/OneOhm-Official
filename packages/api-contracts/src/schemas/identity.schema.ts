@@ -44,6 +44,8 @@ export const personSchema = z.object({
   loadState: z.enum(['ok', 'full', 'over']),
   /** Location for this person over their roles and the company: on, off, or null to follow. */
   tracking: z.enum(['on', 'off']).nullable(),
+  /** Who the person reports to (PRD 3.12); null for no one. */
+  reportsTo: z.object({ id: idSchema, fullName: z.string() }).nullable(),
 });
 export type Person = z.infer<typeof personSchema>;
 

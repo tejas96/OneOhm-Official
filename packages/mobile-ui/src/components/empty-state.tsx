@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { Button } from './button';
+import { canShowIllustrations } from './illustration';
 import { SkeletonRows } from './skeleton';
 import { Text } from './text';
 
@@ -10,15 +11,20 @@ export interface EmptyStateProps {
   readonly title: string;
   readonly description?: string | undefined;
   readonly icon?: ReactNode;
+  /** A small illustration shown instead of the icon (see `Illustration`). */
+  readonly illustration?: ReactNode;
   readonly action?: { readonly label: string; readonly onPress: () => void } | undefined;
 }
 
 /** A quiet, dashed panel saying what is (not) here and the one thing to do next. */
-export function EmptyState({ title, description, icon, action }: EmptyStateProps) {
+export function EmptyState({ title, description, icon, illustration, action }: EmptyStateProps) {
   const theme = useTheme();
+  // A build without the Lottie view keeps the icon.
+  const art = illustration && canShowIllustrations() ? illustration : null;
   return (
     <View style={[styles.box, { borderColor: theme.colors.borderStrong }]}>
-      {icon ? (
+      {art}
+      {icon && !art ? (
         <View style={[styles.icon, { backgroundColor: theme.colors.accentSoft }]}>{icon}</View>
       ) : null}
       <Text variant="titleMd" align="center">

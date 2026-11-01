@@ -1,4 +1,5 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
+import { defaultDiscomId } from '@oneohm/domain';
 import {
   Button,
   describeError,
@@ -16,6 +17,8 @@ import { api, keys } from '@/api/api';
 import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
 import { LEAD_SITE } from '@/copy/sales';
+import { DiscomPicker } from '@/features/discom/discom-picker';
+import { offeredDiscoms, useDiscoms } from '@/features/discom/use-discoms';
 
 type Form = { address: string; city: string; district: string; pincode: string; consumer: string };
 
@@ -44,6 +47,10 @@ export function LeadSiteSheet({
   });
   const set = (key: keyof Form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
+  // The DISCOM on the bill; with a single active DISCOM it starts picked, to confirm.
+  const discoms = useDiscoms();
+  const [pickedDiscom, setDiscom] = useState<string | null>(null);
+  const discomId = pickedDiscom ?? defaultDiscomId(discoms.data ?? [], null);
 
   const save = useMutation({
     mutationFn: () =>
@@ -61,6 +68,7 @@ export function LeadSiteSheet({
               pincode: form.pincode.trim() || null,
               subsidyCategory: lead.subsidyCategory,
               consumerNumber: form.consumer.trim() || null,
+              discomId,
               floors: 1,
             },
           },
@@ -147,6 +155,15 @@ export function LeadSiteSheet({
           accessibilityLabel={LEAD_SITE.consumerNumber}
         />
       </Field>
+      {discoms.data ? (
+        <DiscomPicker
+          discoms={offeredDiscoms(discoms.data, null)}
+          value={discomId}
+          onChange={setDiscom}
+          optional={COMMON.optional}
+          error={error('discomId')}
+        />
+      ) : null}
       {general ? (
         <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
           {general}

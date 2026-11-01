@@ -41,7 +41,7 @@ export const SUPPORT: Copy<typeof en.SUPPORT> = {
   projectLabel: 'कोणती सिस्टिम',
   descriptionLabel: 'काय होत आहे?',
   descriptionHint: 'उदा. आज सकाळपासून इन्व्हर्टरवर लाल दिवा दिसत आहे.',
-  submit: 'OneOhm ला पाठवा',
+  submit: 'विनंती पाठवा',
   sent: 'पाठवले. आमची सर्व्हिस टीम तुम्हाला फोन करेल.',
   historyTitle: 'तुमच्या विनंत्या',
   emptyTitle: 'अजून कोणतीही विनंती नाही',
@@ -75,7 +75,7 @@ export const REFER: Copy<typeof en.REFER> = {
   emptyBody: 'तुम्ही सुचवलेले लोक आणि त्यांचे काम कुठवर आले ते इथे दिसेल.',
   status: {
     received: 'मिळाले',
-    in_progress: 'OneOhm शी बोलणे सुरू',
+    in_progress: 'आमच्या टीमशी बोलणे सुरू',
     ordered: 'सोलर बसवत आहेत',
     installed: 'सोलर बसवला',
     closed: 'बंद',
@@ -88,15 +88,16 @@ export const REFER: Copy<typeof en.REFER> = {
   termsPerKw: (amount, event) =>
     `${WHEN_FRIEND[event]} त्यांच्या प्रत्येक kW साठी तुम्हाला ${amount} मिळतील.`,
   termsOff: 'सोलर हवा असणाऱ्या कोणालाही तुमचा कोड द्या. आम्ही त्यांना फोन करू आणि तुम्हाला कळवत राहू.',
-  approvalNote: 'प्रत्येक बक्षीस OneOhm मंजूर करते आणि मग तुम्हाला देते.',
+  approvalNote: 'प्रत्येक बक्षीस आम्ही मंजूर करतो आणि मग तुम्हाला देतो.',
   shareWhatsApp: 'WhatsApp वर पाठवा',
   shareOther: 'दुसऱ्या प्रकारे पाठवा',
   shareFailed: 'शेअर उघडले नाही. तुमचा कोड मित्राला सांगा.',
-  shareText: (code, link) =>
+  shareText: (code, link, company) =>
     link
-      ? `मी OneOhm कडून सोलर बसवला आणि माझे वीज बिल कमी झाले. तुम्हालाही सोलर हवा आहे का? माझा रेफरल कोड ${code} सांगून OneOhm ला WhatsApp करा: ${link}`
-      : `मी OneOhm कडून सोलर बसवला आणि माझे वीज बिल कमी झाले. तुम्हालाही सोलर हवा आहे का? OneOhm ला फोन करा आणि माझा रेफरल कोड ${code} सांगा.`,
-  friendMessage: (code) => `नमस्कार OneOhm, मला घरासाठी सोलर बसवायचा आहे. माझा रेफरल कोड ${code} आहे.`,
+      ? `मी ${company} कडून सोलर बसवला आणि माझे वीज बिल कमी झाले. तुम्हालाही सोलर हवा आहे का? माझा रेफरल कोड ${code} सांगून ${company} ला WhatsApp करा: ${link}`
+      : `मी ${company} कडून सोलर बसवला आणि माझे वीज बिल कमी झाले. तुम्हालाही सोलर हवा आहे का? ${company} ला फोन करा आणि माझा रेफरल कोड ${code} सांगा.`,
+  friendMessage: (code, company) =>
+    `नमस्कार ${company}, मला घरासाठी सोलर बसवायचा आहे. माझा रेफरल कोड ${code} आहे.`,
   totals: {
     earned: 'मिळाले',
     pending: 'मंजुरीची वाट',
@@ -115,7 +116,7 @@ export const REFER: Copy<typeof en.REFER> = {
 
 export const FEEDBACK: Copy<typeof en.FEEDBACK> = {
   title: 'तुमचा अनुभव सांगा',
-  intro: 'पहिल्या भेटीपासून सिस्टिम सुरू होईपर्यंत OneOhm सोबतचा तुमचा सोलर प्रवास कसा होता?',
+  intro: 'पहिल्या भेटीपासून सिस्टिम सुरू होईपर्यंत आमच्यासोबतचा तुमचा सोलर प्रवास कसा होता?',
   ratingLabel: 'तुमचे रेटिंग',
   stars: STARS,
   commentLabel: 'अजून सांगा',

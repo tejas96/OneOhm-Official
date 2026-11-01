@@ -1,6 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { TaskTemplateInput, TaskTemplateRecord } from '@oneohm/api-contracts';
-import { messageTemplates, roles, skills, taskTemplates } from '@oneohm/database';
+import {
+  REPORT_KEYS,
+  type TaskTemplateInput,
+  type TaskTemplateRecord,
+} from '@oneohm/api-contracts';
+import {
+  discomReportTemplates,
+  messageTemplates,
+  roles,
+  skills,
+  taskTemplates,
+} from '@oneohm/database';
 import { asc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -133,7 +143,11 @@ export class TaskTemplatesService {
     const messages = await this.db
       .select({ key: messageTemplates.key, fields: messageTemplates.fields })
       .from(messageTemplates);
+    const reportRows = await this.db
+      .selectDistinct({ key: discomReportTemplates.key })
+      .from(discomReportTemplates);
     return {
+      reports: new Set([...REPORT_KEYS, ...reportRows.map((row) => row.key)]),
       keys: new Map(templates.map((row) => [row.key, row.dependsOn])),
       roles: new Set(roleRows.map((row) => row.key)),
       skills: new Set(skillRows.map((row) => row.key)),

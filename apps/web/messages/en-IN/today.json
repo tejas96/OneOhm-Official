@@ -24,6 +24,40 @@
         "title": "Coming up",
         "empty": "Nothing else is scheduled for you yet."
       }
+    },
+    "views": "Your day",
+    "myWork": "My work",
+    "approvals": {
+      "title": "Waiting for my approval",
+      "brief": "{count, plural, one {One thing is waiting for your approval.} other {# things are waiting for your approval.}}",
+      "loading": "Loading what waits for you",
+      "emptyTitle": "Nothing is waiting for you",
+      "emptyBody": "Leave, claims, bills, discounts and finished work that need your yes appear here.",
+      "filter": "Show one kind",
+      "all": "All",
+      "noneOfKind": "Nothing of this kind is waiting for you.",
+      "approve": "Approve",
+      "approved": "Approved",
+      "open": "Open",
+      "waitingLong": "Waiting long",
+      "askedBy": "{name} · {when}",
+      "asked": "Asked {when}",
+      "kinds": {
+        "task_review": "Finished task",
+        "assignee_confirm": "Who does it",
+        "discount": "Discount",
+        "leave": "Leave",
+        "attendance_correction": "Attendance fix",
+        "travel_claim": "Travel claim",
+        "purchase_request": "Purchase request",
+        "vendor_advance": "Vendor advance",
+        "bill": "Bill",
+        "points": "Points",
+        "bonus": "Bonus",
+        "commission": "Commission",
+        "referral_reward": "Referral reward"
+      },
+      "proposed": "Proposed: {name} · {when}"
     }
   }
 }

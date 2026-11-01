@@ -1,9 +1,12 @@
 'use client';
 
-import { Checkbox, Field, Input, SegmentedControl, Textarea } from '@oneohm/design-system/web';
+import { Checkbox, Field, SegmentedControl, Textarea } from '@oneohm/design-system/web';
 import { EVIDENCE_KINDS, PROJECT_TYPES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
+import { DiscomPick } from './discom-pick';
+import { FactPick } from './fact-pick';
 import type { SetDraft, TaskDraft } from './task-draft';
+import { TaskReportsPick } from './task-reports-pick';
 
 const FLAGS = ['loan', 'battery', 'groundMount', 'subsidy', 'nameChange'] as const;
 type Tri = 'any' | 'yes' | 'no';
@@ -65,13 +68,11 @@ export function TaskConditionsFields({
           </div>
         ))}
       </div>
-      <Field label={t('discoms')} hint={t('discomsHint')} error={errors['conditions.discomCodes']}>
-        <Input
-          value={draft.discomText}
-          onChange={(e) => set('discomText', e.target.value)}
-          className="font-mono uppercase"
-        />
-      </Field>
+      <DiscomPick
+        value={draft.conditions.discomCodes ?? []}
+        onChange={(discomCodes) => setCondition({ discomCodes })}
+        error={errors['conditions.discomCodes']}
+      />
       <Field label={t('evidence')} error={errors.evidence}>
         <div className="flex flex-wrap gap-x-5">
           {EVIDENCE_KINDS.map((kind) => (
@@ -98,13 +99,16 @@ export function TaskConditionsFields({
           />
         </Field>
       )}
-      <Field label={t('captures')} hint={t('capturesHint')} error={errors.captures}>
-        <Input
-          value={draft.capturesText}
-          onChange={(e) => set('capturesText', e.target.value)}
-          className="font-mono"
-        />
-      </Field>
+      <FactPick
+        value={draft.captures}
+        onChange={(captures) => set('captures', captures)}
+        error={errors.captures}
+      />
+      <TaskReportsPick
+        value={draft.reports}
+        onChange={(reports) => set('reports', reports)}
+        error={errors.reports}
+      />
     </div>
   );
 }

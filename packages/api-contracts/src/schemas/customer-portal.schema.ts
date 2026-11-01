@@ -10,6 +10,7 @@ import {
   phoneSchema,
 } from '../common/primitives';
 import { customerLanguageSchema } from './customer-language.schema';
+import { customerPendingChangeSchema } from './project-change.schema';
 import {
   SERVICE_KINDS,
   SERVICE_STATUSES,
@@ -83,8 +84,12 @@ export const customerProjectSchema = z.object({
   subsidy: z.object({
     amountPaise: paiseSchema,
     status: z.enum(['not_applicable', 'pending', 'applied', 'inspected', 'released']),
+    /** Expected state support for a low-income household, on top (PRD 3.5). */
+    stateSupportPaise: paiseSchema.optional(),
   }),
   quotation: z.object({ id: idSchema, number: z.string() }),
+  /** A scope change sent for the customer's OK, with its price difference (read only). */
+  pendingChange: customerPendingChangeSchema.nullable().optional(),
   contact: z.object({ name: z.string(), phone: z.string().nullable() }).nullable(),
   feedbackGiven: z.boolean(),
 });

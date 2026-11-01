@@ -60,7 +60,7 @@ export const LEAD = {
     manual: 'Office',
     website: 'Website',
     whatsapp: 'WhatsApp',
-    employee: 'OneOhm team',
+    employee: 'Employee referral',
     reseller: 'Reseller',
     referral: 'Referral',
   },
@@ -114,7 +114,7 @@ export const LEAD_QUOTES = {
 
 export const LEAD_SITE = {
   add: 'Add the site',
-  needed: 'Add the site to save a quotation.',
+  needed: 'Add the site to save a quotation and keep the electricity bill and papers.',
   title: 'Add the site',
   description: 'Where the system goes. The rest can come from the survey.',
   address: 'Address',
@@ -127,4 +127,22 @@ export const LEAD_SITE = {
   label: { individual: 'Home', society: 'Society', commercial: 'Business' },
   save: 'Save the site',
   saved: 'Site saved. You can quote now.',
+} as const;
+
+/** A lead closed as lost: why, and bringing it back (PRD 3.3). */
+export const LOST_LEAD = {
+  title: 'Closed as lost',
+  reasons: {
+    price: 'Price too high',
+    competitor: 'Went with another company',
+    not_interested: 'Not interested any more',
+    no_response: 'Could not reach them',
+    not_feasible: 'Site not suitable',
+    finance: 'Could not arrange the money',
+    postponed: 'Putting it off for now',
+    other: 'Other',
+  },
+  reopen: 'Reopen lead',
+  reopenHint: 'It goes back to Contacted with a follow-up today.',
+  reopened: 'Lead reopened',
 } as const;

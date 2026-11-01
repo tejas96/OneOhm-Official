@@ -11,11 +11,15 @@ export const DOCUMENT_CATEGORIES = [
   'quotation',
   'invoice_receipt',
   'vendor',
+  /** A contractor's papers and work orders; never shown to customers (rates are internal). */
+  'contractor',
   /** A panel maker's certificate that the cells are made in India (goods receipt). */
   'dcr_certificate',
   'bank_loan',
   'discom',
   'subsidy',
+  /** Proof of a low-income household (ration card, income certificate) for the state top-up. */
+  'income_proof',
   'commissioning_handover',
   'warranty',
   /** Makers' user manuals for the panels, inverter and battery (PRD 5.4). */

@@ -3,12 +3,20 @@ import {
   CreateBucketCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import {
+  canThumbnail,
+  isThumbnailKey,
+  makeThumbnail,
+  THUMBNAIL_TYPE,
+  thumbnailKeyOf,
+} from './thumbnail-image';
 
 export interface StoredObject {
   readonly body: Readable;
@@ -66,6 +74,29 @@ export class ObjectStorageService implements OnModuleInit {
         ContentLength: body.length,
       }),
     );
+    // Every stored photo also gets its small preview, without holding up the upload.
+    if (canThumbnail(contentType) && !isThumbnailKey(key)) void this.putThumbnail(key, body);
+  }
+
+  /** Whether a file is stored under this key. */
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Stores the 400 px WebP preview beside the photo; a failure is retried on first view. */
+  private async putThumbnail(key: string, original: Buffer): Promise<void> {
+    try {
+      await this.put(thumbnailKeyOf(key), await makeThumbnail(original), THUMBNAIL_TYPE);
+    } catch (error) {
+      this.logger.warn(
+        `No preview for "${key}": ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**

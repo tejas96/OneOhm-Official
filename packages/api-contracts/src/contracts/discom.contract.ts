@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { calendarDateSchema, idSchema, noteSchema } from '../common/primitives';
 import {
   changeRequestDetailSchema,
+  changeRequestNoticesSchema,
   changeRequestStatusSchema,
   changeRequestSuggestionSchema,
   changeRequestSummarySchema,
@@ -55,6 +56,8 @@ export const discomContract = c.router({
         /** The site; may be left out when a project is given (its site is used). */
         propertyId: idSchema.optional(),
         projectId: idSchema.nullable().optional(),
+        /** For a site with no DISCOM yet: the one it is with (saved on the site). */
+        discomId: idSchema.optional(),
         values: z.record(z.string(), z.string().trim().max(200)).default({}),
         note: noteSchema.nullable().optional(),
       })
@@ -75,6 +78,21 @@ export const discomContract = c.router({
     path: '/properties/:id/change-request-suggestions',
     pathParams: idParams,
     responses: { 200: z.array(changeRequestSuggestionSchema) },
+  },
+  changeRequestNotices: {
+    method: 'GET',
+    path: '/change-request-notices',
+    query: z
+      .object({
+        propertyId: idSchema.optional(),
+        projectId: idSchema.optional(),
+        quotationId: idSchema.optional(),
+      })
+      .refine((query) => query.propertyId || query.projectId || query.quotationId, {
+        message: 'Pick a site, project or quotation.',
+      }),
+    responses: { 200: changeRequestNoticesSchema },
+    summary: 'Change requests a mismatch suggests, and whether a quotation needs re-pricing.',
   },
   startChangeRequestStep: {
     method: 'POST',

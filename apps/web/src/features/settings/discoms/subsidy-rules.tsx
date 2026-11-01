@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
+import { StateSupportSection } from '../state-support/state-support-section';
 import { useSubsidyRules } from '../use-settings';
 import { SubsidyImpactSheet } from './subsidy-impact';
 import { type RuleActions, SubsidyRuleCard } from './subsidy-rule-card';
@@ -90,6 +91,7 @@ export function SubsidyRules() {
           onClose={() => setEditor((current) => ({ ...current, open: false }))}
         />
       )}
+      <StateSupportSection />
       <WithdrawRuleDialog rule={withdrawing} onClose={() => setWithdrawing(null)} />
       <SubsidyImpactSheet asOf={impactOn} onClose={() => setImpactOn(null)} />
     </section>

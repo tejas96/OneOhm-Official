@@ -18,6 +18,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadError } from '@/components/query-state';
+import { DocumentsGallery } from '@/features/documents/gallery/documents-gallery';
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 import { AgeingBars } from '../../finance/overview/ageing-bars';
@@ -28,7 +29,7 @@ import { VendorKpis } from './vendor-kpis';
 import { VendorAdvancesTable, VendorBillsTable } from './vendor-money-tables';
 import { VendorOrdersTable, VendorRejectionsTable } from './vendor-supply-tables';
 
-const TABS = ['orders', 'bills', 'advances', 'inspection'] as const;
+const TABS = ['orders', 'bills', 'advances', 'inspection', 'papers'] as const;
 type TabValue = (typeof TABS)[number];
 
 /** One vendor (PRD 3.10): delivery record, what is owed by age, advances and orders. */
@@ -39,10 +40,13 @@ export function VendorProfileView({ id }: { readonly id: string }) {
   const params = useSearchParams();
   const query = useVendorProfile(id);
   const canManage = useCan('procurement.manage');
+  const canSeePapers = useCan('documents.view');
   const canPay = useCan('finance.record_payments');
+  // The vendor's own papers (PRD 3.14), for people who see documents.
+  const tabs = TABS.filter((value) => value !== 'papers' || canSeePapers);
   const [editing, setEditing] = useState(false);
   const [advancing, setAdvancing] = useState(false);
-  const tab = TABS.find((value) => value === params.get('tab')) ?? 'orders';
+  const tab = tabs.find((value) => value === params.get('tab')) ?? 'orders';
   const select = (value: TabValue) => {
     const next = new URLSearchParams(params);
     next.set('tab', value);
@@ -67,6 +71,7 @@ export function VendorProfileView({ id }: { readonly id: string }) {
     bills: query.data.bills.length,
     advances: query.data.advances.length,
     inspection: query.data.rejections.length,
+    papers: 0,
   };
 
   return (
@@ -123,7 +128,7 @@ export function VendorProfileView({ id }: { readonly id: string }) {
       <Tabs
         value={tab}
         onValueChange={select}
-        items={TABS.map((value) => ({
+        items={tabs.map((value) => ({
           value,
           label: t(`tabs.${value}`, { count: counts[value] }),
         }))}
@@ -140,6 +145,11 @@ export function VendorProfileView({ id }: { readonly id: string }) {
         </TabPanel>
         <TabPanel value="inspection" className="pt-6 outline-none">
           {tab === 'inspection' && <VendorRejectionsTable rejections={query.data.rejections} />}
+        </TabPanel>
+        <TabPanel value="papers" className="pt-6 outline-none">
+          {tab === 'papers' && (
+            <DocumentsGallery scope={{ vendorId: vendor.id }} bundleName={vendor.name} />
+          )}
         </TabPanel>
       </Tabs>
       <VendorDialog open={editing} vendor={vendor} onClose={() => setEditing(false)} />

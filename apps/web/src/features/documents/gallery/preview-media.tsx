@@ -4,7 +4,7 @@ import type { DocumentRecord } from '@oneohm/api-contracts';
 import { Skeleton } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useState } from 'react';
-import { documentUrl } from '@/lib/api/upload';
+import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
 import { kindOf, showsInline, titleOf } from './document-kinds';
 import { PaperTile } from './document-tile';
 import { PreviewPlayback } from './preview-playback';
@@ -69,7 +69,9 @@ export function PreviewMedia({ document }: { readonly document: DocumentRecord }
         src={documentUrl(document.id)}
         alt={titleOf(document.name)}
         onError={() => setImageFailed(true)}
-        className="max-h-[55dvh] min-h-48 w-full bg-sunken object-contain"
+        // The small preview (already loaded by the gallery) shows until the original arrives.
+        style={{ backgroundImage: `url(${documentThumbUrl(document.id)})` }}
+        className="max-h-[55dvh] min-h-48 w-full bg-sunken bg-contain bg-center bg-no-repeat object-contain"
       />
     );
   } else if (isPdf && pdf.url) {

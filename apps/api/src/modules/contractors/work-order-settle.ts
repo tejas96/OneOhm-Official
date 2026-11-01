@@ -16,6 +16,7 @@ import { settleWorkOrder } from '@oneohm/domain';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { contractorTdsBp } from './contractor-tds';
 
 /** Rework deductions recorded on a work order so far. */
 export async function reworkTotal(db: DatabaseExecutor, workOrderId: string): Promise<number> {
@@ -76,7 +77,7 @@ export async function settleIfDone(
     reworkDeductionsPaise: await reworkTotal(db, workOrderId),
     advancesPaise: order.order.advancesPaise,
     retentionBp: order.contractor.retentionBp,
-    tdsBp: order.contractor.tdsBp,
+    tdsBp: await contractorTdsBp(db, order.contractor.tdsBp),
   });
   const [lead] = await db
     .select({ userId: contractorMembers.userId })

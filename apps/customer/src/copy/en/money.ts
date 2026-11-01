@@ -1,7 +1,7 @@
 export const PAYMENTS = {
   payNow: (amount: string) => `Pay ${amount} now`,
   payHint: 'UPI, cards or net banking, through Razorpay.',
-  payFailed: 'The payment page could not open. Please try again, or call your OneOhm contact.',
+  payFailed: 'The payment page could not open. Please try again, or call your contact.',
   /** Price minus the expected subsidy, in one plain line (PRD 5.3). */
   effectiveCost: (price: string, subsidy: string, effective: string) =>
     `${price} price − ${subsidy} expected subsidy = ${effective} your effective cost`,
@@ -26,7 +26,7 @@ export const PAYMENTS = {
   dueOn: (date: string) => `Due ${date}`,
   howToPayTitle: 'How to pay',
   howToPayBody:
-    'Your OneOhm contact will share payment details. Always confirm the account with them before you pay.',
+    'Your contact will share payment details. Always confirm the account with them before you pay.',
   callContact: (name: string) => `Call ${name}`,
   subsidyNote: (amount: string) =>
     `The expected government subsidy of ${amount} is paid by the government straight to your bank account; it is not part of these payments.`,
@@ -57,7 +57,7 @@ export const BILLING = {
     cash: 'Cash',
   },
   credit: (amount: string) =>
-    `${amount} you paid above what was due is held for you. OneOhm will set it against your next payment or refund it.`,
+    `${amount} you paid above what was due is held for you. We will set it against your next payment or refund it.`,
 } as const;
 
 export const DOCUMENTS = {
@@ -72,11 +72,11 @@ export const DOCUMENTS = {
   reportsEmpty: 'Agreements and completion reports appear here when they are ready.',
   filesTitle: 'Your papers',
   filesEmpty:
-    'Bills, warranty cards, product manuals and handover papers that OneOhm shares will appear here.',
+    'Bills, warranty cards, product manuals and handover papers that we share will appear here.',
   open: 'Open',
   opening: 'Opening',
   openFailed: 'This file could not open. Please try again.',
-  requestsTitle: 'OneOhm needs from you',
+  requestsTitle: 'Needed from you',
   requestsIntro: 'Send a clear photo or a PDF. It goes straight to your project file.',
   requestMeta: (project: string | null, kind: string) =>
     [kind, project].filter(Boolean).join(' · '),
@@ -99,6 +99,7 @@ export const DOCUMENTS = {
     bank_loan: 'Bank loan',
     discom: 'Electricity board',
     subsidy: 'Subsidy',
+    income_proof: 'Income proof',
     commissioning_handover: 'Handover',
     warranty: 'Warranty',
     product_manual: 'Product manual',

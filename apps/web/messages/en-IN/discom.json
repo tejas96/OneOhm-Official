@@ -2,11 +2,14 @@
   "discom": {
     "eyebrow": "Delivery",
     "title": "DISCOM desk",
-    "description": "Everything waiting on the utility, oldest first. DISCOM time is kept apart from OneOhm's own.",
+    "description": "Everything waiting on the utility, oldest first. DISCOM time is kept apart from our own.",
     "raiseButton": "Raise change request",
     "loading": "Loading the DISCOM desk",
     "tabsLabel": "DISCOM work",
-    "tabs": { "desk": "Waiting on DISCOM", "requests": "Change requests" },
+    "tabs": {
+      "desk": "Waiting on DISCOM",
+      "requests": "Change requests"
+    },
     "totals": {
       "waiting": "Waiting now",
       "followUpsDue": "Follow-ups due",
@@ -37,7 +40,21 @@
       "description": "Average days each finished step waited, so delays are visible by DISCOM.",
       "empty": "Timings appear once DISCOM steps finish.",
       "days": "{days} days",
-      "samples": "{count, plural, one {# time} other {# times}}"
+      "samples": "{count, plural, one {# time} other {# times}}",
+      "view": "Group the timings",
+      "byStep": "By step",
+      "byOffice": "By office",
+      "officeTitle": "Slowest DISCOM offices",
+      "officeDescription": "Average days work waited at each DISCOM office, finished and still waiting.",
+      "officeEmpty": "Offices appear once follow-ups name the DISCOM office."
+    },
+    "notice": {
+      "label": "Suggested for this site",
+      "title": "Worth a change request",
+      "suggestion": "{type}.",
+      "raise": "Raise request",
+      "repricingTitle": "Priced for another property type",
+      "repricing": "This quotation was priced as {pricedAs}, but the site is now {siteIs}. Revise the price before it is accepted."
     },
     "requests": {
       "title": "Change requests",
@@ -52,7 +69,11 @@
         "raised": "Raised"
       },
       "stepOf": "Step {done} of {total} done",
-      "status": { "open": "Open", "completed": "Done", "cancelled": "Cancelled" }
+      "status": {
+        "open": "Open",
+        "completed": "Done",
+        "cancelled": "Cancelled"
+      }
     },
     "types": {
       "consumer_name_change": "Consumer name change",
@@ -89,7 +110,13 @@
       "choose": "Choose",
       "note": "Note (optional)",
       "steps": "{count, plural, one {# DISCOM step} other {# DISCOM steps}} will be created.",
-      "blocks": "Dependent project work waits until it is done."
+      "blocks": "Dependent project work waits until it is done.",
+      "discom": "The site's DISCOM",
+      "discomHint": "This site has none yet; it is saved on the site.",
+      "papers": "Papers needed",
+      "onFile": "on file",
+      "notOnFile": "not on file yet",
+      "papersMissing": "Add the missing papers to the customer first."
     },
     "fields": {
       "newName": "New consumer name",
@@ -110,7 +137,8 @@
         "subsidyCategory": "Property type",
         "phase": "Phase",
         "sanctionedLoadW": "Sanctioned load",
-        "consumerNumber": "Consumer number"
+        "consumerNumber": "Consumer number",
+        "evMeterNumber": "EV meter number"
       }
     },
     "captures": {

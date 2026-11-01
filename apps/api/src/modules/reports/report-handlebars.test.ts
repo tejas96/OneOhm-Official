@@ -1,14 +1,12 @@
+import type { Company } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
 import { assetText } from './report-assets';
-import { REPORT_DEFINITIONS } from './report-definitions';
+import { builtInDefinitions } from './report-definitions';
 import { engine, indianDate, templateVariables, withFillLines } from './report-handlebars';
+import type { ReportProject } from './report-status.service';
+import { reportValues } from './report-values';
 
 const FILL = '<span class="rpt-fill"></span>';
-
-/** Required facts a template reads through a derived value (see report-values.ts). */
-const FEEDS_DERIVED: Readonly<Record<string, readonly string[]>> = {
-  wcr: ['inverter_make'],
-};
 
 describe('report templates', () => {
   it('reads the variables a template uses, not helper or partial names', () => {
@@ -48,12 +46,35 @@ describe('report templates', () => {
   });
 
   it('compiles every statutory template with OneOhm partials', () => {
-    for (const definition of REPORT_DEFINITIONS) {
+    for (const definition of builtInDefinitions()) {
       const source = assetText('reports', 'templates', `${definition.key}.hbs`);
       const html = engine.compile(source)({ ...withFillLines(source, {}), __stamp: 'data:x' });
       expect(html.length, definition.key).toBeGreaterThan(500);
-      const unused = definition.required.filter((key) => !templateVariables(source).has(key));
-      expect(unused, definition.key).toEqual(FEEDS_DERIVED[definition.key] ?? []);
+    }
+  });
+
+  it('prints no blank line once every required detail is in (PRD 3.18)', () => {
+    for (const definition of builtInDefinitions()) {
+      const source = assetText('reports', 'templates', `${definition.key}.hbs`);
+      const facts = Object.fromEntries(definition.required.map((key) => [key, '5']));
+      const project = {
+        code: 'OH-2026-001',
+        type: 'residential',
+        groundMount: false,
+        discomName: 'MSEDCL',
+        discomCode: 'MSEDCL',
+        discomId: 'msedcl',
+        startDate: '2026-11-01',
+        subsidy: true,
+        facts,
+        captureTask: new Map(),
+      } satisfies ReportProject;
+      const company = Object.fromEntries(
+        (definition.company ?? []).map((field) => [field, 'Set']),
+      ) as unknown as Company;
+      const values = reportValues(project, company, '2026-11-01');
+      const html = engine.compile(source)({ ...withFillLines(source, values), __stamp: 'x' });
+      expect(html.includes(FILL), definition.key).toBe(false);
     }
   });
 });

@@ -207,7 +207,7 @@
               <tr>
                 <td>4</td>
                 <td class="label">E-mail</td>
-                <td>{{consumer_email}}</td>
+                <td>{{#if consumer_email}}{{consumer_email}}{{else}}NA{{/if}}</td>
               </tr>
               <tr>
                 <td>5</td>
@@ -257,7 +257,7 @@
               <tr>
                 <td>14</td>
                 <td class="label">Installation date</td>
-                <td>{{> dateBlank}}</td>
+                <td>{{formatDate installation_date}}</td>
               </tr>
               <tr>
                 <td>15</td>
@@ -311,7 +311,7 @@
             installed_capacity_kw}} KWp</strong> capacity has been installed at the site
             <strong>{{dash site_address}}</strong> District <strong>{{dash site_city}}</strong>
             of <strong>{{dash site_state}}</strong> which has been installed by M/S <strong>{{dash
-            vendor_name}}</strong> On {{> dateBlank}} The system is as per
+            vendor_name}}</strong> on <strong>{{formatDate installation_date}}</strong>. The system is as per
             BIS/MNRE specifications. The system has been checked for its performance and found in
             order for further commissioning.
           </p>

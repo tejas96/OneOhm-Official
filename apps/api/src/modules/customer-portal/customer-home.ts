@@ -15,6 +15,7 @@ import { EPC_STAGES } from '@oneohm/domain';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { environmentOnce } from '../../config/environment-once';
 import { openLinksFor } from '../online-payments/open-links';
+import { pendingChangesFor } from '../project-changes/customer-pending';
 
 const day = (value: Date) => value.toISOString().slice(0, 10);
 
@@ -82,6 +83,7 @@ export async function customerProjects(
       quotationId: quotations.id,
       quotationNumber: quotations.number,
       subsidyPaise: quotations.subsidyPaise,
+      stateSupportPaise: quotations.stateSupportPaise,
       managerName: users.fullName,
       managerPhone: users.phoneE164,
     })
@@ -123,6 +125,7 @@ export async function customerProjects(
     db,
     milestones.map((milestone) => milestone.id),
   );
+  const pending = await pendingChangesFor(db, ids);
   const feedback = await db
     .select({ projectId: customerFeedback.projectId })
     .from(customerFeedback)
@@ -181,8 +184,10 @@ export async function customerProjects(
       subsidy: {
         amountPaise: row.subsidy ? row.subsidyPaise : 0,
         status: subsidyStatus(row.subsidy, own),
+        stateSupportPaise: row.subsidy ? row.stateSupportPaise : 0,
       },
       quotation: { id: row.quotationId, number: row.quotationNumber },
+      pendingChange: pending.get(row.id) ?? null,
       contact: row.managerName ? { name: row.managerName, phone: row.managerPhone } : null,
       feedbackGiven: feedback.some((entry) => entry.projectId === row.id),
     };

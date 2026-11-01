@@ -55,7 +55,7 @@ describe('projectState', () => {
   it('never shows a wait on the OneOhm team as on track', () => {
     expect(projectState({ ...base, waitingOn: 'internal' })).toEqual({
       tone: 'atRisk',
-      label: 'Waiting on OneOhm team',
+      label: 'Waiting on our team',
     });
     expect(projectState({ ...base, waitingOn: 'discom', overdueTasks: 1 }).tone).toBe('waiting');
     expect(projectState({ ...base, waitingOn: 'internal', overdueTasks: 1 }).label).toBe(

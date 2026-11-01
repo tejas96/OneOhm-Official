@@ -1,4 +1,9 @@
-import type { QuotationDetail, QuotationPreview, QuotationTotals } from '@oneohm/api-contracts';
+import type {
+  QuotationCosting,
+  QuotationDetail,
+  QuotationPreview,
+  QuotationTotals,
+} from '@oneohm/api-contracts';
 import { type DatabaseExecutor, leads, quotations } from '@oneohm/database';
 import { and, eq, or, type SQL, sql } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
@@ -41,12 +46,16 @@ const hideTotals = (totals: QuotationTotals): QuotationTotals => ({
   marginPaise: 0,
 });
 
+/** The detail stays (people may edit it); the cost build-up goes. */
+const withoutBuild = ({ build: _build, ...costing }: QuotationCosting): QuotationCosting => costing;
+
 export function previewFor(actor: Actor, preview: QuotationPreview): QuotationPreview {
   if (seesCost(actor)) return preview;
   return {
     ...preview,
     totals: hideTotals(preview.totals),
     lines: preview.lines.map((line) => ({ ...line, costPaise: 0 })),
+    costing: preview.costing && withoutBuild(preview.costing),
     comparison: preview.comparison && {
       dcr: hideTotals(preview.comparison.dcr),
       nonDcr: hideTotals(preview.comparison.nonDcr),
@@ -64,5 +73,6 @@ export function detailFor(actor: Actor, detail: QuotationDetail): QuotationDetai
     },
     totals: hideTotals(detail.totals),
     lines: detail.lines.map((line) => ({ ...line, costPaise: 0 })),
+    costing: detail.costing && withoutBuild(detail.costing),
   };
 }

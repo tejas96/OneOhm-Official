@@ -9,7 +9,7 @@ export const SUPPORT = {
   projectLabel: 'Which system',
   descriptionLabel: 'What is happening?',
   descriptionHint: 'For example: the inverter shows a red light since this morning.',
-  submit: 'Send to OneOhm',
+  submit: 'Send request',
   sent: 'Sent. Our service team will call you.',
   historyTitle: 'Your requests',
   emptyTitle: 'No requests yet',
@@ -59,7 +59,7 @@ export const REFER = {
   emptyBody: 'Your referrals and how they are going will show here.',
   status: {
     received: 'Received',
-    in_progress: 'Talking to OneOhm',
+    in_progress: 'Talking to our team',
     ordered: 'Going solar',
     installed: 'Went solar',
     closed: 'Closed',
@@ -73,16 +73,16 @@ export const REFER = {
   termsPerKw: (amount: string, event: ReferEvent) =>
     `Earn ${amount} for every kW your friend installs, once they ${THEY_DO[event]}.`,
   termsOff: 'Share your code with anyone who wants solar. We call them and keep you posted.',
-  approvalNote: 'OneOhm approves each reward, then pays it to you.',
+  approvalNote: 'We approve each reward, then pay it to you.',
   shareWhatsApp: 'Share on WhatsApp',
   shareOther: 'Share another way',
   shareFailed: 'Sharing did not open. Tell your friend your code instead.',
-  shareText: (code: string, link: string | null) =>
+  shareText: (code: string, link: string | null, company: string) =>
     link
-      ? `I got solar from OneOhm and my electricity bill came down. Want solar too? Message OneOhm on WhatsApp with my referral code ${code}: ${link}`
-      : `I got solar from OneOhm and my electricity bill came down. Want solar too? Call OneOhm and quote my referral code ${code}.`,
-  friendMessage: (code: string) =>
-    `Hi OneOhm, I would like solar for my home. My referral code is ${code}.`,
+      ? `I got solar from ${company} and my electricity bill came down. Want solar too? Message ${company} on WhatsApp with my referral code ${code}: ${link}`
+      : `I got solar from ${company} and my electricity bill came down. Want solar too? Call ${company} and quote my referral code ${code}.`,
+  friendMessage: (code: string, company: string) =>
+    `Hi ${company}, I would like solar for my home. My referral code is ${code}.`,
   totals: {
     earned: 'Earned',
     pending: 'Waiting for approval',
@@ -101,7 +101,7 @@ export const REFER = {
 
 export const FEEDBACK = {
   title: 'Rate your experience',
-  intro: 'How was your OneOhm solar journey, from the first visit to switch-on?',
+  intro: 'How was your solar journey with us, from the first visit to switch-on?',
   ratingLabel: 'Your rating',
   stars: ['Poor', 'Could be better', 'Good', 'Very good', 'Excellent'] as const,
   commentLabel: 'Tell us more',

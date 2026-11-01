@@ -1,4 +1,5 @@
 import {
+  type DatabaseExecutor,
   notifyHolders,
   paymentMilestones,
   projectActivities,
@@ -38,7 +39,21 @@ export async function applyAcceptedRevision(
       updatedAt: new Date(),
     })
     .where(eq(projects.id, project.id));
-  const [last] = await tx
+  const { fits, last } = await adjustFinalPayment(tx, project, difference, quotationId);
+  await tx.insert(projectActivities).values({
+    projectId: project.id,
+    kind: 'budget',
+    message:
+      difference === 0
+        ? 'Customer accepted the survey revision. Budget locked.'
+        : `Customer accepted the survey revision (${formatInr(difference)}). Budget locked${fits && last ? `; ${last.label} is now ${formatInr(last.amount + difference)}` : ''}.`,
+    userId,
+  });
+}
+
+/** The project's last customer payment: where a price difference goes while it is upcoming. */
+export async function lastCustomerPayment(db: DatabaseExecutor, projectId: string) {
+  const [last] = await db
     .select({
       id: paymentMilestones.id,
       amount: paymentMilestones.amountPaise,
@@ -46,11 +61,23 @@ export async function applyAcceptedRevision(
       label: paymentMilestones.label,
     })
     .from(paymentMilestones)
-    .where(
-      and(eq(paymentMilestones.projectId, project.id), eq(paymentMilestones.payer, 'customer')),
-    )
+    .where(and(eq(paymentMilestones.projectId, projectId), eq(paymentMilestones.payer, 'customer')))
     .orderBy(desc(paymentMilestones.position))
     .limit(1);
+  return last;
+}
+
+/**
+ * Puts a price difference on the final customer payment while that is still upcoming and
+ * can take it; otherwise finance is asked to adjust the schedule (PRD 3.5, 3.11).
+ */
+export async function adjustFinalPayment(
+  tx: Transaction,
+  project: { readonly id: string; readonly code: string },
+  difference: number,
+  quotationId: string,
+) {
+  const last = await lastCustomerPayment(tx, project.id);
   const fits = last?.status === 'upcoming' && last.amount + difference > 0;
   if (difference !== 0 && last && fits)
     await tx
@@ -65,13 +92,5 @@ export async function applyAcceptedRevision(
       subject: { type: 'project', id: project.id, projectId: project.id },
       dedupeKey: `schedule_adjust:${quotationId}`,
     });
-  await tx.insert(projectActivities).values({
-    projectId: project.id,
-    kind: 'budget',
-    message:
-      difference === 0
-        ? 'Customer accepted the survey revision. Budget locked.'
-        : `Customer accepted the survey revision (${formatInr(difference)}). Budget locked${fits && last ? `; ${last.label} is now ${formatInr(last.amount + difference)}` : ''}.`,
-    userId,
-  });
+  return { fits, last };
 }

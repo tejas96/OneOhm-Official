@@ -1,0 +1,91 @@
+import { createHmac, randomUUID } from 'node:crypto';
+import type { ProjectDetail, TrialBalance } from '@oneohm/api-contracts';
+import { rows } from './db';
+import { API, type Session } from './http';
+import { today } from './sales';
+
+/** The secret the runner gives the acceptance API, so the suite can sign like Razorpay. */
+export const WEBHOOK_SECRET = 'oneohm-acceptance-webhook-secret';
+
+type Milestone = ProjectDetail['milestones'][number];
+export type Trigger =
+  | 'quotation_accepted'
+  | 'material_dispatch'
+  | 'commissioning_completed'
+  | 'loan_disbursement';
+
+/** The project's milestone made due by this business event. */
+export function milestoneOf(detail: ProjectDetail, trigger: Trigger): Milestone {
+  const found = detail.milestones.find((milestone) => milestone.trigger === trigger);
+  if (!found) throw new Error(`${detail.code} has no ${trigger} milestone.`);
+  return found;
+}
+
+export const owed = (milestone: Milestone) => milestone.amountPaise - milestone.paidPaise;
+
+/** Records money received against a milestone (cash, cheque, UPI, bank transfer). */
+export function recordPayment(
+  who: Session,
+  projectId: string,
+  milestone: Milestone,
+  method: 'cash' | 'cheque' | 'bank_transfer' | 'upi',
+  extra: Record<string, unknown> = {},
+): Promise<ProjectDetail> {
+  return who.post<ProjectDetail>(`/projects/${projectId}/payments`, {
+    milestoneId: milestone.id,
+    amountPaise: owed(milestone),
+    method,
+    receivedOn: today(),
+    reference: `${method.toUpperCase()}-${randomUUID().slice(0, 8)} (test)`,
+    ...extra,
+  });
+}
+
+/** A gateway webhook signed with the shared secret (HMAC SHA-256 of the raw body, hex). */
+export async function signedWebhook(
+  body: Record<string, unknown>,
+  secret = WEBHOOK_SECRET,
+): Promise<{ status: number; outcome: string }> {
+  const raw = JSON.stringify(body);
+  const res = await fetch(`${API}/webhooks/razorpay`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-razorpay-signature': createHmac('sha256', secret).update(raw).digest('hex'),
+      'x-razorpay-event-id': `evt_acceptance_${randomUUID().replace(/-/g, '').slice(0, 14)}`,
+    },
+    body: raw,
+  });
+  const text = await res.text();
+  const outcome = text.startsWith('{') ? (JSON.parse(text) as { outcome?: string }).outcome : '';
+  return { status: res.status, outcome: outcome ?? text };
+}
+
+/** How many ledger entries one business event posted (each event books once). */
+export async function postings(sourceType: string, sourceId: string): Promise<number> {
+  const [row] = await rows<{ count: string }>(
+    'select count(*) from journal_entries where source_type = $1 and source_id = $2',
+    [sourceType, sourceId],
+  );
+  return Number(row?.count ?? 0);
+}
+
+/** The trial balance must always balance: every posting has equal debits and credits. */
+export async function expectBalanced(who: Session): Promise<TrialBalance> {
+  const balance = await who.get<TrialBalance>('/finance/trial-balance');
+  if (!balance.balanced || balance.totalDebitPaise !== balance.totalCreditPaise) {
+    throw new Error(
+      `Trial balance out: debits ${balance.totalDebitPaise}, credits ${balance.totalCreditPaise}.`,
+    );
+  }
+  return balance;
+}
+
+/** The gateway's own id for a link or payout, as Razorpay would send it back. */
+export async function providerId(table: 'payment_links' | 'bank_payouts', id: string) {
+  const column = table === 'payment_links' ? 'provider_link_id' : 'provider_payout_id';
+  const [row] = await rows<{ ref: string }>(`select ${column} as ref from ${table} where id = $1`, [
+    id,
+  ]);
+  return row?.ref ?? '';
+}

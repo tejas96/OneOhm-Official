@@ -3,6 +3,7 @@ import type { BusinessReportQuery, ProfitabilityReport } from '@oneohm/api-contr
 import { bucketIndexOf, share } from '@oneohm/domain';
 import { DATABASE, type Database } from '../../config/core.module';
 import { type CsvTable, percent, rupees } from './csv';
+import { readInstallEstimates } from './install-estimate.read';
 import {
   actualCost,
   type BillFact,
@@ -21,6 +22,12 @@ import {
 } from './profitability-report.read';
 import { type ReportScope, reportScope } from './report-scope';
 
+/** The estimate split with contractor rate cards in place of the quoted labour. */
+const withContractorLabour = (
+  estimate: ProfitabilityReport['cost']['estimate'],
+  shiftPaise: number,
+) => ({ ...estimate, installationPaise: estimate.installationPaise + shiftPaise });
+
 type ProjectRow = ProfitabilityReport['byProject'][number];
 
 /** Estimated against actual cost and margin, per project (PRD 3.9, Flow F). */
@@ -35,17 +42,28 @@ export class ProfitabilityReportService {
     const quotationIds = started.flatMap((project) =>
       project.quotation ? [project.quotation.id] : [],
     );
-    const [lines, bills, moves, travel] = await Promise.all([
+    const [lines, bills, moves, travel, installs] = await Promise.all([
       readQuotedLines(this.db, quotationIds),
       readBills(this.db, ids),
       readStockMoves(this.db, ids),
       readTravel(this.db, ids),
+      readInstallEstimates(
+        this.db,
+        started.flatMap((project) =>
+          project.quotation ? [{ projectId: project.id, quotationId: project.quotation.id }] : [],
+        ),
+      ),
     ]);
+    // A contractor's rate card replaces the quoted labour in the estimate (D12).
+    const contractorShift = (projectId: string) => {
+      const install = installs.get(projectId);
+      return install ? install.amountPaise - install.companyPaise : 0;
+    };
     const rows = started
       .map((project): ProjectRow => {
         const quote = project.quotation;
         const contractPaise = quote ? quote.totalPaise - quote.taxPaise : 0;
-        const estimatedCostPaise = quote?.costPaise ?? 0;
+        const estimatedCostPaise = quote ? quote.costPaise + contractorShift(project.id) : 0;
         const own = <T extends { projectId: string }>(rows: readonly T[]) =>
           rows.filter((row) => row.projectId === project.id);
         const actual = actualCost(own(bills), own(moves), own(travel));
@@ -90,7 +108,10 @@ export class ProfitabilityReportService {
         overBudget: rows.filter((row) => row.variancePaise > 0).length,
       },
       cost: {
-        estimate: splitEstimate(lines),
+        estimate: withContractorLabour(
+          splitEstimate(lines),
+          ids.reduce((total, id) => total + contractorShift(id), 0),
+        ),
         actual: {
           stockPaise: sum((row) => row.actual.stockPaise),
           vendorPaise: sum((row) => row.actual.vendorPaise),
