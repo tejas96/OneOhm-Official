@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
+import { CustomerDocumentsSection } from '@/features/documents/customer-documents-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, swatchFor, whatsappHref } from '@/lib/format/contact';
 import { CustomerProperties } from './customer-properties';
@@ -130,6 +131,7 @@ export function CustomerDetailView({ id }: { readonly id: string }) {
         <SectionHeading index="03" title={t('sections.quotations')} />
         <CustomerQuotations quotations={customer.quotations} />
       </section>
+      <CustomerDocumentsSection customerId={customer.id} index="04" />
     </motion.div>
   );
 }

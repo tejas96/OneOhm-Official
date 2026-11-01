@@ -5,6 +5,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
+import { CompanyAssetsService } from '../documents/company-assets.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { PdfRendererService } from './pdf-renderer.service';
 import { type ProductLabel, quotationView } from './quotation-document';
@@ -26,6 +27,7 @@ export class QuotationPdfService {
     private readonly quotations: QuotationsService,
     private readonly catalog: CatalogService,
     private readonly renderer: PdfRendererService,
+    private readonly assets: CompanyAssetsService,
   ) {}
 
   async render(id: string): Promise<PdfFile> {
@@ -63,6 +65,7 @@ export class QuotationPdfService {
     const inverter = label(detail.input.inverterProductId);
     if (!panel || !inverter) throw notFound('A product on this quotation');
 
+    const images = await this.assets.dataUris();
     const view = quotationView(detail, {
       company: await this.catalog.company(),
       customerEmail: row.email,
@@ -79,8 +82,8 @@ export class QuotationPdfService {
       inverter,
       battery: label(detail.input.batteryProductId),
       comparison: (row.snapshot as Snapshot | null)?.comparison ?? null,
-      logo: logoDataUri(),
-      stamp: stampDataUri(),
+      logo: images.logo ?? logoDataUri(),
+      stamp: images.signature ?? images.stamp ?? stampDataUri(),
     });
 
     compiled ??= engine.compile(assetText('quotation', 'quotation.hbs'));

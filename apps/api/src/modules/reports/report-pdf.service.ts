@@ -4,6 +4,7 @@ import { todayIn } from '@oneohm/shared';
 import type { TemplateDelegate } from 'handlebars';
 import { notFound } from '../../common/http/errors';
 import { CatalogService } from '../catalog/catalog.service';
+import { CompanyAssetsService } from '../documents/company-assets.service';
 import { PdfRendererService } from './pdf-renderer.service';
 import { assetText, formFontCss, stampDataUri } from './report-assets';
 import { REPORT_DEFINITIONS } from './report-definitions';
@@ -45,6 +46,7 @@ export class ReportPdfService {
     private readonly statuses: ReportStatusService,
     private readonly catalog: CatalogService,
     private readonly renderer: PdfRendererService,
+    private readonly assets: CompanyAssetsService,
   ) {}
 
   async render(projectId: string, key: ReportKey): Promise<PdfFile> {
@@ -55,9 +57,12 @@ export class ReportPdfService {
     assertReportReady(reportStatus(definition, project, company));
 
     const { source, render } = template(key);
+    const images = await this.assets.dataUris();
     const data = {
       ...withFillLines(source, reportValues(project, company, todayIn())),
-      __stamp: stampDataUri(),
+      // Uploaded images first (Settings → Company); the bundled signed seal otherwise.
+      __signature: images.signature ?? images.stamp ?? stampDataUri(),
+      __stamp: images.stamp ?? images.signature ?? stampDataUri(),
     };
     const html = withPrintBase(render(data));
     const content = await this.renderer.render(html, {

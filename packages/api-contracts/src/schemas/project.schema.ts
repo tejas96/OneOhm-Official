@@ -2,6 +2,7 @@ import { EPC_STAGES, PROJECT_TYPES, WAITING_PARTIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
+import { attachmentSchema } from './document.schema';
 
 export const epcStageSchema = z.enum(EPC_STAGES);
 export const waitingPartySchema = z.enum(WAITING_PARTIES);
@@ -67,6 +68,10 @@ export const projectTaskSchema = z.object({
   evidence: z.array(z.string()),
   /** Facts this task must capture before it can complete. */
   captures: z.array(z.string()),
+  /** Files attached to this task (photos and documents), oldest first. */
+  attachments: z.array(attachmentSchema),
+  /** Evidence still needed before the task can complete, e.g. ['photo']. */
+  missingEvidence: z.array(z.string()),
   blockedBy: z.array(z.string()),
   completedAt: instantSchema.nullable(),
 });

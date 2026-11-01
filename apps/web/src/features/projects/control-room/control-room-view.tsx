@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
+import { DocumentsPanel } from '@/features/documents/documents-panel';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ActivityTimeline } from './activity-timeline';
 import { PaymentPanel } from './payment-panel';
@@ -50,6 +51,7 @@ export function ControlRoomView({ projectId }: { readonly projectId: string }) {
         <aside className="flex flex-col gap-6">
           <PaymentPanel project={project} />
           <ReportReadiness projectId={project.id} reports={project.reports} />
+          <DocumentsPanel scope={{ projectId: project.id }} />
           <ActivityTimeline activities={project.activities} />
         </aside>
       </div>
