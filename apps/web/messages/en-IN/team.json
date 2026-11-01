@@ -1,0 +1,67 @@
+{
+  "team": {
+    "title": "Team",
+    "description": "Everyone who works on OneOhm projects: staff, I&C partner crews and resellers. Roles decide what each person can see and do.",
+    "loading": "Loading the team",
+    "add": "Add person",
+    "search": "Search by name, phone, email or ID",
+    "allRoles": "All roles",
+    "roleFilter": "Filter by role",
+    "count": "{count, plural, one {# person} other {# people}}",
+    "emptyTitle": "No one matches",
+    "emptyBody": "Try another name or clear the role filter.",
+    "columns": {
+      "person": "Person",
+      "roles": "Roles",
+      "contact": "Contact",
+      "status": "Status",
+      "load": "Open tasks"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "onLeave": "On leave"
+    },
+    "noRole": "No role",
+    "openTasks": "{count, plural, =0 {None} one {# task} other {# tasks}}",
+    "edit": "Edit {name}",
+    "form": {
+      "fullName": "Full name",
+      "email": "Email",
+      "emailHint": "For signing in to the web app.",
+      "phone": "Mobile number",
+      "phoneHint": "For signing in to the mobile app with a one-time code.",
+      "employeeCode": "Employee ID",
+      "designation": "Designation",
+      "password": "First password",
+      "passwordHint": "At least 8 characters. They can change it after signing in.",
+      "newPassword": "New password",
+      "newPasswordHint": "Leave blank to keep the current password. Setting one signs them out everywhere.",
+      "roles": "Roles",
+      "rolesHint": "Choose at least one. A person can hold several roles.",
+      "kinds": {
+        "staff": "Staff",
+        "partner": "I&C partners",
+        "reseller": "Resellers"
+      }
+    },
+    "addDialog": {
+      "title": "Add a person",
+      "description": "They can sign in as soon as you save. Give an email and password for the web, a mobile number for the app, or both.",
+      "submit": "Add person",
+      "added": "{name} added"
+    },
+    "editSheet": {
+      "title": "Edit person",
+      "details": "Details",
+      "access": "Access",
+      "onLeave": "On leave",
+      "onLeaveHint": "New tasks go to someone else in the same role while they are away.",
+      "active": "Can sign in",
+      "activeHint": "Turning this off signs them out and keeps their history.",
+      "save": "Save changes",
+      "saved": "Changes saved",
+      "cancel": "Cancel"
+    }
+  }
+}

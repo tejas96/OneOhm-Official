@@ -128,7 +128,9 @@ export class QuotationPricingService {
         : { dcr: other.totals, nonDcr: chosen.totals }
       : null;
     const limit = Math.round(
-      (undiscounted.totals.totalPaise * this.env.DISCOUNT_APPROVAL_BP) / 10_000,
+      (undiscounted.totals.totalPaise *
+        (rates.discountApprovalBp ?? this.env.DISCOUNT_APPROVAL_BP)) /
+        10_000,
     );
     return {
       preview: {

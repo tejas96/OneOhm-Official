@@ -32,7 +32,13 @@ export const peopleContract = c.router({
     path: '/people/:id',
     pathParams: idParams,
     body: z.object({
-      roleIds: z.array(idSchema).min(1).optional(),
+      fullName: nameSchema.optional(),
+      email: emailSchema.nullable().optional(),
+      phone: phoneSchema.nullable().optional(),
+      employeeCode: z.string().trim().max(40).nullable().optional(),
+      /** Sets a new web password; never returned or logged. */
+      password: z.string().min(8, 'Use at least 8 characters.').optional(),
+      roleIds: z.array(idSchema).min(1, 'Choose at least one role.').optional(),
       status: z.enum(['active', 'inactive']).optional(),
       onLeave: z.boolean().optional(),
       designation: z.string().trim().max(120).nullable().optional(),

@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
-import { hashPassword, projectTasks, roles, userRoles, users } from '@oneohm/database';
+import { hashPassword, projectTasks, roles, sessions, userRoles, users } from '@oneohm/database';
 import { SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -96,23 +97,23 @@ export class PeopleService {
     return this.get(id);
   }
 
-  async update(
-    actor: Actor,
-    id: string,
-    patch: {
-      roleIds?: string[] | undefined;
-      status?: 'active' | 'inactive' | undefined;
-      onLeave?: boolean | undefined;
-      designation?: string | null | undefined;
-    },
-  ): Promise<Person> {
+  async update(actor: Actor, id: string, patch: PersonPatch): Promise<Person> {
     const [existing] = await this.db
-      .select({ id: users.id })
+      .select({ id: users.id, email: users.email, phone: users.phoneE164 })
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
     if (!existing) throw notFound('That person');
+    const email = patch.email === undefined ? existing.email : patch.email;
+    const phone = patch.phone === undefined ? existing.phone : patch.phone;
+    if (!email && !phone) {
+      throw invalid('Keep an email or a mobile number so they can sign in.', {
+        email: 'Email or mobile number is required.',
+      });
+    }
     if (patch.roleIds) await this.assertRolesExist(patch.roleIds);
+    await this.assertUnique(patch, id);
+    const fields = await personFields(patch);
     await this.db.transaction(async (tx) => {
       if (patch.roleIds || patch.status === 'inactive')
         await this.assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);
@@ -120,17 +121,15 @@ export class PeopleService {
         await tx.delete(userRoles).where(eq(userRoles.userId, id));
         await tx.insert(userRoles).values(patch.roleIds.map((roleId) => ({ userId: id, roleId })));
       }
-      const fields = {
-        ...(patch.status ? { status: patch.status } : {}),
-        ...(patch.onLeave !== undefined ? { onLeave: patch.onLeave } : {}),
-        ...(patch.designation !== undefined ? { designation: patch.designation } : {}),
-      };
       if (Object.keys(fields).length > 0)
         await tx
           .update(users)
           .set({ ...fields, updatedAt: new Date() })
           .where(eq(users.id, id));
-      await recordAudit(tx, actor.userId, 'person.updated', 'user', id, patch);
+      // Deactivating someone or resetting their password signs them out everywhere.
+      if (patch.status === 'inactive' || patch.password)
+        await tx.delete(sessions).where(eq(sessions.userId, id));
+      await recordAudit(tx, actor.userId, 'person.updated', 'user', id, auditablePatch(patch));
     });
     return this.get(id);
   }
@@ -141,7 +140,10 @@ export class PeopleService {
     return person;
   }
 
-  private async assertUnique(input: NewPerson): Promise<void> {
+  private async assertUnique(
+    input: Pick<PersonPatch, 'email' | 'phone' | 'employeeCode'>,
+    exceptUserId?: string,
+  ): Promise<void> {
     const checks = [
       [
         'email',
@@ -161,7 +163,11 @@ export class PeopleService {
     ] as const;
     for (const [field, condition, message] of checks) {
       if (!condition) continue;
-      const [found] = await this.db.select({ id: users.id }).from(users).where(condition).limit(1);
+      const [found] = await this.db
+        .select({ id: users.id })
+        .from(users)
+        .where(exceptUserId ? and(condition, ne(users.id, exceptUserId)) : condition)
+        .limit(1);
       if (found) throw conflict(message, `duplicate_${field}`);
     }
   }
