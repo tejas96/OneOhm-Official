@@ -30,7 +30,7 @@ const environmentSchema = z
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
     /** Meta webhook: the token typed when subscribing, and the app secret that signs posts. */
-    WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
     WHATSAPP_APP_SECRET: z.string().optional(),
     /** Signs the short-lived links the WhatsApp assistant sends for quotations and receipts. */
     FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),

@@ -4,6 +4,7 @@ import {
   customerFeedback,
   customers,
   leads,
+  notifyHolders,
   projects,
   quotations,
   serviceRequests,
@@ -109,6 +110,12 @@ export class CustomerPortalService {
       })
       .returning({ id: leads.id, name: leads.name, createdAt: leads.createdAt });
     if (!lead) throw new Error('Referral was not saved.');
+    await notifyHolders(this.db, 'leads.manage', {
+      kind: 'referral',
+      title: 'New referral',
+      body: `${lead.name}, referred by ${referrer?.name ?? 'a customer'}. Call them today.`,
+      dedupeKey: `referral:${lead.id}`,
+    });
     return {
       id: lead.id,
       name: lead.name,
@@ -157,6 +164,12 @@ export class CustomerPortalService {
       .returning({ id: serviceRequests.id });
     const created = (await this.serviceRequests(customerId)).find((item) => item.id === row?.id);
     if (!created) throw new Error('Service request was not saved.');
+    await notifyHolders(this.db, 'service.manage', {
+      kind: 'service_request',
+      title: 'New service request',
+      body: input.description.slice(0, 140),
+      dedupeKey: `service_request:${created.id}`,
+    });
     return created;
   }
 

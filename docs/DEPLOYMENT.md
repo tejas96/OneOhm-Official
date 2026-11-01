@@ -103,6 +103,9 @@ Business-initiated WhatsApp messages need templates approved in **WhatsApp Manag
    | `service_update` | customer, what the request is about, new status |
    | `change_request_raised` | customer, change requested (e.g. Consumer name change), request number |
    | `change_request_completed` | customer, change requested, request number |
+   | `payment_link` | customer, amount, milestone, project code, payment link |
+
+   The names, languages, field order and wording can be changed later in **Settings → WhatsApp messages**, so they can match exactly what Meta approved.
 
 2. Once they are approved, set `WHATSAPP_DELIVERY=live` and restart the worker:
 
@@ -111,6 +114,30 @@ Business-initiated WhatsApp messages need templates approved in **WhatsApp Manag
    ```
 
 Until then, messages are recorded in the outbox as "not sent (log mode)", so nothing reaches customers by accident.
+
+3. For the WhatsApp assistant and delivery ticks:
+   - In Meta's app settings, set the webhook to `https://<domain>/api/v1/webhooks/whatsapp`.
+   - Use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` as the verify token.
+   - Subscribe to `messages`.
+   - Put the app secret in `WHATSAPP_APP_SECRET`.
+
+## 5a. Razorpay payment links
+
+1. In the Razorpay dashboard, create API keys and a webhook:
+   - **URL:** `https://<domain>/api/v1/webhooks/razorpay`.
+   - **Secret:** a value you choose.
+   - **Events:** `payment_link.paid`, `payment_link.partially_paid`, `payment_link.expired`, `payment_link.cancelled`, `settlement.processed`.
+2. Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET`, then `RAZORPAY_MODE=live`, and restart the API.
+3. Test once with Razorpay test keys before using live keys.
+
+## 5b. Push notifications
+
+1. Create the Expo project for each app (`eas init`).
+2. Put the project ID in `EAS_PROJECT_ID` for the app builds.
+3. Upload the Firebase service-account JSON with `eas credentials` (Android, FCM V1).
+4. Add `google-services.json` through `GOOGLE_SERVICES_JSON`.
+5. After the first builds, set `PUSH_DELIVERY=live` and restart the worker.
+
 
 ## 6. Backups
 

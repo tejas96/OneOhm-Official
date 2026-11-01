@@ -45,8 +45,8 @@ export class WhatsAppWebhookController {
     @Query('hub.verify_token') token: string | undefined,
     @Query('hub.challenge') challenge: string | undefined,
   ): string {
-    if (!this.env.WHATSAPP_VERIFY_TOKEN) throw new NotFoundException();
-    if (mode !== 'subscribe' || token !== this.env.WHATSAPP_VERIFY_TOKEN || !challenge)
+    if (!this.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) throw new NotFoundException();
+    if (mode !== 'subscribe' || token !== this.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || !challenge)
       throw new ForbiddenException();
     return challenge;
   }

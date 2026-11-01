@@ -129,12 +129,6 @@ export class AssistantService {
       category,
       description: `${description} (via WhatsApp)`,
     });
-    await notifyHolders(this.db, 'service.manage', {
-      kind: 'service_request',
-      title: 'New service request on WhatsApp',
-      body: `${chat.profileName ?? chat.phone}: ${description.slice(0, 120)}`,
-      dedupeKey: `wa_service:${chat.id}:${Date.now()}`,
-    });
     await setState(this.db, chat.id, 'menu');
     return this.say(chat, { kind: 'text', body: WORDS.problemSaved(label) });
   }
