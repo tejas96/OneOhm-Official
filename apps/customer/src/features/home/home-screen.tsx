@@ -1,0 +1,84 @@
+import {
+  describeError,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  localHours,
+  Screen,
+  skyPhase,
+  Text,
+  useTheme,
+} from '@oneohm/mobile-ui';
+import { SunMedium } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
+import { COMMON } from '@/copy/common';
+import { HOME } from '@/copy/home';
+import { BUSINESS_TIME_ZONE, longToday } from '@/lib/dates';
+import { asksForFeedback } from '@/lib/journey';
+import { useCustomer } from '@/session/session-provider';
+import { JourneyCard } from './journey-card';
+import { NextStepCard, UpdatesCard, WaitingCard } from './progress-cards';
+import { ProjectSwitcher } from './project-switcher';
+import { ContactCard, FeedbackPrompt, ReferPrompt, SubsidyCard } from './support-cards';
+import { useChosenProject, useHome } from './use-home';
+
+/** The customer's solar journey: where things stand, what happens next, who to call. */
+export function HomeScreen() {
+  const theme = useTheme();
+  const customer = useCustomer();
+  const query = useHome();
+  const { project, choose } = useChosenProject(query.data?.projects);
+  const phase = skyPhase(localHours(new Date(), BUSINESS_TIME_ZONE));
+  const firstName = customer.name.split(/\s+/)[0] ?? customer.name;
+
+  return (
+    <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+      <View style={styles.header}>
+        <Text variant="mono" tone="tertiary">
+          {longToday().toUpperCase()}
+        </Text>
+        <View>
+          <Text variant="displayXl">{HOME.greeting[phase]},</Text>
+          <Text variant="displayXl" italic color={theme.colors.accent}>
+            {firstName}.
+          </Text>
+        </View>
+      </View>
+
+      {query.isPending ? <LoadingState label={HOME.loading} /> : null}
+      {query.isError ? (
+        <ErrorState
+          title={COMMON.loadError}
+          message={describeError(query.error)}
+          retryLabel={COMMON.retry}
+          onRetry={() => void query.refetch()}
+        />
+      ) : null}
+
+      {query.data && !project ? (
+        <EmptyState
+          icon={<SunMedium size={22} color={theme.colors.accent} />}
+          title={HOME.noProjectTitle}
+          description={HOME.noProjectBody}
+        />
+      ) : null}
+
+      {project && query.data ? (
+        <>
+          <ProjectSwitcher projects={query.data.projects} chosenId={project.id} onChoose={choose} />
+          {project.waiting ? <WaitingCard waiting={project.waiting} /> : null}
+          <JourneyCard project={project} />
+          <NextStepCard next={project.nextStep} />
+          {asksForFeedback(project) ? <FeedbackPrompt projectId={project.id} /> : null}
+          <SubsidyCard subsidy={project.subsidy} />
+          <ContactCard contact={project.contact} />
+          <UpdatesCard updates={project.updates} />
+          <ReferPrompt />
+        </>
+      ) : null}
+      {query.data && !project ? <ReferPrompt /> : null}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({ header: { gap: 8, paddingTop: 8 } });

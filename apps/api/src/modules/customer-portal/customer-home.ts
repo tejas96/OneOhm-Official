@@ -24,6 +24,8 @@ type TaskRow = {
   customerVisible: boolean;
   dueDate: string;
   completedAt: Date | null;
+  waitingParty: 'internal' | 'customer' | 'bank' | 'discom';
+  waitingSince: Date | null;
 };
 
 /** Stage states from the project's tasks: stages without tasks were skipped. */
@@ -38,6 +40,16 @@ function journey(tasks: readonly TaskRow[]): Pick<CustomerProject, 'stages' | 'c
     return { stage, state: index === currentIndex ? ('current' as const) : ('upcoming' as const) };
   });
   return { stages, currentStage: current };
+}
+
+/** The longest hold by someone outside OneOhm, if any. */
+function waitingOn(tasks: readonly TaskRow[]): CustomerProject['waiting'] {
+  const held = tasks
+    .filter((task) => task.status === 'waiting' && task.waitingParty !== 'internal')
+    .filter((task) => task.waitingSince)
+    .sort((a, b) => (a.waitingSince?.getTime() ?? 0) - (b.waitingSince?.getTime() ?? 0))[0];
+  if (!held?.waitingSince || held.waitingParty === 'internal') return null;
+  return { party: held.waitingParty, since: day(held.waitingSince) };
 }
 
 function subsidyStatus(enabled: boolean, tasks: readonly TaskRow[]) {
@@ -87,6 +99,8 @@ export async function customerProjects(
       customerVisible: projectTasks.customerVisible,
       dueDate: projectTasks.dueDate,
       completedAt: projectTasks.completedAt,
+      waitingParty: projectTasks.waitingParty,
+      waitingSince: projectTasks.waitingSince,
     })
     .from(projectTasks)
     .where(inArray(projectTasks.projectId, ids));
@@ -133,8 +147,14 @@ export async function customerProjects(
       updates: visible
         .filter((task) => task.completedAt)
         .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0))
-        .map((task) => ({ title: task.title, done: true, date: day(task.completedAt as Date) })),
-      nextStep: next ? { title: next.title, date: next.dueDate } : null,
+        .map((task) => ({
+          key: task.templateKey,
+          title: task.title,
+          done: true,
+          date: day(task.completedAt as Date),
+        })),
+      nextStep: next ? { key: next.templateKey, title: next.title, date: next.dueDate } : null,
+      waiting: waitingOn(own),
       payments: {
         totalPaise: lines.reduce((sum, line) => sum + line.amountPaise, 0),
         paidPaise: lines.reduce((sum, line) => sum + line.paidPaise, 0),

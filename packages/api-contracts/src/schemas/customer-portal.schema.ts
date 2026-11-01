@@ -42,14 +42,20 @@ export const customerProjectSchema = z.object({
   status: z.enum(['active', 'operational', 'completed', 'cancelled']),
   currentStage: z.enum(EPC_STAGES),
   stages: z.array(journeyStageSchema),
+  /** `key` names the milestone so apps can say it in plain words; `title` is the fallback. */
   updates: z.array(
     z.object({
+      key: z.string(),
       title: z.string(),
       done: z.boolean(),
       date: calendarDateSchema,
     }),
   ),
-  nextStep: z.object({ title: z.string(), date: calendarDateSchema }).nullable(),
+  nextStep: z.object({ key: z.string(), title: z.string(), date: calendarDateSchema }).nullable(),
+  /** Why the project is paused, when someone outside OneOhm holds it (PRD 5.2). */
+  waiting: z
+    .object({ party: z.enum(['customer', 'bank', 'discom']), since: calendarDateSchema })
+    .nullable(),
   payments: z.object({
     totalPaise: paiseSchema,
     paidPaise: paiseSchema,
@@ -65,9 +71,17 @@ export const customerProjectSchema = z.object({
 });
 export type CustomerProject = z.infer<typeof customerProjectSchema>;
 
+/** How to reach OneOhm, from the company profile. */
+export const companyContactSchema = z.object({
+  name: z.string(),
+  phones: z.array(z.string()),
+  email: z.string(),
+});
+
 export const customerHomeSchema = z.object({
   customer: customerProfileSchema,
   projects: z.array(customerProjectSchema),
+  company: companyContactSchema,
 });
 export type CustomerHome = z.infer<typeof customerHomeSchema>;
 
@@ -120,3 +134,24 @@ export const feedbackInputSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: noteSchema.optional(),
 });
+
+/** A file the customer may open: their own papers and the ones shared from their project. */
+export const customerDocumentSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  category: z.string(),
+  projectCode: z.string().nullable(),
+  contentType: z.string(),
+  sizeBytes: z.number().int(),
+  createdAt: instantSchema,
+});
+export type CustomerDocument = z.infer<typeof customerDocumentSchema>;
+
+/** A statutory report that has every detail it prints, ready to open as a PDF. */
+export const customerReportSchema = z.object({
+  projectId: idSchema,
+  projectCode: z.string(),
+  key: z.string(),
+  name: z.string(),
+});
+export type CustomerReport = z.infer<typeof customerReportSchema>;

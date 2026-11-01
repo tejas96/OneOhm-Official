@@ -8,6 +8,6 @@ import { ObjectStorageService } from './object-storage.service';
 @Module({
   controllers: [DocumentsController],
   providers: [ObjectStorageService, DocumentsService, CompanyAssetsService],
-  exports: [CompanyAssetsService],
+  exports: [CompanyAssetsService, ObjectStorageService],
 })
 export class DocumentsModule {}

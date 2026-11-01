@@ -6,8 +6,20 @@ import { bearerToken } from '../../common/auth/session-cookies';
 import { unauthenticated } from '../../common/http/errors';
 import { apiContract } from '../../contract';
 import { QuotationPdfService } from '../reports/quotation-pdf.service';
+import type { PdfFile } from '../reports/report-pdf.service';
 import { CustomerAuthService } from './customer-auth.service';
+import { CustomerDocumentsService } from './customer-documents.service';
 import { CustomerPortalService } from './customer-portal.service';
+
+/** A rendered PDF as the response body (Nest streams StreamableFile with these headers). */
+function pdf(file: PdfFile): Blob {
+  const stream = new StreamableFile(file.content, {
+    type: 'application/pdf',
+    length: file.content.length,
+    disposition: `inline; filename="${file.fileName}"`,
+  });
+  return stream as unknown as Blob;
+}
 
 /**
  * The customer app's API. Staff sessions do not apply here (`@Public` for the staff
@@ -20,6 +32,7 @@ export class CustomerController {
     private readonly auth: CustomerAuthService,
     private readonly portal: CustomerPortalService,
     private readonly quotationPdf: QuotationPdfService,
+    private readonly papers: CustomerDocumentsService,
   ) {}
 
   @TsRestHandler(apiContract.customer)
@@ -49,13 +62,29 @@ export class CustomerController {
       }),
       quotationPdf: async ({ params }) => {
         const id = await this.portal.ownQuotation((await session()).customerId, params.id);
-        const file = await this.quotationPdf.render(id);
-        const stream = new StreamableFile(file.content, {
-          type: 'application/pdf',
-          length: file.content.length,
-          disposition: `inline; filename="${file.fileName}"`,
+        return { status: 200, body: pdf(await this.quotationPdf.render(id)) };
+      },
+      listDocuments: async () => ({
+        status: 200,
+        body: await this.papers.list((await session()).customerId),
+      }),
+      documentFile: async ({ params }) => {
+        const file = await this.papers.file((await session()).customerId, params.id);
+        const stream = new StreamableFile(file.body, {
+          type: file.type,
+          ...(file.length === undefined ? {} : { length: file.length }),
+          disposition: `inline; filename="${encodeURIComponent(file.name)}"`,
         });
         return { status: 200, body: stream as unknown as Blob };
+      },
+      listReports: async () => ({
+        status: 200,
+        body: await this.papers.readyReports((await session()).customerId),
+      }),
+      reportPdf: async ({ params }) => {
+        const customer = (await session()).customerId;
+        const file = await this.papers.reportPdf(customer, params.id, params.reportKey);
+        return { status: 200, body: pdf(file) };
       },
       listReferrals: async () => ({
         status: 200,
