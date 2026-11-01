@@ -122,7 +122,7 @@ export const NAVIGATION: readonly NavGroup[] = [
         key: 'inventory',
         href: '/inventory',
         icon: Boxes,
-        built: false,
+        built: true,
         requires: ['inventory.view'],
       },
       {

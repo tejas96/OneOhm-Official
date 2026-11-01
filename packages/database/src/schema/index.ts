@@ -5,6 +5,8 @@ export * from './customer-portal.schema';
 export * from './enums';
 export * from './finance.schema';
 export * from './identity.schema';
+export * from './inventory.schema';
+export * from './procurement.schema';
 export * from './projects.schema';
 export * from './quotations.schema';
 export * from './records.schema';

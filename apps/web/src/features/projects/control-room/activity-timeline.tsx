@@ -7,6 +7,7 @@ import {
   Hourglass,
   IndianRupee,
   type LucideIcon,
+  Package,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   waiting: Hourglass,
   payment: IndianRupee,
   review: ShieldCheck,
+  material: Package,
 };
 
 /** What happened on the project, newest first, with who did it and when. */
