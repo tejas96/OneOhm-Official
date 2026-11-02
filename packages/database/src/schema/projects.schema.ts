@@ -179,5 +179,9 @@ export const projectActivities = pgTable(
     data: jsonb('data'),
     createdAt: createdAt(),
   },
-  (table) => [index('project_activities_project_idx').on(table.projectId)],
+  (table) => [
+    index('project_activities_project_idx').on(table.projectId),
+    // A task's latest history line, for stale tasks (spec 3.5).
+    index('project_activities_task_idx').on(table.taskId, table.createdAt),
+  ],
 );

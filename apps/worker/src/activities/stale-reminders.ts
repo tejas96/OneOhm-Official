@@ -1,16 +1,12 @@
 import {
   type Database,
   type Notice,
-  notify,
   projects,
   projectTasks,
   taskDependencies,
   taskFreshness,
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm';
-
-export const staleMessage = (title: string, days: number) =>
-  `${title} has had no update for ${days} ${days === 1 ? 'day' : 'days'}. Add a note or move it on.`;
 
 interface ManagedTask {
   readonly id: string;
@@ -43,34 +39,6 @@ function openTasks(db: Database, where = open) {
 }
 
 /**
- * Each morning, the person holding a stale task hears about it once (spec 3.5). A new
- * update starts a new quiet spell, so the next reminder can come later. Nobody is
- * reminded on a day they are on approved leave.
- */
-export async function queueStaleReminders(db: Database, today: string): Promise<number> {
-  const rows = await openTasks(db, inArray(projectTasks.status, ['ready', 'in_progress']));
-  const fresh = await taskFreshness(db, rows, today);
-  let sent = 0;
-  for (const row of rows) {
-    const state = fresh.get(row.id);
-    if (!state?.stale || state.assigneeOnLeave || !row.assigneeUserId) continue;
-    await notify(
-      db,
-      { userId: row.assigneeUserId },
-      {
-        kind: 'task_stale',
-        title: `No update on ${row.code}`,
-        body: staleMessage(row.title, state.idleDays),
-        subject: { type: 'task', id: row.id, projectId: row.projectId },
-        dedupeKey: `stale:${row.id}:${state.lastUpdateAt.toISOString().slice(0, 10)}`,
-      },
-    );
-    sent += 1;
-  }
-  return sent;
-}
-
-/**
  * When the person holding up someone else's task is on leave, their manager hears once
  * per leave (spec 3.4), so the work can be handed over.
  */
@@ -85,10 +53,11 @@ export async function queueBlockerOnLeave(
     .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.taskId))
     .where(open);
   if (holding.length === 0) return 0;
+  // Only work that could move now: a blocked or pending task is not holding anyone up yet.
   const rows = await openTasks(
     db,
     and(
-      open,
+      inArray(projectTasks.status, ['ready', 'in_progress']),
       inArray(
         projectTasks.id,
         holding.map((row) => row.id),

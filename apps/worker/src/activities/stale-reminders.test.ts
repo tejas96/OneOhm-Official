@@ -1,17 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { digestSummary } from './staff-digest';
-import { staleMessage } from './stale-reminders';
-
-describe('staleMessage', () => {
-  it('writes 1 day and n days correctly', () => {
-    expect(staleMessage('Site survey', 1)).toBe(
-      'Site survey has had no update for 1 day. Add a note or move it on.',
-    );
-    expect(staleMessage('Site survey', 4)).toBe(
-      'Site survey has had no update for 4 days. Add a note or move it on.',
-    );
-  });
-});
+import { digestSummary, shouldSendDigest, shouldSendWhatsapp } from './staff-digest';
 
 describe('digestSummary', () => {
   it('lists only counts above zero, stale and urgent included', () => {
@@ -21,5 +9,22 @@ describe('digestSummary', () => {
     expect(
       digestSummary({ overdue: 0, today: 1, followUps: 0, stale: 0, urgent: 0, blocking: 2 }),
     ).toBe('1 due today, 2 blocking others.');
+  });
+});
+
+describe('who gets the morning summary', () => {
+  const none = { overdue: 0, today: 0, followUps: 0, stale: 0, urgent: 0, blocking: 0 };
+
+  it('sends a summary for stale or urgent work, but not for blocking alone', () => {
+    expect(shouldSendDigest({ ...none, stale: 1 })).toBe(true);
+    expect(shouldSendDigest({ ...none, urgent: 1 })).toBe(true);
+    expect(shouldSendDigest({ ...none, blocking: 4 })).toBe(false);
+    expect(shouldSendDigest(none)).toBe(false);
+  });
+
+  it('sends WhatsApp only when its template has something to say', () => {
+    expect(shouldSendWhatsapp({ ...none, stale: 3, urgent: 1 })).toBe(false);
+    expect(shouldSendWhatsapp({ ...none, overdue: 1 })).toBe(true);
+    expect(shouldSendWhatsapp({ ...none, followUps: 2 })).toBe(true);
   });
 });
