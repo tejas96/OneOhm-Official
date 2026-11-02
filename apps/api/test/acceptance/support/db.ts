@@ -67,3 +67,63 @@ export async function ageTask(taskId: string, days: number): Promise<void> {
     shift,
   ]);
 }
+
+/** Sets a task's dates directly (acceptance database only). */
+export async function setTaskDates(
+  taskId: string,
+  dates: { readonly dueDate?: string; readonly startDate?: string },
+): Promise<void> {
+  if (dates.startDate)
+    await rows('UPDATE project_tasks SET start_date = $2 WHERE id = $1', [taskId, dates.startDate]);
+  if (dates.dueDate)
+    await rows('UPDATE project_tasks SET due_date = $2 WHERE id = $1', [taskId, dates.dueDate]);
+}
+
+/** Records a finished wait on a party for whole days `from`..`to` (acceptance only). */
+export async function addTaskWait(
+  taskId: string,
+  party: 'customer' | 'bank' | 'discom' | 'internal',
+  from: string,
+  to: string,
+): Promise<void> {
+  await rows(
+    `INSERT INTO task_waits (task_id, party, started_at, ended_at)
+     VALUES ($1, $2, $3::date::timestamp AT TIME ZONE 'Asia/Kolkata',
+             ($4::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')`,
+    [taskId, party, from, to],
+  );
+}
+
+/** Moves a task's hand-ins back by `days` (acceptance database only). */
+export async function ageHandIns(taskId: string, days: number): Promise<void> {
+  await rows('UPDATE task_reviews SET created_at = created_at - $2::interval WHERE task_id = $1', [
+    taskId,
+    `${days} days`,
+  ]);
+}
+
+/** Moves a person's points rows into the middle of a past month (acceptance only). */
+export async function movePointsToMonth(userId: string, month: string): Promise<void> {
+  await rows(
+    `UPDATE points_entries SET created_at = ($2::date + time '12:00') AT TIME ZONE 'Asia/Kolkata'
+     WHERE user_id = $1`,
+    [userId, `${month}-15`],
+  );
+}
+
+/** Moves the start of a task's current wait back by `days` (acceptance only). */
+export async function ageWait(taskId: string, days: number): Promise<void> {
+  await rows(
+    'UPDATE project_tasks SET waiting_since = waiting_since - $2::interval WHERE id = $1',
+    [taskId, `${days} days`],
+  );
+}
+
+/** Moves the start of the fair points rules (acceptance only). */
+export async function setFairPointsSince(date: string): Promise<void> {
+  await rows(
+    `INSERT INTO points_rules (key, since) VALUES ('fair_points', $1::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+     ON CONFLICT (key) DO UPDATE SET since = EXCLUDED.since`,
+    [date],
+  );
+}

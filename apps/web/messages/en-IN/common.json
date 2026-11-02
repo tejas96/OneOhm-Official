@@ -20,6 +20,7 @@
     },
     "items": {
       "today": "Today",
+      "rewards": "My rewards",
       "commandCenter": "Command centre",
       "leads": "Leads",
       "quotations": "Quotations",
@@ -89,8 +90,12 @@
         "in_progress": "Being worked on",
         "resolved": "Resolved"
       },
-      "contractors": { "archived": "Archived" },
-      "vendors": { "archived": "Archived" }
+      "contractors": {
+        "archived": "Archived"
+      },
+      "vendors": {
+        "archived": "Archived"
+      }
     },
     "keys": {
       "move": "to move",

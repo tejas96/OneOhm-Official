@@ -113,3 +113,36 @@ export const readingConditions = pgTable(
   },
   (table) => [uniqueIndex('reading_conditions_subject_unique').on(table.subjectId, table.kind)],
 );
+
+/**
+ * The owner's monthly decision for one person (spec 3.7): no money, or a bonus proposed
+ * through the usual approval. One per person and month.
+ */
+export const monthlyReviews = pgTable(
+  'monthly_reviews',
+  {
+    id: primaryId(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** India month, `YYYY-MM`. */
+    month: text('month').notNull(),
+    decision: text('decision', { enum: ['none', 'bonus'] }).notNull(),
+    bonusId: uuid('bonus_id').references(() => projectBonuses.id, { onDelete: 'set null' }),
+    note: text('note'),
+    decidedByUserId: uuid('decided_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('monthly_reviews_user_month_unique').on(table.userId, table.month)],
+);
+
+/**
+ * When a points rule started (spec 3.7). `fair_points` is set by its migration, so rates
+ * never mix lines written under the old rule, which recorded on-time work only.
+ */
+export const pointsRules = pgTable('points_rules', {
+  key: text('key').primaryKey(),
+  since: instant('since').notNull().defaultNow(),
+});

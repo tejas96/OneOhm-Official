@@ -821,7 +821,9 @@
         },
         "events": {
           "onTimeTask": "A task finished on time",
-          "onTimeTaskDetail": "For whoever finishes a task by its due date. Late work earns nothing and loses nothing.",
+          "onTimeTaskDetail": "For whoever hands the task in by its due date. Days waiting on the customer, bank or DISCOM, and approved leave, are added first. Late work earns nothing and loses nothing.",
+          "firstTimeRight": "A task approved first time",
+          "firstTimeRightDetail": "For tasks with an approval step, approved without being sent back.",
           "goodRating": "A 4 or 5 star customer rating",
           "goodRatingDetail": "Suggested for the project's manager.",
           "stageRating": "Named on a 4 or 5 star stage rating",

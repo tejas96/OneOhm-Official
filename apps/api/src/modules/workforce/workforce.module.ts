@@ -6,6 +6,7 @@ import { CapacityService } from './capacity.service';
 import { CorrectionsService } from './corrections.service';
 import { EngagementController } from './engagement.controller';
 import { LeaveService } from './leave.service';
+import { MonthlyReviewService } from './monthly-review.service';
 import { MyRewardsService } from './my-rewards.service';
 import { PointsService } from './points.service';
 import { RewardsController } from './rewards.controller';
@@ -31,6 +32,7 @@ import { WorkforceSettingsService } from './workforce-settings.service';
     BonusesService,
     CapacityService,
     MyRewardsService,
+    MonthlyReviewService,
   ],
 })
 export class WorkforceModule {}

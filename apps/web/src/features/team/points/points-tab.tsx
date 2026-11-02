@@ -8,6 +8,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useWorkforceSettings } from '@/features/settings/workforce/use-workforce-settings';
 import { useCan } from '@/providers/current-user';
 import { GivePointsDialog } from './give-points-dialog';
+import { MonthlyReview } from './monthly-review';
 import { PointsRules } from './points-rules';
 import { PointsSuggestions } from './points-suggestions';
 import { RecentPoints } from './recent-points';
@@ -54,6 +55,7 @@ export function PointsTab() {
           {policy && <PointsRules points={policy} />}
         </aside>
       </div>
+      <MonthlyReview />
       {entries.data && <RecentPoints entries={entries.data} />}
       {policy && (
         <GivePointsDialog open={giving} onOpenChange={setGiving} max={policy.recognitionMax} />

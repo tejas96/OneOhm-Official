@@ -166,7 +166,7 @@ export const pointsEntries = pgTable(
     points: integer('points').notNull(),
     reason: text('reason').notNull(),
     sourceType: text('source_type', {
-      enum: ['task_on_time', 'customer_rating', 'recognition', 'stage_rating'],
+      enum: ['task_on_time', 'task_first_time', 'customer_rating', 'recognition', 'stage_rating'],
     }).notNull(),
     sourceId: text('source_id').notNull(),
     status: decisionStatusEnum('status').notNull().default('approved'),

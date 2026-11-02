@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
+import { MonthlyReviewService } from './monthly-review.service';
 import { PointsService } from './points.service';
 import { WorkforceSettingsService } from './workforce-settings.service';
 
@@ -13,6 +14,7 @@ export class RewardsController {
   constructor(
     private readonly points: PointsService,
     private readonly settings: WorkforceSettingsService,
+    private readonly monthly: MonthlyReviewService,
   ) {}
 
   @TsRestHandler(apiContract.rewards)
@@ -36,6 +38,18 @@ export class RewardsController {
       decidePoints: async ({ params, body }) => {
         manage();
         return { status: 200, body: await this.points.decide(actor, params.id, body.approve) };
+      },
+      monthlyReview: async ({ query }) => {
+        assertCan(actor, 'people.view');
+        return { status: 200, body: await this.monthly.month(query.month) };
+      },
+      monthlyPerson: async ({ params, query }) => {
+        assertCan(actor, 'people.view');
+        return { status: 200, body: await this.monthly.person(params.id, query.month) };
+      },
+      decideMonth: async ({ params, body }) => {
+        manage();
+        return { status: 200, body: await this.monthly.decide(actor, params.id, body) };
       },
       workforceSettings: async () => {
         assertCan(actor, 'settings.manage', 'people.manage');

@@ -2,13 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { PointsEntry, PointsStanding } from '@oneohm/api-contracts';
 import { notify, pointsEntries, users } from '@oneohm/database';
-import { todayIn } from '@oneohm/shared';
+import { monthOf } from '@oneohm/shared';
 import { and, eq, ne, type SQL, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
+import { inMonth } from './monthly-review.read';
 import { loadPolicy } from './policy';
 import { readPoints } from './workforce-read';
 
@@ -22,13 +23,13 @@ export class PointsService {
   }
 
   async standings(): Promise<PointsStanding[]> {
-    const monthStart = `${todayIn().slice(0, 8)}01`;
+    const thisMonth = inMonth(pointsEntries.createdAt, monthOf(new Date()));
     const rows = await this.db
       .select({
         id: users.id,
         fullName: users.fullName,
         total: sql<number>`coalesce(sum(${pointsEntries.points}), 0)::int`,
-        thisMonth: sql<number>`coalesce(sum(${pointsEntries.points}) filter (where ${pointsEntries.createdAt} >= ${monthStart}::date), 0)::int`,
+        thisMonth: sql<number>`coalesce(sum(${pointsEntries.points}) filter (where ${thisMonth}), 0)::int`,
       })
       .from(pointsEntries)
       .innerJoin(users, eq(users.id, pointsEntries.userId))

@@ -14,6 +14,12 @@ export function PointsRules({ points }: { readonly points: WorkforcePolicyInput[
       value: `+${points.onTimeTask}`,
     },
     {
+      key: 'firstTime',
+      label: t('firstTime'),
+      detail: t('firstTimeDetail'),
+      value: `+${points.firstTimeRight}`,
+    },
+    {
       key: 'rating',
       label: t('rating'),
       detail: t('ratingDetail'),

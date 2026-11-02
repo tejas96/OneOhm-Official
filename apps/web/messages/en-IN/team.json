@@ -335,6 +335,7 @@
       },
       "source": {
         "task_on_time": "On-time task",
+        "task_first_time": "First-time right",
         "customer_rating": "Customer rating",
         "recognition": "Recognition",
         "stage_rating": "Stage rating"
@@ -367,12 +368,73 @@
       "rules": {
         "title": "What earns points",
         "onTime": "A task done on time",
-        "onTimeDetail": "Given automatically when a task is finished by its due date.",
+        "onTimeDetail": "Given automatically when a task is handed in by its due date. Waits on others and approved leave are added first.",
+        "firstTime": "Approved first time",
+        "firstTimeDetail": "Given automatically when work with an approval step is approved without being sent back.",
         "rating": "A good customer rating",
         "ratingDetail": "Suggested after a good rating; a manager approves it.",
         "recognition": "Recognition",
         "recognitionDetail": "Given by a manager, with a reason.",
         "upTo": "up to {max}"
+      },
+      "monthly": {
+        "title": "Monthly review",
+        "intro": "Each person's month: points against last month, how their work was judged, and your decision. A bonus is a proposal; it still needs payment approval.",
+        "month": "Month",
+        "loading": "Loading the month…",
+        "empty": "Nobody earned points in {month}.",
+        "caption": "Points and rates per person for {month}",
+        "columns": {
+          "person": "Person",
+          "points": "Points",
+          "tasks": "Tasks",
+          "onTime": "On time",
+          "firstTime": "First-time right",
+          "rating": "Rating",
+          "attention": "Needs attention",
+          "decision": "Decision"
+        },
+        "up": "Up on last month",
+        "down": "Down on last month",
+        "attention": {
+          "onTime": "On time only {rate}",
+          "firstTime": "First-time right only {rate}",
+          "none": "All good"
+        },
+        "decided": {
+          "none": "No money",
+          "bonus": {
+            "pending": "Bonus {amount} · waiting for approval",
+            "approved": "Bonus {amount} · approved",
+            "rejected": "Bonus {amount} · rejected",
+            "cancelled": "Bonus {amount} · cancelled"
+          }
+        },
+        "decide": "Decide",
+        "open": "Not decided",
+        "person": {
+          "description": "Every point line for {month}, by project.",
+          "loading": "Loading…",
+          "empty": "No points this month.",
+          "missed": "Missed"
+        },
+        "decideDialog": {
+          "title": "{name} · {month}",
+          "description": "Decide once for this month. A bonus is only proposed here; someone who approves payments still has to approve it.",
+          "decision": "Decision",
+          "none": "No money",
+          "bonus": "Propose a bonus",
+          "amount": "Bonus amount",
+          "amountHint": "In rupees.",
+          "note": "Note",
+          "noteHint": "Optional. Shown with the bonus.",
+          "cancel": "Cancel",
+          "submitNone": "Save decision",
+          "submitBonus": "Propose bonus",
+          "saved": "Saved for {name}",
+          "proposed": "Bonus proposed for {name}"
+        },
+        "fairSince": "Rates count from {date}, when the fair points rules started. Earlier points still add up, but were recorded for on-time work only."
       }
     },
     "resellers": {

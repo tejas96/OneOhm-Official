@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
+import { myMonthSchema } from './monthly-review.schema';
 import { decisionStatusSchema, pointsEntrySchema } from './workforce.schema';
 
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -100,6 +101,8 @@ export const achievementSchema = z.object({
 
 /** The person's own points, achievements, customer feedback and money rewards (PRD 4.7). */
 export const myRewardsSchema = z.object({
+  /** This India month: points, rates and every missed line with its reason (spec 3.7). */
+  month: myMonthSchema,
   points: z.object({
     total: z.number().int(),
     thisMonth: z.number().int(),

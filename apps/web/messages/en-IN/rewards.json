@@ -1,0 +1,21 @@
+{
+  "rewards": {
+    "pageTitle": "My rewards",
+    "title": "My rewards",
+    "intro": "Your points this month, how your work was judged, and anything you missed with the reason. Points never go down: a missed part just earns nothing.",
+    "loading": "Loading your rewards…",
+    "month": "This month",
+    "tiles": {
+      "points": "Points this month",
+      "onTime": "On time",
+      "firstTime": "First-time right",
+      "tasks": "Tasks judged"
+    },
+    "missedTitle": "Missed this month",
+    "missedNone": "Nothing missed this month. Well done.",
+    "historyTitle": "All points · {total} in total",
+    "historyEmpty": "No points yet. Finish a task on time to earn your first.",
+    "missed": "Missed",
+    "bonusesTitle": "Bonuses"
+  }
+}

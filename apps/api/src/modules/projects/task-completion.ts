@@ -13,7 +13,7 @@ import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { recordSubsidyClaim } from '../quotations/subsidy-claim';
-import { awardOnTimeTask } from '../workforce/points';
+import { awardTaskPoints } from '../workforce/points';
 import { askForStageRating } from '../workforce/rating-request';
 import { closeIfSettled } from './financial-closure';
 import { tellCustomerAbout, tellManagerDone } from './task-messages';
@@ -115,8 +115,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
   await settleWorkOrderForTask(tx, task.id, userId);
   // One subsidy per property (PRD 3.5): a released subsidy marks the site.
   await recordSubsidyClaim(tx, task, userId);
-  // On-time work earns its owner points (PRD 3.12); late work loses nothing.
-  await awardOnTimeTask(tx, task);
+  // Fair points for whoever handed it in (spec 3.7); a missed part shows, nothing is lost.
+  await awardTaskPoints(tx, task, userId);
   // A finished customer-visible stage asks the customer how it went (PRD Flow G1).
   await askForStageRating(tx, task);
 }

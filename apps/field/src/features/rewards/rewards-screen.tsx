@@ -17,6 +17,7 @@ import { REWARDS } from '@/copy/engagement';
 import { AchievementBadges } from './achievement-badges';
 import { BonusList } from './bonus-list';
 import { CustomerFeedback } from './customer-feedback';
+import { MonthCard } from './month-card';
 import { PointsHistory } from './points-history';
 import { useMyRewards } from './use-rewards';
 
@@ -59,6 +60,12 @@ function Rewards({ rewards }: { readonly rewards: MyRewards }) {
         {/* The ocean panel is dark in both themes. */}
         <Illustration name="reward" size={76} scheme="dark" />
       </Card>
+      {/* An older API sends no month yet. */}
+      {rewards.month ? (
+        <Section title={REWARDS.sections.month}>
+          <MonthCard month={rewards.month} />
+        </Section>
+      ) : null}
       <Section title={REWARDS.sections.achievements}>
         <AchievementBadges achievements={rewards.achievements} />
       </Section>

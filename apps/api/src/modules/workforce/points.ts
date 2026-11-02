@@ -2,14 +2,16 @@ import {
   type DatabaseExecutor,
   pointsEntries,
   projects,
+  projectTasks,
   roles,
   stageRatingPeople,
   stageRatings,
   userRoles,
 } from '@oneohm/database';
-import { todayIn } from '@oneohm/shared';
+import { judgeTask } from '@oneohm/domain';
 import { and, eq, gte, isNull } from 'drizzle-orm';
 import { loadPolicy } from './policy';
+import { taskPointFacts } from './task-point-facts';
 
 /** Points are for staff; partner crews and resellers are paid, not scored (PRD 3.12). */
 async function isStaff(db: DatabaseExecutor, userId: string): Promise<boolean> {
@@ -23,34 +25,44 @@ async function isStaff(db: DatabaseExecutor, userId: string): Promise<boolean> {
 }
 
 /**
- * A task finished on or before its due date earns its owner the on-time points, once.
- * Late work earns nothing and loses nothing, so delays caused by customers, banks or
- * the DISCOM never count against anyone (PRD 3.12).
+ * A finished task's points (spec 3.7), for whoever handed it in: on time and, with an
+ * approval step, first-time right. Each part leaves one line: its points when earned,
+ * 0 with the reason when missed, so nobody ever loses points. Staff only; a task is
+ * judged once (the unique key keeps a second run from adding anything).
  */
-export async function awardOnTimeTask(
+export async function awardTaskPoints(
   db: DatabaseExecutor,
-  task: {
-    readonly id: string;
-    readonly title: string;
-    readonly assigneeUserId: string | null;
-    readonly dueDate: string;
-  },
+  task: typeof projectTasks.$inferSelect,
+  finishedBy: string,
 ): Promise<void> {
-  if (!task.assigneeUserId) return;
-  if (todayIn() > task.dueDate) return;
+  const { userId, facts } = await taskPointFacts(db, task, finishedBy);
+  if (!(await isStaff(db, userId))) return;
   const { points } = await loadPolicy(db);
-  if (points.onTimeTask <= 0 || !(await isStaff(db, task.assigneeUserId))) return;
-  await db
-    .insert(pointsEntries)
-    .values({
-      userId: task.assigneeUserId,
-      points: points.onTimeTask,
-      reason: `On time: ${task.title}`,
-      sourceType: 'task_on_time',
-      sourceId: task.id,
-      status: 'approved',
-    })
-    .onConflictDoNothing();
+  const verdict = judgeTask(facts);
+  const lines = [
+    { sourceType: 'task_on_time' as const, part: verdict.onTime, value: points.onTimeTask },
+    ...(verdict.firstTimeRight
+      ? [
+          {
+            sourceType: 'task_first_time' as const,
+            part: verdict.firstTimeRight,
+            value: points.firstTimeRight,
+          },
+        ]
+      : []),
+  ];
+  for (const line of lines)
+    await db
+      .insert(pointsEntries)
+      .values({
+        userId,
+        points: line.part.earned ? line.value : 0,
+        reason: `${line.part.reason}: ${task.title}`,
+        sourceType: line.sourceType,
+        sourceId: task.id,
+        status: 'approved',
+      })
+      .onConflictDoNothing();
 }
 
 /**
