@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelNavigation, panelView, withTask } from './task-panel-url';
+import { panelNavigation, panelShown, panelView, withTask } from './task-panel-url';
 
 describe('withTask', () => {
   it('adds the task and keeps other params', () => {
@@ -46,5 +46,20 @@ describe('panelView', () => {
     expect(panelView({ data: undefined, isPending: true, isError: false, missing: false })).toBe(
       'loading',
     );
+  });
+});
+
+describe('panelShown', () => {
+  it('keeps the closing task on screen until its animation ends', () => {
+    expect(panelShown('t1', null)).toEqual({ id: 't1', open: false });
+  });
+
+  it('shows the task the link asks for', () => {
+    expect(panelShown(null, 't2')).toEqual({ id: 't2', open: true });
+    expect(panelShown('t1', 't2')).toEqual({ id: 't2', open: true });
+  });
+
+  it('shows nothing when nothing was open', () => {
+    expect(panelShown(null, null)).toEqual({ id: null, open: false });
   });
 });
