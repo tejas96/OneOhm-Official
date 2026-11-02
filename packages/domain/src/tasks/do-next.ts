@@ -14,6 +14,8 @@ export interface RankInput {
   readonly blocking: readonly string[];
   readonly unlocksPayment: boolean;
   readonly blocksUrgent: boolean;
+  /** Earlier work it still waits for; a blocked task cannot start, so it goes last. */
+  readonly blockedBy: readonly string[];
 }
 
 /** Why a task sits where it does, best reason first. */
@@ -38,6 +40,7 @@ function band(task: RankInput): number {
 
 function compare(left: RankInput, right: RankInput): number {
   return (
+    Number(left.blockedBy.length > 0) - Number(right.blockedBy.length > 0) ||
     band(left) - band(right) ||
     Number(right.overdue) - Number(left.overdue) ||
     right.blocking.length - left.blocking.length ||

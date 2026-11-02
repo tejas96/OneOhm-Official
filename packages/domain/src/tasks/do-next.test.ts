@@ -18,6 +18,7 @@ function rank(partial: Partial<Ranked> & { readonly id?: string }): Ranked {
     blocking: [],
     unlocksPayment: false,
     blocksUrgent: false,
+    blockedBy: [],
     ...partial,
   };
 }
@@ -55,6 +56,15 @@ describe('rankTasks', () => {
         rank({ id: 'overdue', overdue: true, dueDate: '2026-10-31' }),
       ]),
     ).toEqual(['overdue', 'blocks2', 'payment', 'early']);
+  });
+
+  it('puts tasks that can start before blocked ones, even urgent ones', () => {
+    expect(
+      ids([
+        rank({ id: 'blockedUrgent', priority: 'urgent', blockedBy: ['Survey'] }),
+        rank({ id: 'ready' }),
+      ]),
+    ).toEqual(['ready', 'blockedUrgent']);
   });
 
   it('breaks ties by the oldest start date', () => {
