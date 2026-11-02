@@ -39,6 +39,8 @@ DATABASE_URL=postgres://oneohm:oneohm-local-only@127.0.0.1:5460/oneohm node pack
 pnpm --filter @oneohm/database db:seed
 ```
 
+Maps need `GOOGLE_MAPS_API_KEY` in `.env`, and the field app needs a new dev build (`npx expo run:ios` / `run:android`) because `react-native-maps` is native.
+
 Then start each part in its own terminal:
 
 ```bash
