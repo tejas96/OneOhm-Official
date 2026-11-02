@@ -69,7 +69,10 @@ export function TeamView() {
   };
 
   return (
-    <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 py-2">
+    <motion.div
+      {...pageEnter}
+      className="mx-auto flex w-full min-w-0 max-w-[90rem] flex-col gap-8 py-2"
+    >
       <PageHeader title={t('title')} description={t('description')} />
       {current ? (
         <Tabs
@@ -77,6 +80,8 @@ export function TeamView() {
           onValueChange={select}
           items={allowed.map((tab) => ({ value: tab.value, label: t(`tabs.${tab.value}`) }))}
           label={t('tabsLabel')}
+          // The tab bar scrolls by itself; it must not widen the page.
+          className="min-w-0"
         >
           {allowed.map(({ value, Panel }) => (
             <TabPanel key={value} value={value} className="pt-8 outline-none">

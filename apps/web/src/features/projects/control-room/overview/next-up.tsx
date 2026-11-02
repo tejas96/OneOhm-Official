@@ -4,6 +4,7 @@ import type { ProjectTask } from '@oneohm/api-contracts';
 import { Card, CardHeader, cn, StatusPill } from '@oneohm/design-system/web';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { PriorityIcon } from '../../tasks/priority-icon';
 import { taskStatusKey, taskTone } from '../../tasks/task-status';
 import type { ProjectSignals } from '../room-signals';
 import { TabLink } from './tab-link';
@@ -18,14 +19,17 @@ function NextTask({ task, href }: { readonly task: ProjectTask; readonly href: s
   return (
     <li className="relative flex items-start gap-4 px-5 py-3 transition-colors hover:bg-sunken/50">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Link
-          href={href}
-          scroll={false}
-          replace
-          className="oh-stretched-link type-body-sm font-medium text-ink"
-        >
-          {task.title}
-        </Link>
+        <span className="flex min-w-0 items-start gap-1.5">
+          <PriorityIcon priority={task.priority} className="mt-0.5" />
+          <Link
+            href={href}
+            scroll={false}
+            replace
+            className="oh-stretched-link type-body-sm font-medium text-ink"
+          >
+            {task.title}
+          </Link>
+        </span>
         <p className="flex flex-wrap gap-x-2 type-label text-ink-faint">
           <span>{stagesT(task.stage)}</span>
           <span aria-hidden>·</span>
