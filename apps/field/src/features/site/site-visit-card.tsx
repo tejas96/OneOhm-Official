@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
 import { SITE } from '@/copy/site';
 import { ConsentPrompt } from '@/features/attendance/consent-prompt';
+import { buttonState } from './button-state';
 import { TrackingStatus } from './tracking-status';
 import { type Missed, useSiteAction, useTaskSite } from './use-task-site';
 import { VisitLine } from './visit-line';
@@ -88,19 +89,17 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       ) : null}
       {here ? (
         <Button
-          label={checkOut.label ?? SITE.checkOut}
+          {...buttonState(checkOut.isPending, checkOut.label, SITE.checkOut)}
           variant="secondary"
           icon={<LogOut size={18} color={theme.colors.textPrimary} />}
-          pending={checkOut.isPending}
           onPress={() => run(checkOut, SITE.checkedOut)}
           fullWidth
         />
       ) : null}
       {!here && !elsewhere && task.status !== 'completed' ? (
         <Button
-          label={checkIn.label ?? SITE.checkIn}
+          {...buttonState(checkIn.isPending, checkIn.label, SITE.checkIn)}
           icon={<LogIn size={18} color={theme.colors.onAccent} />}
-          pending={checkIn.isPending}
           onPress={() => run(checkIn, SITE.checkedIn)}
           fullWidth
         />

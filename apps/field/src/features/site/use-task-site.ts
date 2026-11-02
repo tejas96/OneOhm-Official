@@ -78,5 +78,5 @@ export function useSiteAction(taskId: string, kind: 'in' | 'out' | 'save') {
   });
   /** What the button says while the precise reading runs, else null. */
   const label = progress.reading ? SITE.finding(progress.accuracyM) : null;
-  return Object.assign(mutation, { label });
+  return { ...mutation, label };
 }
