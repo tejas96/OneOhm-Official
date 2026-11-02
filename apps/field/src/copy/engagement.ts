@@ -44,6 +44,7 @@ export const REWARDS = {
   },
   source: {
     task_on_time: 'On-time work',
+    task_first_time: 'First-time right',
     customer_rating: 'Customer rating',
     recognition: 'Recognition',
     stage_rating: 'Customer named you',

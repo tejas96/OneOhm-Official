@@ -29,8 +29,13 @@ export interface AttendancePolicy {
 }
 
 export interface PointsPolicy {
-  /** A task finished on or before its due date. Late tasks earn nothing; none lose points. */
+  /**
+   * A task handed in by its due date, after outside waits and leave are added (spec 3.7).
+   * Late tasks earn nothing; nobody ever loses points.
+   */
   readonly onTimeTask: number;
+  /** A task with an approval step, approved without being sent back. */
+  readonly firstTimeRight: number;
   /** Suggested for the project manager when a customer rates 4 or 5 stars. */
   readonly goodRating: number;
   /** Most a manager can give in one recognition. */
@@ -79,7 +84,13 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     autoCheckInFromSite: false,
     trackingByRole: {},
   },
-  points: { onTimeTask: 10, goodRating: 50, recognitionMax: 200, stageRating: 20 },
+  points: {
+    onTimeTask: 10,
+    firstTimeRight: 10,
+    goodRating: 50,
+    recognitionMax: 200,
+    stageRating: 20,
+  },
   travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60 },
   capacity: { defaultOpenTaskLimit: 0 },
 };

@@ -367,7 +367,9 @@
       "rules": {
         "title": "What earns points",
         "onTime": "A task done on time",
-        "onTimeDetail": "Given automatically when a task is finished by its due date.",
+        "onTimeDetail": "Given automatically when a task is handed in by its due date. Waits on others and approved leave are added first.",
+        "firstTime": "Approved first time",
+        "firstTimeDetail": "Given automatically when work with an approval step is approved without being sent back.",
         "rating": "A good customer rating",
         "ratingDetail": "Suggested after a good rating; a manager approves it.",
         "recognition": "Recognition",

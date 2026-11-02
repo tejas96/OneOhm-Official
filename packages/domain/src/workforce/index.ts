@@ -7,5 +7,6 @@ export * from './leave-handover';
 export * from './policy';
 export * from './reporting-line';
 export * from './site-visits';
+export * from './task-points';
 export * from './tracking-switch';
 export * from './travel';

@@ -33,6 +33,7 @@ export const workforcePolicySchema = z.object({
   }),
   points: z.object({
     onTimeTask: z.number().int().min(0).max(1000),
+    firstTimeRight: z.number().int().min(0).max(1000).default(10),
     goodRating: z.number().int().min(0).max(5000),
     recognitionMax: z.number().int().min(1).max(10000),
     stageRating: z.number().int().min(0).max(5000).default(20),
@@ -142,7 +143,13 @@ export const pointsEntrySchema = z.object({
   user: userRef,
   points: z.number().int(),
   reason: z.string(),
-  sourceType: z.enum(['task_on_time', 'customer_rating', 'recognition', 'stage_rating']),
+  sourceType: z.enum([
+    'task_on_time',
+    'task_first_time',
+    'customer_rating',
+    'recognition',
+    'stage_rating',
+  ]),
   status: decisionStatusSchema,
   createdAt: instantSchema,
 });

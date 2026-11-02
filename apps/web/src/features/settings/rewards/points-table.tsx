@@ -12,6 +12,7 @@ type PointsField = keyof Points;
 /** Each source of points (apps/api workforce/points), in the order people meet them. */
 const EVENTS: readonly { readonly field: PointsField; readonly approval: Approval }[] = [
   { field: 'onTimeTask', approval: 'automatic' },
+  { field: 'firstTimeRight', approval: 'automatic' },
   { field: 'goodRating', approval: 'manager' },
   { field: 'stageRating', approval: 'manager' },
   { field: 'recognitionMax', approval: 'given' },
