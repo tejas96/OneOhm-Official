@@ -1,6 +1,6 @@
 import { cn } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
-import { SolarLineArt } from './solar-line-art';
+import { SkyArt } from './sky-art';
 
 const LEGEND = ['array', 'inverter', 'meter', 'grid'] as const;
 const LETTERS = { array: 'A', inverter: 'B', meter: 'C', grid: 'D' } as const;
@@ -28,7 +28,7 @@ export function BrandPanel({ className }: { readonly className?: string }) {
         <p className="hidden font-mono text-[0.75rem] text-on-panel-muted sm:block">{t('sheet')}</p>
       </header>
 
-      <SolarLineArt className="mx-auto hidden w-full max-w-[34rem] text-on-panel md:block" />
+      <SkyArt onPanel className="mx-auto hidden w-full max-w-[34rem] md:block" />
 
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">

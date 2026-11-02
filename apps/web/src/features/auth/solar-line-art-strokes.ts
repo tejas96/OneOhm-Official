@@ -6,7 +6,7 @@
  */
 export interface Stroke {
   readonly d: string;
-  /** Faint construction lines (floor line, sun path, irradiance). */
+  /** Faint construction lines (floor line, tree). */
   readonly faint?: boolean;
   readonly dashed?: boolean;
 }
@@ -51,15 +51,6 @@ export const ARRAY_STROKES: readonly Stroke[] = [
   {
     d: 'M86 146 V161 M154 146 V161 M176 146 V161 M244 146 V161 M86 154 L154 150 M176 154 L244 150',
   },
-];
-
-export const SUN_STROKES: readonly Stroke[] = [
-  { d: 'M330 172 Q430 -32 530 172', faint: true, dashed: true },
-  { d: 'M430 52 a18 18 0 1 1 -0.1 0' },
-  {
-    d: 'M430 34 V26 M430 114 V106 M392 70 H384 M476 70 H468 M403 43 L397 37 M457 97 L463 103 M457 43 L463 37 M403 97 L397 103',
-  },
-  { d: 'M410 84 L250 116 M414 90 L170 116', faint: true, dashed: true },
 ];
 
 export const EQUIPMENT_STROKES: readonly Stroke[] = [
