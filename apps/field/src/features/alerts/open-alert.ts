@@ -18,6 +18,11 @@ export function openAlert(subject: {
     router.push({ pathname: '/leads/[id]', params: { id: subject.id } });
     return;
   }
+  // A customer wrote on WhatsApp, or asked for a person: open that chat.
+  if (subject.type === 'chat' && subject.id) {
+    router.push({ pathname: '/chats/[id]', params: { id: subject.id } });
+    return;
+  }
   if (subject.type === 'leave') {
     router.push('/leave');
     return;

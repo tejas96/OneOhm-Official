@@ -1,3 +1,4 @@
+import { CHAT_OPENERS } from '@oneohm/domain';
 /**
  * English (India) copy for the OneOhm customer app, one module per feature. The Marathi
  * (`../mr`) and Hindi (`../hi`) modules have exactly this shape; screens read whichever
@@ -81,6 +82,7 @@ export const PROFILE = {
   referHint: 'Know someone who wants solar? We will take it from here.',
   call: (company: string) => `Call ${company}`,
   whatsapp: (company: string) => `WhatsApp ${company}`,
+  chatHello: CHAT_OPENERS.hello.en,
   signOut: 'Sign out',
   signOutHint: 'You will need a new code to sign in again.',
   server: 'Connected to',

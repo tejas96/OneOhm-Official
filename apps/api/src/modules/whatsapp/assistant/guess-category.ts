@@ -3,13 +3,17 @@ import type { SERVICE_CATEGORIES } from '@oneohm/api-contracts';
 type Category = (typeof SERVICE_CATEGORIES)[number];
 
 const RULES: readonly [RegExp, Category, string][] = [
-  [/inverter|error|fault|beep/i, 'inverter_error', 'inverter'],
-  [/no (power|generation)|not generating|zero|stopped/i, 'no_generation', 'no generation'],
-  [/low|less|reduced/i, 'low_generation', 'low generation'],
-  [/broken|damage|crack|leak|wire/i, 'physical_damage', 'damage'],
-  [/clean|dust|wash/i, 'cleaning', 'cleaning'],
-  [/bill|net ?meter|meter/i, 'billing_net_meter', 'bill or meter'],
-  [/subsidy/i, 'subsidy', 'subsidy'],
+  [/inverter|error|fault|beep|इन्व्हर्टर|इन्वर्टर|एरर/i, 'inverter_error', 'inverter'],
+  [
+    /no (power|generation)|not generating|zero|stopped|बंद|वीज नाही|बिजली नहीं/i,
+    'no_generation',
+    'no generation',
+  ],
+  [/low|less|reduced|कमी|कम /i, 'low_generation', 'low generation'],
+  [/broken|damage|crack|leak|wire|तुटल|टूट|नुकसान|गळ|वायर/i, 'physical_damage', 'damage'],
+  [/clean|dust|wash|स्वच्छ|सफ़ाई|सफाई|धूळ|धूल/i, 'cleaning', 'cleaning'],
+  [/bill|net ?meter|meter|बिल|मीटर/i, 'billing_net_meter', 'bill or meter'],
+  [/subsidy|अनुदान|सब्सिडी/i, 'subsidy', 'subsidy'],
 ];
 
 /** A best guess at the kind of problem from the customer's words; the team can change it. */

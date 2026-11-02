@@ -17,6 +17,8 @@ export const NOTICE_SUBJECTS = [
   'lead',
   /** Something waiting for approval too long; opens "Waiting for my approval". */
   'approval',
+  /** A WhatsApp chat that needs an answer; opens the chat. */
+  'chat',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */

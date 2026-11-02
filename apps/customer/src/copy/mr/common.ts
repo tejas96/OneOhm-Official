@@ -1,3 +1,4 @@
+import { CHAT_OPENERS } from '@oneohm/domain';
 /**
  * Marathi copy for the OneOhm customer app: the same shape as `../en/common.ts`.
  *
@@ -83,6 +84,7 @@ export const PROFILE: Copy<typeof en.PROFILE> = {
   referHint: 'कोणाला सोलर हवा आहे? पुढचे सगळे आम्ही पाहू.',
   call: (company) => `${company} ला फोन करा`,
   whatsapp: (company) => `${company} ला WhatsApp करा`,
+  chatHello: CHAT_OPENERS.hello.mr,
   signOut: 'साइन आउट',
   signOutHint: 'पुन्हा साइन इन करण्यासाठी नवीन कोड लागेल.',
   server: 'जोडलेले:',

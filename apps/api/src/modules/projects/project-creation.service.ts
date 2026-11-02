@@ -21,6 +21,7 @@ import { assertVariantOffered } from '../business-settings/project-variant-check
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { raiseProjectNameChange } from '../discom/change-request-raise';
 import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
+import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
@@ -149,6 +150,7 @@ export class ProjectCreationService {
       property.city,
     ]);
 
+    const managerUserId = input.managerUserId ?? actor.userId;
     return this.db.transaction(async (tx) => {
       const code = await nextCode(tx, input.startDate.slice(0, 4));
       const name =
@@ -171,12 +173,14 @@ export class ProjectCreationService {
           groundMount,
           subsidy: quotation.subsidyPaise > 0,
           nameChange: input.nameChange,
-          managerUserId: input.managerUserId ?? actor.userId,
+          managerUserId,
           startDate: input.startDate,
           targetFinishDate: input.targetFinishDate ?? null,
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
+      // The customer's WhatsApp chat goes to the project's manager from now on.
+      await moveCustomerChats(tx, customer.id, managerUserId);
 
       await saveProjectTeam(tx, project.id, team, actor.userId);
       const { unassigned, toConfirm, perPerson } = await writeGeneratedTasks(

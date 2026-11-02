@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReminderTimingRecord } from '@oneohm/api-contracts';
-import { Field, Input } from '@oneohm/design-system/web';
+import { Field, Input, Switch } from '@oneohm/design-system/web';
 import { addDays, todayIn } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -94,6 +94,16 @@ export function RemindersPanel() {
             remind: day(3 - draft.followUpLeadDays),
             time: draft.staffDigestTime,
           })}
+        </p>
+      </SettingsSection>
+      <SettingsSection title={t('whatsapp.title')} description={t('whatsapp.description')}>
+        <Switch
+          checked={draft.whatsappNightReply}
+          onCheckedChange={(value) => patch({ whatsappNightReply: value })}
+          label={t('whatsapp.nightReply')}
+        />
+        <p className="rounded-md bg-sunken px-4 py-3 type-body-sm text-ink-muted">
+          {t('whatsapp.nightReplyPreview')}
         </p>
       </SettingsSection>
       <SaveBar

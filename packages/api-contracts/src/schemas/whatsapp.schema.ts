@@ -19,6 +19,14 @@ export const chatSummarySchema = z.object({
   /** `human` while a team member has taken over from the assistant. */
   state: z.string(),
   handedOverAt: instantSchema.nullable(),
+  /** The team member who last answered by hand. */
+  handledByUserId: idSchema.nullable(),
+  /** Who answers this chat (project manager or lead owner); null is the service team. */
+  assignee: z.object({ id: idSchema, name: z.string() }).nullable(),
+  /** A person has the chat and the customer wrote last: an answer is owed. */
+  needsReply: z.boolean(),
+  /** Needs a reply and has waited over 2 working hours. */
+  late: z.boolean(),
   lastMessage: z
     .object({ body: z.string(), direction: z.enum(['in', 'out']), at: instantSchema })
     .nullable(),

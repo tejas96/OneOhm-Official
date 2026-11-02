@@ -22,10 +22,20 @@ export const waConversations = pgTable(
     handledByUserId: uuid('handled_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /**
+     * Who answers this chat: the project manager, else the lead's owner. Empty means the
+     * service team's shared queue. Kept when the chat goes back to the assistant.
+     */
+    assignedUserId: uuid('assigned_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (table) => [index('wa_conversations_customer_idx').on(table.customerId)],
+  (table) => [
+    index('wa_conversations_customer_idx').on(table.customerId),
+    index('wa_conversations_assigned_idx').on(table.assignedUserId),
+  ],
 );
 
 /** Every message in a chat, both ways. Outgoing ones point at their outbox row. */

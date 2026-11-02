@@ -49,6 +49,14 @@ export function shareSplit(milestones: readonly Milestone[]) {
 }
 
 /** Digits only, with India's code, for tel: and wa.me links. */
+/**
+ * A WhatsApp link to the business number with a first message ready to send. The
+ * assistant reads that message: "Talk to a person" goes straight to the team.
+ */
+export function businessChatLink(number: string, text: string): string {
+  return `https://wa.me/${dialDigits(number)}?text=${encodeURIComponent(text)}`;
+}
+
 export function dialDigits(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.length === 10 ? `91${digits}` : digits;

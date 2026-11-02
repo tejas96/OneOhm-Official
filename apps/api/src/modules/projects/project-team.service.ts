@@ -18,6 +18,7 @@ import type { Actor } from '../../common/auth/actor';
 import { invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { surveyTaskOf } from '../reports/survey-report.data';
+import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { surveyApproved } from './budget-check.service';
 import { checkTeam, projectTeamOf } from './project-team';
 
@@ -108,8 +109,11 @@ export class ProjectTeamService {
         })
         .where(eq(projects.id, projectId));
       if (input.teamUserIds) await replaceTeam(tx, projectId, input.teamUserIds);
-      if (managerChanged && input.managerUserId)
+      if (managerChanged && input.managerUserId) {
         await this.tellNewManager(tx, project, input.managerUserId, actor);
+        // The customer's WhatsApp chat follows the new manager.
+        await moveCustomerChats(tx, project.customerId, input.managerUserId);
+      }
       await recordAudit(tx, actor.userId, 'project.team_changed', 'project', projectId, {
         managerUserId: managerChanged ? input.managerUserId : undefined,
         previousManagerUserId: managerChanged ? project.managerUserId : undefined,

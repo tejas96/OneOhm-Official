@@ -77,7 +77,7 @@ export function HomeScreen() {
           <JourneyCard project={project} />
           <NextStepCard next={project.nextStep} />
           <SubsidyCard subsidy={project.subsidy} />
-          <ContactCard contact={project.contact} />
+          <ContactCard contact={project.contact} whatsapp={query.data?.company.whatsapp ?? null} />
           <UpdatesCard updates={project.updates} />
           <ReferPrompt />
         </>

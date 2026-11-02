@@ -86,41 +86,54 @@ cd /opt/oneohm/app && git pull
 docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/oneohm/.env up -d --build
 ```
 
-## 5. WhatsApp templates
+## 5. WhatsApp
 
-Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**.
+### Templates
 
-1. Create these templates (category *Utility*, language *English*). The body parameters must be in this order:
+Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
+full list (21 templates, category *Utility*, language *English*), with each body, field
+order and sample values, is in [whatsapp-templates.md](whatsapp-templates.md). The names
+match the app's keys, so no change in **Settings → WhatsApp messages** is needed.
 
-   | Template name | Body parameters `{{1}}, {{2}}, …` |
-   |---|---|
-   | `quotation_sent` | customer, quotation number, total price, expected subsidy, effective cost |
-   | `project_started` | customer, project code, capacity |
-   | `project_milestone` | customer, project code, milestone |
-   | `payment_received` | customer, amount, milestone, project code |
-   | `payment_reminder` | customer, amount due, milestone, project code |
-   | `staff_daily_digest` | name, overdue tasks, tasks due today, lead follow-ups |
-   | `service_update` | customer, what the request is about, new status |
-   | `change_request_raised` | customer, change requested (e.g. Consumer name change), request number |
-   | `change_request_completed` | customer, change requested, request number |
-   | `document_requested` | customer, document asked for (e.g. Latest electricity bill), project code |
-   | `payment_link` | customer, amount, milestone, project code, payment link |
+- With the access token in place, the templates can be registered through the Graph API
+  (`POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates`, `parameter_format: POSITIONAL`).
+- Migration `0057` updates the app's wording to the approved text (rows an owner already
+  changed are kept) and adds `chat_follow_up`.
 
-   The names, languages, field order and wording can be changed later in **Settings → WhatsApp messages**, so they can match exactly what Meta approved.
+Until `WHATSAPP_DELIVERY=live`, messages are recorded in the outbox as "not sent (log mode)",
+so nothing reaches customers by accident. Once the templates are approved:
 
-2. Once they are approved, set `WHATSAPP_DELIVERY=live` and restart the worker:
+```bash
+docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/oneohm/.env up -d worker
+```
 
-   ```bash
-   docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/oneohm/.env up -d worker
-   ```
+Never set `WHATSAPP_TEST_NUMBERS` in production: it only lets listed numbers receive
+messages, and the worker refuses to start in production with it set.
 
-Until then, messages are recorded in the outbox as "not sent (log mode)", so nothing reaches customers by accident.
+### Webhook (customer messages and delivery ticks)
 
-3. For the WhatsApp assistant and delivery ticks:
-   - In Meta's app settings, set the webhook to `https://<domain>/api/v1/webhooks/whatsapp`.
-   - Use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` as the verify token.
-   - Subscribe to `messages`.
-   - Put the app secret in `WHATSAPP_APP_SECRET`.
+1. In Meta's app settings, set the webhook to `https://<domain>/api/v1/webhooks/whatsapp`,
+   use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` as the verify token, and subscribe to `messages`.
+2. Put the app secret in `WHATSAPP_APP_SECRET`: every post is then checked against Meta's
+   signature.
+3. Without the app secret (no Meta console access), set a long random
+   `WHATSAPP_WEBHOOK_PATH_KEY` and point the webhook at
+   `https://<domain>/api/v1/webhooks/whatsapp/<key>`. It can be set with the access token:
+   `POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/subscribed_apps` with `override_callback_uri` and
+   `verify_token`. This is weaker (anyone with the link could post), so add the app secret
+   as soon as you have it; the secret then always wins.
+
+### Where chats live
+
+- Staff answer chats in **Today → Chats** (web), on the **customer** and **lead** pages,
+  and in the field app (Today card, Me → WhatsApp chats). A small card on the project page
+  and an item on the command centre show customers waiting.
+- Each chat has an owner: the newest project's manager, else the lead's owner; a stranger
+  goes to sales. An owner on approved leave is covered by their backup.
+- Reminders: 30 minutes and 2 hours of working time (9:30 am to 6:30 pm). The night
+  auto-reply can be turned off in **Settings → Reminders**.
+- Customers write to the business number; set `WHATSAPP_BUSINESS_NUMBER` to fix it,
+  otherwise it is read from Meta.
 
 ## 5a. Razorpay payment links
 

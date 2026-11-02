@@ -13,6 +13,8 @@ export interface ReminderTiming {
   readonly ownerSummaryTime: string;
   /** Days before a lead's follow-up date that its owner is reminded (0 = on the day). */
   readonly followUpLeadDays: number;
+  /** Outside working hours, one calm WhatsApp reply tells the customer who has their message. */
+  readonly whatsappNightReply: boolean;
 }
 
 export const DEFAULT_REMINDER_TIMING: ReminderTiming = {
@@ -21,6 +23,7 @@ export const DEFAULT_REMINDER_TIMING: ReminderTiming = {
   staffDigestTime: '08:30',
   ownerSummaryTime: '08:45',
   followUpLeadDays: 1,
+  whatsappNightReply: true,
 };
 
 export function checkReminderTiming(timing: ReminderTiming): SettingErrors {

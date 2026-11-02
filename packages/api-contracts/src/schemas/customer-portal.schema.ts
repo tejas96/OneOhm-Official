@@ -100,6 +100,8 @@ export const companyContactSchema = z.object({
   name: z.string(),
   phones: z.array(z.string()),
   email: z.string(),
+  /** The business WhatsApp number (E.164): every chat goes here, never to a personal phone. */
+  whatsapp: z.string().nullable(),
 });
 
 export const customerHomeSchema = z.object({

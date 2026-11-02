@@ -40,6 +40,7 @@ export function Select<TValue extends string>({
     const option = options.find((candidate) => candidate.value === next);
     if (option) onValueChange(option.value);
   };
+  const selectedLabel = options.find((option) => option.value === value)?.label;
   return (
     <SelectPrimitive.Root
       {...(value === undefined ? {} : { value })}
@@ -58,11 +59,14 @@ export function Select<TValue extends string>({
           className,
         )}
       >
-        {/* The label is rendered directly so it shows before hydration too. */}
-        <SelectPrimitive.Value placeholder={placeholder}>
-          {options.find((option) => option.value === value)?.label}
-        </SelectPrimitive.Value>
-        <SelectPrimitive.Icon>
+        {/*
+          The label is rendered directly so it shows before hydration too. It stays on one
+          line in any width: a long one ends in "…" and shows in full on hover.
+        */}
+        <span className="min-w-0 flex-1 truncate" title={selectedLabel}>
+          <SelectPrimitive.Value placeholder={placeholder}>{selectedLabel}</SelectPrimitive.Value>
+        </span>
+        <SelectPrimitive.Icon className="shrink-0">
           <ChevronDown aria-hidden className="size-4 text-ink-faint" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>

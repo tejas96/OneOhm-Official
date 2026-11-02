@@ -18,7 +18,8 @@ export type NoticeSubject =
   | 'stock'
   | 'travel_claim'
   | 'lead'
-  | 'approval';
+  | 'approval'
+  | 'chat';
 
 export interface Notice {
   readonly kind: string;
@@ -118,4 +119,31 @@ export async function markRead(
         ids && ids.length > 0 ? inArray(notifications.id, [...ids]) : undefined,
       ),
     );
+}
+
+/**
+ * Alerts the staff (not partners or resellers) who hold the capability: for things only
+ * the business itself should see, such as customer WhatsApp chats.
+ */
+export async function notifyStaffHolders(
+  db: DatabaseExecutor,
+  capability: string,
+  notice: Notice,
+): Promise<number> {
+  const rows = await db
+    .selectDistinct({ id: users.id })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .innerJoin(roles, and(eq(roles.id, userRoles.roleId), isNull(roles.archivedAt)))
+    .innerJoin(roleCapabilities, eq(roleCapabilities.roleId, roles.id))
+    .where(
+      and(
+        eq(users.status, 'active'),
+        eq(roleCapabilities.capability, capability),
+        eq(roles.kind, 'staff'),
+      ),
+    );
+  for (const { id: userId } of rows)
+    await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
+  return rows.length;
 }

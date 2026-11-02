@@ -6,6 +6,7 @@ import {
 } from '@oneohm/database';
 import { type ReminderTiming, timeReached } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
+import { queueChatReminders } from './chat-reminders';
 import { queueTimedFollowUps } from './follow-up-reminders';
 import type { WorkerJob } from './job-runners';
 
@@ -57,6 +58,12 @@ export async function runTimedReminders(
   }
   try {
     ran += await queueTimedFollowUps(db, todayIn(timeZone), clock);
+  } catch (error) {
+    failure ??= error;
+  }
+  // WhatsApp customers waiting for a person's answer (each alert goes once).
+  try {
+    ran += await queueChatReminders(db, new Date(), timeZone);
   } catch (error) {
     failure ??= error;
   }

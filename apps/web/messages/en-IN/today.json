@@ -71,6 +71,10 @@
       "blocks": "Blocks {count, plural, one {# task} other {# tasks}}{payment, select, true { and a payment} other {}}",
       "payment": "Unlocks a payment",
       "due": "Due {date}"
+    },
+    "chats": {
+      "title": "Chats",
+      "brief": "{count, plural, one {# customer is} other {# customers are}} waiting for your WhatsApp reply."
     }
   }
 }

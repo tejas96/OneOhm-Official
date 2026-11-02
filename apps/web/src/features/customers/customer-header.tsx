@@ -2,11 +2,12 @@
 
 import type { Customer, CustomerAccount } from '@oneohm/api-contracts';
 import { Avatar, Badge, Button } from '@oneohm/design-system/web';
-import { ArrowLeft, Link2, Mail, MessageCircle, PencilLine, Phone } from 'lucide-react';
+import { ArrowLeft, Link2, Mail, PencilLine, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
-import { formatPhone, swatchFor, whatsappHref } from '@/lib/format/contact';
+import { OpenChatButton } from '@/features/service/whatsapp/open-chat-button';
+import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 import { EditCustomerSheet } from './edit-customer-sheet';
 
@@ -74,11 +75,7 @@ export function CustomerHeader({
           <Button asChild variant="secondary" size="sm" leadingIcon={<Phone />}>
             <a href={`tel:${customer.phone}`}>{t('call')}</a>
           </Button>
-          <Button asChild variant="secondary" size="sm" leadingIcon={<MessageCircle />}>
-            <a href={whatsappHref(customer.phone)} target="_blank" rel="noreferrer">
-              {t('whatsapp')}
-            </a>
-          </Button>
+          <OpenChatButton phone={customer.phone} label={t('whatsapp')} />
           {customer.email && (
             <Button asChild variant="secondary" size="sm" leadingIcon={<Mail />}>
               <a href={`mailto:${customer.email}`}>{t('email')}</a>

@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { readWebhook, verifyMetaSignature } from './whatsapp-events';
+import { readWebhook, verifyMetaSignature, webhookAccess } from './whatsapp-events';
 
 const post = (value: unknown) => ({ entry: [{ changes: [{ field: 'messages', value }] }] });
 
@@ -98,5 +98,33 @@ describe('WhatsApp webhook', () => {
     );
     expect(updates).toHaveLength(2);
     expect(updates[1]).toMatchObject({ status: 'failed', error: '131047 Re-engagement message' });
+  });
+});
+
+describe('who may post to the webhook', () => {
+  const body = Buffer.from('{"entry":[]}');
+  const sign = (secret: string) =>
+    `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+  const key = 'k'.repeat(40);
+
+  it('needs Meta’s signature once the app secret is set, whatever the URL', () => {
+    const settings = { appSecret: 's3cret', pathKey: key };
+    expect(webhookAccess(settings, { rawBody: body, signature: sign('s3cret') })).toBe('ok');
+    expect(webhookAccess(settings, { key, rawBody: body, signature: sign('other') })).toBe(
+      'bad_signature',
+    );
+    expect(webhookAccess(settings, { key, rawBody: body })).toBe('bad_signature');
+  });
+
+  it('takes the secret link only while there is no app secret', () => {
+    expect(webhookAccess({ pathKey: key }, { key, rawBody: body })).toBe('ok');
+    expect(webhookAccess({ pathKey: key }, { key: 'k'.repeat(39), rawBody: body })).toBe(
+      'not_found',
+    );
+    expect(webhookAccess({ pathKey: key }, { rawBody: body })).toBe('not_found');
+  });
+
+  it('is closed when neither is set', () => {
+    expect(webhookAccess({}, { key, rawBody: body })).toBe('not_found');
   });
 });

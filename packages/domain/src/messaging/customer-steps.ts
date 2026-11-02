@@ -47,7 +47,7 @@ export const STEP_MESSAGE_TEMPLATES = [
     audience: 'customer',
     fields: ['customer', 'project', 'capacity'],
     preview:
-      'Hello {{1}}, installation of your {{3}} solar system ({{2}}) has started today. We will tell you when it is done.',
+      'Hello {{1}}, installation of your solar system {{2}} ({{3}}) has started today. We will tell you when it is done.',
   },
   {
     key: 'commissioning_completed',
@@ -60,7 +60,8 @@ export const STEP_MESSAGE_TEMPLATES = [
     key: 'project_update_link',
     audience: 'customer',
     fields: ['customer', 'project', 'milestone', 'link'],
-    preview: 'Hello {{1}}, an update on your solar project {{2}}: {{3}}. See it here: {{4}}',
+    preview:
+      'Hello {{1}}, an update on your solar project {{2}}: {{3}}. See it here: {{4}} Thank you for choosing OneOhm.',
   },
   {
     key: 'service_visit_booked',

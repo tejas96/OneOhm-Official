@@ -6,6 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
+import { useChats } from '@/features/service/whatsapp/use-whatsapp';
+import { WhatsAppInbox } from '@/features/service/whatsapp/whatsapp-inbox';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import { useGreeting } from '../command-center/use-greeting';
@@ -13,11 +15,28 @@ import { ApprovalsInbox } from './approvals/approvals-inbox';
 import { groupTasks, TODAY_GROUPS } from './group-tasks';
 import { ACCENT, MyWork } from './my-work';
 
-type View = 'work' | 'approvals';
+type View = 'work' | 'approvals' | 'chats';
+
+/** WhatsApp chats come to the person here, not to a department page. */
+function useTodayChats() {
+  const chats = useChats();
+  const desk = useCan('service.manage', 'customers.manage');
+  return {
+    showChats: (chats.data?.length ?? 0) > 0 || desk,
+    chatsWaiting: (chats.data ?? []).filter((chat) => chat.needsReply).length,
+  };
+}
+
+function pickView(asked: string | null, approvals: boolean, chats: boolean): View {
+  if (approvals && asked === 'approvals') return 'approvals';
+  if (chats && asked === 'chats') return 'chats';
+  return 'work';
+}
 
 /**
- * The signed-in person's day: their own work (late, due, held, next) and, for anyone
- * who approves things, everything waiting for their yes (`?tab=approvals`).
+ * The signed-in person's day: their own work (late, due, held, next), for anyone who
+ * approves things everything waiting for their yes (`?tab=approvals`), and the WhatsApp
+ * chats they answer (`?tab=chats`).
  */
 export function TodayView() {
   const t = useTranslations('today');
@@ -48,17 +67,20 @@ export function TodayView() {
     queryFn: () => expectStatus(api.businessSettings.myApprovals(), 200),
     refetchInterval: 60_000,
   });
+  const { showChats, chatsWaiting } = useTodayChats();
   const groups = groupTasks(query.data ?? [], todayIn());
   const firstName = user.fullName.split(/\s+/)[0] ?? user.fullName;
   const total = TODAY_GROUPS.reduce((sum, group) => sum + groups[group].length, 0);
   const waiting = approvals.data?.length ?? 0;
   const showApprovals = approver || waiting > 0;
-  const view: View = showApprovals && params.get('tab') === 'approvals' ? 'approvals' : 'work';
+  const view = pickView(params.get('tab'), showApprovals, showChats);
   const select = (next: View) => {
     const search = new URLSearchParams(params);
     if (next === 'work') search.delete('tab');
     else search.set('tab', next);
     search.delete('kind');
+    search.delete('chat');
+    search.delete('filter');
     router.replace(`${pathname}${search.size ? `?${search.toString()}` : ''}`, { scroll: false });
   };
 
@@ -79,6 +101,7 @@ export function TodayView() {
               upcoming: groups.upcoming.length,
             })}
             {waiting > 0 && ` ${t('approvals.brief', { count: waiting })}`}
+            {chatsWaiting > 0 && ` ${t('chats.brief', { count: chatsWaiting })}`}
           </p>
         )}
         {view === 'work' && query.data && total > 0 && (
@@ -100,14 +123,19 @@ export function TodayView() {
           </nav>
         )}
       </header>
-      {showApprovals ? (
+      {showApprovals || showChats ? (
         <Tabs<View>
           label={t('views')}
           value={view}
           onValueChange={select}
           items={[
             { value: 'work', label: t('myWork'), count: total },
-            { value: 'approvals', label: t('approvals.title'), count: waiting },
+            ...(showApprovals
+              ? [{ value: 'approvals' as const, label: t('approvals.title'), count: waiting }]
+              : []),
+            ...(showChats
+              ? [{ value: 'chats' as const, label: t('chats.title'), count: chatsWaiting }]
+              : []),
           ]}
           className="flex flex-col gap-8"
         >
@@ -116,6 +144,9 @@ export function TodayView() {
           </TabPanel>
           <TabPanel value="approvals">
             <ApprovalsInbox query={approvals} />
+          </TabPanel>
+          <TabPanel value="chats">
+            <WhatsAppInbox />
           </TabPanel>
         </Tabs>
       ) : (

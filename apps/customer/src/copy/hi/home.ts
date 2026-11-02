@@ -1,3 +1,4 @@
+import { CHAT_OPENERS } from '@oneohm/domain';
 /**
  * Hindi copy for Home and the solar journey: the same shape as `../en/home.ts`.
  *
@@ -89,6 +90,8 @@ export const HOME: Copy<typeof en.HOME> = {
   contactFallback: (company) => `${company} टीम`,
   call: 'फ़ोन करें',
   whatsapp: 'WhatsApp',
+  /** Sent to the business number; the assistant hands it to the contact person. */
+  talkToPerson: CHAT_OPENERS.talkToPerson.hi,
   referTitle: 'किसी को सोलर चाहिए?',
   referBody: 'पड़ोसी या दोस्त का नाम बताएँ। हम उन्हें फ़ोन करेंगे और आपको बताते रहेंगे।',
   referAction: 'नाम बताएँ',
