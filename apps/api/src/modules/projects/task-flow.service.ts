@@ -12,6 +12,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { canViewTask } from './task-access';
 import { taskTimeline } from './task-activity';
+import { saveTick } from './task-checklist';
 import { tellSurveyDate } from './task-messages';
 import { tellRescheduled, tellReturned } from './task-notices';
 import { setPriority } from './task-priority';
@@ -128,6 +129,17 @@ export class TaskFlowService {
       message: `${task.title}: ${note}`,
       userId: actor.userId,
     });
+    return this.present(id);
+  }
+
+  /** One checklist tick, saved at once by whoever works the task. */
+  async tick(actor: Actor, id: string, key: string, done: boolean): Promise<ProjectTask> {
+    const task = await this.row(id);
+    if (actor.kind === 'partner' && !canViewTask(actor, task)) throw notFound('That task');
+    const mine = task.assigneeUserId === actor.userId;
+    if (!mine && !can(actor, 'tasks.assign') && !can(actor, 'projects.manage'))
+      throw forbidden('Only the assignee or a manager can tick this checklist.');
+    await this.db.transaction((tx) => saveTick(tx, task, key, done));
     return this.present(id);
   }
 

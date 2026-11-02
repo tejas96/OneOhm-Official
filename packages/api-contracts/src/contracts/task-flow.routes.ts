@@ -51,6 +51,14 @@ export const taskFlowRoutes = c.router({
     responses: { 200: projectTaskSchema },
     summary: 'A progress note on the project history; the status does not change.',
   },
+  tickChecklist: {
+    method: 'POST',
+    path: '/tasks/:id/checklist',
+    pathParams: idParams,
+    body: z.object({ key: z.string().min(1).max(80), done: z.boolean() }),
+    responses: { 200: projectTaskSchema },
+    summary: 'Saves one checklist tick at once; the task stays where it is.',
+  },
   taskActivity: {
     method: 'GET',
     path: '/tasks/:id/activity',

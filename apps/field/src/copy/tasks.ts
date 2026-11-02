@@ -118,7 +118,7 @@ export const TASK = {
   measurementsBody: 'Measure on site and enter the numbers before completing.',
   checklist: {
     title: 'Checklist',
-    body: 'Tick each item once it is done. All of them are needed to complete.',
+    body: 'Tick each item once it is done; each tick is saved straight away. All of them are needed to complete.',
     progress: (done: number, total: number) => `${done} of ${total} done`,
     allDone: 'Every item is ticked.',
   },

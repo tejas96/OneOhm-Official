@@ -6,8 +6,8 @@ import { TASK } from '@/copy/tasks';
 import { RequirementRow } from './requirement-row';
 
 /**
- * The task's checklist (PRD 4.4). Ticks stay on the phone until the task is completed,
- * when they are saved with the facts; every item is needed to complete.
+ * The task's checklist (PRD 4.4). Each tick is saved as it is made (and again with the
+ * facts on completion); every item is needed to complete.
  */
 export function ChecklistCard({
   task,

@@ -14,13 +14,9 @@ import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
 import { taskStatusKey, taskTone } from '../tasks/task-status';
 import { useTaskSteps } from '../tasks/use-task-steps';
+import { PanelChecklist } from './panel-checklist';
 import { PriorityControl } from './priority-control';
-import {
-  BlockersSection,
-  ChecklistSection,
-  FactsSection,
-  PanelSection,
-} from './task-panel-sections';
+import { BlockersSection, FactsSection, PanelSection } from './task-panel-sections';
 import { TaskTimeline } from './task-timeline';
 
 /**
@@ -112,7 +108,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
       )}
       <TaskCardNotes task={task} />
       <BlockersSection task={task} />
-      <ChecklistSection task={task} />
+      <PanelChecklist task={task} rights={steps.rights} />
       <FactsSection task={task} />
       <EvidenceUploader task={task} />
       <TaskVisitLine task={task} />
