@@ -84,9 +84,9 @@ describe('projectState: the team before outside waits, and stale work', () => {
   it('puts a project with stale work at risk', () => {
     expect(projectState({ ...base, staleTasks: 2 })).toEqual({
       tone: 'atRisk',
-      label: 'At risk · 2 tasks with no update',
+      label: '2 tasks not updated',
     });
-    expect(projectState({ ...base, staleTasks: 1 }).label).toBe('At risk · 1 task with no update');
+    expect(projectState({ ...base, staleTasks: 1 }).label).toBe('1 task not updated');
   });
 });
 

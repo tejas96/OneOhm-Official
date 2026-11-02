@@ -54,7 +54,7 @@ describe('Stale tasks and the Urgent notice', () => {
     await setTaskDates(ready.id, { dueDate: addDays(today(), 5) });
     await ageTask(ready.id, 4);
     expect((await project(admin, other.project.id)).toneLabel).toBe(
-      'At risk · 1 task with no update',
+      '1 task not updated',
     );
   });
 

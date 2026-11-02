@@ -97,7 +97,8 @@ export function projectState(facts: ProjectStateFacts): ProjectState {
   if (facts.staleTasks > 0)
     return {
       tone: 'atRisk',
-      label: `At risk · ${facts.staleTasks} ${facts.staleTasks === 1 ? 'task' : 'tasks'} with no update`,
+      // Short like "1 task overdue"; the at-risk colour says the rest.
+      label: `${facts.staleTasks} ${facts.staleTasks === 1 ? 'task' : 'tasks'} not updated`,
     };
   if (facts.nextDueSoonNotStarted) return { tone: 'atRisk', label: 'At risk' };
   if (operational && facts.paymentDue)
