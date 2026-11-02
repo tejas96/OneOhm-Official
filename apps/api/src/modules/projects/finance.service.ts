@@ -22,6 +22,7 @@ import { environmentOnce } from '../../config/environment-once';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
 import { tellStaffPaidOnline } from '../online-payments/payment-follow-ups';
+import { pdfFileName } from '../reports/pdf-file-name';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
@@ -185,7 +186,7 @@ export class FinanceService {
               id: payment.id,
               customerId: project.customerId,
             }),
-            documentName: `${receiptNumber}.pdf`,
+            documentName: pdfFileName(receiptNumber),
           },
           `payment:${milestone.id}:${total}`,
         );

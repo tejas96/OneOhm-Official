@@ -64,7 +64,7 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087
 **Button (button version):**
 - One **Call to action → Visit website** button, type **Dynamic**.
 - Button text: `Pay now`.
-- URL: `https://<API host>/v1/pay/due/{{1}}`. Use the host in `API_PUBLIC_URL`.
+- URL: `<API_PUBLIC_URL>/v1/pay/due/{{1}}`, with `API_PUBLIC_URL` exactly as set in the app (it can include a path, for example `https://app.example.com/api`). Meta fixes the URL base when it approves the template, so a template approved with a test tunnel address will not work in production. Submit the production version with the production `API_PUBLIC_URL`.
 - Sample for `{{1}}`: any short text, for example `abc123`. The app fills `{{1}}` with the customer's pay token.
 - This is a button field, separate from the body fields.
 
@@ -78,7 +78,7 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087 · https
 **Button (button version):**
 - Same as `payment_reminder`: one dynamic **Visit website** button.
 - Button text: `Pay now`.
-- URL: `https://<API host>/v1/pay/due/{{1}}`, where `{{1}}` is the pay token.
+- URL: `<API_PUBLIC_URL>/v1/pay/due/{{1}}`, where `{{1}}` is the pay token. Same rule as above: the base is fixed at approval, so use the production `API_PUBLIC_URL`.
 
 ### 7. `service_update` — Changed
 Fields: customer, topic, status
@@ -201,23 +201,26 @@ Four templates now have a second version with a file or buttons: `quotation_sent
 `payment_link`, `payment_reminder` and `payment_received`. The text bodies above do not change.
 Meta must approve the new version before the app can use it.
 
-Follow this order for each template:
+Editing an approved Meta template replaces it, and once a template has a document header, a send
+without the header parameter is refused. So never edit the old template. Follow this order:
 
-1. Submit the version with the file and buttons to Meta (same name, same body, plus the header
-   or buttons described above).
+1. Submit the version with the file and buttons to Meta under a **new** Meta name (same body, plus
+   the header or buttons described above). `quotation_sent` has no link field in the new version.
 2. Wait for Meta to approve it.
-3. In **Settings → Messages**, set the Meta name for the template.
-4. Turn on **Meta approved the version with file and buttons** for that template.
+3. In **Settings → Messages**, open the template and, in the same dialog, change the Meta name to
+   the new one and turn on **Meta approved the version with file and buttons**. Save both together.
 
-If sends start to fail, turn that switch off. The app then goes back to the old text template.
-With the switch off, nothing breaks: the quote PDF link goes in the text and the pay link is a
-plain link.
+To roll back, put the old Meta name back and turn the switch off in the same dialog. The old text
+template then sends again.
+
+The switch also applies to the Marathi and Hindi template names. Those versions need the same
+header and buttons approved before the switch goes on, or leave their names empty.
 
 | Template | Header | Buttons |
 |---|---|---|
 | `quotation_sent` | Document (quote PDF) | Quick replies: Accept quote, I have a question |
-| `payment_link` | none | URL button "Pay now": `https://<API host>/v1/pay/due/{{1}}` |
-| `payment_reminder` | none | URL button "Pay now": `https://<API host>/v1/pay/due/{{1}}` |
+| `payment_link` | none | URL button "Pay now": `<API_PUBLIC_URL>/v1/pay/due/{{1}}` (production address) |
+| `payment_reminder` | none | URL button "Pay now": `<API_PUBLIC_URL>/v1/pay/due/{{1}}` (production address) |
 | `payment_received` | Document (receipt PDF) | none |
 
 To test all of this with real (test) keys, follow `docs/LIVE-TEST-WHATSAPP-RAZORPAY.md`.

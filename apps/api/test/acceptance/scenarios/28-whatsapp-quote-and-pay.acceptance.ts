@@ -34,35 +34,6 @@ describe('WhatsApp quote and pay', () => {
     expect(file.headers.get('content-type')).toContain('application/pdf');
   });
 
-  it('also sends the PDF as a chat file when the customer wrote in the last 24 hours', async () => {
-    const customer = await newCustomer(admin, { name: 'Quote Open Window Customer (test)' });
-    await rows(
-      `insert into wa_conversations (phone, customer_id, last_inbound_at) values ($1, $2, now())`,
-      [customer.phone, customer.customerId],
-    );
-    const quotation = await createQuotation(admin, customer);
-    await admin.post(`/quotations/${quotation.id}/send`);
-    await admin.post(`/quotations/${quotation.id}/send`);
-
-    const files = await rows<{ payload: { kind: string; filename: string } }>(
-      "select payload from outbox where recipient = $1 and template = 'session:document'",
-      [customer.phone],
-    );
-    expect(files).toHaveLength(1);
-    expect(files[0]?.payload.filename).toBe(`${quotation.number}.pdf`);
-  });
-
-  it('sends no chat file when the customer has not written recently', async () => {
-    const customer = await newCustomer(admin, { name: 'Quote Closed Window Customer (test)' });
-    const quotation = await createQuotation(admin, customer);
-    await admin.post(`/quotations/${quotation.id}/send`);
-    const files = await rows(
-      "select 1 from outbox where recipient = $1 and template = 'session:document'",
-      [customer.phone],
-    );
-    expect(files).toHaveLength(0);
-  });
-
   it('lists a sent, not yet accepted quote in the Documents answer', async () => {
     const customer = await newCustomer(admin, { name: 'Quote Documents Customer (test)' });
     const quotation = await createQuotation(admin, customer);

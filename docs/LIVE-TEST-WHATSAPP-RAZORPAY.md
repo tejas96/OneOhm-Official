@@ -14,6 +14,9 @@ and `payment_received`. Estimate, slot and onboarding templates come in later pa
 - [ ] Meta approved the versions with file and buttons of the four templates, and the Meta
   names are set in **Settings → Messages**. See `docs/whatsapp-templates.md`. (If not, the
   test still works with the old text templates; the checks for buttons and files will not.)
+  The Pay now button URL base is fixed when Meta approves the template, so a template approved
+  with a test tunnel address will not work in production. Submit the production version with the
+  production `API_PUBLIC_URL`.
 - [ ] A public tunnel (for example ngrok or Cloudflare Tunnel) points to the API port.
   Note its https address. It is `API_PUBLIC_URL` below.
 - [ ] The test phone is +91 8087823247 and has WhatsApp.

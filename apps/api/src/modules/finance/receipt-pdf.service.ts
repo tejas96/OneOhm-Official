@@ -13,6 +13,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
+import { pdfFileName } from '../reports/pdf-file-name';
 import { PdfRendererService } from '../reports/pdf-renderer.service';
 import { assetText, brandFontCss, logoDataUri, stampDataUri } from '../reports/report-assets';
 import { engine } from '../reports/report-handlebars';
@@ -139,6 +140,6 @@ export class ReceiptPdfService {
     const content = await this.renderer.render(html, {
       footer: `${company.legalName} · Receipt ${number}`,
     });
-    return { fileName: `${number.replaceAll('/', '-')}.pdf`, content };
+    return { fileName: pdfFileName(number), content };
   }
 }

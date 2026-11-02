@@ -1,8 +1,9 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, waConversations } from '@oneohm/database';
+import { type DatabaseExecutor, messageTemplates, waConversations } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
+import { pdfFileName } from '../reports/pdf-file-name';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
 
@@ -16,7 +17,7 @@ function pdfOf(env: Environment, quotation: QuotationDetail) {
       id: quotation.id,
       customerId: quotation.customer.id,
     }),
-    filename: `${quotation.number}.pdf`,
+    filename: pdfFileName(quotation.number, quotation.revision),
   };
 }
 
@@ -39,12 +40,19 @@ export function quoteMessage(env: Environment, quotation: QuotationDetail): Reco
 /**
  * When the customer wrote in the last 24 hours, the PDF also goes as a chat file, so it
  * arrives even if the approved template has no file slot yet. Sent once per quotation.
+ * Not queued when the template's extras switch is on: its header already carries the file.
  */
 export async function queueQuotePdf(
   tx: DatabaseExecutor,
   env: Environment,
   quotation: QuotationDetail,
 ): Promise<void> {
+  const [template] = await tx
+    .select({ extrasApproved: messageTemplates.extrasApproved })
+    .from(messageTemplates)
+    .where(eq(messageTemplates.key, 'quotation_sent'))
+    .limit(1);
+  if (template?.extrasApproved) return;
   const [chat] = await tx
     .select({
       id: waConversations.id,

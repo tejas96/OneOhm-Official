@@ -59,7 +59,9 @@ describe('WhatsApp after payment', () => {
       'select receipt_number from payments where milestone_id = $1',
       [milestone.id],
     );
-    expect(received?.payload.documentName).toBe(`${receipt?.receipt_number}.pdf`);
+    expect(received?.payload.documentName).toBe(
+      `${receipt?.receipt_number.replaceAll('/', '-')}.pdf`,
+    );
 
     const alerts = await rows<{ user_id: string; body: string }>(
       "select user_id, body from notifications where kind = 'payment_online' and project_id = $1",

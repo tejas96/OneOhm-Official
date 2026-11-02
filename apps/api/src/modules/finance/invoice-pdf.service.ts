@@ -3,6 +3,7 @@ import { customerInvoiceLines, customerInvoices, projects } from '@oneohm/databa
 import { asc, eq } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { pdfFileName } from '../reports/pdf-file-name';
 import { PdfRendererService } from '../reports/pdf-renderer.service';
 import { assetText, brandFontCss, logoDataUri, stampDataUri } from '../reports/report-assets';
 import { engine } from '../reports/report-handlebars';
@@ -66,6 +67,6 @@ export class InvoicePdfService {
     const content = await this.renderer.render(html, {
       footer: `${seller} · Tax invoice ${invoice.number}`,
     });
-    return { fileName: `${invoice.number.replaceAll('/', '-')}.pdf`, content };
+    return { fileName: pdfFileName(invoice.number), content };
   }
 }

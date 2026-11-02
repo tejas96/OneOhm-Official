@@ -8,6 +8,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CompanyAssetsService } from '../documents/company-assets.service';
 import { planSteps } from '../payment-plans/payment-plans.service';
 import { QuotationsService } from '../quotations/quotations.service';
+import { pdfFileName } from './pdf-file-name';
 import { PdfRendererService } from './pdf-renderer.service';
 import { type ProductLabel, quotationView } from './quotation-document';
 import { assetText, brandFontCss, logoDataUri, stampDataUri } from './report-assets';
@@ -102,7 +103,7 @@ export class QuotationPdfService {
       footer: `${view.company.name} · Quotation ${view.number}`,
     });
     return {
-      fileName: `${detail.number}${detail.revision > 1 ? `-R${detail.revision}` : ''}.pdf`,
+      fileName: pdfFileName(detail.number, detail.revision),
       content,
     };
   }
