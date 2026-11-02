@@ -105,7 +105,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       ? [
           {
             label: TASK.updatedLabel,
-            value: TASK.stale(staleLabelDays(task.lastUpdateAt, businessToday())),
+            value: TASK.stale(task.idleDays ?? staleLabelDays(task.lastUpdateAt, businessToday())),
           },
         ]
       : []),

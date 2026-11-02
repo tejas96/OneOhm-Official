@@ -35,6 +35,7 @@ export function ownershipSignals(
   | 'blocksUrgent'
   | 'stale'
   | 'lastUpdateAt'
+  | 'idleDays'
 > {
   const done = task.status === 'completed';
   const open = (status: string) => status !== 'completed';
@@ -52,5 +53,6 @@ export function ownershipSignals(
     blocksUrgent: !done && context.urgentChain.has(task.id),
     stale: fresh?.stale ?? false,
     lastUpdateAt: (fresh?.lastUpdateAt ?? task.updatedAt).toISOString(),
+    idleDays: fresh?.idleDays ?? 0,
   };
 }

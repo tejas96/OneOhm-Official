@@ -58,7 +58,7 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
       <DoNextLine task={task} />
       {task.stale === true ? (
         <Text variant="label" color={theme.status.atRisk.fg}>
-          {TASK.stale(staleLabelDays(task.lastUpdateAt, businessToday()))}
+          {TASK.stale(task.idleDays ?? staleLabelDays(task.lastUpdateAt, businessToday()))}
         </Text>
       ) : null}
       {waiting > 0 ? (

@@ -21,7 +21,10 @@ export function StaleBadge({
   return (
     <span className={cn('inline-flex items-center gap-1.5 font-medium text-at-risk', className)}>
       <Hourglass aria-hidden className="size-3.5" />
-      {t('stale', { days: staleLabelDays(task.lastUpdateAt, todayIn()) })}
+      {t('stale', {
+        // The server's count leaves out leave days; an older API only sends the date.
+        days: task.idleDays ?? staleLabelDays(task.lastUpdateAt, todayIn()),
+      })}
     </span>
   );
 }
