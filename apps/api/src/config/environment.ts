@@ -70,6 +70,9 @@ const environmentSchema = z
     RAZORPAYX_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
     /** Where customers reach this API from outside; sandbox payment pages live here. */
+    /** Google Maps: one key can serve every app in development; split keys in production. */
+    GOOGLE_MAPS_API_KEY: z.string().optional(),
+    GOOGLE_MAPS_BROWSER_KEY: z.string().optional(),
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
   })
   .superRefine((env, context) => {

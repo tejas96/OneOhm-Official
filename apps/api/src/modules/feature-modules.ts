@@ -13,6 +13,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { FinanceModule } from './finance/finance.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ListsModule } from './lists/lists.module';
+import { MapsModule } from './maps/maps.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GatewayModule } from './online-payments/gateway.module';
 import { OnlinePaymentsModule } from './online-payments/online-payments.module';
@@ -69,4 +70,5 @@ export const FEATURE_MODULES = [
   SearchModule,
   ProjectChangesModule,
   StateSupportModule,
+  MapsModule,
 ];

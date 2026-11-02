@@ -36,6 +36,7 @@ import { inventoryContract } from './inventory.contract';
 import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { listsContract } from './lists.contract';
+import { mapsContract } from './maps.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
 import { paymentPlansContract } from './payment-plans.contract';
@@ -129,6 +130,7 @@ export type ApiRouterDefinition = {
   readonly productDatasheet: typeof productDatasheetContract;
   readonly lists: typeof listsContract;
   readonly search: typeof searchContract;
+  readonly maps: typeof mapsContract;
   readonly businessSettings: typeof businessSettingsContract;
   readonly projectChanges: typeof projectChangesContract;
   readonly stateSupport: typeof stateSupportContract;
@@ -197,6 +199,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   productDatasheet: productDatasheetContract,
   lists: listsContract,
   search: searchContract,
+  maps: mapsContract,
   businessSettings: businessSettingsContract,
   projectChanges: projectChangesContract,
   stateSupport: stateSupportContract,

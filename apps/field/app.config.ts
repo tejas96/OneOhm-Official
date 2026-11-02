@@ -11,6 +11,10 @@ const APP_ID = 'in.oneohm.field';
 /** Set in EAS (or .env) once the Expo project exists; push alerts need both. */
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID;
 const GOOGLE_SERVICES_JSON = process.env.GOOGLE_SERVICES_JSON;
+/** Google Maps keys: a per-platform key wins, then the shared development key. */
+const MAPS_SHARED_KEY = process.env.GOOGLE_MAPS_API_KEY || undefined;
+const MAPS_ANDROID_KEY = process.env.GOOGLE_MAPS_ANDROID_KEY || MAPS_SHARED_KEY;
+const MAPS_IOS_KEY = process.env.GOOGLE_MAPS_IOS_KEY || MAPS_SHARED_KEY;
 const LIGHT_CANVAS = '#F5F6F8';
 const DARK_CANVAS = '#0F1113';
 
@@ -29,11 +33,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: '1',
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    ...(MAPS_IOS_KEY ? { config: { googleMapsApiKey: MAPS_IOS_KEY } } : {}),
   },
   android: {
     package: APP_ID,
     versionCode: 1,
     ...(GOOGLE_SERVICES_JSON ? { googleServicesFile: GOOGLE_SERVICES_JSON } : {}),
+    ...(MAPS_ANDROID_KEY ? { config: { googleMaps: { apiKey: MAPS_ANDROID_KEY } } } : {}),
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#FFFFFF',
@@ -45,7 +51,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   web: { favicon: './assets/images/favicon.png', output: 'single' },
-  extra: { ...config.extra, ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}) },
+  extra: {
+    ...config.extra,
+    mapsEnabled: Boolean(MAPS_ANDROID_KEY || MAPS_IOS_KEY),
+    ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),
+  },
   plugins: [
     'expo-router',
     'expo-font',
@@ -91,7 +101,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         imageWidth: 96,
         resizeMode: 'contain',
         backgroundColor: LIGHT_CANVAS,
-        dark: { image: './assets/images/splash-icon.png', backgroundColor: DARK_CANVAS },
+        dark: {
+          image: './assets/images/splash-icon.png',
+          backgroundColor: DARK_CANVAS,
+        },
       },
     ],
   ],
