@@ -104,7 +104,7 @@ export class LeadsService {
         phoneE164: input.phone,
         email: input.email ?? null,
         city: input.city,
-        source: reseller ? 'reseller' : referrer ? 'referral' : input.source,
+        source: leadSource(reseller, referrer !== null, input.source),
         referredByCustomerId: referrer?.customerId ?? null,
         subsidyCategory: input.subsidyCategory,
         estimatedWp: input.estimatedWp ?? null,
@@ -117,13 +117,7 @@ export class LeadsService {
       })
       .returning();
     if (!created) throw new Error('Lead insert returned nothing.');
-    await logLead(
-      this.db,
-      created.id,
-      actor.userId,
-      'note',
-      referrer ? `Lead created, referred by ${referrer.name} (${referrer.code}).` : 'Lead created.',
-    );
+    await logLead(this.db, created.id, actor.userId, 'note', createdNote(referrer));
     if (owner !== actor.userId) await tellLeadOwner(this.db, owner, created, actor.fullName);
     const [lead] = await presentLeads(this.db, [created]);
     if (!lead) throw notFound('That lead');
@@ -211,4 +205,17 @@ function timeColumns(current: LeadDetail, patch: LeadPatch) {
   const newDay = patch.nextActionOn !== undefined && patch.nextActionOn !== current.nextActionOn;
   if (patch.nextActionTime !== undefined || !newDay) return {};
   return { nextActionTime: null };
+}
+
+/** A reseller's lead is theirs; a referral code makes it a referral; else what staff picked. */
+function leadSource(reseller: boolean, referred: boolean, picked: LeadSource): LeadSource {
+  if (reseller) return 'reseller';
+  return referred ? 'referral' : picked;
+}
+
+/** The first timeline line, naming who referred the lead when someone did. */
+function createdNote(referrer: { readonly name: string; readonly code: string } | null): string {
+  return referrer
+    ? `Lead created, referred by ${referrer.name} (${referrer.code}).`
+    : 'Lead created.';
 }

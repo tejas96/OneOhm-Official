@@ -18,41 +18,20 @@ import {
 } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, CircleAlert } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
-import { type CheckKey, followUpProblem, isIndianMobile } from '@/lib/forms/checks';
 import { useCan } from '@/providers/current-user';
+import { LeadCreateAlert } from './lead-create-alert';
+import { leadProblems } from './lead-create-checks';
 import { kwToWp, leadKeys } from './lead-labels';
 import { PhoneMatchNotice } from './phone-match-notice';
 import { ReferralCodeField } from './referral-code-field';
 import { useLeadOwnerOptions } from './use-lead-owners';
 
 const ME = 'me';
-
-/** What the form checks before sending; the API checks again. */
-function leadProblems(values: {
-  readonly name: string;
-  readonly phone: string;
-  readonly city: string;
-  readonly nextActionOn: string;
-  readonly nextActionTime: string;
-  readonly badKw: boolean;
-}): Record<string, CheckKey | 'minChars'> {
-  const found: Record<string, CheckKey | 'minChars'> = {};
-  if (values.name.length < 2) found.name = 'minChars';
-  if (!values.phone.trim()) found.phone = 'required';
-  else if (!isIndianMobile(values.phone)) found.phone = 'mobile';
-  if (values.city.length < 2) found.city = 'minChars';
-  const followUp = followUpProblem(values.nextActionOn, values.nextActionTime || null);
-  if (followUp) found[followUp.field === 'date' ? 'nextActionOn' : 'nextActionTime'] = followUp.key;
-  if (values.badKw) found.estimatedWp = 'positiveNumber';
-  return found;
-}
 
 /** New lead: who, how to reach them, and when to follow up. Duplicates are caught by phone. */
 export function LeadCreateDialog({
@@ -170,26 +149,7 @@ export function LeadCreateDialog({
         className="grid gap-4 py-1 sm:grid-cols-2"
         noValidate
       >
-        {error && (
-          <div
-            role="alert"
-            className="flex items-start gap-2.5 rounded-lg bg-overdue-tint px-3.5 py-3 type-body-sm text-overdue sm:col-span-2"
-          >
-            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-            <div className="flex flex-col gap-1">
-              <p>{error.message}</p>
-              {duplicateId && (
-                <Link
-                  href={`/leads/${duplicateId}`}
-                  className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
-                >
-                  {t('openExisting')}
-                  <ArrowRight aria-hidden className="size-3.5" />
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
+        {error && <LeadCreateAlert message={error.message} duplicateId={duplicateId} />}
         <Field label={t('name')} required error={fieldError('name')}>
           <Input name="name" autoComplete="name" defaultValue={initial?.name} />
         </Field>

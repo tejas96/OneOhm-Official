@@ -1,8 +1,6 @@
 'use client';
 
-import type { ProjectDetail } from '@oneohm/api-contracts';
 import { Button, Dialog, Field, Input, Select, useToast } from '@oneohm/design-system/web';
-import { CUSTOMER_TDS_METHODS } from '@oneohm/domain';
 import { formatInr, rupeesToPaise, todayIn } from '@oneohm/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
@@ -19,45 +17,17 @@ import {
 } from '@/lib/forms/checks';
 import { useInvalidateWork } from '../tasks/use-task-actions';
 import { type Collected, CollectedFields } from './collected-fields';
-
-type Milestone = ProjectDetail['milestones'][number];
-const METHODS = [
-  'upi',
-  'bank_transfer',
-  'cheque',
-  'cash',
-  'razorpay',
-  'bank_disbursement',
-] as const;
-type Method = (typeof METHODS)[number];
-
-/** Only cash and cheques carry who holds them and the cheque's details. */
-function collectedBody(method: Method, collected: Collected) {
-  if (method !== 'cash' && method !== 'cheque') return {};
-  return {
-    collectedByUserId: collected.collectedByUserId || null,
-    ...(method === 'cheque'
-      ? {
-          chequeNumber: collected.chequeNumber.trim() || null,
-          chequeBank: collected.chequeBank.trim() || null,
-          chequeDate: collected.chequeDate || null,
-        }
-      : {}),
-  };
-}
-
-const NO_COLLECTED: Collected = {
-  collectedByUserId: '',
-  chequeNumber: '',
-  chequeBank: '',
-  chequeDate: '',
-};
-
-const remaining = (milestone: Milestone) => milestone.amountPaise - milestone.paidPaise;
-const toRupees = (paise: number) => String(paise / 100);
-const paiseOf = (text: string) => rupeesToPaise(Number(text.replace(/,/g, '')) || 0);
-/** A business customer may deduct TDS when it pays through a bank. */
-const takesTds = (method: Method) => (CUSTOMER_TDS_METHODS as readonly string[]).includes(method);
+import {
+  collectedBody,
+  METHODS,
+  type Method,
+  type Milestone,
+  NO_COLLECTED,
+  paiseOf,
+  remaining,
+  takesTds,
+  toRupees,
+} from './record-payment-helpers';
 
 /** Records money received against one milestone; the bank's share arrives as a disbursement. */
 export function RecordPaymentDialog({
