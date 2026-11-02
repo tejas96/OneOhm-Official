@@ -11,12 +11,14 @@ import {
 import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { approverNamer } from './approver-names';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 import { assignmentStates } from './task-assignment-state';
 import { loadTaskLinks } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
 import { ownershipSignals } from './task-signals';
 import { waitingPayments } from './unlocks-payment';
+import { urgentChain } from './urgent-chain';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
 export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<ProjectTask[]> {
@@ -83,8 +85,15 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     rows.map((row) => ({ ...row.task, managerUserId: row.managerUserId })),
   );
   const today = todayIn();
-  const waiting = await waitingPayments(db, projectIds);
-  return rows.map(({ task, code, name, assigneeName }) => {
+  const [waiting, chain, approversOf] = await Promise.all([
+    waitingPayments(db, projectIds),
+    urgentChain(db, projectIds),
+    approverNamer(
+      db,
+      rows.map((row) => row.managerUserId),
+    ),
+  ]);
+  return rows.map(({ task, code, name, assigneeName, managerUserId }) => {
     const attached = files.filter((file) => file.taskId === task.id);
     const changes =
       task.status === 'completed'
@@ -122,6 +131,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       customerVisible: task.customerVisible,
       approval: task.approval,
       reviewer: task.reviewer === 'project_manager' ? 'project_manager' : 'approvers',
+      approverNames: approversOf(task, managerUserId),
       ...reviewStateOf(reviews, task.id),
       evidence: task.evidence,
       captures: task.captures,
@@ -153,6 +163,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         freshness,
         today,
         waitingPayments: waiting,
+        urgentChain: chain,
       }),
       completedAt: task.completedAt?.toISOString() ?? null,
     };

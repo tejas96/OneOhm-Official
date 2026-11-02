@@ -102,6 +102,8 @@ export const projectTaskSchema = z.object({
   approval: z.boolean(),
   /** Who approves it: anyone with tasks.approve, or the project manager. */
   reviewer: taskReviewerSchema,
+  /** Names of the people who can approve it; empty when it needs no approval. */
+  approverNames: z.array(z.string()),
   /** While in review: the people who may approve it or send it back. */
   reviewerIds: z.array(idSchema),
   /** Sent back for correction and not yet sent again; null otherwise. */

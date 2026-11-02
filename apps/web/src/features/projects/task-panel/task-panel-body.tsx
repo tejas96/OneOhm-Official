@@ -82,7 +82,12 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
           {task.approval && (
             <span className="inline-flex items-center gap-1.5">
               <ShieldCheck aria-hidden className="size-3.5" />
-              {taskT('needsApproval')}
+              {(task.approverNames ?? []).length > 0
+                ? t('approvedBy', {
+                    names: (task.approverNames ?? []).slice(0, 3).join(', '),
+                    more: Math.max(0, (task.approverNames ?? []).length - 3),
+                  })
+                : taskT('needsApproval')}
             </span>
           )}
         </div>

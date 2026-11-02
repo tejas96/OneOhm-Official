@@ -24,6 +24,7 @@ export function taskOf(partial: Partial<ProjectTask>): ProjectTask {
     approval: false,
     reviewer: 'approvers',
     reviewerIds: [],
+    approverNames: [],
     returned: null,
     reworkCount: 0,
     evidence: [],

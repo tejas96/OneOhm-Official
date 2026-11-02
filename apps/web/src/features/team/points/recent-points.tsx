@@ -71,12 +71,15 @@ export function RecentPoints({ entries }: { readonly entries: readonly PointsEnt
       {rows.length === 0 ? (
         <p className="type-body-sm text-ink-faint">{t('none')}</p>
       ) : (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={rows}
-          rowKey={(entry) => entry.id}
-        />
+        // Many columns: the table scrolls sideways in its own box, never the page.
+        <div className="min-w-0 overflow-x-auto">
+          <ResponsiveTable
+            caption={t('title')}
+            columns={columns}
+            rows={rows}
+            rowKey={(entry) => entry.id}
+          />
+        </div>
       )}
     </section>
   );
