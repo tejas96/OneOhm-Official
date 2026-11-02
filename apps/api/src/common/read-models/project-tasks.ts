@@ -11,6 +11,7 @@ import {
 import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { approverNamer } from './approver-names';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 import { assignmentStates } from './task-assignment-state';
 import { loadTaskLinks } from './task-blocking';
@@ -84,11 +85,15 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     rows.map((row) => ({ ...row.task, managerUserId: row.managerUserId })),
   );
   const today = todayIn();
-  const [waiting, chain] = await Promise.all([
+  const [waiting, chain, approversOf] = await Promise.all([
     waitingPayments(db, projectIds),
     urgentChain(db, projectIds),
+    approverNamer(
+      db,
+      rows.map((row) => row.managerUserId),
+    ),
   ]);
-  return rows.map(({ task, code, name, assigneeName }) => {
+  return rows.map(({ task, code, name, assigneeName, managerUserId }) => {
     const attached = files.filter((file) => file.taskId === task.id);
     const changes =
       task.status === 'completed'
@@ -126,6 +131,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       customerVisible: task.customerVisible,
       approval: task.approval,
       reviewer: task.reviewer === 'project_manager' ? 'project_manager' : 'approvers',
+      approverNames: approversOf(task, managerUserId),
       ...reviewStateOf(reviews, task.id),
       evidence: task.evidence,
       captures: task.captures,

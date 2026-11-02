@@ -25,6 +25,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     description: null,
     reviewer: 'approvers',
     reviewerIds: [],
+    approverNames: [],
     returned: null,
     reworkCount: 0,
     evidence: [],

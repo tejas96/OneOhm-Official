@@ -541,7 +541,8 @@
         "discom": "the DISCOM"
       },
       "tickFailed": "Could not save that tick",
-      "tickOthers": "Only the person doing this task, or a manager, can tick it."
+      "tickOthers": "Only the person doing this task, or a manager, can tick it.",
+      "approvedBy": "Approved by {names}{more, plural, =0 {} other { +#}}"
     },
     "kanban": {
       "drag": "Move {title}",

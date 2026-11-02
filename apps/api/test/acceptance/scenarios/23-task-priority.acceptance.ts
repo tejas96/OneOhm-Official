@@ -82,6 +82,15 @@ describe('Task priority', () => {
     expect(a?.blocksUrgent).toBe(true);
   });
 
+  it('an approval task names who can approve it', async () => {
+    const survey = (await project(admin, sale.project.id)).tasks.find(
+      (task) => task.templateKey === 'site_survey',
+    ) as ProjectTask;
+    expect(survey.approval).toBe(true);
+    expect(survey.approverNames).toContain('OneOhm Admin');
+    expect(survey.approverNames).not.toContain(survey.assignee?.fullName);
+  });
+
   it('someone without tasks.assign is refused', async () => {
     const task = (await project(admin, sale.project.id)).tasks[0] as ProjectTask;
     const sales = await Session.password(staffEmail('sales'), TEAM_PASSWORD);
