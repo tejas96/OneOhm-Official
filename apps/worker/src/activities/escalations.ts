@@ -17,6 +17,7 @@ import {
 } from '@oneohm/domain';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
+import { lateDays, leaveByPerson } from './late-days';
 import { queueBlockerOnLeave } from './stale-reminders';
 
 interface LateTask {
@@ -56,6 +57,7 @@ async function lateTasks(db: Database, today: string, earliest: number) {
       code: projects.code,
       managerUserId: projects.managerUserId,
       assignee: users.fullName,
+      assigneeUserId: projectTasks.assigneeUserId,
       templateDays: taskTemplates.escalateAfterDays,
     })
     .from(projectTasks)
@@ -91,9 +93,20 @@ export async function queueEscalations(db: Database, today: string): Promise<num
     overrides.map((row) => row.days),
   );
   let sent = 0;
-  for (const row of await lateTasks(db, today, earliest)) {
+  const rows = await lateTasks(db, today, earliest);
+  const leave = await leaveByPerson(
+    db,
+    [...new Set(rows.map((row) => row.assigneeUserId).filter((id) => id !== null))],
+    today,
+  );
+  for (const row of rows) {
     const task: LateTask = row;
-    const late = Math.max(0, daysBetween(row.dueDate, today));
+    // Days on approved leave never count toward late (spec 3.5).
+    const late = lateDays(
+      row.dueDate,
+      today,
+      row.assigneeUserId ? (leave.get(row.assigneeUserId) ?? []) : [],
+    );
     const who = row.assignee ?? 'nobody yet';
     const step = lateEscalation(late, policy, row.templateDays);
     if (step === 'owners') {
