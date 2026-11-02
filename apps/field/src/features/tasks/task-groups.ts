@@ -1,4 +1,5 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
+import { rankTasks } from '@oneohm/domain';
 
 /** Shown in this order: what needs the person's attention first (PRD 4.1). */
 export const TASK_GROUPS = [
@@ -35,8 +36,12 @@ export function groupTasks(
     ProjectTask[]
   >;
   for (const task of tasks) groups[groupOf(task, today)].push(task);
-  for (const list of Object.values(groups)) {
-    list.sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  // The person's own work in do-next order (spec 3.3); work others hold, by due date.
+  for (const group of TASK_GROUPS) {
+    groups[group] =
+      group === 'waiting' || group === 'review'
+        ? groups[group].sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+        : rankTasks(groups[group], today);
   }
   return groups;
 }

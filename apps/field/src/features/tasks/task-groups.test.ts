@@ -36,6 +36,11 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     blockedBy: [],
     changeBlockers: [],
     blocking: [],
+    blockers: [],
+    priority: 'none',
+    prioritySetBy: null,
+    unlocksPayment: false,
+    blocksUrgent: false,
     completedAt: null,
     attachments: [],
     missingEvidence: [],
@@ -95,5 +100,18 @@ describe('onTimeShare', () => {
 
   it('is full with nothing assigned', () => {
     expect(onTimeShare(groupTasks([], TODAY))).toBe(1);
+  });
+});
+
+describe('do-next order', () => {
+  it('orders the overdue group by the do-next rule', () => {
+    const groups = groupTasks(
+      [
+        task({ id: 'plain', overdue: true, dueDate: '2026-10-20' }),
+        task({ id: 'urgent', overdue: true, dueDate: '2026-10-30', priority: 'urgent' }),
+      ],
+      TODAY,
+    );
+    expect(groups.overdue.map((entry) => entry.id)).toEqual(['urgent', 'plain']);
   });
 });
