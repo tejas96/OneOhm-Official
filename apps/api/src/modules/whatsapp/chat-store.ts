@@ -15,6 +15,12 @@ import type { Incoming } from './whatsapp-events';
 export type ChatReply =
   | { readonly kind: 'text'; readonly body: string }
   | {
+      readonly kind: 'document';
+      readonly link: string;
+      readonly filename: string;
+      readonly caption?: string;
+    }
+  | {
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
@@ -100,6 +106,8 @@ export async function logIncoming(
 
 function summary(reply: ChatReply): string {
   if (reply.kind === 'text') return reply.body;
+  if (reply.kind === 'document')
+    return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
   const options =
     reply.kind === 'buttons'
       ? reply.buttons.map((button) => button.title)
@@ -107,12 +115,16 @@ function summary(reply: ChatReply): string {
   return `${reply.body}\n[${options.join(' · ')}]`;
 }
 
-/** Queues a reply for the worker and keeps it in the chat history. */
+/**
+ * Queues a reply for the worker and keeps it in the chat history. With a `dedupeKey` the
+ * same reply is queued once; asking again changes nothing.
+ */
 export async function queueReply(
   db: DatabaseExecutor,
   conversation: Pick<Conversation, 'id' | 'phone'>,
   reply: ChatReply,
   sentByUserId: string | null = null,
+  dedupeKey?: string,
 ): Promise<void> {
   const [row] = await db
     .insert(outbox)
@@ -121,9 +133,11 @@ export async function queueReply(
       recipient: conversation.phone,
       template: `session:${reply.kind}`,
       payload: reply,
-      dedupeKey: `chat:${randomUUID()}`,
+      dedupeKey: dedupeKey ?? `chat:${randomUUID()}`,
     })
+    .onConflictDoNothing()
     .returning({ id: outbox.id });
+  if (!row && dedupeKey) return;
   await db.insert(waMessages).values({
     conversationId: conversation.id,
     direction: 'out',

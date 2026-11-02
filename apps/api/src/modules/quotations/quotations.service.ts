@@ -1,14 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
 import { quotationInverters, quotationLines, quotations } from '@oneohm/database';
-import { addDays, formatInr, todayIn } from '@oneohm/shared';
+import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { autoMoveLead } from '../crm/lead-history';
@@ -22,6 +23,7 @@ import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from '.
 import { loadQuotationDetail } from './quotation-detail';
 import { inverterRows } from './quotation-inverters';
 import { leadForQuotation } from './quotation-lead';
+import { queueQuotePdf, quoteMessage } from './quotation-message';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { lineRows, quotationRow } from './quotation-rows';
@@ -34,6 +36,7 @@ export class QuotationsService {
     private readonly pricing: QuotationPricingService,
     private readonly catalog: CatalogService,
     private readonly customers: CustomersService,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
   ) {}
 
   /** `revisionOf` re-prices an accepted quotation (after the survey) under its number. */
@@ -126,15 +129,10 @@ export class QuotationsService {
         tx,
         quotation.customerPhone,
         'quotation_sent',
-        {
-          customer: quotation.customer.name,
-          number: quotation.number,
-          total: formatInr(quotation.totalPaise),
-          subsidy: formatInr(quotation.subsidyPaise),
-          effective: formatInr(quotation.effectivePaise),
-        },
+        quoteMessage(this.env, quotation),
         `quotation_sent:${id}`,
       );
+      await queueQuotePdf(tx, this.env, quotation);
       if (quotation.input.leadId) {
         const again = quotation.status === 'sent' ? ' again' : '';
         const note = `Quotation ${quotation.number} sent${again}.`;
