@@ -12,8 +12,8 @@ import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneo
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
-import { blockingTitles } from './task-blocking';
 import { assignmentStates } from './task-assignment-state';
+import { blockingTitles } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */

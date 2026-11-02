@@ -35,6 +35,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     checklist: [],
     blockedBy: [],
     changeBlockers: [],
+    blocking: [],
     completedAt: null,
     attachments: [],
     missingEvidence: [],
