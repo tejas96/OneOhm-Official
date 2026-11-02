@@ -99,13 +99,16 @@ export class TasksService {
     note: string | null | undefined,
   ): Promise<ProjectTask> {
     const task = await this.load(actor, id);
+    const samePartyStill = task.status === 'waiting' && task.waitingParty === party;
     await this.db.transaction(async (tx) => {
+      // A new party starts a new stretch; the one before is kept, never overwritten.
+      if (task.status === 'waiting' && !samePartyStill) await keepFinishedWait(tx, task);
       await tx
         .update(projectTasks)
         .set({
           status: 'waiting',
           waitingParty: party,
-          waitingSince: new Date(),
+          waitingSince: samePartyStill && task.waitingSince ? task.waitingSince : new Date(),
           note: note ?? task.note,
           updatedAt: new Date(),
         })
@@ -167,6 +170,11 @@ export class TasksService {
       }
       if (note) await tx.update(projectTasks).set({ note }).where(eq(projectTasks.id, id));
       if (handover) await recordHandoverOverride(tx, task, actor.userId, handover);
+      // Handed in straight from a wait: keep that stretch, so it is never lost (spec 3.7).
+      if (task.waitingSince) {
+        await keepFinishedWait(tx, task);
+        await tx.update(projectTasks).set({ waitingSince: null }).where(eq(projectTasks.id, id));
+      }
       // Approval work goes to its reviewer; the rest (or a lone approver's own) finishes.
       let done = true;
       if (task.approval) done = await sendForReview(tx, task, actor);

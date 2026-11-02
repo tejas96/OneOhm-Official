@@ -1,6 +1,6 @@
 import type { PointsEntry, ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addTaskWait, ageHandIns, closeDb, rows, setTaskDates } from '../support/db';
+import { addTaskWait, ageHandIns, ageWait, closeDb, rows, setTaskDates } from '../support/db';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
@@ -98,6 +98,36 @@ describe('Fair points', () => {
     expect(onTime).toMatchObject({ sourceType: 'task_on_time', points: 0 });
     expect(onTime?.reason).toContain('Late by 2 days');
     expect((await admin.get<PointsEntry[]>('/points')).every((row) => row.points >= 0)).toBe(true);
+  });
+
+  it('a wait still open when approval work is handed in keeps it on time', async () => {
+    const { sale, task } = await fresh('Handed In From Waiting (test)', 'site_survey');
+    await me.post(`/tasks/${task.id}/start`);
+    await me.post(`/tasks/${task.id}/waiting`, {
+      party: 'bank',
+      note: 'Bank visit pending (test)',
+    });
+    await ageWait(task.id, 6);
+    await setTaskDates(task.id, { startDate: addDays(today(), -9), dueDate: addDays(today(), -2) });
+    const facts = await surveyFacts(admin, await project(admin, sale.project.id), task);
+    const waiting = taskByKey(await project(admin, sale.project.id), 'site_survey');
+    expect(waiting.status).toBe('waiting');
+    await workTask(admin, waiting, { as: me, facts });
+    const onTime = (await entriesFor(task)).find((row) => row.sourceType === 'task_on_time');
+    expect(onTime?.points).toBe(10);
+    expect(onTime?.reason).toContain('waiting on the bank');
+  });
+
+  it('switching who it waits on keeps the first stretch', async () => {
+    const { task } = await fresh('Switched Wait (test)', 'electricity_details');
+    await me.post(`/tasks/${task.id}/start`);
+    await me.post(`/tasks/${task.id}/waiting`, { party: 'customer', note: 'Bill copy (test)' });
+    await ageWait(task.id, 4);
+    await me.post(`/tasks/${task.id}/waiting`, { party: 'bank', note: 'Now the bank (test)' });
+    const kept = await rows<{ party: string }>('SELECT party FROM task_waits WHERE task_id = $1', [
+      task.id,
+    ]);
+    expect(kept.map((row) => row.party)).toEqual(['customer']);
   });
 
   it('a task without approval gets only the on-time line', async () => {

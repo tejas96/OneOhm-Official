@@ -41,7 +41,7 @@ export async function taskPointFacts(
   const userId = accepted?.submittedBy ?? finishedBy;
   const handedInAt = accepted?.at ?? now;
 
-  const [waits, leave, moves] = await Promise.all([
+  const [waits, leave, moves, current] = await Promise.all([
     tx
       .select({ party: taskWaits.party, from: taskWaits.startedAt, to: taskWaits.endedAt })
       .from(taskWaits)
@@ -60,19 +60,21 @@ export async function taskPointFacts(
           inArray(projectActivities.kind, ['rescheduled']),
         ),
       ),
+    // Read fresh: a wait closed while finishing is already in task_waits.
+    tx
+      .select({ since: projectTasks.waitingSince, party: projectTasks.waitingParty })
+      .from(projectTasks)
+      .where(eq(projectTasks.id, task.id)),
   ]);
   const outsideWaits = waits.map((wait) => ({
     party: wait.party,
     from: indiaDay(wait.from),
     to: indiaDay(wait.to),
   }));
-  // A wait still open when the task finishes counts up to now.
-  if (task.waitingSince && task.status === 'waiting')
-    outsideWaits.push({
-      party: task.waitingParty,
-      from: indiaDay(task.waitingSince),
-      to: indiaDay(now),
-    });
+  // A wait still open counts up to the hand-in, whatever the status says.
+  const open = current[0];
+  if (open?.since && open.since < handedInAt)
+    outsideWaits.push({ party: open.party, from: indiaDay(open.since), to: indiaDay(handedInAt) });
   const selfMovedFrom = moves
     .map((move) => (move.data as { from?: unknown } | null)?.from)
     .filter((from): from is string => typeof from === 'string');

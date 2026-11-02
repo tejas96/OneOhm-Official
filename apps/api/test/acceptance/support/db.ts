@@ -110,3 +110,11 @@ export async function movePointsToMonth(userId: string, month: string): Promise<
     [userId, `${month}-15`],
   );
 }
+
+/** Moves the start of a task's current wait back by `days` (acceptance only). */
+export async function ageWait(taskId: string, days: number): Promise<void> {
+  await rows(
+    'UPDATE project_tasks SET waiting_since = waiting_since - $2::interval WHERE id = $1',
+    [taskId, `${days} days`],
+  );
+}
