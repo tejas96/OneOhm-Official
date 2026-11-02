@@ -56,6 +56,8 @@ export class PaymentLinksService {
     const { milestone, project, customer } = row;
     if (milestone.payer !== 'customer')
       throw invalid('The bank share is claimed from the bank, not paid by link.', {});
+    if (milestone.status === 'paid')
+      throw conflict('Nothing is left to pay on this milestone.', 'paid');
     if (milestone.status !== 'due' && milestone.status !== 'partly_paid')
       throw conflict('Links are sent once a milestone is due and not yet paid.', 'not_due');
     const open = (await openLinksFor(this.db, [milestoneId])).get(milestoneId);

@@ -74,6 +74,22 @@ describe('WhatsApp after payment', () => {
     expect(activity.length).toBeGreaterThan(0);
   });
 
+  it('an old Pay now link says already paid once the milestone is paid', async () => {
+    const { customer, sandboxId } = await advanceLink('After Pay Old Link Customer (test)');
+    await fetch(`${API}/pay/sandbox/${sandboxId}`, { method: 'POST' });
+    const [sent] = await rows<{ payload: Record<string, string> }>(
+      "select payload from outbox where recipient = $1 and template = 'payment_link' order by created_at desc limit 1",
+      [customer.phone],
+    );
+
+    const page = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, { redirect: 'manual' });
+
+    expect(page.status).toBe(200);
+    const text = await page.text();
+    expect(text).toContain('This is already paid. Thank you!');
+    expect(text).not.toContain('not due yet');
+  });
+
   it('an expired link sends one fresh Pay now', async () => {
     const { customer, milestone, sandboxId } = await advanceLink(
       'After Pay Expired Customer (test)',
