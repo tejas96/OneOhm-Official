@@ -44,6 +44,16 @@ describe('Task priority', () => {
     expect(await priorityLines(task.id)).toHaveLength(1);
   });
 
+  it('saves at the same moment still write one history line', async () => {
+    const task = (await project(admin, sale.project.id)).tasks[1] as ProjectTask;
+    await Promise.all(
+      Array.from({ length: 6 }, () =>
+        admin.raw('POST', `/tasks/${task.id}/priority`, { priority: 'high' }),
+      ),
+    );
+    expect(await priorityLines(task.id)).toHaveLength(1);
+  });
+
   it('a blocker of an urgent task says so', async () => {
     const detail = await project(admin, sale.project.id);
     const blocked = detail.tasks.find((task) => task.blockedBy.length > 0) as ProjectTask;

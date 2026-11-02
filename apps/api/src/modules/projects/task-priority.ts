@@ -1,6 +1,6 @@
 import { type DatabaseExecutor, projectActivities, projectTasks } from '@oneohm/database';
 import type { TaskPriority } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 
 const LABEL: Readonly<Record<TaskPriority, string>> = {
@@ -20,7 +20,7 @@ interface TaskRow {
 
 /**
  * A manager sets a task's priority (spec 3.3). The same value again changes nothing, so
- * the history gets one line per real change, with who made it.
+ * the history gets one line per real change, with who made it, even when saves race.
  */
 export async function setPriority(
   tx: DatabaseExecutor,
@@ -29,10 +29,20 @@ export async function setPriority(
   priority: TaskPriority,
 ): Promise<void> {
   if (task.priority === priority) return;
-  await tx
+  // Changed only if it still differs and is still open, so saves at the same moment, or
+  // a completion in between, never write a second history line.
+  const changed = await tx
     .update(projectTasks)
     .set({ priority, prioritySetByUserId: userId, updatedAt: new Date() })
-    .where(eq(projectTasks.id, task.id));
+    .where(
+      and(
+        eq(projectTasks.id, task.id),
+        ne(projectTasks.priority, priority),
+        ne(projectTasks.status, 'completed'),
+      ),
+    )
+    .returning({ id: projectTasks.id });
+  if (changed.length === 0) return;
   await tx.insert(projectActivities).values({
     projectId: task.projectId,
     taskId: task.id,
