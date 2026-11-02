@@ -118,6 +118,8 @@
       "description": "How far from the saved site a check-in can be before it is flagged, when location may be read, and what travel between sites is paid.",
       "farFromSite": "Flag farther than (m)",
       "farFromSiteHint": "A check-in farther than this from the saved site is flagged to the project manager, never refused.",
+      "pinTrust": "Field pin trust distance (m)",
+      "pinTrustHint": "A roof pin farther than this from where the worker checked in is saved, and flagged for the office to check.",
       "rate": "Travel rate per km",
       "rateHint": "Paid on straight-line distance between the day's stops.",
       "margin": "Window either side (min)",

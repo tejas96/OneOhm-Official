@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { GpsFields, readCoordinate } from './gps-fields';
+import { GpsFields, readCoordinate, readLocationSource } from './gps-fields';
 
 const NO_DISCOM = 'none';
 type Phase = 'single' | 'three' | 'unknown';
@@ -193,6 +193,7 @@ export function readPropertyForm(data: FormData): PropertyInput {
   const category = text('subsidyCategory') as SubsidyCategory;
   const loadKw = Number.parseFloat(text('sanctionedLoadKw').replace(',', '.'));
   const phase = text('phase');
+  const locationSource = readLocationSource(data);
   return {
     label: text('label'),
     addressLine: text('addressLine'),
@@ -211,5 +212,6 @@ export function readPropertyForm(data: FormData): PropertyInput {
     floors: whole('floors') ?? 1,
     latitude: readCoordinate(data, 'latitude'),
     longitude: readCoordinate(data, 'longitude'),
+    ...(locationSource ? { locationSource } : {}),
   };
 }

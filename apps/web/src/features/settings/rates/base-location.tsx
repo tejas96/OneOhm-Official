@@ -5,6 +5,8 @@ import { Field } from '@oneohm/design-system/web';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { PinMap } from '@/features/maps/pin-map';
+import { KOLHAPUR, pinMapValue } from '@/features/maps/pin-map-value';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { SETTINGS_KEYS } from '../use-settings';
@@ -57,6 +59,14 @@ export function BaseLocation({ saver }: { readonly saver: ReturnType<typeof useB
   const { point, setPoint, errors } = saver;
   return (
     <div className="flex flex-col gap-2">
+      <PinMap
+        value={pinMapValue.fromNumbers(point.latitude, point.longitude)}
+        fallbackCenter={KOLHAPUR}
+        onChange={(pinned) => {
+          const text = pinMapValue.format(pinned);
+          setPoint({ latitude: Number(text.latitude), longitude: Number(text.longitude) });
+        }}
+      />
       <div className="grid grid-cols-2 gap-4">
         <Field label={t('baseLatitude')} error={errors.baseLatitude}>
           <DecimalInput
