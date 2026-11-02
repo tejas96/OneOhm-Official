@@ -33,6 +33,15 @@ describe('Razorpay webhooks', () => {
     });
   });
 
+  it('reads an expired link as closed, so a fresh Pay now can follow', () => {
+    expect(
+      readEvent({
+        event: 'payment_link.expired',
+        payload: { payment_link: { entity: { id: 'plink_9' } } },
+      }),
+    ).toEqual({ kind: 'closed', providerLinkId: 'plink_9', status: 'expired' });
+  });
+
   it('reads a payout and ignores other events', () => {
     expect(
       readEvent({

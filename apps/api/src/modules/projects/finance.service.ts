@@ -18,8 +18,11 @@ import { assertNotFuture } from '../../common/dates';
 import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
+import { environmentOnce } from '../../config/environment-once';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
+import { tellStaffPaidOnline } from '../online-payments/payment-follow-ups';
+import { sharedFileUrl } from '../whatsapp/file-links';
 import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
 
@@ -113,6 +116,7 @@ export class FinanceService {
         .where(eq(payments.milestoneId, milestone.id));
       already = Number(locked?.total ?? 0);
       if (already + settles > milestone.amountPaise) throw tooMuch();
+      const receiptNumber = await nextReceiptNumber(tx, input.receivedOn);
       const [payment] = await tx
         .insert(payments)
         .values({
@@ -125,7 +129,7 @@ export class FinanceService {
           receivedOn: input.receivedOn,
           reference: input.reference ?? null,
           recordedByUserId: actor.userId,
-          receiptNumber: await nextReceiptNumber(tx, input.receivedOn),
+          receiptNumber,
           gatewayPaymentId: input.gatewayPaymentId ?? null,
           gatewayFeePaise: input.gatewayFeePaise ?? null,
           paidFromCredit: input.paidFromCredit ?? false,
@@ -153,6 +157,7 @@ export class FinanceService {
           code: projects.code,
           phone: customers.phoneE164,
           name: customers.name,
+          customerId: customers.id,
         })
         .from(projects)
         .innerJoin(customers, eq(customers.id, projects.customerId))
@@ -175,10 +180,24 @@ export class FinanceService {
             project: project.code,
             amount: formatInr(input.amountPaise),
             milestone: milestone.label,
+            documentUrl: sharedFileUrl(environmentOnce(), {
+              kind: 'receipt',
+              id: payment.id,
+              customerId: project.customerId,
+            }),
+            documentName: `${receiptNumber}.pdf`,
           },
           `payment:${milestone.id}:${total}`,
         );
       }
+      if (project && input.gatewayPaymentId)
+        await tellStaffPaidOnline(tx, {
+          paymentId: payment.id,
+          projectId,
+          amountPaise: input.amountPaise,
+          customerName: project.name,
+          milestoneLabel: milestone.label,
+        });
       await recordAudit(tx, actor.userId, 'payment.recorded', 'project', projectId, {
         milestoneId: milestone.id,
         amountPaise: input.amountPaise,
