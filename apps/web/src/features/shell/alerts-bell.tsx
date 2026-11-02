@@ -29,11 +29,19 @@ function hrefOf(subject: NotificationItem['subject']): string {
   if (subject.type === 'stock') return '/inventory?tab=stock';
   if (subject.type === 'lead') return `/leads/${subject.id}`;
   if (subject.type === 'approval') return '/today?tab=approvals';
+  if (subject.type === 'chat') return `/today?tab=chats&chat=${subject.id}`;
   return '/';
 }
 
 /** The bell with the unread count; opens the latest alerts, each linking to its work. */
-export function AlertsBell({ className }: { readonly className?: string }) {
+export function AlertsBell({
+  className,
+  hint = false,
+}: {
+  readonly className?: string;
+  /** Show a hover hint beside the bell, for the collapsed sidebar. */
+  readonly hint?: boolean;
+}) {
   const t = useTranslations('alerts');
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
@@ -54,6 +62,7 @@ export function AlertsBell({ className }: { readonly className?: string }) {
   return (
     <Popover
       label={t('title')}
+      tooltip={hint ? (unread > 0 ? t('bellUnread', { count: unread }) : t('bell')) : undefined}
       open={open}
       onOpenChange={setOpen}
       align="end"

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { HandCoins, MessageCircle, Phone, UsersRound } from 'lucide-react-native';
 import { Linking, StyleSheet, View } from 'react-native';
 import { HOME } from '@/copy/home';
-import { dialDigits } from '@/lib/journey';
+import { businessChatLink, dialDigits } from '@/lib/journey';
 import { useBrand } from './use-home';
 
 const SUBSIDY_TONE = {
@@ -44,7 +44,14 @@ export function SubsidyCard({ subsidy }: { readonly subsidy: CustomerProject['su
 }
 
 /** The person to call, with call and WhatsApp. */
-export function ContactCard({ contact }: { readonly contact: CustomerProject['contact'] }) {
+export function ContactCard({
+  contact,
+  whatsapp,
+}: {
+  readonly contact: CustomerProject['contact'];
+  /** The business WhatsApp number; the chat reaches this person through the OneOhm inbox. */
+  readonly whatsapp: string | null;
+}) {
   const theme = useTheme();
   const brand = useBrand();
   const name = contact?.name ?? HOME.contactFallback(brand);
@@ -64,22 +71,31 @@ export function ContactCard({ contact }: { readonly contact: CustomerProject['co
           {name}
         </Text>
       </View>
-      {phone ? (
+      {phone || whatsapp ? (
         <View style={styles.actions}>
-          <Button
-            label={HOME.call}
-            variant="secondary"
-            size="sm"
-            icon={<Phone size={16} color={theme.colors.textPrimary} />}
-            onPress={() => void Linking.openURL(`tel:+${dialDigits(phone)}`)}
-            style={styles.fill}
-          />
+          {phone ? (
+            <Button
+              label={HOME.call}
+              variant="secondary"
+              size="sm"
+              icon={<Phone size={16} color={theme.colors.textPrimary} />}
+              onPress={() => void Linking.openURL(`tel:+${dialDigits(phone)}`)}
+              style={styles.fill}
+            />
+          ) : null}
+          {/* WhatsApp goes to the business number, so it works even without a personal phone. */}
           <Button
             label={HOME.whatsapp}
             variant="secondary"
             size="sm"
             icon={<MessageCircle size={16} color={theme.colors.textPrimary} />}
-            onPress={() => void Linking.openURL(`https://wa.me/${dialDigits(phone)}`)}
+            onPress={() =>
+              void Linking.openURL(
+                whatsapp
+                  ? businessChatLink(whatsapp, HOME.talkToPerson)
+                  : `https://wa.me/${dialDigits(phone ?? '')}`,
+              )
+            }
             style={styles.fill}
           />
         </View>

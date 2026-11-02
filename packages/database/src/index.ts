@@ -1,4 +1,6 @@
 export * from './business-settings';
+export * from './chat-answerer';
+export * from './chat-waiting';
 export * from './client';
 export * from './company-brand';
 export * from './customer-channel';

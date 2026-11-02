@@ -14,6 +14,8 @@ interface PopoverProps {
   readonly className?: string;
   /** Accessible name for the popover panel. */
   readonly label: string;
+  /** A hover/focus hint on the trigger, for icon-only triggers. Shows beside it. */
+  readonly tooltip?: string | undefined;
 }
 
 /** `trigger` must be a single focusable element (it is rendered with asChild). */
@@ -26,13 +28,21 @@ export function Popover({
   side = 'bottom',
   className,
   label,
+  tooltip,
 }: PopoverProps) {
+  const triggerNode = <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger>;
   return (
     <PopoverPrimitive.Root
       {...(open === undefined ? {} : { open })}
       {...(onOpenChange ? { onOpenChange } : {})}
     >
-      <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger>
+      {tooltip ? (
+        <Tooltip content={tooltip} side="right">
+          {triggerNode}
+        </Tooltip>
+      ) : (
+        triggerNode
+      )}
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           aria-label={label}
@@ -66,9 +76,12 @@ interface TooltipProps {
   /** A single focusable element; the tooltip also shows on keyboard focus. */
   readonly children: ReactNode;
   readonly side?: 'top' | 'right' | 'bottom' | 'left';
+  /** Off: the children render bare, with no hint. */
+  readonly enabled?: boolean;
 }
 
-export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', enabled = true }: TooltipProps) {
+  if (!enabled) return children;
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>

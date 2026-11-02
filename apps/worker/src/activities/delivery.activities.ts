@@ -23,6 +23,7 @@ import {
   type SessionMessage,
   type WhatsAppSender,
 } from '../channels/whatsapp-cloud';
+import { logTemplateInChat } from './chat-history';
 import { deliverPush } from './push-delivery';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
@@ -38,6 +39,10 @@ interface DeliveryDeps {
 /** The plain words of a customer message, for its SMS version. */
 const wordsFor = (template: string, payload: Record<string, string>) =>
   customerNotice(template, payload, 'sms') ?? GENERIC_WORDS;
+
+/** Why a message was only logged: log mode, or a number outside the test list. */
+const loggedNote = (channel: string, result: { readonly note?: string }) =>
+  result.note ?? `Not sent: ${channel === 'sms' ? 'SMS' : 'WhatsApp'} delivery is in log mode.`;
 
 /**
  * Sends one queued message. Final outcomes (sent, skipped, failed) are written to the
@@ -110,11 +115,12 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     try {
       const result = await call();
       if (result.outcome === 'logged') {
-        const channel = row.channel === 'sms' ? 'SMS' : 'WhatsApp';
-        await finish(row.id, 'skipped', `Not sent: ${channel} delivery is in log mode.`);
+        await finish(row.id, 'skipped', loggedNote(row.channel, result));
         return 'skipped';
       }
       await finish(row.id, 'sent', null, result.providerId);
+      // The history is a nicety: it must never turn a sent message into a retry.
+      if (row.channel === 'whatsapp') await logTemplateInChat(db, row).catch(() => undefined);
       return 'sent';
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

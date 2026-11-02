@@ -6,11 +6,10 @@ import { Lock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { ComponentType } from 'react';
+import { type ComponentType, useEffect } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
 import { MessageLogPanel } from './message-log/message-log-panel';
 import { ServiceRequestsPanel } from './service-desk-view';
-import { WhatsAppInbox } from './whatsapp/whatsapp-inbox';
 
 const MESSAGING: readonly Capability[] = ['service.manage', 'customers.manage'];
 
@@ -20,7 +19,6 @@ const TABS = [
     requires: ['service.manage', 'customers.view'],
     Panel: ServiceRequestsPanel,
   },
-  { value: 'whatsapp', requires: MESSAGING, Panel: WhatsAppInbox },
   { value: 'log', requires: MESSAGING, Panel: MessageLogPanel },
 ] as const satisfies readonly {
   value: string;
@@ -29,7 +27,10 @@ const TABS = [
 }[];
 type TabValue = (typeof TABS)[number]['value'];
 
-/** Service requests, the WhatsApp inbox and the message log. The open tab lives in `?tab=`. */
+/**
+ * Service requests and the message log (`?tab=`). WhatsApp chats live in Today → Chats
+ * and on each customer, so an old WhatsApp link here goes there.
+ */
 export function ServiceView() {
   const t = useTranslations('service');
   const user = useCurrentUser();
@@ -40,11 +41,16 @@ export function ServiceView() {
     tab.requires.some((capability) => user.capabilities.includes(capability)),
   );
   const current = allowed.find((tab) => tab.value === params.get('tab')) ?? allowed[0];
+  const oldChatLink = params.get('tab') === 'whatsapp';
+  useEffect(() => {
+    if (!oldChatLink) return;
+    const chat = params.get('chat');
+    router.replace(`/today?tab=chats${chat ? `&chat=${chat}` : ''}`);
+  }, [oldChatLink, params, router]);
 
   const select = (value: TabValue) => {
     const next = new URLSearchParams(params);
     next.set('tab', value);
-    next.delete('chat');
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 

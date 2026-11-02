@@ -17,6 +17,21 @@ const schema = z.object({
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_API_VERSION: z.string().default('v25.0'),
   WHATSAPP_TEMPLATE_LANGUAGE: z.string().default('en'),
+  /**
+   * Testing live on a laptop: only these numbers (E.164, comma separated) get real
+   * WhatsApp messages; every other message is logged. Not allowed in production.
+   */
+  WHATSAPP_TEST_NUMBERS: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value
+        ? value
+            .split(',')
+            .map((number) => number.replace(/[^\d+]/g, ''))
+            .filter(Boolean)
+        : [],
+    ),
   /** Phone alerts go through Expo's push service (Firebase for Android, Apple for iOS). */
   PUSH_DELIVERY: z.enum(['log', 'live']).default('log'),
   EXPO_ACCESS_TOKEN: z.string().optional(),
@@ -45,6 +60,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     throw new Error(
       'WHATSAPP_DELIVERY=live needs WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID.',
     );
+  }
+  if (config.NODE_ENV === 'production' && config.WHATSAPP_TEST_NUMBERS.length > 0) {
+    throw new Error('WHATSAPP_TEST_NUMBERS is for testing only; remove it in production.');
   }
   if (
     config.SMS_DELIVERY === 'msg91' &&

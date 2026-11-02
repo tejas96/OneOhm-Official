@@ -1,0 +1,32 @@
+/** English (India) copy for WhatsApp chats in the field app. */
+export const CHATS = {
+  title: 'WhatsApp chats',
+  sectionTitle: 'WhatsApp: needs a reply',
+  seeAll: 'All my chats',
+  empty: 'No chats yet. Chats with your customers and leads show up here.',
+  loading: 'Loading chats',
+  loadingChat: 'Loading the chat',
+  notFound: 'This chat is not available.',
+  needsReply: 'Needs a reply',
+  you: 'You',
+  assistant: 'Assistant',
+  update: 'Update',
+  call: 'Call',
+  placeholder: 'Write a message',
+  send: 'Send',
+  sendFailed: 'The message did not go',
+  closed:
+    'Over 24 hours since they last wrote. Your message goes as a WhatsApp update, and the chat opens again when they reply.',
+  takeOver: 'Your reply pauses the assistant in this chat.',
+  handBack: 'Hand back to assistant',
+  noMessages: 'No messages yet. Write the first one.',
+  delivery: {
+    pending: 'Sending',
+    skipped: 'Not sent',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    read: 'Read',
+    failed: 'Not delivered',
+  },
+  openFailed: 'Could not open the chat',
+} as const;

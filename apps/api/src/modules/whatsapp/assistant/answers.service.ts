@@ -15,7 +15,7 @@ import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
 import { rewardsText } from './rewards-answer';
-import { FILE_WORDS, WORDS } from './words';
+import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
 
 const list = (lines: readonly string[]) => lines.filter(Boolean).join('\n');
 
@@ -43,12 +43,18 @@ export class AnswersService {
         const steps = project.stages.filter((stage) => stage.state !== 'skipped').length;
         return list([
           `*${project.code}* · ${formatKwp(project.capacityWp)} · ${project.place}`,
-          `Now: ${WORDS.stage[project.currentStage] ?? project.currentStage} (${done} of ${steps} steps done)`,
+          ANSWER_WORDS.now(WORDS.stage[project.currentStage] ?? project.currentStage, done, steps),
           project.nextStep
-            ? `Next: ${project.nextStep.title}, planned ${daySpan(project.nextStep.date, project.nextStep.date)}`
+            ? ANSWER_WORDS.next(
+                project.nextStep.title,
+                daySpan(project.nextStep.date, project.nextStep.date),
+              )
             : '',
           project.waiting
-            ? `${WORDS.waitingOn[project.waiting.party] ?? ''} since ${daySpan(project.waiting.since, project.waiting.since)}`
+            ? ANSWER_WORDS.waitingSince(
+                WORDS.waitingOn[project.waiting.party] ?? '',
+                daySpan(project.waiting.since, project.waiting.since),
+              )
             : '',
           WORDS.subsidy[project.subsidy.status] ?? '',
         ]);
@@ -111,13 +117,13 @@ export class AnswersService {
     online: boolean,
   ): Promise<string> {
     const left = milestone.amountPaise - got;
-    if (left <= 0) return `✓ ${milestone.label}: ${formatInr(milestone.amountPaise)} paid`;
-    if (milestone.payer === 'bank') return `• ${milestone.label}: ${formatInr(left)} (bank loan)`;
+    if (left <= 0) return ANSWER_WORDS.paid(milestone.label, formatInr(milestone.amountPaise));
+    if (milestone.payer === 'bank') return ANSWER_WORDS.bank(milestone.label, formatInr(left));
     if (milestone.status !== 'due' && milestone.status !== 'partly_paid')
-      return `• ${milestone.label}: ${formatInr(left)} later`;
+      return ANSWER_WORDS.later(milestone.label, formatInr(left));
     const url =
       openUrl ?? (online ? (await this.links.create({ userId: null }, milestone.id)).url : null);
-    return `• ${milestone.label}: ${formatInr(left)} due${url ? `\n  ${WORDS.payHere}: ${url}` : ''}`;
+    return `${ANSWER_WORDS.due(milestone.label, formatInr(left))}${url ? `\n  ${WORDS.payHere}: ${url}` : ''}`;
   }
 
   /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */
@@ -172,11 +178,11 @@ export class AnswersService {
   async requests(customerId: string): Promise<string> {
     const rows = (await this.portal.serviceRequests(customerId)).slice(0, 5);
     if (rows.length === 0) return WORDS.noRequests;
-    const status = { open: 'Open', in_progress: 'Being worked on', resolved: 'Resolved' } as const;
+    const status = ANSWER_WORDS.requestStatus;
     return rows
       .map(
         (row) =>
-          `• ${row.description.slice(0, 60)} — *${status[row.status]}*${row.visitOn && row.status !== 'resolved' ? `\n  Technician visit: ${daySpan(row.visitOn, row.visitOn)}` : ''}${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
+          `• ${row.description.slice(0, 60)} — *${status[row.status]}*${row.visitOn && row.status !== 'resolved' ? `\n  ${ANSWER_WORDS.technicianVisit(daySpan(row.visitOn, row.visitOn))}` : ''}${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
       )
       .join('\n');
   }

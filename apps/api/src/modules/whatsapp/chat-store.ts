@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
+  customerContacts,
   customers,
   type DatabaseExecutor,
   outbox,
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { eq } from 'drizzle-orm';
+import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { Incoming } from './whatsapp-events';
 
 /** A reply inside WhatsApp's 24-hour window; the worker sends it like any message. */
@@ -32,16 +34,35 @@ export type ChatReply =
 
 export type Conversation = typeof waConversations.$inferSelect;
 
+/**
+ * The customer behind a number: their own phone, else a family member they added (who
+ * reaches the same chat and the same person). Null for a stranger.
+ */
+export async function customerForPhone(
+  db: DatabaseExecutor,
+  phone: string,
+): Promise<{ readonly id: string; readonly name: string } | null> {
+  const [own] = await db
+    .select({ id: customers.id, name: customers.name })
+    .from(customers)
+    .where(eq(customers.phoneE164, phone))
+    .limit(1);
+  if (own) return own;
+  const family = await db
+    .select({ id: customers.id, name: customers.name })
+    .from(customerContacts)
+    .innerJoin(customers, eq(customers.id, customerContacts.customerId))
+    .where(and(eq(customerContacts.phoneE164, phone), isNull(customerContacts.revokedAt)))
+    .limit(2);
+  return soleCustomer(family);
+}
+
 /** The chat for this number, made on first contact and linked to the customer who owns it. */
 export async function conversationFor(
   db: DatabaseExecutor,
   incoming: Incoming,
 ): Promise<Conversation> {
-  const [owner] = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(eq(customers.phoneE164, incoming.from))
-    .limit(1);
+  const owner = await customerForPhone(db, incoming.from);
   const values = {
     customerId: owner?.id ?? null,
     profileName: incoming.profileName,
@@ -111,6 +132,66 @@ export async function queueReply(
     outboxId: row?.id ?? null,
     sentByUserId,
   });
+}
+
+/**
+ * Queues an approved template into a chat (used once the 24-hour window has closed) and
+ * keeps its words in the history, so the team sees exactly what the customer got.
+ */
+export async function queueTemplate(
+  db: DatabaseExecutor,
+  conversation: Pick<Conversation, 'id' | 'phone'>,
+  key: string,
+  payload: Readonly<Record<string, string>>,
+  sentByUserId: string | null = null,
+): Promise<void> {
+  const template = DEFAULT_MESSAGE_TEMPLATES.find((item) => item.key === key);
+  if (!template) throw new Error(`No message template "${key}".`);
+  const [row] = await db
+    .insert(outbox)
+    .values({
+      channel: 'whatsapp',
+      recipient: conversation.phone,
+      template: key,
+      payload,
+      dedupeKey: `chat:${randomUUID()}`,
+    })
+    .returning({ id: outbox.id });
+  await db.insert(waMessages).values({
+    conversationId: conversation.id,
+    direction: 'out',
+    kind: 'template',
+    body: renderTemplate(template.preview, template.fields, payload),
+    outboxId: row?.id ?? null,
+    sentByUserId,
+  });
+}
+
+/** The chat for a number the team wants to write to; made when it does not exist yet. */
+export async function conversationForPhone(
+  db: DatabaseExecutor,
+  phone: string,
+): Promise<Conversation> {
+  const [existing] = await db
+    .select()
+    .from(waConversations)
+    .where(eq(waConversations.phone, phone))
+    .limit(1);
+  if (existing) return existing;
+  const owner = await customerForPhone(db, phone);
+  const [row] = await db
+    .insert(waConversations)
+    .values({ phone, customerId: owner?.id ?? null, profileName: owner?.name ?? null })
+    .onConflictDoNothing({ target: waConversations.phone })
+    .returning();
+  if (row) return row;
+  const [again] = await db
+    .select()
+    .from(waConversations)
+    .where(eq(waConversations.phone, phone))
+    .limit(1);
+  if (!again) throw new Error('Conversation upsert returned nothing.');
+  return again;
 }
 
 /** Moves the chat to the next step of the assistant, with what that step needs. */

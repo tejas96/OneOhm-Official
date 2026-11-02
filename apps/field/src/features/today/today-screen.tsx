@@ -23,6 +23,7 @@ import { Bell } from '@/features/alerts/bell';
 import { AnnouncementsCard } from '@/features/announcements/announcements-card';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
+import { ChatsSection } from '@/features/chats/chats-section';
 import { LeaveAndPoints } from '@/features/rewards/leave-and-points';
 import { SearchButton } from '@/features/search/search-button';
 import { ServiceVisitsSection } from '@/features/service/service-visits-section';
@@ -105,6 +106,7 @@ export function TodayScreen() {
             upcoming={groups.upcoming.length}
           />
           <QuickActions />
+          <ChatsSection />
           <ServiceVisitsSection />
           {onlyService ? null : tasks.length === 0 ? (
             <EmptyState

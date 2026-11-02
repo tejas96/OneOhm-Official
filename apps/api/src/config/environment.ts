@@ -36,6 +36,13 @@ const environmentSchema = z
     /** Meta webhook: the token typed when subscribing, and the app secret that signs posts. */
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
     WHATSAPP_APP_SECRET: z.string().optional(),
+    /** Until the app secret is known: a long random key that ends the webhook URL. */
+    WHATSAPP_WEBHOOK_PATH_KEY: z.string().min(32).optional(),
+    /** The business WhatsApp number (E.164) customers write to; read from Meta when unset. */
+    WHATSAPP_BUSINESS_NUMBER: z
+      .string()
+      .regex(/^\+\d{10,15}$/, 'Use the full number with country code, like +919800000000.')
+      .optional(),
     /** Signs the short-lived links the WhatsApp assistant sends for quotations and receipts. */
     FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
     FILE_LINK_HOURS: z.coerce.number().int().min(1).max(168).default(72),

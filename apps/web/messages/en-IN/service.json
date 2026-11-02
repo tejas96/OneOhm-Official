@@ -55,13 +55,17 @@
       "listLabel": "WhatsApp chats",
       "filterLabel": "Show chats",
       "filter": {
-        "all": "All",
-        "human": "Waiting for a person · {count}"
+        "reply": "To reply · {count}",
+        "late": "Late · {count}",
+        "unassigned": "No owner · {count}",
+        "all": "All"
       },
       "withPerson": "With a person",
       "empty": {
         "all": "No WhatsApp chats yet. When a customer writes to our number, the chat appears here.",
-        "human": "No one is waiting for a person. The assistant is answering every chat."
+        "reply": "Every customer has an answer. Nothing is waiting.",
+        "late": "No customer has waited over 2 hours.",
+        "unassigned": "Every chat has someone answering it."
       },
       "noMessages": "No messages yet",
       "fromUs": "{company}: {text}",
@@ -96,10 +100,25 @@
         "placeholder": "Write a reply",
         "send": "Send",
         "hint": "Ctrl or ⌘ + Enter sends.",
-        "closed": "WhatsApp allows replies only within 24 hours of the customer’s last message — call them instead.",
+        "closed": "Over 24 hours since they last wrote. Your message goes as a WhatsApp update, and the chat opens again when they reply.",
         "failed": "The reply did not go",
-        "takeOver": "Replying takes this chat over from the assistant until you hand it back."
-      }
+        "takeOver": "Replying takes this chat over from the assistant until you hand it back.",
+        "followUpPlaceholder": "Write a message"
+      },
+      "needsReply": "Needs a reply",
+      "answeredBy": "{name} answers",
+      "teamAnswers": "Service team answers",
+      "openFailed": "Could not open the WhatsApp chat",
+      "late": "Late",
+      "passTo": "Pass to…",
+      "passTitle": "Pass this chat to",
+      "passDone": "Passed to {name}",
+      "passFailed": "Could not pass the chat",
+      "startChat": "Start chat",
+      "noChatYet": "No WhatsApp chat yet. Messages you send come from the business number.",
+      "customerChat": "Customer chat",
+      "openChat": "Open chat",
+      "salesAnswers": "Sales team answers"
     },
     "log": {
       "loading": "Loading messages",

@@ -18,11 +18,13 @@ import {
   serviceRequestRows,
   toCustomerRequest,
 } from '../../common/read-models/service-request-rows';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { LeadIntakeService } from '../crm/lead-intake.service';
 import { customerReferrals } from '../referrals/customer-referrals.read';
 import { resolveReferralCode } from '../referrals/referral-codes';
+import { businessWhatsAppNumber } from '../whatsapp/business-number';
 import { suggestRatingPoints } from '../workforce/points';
 import { viewerOf } from './customer-family';
 import { customerProjects } from './customer-home';
@@ -32,6 +34,7 @@ import { customerProjects } from './customer-home';
 export class CustomerPortalService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly catalog: CatalogService,
     private readonly intake: LeadIntakeService,
   ) {}
@@ -56,7 +59,12 @@ export class CustomerPortalService {
         viewer: await viewerOf(this.db, contactId),
       },
       projects: await customerProjects(this.db, customerId),
-      company: { name: company.brandName, phones: company.phones, email: company.email },
+      company: {
+        name: company.brandName,
+        phones: company.phones,
+        email: company.email,
+        whatsapp: await businessWhatsAppNumber(this.env),
+      },
     };
   }
 

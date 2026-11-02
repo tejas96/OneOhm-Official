@@ -55,7 +55,12 @@ export function CustomerTabs({ customer }: { readonly customer: CustomerRecord }
         return withActivity((data) => <CustomerMoneyTab activity={data} />);
       case 'conversations':
         return withActivity((data) => (
-          <CustomerConversationsTab activity={data} name={customer.name} phone={customer.phone} />
+          <CustomerConversationsTab
+            activity={data}
+            customerId={customer.id}
+            name={customer.name}
+            phone={customer.phone}
+          />
         ));
       case 'service':
         return withActivity((data) => <CustomerServiceTab activity={data} />);

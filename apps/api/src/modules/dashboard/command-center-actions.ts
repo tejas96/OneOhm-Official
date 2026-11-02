@@ -1,5 +1,6 @@
 import type { ActionItem } from '@oneohm/api-contracts';
 import {
+  chatsWaitingSince,
   type Database,
   discoms,
   leads,
@@ -8,12 +9,16 @@ import {
   projectTasks,
   quotations,
   users,
+  waConversations,
 } from '@oneohm/database';
-import type { DashboardSettings } from '@oneohm/domain';
+import { chatWaitStage, type DashboardSettings } from '@oneohm/domain';
 import { daysBetween, formatInrCompact } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
 import { waitsForApproval } from '../lists/quotation-page';
 import { assignmentConfirmations } from './command-center-confirm';
+
+/** Late chats are counted on the business clock (the same default the API uses). */
+const BUSINESS_TIME_ZONE = process.env.BUSINESS_TIMEZONE ?? 'Asia/Kolkata';
 
 const plural = (count: number, one: string, many: string) =>
   count === 1 ? one : many.replace('#', String(count));
@@ -28,6 +33,7 @@ export async function buildActions(
 ): Promise<ActionItem[]> {
   const groups = await Promise.all([
     latePayments(db, today, settings.paymentLateDays),
+    lateChats(db),
     longDiscomWaits(db, today, settings.discomWaitDays),
     pendingDiscounts(db),
     bankClaims(db),
@@ -238,6 +244,42 @@ async function unownedLeads(db: Database): Promise<ActionItem[]> {
       action: 'Assign',
       party: 'internal',
       href: '/leads?filter=unowned',
+    },
+  ];
+}
+
+/**
+ * Customers who wrote on WhatsApp and have waited over 2 working hours for a person's
+ * answer (the same clock as the reminders). The owner sees how many, not the chats.
+ */
+async function lateChats(db: Database): Promise<ActionItem[]> {
+  const open = await db
+    .select({ id: waConversations.id })
+    .from(waConversations)
+    .where(eq(waConversations.state, 'human'));
+  if (open.length === 0) return [];
+  const waiting = await chatsWaitingSince(
+    db,
+    open.map((chat) => chat.id),
+  );
+  const now = new Date();
+  const late = [...waiting.values()].filter(
+    (since) => chatWaitStage(since, now, BUSINESS_TIME_ZONE) === 2,
+  ).length;
+  if (late === 0) return [];
+  return [
+    {
+      id: 'late-chats',
+      tone: 'overdue',
+      title: plural(
+        late,
+        '1 customer is waiting for a WhatsApp reply',
+        '# customers are waiting for a WhatsApp reply',
+      ),
+      detail: 'Waiting over 2 working hours',
+      action: 'Open chats',
+      party: 'internal',
+      href: '/today?tab=chats&filter=late',
     },
   ];
 }

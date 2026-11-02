@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate } from './message-templates';
+import {
+  DEFAULT_MESSAGE_TEMPLATES,
+  FOLLOW_UP_MAX,
+  followUpText,
+  renderTemplate,
+} from './message-templates';
 
 describe('message templates', () => {
   it('fills placeholders in field order', () => {
@@ -21,5 +26,19 @@ describe('message templates', () => {
       const count = (template.preview.match(/\{\{\d+\}\}/g) ?? []).length;
       expect(count, template.key).toBe(template.fields.length);
     }
+  });
+});
+
+describe('follow-up text', () => {
+  it('keeps a staff message on one tidy line', () => {
+    expect(followUpText('  Hello,\n\nyour meter   is fitted.\tCall us.  ')).toBe(
+      'Hello, your meter is fitted. Call us.',
+    );
+  });
+
+  it('cuts a long message with an ellipsis', () => {
+    const text = followUpText('a'.repeat(FOLLOW_UP_MAX + 50));
+    expect(text).toHaveLength(FOLLOW_UP_MAX);
+    expect(text.endsWith('…')).toBe(true);
   });
 });

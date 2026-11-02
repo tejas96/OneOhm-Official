@@ -23,6 +23,16 @@ interface SegmentedControlProps<TValue extends string> {
   readonly className?: string;
 }
 
+/** Scrolls only the row (never the page) so the chosen option is fully visible. */
+function keepInRow(node: HTMLElement | null) {
+  const row = node?.parentElement;
+  if (!node || !row) return;
+  const left = node.offsetLeft;
+  const right = left + node.offsetWidth;
+  if (left < row.scrollLeft) row.scrollLeft = left;
+  else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth;
+}
+
 /** A small set of mutually exclusive views; the thumb slides to the choice. */
 export function SegmentedControl<TValue extends string>({
   value,
@@ -42,7 +52,11 @@ export function SegmentedControl<TValue extends string>({
         if (option) onValueChange(option.value);
       }}
       orientation="horizontal"
-      className={cn('inline-flex rounded-md border border-hairline bg-sunken p-0.5', className)}
+      // Options never wrap; when they do not fit, the row scrolls sideways (no scrollbar).
+      className={cn(
+        'inline-flex max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-hairline bg-sunken p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        className,
+      )}
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -50,11 +64,13 @@ export function SegmentedControl<TValue extends string>({
           <RadioGroup.Item
             key={option.value}
             value={option.value}
+            // The chosen option is kept in view when the row has to scroll.
+            ref={selected ? keepInRow : undefined}
             // Named explicitly: the sliding thumb shares the item's content, and some
             // assistive tools do not compute a radio's name from its text.
             aria-label={option.label}
             className={cn(
-              'relative flex items-center justify-center gap-1.5 rounded-[6px] px-3 font-medium transition-colors',
+              'relative flex shrink-0 items-center justify-center gap-1.5 rounded-[6px] px-3 font-medium whitespace-nowrap transition-colors',
               size === 'sm' ? 'h-8 text-[0.8125rem] pointer-coarse:h-10' : 'h-10 text-[0.875rem]',
               selected ? 'text-ink' : 'text-ink-muted hover:text-ink',
             )}

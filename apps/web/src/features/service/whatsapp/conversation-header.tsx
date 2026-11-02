@@ -9,6 +9,7 @@ import { ChatLeadAction } from '@/features/leads/chat-lead-action';
 import { describeError } from '@/lib/api/api-error';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
+import { PassChat } from './pass-chat';
 import { useRelease } from './use-whatsapp';
 
 /** Back to the chat list; only on phones, where one pane shows at a time. */
@@ -59,6 +60,12 @@ export function ConversationHeader({
             {formatPhone(chat.phone)}
           </a>
           <p className="type-label text-ink-faint">
+            {chat.assignee
+              ? t('answeredBy', { name: chat.assignee.name })
+              : chat.customerId
+                ? t('teamAnswers')
+                : t('salesAnswers')}
+            {' · '}
             {human && chat.handedOverAt
               ? t('personSince', { time: ago(chat.handedOverAt) })
               : t('assistantOn')}
@@ -66,6 +73,7 @@ export function ConversationHeader({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <PassChat chat={chat} />
         {!chat.customerId && <ChatLeadAction name={chat.name} phone={chat.phone} />}
         {chat.customerId && (
           <Button asChild size="sm" variant="quiet">

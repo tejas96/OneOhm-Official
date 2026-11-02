@@ -1,8 +1,12 @@
+import { localized } from './language';
+import { HI } from './words-hi';
+import { MR } from './words-mr';
+
 /**
  * What the WhatsApp assistant says (PRD 6.1), in plain words. Row titles stay within
  * WhatsApp's limits: 24 characters for list rows and 20 for buttons.
  */
-export const MENU_ROWS = [
+const EN_MENU_ROWS = [
   { id: 'progress', title: 'Project progress', description: 'Where your solar work stands' },
   { id: 'payments', title: 'Payments', description: 'Paid, due and a link to pay' },
   { id: 'documents', title: 'Documents', description: 'Quotation, invoices, receipts, papers' },
@@ -15,9 +19,9 @@ export const MENU_ROWS = [
   { id: 'human', title: 'Talk to a person', description: 'A team member replies here' },
 ] as const;
 
-export type MenuChoice = (typeof MENU_ROWS)[number]['id'];
+export type MenuChoice = (typeof EN_MENU_ROWS)[number]['id'];
 
-export const WORDS = {
+const EN_WORDS = {
   menu: (name: string, company: string) =>
     `Hello ${name}! I am the ${company ? `${company} ` : ''}assistant. What would you like to see? You can type "menu" at any time.`,
   menuButton: 'Choose',
@@ -69,9 +73,15 @@ export const WORDS = {
   humanSoon:
     'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Type "menu" to go back to the assistant.',
   notUnderstood: 'Sorry, I did not get that. Here is what I can help with.',
+  /** A reply to one of our updates goes to their person, with this warm note. */
+  passedToOwner: (name: string | null) =>
+    `Thank you. ${name ?? 'Our team'} will reply to you here.`,
+  /** Once a night, when a person has the chat and it is outside working hours. */
+  nightReply: (name: string | null) =>
+    `Thank you. We reply from 9:30 am to 6:30 pm. Your message is with ${name ?? 'our team'}.`,
 } as const;
 
-export const RATINGS = [
+const EN_RATINGS = [
   { id: 'rate:5', title: 'Very happy', description: '5 of 5' },
   { id: 'rate:4', title: 'Happy', description: '4 of 5' },
   { id: 'rate:3', title: 'Okay', description: '3 of 5' },
@@ -80,7 +90,7 @@ export const RATINGS = [
 ] as const;
 
 /** Each file line in the "Documents" answer. */
-export const FILE_WORDS = {
+const EN_FILE_WORDS = {
   quotation: (number: string, url: string) => `Quotation ${number}: ${url}`,
   invoice: (number: string, amount: string, url: string) =>
     `Tax invoice ${number} (${amount}): ${url}`,
@@ -91,7 +101,7 @@ export const FILE_WORDS = {
 } as const;
 
 /** Photos and papers the customer sends (PRD 6.1). */
-export const MEDIA_WORDS = {
+const EN_MEDIA_WORDS = {
   what: { image: 'photo', document: 'paper', video: 'video', audio: 'voice note' },
   ask: (what: string) =>
     `Thank you, we got your ${what}. Is it about a problem with your solar system?`,
@@ -114,7 +124,7 @@ export const MEDIA_WORDS = {
 } as const;
 
 /** The "Warranty and AMC" answer, the same cover the app shows (PRD 5.5). */
-export const COVER_WORDS = {
+const EN_COVER_WORDS = {
   notYet: 'Your warranties start on the day your system is switched on. They will show here then.',
   since: (date: string) => `Switched on ${date}. Cover counts from that day.`,
   kinds: {
@@ -140,7 +150,7 @@ export const COVER_WORDS = {
 } as const;
 
 /** "My rewards": the people the customer referred and what they earned (PRD 5.6). */
-export const REWARD_WORDS = {
+const EN_REWARD_WORDS = {
   none: 'You have not referred anyone yet. Tap "Refer a friend" to tell your friends about us. You earn a reward when their solar is installed.',
   title: '*Your referrals*',
   status: {
@@ -163,10 +173,70 @@ export const REWARD_WORDS = {
 } as const;
 
 /** Rating OneOhm on WhatsApp (PRD 6.1), asked only once the system is switched on. */
-export const FEEDBACK_WORDS = {
+const EN_FEEDBACK_WORDS = {
   later:
     'Thank you! We will ask for your rating once your solar system is switched on. Type "menu" to see other options.',
   askComment: 'Thank you for rating us! Anything to add? Type it here, or type "skip".',
   commentSaved: 'Thank you, we have noted it. It helps the team do better.',
   skipWords: ['skip', 'no', 'nothing', 'no thanks', 'none', 'nahi', 'nako'] as readonly string[],
 } as const;
+
+/** Lines in the progress, payments and requests answers. */
+const EN_ANSWER_WORDS = {
+  now: (stage: string, done: number, steps: number) =>
+    `Now: ${stage} (${done} of ${steps} steps done)`,
+  next: (title: string, when: string) => `Next: ${title}, planned ${when}`,
+  waitingSince: (who: string, when: string) => `${who} since ${when}`,
+  paid: (label: string, amount: string) => `✓ ${label}: ${amount} paid`,
+  bank: (label: string, amount: string) => `• ${label}: ${amount} (bank loan)`,
+  later: (label: string, amount: string) => `• ${label}: ${amount} later`,
+  due: (label: string, amount: string) => `• ${label}: ${amount} due`,
+  requestStatus: { open: 'Open', in_progress: 'Being worked on', resolved: 'Resolved' },
+  technicianVisit: (when: string) => `Technician visit: ${when}`,
+} as const;
+
+/** The kind of problem, in the customer's words, for "Your … request is raised". */
+const EN_CATEGORY_WORDS = {
+  inverter_error: 'inverter',
+  no_generation: 'no generation',
+  low_generation: 'low generation',
+  physical_damage: 'damage',
+  cleaning: 'cleaning',
+  billing_net_meter: 'bill or meter',
+  subsidy: 'subsidy',
+  other: 'service',
+} as Record<string, string>;
+
+export const EN = {
+  MENU_ROWS: EN_MENU_ROWS,
+  WORDS: EN_WORDS,
+  RATINGS: EN_RATINGS,
+  FILE_WORDS: EN_FILE_WORDS,
+  MEDIA_WORDS: EN_MEDIA_WORDS,
+  COVER_WORDS: EN_COVER_WORDS,
+  REWARD_WORDS: EN_REWARD_WORDS,
+  FEEDBACK_WORDS: EN_FEEDBACK_WORDS,
+  ANSWER_WORDS: EN_ANSWER_WORDS,
+  CATEGORY_WORDS: EN_CATEGORY_WORDS,
+};
+export type AssistantWords = typeof EN;
+
+const pick = <K extends keyof AssistantWords>(key: K) =>
+  localized(EN[key], { mr: MR[key], hi: HI[key] });
+
+export const MENU_ROWS = pick('MENU_ROWS');
+export const WORDS = pick('WORDS');
+export const RATINGS = pick('RATINGS');
+export const FILE_WORDS = pick('FILE_WORDS');
+export const MEDIA_WORDS = pick('MEDIA_WORDS');
+export const COVER_WORDS = pick('COVER_WORDS');
+export const REWARD_WORDS = pick('REWARD_WORDS');
+export const FEEDBACK_WORDS = pick('FEEDBACK_WORDS');
+export const ANSWER_WORDS = pick('ANSWER_WORDS');
+export const CATEGORY_WORDS = pick('CATEGORY_WORDS');
+
+/** Menu rows in every language, so a typed title works whatever language is set. */
+export const ALL_MENU_ROWS = [...EN_MENU_ROWS, ...MR.MENU_ROWS, ...HI.MENU_ROWS] as readonly {
+  readonly id: MenuChoice;
+  readonly title: string;
+}[];

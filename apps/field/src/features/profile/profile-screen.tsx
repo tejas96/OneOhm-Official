@@ -5,6 +5,7 @@ import { API_BASE_URL } from '@/api/api';
 import { initials } from '@/components/initials';
 import { PROFILE } from '@/copy/common';
 import { LocationSharingCard } from '@/features/attendance/location-sharing-card';
+import { ChatsLink } from '@/features/chats/chats-link';
 import { useCurrentUser, useSession } from '@/session/session-provider';
 import { ContactCard } from './contact-card';
 
@@ -36,6 +37,7 @@ export function ProfileScreen() {
           {PROFILE.kind[user.kind]}
         </Text>
       </View>
+      <ChatsLink />
       <LocationSharingCard />
       <AppearanceCard words={PROFILE.appearance} />
       {user.kind === 'reseller' ? <ContactCard /> : null}

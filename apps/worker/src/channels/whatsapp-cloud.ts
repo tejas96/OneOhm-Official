@@ -9,7 +9,7 @@ export interface WhatsAppTemplateMessage {
 
 export type SendResult =
   | { readonly outcome: 'sent'; readonly providerId: string | null }
-  | { readonly outcome: 'logged' };
+  | { readonly outcome: 'logged'; readonly note?: string };
 
 /** A send that will never succeed as is (bad number, unknown template): do not retry. */
 export class PermanentSendError extends Error {
@@ -147,8 +147,17 @@ export function createWhatsAppSender(
     if (isRetryableStatus(response.status)) throw new Error(reason);
     throw new PermanentSendError(reason, body.error?.code ?? null);
   };
+  // Testing live: numbers outside the list are only logged, never messaged.
+  const allowed = config.WHATSAPP_TEST_NUMBERS;
+  const held = (to: string, what: string): SendResult | null => {
+    if (allowed.length === 0 || allowed.includes(to)) return null;
+    log(`[whatsapp:test] held ${what} → ${to} (not in WHATSAPP_TEST_NUMBERS)`);
+    return { outcome: 'logged', note: 'Not sent: only test numbers get messages right now.' };
+  };
   return {
-    send: (message) => post(templateRequestBody(message)),
-    sendSession: (toE164, message) => post(sessionRequestBody(toE164, message)),
+    send: async (message) =>
+      held(message.toE164, message.template) ?? post(templateRequestBody(message)),
+    sendSession: async (toE164, message) =>
+      held(toE164, message.kind) ?? post(sessionRequestBody(toE164, message)),
   };
 }

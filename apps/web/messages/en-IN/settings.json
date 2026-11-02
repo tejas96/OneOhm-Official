@@ -1038,6 +1038,12 @@
           "lead": "Remind this many days before",
           "leadHint": "0 reminds on the day itself.",
           "preview": "{days, plural, =0 {A follow-up planned for {date} is reminded that morning at {time}.} one {A follow-up planned for {date} is reminded on {remind} at {time}, a day before.} other {A follow-up planned for {date} is reminded on {remind} at {time}, # days before.}}"
+        },
+        "whatsapp": {
+          "title": "WhatsApp at night",
+          "description": "When a customer writes outside 9:30 am to 6:30 pm and a person has their chat.",
+          "nightReply": "Send one calm reply at night",
+          "nightReplyPreview": "The customer gets once a night, in their language: “Thank you. We reply from 9:30 am to 6:30 pm. Your message is with Asha.”"
         }
       },
       "assignment": {

@@ -10,7 +10,7 @@ import { FAMILY } from '@/copy/family';
 import { CoverCard } from '@/features/help/cover-card';
 import { useChosenProject, useHome } from '@/features/home/use-home';
 import { LanguageCard } from '@/features/language/language-card';
-import { dialDigits } from '@/lib/journey';
+import { businessChatLink, dialDigits } from '@/lib/journey';
 import { useCustomer, useSession } from '@/session/session-provider';
 import { ReferralList } from './refer-screen';
 
@@ -100,14 +100,18 @@ export function ProfileScreen() {
                 onPress={() => void Linking.openURL(`tel:+${dialDigits(company.phones[0] ?? '')}`)}
               />
             ) : null}
-            {company.phones[0] ? (
+            {company.whatsapp || company.phones[0] ? (
               <Button
                 label={PROFILE.whatsapp(company.name)}
                 variant="secondary"
                 size="sm"
                 icon={<MessageCircle size={16} color={icon} />}
                 onPress={() =>
-                  void Linking.openURL(`https://wa.me/${dialDigits(company.phones[0] ?? '')}`)
+                  void Linking.openURL(
+                    company.whatsapp
+                      ? businessChatLink(company.whatsapp, PROFILE.chatHello)
+                      : `https://wa.me/${dialDigits(company.phones[0] ?? '')}`,
+                  )
                 }
               />
             ) : null}

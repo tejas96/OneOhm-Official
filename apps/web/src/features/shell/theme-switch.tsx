@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@oneohm/design-system/web';
+import { cn, Tooltip } from '@oneohm/design-system/web';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
@@ -9,12 +9,39 @@ import { THEME_PREFERENCES } from '@/providers/preferences';
 
 const ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
+interface ThemeSwitchProps {
+  readonly className?: string;
+  /** One button that steps to the next choice, for the collapsed sidebar. */
+  readonly compact?: boolean;
+}
+
 /** Light, dark or follow the device — saved for the next visit. */
-export function ThemeSwitch({ className }: { readonly className?: string }) {
+export function ThemeSwitch({ className, compact = false }: ThemeSwitchProps) {
   const t = useTranslations('appearance');
   const { theme, setTheme } = useThemePreference();
   // The sidebar and the phone menu each hold a switch; their radio groups must not merge.
   const name = useId();
+  if (compact) {
+    const Icon = ICONS[theme];
+    const next =
+      THEME_PREFERENCES[(THEME_PREFERENCES.indexOf(theme) + 1) % THEME_PREFERENCES.length];
+    return (
+      <Tooltip content={`${t('label')}: ${t(theme)}`} side="right">
+        <button
+          type="button"
+          aria-label={`${t('label')}: ${t(theme)}`}
+          onClick={() => next && setTheme(next)}
+          className={cn(
+            'flex h-9 items-center justify-center rounded-lg border border-hairline bg-sunken/60 text-ink-muted',
+            'transition-colors duration-(--duration-fast) hover:text-ink',
+            className,
+          )}
+        >
+          <Icon aria-hidden className="size-4" />
+        </button>
+      </Tooltip>
+    );
+  }
   return (
     <fieldset
       className={cn('flex rounded-lg border p-0.5', 'border-hairline bg-sunken/60', className)}

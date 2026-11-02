@@ -18,10 +18,13 @@ import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { api } from '@/api/api';
 import { ScreenHeader, SectionTitle } from '@/components/screen-header';
+import { useToast } from '@/components/toast';
+import { CHATS } from '@/copy/chats';
 import { COMMON } from '@/copy/common';
 import { LEAD, LEAD_SITE, LEADS } from '@/copy/sales';
+import { useOpenChat } from '@/features/chats/use-chats';
 import { shortDate, shortMoment } from '@/lib/dates';
-import { useCan } from '@/session/session-provider';
+import { useCan, useCurrentUser } from '@/session/session-provider';
 import { whenLabel } from './follow-up-dates';
 import { FollowUpSheet } from './follow-up-sheet';
 import { LeadConnection } from './lead-connection';
@@ -61,6 +64,9 @@ export function LeadScreen() {
 
 function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
   const theme = useTheme();
+  const user = useCurrentUser();
+  const openChat = useOpenChat();
+  const toast = useToast();
   const canQuote = useCan('quotations.create');
   const canAddSite = useCan('quotations.create', 'customers.manage');
   const [logging, setLogging] = useState(false);
@@ -109,7 +115,17 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
           variant="secondary"
           style={styles.flex}
           icon={<MessageCircle size={16} color={theme.colors.textPrimary} />}
-          onPress={() => void Linking.openURL(`https://wa.me/${digits}`)}
+          pending={openChat.isPending}
+          onPress={() =>
+            // Staff write from the business number, so the chat stays with OneOhm.
+            user.kind === 'staff'
+              ? openChat.mutate(lead.phone, {
+                  onSuccess: (chat) =>
+                    router.push({ pathname: '/chats/[id]', params: { id: chat.id } }),
+                  onError: (error) => toast(`${CHATS.openFailed}: ${describeError(error)}`),
+                })
+              : void Linking.openURL(`https://wa.me/${digits}`)
+          }
         />
       </View>
       {lead.stage === 'lost' ? <LostLeadCard lead={lead} /> : null}

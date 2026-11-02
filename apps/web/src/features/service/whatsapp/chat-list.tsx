@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChatSummary } from '@oneohm/api-contracts';
-import { Avatar, Badge, cn } from '@oneohm/design-system/web';
+import { Avatar, Badge, cn, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useBrandName } from '@/features/shell/company-name';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
@@ -83,7 +83,20 @@ function ChatRow({
         <span className="truncate type-body-sm text-ink-muted">{preview}</span>
         <span className="mt-1 flex flex-wrap items-center gap-2">
           <span className="type-label text-ink-faint tabular-nums">{formatPhone(chat.phone)}</span>
-          {chat.state === 'human' && <Badge variant="accent">{t('withPerson')}</Badge>}
+          {chat.late ? (
+            <StatusPill tone="overdue" size="sm" label={t('late')} />
+          ) : chat.needsReply ? (
+            <Badge variant="accent">{t('needsReply')}</Badge>
+          ) : (
+            chat.state === 'human' && <Badge>{t('withPerson')}</Badge>
+          )}
+          <span className="type-label text-ink-faint">
+            {chat.assignee
+              ? t('answeredBy', { name: chat.assignee.name })
+              : chat.customerId
+                ? t('teamAnswers')
+                : t('salesAnswers')}
+          </span>
         </span>
       </span>
     </button>

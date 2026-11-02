@@ -1,4 +1,5 @@
 import type { EpcStage } from '@oneohm/domain';
+import { CHAT_OPENERS } from '@oneohm/domain';
 
 /** What each stage means for the homeowner, in one line. */
 export const STAGE_MEANING: Readonly<Record<EpcStage, string>> = {
@@ -90,6 +91,8 @@ export const HOME = {
   contactFallback: (company: string) => `${company} team`,
   call: 'Call',
   whatsapp: 'WhatsApp',
+  /** Sent to the business number; the assistant hands it to the contact person. */
+  talkToPerson: CHAT_OPENERS.talkToPerson.en,
   referTitle: 'Know someone who wants solar?',
   referBody: 'Refer a neighbour or friend. We call them and keep you posted.',
   referAction: 'Refer someone',

@@ -1,6 +1,6 @@
 'use client';
 
-import { CountBadge, cn } from '@oneohm/design-system/web';
+import { CountBadge, cn, Tooltip } from '@oneohm/design-system/web';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -32,26 +32,36 @@ interface NavListProps {
   readonly variant: Variant;
   /** Called when a link is followed, e.g. to close the phone menu. */
   readonly onNavigate?: () => void;
+  /** Icons only: labels move into tooltips. Sidebar only. */
+  readonly collapsed?: boolean;
   readonly className?: string;
 }
 
 /** The business's map, grouped the way an EPC business works; shared by sidebar and phone menu. */
-export function NavList({ variant, onNavigate, className }: NavListProps) {
+export function NavList({ variant, onNavigate, collapsed = false, className }: NavListProps) {
   const t = useTranslations('nav');
   const groups = useAllowedNavigation();
   return (
     <nav aria-label={t('label')} className={cn('flex flex-col gap-3', className)}>
       {groups.map((group, index) => (
         <div key={group.key ?? `group-${index}`} className="flex shrink-0 flex-col gap-0.5">
-          {group.key && (
+          {group.key && !collapsed && (
             <p className="px-3 pb-0.5 type-overline text-ink-faint uppercase">
               {t(`groups.${group.key}`)}
             </p>
           )}
+          {group.key && collapsed && index > 0 && (
+            <hr aria-hidden className="mx-2 mb-1 border-hairline" />
+          )}
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => (
               <li key={item.key}>
-                <NavLink item={item} variant={variant} onNavigate={onNavigate} />
+                <NavLink
+                  item={item}
+                  variant={variant}
+                  onNavigate={onNavigate}
+                  collapsed={collapsed}
+                />
               </li>
             ))}
           </ul>
@@ -80,9 +90,10 @@ interface NavLinkProps {
   readonly item: NavItem;
   readonly variant: Variant;
   readonly onNavigate?: (() => void) | undefined;
+  readonly collapsed: boolean;
 }
 
-function NavLink({ item, variant, onNavigate }: NavLinkProps) {
+function NavLink({ item, variant, onNavigate, collapsed }: NavLinkProps) {
   const t = useTranslations('nav');
   const followUps = useLeadsToFollowUp(item.key === 'leads');
   const active = useIsCurrent(item.href);
@@ -93,32 +104,49 @@ function NavLink({ item, variant, onNavigate }: NavLinkProps) {
         aria-hidden
         className={cn('size-[1.125rem] shrink-0', active ? STYLES.iconActive : STYLES.icon)}
       />
-      <span className="flex-1 truncate">{t(`items.${item.key}`)}</span>
+      <span className={cn('flex-1 truncate', collapsed && 'sr-only')}>
+        {t(`items.${item.key}`)}
+      </span>
       {item.key === 'leads' && (
-        <CountBadge count={followUps} label={t('leadsBadge', { count: followUps })} />
+        <span className={cn(collapsed && 'absolute -top-1 -right-1 scale-75')}>
+          <CountBadge count={followUps} label={t('leadsBadge', { count: followUps })} />
+        </span>
       )}
     </>
   );
   const classes = cn(
     'relative flex shrink-0 items-center gap-3 rounded-lg px-3 transition-[background-color,color,box-shadow] duration-(--duration-fast)',
     ROW[variant],
+    collapsed && 'justify-center px-0',
     active ? STYLES.itemActive : STYLES.item,
   );
   if (!item.built) {
     return (
-      <span aria-disabled="true" title={t('notBuilt')} className={cn(classes, 'cursor-default')}>
-        {content}
-      </span>
+      <Tooltip
+        content={`${t(`items.${item.key}`)} · ${t('notBuilt')}`}
+        side="right"
+        enabled={collapsed}
+      >
+        <span
+          aria-disabled="true"
+          {...(collapsed ? {} : { title: t('notBuilt') })}
+          className={cn(classes, 'cursor-default')}
+        >
+          {content}
+        </span>
+      </Tooltip>
     );
   }
   return (
-    <Link
-      href={item.href}
-      aria-current={active ? 'page' : undefined}
-      {...(onNavigate ? { onClick: onNavigate } : {})}
-      className={classes}
-    >
-      {content}
-    </Link>
+    <Tooltip content={t(`items.${item.key}`)} side="right" enabled={collapsed}>
+      <Link
+        href={item.href}
+        aria-current={active ? 'page' : undefined}
+        {...(onNavigate ? { onClick: onNavigate } : {})}
+        className={classes}
+      >
+        {content}
+      </Link>
+    </Tooltip>
   );
 }

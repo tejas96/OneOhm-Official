@@ -8,7 +8,7 @@ import { CustomerRequestPhotosService } from '../../customer-portal/customer-req
 import type { IncomingFile } from '../../documents/upload-file';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { guessCategory } from './guess-category';
-import { MEDIA_WORDS, WORDS } from './words';
+import { CATEGORY_WORDS, MEDIA_WORDS, WORDS } from './words';
 
 /** For this long after a request is raised, more photos sent are added to it. */
 export const ADD_PHOTOS_MINUTES = 30;
@@ -50,7 +50,8 @@ export class ProblemFlowService {
     // A photo with no words (or one word) still raises a request; the photo says the rest.
     const words = typed.length >= 5 || files.length === 0 ? typed : MEDIA_WORDS.photoOnly;
     if (words.length < 5) return this.text(chat, WORDS.tooShort);
-    const { category, label } = guessCategory(words);
+    const { category, label: plain } = guessCategory(words);
+    const label = CATEGORY_WORDS[category] ?? plain;
     const [project] = await this.db
       .select({ id: projects.id })
       .from(projects)

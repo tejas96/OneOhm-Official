@@ -3,15 +3,17 @@
 import { Button, pageEnter, Skeleton, SkeletonGroup, StatusPill } from '@oneohm/design-system/web';
 import { todayIn } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, MessageCircle, Phone, UserRoundCheck } from 'lucide-react';
+import { ArrowLeft, Phone, UserRoundCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
 import { PapersSection } from '@/features/documents/papers-section';
+import { OpenChatButton } from '@/features/service/whatsapp/open-chat-button';
+import { RecordChat } from '@/features/service/whatsapp/record-chat';
 import { api, expectStatus } from '@/lib/api/api-client';
-import { formatPhone, whatsappHref } from '@/lib/format/contact';
+import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 import { LeadCustomerCard } from './lead-customer-card';
 import { FollowUpCard, LeadFactsCard } from './lead-facts-card';
@@ -96,17 +98,15 @@ export function LeadDetailView({ id }: { readonly id: string }) {
             <Button asChild variant="secondary" size="sm" leadingIcon={<Phone />}>
               <a href={`tel:${lead.phone}`}>{t('call')}</a>
             </Button>
-            <Button asChild variant="secondary" size="sm" leadingIcon={<MessageCircle />}>
-              <a href={whatsappHref(lead.phone)} target="_blank" rel="noreferrer">
-                {t('whatsapp')}
-              </a>
-            </Button>
+            <OpenChatButton phone={lead.phone} label={t('whatsapp')} />
           </div>
         </div>
       </header>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-8">
           {canManage && <LogActivityForm lead={lead} />}
+          {/* The lead's WhatsApp chat, answered here from the business number. */}
+          <RecordChat phone={lead.phone} name={lead.name} />
           <section aria-label={t('timeline.title')} className="flex flex-col gap-4">
             <SectionHeading index="01" title={t('timeline.title')} />
             <LeadTimeline activities={lead.activities} />

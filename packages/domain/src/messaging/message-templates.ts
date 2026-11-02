@@ -18,7 +18,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     audience: 'customer',
     fields: ['customer', 'number', 'total', 'subsidy', 'effective'],
     preview:
-      'Hello {{1}}, your OneOhm solar quotation {{2}} is ready. Price {{3}}, expected subsidy {{4}}, you pay {{5}}.',
+      'Hello {{1}}, your OneOhm solar quotation {{2}} is ready. Total price: {{3}}. Expected government subsidy: {{4}}. Your cost after subsidy: {{5}}. Reply here if you have any questions.',
   },
   {
     key: 'project_started',
@@ -31,44 +31,49 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'project_milestone',
     audience: 'customer',
     fields: ['customer', 'project', 'milestone'],
-    preview: 'Hello {{1}}, an update on your solar project {{2}}: {{3}}.',
+    preview:
+      'Hello {{1}}, an update on your solar project {{2}}: {{3}}. We will keep you posted here.',
   },
   {
     key: 'payment_received',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
-    preview: 'Hello {{1}}, we received {{2}} for {{3}} on project {{4}}. Thank you.',
+    preview:
+      'Hello {{1}}, we received your payment of {{2}} for {{3}} on your solar project {{4}}. Thank you. You can see all your payments in the OneOhm app.',
   },
   {
     key: 'payment_reminder',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
     preview:
-      'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience.',
+      'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience. If you have already paid, please ignore this message.',
   },
   {
     key: 'payment_link',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project', 'link'],
-    preview: 'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}} here: {{5}}',
+    preview:
+      'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.',
   },
   {
     key: 'service_update',
     audience: 'customer',
     fields: ['customer', 'topic', 'status'],
-    preview: 'Hello {{1}}, your service request "{{2}}" is now {{3}}.',
+    preview:
+      'Hello {{1}}, your service request "{{2}}" is now {{3}}. We will keep you posted here.',
   },
   {
     key: 'change_request_raised',
     audience: 'customer',
     fields: ['customer', 'request', 'number'],
-    preview: 'Hello {{1}}, we have started your {{2}} request ({{3}}).',
+    preview:
+      'Hello {{1}}, we have started your {{2}} request ({{3}}). We will tell you when it is complete.',
   },
   {
     key: 'change_request_completed',
     audience: 'customer',
     fields: ['customer', 'request', 'number'],
-    preview: 'Hello {{1}}, your {{2}} request ({{3}}) is complete.',
+    preview: 'Hello {{1}}, your {{2}} request ({{3}}) is complete. Thank you for your patience.',
   },
   {
     key: 'document_requested',
@@ -88,7 +93,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     audience: 'customer',
     fields: ['customer', 'visit', 'date', 'project'],
     preview:
-      'Hello {{1}}, your free {{2}} visit for {{4}} is on {{3}}. Our service team will call before they come.',
+      'Hello {{1}}, your free {{2}} visit is on {{3}}, for project {{4}}. Our service team will call before they come.',
   },
   {
     key: 'survey_scheduled',
@@ -106,10 +111,19 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
   },
   ...STEP_MESSAGE_TEMPLATES,
   {
+    // A team member writes after WhatsApp's 24-hour window closed; their words go in {{3}}.
+    key: 'chat_follow_up',
+    audience: 'customer',
+    fields: ['customer', 'staff', 'message'],
+    preview:
+      'Hello {{1}}, you have a new message from {{2}} at OneOhm: "{{3}}" Please reply here to continue the chat.',
+  },
+  {
     key: 'staff_daily_digest',
     audience: 'staff',
     fields: ['name', 'overdue', 'today', 'followUps'],
-    preview: 'Good morning {{1}}. Overdue tasks: {{2}}. Due today: {{3}}. Lead follow-ups: {{4}}.',
+    preview:
+      'Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.',
   },
 ] as const satisfies readonly MessageTemplateDefault[];
 
@@ -137,4 +151,16 @@ export function renderTemplate(
     const field = fields[Number(index) - 1];
     return field ? (values[field] ?? match) : match;
   });
+}
+
+/** The longest staff message a follow-up template carries; WhatsApp caps the whole body. */
+export const FOLLOW_UP_MAX = 700;
+
+/**
+ * A staff message made fit for a template field: WhatsApp refuses line breaks, tabs and
+ * long runs of spaces there, so the message becomes one tidy line, cut to FOLLOW_UP_MAX.
+ */
+export function followUpText(text: string): string {
+  const line = text.replace(/\s+/g, ' ').trim();
+  return line.length <= FOLLOW_UP_MAX ? line : `${line.slice(0, FOLLOW_UP_MAX - 1).trimEnd()}…`;
 }
