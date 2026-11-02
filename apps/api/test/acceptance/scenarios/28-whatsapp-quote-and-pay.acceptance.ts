@@ -208,9 +208,7 @@ describe('WhatsApp quote and pay', () => {
     const { customer, project } = await sellProject(admin, {
       name: 'Quote Pay Token Customer (test)',
     });
-    await admin.post(
-      `/finance/milestones/${milestoneOf(project, 'quotation_accepted').id}/payment-link`,
-    );
+    expect(milestoneOf(project, 'quotation_accepted').status).toBe('due');
 
     const [sent] = await newestOutbox(customer.phone, 'payment_link');
     expect(sent?.payload.payToken).toBeTruthy();

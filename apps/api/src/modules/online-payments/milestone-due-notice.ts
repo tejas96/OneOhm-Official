@@ -70,8 +70,9 @@ export async function tellCustomerMilestonesDue(
         amount: formatInr(notice.owedPaise),
         milestone: milestone.label,
         project: project.code,
+        payToken: token,
         ...(notice.message === 'payment_link'
-          ? { link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`, payToken: token }
+          ? { link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}` }
           : {}),
       },
       `milestone_due:${milestone.id}`,
