@@ -1,5 +1,12 @@
 import type { ProjectSummary } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, discoms, projects, properties, users } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  discoms,
+  projects,
+  properties,
+  taskFreshness,
+  users,
+} from '@oneohm/database';
 import {
   deliveryForecast,
   EPC_STAGES,
@@ -58,6 +65,12 @@ export async function projectSummaries(
     .leftJoin(users, eq(users.id, projects.managerUserId))
     .where(where);
   const { tasks, stages, milestones, blocked } = await summaryFacts(db, ids, today, scope);
+  // Stale work (spec 3.5) for every listed project in one pass.
+  const fresh = await taskFreshness(
+    db,
+    tasks.filter((task) => task.status === 'ready' || task.status === 'in_progress'),
+    today,
+  );
   const open = byProject(tasks);
   const counts = byProject(stages);
   const money = byProject(milestones);
@@ -71,6 +84,7 @@ export async function projectSummaries(
       stages: counts.get(project.id) ?? [],
       milestones: money.get(project.id) ?? [],
       blockedBy: blocked.get(project.id) ?? null,
+      staleTasks: (open.get(project.id) ?? []).filter((task) => fresh.get(task.id)?.stale).length,
       today,
     }),
   );
@@ -112,6 +126,7 @@ function summarise(input: {
   readonly stages: readonly StageCount[];
   readonly milestones: readonly MilestoneRow[];
   readonly blockedBy: ProjectBlock | null;
+  readonly staleTasks: number;
   readonly today: string;
 }): ProjectSummary {
   const { project, open, stages, milestones, today } = input;
@@ -141,7 +156,11 @@ function summarise(input: {
     paymentLate: Boolean(latePayment),
     blockedBy: input.blockedBy,
     waitingOn: longest?.waitingParty ?? null,
-    overdueTasks: overdue.length,
+    // Late work waiting on the customer, bank or DISCOM is not the team's (spec 3.8).
+    overdueTasks: overdue.filter(
+      (task) => !(task.status === 'waiting' && task.waitingParty !== 'internal'),
+    ).length,
+    staleTasks: input.staleTasks,
     nextDueSoonNotStarted: Boolean(
       nextTask && daysBetween(today, nextTask.dueDate) <= 1 && nextTask.status !== 'in_progress',
     ),

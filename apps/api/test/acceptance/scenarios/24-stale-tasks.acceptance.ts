@@ -1,8 +1,8 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ageTask, closeDb } from '../support/db';
+import { ageTask, closeDb, setTaskDates } from '../support/db';
 import { Session } from '../support/http';
-import { type Sale, sellProject } from '../support/sales';
+import { addDays, type Sale, sellProject, today } from '../support/sales';
 import { project, sessionOf } from '../support/tasks';
 
 // Spec 3.5: work nobody has touched for a while shows as stale, any update clears it,
@@ -44,6 +44,29 @@ describe('Stale tasks and the Urgent notice', () => {
     ) as ProjectTask;
     await ageTask(blocked.id, 10);
     expect((await taskById(blocked.id)).stale).toBe(false);
+  });
+
+  it('a project with stale work is at risk', async () => {
+    const other = await sellProject(admin, { name: 'Quiet Project (test)' });
+    const ready = (await project(admin, other.project.id)).tasks.find(
+      (task) => task.status === 'ready',
+    ) as ProjectTask;
+    await setTaskDates(ready.id, { dueDate: addDays(today(), 5) });
+    await ageTask(ready.id, 4);
+    expect((await project(admin, other.project.id)).toneLabel).toBe(
+      'At risk · 1 task with no update',
+    );
+  });
+
+  it("the team's own late work shows before a wait on the bank", async () => {
+    const other = await sellProject(admin, { name: 'Late And Waiting (test)' });
+    const tasks = (await project(admin, other.project.id)).tasks;
+    const ready = tasks.find((task) => task.status === 'ready') as ProjectTask;
+    await admin.post(`/tasks/${ready.id}/start`);
+    await admin.post(`/tasks/${ready.id}/waiting`, { party: 'bank', note: 'Loan papers (test)' });
+    const late = tasks.find((task) => task.id !== ready.id) as ProjectTask;
+    await setTaskDates(late.id, { dueDate: addDays(today(), -2) });
+    expect((await project(admin, other.project.id)).toneLabel).toBe('1 task overdue');
   });
 
   it('marking urgent tells the assignee once per change to Urgent', async () => {

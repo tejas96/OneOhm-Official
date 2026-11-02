@@ -10,6 +10,7 @@ const base: ProjectStateFacts = {
   blockedBy: null,
   waitingOn: null,
   overdueTasks: 0,
+  staleTasks: 0,
   nextDueSoonNotStarted: false,
 };
 
@@ -57,10 +58,35 @@ describe('projectState', () => {
       tone: 'atRisk',
       label: 'Waiting on our team',
     });
-    expect(projectState({ ...base, waitingOn: 'discom', overdueTasks: 1 }).tone).toBe('waiting');
+    // The team's own late work shows before an outside wait (owner decision, phase 5).
+    expect(projectState({ ...base, waitingOn: 'discom', overdueTasks: 1 }).tone).toBe('overdue');
     expect(projectState({ ...base, waitingOn: 'internal', overdueTasks: 1 }).label).toBe(
       '1 task overdue',
     );
+  });
+});
+
+describe('projectState: the team before outside waits, and stale work', () => {
+  it("shows the team's own late work before an outside wait", () => {
+    expect(projectState({ ...base, waitingOn: 'bank', overdueTasks: 3 })).toEqual({
+      tone: 'overdue',
+      label: '3 tasks overdue',
+    });
+  });
+
+  it('shows the outside wait when nothing of the team is late', () => {
+    expect(projectState({ ...base, waitingOn: 'bank', staleTasks: 2 })).toEqual({
+      tone: 'waiting',
+      label: 'Waiting on bank',
+    });
+  });
+
+  it('puts a project with stale work at risk', () => {
+    expect(projectState({ ...base, staleTasks: 2 })).toEqual({
+      tone: 'atRisk',
+      label: 'At risk · 2 tasks with no update',
+    });
+    expect(projectState({ ...base, staleTasks: 1 }).label).toBe('At risk · 1 task with no update');
   });
 });
 

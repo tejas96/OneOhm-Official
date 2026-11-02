@@ -25,7 +25,10 @@ export interface ProjectStateFacts {
   readonly blockedBy: ProjectBlock | null;
   /** Who the longest open wait is on; null when no task waits. */
   readonly waitingOn: WaitingParty | null;
+  /** Open tasks past due that are the team's own (not waiting on someone outside). */
   readonly overdueTasks: number;
+  /** Ready or in-progress tasks with no update for the days set in Settings (spec 3.5). */
+  readonly staleTasks: number;
   /** The next open task is due within a day and nobody has started it. */
   readonly nextDueSoonNotStarted: boolean;
 }
@@ -68,9 +71,10 @@ function finishedState(facts: ProjectStateFacts): ProjectState | null {
 
 /**
  * The one state on a project card, the most urgent thing first (PRD 3.1, Flow D):
- * finished and closed states, then blocked, late money, outside waits, late work,
- * the team's own waits, work about to slip, money due on a switched-on system, and
- * only then on track. A wait on the OneOhm team is never shown as on track.
+ * finished and closed states, then blocked, late money, the team's own late work,
+ * outside waits, the team's own waits, stale work, work about to slip, money due on a
+ * switched-on system, and only then on track. An outside wait never hides the team's
+ * own lateness, and a task waiting on someone outside is never counted as the team's.
  */
 export function projectState(facts: ProjectStateFacts): ProjectState {
   const finished = finishedState(facts);
@@ -82,14 +86,19 @@ export function projectState(facts: ProjectStateFacts): ProjectState {
       tone: 'overdue',
       label: operational ? 'Operational — payment due' : 'Payment overdue',
     };
-  if (facts.waitingOn && facts.waitingOn !== 'internal')
-    return { tone: 'waiting', label: PARTY_LABEL[facts.waitingOn] };
   if (facts.overdueTasks > 0)
     return {
       tone: 'overdue',
       label: facts.overdueTasks === 1 ? '1 task overdue' : `${facts.overdueTasks} tasks overdue`,
     };
+  if (facts.waitingOn && facts.waitingOn !== 'internal')
+    return { tone: 'waiting', label: PARTY_LABEL[facts.waitingOn] };
   if (facts.waitingOn === 'internal') return { tone: 'atRisk', label: PARTY_LABEL.internal };
+  if (facts.staleTasks > 0)
+    return {
+      tone: 'atRisk',
+      label: `At risk · ${facts.staleTasks} ${facts.staleTasks === 1 ? 'task' : 'tasks'} with no update`,
+    };
   if (facts.nextDueSoonNotStarted) return { tone: 'atRisk', label: 'At risk' };
   if (operational && facts.paymentDue)
     return { tone: 'waiting', label: 'Operational — payment due' };
