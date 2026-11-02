@@ -1,6 +1,6 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeDb, movePointsToMonth, setTaskDates } from '../support/db';
+import { closeDb, movePointsToMonth, setFairPointsSince, setTaskDates } from '../support/db';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
@@ -40,7 +40,25 @@ describe('Monthly review', () => {
       facts,
     });
     await movePointsToMonth(doer.id, lastMonth());
+    // The fair rules count from the start of last month in this scenario.
+    await setFairPointsSince(`${lastMonth()}-01`);
   });
+  it('a month before the fair rules shows points but no rates', async () => {
+    await setFairPointsSince(today());
+    const review = await admin.get<{ fairSince: string | null; rows: MonthlyRow[] }>(
+      `/points/monthly?month=${lastMonth()}`,
+    );
+    const row = review.rows.find((entry) => entry.user.id === doer.id);
+    expect(row).toMatchObject({
+      points: 20,
+      tasksJudged: 0,
+      onTimeRate: null,
+      firstTimeRate: null,
+    });
+    expect(review.fairSince).toBeTruthy();
+    await setFairPointsSince(`${lastMonth()}-01`);
+  });
+
   afterAll(async () => {
     await retire(admin, [doer]);
     await closeDb();

@@ -38,7 +38,9 @@ export async function taskPointFacts(
   const accepted = task.approval
     ? reviews.filter((review) => ACCEPTED.includes(review.outcome)).at(-1)
     : undefined;
-  const userId = accepted?.submittedBy ?? finishedBy;
+  // No recorded hand-in on approval work: the assignee did it, never the approver.
+  const userId =
+    accepted?.submittedBy ?? (task.approval ? (task.assigneeUserId ?? finishedBy) : finishedBy);
   const handedInAt = accepted?.at ?? now;
 
   const [waits, leave, moves, current] = await Promise.all([

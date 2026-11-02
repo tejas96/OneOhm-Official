@@ -3,6 +3,7 @@ import {
   type DatabaseExecutor,
   monthlyReviews,
   pointsEntries,
+  pointsRules,
   projectBonuses,
   projects,
   projectTasks,
@@ -19,16 +20,40 @@ export function inMonth(column: typeof pointsEntries.createdAt, month: string): 
   return sql`(${column} at time zone 'Asia/Kolkata')::date between ${start}::date and ${end}::date`;
 }
 
-/** A judged part counts as earned unless its reason says it was not (spec 3.7). */
-export const earned = (reason: string) => !reason.includes('not earned');
+/**
+ * A judged part was earned when its reason starts so (spec 3.7). Only the start is read,
+ * never the task title after it.
+ */
+export const earned = (reason: string) =>
+  reason.startsWith('On time') || reason.startsWith('First-time right');
+
+/** When the fair points rules started; null only before migration 0055. */
+export async function fairPointsSince(db: DatabaseExecutor): Promise<Date | null> {
+  const [row] = await db
+    .select({ since: pointsRules.since })
+    .from(pointsRules)
+    .where(eq(pointsRules.key, 'fair_points'));
+  return row?.since ?? null;
+}
 const rate = (hit: number, of: number) => (of === 0 ? null : hit / of);
 
-/** Points and rates per person from their month's lines. */
+/**
+ * Points and rates per person from their month's lines. Rates use only lines written
+ * under the fair rules: before them, only on-time work was recorded, so every rate
+ * would read 100%.
+ */
 export function monthTotals(
-  lines: readonly { sourceType: string; points: number; reason: string }[],
+  lines: readonly {
+    sourceType: string;
+    points: number;
+    reason: string;
+    createdAt: Date | string;
+  }[],
+  fairSince: Date | null,
 ) {
-  const onTime = lines.filter((line) => line.sourceType === 'task_on_time');
-  const first = lines.filter((line) => line.sourceType === 'task_first_time');
+  const fair = lines.filter((line) => !fairSince || new Date(line.createdAt) >= fairSince);
+  const onTime = fair.filter((line) => line.sourceType === 'task_on_time');
+  const first = fair.filter((line) => line.sourceType === 'task_first_time');
   return {
     points: lines.reduce((sum, line) => sum + line.points, 0),
     tasksJudged: onTime.length,
@@ -43,6 +68,7 @@ const approvedIn = (month: string) =>
 /** Every staff member with points or a decision that month, most points first. */
 export async function readMonth(db: DatabaseExecutor, month: string): Promise<MonthlyReview> {
   const { start, end } = monthRange(month);
+  const fairSince = await fairPointsSince(db);
   const [lines, before, ratings, reviews] = await Promise.all([
     db
       .select({
@@ -50,6 +76,7 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
         sourceType: pointsEntries.sourceType,
         points: pointsEntries.points,
         reason: pointsEntries.reason,
+        createdAt: pointsEntries.createdAt,
       })
       .from(pointsEntries)
       .where(approvedIn(month)),
@@ -96,7 +123,10 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
     const review = reviews.find((entry) => entry.userId === user.id);
     return {
       user,
-      ...monthTotals(lines.filter((line) => line.userId === user.id)),
+      ...monthTotals(
+        lines.filter((line) => line.userId === user.id),
+        fairSince,
+      ),
       previousPoints: before.find((entry) => entry.userId === user.id)?.points ?? 0,
       ratingAverage: ratings.find((entry) => entry.userId === user.id)?.average ?? null,
       review: review
@@ -111,7 +141,7 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
     };
   });
   rows.sort((a, b) => b.points - a.points || a.user.fullName.localeCompare(b.user.fullName));
-  return { month, rows };
+  return { month, fairSince: fairSince?.toISOString() ?? null, rows };
 }
 
 /** One person's month, every line grouped by the project it came from. */

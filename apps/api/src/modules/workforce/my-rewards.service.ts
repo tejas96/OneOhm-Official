@@ -12,7 +12,7 @@ import { monthOf } from '@oneohm/shared';
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { bonusesOf } from './bonus-read';
-import { earned, monthTotals } from './monthly-review.read';
+import { earned, fairPointsSince, monthTotals } from './monthly-review.read';
 import { readPoints } from './workforce-read';
 
 /** Finished on or before its due date, in India time. */
@@ -27,7 +27,7 @@ export class MyRewardsService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async get(userId: string): Promise<MyRewards> {
-    const [points, finished, counts, feedback, bonuses] = await Promise.all([
+    const [points, finished, counts, feedback, bonuses, fairSince] = await Promise.all([
       readPoints(
         this.db,
         and(eq(pointsEntries.userId, userId), eq(pointsEntries.status, 'approved')),
@@ -37,6 +37,7 @@ export class MyRewardsService {
       this.counts(userId),
       this.feedback(userId),
       bonusesOf(this.db, userId),
+      fairPointsSince(this.db),
     ]);
     // India months everywhere, so a point earned just after midnight IST is in the new month.
     const month = monthOf(new Date());
@@ -49,7 +50,7 @@ export class MyRewardsService {
     return {
       month: {
         month,
-        ...monthTotals(monthLines),
+        ...monthTotals(monthLines, fairSince),
         missed: monthLines
           .filter((entry) => entry.sourceType.startsWith('task_') && !earned(entry.reason))
           .map((entry) => ({ reason: entry.reason, createdAt: entry.createdAt })),

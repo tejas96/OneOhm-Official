@@ -335,6 +335,7 @@
       },
       "source": {
         "task_on_time": "On-time task",
+        "task_first_time": "First-time right",
         "customer_rating": "Customer rating",
         "recognition": "Recognition",
         "stage_rating": "Stage rating"
@@ -432,7 +433,8 @@
           "submitBonus": "Propose bonus",
           "saved": "Saved for {name}",
           "proposed": "Bonus proposed for {name}"
-        }
+        },
+        "fairSince": "Rates count from {date}, when the fair points rules started. Earlier points still add up, but were recorded for on-time work only."
       }
     },
     "resellers": {

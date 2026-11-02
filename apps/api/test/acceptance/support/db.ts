@@ -118,3 +118,12 @@ export async function ageWait(taskId: string, days: number): Promise<void> {
     [taskId, `${days} days`],
   );
 }
+
+/** Moves the start of the fair points rules (acceptance only). */
+export async function setFairPointsSince(date: string): Promise<void> {
+  await rows(
+    `INSERT INTO points_rules (key, since) VALUES ('fair_points', $1::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+     ON CONFLICT (key) DO UPDATE SET since = EXCLUDED.since`,
+    [date],
+  );
+}

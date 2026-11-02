@@ -137,3 +137,12 @@ export const monthlyReviews = pgTable(
   },
   (table) => [uniqueIndex('monthly_reviews_user_month_unique').on(table.userId, table.month)],
 );
+
+/**
+ * When a points rule started (spec 3.7). `fair_points` is set by its migration, so rates
+ * never mix lines written under the old rule, which recorded on-time work only.
+ */
+export const pointsRules = pgTable('points_rules', {
+  key: text('key').primaryKey(),
+  since: instant('since').notNull().defaultNow(),
+});

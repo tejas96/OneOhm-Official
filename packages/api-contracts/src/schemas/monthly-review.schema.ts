@@ -32,6 +32,8 @@ export type MonthlyRow = z.infer<typeof monthlyRowSchema>;
 
 export const monthlyReviewSchema = z.object({
   month: monthSchema,
+  /** Rates count only lines from this moment, when the fair points rules started. */
+  fairSince: instantSchema.nullable(),
   rows: z.array(monthlyRowSchema),
 });
 export type MonthlyReview = z.infer<typeof monthlyReviewSchema>;

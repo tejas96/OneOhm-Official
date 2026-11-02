@@ -155,6 +155,17 @@ export function MonthlyReview() {
           className="sm:w-52"
         />
       </div>
+      {query.data?.fairSince && query.data.fairSince.slice(0, 7) >= month && (
+        <p className="type-body-sm text-ink-muted">
+          {t('fairSince', {
+            date: format.dateTime(new Date(query.data.fairSince), {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
+          })}
+        </p>
+      )}
       {query.isPending && <ListSkeleton label={t('loading')} rows={4} />}
       {query.isError && <LoadError error={query.error} onRetry={() => query.refetch()} />}
       {query.data &&

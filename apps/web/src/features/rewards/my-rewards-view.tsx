@@ -25,13 +25,22 @@ export function MyRewardsView() {
   if (query.isPending) return <ListSkeleton label={t('loading')} rows={4} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
   const data: MyRewards = query.data;
+  // An older API sends no month yet: show what it has.
+  const month = data.month ?? {
+    month: '',
+    points: data.points.thisMonth,
+    tasksJudged: 0,
+    onTimeRate: null,
+    firstTimeRate: null,
+    missed: [],
+  };
   const day = (instant: string) =>
     format.dateTime(new Date(instant), { day: 'numeric', month: 'short' });
   const tiles = [
-    { key: 'points', value: String(data.month.points) },
-    { key: 'onTime', value: percent(data.month.onTimeRate) },
-    { key: 'firstTime', value: percent(data.month.firstTimeRate) },
-    { key: 'tasks', value: String(data.month.tasksJudged) },
+    { key: 'points', value: String(month.points) },
+    { key: 'onTime', value: percent(month.onTimeRate) },
+    { key: 'firstTime', value: percent(month.firstTimeRate) },
+    { key: 'tasks', value: String(month.tasksJudged) },
   ];
 
   return (
@@ -50,11 +59,11 @@ export function MyRewardsView() {
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="type-title-lg text-ink">{t('missedTitle')}</h2>
-        {data.month.missed.length === 0 ? (
+        {month.missed.length === 0 ? (
           <p className="type-body-sm text-ink-faint">{t('missedNone')}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-hairline">
-            {data.month.missed.map((line) => (
+            {month.missed.map((line) => (
               <li
                 key={`${line.createdAt}-${line.reason}`}
                 className="flex justify-between gap-4 py-2.5"

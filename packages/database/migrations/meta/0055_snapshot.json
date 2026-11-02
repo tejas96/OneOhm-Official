@@ -1,5 +1,5 @@
 {
-  "id": "133593aa-4bd2-4f90-be76-b2b60291f878",
+  "id": "9a0333d0-f0f3-46bf-b511-62f90b81754e",
   "prevId": "d07b70a4-8051-49c0-b918-45f2ce7955e9",
   "version": "7",
   "dialect": "postgresql",
@@ -7444,6 +7444,32 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.points_rules": {
+      "name": "points_rules",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "since": {
+          "name": "since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
