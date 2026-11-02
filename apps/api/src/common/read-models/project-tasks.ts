@@ -5,6 +5,7 @@ import {
   projectFacts,
   projects,
   projectTasks,
+  taskFreshness,
   users,
 } from '@oneohm/database';
 import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneohm/domain';
@@ -12,9 +13,9 @@ import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 import { assignmentStates } from './task-assignment-state';
-import { blockerDetails } from './task-blockers';
-import { blockingTitles, loadTaskLinks } from './task-blocking';
+import { loadTaskLinks } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
+import { ownershipSignals } from './task-signals';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
 export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<ProjectTask[]> {
@@ -33,6 +34,11 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     .orderBy(asc(projectTasks.dueDate), asc(projectTasks.position));
   const ids = rows.map((row) => row.task.id);
   const { deps, dependents } = await loadTaskLinks(db, ids);
+  const freshness = await taskFreshness(
+    db,
+    rows.map(({ task }) => task),
+    todayIn(),
+  );
   const setterIds = [
     ...new Set(rows.map((row) => row.task.prioritySetByUserId).filter((id) => id !== null)),
   ];
@@ -138,24 +144,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         ...[assignment.get(task.id)?.budgetBlock ?? ''].filter(Boolean),
       ],
       changeBlockers: changes,
-      blocking: blockingTitles(task.id, task.status === 'completed', dependents),
-      blockers:
-        task.status === 'completed'
-          ? []
-          : deps
-              .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
-              .map((dep) => blockerDetails(dep, today)),
-      priority: task.priority,
-      prioritySetBy: setters.find((user) => user.id === task.prioritySetByUserId) ?? null,
-      unlocksPayment: Boolean(task.onComplete) && task.onComplete !== 'project_operational',
-      blocksUrgent:
-        task.status !== 'completed' &&
-        dependents.some(
-          (dep) =>
-            dep.dependsOnTaskId === task.id &&
-            dep.status !== 'completed' &&
-            dep.priority === 'urgent',
-        ),
+      ...ownershipSignals(task, { deps, dependents, setters, freshness, today }),
       completedAt: task.completedAt?.toISOString() ?? null,
     };
   });

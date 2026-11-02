@@ -145,6 +145,9 @@ export const projectTaskSchema = z.object({
   unlocksPayment: z.boolean(),
   /** An open task waiting on this one is Urgent. */
   blocksUrgent: z.boolean(),
+  /** Ready or in progress with no update for the days set in Settings (spec 3.5). */
+  stale: z.boolean(),
+  lastUpdateAt: instantSchema,
   completedAt: instantSchema.nullable(),
 });
 export type ProjectTask = z.infer<typeof projectTaskSchema>;

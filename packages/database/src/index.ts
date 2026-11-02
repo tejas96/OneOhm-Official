@@ -18,3 +18,4 @@ export * from './seed/company.seed';
 export * from './seed/inventory.seed';
 export * from './seed/seed';
 export * from './service-work';
+export * from './task-freshness';
