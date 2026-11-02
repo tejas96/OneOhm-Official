@@ -10,7 +10,7 @@ import {
   Textarea,
   useToast,
 } from '@oneohm/design-system/web';
-import { renderTemplate } from '@oneohm/domain';
+import { renderTemplate, templateExtras } from '@oneohm/domain';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
@@ -28,6 +28,7 @@ interface Draft {
   fields: string;
   preview: string;
   active: boolean;
+  extrasApproved: boolean;
 }
 
 /** Edit how one message maps onto its approved WhatsApp template. */
@@ -78,6 +79,7 @@ export function MessageTemplateDialog({
       fields,
       preview: draft.preview,
       active: draft.active,
+      extrasApproved: draft.extrasApproved,
     };
     await form.run(
       () =>
@@ -170,6 +172,16 @@ export function MessageTemplateDialog({
           onCheckedChange={(value) => set('active', value)}
           label={t('active')}
         />
+        {templateExtras(template.key) && (
+          <div className="flex flex-col gap-1">
+            <Switch
+              checked={draft.extrasApproved}
+              onCheckedChange={(value) => set('extrasApproved', value)}
+              label={t('extrasApproved')}
+            />
+            <p className="type-body-sm text-ink-muted">{t('extrasApprovedHint')}</p>
+          </div>
+        )}
         <FormError message={form.error} />
       </form>
     </Dialog>

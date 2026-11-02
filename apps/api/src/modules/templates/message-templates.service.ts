@@ -15,6 +15,7 @@ interface MessageTemplateChange {
   fields: string[];
   preview: string;
   active: boolean;
+  extrasApproved?: boolean | undefined;
 }
 
 /** The WhatsApp templates, matched to what is approved in WhatsApp Manager. */
@@ -40,6 +41,7 @@ export class MessageTemplatesService {
       fields: row.fields,
       preview: row.preview,
       active: row.active,
+      extrasApproved: row.extrasApproved,
       usedByTasks: used.get(row.key) ?? 0,
     }));
   }
@@ -59,6 +61,7 @@ export class MessageTemplatesService {
     await recordAudit(this.db, actor.userId, 'message_template.updated', 'message_template', key, {
       metaName: change.metaName,
       active: change.active,
+      extrasApproved: change.extrasApproved,
     });
     const updated = (await this.list()).find((template) => template.key === key);
     if (!updated) throw notFound('That message template');

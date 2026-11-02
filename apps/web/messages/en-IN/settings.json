@@ -734,7 +734,9 @@
         "saved": "{name} saved.",
         "metaNameMr": "Marathi template name (optional)",
         "metaNameHi": "Hindi template name (optional)",
-        "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one."
+        "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one.",
+        "extrasApproved": "Meta approved the version with file and buttons",
+        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off."
       }
     },
     "activity": {

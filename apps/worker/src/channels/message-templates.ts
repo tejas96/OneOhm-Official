@@ -1,5 +1,6 @@
 import { localValues } from '@oneohm/database';
-import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
+import { DEFAULT_MESSAGE_TEMPLATES, templateExtras } from '@oneohm/domain';
+import type { TemplateButton, TemplateHeader } from './whatsapp-cloud';
 
 /**
  * The default field order per message key. Settings can change it (and the Meta name and
@@ -55,6 +56,45 @@ export function templateFor(
   return { name: names.metaName, language: names.language, local: false };
 }
 
+/** A payload value the message needs; fails when it is missing. */
+function required(key: string, field: string, values: Readonly<Record<string, unknown>>): string {
+  return templateParameters(key, [field], values)[0] as string;
+}
+
+/**
+ * The file and buttons for the Meta version that has them. Quick replies take positions
+ * 0, 1… in order; the URL button comes after them.
+ */
+export function templateExtraParts(
+  key: string,
+  values: Readonly<Record<string, unknown>>,
+): { readonly header?: TemplateHeader; readonly buttons?: TemplateButton[] } {
+  const extras = templateExtras(key);
+  if (!extras) return {};
+  const quickReplies = extras.quickReplies ?? [];
+  const buttons: TemplateButton[] = quickReplies.map((field, index) => ({
+    kind: 'quick_reply',
+    index,
+    payload: required(key, field, values),
+  }));
+  if (extras.urlButton)
+    buttons.push({
+      kind: 'url',
+      index: quickReplies.length,
+      suffix: required(key, extras.urlButton, values),
+    });
+  return {
+    ...(extras.document && {
+      header: {
+        kind: 'document',
+        link: required(key, extras.document.urlField, values),
+        filename: required(key, extras.document.nameField, values),
+      },
+    }),
+    ...(buttons.length > 0 && { buttons }),
+  };
+}
+
 /**
  * The approved template and its values for one queued message. The customer's language
  * rides in the payload; a Marathi or Hindi template, when set up, gets the step and
@@ -65,7 +105,14 @@ export function approvedMessage(
   fields: readonly string[],
   names: TemplateNames,
   stored: unknown,
-): { readonly name: string; readonly language: string; readonly parameters: string[] } {
+  extrasApproved = false,
+): {
+  readonly name: string;
+  readonly language: string;
+  readonly parameters: string[];
+  readonly header?: TemplateHeader;
+  readonly buttons?: TemplateButton[];
+} {
   const payload = (stored ?? {}) as Record<string, string>;
   const chosen = templateFor(names, payload.language);
   const values = chosen.local ? localValues(payload.language, key, payload) : payload;
@@ -73,5 +120,6 @@ export function approvedMessage(
     name: chosen.name,
     language: chosen.language,
     parameters: templateParameters(key, fields, values),
+    ...(extrasApproved && templateExtraParts(key, values)),
   };
 }

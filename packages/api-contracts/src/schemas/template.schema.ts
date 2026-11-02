@@ -23,6 +23,7 @@ export const messageTemplateSchema = z.object({
   fields: z.array(z.string()),
   preview: z.string(),
   active: z.boolean(),
+  extrasApproved: z.boolean(),
   /** How many task templates send this message. */
   usedByTasks: z.number().int(),
 });
@@ -53,6 +54,8 @@ export const messageTemplateInputSchema = z.object({
   fields: z.array(z.string().trim().min(1)).max(10),
   preview: z.string().trim().min(5).max(1024),
   active: z.boolean(),
+  /** Left out, the switch keeps its value. */
+  extrasApproved: z.boolean().optional(),
 });
 
 const conditionsSchema = z.object({

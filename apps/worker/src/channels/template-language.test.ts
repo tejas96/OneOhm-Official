@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approvedMessage, templateFor } from './message-templates';
+import { approvedMessage, MissingFieldError, templateFor } from './message-templates';
 
 const names = { metaName: 'project_milestone', language: 'en', metaNameMr: 'project_milestone_mr' };
 
@@ -53,5 +53,58 @@ describe('approvedMessage', () => {
       language: 'hi-IN',
     });
     expect(sent.parameters).toEqual(['Net meter fitted']);
+  });
+
+  describe('extras', () => {
+    const quote = { metaName: 'quotation_sent', language: 'en' };
+    const payload = {
+      customer: 'Ramesh',
+      number: 'Q-1',
+      total: '1',
+      subsidy: '2',
+      effective: '3',
+      documentUrl: 'https://x/q.pdf',
+      documentName: 'Quotation.pdf',
+      acceptPayload: 'quote:accept:1',
+      askPayload: 'quote:ask:1',
+    };
+    const fields = ['customer', 'number', 'total', 'subsidy', 'effective'];
+
+    it('adds header and buttons only when extrasApproved', () => {
+      const on = approvedMessage('quotation_sent', fields, quote, payload, true);
+      expect(on.header).toEqual({
+        kind: 'document',
+        link: 'https://x/q.pdf',
+        filename: 'Quotation.pdf',
+      });
+      expect(on.buttons).toHaveLength(2);
+      const off = approvedMessage('quotation_sent', fields, quote, payload, false);
+      expect(off.header).toBeUndefined();
+      expect(off.buttons).toBeUndefined();
+    });
+
+    it('throws MissingFieldError when extras are on but documentUrl is missing', () => {
+      const { documentUrl: _omitted, ...rest } = payload;
+      expect(() => approvedMessage('quotation_sent', fields, quote, rest, true)).toThrow(
+        MissingFieldError,
+      );
+    });
+
+    it('numbers quick replies in order and puts the URL button after them', () => {
+      const on = approvedMessage('quotation_sent', fields, quote, payload, true);
+      expect(on.buttons).toEqual([
+        { kind: 'quick_reply', index: 0, payload: 'quote:accept:1' },
+        { kind: 'quick_reply', index: 1, payload: 'quote:ask:1' },
+      ]);
+      const pay = approvedMessage(
+        'payment_link',
+        ['customer'],
+        { metaName: 'payment_link', language: 'en' },
+        { customer: 'R', payToken: 'tok' },
+        true,
+      );
+      expect(pay.buttons).toEqual([{ kind: 'url', index: 0, suffix: 'tok' }]);
+      expect(pay.header).toBeUndefined();
+    });
   });
 });

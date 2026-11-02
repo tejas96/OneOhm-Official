@@ -10,6 +10,17 @@ export interface MessageTemplateDefault {
   readonly audience: 'customer' | 'staff';
   readonly fields: readonly string[];
   readonly preview: string;
+  /**
+   * What the Meta-approved version with a file and buttons adds. Each value names a payload
+   * field. Sent only while the template's "extras approved" switch is on in Settings.
+   */
+  readonly extras?: {
+    readonly document?: { readonly urlField: string; readonly nameField: string };
+    /** Payload field names, in button order. */
+    readonly quickReplies?: readonly string[];
+    /** The payload field holding the URL button's suffix. */
+    readonly urlButton?: string;
+  };
 }
 
 export const DEFAULT_MESSAGE_TEMPLATES = [
@@ -17,6 +28,10 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'quotation_sent',
     audience: 'customer',
     fields: ['customer', 'number', 'total', 'subsidy', 'effective'],
+    extras: {
+      document: { urlField: 'documentUrl', nameField: 'documentName' },
+      quickReplies: ['acceptPayload', 'askPayload'],
+    },
     preview:
       'Hello {{1}}, your OneOhm solar quotation {{2}} is ready. Total price: {{3}}. Expected government subsidy: {{4}}. Your cost after subsidy: {{5}}. Reply here if you have any questions.',
   },
@@ -38,6 +53,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_received',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
+    extras: { document: { urlField: 'documentUrl', nameField: 'documentName' } },
     preview:
       'Hello {{1}}, we received your payment of {{2}} for {{3}} on your solar project {{4}}. Thank you. You can see all your payments in the OneOhm app.',
   },
@@ -45,6 +61,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_reminder',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
+    extras: { urlButton: 'payToken' },
     preview:
       'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience. If you have already paid, please ignore this message.',
   },
@@ -52,6 +69,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_link',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project', 'link'],
+    extras: { urlButton: 'payToken' },
     preview:
       'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.',
   },
@@ -126,6 +144,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.',
   },
 ] as const satisfies readonly MessageTemplateDefault[];
+
+/** The file and buttons a message can add once Meta approves them, if it has any. */
+export function templateExtras(key: string): MessageTemplateDefault['extras'] {
+  return (DEFAULT_MESSAGE_TEMPLATES as readonly MessageTemplateDefault[]).find(
+    (template) => template.key === key,
+  )?.extras;
+}
 
 /** Fields a task's customer message can fill; templates needing others cannot be picked. */
 export const TASK_MESSAGE_FIELDS = [
