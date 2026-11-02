@@ -170,13 +170,15 @@
       "views": {
         "open": "Open",
         "mine": "Mine",
+        "blocked": "Blocked",
         "all": "All"
       },
       "stageDone": "Everything in this stage is done.",
       "empty": {
         "open": "Every task on this project is done.",
         "mine": "Nothing on this project is assigned to you.",
-        "all": "This project has no tasks."
+        "all": "This project has no tasks.",
+        "blocked": "Nothing on this project is waiting for other work."
       }
     },
     "task": {
@@ -527,7 +529,10 @@
       "timeline": "History",
       "timelineEmpty": "Nothing has happened yet.",
       "timelineError": "Could not load the history.",
-      "postUpdate": "Post update"
+      "postUpdate": "Post update",
+      "blocker": "{title} · {who}, {days, plural, =0 {on time} one {# day late} other {# days late}}",
+      "blockerOutside": "{title} · waiting on the {party}",
+      "nobody": "unassigned"
     },
     "kanban": {
       "drag": "Move {title}",
@@ -547,6 +552,15 @@
         "end": "{title} dropped on {column}.",
         "cancel": "Move cancelled. {title} stays where it was."
       }
+    },
+    "priority": {
+      "none": "No priority",
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "set": "Set priority",
+      "failed": "Could not change the priority"
     }
   }
 }

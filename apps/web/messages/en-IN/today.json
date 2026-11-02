@@ -58,6 +58,15 @@
         "referral_reward": "Referral reward"
       },
       "proposed": "Proposed: {name} · {when}"
+    },
+    "reason": {
+      "priority": "Marked {level}",
+      "priorityBy": "Marked {level} by {name}",
+      "blocksUrgent": "Blocks an Urgent task",
+      "overdue": "Overdue {days, plural, one {# day} other {# days}}",
+      "blocks": "Blocks {count, plural, one {# task} other {# tasks}}{payment, select, true { and a payment} other {}}",
+      "payment": "Unlocks a payment",
+      "due": "Due {date}"
     }
   }
 }

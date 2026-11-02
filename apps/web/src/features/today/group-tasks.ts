@@ -1,4 +1,5 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
+import { rankTasks } from '@oneohm/domain';
 
 export const TODAY_GROUPS = ['overdue', 'today', 'waiting', 'upcoming'] as const;
 export type TodayGroup = (typeof TODAY_GROUPS)[number];
@@ -28,5 +29,10 @@ export function groupTasks(
     if (task.status === 'completed') continue;
     groups[groupOf(task, today)].push(task);
   }
+  // The person's own work in do-next order (spec 3.3); work others hold, by due date.
+  groups.overdue = rankTasks(groups.overdue, today);
+  groups.today = rankTasks(groups.today, today);
+  groups.upcoming = rankTasks(groups.upcoming, today);
+  groups.waiting.sort((left, right) => left.dueDate.localeCompare(right.dueDate));
   return groups;
 }

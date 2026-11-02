@@ -31,17 +31,35 @@ export function PanelSection({
 /** What this task waits for, and what waits for it (spec 3.4). */
 export function BlockersSection({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.panel');
-  const waiting = task.status === 'completed' ? [] : task.blockedBy;
+  const partyT = useTranslations('commandCenter.party');
+  const details = task.blockers ?? [];
+  // Change requests and budget holds have no task behind them: titles only.
+  const others = (task.status === 'completed' ? [] : task.blockedBy).filter(
+    (title) => !details.some((blocker) => blocker.title === title),
+  );
+  const waiting = [
+    ...details.map((blocker) => ({
+      key: blocker.title,
+      text: blocker.waitingOn
+        ? t('blockerOutside', { title: blocker.title, party: partyT(blocker.waitingOn) })
+        : t('blocker', {
+            title: blocker.title,
+            who: blocker.assignee ?? t('nobody'),
+            days: blocker.daysLate,
+          }),
+    })),
+    ...others.map((title) => ({ key: title, text: title })),
+  ];
   const blocking = blockingOf(task);
   return (
     <>
       {waiting.length > 0 && (
         <PanelSection title={t('waitingFor')}>
           <ul className="flex flex-col gap-1.5">
-            {waiting.map((title) => (
-              <li key={title} className="flex items-start gap-2 type-body text-ink">
+            {waiting.map((line) => (
+              <li key={line.key} className="flex items-start gap-2 type-body text-ink">
                 <Lock aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
-                {title}
+                {line.text}
               </li>
             ))}
           </ul>

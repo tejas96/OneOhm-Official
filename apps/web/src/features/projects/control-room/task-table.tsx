@@ -11,6 +11,7 @@ import {
 import { Lock, RotateCcw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskTitleButton } from '../task-panel/task-title-button';
+import { PriorityIcon } from '../tasks/priority-icon';
 import { TaskActions } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { isBlocked, isReturned, taskStatusKey, taskTone } from '../tasks/task-status';
@@ -21,12 +22,15 @@ function TaskCell({ task }: { readonly task: ProjectTask }) {
   return (
     <div className="flex min-w-0 items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <TaskTitleButton
-          taskId={task.id}
-          className={cn('type-body font-medium', done ? 'text-ink-muted' : 'text-ink')}
-        >
-          {task.title}
-        </TaskTitleButton>
+        <span className="flex min-w-0 items-start gap-1.5">
+          {!done && <PriorityIcon priority={task.priority} className="mt-0.5" />}
+          <TaskTitleButton
+            taskId={task.id}
+            className={cn('type-body font-medium', done ? 'text-ink-muted' : 'text-ink')}
+          >
+            {task.title}
+          </TaskTitleButton>
+        </span>
         {isBlocked(task) && (
           <span className="flex min-w-0 items-center gap-1.5 type-body-sm font-normal text-ink-faint">
             <Lock aria-hidden className="size-3 shrink-0" />

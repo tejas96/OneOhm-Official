@@ -7,6 +7,7 @@ import { ArrowRight, CalendarClock, GripVertical, Lock } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { TaskTitleButton } from '../task-panel/task-title-button';
+import { PriorityIcon } from '../tasks/priority-icon';
 import { ReworkBadge } from '../tasks/task-card-notes';
 import type { TaskRights, TaskStep } from '../tasks/task-menu';
 import { blockingOf, isBlocked } from '../tasks/task-status';
@@ -65,15 +66,18 @@ export function KanbanCard({
         <GripVertical aria-hidden className="size-4" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <TaskTitleButton
-          taskId={task.id}
-          className={cn(
-            'type-body font-medium [overflow-wrap:anywhere]',
-            done ? 'text-ink-muted' : 'text-ink',
-          )}
-        >
-          {task.title}
-        </TaskTitleButton>
+        <span className="flex min-w-0 items-start gap-1.5">
+          {!done && <PriorityIcon priority={task.priority} className="mt-0.5" />}
+          <TaskTitleButton
+            taskId={task.id}
+            className={cn(
+              'type-body font-medium [overflow-wrap:anywhere]',
+              done ? 'text-ink-muted' : 'text-ink',
+            )}
+          >
+            {task.title}
+          </TaskTitleButton>
+        </span>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-body-sm text-ink-muted">
           <span className={task.assignee ? '' : 'text-at-risk'}>
             {task.assignee?.fullName ?? taskT('unassigned')}
