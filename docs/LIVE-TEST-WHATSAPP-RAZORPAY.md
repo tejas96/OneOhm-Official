@@ -70,7 +70,8 @@ number can accept a quote. Write what you see in "Result".
 | 7 | Pay with a Razorpay test UPI (`success@razorpay`) or test card | Razorpay shows success | |
 | 8 | Wait for the webhook | A receipt PDF arrives on WhatsApp with a thank-you | |
 | 9 | Check the app: lead, customer, project, finance, chat | Each one shows the payment (see the loop table) | |
-| 10 | Make a second due payment, then cancel or let its link expire (or cancel it in Razorpay) | The old Pay now link says it expired; a fresh link goes out once | |
+| 10a | Cancel the open link (staff in the app, or in the Razorpay dashboard), then tap the old **Pay now** | The old link is marked cancelled. No new WhatsApp message goes out. The Pay now page does not show "closed": it works from the pay token, so it makes a new Razorpay link for what is still owed and opens it. If the amount is already paid, it says "This is already paid. Thank you!" | |
+| 10b | Expiry: a link passes its end date (`payment_link.expired`) | The old link is marked expired. One fresh Pay now message goes to the customer and one alert to the owner. Not repeated if Razorpay sends the event twice | Check on the first real expiry. It cannot be forced quickly (`PAYMENT_LINK_DAYS` is at least 1 day). Covered by the automated test `28-whatsapp-after-payment` | |
 
 ## The loop table
 
@@ -83,7 +84,8 @@ For each action, tick each thing you saw. A dash means that column does not appl
 | Project created, advance due | [ ] project and advance payment due | [ ] project note | [ ] owner or accounts | [ ] — | [ ] payment message with Pay now | [ ] — |
 | Pay now opened | [ ] pay page shows the right amount | [ ] — | [ ] — | [ ] — | [ ] — | [ ] — |
 | Pay | [ ] payment, receipt, ledger | [ ] customer and project note | [ ] owner and accounts | [ ] — | [ ] thank-you and receipt PDF | [ ] payment audit |
-| Link expired | [ ] old link marked expired, one fresh link made | [ ] note | [ ] staff told | [ ] — | [ ] fresh Pay now link, sent once | [ ] — |
+| Link cancelled | [ ] old link marked cancelled | [ ] — | [ ] — | [ ] — | [ ] none sent | [ ] — |
+| Link expired (check on the first real expiry) | [ ] old link marked expired | [ ] — | [ ] owner told | [ ] — | [ ] one fresh Pay now message, sent once | [ ] — |
 | Chat view | [ ] every message above is in the customer's chat | [ ] — | [ ] — | [ ] — | [ ] — | [ ] — |
 
 ## If something fails
