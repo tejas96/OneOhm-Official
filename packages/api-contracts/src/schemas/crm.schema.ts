@@ -1,4 +1,10 @@
-import { LEAD_LOST_REASONS, LEAD_SOURCES, LEAD_STAGES, SUBSIDY_CATEGORIES } from '@oneohm/domain';
+import {
+  LEAD_LOST_REASONS,
+  LEAD_SOURCES,
+  LEAD_STAGES,
+  LOCATION_SOURCES,
+  SUBSIDY_CATEGORIES,
+} from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 
@@ -108,6 +114,13 @@ export const propertySchema = z.object({
   /** The site's GPS point; photos and check-ins are checked against it. */
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  /** How the point was set, when it was, and whether a far-off pin is waiting for review. */
+  locationSource: z.enum(LOCATION_SOURCES).nullable().optional(),
+  locatedAt: instantSchema.nullable().optional(),
+  locationFlagged: z.boolean().optional(),
+  locationFlagDistanceM: z.number().int().nullable().optional(),
+  /** True when an earlier point is kept and can be restored. */
+  hasPreviousLocation: z.boolean().optional(),
 });
 export type Property = z.infer<typeof propertySchema>;
 

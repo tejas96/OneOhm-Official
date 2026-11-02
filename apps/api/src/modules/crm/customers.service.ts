@@ -23,8 +23,22 @@ import { addSite, editSite, insertLeadSite } from './site-edit';
 import { savingSite } from './site-rules';
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
-  const { createdAt: _c, updatedAt: _u, version: _v, ...rest } = row;
-  return rest;
+  const {
+    createdAt: _c,
+    updatedAt: _u,
+    version: _v,
+    locationAccuracyM: _a,
+    locatedByUserId: _b,
+    locatedAt,
+    previousLatitude,
+    previousLongitude,
+    ...rest
+  } = row;
+  return {
+    ...rest,
+    locatedAt: locatedAt ? locatedAt.toISOString() : null,
+    hasPreviousLocation: previousLatitude !== null && previousLongitude !== null,
+  };
 };
 
 /** One customer identity across leads, quotations and projects (PRD 3.2). */

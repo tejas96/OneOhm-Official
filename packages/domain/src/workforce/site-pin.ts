@@ -1,7 +1,8 @@
 import { distanceMeters, type GeoPoint } from './attendance';
 
 /** Where a saved site location came from. */
-export type LocationSource = 'gps' | 'map_pin' | 'address' | 'typed';
+export const LOCATION_SOURCES = ['gps', 'map_pin', 'address', 'typed'] as const;
+export type LocationSource = (typeof LOCATION_SOURCES)[number];
 
 /**
  * Compares a pin dropped by the field worker with the phone's own reading.

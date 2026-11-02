@@ -414,6 +414,13 @@
       "when": 1793645958606,
       "tag": "0058_template_extras_approved",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1793651078456,
+      "tag": "0059_property_location_source",
+      "breakpoints": true
     }
   ]
 }
