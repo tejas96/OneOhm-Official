@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { createQuotation, newCustomer } from '../support/sales';
+import { sendInbound } from '../support/whatsapp';
 
 // The WhatsApp quote-and-pay cycle: the quote reaches the customer as a file with buttons.
 describe('WhatsApp quote and pay', () => {
@@ -59,5 +60,20 @@ describe('WhatsApp quote and pay', () => {
       [customer.phone],
     );
     expect(files).toHaveLength(0);
+  });
+
+  it('lists a sent, not yet accepted quote in the Documents answer', async () => {
+    const customer = await newCustomer(admin, { name: 'Quote Documents Customer (test)' });
+    const quotation = await createQuotation(admin, customer);
+    await admin.post(`/quotations/${quotation.id}/send`);
+
+    await sendInbound(customer.phone, { text: 'documents' });
+
+    const [reply] = await rows<{ text: string }>(
+      "select payload::text as text from outbox where recipient = $1 and template like 'session:%' order by created_at desc limit 1",
+      [customer.phone],
+    );
+    expect(reply?.text).toContain(quotation.number);
+    expect(reply?.text).toContain('/v1/files/shared/');
   });
 });

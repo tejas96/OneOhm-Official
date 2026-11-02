@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { paymentMilestones, payments, projects } from '@oneohm/database';
+import { paymentMilestones, payments, projects, quotations } from '@oneohm/database';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
@@ -143,10 +143,10 @@ export class AnswersService {
       .slice(0, LATEST);
     const invoices = await issuedInvoices(this.db, customerId, LATEST);
     const reports = (await this.papers.readyReports(customerId)).slice(0, LATEST);
+    const projectQuotes = own.map((project) => project.quotation);
+    const quotes = [...projectQuotes, ...(await this.sentQuotes(customerId, projectQuotes))];
     const lines = [
-      ...own.map((project) =>
-        FILE_WORDS.quotation(project.quotation.number, link('quotation', project.quotation.id)),
-      ),
+      ...quotes.map((quote) => FILE_WORDS.quotation(quote.number, link('quotation', quote.id))),
       ...invoices.map((invoice) =>
         FILE_WORDS.invoice(
           invoice.number,
@@ -172,6 +172,22 @@ export class AnswersService {
     ];
     if (lines.length === 0) return WORDS.noDocuments;
     return fitMessage(lines, WORDS.linksExpire(this.env.FILE_LINK_HOURS), FILE_WORDS.more);
+  }
+
+  /** The newest sent or accepted revision of each quotation not already shown with a project. */
+  private async sentQuotes(customerId: string, shown: readonly { number: string }[]) {
+    const rows = await this.db
+      .select({ id: quotations.id, number: quotations.number })
+      .from(quotations)
+      .where(
+        and(
+          eq(quotations.customerId, customerId),
+          inArray(quotations.status, ['sent', 'accepted']),
+        ),
+      )
+      .orderBy(desc(quotations.revision), desc(quotations.createdAt));
+    const seen = new Set(shown.map((quote) => quote.number));
+    return rows.filter((row) => !seen.has(row.number) && seen.add(row.number)).slice(0, LATEST);
   }
 
   async requests(customerId: string): Promise<string> {
