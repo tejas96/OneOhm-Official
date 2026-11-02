@@ -47,3 +47,23 @@ export function outboxFor(phone: string): Promise<OutboxRow[]> {
     [phone],
   );
 }
+
+/**
+ * Makes a task look untouched for `days` (acceptance database only): moves its own
+ * update time and its history lines and files back by that many days.
+ */
+export async function ageTask(taskId: string, days: number): Promise<void> {
+  const shift = `${days} days`;
+  await rows('UPDATE project_tasks SET updated_at = updated_at - $2::interval WHERE id = $1', [
+    taskId,
+    shift,
+  ]);
+  await rows(
+    'UPDATE project_activities SET created_at = created_at - $2::interval WHERE task_id = $1',
+    [taskId, shift],
+  );
+  await rows('UPDATE documents SET created_at = created_at - $2::interval WHERE task_id = $1', [
+    taskId,
+    shift,
+  ]);
+}

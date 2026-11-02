@@ -12,6 +12,7 @@ import { DoNextReasonLine } from '@/features/today/do-next-reason';
 import { useCan } from '@/providers/current-user';
 import { TaskTitleButton } from '../task-panel/task-title-button';
 import { PriorityIcon } from './priority-icon';
+import { StaleBadge } from './stale-badge';
 import { TaskActions } from './task-actions';
 import { ReworkBadge, TaskCardNotes } from './task-card-notes';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
@@ -132,6 +133,7 @@ export function TaskCard({
             </span>
           )}
           <ReworkBadge count={task.reworkCount} />
+          <StaleBadge task={task} />
           {task.customerVisible && (
             <span className="inline-flex items-center gap-1.5">
               <Eye aria-hidden className="size-3.5" />

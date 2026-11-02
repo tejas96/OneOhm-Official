@@ -8,6 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
+import { StaleBadge } from '../tasks/stale-badge';
 import { TaskActions } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
@@ -77,6 +78,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
               ? taskT('doneOn', { date: day(task.completedAt) })
               : taskT(task.overdue ? 'overdueOn' : 'dueOn', { date: day(task.dueDate) })}
           </span>
+          <StaleBadge task={task} />
           <span className="inline-flex items-center gap-1.5">
             <Layers aria-hidden className="size-3.5" />
             {stagesT(task.stage)}

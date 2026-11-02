@@ -70,6 +70,8 @@ export const TASK = {
   blocker: (title: string, who: string | null, daysLate: number) =>
     `${title} · ${who ?? 'unassigned'}, ${daysLate === 0 ? 'on time' : `${daysLate} ${daysLate === 1 ? 'day' : 'days'} late`}`,
   blockerOutside: (title: string, party: string) => `${title} · waiting on the ${party}`,
+  updatedLabel: 'Last update',
+  stale: (days: number) => `No update for ${days} ${days === 1 ? 'day' : 'days'}`,
   blockedTitle: 'Finish these first',
   blockedBody: 'This task starts when the work before it is done.',
   captureTitle: 'What to record',

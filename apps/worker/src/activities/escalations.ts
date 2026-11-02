@@ -17,6 +17,7 @@ import {
 } from '@oneohm/domain';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
+import { queueBlockerOnLeave } from './stale-reminders';
 
 interface LateTask {
   readonly id: string;
@@ -128,5 +129,8 @@ export async function queueEscalations(db: Database, today: string): Promise<num
     });
     sent += 1;
   }
+  // Same morning run (spec 3.5: extend this job, never a second reminder system). Stale
+  // work is not sent one task at a time: it goes into the morning summary.
+  sent += await queueBlockerOnLeave(db, today, tellManager);
   return sent;
 }

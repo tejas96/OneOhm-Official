@@ -228,7 +228,8 @@
       "returnedBy": "Sent back by {name}:",
       "reviewer": "the reviewer",
       "returnedNote": "Sent back: {note}",
-      "reworkCount": "{count, plural, one {Sent back once} other {Sent back # times}}"
+      "reworkCount": "{count, plural, one {Sent back once} other {Sent back # times}}",
+      "stale": "No update for {days, plural, one {# day} other {# days}}"
     },
     "complete": {
       "title": "Complete task",

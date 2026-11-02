@@ -41,6 +41,8 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     prioritySetBy: null,
     unlocksPayment: false,
     blocksUrgent: false,
+    stale: false,
+    lastUpdateAt: '2026-11-01T06:00:00.000Z',
     completedAt: null,
     attachments: [],
     missingEvidence: [],

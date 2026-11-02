@@ -23,7 +23,7 @@ import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
 import { CrewMaterialPrompt } from '@/features/crew/crew-material-prompt';
 import { SiteVisitCard } from '@/features/site/site-visit-card';
-import { shortDate } from '@/lib/dates';
+import { businessToday, shortDate } from '@/lib/dates';
 import { useCan, useCurrentUser } from '@/session/session-provider';
 import { ChecklistCard } from './evidence/checklist-card';
 import { completionFacts } from './evidence/evidence-rules';
@@ -33,6 +33,7 @@ import { useEvidence } from './evidence/use-evidence';
 import { FactsForm } from './facts-form';
 import { NoteSheet } from './note-sheet';
 import { RescheduleSheet } from './reschedule-sheet';
+import { staleLabelDays } from './stale-days';
 import { TaskBlockersCard } from './task-blockers-card';
 import { TaskFooter } from './task-footer';
 import { TaskNotes } from './task-notes';
@@ -108,6 +109,14 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const meta = [
     { label: TASK.stage, value: COMMON.stages[task.stage] },
     { label: TASK.dueDate, value: shortDate(task.dueDate) },
+    ...(task.stale === true
+      ? [
+          {
+            label: TASK.updatedLabel,
+            value: TASK.stale(staleLabelDays(task.lastUpdateAt, businessToday())),
+          },
+        ]
+      : []),
     ...(task.priority && task.priority !== 'none'
       ? [{ label: TASK.priority.label, value: TASK.priority[task.priority] }]
       : []),

@@ -8,6 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { TaskTitleButton } from '../task-panel/task-title-button';
 import { PriorityIcon } from '../tasks/priority-icon';
+import { StaleBadge } from '../tasks/stale-badge';
 import { ReworkBadge } from '../tasks/task-card-notes';
 import type { TaskRights, TaskStep } from '../tasks/task-menu';
 import { blockingOf, isBlocked } from '../tasks/task-status';
@@ -93,6 +94,7 @@ export function KanbanCard({
           </span>
           <span className="text-ink-faint">{stagesT(task.stage)}</span>
           <ReworkBadge count={task.reworkCount} />
+          <StaleBadge task={task} />
         </div>
         {blocked && (
           <p className="flex items-start gap-1.5 type-body-sm text-ink-faint">
