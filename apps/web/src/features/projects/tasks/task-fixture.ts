@@ -44,6 +44,7 @@ export function taskOf(partial: Partial<ProjectTask>): ProjectTask {
     unlocksPayment: false,
     blocksUrgent: false,
     stale: false,
+    idleDays: 0,
     lastUpdateAt: '2026-11-01T06:00:00.000Z',
     completedAt: null,
     ...partial,

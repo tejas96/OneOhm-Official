@@ -21,6 +21,12 @@ describe('canViewTask', () => {
     );
   });
 
+  it('lets people who see the business view open the tasks it lists', () => {
+    expect(
+      canViewTask(viewer('staff', ['dashboard.view_business']), { assigneeUserId: 'other' }),
+    ).toBe(true);
+  });
+
   it('keeps everyone else to their own work', () => {
     expect(canViewTask(viewer('staff', ['tasks.complete']), { assigneeUserId: 'other' })).toBe(
       false,

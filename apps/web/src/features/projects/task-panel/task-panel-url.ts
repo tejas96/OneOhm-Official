@@ -33,3 +33,15 @@ export function panelView(state: {
   if (state.isError) return state.missing ? 'missing' : 'error';
   return 'loading';
 }
+
+/**
+ * Which task the panel shows, and whether it is open. When the link drops the task, the
+ * last one stays on screen (closed) so the panel can slide away instead of vanishing.
+ */
+export function panelShown(
+  lastShown: string | null,
+  taskId: string | null,
+): { readonly id: string | null; readonly open: boolean } {
+  if (taskId) return { id: taskId, open: true };
+  return { id: lastShown, open: false };
+}

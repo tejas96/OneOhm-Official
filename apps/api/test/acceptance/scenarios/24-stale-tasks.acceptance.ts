@@ -1,7 +1,8 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ageTask, closeDb, setTaskDates } from '../support/db';
+import { addLeave, ageTask, closeDb, setTaskDates } from '../support/db';
 import { Session } from '../support/http';
+import { ownPerson, retire } from '../support/people';
 import { addDays, type Sale, sellProject, today } from '../support/sales';
 import { project, sessionOf } from '../support/tasks';
 
@@ -26,6 +27,23 @@ describe('Stale tasks and the Urgent notice', () => {
     expect(ready.stale).toBe(false);
     await ageTask(ready.id, 3);
     expect((await taskById(ready.id)).stale).toBe(true);
+  });
+
+  it('the badge days leave out approved leave, like the morning summary', async () => {
+    const quiet = await sellProject(admin, { name: 'Quiet Over Leave (test)' });
+    const ready = (await project(admin, quiet.project.id)).tasks.find(
+      (task) => task.status === 'ready',
+    ) as ProjectTask;
+    // Their own person, so this leave touches no other test.
+    const holder = await ownPerson(admin, 'Lena Leave (test)');
+    await admin.post(`/tasks/${ready.id}/assign`, { userId: holder.id });
+    await ageTask(ready.id, 6);
+    await addLeave(holder.id, addDays(today(), -3), addDays(today(), -2));
+    const after = (await project(admin, quiet.project.id)).tasks.find(
+      (task) => task.id === ready.id,
+    );
+    expect(after?.idleDays).toBe(4);
+    await retire(admin, [holder]);
   });
 
   it('a note clears stale at once', async () => {
