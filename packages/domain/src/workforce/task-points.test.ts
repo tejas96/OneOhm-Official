@@ -110,6 +110,21 @@ describe('judgeTask: on time', () => {
   });
 });
 
+describe('judgeTask: time with the reviewer', () => {
+  it('does not count days a send-back sat with the reviewer', () => {
+    const { onTime } = judgeTask(
+      facts({
+        handedInOn: '2026-11-04',
+        outsideWaits: [wait('reviewer', '2026-10-26', '2026-10-31')],
+      }),
+    );
+    expect(onTime).toMatchObject({
+      earned: true,
+      reason: 'On time (after 5 days with the reviewer)',
+    });
+  });
+});
+
 describe('judgeTask: first-time right', () => {
   it('first-time right only with an approval step', () => {
     expect(judgeTask(facts({})).firstTimeRight).toBeNull();

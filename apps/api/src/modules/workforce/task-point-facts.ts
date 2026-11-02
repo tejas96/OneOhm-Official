@@ -9,11 +9,11 @@ import {
 import type { TaskPointFacts } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import { reviewHistory } from './review-history';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
 const indiaDay = (instant: Date) => todayIn('Asia/Kolkata', instant);
-const ACCEPTED = ['approved', 'self_approved'];
 
 /**
  * Who earns a finished task's points and the facts it is judged on (spec 3.7), read in
@@ -31,13 +31,13 @@ export async function taskPointFacts(
       outcome: taskReviews.outcome,
       submittedBy: taskReviews.submittedByUserId,
       at: taskReviews.createdAt,
+      decidedAt: taskReviews.decidedAt,
     })
     .from(taskReviews)
     .where(eq(taskReviews.taskId, task.id))
     .orderBy(asc(taskReviews.createdAt));
-  const accepted = task.approval
-    ? reviews.filter((review) => ACCEPTED.includes(review.outcome)).at(-1)
-    : undefined;
+  const history = reviewHistory(task.approval, reviews);
+  const accepted = history.accepted;
   // No recorded hand-in on approval work: the assignee did it, never the approver.
   const userId =
     accepted?.submittedBy ?? (task.approval ? (task.assigneeUserId ?? finishedBy) : finishedBy);
@@ -68,11 +68,14 @@ export async function taskPointFacts(
       .from(projectTasks)
       .where(eq(projectTasks.id, task.id)),
   ]);
-  const outsideWaits = waits.map((wait) => ({
-    party: wait.party,
-    from: wait.from.toISOString(),
-    to: wait.to.toISOString(),
-  }));
+  const outsideWaits = [
+    ...history.withReviewer,
+    ...waits.map((wait) => ({
+      party: wait.party,
+      from: wait.from.toISOString(),
+      to: wait.to.toISOString(),
+    })),
+  ];
   // A wait still open counts up to the hand-in, whatever the status says.
   const open = current[0];
   if (open?.since && open.since < handedInAt)
@@ -97,8 +100,8 @@ export async function taskPointFacts(
       selfMoves,
       outsideWaits,
       leave,
-      needsApproval: task.approval,
-      returns: reviews.filter((review) => review.outcome === 'returned').length,
+      needsApproval: history.needsApproval,
+      returns: history.returns,
     },
   };
 }

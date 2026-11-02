@@ -130,6 +130,51 @@ describe('Fair points', () => {
     expect(kept.map((row) => row.party)).toEqual(['customer']);
   });
 
+  it('days the work sat with a reviewer who sent it back do not count against the doer', async () => {
+    const { sale, task } = await fresh('Slow Send Back (test)', 'site_survey');
+    const facts = await surveyFacts(admin, await project(admin, sale.project.id), task);
+    await workTask(admin, task, { as: me, facts, approve: false });
+    // Handed in 8 days ago; the reviewer only sends it back now.
+    await ageHandIns(task.id, 8);
+    await setTaskDates(task.id, {
+      startDate: addDays(today(), -10),
+      dueDate: addDays(today(), -2),
+    });
+    await admin.post(`/tasks/${task.id}/return`, { reason: 'Add the roof photo (test)' });
+    await workTask(admin, taskByKey(await project(admin, sale.project.id), 'site_survey'), {
+      as: me,
+      facts,
+    });
+    const onTime = (await entriesFor(task)).find((row) => row.sourceType === 'task_on_time');
+    expect(onTime?.points).toBe(10);
+    expect(onTime?.reason).toContain('with the reviewer');
+  });
+
+  it('send-backs before a hand-over do not count against the new holder', async () => {
+    const other = await ownPerson(admin, 'Ravi Before (test)');
+    const otherSession = await Session.code(other.phone);
+    const { sale, task } = await fresh('Handed Over (test)', 'site_survey');
+    await admin.post(`/tasks/${task.id}/assign`, { userId: other.id });
+    const facts = await surveyFacts(admin, await project(admin, sale.project.id), task);
+    await workTask(admin, taskByKey(await project(admin, sale.project.id), 'site_survey'), {
+      as: otherSession,
+      facts,
+      approve: false,
+    });
+    await admin.post(`/tasks/${task.id}/return`, { reason: 'Wrong roof size (test)' });
+    await admin.post(`/tasks/${task.id}/assign`, { userId: doer.id });
+    await workTask(admin, taskByKey(await project(admin, sale.project.id), 'site_survey'), {
+      as: me,
+      facts,
+    });
+    const first = (await entriesFor(task)).find((row) => row.sourceType === 'task_first_time');
+    expect(first).toMatchObject({
+      points: 10,
+      reason: 'First-time right: Site survey and measurements',
+    });
+    await retire(admin, [other]);
+  });
+
   it('a task without approval gets only the on-time line', async () => {
     const { task } = await fresh('No Review (test)', 'electricity_details');
     await workTask(admin, task, { as: me });

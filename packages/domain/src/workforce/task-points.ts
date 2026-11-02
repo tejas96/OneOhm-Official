@@ -31,6 +31,7 @@ const PARTY: Readonly<Record<string, string>> = {
   bank: 'the bank',
   customer: 'the customer',
   discom: 'the DISCOM',
+  reviewer: 'the reviewer',
 };
 
 const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
@@ -77,7 +78,9 @@ function heldDays(facts: TaskPointFacts) {
 
 function heldText(held: ReturnType<typeof heldDays>): string {
   const parts = [
-    held.waiting > 0 ? `${days(held.waiting)} waiting on ${held.who}` : null,
+    held.waiting > 0
+      ? `${days(held.waiting)} ${held.who === 'the reviewer' ? 'with' : 'waiting on'} ${held.who}`
+      : null,
     held.leave > 0 ? `${days(held.leave)} of leave` : null,
   ].filter(Boolean);
   return parts.join(' and ');
