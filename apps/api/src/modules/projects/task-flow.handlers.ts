@@ -33,6 +33,16 @@ export function taskFlowHandlers(flow: TaskFlowService, actor: Actor) {
       status: 200 as const,
       body: await flow.postUpdate(actor, params.id, body.note),
     }),
+    tickChecklist: async ({
+      params,
+      body,
+    }: {
+      params: { id: string };
+      body: { key: string; done: boolean };
+    }) => ({
+      status: 200 as const,
+      body: await flow.tick(actor, params.id, body.key, body.done),
+    }),
     taskActivity: async ({ params }: { params: { id: string } }) => ({
       status: 200 as const,
       body: await flow.activity(actor, params.id),
