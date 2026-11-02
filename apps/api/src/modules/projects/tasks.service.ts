@@ -19,7 +19,7 @@ import { assertEvidence, assertUnblocked, checkedConsumerNumber } from './task-g
 import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
-import { keepFinishedWait } from './task-waits';
+import { closeOpenWait, nextWaitStart } from './task-waits';
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
@@ -76,13 +76,12 @@ export class TasksService {
     const task = await this.load(actor, id);
     await assertUnblocked(this.db, task);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
-    await keepFinishedWait(this.db, task);
+    await closeOpenWait(this.db, task);
     await this.db
       .update(projectTasks)
       .set({
         status: 'in_progress',
         startedAt: new Date(),
-        waitingSince: null,
         updatedAt: new Date(),
       })
       .where(eq(projectTasks.id, id));
@@ -99,16 +98,13 @@ export class TasksService {
     note: string | null | undefined,
   ): Promise<ProjectTask> {
     const task = await this.load(actor, id);
-    const samePartyStill = task.status === 'waiting' && task.waitingParty === party;
     await this.db.transaction(async (tx) => {
-      // A new party starts a new stretch; the one before is kept, never overwritten.
-      if (task.status === 'waiting' && !samePartyStill) await keepFinishedWait(tx, task);
       await tx
         .update(projectTasks)
         .set({
           status: 'waiting',
           waitingParty: party,
-          waitingSince: samePartyStill && task.waitingSince ? task.waitingSince : new Date(),
+          waitingSince: await nextWaitStart(tx, task, party),
           note: note ?? task.note,
           updatedAt: new Date(),
         })
@@ -170,11 +166,7 @@ export class TasksService {
       }
       if (note) await tx.update(projectTasks).set({ note }).where(eq(projectTasks.id, id));
       if (handover) await recordHandoverOverride(tx, task, actor.userId, handover);
-      // Handed in straight from a wait: keep that stretch, so it is never lost (spec 3.7).
-      if (task.waitingSince) {
-        await keepFinishedWait(tx, task);
-        await tx.update(projectTasks).set({ waitingSince: null }).where(eq(projectTasks.id, id));
-      }
+      await closeOpenWait(tx, task);
       // Approval work goes to its reviewer; the rest (or a lone approver's own) finishes.
       let done = true;
       if (task.approval) done = await sendForReview(tx, task, actor);
