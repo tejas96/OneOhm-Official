@@ -67,7 +67,12 @@ export function ContractorEditSheet({
         </Button>
       }
     >
-      <form id={formId} onSubmit={submit} noValidate className="flex flex-col gap-6">
+      <form
+        id={formId}
+        onSubmit={submit}
+        noValidate
+        className="flex flex-col gap-6 px-5 py-6 sm:px-6"
+      >
         <ContractorFields draft={draft} onChange={setDraft} errors={form.fieldErrors} />
         <Switch
           label={t('active')}

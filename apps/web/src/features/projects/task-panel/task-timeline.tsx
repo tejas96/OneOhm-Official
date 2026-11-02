@@ -2,7 +2,7 @@
 
 import { cn } from '@oneohm/design-system/web';
 import { useQuery } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { api, expectStatus } from '@/lib/api/api-client';
 
 const SHOWN = 10;
@@ -14,6 +14,7 @@ const SHOWN = 10;
 export function TaskTimeline({ taskId }: { readonly taskId: string }) {
   const t = useTranslations('projects.panel');
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const query = useQuery({
     queryKey: ['tasks', 'activity', taskId],
     queryFn: () => expectStatus(api.tasks.taskActivity({ params: { id: taskId } }), 200),
@@ -45,7 +46,7 @@ export function TaskTimeline({ taskId }: { readonly taskId: string }) {
                 {entry.message}
               </p>
               <p className="type-label text-ink-faint">
-                {[entry.user?.fullName, format.relativeTime(new Date(entry.createdAt))]
+                {[entry.user?.fullName, format.relativeTime(new Date(entry.createdAt), now)]
                   .filter(Boolean)
                   .join(' · ')}
               </p>

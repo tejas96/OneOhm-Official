@@ -12,6 +12,8 @@
     "menu": "Menu",
     "menuOpen": "Open the menu",
     "notBuilt": "Not built yet",
+    "collapse": "Hide the sidebar labels",
+    "expand": "Show the sidebar labels",
     "leadsBadge": "{count} leads to follow up today",
     "groups": {
       "sales": "Sales",
