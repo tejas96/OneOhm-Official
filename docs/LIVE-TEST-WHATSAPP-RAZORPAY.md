@@ -71,7 +71,7 @@ number can accept a quote. Write what you see in "Result".
 | 8 | Wait for the webhook | A receipt PDF arrives on WhatsApp with a thank-you | |
 | 9 | Check the app: lead, customer, project, finance, chat | Each one shows the payment (see the loop table) | |
 | 10a | Cancel the open link (staff in the app, or in the Razorpay dashboard), then tap the old **Pay now** | The old link is marked cancelled. No new WhatsApp message goes out. The Pay now page does not show "closed": it works from the pay token, so it makes a new Razorpay link for what is still owed and opens it. If the amount is already paid, it says "This is already paid. Thank you!" | |
-| 10b | Expiry: a link passes its end date (`payment_link.expired`) | The old link is marked expired. One fresh Pay now message goes to the customer and one alert to the owner. Not repeated if Razorpay sends the event twice | Check on the first real expiry. It cannot be forced quickly (`PAYMENT_LINK_DAYS` is at least 1 day). Covered by the automated test `28-whatsapp-after-payment` | |
+| 10b | Expiry: a link passes its end date (`payment_link.expired`) | The old link is marked expired. One fresh Pay now message goes to the customer and one alert to the owner. A fresh Pay now goes out only while the milestone still owes money. Not repeated if Razorpay sends the event twice | Check on the first real expiry. It cannot be forced quickly (`PAYMENT_LINK_DAYS` is at least 1 day). Covered by the automated test `28-whatsapp-after-payment` |
 
 ## The loop table
 
