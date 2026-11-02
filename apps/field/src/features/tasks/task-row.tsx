@@ -9,6 +9,7 @@ import { TASK } from '@/copy/tasks';
 import { UPLOADS } from '@/copy/uploads';
 import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { businessToday, daysBetween, relativeDate } from '@/lib/dates';
+import { priorityMark } from './priority-mark';
 
 export function toneOf(task: ProjectTask): Tone {
   if (task.status === 'in_review') return 'review';
@@ -46,6 +47,7 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
         </Text>
         <ChevronRight size={18} color={theme.colors.textTertiary} />
       </View>
+      <PriorityLabel task={task} />
       <Text variant="titleMd" numberOfLines={2}>
         {task.title}
       </Text>
@@ -73,6 +75,18 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
         </View>
       </View>
     </Card>
+  );
+}
+
+/** Priority as a small label above the title (spec 3.3: every task surface). */
+function PriorityLabel({ task }: { readonly task: ProjectTask }) {
+  const theme = useTheme();
+  const mark = task.status === 'completed' ? null : priorityMark(task.priority);
+  if (!mark) return null;
+  return (
+    <Text variant="label" color={mark.loud ? theme.status.overdue.fg : theme.colors.textSecondary}>
+      {mark.label}
+    </Text>
   );
 }
 
