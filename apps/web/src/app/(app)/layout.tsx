@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { TaskPanel } from '@/features/projects/task-panel/task-panel';
 import { MobileTopBar } from '@/features/shell/mobile-top-bar';
 import { Sidebar } from '@/features/shell/sidebar';
 import { currentUser } from '@/lib/api/server-session';
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { readonly children: React
           <main className="flex-1 px-4 py-6 sm:px-6 md:px-10 md:py-9">{children}</main>
         </div>
       </div>
+      <TaskPanel />
     </CurrentUserProvider>
   );
 }

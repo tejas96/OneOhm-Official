@@ -510,6 +510,24 @@
       "rule": "Expected finish = the last open task's due date, moved on by how many days the work runs late today.",
       "short": "Finish {date}",
       "shortBehind": "Finish {date} · {days, plural, one {# day} other {# days}} behind"
+    },
+    "panel": {
+      "title": "Task",
+      "loading": "Loading the task…",
+      "notFound": "Task not found",
+      "notFoundBody": "It may have been removed, or it is not yours to see.",
+      "openProject": "Open project",
+      "about": "About this task",
+      "waitingFor": "Waiting for",
+      "blocking": "{count, plural, one {Blocking # task} other {Blocking # tasks}}",
+      "checklist": "Checklist · {done}/{total}",
+      "facts": "Facts to record",
+      "notRecorded": "Not recorded yet",
+      "files": "Photos and documents",
+      "timeline": "History",
+      "timelineEmpty": "Nothing has happened yet.",
+      "timelineError": "Could not load the history.",
+      "postUpdate": "Post update"
     }
   }
 }
