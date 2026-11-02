@@ -68,16 +68,23 @@ export async function taskPointFacts(
   ]);
   const outsideWaits = waits.map((wait) => ({
     party: wait.party,
-    from: indiaDay(wait.from),
-    to: indiaDay(wait.to),
+    from: wait.from.toISOString(),
+    to: wait.to.toISOString(),
   }));
   // A wait still open counts up to the hand-in, whatever the status says.
   const open = current[0];
   if (open?.since && open.since < handedInAt)
-    outsideWaits.push({ party: open.party, from: indiaDay(open.since), to: indiaDay(handedInAt) });
-  const selfMovedFrom = moves
-    .map((move) => (move.data as { from?: unknown } | null)?.from)
-    .filter((from): from is string => typeof from === 'string');
+    outsideWaits.push({
+      party: open.party,
+      from: open.since.toISOString(),
+      to: handedInAt.toISOString(),
+    });
+  const selfMoves = moves
+    .map((move) => move.data as { from?: unknown; to?: unknown } | null)
+    .filter(
+      (data): data is { from: string; to: string } =>
+        typeof data?.from === 'string' && typeof data?.to === 'string',
+    );
 
   return {
     userId,
@@ -85,7 +92,7 @@ export async function taskPointFacts(
       dueDate: task.dueDate,
       startDate: task.startDate,
       handedInOn: indiaDay(handedInAt),
-      selfMovedFrom,
+      selfMoves,
       outsideWaits,
       leave,
       needsApproval: task.approval,

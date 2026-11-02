@@ -79,7 +79,7 @@ export async function setTaskDates(
     await rows('UPDATE project_tasks SET due_date = $2 WHERE id = $1', [taskId, dates.dueDate]);
 }
 
-/** Records a finished wait on a party, as if the task had waited then (acceptance only). */
+/** Records a finished wait on a party for whole days `from`..`to` (acceptance only). */
 export async function addTaskWait(
   taskId: string,
   party: 'customer' | 'bank' | 'discom' | 'internal',
@@ -88,8 +88,8 @@ export async function addTaskWait(
 ): Promise<void> {
   await rows(
     `INSERT INTO task_waits (task_id, party, started_at, ended_at)
-     VALUES ($1, $2, ($3::date + time '10:00') AT TIME ZONE 'Asia/Kolkata',
-             ($4::date + time '17:00') AT TIME ZONE 'Asia/Kolkata')`,
+     VALUES ($1, $2, $3::date::timestamp AT TIME ZONE 'Asia/Kolkata',
+             ($4::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')`,
     [taskId, party, from, to],
   );
 }

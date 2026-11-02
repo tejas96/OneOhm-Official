@@ -11,8 +11,9 @@ export interface TaskPointFacts {
   readonly startDate: string;
   /** The last hand-in that was accepted, not the day a reviewer approved it. */
   readonly handedInOn: string;
-  /** `from` dates of reschedules the credited person made to their own task. */
-  readonly selfMovedFrom: readonly string[];
+  /** Reschedules the credited person made to their own task (`from` → `to`). */
+  readonly selfMoves: readonly Span[];
+  /** Waits as ISO instants; only real time counts, overlaps once (spec 3.7). */
   readonly outsideWaits: readonly (Span & { readonly party: string })[];
   /** The credited person's approved leave. */
   readonly leave: readonly Span[];
@@ -35,14 +36,39 @@ const PARTY: Readonly<Record<string, string>> = {
 const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
 const inSpan = (day: string, span: Span) => span.from <= day && day <= span.to;
 
-/** Days between start and hand-in held up by an outside party, and by leave; each day once. */
+const DAY_MS = 86_400_000;
+/** Midnight in India for a calendar date, as epoch milliseconds. */
+const indiaMidnight = (date: string) => Date.parse(`${date}T00:00:00+05:30`);
+
+/**
+ * Time held up between start and hand-in: outside waits by their real length (merged,
+ * so overlaps count once, then whole days, so a short "waiting" never earns a day),
+ * and approved leave days on days no outside wait touched.
+ */
 function heldDays(facts: TaskPointFacts) {
+  const windowStart = indiaMidnight(facts.startDate);
+  const windowEnd = indiaMidnight(addDays(facts.handedInOn, 1));
   const outside = facts.outsideWaits.filter((wait) => wait.party !== 'internal');
-  let waiting = 0;
+  const spans = outside
+    .map((wait) => ({
+      from: Math.max(windowStart, Date.parse(wait.from)),
+      to: Math.min(windowEnd, Date.parse(wait.to)),
+    }))
+    .filter((span) => span.to > span.from)
+    .sort((a, b) => a.from - b.from);
+  let heldMs = 0;
+  let cursor = Number.NEGATIVE_INFINITY;
+  for (const span of spans) {
+    const from = Math.max(span.from, cursor);
+    if (span.to > from) heldMs += span.to - from;
+    cursor = Math.max(cursor, span.to);
+  }
+  const waiting = Math.floor(heldMs / DAY_MS);
   let leave = 0;
   for (let day = facts.startDate; day <= facts.handedInOn; day = addDays(day, 1)) {
-    if (outside.some((wait) => inSpan(day, wait))) waiting += 1;
-    else if (facts.leave.some((span) => inSpan(day, span))) leave += 1;
+    const dayStart = indiaMidnight(day);
+    const touched = spans.some((span) => span.from < dayStart + DAY_MS && span.to > dayStart);
+    if (!touched && facts.leave.some((span) => inSpan(day, span))) leave += 1;
   }
   const parties = [...new Set(outside.map((wait) => wait.party))];
   const who = parties.length === 1 ? (PARTY[parties[0] ?? ''] ?? 'others') : 'others';
@@ -66,7 +92,13 @@ export function judgeTask(facts: TaskPointFacts): {
   readonly onTime: PartResult & { readonly judgedDue: string; readonly daysLate: number };
   readonly firstTimeRight: PartResult | null;
 } {
-  const baseDue = [facts.dueDate, ...facts.selfMovedFrom].sort()[0] ?? facts.dueDate;
+  // Only the days the person pushed their own date out are taken back; later moves by a
+  // manager or an earlier late task stand.
+  const selfAdded = facts.selfMoves.reduce(
+    (sum, move) => sum + Math.max(0, daysBetween(move.from, move.to)),
+    0,
+  );
+  const baseDue = addDays(facts.dueDate, -selfAdded);
   const held = heldDays(facts);
   const judgedDue = addDays(baseDue, held.waiting + held.leave);
   const daysLate = Math.max(0, daysBetween(judgedDue, facts.handedInOn));
