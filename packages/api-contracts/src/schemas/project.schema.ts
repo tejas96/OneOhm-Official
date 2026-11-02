@@ -134,6 +134,8 @@ export const projectTaskSchema = z.object({
   blockedBy: z.array(z.string()),
   /** The part of `blockedBy` that is open DISCOM change requests, not earlier tasks. */
   changeBlockers: z.array(z.string()),
+  /** Open tasks that wait for this one to finish. */
+  blocking: z.array(z.string()),
   completedAt: instantSchema.nullable(),
 });
 export type ProjectTask = z.infer<typeof projectTaskSchema>;
