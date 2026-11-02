@@ -65,6 +65,23 @@ describe('Task priority', () => {
     expect(again?.blockers[0]?.title).toBe(blocked.blockedBy[0]);
   });
 
+  it('the whole chain under an urgent task is lifted', async () => {
+    const chainSale = await sellProject(admin, { name: 'Urgent Chain (test)' });
+    const detail = await project(admin, chainSale.project.id);
+    const byTitle = (title: string) => detail.tasks.find((task) => task.title === title);
+    // C waits for B, and B waits for A: mark C urgent, A must rise too.
+    const c = detail.tasks.find((task) => {
+      const b = byTitle(task.blockedBy[0] ?? '');
+      return Boolean(b && b.blockedBy.length > 0);
+    }) as ProjectTask;
+    const b = byTitle(c.blockedBy[0] ?? '') as ProjectTask;
+    await admin.post(`/tasks/${c.id}/priority`, { priority: 'urgent' });
+    const after = await project(admin, chainSale.project.id);
+    const a = after.tasks.find((task) => task.title === b.blockedBy[0]);
+    expect(after.tasks.find((task) => task.id === b.id)?.blocksUrgent).toBe(true);
+    expect(a?.blocksUrgent).toBe(true);
+  });
+
   it('someone without tasks.assign is refused', async () => {
     const task = (await project(admin, sale.project.id)).tasks[0] as ProjectTask;
     const sales = await Session.password(staffEmail('sales'), TEAM_PASSWORD);

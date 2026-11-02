@@ -17,6 +17,7 @@ import { loadTaskLinks } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
 import { ownershipSignals } from './task-signals';
 import { waitingPayments } from './unlocks-payment';
+import { urgentChain } from './urgent-chain';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
 export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<ProjectTask[]> {
@@ -83,7 +84,10 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     rows.map((row) => ({ ...row.task, managerUserId: row.managerUserId })),
   );
   const today = todayIn();
-  const waiting = await waitingPayments(db, projectIds);
+  const [waiting, chain] = await Promise.all([
+    waitingPayments(db, projectIds),
+    urgentChain(db, projectIds),
+  ]);
   return rows.map(({ task, code, name, assigneeName }) => {
     const attached = files.filter((file) => file.taskId === task.id);
     const changes =
@@ -153,6 +157,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         freshness,
         today,
         waitingPayments: waiting,
+        urgentChain: chain,
       }),
       completedAt: task.completedAt?.toISOString() ?? null,
     };
