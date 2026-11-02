@@ -10,6 +10,7 @@ import { UPLOADS } from '@/copy/uploads';
 import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { businessToday, daysBetween, relativeDate } from '@/lib/dates';
 import { priorityMark } from './priority-mark';
+import { staleLabelDays } from './stale-days';
 
 export function toneOf(task: ProjectTask): Tone {
   if (task.status === 'in_review') return 'review';
@@ -55,6 +56,11 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
         {task.projectName}
       </Text>
       <DoNextLine task={task} />
+      {task.stale === true ? (
+        <Text variant="label" color={theme.status.atRisk.fg}>
+          {TASK.stale(staleLabelDays(task.lastUpdateAt, businessToday()))}
+        </Text>
+      ) : null}
       {waiting > 0 ? (
         <View style={styles.due}>
           <CloudUpload size={14} color={theme.status.waiting.fg} />

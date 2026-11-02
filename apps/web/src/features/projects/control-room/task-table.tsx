@@ -12,6 +12,7 @@ import { Lock, RotateCcw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskTitleButton } from '../task-panel/task-title-button';
 import { PriorityIcon } from '../tasks/priority-icon';
+import { StaleBadge } from '../tasks/stale-badge';
 import { TaskActions } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { isBlocked, isReturned, taskStatusKey, taskTone } from '../tasks/task-status';
@@ -31,6 +32,7 @@ function TaskCell({ task }: { readonly task: ProjectTask }) {
             {task.title}
           </TaskTitleButton>
         </span>
+        <StaleBadge task={task} className="type-body-sm" />
         {isBlocked(task) && (
           <span className="flex min-w-0 items-center gap-1.5 type-body-sm font-normal text-ink-faint">
             <Lock aria-hidden className="size-3 shrink-0" />

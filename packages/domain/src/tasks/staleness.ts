@@ -1,4 +1,4 @@
-import { addDays } from '@oneohm/shared';
+import { addDays, daysBetween, todayIn } from '@oneohm/shared';
 
 /** Approved leave, as calendar dates (inclusive). */
 export interface LeaveSpan {
@@ -35,4 +35,9 @@ export function isStale(input: {
 
 export function onLeave(today: string, leave: readonly LeaveSpan[]): boolean {
   return covered(today, leave);
+}
+
+/** Whole India days from an update instant (ISO) to today, for the "Stale" badge. */
+export function daysSinceUpdate(lastUpdateAt: string, today: string): number {
+  return Math.max(0, daysBetween(todayIn('Asia/Kolkata', new Date(lastUpdateAt)), today));
 }
