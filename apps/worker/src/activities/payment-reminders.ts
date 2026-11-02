@@ -9,14 +9,25 @@ import {
 } from '@oneohm/database';
 import { paymentReminderRound } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
+import { signPayToken } from '@oneohm/shared/pay-token';
 import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+
+/** What signs a reminder's Pay now link, and for how long it works. */
+export interface PayLinkSettings {
+  readonly secret: string;
+  readonly days: number;
+}
 
 /**
  * Customers hear about an unpaid milestone after the grace days in Settings →
  * Reminders, then again every repeat while it stays unpaid (PRD 3.11, 7.2). Each round
  * is sent once, however often the job runs.
  */
-export async function queuePaymentReminders(db: Database, timeZone: string): Promise<number> {
+export async function queuePaymentReminders(
+  db: Database,
+  timeZone: string,
+  payLinks: PayLinkSettings,
+): Promise<number> {
   const today = todayIn(timeZone);
   const timing = await readBusinessSetting(db, 'reminders');
   const due = await db
@@ -26,6 +37,7 @@ export async function queuePaymentReminders(db: Database, timeZone: string): Pro
       amount: paymentMilestones.amountPaise,
       dueAt: paymentMilestones.dueAt,
       projectCode: projects.code,
+      customerId: projects.customerId,
       customer: customers.name,
       phone: customers.phoneE164,
     })
@@ -69,6 +81,11 @@ export async function queuePaymentReminders(db: Database, timeZone: string): Pro
         amount: formatInr(outstanding),
         milestone: row.label,
         project: row.projectCode,
+        payToken: signPayToken(payLinks.secret, {
+          milestoneId: row.id,
+          customerId: row.customerId,
+          exp: Math.floor(Date.now() / 1000) + payLinks.days * 86_400,
+        }),
       },
       `payment_reminder:${row.id}:round-${round}`,
     );

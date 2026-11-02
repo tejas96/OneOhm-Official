@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
-import { Session } from '../support/http';
-import { createQuotation, newCustomer, uniquePhone } from '../support/sales';
+import { API, Session } from '../support/http';
+import { milestoneOf } from '../support/money';
+import { createQuotation, newCustomer, sellProject, uniquePhone } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
 
 // The WhatsApp quote-and-pay cycle: the quote reaches the customer as a file with buttons.
@@ -201,5 +202,41 @@ describe('WhatsApp quote and pay', () => {
     expect(await statusOf(quotation.id)).toBe('sent');
     expect(await acceptances(quotation.id)).toHaveLength(0);
     expect(await chatState(family)).toBe('human');
+  });
+
+  it('the advance link message carries a pay token that opens the pay page', async () => {
+    const { customer, project } = await sellProject(admin, {
+      name: 'Quote Pay Token Customer (test)',
+    });
+    await admin.post(
+      `/finance/milestones/${milestoneOf(project, 'quotation_accepted').id}/payment-link`,
+    );
+
+    const [sent] = await newestOutbox(customer.phone, 'payment_link');
+    expect(sent?.payload.payToken).toBeTruthy();
+    const page = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
+      redirect: 'manual',
+    });
+    expect(page.status).toBe(302);
+    expect(page.headers.get('location')).toContain('/v1/pay/sandbox/');
+  });
+
+  it('the Payments menu sends a Pay now button for each due amount', async () => {
+    const { customer } = await sellProject(admin, { name: 'Quote Pay Menu Customer (test)' });
+    await rows(
+      `insert into wa_conversations (phone, customer_id, last_inbound_at) values ($1, $2, now())
+       on conflict (phone) do update set last_inbound_at = now()`,
+      [customer.phone, customer.customerId],
+    );
+
+    await sendInbound(customer.phone, { text: 'payments' });
+
+    const buttons = await rows<{ payload: { label: string; url: string } }>(
+      "select payload from outbox where recipient = $1 and template = 'session:cta_url'",
+      [customer.phone],
+    );
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons[0]?.payload.label).toBe('Pay now');
+    expect(buttons[0]?.payload.url).toContain('/v1/pay/due/');
   });
 });

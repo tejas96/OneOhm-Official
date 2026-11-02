@@ -113,7 +113,9 @@ export class AssistantService {
       case 'progress':
         return text(await this.answers.progress(customerId));
       case 'payments':
-        return text(await this.answers.payments(customerId));
+        await text(await this.answers.payments(customerId));
+        for (const button of await this.answers.payNow(customerId)) await this.say(chat, button);
+        return;
       case 'documents':
         return text(await this.answers.documents(customerId));
       case 'requests':

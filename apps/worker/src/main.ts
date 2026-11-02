@@ -26,6 +26,7 @@ async function main(): Promise<void> {
 
   const database = createDatabaseConnection(config.DATABASE_URL, { max: 5 });
   const sender = createWhatsAppSender(config, log);
+  const payLinks = { secret: config.FILE_LINK_SECRET, days: config.PAYMENT_LINK_DAYS };
   const nativeConnection = await NativeConnection.connect({ address: config.TEMPORAL_ADDRESS });
   const worker = await Worker.create({
     connection: nativeConnection,
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
       sms: createSmsSender(config, log),
       language: config.WHATSAPP_TEMPLATE_LANGUAGE,
       timeZone: config.BUSINESS_TIMEZONE,
+      payLinks,
     }),
     ...workflowSource(config.NODE_ENV),
   });
@@ -65,7 +67,7 @@ async function main(): Promise<void> {
   );
   relay.start();
   // Retries asked for in Settings → Automation runs (PRD 7.1).
-  const retries = new JobRetryLoop(database.db, config.BUSINESS_TIMEZONE, 20_000, log);
+  const retries = new JobRetryLoop(database.db, config.BUSINESS_TIMEZONE, payLinks, 20_000, log);
   retries.start();
   log(
     `[worker] running · WhatsApp delivery: ${config.WHATSAPP_DELIVERY} · push: ${config.PUSH_DELIVERY}`,

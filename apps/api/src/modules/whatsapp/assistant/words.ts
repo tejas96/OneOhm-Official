@@ -53,6 +53,7 @@ const EN_WORDS = {
   } as Record<string, string>,
   allPaid: 'Everything is paid. Thank you!',
   payHere: 'Pay here',
+  payNow: 'Pay now',
   noDocuments: 'No documents yet. They will appear here as your project moves.',
   linksExpire: (hours: number) => `Links work for ${hours} hours.`,
   askProblem:

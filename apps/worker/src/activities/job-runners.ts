@@ -8,7 +8,7 @@ import { queueEscalations } from './escalations';
 import { queueFollowUpReminders } from './follow-up-reminders';
 import { clearOldLocations } from './location-retention';
 import { queueOwnerSummaries } from './owner-summary';
-import { queuePaymentReminders } from './payment-reminders';
+import { type PayLinkSettings, queuePaymentReminders } from './payment-reminders';
 import { queueSlaAlerts } from './service-sla';
 import { queueStaffDigests } from './staff-digest';
 
@@ -26,10 +26,11 @@ export type WorkerJob = Exclude<
 export function jobRunners(
   db: Database,
   timeZone: string,
+  payLinks: PayLinkSettings,
 ): Readonly<Record<WorkerJob, () => Promise<number>>> {
   const today = () => todayIn(timeZone);
   return {
-    payment_reminders: () => queuePaymentReminders(db, timeZone),
+    payment_reminders: () => queuePaymentReminders(db, timeZone, payLinks),
     staff_digests: () => queueStaffDigests(db, today()),
     owner_summaries: () => queueOwnerSummaries(db, today()),
     follow_up_reminders: () => queueFollowUpReminders(db, today()),

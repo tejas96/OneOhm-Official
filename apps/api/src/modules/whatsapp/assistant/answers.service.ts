@@ -14,6 +14,7 @@ import { type SharedFile, sharedFileUrl } from '../file-links';
 import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
+import { payNowReplies } from './pay-buttons';
 import { rewardsText } from './rewards-answer';
 import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
 
@@ -107,6 +108,11 @@ export class AnswersService {
       blocks.push(list(lines));
     }
     return blocks.join('\n\n');
+  }
+
+  /** A "Pay now" message for each due amount; the text answer is sent first. */
+  payNow(customerId: string) {
+    return payNowReplies(this.db, this.env, customerId);
   }
 
   /** One line per milestone: paid, later, the bank's share, or due with a pay link. */

@@ -21,6 +21,13 @@ export type ChatReply =
       readonly caption?: string;
     }
   | {
+      /** One message with a button that opens a web page (WhatsApp keeps the label to 20). */
+      readonly kind: 'cta_url';
+      readonly body: string;
+      readonly label: string;
+      readonly url: string;
+    }
+  | {
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
@@ -108,6 +115,7 @@ function summary(reply: ChatReply): string {
   if (reply.kind === 'text') return reply.body;
   if (reply.kind === 'document')
     return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
+  if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
   const options =
     reply.kind === 'buttons'
       ? reply.buttons.map((button) => button.title)

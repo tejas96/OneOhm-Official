@@ -27,6 +27,7 @@ describe('assistant words in three languages', () => {
         expect(row.description.length, `${language} ${row.description}`).toBeLessThanOrEqual(72);
       }
       for (const button of [
+        words.WORDS.payNow,
         words.WORDS.callMeBack,
         words.WORDS.menuButton,
         words.WORDS.quoteYes,

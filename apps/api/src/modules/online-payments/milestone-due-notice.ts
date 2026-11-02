@@ -71,7 +71,7 @@ export async function tellCustomerMilestonesDue(
         milestone: milestone.label,
         project: project.code,
         ...(notice.message === 'payment_link'
-          ? { link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}` }
+          ? { link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`, payToken: token }
           : {}),
       },
       `milestone_due:${milestone.id}`,

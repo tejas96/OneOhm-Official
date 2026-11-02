@@ -49,6 +49,7 @@ export const MR: Words<AssistantWords> = {
     },
     allPaid: 'सर्व पेमेंट झाले आहे. धन्यवाद!',
     payHere: 'इथे भरा',
+    payNow: 'आता भरा',
     noDocuments: 'अजून कागदपत्रे नाहीत. प्रकल्प पुढे जाईल तशी ती इथे दिसतील.',
     linksExpire: (hours) => `लिंक ${hours} तास चालतील.`,
     askProblem:

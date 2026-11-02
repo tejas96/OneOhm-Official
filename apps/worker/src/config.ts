@@ -39,6 +39,9 @@ const schema = z.object({
   SMS_DELIVERY: z.enum(['log', 'msg91']).default('log'),
   MSG91_AUTH_KEY: z.string().optional(),
   MSG91_SMS_TEMPLATE_ID: z.string().optional(),
+  /** Signs the Pay now links in payment reminders; must equal the API's value. */
+  FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
+  PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
 });
 
 export type WorkerConfig = z.infer<typeof schema>;
