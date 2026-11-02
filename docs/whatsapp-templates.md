@@ -23,6 +23,12 @@ Fields: customer, number, total, subsidy, effective
 
 Examples: Ramesh Patil · QT-2026-0142 · ₹1,85,000 · ₹78,000 · ₹1,07,000
 
+**Header and buttons (file and buttons version):**
+- Header: **Document**. The app attaches the quote PDF. Use any sample PDF when you submit.
+- Quick reply 1: `Accept quote` (the app sends the payload `quote_accept:<id>`).
+- Quick reply 2: `I have a question` (payload `quote_ask:<id>`).
+- Keep the order. The app fills the buttons in this order.
+
 ### 2. `project_started`
 Fields: customer, project, capacity
 
@@ -44,6 +50,10 @@ Fields: customer, amount, milestone, project
 
 Examples: Ramesh Patil · ₹50,000 · Advance payment · PRJ-0087
 
+**Header (file version):**
+- Header: **Document**. The app attaches the receipt PDF. Use any sample PDF when you submit.
+- No buttons.
+
 ### 5. `payment_reminder` — Changed
 Fields: customer, amount, milestone, project
 
@@ -51,12 +61,24 @@ Fields: customer, amount, milestone, project
 
 Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087
 
+**Button (button version):**
+- One **Call to action → Visit website** button, type **Dynamic**.
+- Button text: `Pay now`.
+- URL: `https://<API host>/v1/pay/due/{{1}}`. Use the host in `API_PUBLIC_URL`.
+- Sample for `{{1}}`: any short text, for example `abc123`. The app fills `{{1}}` with the customer's pay token.
+- This is a button field, separate from the body fields.
+
 ### 6. `payment_link` — Changed
 Fields: customer, amount, milestone, project, link
 
 > Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.
 
 Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087 · https://rzp.io/l/abc123
+
+**Button (button version):**
+- Same as `payment_reminder`: one dynamic **Visit website** button.
+- Button text: `Pay now`.
+- URL: `https://<API host>/v1/pay/due/{{1}}`, where `{{1}}` is the pay token.
 
 ### 7. `service_update` — Changed
 Fields: customer, topic, status
@@ -172,6 +194,33 @@ inside it. The message is kept on one line (WhatsApp does not allow line breaks 
 > Hello {{1}}, you have a new message from {{2}} at OneOhm: "{{3}}" Please reply here to continue the chat.
 
 Examples: Ramesh Patil · Priya · Your net meter is fitted. Please check the reading tonight.
+
+## Templates with a file and buttons
+
+Four templates now have a second version with a file or buttons: `quotation_sent`,
+`payment_link`, `payment_reminder` and `payment_received`. The text bodies above do not change.
+Meta must approve the new version before the app can use it.
+
+Follow this order for each template:
+
+1. Submit the version with the file and buttons to Meta (same name, same body, plus the header
+   or buttons described above).
+2. Wait for Meta to approve it.
+3. In **Settings → Messages**, set the Meta name for the template.
+4. Turn on **Meta approved the version with file and buttons** for that template.
+
+If sends start to fail, turn that switch off. The app then goes back to the old text template.
+With the switch off, nothing breaks: the quote PDF link goes in the text and the pay link is a
+plain link.
+
+| Template | Header | Buttons |
+|---|---|---|
+| `quotation_sent` | Document (quote PDF) | Quick replies: Accept quote, I have a question |
+| `payment_link` | none | URL button "Pay now": `https://<API host>/v1/pay/due/{{1}}` |
+| `payment_reminder` | none | URL button "Pay now": `https://<API host>/v1/pay/due/{{1}}` |
+| `payment_received` | Document (receipt PDF) | none |
+
+To test all of this with real (test) keys, follow `docs/LIVE-TEST-WHATSAPP-RAZORPAY.md`.
 
 ## Not included yet
 
