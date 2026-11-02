@@ -79,6 +79,13 @@ const EN_WORDS = {
   /** Once a night, when a person has the chat and it is outside working hours. */
   nightReply: (name: string | null) =>
     `Thank you. We reply from 9:30 am to 6:30 pm. Your message is with ${name ?? 'our team'}.`,
+  /** A tap on "Accept quote": one check before it binds. Buttons keep 20 characters. */
+  quoteConfirm: (number: string, total: string) => `Accept quotation ${number} for ${total}?`,
+  quoteYes: 'Yes, accept',
+  quoteNotYet: 'Not yet',
+  quoteChanged: 'This quote has changed or is no longer open.',
+  quoteOwnerOnly: 'Only the customer’s own number can accept a quote.',
+  quoteThanks: 'Thank you. Our team will start your project and send the advance payment link.',
 } as const;
 
 const EN_RATINGS = [

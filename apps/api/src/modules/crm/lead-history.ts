@@ -13,7 +13,7 @@ type ActivityKind = 'note' | 'call' | 'visit' | 'whatsapp' | 'stage_change' | 'f
 export async function logLead(
   db: DatabaseExecutor,
   leadId: string,
-  userId: string,
+  userId: string | null,
   kind: ActivityKind,
   note: string,
   internal = false,
@@ -104,7 +104,8 @@ function followUpNote(current: LeadDetail, patch: LeadPatch): string | null {
 export async function autoMoveLead(
   db: DatabaseExecutor,
   leadId: string,
-  userId: string,
+  /** Null when the customer did it themselves (accepting on WhatsApp). */
+  userId: string | null,
   stage: 'quoted' | 'won',
   note: string,
 ): Promise<void> {

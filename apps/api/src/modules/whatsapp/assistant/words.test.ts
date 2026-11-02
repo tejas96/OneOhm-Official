@@ -29,6 +29,8 @@ describe('assistant words in three languages', () => {
       for (const button of [
         words.WORDS.callMeBack,
         words.WORDS.menuButton,
+        words.WORDS.quoteYes,
+        words.WORDS.quoteNotYet,
         words.MEDIA_WORDS.reportProblem,
         words.MEDIA_WORDS.talkToPerson,
       ])

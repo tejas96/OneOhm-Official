@@ -72,6 +72,12 @@ export const MR: Words<AssistantWords> = {
     passedToOwner: (name) => `धन्यवाद. ${name ?? 'आमची टीम'} तुम्हाला इथेच उत्तर देईल.`,
     nightReply: (name) =>
       `धन्यवाद. आम्ही सकाळी 9:30 ते संध्याकाळी 6:30 उत्तर देतो. तुमचा मेसेज ${name ? `${name} यांच्याकडे` : 'आमच्या टीमकडे'} आहे.`,
+    quoteConfirm: (number, total) => `कोटेशन ${number} (${total}) स्वीकारायचे?`,
+    quoteYes: 'हो, स्वीकारतो',
+    quoteNotYet: 'आत्ता नाही',
+    quoteChanged: 'हे कोटेशन बदलले आहे किंवा आता खुले नाही.',
+    quoteOwnerOnly: 'कोटेशन फक्त ग्राहकाच्या स्वतःच्या नंबरवरून स्वीकारता येते.',
+    quoteThanks: 'धन्यवाद. आमची टीम तुमचा प्रकल्प सुरू करेल आणि आगाऊ रकमेची पेमेंट लिंक पाठवेल.',
   },
   RATINGS: [
     { id: 'rate:5', title: 'खूप खूश', description: '5 पैकी 5' },
