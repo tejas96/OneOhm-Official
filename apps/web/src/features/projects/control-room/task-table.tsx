@@ -10,6 +10,7 @@ import {
 } from '@oneohm/design-system/web';
 import { Lock, RotateCcw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
+import { TaskTitleButton } from '../task-panel/task-title-button';
 import { TaskActions } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { isBlocked, isReturned, taskStatusKey, taskTone } from '../tasks/task-status';
@@ -20,9 +21,12 @@ function TaskCell({ task }: { readonly task: ProjectTask }) {
   return (
     <div className="flex min-w-0 items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className={cn('type-body font-medium', done ? 'text-ink-muted' : 'text-ink')}>
+        <TaskTitleButton
+          taskId={task.id}
+          className={cn('type-body font-medium', done ? 'text-ink-muted' : 'text-ink')}
+        >
           {task.title}
-        </span>
+        </TaskTitleButton>
         {isBlocked(task) && (
           <span className="flex min-w-0 items-center gap-1.5 type-body-sm font-normal text-ink-faint">
             <Lock aria-hidden className="size-3 shrink-0" />

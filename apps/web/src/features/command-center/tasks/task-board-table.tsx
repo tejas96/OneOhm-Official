@@ -9,6 +9,7 @@ import {
 } from '@oneohm/design-system/web';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { TaskTitleButton } from '@/features/projects/task-panel/task-title-button';
 
 const TONE: Readonly<Record<TaskBoardRow['status'], PillTone>> = {
   pending: 'neutral',
@@ -34,15 +35,15 @@ export function TaskBoardTable({ rows }: { readonly rows: readonly TaskBoardRow[
       primary: true,
       cell: (row) => (
         <span className="flex min-w-0 flex-col gap-0.5">
+          <TaskTitleButton taskId={row.id} className="type-body font-medium text-ink">
+            {row.title}
+          </TaskTitleButton>
           <Link
             href={`/projects/${row.projectId}?tab=tasks&layout=list`}
-            className="type-body font-medium text-ink hover:text-accent hover:underline"
+            className="type-body-sm text-ink-faint hover:text-accent hover:underline"
           >
-            {row.title}
-          </Link>
-          <span className="type-body-sm text-ink-faint">
             <span className="font-mono text-[0.75rem]">{row.projectCode}</span> · {row.projectName}
-          </span>
+          </Link>
         </span>
       ),
     },
