@@ -8,6 +8,7 @@ import {
   taskActivitySchema,
   taskUpdateInputSchema,
 } from '../schemas/task-flow.schema';
+import { setTaskPriorityInputSchema } from '../schemas/task-priority.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -17,6 +18,14 @@ const idParams = z.object({ id: idSchema });
  * a new due date, work sent back for correction, progress notes and the project history.
  */
 export const taskFlowRoutes = c.router({
+  setTaskPriority: {
+    method: 'POST',
+    path: '/tasks/:id/priority',
+    pathParams: idParams,
+    body: setTaskPriorityInputSchema,
+    responses: { 200: projectTaskSchema },
+    summary: 'Managers set a task priority; the change goes into the project history.',
+  },
   rescheduleTask: {
     method: 'POST',
     path: '/tasks/:id/reschedule',

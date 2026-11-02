@@ -83,6 +83,7 @@ export async function taskBoard(db: Database, query: TaskBoardQuery): Promise<Ta
         dueDate: projectTasks.dueDate,
         completedAt: projectTasks.completedAt,
         waitingParty: projectTasks.waitingParty,
+        priority: projectTasks.priority,
         assigneeUserId: projectTasks.assigneeUserId,
       },
       projectCode: projects.code,
@@ -115,6 +116,7 @@ export async function taskBoard(db: Database, query: TaskBoardQuery): Promise<Ta
       completedOn,
       daysLate: Math.max(0, daysBetween(task.dueDate, end)),
       waitingParty: task.waitingParty,
+      priority: task.priority,
       assignee:
         task.assigneeUserId && row.assigneeName
           ? { id: task.assigneeUserId, name: row.assigneeName }

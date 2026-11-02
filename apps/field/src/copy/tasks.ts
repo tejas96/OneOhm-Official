@@ -15,6 +15,7 @@ export const TODAY = {
   counts: { overdue: 'Overdue', today: 'Today', upcoming: 'Coming up' },
   quick: { newLead: 'New lead', quote: 'Quick quote' },
   groups: {
+    first: 'Do first',
     returned: 'Sent back to you',
     overdue: 'Overdue',
     today: 'Due today',
@@ -46,6 +47,29 @@ export const TASK = {
   stage: 'Stage',
   dueDate: 'Due',
   project: 'Project',
+  priority: {
+    label: 'Priority',
+    none: 'No priority',
+    urgent: 'Urgent',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+  },
+  /** Why a task sits where it does on Today (spec 3.3), in the same words as the web app. */
+  reason: {
+    priority: (level: string, by: string | null) =>
+      by ? `Marked ${level} by ${by}` : `Marked ${level}`,
+    blocksUrgent: 'Blocks an Urgent task',
+    overdue: (days: number) => `Overdue ${days} ${days === 1 ? 'day' : 'days'}`,
+    blocks: (count: number, payment: boolean) =>
+      `Blocks ${count} ${count === 1 ? 'task' : 'tasks'}${payment ? ' and a payment' : ''}`,
+    payment: 'Unlocks a payment',
+  },
+  blockingTitle: (count: number) => `Blocking ${count} ${count === 1 ? 'task' : 'tasks'}`,
+  blockingBody: 'These start when you finish this one.',
+  blocker: (title: string, who: string | null, daysLate: number) =>
+    `${title} · ${who ?? 'unassigned'}, ${daysLate === 0 ? 'on time' : `${daysLate} ${daysLate === 1 ? 'day' : 'days'} late`}`,
+  blockerOutside: (title: string, party: string) => `${title} · waiting on the ${party}`,
   blockedTitle: 'Finish these first',
   blockedBody: 'This task starts when the work before it is done.',
   captureTitle: 'What to record',

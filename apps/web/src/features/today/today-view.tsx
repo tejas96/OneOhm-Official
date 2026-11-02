@@ -83,18 +83,20 @@ export function TodayView() {
         )}
         {view === 'work' && query.data && total > 0 && (
           <nav aria-label={t('jump')} className="flex flex-wrap gap-2">
-            {TODAY_GROUPS.map((group) => (
-              <a
-                key={group}
-                href={`#${group}`}
-                className="inline-flex items-center gap-2 rounded-full bg-raised px-3.5 py-1.5 type-body-sm text-ink-muted shadow-e1 ring-1 ring-hairline/70 hover:text-ink"
-              >
-                <span className={cn('font-mono font-medium', ACCENT[group])}>
-                  {groups[group].length}
-                </span>
-                {t(`groups.${group}.title`)}
-              </a>
-            ))}
+            {TODAY_GROUPS.filter((group) => group !== 'first' || groups.first.length > 0).map(
+              (group) => (
+                <a
+                  key={group}
+                  href={`#${group}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-raised px-3.5 py-1.5 type-body-sm text-ink-muted shadow-e1 ring-1 ring-hairline/70 hover:text-ink"
+                >
+                  <span className={cn('font-mono font-medium', ACCENT[group])}>
+                    {groups[group].length}
+                  </span>
+                  {t(`groups.${group}.title`)}
+                </a>
+              ),
+            )}
           </nav>
         )}
       </header>

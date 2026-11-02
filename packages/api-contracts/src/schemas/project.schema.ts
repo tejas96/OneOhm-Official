@@ -6,6 +6,7 @@ import { attachmentSchema } from './document.schema';
 import { openLinkSchema } from './payment-link.schema';
 import { projectSetupSchema } from './project-team.schema';
 import { taskReturnSchema, taskReviewerSchema } from './task-flow.schema';
+import { taskBlockerSchema, taskPrioritySchema } from './task-priority.schema';
 
 export const epcStageSchema = z.enum(EPC_STAGES);
 export const waitingPartySchema = z.enum(WAITING_PARTIES);
@@ -136,6 +137,14 @@ export const projectTaskSchema = z.object({
   changeBlockers: z.array(z.string()),
   /** Open tasks that wait for this one to finish. */
   blocking: z.array(z.string()),
+  /** Earlier tasks this one waits for: who holds each, how late, or the outside party. */
+  blockers: z.array(taskBlockerSchema),
+  priority: taskPrioritySchema,
+  prioritySetBy: userRefSchema.nullable(),
+  /** Finishing it makes a payment milestone due. */
+  unlocksPayment: z.boolean(),
+  /** An open task waiting on this one is Urgent. */
+  blocksUrgent: z.boolean(),
   completedAt: instantSchema.nullable(),
 });
 export type ProjectTask = z.infer<typeof projectTaskSchema>;

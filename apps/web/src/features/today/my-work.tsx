@@ -10,6 +10,7 @@ import { TaskCard } from '../projects/tasks/task-card';
 import { TODAY_GROUPS, type TodayGroup } from './group-tasks';
 
 export const ACCENT: Readonly<Record<TodayGroup, string>> = {
+  first: 'text-overdue',
   overdue: 'text-overdue',
   today: 'text-accent',
   waiting: 'text-waiting',
@@ -32,7 +33,7 @@ export function MyWork({
     return <EmptyState icon={<Coffee />} title={t('clearTitle')} description={t('clearBody')} />;
   return (
     <>
-      {TODAY_GROUPS.map((group) => (
+      {TODAY_GROUPS.filter((group) => group !== 'first' || groups.first.length > 0).map((group) => (
         <section
           key={group}
           id={group}

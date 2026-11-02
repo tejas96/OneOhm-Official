@@ -1,4 +1,5 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
+import { doNextReason } from '@oneohm/domain';
 import { Card, StatusPill, Text, type Tone, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
 import { ChevronRight, CloudUpload, Lock } from 'lucide-react-native';
@@ -8,6 +9,7 @@ import { TASK } from '@/copy/tasks';
 import { UPLOADS } from '@/copy/uploads';
 import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { businessToday, daysBetween, relativeDate } from '@/lib/dates';
+import { priorityMark } from './priority-mark';
 
 export function toneOf(task: ProjectTask): Tone {
   if (task.status === 'in_review') return 'review';
@@ -45,12 +47,14 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
         </Text>
         <ChevronRight size={18} color={theme.colors.textTertiary} />
       </View>
+      <PriorityLabel task={task} />
       <Text variant="titleMd" numberOfLines={2}>
         {task.title}
       </Text>
       <Text variant="bodySm" tone="secondary" numberOfLines={1}>
         {task.projectName}
       </Text>
+      <DoNextLine task={task} />
       {waiting > 0 ? (
         <View style={styles.due}>
           <CloudUpload size={14} color={theme.status.waiting.fg} />
@@ -71,6 +75,41 @@ export function TaskRow({ task }: { readonly task: ProjectTask }) {
         </View>
       </View>
     </Card>
+  );
+}
+
+/** Priority as a small label above the title (spec 3.3: every task surface). */
+function PriorityLabel({ task }: { readonly task: ProjectTask }) {
+  const theme = useTheme();
+  const mark = task.status === 'completed' ? null : priorityMark(task.priority);
+  if (!mark) return null;
+  return (
+    <Text variant="label" color={mark.loud ? theme.status.overdue.fg : theme.colors.textSecondary}>
+      {mark.label}
+    </Text>
+  );
+}
+
+/** Why the task sits where it does, when there is a reason stronger than its due date. */
+function DoNextLine({ task }: { readonly task: ProjectTask }) {
+  const theme = useTheme();
+  if (task.status !== 'ready' && task.status !== 'pending' && task.status !== 'in_progress')
+    return null;
+  if (task.blockedBy.length > 0 || task.priority === undefined) return null;
+  const reason = doNextReason(task, businessToday());
+  let text: string | null = null;
+  if (reason.kind === 'priority')
+    text = TASK.reason.priority(TASK.priority[reason.priority], reason.by);
+  else if (reason.kind === 'blocksUrgent') text = TASK.reason.blocksUrgent;
+  else if (reason.kind === 'blocks')
+    text =
+      reason.count > 0 ? TASK.reason.blocks(reason.count, reason.payment) : TASK.reason.payment;
+  if (!text) return null;
+  const urgent = task.priority === 'urgent' || task.blocksUrgent;
+  return (
+    <Text variant="label" color={urgent ? theme.status.overdue.fg : theme.colors.accent}>
+      {text}
+    </Text>
   );
 }
 

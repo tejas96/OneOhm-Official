@@ -7,6 +7,7 @@ import {
   taskStatusSchema,
   waitingPartySchema,
 } from './project.schema';
+import { taskPrioritySchema } from './task-priority.schema';
 
 /**
  * Which tasks the cross-project list shows: open work, the overdue or unowned part of
@@ -52,6 +53,7 @@ export const taskBoardRowSchema = z.object({
   /** Past due today (open) or at finish (completed); 0 when on time. */
   daysLate: z.number().int(),
   waitingParty: waitingPartySchema,
+  priority: taskPrioritySchema,
   assignee: z.object({ id: idSchema, name: z.string() }).nullable(),
   contractorName: z.string().nullable(),
   managerName: z.string().nullable(),

@@ -2,7 +2,6 @@ import type { ProjectTask } from '@oneohm/api-contracts';
 import { CHECKLIST_TICKED } from '@oneohm/domain';
 import {
   Button,
-  Card,
   describeError,
   EmptyState,
   fieldErrorsOf,
@@ -15,7 +14,7 @@ import {
 } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Lock, ShieldCheck } from 'lucide-react-native';
+import { ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
@@ -34,6 +33,7 @@ import { useEvidence } from './evidence/use-evidence';
 import { FactsForm } from './facts-form';
 import { NoteSheet } from './note-sheet';
 import { RescheduleSheet } from './reschedule-sheet';
+import { TaskBlockersCard } from './task-blockers-card';
 import { TaskFooter } from './task-footer';
 import { TaskNotes } from './task-notes';
 import { statusLabel, toneOf } from './task-row';
@@ -102,13 +102,15 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
     close();
     if (router.canGoBack()) router.back();
   };
-  const blocked = task.blockedBy.length > 0;
   // The waiting sheet shows its own error, in front of the screen.
   const failure = actions.complete.error ?? actions.start.error ?? actions.approve.error;
   const errors = fieldErrorsOf(actions.complete.error);
   const meta = [
     { label: TASK.stage, value: COMMON.stages[task.stage] },
     { label: TASK.dueDate, value: shortDate(task.dueDate) },
+    ...(task.priority && task.priority !== 'none'
+      ? [{ label: TASK.priority.label, value: TASK.priority[task.priority] }]
+      : []),
   ];
 
   const footer = (
@@ -146,22 +148,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
         ) : null}
       </View>
       <TaskNotes task={task} />
-      {blocked ? (
-        <Card tone="sunken" style={styles.card}>
-          <View style={styles.row}>
-            <Lock size={16} color={theme.colors.textSecondary} />
-            <Text variant="titleMd">{TASK.blockedTitle}</Text>
-          </View>
-          <Text variant="bodySm" tone="secondary">
-            {TASK.blockedBody}
-          </Text>
-          {task.blockedBy.map((title) => (
-            <Text key={title} variant="body">
-              · {title}
-            </Text>
-          ))}
-        </Card>
-      ) : null}
+      <TaskBlockersCard task={task} />
       <SiteVisitCard task={task} />
       {task.approval && task.status !== 'in_review' ? (
         <View style={styles.row}>
@@ -238,7 +225,6 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
 const styles = StyleSheet.create({
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 16 },
   metaItem: { gap: 2 },
-  card: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   alert: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
 });

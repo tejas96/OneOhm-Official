@@ -5,7 +5,6 @@ import {
   projectFacts,
   projects,
   projectTasks,
-  taskDependencies,
   users,
 } from '@oneohm/database';
 import { checklistFor, factField, measurementsFor, missingEvidence } from '@oneohm/domain';
@@ -13,7 +12,8 @@ import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 import { assignmentStates } from './task-assignment-state';
-import { blockingTitles } from './task-blocking';
+import { blockerDetails } from './task-blockers';
+import { blockingTitles, loadTaskLinks } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
@@ -32,27 +32,15 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
     .where(where)
     .orderBy(asc(projectTasks.dueDate), asc(projectTasks.position));
   const ids = rows.map((row) => row.task.id);
-  const deps = ids.length
+  const { deps, dependents } = await loadTaskLinks(db, ids);
+  const setterIds = [
+    ...new Set(rows.map((row) => row.task.prioritySetByUserId).filter((id) => id !== null)),
+  ];
+  const setters = setterIds.length
     ? await db
-        .select({
-          taskId: taskDependencies.taskId,
-          title: projectTasks.title,
-          status: projectTasks.status,
-        })
-        .from(taskDependencies)
-        .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
-        .where(inArray(taskDependencies.taskId, ids))
-    : [];
-  const dependents = ids.length
-    ? await db
-        .select({
-          dependsOnTaskId: taskDependencies.dependsOnTaskId,
-          title: projectTasks.title,
-          status: projectTasks.status,
-        })
-        .from(taskDependencies)
-        .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.taskId))
-        .where(inArray(taskDependencies.dependsOnTaskId, ids))
+        .select({ id: users.id, fullName: users.fullName })
+        .from(users)
+        .where(inArray(users.id, setterIds))
     : [];
   const files = ids.length
     ? await db
@@ -151,6 +139,23 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
       ],
       changeBlockers: changes,
       blocking: blockingTitles(task.id, task.status === 'completed', dependents),
+      blockers:
+        task.status === 'completed'
+          ? []
+          : deps
+              .filter((dep) => dep.taskId === task.id && dep.status !== 'completed')
+              .map((dep) => blockerDetails(dep, today)),
+      priority: task.priority,
+      prioritySetBy: setters.find((user) => user.id === task.prioritySetByUserId) ?? null,
+      unlocksPayment: Boolean(task.onComplete) && task.onComplete !== 'project_operational',
+      blocksUrgent:
+        task.status !== 'completed' &&
+        dependents.some(
+          (dep) =>
+            dep.dependsOnTaskId === task.id &&
+            dep.status !== 'completed' &&
+            dep.priority === 'urgent',
+        ),
       completedAt: task.completedAt?.toISOString() ?? null,
     };
   });

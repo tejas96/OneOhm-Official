@@ -27,7 +27,9 @@ export function TaskBoard({
       done: all.filter((task) => task.status === 'completed').length,
       shown: all.filter((task) => inScope(task, scope, user.id)),
     };
-  }).filter((group) => (scope === 'mine' ? group.shown.length > 0 : group.all.length > 0));
+  }).filter((group) =>
+    scope === 'mine' || scope === 'blocked' ? group.shown.length > 0 : group.all.length > 0,
+  );
 
   return (
     <ol className="flex flex-col gap-8">

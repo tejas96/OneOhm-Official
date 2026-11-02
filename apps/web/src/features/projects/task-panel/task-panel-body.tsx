@@ -13,6 +13,7 @@ import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
 import { taskStatusKey, taskTone } from '../tasks/task-status';
 import { useTaskSteps } from '../tasks/use-task-steps';
+import { PriorityControl } from './priority-control';
 import {
   BlockersSection,
   ChecklistSection,
@@ -42,6 +43,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
     <div className="flex flex-col gap-6 px-5 py-5 sm:px-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 type-body-sm text-ink-muted">
+          <PriorityControl task={task} />
           <StatusPill
             tone={taskTone(task)}
             label={

@@ -8,8 +8,10 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
+import { DoNextReasonLine } from '@/features/today/do-next-reason';
 import { useCan } from '@/providers/current-user';
 import { TaskTitleButton } from '../task-panel/task-title-button';
+import { PriorityIcon } from './priority-icon';
 import { TaskActions } from './task-actions';
 import { ReworkBadge, TaskCardNotes } from './task-card-notes';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
@@ -76,14 +78,18 @@ export function TaskCard({
             </p>
           ))}
         <div className="flex items-start justify-between gap-3">
-          <TaskTitleButton
-            taskId={task.id}
-            className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}
-          >
-            {task.title}
-          </TaskTitleButton>
+          <span className="flex min-w-0 items-start gap-2">
+            {!done && <PriorityIcon priority={task.priority} className="mt-1" />}
+            <TaskTitleButton
+              taskId={task.id}
+              className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}
+            >
+              {task.title}
+            </TaskTitleButton>
+          </span>
           <TaskActions task={task} />
         </div>
+        {showProject && <DoNextReasonLine task={task} />}
         <TaskCardNotes task={task} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 type-body-sm text-ink-muted">
           <StatusPill

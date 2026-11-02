@@ -1,48 +1,7 @@
-import type { ProjectTask } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
 import { boardColumns, boardMove, columnStep } from './board-moves';
+import { taskOf } from './task-fixture';
 import type { TaskRights } from './task-menu';
-
-function taskOf(partial: Partial<ProjectTask>): ProjectTask {
-  return {
-    id: 't',
-    projectId: 'p',
-    projectCode: 'P-1',
-    projectName: 'Project',
-    templateKey: 'k',
-    title: 'Task',
-    description: null,
-    stage: 'survey',
-    roleKey: 'execution',
-    assignee: { id: 'me', fullName: 'Me' },
-    proposedAssignee: null,
-    outsideTeam: false,
-    status: 'ready',
-    waitingParty: 'internal',
-    startDate: '2026-10-01',
-    dueDate: '2026-11-10',
-    overdue: false,
-    customerVisible: false,
-    approval: false,
-    reviewer: 'approvers',
-    reviewerIds: [],
-    returned: null,
-    reworkCount: 0,
-    evidence: [],
-    captures: [],
-    captureFields: [],
-    measurements: [],
-    knownFacts: {},
-    checklist: [],
-    attachments: [],
-    missingEvidence: [],
-    blockedBy: [],
-    changeBlockers: [],
-    blocking: [],
-    completedAt: null,
-    ...partial,
-  } as ProjectTask;
-}
 
 const worker: TaskRights = { work: true, manage: false, assign: false, review: false };
 const reviewer: TaskRights = { work: false, manage: false, assign: false, review: true };

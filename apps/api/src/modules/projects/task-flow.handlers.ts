@@ -1,9 +1,20 @@
+import type { TaskPriority } from '@oneohm/domain';
 import type { Actor } from '../../common/auth/actor';
 import type { TaskFlowService } from './task-flow.service';
 
 /** Route handlers for the task-flow routes, spread into the tasks controller. */
 export function taskFlowHandlers(flow: TaskFlowService, actor: Actor) {
   return {
+    setTaskPriority: async ({
+      params,
+      body,
+    }: {
+      params: { id: string };
+      body: { priority: TaskPriority };
+    }) => ({
+      status: 200 as const,
+      body: await flow.setPriority(actor, params.id, body.priority),
+    }),
     rescheduleTask: async ({ params, body }: { params: { id: string }; body: RescheduleBody }) => ({
       status: 200 as const,
       body: await flow.reschedule(actor, params.id, body),

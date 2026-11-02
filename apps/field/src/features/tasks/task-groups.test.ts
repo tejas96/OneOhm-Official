@@ -1,6 +1,6 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { groupOf, groupTasks, onTimeShare } from './task-groups';
+import { groupOf, groupTasks, onTimeShare, TASK_GROUPS } from './task-groups';
 
 function task(overrides: Partial<ProjectTask>): ProjectTask {
   return {
@@ -36,6 +36,11 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     blockedBy: [],
     changeBlockers: [],
     blocking: [],
+    blockers: [],
+    priority: 'none',
+    prioritySetBy: null,
+    unlocksPayment: false,
+    blocksUrgent: false,
     completedAt: null,
     attachments: [],
     missingEvidence: [],
@@ -95,5 +100,32 @@ describe('onTimeShare', () => {
 
   it('is full with nothing assigned', () => {
     expect(onTimeShare(groupTasks([], TODAY))).toBe(1);
+  });
+});
+
+describe('do-next order', () => {
+  it('orders the overdue group by the do-next rule', () => {
+    const groups = groupTasks(
+      [
+        task({ id: 'plain', overdue: true, dueDate: '2026-10-20' }),
+        task({ id: 'high', overdue: true, dueDate: '2026-10-30', priority: 'high' }),
+      ],
+      TODAY,
+    );
+    expect(groups.overdue.map((entry) => entry.id)).toEqual(['high', 'plain']);
+  });
+});
+
+describe('do first', () => {
+  it('lifts a startable urgent task above overdue work', () => {
+    const groups = groupTasks(
+      [
+        task({ id: 'late', overdue: true, dueDate: '2026-10-20' }),
+        task({ id: 'urgent', dueDate: '2026-11-09', priority: 'urgent' }),
+      ],
+      TODAY,
+    );
+    expect(groups.first.map((entry) => entry.id)).toEqual(['urgent']);
+    expect(TASK_GROUPS[0]).toBe('first');
   });
 });
