@@ -2,7 +2,7 @@
 
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { cn } from '@oneohm/design-system/web';
-import { ArrowRight, Circle, CircleCheck, Lock } from 'lucide-react';
+import { ArrowRight, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { blockingOf } from '../tasks/task-status';
@@ -95,35 +95,6 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
         </PanelSection>
       )}
     </>
-  );
-}
-
-/** Items to tick; they are ticked in the complete form, so this only shows them. */
-export function ChecklistSection({ task }: { readonly task: ProjectTask }) {
-  const t = useTranslations('projects.panel');
-  if (task.checklist.length === 0) return null;
-  const done = task.checklist.filter((item) => item.done).length;
-  return (
-    <PanelSection title={t('checklist', { done, total: task.checklist.length })}>
-      <ul className="flex flex-col gap-1.5">
-        {task.checklist.map((item) => (
-          <li
-            key={item.key}
-            className={cn(
-              'flex items-start gap-2 type-body',
-              item.done ? 'text-ink-muted' : 'text-ink',
-            )}
-          >
-            {item.done ? (
-              <CircleCheck aria-hidden className="mt-1 size-3.5 shrink-0 text-on-track" />
-            ) : (
-              <Circle aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
-            )}
-            {item.label}
-          </li>
-        ))}
-      </ul>
-    </PanelSection>
   );
 }
 

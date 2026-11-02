@@ -539,7 +539,9 @@
         "customer": "the customer",
         "bank": "the bank",
         "discom": "the DISCOM"
-      }
+      },
+      "tickFailed": "Could not save that tick",
+      "tickOthers": "Only the person doing this task, or a manager, can tick it."
     },
     "kanban": {
       "drag": "Move {title}",

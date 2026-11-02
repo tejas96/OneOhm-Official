@@ -39,6 +39,7 @@ import { TaskFooter } from './task-footer';
 import { TaskNotes } from './task-notes';
 import { statusLabel, toneOf } from './task-row';
 import { TaskTimeline } from './task-timeline';
+import { useChecklistTicks } from './use-checklist-ticks';
 import { useTaskActions } from './use-task-actions';
 import { WaitingSheet } from './waiting-sheet';
 
@@ -78,16 +79,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const actions = useTaskActions(task);
   const evidence = useEvidence(task);
   const [facts, setFacts] = useState<Record<string, string>>(() => ({ ...task.knownFacts }));
-  const [ticked, setTicked] = useState<ReadonlySet<string>>(
-    () => new Set(task.checklist.filter((item) => item.done).map((item) => item.key)),
-  );
-  const toggle = (key: string) =>
-    setTicked((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const { ticked, toggle } = useChecklistTicks(task, canWork);
   const [note, setNote] = useState('');
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const close = () => setSheet(null);
