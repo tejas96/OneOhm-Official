@@ -10,6 +10,7 @@ import {
   users,
 } from '@oneohm/database';
 import { and, eq, gte, inArray, lte, ne, notInArray, or, sql } from 'drizzle-orm';
+import { onLiveProject } from './live-projects';
 
 interface DayCounts {
   readonly overdue: number;
@@ -31,7 +32,13 @@ async function ownershipCounts(db: Database, userId: string, today: string) {
       updatedAt: projectTasks.updatedAt,
     })
     .from(projectTasks)
-    .where(and(eq(projectTasks.assigneeUserId, userId), ne(projectTasks.status, 'completed')));
+    .where(
+      and(
+        eq(projectTasks.assigneeUserId, userId),
+        ne(projectTasks.status, 'completed'),
+        onLiveProject(db),
+      ),
+    );
   if (mine.length === 0) return { stale: 0, urgent: 0, blocking: 0 };
   const fresh = await taskFreshness(db, mine, today);
   const holding = await db
@@ -84,7 +91,13 @@ async function countsFor(db: Database, userId: string, today: string): Promise<D
       today: sql<number>`count(*) filter (where ${projectTasks.dueDate} = ${today})`,
     })
     .from(projectTasks)
-    .where(and(eq(projectTasks.assigneeUserId, userId), ne(projectTasks.status, 'completed')));
+    .where(
+      and(
+        eq(projectTasks.assigneeUserId, userId),
+        ne(projectTasks.status, 'completed'),
+        onLiveProject(db),
+      ),
+    );
   const [followUps] = await db
     .select({ count: sql<number>`count(*)` })
     .from(leads)

@@ -7,6 +7,7 @@ import {
   taskFreshness,
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm';
+import { onLiveProject } from './live-projects';
 
 interface ManagedTask {
   readonly id: string;
@@ -35,7 +36,7 @@ function openTasks(db: Database, where = open) {
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
-    .where(and(where, isNotNull(projectTasks.assigneeUserId)));
+    .where(and(where, isNotNull(projectTasks.assigneeUserId), onLiveProject(db)));
 }
 
 /**

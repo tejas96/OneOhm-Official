@@ -5,6 +5,16 @@ import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
 
+/** Stable keys for lines that may repeat (two tasks can share a title). */
+const keyed = (lines: readonly string[]) => {
+  const seen = new Map<string, number>();
+  return lines.map((text) => {
+    const count = (seen.get(text) ?? 0) + 1;
+    seen.set(text, count);
+    return { key: `${text}#${count}`, text };
+  });
+};
+
 const partyName = (party: keyof typeof COMMON.parties) =>
   party === 'discom' ? COMMON.parties[party] : COMMON.parties[party].toLowerCase();
 
@@ -40,9 +50,9 @@ export function TaskBlockersCard({ task }: { readonly task: ProjectTask }) {
           <Text variant="bodySm" tone="secondary">
             {TASK.blockedBody}
           </Text>
-          {waitingFor.map((line, index) => (
-            <Text key={`${index}-${line}`} variant="body">
-              · {line}
+          {keyed(waitingFor).map((line) => (
+            <Text key={line.key} variant="body">
+              · {line.text}
             </Text>
           ))}
         </Card>
@@ -56,9 +66,9 @@ export function TaskBlockersCard({ task }: { readonly task: ProjectTask }) {
           <Text variant="bodySm" tone="secondary">
             {TASK.blockingBody}
           </Text>
-          {blocking.map((title, index) => (
-            <Text key={`${index}-${title}`} variant="body">
-              · {title}
+          {keyed(blocking).map((line) => (
+            <Text key={line.key} variant="body">
+              · {line.text}
             </Text>
           ))}
         </Card>
