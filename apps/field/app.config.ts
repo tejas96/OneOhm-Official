@@ -101,10 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         imageWidth: 96,
         resizeMode: 'contain',
         backgroundColor: LIGHT_CANVAS,
-        dark: {
-          image: './assets/images/splash-icon.png',
-          backgroundColor: DARK_CANVAS,
-        },
+        dark: { image: './assets/images/splash-icon.png', backgroundColor: DARK_CANVAS },
       },
     ],
   ],

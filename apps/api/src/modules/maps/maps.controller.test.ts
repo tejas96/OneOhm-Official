@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadEnvironment } from '../../config/environment';
-import { browserKeyFrom } from './maps.controller';
+import { browserKeyFrom, mapsConfigFor } from './maps.controller';
 
 const base = { DATABASE_URL: 'postgres://x', NODE_ENV: 'test' } as NodeJS.ProcessEnv;
 const keyFor = (extra: Record<string, string>) =>
@@ -18,5 +18,15 @@ describe('maps config key', () => {
   });
   it('prefers the browser key', () => {
     expect(keyFor({ GOOGLE_MAPS_API_KEY: 'k', GOOGLE_MAPS_BROWSER_KEY: 'b' })).toBe('b');
+  });
+});
+
+describe('maps config access', () => {
+  const env = loadEnvironment({ ...base, GOOGLE_MAPS_API_KEY: 'k' });
+  it('gives staff the key', () => {
+    expect(mapsConfigFor({ kind: 'staff' }, env)).toEqual({ browserKey: 'k' });
+  });
+  it.each(['partner', 'reseller'] as const)('refuses a %s', (kind) => {
+    expect(() => mapsConfigFor({ kind }, env)).toThrow();
   });
 });

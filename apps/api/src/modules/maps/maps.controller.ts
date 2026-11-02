@@ -14,6 +14,15 @@ export function browserKeyFrom(
   return env.GOOGLE_MAPS_BROWSER_KEY ?? env.GOOGLE_MAPS_API_KEY ?? null;
 }
 
+/** Staff get the key; every other kind of person is refused. */
+export function mapsConfigFor(
+  actor: Pick<Actor, 'kind'>,
+  env: Pick<Environment, 'GOOGLE_MAPS_BROWSER_KEY' | 'GOOGLE_MAPS_API_KEY'>,
+): { browserKey: string | null } {
+  if (actor.kind !== 'staff') throw forbidden();
+  return { browserKey: browserKeyFrom(env) };
+}
+
 /** Map settings for signed-in staff. Customers and partners get nothing. */
 @Controller()
 export class MapsController {
@@ -23,8 +32,7 @@ export class MapsController {
   handler(@CurrentActor() actor: Actor) {
     return tsRestHandler(apiContract.maps, {
       config: async () => {
-        if (actor.kind !== 'staff') throw forbidden();
-        return { status: 200, body: { browserKey: browserKeyFrom(this.env) } };
+        return { status: 200, body: mapsConfigFor(actor, this.env) };
       },
     });
   }
