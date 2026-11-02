@@ -5,6 +5,7 @@ export * from './evidence';
 export * from './fact-fields';
 export * from './generate-tasks';
 export * from './project-assignment';
+export * from './staleness';
 export * from './task-checklists';
 export * from './task-descriptions';
 export * from './task-library';
