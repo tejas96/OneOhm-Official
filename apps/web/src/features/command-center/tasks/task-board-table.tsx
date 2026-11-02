@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TaskTitleButton } from '@/features/projects/task-panel/task-title-button';
+import { PriorityIcon } from '@/features/projects/tasks/priority-icon';
 
 const TONE: Readonly<Record<TaskBoardRow['status'], PillTone>> = {
   pending: 'neutral',
@@ -35,9 +36,14 @@ export function TaskBoardTable({ rows }: { readonly rows: readonly TaskBoardRow[
       primary: true,
       cell: (row) => (
         <span className="flex min-w-0 flex-col gap-0.5">
-          <TaskTitleButton taskId={row.id} className="type-body font-medium text-ink">
-            {row.title}
-          </TaskTitleButton>
+          <span className="flex min-w-0 items-start gap-1.5">
+            {row.status !== 'completed' && (
+              <PriorityIcon priority={row.priority} className="mt-0.5" />
+            )}
+            <TaskTitleButton taskId={row.id} className="type-body font-medium text-ink">
+              {row.title}
+            </TaskTitleButton>
+          </span>
           <Link
             href={`/projects/${row.projectId}?tab=tasks&layout=list`}
             className="type-body-sm text-ink-faint hover:text-accent hover:underline"

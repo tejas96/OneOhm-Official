@@ -30,6 +30,14 @@ describe('Task priority', () => {
     expect(await priorityLines(task.id)).toHaveLength(1);
   });
 
+  it('the Command Center task board shows the priority', async () => {
+    const task = (await project(admin, sale.project.id)).tasks[0] as ProjectTask;
+    const board = await admin.get<{ rows: { id: string; priority?: string }[] }>(
+      `/command-center/tasks?projectId=${sale.project.id}`,
+    );
+    expect(board.rows.find((row) => row.id === task.id)?.priority).toBe('urgent');
+  });
+
   it('setting the same priority twice writes one history line', async () => {
     const task = (await project(admin, sale.project.id)).tasks[0] as ProjectTask;
     await admin.post(`/tasks/${task.id}/priority`, { priority: 'urgent' });
