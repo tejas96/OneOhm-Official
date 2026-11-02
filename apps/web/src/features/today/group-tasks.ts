@@ -1,7 +1,7 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
-import { rankTasks } from '@oneohm/domain';
+import { isDoFirst, rankTasks } from '@oneohm/domain';
 
-export const TODAY_GROUPS = ['overdue', 'today', 'waiting', 'upcoming'] as const;
+export const TODAY_GROUPS = ['first', 'overdue', 'today', 'waiting', 'upcoming'] as const;
 export type TodayGroup = (typeof TODAY_GROUPS)[number];
 
 /**
@@ -10,6 +10,7 @@ export type TodayGroup = (typeof TODAY_GROUPS)[number];
  */
 export function groupOf(task: ProjectTask, today: string): TodayGroup {
   if (task.status === 'waiting' || task.status === 'in_review') return 'waiting';
+  if (isDoFirst(task)) return 'first';
   if (task.overdue) return 'overdue';
   if (task.dueDate <= today) return 'today';
   return 'upcoming';
@@ -20,6 +21,7 @@ export function groupTasks(
   today: string,
 ): Record<TodayGroup, ProjectTask[]> {
   const groups: Record<TodayGroup, ProjectTask[]> = {
+    first: [],
     overdue: [],
     today: [],
     waiting: [],
@@ -30,6 +32,7 @@ export function groupTasks(
     groups[groupOf(task, today)].push(task);
   }
   // The person's own work in do-next order (spec 3.3); work others hold, by due date.
+  groups.first = rankTasks(groups.first, today);
   groups.overdue = rankTasks(groups.overdue, today);
   groups.today = rankTasks(groups.today, today);
   groups.upcoming = rankTasks(groups.upcoming, today);

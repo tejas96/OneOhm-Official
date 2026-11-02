@@ -50,6 +50,16 @@ function compare(left: RankInput, right: RankInput): number {
   );
 }
 
+/**
+ * Work to lift above everything else on Today (spec 3.3): it can start now and is
+ * Urgent, or it holds up an Urgent task.
+ */
+export function isDoFirst(
+  task: Pick<RankInput, 'priority' | 'blocksUrgent' | 'blockedBy'>,
+): boolean {
+  return task.blockedBy.length === 0 && (task.priority === 'urgent' || task.blocksUrgent);
+}
+
 /** One person's tasks in the order to do them (spec 3.3); the input is left as it was. */
 export function rankTasks<T extends RankInput>(tasks: readonly T[], _today: string): T[] {
   return [...tasks].sort(compare);

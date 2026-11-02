@@ -1,8 +1,9 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
-import { rankTasks } from '@oneohm/domain';
+import { isDoFirst, rankTasks } from '@oneohm/domain';
 
 /** Shown in this order: what needs the person's attention first (PRD 4.1). */
 export const TASK_GROUPS = [
+  'first',
   'returned',
   'help',
   'overdue',
@@ -21,6 +22,7 @@ export type TaskGroup = (typeof TASK_GROUPS)[number];
 export function groupOf(task: ProjectTask, today: string): TaskGroup {
   if (task.status === 'in_review') return 'review';
   if (task.status === 'waiting') return task.waitingParty === 'internal' ? 'help' : 'waiting';
+  if (isDoFirst(task)) return 'first';
   if (task.returned) return 'returned';
   if (task.overdue || task.dueDate < today) return 'overdue';
   if (task.dueDate === today) return 'today';
@@ -48,7 +50,7 @@ export function groupTasks(
 
 /** Share of the person's own open work that is not overdue (0–1). */
 export function onTimeShare(groups: Readonly<Record<TaskGroup, readonly ProjectTask[]>>): number {
-  const flagged = [...groups.returned, ...groups.help];
+  const flagged = [...groups.first, ...groups.returned, ...groups.help];
   const own = groups.overdue.length + groups.today.length + groups.upcoming.length + flagged.length;
   if (own === 0) return 1;
   const late = groups.overdue.length + flagged.filter((task) => task.overdue).length;

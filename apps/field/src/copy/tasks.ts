@@ -15,6 +15,7 @@ export const TODAY = {
   counts: { overdue: 'Overdue', today: 'Today', upcoming: 'Coming up' },
   quick: { newLead: 'New lead', quote: 'Quick quote' },
   groups: {
+    first: 'Do first',
     returned: 'Sent back to you',
     overdue: 'Overdue',
     today: 'Due today',

@@ -8,6 +8,10 @@
     "clearTitle": "A clear day",
     "clearBody": "Nothing is assigned to you right now. New work appears here as projects move.",
     "groups": {
+      "first": {
+        "title": "Do first",
+        "empty": "Nothing urgent right now."
+      },
       "overdue": {
         "title": "Overdue",
         "empty": "Nothing is late. Well kept."

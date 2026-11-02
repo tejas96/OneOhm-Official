@@ -1,6 +1,6 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { groupOf, groupTasks, onTimeShare } from './task-groups';
+import { groupOf, groupTasks, onTimeShare, TASK_GROUPS } from './task-groups';
 
 function task(overrides: Partial<ProjectTask>): ProjectTask {
   return {
@@ -108,10 +108,24 @@ describe('do-next order', () => {
     const groups = groupTasks(
       [
         task({ id: 'plain', overdue: true, dueDate: '2026-10-20' }),
-        task({ id: 'urgent', overdue: true, dueDate: '2026-10-30', priority: 'urgent' }),
+        task({ id: 'high', overdue: true, dueDate: '2026-10-30', priority: 'high' }),
       ],
       TODAY,
     );
-    expect(groups.overdue.map((entry) => entry.id)).toEqual(['urgent', 'plain']);
+    expect(groups.overdue.map((entry) => entry.id)).toEqual(['high', 'plain']);
+  });
+});
+
+describe('do first', () => {
+  it('lifts a startable urgent task above overdue work', () => {
+    const groups = groupTasks(
+      [
+        task({ id: 'late', overdue: true, dueDate: '2026-10-20' }),
+        task({ id: 'urgent', dueDate: '2026-11-09', priority: 'urgent' }),
+      ],
+      TODAY,
+    );
+    expect(groups.first.map((entry) => entry.id)).toEqual(['urgent']);
+    expect(TASK_GROUPS[0]).toBe('first');
   });
 });
