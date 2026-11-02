@@ -18,6 +18,7 @@ import { pickDocuments } from '@/features/tasks/evidence/pick-documents';
 import { type PhotoSource, pickPhotos } from '@/features/tasks/evidence/pick-photos';
 import { useUploadQueue } from '@/features/uploads/upload-queue';
 import { businessToday } from '@/lib/dates';
+import { useBusy } from '@/lib/use-busy';
 import { PAPER_CATEGORIES, type PaperCategory, paperName } from './paper-name';
 
 /**
@@ -39,6 +40,7 @@ export function LeadPaperSheet({
   const toast = useToast();
   const [category, setCategory] = useState<PaperCategory>('electricity_bill');
   const [notice, setNotice] = useState<string | null>(null);
+  const picker = useBusy();
 
   const keep = async (files: readonly UploadableFile[], tooLarge: readonly string[] = []) => {
     if (tooLarge.length > 0) setNotice(LEAD_PAPERS.tooLarge(tooLarge.join(', ')));
@@ -60,20 +62,22 @@ export function LeadPaperSheet({
     toast(LEAD_PAPERS.added(files.length));
     if (tooLarge.length === 0) onClose();
   };
-  const photograph = async (source: PhotoSource) => {
-    setNotice(null);
-    const picked = await pickPhotos(source);
-    if (picked === 'denied') {
-      setNotice(source === 'camera' ? LEAD_PAPERS.cameraDenied : LEAD_PAPERS.libraryDenied);
-      return;
-    }
-    await keep(picked.map((photo) => photo.file));
-  };
-  const pickFile = async () => {
-    setNotice(null);
-    const picked = await pickDocuments();
-    await keep(picked.files, picked.tooLarge);
-  };
+  const photograph = (source: PhotoSource) =>
+    picker.run(async () => {
+      setNotice(null);
+      const picked = await pickPhotos(source);
+      if (picked === 'denied') {
+        setNotice(source === 'camera' ? LEAD_PAPERS.cameraDenied : LEAD_PAPERS.libraryDenied);
+        return;
+      }
+      await keep(picked.map((photo) => photo.file));
+    });
+  const pickFile = () =>
+    picker.run(async () => {
+      setNotice(null);
+      const picked = await pickDocuments();
+      await keep(picked.files, picked.tooLarge);
+    });
 
   return (
     <Sheet
@@ -99,6 +103,7 @@ export function LeadPaperSheet({
           label={LEAD_PAPERS.takePhoto}
           variant="secondary"
           icon={<Camera size={16} color={theme.colors.textPrimary} />}
+          disabled={picker.busy}
           onPress={() => void photograph('camera')}
           style={styles.flex}
         />
@@ -106,6 +111,7 @@ export function LeadPaperSheet({
           label={LEAD_PAPERS.choosePhoto}
           variant="secondary"
           icon={<Images size={16} color={theme.colors.textPrimary} />}
+          disabled={picker.busy}
           onPress={() => void photograph('library')}
           style={styles.flex}
         />
@@ -115,6 +121,7 @@ export function LeadPaperSheet({
         variant="secondary"
         icon={<FilePlus size={16} color={theme.colors.textPrimary} />}
         accessibilityHint={LEAD_PAPERS.chooseFileHint}
+        disabled={picker.busy}
         onPress={() => void pickFile()}
         fullWidth
       />

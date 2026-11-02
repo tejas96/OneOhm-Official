@@ -22,10 +22,11 @@ export const REQUEST_MEDIA = {
   videoTooLong: (seconds: number) =>
     `This video is longer than ${seconds} seconds. Please pick a shorter one.`,
   videoTooLarge: 'This video is too large. Please record a shorter one.',
-  filesFailed: (count: number) =>
-    count === 1
-      ? 'Sent, but 1 file could not be uploaded.'
-      : `Sent, but ${count} files could not be uploaded.`,
+  /** After a request is raised: what did not upload, e.g. "2 photos, the video". */
+  notUploaded: (what: string) =>
+    `Sent. These could not be uploaded: ${what}. Please show them to the team when they call.`,
+  failedVideo: 'the video',
+  failedVoice: 'the voice note',
   hasVideo: 'Video',
   hasVoiceNote: 'Voice note',
   visitOn: (date: string) => `Technician visit on ${date}`,

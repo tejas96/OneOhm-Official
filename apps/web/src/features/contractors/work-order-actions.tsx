@@ -101,11 +101,11 @@ function ActionDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const done = await form.run(call);
-    if (!done) return;
-    await refresh();
-    toast({ tone: 'success', title: t('done') });
-    onClose();
+    await form.run(call, async () => {
+      await refresh();
+      toast({ tone: 'success', title: t('done') });
+      onClose();
+    });
   };
 
   const errors = form.fieldErrors;

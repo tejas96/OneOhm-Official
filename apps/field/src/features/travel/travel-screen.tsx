@@ -5,6 +5,7 @@ import {
   describeError,
   ErrorState,
   Field,
+  fieldErrorsOf,
   formatInr,
   Input,
   LoadingState,
@@ -99,6 +100,7 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
   const { claim, cancel } = useClaimActions();
   const [note, setNote] = useState('');
   const [projectId, setProjectId] = useState(() => defaultProject(day));
+  const errors = fieldErrorsOf(claim.error);
   const live = day.claim && (day.claim.status === 'pending' || day.claim.status === 'approved');
   if (live && day.claim) {
     const state = stateOf(day.claim);
@@ -114,13 +116,13 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
             variant="quiet"
             size="sm"
             pending={cancel.isPending}
-            onPress={() =>
-              day.claim &&
+            onPress={() => {
+              if (!day.claim || cancel.isPending) return;
               cancel.mutate(day.claim.id, {
                 onSuccess: () => toast(TRAVEL.cancelled),
                 onError: (error) => toast(describeError(error)),
-              })
-            }
+              });
+            }}
           />
         ) : null}
       </View>
@@ -135,25 +137,40 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
   }
   return (
     <View style={styles.form}>
-      <ClaimProject day={day} value={projectId} onChange={setProjectId} />
-      <Field label={TRAVEL.note} hint={TRAVEL.noteHint} optional={COMMON.optional}>
-        <Input value={note} onChangeText={setNote} maxLength={500} />
+      <ClaimProject day={day} value={projectId} onChange={setProjectId} error={errors.projectId} />
+      <Field
+        label={TRAVEL.note}
+        hint={TRAVEL.noteHint}
+        optional={COMMON.optional}
+        error={errors.note}
+      >
+        <Input
+          value={note}
+          onChangeText={setNote}
+          maxLength={500}
+          invalid={Boolean(errors.note)}
+          accessibilityLabel={TRAVEL.note}
+        />
       </Field>
       <Button
         label={TRAVEL.claim}
         icon={<ReceiptIndianRupee size={18} color={theme.colors.onAccent} />}
         pending={claim.isPending}
         fullWidth
-        onPress={() =>
+        onPress={() => {
+          if (claim.isPending) return;
+          // A failure shows below, in place, rather than as a passing toast.
           claim.mutate(
             { workDate: day.workDate, note: note.trim() || null, projectId },
-            {
-              onSuccess: () => toast(TRAVEL.claimed),
-              onError: (error) => toast(describeError(error)),
-            },
-          )
-        }
+            { onSuccess: () => toast(TRAVEL.claimed) },
+          );
+        }}
       />
+      {claim.error ? (
+        <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
+          {describeError(claim.error)}
+        </Text>
+      ) : null}
     </View>
   );
 }

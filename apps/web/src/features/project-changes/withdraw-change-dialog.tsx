@@ -24,11 +24,14 @@ export function WithdrawChangeDialog({
 
   const confirm = async () => {
     if (!change) return;
-    const done = await form.run(() => withdraw(change.id, reason));
-    if (!done) return;
-    toast({ tone: 'success', title: t('done', { number: change.number }) });
-    setReason('');
-    onClose();
+    await form.run(
+      () => withdraw(change.id, reason),
+      () => {
+        toast({ tone: 'success', title: t('done', { number: change.number }) });
+        setReason('');
+        onClose();
+      },
+    );
   };
 
   return (

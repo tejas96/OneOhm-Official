@@ -20,6 +20,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { assertVariantOffered } from '../business-settings/project-variant-check';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { raiseProjectNameChange } from '../discom/change-request-raise';
+import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
@@ -101,12 +102,11 @@ export class ProjectCreationService {
       .select()
       .from(products)
       .where(eq(products.id, quotation.panelProductId));
-    const [inverter] = await this.db
-      .select()
-      .from(products)
-      .where(eq(products.id, quotation.inverterProductId));
-    if (!property || !customer || !panel || !inverter) throw notFound('The quotation details');
-    return { property, customer, panel, inverter };
+    const inverters = await inverterProducts(this.db, await invertersOf(this.db, quotation.id));
+    if (!property || !customer || !panel || inverters.length === 0) {
+      throw notFound('The quotation details');
+    }
+    return { property, customer, panel, inverters };
   }
 
   async create(actor: Actor, input: NewProject): Promise<CreatedProject> {
@@ -124,7 +124,7 @@ export class ProjectCreationService {
         targetFinishDate: 'Pick a date on or after the start date.',
       });
     const partner = await loadLoanPartner(this.db, input);
-    const { property, customer, panel, inverter } = await this.parts(quotation);
+    const { property, customer, panel, inverters } = await this.parts(quotation);
 
     const type = PROJECT_TYPE[quotation.subsidyCategory];
     const battery = input.battery || quotation.batteryProductId !== null;
@@ -209,7 +209,7 @@ export class ProjectCreationService {
       );
       if (partner) await setUpProjectLoan(tx, project.id, partner, actor.userId);
 
-      const facts = initialFacts(customer, property, quotation, panel, inverter, input.startDate);
+      const facts = initialFacts(customer, property, quotation, panel, inverters, input.startDate);
       await tx
         .insert(projectFacts)
         .values(

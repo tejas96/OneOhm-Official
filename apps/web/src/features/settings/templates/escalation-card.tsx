@@ -37,12 +37,13 @@ export function EscalationCard() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft) return;
-    const saved = await form.run(() =>
-      expectStatus(api.projectTeam.updateEscalationPolicy({ body: draft }), 200),
+    await form.run(
+      () => expectStatus(api.projectTeam.updateEscalationPolicy({ body: draft }), 200),
+      (saved) => {
+        client.setQueryData(KEY, saved);
+        toast({ title: t('saved'), tone: 'success' });
+      },
     );
-    if (!saved) return;
-    client.setQueryData(KEY, saved);
-    toast({ title: t('saved'), tone: 'success' });
   };
 
   if (!draft) return null;

@@ -27,7 +27,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ThemeProvider>
+        <ThemeProvider storageKey="oneohm.customer.theme">
           <QueryClientProvider client={queryClient}>
             <SessionProvider>
               <ToastProvider>

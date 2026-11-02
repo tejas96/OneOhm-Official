@@ -61,7 +61,12 @@ export class LeadIntakeService {
       const today = todayIn();
       await tx
         .update(leads)
-        .set({ nextActionOn: today, nextActionNote: input.nextActionNote, updatedAt: new Date() })
+        .set({
+          nextActionOn: today,
+          nextActionTime: null,
+          nextActionNote: input.nextActionNote,
+          updatedAt: new Date(),
+        })
         .where(eq(leads.id, open.id));
       await tx
         .insert(leadActivities)

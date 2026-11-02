@@ -1,7 +1,7 @@
-import { roundQuantity } from '@oneohm/domain';
+import { type InverterPick, isInverterLineKey, roundQuantity } from '@oneohm/domain';
 
 /** Lines the quotation's own panel, inverter and battery picks already cover. */
-const HEADER_KEYS = new Set(['panel', 'inverter', 'battery']);
+const isHeaderKey = (key: string) => key === 'panel' || key === 'battery' || isInverterLineKey(key);
 
 function mergeNeeds(needs: readonly { productId: string; quantity: number }[]) {
   const merged = new Map<string, number>();
@@ -18,17 +18,18 @@ export function quotationNeeds(
   quotation: {
     readonly panelProductId: string;
     readonly moduleCount: number;
-    readonly inverterProductId: string;
+    /** Every inverter model with how many. */
+    readonly inverters: readonly InverterPick[];
     readonly batteryProductId: string | null;
   },
   stocked: readonly { key: string; productId: string | null; quantity: number }[],
 ) {
   return mergeNeeds([
     { productId: quotation.panelProductId, quantity: quotation.moduleCount },
-    { productId: quotation.inverterProductId, quantity: 1 },
+    ...quotation.inverters.map((pick) => ({ productId: pick.productId, quantity: pick.quantity })),
     ...(quotation.batteryProductId ? [{ productId: quotation.batteryProductId, quantity: 1 }] : []),
     ...stocked.flatMap((line) =>
-      line.productId && !HEADER_KEYS.has(line.key)
+      line.productId && !isHeaderKey(line.key)
         ? [{ productId: line.productId, quantity: line.quantity }]
         : [],
     ),

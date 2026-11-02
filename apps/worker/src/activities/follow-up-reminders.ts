@@ -1,6 +1,6 @@
 import { type Database, leads, notify, readBusinessSetting } from '@oneohm/database';
 import { followUpHorizon } from '@oneohm/domain';
-import { and, between, eq, isNotNull, notInArray } from 'drizzle-orm';
+import { and, between, eq, isNotNull, lte, notInArray } from 'drizzle-orm';
 
 const DAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const when = (date: string, today: string) =>
@@ -52,6 +52,60 @@ export async function queueFollowUpReminders(db: Database, today: string): Promi
         body: lead.note?.trim() || 'Call or visit as planned.',
         subject: { type: 'lead', id: lead.id },
         dedupeKey: `lead_follow_up:${lead.id}:${lead.on}`,
+      },
+    );
+  }
+  return due.length;
+}
+
+/** How long before a follow-up's set time its owner is alerted. */
+export const TIMED_FOLLOW_UP_LEAD_MINUTES = 15;
+
+/** "HH:MM" plus some minutes, capped at the end of the day. */
+export function clockPlus(clock: string, minutes: number): string {
+  const [hour = 0, minute = 0] = clock.split(':').map(Number);
+  const total = Math.min(hour * 60 + minute + minutes, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Runs every few minutes: a follow-up with a time today alerts its owner a little before
+ * that time (once per lead, day and time).
+ */
+export async function queueTimedFollowUps(
+  db: Database,
+  today: string,
+  clock: string,
+): Promise<number> {
+  const due = await db
+    .select({
+      id: leads.id,
+      name: leads.name,
+      owner: leads.ownerUserId,
+      time: leads.nextActionTime,
+      note: leads.nextActionNote,
+    })
+    .from(leads)
+    .where(
+      and(
+        isNotNull(leads.ownerUserId),
+        notInArray(leads.stage, ['won', 'lost']),
+        eq(leads.nextActionOn, today),
+        isNotNull(leads.nextActionTime),
+        lte(leads.nextActionTime, clockPlus(clock, TIMED_FOLLOW_UP_LEAD_MINUTES)),
+      ),
+    );
+  for (const lead of due) {
+    if (!lead.owner || !lead.time) continue;
+    await notify(
+      db,
+      { userId: lead.owner },
+      {
+        kind: 'lead_follow_up',
+        title: `Follow up with ${lead.name} at ${lead.time}`,
+        body: lead.note?.trim() || 'Call or visit as planned.',
+        subject: { type: 'lead', id: lead.id },
+        dedupeKey: `lead_follow_up_at:${lead.id}:${today}:${lead.time}`,
       },
     );
   }

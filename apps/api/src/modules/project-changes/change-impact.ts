@@ -23,6 +23,7 @@ import {
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { invalid } from '../../common/http/errors';
 import { quotationNeeds } from '../inventory/quotation-needs';
+import { invertersOf } from '../quotations/quotation-inverters';
 import type { PricedQuotation } from '../quotations/quotation-pricing.service';
 import { pricedLinesOnly } from '../quotations/quotation-rows';
 import { lastCustomerPayment } from '../quotations/revision-accept';
@@ -60,12 +61,14 @@ async function material(
         pricedLinesOnly(),
       ),
     );
-  const before = row ? quotationNeeds(row, lines) : [];
+  const before = row
+    ? quotationNeeds({ ...row, inverters: await invertersOf(db, row.id) }, lines)
+    : [];
   const after = quotationNeeds(
     {
       panelProductId: input.panelProductId,
       moduleCount: priced.preview.totals.moduleCount,
-      inverterProductId: input.inverterProductId,
+      inverters: priced.inverters,
       batteryProductId: input.batteryProductId ?? null,
     },
     priced.lines.filter((line) => line.extra !== 'optional'),

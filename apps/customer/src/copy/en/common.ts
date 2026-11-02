@@ -13,6 +13,9 @@ export const COMMON = {
   cancel: 'Cancel',
   send: 'Send',
   optional: 'Optional',
+  required: 'This is required.',
+  nameShort: 'Use at least 2 characters.',
+  phoneInvalid: 'Enter a 10-digit mobile number.',
   tabs: {
     home: 'Home',
     payments: 'Payments',
@@ -57,6 +60,7 @@ export const SIGN_IN = {
     description: 'Follow your solar project, payments and papers in one place.',
     phoneLabel: 'Mobile number',
     phoneHint: 'The number you gave OneOhm when you booked.',
+    phoneInvalid: 'Enter your 10-digit mobile number.',
     sendCode: 'Text me a code',
     codeTitle: 'Enter your code',
     codeSentTo: (phone: string) => `We sent a 6-digit code to ${phone}.`,
@@ -84,4 +88,9 @@ export const PROFILE = {
   languageHint:
     'The app and your updates use this language. WhatsApp messages use it too where we have them in it.',
   languageNotSaved: 'Changed on this phone. We will save it to your account when you are online.',
+  appearance: {
+    title: 'Appearance',
+    hint: 'Light, dark, or the same as your phone. Kept on this phone.',
+    options: { system: 'Phone', light: 'Light', dark: 'Dark' },
+  },
 } as const;

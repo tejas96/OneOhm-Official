@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { sameRows } from '../inverter-rows-state';
 import {
   type BuilderState,
   EMPTY_BUILDER,
@@ -106,15 +107,8 @@ export function useBuilder() {
   useEffect(() => {
     if (!products || state.inverterChosen) return;
     const suggested = suggestInverter(products.inverters, state.targetKw, state.systemType);
-    if (suggested !== state.inverterProductId) patch({ inverterProductId: suggested });
-  }, [
-    products,
-    state.inverterChosen,
-    state.targetKw,
-    state.systemType,
-    state.inverterProductId,
-    patch,
-  ]);
+    if (!sameRows(suggested, state.inverters)) patch({ inverters: suggested });
+  }, [products, state.inverterChosen, state.targetKw, state.systemType, state.inverters, patch]);
 
   const selectProperty = useCallback((site: Property) => {
     applied.current = { ...applied.current, property: site.id };

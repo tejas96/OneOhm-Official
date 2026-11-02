@@ -1,4 +1,4 @@
-import { Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
+import { AppearanceCard, Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
 import { MessageCircle, Phone, Star, UserPlus, Users } from 'lucide-react-native';
 import { useState } from 'react';
@@ -39,6 +39,7 @@ export function ProfileScreen() {
       </Card>
 
       <LanguageCard />
+      <AppearanceCard words={PROFILE.appearance} />
 
       <CoverCard projectId={project?.id ?? null} />
 

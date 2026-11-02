@@ -5,7 +5,7 @@ import { materialDelta, priceImpact, reservationExcess } from './change-money';
 const accepted: ScopeChoices = {
   targetWp: 3000,
   panelProductId: 'panel-dcr',
-  inverterProductId: 'inv-3',
+  inverters: [{ productId: 'inv-3', quantity: 1 }],
   batteryProductId: null,
   structureType: 'rooftop',
   extras: [],
@@ -23,6 +23,28 @@ describe('what a change asks for', () => {
         extras: [{ description: 'Extra earthing pit' }],
       }),
     ).toEqual(['capacity', 'battery_added', 'panel', 'extra_lines']);
+  });
+
+  it('sees a change in inverter models or counts, not in their order', () => {
+    const two = {
+      ...accepted,
+      inverters: [
+        { productId: 'inv-3', quantity: 1 },
+        { productId: 'inv-5', quantity: 2 },
+      ],
+    };
+    const reordered = { ...two, inverters: [...two.inverters].reverse() };
+    expect(changeKinds(two, reordered)).toEqual([]);
+    expect(changeKinds(accepted, two)).toEqual(['inverter']);
+    expect(
+      changeKinds(two, {
+        ...two,
+        inverters: [
+          { productId: 'inv-3', quantity: 1 },
+          { productId: 'inv-5', quantity: 3 },
+        ],
+      }),
+    ).toEqual(['inverter']);
   });
 
   it('tells adding, removing and swapping a battery apart', () => {

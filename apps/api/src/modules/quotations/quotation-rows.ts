@@ -35,7 +35,8 @@ export function quotationRow(
     capacityWp: totals.capacityWp,
     moduleCount: totals.moduleCount,
     panelProductId: input.panelProductId,
-    inverterProductId: input.inverterProductId,
+    // The main (first) inverter; all of them are in quotation_inverters.
+    inverterProductId: priced.inverters[0]?.productId ?? '',
     batteryProductId: input.batteryProductId ?? null,
     structureType: input.structureType,
     floors: input.floors,

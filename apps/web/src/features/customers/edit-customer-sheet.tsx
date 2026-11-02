@@ -32,25 +32,27 @@ export function EditCustomerSheet({
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const text = (name: string) => String(data.get(name) ?? '').trim();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.crm.updateCustomer({
-          params: { id: customer.id },
-          body: {
-            name: text('name'),
-            phone: text('phone'),
-            email: text('email') || null,
-            kind: text('kind') as Kind,
-            gstin: text('gstin') || null,
-          },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.crm.updateCustomer({
+            params: { id: customer.id },
+            body: {
+              name: text('name'),
+              phone: text('phone'),
+              email: text('email') || null,
+              kind: text('kind') as Kind,
+              gstin: text('gstin') || null,
+            },
+          }),
+          200,
+        ),
+      async () => {
+        await queryClient.invalidateQueries({ queryKey: ['customers'] });
+        toast({ tone: 'success', title: t('saved') });
+        onOpenChange(false);
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: ['customers'] });
-    toast({ tone: 'success', title: t('saved') });
-    onOpenChange(false);
   };
 
   return (

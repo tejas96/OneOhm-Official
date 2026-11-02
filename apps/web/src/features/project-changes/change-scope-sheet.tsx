@@ -48,10 +48,13 @@ function ChangeForm({
     event.preventDefault();
     const full = changeBody(accepted.input, draft, draft.reason);
     if (!full) return;
-    const raised = await form.run(() => raise(full));
-    if (!raised) return;
-    toast({ tone: 'success', title: t('raised', { number: raised.number }) });
-    onRaised();
+    await form.run(
+      () => raise(full),
+      (raised) => {
+        toast({ tone: 'success', title: t('raised', { number: raised.number }) });
+        onRaised();
+      },
+    );
   };
 
   if (catalog.isPending) return <Skeleton className="m-6 h-64 rounded-xl" />;

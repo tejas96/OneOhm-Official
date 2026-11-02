@@ -5,9 +5,10 @@ import { Button, Dialog, useToast } from '@oneohm/design-system/web';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { useRevealError } from '@/lib/forms/use-reveal-error';
 import { PropertyFields, readPropertyForm } from './property-fields';
 
 /** Correct a site's address or electricity connection (survey, DISCOM or customer updates). */
@@ -24,6 +25,8 @@ export function EditPropertyDialog({
   const toast = useToast();
   const queryClient = useQueryClient();
   const [error, setError] = useState<ApiError | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  useRevealError(formRef, error);
   const save = useMutation({
     mutationFn: (body: NonNullable<Parameters<typeof api.crm.updateProperty>[0]['body']>) =>
       expectStatus(api.crm.updateProperty({ params: { id: property.id }, body }), 200),
@@ -71,6 +74,7 @@ export function EditPropertyDialog({
       }
     >
       <form
+        ref={formRef}
         id={`property-${property.id}`}
         onSubmit={submit}
         className="flex flex-col gap-5 py-1"

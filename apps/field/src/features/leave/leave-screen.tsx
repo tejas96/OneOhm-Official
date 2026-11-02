@@ -6,7 +6,6 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
-  PressableScale,
   Screen,
   StatusPill,
   Text,
@@ -23,6 +22,7 @@ import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
 import { LEAVE } from '@/copy/workforce';
 import { useWorkday } from '@/features/attendance/use-workday';
+import { confirmAction } from '@/lib/confirm';
 import { shortDate } from '@/lib/dates';
 
 const TONE: Readonly<Record<LeaveRequestRecord['status'], Tone>> = {
@@ -129,6 +129,16 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
     },
     onError: (error) => toast(describeError(error)),
   });
+  const askToCancel = () => {
+    if (cancel.isPending) return;
+    confirmAction({
+      title: LEAVE.cancelConfirm.title,
+      message: LEAVE.cancelConfirm.body,
+      confirm: LEAVE.cancelConfirm.yes,
+      cancel: LEAVE.cancelConfirm.no,
+      onConfirm: () => cancel.mutate(),
+    });
+  };
   const range =
     request.fromDate === request.toDate
       ? shortDate(request.fromDate)
@@ -158,15 +168,14 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
         </Text>
       ) : null}
       {request.status === 'pending' || request.status === 'approved' ? (
-        <PressableScale
-          accessibilityRole="button"
-          onPress={() => cancel.mutate()}
-          disabled={cancel.isPending}
-        >
-          <Text variant="label" tone="accent">
-            {LEAVE.cancel}
-          </Text>
-        </PressableScale>
+        <Button
+          label={LEAVE.cancel}
+          size="sm"
+          variant="quiet"
+          pending={cancel.isPending}
+          onPress={askToCancel}
+          style={styles.cancel}
+        />
       ) : null}
     </Card>
   );
@@ -182,4 +191,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   grow: { flex: 1 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cancel: { alignSelf: 'flex-start' },
 });

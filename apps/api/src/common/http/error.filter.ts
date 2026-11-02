@@ -9,13 +9,14 @@ import { RequestValidationError } from '@ts-rest/nest';
 import type { Response } from 'express';
 import type { ZodError } from 'zod';
 import { AppError } from './errors';
+import { plainIssue, validationSentence } from './zod-words';
 
 function fieldErrors(...errors: Array<ZodError | null | undefined>): Record<string, string> {
   const result: Record<string, string> = {};
   for (const error of errors) {
     for (const issue of error?.issues ?? []) {
       const field = issue.path.join('.') || 'body';
-      result[field] ??= issue.message;
+      result[field] ??= plainIssue(issue);
     }
   }
   return result;
@@ -37,10 +38,11 @@ export class ErrorFilter implements ExceptionFilter {
       return;
     }
     if (exception instanceof RequestValidationError) {
+      const fields = fieldErrors(exception.body, exception.query, exception.pathParams);
       response.status(400).json({
-        message: 'Some details need fixing.',
+        message: validationSentence(fields),
         code: 'invalid',
-        fieldErrors: fieldErrors(exception.body, exception.query, exception.pathParams),
+        fieldErrors: fields,
       });
       return;
     }

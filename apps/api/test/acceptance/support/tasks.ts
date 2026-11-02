@@ -52,6 +52,9 @@ const FACT_DEFAULTS: Record<string, string> = {
 function valueFor(field: { key: string; input: string }): string {
   const known = FACT_DEFAULTS[field.key];
   if (known) return known;
+  // A bill's consumer number: digits, and each site's own (PRD 3.2).
+  if (field.key === 'consumer_number')
+    return `27${String(Math.random()).slice(2, 12).padEnd(10, '0')}`;
   if (field.input === 'date') return today();
   if (field.input === 'number') return '3';
   return `${field.key.replace(/_/g, '-').toUpperCase().slice(0, 18)}-TEST`;

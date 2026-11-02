@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     : {}),
   poweredByHeader: false,
   devIndicators: false,
+  // Dev only: lets a phone on the same Wi-Fi open the app by the laptop's address.
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*'],
   agentRules: false,
   experimental: {
     // Uploads pass through this server to the API; the largest is a 60 MB site video.

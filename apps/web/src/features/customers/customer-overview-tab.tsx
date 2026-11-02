@@ -15,7 +15,11 @@ export function CustomerOverviewTab({ customer }: { readonly customer: CustomerR
     <div className="flex flex-col gap-10">
       <section aria-label={t('properties')} className="flex flex-col gap-5">
         <SectionHeading index="01" title={t('properties')} />
-        <CustomerProperties properties={customer.properties} />
+        <CustomerProperties
+          customerId={customer.id}
+          customerName={customer.name}
+          properties={customer.properties}
+        />
       </section>
       <section aria-label={t('projects')} className="flex flex-col gap-5">
         <SectionHeading index="02" title={t('projects')} />

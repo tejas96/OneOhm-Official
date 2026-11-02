@@ -7,6 +7,7 @@ import { formatInr } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
+import { UnitSelect } from '@/components/unit-select';
 import { NumberInput } from '../number-input';
 import { useAllProducts } from '../use-settings';
 import { keyFor, useCardSaver } from './use-card-saver';
@@ -129,7 +130,11 @@ export function RateLineSheet({
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={t('unit')} hint={t('unitHint')} error={error('unit')} required>
-            <Input value={draft.unit} onChange={(event) => set('unit', event.target.value)} />
+            <UnitSelect
+              value={draft.unit}
+              onValueChange={(unit) => set('unit', unit)}
+              label={t('unit')}
+            />
           </Field>
           <Field label={t('tax')}>
             <SegmentedControl

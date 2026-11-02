@@ -91,36 +91,43 @@ export function ReceiveDialog({
         rejectedQuantity: rejectedOf(line.id),
         rejectionReason: entry?.rejectionReason ?? '',
       }));
-    const saved = await form.run(() =>
-      expectStatus(
-        api.inventory.purchaseOrders.receive({
-          params: { id: order.id },
-          body: {
-            locationId: chosenLocation,
-            receivedOn,
-            vendorInvoiceNumber: invoiceNumber,
-            vendorInvoiceDate: invoiceDate || null,
-            vendorInvoicePaise: invoicePaise,
-            notes: '',
-            lines,
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.inventory.purchaseOrders.receive({
+            params: { id: order.id },
+            body: {
+              locationId: chosenLocation,
+              receivedOn,
+              vendorInvoiceNumber: invoiceNumber,
+              vendorInvoiceDate: invoiceDate || null,
+              vendorInvoicePaise: invoicePaise,
+              notes: '',
+              lines,
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        const receipt = saved.receipts.find(
+          (row) => !order.receipts.some((old) => old.id === row.id),
+        );
+        if (certificate && receipt) {
+          try {
+            await uploadDcrCertificate(receipt.id, certificate);
+          } catch (error) {
+            toast({
+              tone: 'error',
+              title: t('certificateFailed', { reason: describeError(error) }),
+            });
+          }
+        }
+        await refreshDcr(order.id);
+        await refresh(saved.projectId);
+        toast({ tone: 'success', title: t('saved', { number: saved.number }) });
+        onClose();
+      },
     );
-    if (!saved) return;
-    const receipt = saved.receipts.find((row) => !order.receipts.some((old) => old.id === row.id));
-    if (certificate && receipt) {
-      try {
-        await uploadDcrCertificate(receipt.id, certificate);
-      } catch (error) {
-        toast({ tone: 'error', title: t('certificateFailed', { reason: describeError(error) }) });
-      }
-    }
-    await refreshDcr(order.id);
-    await refresh(saved.projectId);
-    toast({ tone: 'success', title: t('saved', { number: saved.number }) });
-    onClose();
   };
 
   const errors = form.fieldErrors;

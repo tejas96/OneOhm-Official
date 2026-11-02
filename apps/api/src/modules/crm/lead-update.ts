@@ -11,6 +11,7 @@ export type LeadPatch = Patch<{
   stepKey: string;
   ownerUserId: string | null;
   nextActionOn: string | null;
+  nextActionTime: string | null;
   nextActionNote: string | null;
   lostReasonKey: LeadLostReason | null;
   lostReason: string | null;
@@ -74,4 +75,13 @@ export function lostNote(columns: Pick<LeadPatch, 'lostReasonKey' | 'lostReason'
   const words = columns.lostReason ? ` (${columns.lostReason})` : '';
   const revisit = columns.revisitOn ? ` Try again on ${columns.revisitOn}.` : '';
   return `Reason: ${label}${words}.${revisit}`;
+}
+
+/** A follow-up is for today or later; a past day would be overdue the moment it is saved. */
+export function assertFollowUpAhead(nextActionOn: string | null | undefined, today: string): void {
+  if (nextActionOn && nextActionOn < today) {
+    throw invalid('Pick today or a later day for the follow-up.', {
+      nextActionOn: 'Pick today or a later day.',
+    });
+  }
 }

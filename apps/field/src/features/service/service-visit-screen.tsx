@@ -62,18 +62,25 @@ function VisitDetail({ visit }: { readonly visit: ServiceVisit }) {
   const serverErrors = fieldErrorsOf(finish.error);
 
   const markDone = () => {
+    if (finish.isPending) return;
     const problems = finishProblems({ outcome: 'done', ...draft });
     setErrors(problems);
-    if (Object.keys(problems).length > 0) return;
+    if (Object.keys(problems).length > 0) {
+      finish.reset();
+      return;
+    }
+    // A failure shows once, under the report (no toast as well).
     finish.mutate(
       { finish: { outcome: 'done', ...draft }, tracking: visit.tracking },
-      {
-        onSuccess: () => toast(SERVICE.doneConfirm),
-        onError: (error) => toast(describeError(error)),
-      },
+      { onSuccess: () => toast(SERVICE.doneConfirm) },
     );
   };
-  const handBack = (reason: string) =>
+  const openHandBack = () => {
+    finish.reset();
+    setHandingBack(true);
+  };
+  const handBack = (reason: string) => {
+    if (finish.isPending) return;
     finish.mutate(
       { finish: { outcome: 'handed_back', reason, ...draft }, tracking: visit.tracking },
       {
@@ -84,13 +91,14 @@ function VisitDetail({ visit }: { readonly visit: ServiceVisit }) {
         },
       },
     );
+  };
 
   const footer = visit.canWork ? (
     <FinishFooter
       uploading={uploading}
       pending={finish.isPending}
       onDone={markDone}
-      onHandBack={() => setHandingBack(true)}
+      onHandBack={openHandBack}
     />
   ) : undefined;
 
@@ -117,7 +125,7 @@ function VisitDetail({ visit }: { readonly visit: ServiceVisit }) {
         <ReportForm draft={draft} errors={{ ...serverErrors, ...errors }} onChange={setDraft} />
       ) : null}
       <ReportHistory visit={visit} />
-      {finish.error && Object.keys(serverErrors).length === 0 && !handingBack ? (
+      {finish.error && !handingBack ? (
         <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
           {describeError(finish.error)}
         </Text>
@@ -126,10 +134,7 @@ function VisitDetail({ visit }: { readonly visit: ServiceVisit }) {
         visit={visit}
         open={handingBack}
         pending={finish.isPending}
-        error={
-          serverErrors.reason ??
-          (finish.error && handingBack ? describeError(finish.error) : undefined)
-        }
+        error={handingBack ? finish.error : null}
         onClose={() => setHandingBack(false)}
         onSend={handBack}
       />

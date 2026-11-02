@@ -81,6 +81,7 @@ export const TASK = {
     retrying: 'No connection. It will try again by itself.',
     remove: 'Remove photo',
     removeFile: 'Remove file',
+    removeFailed: (reason: string) => `Could not remove it. ${reason}`,
     attached: (count: number) => `${count} ${count === 1 ? 'file' : 'files'} attached`,
     cameraDenied: 'Allow camera access in your phone settings to take site photos.',
     libraryDenied: 'Allow photo access in your phone settings to attach site photos.',

@@ -68,6 +68,8 @@ export function ExtraSheet({
           <Input
             value={form.description}
             onChangeText={(value) => set('description', value)}
+            maxLength={160}
+            invalid={Boolean(error('description'))}
             accessibilityLabel={copy.description}
           />
         </Field>
@@ -90,6 +92,7 @@ export function ExtraSheet({
                 <Input
                   value={form.amount}
                   onChangeText={(value) => set('amount', value)}
+                  invalid={Boolean(error('amount'))}
                   keyboardType="decimal-pad"
                   mono
                   accessibilityLabel={copy.amount[form.kind]}
@@ -103,6 +106,7 @@ export function ExtraSheet({
                 <Input
                   value={form.cost}
                   onChangeText={(value) => set('cost', value)}
+                  invalid={Boolean(error('cost'))}
                   keyboardType="decimal-pad"
                   mono
                   accessibilityLabel={copy.cost}
@@ -117,6 +121,8 @@ export function ExtraSheet({
               value={form.reason}
               onChangeText={(value) => set('reason', value)}
               multiline
+              maxLength={300}
+              invalid={Boolean(error('reason'))}
               accessibilityLabel={copy.reason}
             />
           </Field>

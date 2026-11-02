@@ -20,7 +20,7 @@ export function QuoteFooter({
   const theme = useTheme();
   const failure = quote.save.error ?? quote.send.error;
   const error = failure ? (
-    <Text variant="bodySm" color={theme.status.overdue.fg}>
+    <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
       {describeError(failure)}
     </Text>
   ) : null;
@@ -42,7 +42,9 @@ export function QuoteFooter({
           fullWidth
           icon={<Save size={18} color={theme.colors.onAccent} />}
           pending={quote.save.isPending}
-          onPress={() => quote.save.mutate(input)}
+          onPress={() => {
+            if (!quote.save.isPending) quote.save.mutate(input);
+          }}
         />
       </>
     );
@@ -70,7 +72,9 @@ export function QuoteFooter({
         }
         disabled={waiting}
         pending={quote.send.isPending}
-        onPress={() => quote.send.mutate(quotation.id)}
+        onPress={() => {
+          if (!quote.send.isPending) quote.send.mutate(quotation.id);
+        }}
       />
       <Text variant="label" tone="tertiary">
         {note}

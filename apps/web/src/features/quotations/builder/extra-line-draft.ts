@@ -1,5 +1,5 @@
 import type { ExtraLineInput, Product } from '@oneohm/api-contracts';
-import { EXTRA_KINDS, type ExtraKind } from '@oneohm/domain';
+import { asUnit, EXTRA_KINDS, type ExtraKind, type Unit } from '@oneohm/domain';
 import { rupeesToPaise } from '@oneohm/shared';
 
 export type { ExtraKind };
@@ -11,7 +11,7 @@ export interface ExtraDraft {
   readonly productId: string | null;
   readonly description: string;
   readonly quantity: string;
-  readonly unit: string;
+  readonly unit: Unit;
   /** Rupees per unit; for an adjustment, the amount before GST. */
   readonly price: string;
   readonly cost: string;
@@ -41,7 +41,7 @@ export function withProduct(draft: ExtraDraft, product: Product | undefined): Ex
     ...draft,
     productId: product.id,
     description: name,
-    unit: product.unit,
+    unit: asUnit(product.unit),
     price: String(product.pricePaise / 100),
     cost: String(product.costPaise / 100),
   };
@@ -97,7 +97,7 @@ export function extraFromDraft(
       productId: takesProduct(draft.kind) ? draft.productId : null,
       description: draft.description.trim(),
       quantity,
-      unit: adjustment ? 'job' : draft.unit.trim() || 'nos',
+      unit: adjustment ? 'job' : draft.unit,
       unitPricePaise: draft.kind === 'gift' ? 0 : rupeesToPaise(signed),
       unitCostPaise: takesCost(draft.kind) ? rupeesToPaise(cost) : 0,
       reason: draft.reason.trim(),

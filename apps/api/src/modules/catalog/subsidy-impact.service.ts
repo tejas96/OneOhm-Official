@@ -6,6 +6,7 @@ import { todayIn } from '@oneohm/shared';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { costingOf } from '../quotations/quotation-detail';
+import { invertersOf } from '../quotations/quotation-inverters';
 import { QuotationPricingService } from '../quotations/quotation-pricing.service';
 
 type QuotationRow = typeof quotations.$inferSelect;
@@ -21,7 +22,10 @@ const householdsOf = (row: QuotationRow) =>
   (row.snapshot as { households?: number | null }).households ?? null;
 
 /** The quotation's own choices, as the pricing engine takes them. */
-function pricingInput(row: QuotationRow): QuotationPreviewInput {
+function pricingInput(
+  row: QuotationRow,
+  inverters: QuotationPreviewInput['inverters'],
+): QuotationPreviewInput {
   return {
     propertyId: row.propertyId,
     subsidyCategory: row.subsidyCategory,
@@ -29,6 +33,7 @@ function pricingInput(row: QuotationRow): QuotationPreviewInput {
     systemType: row.systemType,
     targetWp: row.targetWp,
     panelProductId: row.panelProductId,
+    inverters,
     inverterProductId: row.inverterProductId,
     batteryProductId: row.batteryProductId,
     structureType: row.structureType,
@@ -93,7 +98,8 @@ export class SubsidyImpactService {
   ): Promise<number | null> {
     const { quotation } = row;
     try {
-      const priced = await this.pricing.price(pricingInput(quotation));
+      const inverters = await invertersOf(this.db, quotation.id);
+      const priced = await this.pricing.price(pricingInput(quotation, inverters));
       const { totals } = priced.preview;
       const rule = ruleInForce(rules, quotation.subsidyCategory, date);
       if (rule?.validFrom === priced.rule?.validFrom) return totals.subsidyPaise;

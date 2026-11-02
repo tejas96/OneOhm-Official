@@ -5,7 +5,7 @@ import type {
   QuotationTotals,
 } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, products } from '@oneohm/database';
-import type { PriceSide, ScopeChoices } from '@oneohm/domain';
+import { inverterPicks, inverterSummary, type PriceSide, type ScopeChoices } from '@oneohm/domain';
 import { inArray } from 'drizzle-orm';
 
 /**
@@ -17,7 +17,8 @@ export function changedInput(accepted: QuotationInput, change: ProjectChangeInpu
     ...accepted,
     targetWp: change.targetWp,
     panelProductId: change.panelProductId,
-    inverterProductId: change.inverterProductId,
+    inverters: change.inverters,
+    inverterProductId: change.inverters[0]?.productId,
     batteryProductId: change.batteryProductId,
     structureType: change.structureType,
     extras: change.extras,
@@ -39,7 +40,7 @@ export function choicesOf(input: QuotationInput): ScopeChoices {
   return {
     targetWp: input.targetWp,
     panelProductId: input.panelProductId,
-    inverterProductId: input.inverterProductId,
+    inverters: inverterPicks(input),
     batteryProductId: input.batteryProductId ?? null,
     structureType: input.structureType,
     extras: (input.extras ?? []).map((line) => ({
@@ -72,9 +73,11 @@ export async function scopeViews(
   sides: readonly { input: QuotationInput; totals: QuotationTotals }[],
 ): Promise<ScopeView[]> {
   const ids = sides.flatMap(({ input }) =>
-    [input.panelProductId, input.inverterProductId, input.batteryProductId].flatMap((id) =>
-      id ? [id] : [],
-    ),
+    [
+      input.panelProductId,
+      ...inverterPicks(input).map((pick) => pick.productId),
+      input.batteryProductId,
+    ].flatMap((id) => (id ? [id] : [])),
   );
   const rows = await db.select().from(products).where(inArray(products.id, ids));
   const named = (id: string | null | undefined) => {
@@ -89,7 +92,7 @@ export async function scopeViews(
       name: named(input.panelProductId),
       dcr: rows.find((row) => row.id === input.panelProductId)?.dcr ?? false,
     },
-    inverter: named(input.inverterProductId),
+    inverter: inverterSummary(inverterPicks(input), named),
     battery: input.batteryProductId ? named(input.batteryProductId) : null,
     structureType: input.structureType,
     extras: (input.extras ?? []).map((line) => line.description),

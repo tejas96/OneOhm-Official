@@ -14,7 +14,8 @@ export interface QuotationExtras {
     readonly sanctionedLoadW: number | null;
   };
   readonly panel: ProductLabel;
-  readonly inverter: ProductLabel;
+  /** Every inverter model with how many, in the order picked. */
+  readonly inverters: readonly { readonly label: ProductLabel; readonly quantity: number }[];
   readonly battery: ProductLabel | null;
   readonly comparison: { readonly dcr: QuotationTotals; readonly nonDcr: QuotationTotals } | null;
   /** The default payment terms shown on the quotation (Settings → Payment terms). */
@@ -147,11 +148,14 @@ export function quotationView(quotation: QuotationDetail, extras: QuotationExtra
       type: SYSTEM_TYPE[input.systemType],
       modules: `${totals.moduleCount} × ${productLine(extras.panel)}`,
       panelKind: extras.panel.dcr ? 'DCR (made with Indian cells)' : 'Non-DCR',
-      inverter: productLine(extras.inverter),
+      inverterTitle: extras.inverters.length > 1 ? 'Inverters' : 'Inverter',
+      inverters: extras.inverters.map(({ label, quantity }) => ({
+        name: quantity > 1 ? `${quantity} × ${productLine(label)}` : productLine(label),
+        specs: specsLine(label),
+      })),
       battery: extras.battery ? productLine(extras.battery) : null,
       structure: STRUCTURE[input.structureType],
       panelSpecs: specsLine(extras.panel),
-      inverterSpecs: specsLine(extras.inverter),
       batterySpecs: specsLine(extras.battery),
     },
     lines: customerLines(quotation.lines),

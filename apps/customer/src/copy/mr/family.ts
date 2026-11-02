@@ -25,6 +25,8 @@ export const FAMILY: Copy<typeof en.FAMILY> = {
   added: (name) => `${name} आता साइन इन करू शकतात.`,
   remove: 'काढा',
   removeLabel: (name) => `${name} यांना काढा`,
+  removeAsk: (name) => `${name} यांना काढायचे?`,
+  removeAskBody: (name) => `${name} यांना यापुढे साइन इन करून तुमचे प्रकल्प पाहता येणार नाहीत.`,
   removed: (name) => `${name} यांचा ॲक्सेस काढला.`,
   failed: 'ते झाले नाही. कृपया पुन्हा प्रयत्न करा.',
 };

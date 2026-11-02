@@ -28,10 +28,9 @@ export const REQUEST_MEDIA: Copy<typeof en.REQUEST_MEDIA> = {
   videoReady: 'व्हिडिओ जोडला',
   videoTooLong: (seconds) => `हा व्हिडिओ ${seconds} सेकंदांपेक्षा मोठा आहे. छोटा व्हिडिओ निवडा.`,
   videoTooLarge: 'हा व्हिडिओ खूप मोठा आहे. छोटा व्हिडिओ रेकॉर्ड करा.',
-  filesFailed: (count) =>
-    count === 1
-      ? 'पाठवले, पण 1 फाईल अपलोड झाली नाही.'
-      : `पाठवले, पण ${count} फाईल अपलोड झाल्या नाहीत.`,
+  notUploaded: (what) => `पाठवले. हे अपलोड झाले नाही: ${what}. टीमचा फोन आल्यावर त्यांना दाखवा.`,
+  failedVideo: 'व्हिडिओ',
+  failedVoice: 'व्हॉइस नोट',
   hasVideo: 'व्हिडिओ',
   hasVoiceNote: 'व्हॉइस नोट',
   visitOn: (date) => `तंत्रज्ञाची भेट: ${date}`,

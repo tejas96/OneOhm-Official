@@ -47,7 +47,11 @@ export function cardProblems(card: CostingCard): CardProblem[] {
   const problems: CardProblem[] = [];
   const kinds = new Map<string, RateKind>();
   card.rateLines.forEach((line, index) => {
-    if (!KEY_PATTERN.test(line.key) || RESERVED.has(line.key) || /^extra_\d+$/.test(line.key)) {
+    if (
+      !KEY_PATTERN.test(line.key) ||
+      RESERVED.has(line.key) ||
+      /^(extra|inverter)_\d+$/.test(line.key)
+    ) {
       problems.push({ path: ['rateLines', index, 'key'], message: 'Use another short name.' });
     } else if (kinds.has(line.key)) {
       problems.push({ path: ['rateLines', index, 'key'], message: 'Another rate uses this name.' });

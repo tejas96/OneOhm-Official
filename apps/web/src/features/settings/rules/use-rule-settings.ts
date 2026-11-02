@@ -39,11 +39,14 @@ export function useRuleSettings<T>(
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft) return;
-    const saved = await form.run(() => save(draft));
-    if (saved === undefined) return;
-    client.setQueryData(key, saved);
-    setDraft(saved);
-    toast({ title: t('saved'), reference, tone: 'success' });
+    await form.run(
+      () => save(draft),
+      (saved) => {
+        client.setQueryData(key, saved);
+        setDraft(saved);
+        toast({ title: t('saved'), reference, tone: 'success' });
+      },
+    );
   };
   const discard = () => {
     if (query.data) setDraft(query.data);

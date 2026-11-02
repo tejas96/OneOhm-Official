@@ -16,6 +16,9 @@ export const COMMON: Copy<typeof en.COMMON> = {
   cancel: 'रद्द करा',
   send: 'पाठवा',
   optional: 'हवे असल्यास',
+  required: 'हे भरणे आवश्यक आहे.',
+  nameShort: 'किमान 2 अक्षरे लिहा.',
+  phoneInvalid: '10 अंकी मोबाईल नंबर टाका.',
   tabs: {
     home: 'होम',
     payments: 'पेमेंट',
@@ -59,6 +62,7 @@ export const SIGN_IN: Copy<typeof en.SIGN_IN> = {
     description: 'तुमचा सोलर प्रकल्प, पेमेंट आणि कागदपत्रे एकाच ठिकाणी पाहा.',
     phoneLabel: 'मोबाईल नंबर',
     phoneHint: 'बुकिंगच्या वेळी OneOhm ला दिलेला नंबर.',
+    phoneInvalid: 'तुमचा 10 अंकी मोबाईल नंबर टाका.',
     sendCode: 'मला कोड पाठवा',
     codeTitle: 'तुमचा कोड टाका',
     codeSentTo: (phone) => `${phone} वर 6 अंकी कोड पाठवला आहे.`,
@@ -85,4 +89,9 @@ export const PROFILE: Copy<typeof en.PROFILE> = {
   language: 'भाषा',
   languageHint: 'ॲप आणि अपडेट्स याच भाषेत दिसतील. WhatsApp मेसेजही, जिथे ते या भाषेत तयार आहेत तिथे.',
   languageNotSaved: 'या फोनवर बदलली. इंटरनेट आल्यावर तुमच्या खात्यात सेव्ह करू.',
+  appearance: {
+    title: 'दिसणे',
+    hint: 'लाइट, डार्क, किंवा फोनप्रमाणे. या फोनवर लक्षात राहील.',
+    options: { system: 'फोनप्रमाणे', light: 'लाइट', dark: 'डार्क' },
+  },
 };

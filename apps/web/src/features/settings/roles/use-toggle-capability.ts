@@ -3,7 +3,7 @@
 import type { Role } from '@oneohm/api-contracts';
 import { useToast } from '@oneohm/design-system/web';
 import type { Capability } from '@oneohm/domain';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ROLES_KEY } from '@/features/team/use-team';
 import { api, expectStatus } from '@/lib/api/api-client';
@@ -18,6 +18,23 @@ export interface CapabilityChange {
 }
 
 const TOGGLE_KEY = ['roles', 'toggle-capability'] as const;
+
+export const cellKey = (roleId: string, capability: Capability) => `${roleId}:${capability}`;
+
+/**
+ * The cells whose save is still waiting or running. They stay disabled until it settles,
+ * so a double click cannot queue two opposite changes for one cell.
+ */
+export function usePendingCells(): ReadonlySet<string> {
+  const pending = useMutationState({
+    filters: { mutationKey: TOGGLE_KEY, status: 'pending' },
+    select: (mutation) => {
+      const change = mutation.state.variables as CapabilityChange | undefined;
+      return change ? cellKey(change.role.id, change.capability) : '';
+    },
+  });
+  return new Set(pending.filter(Boolean));
+}
 
 /**
  * Flips one role × permission cell. The grid changes at once; saves run one at a

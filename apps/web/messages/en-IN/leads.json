@@ -88,6 +88,7 @@
       "owner": "Owner",
       "ownerMe": "Me",
       "nextActionOn": "Follow up on",
+      "nextActionTime": "Time (optional)",
       "nextActionNote": "Next step",
       "nextActionPlaceholder": "e.g. Call to fix a site survey",
       "notes": "Notes",
@@ -116,6 +117,7 @@
         "note": "Anything the team should know"
       },
       "nextOn": "Next follow-up",
+      "nextTime": "Time (optional)",
       "nextNote": "Next step",
       "nextNotePlaceholder": "e.g. Send the quotation",
       "submit": "Save",

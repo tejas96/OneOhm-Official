@@ -125,5 +125,23 @@
     "nothingYet": "Nothing here yet",
     "noAccessTitle": "Not part of your role",
     "noAccessBody": "Your role does not include this. Ask an admin if you need it."
+  },
+  "checks": {
+    "required": "This is required.",
+    "minChars": "Enter at least {count} characters.",
+    "mobile": "Enter a 10-digit Indian mobile number.",
+    "dateNotPast": "Pick today or a later date.",
+    "dateNotFuture": "This date cannot be in the future.",
+    "timeNotPast": "This time has already passed today.",
+    "positiveAmount": "Enter an amount greater than zero.",
+    "positiveNumber": "Enter a number greater than zero.",
+    "notNegative": "Enter zero or more.",
+    "fixFields": "Check the highlighted fields."
+  },
+  "productSearch": {
+    "choose": "Choose…",
+    "placeholder": "Search by name, brand or SKU",
+    "empty": "Nothing matches. Try fewer words.",
+    "more": "Showing {shown} of {total}. Type to narrow the list."
   }
 }

@@ -1,12 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChangeRequestDetail } from '@oneohm/api-contracts';
 import { changeRequestSteps, changeRequests, type Transaction } from '@oneohm/database';
-import { factLabel, type WaitingParty } from '@oneohm/domain';
+import {
+  consumerNumberProblem,
+  factLabel,
+  normalizeConsumerNumber,
+  type WaitingParty,
+} from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertConsumerNumberFree, savingSite } from '../crm/site-rules';
 import { applyChangeRequest } from './change-request-apply';
 import { presentChangeRequest } from './change-request-read';
 
@@ -84,6 +90,18 @@ export class ChangeRequestStepsService {
     const captured = { ...request.captured };
     for (const [key, value] of Object.entries(facts))
       if (value.trim()) captured[key] = value.trim();
+    // A new consumer number is saved on the site at the end: the same rules as typing it there.
+    if (facts.consumer_number?.trim()) {
+      const number = normalizeConsumerNumber(facts.consumer_number.trim());
+      const problem = consumerNumberProblem(number);
+      if (problem) throw invalid(problem, { consumer_number: problem });
+      await assertConsumerNumberFree(this.db, number, {
+        exceptPropertyId: request.propertyId,
+        field: 'consumer_number',
+        reveal: can(actor, 'customers.view'),
+      });
+      captured.consumer_number = number;
+    }
     const missing = step.captures.filter((key) => !captured[key]);
     if (missing.length > 0) {
       throw invalid(
@@ -91,41 +109,43 @@ export class ChangeRequestStepsService {
         Object.fromEntries(missing.map((key) => [key, `${factLabel(key)} is required.`])),
       );
     }
-    await this.db.transaction(async (tx) => {
-      const now = new Date();
-      await tx
-        .update(changeRequestSteps)
-        .set({
-          status: 'completed',
-          completedAt: now,
-          completedByUserId: actor.userId,
-          ...(note ? { note } : {}),
-          updatedAt: now,
-        })
-        .where(eq(changeRequestSteps.id, stepId));
-      await tx
-        .update(changeRequests)
-        .set({
-          captured,
-          ...(captured.application_number && !request.referenceNumber
-            ? { referenceNumber: captured.application_number }
-            : {}),
-          updatedAt: now,
-        })
-        .where(eq(changeRequests.id, id));
-      const next = await this.nextStep(tx, id);
-      if (next) {
+    await savingSite('consumer_number', () =>
+      this.db.transaction(async (tx) => {
+        const now = new Date();
         await tx
           .update(changeRequestSteps)
-          .set({ status: 'ready', updatedAt: now })
-          .where(eq(changeRequestSteps.id, next.id));
-      } else {
-        await applyChangeRequest(tx, { ...request, captured }, actor.userId);
-      }
-      await recordAudit(tx, actor.userId, 'change_request.step_completed', 'change_request', id, {
-        step: step.key,
-      });
-    });
+          .set({
+            status: 'completed',
+            completedAt: now,
+            completedByUserId: actor.userId,
+            ...(note ? { note } : {}),
+            updatedAt: now,
+          })
+          .where(eq(changeRequestSteps.id, stepId));
+        await tx
+          .update(changeRequests)
+          .set({
+            captured,
+            ...(captured.application_number && !request.referenceNumber
+              ? { referenceNumber: captured.application_number }
+              : {}),
+            updatedAt: now,
+          })
+          .where(eq(changeRequests.id, id));
+        const next = await this.nextStep(tx, id);
+        if (next) {
+          await tx
+            .update(changeRequestSteps)
+            .set({ status: 'ready', updatedAt: now })
+            .where(eq(changeRequestSteps.id, next.id));
+        } else {
+          await applyChangeRequest(tx, { ...request, captured }, actor.userId);
+        }
+        await recordAudit(tx, actor.userId, 'change_request.step_completed', 'change_request', id, {
+          step: step.key,
+        });
+      }),
+    );
     return presentChangeRequest(this.db, id);
   }
 

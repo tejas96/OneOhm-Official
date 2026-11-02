@@ -18,25 +18,25 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
 import { REFER } from '@/copy/care';
 import { COMMON } from '@/copy/common';
+import { indianMobile } from '@/lib/phone';
 import { ReferralCodeCard, referralProgramKey } from './referral-code-card';
 import { ReferralList } from './referral-list';
 
 export { ReferralList };
 
 /** Name and number of someone who wants solar; the sales team calls them. */
+type ReferField = 'name' | 'phone' | 'city';
+
 export function ReferScreen() {
   const toast = useToast();
   const client = useQueryClient();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
+  const [checked, setChecked] = useState<Partial<Record<ReferField, string | undefined>>>({});
   const send = useMutation({
-    mutationFn: () =>
-      unwrap(
-        api.customer.createReferral({
-          body: { name, phone, ...(city.trim() ? { city } : {}) },
-        }),
-      ),
+    mutationFn: (body: { name: string; phone: string; city?: string }) =>
+      unwrap(api.customer.createReferral({ body })),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: keys.referrals });
       await client.invalidateQueries({ queryKey: referralProgramKey });
@@ -47,19 +47,33 @@ export function ReferScreen() {
       router.back();
     },
   });
-  const errors = send.error ? fieldErrorsOf(send.error) : {};
-  const general = send.error && !errors.name && !errors.phone ? describeError(send.error) : null;
+  const server = send.error ? fieldErrorsOf(send.error) : {};
+  const errorOf = (field: ReferField) => checked[field] ?? server[field];
+  const submit = () => {
+    const mobile = indianMobile(phone);
+    const found: Partial<Record<ReferField, string | undefined>> = {};
+    if (!name.trim()) found.name = COMMON.required;
+    else if (name.trim().length < 2) found.name = COMMON.nameShort;
+    if (!phone.trim()) found.phone = COMMON.required;
+    else if (!mobile) found.phone = COMMON.phoneInvalid;
+    setChecked(found);
+    if (Object.keys(found).length > 0 || !mobile) {
+      send.reset();
+      return;
+    }
+    send.mutate({
+      name: name.trim(),
+      phone: mobile,
+      ...(city.trim() ? { city: city.trim() } : {}),
+    });
+  };
+  const change = (field: ReferField, set: (value: string) => void) => (value: string) => {
+    set(value);
+    if (checked[field]) setChecked((current) => ({ ...current, [field]: undefined }));
+  };
   return (
     <Screen
-      footer={
-        <Button
-          label={REFER.submit}
-          onPress={() => send.mutate()}
-          pending={send.isPending}
-          disabled={name.trim().length < 2 || phone.replace(/\D/g, '').length < 10}
-          fullWidth
-        />
-      }
+      footer={<Button label={REFER.submit} onPress={submit} pending={send.isPending} fullWidth />}
     >
       <ScreenHeader title={REFER.title} />
       <ReferralCodeCard />
@@ -67,29 +81,37 @@ export function ReferScreen() {
         {REFER.intro}
       </Text>
       <View style={styles.form}>
-        <Field label={REFER.nameLabel} error={errors.name}>
+        <Field label={REFER.nameLabel} error={errorOf('name')}>
           <Input
             value={name}
             accessibilityLabel={REFER.nameLabel}
-            onChangeText={setName}
+            onChangeText={change('name', setName)}
             autoComplete="name"
-            invalid={Boolean(errors.name)}
+            maxLength={160}
+            invalid={Boolean(errorOf('name'))}
           />
         </Field>
-        <Field label={REFER.phoneLabel} error={errors.phone}>
+        <Field label={REFER.phoneLabel} error={errorOf('phone')}>
           <Input
             value={phone}
             accessibilityLabel={REFER.phoneLabel}
-            onChangeText={setPhone}
+            onChangeText={change('phone', setPhone)}
             keyboardType="phone-pad"
             autoComplete="tel"
-            invalid={Boolean(errors.phone)}
+            maxLength={16}
+            invalid={Boolean(errorOf('phone'))}
           />
         </Field>
-        <Field label={REFER.cityLabel} optional={COMMON.optional}>
-          <Input value={city} onChangeText={setCity} accessibilityLabel={REFER.cityLabel} />
+        <Field label={REFER.cityLabel} optional={COMMON.optional} error={errorOf('city')}>
+          <Input
+            value={city}
+            onChangeText={change('city', setCity)}
+            accessibilityLabel={REFER.cityLabel}
+            maxLength={120}
+            invalid={Boolean(errorOf('city'))}
+          />
         </Field>
-        <FormAlert message={general} />
+        <FormAlert message={send.error ? describeError(send.error) : null} />
       </View>
       <ReferralList />
     </Screen>

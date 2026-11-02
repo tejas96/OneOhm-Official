@@ -14,7 +14,7 @@ const base = {
   startsOn: '2026-11-01',
   policy: DEFAULT_WARRANTY_POLICY,
   panel: product('p', 'Mono PERC module', 545),
-  inverter: product('i', 'On-grid inverter 3 kW'),
+  inverters: [{ product: product('i', 'On-grid inverter 3 kW'), quantity: 1 }],
   battery: undefined,
   moduleCount: 6,
   lines: new Map([
@@ -44,6 +44,25 @@ describe('installed assets from the quotation', () => {
     expect(inverter).toMatchObject({ serialNumbers: ['INV-1'], warrantyEndsOn: '2031-10-31' });
     expect(structure).toMatchObject({ make: null, model: 'Elevated RCC-roof structure' });
     expect(work).toMatchObject({ make: 'OneOhm', warrantyEndsOn: '2027-10-31' });
+  });
+
+  it('records several inverter models as one inverter asset with every serial', () => {
+    const rows = assetsFrom({
+      ...base,
+      inverters: [
+        { product: product('i', 'On-grid inverter 5 kW'), quantity: 2 },
+        { product: product('j', 'On-grid inverter 3 kW'), quantity: 1 },
+      ],
+      facts: new Map([['inverter_serial_number', 'INV-1, INV-2, INV-3']]),
+    });
+    expect(rows.filter((row) => row.kind === 'inverter')).toHaveLength(1);
+    expect(rows.find((row) => row.kind === 'inverter')).toMatchObject({
+      make: 'Maker (test)',
+      model: 'On-grid inverter 5 kW × 2, On-grid inverter 3 kW',
+      productId: 'i',
+      quantity: 3,
+      serialNumbers: ['INV-1', 'INV-2', 'INV-3'],
+    });
   });
 
   it('adds the battery with its serial, and trusts the counted panels over the quote', () => {

@@ -11,11 +11,17 @@ import {
   quotations,
   type Transaction,
 } from '@oneohm/database';
-import { flagsAfterChange, planTaskChange, type ScopeChoices } from '@oneohm/domain';
+import {
+  flagsAfterChange,
+  type InverterPick,
+  planTaskChange,
+  type ScopeChoices,
+} from '@oneohm/domain';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { initialFacts } from '../projects/project-setup';
+import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
 import { adjustFinalPayment } from '../quotations/revision-accept';
 import { followChangeInStore } from './change-material';
 import { applyTaskPlan, loadPlanInput } from './change-plan-io';
@@ -35,10 +41,10 @@ const SYSTEM_FACTS = [
   'system_cost',
 ];
 
-const choices = (row: QuotationRow): ScopeChoices => ({
+const choices = (row: QuotationRow, inverters: readonly InverterPick[]): ScopeChoices => ({
   targetWp: row.targetWp,
   panelProductId: row.panelProductId,
-  inverterProductId: row.inverterProductId,
+  inverters,
   batteryProductId: row.batteryProductId,
   structureType: row.structureType,
   extras: [],
@@ -55,12 +61,9 @@ async function refreshFacts(
     .from(properties)
     .where(eq(properties.id, project.propertyId));
   const [panel] = await tx.select().from(products).where(eq(products.id, quotation.panelProductId));
-  const [inverter] = await tx
-    .select()
-    .from(products)
-    .where(eq(products.id, quotation.inverterProductId));
-  if (!customer || !property || !panel || !inverter) return;
-  const facts = initialFacts(customer, property, quotation, panel, inverter, project.startDate);
+  const inverters = await inverterProducts(tx, await invertersOf(tx, quotation.id));
+  if (!customer || !property || !panel || inverters.length === 0) return;
+  const facts = initialFacts(customer, property, quotation, panel, inverters, project.startDate);
   const saved = await tx.select().from(projectFacts).where(eq(projectFacts.projectId, project.id));
   for (const key of SYSTEM_FACTS) {
     const value = facts[key];
@@ -99,7 +102,12 @@ export async function applyAcceptedChange(
   const [old] = await tx.select().from(quotations).where(eq(quotations.id, project.quotationId));
   const [next] = await tx.select().from(quotations).where(eq(quotations.id, quotationId));
   if (!old || !next) return;
-  const flags = flagsAfterChange(project, choices(old), choices(next), next.subsidyPaise);
+  const flags = flagsAfterChange(
+    project,
+    choices(old, await invertersOf(tx, old.id)),
+    choices(next, await invertersOf(tx, next.id)),
+    next.subsidyPaise,
+  );
   const planInput = await loadPlanInput(tx, project, flags);
   const plan = planTaskChange(planInput);
   // A survey revision still waiting was replaced by this one: the price check runs again.

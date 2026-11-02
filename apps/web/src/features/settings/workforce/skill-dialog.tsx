@@ -39,15 +39,17 @@ export function SkillDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const body = { name: name.trim(), description: description.trim() };
-    const saved = await form.run(() =>
-      skill
-        ? expectStatus(api.skills.updateSkill({ params: { key: skill.key }, body }), 200)
-        : expectStatus(api.skills.createSkill({ body }), 201),
+    await form.run(
+      () =>
+        skill
+          ? expectStatus(api.skills.updateSkill({ params: { key: skill.key }, body }), 200)
+          : expectStatus(api.skills.createSkill({ body }), 201),
+      async (saved) => {
+        await queryClient.invalidateQueries({ queryKey: SKILLS_KEY });
+        toast({ title: skill ? t('updated') : t('added'), reference: saved.name, tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: SKILLS_KEY });
-    toast({ title: skill ? t('updated') : t('added'), reference: saved.name, tone: 'success' });
-    onClose();
   };
 
   return (

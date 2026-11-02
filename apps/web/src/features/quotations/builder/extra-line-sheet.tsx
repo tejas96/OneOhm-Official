@@ -5,14 +5,15 @@ import {
   Button,
   Field,
   Input,
+  SearchSelect,
   SegmentedControl,
-  Select,
   Sheet,
   Textarea,
 } from '@oneohm/design-system/web';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
+import { productOptions, useSearchWords } from '@/components/product-search';
 import { api, expectStatus } from '@/lib/api/api-client';
 import {
   EMPTY_EXTRA,
@@ -56,6 +57,7 @@ export function ExtraLineSheet({
   const t = useTranslations('quotations.extras');
   const formId = useId();
   const products = useActiveProducts();
+  const words = useSearchWords();
   const [draft, setDraft] = useState<ExtraDraft>(EMPTY_EXTRA);
   const [errors, setErrors] = useState<readonly ExtraDraftError[]>([]);
   useEffect(() => {
@@ -114,7 +116,8 @@ export function ExtraLineSheet({
         </Field>
         {takesProduct(kind) && (
           <Field label={t('product')} hint={t('productHint')}>
-            <Select
+            <SearchSelect
+              {...words}
               label={t('product')}
               value={draft.productId ?? NO_PRODUCT}
               onValueChange={(value) =>
@@ -127,10 +130,7 @@ export function ExtraLineSheet({
               }
               options={[
                 { value: NO_PRODUCT, label: t('typed') },
-                ...(products.data ?? []).map((row) => ({
-                  value: row.id,
-                  label: row.brand === 'Starter catalog' ? row.name : `${row.brand} ${row.name}`,
-                })),
+                ...productOptions(products.data ?? []),
               ]}
             />
           </Field>
@@ -176,8 +176,9 @@ function AmountFields({
   const t = useTranslations('quotations.extras');
   const rupee = <span className="type-body text-ink-faint">₹</span>;
   if (draft.kind === 'adjustment') {
+    // Stacked: side by side, "Lower the price" wraps inside its half-width switch.
     return (
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="flex flex-col gap-5">
         <Field label={t('direction')}>
           <SegmentedControl
             label={t('direction')}
@@ -191,7 +192,13 @@ function AmountFields({
             size="sm"
           />
         </Field>
-        <Field label={t('amount')} hint={t('amountHint')} error={error('price')} required>
+        <Field
+          label={t('amount')}
+          hint={t('amountHint')}
+          error={error('price')}
+          required
+          className="sm:max-w-[calc(50%-0.625rem)]"
+        >
           <Input
             inputMode="decimal"
             value={draft.price}
@@ -203,9 +210,12 @@ function AmountFields({
       </div>
     );
   }
+  // Each field spans the same three rows (label, input, note), so a label that wraps
+  // to two lines never pushes its input below the others.
+  const cell = 'sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-1.5';
   return (
-    <div className="grid gap-5 sm:grid-cols-3">
-      <Field label={t('quantity')} error={error('quantity')} required>
+    <div className="grid gap-5 sm:grid-cols-3 sm:gap-y-0">
+      <Field label={t('quantity')} error={error('quantity')} required className={cell}>
         <Input
           inputMode="decimal"
           value={draft.quantity}
@@ -214,7 +224,7 @@ function AmountFields({
         />
       </Field>
       {takesPrice(draft.kind) && (
-        <Field label={t('price')} error={error('price')}>
+        <Field label={t('price')} error={error('price')} className={cell}>
           <Input
             inputMode="decimal"
             value={draft.price}
@@ -226,7 +236,7 @@ function AmountFields({
         </Field>
       )}
       {takesCost(draft.kind) && (
-        <Field label={t('cost')} error={error('cost')}>
+        <Field label={t('cost')} error={error('cost')} className={cell}>
           <Input
             inputMode="decimal"
             value={draft.cost}

@@ -174,7 +174,14 @@ describe('labour and travel (PRD 3.9 B)', () => {
 
 describe('the cost engine end to end', () => {
   const design = (overrides: Partial<Parameters<typeof designSystem>[0]> = {}) =>
-    designSystem({ targetWp: 9_800, panel, inverter, site, rates: card, ...overrides });
+    designSystem({
+      targetWp: 9_800,
+      panel,
+      inverters: [{ product: inverter, quantity: 1 }],
+      site,
+      rates: card,
+      ...overrides,
+    });
 
   it('orders lines by stage and names each product', () => {
     const { lines } = design();
@@ -235,7 +242,13 @@ describe('the cost engine end to end', () => {
 
 describe('cost build-up', () => {
   it('splits the cost, adds overhead and shows the margin left', () => {
-    const { lines } = designSystem({ targetWp: 9_800, panel, inverter, site, rates: card });
+    const { lines } = designSystem({
+      targetWp: 9_800,
+      panel,
+      inverters: [{ product: inverter, quantity: 1 }],
+      site,
+      rates: card,
+    });
     const priced = priceQuote(lines, { contingencyBp: 800, discountPaise: 0 });
     const build = costBuildup(card, priced.lines);
     expect(build.labourPaise).toBe(rupees(5 * 900 + 2.5 * 550) + Math.round(9.81 * 40_000));

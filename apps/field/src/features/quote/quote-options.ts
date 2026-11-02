@@ -1,4 +1,5 @@
 import type { Product } from '@oneohm/api-contracts';
+import { suggestInverterMix } from '@oneohm/domain';
 import { useEffect, useState } from 'react';
 
 /**
@@ -43,6 +44,45 @@ export function suggestInverter(inverters: readonly Product[], targetWp: number)
     return Number(/hybrid/i.test(left.name)) - Number(/hybrid/i.test(right.name));
   });
   return sorted.find((product) => (product.ratedW ?? 0) >= targetWp * 0.9) ?? sorted.at(-1) ?? null;
+}
+
+/** One inverter row as typed on the phone: a model (or none yet) and how many. */
+export interface InverterRow {
+  readonly productId: string | null;
+  readonly quantity: string;
+}
+
+/**
+ * The inverters a quote starts with: one that carries the array, else the largest as
+ * many times as fill it plus one smaller (120 kW gets 2 × 50 + 25 kW). Sales can change them.
+ */
+export function suggestInverterRows(
+  inverters: readonly Product[],
+  targetWp: number,
+): InverterRow[] {
+  // On-grid before hybrid at the same rating, as for one inverter.
+  const models = inverters
+    .filter((product) => product.active && product.ratedW)
+    .sort((left, right) => Number(/hybrid/i.test(left.name)) - Number(/hybrid/i.test(right.name)))
+    .map((product) => ({ id: product.id, ratedW: product.ratedW ?? 0 }));
+  return suggestInverterMix(models, targetWp, 1 / 0.9).map((pick) => ({
+    productId: pick.productId,
+    quantity: String(pick.quantity),
+  }));
+}
+
+/** The picks for the API, or null while a row has no model or a whole count from 1 to 50. */
+export function inverterPicksOf(
+  rows: readonly InverterRow[],
+): { productId: string; quantity: number }[] | null {
+  if (rows.length === 0 || rows.length > 10) return null;
+  const picks: { productId: string; quantity: number }[] = [];
+  for (const row of rows) {
+    const quantity = Number(row.quantity);
+    if (!row.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return null;
+    picks.push({ productId: row.productId, quantity });
+  }
+  return picks;
 }
 
 /** The value after it has stopped changing for `delayMs` (live preview without flooding). */

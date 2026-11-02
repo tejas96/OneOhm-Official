@@ -1,6 +1,15 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { siteVisitKindOf } from '@oneohm/domain';
-import { Button, describeError, Field, fieldErrorsOf, Input, Sheet } from '@oneohm/mobile-ui';
+import {
+  Button,
+  describeError,
+  Field,
+  fieldErrorsOf,
+  Input,
+  Sheet,
+  Text,
+  useTheme,
+} from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
@@ -30,11 +39,12 @@ export function RescheduleSheet({
   readonly onSave: (input: { dueDate: string; reason: string }) => void;
 }) {
   const words = TASK.rescheduleSheet;
+  const theme = useTheme();
   const survey = siteVisitKindOf(task) === 'survey';
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const errors = fieldErrorsOf(error);
-  const general = error && Object.keys(errors).length === 0 ? describeError(error) : undefined;
+  const general = error ? describeError(error) : undefined;
   return (
     <Sheet
       open={open}
@@ -48,7 +58,9 @@ export function RescheduleSheet({
           size="lg"
           pending={pending}
           disabled={!dueDate || reason.trim().length < 3}
-          onPress={() => dueDate && onSave({ dueDate, reason })}
+          onPress={() => {
+            if (!pending && dueDate) onSave({ dueDate, reason });
+          }}
           fullWidth
         />
       }
@@ -60,15 +72,22 @@ export function RescheduleSheet({
         value={dueDate}
         onChange={setDueDate}
       />
-      <Field label={words.reason} error={errors.reason ?? errors.dueDate ?? general}>
+      <Field label={words.reason} error={errors.reason ?? errors.dueDate}>
         <Input
           value={reason}
           onChangeText={setReason}
           placeholder={words.reasonPlaceholder}
           multiline
+          maxLength={500}
+          invalid={Boolean(errors.reason ?? errors.dueDate)}
           accessibilityLabel={words.reason}
         />
       </Field>
+      {general ? (
+        <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
+          {general}
+        </Text>
+      ) : null}
     </Sheet>
   );
 }

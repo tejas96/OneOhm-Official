@@ -41,12 +41,13 @@ export function ChangeTypeSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      save(editing?.id ?? null, bodyFrom(draft, CHANGE_REQUEST_INPUT_KEYS)),
+    await form.run(
+      () => save(editing?.id ?? null, bodyFrom(draft, CHANGE_REQUEST_INPUT_KEYS)),
+      (saved) => {
+        toast({ tone: 'success', title: t(editing ? 'saved' : 'added', { name: saved.title }) });
+        onClose();
+      },
     );
-    if (!saved) return;
-    toast({ tone: 'success', title: t(editing ? 'saved' : 'added', { name: saved.title }) });
-    onClose();
   };
 
   return (

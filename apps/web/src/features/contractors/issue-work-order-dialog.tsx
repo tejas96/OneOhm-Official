@@ -51,24 +51,26 @@ export function IssueWorkOrderDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const issued = await form.run(() =>
-      expectStatus(
-        api.contractors.issueWorkOrder({
-          params: { id: contractor.id },
-          body: { projectId, dueDate: dueDate || null, scope: scope.trim() || null },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.contractors.issueWorkOrder({
+            params: { id: contractor.id },
+            body: { projectId, dueDate: dueDate || null, scope: scope.trim() || null },
+          }),
+          201,
+        ),
+      async (issued) => {
+        await refresh();
+        toast({
+          tone: 'success',
+          title: t('done', { number: issued.number }),
+          reference: issued.number,
+        });
+        onOpenChange(false);
+        router.push(`/contractors/work-orders/${issued.id}`);
+      },
     );
-    if (!issued) return;
-    await refresh();
-    toast({
-      tone: 'success',
-      title: t('done', { number: issued.number }),
-      reference: issued.number,
-    });
-    onOpenChange(false);
-    router.push(`/contractors/work-orders/${issued.id}`);
   };
 
   return (

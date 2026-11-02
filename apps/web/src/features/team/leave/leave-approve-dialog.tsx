@@ -99,11 +99,7 @@ export function LeaveApproveDialog({
           skipHandover: skip && backup === NONE,
         }
       : { approve: false, note: note.trim() || null };
-    const done = await form.run(async () => {
-      await onDecide(body);
-      return true;
-    });
-    if (done) onClose();
+    await form.run(() => onDecide(body), onClose);
   };
 
   return (

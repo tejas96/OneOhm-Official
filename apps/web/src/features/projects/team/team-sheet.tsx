@@ -43,24 +43,26 @@ export function TeamSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.projectTeam.updateProject({
-          params: { id: project.id },
-          body: {
-            ...(manager ? { managerUserId: manager } : {}),
-            teamUserIds: team,
-            targetFinishDate: target || null,
-          },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.projectTeam.updateProject({
+            params: { id: project.id },
+            body: {
+              ...(manager ? { managerUserId: manager } : {}),
+              teamUserIds: team,
+              targetFinishDate: target || null,
+            },
+          }),
+          200,
+        ),
+      async (saved) => {
+        client.setQueryData(['project', project.id], saved);
+        await client.invalidateQueries({ queryKey: ['projects'] });
+        toast({ title: t('saved'), tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    client.setQueryData(['project', project.id], saved);
-    await client.invalidateQueries({ queryKey: ['projects'] });
-    toast({ title: t('saved'), tone: 'success' });
-    onClose();
   };
 
   const errors = form.fieldErrors;

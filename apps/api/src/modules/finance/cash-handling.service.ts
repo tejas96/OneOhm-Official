@@ -13,6 +13,7 @@ import { formatInr } from '@oneohm/shared';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan } from '../../common/auth/actor';
+import { assertNotFuture } from '../../common/dates';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { readHandled } from './cash-handling-read';
@@ -57,6 +58,7 @@ export class CashHandlingService {
   }
 
   async createDeposit(actor: Actor, input: NewDeposit): Promise<MoneyDeposit> {
+    assertNotFuture(input.depositedOn, 'depositedOn');
     assertCan(actor, 'finance.record_payments');
     const ids = [...new Set(input.paymentIds)];
     const items = await readHandled(this.db, inArray(paymentHandling.paymentId, ids));
@@ -126,6 +128,7 @@ export class CashHandlingService {
   }
 
   async clearCheque(actor: Actor, paymentId: string, clearedOn: string): Promise<HandledPayment> {
+    assertNotFuture(clearedOn, 'clearedOn');
     assertCan(actor, 'finance.record_payments');
     const cheque = await this.openCheque(paymentId);
     if (clearedOn < cheque.receivedOn) {
@@ -160,6 +163,7 @@ export class CashHandlingService {
     paymentId: string,
     input: { bouncedOn: string; reason: string },
   ): Promise<HandledPayment> {
+    assertNotFuture(input.bouncedOn, 'bouncedOn');
     assertCan(actor, 'finance.approve_payments');
     const cheque = await this.openCheque(paymentId);
     const label = `Cheque ${cheque.chequeNumber ?? ''} bounced: ${input.reason}`;

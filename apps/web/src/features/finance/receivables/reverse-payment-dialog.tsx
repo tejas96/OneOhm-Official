@@ -37,16 +37,25 @@ export function ReversePaymentDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!payment) return;
-    const done = await form.run(() =>
-      expectStatus(
-        api.finance.reversePayment({ params: { id: payment.id }, body: { reason: reason.trim() } }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.finance.reversePayment({
+            params: { id: payment.id },
+            body: { reason: reason.trim() },
+          }),
+          201,
+        ),
+      async () => {
+        await invalidate();
+        toast({
+          title: t('done'),
+          description: payment.receiptNumber ?? undefined,
+          tone: 'success',
+        });
+        close();
+      },
     );
-    if (!done) return;
-    await invalidate();
-    toast({ title: t('done'), description: payment.receiptNumber ?? undefined, tone: 'success' });
-    close();
   };
 
   return (

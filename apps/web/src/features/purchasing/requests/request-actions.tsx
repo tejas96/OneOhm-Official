@@ -82,15 +82,17 @@ function DecisionDialog({
     event.preventDefault();
     if (!decision) return;
     const params = { id: request.id };
-    const saved = await form.run(() =>
-      decision === 'approve'
-        ? expectStatus(api.purchasing.requests.approve({ params, body: { note } }), 200)
-        : expectStatus(api.purchasing.requests.reject({ params, body: { note } }), 200),
+    await form.run(
+      () =>
+        decision === 'approve'
+          ? expectStatus(api.purchasing.requests.approve({ params, body: { note } }), 200)
+          : expectStatus(api.purchasing.requests.reject({ params, body: { note } }), 200),
+      async (saved) => {
+        await refresh();
+        toast({ tone: 'success', title: t(`done.${decision}`, { number: saved.number }) });
+        close();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t(`done.${decision}`, { number: saved.number }) });
-    close();
   };
 
   return (
@@ -140,13 +142,14 @@ function CancelDialog({
   const refresh = useRefreshPurchasing();
   const form = useApiForm();
   const confirm = async () => {
-    const saved = await form.run(() =>
-      expectStatus(api.purchasing.requests.cancel({ params: { id: request.id } }), 200),
+    await form.run(
+      () => expectStatus(api.purchasing.requests.cancel({ params: { id: request.id } }), 200),
+      async (saved) => {
+        await refresh();
+        toast({ tone: 'success', title: t('done.cancel', { number: saved.number }) });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('done.cancel', { number: saved.number }) });
-    onClose();
   };
   return (
     <Dialog

@@ -38,16 +38,17 @@ export function AddPersonDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(api.people.createPerson({ body: bodyFrom(draft) }), 201),
+    await form.run(
+      () => expectStatus(api.people.createPerson({ body: bodyFrom(draft) }), 201),
+      async (created) => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
+          queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
+        ]);
+        toast({ title: t('added', { name: created.fullName }), tone: 'success' });
+        close(false);
+      },
     );
-    if (!created) return;
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
-      queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
-    ]);
-    toast({ title: t('added', { name: created.fullName }), tone: 'success' });
-    close(false);
   };
 
   return (

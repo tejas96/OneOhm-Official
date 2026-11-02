@@ -1,8 +1,9 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { SIGNATURE_CATEGORY, VOICE_NOTE_CATEGORY } from '@oneohm/domain';
-import { type UploadableFile, unwrap } from '@oneohm/mobile-ui';
+import { describeError, type UploadableFile, unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
+import { useToast } from '@/components/toast';
 import { TASK } from '@/copy/tasks';
 import type { PickedVideo } from '@/features/media/pick-video';
 import { onItsWay } from '@/features/uploads/queue-logic';
@@ -18,6 +19,7 @@ import type { PickedPhoto } from './pick-photos';
 export function useEvidence(task: ProjectTask) {
   const client = useQueryClient();
   const queue = useUploadQueue();
+  const toast = useToast();
   const pending = queue.items.filter((item) => item.taskId === task.id);
 
   const remove = useMutation({
@@ -27,6 +29,7 @@ export function useEvidence(task: ProjectTask) {
       await client.invalidateQueries({ queryKey: keys.task(task.id) });
       await client.invalidateQueries({ queryKey: keys.tasks });
     },
+    onError: (error) => toast(TASK.evidence.removeFailed(describeError(error))),
   });
 
   const addPhotos = (photos: readonly PickedPhoto[]) =>

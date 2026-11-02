@@ -34,8 +34,12 @@ export function useBaseSaver(company: Company | undefined) {
   const save = async (): Promise<boolean> => {
     if (point.latitude === known.latitude && point.longitude === known.longitude) return true;
     const body = { baseLatitude: point.latitude, baseLongitude: point.longitude };
-    const saved = await form.run(() => expectStatus(api.catalog.updateCompany({ body }), 200));
-    if (saved) queryClient.setQueryData(SETTINGS_KEYS.company, saved);
+    const saved = await form.run(
+      () => expectStatus(api.catalog.updateCompany({ body }), 200),
+      (result) => {
+        queryClient.setQueryData(SETTINGS_KEYS.company, result);
+      },
+    );
     return saved !== undefined;
   };
   return {

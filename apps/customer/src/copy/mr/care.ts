@@ -38,6 +38,8 @@ export const SUPPORT: Copy<typeof en.SUPPORT> = {
   formTitle: 'कशासाठी मदत हवी आहे?',
   formDescription: 'जवळचा पर्याय निवडा आणि थोडक्यात सांगा.',
   categoryLabel: 'अडचणीचा प्रकार',
+  categoryNeeded: 'अडचणीचा प्रकार निवडा.',
+  descriptionNeeded: 'थोडे अजून सांगा, किंवा व्हॉइस नोट रेकॉर्ड करा.',
   projectLabel: 'कोणती सिस्टिम',
   descriptionLabel: 'काय होत आहे?',
   descriptionHint: 'उदा. आज सकाळपासून इन्व्हर्टरवर लाल दिवा दिसत आहे.',

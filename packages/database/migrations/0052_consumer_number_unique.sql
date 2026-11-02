@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "properties_consumer_number_unique" ON "properties" USING btree (upper(regexp_replace("consumer_number", '[^A-Za-z0-9]', '', 'g'))) WHERE "properties"."consumer_number" is not null;

@@ -8,6 +8,8 @@ import {
 } from '../../common/read-models/change-request-blocks';
 import { assignmentStates } from '../../common/read-models/task-assignment-state';
 
+export { checkedConsumerNumber } from './task-consumer-number';
+
 /** Earlier tasks and open change requests (PRD 3.15) can both hold a task back. */
 export async function assertUnblocked(
   db: Database,

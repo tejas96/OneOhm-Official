@@ -11,7 +11,7 @@ import { and, asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { invalid, notFound } from '../../common/http/errors';
-import { definedOnly, type Patch } from '../../common/patch';
+import type { Patch } from '../../common/patch';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -19,6 +19,8 @@ import { otherAccounts } from './customer-accounts.read';
 import { type CustomerPatch, editCustomer } from './customer-edit';
 import { logLead } from './lead-history';
 import { LeadsService } from './leads.service';
+import { addSite, editSite, insertLeadSite } from './site-edit';
+import { savingSite } from './site-rules';
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
   const { createdAt: _c, updatedAt: _u, version: _v, ...rest } = row;
@@ -51,7 +53,8 @@ export class CustomersService {
     const propertyRows = await this.db
       .select()
       .from(properties)
-      .where(eq(properties.customerId, id));
+      .where(eq(properties.customerId, id))
+      .orderBy(asc(properties.createdAt));
     return {
       ...customer,
       properties: propertyRows.map(presentProperty),
@@ -80,37 +83,39 @@ export class CustomersService {
     site: { property?: PropertyInput | undefined; propertyId?: string | undefined },
   ) {
     const lead = await this.leads.get(actor, leadId);
-    const result = await this.db.transaction(async (tx) => {
-      let [customer] = await tx
-        .select({ id: customers.id })
-        .from(customers)
-        .where(eq(customers.phoneE164, lead.phone))
-        .limit(1);
-      const matched = Boolean(customer);
-      if (!customer) {
-        [customer] = await tx
-          .insert(customers)
-          .values({
-            kind,
-            name: lead.name,
-            phoneE164: lead.phone,
-            email: lead.email,
-            createdByUserId: actor.userId,
-          })
-          .returning({ id: customers.id });
-      }
-      if (!customer) throw new Error('Customer insert returned nothing.');
-      const propertyId = await this.siteFor(tx, customer.id, site);
-      await recordAudit(tx, actor.userId, 'lead.converted', 'lead', leadId, {
-        customerId: customer.id,
-        propertyId,
-        reusedProperty: Boolean(site.propertyId),
-      });
-      const who = matched ? 'Matched to the existing customer' : 'Converted to a customer';
-      const where = site.propertyId ? 'their site on file' : 'a new site';
-      await logLead(tx, leadId, actor.userId, 'note', `${who}, with ${where}.`);
-      return { customerId: customer.id, propertyId };
-    });
+    const result = await savingSite('property.consumerNumber', () =>
+      this.db.transaction(async (tx) => {
+        let [customer] = await tx
+          .select({ id: customers.id })
+          .from(customers)
+          .where(eq(customers.phoneE164, lead.phone))
+          .limit(1);
+        const matched = Boolean(customer);
+        if (!customer) {
+          [customer] = await tx
+            .insert(customers)
+            .values({
+              kind,
+              name: lead.name,
+              phoneE164: lead.phone,
+              email: lead.email,
+              createdByUserId: actor.userId,
+            })
+            .returning({ id: customers.id });
+        }
+        if (!customer) throw new Error('Customer insert returned nothing.');
+        const propertyId = await this.siteFor(tx, actor, customer.id, site);
+        await recordAudit(tx, actor.userId, 'lead.converted', 'lead', leadId, {
+          customerId: customer.id,
+          propertyId,
+          reusedProperty: Boolean(site.propertyId),
+        });
+        const who = matched ? 'Matched to the existing customer' : 'Converted to a customer';
+        const where = site.propertyId ? 'their site on file' : 'a new site';
+        await logLead(tx, leadId, actor.userId, 'note', `${who}, with ${where}.`);
+        return { customerId: customer.id, propertyId };
+      }),
+    );
     await this.leads.link(leadId, result.customerId, result.propertyId);
     return result;
   }
@@ -118,6 +123,7 @@ export class CustomersService {
   /** A site of this customer picked by id, or a new one from the form. */
   private async siteFor(
     tx: DatabaseExecutor,
+    actor: Actor,
     customerId: string,
     site: { property?: PropertyInput | undefined; propertyId?: string | undefined },
   ): Promise<string> {
@@ -131,12 +137,7 @@ export class CustomersService {
       return own.id;
     }
     if (!site.property) throw invalid('Add the site address.');
-    const [created] = await tx
-      .insert(properties)
-      .values({ customerId, ...site.property, households: site.property.households ?? null })
-      .returning({ id: properties.id });
-    if (!created) throw new Error('Property insert returned nothing.');
-    return created.id;
+    return insertLeadSite(tx, actor, customerId, site.property);
   }
 
   async property(id: string): Promise<typeof properties.$inferSelect> {
@@ -158,13 +159,19 @@ export class CustomersService {
     return { ...presentProperty(row), customer };
   }
 
+  /** Another site for a customer who already has one (PRD 3.2: a customer can have several). */
+  async addProperty(actor: Actor, customerId: string, input: PropertyInput): Promise<Property> {
+    const [customer] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+    if (!customer) throw notFound('That customer');
+    return presentProperty(await this.property(await addSite(this.db, actor, customerId, input)));
+  }
+
   async updateProperty(actor: Actor, id: string, patch: Patch<PropertyInput>): Promise<Property> {
-    await this.property(id);
-    await this.db
-      .update(properties)
-      .set({ ...definedOnly(patch), updatedAt: new Date() })
-      .where(eq(properties.id, id));
-    await recordAudit(this.db, actor.userId, 'property.updated', 'property', id, patch);
+    await editSite(this.db, actor, await this.property(id), patch);
     return presentProperty(await this.property(id));
   }
 

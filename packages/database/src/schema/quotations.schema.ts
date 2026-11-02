@@ -127,3 +127,26 @@ export const quotationLines = pgTable(
   },
   (table) => [index('quotation_lines_quotation_idx').on(table.quotationId)],
 );
+
+/**
+ * The inverters on a quotation: one row per model, with how many, in the order picked.
+ * `quotations.inverter_product_id` keeps the first (main) one for single-inverter readers.
+ */
+export const quotationInverters = pgTable(
+  'quotation_inverters',
+  {
+    id: primaryId(),
+    quotationId: uuid('quotation_id')
+      .notNull()
+      .references(() => quotations.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    quantity: integer('quantity').notNull(),
+  },
+  (table) => [
+    uniqueIndex('quotation_inverters_position_unique').on(table.quotationId, table.position),
+    uniqueIndex('quotation_inverters_product_unique').on(table.quotationId, table.productId),
+  ],
+);

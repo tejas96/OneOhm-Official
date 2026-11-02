@@ -1,12 +1,15 @@
 import {
   Button,
   ChoiceChips,
+  describeError,
   Field,
   fieldErrorsOf,
   Input,
   LoadingState,
   Screen,
+  Text,
   unwrap,
+  useTheme,
 } from '@oneohm/mobile-ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -22,6 +25,7 @@ import { useSendLeave } from './use-send-leave';
 
 /** Ask for leave in a few taps, seeing its effect on work before sending (PRD 4.6). */
 export function RequestLeaveScreen() {
+  const theme = useTheme();
   const workday = useWorkday();
   const balances = workday.data?.balances ?? [];
   const form = useLeaveForm(balances[0]?.leaveType ?? null);
@@ -47,15 +51,23 @@ export function RequestLeaveScreen() {
   });
   const errors = send.error ? fieldErrorsOf(send.error) : {};
   const shown = window ? impact.data : undefined;
+  // The impact of newly picked days must be on screen before sending them.
+  const checking = window !== null && (impact.isFetching || impact.isPlaceholderData);
+  // Messages for things picked by tap (days, the backup) sit with the sentence.
+  const picked = [errors.fromDate, errors.toDate, errors.halfDay, errors.backupUserId].filter(
+    (message): message is string => Boolean(message),
+  );
 
   return (
     <Screen
       footer={
         <Button
           label={REQUEST_LEAVE.send}
-          onPress={() => send.mutate()}
+          onPress={() => {
+            if (!send.isPending) send.mutate();
+          }}
           pending={send.isPending}
-          disabled={!shown || shown.halfDays === 0}
+          disabled={!shown || shown.halfDays === 0 || checking}
           fullWidth
         />
       }
@@ -63,7 +75,7 @@ export function RequestLeaveScreen() {
       <ScreenHeader title={REQUEST_LEAVE.title} />
       {workday.isPending ? <LoadingState label={REQUEST_LEAVE.checking} /> : null}
       <View style={styles.form}>
-        <Field label={REQUEST_LEAVE.kind}>
+        <Field label={REQUEST_LEAVE.kind} error={errors.leaveType}>
           <ChoiceChips
             label={REQUEST_LEAVE.kind}
             choices={balances.map((balance) => ({
@@ -87,6 +99,8 @@ export function RequestLeaveScreen() {
               onChangeText={setHandover}
               accessibilityLabel={REQUEST_LEAVE.handover}
               multiline
+              maxLength={2000}
+              invalid={Boolean(errors.handoverNote)}
             />
           </Field>
         ) : null}
@@ -96,8 +110,25 @@ export function RequestLeaveScreen() {
             onChangeText={setReason}
             accessibilityLabel={REQUEST_LEAVE.reason}
             multiline
+            maxLength={2000}
+            invalid={Boolean(errors.reason)}
           />
         </Field>
+        {send.error ? (
+          <View
+            style={[styles.alert, { backgroundColor: theme.status.overdue.tint }]}
+            accessibilityRole="alert"
+          >
+            <Text variant="bodySm" color={theme.status.overdue.fg}>
+              {describeError(send.error)}
+            </Text>
+            {picked.map((message) => (
+              <Text key={message} variant="bodySm" color={theme.status.overdue.fg}>
+                {message}
+              </Text>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Screen>
   );
@@ -105,4 +136,5 @@ export function RequestLeaveScreen() {
 
 const styles = StyleSheet.create({
   form: { gap: 18 },
+  alert: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, gap: 6 },
 });

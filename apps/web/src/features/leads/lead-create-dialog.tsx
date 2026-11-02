@@ -25,6 +25,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { type CheckKey, followUpProblem, isIndianMobile } from '@/lib/forms/checks';
 import { useCan } from '@/providers/current-user';
 import { kwToWp, leadKeys } from './lead-labels';
 import { PhoneMatchNotice } from './phone-match-notice';
@@ -32,6 +33,26 @@ import { ReferralCodeField } from './referral-code-field';
 import { useLeadOwnerOptions } from './use-lead-owners';
 
 const ME = 'me';
+
+/** What the form checks before sending; the API checks again. */
+function leadProblems(values: {
+  readonly name: string;
+  readonly phone: string;
+  readonly city: string;
+  readonly nextActionOn: string;
+  readonly nextActionTime: string;
+  readonly badKw: boolean;
+}): Record<string, CheckKey | 'minChars'> {
+  const found: Record<string, CheckKey | 'minChars'> = {};
+  if (values.name.length < 2) found.name = 'minChars';
+  if (!values.phone.trim()) found.phone = 'required';
+  else if (!isIndianMobile(values.phone)) found.phone = 'mobile';
+  if (values.city.length < 2) found.city = 'minChars';
+  const followUp = followUpProblem(values.nextActionOn, values.nextActionTime || null);
+  if (followUp) found[followUp.field === 'date' ? 'nextActionOn' : 'nextActionTime'] = followUp.key;
+  if (values.badKw) found.estimatedWp = 'positiveNumber';
+  return found;
+}
 
 /** New lead: who, how to reach them, and when to follow up. Duplicates are caught by phone. */
 export function LeadCreateDialog({
@@ -47,6 +68,7 @@ export function LeadCreateDialog({
   const t = useTranslations('leads.create');
   const sourceT = useTranslations('leads.source');
   const categoryT = useTranslations('leads.category');
+  const checkT = useTranslations('checks');
   const router = useRouter();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -56,6 +78,7 @@ export function LeadCreateDialog({
   const [category, setCategory] = useState<SubsidyCategory>('individual');
   const [owner, setOwner] = useState<string>(ME);
   const [error, setError] = useState<ApiError | null>(null);
+  const [checks, setChecks] = useState<Record<string, string>>({});
   const owners = useLeadOwnerOptions(open && canAssign);
   const create = useMutation({
     mutationFn: (body: Parameters<typeof api.crm.createLead>[0]['body']) =>
@@ -77,7 +100,24 @@ export function LeadCreateDialog({
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const text = (name: string) => String(data.get(name) ?? '').trim();
+    if (create.isPending) return;
     setError(null);
+    const estimatedWp = kwToWp(text('estimatedKw'));
+    const found = leadProblems({
+      name: text('name'),
+      phone,
+      city: text('city'),
+      nextActionOn: text('nextActionOn'),
+      nextActionTime: text('nextActionTime'),
+      badKw: Boolean(text('estimatedKw')) && estimatedWp === null,
+    });
+    const messages = Object.fromEntries(
+      Object.entries(found).map(([field, key]) =>
+        key === 'minChars' ? [field, checkT('minChars', { count: 2 })] : [field, checkT(key)],
+      ),
+    );
+    setChecks(messages);
+    if (Object.keys(found).length > 0) return;
     create.mutate({
       name: text('name'),
       phone,
@@ -85,16 +125,17 @@ export function LeadCreateDialog({
       city: text('city'),
       source,
       subsidyCategory: category,
-      estimatedWp: kwToWp(text('estimatedKw')),
+      estimatedWp,
       ...(owner === ME ? {} : { ownerUserId: owner }),
       nextActionOn: text('nextActionOn'),
+      nextActionTime: text('nextActionTime') || null,
       nextActionNote: text('nextActionNote') || null,
       notes: text('notes') || null,
       referralCode: text('referralCode') || null,
     });
   };
 
-  const fieldError = (name: string) => error?.fieldErrors[name];
+  const fieldError = (name: string) => checks[name] ?? error?.fieldErrors[name];
   const duplicateId = error?.code?.startsWith('duplicate_lead:') ? error.code.slice(15) : null;
   const ownerOptions = [{ value: ME, label: t('ownerMe') }, ...owners];
 
@@ -102,7 +143,10 @@ export function LeadCreateDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setError(null);
+        if (!next) {
+          setError(null);
+          setChecks({});
+        }
         onOpenChange(next);
       }}
       title={t('title')}
@@ -176,8 +220,11 @@ export function LeadCreateDialog({
             options={SUBSIDY_CATEGORIES.map((value) => ({ value, label: categoryT(value) }))}
             className="self-start"
           />
+          {fieldError('subsidyCategory') && (
+            <p className="type-body-sm text-overdue">{fieldError('subsidyCategory')}</p>
+          )}
         </div>
-        <Field label={t('source')}>
+        <Field label={t('source')} error={fieldError('source')}>
           <Select
             value={source}
             onValueChange={setSource}
@@ -189,7 +236,7 @@ export function LeadCreateDialog({
           <Input name="estimatedKw" inputMode="decimal" />
         </Field>
         {canAssign && (
-          <Field label={t('owner')}>
+          <Field label={t('owner')} error={fieldError('ownerUserId')}>
             <Select value={owner} onValueChange={setOwner} options={ownerOptions} />
           </Field>
         )}
@@ -200,6 +247,9 @@ export function LeadCreateDialog({
             min={todayIn()}
             defaultValue={addDays(todayIn(), 1)}
           />
+        </Field>
+        <Field label={t('nextActionTime')} error={fieldError('nextActionTime')}>
+          <Input name="nextActionTime" type="time" step={300} />
         </Field>
         <Field label={t('nextActionNote')} error={fieldError('nextActionNote')}>
           <Input name="nextActionNote" placeholder={t('nextActionPlaceholder')} />

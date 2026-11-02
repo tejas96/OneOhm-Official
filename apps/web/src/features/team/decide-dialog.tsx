@@ -42,11 +42,7 @@ export function DecideDialog({
 
   const submit = async () => {
     const approve = choice === 'approve';
-    const done = await form.run(async () => {
-      await onDecide(approve, note.trim() || null);
-      return true;
-    });
-    if (done) onClose();
+    await form.run(() => onDecide(approve, note.trim() || null), onClose);
   };
 
   return (

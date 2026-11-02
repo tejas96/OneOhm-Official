@@ -55,24 +55,26 @@ export function DisbursementDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!loan) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.finance.recordDisbursement({
-          params: { projectId: loan.projectId },
-          body: {
-            trancheId: trancheId === UNPLANNED ? null : trancheId,
-            amountPaise: amount ?? 0,
-            receivedOn,
-            reference: reference.trim() || null,
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.finance.recordDisbursement({
+            params: { projectId: loan.projectId },
+            body: {
+              trancheId: trancheId === UNPLANNED ? null : trancheId,
+              amountPaise: amount ?? 0,
+              receivedOn,
+              reference: reference.trim() || null,
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        await invalidate();
+        toast({ title: t('done'), description: saved.projectCode, tone: 'success' });
+        close();
+      },
     );
-    if (!saved) return;
-    await invalidate();
-    toast({ title: t('done'), description: saved.projectCode, tone: 'success' });
-    close();
   };
 
   return (

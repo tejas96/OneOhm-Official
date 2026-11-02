@@ -5,7 +5,8 @@ import { Button, Field, Input, Sheet, Textarea } from '@oneohm/design-system/web
 import { formatInr, todayIn } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { describeError } from '@/lib/api/api-error';
+import { FormError } from '@/components/form-error';
+import { ApiError, describeError } from '@/lib/api/api-error';
 import { useCreateDeposit } from './use-cash';
 
 /** One bank slip for the ticked cash and cheques: the date, the slip number and a note. */
@@ -21,6 +22,8 @@ export function DepositSheet({
   readonly onDone: () => void;
 }) {
   const t = useTranslations('finance.cash.deposit');
+  const checkT = useTranslations('checks');
+  const [dateError, setDateError] = useState<string | null>(null);
   const [depositedOn, setDepositedOn] = useState(todayIn());
   const [bankReference, setBankReference] = useState('');
   const [note, setNote] = useState('');
@@ -31,13 +34,23 @@ export function DepositSheet({
   });
   const total = (method: 'cash' | 'cheque') =>
     items.filter((item) => item.method === method).reduce((sum, item) => sum + item.amountPaise, 0);
-  const submit = () =>
+  const fieldErrors = create.error instanceof ApiError ? create.error.fieldErrors : {};
+  const submit = () => {
+    if (create.isPending) return;
+    const problem = !depositedOn
+      ? checkT('required')
+      : depositedOn > todayIn()
+        ? checkT('dateNotFuture')
+        : null;
+    setDateError(problem);
+    if (problem) return;
     create.mutate({
       depositedOn,
       bankReference: bankReference.trim() || null,
       note: note.trim(),
       paymentIds: items.map((item) => item.paymentId),
     });
+  };
   return (
     <Sheet
       open={open}
@@ -71,24 +84,22 @@ export function DepositSheet({
             <dd className="font-mono text-ink tabular-nums">{formatInr(total('cheque'))}</dd>
           </div>
         </dl>
-        <Field label={t('date')} required>
+        <Field label={t('date')} required error={dateError ?? fieldErrors.depositedOn}>
           <Input
             type="date"
+            max={todayIn()}
             value={depositedOn}
             onChange={(event) => setDepositedOn(event.target.value)}
           />
         </Field>
-        <Field label={t('reference')} hint={t('referenceHint')}>
+        <Field label={t('reference')} hint={t('referenceHint')} error={fieldErrors.bankReference}>
           <Input
             value={bankReference}
             maxLength={60}
             onChange={(event) => setBankReference(event.target.value)}
           />
         </Field>
-        <Field
-          label={t('note')}
-          error={create.isError ? `${t('failed')}: ${describeError(create.error)}` : null}
-        >
+        <Field label={t('note')} error={fieldErrors.note}>
           <Textarea
             value={note}
             rows={2}
@@ -97,6 +108,9 @@ export function DepositSheet({
           />
         </Field>
         <p className="type-body-sm text-ink-faint">{t('chequesNote')}</p>
+        <FormError
+          message={create.isError ? `${t('failed')}: ${describeError(create.error)}` : null}
+        />
       </div>
     </Sheet>
   );

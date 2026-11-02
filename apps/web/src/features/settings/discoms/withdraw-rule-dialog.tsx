@@ -23,13 +23,16 @@ export function WithdrawRuleDialog({
 
   const confirm = async () => {
     if (!rule) return;
-    const done = await form.run(async () => {
-      await withdraw(rule.id);
-      return true;
-    });
-    if (!done) return;
-    toast({ title: t('withdrawDialog.done'), tone: 'success' });
-    onClose();
+    await form.run(
+      async () => {
+        await withdraw(rule.id);
+        return true;
+      },
+      () => {
+        toast({ title: t('withdrawDialog.done'), tone: 'success' });
+        onClose();
+      },
+    );
   };
 
   return (

@@ -110,18 +110,20 @@ export function VendorDialog({
       ...draft,
       paymentTermsDays: Number(draft.paymentTermsDays || 0),
     };
-    const saved = await form.run(() =>
-      vendor
-        ? expectStatus(api.inventory.vendors.update({ params: { id: vendor.id }, body }), 200)
-        : expectStatus(api.inventory.vendors.create({ body }), 201),
+    await form.run(
+      () =>
+        vendor
+          ? expectStatus(api.inventory.vendors.update({ params: { id: vendor.id }, body }), 200)
+          : expectStatus(api.inventory.vendors.create({ body }), 201),
+      async (saved) => {
+        await refresh();
+        toast({
+          tone: 'success',
+          title: vendor ? t('updated', { name: saved.name }) : t('created', { name: saved.name }),
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({
-      tone: 'success',
-      title: vendor ? t('updated', { name: saved.name }) : t('created', { name: saved.name }),
-    });
-    onClose();
   };
 
   const text = (key: Exclude<keyof Draft, 'active' | 'productIds'>) => ({

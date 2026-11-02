@@ -74,7 +74,7 @@ describe('cardFromLegacy prices exactly as the old flat card did', () => {
     const design = designSystem({
       targetWp: 3_000,
       panel,
-      inverter,
+      inverters: [{ product: inverter, quantity: 1 }],
       site: { floors: 1, structureType: 'rcc_elevated', distanceKm: 10 },
       rates: cardFromLegacy(OLD),
     });
@@ -160,7 +160,7 @@ describe('cardFromLegacy prices exactly as the old flat card did', () => {
     const design = designSystem({
       targetWp: 5_000,
       panel,
-      inverter,
+      inverters: [{ product: inverter, quantity: 1 }],
       site: { floors: 4, structureType: 'tin_shed', distanceKm: 40 },
       rates: cardFromLegacy(OLD),
     });
@@ -200,7 +200,7 @@ describe('cardFromLegacy prices exactly as the old flat card did', () => {
     const design = designSystem({
       targetWp: 10_000,
       panel,
-      inverter,
+      inverters: [{ product: inverter, quantity: 1 }],
       battery,
       site: {
         floors: 0,

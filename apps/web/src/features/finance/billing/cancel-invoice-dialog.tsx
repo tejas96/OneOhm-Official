@@ -33,16 +33,21 @@ export function CancelInvoiceDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!invoice) return;
-    const done = await form.run(() =>
-      expectStatus(
-        api.billing.cancelInvoice({ params: { id: invoice.id }, body: { reason: reason.trim() } }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.billing.cancelInvoice({
+            params: { id: invoice.id },
+            body: { reason: reason.trim() },
+          }),
+          200,
+        ),
+      async (done) => {
+        await invalidate();
+        toast({ title: t('done'), description: done.number, tone: 'success' });
+        close();
+      },
     );
-    if (!done) return;
-    await invalidate();
-    toast({ title: t('done'), description: done.number, tone: 'success' });
-    close();
   };
 
   return (

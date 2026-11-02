@@ -2,6 +2,7 @@ import {
   Button,
   describeError,
   Field,
+  fieldErrorsOf,
   Input,
   PressableScale,
   Screen,
@@ -21,28 +22,38 @@ import { useToast } from '@/components/toast';
 import { RATE } from '@/copy/after-sales';
 import { COMMON } from '@/copy/common';
 
+/** A starting rating from the link: a whole number 1-5, otherwise none. */
+export function startingRating(value: string | undefined): number {
+  const stars = Number(value);
+  return Number.isInteger(stars) && stars >= 1 && stars <= 5 ? stars : 0;
+}
+
 /** One to five stars for how a resolved request was handled, with an optional comment. */
 export function RateRequestScreen() {
-  const params = useLocalSearchParams<{ requestId: string; rating?: string }>();
+  const params = useLocalSearchParams<{ requestId?: string; rating?: string }>();
+  const requestId = params.requestId ?? '';
   const theme = useTheme();
   const toast = useToast();
   const client = useQueryClient();
-  const [rating, setRating] = useState(Number(params.rating) || 0);
+  const [rating, setRating] = useState(() => startingRating(params.rating));
   const [comment, setComment] = useState('');
   const send = useMutation({
-    mutationFn: () =>
-      unwrap(
+    mutationFn: () => {
+      if (!requestId) throw new Error(COMMON.loadError);
+      return unwrap(
         api.customerAfterSales.rateServiceRequest({
-          params: { id: params.requestId },
-          body: { rating, ...(comment.trim() ? { comment } : {}) },
+          params: { id: requestId },
+          body: { rating, ...(comment.trim() ? { comment: comment.trim() } : {}) },
         }),
-      ),
+      );
+    },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: keys.service });
       toast(RATE.sent);
       router.back();
     },
   });
+  const errors = send.error ? fieldErrorsOf(send.error) : {};
   return (
     <Screen
       footer={
@@ -50,7 +61,7 @@ export function RateRequestScreen() {
           label={RATE.submit}
           onPress={() => send.mutate()}
           pending={send.isPending}
-          disabled={rating === 0}
+          disabled={rating === 0 || !requestId}
           fullWidth
         />
       }
@@ -90,13 +101,20 @@ export function RateRequestScreen() {
             {rating > 0 ? RATE.stars[rating - 1] : RATE.pick}
           </Text>
         </View>
-        <Field label={RATE.commentLabel} hint={RATE.commentHint} optional={COMMON.optional}>
+        <Field
+          label={RATE.commentLabel}
+          hint={RATE.commentHint}
+          optional={COMMON.optional}
+          error={errors.comment}
+        >
           <Input
             value={comment}
             accessibilityLabel={RATE.commentLabel}
             onChangeText={setComment}
             multiline
+            maxLength={2000}
             style={styles.multiline}
+            invalid={Boolean(errors.comment)}
           />
         </Field>
         <FormAlert message={send.error ? describeError(send.error) : null} />

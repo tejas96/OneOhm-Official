@@ -6,7 +6,7 @@ import { WAITING_PARTIES, type WaitingParty } from '@oneohm/domain';
 import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
-import { describeError } from '@/lib/api/api-error';
+import { ApiError, describeError } from '@/lib/api/api-error';
 
 interface WaitingMutation {
   readonly isPending: boolean;
@@ -31,15 +31,19 @@ export function WaitingDialog({
   const [party, setParty] = useState<WaitingParty>(task.waitingParty);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (mutation.isPending) return;
     setError(null);
+    setFieldErrors({});
     try {
       await mutation.mutateAsync({ party, note: note.trim() || null });
       onOpenChange(false);
     } catch (caught) {
       setError(describeError(caught));
+      if (caught instanceof ApiError) setFieldErrors(caught.fieldErrors);
     }
   };
 
@@ -60,7 +64,7 @@ export function WaitingDialog({
         </>
       }
     >
-      <form id={formId} onSubmit={submit} className="flex flex-col gap-5 pb-2">
+      <form id={formId} onSubmit={submit} noValidate className="flex flex-col gap-5 pb-2">
         <div className="flex flex-col gap-2">
           <p className="type-label text-ink-muted">{t('party')}</p>
           <SegmentedControl
@@ -71,8 +75,9 @@ export function WaitingDialog({
             className="self-start"
           />
           <p className="type-body-sm text-ink-faint">{t('partyHint')}</p>
+          {fieldErrors.party && <p className="type-body-sm text-overdue">{fieldErrors.party}</p>}
         </div>
-        <Field label={t('note')} hint={t('noteHint')}>
+        <Field label={t('note')} hint={t('noteHint')} error={fieldErrors.note}>
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
         {error && (

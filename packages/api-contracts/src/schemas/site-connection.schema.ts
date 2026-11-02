@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from '../common/primitives';
+import { consumerNumberSchema, idSchema } from '../common/primitives';
 
 /**
  * A site's electricity connection as the field app captures it (PRD 4.2, 4.5): the
@@ -20,7 +20,7 @@ export type SiteConnection = z.infer<typeof siteConnectionSchema>;
 
 /** At the lead stage both can be noted; either may be cleared. */
 export const leadConnectionInputSchema = z.object({
-  consumerNumber: z.string().trim().max(40).nullable().optional(),
+  consumerNumber: consumerNumberSchema.nullable().optional(),
   discomId: idSchema.nullable().optional(),
 });
 export type LeadConnectionInput = z.infer<typeof leadConnectionInputSchema>;

@@ -59,29 +59,33 @@ export function RoleEditorSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      role
-        ? expectStatus(
-            api.people.updateRole({
-              params: { id: role.id },
-              body: locked ? { name, description } : { name, description, capabilities, archived },
-            }),
-            200,
-          )
-        : expectStatus(
-            api.people.createRole({ body: { name, description, kind, capabilities } }),
-            201,
-          ),
+    await form.run(
+      () =>
+        role
+          ? expectStatus(
+              api.people.updateRole({
+                params: { id: role.id },
+                body: locked
+                  ? { name, description }
+                  : { name, description, capabilities, archived },
+              }),
+              200,
+            )
+          : expectStatus(
+              api.people.createRole({ body: { name, description, kind, capabilities } }),
+              201,
+            ),
+      async (saved) => {
+        await queryClient.invalidateQueries({ queryKey: ROLES_KEY });
+        toast({
+          title: role
+            ? editorT('updated', { name: saved.name })
+            : editorT('created', { name: saved.name }),
+          tone: 'success',
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: ROLES_KEY });
-    toast({
-      title: role
-        ? editorT('updated', { name: saved.name })
-        : editorT('created', { name: saved.name }),
-      tone: 'success',
-    });
-    onClose();
   };
 
   return (

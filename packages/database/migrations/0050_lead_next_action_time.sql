@@ -1,0 +1,1 @@
+ALTER TABLE "leads" ADD COLUMN "next_action_time" text;

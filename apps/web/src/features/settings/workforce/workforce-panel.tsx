@@ -43,13 +43,14 @@ export function WorkforcePanel() {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = await form.run(() =>
-      expectStatus(api.rewards.saveWorkforcePolicy({ body: draft }), 200),
+    await form.run(
+      () => expectStatus(api.rewards.saveWorkforcePolicy({ body: draft }), 200),
+      (result) => {
+        queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, result);
+        setDraft(result.policy);
+        toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
+      },
     );
-    if (!result) return;
-    queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, result);
-    setDraft(result.policy);
-    toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
   };
   const discard = () => {
     setDraft(saved);

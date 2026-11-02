@@ -71,19 +71,25 @@ export function TaskTemplateSheet({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const input = toInput(draft);
-    const saved = await form.run(() => {
-      if (!template) return expectStatus(api.templates.createTaskTemplate({ body: input }), 201);
-      const { key: _key, ...body } = input;
-      return expectStatus(
-        api.templates.updateTaskTemplate({ params: { id: template.id }, body }),
-        200,
-      );
-    });
-    if (!saved) return;
-    await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.tasks });
-    await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.messages });
-    toast({ title: t(template ? 'updated' : 'created', { title: saved.title }), tone: 'success' });
-    onClose();
+    await form.run(
+      () => {
+        if (!template) return expectStatus(api.templates.createTaskTemplate({ body: input }), 201);
+        const { key: _key, ...body } = input;
+        return expectStatus(
+          api.templates.updateTaskTemplate({ params: { id: template.id }, body }),
+          200,
+        );
+      },
+      async (saved) => {
+        await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.tasks });
+        await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.messages });
+        toast({
+          title: t(template ? 'updated' : 'created', { title: saved.title }),
+          tone: 'success',
+        });
+        onClose();
+      },
+    );
   };
 
   const errors = form.fieldErrors;

@@ -1,11 +1,13 @@
 'use client';
 
 import type { Product } from '@oneohm/api-contracts';
-import { Button, Field, IconButton, Input, Select } from '@oneohm/design-system/web';
-import { purchaseLineTotal, purchaseOrderTotals } from '@oneohm/domain';
+import { Button, Field, IconButton, Input, SearchSelect } from '@oneohm/design-system/web';
+import { asUnit, purchaseLineTotal, purchaseOrderTotals, type Unit } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { PackagePlus, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { productOptions, useSearchWords } from '@/components/product-search';
+import { UnitSelect } from '@/components/unit-select';
 import { NumberInput } from '@/features/settings/number-input';
 
 export interface LineDraft {
@@ -14,7 +16,7 @@ export interface LineDraft {
   readonly kind: 'product' | 'item';
   readonly productId: string | null;
   readonly description: string;
-  readonly unit: string;
+  readonly unit: Unit;
   readonly quantity: string;
   readonly ratePaise: number | null;
   readonly taxRateBp: number | null;
@@ -52,6 +54,7 @@ export function OrderLinesEditor({
   readonly onChange: (lines: LineDraft[]) => void;
 }) {
   const t = useTranslations('inventory.orderForm');
+  const words = useSearchWords();
   const update = (key: string, patch: Partial<LineDraft>) =>
     onChange(lines.map((line) => (line.key === key ? { ...line, ...patch } : line)));
   const pick = (key: string, productId: string) => {
@@ -60,7 +63,7 @@ export function OrderLinesEditor({
     update(key, {
       productId,
       description: product.name,
-      unit: product.unit,
+      unit: asUnit(product.unit),
       ratePaise: product.costPaise,
       taxRateBp: product.taxRateBp,
     });
@@ -90,11 +93,12 @@ export function OrderLinesEditor({
           <div className="flex flex-col gap-2 sm:col-span-4">
             {line.kind === 'product' && (
               <Field label={t('item')} error={errors[`lines.${index}.productId`]}>
-                <Select
+                <SearchSelect
+                  {...words}
                   value={line.productId ?? undefined}
                   onValueChange={(value) => pick(line.key, value)}
                   placeholder={t('productPlaceholder')}
-                  options={products.map((product) => ({ value: product.id, label: product.name }))}
+                  options={productOptions(products, (product) => product.sku)}
                   label={t('item')}
                 />
               </Field>
@@ -107,9 +111,10 @@ export function OrderLinesEditor({
             </Field>
           </div>
           <Field label={t('unit')} error={errors[`lines.${index}.unit`]}>
-            <Input
+            <UnitSelect
               value={line.unit}
-              onChange={(event) => update(line.key, { unit: event.target.value })}
+              onValueChange={(unit) => update(line.key, { unit })}
+              label={t('unit')}
             />
           </Field>
           <Field label={t('quantity')} error={errors[`lines.${index}.quantity`]}>

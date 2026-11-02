@@ -14,7 +14,12 @@ import { assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
 import { leadVisibility, needsFollowUp, readLeadDetail, unownedLeads } from './lead-read';
 import { pickStep, stepColumns } from './lead-steps-read';
-import { assertOpenLeadComplete, type LeadPatch, lostColumns } from './lead-update';
+import {
+  assertFollowUpAhead,
+  assertOpenLeadComplete,
+  type LeadPatch,
+  lostColumns,
+} from './lead-update';
 
 const CLOSED: LeadStage[] = ['won', 'lost'];
 
@@ -28,6 +33,7 @@ export interface NewLead {
   estimatedWp?: number | null | undefined;
   ownerUserId?: string | null | undefined;
   nextActionOn: string;
+  nextActionTime?: string | null | undefined;
   nextActionNote?: string | null | undefined;
   notes?: string | null | undefined;
   referralCode?: string | null | undefined;
@@ -64,7 +70,7 @@ export class LeadsService {
       .select()
       .from(leads)
       .where(and(...conditions))
-      .orderBy(asc(leads.nextActionOn), desc(leads.createdAt));
+      .orderBy(asc(leads.nextActionOn), asc(leads.nextActionTime), desc(leads.createdAt));
     return presentLeads(this.db, rows);
   }
 
@@ -73,6 +79,7 @@ export class LeadsService {
   }
 
   async create(actor: Actor, input: NewLead): Promise<Lead> {
+    assertFollowUpAhead(input.nextActionOn, todayIn());
     const [duplicate] = await this.db
       .select({ id: leads.id, name: leads.name })
       .from(leads)
@@ -104,6 +111,7 @@ export class LeadsService {
         ownerUserId: owner,
         resellerUserId: reseller ? actor.userId : null,
         nextActionOn: input.nextActionOn,
+        nextActionTime: input.nextActionTime ?? null,
         nextActionNote: input.nextActionNote ?? null,
         notes: input.notes ?? null,
       })
@@ -127,6 +135,8 @@ export class LeadsService {
     const step = patch.stepKey ? await pickStep(this.db, patch.stepKey) : null;
     const stage = step?.stage ?? patch.stage ?? current.stage;
     assertOpenLeadComplete(current, patch, stage);
+    if (patch.nextActionOn !== current.nextActionOn)
+      assertFollowUpAhead(patch.nextActionOn, todayIn());
     // Won means a customer: convert first, so the site and quotation have a home.
     if (stage === 'won' && current.stage !== 'won' && !current.customerId) {
       throw invalid('Convert this lead to a customer before marking it won.', {
@@ -149,6 +159,7 @@ export class LeadsService {
           ...lost,
           ...(owner === undefined ? {} : { ownerUserId: owner }),
         }),
+        ...timeColumns(current, patch),
         ...stepColumns(step, patch.stage),
         ...(stage === 'won' && current.stage !== 'won' ? { wonAt: new Date() } : {}),
         updatedAt: new Date(),
@@ -193,4 +204,11 @@ export class LeadsService {
     }
     return owner;
   }
+}
+
+/** A new follow-up day without a time drops the old day's time. */
+function timeColumns(current: LeadDetail, patch: LeadPatch) {
+  const newDay = patch.nextActionOn !== undefined && patch.nextActionOn !== current.nextActionOn;
+  if (patch.nextActionTime !== undefined || !newDay) return {};
+  return { nextActionTime: null };
 }

@@ -1,9 +1,12 @@
 'use client';
 
 import type { Product } from '@oneohm/api-contracts';
-import { cn, Field, Input, SegmentedControl, Select } from '@oneohm/design-system/web';
+import { cn, Field, Input, SearchSelect, SegmentedControl } from '@oneohm/design-system/web';
 import { formatWp } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
+import { productOptions, useSearchWords } from '@/components/product-search';
+import { InverterRowsField } from '../inverter-rows';
+import { dcCapacityWp } from '../inverter-rows-state';
 import type { BuilderState, SubsidyCategory, SystemType } from './builder-state';
 
 const CATEGORIES: readonly SubsidyCategory[] = ['individual', 'society', 'commercial'];
@@ -34,6 +37,7 @@ export function SystemFields({
   const t = useTranslations('quotations.builder.system');
   const categoryT = useTranslations('quotations.category');
   const typeT = useTranslations('quotations.systemType');
+  const words = useSearchWords();
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-5 md:grid-cols-2">
@@ -98,53 +102,57 @@ export function SystemFields({
 
       <div className="grid gap-5 md:grid-cols-2">
         <Field label={t('panel')} hint={t('panelHint')} error={errors.panelProductId} required>
-          <Select
+          <SearchSelect
+            {...words}
             value={state.panelProductId ?? undefined}
             onValueChange={(value) => patch({ panelProductId: value, panelChosen: true })}
-            placeholder={t('choose')}
-            options={catalog.panels.map((product) => ({
-              value: product.id,
-              label: `${productName(product)} · ${formatWp(product.wattageWp ?? 0)} · ${product.dcr ? 'DCR' : t('nonDcr')}`,
-            }))}
-          />
-        </Field>
-        <Field
-          label={t('inverter')}
-          hint={state.inverterChosen ? undefined : t('inverterHint')}
-          error={errors.inverterProductId}
-          required
-        >
-          <Select
-            value={state.inverterProductId ?? undefined}
-            onValueChange={(value) => patch({ inverterProductId: value, inverterChosen: true })}
-            placeholder={t('choose')}
-            options={catalog.inverters.map((product) => ({
-              value: product.id,
-              label: productName(product),
-            }))}
+            options={productOptions(
+              catalog.panels,
+              (product) =>
+                `${formatWp(product.wattageWp ?? 0)} · ${product.dcr ? 'DCR' : t('nonDcr')}`,
+            )}
           />
         </Field>
       </div>
 
+      <InverterRowsField
+        rows={state.inverters}
+        onChange={(inverters) => patch({ inverters, inverterChosen: true })}
+        inverters={catalog.inverters}
+        capacityWp={dcCapacityWp(
+          state.targetKw,
+          catalog.panels.find((panel) => panel.id === state.panelProductId),
+        )}
+        error={inverterError(errors)}
+        hint={state.inverterChosen ? undefined : t('inverterHint')}
+      />
+
       {state.systemType !== 'on_grid' && (
         <Field label={t('battery')} hint={t('batteryHint')} error={errors.batteryProductId}>
-          <Select
+          <SearchSelect
+            {...words}
             value={state.batteryProductId ?? NO_BATTERY}
             onValueChange={(value) =>
               patch({ batteryProductId: value === NO_BATTERY ? null : value })
             }
             options={[
               { value: NO_BATTERY, label: t('noBattery') },
-              ...catalog.batteries.map((product) => ({
-                value: product.id,
-                label: productName(product),
-              })),
+              ...productOptions(catalog.batteries),
             ]}
             className="md:max-w-[calc(50%-0.625rem)]"
           />
         </Field>
       )}
     </div>
+  );
+}
+
+/** The API names inverter problems by row (`inverters.1.productId`) or as a whole. */
+export function inverterError(errors: Readonly<Record<string, string>>): string | undefined {
+  return (
+    errors.inverters ??
+    errors.inverterProductId ??
+    Object.entries(errors).find(([key]) => key.startsWith('inverters.'))?.[1]
   );
 }
 

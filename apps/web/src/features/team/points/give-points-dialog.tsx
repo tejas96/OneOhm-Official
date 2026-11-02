@@ -50,15 +50,16 @@ export function GivePointsDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const given = await form.run(() =>
-      give({ userId: userId ?? '', points: points ?? 0, reason: reason.trim() }),
+    await form.run(
+      () => give({ userId: userId ?? '', points: points ?? 0, reason: reason.trim() }),
+      (given) => {
+        toast({
+          title: t('given', { count: given.points, name: given.user.fullName }),
+          tone: 'success',
+        });
+        onOpenChange(false);
+      },
     );
-    if (!given) return;
-    toast({
-      title: t('given', { count: given.points, name: given.user.fullName }),
-      tone: 'success',
-    });
-    onOpenChange(false);
   };
 
   return (

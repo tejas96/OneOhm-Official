@@ -1,4 +1,4 @@
-import { Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
+import { Card, fieldErrorsOf, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { useLocalSearchParams } from 'expo-router';
 import { MapPin } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { QUOTE } from '@/copy/quote';
 import { useCan } from '@/session/session-provider';
 import { ExtrasBlock } from './extras-block';
+import { quoteFormChecks } from './quote-checks';
 import { QuoteFooter } from './quote-footer';
 import { type QuoteForm, QuoteInputs } from './quote-inputs';
 import type { QuoteSite } from './quote-options';
@@ -20,7 +21,7 @@ const INITIAL: QuoteForm = {
   sizeKw: '',
   dcr: true,
   panelId: null,
-  inverterId: null,
+  inverters: null,
   structure: 'rcc_elevated',
   // A quick quote prices from defaults straight away (PRD 3.5); sales adjusts on site.
   floors: '1',
@@ -51,7 +52,7 @@ export function QuoteScreen() {
     }));
   }, [site]);
 
-  const { panels, inverters, suggestedInverterId, input, ready, preview } = useQuotePreview(
+  const { panels, inverters, inverterRows, panelId, input, ready, preview } = useQuotePreview(
     site,
     form,
   );
@@ -59,6 +60,13 @@ export function QuoteScreen() {
   const quote = useSaveQuote(saveInput);
   const priced = ready && preview.data !== undefined && !preview.error;
   const canCreate = useCan('quotations.create');
+  const society = site?.subsidyCategory === 'society';
+  // The server's messages land under the matching inputs; the footer keeps the sentence.
+  const errors = {
+    ...fieldErrorsOf(preview.error),
+    ...fieldErrorsOf(quote.save.error ?? quote.send.error),
+    ...quoteFormChecks(form, society),
+  };
 
   return (
     <Screen
@@ -85,8 +93,10 @@ export function QuoteScreen() {
         set={set}
         panels={panels}
         inverters={inverters}
-        suggestedInverterId={suggestedInverterId}
-        society={site?.subsidyCategory === 'society'}
+        inverterRows={inverterRows}
+        panelId={panelId}
+        society={society}
+        errors={errors}
       />
       <ExtrasBlock extras={form.extras} onChange={(extras) => set('extras', extras)} />
       {preview.data && ready ? <QuoteLines lines={preview.data.lines} /> : null}

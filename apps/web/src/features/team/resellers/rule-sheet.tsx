@@ -48,14 +48,17 @@ export function RuleSheet({
 
   const target = editing?.target ?? null;
   const run = async (rule: CommissionRuleInput | 'default') => {
-    const saved = await form.run(() => save.mutateAsync({ target, rule }));
-    if (!saved) return;
-    toast({
-      title: rule === 'default' ? t('reverted') : t('saved'),
-      description: target?.fullName ?? t('defaultName'),
-      tone: 'success',
-    });
-    onClose();
+    await form.run(
+      () => save.mutateAsync({ target, rule }),
+      () => {
+        toast({
+          title: rule === 'default' ? t('reverted') : t('saved'),
+          description: target?.fullName ?? t('defaultName'),
+          tone: 'success',
+        });
+        onClose();
+      },
+    );
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

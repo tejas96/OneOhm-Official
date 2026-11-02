@@ -50,6 +50,7 @@ export async function presentLeads(
     estimatedWp: row.estimatedWp,
     owner: owners.find((owner) => owner.id === row.ownerUserId) ?? null,
     nextActionOn: row.nextActionOn,
+    nextActionTime: row.nextActionTime,
     nextActionNote: row.nextActionNote,
     overdue: !CLOSED.includes(row.stage) && row.nextActionOn !== null && row.nextActionOn < today,
     customerId: row.customerId,

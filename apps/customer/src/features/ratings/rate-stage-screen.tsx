@@ -1,4 +1,13 @@
-import { Button, describeError, Field, Input, Screen, Text, unwrap } from '@oneohm/mobile-ui';
+import {
+  Button,
+  describeError,
+  Field,
+  fieldErrorsOf,
+  Input,
+  Screen,
+  Text,
+  unwrap,
+} from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -24,6 +33,7 @@ export function RateStageScreen() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [people, setPeople] = useState<Readonly<Record<string, number>>>({});
+  const [commentMissing, setCommentMissing] = useState(false);
   const low = rating > 0 && rating <= 2;
   const send = useMutation({
     mutationFn: () => {
@@ -46,15 +56,26 @@ export function RateStageScreen() {
       router.back();
     },
   });
+  const errors = send.error ? fieldErrorsOf(send.error) : {};
+  const commentError = commentMissing ? STAGE_RATING.commentNeeded : errors.comment;
+  const submit = () => {
+    // A low rating needs a few words on what went wrong.
+    if (low && comment.trim().length < 5) {
+      setCommentMissing(true);
+      send.reset();
+      return;
+    }
+    send.mutate();
+  };
   const stage = card ? (lookup(STAGE_RATING.stage, card.stage) ?? card.stage) : '';
   return (
     <Screen
       footer={
         <Button
           label={STAGE_RATING.submit}
-          onPress={() => send.mutate()}
+          onPress={submit}
           pending={send.isPending}
-          disabled={!card || rating === 0 || (low && comment.trim().length < 5)}
+          disabled={!card || rating === 0}
           fullWidth
         />
       }
@@ -75,14 +96,20 @@ export function RateStageScreen() {
       <Field
         label={STAGE_RATING.comment}
         hint={low ? STAGE_RATING.commentNeeded : STAGE_RATING.commentHint}
+        error={commentError}
         {...(low ? {} : { optional: COMMON.optional })}
       >
         <Input
           value={comment}
           accessibilityLabel={STAGE_RATING.comment}
-          onChangeText={setComment}
+          onChangeText={(value) => {
+            setComment(value);
+            if (commentMissing) setCommentMissing(false);
+          }}
           multiline
+          maxLength={1000}
           style={styles.multiline}
+          invalid={Boolean(commentError)}
         />
       </Field>
       {card && card.people.length > 0 ? (

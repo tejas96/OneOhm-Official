@@ -36,14 +36,15 @@ export function ContractorCreateDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(api.contractors.createContractor({ body: contractorBody(draft) }), 201),
+    await form.run(
+      () => expectStatus(api.contractors.createContractor({ body: contractorBody(draft) }), 201),
+      async (created) => {
+        await refresh();
+        toast({ tone: 'success', title: t('done', { name: created.name }) });
+        close(false);
+        router.push(`/contractors/${created.id}`);
+      },
     );
-    if (!created) return;
-    await refresh();
-    toast({ tone: 'success', title: t('done', { name: created.name }) });
-    close(false);
-    router.push(`/contractors/${created.id}`);
   };
 
   return (

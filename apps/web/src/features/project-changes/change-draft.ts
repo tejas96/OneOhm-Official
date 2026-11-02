@@ -1,10 +1,17 @@
 import type { ExtraLineInput, ProjectChangeInput, QuotationInput } from '@oneohm/api-contracts';
+import { inverterPicks, samePicks } from '@oneohm/domain';
+import {
+  type InverterRow,
+  picksFromRows,
+  rowsFromInput,
+} from '@/features/quotations/inverter-rows-state';
 
 /** What "Change scope" edits, starting from the accepted quotation. */
 export interface ChangeDraft {
   readonly targetKw: string;
   readonly panelProductId: string;
-  readonly inverterProductId: string;
+  /** One row per inverter model with how many. */
+  readonly inverters: readonly InverterRow[];
   readonly batteryProductId: string | null;
   readonly structureType: QuotationInput['structureType'];
   /** Lines added by this change; the accepted ones stay as they are. */
@@ -16,7 +23,7 @@ export function draftFrom(accepted: QuotationInput): ChangeDraft {
   return {
     targetKw: String(accepted.targetWp / 1000),
     panelProductId: accepted.panelProductId,
-    inverterProductId: accepted.inverterProductId,
+    inverters: rowsFromInput(accepted),
     batteryProductId: accepted.batteryProductId ?? null,
     structureType: accepted.structureType,
     newExtras: [],
@@ -25,7 +32,8 @@ export function draftFrom(accepted: QuotationInput): ChangeDraft {
 }
 
 /**
- * The body the API takes; null while the size is not a number yet. The preview passes no
+ * The body the API takes; null while the size is not a number or an inverter row is not
+ * complete yet. The preview passes no
  * reason (a fixed word stands in), so typing the reason does not price again.
  */
 export function changeBody(
@@ -34,11 +42,12 @@ export function changeBody(
   reason = 'Preview',
 ): ProjectChangeInput | null {
   const kw = Number(draft.targetKw);
-  if (!Number.isFinite(kw) || kw <= 0) return null;
+  const inverters = picksFromRows(draft.inverters);
+  if (!Number.isFinite(kw) || kw <= 0 || !inverters) return null;
   return {
     targetWp: Math.round(kw * 1000),
     panelProductId: draft.panelProductId,
-    inverterProductId: draft.inverterProductId,
+    inverters,
     batteryProductId: draft.batteryProductId,
     structureType: draft.structureType,
     extras: [...(accepted.extras ?? []), ...draft.newExtras],
@@ -53,7 +62,7 @@ export function draftChanges(accepted: QuotationInput, draft: ChangeDraft): bool
   return (
     body.targetWp !== accepted.targetWp ||
     body.panelProductId !== accepted.panelProductId ||
-    body.inverterProductId !== accepted.inverterProductId ||
+    !samePicks(body.inverters, inverterPicks(accepted)) ||
     body.batteryProductId !== (accepted.batteryProductId ?? null) ||
     body.structureType !== accepted.structureType ||
     draft.newExtras.length > 0

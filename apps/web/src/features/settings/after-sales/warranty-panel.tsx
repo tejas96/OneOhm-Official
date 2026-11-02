@@ -74,13 +74,14 @@ export function WarrantyPanel() {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved.policy);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = await form.run(() =>
-      expectStatus(api.afterSales.saveWarrantyPolicy({ body: draft }), 200),
+    await form.run(
+      () => expectStatus(api.afterSales.saveWarrantyPolicy({ body: draft }), 200),
+      (result) => {
+        queryClient.setQueryData(AFTER_SALES_KEYS.warranty, result);
+        setDraft(result.policy);
+        toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
+      },
     );
-    if (!result) return;
-    queryClient.setQueryData(AFTER_SALES_KEYS.warranty, result);
-    setDraft(result.policy);
-    toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
   };
 
   return (

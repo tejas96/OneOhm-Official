@@ -1,4 +1,4 @@
-import { describeError, unwrap } from '@oneohm/mobile-ui';
+import { unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { api, keys } from '@/api/api';
@@ -19,7 +19,7 @@ export interface LeaveExtras {
   readonly handover: string;
 }
 
-/** Sends the request, refreshes the person's day and goes back with a short note. */
+/** Sends the request (errors show on the screen), refreshes the person's day and goes back with a short note. */
 export function useSendLeave(window: LeaveWindow | null, extras: LeaveExtras) {
   const toast = useToast();
   const client = useQueryClient();
@@ -43,6 +43,6 @@ export function useSendLeave(window: LeaveWindow | null, extras: LeaveExtras) {
       toast(REQUEST_LEAVE.sent);
       router.back();
     },
-    onError: (error) => toast(describeError(error)),
+    // A failure shows on the screen, next to what to fix (not as a passing toast).
   });
 }

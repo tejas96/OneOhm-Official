@@ -1,6 +1,18 @@
-import { EXTRA_KINDS, LINE_CATEGORIES, STRUCTURE_TYPES } from '@oneohm/domain';
+import {
+  EXTRA_KINDS,
+  LINE_CATEGORIES,
+  MAX_INVERTER_MODELS,
+  MAX_INVERTERS_PER_MODEL,
+  STRUCTURE_TYPES,
+} from '@oneohm/domain';
 import { z } from 'zod';
-import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
+import {
+  calendarDateSchema,
+  idSchema,
+  instantSchema,
+  paiseSchema,
+  unitSchema,
+} from '../common/primitives';
 import { costingDetailSchema, quotationCostingSchema } from './costing.schema';
 import { subsidyCategorySchema } from './crm.schema';
 
@@ -46,7 +58,7 @@ export const extraLineInputSchema = z
     productId: idSchema.nullable().optional(),
     description: z.string().trim().min(2, 'Describe the item.').max(160),
     quantity: z.number().positive().max(10_000).default(1),
-    unit: z.string().trim().min(1).max(20).default('nos'),
+    unit: unitSchema.default('nos'),
     unitPricePaise: paiseSchema.min(-10_00_00_000).max(10_00_00_000).default(0),
     unitCostPaise: paiseSchema.min(0).max(10_00_00_000).default(0),
     reason: z.string().trim().max(300).default(''),
@@ -65,6 +77,13 @@ export const extraLineInputSchema = z
   });
 export type ExtraLineInput = z.infer<typeof extraLineInputSchema>;
 
+/** One inverter model on a quotation and how many of it. */
+export const inverterPickSchema = z.object({
+  productId: idSchema,
+  quantity: z.number().int().min(1).max(MAX_INVERTERS_PER_MODEL),
+});
+export type InverterPickInput = z.infer<typeof inverterPickSchema>;
+
 /** What sales chooses; everything else comes from the property, catalog and rate card. */
 export const quotationInputSchema = z.object({
   propertyId: idSchema,
@@ -74,7 +93,13 @@ export const quotationInputSchema = z.object({
   systemType: systemTypeSchema,
   targetWp: z.number().int().min(500).max(2_000_000),
   panelProductId: idSchema,
-  inverterProductId: idSchema,
+  /** The inverters: one row per model, in the order picked. The first is the main one. */
+  inverters: z.array(inverterPickSchema).min(1).max(MAX_INVERTER_MODELS).optional(),
+  /**
+   * Older clients send one inverter here; it reads as one row. The API needs this or
+   * `inverters`. A saved quotation always returns both, this one being the main inverter.
+   */
+  inverterProductId: idSchema.optional(),
   batteryProductId: idSchema.nullable().optional(),
   structureType: structureTypeSchema,
   floors: z.number().int().min(0).max(40),

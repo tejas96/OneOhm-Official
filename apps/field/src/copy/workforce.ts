@@ -48,6 +48,8 @@ export const CORRECTION = {
   send: 'Send for approval',
   sent: 'Sent for approval.',
   badTime: 'Use HH:MM, for example 09:25.',
+  notYet: 'This time has not come yet.',
+  outBeforeIn: 'Check-out must be after check-in.',
 } as const;
 
 export const LEAVE = {
@@ -64,6 +66,12 @@ export const LEAVE = {
   emptyBody: 'Requests and approved leave show here.',
   cancel: 'Cancel request',
   cancelled: 'Request cancelled.',
+  cancelConfirm: {
+    title: 'Cancel this leave?',
+    body: 'Your manager is told. To take these days later, ask again.',
+    yes: 'Cancel leave',
+    no: 'Keep it',
+  },
   status: {
     pending: 'Waiting for approval',
     approved: 'Approved',

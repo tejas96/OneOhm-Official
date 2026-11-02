@@ -68,17 +68,17 @@ export function LenderForm({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(save);
-    if (!saved) return;
-    await invalidate();
-    toast({ title: t(lender ? 'saved' : 'added', { name: saved.name }), tone: 'success' });
-    if (!lender) {
-      setName('');
-      setDocuments('');
-      setDisbursement('single');
-      setParts(partsFromPattern([]));
-    }
-    onDone();
+    await form.run(save, async (saved) => {
+      await invalidate();
+      toast({ title: t(lender ? 'saved' : 'added', { name: saved.name }), tone: 'success' });
+      if (!lender) {
+        setName('');
+        setDocuments('');
+        setDisbursement('single');
+        setParts(partsFromPattern([]));
+      }
+      onDone();
+    });
   };
 
   return (

@@ -6,10 +6,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useState } from 'react';
-import { PropertyFields, readPropertyForm } from '@/features/customers/property-fields';
+import { type FormEvent, useRef, useState } from 'react';
+import {
+  FieldMessage,
+  PropertyFields,
+  readPropertyForm,
+} from '@/features/customers/property-fields';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { useRevealError } from '@/lib/forms/use-reveal-error';
 import { ExistingSitePicker, NEW_SITE, useMatchedSites } from './existing-site-picker';
 import { leadKeys } from './lead-labels';
 
@@ -37,6 +42,8 @@ export function ConvertLeadDialog({
     lead.subsidyCategory === 'individual' ? 'individual' : 'organization',
   );
   const [error, setError] = useState<ApiError | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  useRevealError(formRef, error);
   const sites = useMatchedSites(lead, open);
   const [site, setSite] = useState<string>(NEW_SITE);
   const convert = useMutation({
@@ -66,6 +73,7 @@ export function ConvertLeadDialog({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (convert.isPending) return;
     setError(null);
     convert.mutate(
       site === NEW_SITE
@@ -96,7 +104,13 @@ export function ConvertLeadDialog({
         </>
       }
     >
-      <form id="lead-convert" onSubmit={submit} className="flex flex-col gap-5 py-1" noValidate>
+      <form
+        ref={formRef}
+        id="lead-convert"
+        onSubmit={submit}
+        className="flex flex-col gap-5 py-1"
+        noValidate
+      >
         {error && (
           <p
             role="alert"
@@ -119,8 +133,10 @@ export function ConvertLeadDialog({
             }))}
             className="self-start"
           />
+          <FieldMessage message={error?.fieldErrors.kind} />
         </div>
         <ExistingSitePicker lead={lead} sites={sites} value={site} onValueChange={setSite} />
+        <FieldMessage message={error?.fieldErrors.propertyId ?? error?.fieldErrors.property} />
         {site === NEW_SITE && (
           <PropertyFields
             defaultCategory={lead.subsidyCategory}

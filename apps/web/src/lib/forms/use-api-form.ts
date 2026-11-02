@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ApiError, describeError } from '@/lib/api/api-error';
 
 export interface ApiFormState {
@@ -9,8 +9,15 @@ export interface ApiFormState {
   readonly error: string | null;
   /** Messages keyed by field path (`dcCable.price`), as the API sends them. */
   readonly fieldErrors: Readonly<Record<string, string>>;
-  /** Runs a save; resolves to its result, or undefined when it failed (errors are shown). */
-  readonly run: <T>(action: () => Promise<T>) => Promise<T | undefined>;
+  /**
+   * Runs a save; resolves to its result, or undefined when it failed (errors are shown).
+   * `after` (refresh lists, toast, close) runs while the button still shows pending, so a
+   * second click cannot send the save again. A run while one is going is ignored.
+   */
+  readonly run: <T>(
+    action: () => Promise<T>,
+    after?: (result: T) => Promise<void> | void,
+  ) => Promise<T | undefined>;
   readonly reset: () => void;
 }
 
@@ -20,20 +27,33 @@ export function useApiForm(): ApiFormState {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const run = useCallback(async <T>(action: () => Promise<T>): Promise<T | undefined> => {
-    setPending(true);
-    setError(null);
-    setFieldErrors({});
-    try {
-      return await action();
-    } catch (caught) {
-      setError(describeError(caught));
-      if (caught instanceof ApiError) setFieldErrors({ ...caught.fieldErrors });
-      return undefined;
-    } finally {
-      setPending(false);
-    }
-  }, []);
+  const busy = useRef(false);
+
+  const run = useCallback(
+    async <T>(
+      action: () => Promise<T>,
+      after?: (result: T) => Promise<void> | void,
+    ): Promise<T | undefined> => {
+      if (busy.current) return undefined;
+      busy.current = true;
+      setPending(true);
+      setError(null);
+      setFieldErrors({});
+      try {
+        const result = await action();
+        await after?.(result);
+        return result;
+      } catch (caught) {
+        setError(describeError(caught));
+        if (caught instanceof ApiError) setFieldErrors({ ...caught.fieldErrors });
+        return undefined;
+      } finally {
+        busy.current = false;
+        setPending(false);
+      }
+    },
+    [],
+  );
 
   const reset = useCallback(() => {
     setError(null);

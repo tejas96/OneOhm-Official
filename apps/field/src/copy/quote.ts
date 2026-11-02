@@ -24,6 +24,25 @@ export const QUOTE = {
   dcr: 'DCR (made in India)',
   nonDcr: 'Non-DCR',
   inverter: 'Inverter',
+  inverters: {
+    label: 'Inverters',
+    row: (index: number) => `Inverter ${index}`,
+    count: (name: string) => `How many ${name}`,
+    remove: (name: string) => `Remove ${name}`,
+    add: 'Add another inverter',
+    total: (ac: string, dc: string | null) =>
+      dc ? `${ac} AC for ${dc} of panels` : `${ac} AC in all`,
+    small:
+      'The panels are more than 130% of the inverters. Power is clipped at midday. Add an inverter or pick a larger one.',
+    large: 'The inverters are more than 120% of the panels. The extra capacity is never used.',
+  },
+  search: {
+    placeholder: 'Choose…',
+    search: 'Search by name, brand or SKU',
+    empty: 'Nothing matches. Try fewer words.',
+    more: (shown: number, total: number) =>
+      `Showing ${shown} of ${total}. Type to narrow the list.`,
+  },
   structure: 'Mounting',
   structures: {
     rcc_elevated: 'RCC roof',
@@ -33,6 +52,12 @@ export const QUOTE = {
     custom: 'Custom',
   },
   floors: 'Floors',
+  checks: {
+    size: 'Enter a size from 0.5 to 2000 kW.',
+    floors: 'Enter 0 to 40 floors.',
+    distance: 'Enter 0 to 1000 km.',
+    households: 'Enter at least 1 household.',
+  },
   households: 'Households',
   distance: 'Distance from office (km)',
   distanceHint: 'Used for transport. Enter 0 inside Sangli.',

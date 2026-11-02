@@ -1,5 +1,14 @@
 import { WAITING_PARTIES, type WaitingParty } from '@oneohm/domain';
-import { Button, ChoiceChips, Field, Sheet } from '@oneohm/mobile-ui';
+import {
+  Button,
+  ChoiceChips,
+  describeError,
+  Field,
+  fieldErrorsOf,
+  Sheet,
+  Text,
+  useTheme,
+} from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { COMMON } from '@/copy/common';
 import { TASK } from '@/copy/tasks';
@@ -9,12 +18,14 @@ import { DictationInput } from '@/features/dictation/dictation-input';
 export function WaitingSheet({
   open,
   pending,
+  error,
   initialParty,
   onClose,
   onSave,
 }: {
   readonly open: boolean;
   readonly pending: boolean;
+  readonly error: unknown;
   readonly initialParty: WaitingParty;
   readonly onClose: () => void;
   readonly onSave: (party: WaitingParty, note: string) => void;
@@ -23,6 +34,8 @@ export function WaitingSheet({
     initialParty === 'internal' ? 'customer' : initialParty,
   );
   const [note, setNote] = useState('');
+  const theme = useTheme();
+  const errors = fieldErrorsOf(error);
   return (
     <Sheet
       open={open}
@@ -35,7 +48,9 @@ export function WaitingSheet({
           label={TASK.waitingSheet.save}
           size="lg"
           pending={pending}
-          onPress={() => onSave(party, note)}
+          onPress={() => {
+            if (!pending) onSave(party, note);
+          }}
           fullWidth
         />
       }
@@ -43,6 +58,7 @@ export function WaitingSheet({
       <Field
         label={TASK.waitingSheet.party}
         hint={party === 'internal' ? TASK.waitingSheet.helpNote : undefined}
+        error={errors.party}
       >
         <ChoiceChips
           label={TASK.waitingSheet.party}
@@ -51,15 +67,22 @@ export function WaitingSheet({
           onChange={setParty}
         />
       </Field>
-      <Field label={TASK.waitingSheet.note} optional={COMMON.optional}>
+      <Field label={TASK.waitingSheet.note} optional={COMMON.optional} error={errors.note}>
         <DictationInput
           value={note}
           onChangeText={setNote}
           placeholder={TASK.waitingSheet.notePlaceholder}
           multiline
+          maxLength={2000}
+          invalid={Boolean(errors.note)}
           accessibilityLabel={TASK.waitingSheet.note}
         />
       </Field>
+      {error ? (
+        <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
+          {describeError(error)}
+        </Text>
+      ) : null}
     </Sheet>
   );
 }

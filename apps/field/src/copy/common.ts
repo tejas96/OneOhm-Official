@@ -64,6 +64,7 @@ export const SIGN_IN = {
     description: 'For the OneOhm team, I&C crews and resellers. We text you a one-time code.',
     phoneLabel: 'Mobile number',
     phoneHint: 'The number your OneOhm administrator registered for you.',
+    phoneInvalid: 'Enter your 10-digit mobile number.',
     sendCode: 'Text me a code',
     codeTitle: 'Enter your code',
     codeSentTo: (phone: string) => `We sent a 6-digit code to ${phone}.`,
@@ -86,4 +87,9 @@ export const PROFILE = {
   server: 'Connected to',
   signOut: 'Sign out',
   signOutHint: 'You will need a new code to sign in again.',
+  appearance: {
+    title: 'Appearance',
+    hint: 'Light, dark, or the same as your phone. Kept on this phone.',
+    options: { system: 'Phone', light: 'Light', dark: 'Dark' },
+  },
 } as const;

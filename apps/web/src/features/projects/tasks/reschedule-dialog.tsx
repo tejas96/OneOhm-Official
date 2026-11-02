@@ -42,8 +42,10 @@ export function RescheduleDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() => mutation.mutateAsync({ dueDate, reason: reason.trim() }));
-    if (saved !== undefined) onOpenChange(false);
+    await form.run(
+      () => mutation.mutateAsync({ dueDate, reason: reason.trim() }),
+      () => onOpenChange(false),
+    );
   };
 
   return (

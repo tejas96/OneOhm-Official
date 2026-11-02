@@ -100,8 +100,7 @@ export function SubsidyRuleSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = await form.run(() => save(editing?.id ?? null, toBody(draft)));
-    if (result) setSaved(result);
+    await form.run(() => save(editing?.id ?? null, toBody(draft)), setSaved);
   };
 
   const day = (date: string) => format.dateTime(new Date(date), { dateStyle: 'medium' });

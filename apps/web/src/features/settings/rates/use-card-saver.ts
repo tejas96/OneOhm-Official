@@ -20,13 +20,14 @@ export function useCardSaver() {
   const form = useApiForm();
 
   const save = async (next: RateCardValues): Promise<boolean> => {
-    const saved = await form.run(() =>
-      expectStatus(api.catalog.updateRateCard({ body: next }), 200),
+    const saved = await form.run(
+      () => expectStatus(api.catalog.updateRateCard({ body: next }), 200),
+      (result) => {
+        queryClient.setQueryData(SETTINGS_KEYS.rateCard, result);
+        toast({ title: settingsT('saved'), reference: result.name, tone: 'success' });
+      },
     );
-    if (!saved) return false;
-    queryClient.setQueryData(SETTINGS_KEYS.rateCard, saved);
-    toast({ title: settingsT('saved'), reference: saved.name, tone: 'success' });
-    return true;
+    return saved !== undefined;
   };
 
   return { save, form };

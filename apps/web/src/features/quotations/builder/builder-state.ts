@@ -7,6 +7,12 @@ import type {
   QuotationInput,
 } from '@oneohm/api-contracts';
 import { rupeesToPaise } from '@oneohm/shared';
+import {
+  type InverterRow,
+  picksFromRows,
+  rowsFromInput,
+  suggestInverters,
+} from '../inverter-rows-state';
 
 export type SubsidyCategory = QuotationInput['subsidyCategory'];
 export type SystemType = QuotationInput['systemType'];
@@ -24,7 +30,8 @@ export interface BuilderState {
   readonly systemType: SystemType;
   readonly targetKw: string;
   readonly panelProductId: string | null;
-  readonly inverterProductId: string | null;
+  /** One row per inverter model with how many; the first is the main one. */
+  readonly inverters: readonly InverterRow[];
   readonly batteryProductId: string | null;
   readonly structureType: StructureType;
   readonly floors: string;
@@ -51,7 +58,7 @@ export const EMPTY_BUILDER: BuilderState = {
   systemType: 'on_grid',
   targetKw: '',
   panelProductId: null,
-  inverterProductId: null,
+  inverters: [],
   batteryProductId: null,
   structureType: 'rcc_elevated',
   floors: '1',
@@ -88,7 +95,7 @@ export function fromQuotation(quotation: QuotationDetail): BuilderState {
     systemType: input.systemType,
     targetKw: String(input.targetWp / 1000),
     panelProductId: input.panelProductId,
-    inverterProductId: input.inverterProductId,
+    inverters: rowsFromInput(input),
     batteryProductId: input.batteryProductId ?? null,
     structureType: input.structureType,
     floors: String(input.floors),
@@ -122,7 +129,8 @@ export function toInput(state: BuilderState): QuotationInput | null {
   const floors = wholeNumber(state.floors);
   const distanceKm = wholeNumber(state.distanceKm);
   const discount = state.discountRupees.trim() === '' ? 0 : Number(state.discountRupees);
-  if (!state.propertyId || !state.panelProductId || !state.inverterProductId) return null;
+  const inverters = picksFromRows(state.inverters);
+  if (!state.propertyId || !state.panelProductId || !inverters) return null;
   if (kw === null || floors === null || distanceKm === null) return null;
   if (!Number.isFinite(discount) || discount < 0) return null;
   const targetWp = Math.round(kw * 1000);
@@ -137,7 +145,7 @@ export function toInput(state: BuilderState): QuotationInput | null {
     systemType: state.systemType,
     targetWp,
     panelProductId: state.panelProductId,
-    inverterProductId: state.inverterProductId,
+    inverters,
     batteryProductId: battery,
     structureType: state.structureType,
     floors,
@@ -150,29 +158,13 @@ export function toInput(state: BuilderState): QuotationInput | null {
   };
 }
 
-const isHybrid = (product: Product) => /hybrid|hyb/i.test(`${product.sku} ${product.name}`);
-
-/**
- * The smallest inverter that carries the array (DC up to 110% of AC), else the largest.
- * Battery systems prefer hybrid inverters, grid-only systems the others; then the cheapest.
- */
+/** The inverters suggested for the size typed; several of the largest when one is not enough. */
 export function suggestInverter(
   inverters: readonly Product[],
   targetKw: string,
   systemType: SystemType,
-): string | null {
-  const wanted = (positive(targetKw) ?? 0) * 1000;
-  const wantHybrid = systemType !== 'on_grid';
-  const sized = [...inverters]
-    .filter((product) => product.active && product.ratedW)
-    .sort(
-      (left, right) =>
-        (left.ratedW ?? 0) - (right.ratedW ?? 0) ||
-        Number(isHybrid(left) !== wantHybrid) - Number(isHybrid(right) !== wantHybrid) ||
-        left.pricePaise - right.pricePaise,
-    );
-  const fits = sized.find((product) => (product.ratedW ?? 0) * 1.1 >= wanted);
-  return (fits ?? sized.at(-1))?.id ?? null;
+): InverterRow[] {
+  return suggestInverters(inverters, (positive(targetKw) ?? 0) * 1000, systemType);
 }
 
 /** DCR panels where a subsidy is possible (it needs them); otherwise the cheapest panel. */

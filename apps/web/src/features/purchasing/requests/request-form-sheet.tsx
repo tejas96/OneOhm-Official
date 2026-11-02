@@ -6,6 +6,7 @@ import {
   Field,
   IconButton,
   Input,
+  SearchSelect,
   Select,
   Sheet,
   Textarea,
@@ -17,6 +18,7 @@ import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
+import { productOptions, useSearchWords } from '@/components/product-search';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useRefreshPurchasing } from '../use-purchasing';
@@ -54,19 +56,18 @@ function LineRow({
   readonly onRemove: (() => void) | null;
 }) {
   const t = useTranslations('purchasing.requests.form');
+  const words = useSearchWords();
   const unit = products.find((product) => product.id === line.productId)?.unit;
   const error = (key: string) => errors[`lines.${index}.${key}`];
   return (
     <li className="grid gap-3 rounded-2xl border border-hairline p-4 sm:grid-cols-[minmax(0,1fr)_8rem_10rem_auto] sm:items-start">
       <Field label={t('item')} error={error('productId')}>
-        <Select
+        <SearchSelect
+          {...words}
           value={line.productId}
           onValueChange={(productId) => onChange({ productId })}
           placeholder={t('pickItem')}
-          options={products.map((product) => ({
-            value: product.id,
-            label: `${product.name} · ${product.sku}`,
-          }))}
+          options={productOptions(products, (product) => product.sku)}
         />
       </Field>
       <Field label={t('quantity')} error={error('quantity')}>
@@ -140,26 +141,28 @@ export function RequestFormSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(
-        api.purchasing.requests.create({
-          body: {
-            projectId: project === STOCK ? null : project,
-            reason,
-            lines: lines.map((line) => ({
-              productId: line.productId ?? '',
-              quantity: Number(line.quantity.replace(/,/g, '')) || 0,
-              neededBy: line.neededBy,
-            })),
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.purchasing.requests.create({
+            body: {
+              projectId: project === STOCK ? null : project,
+              reason,
+              lines: lines.map((line) => ({
+                productId: line.productId ?? '',
+                quantity: Number(line.quantity.replace(/,/g, '')) || 0,
+                neededBy: line.neededBy,
+              })),
+            },
+          }),
+          201,
+        ),
+      async (created) => {
+        await refresh();
+        toast({ tone: 'success', title: t('done', { number: created.number }) });
+        onCreated(created.id);
+      },
     );
-    if (!created) return;
-    await refresh();
-    toast({ tone: 'success', title: t('done', { number: created.number }) });
-    onCreated(created.id);
   };
 
   return (

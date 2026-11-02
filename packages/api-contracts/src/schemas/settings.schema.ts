@@ -1,6 +1,12 @@
 import { LINE_CATEGORIES, SUBSIDY_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
-import { calendarDateSchema, idSchema, instantSchema, nameSchema } from '../common/primitives';
+import {
+  calendarDateSchema,
+  idSchema,
+  instantSchema,
+  nameSchema,
+  unitSchema,
+} from '../common/primitives';
 import { costingCardSchema } from './costing.schema';
 
 const amountSchema = z.number().int().nonnegative('Use zero or more.');
@@ -24,7 +30,7 @@ export const productInputSchema = z.object({
   name: nameSchema,
   brand: z.string().trim().min(1, 'Add the brand.').max(80),
   category: z.enum(LINE_CATEGORIES),
-  unit: z.string().trim().min(1).max(20),
+  unit: unitSchema,
   wattageWp: z.number().int().positive().max(2000).nullable(),
   ratedW: z.number().int().positive().max(5_000_000).nullable(),
   dcr: z.boolean(),

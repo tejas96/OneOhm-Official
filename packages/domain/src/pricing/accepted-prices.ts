@@ -1,3 +1,4 @@
+import { isInverterLineKey } from './inverter-picks';
 import type { PricedProduct } from './rate-card';
 
 /** A priced line of an accepted quotation, as saved. */
@@ -6,6 +7,8 @@ export interface SavedLinePrice {
   readonly unitPricePaise: number;
   readonly unitCostPaise: number;
   readonly taxRateBp: number;
+  /** The catalog product on the line; tells a quotation's inverters apart. */
+  readonly productId?: string | null | undefined;
 }
 
 /**
@@ -18,7 +21,14 @@ export function atAcceptedPrice<T extends PricedProduct>(
   lines: readonly SavedLinePrice[],
   key: 'panel' | 'inverter' | 'battery',
 ): T {
-  const saved = lines.find((line) => line.key === key);
+  const saved =
+    key === 'inverter'
+      ? lines.find((line) =>
+          line.productId === undefined
+            ? line.key === 'inverter'
+            : isInverterLineKey(line.key) && line.productId === product.id,
+        )
+      : lines.find((line) => line.key === key);
   if (!saved) return product;
   return {
     ...product,

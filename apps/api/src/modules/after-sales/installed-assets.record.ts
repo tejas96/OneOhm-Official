@@ -19,6 +19,7 @@ import {
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { invertersOf } from '../quotations/quotation-inverters';
 
 type Product = { id: string; name: string; brand: string; wattageWp: number | null };
 type NewAsset = typeof installedAssets.$inferInsert;
@@ -58,7 +59,8 @@ interface Sources {
   readonly startsOn: string;
   readonly policy: WarrantyPolicy;
   readonly panel: Product | undefined;
-  readonly inverter: Product | undefined;
+  /** Every inverter model with how many; recorded as one inverter asset (one per kind). */
+  readonly inverters: readonly { readonly product: Product; readonly quantity: number }[];
   readonly battery: Product | undefined;
   readonly moduleCount: number;
   readonly lines: ReadonlyMap<string, string>;
@@ -102,14 +104,27 @@ export function assetsFrom(sources: Sources): NewAsset[] {
       }),
     );
   }
-  if (sources.inverter)
+  const [mainInverter] = sources.inverters;
+  if (mainInverter) {
+    const mixed = sources.inverters.length > 1;
     rows.push(
-      asset(
-        sources,
-        'inverter',
-        productFields(sources.inverter, facts.get('inverter_serial_number')),
-      ),
+      asset(sources, 'inverter', {
+        ...productFields(mainInverter.product, facts.get('inverter_serial_number')),
+        // Several models share the one inverter asset: name them all, count them all.
+        ...(mixed
+          ? {
+              make: [...new Set(sources.inverters.map(({ product }) => product.brand))].join(', '),
+              model: sources.inverters
+                .map(({ product, quantity }) =>
+                  quantity > 1 ? `${product.name} × ${quantity}` : product.name,
+                )
+                .join(', '),
+            }
+          : {}),
+        quantity: sources.inverters.reduce((sum, { quantity }) => sum + quantity, 0),
+      }),
     );
+  }
   if (sources.battery)
     rows.push(
       asset(sources, 'battery', productFields(sources.battery, facts.get('battery_serial_number'))),
@@ -141,7 +156,12 @@ export async function recordInstalledAssets(
     .where(eq(projects.id, projectId));
   if (!project) return 0;
   const { quotation } = project;
-  const ids = [quotation.panelProductId, quotation.inverterProductId, quotation.batteryProductId];
+  const picks = await invertersOf(db, quotation.id);
+  const ids = [
+    quotation.panelProductId,
+    ...picks.map((pick) => pick.productId),
+    quotation.batteryProductId,
+  ];
   const items = await db
     .select({
       id: products.id,
@@ -170,7 +190,10 @@ export async function recordInstalledAssets(
     startsOn,
     policy: await warrantyPolicyOf(db),
     panel: items.find((item) => item.id === quotation.panelProductId),
-    inverter: items.find((item) => item.id === quotation.inverterProductId),
+    inverters: picks.flatMap((pick) => {
+      const product = items.find((item) => item.id === pick.productId);
+      return product ? [{ product, quantity: pick.quantity }] : [];
+    }),
     battery: items.find((item) => item.id === quotation.batteryProductId),
     moduleCount: quotation.moduleCount,
     lines: new Map(lines.map((line) => [line.key, line.description])),

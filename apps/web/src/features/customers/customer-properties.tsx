@@ -4,7 +4,7 @@ import type { Property } from '@oneohm/api-contracts';
 import { Badge, Button, Card, listItemEnter } from '@oneohm/design-system/web';
 import { formatKwp } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
-import { FileCog, FilePlus2, MapPin, PencilLine } from 'lucide-react';
+import { FileCog, FilePlus2, MapPin, PencilLine, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -14,29 +14,65 @@ import { RaiseChangeRequestDialog } from '@/features/discom/raise-change-request
 import { LowIncomeBadge } from '@/features/state-support/low-income-badge';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan } from '@/providers/current-user';
+import { AddPropertyDialog } from './add-property-dialog';
 import { EditPropertyDialog } from './edit-property-dialog';
 import { GpsLine } from './gps-fields';
 
 /** Each site the customer owns, with its electricity connection set out for DISCOM work. */
-export function CustomerProperties({ properties }: { readonly properties: readonly Property[] }) {
+export function CustomerProperties({
+  customerId,
+  customerName,
+  properties,
+}: {
+  readonly customerId: string;
+  readonly customerName: string;
+  readonly properties: readonly Property[];
+}) {
   const t = useTranslations('customers.property');
+  const canAdd = useCan('customers.manage');
+  const [adding, setAdding] = useState(false);
   const discoms = useQuery({
     queryKey: ['discoms'],
     queryFn: () => expectStatus(api.catalog.listDiscoms(), 200),
     staleTime: 5 * 60_000,
   });
-  if (properties.length === 0) return <p className="type-body-sm text-ink-faint">{t('none')}</p>;
   return (
-    <ul className="grid gap-4 lg:grid-cols-2">
-      {properties.map((property, index) => (
-        <motion.li key={property.id} {...listItemEnter(index)}>
-          <PropertyCard
-            property={property}
-            discom={discoms.data?.find((row) => row.id === property.discomId)?.code ?? null}
+    <div className="flex flex-col gap-4">
+      {properties.length === 0 ? (
+        <p className="type-body-sm text-ink-faint">{t('none')}</p>
+      ) : (
+        <ul className="grid gap-4 lg:grid-cols-2">
+          {properties.map((property, index) => (
+            <motion.li key={property.id} {...listItemEnter(index)}>
+              <PropertyCard
+                property={property}
+                discom={discoms.data?.find((row) => row.id === property.discomId)?.code ?? null}
+              />
+            </motion.li>
+          ))}
+        </ul>
+      )}
+      {canAdd && (
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            leadingIcon={<Plus />}
+            onClick={() => setAdding(true)}
+            className="self-start"
+          >
+            {t('add')}
+          </Button>
+          <AddPropertyDialog
+            customerId={customerId}
+            customerName={customerName}
+            defaultCity={properties[0]?.city}
+            open={adding}
+            onOpenChange={setAdding}
           />
-        </motion.li>
-      ))}
-    </ul>
+        </>
+      )}
+    </div>
   );
 }
 

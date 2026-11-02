@@ -15,6 +15,7 @@ import {
 import { available, materialShortfall } from '@oneohm/domain';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, asc, eq, inArray, lt, lte, ne, sql } from 'drizzle-orm';
+import { invertersByQuotation } from '../quotations/quotation-inverters';
 import type { CenterScope } from './command-center-scope';
 
 /** Rows each list shows; the counts say how many there are in all. */
@@ -102,9 +103,9 @@ async function projectsShort(db: Database, scope: CenterScope) {
     .selectDistinct({
       project: { id: projects.id, code: projects.code, name: projects.name },
       quotation: {
+        id: quotations.id,
         moduleCount: quotations.moduleCount,
         panelProductId: quotations.panelProductId,
-        inverterProductId: quotations.inverterProductId,
         batteryProductId: quotations.batteryProductId,
       },
     })
@@ -121,6 +122,10 @@ async function projectsShort(db: Database, scope: CenterScope) {
     );
   if (live.length === 0) return [];
   const ids = live.map((row) => row.project.id);
+  const inverters = await invertersByQuotation(
+    db,
+    live.map((row) => row.quotation.id),
+  );
   const [held, ordered, catalog] = await Promise.all([
     db
       .select({
@@ -156,7 +161,10 @@ async function projectsShort(db: Database, scope: CenterScope) {
     .map(({ project, quotation }) => {
       const needs = [
         { productId: quotation.panelProductId, needed: quotation.moduleCount },
-        { productId: quotation.inverterProductId, needed: 1 },
+        ...(inverters.get(quotation.id) ?? []).map((pick) => ({
+          productId: pick.productId,
+          needed: pick.quantity,
+        })),
         ...(quotation.batteryProductId
           ? [{ productId: quotation.batteryProductId, needed: 1 }]
           : []),

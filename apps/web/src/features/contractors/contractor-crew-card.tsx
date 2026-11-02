@@ -83,19 +83,21 @@ function CrewDialog({
 
   const save = async () => {
     const leadId = lead && chosen.includes(lead) ? lead : chosen[0];
-    const saved = await form.run(() =>
-      expectStatus(
-        api.contractors.setContractorMembers({
-          params: { id: contractor.id },
-          body: { members: chosen.map((userId) => ({ userId, lead: userId === leadId })) },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.contractors.setContractorMembers({
+            params: { id: contractor.id },
+            body: { members: chosen.map((userId) => ({ userId, lead: userId === leadId })) },
+          }),
+          200,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('saved') });
+        onOpenChange(false);
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('saved') });
-    onOpenChange(false);
   };
 
   return (

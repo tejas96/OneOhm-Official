@@ -43,19 +43,21 @@ export function IssueInvoiceDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const typed = gstin.trim();
-    const issued = await form.run(() =>
-      expectStatus(
-        api.billing.issueInvoice({
-          params: { projectId },
-          body: { customerGstin: typed === '' ? null : typed },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.billing.issueInvoice({
+            params: { projectId },
+            body: { customerGstin: typed === '' ? null : typed },
+          }),
+          201,
+        ),
+      async (issued) => {
+        await invalidate();
+        toast({ title: t('done'), description: issued.number, tone: 'success' });
+        close();
+      },
     );
-    if (!issued) return;
-    await invalidate();
-    toast({ title: t('done'), description: issued.number, tone: 'success' });
-    close();
   };
 
   return (

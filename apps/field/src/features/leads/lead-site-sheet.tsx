@@ -19,6 +19,7 @@ import { COMMON } from '@/copy/common';
 import { LEAD_SITE } from '@/copy/sales';
 import { DiscomPicker } from '@/features/discom/discom-picker';
 import { offeredDiscoms, useDiscoms } from '@/features/discom/use-discoms';
+import { type Checks, passes, withoutKeys } from '@/lib/form';
 
 type Form = { address: string; city: string; district: string; pincode: string; consumer: string };
 
@@ -45,8 +46,11 @@ export function LeadSiteSheet({
     pincode: '',
     consumer: '',
   });
-  const set = (key: keyof Form) => (value: string) =>
+  const [checks, setChecks] = useState<Checks>({});
+  const set = (key: keyof Form, field: string) => (value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
+    setChecks((current) => withoutKeys(current, field));
+  };
   // The DISCOM on the bill; with a single active DISCOM it starts picked, to confirm.
   const discoms = useDiscoms();
   const [pickedDiscom, setDiscom] = useState<string | null>(null);
@@ -61,9 +65,9 @@ export function LeadSiteSheet({
             kind: lead.subsidyCategory === 'individual' ? 'individual' : 'organization',
             property: {
               label: LEAD_SITE.label[lead.subsidyCategory],
-              addressLine: form.address,
-              city: form.city,
-              district: form.district,
+              addressLine: form.address.trim(),
+              city: form.city.trim(),
+              district: form.district.trim(),
               state: 'Maharashtra',
               pincode: form.pincode.trim() || null,
               subsidyCategory: lead.subsidyCategory,
@@ -84,8 +88,28 @@ export function LeadSiteSheet({
     },
   });
   const errors = fieldErrorsOf(save.error);
-  const error = (field: string) => errors[`property.${field}`] ?? errors[field];
-  const general = save.error && Object.keys(errors).length === 0 ? describeError(save.error) : null;
+  const error = (field: string) => checks[field] ?? errors[`property.${field}`] ?? errors[field];
+  const general = save.error ? describeError(save.error) : null;
+  // Fields this sheet fills in for the person: their messages show with the sentence.
+  const hidden = [errors.property, error('label'), error('state'), error('floors')].filter(
+    (message): message is string => Boolean(message),
+  );
+
+  const submit = () => {
+    if (save.isPending) return;
+    const found: Record<string, string> = {};
+    if (form.address.trim().length < 3) found.addressLine = LEAD_SITE.addressRequired;
+    if (form.city.trim().length < 2) found.city = LEAD_SITE.cityRequired;
+    if (form.district.trim().length < 2) found.district = LEAD_SITE.districtRequired;
+    if (form.pincode.trim() && !/^\d{6}$/.test(form.pincode.trim()))
+      found.pincode = LEAD_SITE.pincodeInvalid;
+    setChecks(found);
+    if (!passes(found)) {
+      save.reset();
+      return;
+    }
+    save.mutate();
+  };
 
   return (
     <Sheet
@@ -100,14 +124,15 @@ export function LeadSiteSheet({
           size="lg"
           fullWidth
           pending={save.isPending}
-          onPress={() => save.mutate()}
+          onPress={submit}
         />
       }
     >
       <Field label={LEAD_SITE.address} error={error('addressLine')}>
         <Input
           value={form.address}
-          onChangeText={set('address')}
+          onChangeText={set('address', 'addressLine')}
+          maxLength={400}
           placeholder={LEAD_SITE.addressPlaceholder}
           textContentType="fullStreetAddress"
           invalid={Boolean(error('addressLine'))}
@@ -117,7 +142,8 @@ export function LeadSiteSheet({
       <Field label={LEAD_SITE.city} error={error('city')}>
         <Input
           value={form.city}
-          onChangeText={set('city')}
+          onChangeText={set('city', 'city')}
+          maxLength={80}
           autoCapitalize="words"
           invalid={Boolean(error('city'))}
           accessibilityLabel={LEAD_SITE.city}
@@ -126,7 +152,8 @@ export function LeadSiteSheet({
       <Field label={LEAD_SITE.district} error={error('district')}>
         <Input
           value={form.district}
-          onChangeText={set('district')}
+          onChangeText={set('district', 'district')}
+          maxLength={80}
           autoCapitalize="words"
           invalid={Boolean(error('district'))}
           accessibilityLabel={LEAD_SITE.district}
@@ -135,7 +162,7 @@ export function LeadSiteSheet({
       <Field label={LEAD_SITE.pincode} optional={COMMON.optional} error={error('pincode')}>
         <Input
           value={form.pincode}
-          onChangeText={set('pincode')}
+          onChangeText={set('pincode', 'pincode')}
           keyboardType="number-pad"
           maxLength={6}
           invalid={Boolean(error('pincode'))}
@@ -150,7 +177,8 @@ export function LeadSiteSheet({
       >
         <Input
           value={form.consumer}
-          onChangeText={set('consumer')}
+          onChangeText={set('consumer', 'consumerNumber')}
+          maxLength={40}
           invalid={Boolean(error('consumerNumber'))}
           accessibilityLabel={LEAD_SITE.consumerNumber}
         />
@@ -169,6 +197,11 @@ export function LeadSiteSheet({
           {general}
         </Text>
       ) : null}
+      {hidden.map((message) => (
+        <Text key={message} variant="bodySm" color={theme.status.overdue.fg}>
+          {message}
+        </Text>
+      ))}
     </Sheet>
   );
 }

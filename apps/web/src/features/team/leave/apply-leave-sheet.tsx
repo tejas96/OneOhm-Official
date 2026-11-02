@@ -89,11 +89,14 @@ export function ApplyLeaveSheet({
       backupUserId: backup,
       handoverNote: backup ? draft.handoverNote.trim() || null : null,
     };
-    const saved = await form.run(() => expectStatus(api.workforce.applyLeave({ body }), 201));
-    if (!saved) return;
-    await refresh();
-    toast({ title: t('sent'), reference: saved.leaveLabel, tone: 'success' });
-    onOpenChange(false);
+    await form.run(
+      () => expectStatus(api.workforce.applyLeave({ body }), 201),
+      async (saved) => {
+        await refresh();
+        toast({ title: t('sent'), reference: saved.leaveLabel, tone: 'success' });
+        onOpenChange(false);
+      },
+    );
   };
 
   return (

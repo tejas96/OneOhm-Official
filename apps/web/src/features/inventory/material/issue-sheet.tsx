@@ -107,36 +107,38 @@ export function IssueSheet({
       return;
     }
     setSubmitted(chosen);
-    const saved = await form.run(() =>
-      expectStatus(
-        api.inventory.custody.issue({
-          params: { id: custody.projectId },
-          body: {
-            contractorId,
-            locationId,
-            occurredOn,
-            note,
-            lines: chosen.map(({ key, productId, quantity }) => ({
-              productId,
-              lineKey: key,
-              quantity,
-            })),
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.inventory.custody.issue({
+            params: { id: custody.projectId },
+            body: {
+              contractorId,
+              locationId,
+              occurredOn,
+              note,
+              lines: chosen.map(({ key, productId, quantity }) => ({
+                productId,
+                lineKey: key,
+                quantity,
+              })),
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        if (photo) {
+          try {
+            await uploadSlipPhoto(saved.id, photo);
+          } catch (error) {
+            toast({ tone: 'error', title: t('photoFailed', { reason: describeError(error) }) });
+          }
+        }
+        await refresh(custody.projectId);
+        toast({ tone: 'success', title: t('saved', { number: saved.number }) });
+        onOpenChange(false);
+      },
     );
-    if (!saved) return;
-    if (photo) {
-      try {
-        await uploadSlipPhoto(saved.id, photo);
-      } catch (error) {
-        toast({ tone: 'error', title: t('photoFailed', { reason: describeError(error) }) });
-      }
-    }
-    await refresh(custody.projectId);
-    toast({ tone: 'success', title: t('saved', { number: saved.number }) });
-    onOpenChange(false);
   };
 
   const contractor = custody.contractors.find((row) => row.id === contractorId);

@@ -45,9 +45,10 @@ export class QuotationPdfService {
     const [discom] = property.discomId
       ? await this.db.select().from(discoms).where(eq(discoms.id, property.discomId)).limit(1)
       : [];
+    const inverterPicks = detail.input.inverters ?? [];
     const ids = [
       detail.input.panelProductId,
-      detail.input.inverterProductId,
+      ...inverterPicks.map((pick) => pick.productId),
       ...(detail.input.batteryProductId ? [detail.input.batteryProductId] : []),
     ];
     const rows = await this.db.select().from(products).where(inArray(products.id, ids));
@@ -66,8 +67,11 @@ export class QuotationPdfService {
       };
     };
     const panel = label(detail.input.panelProductId);
-    const inverter = label(detail.input.inverterProductId);
-    if (!panel || !inverter) throw notFound('A product on this quotation');
+    const inverters = inverterPicks.flatMap((pick) => {
+      const found = label(pick.productId);
+      return found ? [{ label: found, quantity: pick.quantity }] : [];
+    });
+    if (!panel || inverters.length === 0) throw notFound('A product on this quotation');
 
     const images = await this.assets.dataUris();
     const view = quotationView(detail, {
@@ -83,7 +87,7 @@ export class QuotationPdfService {
         sanctionedLoadW: property.sanctionedLoadW,
       },
       panel,
-      inverter,
+      inverters,
       battery: label(detail.input.batteryProductId),
       comparison: (row.snapshot as Snapshot | null)?.comparison ?? null,
       paymentSteps: await planSteps(this.db, null),

@@ -29,24 +29,26 @@ export function FollowUpDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.discom.updateFollowUp({
-          params: { taskId: item.id },
-          body: {
-            referenceNumber: referenceNumber.trim() || null,
-            office: office.trim() || null,
-            nextFollowUpOn: nextFollowUpOn || null,
-            note: note.trim() || null,
-          },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.discom.updateFollowUp({
+            params: { taskId: item.id },
+            body: {
+              referenceNumber: referenceNumber.trim() || null,
+              office: office.trim() || null,
+              nextFollowUpOn: nextFollowUpOn || null,
+              note: note.trim() || null,
+            },
+          }),
+          200,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('saved') });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('saved') });
-    onClose();
   };
 
   return (

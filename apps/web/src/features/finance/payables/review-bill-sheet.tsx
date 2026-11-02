@@ -54,25 +54,28 @@ export function ReviewBillSheet({
 
   const run = async (approve: boolean) => {
     if (!bill) return;
-    const saved = await form.run(async () => {
-      const reviewed = await expectStatus(
-        api.finance.reviewPayable({
-          params: { id: bill.id },
-          body: { vendorInvoicePaise: invoicePaise, tdsBp: tdsBp ?? 0 },
-        }),
-        200,
-      );
-      if (!approve) return reviewed;
-      return expectStatus(api.finance.approvePayable({ params: { id: bill.id } }), 200);
-    });
-    if (!saved) return;
-    await invalidate();
-    toast({
-      tone: 'success',
-      title: approve ? t('approved') : t('saved'),
-      description: bill.partyName,
-    });
-    onClose();
+    await form.run(
+      async () => {
+        const reviewed = await expectStatus(
+          api.finance.reviewPayable({
+            params: { id: bill.id },
+            body: { vendorInvoicePaise: invoicePaise, tdsBp: tdsBp ?? 0 },
+          }),
+          200,
+        );
+        if (!approve) return reviewed;
+        return expectStatus(api.finance.approvePayable({ params: { id: bill.id } }), 200);
+      },
+      async () => {
+        await invalidate();
+        toast({
+          tone: 'success',
+          title: approve ? t('approved') : t('saved'),
+          description: bill.partyName,
+        });
+        onClose();
+      },
+    );
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

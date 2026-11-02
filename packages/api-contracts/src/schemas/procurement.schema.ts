@@ -1,6 +1,6 @@
 import { LINE_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
-import { calendarDateSchema, idSchema, paiseSchema } from '../common/primitives';
+import { calendarDateSchema, idSchema, paiseSchema, unitSchema } from '../common/primitives';
 import { dispatchSchema, quantitySchema } from './inventory.schema';
 
 export const PURCHASE_ORDER_STATUSES = [
@@ -90,7 +90,7 @@ export type PurchaseOrderDetail = z.infer<typeof purchaseOrderDetailSchema>;
 export const purchaseOrderLineInputSchema = z.object({
   productId: idSchema.nullable(),
   description: z.string().trim().min(2, 'Describe the item.').max(200),
-  unit: z.string().trim().min(1).max(12),
+  unit: unitSchema,
   quantity: quantitySchema.refine((value) => value > 0, 'Enter a quantity above 0.'),
   ratePaise: paiseSchema.nonnegative(),
   taxRateBp: z.number().int().min(0).max(2800),

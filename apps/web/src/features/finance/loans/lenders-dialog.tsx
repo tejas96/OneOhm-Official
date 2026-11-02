@@ -26,14 +26,22 @@ export function LendersDialog({
   const summary = usePatternSummary();
   const [editing, setEditing] = useState<LendingPartner | null>(null);
 
+  // One toggle at a time: a double click must not send two opposite changes.
+  const [toggling, setToggling] = useState<string | null>(null);
   const toggle = async (lender: LendingPartner) => {
-    const saved = await toggleForm.run(() =>
-      expectStatus(
-        api.finance.updateLender({ params: { id: lender.id }, body: { active: !lender.active } }),
-        200,
-      ),
+    if (toggleForm.pending) return;
+    setToggling(lender.id);
+    await toggleForm.run(
+      () =>
+        expectStatus(
+          api.finance.updateLender({ params: { id: lender.id }, body: { active: !lender.active } }),
+          200,
+        ),
+      async () => {
+        await invalidate();
+      },
     );
-    if (saved) await invalidate();
+    setToggling(null);
   };
 
   const describe = (lender: LendingPartner) => {
@@ -73,7 +81,13 @@ export function LendersDialog({
                   <Button size="sm" variant="quiet" onClick={() => setEditing(lender)}>
                     {t('edit')}
                   </Button>
-                  <Button size="sm" variant="quiet" onClick={() => toggle(lender)}>
+                  <Button
+                    size="sm"
+                    variant="quiet"
+                    pending={toggling === lender.id}
+                    disabled={toggleForm.pending}
+                    onClick={() => toggle(lender)}
+                  >
                     {lender.active ? t('deactivate') : t('activate')}
                   </Button>
                 </div>

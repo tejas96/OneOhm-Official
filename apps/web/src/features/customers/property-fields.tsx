@@ -20,11 +20,14 @@ export function PropertyFields({
   initial,
   defaultCategory = 'individual',
   defaultCity,
+  defaultLabel,
   errors,
 }: {
   readonly initial?: Property | undefined;
   readonly defaultCategory?: SubsidyCategory;
   readonly defaultCity?: string | undefined;
+  /** A second site starts unnamed, so it is not called Home like the first. */
+  readonly defaultLabel?: string | undefined;
   /** Field messages keyed by property field name. */
   readonly errors: (field: string) => string | undefined;
 }) {
@@ -58,7 +61,7 @@ export function PropertyFields({
       <input type="hidden" name="discomId" value={discom} />
       <input type="hidden" name="phase" value={phase} />
       <input type="hidden" name="meterInSocietyName" value={String(inSocietyName)} />
-      <Group label={t('category')} wide>
+      <Group label={t('category')} wide error={errors('subsidyCategory')}>
         <SegmentedControl
           label={t('category')}
           size="sm"
@@ -69,7 +72,7 @@ export function PropertyFields({
         />
       </Group>
       <Field label={t('label')} hint={t('labelHint')} required error={errors('label')}>
-        <Input name="label" defaultValue={text('label') ?? t('labelDefault')} />
+        <Input name="label" defaultValue={text('label') ?? defaultLabel ?? t('labelDefault')} />
       </Field>
       <Field label={t('floors')} error={errors('floors')}>
         <Input name="floors" type="number" min={0} max={40} defaultValue={text('floors') ?? '1'} />
@@ -103,7 +106,11 @@ export function PropertyFields({
       <Field label={t('discom')} error={errors('discomId')}>
         <Select value={discom} onValueChange={setDiscom} options={discomOptions} />
       </Field>
-      <Field label={t('consumerNumber')} error={errors('consumerNumber')}>
+      <Field
+        label={t('consumerNumber')}
+        hint={t('consumerNumberHint')}
+        error={errors('consumerNumber')}
+      >
         <Input name="consumerNumber" defaultValue={text('consumerNumber')} />
       </Field>
       <Field label={t('meterHolder')} hint={t('meterHolderHint')} error={errors('meterHolderName')}>
@@ -122,7 +129,7 @@ export function PropertyFields({
           }
         />
       </Field>
-      <Group label={t('phase')}>
+      <Group label={t('phase')} error={errors('phase')}>
         <SegmentedControl
           label={t('phase')}
           size="sm"
@@ -136,11 +143,14 @@ export function PropertyFields({
         />
       </Group>
       {category === 'society' && (
-        <Checkbox
-          checked={inSocietyName}
-          onCheckedChange={setInSocietyName}
-          label={t('meterInSocietyName')}
-        />
+        <div className="flex flex-col gap-1.5">
+          <Checkbox
+            checked={inSocietyName}
+            onCheckedChange={setInSocietyName}
+            label={t('meterInSocietyName')}
+          />
+          <FieldMessage message={errors('meterInSocietyName')} />
+        </div>
       )}
     </div>
   );
@@ -149,18 +159,27 @@ export function PropertyFields({
 function Group({
   label,
   wide,
+  error,
   children,
 }: {
   readonly label: string;
   readonly wide?: boolean;
+  readonly error?: string | undefined;
   readonly children: ReactNode;
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${wide ? 'sm:col-span-2' : ''}`}>
       <span className="type-label text-ink-muted">{label}</span>
       {children}
+      <FieldMessage message={error} />
     </div>
   );
+}
+
+/** A field message under a control that is not wrapped in a `Field`. */
+export function FieldMessage({ message }: { readonly message: string | undefined }) {
+  if (!message) return null;
+  return <p className="type-body-sm text-overdue">{message}</p>;
 }
 
 /** The property as the API expects it, from a form that holds `PropertyFields`. */

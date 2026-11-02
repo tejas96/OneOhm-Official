@@ -53,6 +53,7 @@ export function CompleteTaskDialog({
   const [materialHeld, setMaterialHeld] = useState(false);
 
   const finish = async (materialOverride?: string) => {
+    if (mutation.isPending) return;
     setError(null);
     setFieldErrors({});
     try {
@@ -100,7 +101,7 @@ export function CompleteTaskDialog({
         </>
       }
     >
-      <form id={formId} onSubmit={submit} className="flex flex-col gap-5 pb-2">
+      <form id={formId} onSubmit={submit} noValidate className="flex flex-col gap-5 pb-2">
         {task.description && <p className="type-body-sm text-ink-muted">{task.description}</p>}
         {task.captureFields.length > 0 && (
           <section className="flex flex-col gap-3">
@@ -133,7 +134,7 @@ export function CompleteTaskDialog({
         )}
         <EvidenceUploader task={task} onBusyChange={setUploading} />
         {task.evidence.includes('signature') && <SignaturePad task={task} />}
-        <Field label={t('note')} hint={t('noteHint')}>
+        <Field label={t('note')} hint={t('noteHint')} error={fieldErrors.note}>
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
         {task.approval && (

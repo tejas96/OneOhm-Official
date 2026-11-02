@@ -2,6 +2,11 @@ import { LEAD_LOST_REASONS, LEAD_SOURCES, LEAD_STAGES, SUBSIDY_CATEGORIES } from
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 
+/** A time of day on the business clock, "HH:MM". */
+export const timeOfDaySchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 16:30.');
+
 export const leadStageSchema = z.enum(LEAD_STAGES);
 export const leadSourceSchema = z.enum(LEAD_SOURCES);
 export const subsidyCategorySchema = z.enum(SUBSIDY_CATEGORIES);
@@ -23,6 +28,8 @@ export const leadSchema = z.object({
   estimatedWp: z.number().int().nullable(),
   owner: userRefSchema.nullable(),
   nextActionOn: calendarDateSchema.nullable(),
+  /** Optional time on that day, "HH:MM". */
+  nextActionTime: z.string().nullable(),
   nextActionNote: z.string().nullable(),
   /** An open lead whose next action date has passed (PRD 3.3: never silent). */
   overdue: z.boolean(),

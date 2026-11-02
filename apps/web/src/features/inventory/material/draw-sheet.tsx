@@ -88,24 +88,26 @@ export function DrawSheet({
       lines: lines.map(({ key: _key, ...line }) => line),
     };
     const params = { id: group.project.id };
-    const saved = await form.run(() =>
-      returning
-        ? expectStatus(
-            api.inventory.custody.recordReturn({
-              params,
-              body: { ...body, locationId: locationId ?? null },
-            }),
-            201,
-          )
-        : expectStatus(api.inventory.custody.recordUse({ params, body }), 201),
+    await form.run(
+      () =>
+        returning
+          ? expectStatus(
+              api.inventory.custody.recordReturn({
+                params,
+                body: { ...body, locationId: locationId ?? null },
+              }),
+              201,
+            )
+          : expectStatus(api.inventory.custody.recordUse({ params, body }), 201),
+      async (saved) => {
+        await refresh(group.project.id);
+        toast({
+          tone: 'success',
+          title: t(returning ? 'savedReturn' : 'savedUse', { number: saved.number }),
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh(group.project.id);
-    toast({
-      tone: 'success',
-      title: t(returning ? 'savedReturn' : 'savedUse', { number: saved.number }),
-    });
-    onClose();
   };
 
   const lineError = (holding: CustodyHolding) => {

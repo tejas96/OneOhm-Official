@@ -2,7 +2,7 @@ import type { LeadDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb } from '../support/db';
 import { Session } from '../support/http';
-import { createQuotation, newCustomer, today, uniquePhone } from '../support/sales';
+import { addDays, createQuotation, newCustomer, today, uniquePhone } from '../support/sales';
 import { staffEmail, TEAM_PASSWORD } from '../support/team';
 
 // The lead's History tells the whole sale: converted, quotation sent, quotation accepted.
@@ -51,5 +51,28 @@ describe('Lead history', () => {
     const reply = await sales.raw('PATCH', `/leads/${created.id}`, { stage: 'won' });
     expect(reply.status).toBe(400);
     expect((await lead(created.id)).stage).toBe('new');
+  });
+
+  it('keeps a follow-up time, writes it to History, and drops it with a new day', async () => {
+    const created = await sales.post<{ id: string }>('/leads', {
+      name: 'Timed Follow-up (test)',
+      phone: uniquePhone(),
+      city: 'Sangli',
+      subsidyCategory: 'individual',
+      nextActionOn: today(),
+      nextActionTime: '16:30',
+    });
+    expect((await lead(created.id)).nextActionTime).toBe('16:30');
+
+    const day = addDays(today(), 2);
+    await sales.patch(`/leads/${created.id}`, { nextActionOn: day, nextActionTime: '11:00' });
+    expect((await lead(created.id)).nextActionTime).toBe('11:00');
+    expect(await notes(created.id)).toContain(`Next action on ${day} at 11:00.`);
+
+    await sales.patch(`/leads/${created.id}`, { nextActionOn: addDays(today(), 3) });
+    expect((await lead(created.id)).nextActionTime).toBeNull();
+
+    const bad = await sales.raw('PATCH', `/leads/${created.id}`, { nextActionTime: '25:00' });
+    expect(bad.status).toBe(400);
   });
 });

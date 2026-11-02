@@ -20,9 +20,11 @@ import { api, keys } from '@/api/api';
 import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
-import { NEW_LEAD } from '@/copy/sales';
+import { LEAD, NEW_LEAD } from '@/copy/sales';
+import { businessClock, businessToday } from '@/lib/dates';
+import { type Checks, isIndianMobile, passes, withoutKeys } from '@/lib/form';
 import { useCurrentUser } from '@/session/session-provider';
-import { defaultFollowUp, FollowUpDates } from './follow-up-dates';
+import { defaultFollowUp, FollowUpDates, FollowUpTime } from './follow-up-dates';
 
 /** Capture a lead on site in under a minute; duplicates point to the existing lead. */
 export function NewLeadScreen() {
@@ -40,28 +42,43 @@ export function NewLeadScreen() {
   });
   const [category, setCategory] = useState<SubsidyCategory>('individual');
   const [next, setNext] = useState(defaultFollowUp());
-  const set = (key: keyof typeof form) => (value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const [time, setTime] = useState<string | null>(null);
+  const [checks, setChecks] = useState<Checks>({});
+  const set =
+    (key: keyof typeof form, field: string = key) =>
+    (value: string) => {
+      setForm((current) => ({ ...current, [key]: value }));
+      setChecks((current) => withoutKeys(current, field));
+    };
+  const minTime = next === businessToday() ? businessClock() : undefined;
+
+  /** The size in watts; null when left empty, undefined when it is not a number. */
+  const sizeWp = (): number | null | undefined => {
+    const text = form.size.trim().replace(',', '.');
+    if (!text) return null;
+    if (!/^\d+(\.\d+)?$/.test(text)) return undefined;
+    const wp = Math.round(Number.parseFloat(text) * 1000);
+    return wp > 0 ? wp : undefined;
+  };
 
   const save = useMutation({
-    mutationFn: () => {
-      const kw = Number.parseFloat(form.size.replace(',', '.'));
-      return unwrap(
+    mutationFn: () =>
+      unwrap(
         api.crm.createLead({
           body: {
-            name: form.name,
-            phone: form.phone,
-            city: form.city,
+            name: form.name.trim(),
+            phone: form.phone.trim(),
+            city: form.city.trim(),
             source: user.kind === 'reseller' ? 'reseller' : 'employee',
             subsidyCategory: category,
-            estimatedWp: Number.isFinite(kw) && kw > 0 ? Math.round(kw * 1000) : null,
+            estimatedWp: sizeWp() ?? null,
             nextActionOn: next,
+            nextActionTime: time,
             nextActionNote: form.nextNote.trim() || null,
             notes: form.notes.trim() || null,
           },
         }),
-      );
-    },
+      ),
     onSuccess: async (lead) => {
       toast(NEW_LEAD.saved);
       await client.invalidateQueries({ queryKey: keys.leads });
@@ -69,13 +86,28 @@ export function NewLeadScreen() {
     },
   });
 
-  const errors = fieldErrorsOf(save.error);
+  const submit = () => {
+    if (save.isPending) return;
+    const found: Record<string, string> = {};
+    if (form.name.trim().length < 2) found.name = NEW_LEAD.nameRequired;
+    if (!isIndianMobile(form.phone)) found.phone = NEW_LEAD.phoneInvalid;
+    if (form.city.trim().length < 2) found.city = NEW_LEAD.cityRequired;
+    if (sizeWp() === undefined) found.estimatedWp = NEW_LEAD.sizeInvalid;
+    if (time && minTime && time < minTime) found.nextActionTime = LEAD.sheet.timeInPast;
+    setChecks(found);
+    if (!passes(found)) {
+      save.reset();
+      return;
+    }
+    save.mutate();
+  };
+
+  const errors = { ...fieldErrorsOf(save.error), ...checks };
   const duplicateId =
     save.error instanceof ApiError && save.error.code?.startsWith('duplicate_lead:')
       ? save.error.code.slice('duplicate_lead:'.length)
       : null;
-  const generalError =
-    save.error && Object.keys(errors).length === 0 ? describeError(save.error) : null;
+  const generalError = save.error ? describeError(save.error) : null;
 
   return (
     <Screen
@@ -85,7 +117,7 @@ export function NewLeadScreen() {
           size="lg"
           fullWidth
           pending={save.isPending}
-          onPress={() => save.mutate()}
+          onPress={submit}
         />
       }
     >
@@ -117,6 +149,7 @@ export function NewLeadScreen() {
           onChangeText={set('name')}
           autoCapitalize="words"
           textContentType="name"
+          maxLength={160}
           invalid={Boolean(errors.name)}
           accessibilityLabel={NEW_LEAD.name}
         />
@@ -127,6 +160,7 @@ export function NewLeadScreen() {
           onChangeText={set('phone')}
           keyboardType="phone-pad"
           textContentType="telephoneNumber"
+          maxLength={16}
           invalid={Boolean(errors.phone)}
           accessibilityLabel={NEW_LEAD.phone}
         />
@@ -136,6 +170,7 @@ export function NewLeadScreen() {
           value={form.city}
           onChangeText={set('city')}
           autoCapitalize="words"
+          maxLength={80}
           invalid={Boolean(errors.city)}
           accessibilityLabel={NEW_LEAD.city}
         />
@@ -160,27 +195,56 @@ export function NewLeadScreen() {
       >
         <Input
           value={form.size}
-          onChangeText={set('size')}
+          onChangeText={set('size', 'estimatedWp')}
           keyboardType="decimal-pad"
+          maxLength={8}
+          invalid={Boolean(errors.estimatedWp)}
           accessibilityLabel={NEW_LEAD.size}
         />
       </Field>
       <Field label={NEW_LEAD.followUp} error={errors.nextActionOn}>
-        <FollowUpDates label={NEW_LEAD.followUp} value={next} onChange={setNext} />
+        <FollowUpDates
+          label={NEW_LEAD.followUp}
+          value={next}
+          onChange={(value) => {
+            setNext(value);
+            setChecks((current) => withoutKeys(current, 'nextActionTime'));
+          }}
+        />
       </Field>
-      <Field label={NEW_LEAD.followUpNote} optional={COMMON.optional}>
+      <Field
+        label={LEAD.sheet.time}
+        hint={LEAD.sheet.timeHint}
+        optional={COMMON.optional}
+        error={errors.nextActionTime}
+      >
+        <FollowUpTime
+          label={LEAD.sheet.time}
+          value={time}
+          onChange={(value) => {
+            setTime(value);
+            setChecks((current) => withoutKeys(current, 'nextActionTime'));
+          }}
+          minTime={minTime}
+        />
+      </Field>
+      <Field label={NEW_LEAD.followUpNote} optional={COMMON.optional} error={errors.nextActionNote}>
         <Input
           value={form.nextNote}
-          onChangeText={set('nextNote')}
+          onChangeText={set('nextNote', 'nextActionNote')}
           placeholder={NEW_LEAD.followUpNotePlaceholder}
+          maxLength={300}
+          invalid={Boolean(errors.nextActionNote)}
           accessibilityLabel={NEW_LEAD.followUpNote}
         />
       </Field>
-      <Field label={NEW_LEAD.notes} optional={COMMON.optional}>
+      <Field label={NEW_LEAD.notes} optional={COMMON.optional} error={errors.notes}>
         <Input
           value={form.notes}
           onChangeText={set('notes')}
           multiline
+          maxLength={2000}
+          invalid={Boolean(errors.notes)}
           accessibilityLabel={NEW_LEAD.notes}
         />
       </Field>

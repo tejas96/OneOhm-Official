@@ -52,14 +52,15 @@ export function ReferralsPanel() {
   const patch = (next: Partial<ReferralProgramInput>) => setDraft({ ...draft, ...next });
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = await form.run(() =>
-      expectStatus(api.referrals.saveProgram({ body: draft }), 200),
+    await form.run(
+      () => expectStatus(api.referrals.saveProgram({ body: draft }), 200),
+      async (result) => {
+        queryClient.setQueryData(REFERRAL_PROGRAM_KEY, result);
+        await queryClient.invalidateQueries({ queryKey: ['finance', 'payouts'] });
+        setDraft(inputOf(result));
+        toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
+      },
     );
-    if (!result) return;
-    queryClient.setQueryData(REFERRAL_PROGRAM_KEY, result);
-    await queryClient.invalidateQueries({ queryKey: ['finance', 'payouts'] });
-    setDraft(inputOf(result));
-    toast({ title: settingsT('saved'), reference: t('title'), tone: 'success' });
   };
   const discard = () => {
     setDraft(inputOf(saved));

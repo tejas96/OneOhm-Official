@@ -72,7 +72,7 @@ export function UseSheet({
             projectId: project?.project.id ?? '',
             occurredOn: businessToday(),
             taskId: taskId ?? null,
-            note,
+            note: note.trim(),
             lines: lines.map(({ holding, quantity }) => ({
               productId: holding.productId,
               lineKey: holding.lineKey,
@@ -86,11 +86,10 @@ export function UseSheet({
       toast(CREW.use.saved);
       onClose();
     },
-    onError: (failure) => {
-      const fields = fieldErrorsOf(failure);
-      setError(Object.values(fields)[0] ?? describeError(failure));
-    },
+    // The sentence names the field; the note's own message also shows under it.
+    onError: (failure) => setError(describeError(failure)),
   });
+  const noteError = fieldErrorsOf(save.error).note;
   const invalid = holdings.some((holding) => problemWith(holding, amounts[keyOf(holding)] ?? ''));
 
   return (
@@ -113,7 +112,7 @@ export function UseSheet({
               return;
             }
             setError(null);
-            save.mutate();
+            if (!save.isPending) save.mutate();
           }}
         />
       }
@@ -140,12 +139,14 @@ export function UseSheet({
           </Field>
         );
       })}
-      <Field label={CREW.use.note} optional={COMMON.optional}>
+      <Field label={CREW.use.note} optional={COMMON.optional} error={noteError}>
         <Input
           value={note}
           onChangeText={setNote}
           placeholder={CREW.use.notePlaceholder}
           multiline
+          maxLength={500}
+          invalid={Boolean(noteError)}
           accessibilityLabel={CREW.use.note}
         />
       </Field>

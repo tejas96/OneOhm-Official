@@ -16,18 +16,23 @@ interface FieldsProps {
   readonly onFact: (key: string, value: string) => void;
 }
 
+/** The server names a fact as `facts.<key>`; checks made here use the bare key. */
+const factError = (errors: Readonly<Record<string, string>>, key: string) =>
+  errors[key] ?? errors[`facts.${key}`];
+
 function FactFields({ fields, facts, errors, onFact }: FieldsProps) {
   return fields.map((field) => (
     <Field
       key={field.key}
       label={field.label}
       hint={field.input === 'date' ? (field.hint ?? TASK.dateHint) : field.hint}
-      error={errors[field.key]}
+      error={factError(errors, field.key)}
     >
       <Input
         value={facts[field.key] ?? ''}
         onChangeText={(value) => onFact(field.key, value)}
-        invalid={Boolean(errors[field.key])}
+        maxLength={2000}
+        invalid={Boolean(factError(errors, field.key))}
         multiline={field.input === 'long'}
         keyboardType={
           field.input === 'number' || field.input === 'date' ? KEYBOARD[field.input] : 'default'
@@ -83,12 +88,14 @@ export function FactsForm({
       ) : null}
       <FactFields fields={measurements} facts={facts} errors={errors} onFact={onFact} />
       <CableRunsField task={task} facts={facts} onFact={onFact} />
-      <Field label={TASK.note} optional={COMMON.optional}>
+      <Field label={TASK.note} optional={COMMON.optional} error={errors.note}>
         <DictationInput
           value={note}
           onChangeText={onNote}
           placeholder={TASK.notePlaceholder}
           multiline
+          maxLength={2000}
+          invalid={Boolean(errors.note)}
           accessibilityLabel={TASK.note}
         />
       </Field>

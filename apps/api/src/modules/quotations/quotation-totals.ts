@@ -4,6 +4,7 @@ import type {
   QuotationTotals,
 } from '@oneohm/api-contracts';
 import {
+  asUnit,
   type CostBuildup,
   calculateSubsidy,
   costBuildup,
@@ -27,7 +28,8 @@ export interface QuoteParts {
   readonly input: QuotationPreviewInput;
   readonly site: SiteFacts;
   readonly panel: PanelProduct;
-  readonly inverter: PricedProduct;
+  /** Each inverter model with how many of it, in the order picked. */
+  readonly inverters: readonly { readonly product: PricedProduct; readonly quantity: number }[];
   readonly battery: PricedProduct | undefined;
   readonly extras: readonly ExtraLine[];
   readonly rates: RateCard;
@@ -59,7 +61,7 @@ export function quoteTotals(parts: QuoteParts, discountPaise: number): QuoteResu
   const design = designSystem({
     targetWp: input.targetWp,
     panel: parts.panel,
-    inverter: parts.inverter,
+    inverters: parts.inverters,
     battery: parts.battery,
     site: {
       floors: input.floors,
@@ -128,7 +130,12 @@ export function costingView(rates: RateCard, result: QuoteResult): QuotationCost
   return {
     build: result.build,
     used: result.used as QuotationCosting['used'],
-    rates: rates.rateLines.map(({ key, label, kind, unit }) => ({ key, label, kind, unit })),
+    rates: rates.rateLines.map(({ key, label, kind, unit }) => ({
+      key,
+      label,
+      kind,
+      unit: asUnit(unit),
+    })),
     pricingMode: rates.pricing.mode,
   };
 }

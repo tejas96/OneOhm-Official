@@ -2,6 +2,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import {
   calendarDateSchema,
+  consumerNumberSchema,
   emailSchema,
   idSchema,
   nameSchema,
@@ -19,6 +20,7 @@ import {
   leadStageSchema,
   propertySchema,
   subsidyCategorySchema,
+  timeOfDaySchema,
 } from '../schemas/crm.schema';
 import { customerActivitySchema } from '../schemas/customer-activity.schema';
 import { projectSummarySchema } from '../schemas/project.schema';
@@ -42,7 +44,8 @@ export const propertyInputSchema = z.object({
   subsidyCategory: subsidyCategorySchema,
   households: z.number().int().positive().nullable().optional(),
   discomId: idSchema.nullable().optional(),
-  consumerNumber: z.string().trim().max(40).nullable().optional(),
+  /** Unique: no two sites share a consumer number. */
+  consumerNumber: consumerNumberSchema.nullable().optional(),
   meterHolderName: z.string().trim().max(160).nullable().optional(),
   sanctionedLoadW: z.number().int().positive().nullable().optional(),
   phase: z.enum(['single', 'three']).nullable().optional(),
@@ -87,6 +90,7 @@ export const crmContract = c.router({
       estimatedWp: z.number().int().positive().nullable().optional(),
       ownerUserId: idSchema.nullable().optional(),
       nextActionOn: calendarDateSchema,
+      nextActionTime: timeOfDaySchema.nullable().optional(),
       nextActionNote: z.string().trim().max(300).nullable().optional(),
       notes: noteSchema.nullable().optional(),
       /** A customer's referral code: the lead remembers who referred it (PRD 5.6). */
@@ -111,6 +115,8 @@ export const crmContract = c.router({
       stepKey: z.string().trim().min(1).max(60).optional(),
       ownerUserId: idSchema.nullable().optional(),
       nextActionOn: calendarDateSchema.nullable().optional(),
+      /** Left out with a new date: the time is cleared. */
+      nextActionTime: timeOfDaySchema.nullable().optional(),
       nextActionNote: z.string().trim().max(300).nullable().optional(),
       lostReasonKey: leadLostReasonSchema.nullable().optional(),
       lostReason: z.string().trim().max(300).nullable().optional(),
@@ -199,6 +205,14 @@ export const crmContract = c.router({
     pathParams: idParams,
     responses: { 200: propertySchema.extend({ customer: customerSchema }) },
     summary: 'One property with its customer (the quotation builder starts from a property).',
+  },
+  addProperty: {
+    method: 'POST',
+    path: '/customers/:id/properties',
+    pathParams: idParams,
+    body: propertyInputSchema,
+    responses: { 201: propertySchema },
+    summary: 'Adds another site to a customer (a second home, a shop or a farm).',
   },
   updateProperty: {
     method: 'PATCH',

@@ -53,6 +53,11 @@ export class CorrectionsService {
       throw invalid('Pick today or an earlier day.', { workDate: 'Not yet.' });
     if (!input.checkInAt && !input.checkOutAt)
       throw invalid('Give the check-in or check-out time to correct.', { checkInAt: 'Required.' });
+    const now = Date.now() + 5 * 60_000;
+    if ([input.checkInAt, input.checkOutAt].some((at) => at && Date.parse(at) > now))
+      throw invalid('A time cannot be later than now.', { checkOutAt: 'Not yet.' });
+    if (input.checkInAt && input.checkOutAt && input.checkOutAt <= input.checkInAt)
+      throw invalid('Check-out must be after check-in.', { checkOutAt: 'After check-in.' });
     const [row] = await this.db
       .insert(attendanceCorrections)
       .values({

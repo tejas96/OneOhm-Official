@@ -37,19 +37,21 @@ export function ContractorEditSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.contractors.updateContractor({
-          params: { id: contractor.id },
-          body: { ...contractorBody(draft), active },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.contractors.updateContractor({
+            params: { id: contractor.id },
+            body: { ...contractorBody(draft), active },
+          }),
+          200,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('saved') });
+        onOpenChange(false);
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('saved') });
-    onOpenChange(false);
   };
 
   return (

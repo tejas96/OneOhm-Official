@@ -7,9 +7,16 @@ import { formatInr, rupeesToPaise, todayIn } from '@oneohm/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, useEffect, useId, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import {
+  amountProblem,
+  type CheckKey,
+  happenedOnProblem,
+  optionalNotNegativeProblem,
+  parseNumber,
+} from '@/lib/forms/checks';
 import { useInvalidateWork } from '../tasks/use-task-actions';
 import { type Collected, CollectedFields } from './collected-fields';
 
@@ -39,6 +46,13 @@ function collectedBody(method: Method, collected: Collected) {
   };
 }
 
+const NO_COLLECTED: Collected = {
+  collectedByUserId: '',
+  chequeNumber: '',
+  chequeBank: '',
+  chequeDate: '',
+};
+
 const remaining = (milestone: Milestone) => milestone.amountPaise - milestone.paidPaise;
 const toRupees = (paise: number) => String(paise / 100);
 const paiseOf = (text: string) => rupeesToPaise(Number(text.replace(/,/g, '')) || 0);
@@ -59,6 +73,7 @@ export function RecordPaymentDialog({
 }) {
   const t = useTranslations('projects.money');
   const methodT = useTranslations('projects.money.methods');
+  const checkT = useTranslations('checks');
   const toast = useToast();
   const client = useQueryClient();
   const invalidate = useInvalidateWork();
@@ -72,14 +87,24 @@ export function RecordPaymentDialog({
   const [receivedOn, setReceivedOn] = useState(todayIn());
   const [reference, setReference] = useState('');
   const [tds, setTds] = useState('');
-  const [collected, setCollected] = useState<Collected>({
-    collectedByUserId: '',
-    chequeNumber: '',
-    chequeBank: '',
-    chequeDate: '',
-  });
+  const [collected, setCollected] = useState<Collected>(NO_COLLECTED);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
+
+  // Each opening starts fresh from the first milestone still due.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setMilestoneId(first?.id ?? '');
+    setAmount(first ? toRupees(remaining(first)) : '');
+    setMethod(first?.payer === 'bank' ? 'bank_disbursement' : 'upi');
+    setReceivedOn(todayIn());
+    setReference('');
+    setTds('');
+    setCollected(NO_COLLECTED);
+    setError(null);
+    setFieldErrors({});
+  }, [open]);
   const milestone = milestones.find((candidate) => candidate.id === milestoneId);
   const bank = milestone?.payer === 'bank';
   const withTds = !bank && takesTds(method);
@@ -92,7 +117,7 @@ export function RecordPaymentDialog({
           params: { id: projectId },
           body: {
             milestoneId,
-            amountPaise: rupeesToPaise(Number(amount.replace(/,/g, ''))),
+            amountPaise: rupeesToPaise(parseNumber(amount) ?? 0),
             ...(tdsPaise > 0 ? { tdsPaise } : {}),
             method: bank ? 'bank_disbursement' : method,
             receivedOn,
@@ -121,8 +146,18 @@ export function RecordPaymentDialog({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (record.isPending) return;
     setError(null);
-    setFieldErrors({});
+    const problems: Record<string, CheckKey | null> = {
+      milestoneId: milestoneId ? null : 'required',
+      amountPaise: amountProblem(amount),
+      tdsPaise: withTds ? optionalNotNegativeProblem(tds) : null,
+      receivedOn: happenedOnProblem(receivedOn),
+    };
+    const found: Record<string, string> = {};
+    for (const [field, key] of Object.entries(problems)) if (key) found[field] = checkT(key);
+    setFieldErrors(found);
+    if (Object.keys(found).length > 0) return;
     record.mutate();
   };
 
@@ -150,7 +185,7 @@ export function RecordPaymentDialog({
         </>
       }
     >
-      <form id={formId} onSubmit={submit} className="grid gap-4 pb-2 sm:grid-cols-2">
+      <form id={formId} onSubmit={submit} noValidate className="grid gap-4 pb-2 sm:grid-cols-2">
         <Field label={t('milestone')} className="sm:col-span-2" error={fieldErrors.milestoneId}>
           <Select
             value={milestoneId}
@@ -203,6 +238,7 @@ export function RecordPaymentDialog({
         <Field label={t('receivedOn')} required error={fieldErrors.receivedOn}>
           <Input
             type="date"
+            max={todayIn()}
             value={receivedOn}
             onChange={(event) => setReceivedOn(event.target.value)}
           />

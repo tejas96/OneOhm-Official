@@ -17,6 +17,7 @@ import { formatInr, todayIn } from '@oneohm/shared';
 import { and, asc, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { assertNotFuture } from '../../common/dates';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { assertBillWithinLimit } from '../business-settings/approval-limit';
@@ -184,6 +185,7 @@ export class PayablesService {
     id: string,
     input: { method: MoneyOutMethod; paidOn: string; reference?: string | null | undefined },
   ): Promise<Payable> {
+    assertNotFuture(input.paidOn, 'paidOn');
     await this.db.transaction(async (tx) => {
       const [updated] = await tx
         .update(payables)

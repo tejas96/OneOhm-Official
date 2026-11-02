@@ -26,13 +26,39 @@ type Product = typeof products.$inferSelect;
 const productName = (product: Product) =>
   `${product.brand === 'Starter catalog' ? '' : `${product.brand} `}${product.name}`;
 
+export interface InverterProduct {
+  readonly product: Product;
+  readonly quantity: number;
+}
+
+/**
+ * Inverter facts for DISCOM forms and reports: every model with its count
+ * ("Brand 5 kW × 2, Brand 3 kW") and the total AC rating in kW.
+ */
+export function inverterFacts(
+  inverters: readonly InverterProduct[],
+): Pick<Record<string, string>, 'inverter_make' | 'inverter_total_kw'> {
+  const totalW = inverters.reduce(
+    (sum, { product, quantity }) => sum + (product.ratedW ?? 0) * quantity,
+    0,
+  );
+  return {
+    inverter_make: inverters
+      .map(({ product, quantity }) =>
+        quantity > 1 ? `${productName(product)} × ${quantity}` : productName(product),
+      )
+      .join(', '),
+    inverter_total_kw: String(totalW / 1000),
+  };
+}
+
 /** Report facts known at creation, from the customer, property and accepted quotation. */
 export function initialFacts(
   customer: Customer,
   property: Property,
   quotation: Quotation,
   panel: Product,
-  inverter: Product,
+  inverters: readonly InverterProduct[],
   startDate: string,
 ): Record<string, string> {
   const facts: Record<string, string> = {
@@ -47,8 +73,7 @@ export function initialFacts(
     module_wattage: String(panel.wattageWp ?? ''),
     module_total_kw: String(quotation.capacityWp / 1000),
     module_make: productName(panel),
-    inverter_make: productName(inverter),
-    inverter_total_kw: String((inverter.ratedW ?? 0) / 1000),
+    ...inverterFacts(inverters),
     system_cost: String(quotation.totalPaise),
     project_onboarded_date: startDate,
     consumer_number: property.consumerNumber ?? '',

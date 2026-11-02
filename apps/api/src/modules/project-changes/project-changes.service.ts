@@ -12,6 +12,7 @@ import {
   projects,
   quotations,
 } from '@oneohm/database';
+import { inverterPicks } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -29,7 +30,8 @@ import { kindsLine, signedInr, tasksLine } from './change-words';
 const asChangeInput = (input: QuotationInput, reason: string): ProjectChangeInput => ({
   targetWp: input.targetWp,
   panelProductId: input.panelProductId,
-  inverterProductId: input.inverterProductId,
+  // Changes raised before inverter lists carry one inverter; it reads as one row.
+  inverters: inverterPicks(input),
   batteryProductId: input.batteryProductId ?? null,
   structureType: input.structureType,
   extras: input.extras ?? [],

@@ -56,7 +56,10 @@ export function SignatureCard({
               file={file}
               removable={open}
               removing={evidence.remove.isPending && evidence.remove.variables === file.id}
-              onRemove={() => evidence.remove.mutate(file.id)}
+              onRemove={() => {
+                // One removal at a time: repeat taps while it runs do nothing.
+                if (!evidence.remove.isPending) evidence.remove.mutate(file.id);
+              }}
             />
           ))}
           {queued.map((item) => (

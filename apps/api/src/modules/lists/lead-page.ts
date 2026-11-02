@@ -57,7 +57,12 @@ export async function leadPage(
       .select()
       .from(leads)
       .where(where)
-      .orderBy(asc(leads.nextActionOn), desc(leads.createdAt), asc(leads.id))
+      .orderBy(
+        asc(leads.nextActionOn),
+        asc(leads.nextActionTime),
+        desc(leads.createdAt),
+        asc(leads.id),
+      )
       .limit(query.limit)
       .offset(offset),
     db

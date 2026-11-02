@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { parseNumber } from '@/lib/forms/checks';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useRefreshInventory } from '../use-inventory';
 
@@ -22,32 +23,42 @@ export function ThresholdDialog({
   const toast = useToast();
   const refresh = useRefreshInventory();
   const form = useApiForm();
+  const checkT = useTranslations('checks');
   const [minimum, setMinimum] = useState('');
+  const [check, setCheck] = useState<string | null>(null);
   const { reset } = form;
 
   useEffect(() => {
     if (!row) return;
     setMinimum(row.minimum === null ? '' : String(row.minimum));
+    setCheck(null);
     reset();
   }, [row, reset]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!row) return;
-    const text = minimum.replace(/,/g, '').trim();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.inventory.stock.setThreshold({
-          params: { id: row.productId },
-          body: { minimum: text === '' ? null : Number(text) },
-        }),
-        200,
-      ),
+    if (!row || form.pending) return;
+    // Empty clears the alert; anything typed must be a number, zero or more.
+    const value = minimum.trim() === '' ? null : parseNumber(minimum);
+    const problem =
+      minimum.trim() !== '' && (value === null || value < 0) ? checkT('notNegative') : null;
+    setCheck(problem);
+    if (problem) return;
+    await form.run(
+      () =>
+        expectStatus(
+          api.inventory.stock.setThreshold({
+            params: { id: row.productId },
+            body: { minimum: value },
+          }),
+          200,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('saved'), reference: row.name });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('saved'), reference: row.name });
-    onClose();
   };
 
   return (
@@ -69,7 +80,7 @@ export function ThresholdDialog({
         <Field
           label={t('minimum', { unit: row?.unit ?? '' })}
           hint={t('hint')}
-          error={form.fieldErrors.minimum}
+          error={check ?? form.fieldErrors.minimum}
         >
           <Input
             inputMode="decimal"

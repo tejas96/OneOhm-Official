@@ -71,15 +71,17 @@ export function PlaceDialog({
       radiusM: draft.radiusM ?? 0,
       active: draft.active,
     };
-    const saved = await form.run(() =>
-      place
-        ? expectStatus(api.rewards.updateWorkLocation({ params: { id: place.id }, body }), 200)
-        : expectStatus(api.rewards.addWorkLocation({ body }), 201),
+    await form.run(
+      () =>
+        place
+          ? expectStatus(api.rewards.updateWorkLocation({ params: { id: place.id }, body }), 200)
+          : expectStatus(api.rewards.addWorkLocation({ body }), 201),
+      (saved) => {
+        queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, saved);
+        toast({ title: place ? t('updated') : t('added'), reference: body.name, tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, saved);
-    toast({ title: place ? t('updated') : t('added'), reference: body.name, tone: 'success' });
-    onClose();
   };
 
   return (

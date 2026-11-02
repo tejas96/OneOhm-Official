@@ -27,3 +27,11 @@ export function kwToWp(value: string): number | null {
   const kw = Number.parseFloat(value.replace(',', '.'));
   return Number.isFinite(kw) && kw > 0 ? Math.round(kw * 1000) : null;
 }
+
+/** "16:30" as people in India read it: "4:30 pm". */
+export function clockLabel(time: string): string {
+  const [hour = 0, minute = 0] = time.split(':').map(Number);
+  const half = hour < 12 ? 'am' : 'pm';
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:${String(minute).padStart(2, '0')} ${half}`;
+}

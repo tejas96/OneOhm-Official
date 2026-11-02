@@ -26,15 +26,22 @@ export function ClaimProject({
   day,
   value,
   onChange,
+  error,
 }: {
   readonly day: TravelDay;
   readonly value: string | null;
   readonly onChange: (projectId: string | null) => void;
+  readonly error?: string | undefined;
 }) {
   const projects = visitedProjects(day);
   if (projects.length === 0) return null;
   return (
-    <Field label={TRAVEL.project} hint={TRAVEL.projectHint} optional={COMMON.optional}>
+    <Field
+      label={TRAVEL.project}
+      hint={TRAVEL.projectHint}
+      optional={COMMON.optional}
+      error={error}
+    >
       <ChoiceChips
         label={TRAVEL.project}
         choices={[

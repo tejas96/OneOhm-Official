@@ -33,11 +33,14 @@ export function RejectPayoutDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!target) return;
-    const done = await form.run(() => rejectPayout(target, reason.trim()));
-    if (!done) return;
-    await invalidate();
-    toast({ title: t('done'), description: target.party, tone: 'success' });
-    close();
+    await form.run(
+      () => rejectPayout(target, reason.trim()),
+      async () => {
+        await invalidate();
+        toast({ title: t('done'), description: target.party, tone: 'success' });
+        close();
+      },
+    );
   };
 
   return (

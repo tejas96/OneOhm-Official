@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
+import { FieldError } from '@/components/field-error';
 import { FormAlert } from '@/components/form-alert';
 import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
@@ -46,6 +47,10 @@ export function NewRequestScreen() {
   const [video, setVideo] = useState<PickedVideo | null>(null);
   const [voice, setVoice] = useState<RecordedVoice | null>(null);
   const [recording, setRecording] = useState(false);
+  const [checked, setChecked] = useState<{
+    category?: string | undefined;
+    description?: string | undefined;
+  }>({});
   const forProject = projectId ?? chosen?.id ?? null;
   // Typing is optional with a voice note: the customer may just say it (PRD 5.5).
   const typed = description.trim().length >= 5;
@@ -59,16 +64,27 @@ export function NewRequestScreen() {
         }),
       );
       const failedPhotos = await sendRequestPhotos(request.id, photos);
-      // The video and the voice note go after the photos, to the route that takes them.
-      const media = [video?.file, voice?.file].filter((file) => file !== undefined);
-      const failedMedia = await sendRequestPhotos(request.id, media, 'files');
-      return { failedPhotos, failedMedia };
+      // The video and the voice note go after the photos, to the route that takes them;
+      // one at a time, so the customer hears which of them did not get through.
+      const videoFailed = video
+        ? (await sendRequestPhotos(request.id, [video.file], 'files')) > 0
+        : false;
+      const voiceFailed = voice
+        ? (await sendRequestPhotos(request.id, [voice.file], 'files')) > 0
+        : false;
+      return { failedPhotos, videoFailed, voiceFailed };
     },
-    onSuccess: async ({ failedPhotos, failedMedia }) => {
+    onMutate: () => setError(null),
+    onSuccess: async ({ failedPhotos, videoFailed, voiceFailed }) => {
       await client.invalidateQueries({ queryKey: keys.service });
+      const missing = [
+        failedPhotos > 0 ? SUPPORT.photoCount(failedPhotos) : null,
+        videoFailed ? REQUEST_MEDIA.failedVideo : null,
+        voiceFailed ? REQUEST_MEDIA.failedVoice : null,
+      ].filter((part) => part !== null);
       toast(
-        failedMedia > 0
-          ? REQUEST_MEDIA.filesFailed(failedPhotos + failedMedia)
+        videoFailed || voiceFailed
+          ? REQUEST_MEDIA.notUploaded(missing.join(', '))
           : failedPhotos > 0
             ? SUPPORT.photosFailed(failedPhotos)
             : SUPPORT.sent,
@@ -84,6 +100,21 @@ export function NewRequestScreen() {
     onError: (failure) => setError(describeError(failure)),
   });
   const fieldErrors = send.error ? fieldErrorsOf(send.error) : {};
+  const categoryError = checked.category ?? fieldErrors.category;
+  const descriptionError = checked.description ?? fieldErrors.description;
+  const submit = () => {
+    const found = {
+      ...(category ? {} : { category: SUPPORT.categoryNeeded }),
+      ...(typed || voice ? {} : { description: SUPPORT.descriptionNeeded }),
+    };
+    setChecked(found);
+    if (found.category || found.description) {
+      send.reset();
+      setError(null);
+      return;
+    }
+    send.mutate();
+  };
   const addPhotos = async (source: 'camera' | 'library') => {
     const picked = await pickRequestPhotos(source, MAX_REQUEST_PHOTOS - photos.length);
     if (picked === 'denied') {
@@ -104,9 +135,9 @@ export function NewRequestScreen() {
       footer={
         <Button
           label={SUPPORT.submit}
-          onPress={() => send.mutate()}
+          onPress={submit}
           pending={send.isPending}
-          disabled={!category || !(typed || voice) || recording}
+          disabled={recording}
           fullWidth
         />
       }
@@ -123,8 +154,12 @@ export function NewRequestScreen() {
             label: SUPPORT.category(item.key, item.label),
           }))}
           value={category}
-          onChange={setCategory}
+          onChange={(value) => {
+            setCategory(value);
+            setChecked((current) => ({ ...current, category: undefined }));
+          }}
         />
+        <FieldError message={categoryError} />
         {projects.length > 1 ? (
           <ChoiceChips
             label={SUPPORT.projectLabel}
@@ -136,19 +171,25 @@ export function NewRequestScreen() {
             onChange={setProjectId}
           />
         ) : null}
+        <FieldError message={fieldErrors.projectId} />
         <Field
           label={SUPPORT.descriptionLabel}
           hint={SUPPORT.descriptionHint}
-          error={fieldErrors.description}
+          error={descriptionError}
         >
           <Input
             value={description}
             accessibilityLabel={SUPPORT.descriptionLabel}
-            onChangeText={setDescription}
+            onChangeText={(value) => {
+              setDescription(value);
+              if (checked.description)
+                setChecked((current) => ({ ...current, description: undefined }));
+            }}
             multiline
             numberOfLines={4}
+            maxLength={2000}
             style={styles.multiline}
-            invalid={Boolean(fieldErrors.description)}
+            invalid={Boolean(descriptionError)}
           />
         </Field>
         <PhotoStrip
@@ -158,7 +199,7 @@ export function NewRequestScreen() {
         />
         <VoiceNoteField value={voice} onChange={setVoice} onRecording={setRecording} />
         <VideoField value={video} onChange={setVideo} />
-        <FormAlert message={error && !fieldErrors.description ? error : null} />
+        <FormAlert message={error} />
       </View>
     </Screen>
   );

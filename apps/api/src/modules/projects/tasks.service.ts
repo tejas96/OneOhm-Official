@@ -15,7 +15,7 @@ import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
-import { assertEvidence, assertUnblocked } from './task-guards';
+import { assertEvidence, assertUnblocked, checkedConsumerNumber } from './task-guards';
 import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
@@ -130,11 +130,12 @@ export class TasksService {
   async complete(
     actor: Actor,
     id: string,
-    facts: Record<string, string>,
+    typedFacts: Record<string, string>,
     note: string | null | undefined,
     materialOverride?: string | null,
   ): Promise<ProjectTask> {
     const task = await this.load(actor, id);
+    const facts = await checkedConsumerNumber(this.db, actor, task.projectId, typedFacts);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
     await assertUnblocked(this.db, task);
     const handover = await checkHandoverMaterial(this.db, task, actor, materialOverride);

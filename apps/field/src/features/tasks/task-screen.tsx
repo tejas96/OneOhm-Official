@@ -93,7 +93,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
   const closeOnSuccess = { onSuccess: close };
   const open = (name: SheetName) => {
     // A new sheet starts without the last attempt's error.
-    for (const mutation of [actions.reschedule, actions.postUpdate, actions.sendBack])
+    for (const mutation of [actions.reschedule, actions.postUpdate, actions.sendBack, actions.wait])
       mutation.reset();
     setSheet(name);
   };
@@ -103,8 +103,8 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
     if (router.canGoBack()) router.back();
   };
   const blocked = task.blockedBy.length > 0;
-  const failure =
-    actions.complete.error ?? actions.start.error ?? actions.approve.error ?? actions.wait.error;
+  // The waiting sheet shows its own error, in front of the screen.
+  const failure = actions.complete.error ?? actions.start.error ?? actions.approve.error;
   const errors = fieldErrorsOf(actions.complete.error);
   const meta = [
     { label: TASK.stage, value: COMMON.stages[task.stage] },
@@ -171,7 +171,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
           </Text>
         </View>
       ) : null}
-      {failure && Object.keys(errors).length === 0 ? (
+      {failure ? (
         <View
           style={[styles.alert, { backgroundColor: theme.status.overdue.tint }]}
           accessibilityRole="alert"
@@ -199,6 +199,7 @@ function TaskDetail({ task }: { readonly task: ProjectTask }) {
       <WaitingSheet
         open={sheet === 'waiting'}
         pending={actions.wait.isPending}
+        error={actions.wait.error}
         initialParty={task.waitingParty}
         onClose={close}
         onSave={(party, waitingNote) =>

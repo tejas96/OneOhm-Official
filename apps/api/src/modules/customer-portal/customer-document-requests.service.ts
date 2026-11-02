@@ -53,6 +53,13 @@ export class CustomerDocumentRequestsService {
     const storageKey = `${scope}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     await this.db.transaction(async (tx) => {
+      // Claim the request first: of two uploads at once, only one is filed.
+      const [claimed] = await tx
+        .update(documentRequests)
+        .set({ status: 'received', updatedAt: new Date() })
+        .where(and(eq(documentRequests.id, id), eq(documentRequests.status, 'open')))
+        .returning({ id: documentRequests.id });
+      if (!claimed) throw conflict('You have already sent this. Thank you.', 'received');
       const [document] = await tx
         .insert(documents)
         .values({

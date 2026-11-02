@@ -80,6 +80,8 @@ export async function customerProjects(
       status: projects.status,
       subsidy: projects.subsidy,
       place: properties.city,
+      site: properties.label,
+      propertyId: properties.id,
       quotationId: quotations.id,
       quotationNumber: quotations.number,
       subsidyPaise: quotations.subsidyPaise,
@@ -94,6 +96,8 @@ export async function customerProjects(
     .where(and(eq(projects.customerId, customerId), ne(projects.status, 'cancelled')))
     .orderBy(asc(projects.createdAt));
   if (rows.length === 0) return [];
+  // Projects on two or more sites say which site, not only the town.
+  const manySites = new Set(rows.map((row) => row.propertyId)).size > 1;
   const ids = rows.map((row) => row.id);
   const tasks: TaskRow[] = await db
     .select({
@@ -162,7 +166,7 @@ export async function customerProjects(
       code: row.code,
       capacityWp: row.capacityWp,
       type: row.type,
-      place: row.place,
+      place: manySites ? `${row.site}, ${row.place}` : row.place,
       status: row.status,
       ...journey(own),
       updates: visible

@@ -8,6 +8,7 @@ import {
 } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { invertersOf } from './quotation-inverters';
 
 /**
  * What an accepted quotation was priced with: its own rates, subsidy rule and saved line
@@ -24,7 +25,8 @@ export interface AcceptedPricing {
   /** The products the accepted quotation picked; their saved prices belong to them only. */
   readonly picks?: {
     readonly panel: string;
-    readonly inverter: string;
+    /** Every inverter model on the accepted quotation. */
+    readonly inverters: readonly string[];
     readonly battery: string | null;
   };
 }
@@ -40,7 +42,12 @@ export function savedFor(
   productId: string,
 ): readonly SavedLinePrice[] {
   if (!against) return [];
-  return !against.picks || against.picks[key] === productId ? against.lines : [];
+  if (!against.picks) return against.lines;
+  const picked =
+    key === 'inverter'
+      ? against.picks.inverters.includes(productId)
+      : against.picks[key] === productId;
+  return picked ? against.lines : [];
 }
 
 export async function acceptedPricing(
@@ -51,7 +58,6 @@ export async function acceptedPricing(
     .select({
       snapshot: quotations.snapshot,
       panel: quotations.panelProductId,
-      inverter: quotations.inverterProductId,
       battery: quotations.batteryProductId,
     })
     .from(quotations)
@@ -69,6 +75,7 @@ export async function acceptedPricing(
       unitPricePaise: quotationLines.unitPricePaise,
       unitCostPaise: quotationLines.unitCostPaise,
       taxRateBp: quotationLines.taxRateBp,
+      productId: quotationLines.productId,
     })
     .from(quotationLines)
     .where(eq(quotationLines.quotationId, quotationId));
@@ -80,7 +87,11 @@ export async function acceptedPricing(
     rates,
     rule: snapshot.rule ?? null,
     stateRule: snapshot.stateRule ?? null,
-    picks: { panel: row.panel, inverter: row.inverter, battery: row.battery },
+    picks: {
+      panel: row.panel,
+      inverters: (await invertersOf(db, quotationId)).map((pick) => pick.productId),
+      battery: row.battery,
+    },
     lines,
   };
 }

@@ -10,6 +10,7 @@ import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { canViewTask } from '../projects/task-access';
 import { leadVisibility } from './lead-read';
+import { assertConsumerNumberFree, savingSite } from './site-rules';
 
 /**
  * The consumer number and DISCOM of a site from the field app (PRD 4.2, 4.5): on a
@@ -31,15 +32,22 @@ export class SiteConnectionService {
     const propertyId = await this.leadSite(actor, leadId);
     if (input.discomId) await this.assertDiscom(input.discomId);
     const patch = definedOnly({
-      consumerNumber:
-        input.consumerNumber === undefined ? undefined : input.consumerNumber?.trim() || null,
+      consumerNumber: input.consumerNumber === undefined ? undefined : input.consumerNumber || null,
       discomId: input.discomId,
     });
+    // Resellers are not told whose site has it: they see only their own customers.
+    await assertConsumerNumberFree(this.db, patch.consumerNumber, {
+      exceptPropertyId: propertyId,
+      field: 'consumerNumber',
+      reveal: actor.kind === 'staff' && can(actor, 'customers.view'),
+    });
     if (Object.keys(patch).length > 0) {
-      await this.db
-        .update(properties)
-        .set({ ...patch, updatedAt: new Date() })
-        .where(eq(properties.id, propertyId));
+      await savingSite('consumerNumber', () =>
+        this.db
+          .update(properties)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(eq(properties.id, propertyId)),
+      );
       await recordAudit(
         this.db,
         actor.userId,

@@ -1,6 +1,15 @@
 import type { ServiceVisit } from '@oneohm/api-contracts';
 import { SERVICE_NOTE_MAX } from '@oneohm/domain';
-import { Button, Field, Input, Sheet, Text } from '@oneohm/mobile-ui';
+import {
+  Button,
+  describeError,
+  Field,
+  fieldErrorsOf,
+  Input,
+  Sheet,
+  Text,
+  useTheme,
+} from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
@@ -59,11 +68,14 @@ export function HandBackSheet({
   readonly visit: ServiceVisit;
   readonly open: boolean;
   readonly pending: boolean;
-  readonly error: string | undefined;
+  /** The last failed send, shown here in front of the screen. */
+  readonly error: unknown;
   readonly onClose: () => void;
   readonly onSend: (reason: string) => void;
 }) {
+  const theme = useTheme();
   const [reason, setReason] = useState('');
+  const fieldError = fieldErrorsOf(error).reason;
   return (
     <Sheet
       open={open}
@@ -77,7 +89,9 @@ export function HandBackSheet({
           size="lg"
           pending={pending}
           disabled={reason.trim().length === 0}
-          onPress={() => onSend(reason)}
+          onPress={() => {
+            if (!pending && reason.trim()) onSend(reason.trim());
+          }}
           fullWidth
         />
       }
@@ -85,15 +99,21 @@ export function HandBackSheet({
       <Text variant="bodySm" tone="secondary">
         {`${visit.categoryLabel} · ${visit.customer.name}`}
       </Text>
-      <Field label={SERVICE.reason} hint={SERVICE.reasonHint} error={error}>
+      <Field label={SERVICE.reason} hint={SERVICE.reasonHint} error={fieldError}>
         <Input
           value={reason}
           onChangeText={setReason}
           multiline
           maxLength={SERVICE_NOTE_MAX}
+          invalid={Boolean(fieldError)}
           accessibilityLabel={SERVICE.reason}
         />
       </Field>
+      {error ? (
+        <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
+          {describeError(error)}
+        </Text>
+      ) : null}
     </Sheet>
   );
 }

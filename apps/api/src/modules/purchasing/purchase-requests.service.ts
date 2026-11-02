@@ -14,7 +14,7 @@ import {
   purchaseRequests,
   type Transaction,
 } from '@oneohm/database';
-import { canStepRequest, type PurchaseRequestStep } from '@oneohm/domain';
+import { asUnit, canStepRequest, type PurchaseRequestStep } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -227,7 +227,7 @@ function toOrder(request: PurchaseRequest, input: RequestOrderInput): PurchaseOr
       return {
         productId: line.productId,
         description: line.name,
-        unit: line.unit,
+        unit: asUnit(line.unit),
         quantity: line.quantity,
         ratePaise: rate?.ratePaise ?? line.costPaise,
         taxRateBp: rate?.taxRateBp ?? line.taxRateBp,

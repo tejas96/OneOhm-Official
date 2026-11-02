@@ -57,6 +57,8 @@ export function AttachmentTile({
         <View style={styles.corner}>
           <PressableScale
             onPress={onRemove}
+            disabled={removing}
+            accessibilityState={{ disabled: removing, busy: removing }}
             accessibilityRole="button"
             accessibilityLabel={`${image ? TASK.evidence.remove : TASK.evidence.removeFile}: ${file.name}`}
             style={[styles.cornerButton, { backgroundColor: theme.colors.surfaceRaised }]}

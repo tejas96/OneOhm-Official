@@ -62,26 +62,31 @@ export function DispatchDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!material) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.inventory.material.dispatch({
-          params: { id: material.projectId },
-          body: {
-            dispatchedOn,
-            vehicle,
-            driverName,
-            driverPhone,
-            notes,
-            contractorId: contractorId === NOBODY ? null : contractorId,
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.inventory.material.dispatch({
+            params: { id: material.projectId },
+            body: {
+              dispatchedOn,
+              vehicle,
+              driverName,
+              driverPhone,
+              notes,
+              contractorId: contractorId === NOBODY ? null : contractorId,
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        await refresh(material.projectId);
+        toast({
+          tone: 'success',
+          title: t('saved', { number: saved.dispatches[0]?.number ?? '' }),
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh(material.projectId);
-    toast({ tone: 'success', title: t('saved', { number: saved.dispatches[0]?.number ?? '' }) });
-    onClose();
   };
 
   const errors = form.fieldErrors;

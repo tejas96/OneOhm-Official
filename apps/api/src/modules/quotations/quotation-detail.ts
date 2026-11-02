@@ -7,6 +7,7 @@ import {
 } from '@oneohm/api-contracts';
 import { customers, type Database, quotationLines, quotations } from '@oneohm/database';
 import {
+  asUnit,
   costBuildup,
   EXTRA_KINDS,
   type ExtraKind,
@@ -16,6 +17,7 @@ import {
 import { asc, eq } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
+import { invertersOf } from './quotation-inverters';
 
 type LineRow = typeof quotationLines.$inferSelect;
 
@@ -34,6 +36,7 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
     .from(quotationLines)
     .where(eq(quotationLines.quotationId, id))
     .orderBy(asc(quotationLines.position));
+  const inverters = await invertersOf(db, id);
   const snapshot = row.snapshot as {
     households?: number | null;
     rates?: unknown;
@@ -50,7 +53,8 @@ export async function loadQuotationDetail(db: Database, id: string): Promise<Quo
       systemType: row.systemType,
       targetWp: row.targetWp,
       panelProductId: row.panelProductId,
-      inverterProductId: row.inverterProductId,
+      inverters,
+      inverterProductId: inverters[0]?.productId ?? row.inverterProductId,
       batteryProductId: row.batteryProductId,
       structureType: row.structureType,
       floors: row.floors,
@@ -113,7 +117,12 @@ function savedCosting(rates: unknown, lines: readonly LineRow[]): QuotationCosti
   );
   return {
     build: costBuildup(card, priced),
-    rates: card.rateLines.map(({ key, label, kind, unit }) => ({ key, label, kind, unit })),
+    rates: card.rateLines.map(({ key, label, kind, unit }) => ({
+      key,
+      label,
+      kind,
+      unit: asUnit(unit),
+    })),
     pricingMode: card.pricing.mode,
   };
 }
@@ -132,7 +141,7 @@ function extrasOf(lines: readonly LineRow[]): ExtraLineInput[] {
         productId: line.productId,
         description: line.description,
         quantity: line.quantity,
-        unit: line.unit,
+        unit: asUnit(line.unit),
         unitPricePaise: line.unitPricePaise,
         unitCostPaise: line.unitCostPaise,
         reason: line.reason ?? '',

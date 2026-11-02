@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { describeError, fieldErrorsOf } from '../api/api-error';
 import { Button } from '../components/button';
@@ -12,6 +12,8 @@ export interface OtpSignInCopy {
   readonly description: string;
   readonly phoneLabel: string;
   readonly phoneHint: string;
+  /** Shown when the number is not 10 digits. */
+  readonly phoneInvalid: string;
   readonly sendCode: string;
   readonly codeTitle: string;
   /** Receives the number the code went to. */
@@ -50,7 +52,11 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
     return () => clearTimeout(timer);
   }, [wait]);
 
+  // A ref, not state: the return key and the last code box can fire before a re-render.
+  const busy = useRef(false);
   const run = async (job: () => Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
     setPending(true);
     setError(null);
     setFieldError(undefined);
@@ -62,17 +68,25 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
       if (message) setFieldError(message);
       else setError(describeError(caught));
     } finally {
+      busy.current = false;
       setPending(false);
     }
   };
+  const digits = phone.replace(/\D/g, '').slice(-10);
+  const phoneReady = digits.length === 10;
 
-  const send = () =>
-    run(async () => {
+  const send = () => {
+    if (!phoneReady) {
+      setFieldError(copy.phoneInvalid);
+      return;
+    }
+    return run(async () => {
       await requestCode(phone);
       setStep('code');
       setCode('');
       setWait(RESEND_SECONDS);
     });
+  };
   const verify = (value = code) => run(() => verifyCode(phone, value));
 
   return (
@@ -93,7 +107,7 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
             keyboardType="phone-pad"
             textContentType="telephoneNumber"
             autoComplete="tel"
-            maxLength={14}
+            maxLength={16}
             invalid={Boolean(fieldError)}
             onSubmitEditing={send}
             leading={
@@ -142,7 +156,12 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
               label={copy.changeNumber}
               variant="quiet"
               size="sm"
-              onPress={() => setStep('phone')}
+              disabled={pending}
+              onPress={() => {
+                setFieldError(undefined);
+                setError(null);
+                setStep('phone');
+              }}
             />
             <Button
               label={wait > 0 ? copy.resendIn(wait) : copy.resend}

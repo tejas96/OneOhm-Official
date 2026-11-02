@@ -9,7 +9,7 @@ import {
   STRUCTURE_TYPES,
 } from '@oneohm/domain';
 import { z } from 'zod';
-import { idSchema, paiseSchema } from '../common/primitives';
+import { idSchema, paiseSchema, unitSchema } from '../common/primitives';
 
 const amountSchema = z.number().int().nonnegative('Use zero or more.').max(10_00_00_000);
 /** Basis points: 100 = 1%. */
@@ -22,7 +22,7 @@ export const rateLineSchema = z.object({
   key: rateKeySchema,
   label: z.string().trim().min(2, 'Name the rate.').max(120),
   kind: z.enum(RATE_KINDS),
-  unit: z.string().trim().min(1, 'Add the unit.').max(20),
+  unit: unitSchema,
   pricePaise: amountSchema,
   costPaise: amountSchema,
   tax: z.enum(['goods', 'service']),

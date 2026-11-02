@@ -13,6 +13,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { assertNotFuture } from '../../common/dates';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from '../referrals/incentive-shared';
@@ -109,6 +110,7 @@ export class CommissionEntriesService {
   }
 
   async pay(actor: Actor, id: string, input: PayoutInput): Promise<CommissionEntry> {
+    assertNotFuture(input.paidOn, 'paidOn');
     await this.step(actor, id, 'approved', {
       status: 'paid',
       paidAt: new Date(),

@@ -57,18 +57,20 @@ export function AnnouncementSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(
-        api.engagement.createAnnouncement({
-          body: { title, body, audienceRoleKeys: audience, endsOn: endsOn || null },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.engagement.createAnnouncement({
+            body: { title, body, audienceRoleKeys: audience, endsOn: endsOn || null },
+          }),
+          201,
+        ),
+      async (created) => {
+        await queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEY });
+        toast({ title: t('posted'), reference: created.title, tone: 'success' });
+        onOpenChange(false);
+      },
     );
-    if (!created) return;
-    await queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEY });
-    toast({ title: t('posted'), reference: created.title, tone: 'success' });
-    onOpenChange(false);
   };
 
   return (

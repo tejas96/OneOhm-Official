@@ -19,6 +19,7 @@ import {
 import { roundQuantity } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, notInArray, type SQL } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
+import { invertersOf } from '../quotations/quotation-inverters';
 import { pricedLinesOnly } from '../quotations/quotation-rows';
 import { purchaseOrderSummaries } from './purchase-order-read';
 import { quotationNeeds } from './quotation-needs';
@@ -52,7 +53,8 @@ export async function projectNeeds(db: DatabaseExecutor, projectId: string) {
         pricedLinesOnly(),
       ),
     );
-  const needs = quotationNeeds(quotation, stocked);
+  const inverters = await invertersOf(db, quotation.id);
+  const needs = quotationNeeds({ ...quotation, inverters }, stocked);
   const catalog = await db
     .select()
     .from(products)
@@ -207,9 +209,12 @@ function materialFacts(input: {
     facts.purchase_order_date = input.latestOrder.orderDate;
   }
   const panel = input.catalog.find((row) => row.category === 'panel');
-  const inverter = input.catalog.find((row) => row.category === 'inverter');
+  // A quotation may carry several inverter models: their makes and serials all count.
+  const inverters = input.catalog.filter((row) => row.category === 'inverter');
   const panelSerials = input.serials.filter((row) => row.productId === panel?.id);
-  const inverterSerials = input.serials.filter((row) => row.productId === inverter?.id);
+  const inverterSerials = input.serials.filter((row) =>
+    inverters.some((inverter) => inverter.id === row.productId),
+  );
   if (panel && panelSerials.length > 0) {
     facts.module_make = panel.brand;
     if (panel.wattageWp) facts.module_wattage = String(panel.wattageWp);
@@ -219,8 +224,14 @@ function materialFacts(input: {
     if (cells?.cellManufacturer) facts.cell_manufacturer_name = cells.cellManufacturer;
     if (cells?.cellInvoiceNumber) facts.cell_gst_invoice_no = cells.cellInvoiceNumber;
   }
-  if (inverter && inverterSerials[0]) {
-    facts.inverter_make = inverter.brand;
+  if (inverterSerials[0]) {
+    facts.inverter_make = [
+      ...new Set(
+        inverters
+          .filter((inverter) => inverterSerials.some((row) => row.productId === inverter.id))
+          .map((inverter) => inverter.brand),
+      ),
+    ].join(', ');
     facts.inverter_serial_number = inverterSerials.map((row) => row.serial).join(', ');
   }
   return facts;

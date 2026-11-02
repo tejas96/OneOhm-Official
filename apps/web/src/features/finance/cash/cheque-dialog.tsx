@@ -4,7 +4,9 @@ import type { HandledPayment } from '@oneohm/api-contracts';
 import { Button, Dialog, Field, Input } from '@oneohm/design-system/web';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { FormError } from '@/components/form-error';
+import { ApiError, describeError } from '@/lib/api/api-error';
 import { useSettleCheque } from './use-cash';
 
 export type ChequeAction = { readonly kind: 'clear' | 'bounce'; readonly cheque: HandledPayment };
@@ -21,12 +23,31 @@ export function ChequeDialog({
   readonly onClose: () => void;
 }) {
   const t = useTranslations('finance.cash.cheque');
+  const checkT = useTranslations('checks');
   const settle = useSettleCheque(onClose);
   const [date, setDate] = useState(todayIn());
   const [reason, setReason] = useState('');
+  const [checks, setChecks] = useState<Record<string, string>>({});
   const bounce = action?.kind === 'bounce';
-  const submit = () => {
+  const { reset } = settle;
+  useEffect(() => {
     if (!action) return;
+    setDate(todayIn());
+    setReason('');
+    setChecks({});
+    reset();
+  }, [action, reset]);
+  const serverErrors = settle.error instanceof ApiError ? settle.error.fieldErrors : {};
+  const dateKey = bounce ? 'bouncedOn' : 'clearedOn';
+  const fieldError = (key: string) => checks[key] ?? serverErrors[key];
+  const submit = () => {
+    if (!action || settle.isPending) return;
+    const found: Record<string, string> = {};
+    if (!date) found[dateKey] = checkT('required');
+    else if (date > todayIn()) found[dateKey] = checkT('dateNotFuture');
+    if (bounce && reason.trim().length < 3) found.reason = checkT('minChars', { count: 3 });
+    setChecks(found);
+    if (Object.keys(found).length > 0) return;
     if (action.kind === 'clear')
       settle.mutate({ kind: 'clear', cheque: action.cheque, clearedOn: date });
     else
@@ -68,12 +89,17 @@ export function ChequeDialog({
       }
     >
       <div className="grid gap-4 pb-2">
-        <Field label={t(bounce ? 'bouncedOn' : 'clearedOn')} required>
-          <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Field label={t(dateKey)} required error={fieldError(dateKey)}>
+          <Input
+            type="date"
+            max={todayIn()}
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
         </Field>
         {bounce && (
           <>
-            <Field label={t('reason')} hint={t('reasonHint')} required>
+            <Field label={t('reason')} hint={t('reasonHint')} required error={fieldError('reason')}>
               <Input
                 value={reason}
                 maxLength={200}
@@ -83,6 +109,7 @@ export function ChequeDialog({
             <p className="type-body-sm text-ink-muted">{t('bounceNote')}</p>
           </>
         )}
+        <FormError message={settle.isError ? describeError(settle.error) : null} />
       </div>
     </Dialog>
   );

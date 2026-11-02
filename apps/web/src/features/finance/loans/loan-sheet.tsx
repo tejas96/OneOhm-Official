@@ -93,36 +93,39 @@ export function LoanSheet({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!loan || !draft) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.finance.saveLoan({
-          params: { projectId: loan.projectId },
-          body: {
-            version: loan.version,
-            lendingPartnerId: draft.lendingPartnerId === NO_PARTNER ? null : draft.lendingPartnerId,
-            lenderName: draft.lenderName,
-            applicationNumber: draft.applicationNumber.trim() || null,
-            status: draft.status,
-            sanctionedPaise: draft.sanctionedPaise,
-            sanctionedOn: draft.sanctionedOn || null,
-            documents: draft.documents,
-            notes: draft.notes.trim() || null,
-            tranches: draft.tranches.map((tranche) => ({
-              id: tranche.id,
-              label: tranche.label,
-              amountPaise: tranche.amountPaise ?? 0,
-              expectedOn: tranche.expectedOn || null,
-              claimed: tranche.claimed,
-            })),
-          },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.finance.saveLoan({
+            params: { projectId: loan.projectId },
+            body: {
+              version: loan.version,
+              lendingPartnerId:
+                draft.lendingPartnerId === NO_PARTNER ? null : draft.lendingPartnerId,
+              lenderName: draft.lenderName,
+              applicationNumber: draft.applicationNumber.trim() || null,
+              status: draft.status,
+              sanctionedPaise: draft.sanctionedPaise,
+              sanctionedOn: draft.sanctionedOn || null,
+              documents: draft.documents,
+              notes: draft.notes.trim() || null,
+              tranches: draft.tranches.map((tranche) => ({
+                id: tranche.id,
+                label: tranche.label,
+                amountPaise: tranche.amountPaise ?? 0,
+                expectedOn: tranche.expectedOn || null,
+                claimed: tranche.claimed,
+              })),
+            },
+          }),
+          200,
+        ),
+      async (saved) => {
+        await invalidate();
+        toast({ title: t('saved'), description: saved.projectCode, tone: 'success' });
+        close();
+      },
     );
-    if (!saved) return;
-    await invalidate();
-    toast({ title: t('saved'), description: saved.projectCode, tone: 'success' });
-    close();
   };
 
   const planned =

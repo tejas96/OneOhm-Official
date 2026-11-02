@@ -1,3 +1,5 @@
+import { type InverterPick, samePicks } from '../pricing/inverter-picks';
+
 /**
  * A scope or product change on a live project (PRD 3.6 "Project change requests", 3.15
  * "Other change requests"): what is asked, said in plain kinds so people see at a glance
@@ -35,7 +37,8 @@ export const OPEN_CHANGE_STATUSES: readonly ProjectChangeStatus[] = ['raised', '
 export interface ScopeChoices {
   readonly targetWp: number;
   readonly panelProductId: string;
-  readonly inverterProductId: string;
+  /** Inverter models and counts; any difference in models or counts is an inverter change. */
+  readonly inverters: readonly InverterPick[];
   readonly batteryProductId: string | null;
   readonly structureType: string;
   /** The hand-added lines, compared as a whole. */
@@ -55,7 +58,7 @@ export function changeKinds(before: ScopeChoices, after: ScopeChoices): ProjectC
     before.targetWp === after.targetWp ? null : 'capacity',
     batteryKind(before, after),
     before.panelProductId === after.panelProductId ? null : 'panel',
-    before.inverterProductId === after.inverterProductId ? null : 'inverter',
+    samePicks(before.inverters, after.inverters) ? null : 'inverter',
     before.structureType === after.structureType ? null : 'structure',
     JSON.stringify(before.extras) === JSON.stringify(after.extras) ? null : 'extra_lines',
   ];

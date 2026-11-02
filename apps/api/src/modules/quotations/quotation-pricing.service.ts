@@ -9,6 +9,7 @@ import { products, subsidyRules } from '@oneohm/database';
 import {
   atAcceptedPrice,
   detailProblems,
+  type InverterPick,
   type PanelProduct,
   type PricedProduct,
   type RateCard,
@@ -25,6 +26,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { type AcceptedPricing, acceptedPricing, savedFor } from './accepted-pricing';
 import { resolveExtras } from './quotation-extras';
+import { requiredInverterPicks } from './quotation-inverters';
 import { costingView, type QuotedLine, quoteTotals } from './quotation-totals';
 import { type SiteFacts, siteFactsWithoutProperty } from './site-facts';
 import { stateRuleToday } from './state-support-line';
@@ -38,6 +40,8 @@ export interface PricedQuotation {
   readonly rates: RateCard;
   readonly rule: SubsidyRule | null;
   readonly stateRule: StateTopUpRule | null;
+  /** The inverters priced, one row per model, in the order picked. */
+  readonly inverters: readonly InverterPick[];
 }
 
 export interface PriceOptions {
@@ -84,7 +88,12 @@ export class QuotationPricingService {
     const against = options.against;
     const site = await this.siteFacts(input);
     const panel = await this.product(input.panelProductId, 'panel', 'panelProductId');
-    const inverter = await this.product(input.inverterProductId, 'inverter', 'inverterProductId');
+    const picks = requiredInverterPicks(input);
+    const inverterProducts = await Promise.all(
+      picks.map((pick, index) =>
+        this.product(pick.productId, 'inverter', `inverters.${index}.productId`),
+      ),
+    );
     const battery = input.batteryProductId
       ? await this.product(input.batteryProductId, 'battery', 'batteryProductId')
       : undefined;
@@ -100,11 +109,10 @@ export class QuotationPricingService {
     const parts = {
       input,
       site,
-      inverter: atAcceptedPrice(
-        asPriced(inverter),
-        savedFor(against, 'inverter', inverter.id),
-        'inverter',
-      ),
+      inverters: inverterProducts.map((row, index) => ({
+        product: atAcceptedPrice(asPriced(row), savedFor(against, 'inverter', row.id), 'inverter'),
+        quantity: picks[index]?.quantity ?? 1,
+      })),
       battery: battery
         ? atAcceptedPrice(asPriced(battery), savedFor(against, 'battery', battery.id), 'battery')
         : undefined,
@@ -153,6 +161,7 @@ export class QuotationPricingService {
       rates,
       rule,
       stateRule,
+      inverters: picks,
     };
   }
 

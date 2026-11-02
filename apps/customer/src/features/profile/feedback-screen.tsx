@@ -3,6 +3,7 @@ import {
   ChoiceChips,
   describeError,
   Field,
+  fieldErrorsOf,
   Input,
   PressableScale,
   Screen,
@@ -41,7 +42,7 @@ export function FeedbackScreen() {
           body: {
             projectId: forProject ?? '',
             rating,
-            ...(comment.trim() ? { comment } : {}),
+            ...(comment.trim() ? { comment: comment.trim() } : {}),
           },
         }),
       ),
@@ -52,6 +53,7 @@ export function FeedbackScreen() {
       router.back();
     },
   });
+  const errors = send.error ? fieldErrorsOf(send.error) : {};
   return (
     <Screen
       footer={
@@ -110,13 +112,20 @@ export function FeedbackScreen() {
             {rating > 0 ? FEEDBACK.stars[rating - 1] : FEEDBACK.pickRating}
           </Text>
         </View>
-        <Field label={FEEDBACK.commentLabel} hint={FEEDBACK.commentHint} optional={COMMON.optional}>
+        <Field
+          label={FEEDBACK.commentLabel}
+          hint={FEEDBACK.commentHint}
+          optional={COMMON.optional}
+          error={errors.comment}
+        >
           <Input
             value={comment}
             accessibilityLabel={FEEDBACK.commentLabel}
             onChangeText={setComment}
             multiline
+            maxLength={2000}
             style={styles.multiline}
+            invalid={Boolean(errors.comment)}
           />
         </Field>
         <FormAlert message={send.error ? describeError(send.error) : null} />

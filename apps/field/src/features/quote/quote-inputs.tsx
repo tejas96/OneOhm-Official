@@ -1,10 +1,11 @@
 import type { ExtraLineInput, Product } from '@oneohm/api-contracts';
 import { STRUCTURE_TYPES, type StructureType } from '@oneohm/domain';
-import { ChoiceChips, Field, Input } from '@oneohm/mobile-ui';
+import { ChoiceChips, Field, Input, SearchPicker } from '@oneohm/mobile-ui';
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { QUOTE } from '@/copy/quote';
-import { SIZE_CHOICES_KW } from './quote-options';
+import { InverterRows, productOptions, SEARCH_WORDS } from './inverter-rows';
+import { type InverterRow, parseKw, SIZE_CHOICES_KW } from './quote-options';
 
 /** Every kind of site the costing engine prices (PRD 3.9). */
 export type Structure = StructureType;
@@ -13,7 +14,8 @@ export interface QuoteForm {
   readonly sizeKw: string;
   readonly dcr: boolean;
   readonly panelId: string | null;
-  readonly inverterId: string | null;
+  /** The inverter rows; null follows the suggestion for the size. */
+  readonly inverters: readonly InverterRow[] | null;
   readonly structure: Structure;
   readonly floors: string;
   readonly households: string;
@@ -29,17 +31,27 @@ export function QuoteInputs({
   set,
   panels,
   inverters,
-  suggestedInverterId,
+  inverterRows,
+  panelId,
   society,
+  errors = {},
 }: {
   readonly form: QuoteForm;
   readonly set: <K extends keyof QuoteForm>(key: K, value: QuoteForm[K]) => void;
   readonly panels: readonly Product[];
   readonly inverters: readonly Product[];
-  readonly suggestedInverterId: string | null;
+  /** The rows priced: the ones typed, or the suggestion until then. */
+  readonly inverterRows: readonly InverterRow[];
+  /** The panel priced, to check the inverters against. */
+  readonly panelId: string | null;
   readonly society: boolean;
+  /** Messages keyed by the request's fields (targetWp, floors, distanceKm…). */
+  readonly errors?: Readonly<Record<string, string>>;
 }) {
   const sameType = panels.filter((panel) => panel.dcr === form.dcr);
+  const wattage = panels.find((panel) => panel.id === panelId)?.wattageWp ?? 0;
+  const targetWp = parseKw(form.sizeKw) ?? 0;
+  const capacityWp = wattage > 0 ? Math.ceil(targetWp / wattage) * wattage : 0;
   return (
     <View style={styles.root}>
       <Field label={QUOTE.size}>
@@ -50,16 +62,18 @@ export function QuoteInputs({
           onChange={(kw) => set('sizeKw', kw)}
         />
       </Field>
-      <Field label={QUOTE.sizeCustom}>
+      <Field label={QUOTE.sizeCustom} error={errors.targetWp}>
         <Input
           value={form.sizeKw}
           onChangeText={(value) => set('sizeKw', value)}
           keyboardType="decimal-pad"
+          maxLength={7}
+          invalid={Boolean(errors.targetWp)}
           mono
           accessibilityLabel={QUOTE.sizeCustom}
         />
       </Field>
-      <Field label={QUOTE.panels}>
+      <Field label={QUOTE.panels} error={errors.panelProductId}>
         <ChoiceChips
           kind="segmented"
           label={QUOTE.panels}
@@ -74,26 +88,27 @@ export function QuoteInputs({
           }}
         />
         {sameType.length > 1 ? (
-          <ChoiceChips
+          <SearchPicker
             label={QUOTE.panels}
-            choices={sameType.map((panel) => ({
-              value: panel.id,
-              label: `${panel.name} · ${panel.wattageWp ?? ''} Wp`,
-            }))}
             value={form.panelId ?? sameType[0]?.id ?? null}
+            options={productOptions(sameType, (panel) => `${panel.wattageWp ?? ''} Wp`)}
             onChange={(id) => set('panelId', id)}
+            words={SEARCH_WORDS}
           />
         ) : null}
       </Field>
-      <Field label={QUOTE.inverter}>
-        <ChoiceChips
-          label={QUOTE.inverter}
-          choices={inverters.map((inverter) => ({ value: inverter.id, label: inverter.name }))}
-          value={form.inverterId ?? suggestedInverterId}
-          onChange={(id) => set('inverterId', id)}
-        />
-      </Field>
-      <Field label={QUOTE.structure}>
+      <InverterRows
+        rows={inverterRows}
+        onChange={(rows) => set('inverters', rows)}
+        inverters={inverters}
+        capacityWp={capacityWp}
+        error={
+          errors.inverters ??
+          errors.inverterProductId ??
+          Object.entries(errors).find(([key]) => key.startsWith('inverters.'))?.[1]
+        }
+      />
+      <Field label={QUOTE.structure} error={errors.structureType}>
         <ChoiceChips
           label={QUOTE.structure}
           choices={STRUCTURE_TYPES.map((value) => ({
@@ -106,11 +121,13 @@ export function QuoteInputs({
       </Field>
       <View style={styles.pair}>
         <View style={styles.flex}>
-          <Field label={QUOTE.floors}>
+          <Field label={QUOTE.floors} error={errors.floors}>
             <Input
               value={form.floors}
               onChangeText={(value) => set('floors', value)}
               keyboardType="number-pad"
+              maxLength={2}
+              invalid={Boolean(errors.floors)}
               mono
               accessibilityLabel={QUOTE.floors}
             />
@@ -118,11 +135,13 @@ export function QuoteInputs({
         </View>
         {society ? (
           <View style={styles.flex}>
-            <Field label={QUOTE.households}>
+            <Field label={QUOTE.households} error={errors.households}>
               <Input
                 value={form.households}
                 onChangeText={(value) => set('households', value)}
                 keyboardType="number-pad"
+                maxLength={5}
+                invalid={Boolean(errors.households)}
                 mono
                 accessibilityLabel={QUOTE.households}
               />
@@ -130,20 +149,29 @@ export function QuoteInputs({
           </View>
         ) : null}
       </View>
-      <Field label={QUOTE.distance} hint={QUOTE.distanceHint}>
+      <Field label={QUOTE.distance} hint={QUOTE.distanceHint} error={errors.distanceKm}>
         <Input
           value={form.distanceKm}
           onChangeText={(value) => set('distanceKm', value)}
           keyboardType="number-pad"
+          maxLength={4}
+          invalid={Boolean(errors.distanceKm)}
           mono
           accessibilityLabel={QUOTE.distance}
         />
       </Field>
-      <Field label={QUOTE.discount} hint={QUOTE.discountHint} optional={COMMON.optional}>
+      <Field
+        label={QUOTE.discount}
+        hint={QUOTE.discountHint}
+        optional={COMMON.optional}
+        error={errors.discountPaise}
+      >
         <Input
           value={form.discount}
           onChangeText={(value) => set('discount', value)}
           keyboardType="number-pad"
+          maxLength={9}
+          invalid={Boolean(errors.discountPaise)}
           mono
           accessibilityLabel={QUOTE.discount}
         />

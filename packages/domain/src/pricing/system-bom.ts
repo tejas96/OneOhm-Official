@@ -2,6 +2,7 @@ import { line, priced, rateLines, STAGE, type Staged, TRAVEL_STAGE } from './bom
 import { cableNeeds, cableRuns } from './cable-estimate';
 import type { CostingCard } from './costing-card';
 import { type CostingDetail, countOf, type RateNeed, type UsedDetail } from './costing-detail';
+import { inverterLineKey } from './inverter-picks';
 import { labourEstimate } from './labour-estimate';
 import type { QuoteLineInput } from './quote-pricing';
 import type { PanelProduct, PricedProduct, SiteFacts } from './rate-card';
@@ -10,7 +11,8 @@ import { structureEstimate } from './structure-bom';
 export interface SystemDesignInput {
   readonly targetWp: number;
   readonly panel: PanelProduct;
-  readonly inverter: PricedProduct;
+  /** One or more inverter models, each with how many; at least one. */
+  readonly inverters: readonly { readonly product: PricedProduct; readonly quantity: number }[];
   readonly battery?: PricedProduct | undefined;
   readonly site: SiteFacts;
   readonly rates: CostingCard;
@@ -120,16 +122,17 @@ function measuredTotals(site: SiteFacts): Partial<Record<'dc' | 'ac', number>> {
   };
 }
 
-/** Panels, inverter and battery from the catalog, each naming its product. */
+/** Panels, inverters and battery from the catalog, each naming its product. */
 function equipmentLines(input: SystemDesignInput, moduleCount: number): QuoteLineInput[] {
-  const { panel, inverter, battery } = input;
+  const { panel, inverters, battery } = input;
   const catalog = (
-    key: 'panel' | 'inverter' | 'battery',
+    key: string,
+    category: 'panel' | 'inverter' | 'battery',
     product: PricedProduct,
     quantity: number,
     name: string,
   ) =>
-    line(key, name, key, quantity, product.unit, {
+    line(key, name, category, quantity, product.unit, {
       price: product.pricePaise,
       cost: product.costPaise,
       tax: product.taxRateBp,
@@ -139,11 +142,15 @@ function equipmentLines(input: SystemDesignInput, moduleCount: number): QuoteLin
   return [
     catalog(
       'panel',
+      'panel',
       panel,
       moduleCount,
       `${panel.name} (${panel.wattageWp} Wp${panel.dcr ? ', DCR' : ''})`,
     ),
-    catalog('inverter', inverter, 1, inverter.name),
-    ...(battery ? [catalog('battery', battery, 1, battery.name)] : []),
+    // One line per inverter model, in the order picked: `inverter`, `inverter_2`…
+    ...inverters.map((pick, index) =>
+      catalog(inverterLineKey(index), 'inverter', pick.product, pick.quantity, pick.product.name),
+    ),
+    ...(battery ? [catalog('battery', 'battery', battery, 1, battery.name)] : []),
   ];
 }

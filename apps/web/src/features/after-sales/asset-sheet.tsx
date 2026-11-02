@@ -47,19 +47,21 @@ export function AssetSheet({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!asset) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.afterSales.updateAsset({
-          params: { id: asset.id },
-          body: { make: make.trim() || null, model, serialNumbers: splitSerials(serials) },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.afterSales.updateAsset({
+            params: { id: asset.id },
+            body: { make: make.trim() || null, model, serialNumbers: splitSerials(serials) },
+          }),
+          200,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('asset.saved') });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('asset.saved') });
-    onClose();
   };
 
   const kind = asset ? t(`kinds.${asset.kind}`) : '';

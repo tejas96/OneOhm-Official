@@ -41,6 +41,10 @@ export const NEW_LEAD = {
   duplicate: 'This person is already an open lead.',
   openExisting: 'Open that lead',
   saved: 'Lead saved',
+  nameRequired: 'Enter the name.',
+  phoneInvalid: 'Enter a 10-digit mobile number.',
+  cityRequired: 'Enter the town or city.',
+  sizeInvalid: 'Enter the size in kW, like 3 or 4.5.',
 } as const;
 
 export const FOLLOW_UP_DATES = {
@@ -48,6 +52,8 @@ export const FOLLOW_UP_DATES = {
   tomorrow: 'Tomorrow',
   in3: 'In 3 days',
   week: 'Next week',
+  other: 'Another day',
+  anyTime: 'Any time',
 } as const;
 
 export const LEAD = {
@@ -84,8 +90,15 @@ export const LEAD = {
     note: 'What happened',
     notePlaceholder: 'e.g. Visited the roof; wants a quote for 5 kW',
     next: 'Next follow-up',
+    time: 'Time',
+    timeHint: 'You get an alert 15 minutes before.',
+    nextNote: 'What to do next',
+    nextNotePlaceholder: 'e.g. Send the quotation',
     save: 'Save',
     audience: 'Who sees this note',
+    noteRequired: 'Write what happened.',
+    dateInPast: 'Pick today or a later day.',
+    timeInPast: 'Pick a later time.',
   },
   quote: 'Quick quote',
   logged: 'Follow-up saved',
@@ -127,6 +140,10 @@ export const LEAD_SITE = {
   label: { individual: 'Home', society: 'Society', commercial: 'Business' },
   save: 'Save the site',
   saved: 'Site saved. You can quote now.',
+  addressRequired: 'Enter the address.',
+  cityRequired: 'Enter the town or city.',
+  districtRequired: 'Enter the district.',
+  pincodeInvalid: 'Use a 6-digit PIN code.',
 } as const;
 
 /** A lead closed as lost: why, and bringing it back (PRD 3.3). */

@@ -1,8 +1,9 @@
-import { PROJECT_CHANGE_KINDS, PROJECT_CHANGE_STATUSES } from '@oneohm/domain';
+import { MAX_INVERTER_MODELS, PROJECT_CHANGE_KINDS, PROJECT_CHANGE_STATUSES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import {
   extraLineInputSchema,
+  inverterPickSchema,
   quotationStatusSchema,
   structureTypeSchema,
 } from './quotation.schema';
@@ -17,7 +18,7 @@ export const projectChangeStatusSchema = z.enum(PROJECT_CHANGE_STATUSES);
 export const projectChangeInputSchema = z.object({
   targetWp: z.number().int().min(500).max(2_000_000),
   panelProductId: idSchema,
-  inverterProductId: idSchema,
+  inverters: z.array(inverterPickSchema).min(1).max(MAX_INVERTER_MODELS),
   batteryProductId: idSchema.nullable(),
   structureType: structureTypeSchema,
   extras: z.array(extraLineInputSchema).max(20),
@@ -39,6 +40,7 @@ const scopeViewSchema = z.object({
   capacityWp: z.number().int(),
   moduleCount: z.number().int(),
   panel: z.object({ name: z.string(), dcr: z.boolean() }),
+  /** All inverters in a line, e.g. "Brand 5 kW × 2, Brand 3 kW". */
   inverter: z.string(),
   battery: z.string().nullable(),
   structureType: structureTypeSchema,

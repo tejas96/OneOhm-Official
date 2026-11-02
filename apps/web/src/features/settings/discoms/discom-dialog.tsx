@@ -50,18 +50,20 @@ export function DiscomDialog({
       expectedDays: draft.expectedDays,
       active: draft.active,
     };
-    const saved = await form.run(() =>
-      discom
-        ? expectStatus(api.catalog.updateDiscom({ params: { id: discom.id }, body }), 200)
-        : expectStatus(api.catalog.createDiscom({ body }), 201),
+    await form.run(
+      () =>
+        discom
+          ? expectStatus(api.catalog.updateDiscom({ params: { id: discom.id }, body }), 200)
+          : expectStatus(api.catalog.createDiscom({ body }), 201),
+      async (saved) => {
+        await queryClient.invalidateQueries({ queryKey: SETTINGS_KEYS.discoms });
+        toast({
+          title: discom ? t('updated', { name: saved.code }) : t('created', { name: saved.code }),
+          tone: 'success',
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: SETTINGS_KEYS.discoms });
-    toast({
-      title: discom ? t('updated', { name: saved.code }) : t('created', { name: saved.code }),
-      tone: 'success',
-    });
-    onClose();
   };
 
   const errors = form.fieldErrors;

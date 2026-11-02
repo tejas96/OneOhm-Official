@@ -1,4 +1,4 @@
-import { Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
+import { AppearanceCard, Button, Card, Screen, Text, useTheme } from '@oneohm/mobile-ui';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/api/api';
@@ -37,6 +37,7 @@ export function ProfileScreen() {
         </Text>
       </View>
       <LocationSharingCard />
+      <AppearanceCard words={PROFILE.appearance} />
       {user.kind === 'reseller' ? <ContactCard /> : null}
       <Card style={styles.card}>
         <Text variant="label" tone="tertiary">

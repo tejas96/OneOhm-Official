@@ -36,8 +36,10 @@ export function TaskNoteDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() => mutation.mutateAsync(text.trim()));
-    if (saved !== undefined) onOpenChange(false);
+    await form.run(
+      () => mutation.mutateAsync(text.trim()),
+      () => onOpenChange(false),
+    );
   };
 
   return (

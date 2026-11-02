@@ -15,6 +15,7 @@ import { formatInr, todayIn } from '@oneohm/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { assertNotFuture } from '../../common/dates';
 import { invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { FinanceService } from '../projects/finance.service';
@@ -55,6 +56,7 @@ export class CustomerMoneyService {
   }
 
   async refund(actor: Actor, projectId: string, input: NewRefund): Promise<CustomerMoneyEntry> {
+    assertNotFuture(input.paidOn, 'paidOn');
     const id = await this.db.transaction(async (tx) => {
       await this.lockProject(tx, projectId);
       const release = input.milestoneId

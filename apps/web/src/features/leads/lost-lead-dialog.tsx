@@ -6,7 +6,7 @@ import { LEAD_LOST_REASONS, type LeadLostReason } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { ApiError } from '@/lib/api/api-error';
+import { ApiError, describeError } from '@/lib/api/api-error';
 import { useUpdateLead } from './use-lead-mutations';
 
 /**
@@ -40,7 +40,7 @@ export function LostLeadDialog({
     onOpenChange(next);
   };
   const submit = () => {
-    if (!reason) return;
+    if (!reason || update.isPending) return;
     setError(null);
     update.mutate(
       {
@@ -51,7 +51,12 @@ export function LostLeadDialog({
       },
       {
         onSuccess: () => close(false),
-        onError: (caught) => setError(caught instanceof ApiError ? caught : null),
+        onError: (caught) =>
+          setError(
+            caught instanceof ApiError
+              ? caught
+              : new ApiError(0, describeError(caught), undefined, {}),
+          ),
       },
     );
   };
@@ -98,7 +103,7 @@ export function LostLeadDialog({
             onChange={(event) => setRevisitOn(event.target.value)}
           />
         </Field>
-        {error && Object.keys(error.fieldErrors).length === 0 && (
+        {error && (
           <p role="alert" className="type-body-sm text-overdue">
             {error.message}
           </p>

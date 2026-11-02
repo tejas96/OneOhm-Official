@@ -54,10 +54,13 @@ export function StateRuleSheet({
       paisePerKw: draft.paisePerKw ?? 0,
       capPaise: draft.capPaise ?? 0,
     };
-    const saved = await form.run(() => save(editing?.id ?? null, body));
-    if (!saved) return;
-    toast({ tone: 'success', title: t('saved') });
-    onClose();
+    await form.run(
+      () => save(editing?.id ?? null, body),
+      () => {
+        toast({ tone: 'success', title: t('saved') });
+        onClose();
+      },
+    );
   };
 
   return (

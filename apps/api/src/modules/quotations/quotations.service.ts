@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
-import { quotationLines, quotations } from '@oneohm/database';
+import { quotationInverters, quotationLines, quotations } from '@oneohm/database';
 import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -20,6 +20,7 @@ import {
 } from '../project-changes/change-close';
 import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import { loadQuotationDetail } from './quotation-detail';
+import { inverterRows } from './quotation-inverters';
 import { leadForQuotation } from './quotation-lead';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
@@ -53,7 +54,7 @@ export class QuotationsService {
     const id = await this.db.transaction(async (tx) => {
       const slot = await numberFor(tx, input.propertyId, today, revisionOf ?? redraft?.revisionOf);
       const totals = priced.preview.totals;
-      const leadId = await leadForQuotation(tx, input.leadId, property.customerId);
+      const leadId = await leadForQuotation(tx, input.leadId, property.customerId, property.id);
       const [created] = await tx
         .insert(quotations)
         .values(
@@ -76,6 +77,7 @@ export class QuotationsService {
       if (!created) throw new Error('Quotation insert returned nothing.');
       if (redraft) await linkRevision(tx, redraft.projectId, created.id);
       await tx.insert(quotationLines).values(lineRows(created.id, priced));
+      await tx.insert(quotationInverters).values(inverterRows(created.id, priced.inverters));
       await recordAudit(tx, actor.userId, 'quotation.created', 'quotation', created.id, {
         number: slot.number,
         revisionOf: revisionOf?.id ?? null,

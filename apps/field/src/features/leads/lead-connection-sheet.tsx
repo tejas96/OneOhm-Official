@@ -60,7 +60,7 @@ export function LeadConnectionSheet({
     },
   });
   const errors = fieldErrorsOf(save.error);
-  const general = save.error && Object.keys(errors).length === 0 ? describeError(save.error) : null;
+  const general = save.error ? describeError(save.error) : null;
   return (
     <Sheet
       open={open}
@@ -74,7 +74,9 @@ export function LeadConnectionSheet({
           size="lg"
           fullWidth
           pending={save.isPending}
-          onPress={() => save.mutate()}
+          onPress={() => {
+            if (!save.isPending) save.mutate();
+          }}
         />
       }
     >
@@ -89,6 +91,7 @@ export function LeadConnectionSheet({
           onChangeText={setConsumer}
           autoCapitalize="characters"
           autoCorrect={false}
+          maxLength={40}
           invalid={Boolean(errors.consumerNumber)}
           accessibilityLabel={LEAD_CONNECTION.consumerNumber}
         />

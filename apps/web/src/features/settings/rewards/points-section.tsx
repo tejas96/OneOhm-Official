@@ -49,13 +49,15 @@ export function PointsSection() {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved.points);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = await form.run(() =>
-      expectStatus(api.rewards.saveWorkforcePolicy({ body: { ...saved, points: draft } }), 200),
+    await form.run(
+      () =>
+        expectStatus(api.rewards.saveWorkforcePolicy({ body: { ...saved, points: draft } }), 200),
+      (result) => {
+        queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, result);
+        setDraft(result.policy.points);
+        toast({ title: settingsT('saved'), reference: t('points.title'), tone: 'success' });
+      },
     );
-    if (!result) return;
-    queryClient.setQueryData(WORKFORCE_SETTINGS_KEY, result);
-    setDraft(result.policy.points);
-    toast({ title: settingsT('saved'), reference: t('points.title'), tone: 'success' });
   };
   const discard = () => {
     setDraft(saved.points);

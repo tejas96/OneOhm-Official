@@ -6,6 +6,8 @@ export const SUPPORT = {
   formTitle: 'What do you need help with?',
   formDescription: 'Pick the closest match and tell us a little about it.',
   categoryLabel: 'Kind of problem',
+  categoryNeeded: 'Pick the kind of problem.',
+  descriptionNeeded: 'Tell us a little more, or record a voice note.',
   projectLabel: 'Which system',
   descriptionLabel: 'What is happening?',
   descriptionHint: 'For example: the inverter shows a red light since this morning.',

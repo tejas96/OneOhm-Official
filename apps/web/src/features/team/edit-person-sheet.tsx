@@ -63,16 +63,17 @@ export function EditPersonSheet({
       skills,
       ...workBodyFrom(work),
     } as const;
-    const saved = await form.run(() =>
-      expectStatus(api.people.updatePerson({ params: { id: person.id }, body }), 200),
+    await form.run(
+      () => expectStatus(api.people.updatePerson({ params: { id: person.id }, body }), 200),
+      async (saved) => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
+          queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
+        ]);
+        toast({ title: t('saved'), reference: saved.fullName, tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
-      queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
-    ]);
-    toast({ title: t('saved'), reference: saved.fullName, tone: 'success' });
-    onClose();
   };
 
   return (

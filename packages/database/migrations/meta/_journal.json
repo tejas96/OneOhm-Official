@@ -351,6 +351,27 @@
       "when": 1793551722446,
       "tag": "0049_reports_to_tds_register",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793555303381,
+      "tag": "0050_lead_next_action_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793559546018,
+      "tag": "0051_quotation_inverters",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793586365983,
+      "tag": "0052_consumer_number_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import type { QuotationInput } from '@oneohm/api-contracts';
+import { inverterPicks, inverterSummary } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -52,7 +53,7 @@ export function SystemFacts({
         label={t('panel')}
         value={panel ? `${name(panel.id)} · ${panel.dcr ? 'DCR' : t('nonDcr')}` : name(null)}
       />
-      <Fact label={t('inverter')} value={name(input.inverterProductId)} />
+      <Fact label={t('inverter')} value={inverterSummary(inverterPicks(input), (id) => name(id))} />
       {input.batteryProductId && <Fact label={t('battery')} value={name(input.batteryProductId)} />}
       <Fact label={t('structure')} value={structureT(input.structureType)} />
       <Fact

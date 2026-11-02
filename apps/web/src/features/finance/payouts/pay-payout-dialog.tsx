@@ -40,13 +40,14 @@ export function PayPayoutDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!target) return;
-    const paid = await form.run(() =>
-      payPayout(target, { method, paidOn, reference: reference.trim() || null }),
+    await form.run(
+      () => payPayout(target, { method, paidOn, reference: reference.trim() || null }),
+      async () => {
+        await invalidate();
+        toast({ title: t('done'), description: target.party, tone: 'success' });
+        close();
+      },
     );
-    if (!paid) return;
-    await invalidate();
-    toast({ title: t('done'), description: target.party, tone: 'success' });
-    close();
   };
 
   return (

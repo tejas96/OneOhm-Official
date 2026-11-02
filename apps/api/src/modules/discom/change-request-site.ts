@@ -6,8 +6,8 @@ import {
   projects,
   properties,
 } from '@oneohm/database';
-import { defaultDiscomId } from '@oneohm/domain';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { countsForSite, defaultDiscomId } from '@oneohm/domain';
+import { and, count, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { invalid, notFound } from '../../common/http/errors';
 
 export interface RequestScope {
@@ -80,15 +80,22 @@ export async function requestSite(db: DatabaseExecutor, scope: RequestScope): Pr
   };
 }
 
-/** The document categories on file for the customer or this site (current copies only). */
+/**
+ * The document categories on file for this site (current copies only). ID papers count
+ * from anywhere on the customer; a bill or property proof only from this site.
+ */
 export async function papersOnFile(
   db: DatabaseExecutor,
-  site: Pick<RequestSite, 'property' | 'customer'>,
+  site: Pick<RequestSite, 'property' | 'customer' | 'project'>,
   categories: readonly string[],
 ): Promise<Set<string>> {
   if (categories.length === 0) return new Set();
   const rows = await db
-    .selectDistinct({ category: documents.category })
+    .select({
+      category: documents.category,
+      propertyId: documents.propertyId,
+      projectId: documents.projectId,
+    })
     .from(documents)
     .where(
       and(
@@ -98,5 +105,14 @@ export async function papersOnFile(
         isNull(documents.removedAt),
       ),
     );
-  return new Set(rows.map((row) => row.category));
+  const [sites] = await db
+    .select({ count: count() })
+    .from(properties)
+    .where(eq(properties.customerId, site.customer.id));
+  const scope = {
+    propertyId: site.property.id,
+    projectId: site.project?.id ?? null,
+    customerSites: sites?.count ?? 1,
+  };
+  return new Set(rows.filter((row) => countsForSite(row, scope)).map((row) => row.category));
 }

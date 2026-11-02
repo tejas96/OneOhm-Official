@@ -64,22 +64,24 @@ export function RecordAdvanceDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.purchasing.advances.create({
-          body: { purchaseOrderId: chosen ?? '', amountPaise: amount ?? 0, note },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.purchasing.advances.create({
+            body: { purchaseOrderId: chosen ?? '', amountPaise: amount ?? 0, note },
+          }),
+          201,
+        ),
+      async (saved) => {
+        await refresh();
+        toast({
+          tone: 'success',
+          title: t('done', { number: saved.number }),
+          description: saved.vendor.name,
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({
-      tone: 'success',
-      title: t('done', { number: saved.number }),
-      description: saved.vendor.name,
-    });
-    onClose();
   };
 
   return (

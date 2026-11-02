@@ -38,28 +38,30 @@ export function AddRateDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.contractors.addContractorRate({
-          params: { id: contractor.id },
-          body: {
-            basis,
-            label: label.trim() || t(`basis.${basis}`),
-            amountPaise: amount ?? 0,
-            taskKey: basis === 'per_task' ? taskKey || null : null,
-            projectType:
-              projectType === ANY ? null : (projectType as (typeof PROJECT_TYPES)[number]),
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.contractors.addContractorRate({
+            params: { id: contractor.id },
+            body: {
+              basis,
+              label: label.trim() || t(`basis.${basis}`),
+              amountPaise: amount ?? 0,
+              taskKey: basis === 'per_task' ? taskKey || null : null,
+              projectType:
+                projectType === ANY ? null : (projectType as (typeof PROJECT_TYPES)[number]),
+            },
+          }),
+          201,
+        ),
+      async () => {
+        await refresh();
+        toast({ tone: 'success', title: t('added') });
+        setLabel('');
+        setAmount(null);
+        onOpenChange(false);
+      },
     );
-    if (!saved) return;
-    await refresh();
-    toast({ tone: 'success', title: t('added') });
-    setLabel('');
-    setAmount(null);
-    onOpenChange(false);
   };
 
   return (

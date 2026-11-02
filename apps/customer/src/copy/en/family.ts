@@ -18,6 +18,9 @@ export const FAMILY = {
   added: (name: string) => `${name} can now sign in.`,
   remove: 'Remove',
   removeLabel: (name: string) => `Remove ${name}`,
+  removeAsk: (name: string) => `Remove ${name}?`,
+  removeAskBody: (name: string) =>
+    `${name} will no longer be able to sign in and see your projects.`,
   removed: (name: string) => `${name} no longer has access.`,
   failed: 'That did not work. Please try again.',
 } as const;

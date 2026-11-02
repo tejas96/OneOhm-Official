@@ -60,21 +60,25 @@ export function CategoryDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const body = { ...draft, customerLabel: category?.system ? draft.label : draft.customerLabel };
-    const saved = await form.run(() =>
-      category
-        ? expectStatus(
-            api.afterSales.updateServiceCategory({ params: { id: category.id }, body }),
-            200,
-          )
-        : expectStatus(api.afterSales.createServiceCategory({ body }), 201),
+    await form.run(
+      () =>
+        category
+          ? expectStatus(
+              api.afterSales.updateServiceCategory({ params: { id: category.id }, body }),
+              200,
+            )
+          : expectStatus(api.afterSales.createServiceCategory({ body }), 201),
+      async (saved) => {
+        await queryClient.invalidateQueries({ queryKey: AFTER_SALES_KEYS.categories });
+        toast({
+          tone: 'success',
+          title: category
+            ? t('updated', { name: saved.label })
+            : t('created', { name: saved.label }),
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: AFTER_SALES_KEYS.categories });
-    toast({
-      tone: 'success',
-      title: category ? t('updated', { name: saved.label }) : t('created', { name: saved.label }),
-    });
-    onClose();
   };
 
   const errors = form.fieldErrors;
@@ -129,7 +133,7 @@ export function CategoryDialog({
             <p className="type-body-sm text-ink-faint">{t('activeHint')}</p>
           </div>
         )}
-        <FormError message={form.error && !errors.active ? form.error : (errors.active ?? null)} />
+        <FormError message={form.error ?? errors.active ?? null} />
       </form>
     </Dialog>
   );

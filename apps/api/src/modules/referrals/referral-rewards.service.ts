@@ -13,6 +13,7 @@ import { formatInr } from '@oneohm/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { assertNotFuture } from '../../common/dates';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from './incentive-shared';
@@ -100,6 +101,7 @@ export class ReferralRewardsService {
   }
 
   async pay(actor: Actor, id: string, input: PayoutInput): Promise<ReferralReward> {
+    assertNotFuture(input.paidOn, 'paidOn');
     await this.step(actor, id, 'approved', {
       status: 'paid',
       paidAt: new Date(),

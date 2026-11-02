@@ -68,19 +68,21 @@ export function SellAmcDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!planId) return;
-    const sold = await form.run(() =>
-      expectStatus(
-        api.afterSales.sellAmc({
-          params: { id: project.id },
-          body: { planId, startsOn, pricePaise: price ?? 0, ...(note.trim() ? { note } : {}) },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.afterSales.sellAmc({
+            params: { id: project.id },
+            body: { planId, startsOn, pricePaise: price ?? 0, ...(note.trim() ? { note } : {}) },
+          }),
+          201,
+        ),
+      async (sold) => {
+        await refresh();
+        toast({ tone: 'success', title: t('sold', { count: sold.visits.length }) });
+        onClose();
+      },
     );
-    if (!sold) return;
-    await refresh();
-    toast({ tone: 'success', title: t('sold', { count: sold.visits.length }) });
-    onClose();
   };
 
   const preview =

@@ -1,5 +1,5 @@
 import type { CustomerProject } from '@oneohm/api-contracts';
-import { Button, formatInr, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
+import { Button, describeError, formatInr, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreditCard } from 'lucide-react-native';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -9,9 +9,14 @@ import { PAYMENTS } from '@/copy/money';
 
 type Line = CustomerProject['payments']['milestones'][number];
 
-/** Whether this line shows a Pay button: the customer's own share, due, payable online. */
+/** What is still owed on this line, in paise. */
+const owedPaise = (line: Line): number => line.amountPaise - line.paidPaise;
+
+/** Whether this line shows a Pay button: the customer's own share, still owed, payable online. */
 export const canPayNow = (line: Line): boolean =>
-  line.payer === 'customer' && (Boolean(line.payUrl) || Boolean(line.canPayOnline && line.id));
+  line.payer === 'customer' &&
+  owedPaise(line) > 0 &&
+  (Boolean(line.payUrl) || Boolean(line.canPayOnline && line.id));
 
 /**
  * Opens the Razorpay page for what is still owed (PRD 5.3). When the team has not sent a
@@ -20,10 +25,12 @@ export const canPayNow = (line: Line): boolean =>
 export function PayNow({ line }: { readonly line: Line }) {
   const theme = useTheme();
   const open = usePayNow(line);
+  // Nothing owed (paid in full, or a credit): no Pay button.
+  if (owedPaise(line) <= 0) return null;
   return (
     <View style={styles.pay}>
       <Button
-        label={PAYMENTS.payNow(formatInr(line.amountPaise - line.paidPaise))}
+        label={PAYMENTS.payNow(formatInr(owedPaise(line)))}
         icon={<CreditCard size={18} color={theme.colors.onAccent} />}
         pending={open.isPending}
         onPress={() => open.mutate()}
@@ -32,7 +39,7 @@ export function PayNow({ line }: { readonly line: Line }) {
       <Text variant="label" tone="tertiary">
         {PAYMENTS.payHint}
       </Text>
-      <FormAlert message={open.isError ? PAYMENTS.payFailed : null} />
+      <FormAlert message={open.error ? describeError(open.error) : null} />
     </View>
   );
 }

@@ -75,18 +75,20 @@ export function AmcPlanDialog({
         .filter(Boolean),
       active: draft.active,
     };
-    const saved = await form.run(() =>
-      plan
-        ? expectStatus(api.afterSales.updateAmcPlan({ params: { id: plan.id }, body }), 200)
-        : expectStatus(api.afterSales.createAmcPlan({ body }), 201),
+    await form.run(
+      () =>
+        plan
+          ? expectStatus(api.afterSales.updateAmcPlan({ params: { id: plan.id }, body }), 200)
+          : expectStatus(api.afterSales.createAmcPlan({ body }), 201),
+      async (saved) => {
+        await queryClient.invalidateQueries({ queryKey: AFTER_SALES_KEYS.plans });
+        toast({
+          tone: 'success',
+          title: plan ? t('updated', { name: saved.name }) : t('created', { name: saved.name }),
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: AFTER_SALES_KEYS.plans });
-    toast({
-      tone: 'success',
-      title: plan ? t('updated', { name: saved.name }) : t('created', { name: saved.name }),
-    });
-    onClose();
   };
 
   const errors = form.fieldErrors;

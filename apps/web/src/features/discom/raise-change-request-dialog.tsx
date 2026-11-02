@@ -82,32 +82,34 @@ export function RaiseChangeRequestDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(
-        api.discom.createChangeRequest({
-          body: {
-            type: definition?.key ?? type,
-            values,
-            note: note.trim() || null,
-            ...(discomId ? { discomId } : {}),
-            ...(sitePropertyId ? { propertyId: sitePropertyId } : {}),
-            projectId: projectId ?? site?.projectId ?? null,
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.discom.createChangeRequest({
+            body: {
+              type: definition?.key ?? type,
+              values,
+              note: note.trim() || null,
+              ...(discomId ? { discomId } : {}),
+              ...(sitePropertyId ? { propertyId: sitePropertyId } : {}),
+              projectId: projectId ?? site?.projectId ?? null,
+            },
+          }),
+          201,
+        ),
+      async (created) => {
+        await refresh();
+        toast({
+          tone: 'success',
+          title: t('done', { number: created.number }),
+          reference: created.number,
+        });
+        onOpenChange(false);
+        setValues({});
+        setNote('');
+        router.push(`/discom/change-requests/${created.id}`);
+      },
     );
-    if (!created) return;
-    await refresh();
-    toast({
-      tone: 'success',
-      title: t('done', { number: created.number }),
-      reference: created.number,
-    });
-    onOpenChange(false);
-    setValues({});
-    setNote('');
-    router.push(`/discom/change-requests/${created.id}`);
   };
 
   const choices = options.data?.options ?? [];

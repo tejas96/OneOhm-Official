@@ -2,31 +2,34 @@ import type { QuotationPreviewInput } from '@oneohm/api-contracts';
 import { unwrap } from '@oneohm/mobile-ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
+import { quoteFormChecks, whole } from './quote-checks';
 import type { QuoteForm } from './quote-inputs';
 import {
+  type InverterRow,
+  inverterPicksOf,
   parseKw,
   type QuoteSite,
   rupeesToPaise,
-  suggestInverter,
+  suggestInverterRows,
   useDebounced,
 } from './quote-options';
-
-function whole(value: string): number | null {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}
 
 /** The pricing request, once the site and every number pricing needs are filled in. */
 export function buildQuoteInput(
   site: QuoteSite | null,
   form: QuoteForm,
   panelId: string | null,
-  inverterId: string | null,
+  inverterRows: readonly InverterRow[],
 ): QuotationPreviewInput | null {
+  const inverters = inverterPicksOf(inverterRows);
   const targetWp = parseKw(form.sizeKw);
   const floors = whole(form.floors);
   const distanceKm = whole(form.distanceKm);
-  if (!site || !targetWp || !panelId || !inverterId || floors === null || distanceKm === null) {
+  if (!site || !targetWp || !panelId || !inverters || floors === null || distanceKm === null) {
+    return null;
+  }
+  // Out of range: no request until it is fixed; the inputs say what to change.
+  if (Object.keys(quoteFormChecks(form, site.subsidyCategory === 'society')).length > 0) {
     return null;
   }
   return {
@@ -37,7 +40,7 @@ export function buildQuoteInput(
     systemType: 'on_grid',
     targetWp,
     panelProductId: panelId,
-    inverterProductId: inverterId,
+    inverters,
     batteryProductId: null,
     structureType: form.structure,
     floors,
@@ -57,9 +60,10 @@ export function useQuotePreview(site: QuoteSite | null, form: QuoteForm) {
   const panels = all.filter((product) => product.category === 'panel' && product.active);
   const inverters = all.filter((product) => product.category === 'inverter' && product.active);
   const targetWp = parseKw(form.sizeKw);
-  const suggested = targetWp ? suggestInverter(inverters, targetWp) : null;
+  const suggested = targetWp ? suggestInverterRows(inverters, targetWp) : [];
   const panelId = form.panelId ?? panels.find((panel) => panel.dcr === form.dcr)?.id ?? null;
-  const input = buildQuoteInput(site, form, panelId, form.inverterId ?? suggested?.id ?? null);
+  const inverterRows = form.inverters ?? suggested;
+  const input = buildQuoteInput(site, form, panelId, inverterRows);
   const settled = useDebounced(input);
   const preview = useQuery({
     queryKey: ['quote-preview', settled],
@@ -72,7 +76,8 @@ export function useQuotePreview(site: QuoteSite | null, form: QuoteForm) {
   return {
     panels,
     inverters,
-    suggestedInverterId: suggested?.id ?? null,
+    inverterRows,
+    panelId,
     input,
     ready: input !== null,
     preview,

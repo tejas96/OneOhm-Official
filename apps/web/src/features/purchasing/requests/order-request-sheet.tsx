@@ -84,28 +84,31 @@ export function OrderRequestSheet({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!request) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.purchasing.requests.order({
-          params: { id: request.id },
-          body: {
-            vendorId: vendorId ?? '',
-            orderDate,
-            expectedOn: expectedOn || null,
-            lines: request.lines.map((line) => ({
-              lineId: line.id,
-              ratePaise: rates[line.id]?.ratePaise ?? 0,
-              taxRateBp: rates[line.id]?.taxRateBp ?? 0,
-            })),
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.purchasing.requests.order({
+            params: { id: request.id },
+            body: {
+              vendorId: vendorId ?? '',
+              orderDate,
+              expectedOn: expectedOn || null,
+              lines: request.lines.map((line) => ({
+                lineId: line.id,
+                ratePaise: rates[line.id]?.ratePaise ?? 0,
+                taxRateBp: rates[line.id]?.taxRateBp ?? 0,
+              })),
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        if (!saved.purchaseOrder) return;
+        await refresh();
+        toast({ tone: 'success', title: t('done', { number: saved.purchaseOrder.number }) });
+        router.push(`/inventory?tab=orders&order=${saved.purchaseOrder.id}`);
+      },
     );
-    if (!saved?.purchaseOrder) return;
-    await refresh();
-    toast({ tone: 'success', title: t('done', { number: saved.purchaseOrder.number }) });
-    router.push(`/inventory?tab=orders&order=${saved.purchaseOrder.id}`);
   };
 
   const errors = form.fieldErrors;

@@ -43,6 +43,7 @@
     },
     "property": {
       "none": "No sites yet.",
+      "add": "Add site",
       "category": "Site type",
       "label": "Site name",
       "labelHint": "How the team refers to it, e.g. Home or Shop",
@@ -59,6 +60,7 @@
       "discom": "DISCOM",
       "discomUnknown": "Not known yet",
       "consumerNumber": "Consumer number",
+      "consumerNumberHint": "From the bill. Each site has its own.",
       "meterHolder": "Meter holder",
       "meterHolderHint": "Name on the electricity bill",
       "sanctionedLoad": "Sanctioned load (kW)",
@@ -87,6 +89,13 @@
       "cancel": "Cancel",
       "submit": "Save site",
       "saved": "Site updated"
+    },
+    "addProperty": {
+      "title": "Add site",
+      "description": "Another place {name} wants solar on, such as a shop or a farm.",
+      "cancel": "Cancel",
+      "submit": "Add site",
+      "saved": "Site added"
     },
     "quotations": {
       "title": "Quotations",

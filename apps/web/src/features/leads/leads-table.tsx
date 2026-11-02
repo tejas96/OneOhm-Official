@@ -12,7 +12,7 @@ import { formatKwp } from '@oneohm/shared';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
-import { isOpenLead, STAGE_TONE } from './lead-labels';
+import { clockLabel, isOpenLead, STAGE_TONE } from './lead-labels';
 
 /** The lead list: a table on desktop, cards on phones. The name opens the lead. */
 export function LeadsTable({
@@ -141,6 +141,7 @@ export function NextAction({ lead, today }: { readonly lead: Lead; readonly toda
           />
         )}
         {lead.overdue ? t('overdueOn', { date }) : isToday ? t('today') : date}
+        {lead.nextActionTime && ` · ${clockLabel(lead.nextActionTime)}`}
       </span>
       {lead.nextActionNote && (
         <span className="max-w-[16rem] truncate type-body-sm text-ink-faint">

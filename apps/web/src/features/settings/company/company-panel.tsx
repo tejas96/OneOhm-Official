@@ -63,10 +63,13 @@ export function CompanyPanel() {
         .map((line) => line.trim())
         .filter(Boolean),
     };
-    const saved = await form.run(() => expectStatus(api.catalog.updateCompany({ body }), 200));
-    if (!saved) return;
-    queryClient.setQueryData(SETTINGS_KEYS.company, saved);
-    toast({ title: settingsT('saved'), reference: saved.brandName, tone: 'success' });
+    await form.run(
+      () => expectStatus(api.catalog.updateCompany({ body }), 200),
+      (saved) => {
+        queryClient.setQueryData(SETTINGS_KEYS.company, saved);
+        toast({ title: settingsT('saved'), reference: saved.brandName, tone: 'success' });
+      },
+    );
   };
 
   return (

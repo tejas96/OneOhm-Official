@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { parseNumber } from '@/lib/forms/checks';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useInvalidateFinance } from '../use-finance';
 
@@ -32,6 +33,8 @@ export function ApplyCreditDialog({
   const toast = useToast();
   const invalidate = useInvalidateFinance();
   const form = useApiForm();
+  const checkT = useTranslations('checks');
+  const [checks, setChecks] = useState<Record<string, string>>({});
   const unpaid = milestones.filter((m) => m.payer === 'customer' && left(m) > 0);
   const first = unpaid[0];
   const suggest = (milestone: Milestone | undefined) =>
@@ -41,19 +44,32 @@ export function ApplyCreditDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const done = await form.run(() =>
-      expectStatus(
-        api.billing.applyCredit({
-          params: { projectId },
-          body: { milestoneId, amountPaise: rupeesToPaise(Number(amount.replace(/,/g, ''))) },
-        }),
-        201,
-      ),
+    if (form.pending) return;
+    const found: Record<string, string> = {};
+    if (!milestoneId) found.milestoneId = checkT('required');
+    const value = parseNumber(amount);
+    if (value === null || value <= 0) found.amountPaise = checkT('positiveAmount');
+    setChecks(found);
+    if (Object.keys(found).length > 0 || value === null) return;
+    await form.run(
+      () =>
+        expectStatus(
+          api.billing.applyCredit({
+            params: { projectId },
+            body: { milestoneId, amountPaise: rupeesToPaise(value) },
+          }),
+          201,
+        ),
+      async (done) => {
+        await invalidate();
+        toast({
+          title: t('done'),
+          description: done.milestoneLabel ?? undefined,
+          tone: 'success',
+        });
+        onClose();
+      },
     );
-    if (!done) return;
-    await invalidate();
-    toast({ title: t('done'), description: done.milestoneLabel ?? undefined, tone: 'success' });
-    onClose();
   };
 
   return (
@@ -75,7 +91,7 @@ export function ApplyCreditDialog({
       }
     >
       <form id={formId} onSubmit={submit} noValidate className="flex flex-col gap-4">
-        <Field label={t('milestone')} error={form.fieldErrors.milestoneId}>
+        <Field label={t('milestone')} error={checks.milestoneId ?? form.fieldErrors.milestoneId}>
           <Select
             value={milestoneId}
             onValueChange={(id) => {
@@ -89,7 +105,11 @@ export function ApplyCreditDialog({
             }))}
           />
         </Field>
-        <Field label={t('amount')} required error={form.fieldErrors.amountPaise}>
+        <Field
+          label={t('amount')}
+          required
+          error={checks.amountPaise ?? form.fieldErrors.amountPaise}
+        >
           <Input
             inputMode="decimal"
             value={amount}

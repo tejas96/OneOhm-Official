@@ -32,10 +32,13 @@ export function MyLeave({ requests }: { readonly requests: readonly LeaveRequest
   };
   const confirm = async () => {
     if (!cancelling) return;
-    const done = await form.run(() => cancel(cancelling.id));
-    if (!done) return;
-    toast({ title: t('cancelled'), reference: done.leaveLabel, tone: 'success' });
-    setCancelling(null);
+    await form.run(
+      () => cancel(cancelling.id),
+      (done) => {
+        toast({ title: t('cancelled'), reference: done.leaveLabel, tone: 'success' });
+        setCancelling(null);
+      },
+    );
   };
 
   return (

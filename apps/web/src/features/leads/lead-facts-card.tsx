@@ -7,7 +7,7 @@ import { CalendarClock } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useCan } from '@/providers/current-user';
-import { isOpenLead } from './lead-labels';
+import { clockLabel, isOpenLead } from './lead-labels';
 import { useUpdateLead } from './use-lead-mutations';
 import { useLeadOwnerOptions } from './use-lead-owners';
 
@@ -49,6 +49,7 @@ export function FollowUpCard({
                 day: 'numeric',
                 month: 'short',
               })}
+          {lead.nextActionTime && ` · ${clockLabel(lead.nextActionTime)}`}
         </p>
       ) : (
         <p className="type-body text-ink-faint">{t('none')}</p>

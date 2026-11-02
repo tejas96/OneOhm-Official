@@ -2,6 +2,7 @@
 
 import type { ProjectMaterial } from '@oneohm/api-contracts';
 import { Button, Field, Input, Select, Sheet, Textarea, useToast } from '@oneohm/design-system/web';
+import { asUnit } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Wand2 } from 'lucide-react';
@@ -24,7 +25,7 @@ function linesFromMaterial(material: ProjectMaterial): LineDraft[] {
       kind: 'product',
       productId: row.productId,
       description: row.name,
-      unit: row.unit,
+      unit: asUnit(row.unit),
       quantity: String(Math.round((row.needed - row.ordered) * 1000) / 1000),
       ratePaise: row.ratePaise,
       taxRateBp: row.taxRateBp,
@@ -108,32 +109,34 @@ export function OrderFormSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      expectStatus(
-        api.inventory.purchaseOrders.create({
-          body: {
-            vendorId: vendorId ?? '',
-            projectId: chosenProject,
-            orderDate,
-            expectedOn: expectedOn || null,
-            notes,
-            lines: lines.map((line) => ({
-              productId: line.kind === 'product' ? line.productId : null,
-              description: line.description,
-              unit: line.unit,
-              quantity: Number(line.quantity.replace(/,/g, '')),
-              ratePaise: line.ratePaise ?? 0,
-              taxRateBp: line.taxRateBp ?? 0,
-            })),
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.inventory.purchaseOrders.create({
+            body: {
+              vendorId: vendorId ?? '',
+              projectId: chosenProject,
+              orderDate,
+              expectedOn: expectedOn || null,
+              notes,
+              lines: lines.map((line) => ({
+                productId: line.kind === 'product' ? line.productId : null,
+                description: line.description,
+                unit: line.unit,
+                quantity: Number(line.quantity.replace(/,/g, '')),
+                ratePaise: line.ratePaise ?? 0,
+                taxRateBp: line.taxRateBp ?? 0,
+              })),
+            },
+          }),
+          201,
+        ),
+      async (saved) => {
+        await refresh(chosenProject);
+        toast({ tone: 'success', title: t('created', { number: saved.number }) });
+        onCreated(saved.id);
+      },
     );
-    if (!saved) return;
-    await refresh(chosenProject);
-    toast({ tone: 'success', title: t('created', { number: saved.number }) });
-    onCreated(saved.id);
   };
 
   return (

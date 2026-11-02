@@ -59,19 +59,21 @@ export function ProposeBonusSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      actions.propose({
-        projectId: projectId === NO_PROJECT ? null : projectId,
-        reason,
-        totalPaise: total ?? 0,
-        people: rows
-          .filter((row) => row.userId !== '')
-          .map((row) => ({ userId: row.userId, shares: row.shares })),
-      }),
+    await form.run(
+      () =>
+        actions.propose({
+          projectId: projectId === NO_PROJECT ? null : projectId,
+          reason,
+          totalPaise: total ?? 0,
+          people: rows
+            .filter((row) => row.userId !== '')
+            .map((row) => ({ userId: row.userId, shares: row.shares })),
+        }),
+      (created) => {
+        toast({ title: t('sent'), reference: created.reason, tone: 'success' });
+        onOpenChange(false);
+      },
     );
-    if (!created) return;
-    toast({ title: t('sent'), reference: created.reason, tone: 'success' });
-    onOpenChange(false);
   };
 
   return (

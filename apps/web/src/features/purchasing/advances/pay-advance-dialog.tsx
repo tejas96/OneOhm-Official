@@ -41,23 +41,25 @@ export function PayAdvanceDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!advance) return;
-    const paid = await form.run(() =>
-      expectStatus(
-        api.purchasing.advances.pay({
-          params: { id: advance.id },
-          body: { method, paidOn, reference },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.purchasing.advances.pay({
+            params: { id: advance.id },
+            body: { method, paidOn, reference },
+          }),
+          200,
+        ),
+      async (paid) => {
+        await refresh();
+        toast({
+          tone: 'success',
+          title: t('done', { number: paid.number }),
+          description: paid.vendor.name,
+        });
+        close();
+      },
     );
-    if (!paid) return;
-    await refresh();
-    toast({
-      tone: 'success',
-      title: t('done', { number: paid.number }),
-      description: paid.vendor.name,
-    });
-    close();
   };
 
   return (

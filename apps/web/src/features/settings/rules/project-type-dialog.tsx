@@ -46,19 +46,21 @@ export function ProjectTypeDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!variant) return;
-    const saved = await form.run(() =>
-      expectStatus(
-        api.businessSettings.saveProjectVariant({
-          params: { key: variant.key },
-          body: { name, description, active },
-        }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.businessSettings.saveProjectVariant({
+            params: { key: variant.key },
+            body: { name, description, active },
+          }),
+          200,
+        ),
+      async (saved) => {
+        await client.invalidateQueries({ queryKey: RULE_KEYS.projectTypes });
+        toast({ title: settingsT('saved'), reference: saved.name, tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await client.invalidateQueries({ queryKey: RULE_KEYS.projectTypes });
-    toast({ title: settingsT('saved'), reference: saved.name, tone: 'success' });
-    onClose();
   };
 
   return (

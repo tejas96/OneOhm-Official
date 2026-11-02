@@ -1,5 +1,5 @@
 import type { CustomerProject } from '@oneohm/api-contracts';
-import { Button, Card, formatInr, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
+import { Button, Card, describeError, formatInr, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, router } from 'expo-router';
 import { FileUp, IndianRupee, Star } from 'lucide-react-native';
@@ -111,7 +111,7 @@ function PaymentRow({
         pending={pay.isPending}
         onPress={() => (payable ? pay.mutate() : router.push('/payments' as Href))}
       />
-      <FormAlert message={pay.isError ? HOME.todoPayFailed : null} />
+      <FormAlert message={pay.error ? describeError(pay.error) : null} />
     </View>
   );
 }

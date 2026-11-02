@@ -1,14 +1,25 @@
 'use client';
 
 import type { ExtraLineInput } from '@oneohm/api-contracts';
-import { Badge, Button, Field, IconButton, Input, Select } from '@oneohm/design-system/web';
+import {
+  Badge,
+  Button,
+  Field,
+  IconButton,
+  Input,
+  SearchSelect,
+  Select,
+} from '@oneohm/design-system/web';
 import { STRUCTURE_TYPES } from '@oneohm/domain';
 import { formatInr, formatWp } from '@oneohm/shared';
 import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { productOptions, useSearchWords } from '@/components/product-search';
 import { ExtraLineSheet } from '@/features/quotations/builder/extra-line-sheet';
-import { type Catalog, productName } from '@/features/quotations/builder/system-fields';
+import { type Catalog, inverterError } from '@/features/quotations/builder/system-fields';
+import { InverterRowsField } from '@/features/quotations/inverter-rows';
+import { dcCapacityWp } from '@/features/quotations/inverter-rows-state';
 import type { ChangeDraft } from './change-draft';
 
 const NO_BATTERY = 'none';
@@ -104,6 +115,7 @@ export function ChangeFormFields({
   readonly errors: Readonly<Record<string, string>>;
 }) {
   const t = useTranslations('scopeChanges.form');
+  const words = useSearchWords();
   const structureT = useTranslations('quotations.structure');
   return (
     <div className="flex flex-col gap-5">
@@ -126,38 +138,38 @@ export function ChangeFormFields({
         </Field>
       </div>
       <Field label={t('panel')} hint={t('panelHint')} error={errors.panelProductId}>
-        <Select
+        <SearchSelect
+          {...words}
           value={draft.panelProductId}
           onValueChange={(value) => patch({ panelProductId: value })}
-          options={catalog.panels.map((product) => ({
-            value: product.id,
-            label: `${productName(product)} · ${formatWp(product.wattageWp ?? 0)} · ${product.dcr ? t('dcr') : t('nonDcr')}`,
-          }))}
+          options={productOptions(
+            catalog.panels,
+            (product) =>
+              `${formatWp(product.wattageWp ?? 0)} · ${product.dcr ? t('dcr') : t('nonDcr')}`,
+          )}
         />
       </Field>
+      <InverterRowsField
+        rows={draft.inverters}
+        onChange={(inverters) => patch({ inverters })}
+        inverters={catalog.inverters}
+        capacityWp={dcCapacityWp(
+          draft.targetKw,
+          catalog.panels.find((panel) => panel.id === draft.panelProductId),
+        )}
+        error={inverterError(errors)}
+      />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label={t('inverter')} error={errors.inverterProductId}>
-          <Select
-            value={draft.inverterProductId}
-            onValueChange={(value) => patch({ inverterProductId: value })}
-            options={catalog.inverters.map((product) => ({
-              value: product.id,
-              label: productName(product),
-            }))}
-          />
-        </Field>
         <Field label={t('battery')} error={errors.batteryProductId}>
-          <Select
+          <SearchSelect
+            {...words}
             value={draft.batteryProductId ?? NO_BATTERY}
             onValueChange={(value) =>
               patch({ batteryProductId: value === NO_BATTERY ? null : value })
             }
             options={[
               { value: NO_BATTERY, label: t('noBattery') },
-              ...catalog.batteries.map((product) => ({
-                value: product.id,
-                label: productName(product),
-              })),
+              ...productOptions(catalog.batteries),
             ]}
           />
         </Field>

@@ -194,7 +194,8 @@
         "saved": "Quotation saved",
         "sent": "Quotation sent",
         "waitingApproval": "Waiting for discount approval before it can be sent.",
-        "failed": "The quotation was not saved"
+        "failed": "The quotation was not saved",
+        "sendFailed": "The quotation was saved but not sent"
       }
     },
     "detail": {
@@ -339,6 +340,20 @@
         "optional": "Optional items"
       },
       "optionalNote": "Not in the total. Prices are before GST; adding one makes a new revision."
+    },
+    "inverters": {
+      "label": "Inverters",
+      "row": "Inverter {index}",
+      "model": "Inverter {index} model",
+      "count": "How many {name}",
+      "remove": "Remove {name}",
+      "add": "Add another inverter",
+      "total": "{ac} AC in all",
+      "totalAgainst": "{ac} AC for {dc} of panels",
+      "fit": {
+        "small": "The panels are more than 130% of the inverters. Power will be clipped at midday. Add an inverter or pick a larger one.",
+        "large": "The inverters are more than 120% of the panels. The extra capacity is never used. A smaller inverter costs less."
+      }
     }
   }
 }

@@ -11,8 +11,17 @@ import {
   type StatusTone,
   type ThemeColors,
 } from '@oneohm/design-system/tokens';
-import { createContext, type ReactNode, use } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useColorScheme } from 'react-native';
+import { createTokenStore } from '../api/token-store';
 
 export type Tone = StatusTone | 'neutral';
 
@@ -50,21 +59,66 @@ const DARK_THEME = build('dark');
 
 const ThemeContext = createContext<MobileTheme>(LIGHT_THEME);
 
-/** Light and dark follow the phone's setting unless `scheme` forces one. */
+/** What the person picked: follow the phone, or always light, or always dark. */
+export type ThemePreference = 'system' | 'light' | 'dark';
+export const THEME_PREFERENCES: readonly ThemePreference[] = ['system', 'light', 'dark'];
+
+interface PreferenceState {
+  readonly preference: ThemePreference;
+  readonly setPreference: (next: ThemePreference) => void;
+}
+
+const PreferenceContext = createContext<PreferenceState>({
+  preference: 'system',
+  setPreference: () => {},
+});
+
+const isPreference = (value: string | null): value is ThemePreference =>
+  value === 'system' || value === 'light' || value === 'dark';
+
+/**
+ * Light and dark follow the phone's setting unless the person picks one in the app
+ * (saved under `storageKey`), or `scheme` forces one.
+ */
 export function ThemeProvider({
   children,
   scheme,
+  storageKey,
 }: {
   readonly children: ReactNode;
   readonly scheme?: 'light' | 'dark';
+  readonly storageKey?: string;
 }) {
   const system = useColorScheme();
-  const resolved = scheme ?? (system === 'dark' ? 'dark' : 'light');
+  const store = useMemo(() => (storageKey ? createTokenStore(storageKey) : null), [storageKey]);
+  const [preference, setLocal] = useState<ThemePreference>('system');
+  useEffect(() => {
+    void store?.read().then((saved) => {
+      if (isPreference(saved)) setLocal(saved);
+    });
+  }, [store]);
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      setLocal(next);
+      void store?.write(next).catch(() => {});
+    },
+    [store],
+  );
+  const picked = preference === 'system' ? system : preference;
+  const resolved = scheme ?? (picked === 'dark' ? 'dark' : 'light');
+  const state = useMemo(() => ({ preference, setPreference }), [preference, setPreference]);
   return (
-    <ThemeContext value={resolved === 'dark' ? DARK_THEME : LIGHT_THEME}>{children}</ThemeContext>
+    <PreferenceContext value={state}>
+      <ThemeContext value={resolved === 'dark' ? DARK_THEME : LIGHT_THEME}>{children}</ThemeContext>
+    </PreferenceContext>
   );
 }
 
 export function useTheme(): MobileTheme {
   return use(ThemeContext);
+}
+
+/** The saved light / dark / phone choice, and how to change it. */
+export function useThemePreference(): PreferenceState {
+  return use(PreferenceContext);
 }

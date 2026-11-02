@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { LEAD, LEADS } from '@/copy/sales';
-import { relativeDate } from '@/lib/dates';
+import { whenLabel } from './follow-up-dates';
 
 const STAGE_TONE: Readonly<Record<Lead['stage'], Tone>> = {
   new: 'review',
@@ -18,7 +18,7 @@ const STAGE_TONE: Readonly<Record<Lead['stage'], Tone>> = {
 /** One lead: who, where, its stage and the next follow-up (overdue in red, never silent). */
 export function LeadRow({ lead }: { readonly lead: Lead }) {
   const theme = useTheme();
-  const next = lead.nextActionOn ? LEADS.next(relativeDate(lead.nextActionOn)) : LEADS.noNext;
+  const next = lead.nextActionOn ? LEADS.next(whenLabel(lead)) : LEADS.noNext;
   return (
     <Card
       onPress={() => router.push(`/leads/${lead.id}`)}

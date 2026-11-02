@@ -20,8 +20,9 @@ import { api } from '@/api/api';
 import { ScreenHeader, SectionTitle } from '@/components/screen-header';
 import { COMMON } from '@/copy/common';
 import { LEAD, LEAD_SITE, LEADS } from '@/copy/sales';
-import { relativeDate, shortDate, shortMoment } from '@/lib/dates';
+import { shortDate, shortMoment } from '@/lib/dates';
 import { useCan } from '@/session/session-provider';
+import { whenLabel } from './follow-up-dates';
 import { FollowUpSheet } from './follow-up-sheet';
 import { LeadConnection } from './lead-connection';
 import { LeadPapers } from './lead-papers';
@@ -179,7 +180,7 @@ function LeadDetailView({ lead }: { readonly lead: LeadDetail }) {
 function followUpLine(lead: LeadDetail): string {
   if (lead.stage === 'lost') return lead.revisitOn ? LEAD.revisitOn(shortDate(lead.revisitOn)) : '';
   if (lead.overdue) return LEADS.overdue;
-  return lead.nextActionOn ? LEADS.next(relativeDate(lead.nextActionOn)) : LEADS.noNext;
+  return lead.nextActionOn ? LEADS.next(whenLabel(lead)) : LEADS.noNext;
 }
 
 const styles = StyleSheet.create({

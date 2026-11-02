@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { parseNumber } from '@/lib/forms/checks';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useInvalidateFinance } from '../use-finance';
 
@@ -48,6 +49,9 @@ export function RefundDialog({
   const toast = useToast();
   const invalidate = useInvalidateFinance();
   const form = useApiForm();
+  const checkT = useTranslations('checks');
+  const [checks, setChecks] = useState<Record<string, string>>({});
+  const fieldError = (key: string) => checks[key] ?? form.fieldErrors[key];
   const paidTowards = milestones.filter((m) => m.payer === 'customer' && m.paidPaise > 0);
   const [source, setSource] = useState(creditPaise > 0 ? CREDIT : (paidTowards[0]?.id ?? CREDIT));
   const [amount, setAmount] = useState(creditPaise > 0 ? rupees(creditPaise) : '');
@@ -58,26 +62,37 @@ export function RefundDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const done = await form.run(() =>
-      expectStatus(
-        api.billing.recordRefund({
-          params: { projectId },
-          body: {
-            milestoneId: source === CREDIT ? null : source,
-            amountPaise: rupeesToPaise(Number(amount.replace(/,/g, ''))),
-            method,
-            paidOn,
-            reference: reference.trim() || null,
-            reason: reason.trim(),
-          },
-        }),
-        201,
-      ),
+    if (form.pending) return;
+    const found: Record<string, string> = {};
+    const value = parseNumber(amount);
+    if (value === null || value <= 0) found.amountPaise = checkT('positiveAmount');
+    if (!paidOn) found.paidOn = checkT('required');
+    else if (paidOn > todayIn()) found.paidOn = checkT('dateNotFuture');
+    if (!reason.trim()) found.reason = checkT('required');
+    setChecks(found);
+    if (Object.keys(found).length > 0 || value === null) return;
+    await form.run(
+      () =>
+        expectStatus(
+          api.billing.recordRefund({
+            params: { projectId },
+            body: {
+              milestoneId: source === CREDIT ? null : source,
+              amountPaise: rupeesToPaise(value),
+              method,
+              paidOn,
+              reference: reference.trim() || null,
+              reason: reason.trim(),
+            },
+          }),
+          201,
+        ),
+      async (done) => {
+        await invalidate();
+        toast({ title: t('done'), description: formatInr(done.amountPaise), tone: 'success' });
+        onClose();
+      },
     );
-    if (!done) return;
-    await invalidate();
-    toast({ title: t('done'), description: formatInr(done.amountPaise), tone: 'success' });
-    onClose();
   };
 
   const sources = [
@@ -122,7 +137,7 @@ export function RefundDialog({
         {source !== CREDIT && (
           <p className="type-body-sm text-ink-muted sm:col-span-2">{t('reopens')}</p>
         )}
-        <Field label={t('amount')} required error={form.fieldErrors.amountPaise}>
+        <Field label={t('amount')} required error={fieldError('amountPaise')}>
           <Input
             inputMode="decimal"
             value={amount}
@@ -137,8 +152,13 @@ export function RefundDialog({
             options={METHODS.map((value) => ({ value, label: methodT(value) }))}
           />
         </Field>
-        <Field label={t('paidOn')} required error={form.fieldErrors.paidOn}>
-          <Input type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} />
+        <Field label={t('paidOn')} required error={fieldError('paidOn')}>
+          <Input
+            type="date"
+            max={todayIn()}
+            value={paidOn}
+            onChange={(event) => setPaidOn(event.target.value)}
+          />
         </Field>
         <Field label={t('reference')} hint={t('referenceHint')} error={form.fieldErrors.reference}>
           <Input value={reference} onChange={(event) => setReference(event.target.value)} />
@@ -147,7 +167,7 @@ export function RefundDialog({
           label={t('reason')}
           hint={t('reasonHint')}
           required
-          error={form.fieldErrors.reason}
+          error={fieldError('reason')}
           className="sm:col-span-2"
         >
           <Textarea value={reason} rows={2} onChange={(event) => setReason(event.target.value)} />

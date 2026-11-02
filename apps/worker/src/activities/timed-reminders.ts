@@ -5,6 +5,8 @@ import {
   recordJobRun,
 } from '@oneohm/database';
 import { type ReminderTiming, timeReached } from '@oneohm/domain';
+import { todayIn } from '@oneohm/shared';
+import { queueTimedFollowUps } from './follow-up-reminders';
 import type { WorkerJob } from './job-runners';
 
 /** Jobs that go out at a time set in Settings → Reminders, once a day (PRD 7.2). */
@@ -32,6 +34,7 @@ export function businessClock(timeZone: string, now = new Date()) {
 /**
  * Runs every few minutes: each timed job goes out the first time its set time has come
  * and it has not yet finished today. A failed one is tried again on the next tick.
+ * Follow-ups set for a time today are checked on every tick.
  */
 export async function runTimedReminders(
   db: Database,
@@ -51,6 +54,11 @@ export async function runTimedReminders(
     } catch (error) {
       failure ??= error;
     }
+  }
+  try {
+    ran += await queueTimedFollowUps(db, todayIn(timeZone), clock);
+  } catch (error) {
+    failure ??= error;
   }
   if (failure) throw failure;
   return ran;

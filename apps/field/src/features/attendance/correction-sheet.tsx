@@ -5,7 +5,9 @@ import {
   fieldErrorsOf,
   Input,
   Sheet,
+  Text,
   unwrap,
+  useTheme,
 } from '@oneohm/mobile-ui';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -28,6 +30,21 @@ function instantOf(time: string, date: string): string | null | 'bad' {
   return new Date(`${date}T${hh}:${match[2]}:00+05:30`).toISOString();
 }
 
+/** What is wrong with the typed times: not a time, still to come, or out before in. */
+function timeProblems(
+  inAt: string | null | 'bad',
+  outAt: string | null | 'bad',
+  now: string,
+): { inError: string | undefined; outError: string | undefined } {
+  const inError =
+    inAt === 'bad' ? CORRECTION.badTime : inAt && inAt > now ? CORRECTION.notYet : undefined;
+  let outError: string | undefined;
+  if (outAt === 'bad') outError = CORRECTION.badTime;
+  else if (outAt && outAt > now) outError = CORRECTION.notYet;
+  else if (outAt && inAt && inAt !== 'bad' && outAt <= inAt) outError = CORRECTION.outBeforeIn;
+  return { inError, outError };
+}
+
 /** "I forgot to check out": the right times and why; a manager approves (PRD 4.3). */
 export function CorrectionSheet({
   open,
@@ -37,12 +54,14 @@ export function CorrectionSheet({
   readonly onClose: () => void;
 }) {
   const toast = useToast();
+  const theme = useTheme();
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [reason, setReason] = useState('');
   const date = businessToday();
   const inAt = instantOf(checkIn, date);
   const outAt = instantOf(checkOut, date);
+  const { inError, outError } = timeProblems(inAt, outAt, new Date().toISOString());
   const send = useMutation({
     mutationFn: () =>
       unwrap(
@@ -51,7 +70,7 @@ export function CorrectionSheet({
             workDate: date,
             checkInAt: inAt === 'bad' ? null : inAt,
             checkOutAt: outAt === 'bad' ? null : outAt,
-            reason,
+            reason: reason.trim(),
           },
         }),
       ),
@@ -62,10 +81,10 @@ export function CorrectionSheet({
       setReason('');
       onClose();
     },
-    onError: (error) => toast(describeError(error)),
   });
+  // A failure shows once, in the sheet: the sentence below, field messages in place.
   const errors = send.error ? fieldErrorsOf(send.error) : {};
-  const ready = (inAt || outAt) && inAt !== 'bad' && outAt !== 'bad' && reason.trim().length >= 5;
+  const ready = Boolean(inAt || outAt) && !inError && !outError && reason.trim().length >= 5;
   return (
     <Sheet
       open={open}
@@ -76,7 +95,9 @@ export function CorrectionSheet({
       footer={
         <Button
           label={CORRECTION.send}
-          onPress={() => send.mutate()}
+          onPress={() => {
+            if (ready && !send.isPending) send.mutate();
+          }}
           pending={send.isPending}
           disabled={!ready}
           fullWidth
@@ -89,12 +110,14 @@ export function CorrectionSheet({
             <Field
               label={CORRECTION.checkIn}
               hint={CORRECTION.timeHint}
-              error={inAt === 'bad' ? CORRECTION.badTime : errors.checkInAt}
+              error={inError ?? errors.checkInAt}
               optional={COMMON.optional}
             >
               <Input
                 value={checkIn}
                 onChangeText={setCheckIn}
+                maxLength={5}
+                invalid={Boolean(inError ?? errors.checkInAt)}
                 accessibilityLabel={CORRECTION.checkIn}
                 mono
               />
@@ -103,12 +126,14 @@ export function CorrectionSheet({
           <View style={styles.half}>
             <Field
               label={CORRECTION.checkOut}
-              error={outAt === 'bad' ? CORRECTION.badTime : errors.checkOutAt}
+              error={outError ?? errors.checkOutAt}
               optional={COMMON.optional}
             >
               <Input
                 value={checkOut}
                 onChangeText={setCheckOut}
+                maxLength={5}
+                invalid={Boolean(outError ?? errors.checkOutAt)}
                 accessibilityLabel={CORRECTION.checkOut}
                 mono
               />
@@ -121,8 +146,15 @@ export function CorrectionSheet({
             onChangeText={setReason}
             accessibilityLabel={CORRECTION.reason}
             multiline
+            maxLength={500}
+            invalid={Boolean(errors.reason)}
           />
         </Field>
+        {send.error ? (
+          <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
+            {describeError(send.error)}
+          </Text>
+        ) : null}
       </View>
     </Sheet>
   );

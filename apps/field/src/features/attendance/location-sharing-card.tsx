@@ -1,5 +1,6 @@
-import { Button, Card, Text } from '@oneohm/mobile-ui';
+import { Button, Card, describeError, Text } from '@oneohm/mobile-ui';
 import { StyleSheet } from 'react-native';
+import { useToast } from '@/components/toast';
 import { ATTENDANCE } from '@/copy/workforce';
 import { useConsent, useWorkday } from './use-workday';
 
@@ -7,6 +8,7 @@ import { useConsent, useWorkday } from './use-workday';
 export function LocationSharingCard() {
   const workday = useWorkday();
   const consent = useConsent();
+  const toast = useToast();
   const data = workday.data;
   if (!data?.attendance.captureLocation) return null;
   const sharing = data.consent.given;
@@ -24,7 +26,10 @@ export function LocationSharingCard() {
         variant="secondary"
         size="sm"
         pending={consent.isPending}
-        onPress={() => consent.mutate(!sharing)}
+        onPress={() => {
+          if (consent.isPending) return;
+          consent.mutate(!sharing, { onError: (error) => toast(describeError(error)) });
+        }}
       />
     </Card>
   );

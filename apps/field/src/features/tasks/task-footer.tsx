@@ -44,7 +44,10 @@ export function TaskFooter({
           size="lg"
           fullWidth
           pending={actions.approve.isPending}
-          onPress={() => actions.approve.mutate(undefined, { onSuccess: leaveWhenDone })}
+          onPress={() => {
+            if (!actions.approve.isPending)
+              actions.approve.mutate(undefined, { onSuccess: leaveWhenDone });
+          }}
         />
         <Button label={TASK.sendBack} variant="secondary" fullWidth onPress={onSendBack} />
       </>
@@ -59,7 +62,10 @@ export function TaskFooter({
           fullWidth
           disabled={blocked || uploading}
           pending={actions.complete.isPending}
-          onPress={() => actions.complete.mutate({ facts, note }, { onSuccess: leaveWhenDone })}
+          onPress={() => {
+            if (!actions.complete.isPending)
+              actions.complete.mutate({ facts, note }, { onSuccess: leaveWhenDone });
+          }}
         />
       ) : (
         <Button
@@ -68,7 +74,9 @@ export function TaskFooter({
           fullWidth
           disabled={blocked}
           pending={actions.start.isPending}
-          onPress={() => actions.start.mutate()}
+          onPress={() => {
+            if (!actions.start.isPending) actions.start.mutate();
+          }}
         />
       )}
       <Button label={TASK.markWaiting} variant="secondary" fullWidth onPress={onWaiting} />

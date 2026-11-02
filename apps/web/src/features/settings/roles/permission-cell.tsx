@@ -23,6 +23,7 @@ export function PermissionCell({
   held,
   locked,
   editable,
+  pending = false,
   onToggle,
   row,
   column,
@@ -31,6 +32,8 @@ export function PermissionCell({
   readonly held: boolean;
   readonly locked: boolean;
   readonly editable: boolean;
+  /** Its save is still going; clicks wait until it settles. */
+  readonly pending?: boolean;
   readonly onToggle: () => void;
   /** Grid position, for arrow-key moves between cells. */
   readonly row: number;
@@ -58,10 +61,15 @@ export function PermissionCell({
       aria-label={label}
       aria-pressed={held}
       data-cell={`${row}:${column}`}
-      onClick={onToggle}
+      aria-disabled={pending || undefined}
+      aria-busy={pending || undefined}
+      onClick={() => {
+        if (!pending) onToggle();
+      }}
       className={cn(
         BOX,
         'transition-colors duration-(--duration-fast)',
+        pending && 'cursor-progress opacity-60',
         held
           ? 'text-accent hover:bg-accent-soft'
           : 'text-ink-faint/45 hover:bg-sunken hover:text-ink-muted',

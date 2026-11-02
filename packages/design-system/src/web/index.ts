@@ -2,6 +2,7 @@ export { Button, buttonStyles, IconButton } from './controls/button';
 export * from './controls/checkbox';
 export { controlSurface, Field, useField } from './controls/field';
 export { Input, Textarea } from './controls/input';
+export * from './controls/search-select';
 export * from './controls/select';
 export { Avatar } from './data/avatar';
 export { DonutChart, type DonutSegment } from './data/donut-chart';

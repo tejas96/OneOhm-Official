@@ -82,7 +82,7 @@
       <h2>System details</h2>
       <dl class="q-specs">
         <div class="q-spec"><dt>Solar panels</dt><dd>{{system.modules}} <span class="q-muted">· {{system.panelKind}}</span>{{#if system.panelSpecs}}<br /><small class="q-spec-note">{{system.panelSpecs}}</small>{{/if}}</dd></div>
-        <div class="q-spec"><dt>Inverter</dt><dd>{{system.inverter}}{{#if system.inverterSpecs}}<br /><small class="q-spec-note">{{system.inverterSpecs}}</small>{{/if}}</dd></div>
+        <div class="q-spec"><dt>{{system.inverterTitle}}</dt><dd>{{#each system.inverters}}{{#unless @first}}<br />{{/unless}}{{name}}{{#if specs}}<br /><small class="q-spec-note">{{specs}}</small>{{/if}}{{/each}}</dd></div>
         {{#if system.battery}}<div class="q-spec"><dt>Battery</dt><dd>{{system.battery}}{{#if system.batterySpecs}}<br /><small class="q-spec-note">{{system.batterySpecs}}</small>{{/if}}</dd></div>{{/if}}
         <div class="q-spec"><dt>Mounting</dt><dd>{{system.structure}}</dd></div>
       </dl>

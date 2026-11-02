@@ -64,9 +64,15 @@ export async function logLeadChanges(
   } else if (stage === 'lost' && patch.revisitOn !== undefined) {
     await logLead(db, current.id, actor.userId, 'follow_up', lostNote(lost));
   }
-  if (patch.nextActionOn && patch.nextActionOn !== current.nextActionOn) {
+  const day = patch.nextActionOn ?? current.nextActionOn;
+  const time = patch.nextActionTime === undefined ? current.nextActionTime : patch.nextActionTime;
+  const newDay = Boolean(patch.nextActionOn) && patch.nextActionOn !== current.nextActionOn;
+  const newTime =
+    patch.nextActionTime !== undefined && patch.nextActionTime !== current.nextActionTime;
+  if (day && (newDay || newTime)) {
     const what = patch.nextActionNote ? `: ${patch.nextActionNote}` : '';
-    const note = `Next action on ${patch.nextActionOn}${what}.`;
+    const at = newDay && patch.nextActionTime === undefined ? '' : time ? ` at ${time}` : '';
+    const note = `Next action on ${day}${at}${what}.`;
     await logLead(db, current.id, actor.userId, 'follow_up', note);
   }
   if (!owner || owner === current.owner?.id) return;

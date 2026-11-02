@@ -5,4 +5,5 @@ export * from './document-rules';
 export * from './file-type';
 export * from './media-type';
 export * from './required-documents';
+export * from './site-papers';
 export * from './system-papers';

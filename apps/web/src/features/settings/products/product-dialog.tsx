@@ -2,11 +2,12 @@
 
 import type { Product, ProductInput } from '@oneohm/api-contracts';
 import { Button, Dialog, Field, Input, Select, Switch, useToast } from '@oneohm/design-system/web';
-import { LINE_CATEGORIES } from '@oneohm/domain';
+import { asUnit, LINE_CATEGORIES } from '@oneohm/domain';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
+import { UnitSelect } from '@/components/unit-select';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
@@ -28,7 +29,10 @@ const BLANK: ProductInput = {
   active: true,
 };
 
-const inputFrom = ({ id: _id, datasheet: _sheet, ...product }: Product): ProductInput => product;
+const inputFrom = ({ id: _id, datasheet: _sheet, ...product }: Product): ProductInput => ({
+  ...product,
+  unit: asUnit(product.unit),
+});
 
 /** Add or edit one catalog product; `product` null with `open` adds. */
 export function ProductDialog({
@@ -70,19 +74,25 @@ export function ProductDialog({
       ratedW: isRated ? draft.ratedW : null,
       dcr: isPanel ? draft.dcr : false,
     };
-    const saved = await form.run(() =>
-      product
-        ? expectStatus(api.catalog.updateProduct({ params: { id: product.id }, body }), 200)
-        : expectStatus(api.catalog.createProduct({ body }), 201),
+    await form.run(
+      () =>
+        product
+          ? expectStatus(api.catalog.updateProduct({ params: { id: product.id }, body }), 200)
+          : expectStatus(api.catalog.createProduct({ body }), 201),
+      async (saved) => {
+        // The builder and other pickers keep their own product lists under ['catalog'].
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: SETTINGS_KEYS.products }),
+          queryClient.invalidateQueries({ queryKey: ['catalog'] }),
+        ]);
+        const name = { name: saved.name };
+        toast({
+          title: product ? dialogT('updated', name) : dialogT('created', name),
+          tone: 'success',
+        });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await queryClient.invalidateQueries({ queryKey: SETTINGS_KEYS.products });
-    const name = { name: saved.name };
-    toast({
-      title: product ? dialogT('updated', name) : dialogT('created', name),
-      tone: 'success',
-    });
-    onClose();
   };
 
   return (
@@ -122,7 +132,11 @@ export function ProductDialog({
             />
           </Field>
           <Field label={dialogT('unit')} error={errors.unit}>
-            <Input value={draft.unit} onChange={(event) => set('unit', event.target.value)} />
+            <UnitSelect
+              value={draft.unit}
+              onValueChange={(unit) => set('unit', unit)}
+              label={dialogT('unit')}
+            />
           </Field>
           {isPanel && (
             <Field label={dialogT('wattageWp')} error={errors.wattageWp} required>

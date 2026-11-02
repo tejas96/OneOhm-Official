@@ -60,27 +60,29 @@ export function AddBillDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const created = await form.run(() =>
-      expectStatus(
-        api.finance.createPayable({
-          body: {
-            party: draft.party,
-            partyName: draft.partyName,
-            description: draft.description,
-            billNumber: draft.billNumber.trim() || null,
-            amountPaise: draft.amountPaise ?? 0,
-            tdsBp: draft.tdsBp ?? 0,
-            dueOn: draft.dueOn,
-            projectId: draft.projectId === NO_PROJECT ? null : draft.projectId,
-          },
-        }),
-        201,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.finance.createPayable({
+            body: {
+              party: draft.party,
+              partyName: draft.partyName,
+              description: draft.description,
+              billNumber: draft.billNumber.trim() || null,
+              amountPaise: draft.amountPaise ?? 0,
+              tdsBp: draft.tdsBp ?? 0,
+              dueOn: draft.dueOn,
+              projectId: draft.projectId === NO_PROJECT ? null : draft.projectId,
+            },
+          }),
+          201,
+        ),
+      async (created) => {
+        await invalidate();
+        toast({ title: t('added'), description: created.partyName, tone: 'success' });
+        close(false);
+      },
     );
-    if (!created) return;
-    await invalidate();
-    toast({ title: t('added'), description: created.partyName, tone: 'success' });
-    close(false);
   };
 
   return (

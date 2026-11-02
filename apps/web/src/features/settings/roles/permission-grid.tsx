@@ -11,7 +11,7 @@ import { asPredicate, orderRolesForGrid } from './grid-model';
 import { PermissionCell } from './permission-cell';
 import { RoleColumnHeader } from './role-column-header';
 import { useScrollEdges } from './use-scroll-edges';
-import { useToggleCapability } from './use-toggle-capability';
+import { cellKey, usePendingCells, useToggleCapability } from './use-toggle-capability';
 
 /** Each permission's row number across all areas, for arrow-key moves. */
 const ROW_OF: ReadonlyMap<Capability, number> = new Map(
@@ -39,6 +39,7 @@ export function PermissionGrid({
   const t = useTranslations('settings.roles.grid');
   const editable = useCan('roles.manage');
   const toggle = useToggleCapability();
+  const pendingCells = usePendingCells();
   const columns = orderRolesForGrid(roles);
   const [frameRef, edges] = useScrollEdges();
 
@@ -128,6 +129,7 @@ export function PermissionGrid({
                             held={held}
                             locked={role.system}
                             editable={editable}
+                            pending={pendingCells.has(cellKey(role.id, capability))}
                             onToggle={() => toggle.mutate({ role, capability, grant: !held })}
                             row={row}
                             column={column}

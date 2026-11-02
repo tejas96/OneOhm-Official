@@ -69,11 +69,11 @@ function useStepSave(onClose: () => void) {
   const refresh = useRefreshDiscom();
   const form = useApiForm();
   const save = async <T,>(action: () => Promise<T>, done: string) => {
-    const result = await form.run(action);
-    if (result === undefined) return;
-    await refresh();
-    toast({ tone: 'success', title: done });
-    onClose();
+    await form.run(action, async () => {
+      await refresh();
+      toast({ tone: 'success', title: done });
+      onClose();
+    });
   };
   return { form, save };
 }

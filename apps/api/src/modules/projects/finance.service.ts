@@ -14,6 +14,7 @@ import { customerTdsProblem } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { assertNotFuture } from '../../common/dates';
 import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -66,6 +67,7 @@ export class FinanceService {
     input: NewPayment,
     alsoInTransaction?: (tx: Transaction, paymentId: string) => Promise<void>,
   ): Promise<string> {
+    assertNotFuture(input.receivedOn, 'receivedOn');
     const [milestone] = await this.db
       .select()
       .from(paymentMilestones)

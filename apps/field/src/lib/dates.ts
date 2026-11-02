@@ -57,3 +57,16 @@ export function clockTime(instant: string): string {
     timeZone: BUSINESS_TIME_ZONE,
   }).format(new Date(instant));
 }
+
+/** The time of day in India as "HH:MM" (24-hour), for comparing with follow-up slots. */
+export function businessClock(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: BUSINESS_TIME_ZONE,
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour}:${minute}`;
+}

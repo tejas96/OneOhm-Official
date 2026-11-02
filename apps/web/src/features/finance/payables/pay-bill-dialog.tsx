@@ -37,6 +37,8 @@ export function PayBillDialog({
   const toast = useToast();
   const invalidate = useInvalidateFinance();
   const form = useApiForm();
+  const checkT = useTranslations('checks');
+  const [dateError, setDateError] = useState<string | null>(null);
   const [method, setMethod] = useState<Method>('bank_transfer');
   const [paidOn, setPaidOn] = useState(todayIn());
   const [reference, setReference] = useState('');
@@ -50,26 +52,36 @@ export function PayBillDialog({
     setReference('');
     setPaidOn(todayIn());
     setWay('bank');
+    setDateError(null);
     form.reset();
     onClose();
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!bill) return;
-    const paid = await form.run(() =>
-      expectStatus(
-        api.finance.payPayable({
-          params: { id: bill.id },
-          body: { method, paidOn, reference: reference.trim() || null },
-        }),
-        200,
-      ),
+    if (!bill || form.pending) return;
+    const problem = !paidOn
+      ? checkT('required')
+      : paidOn > todayIn()
+        ? checkT('dateNotFuture')
+        : null;
+    setDateError(problem);
+    if (problem) return;
+    await form.run(
+      () =>
+        expectStatus(
+          api.finance.payPayable({
+            params: { id: bill.id },
+            body: { method, paidOn, reference: reference.trim() || null },
+          }),
+          200,
+        ),
+      async (paid) => {
+        await invalidate();
+        toast({ title: t('done'), description: paid.partyName, tone: 'success' });
+        close();
+      },
     );
-    if (!paid) return;
-    await invalidate();
-    toast({ title: t('done'), description: paid.partyName, tone: 'success' });
-    close();
   };
 
   return (
@@ -120,8 +132,13 @@ export function PayBillDialog({
               options={METHODS.map((value) => ({ value, label: methodT(value) }))}
             />
           </Field>
-          <Field label={t('paidOn')} required error={form.fieldErrors.paidOn}>
-            <Input type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} />
+          <Field label={t('paidOn')} required error={dateError ?? form.fieldErrors.paidOn}>
+            <Input
+              type="date"
+              max={todayIn()}
+              value={paidOn}
+              onChange={(event) => setPaidOn(event.target.value)}
+            />
           </Field>
           <Field
             label={t('reference')}

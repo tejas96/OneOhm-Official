@@ -38,6 +38,8 @@ export const SUPPORT: Copy<typeof en.SUPPORT> = {
   formTitle: 'किस चीज़ में मदद चाहिए?',
   formDescription: 'सबसे मिलता-जुलता चुनें और थोड़ा बताएँ।',
   categoryLabel: 'दिक्कत किस तरह की है',
+  categoryNeeded: 'दिक्कत किस तरह की है, चुनें।',
+  descriptionNeeded: 'थोड़ा और बताएँ, या वॉइस नोट रिकॉर्ड करें।',
   projectLabel: 'कौन-सा सिस्टम',
   descriptionLabel: 'क्या हो रहा है?',
   descriptionHint: 'जैसे: आज सुबह से इन्वर्टर पर लाल बत्ती जल रही है।',

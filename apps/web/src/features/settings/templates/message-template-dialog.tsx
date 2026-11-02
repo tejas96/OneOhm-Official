@@ -79,16 +79,18 @@ export function MessageTemplateDialog({
       preview: draft.preview,
       active: draft.active,
     };
-    const saved = await form.run(() =>
-      expectStatus(
-        api.templates.updateMessageTemplate({ params: { key: template.key }, body }),
-        200,
-      ),
+    await form.run(
+      () =>
+        expectStatus(
+          api.templates.updateMessageTemplate({ params: { key: template.key }, body }),
+          200,
+        ),
+      async () => {
+        await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.messages });
+        toast({ title: t('saved', { name }), tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await client.invalidateQueries({ queryKey: TEMPLATE_KEYS.messages });
-    toast({ title: t('saved', { name }), tone: 'success' });
-    onClose();
   };
 
   const errors = form.fieldErrors;

@@ -11,6 +11,7 @@ import { AUTO_CONTRACTOR } from '@/features/projects/team/contractor-field';
 import { useTeamOptions } from '@/features/projects/team/use-team-options';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
+import { parseNumber } from '@/lib/forms/checks';
 import { useDiscoms, useProperty } from '../builder/property-summary';
 import { CreateTeamSection, MANAGER_LATER } from './create-team-section';
 import { type LenderChoice, LoanFields, lenderFields, NO_LENDER } from './loan-fields';
@@ -33,6 +34,7 @@ export function CreateProjectDialog({
 }) {
   const t = useTranslations('quotations.project');
   const teamT = useTranslations('projectTeam.create');
+  const checkT = useTranslations('checks');
   const toast = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -53,6 +55,7 @@ export function CreateProjectDialog({
   const [contractor, setContractor] = useState<string>(AUTO_CONTRACTOR);
   const [team, setTeam] = useState<string[]>([]);
   const [plan, setPlan] = useState<string>(DEFAULT_PLAN);
+  const [checks, setChecks] = useState<Record<string, string>>({});
 
   const site = property.data;
   useEffect(() => {
@@ -71,7 +74,7 @@ export function CreateProjectDialog({
             discomId: discomId ?? '',
             loan,
             ...lenderFields(loan, lender),
-            loanPaise: loan && loanRupees ? rupeesToPaise(Number(loanRupees)) : 0,
+            loanPaise: loan && loanRupees ? rupeesToPaise(parseNumber(loanRupees) ?? 0) : 0,
             battery,
             groundMount,
             nameChange,
@@ -100,9 +103,22 @@ export function CreateProjectDialog({
       router.push(`/projects/${project.id}`);
     },
   });
-  const errors = create.error instanceof ApiError ? create.error.fieldErrors : {};
+  const errors = {
+    ...(create.error instanceof ApiError ? create.error.fieldErrors : {}),
+    ...checks,
+  };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (create.isPending) return;
+    const found: Record<string, string> = {};
+    if (!discomId) found.discomId = checkT('required');
+    if (!startDate) found.startDate = checkT('required');
+    if (loan && loanRupees) {
+      const amount = parseNumber(loanRupees);
+      if (amount === null || amount <= 0) found.loanPaise = checkT('positiveAmount');
+    }
+    setChecks(found);
+    if (Object.keys(found).length > 0) return;
     create.mutate();
   };
 
@@ -130,7 +146,7 @@ export function CreateProjectDialog({
         </>
       }
     >
-      <form id="create-project" onSubmit={submit} className="flex flex-col gap-5">
+      <form id="create-project" onSubmit={submit} noValidate className="flex flex-col gap-5">
         <ProjectFactsSummary quotation={quotation} />
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={t('discom')} error={errors.discomId} required>
@@ -218,15 +234,14 @@ export function CreateProjectDialog({
             description={t('nameChangeHint')}
           />
         </div>
-        {create.isError &&
-          !(create.error instanceof ApiError && Object.keys(errors).length > 0) && (
-            <p
-              role="alert"
-              className="rounded-lg bg-overdue-tint px-3 py-2.5 type-body-sm text-overdue"
-            >
-              {describeError(create.error)}
-            </p>
-          )}
+        {create.isError && (
+          <p
+            role="alert"
+            className="rounded-lg bg-overdue-tint px-3 py-2.5 type-body-sm text-overdue"
+          >
+            {describeError(create.error)}
+          </p>
+        )}
       </form>
     </Dialog>
   );

@@ -1,8 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChecklistItem, DocumentChecklist } from '@oneohm/api-contracts';
-import { customers, discoms, documentRequests, documents, projects } from '@oneohm/database';
-import { customerCategoryFor, requirementsFor } from '@oneohm/domain';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import {
+  customers,
+  discoms,
+  documentRequests,
+  documents,
+  projects,
+  properties,
+} from '@oneohm/database';
+import {
+  countsForSite,
+  customerCategoryFor,
+  requirementsFor,
+  type SiteScope,
+} from '@oneohm/domain';
+import { and, count, eq, isNull, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { fileSystemPapers } from '../documents/system-papers-hook';
@@ -10,8 +22,9 @@ import { loadRequirements } from './document-requirements.service';
 import { ReportStatusService } from './report-status.service';
 
 /**
- * Which papers and reports a project needs and which it has (PRD 3.14, 3.18). Customer
- * papers (ID, bill, property) count wherever they were filed for that customer.
+ * Which papers and reports a project needs and which it has (PRD 3.14, 3.18). ID papers
+ * count wherever they were filed for the customer; a bill or property proof counts only
+ * for its own site, so a customer with two sites cannot lend one site's papers to the other.
  */
 @Injectable()
 export class DocumentChecklistService {
@@ -33,8 +46,23 @@ export class DocumentChecklistService {
       .where(eq(projects.id, projectId))
       .limit(1);
     if (!project) throw notFound('That project');
-    const files = await this.db
-      .select({ id: documents.id, category: documents.category, reportKey: documents.reportKey })
+    const [sites] = await this.db
+      .select({ count: count() })
+      .from(properties)
+      .where(eq(properties.customerId, project.project.customerId));
+    const site: SiteScope = {
+      propertyId: project.project.propertyId,
+      projectId,
+      customerSites: sites?.count ?? 1,
+    };
+    const filed = await this.db
+      .select({
+        id: documents.id,
+        category: documents.category,
+        reportKey: documents.reportKey,
+        propertyId: documents.propertyId,
+        projectId: documents.projectId,
+      })
       .from(documents)
       .where(
         and(
@@ -46,7 +74,8 @@ export class DocumentChecklistService {
           isNull(documents.removedAt),
         ),
       );
-    const asked = await this.openRequests(project.project.customerId);
+    const files = filed.filter((file) => countsForSite(file, site));
+    const asked = await this.openRequests(project.project.customerId, site);
     const needed = requirementsFor(await loadRequirements(this.db), {
       ...project.project,
       discomCode: project.discomCode,
@@ -114,11 +143,11 @@ export class DocumentChecklistService {
   }
 
   /** Categories the customer has been asked for and not yet sent. */
-  private async openRequests(customerId: string): Promise<ReadonlySet<string>> {
+  private async openRequests(customerId: string, site: SiteScope): Promise<ReadonlySet<string>> {
     const rows = await this.db
-      .select({ category: documentRequests.category })
+      .select({ category: documentRequests.category, projectId: documentRequests.projectId })
       .from(documentRequests)
       .where(and(eq(documentRequests.customerId, customerId), eq(documentRequests.status, 'open')));
-    return new Set(rows.map((row) => row.category));
+    return new Set(rows.filter((row) => countsForSite(row, site)).map((row) => row.category));
   }
 }

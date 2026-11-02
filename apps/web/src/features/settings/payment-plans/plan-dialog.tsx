@@ -55,15 +55,17 @@ export function PlanDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await form.run(() =>
-      plan
-        ? expectStatus(api.paymentPlans.update({ params: { id: plan.id }, body: draft }), 200)
-        : expectStatus(api.paymentPlans.create({ body: draft }), 201),
+    await form.run(
+      () =>
+        plan
+          ? expectStatus(api.paymentPlans.update({ params: { id: plan.id }, body: draft }), 200)
+          : expectStatus(api.paymentPlans.create({ body: draft }), 201),
+      async (saved) => {
+        await client.invalidateQueries({ queryKey: PLANS_KEY });
+        toast({ title: t('saved', { name: saved.name }), tone: 'success' });
+        onClose();
+      },
     );
-    if (!saved) return;
-    await client.invalidateQueries({ queryKey: PLANS_KEY });
-    toast({ title: t('saved', { name: saved.name }), tone: 'success' });
-    onClose();
   };
 
   return (

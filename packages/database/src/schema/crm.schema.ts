@@ -7,6 +7,7 @@ import {
   integer,
   pgTable,
   text,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { discoms } from './catalog.schema';
@@ -84,7 +85,13 @@ export const properties = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (table) => [index('properties_customer_idx').on(table.customerId)],
+  (table) => [
+    index('properties_customer_idx').on(table.customerId),
+    // Each connection has its own number: compared without spaces or dashes, in capitals.
+    uniqueIndex('properties_consumer_number_unique')
+      .on(sql`upper(regexp_replace(${table.consumerNumber}, '[^A-Za-z0-9]', '', 'g'))`)
+      .where(sql`${table.consumerNumber} is not null`),
+  ],
 );
 
 /** Every lead has an owner and a next action (PRD 3.3). */
@@ -111,6 +118,8 @@ export const leads = pgTable(
     estimatedWp: integer('estimated_wp'),
     subsidyCategory: subsidyCategoryEnum('subsidy_category').notNull().default('individual'),
     nextActionOn: calendarDate('next_action_on'),
+    /** Optional "HH:MM" on the business clock; the owner is alerted shortly before it. */
+    nextActionTime: text('next_action_time'),
     nextActionNote: text('next_action_note'),
     /** One of LEAD_LOST_REASONS; `lost_reason` holds the words (required for "other"). */
     lostReasonKey: text('lost_reason_key'),
