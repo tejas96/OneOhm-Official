@@ -28,7 +28,18 @@ async function ownerOf(db: DatabaseExecutor, projectId: string): Promise<string 
   return row?.manager ?? row?.lead ?? null;
 }
 
-/** Tells the project's owner (when it has one) and the accounts team, once per key. */
+/** Tells the project's owner (when it has one), once per key. */
+async function tellOwner(
+  db: DatabaseExecutor,
+  projectId: string,
+  notice: Parameters<typeof notifyHolders>[2],
+): Promise<void> {
+  const owner = await ownerOf(db, projectId);
+  if (owner)
+    await notify(db, { userId: owner }, { ...notice, dedupeKey: `${notice.dedupeKey}:${owner}` });
+}
+
+/** Tells the project's owner and the accounts team, once per key. */
 async function tellOwnerAndAccounts(
   db: DatabaseExecutor,
   projectId: string,
@@ -68,6 +79,19 @@ export async function sendFreshLinkAfterExpiry(
   db: DatabaseExecutor,
   linkId: string,
 ): Promise<void> {
+  // Wait for any payment being recorded on this milestone: recordPayment holds this lock
+  // until it commits. The read below is a separate statement, so it sees that payment.
+  const [link] = await db
+    .select({ milestoneId: paymentLinks.milestoneId })
+    .from(paymentLinks)
+    .where(eq(paymentLinks.id, linkId))
+    .limit(1);
+  if (!link) return;
+  await db
+    .select({ id: paymentMilestones.id })
+    .from(paymentMilestones)
+    .where(eq(paymentMilestones.id, link.milestoneId))
+    .for('update');
   const [row] = await db
     .select({
       milestone: paymentMilestones,
@@ -99,7 +123,7 @@ export async function sendFreshLinkAfterExpiry(
     }),
     `link_expired:${linkId}`,
   );
-  await tellOwnerAndAccounts(db, project.id, {
+  await tellOwner(db, project.id, {
     kind: 'payment_link_expired',
     title: 'Payment link expired',
     body: `${customer.name}'s link for ${milestone.label} (${project.code}) expired unpaid. A fresh Pay now was sent.`,

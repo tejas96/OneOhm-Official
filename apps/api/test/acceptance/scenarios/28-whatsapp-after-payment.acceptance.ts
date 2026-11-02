@@ -89,10 +89,17 @@ describe('WhatsApp after payment', () => {
     );
     expect(fresh?.payload.payToken).toBeTruthy();
     expect(fresh?.payload.link).toContain('/v1/pay/due/');
-    const owner = await rows(
-      "select 1 from notifications where kind = 'payment_link_expired' and dedupe_key like 'link_expired:%'",
+    const [link] = await rows<{ id: string }>(
+      'select id from payment_links where milestone_id = $1',
+      [milestone.id],
     );
-    expect(owner.length).toBeGreaterThan(0);
+    const told = await rows<{ user_id: string }>(
+      "select user_id from notifications where kind = 'payment_link_expired' and dedupe_key like $1",
+      [`link_expired:${link?.id}:%`],
+    );
+    expect(told.length).toBeGreaterThan(0);
+    expect(new Set(told.map((row) => row.user_id)).size).toBe(told.length);
+    expect(told).toHaveLength(1);
   });
 
   it('no fresh link when the milestone is already paid', async () => {
