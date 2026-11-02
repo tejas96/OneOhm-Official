@@ -25,6 +25,8 @@ export interface TaskFreshness {
   readonly stale: boolean;
   /** The assignee is on approved leave today. */
   readonly assigneeOnLeave: boolean;
+  /** First day of the leave that covers today, when there is one. */
+  readonly assigneeLeaveFrom: string | null;
 }
 
 /** The stale threshold from Settings ("stuck after N days"), or the default. */
@@ -100,6 +102,7 @@ export async function taskFreshness(
         thresholdDays: threshold,
       }),
       assigneeOnLeave: onLeave(today, spans),
+      assigneeLeaveFrom: spans.find((span) => span.from <= today && today <= span.to)?.from ?? null,
     });
   }
   return result;
