@@ -1,6 +1,6 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { boardColumns, boardMove } from './board-moves';
+import { boardColumns, boardMove, columnStep } from './board-moves';
 import type { TaskRights } from './task-menu';
 
 function taskOf(partial: Partial<ProjectTask>): ProjectTask {
@@ -108,5 +108,18 @@ describe('boardColumns', () => {
     ]);
     expect(cols.ready.map((task) => task.id)).toEqual(['2', '1']);
     expect(cols.completed).toEqual([]);
+  });
+});
+
+describe('columnStep', () => {
+  it('moves one column right or left', () => {
+    expect(columnStep('in_progress', 'ArrowRight')).toBe('waiting');
+    expect(columnStep('in_progress', 'ArrowLeft')).toBe('ready');
+  });
+
+  it('stays at the ends and ignores other keys', () => {
+    expect(columnStep('completed', 'ArrowRight')).toBe('completed');
+    expect(columnStep('pending', 'ArrowLeft')).toBe('pending');
+    expect(columnStep('ready', 'ArrowDown')).toBeNull();
   });
 });

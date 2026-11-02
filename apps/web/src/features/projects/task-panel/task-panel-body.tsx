@@ -110,9 +110,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
       <BlockersSection task={task} />
       <ChecklistSection task={task} />
       <FactsSection task={task} />
-      <PanelSection title={t('files')}>
-        <EvidenceUploader task={task} />
-      </PanelSection>
+      <EvidenceUploader task={task} />
       <TaskVisitLine task={task} />
       <PanelSection
         title={t('timeline')}

@@ -5,6 +5,7 @@ import {
   DndContext,
   type DragEndEvent,
   DragOverlay,
+  type KeyboardCoordinateGetter,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -16,7 +17,13 @@ import type { ProjectTask } from '@oneohm/api-contracts';
 import { Button, cn, useToast } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useCallback, useRef, useState } from 'react';
-import { BOARD_COLUMNS, type BoardColumn, boardColumns, boardMove } from '../tasks/board-moves';
+import {
+  BOARD_COLUMNS,
+  type BoardColumn,
+  boardColumns,
+  boardMove,
+  columnStep,
+} from '../tasks/board-moves';
 import { type CardRunner, KanbanCard } from './kanban-card';
 
 /**
@@ -35,7 +42,7 @@ export function TaskKanban({ tasks }: { readonly tasks: readonly ProjectTask[] }
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: jumpColumns }),
   );
   const register = useCallback((id: string, runner: CardRunner | null) => {
     if (runner) runners.current.set(id, runner);
@@ -110,6 +117,22 @@ export function TaskKanban({ tasks }: { readonly tasks: readonly ProjectTask[] }
     </DndContext>
   );
 }
+
+/**
+ * Keyboard moves jump a whole column per arrow key, so a picked-up card lands on the
+ * next status instead of creeping a few pixels at a time.
+ */
+const jumpColumns: KeyboardCoordinateGetter = (event, { active, currentCoordinates, context }) => {
+  const { collisionRect, droppableRects, over } = context;
+  if (!collisionRect) return undefined;
+  const from = (over?.id ?? context.active?.data.current?.task?.status) as BoardColumn | undefined;
+  const to = from ? columnStep(from, event.code) : null;
+  if (!to) return undefined;
+  event.preventDefault();
+  const rect = droppableRects.get(to);
+  if (!rect || !active) return currentCoordinates;
+  return { x: rect.left + rect.width / 2 - collisionRect.width / 2, y: currentCoordinates.y };
+};
 
 function Column({
   column,

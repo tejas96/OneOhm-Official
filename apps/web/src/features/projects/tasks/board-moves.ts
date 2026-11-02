@@ -59,3 +59,12 @@ export function boardColumns(tasks: readonly ProjectTask[]): Record<BoardColumn,
     );
   return columns;
 }
+
+/** The column an arrow key moves a picked-up card to; null for any other key. */
+export function columnStep(from: BoardColumn, key: string): BoardColumn | null {
+  const index = BOARD_COLUMNS.indexOf(from);
+  if (key === 'ArrowRight')
+    return BOARD_COLUMNS[Math.min(index + 1, BOARD_COLUMNS.length - 1)] ?? from;
+  if (key === 'ArrowLeft') return BOARD_COLUMNS[Math.max(index - 1, 0)] ?? from;
+  return null;
+}

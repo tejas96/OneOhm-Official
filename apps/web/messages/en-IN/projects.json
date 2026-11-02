@@ -524,7 +524,6 @@
       "checklist": "Checklist · {done}/{total}",
       "facts": "Facts to record",
       "notRecorded": "Not recorded yet",
-      "files": "Photos and documents",
       "timeline": "History",
       "timelineEmpty": "Nothing has happened yet.",
       "timelineError": "Could not load the history.",
