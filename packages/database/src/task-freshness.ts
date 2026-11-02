@@ -80,16 +80,25 @@ export async function taskFreshness(
           )
       : Promise.resolve([]),
   ]);
-  const latest = (rows: readonly { taskId: string | null; at: Date | null }[], id: string) =>
-    rows.find((row) => row.taskId === id)?.at ?? null;
+  // Indexed once, so large lists (the project list, the morning job) stay fast.
+  const byTask = (rows: readonly { taskId: string | null; at: Date | null }[]) =>
+    new Map(rows.map((row) => [row.taskId, row.at]));
+  const lastActivity = byTask(activity);
+  const lastFile = byTask(files);
+  const leaveBy = new Map<string, LeaveSpan[]>();
+  for (const row of leave) {
+    const spans = leaveBy.get(row.userId) ?? [];
+    spans.push({ from: row.from, to: row.to });
+    leaveBy.set(row.userId, spans);
+  }
   for (const task of tasks) {
-    const times = [task.updatedAt, latest(activity, task.id), latest(files, task.id)].filter(
-      (time): time is Date => time !== null,
-    );
+    const times = [
+      task.updatedAt,
+      lastActivity.get(task.id) ?? null,
+      lastFile.get(task.id) ?? null,
+    ].filter((time): time is Date => time !== null);
     const lastUpdateAt = new Date(Math.max(...times.map((time) => time.getTime())));
-    const spans: LeaveSpan[] = leave
-      .filter((row) => row.userId === task.assigneeUserId)
-      .map((row) => ({ from: row.from, to: row.to }));
+    const spans = task.assigneeUserId ? (leaveBy.get(task.assigneeUserId) ?? []) : [];
     const lastUpdate = todayIn('Asia/Kolkata', lastUpdateAt);
     result.set(task.id, {
       lastUpdateAt,

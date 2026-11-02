@@ -24,6 +24,8 @@ export type TaskRow = Pick<
   | 'title'
   | 'customerVisible'
   | 'completedAt'
+  | 'assigneeUserId'
+  | 'updatedAt'
 >;
 export type MilestoneRow = Pick<
   typeof paymentMilestones.$inferSelect,
@@ -72,6 +74,8 @@ export async function summaryFacts(
         title: projectTasks.title,
         customerVisible: projectTasks.customerVisible,
         completedAt: projectTasks.completedAt,
+        assigneeUserId: projectTasks.assigneeUserId,
+        updatedAt: projectTasks.updatedAt,
       })
       .from(projectTasks)
       .where(and(inProjects(projectTasks.projectId), ne(projectTasks.status, 'completed'))),
