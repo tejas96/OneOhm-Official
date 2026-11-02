@@ -6,7 +6,7 @@ import { addDays, type Sale, sellProject, today } from '../support/sales';
 import { project, surveyFacts, taskByKey, workTask } from '../support/tasks';
 
 // PRD 13 "Engagement": points and rewards reflect verified performance. On-time work earns
-// points once it is verified (approval tasks only after approval), late work earns none
+// points once it is verified (approval tasks only after approval), late work earns 0
 // and loses none, customer praise waits for a manager, and delays caused by the customer,
 // bank or DISCOM are never counted against the person.
 interface TeamRow {
@@ -68,7 +68,13 @@ describe('Engagement', () => {
     expect(sent.status).toBe('in_review');
     expect((await mine()).filter((e) => e.reason.includes(survey.title))).toHaveLength(0);
     await admin.post(`/tasks/${survey.id}/approve`);
-    expect((await mine()).filter((e) => e.reason.includes(survey.title))).toHaveLength(1);
+    // Verified: on time, plus first-time right for work with an approval step (spec 3.7).
+    expect(
+      (await mine())
+        .filter((e) => e.reason.includes(survey.title))
+        .map((e) => e.sourceType)
+        .sort(),
+    ).toEqual(['task_first_time', 'task_on_time']);
   });
 
   it('gives late work no points and takes none away', async () => {
@@ -82,9 +88,13 @@ describe('Engagement', () => {
     const facts = await surveyFacts(admin, await project(admin, late.project.id), survey);
     const waited = taskByKey(await project(admin, late.project.id), 'site_survey');
     expect((await workTask(admin, waited, { as: me, facts })).status).toBe('completed');
-    const entries = await mine();
-    expect(entries.filter((entry) => entry.sourceType === 'task_on_time')).toHaveLength(2);
-    expect(entries.every((entry) => entry.points > 0)).toBe(true);
+    // Late work earns 0 with a reason that says so; nothing is ever taken away (spec 3.7).
+    const onTimeLines = (await mine()).filter((entry) => entry.sourceType === 'task_on_time');
+    expect(onTimeLines.filter((entry) => entry.points === 10)).toHaveLength(2);
+    const missed = onTimeLines.filter((entry) => entry.points === 0);
+    expect(missed).toHaveLength(2);
+    expect(missed.every((entry) => entry.reason.startsWith('Late by'))).toBe(true);
+    expect((await mine()).every((entry) => entry.points >= 0)).toBe(true);
   });
 
   it('does not count customer, bank or DISCOM delays against the person', async () => {

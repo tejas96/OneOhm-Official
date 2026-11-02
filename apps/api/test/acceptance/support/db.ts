@@ -67,3 +67,37 @@ export async function ageTask(taskId: string, days: number): Promise<void> {
     shift,
   ]);
 }
+
+/** Sets a task's dates directly (acceptance database only). */
+export async function setTaskDates(
+  taskId: string,
+  dates: { readonly dueDate?: string; readonly startDate?: string },
+): Promise<void> {
+  if (dates.startDate)
+    await rows('UPDATE project_tasks SET start_date = $2 WHERE id = $1', [taskId, dates.startDate]);
+  if (dates.dueDate)
+    await rows('UPDATE project_tasks SET due_date = $2 WHERE id = $1', [taskId, dates.dueDate]);
+}
+
+/** Records a finished wait on a party, as if the task had waited then (acceptance only). */
+export async function addTaskWait(
+  taskId: string,
+  party: 'customer' | 'bank' | 'discom' | 'internal',
+  from: string,
+  to: string,
+): Promise<void> {
+  await rows(
+    `INSERT INTO task_waits (task_id, party, started_at, ended_at)
+     VALUES ($1, $2, ($3::date + time '10:00') AT TIME ZONE 'Asia/Kolkata',
+             ($4::date + time '17:00') AT TIME ZONE 'Asia/Kolkata')`,
+    [taskId, party, from, to],
+  );
+}
+
+/** Moves a task's hand-ins back by `days` (acceptance database only). */
+export async function ageHandIns(taskId: string, days: number): Promise<void> {
+  await rows('UPDATE task_reviews SET created_at = created_at - $2::interval WHERE task_id = $1', [
+    taskId,
+    `${days} days`,
+  ]);
+}
