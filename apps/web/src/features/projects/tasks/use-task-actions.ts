@@ -8,7 +8,10 @@ import { useTranslations } from 'next-intl';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 
-/** Everything a task change can move: the project, lists, my tasks and the owner's view. */
+/**
+ * Everything a task change can move: the project, lists, my tasks, the owner's view and
+ * the team views (workload, points).
+ */
 export function useInvalidateWork() {
   const client = useQueryClient();
   return () =>
@@ -17,6 +20,7 @@ export function useInvalidateWork() {
       client.invalidateQueries({ queryKey: ['projects'] }),
       client.invalidateQueries({ queryKey: ['tasks'] }),
       client.invalidateQueries({ queryKey: ['command-center'] }),
+      client.invalidateQueries({ queryKey: ['team'] }),
     ]);
 }
 

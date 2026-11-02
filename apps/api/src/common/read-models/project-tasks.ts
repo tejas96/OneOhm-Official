@@ -13,6 +13,7 @@ import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { changeRequestsBlocking, openChangeRequestBlocks } from './change-request-blocks';
 import { assignmentStates } from './task-assignment-state';
+import { blockingTitles } from './task-blocking';
 import { reviewStateOf, reviewStates } from './task-review-state';
 
 /** Tasks with their project, assignee and the titles of whatever still blocks them. */
@@ -41,6 +42,17 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         .from(taskDependencies)
         .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
         .where(inArray(taskDependencies.taskId, ids))
+    : [];
+  const dependents = ids.length
+    ? await db
+        .select({
+          dependsOnTaskId: taskDependencies.dependsOnTaskId,
+          title: projectTasks.title,
+          status: projectTasks.status,
+        })
+        .from(taskDependencies)
+        .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.taskId))
+        .where(inArray(taskDependencies.dependsOnTaskId, ids))
     : [];
   const files = ids.length
     ? await db
@@ -138,6 +150,7 @@ export async function presentTasks(db: DatabaseExecutor, where: SQL): Promise<Pr
         ...[assignment.get(task.id)?.budgetBlock ?? ''].filter(Boolean),
       ],
       changeBlockers: changes,
+      blocking: blockingTitles(task.id, task.status === 'completed', dependents),
       completedAt: task.completedAt?.toISOString() ?? null,
     };
   });

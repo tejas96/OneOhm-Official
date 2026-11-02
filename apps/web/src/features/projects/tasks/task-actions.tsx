@@ -5,61 +5,24 @@ import { Button, IconButton, Popover } from '@oneohm/design-system/web';
 import { Ellipsis } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { useCan, useCurrentUser } from '@/providers/current-user';
-import { AssignDialog } from './assign-dialog';
-import { CompleteTaskDialog } from './complete-task-dialog';
-import { RescheduleDialog } from './reschedule-dialog';
-import {
-  type DialogName,
-  menuSteps,
-  primaryStep,
-  type TaskRights,
-  type TaskStep,
-} from './task-menu';
-import { TaskNoteDialog } from './task-note-dialog';
-import { useTaskActions } from './use-task-actions';
-import { WaitingDialog } from './waiting-dialog';
+import type { TaskStep } from './task-menu';
+import { useTaskSteps } from './use-task-steps';
 
 /**
  * The one next step for a task as a button, the rest in a small menu. Only what the
- * person may do is offered: the assignee or a manager works the task, managers move its
- * due date, `tasks.assign` hands it over, and its reviewers approve or send work back.
+ * person may do is offered (see `useTaskRights`).
  */
 export function TaskActions({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.task.actions');
-  const user = useCurrentUser();
-  const manage = useCan('tasks.assign', 'projects.manage');
-  const assign = useCan('tasks.assign');
-  const actions = useTaskActions(task);
-  const [dialog, setDialog] = useState<DialogName | null>(null);
-  const [session, setSession] = useState(0);
+  const steps = useTaskSteps(task);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const rights: TaskRights = {
-    work: task.assignee?.id === user.id || manage,
-    manage,
-    assign,
-    review: task.reviewerIds.includes(user.id),
-  };
-  const primary = primaryStep(task, rights);
-  const menu = menuSteps(task, rights);
+  const { primary, menu } = steps;
   if (!primary && menu.length === 0) return null;
 
   const run = (entry: TaskStep) => {
     setMenuOpen(false);
-    if ('quick' in entry.run) {
-      if (entry.run.quick === 'approve') actions.approve.mutate();
-      else actions.start.mutate();
-      return;
-    }
-    setSession((value) => value + 1);
-    setDialog(entry.run.dialog);
+    steps.run(entry);
   };
-  const dialogProps = (name: DialogName) => ({
-    task,
-    open: dialog === name,
-    onOpenChange: (next: boolean) => setDialog(next ? name : null),
-  });
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
@@ -68,7 +31,7 @@ export function TaskActions({ task }: { readonly task: ProjectTask }) {
           size="sm"
           variant="secondary"
           leadingIcon={<primary.icon />}
-          pending={primary.key === 'approve' ? actions.approve.isPending : actions.start.isPending}
+          pending={steps.pendingKey === primary.key}
           onClick={() => run(primary)}
         >
           {t(primary.key)}
@@ -103,35 +66,7 @@ export function TaskActions({ task }: { readonly task: ProjectTask }) {
           </ul>
         </Popover>
       )}
-      {/* A new key per opening starts each form empty. */}
-      <CompleteTaskDialog
-        key={`complete-${session}`}
-        {...dialogProps('complete')}
-        mutation={actions.complete}
-      />
-      <WaitingDialog
-        key={`waiting-${session}`}
-        {...dialogProps('waiting')}
-        mutation={actions.waiting}
-      />
-      <AssignDialog {...dialogProps('assign')} mutation={actions.assign} />
-      <RescheduleDialog
-        key={`reschedule-${session}`}
-        {...dialogProps('reschedule')}
-        mutation={actions.reschedule}
-      />
-      <TaskNoteDialog
-        key={`update-${session}`}
-        kind="update"
-        {...dialogProps('update')}
-        mutation={actions.postUpdate}
-      />
-      <TaskNoteDialog
-        key={`sendBack-${session}`}
-        kind="sendBack"
-        {...dialogProps('sendBack')}
-        mutation={actions.sendBack}
-      />
+      {steps.dialogs}
     </div>
   );
 }

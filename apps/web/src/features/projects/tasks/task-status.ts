@@ -52,3 +52,10 @@ export function taskStatusKey(task: ProjectTask): string {
   if (isBlocked(task)) return 'queued';
   return task.status;
 }
+
+/**
+ * Open tasks waiting for this one. An older API may not send the field yet, so a web
+ * release that reaches the browser first does not break the page.
+ */
+export const blockingOf = (task: ProjectTask): readonly string[] =>
+  (task as Partial<ProjectTask>).blocking ?? [];

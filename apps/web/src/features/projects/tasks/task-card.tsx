@@ -9,6 +9,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { TaskEvidenceLine } from '@/features/documents/task-evidence-line';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
+import { TaskTitleButton } from '../task-panel/task-title-button';
 import { TaskActions } from './task-actions';
 import { ReworkBadge, TaskCardNotes } from './task-card-notes';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
@@ -75,7 +76,12 @@ export function TaskCard({
             </p>
           ))}
         <div className="flex items-start justify-between gap-3">
-          <p className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}>{task.title}</p>
+          <TaskTitleButton
+            taskId={task.id}
+            className={cn('type-title-md', done ? 'text-ink-muted' : 'text-ink')}
+          >
+            {task.title}
+          </TaskTitleButton>
           <TaskActions task={task} />
         </div>
         <TaskCardNotes task={task} />
