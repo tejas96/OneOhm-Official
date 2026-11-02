@@ -10,12 +10,10 @@ import {
   Screen,
   Text,
   unwrap,
-  useTheme,
 } from '@oneohm/mobile-ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 import { api, keys } from '@/api/api';
 import { ScreenHeader } from '@/components/screen-header';
 import { useToast } from '@/components/toast';
@@ -25,10 +23,10 @@ import { businessClock, businessToday } from '@/lib/dates';
 import { type Checks, isIndianMobile, passes, withoutKeys } from '@/lib/form';
 import { useCurrentUser } from '@/session/session-provider';
 import { defaultFollowUp, FollowUpDates, FollowUpTime } from './follow-up-dates';
+import { NewLeadAlert } from './new-lead-alert';
 
 /** Capture a lead on site in under a minute; duplicates point to the existing lead. */
 export function NewLeadScreen() {
-  const theme = useTheme();
   const user = useCurrentUser();
   const client = useQueryClient();
   const toast = useToast();
@@ -125,24 +123,7 @@ export function NewLeadScreen() {
       <Text variant="body" tone="secondary">
         {NEW_LEAD.description}
       </Text>
-      {generalError ? (
-        <View
-          style={[styles.alert, { backgroundColor: theme.status.overdue.tint }]}
-          accessibilityRole="alert"
-        >
-          <Text variant="bodySm" color={theme.status.overdue.fg}>
-            {generalError}
-          </Text>
-          {duplicateId ? (
-            <Button
-              label={NEW_LEAD.openExisting}
-              variant="secondary"
-              size="sm"
-              onPress={() => router.replace(`/leads/${duplicateId}`)}
-            />
-          ) : null}
-        </View>
-      ) : null}
+      {generalError ? <NewLeadAlert message={generalError} duplicateId={duplicateId} /> : null}
       <Field label={NEW_LEAD.name} error={errors.name}>
         <Input
           value={form.name}
@@ -251,7 +232,3 @@ export function NewLeadScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  alert: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
-});

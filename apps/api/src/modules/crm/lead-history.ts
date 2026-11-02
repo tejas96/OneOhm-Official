@@ -56,30 +56,44 @@ export async function logLeadChanges(
   current: LeadDetail,
   { patch, step, stage, lost, owner }: LeadChange,
 ): Promise<void> {
-  const moved = movedNote(current, step, patch.stage);
-  const lostNow = stage === 'lost' && current.stage !== 'lost';
-  if (moved) {
-    const note = lostNow ? `${moved} ${lostNote(lost)}` : moved;
-    await logLead(db, current.id, actor.userId, 'stage_change', note);
-  } else if (stage === 'lost' && patch.revisitOn !== undefined) {
-    await logLead(db, current.id, actor.userId, 'follow_up', lostNote(lost));
-  }
-  const day = patch.nextActionOn ?? current.nextActionOn;
-  const time = patch.nextActionTime === undefined ? current.nextActionTime : patch.nextActionTime;
-  const newDay = Boolean(patch.nextActionOn) && patch.nextActionOn !== current.nextActionOn;
-  const newTime =
-    patch.nextActionTime !== undefined && patch.nextActionTime !== current.nextActionTime;
-  if (day && (newDay || newTime)) {
-    const what = patch.nextActionNote ? `: ${patch.nextActionNote}` : '';
-    const at = newDay && patch.nextActionTime === undefined ? '' : time ? ` at ${time}` : '';
-    const note = `Next action on ${day}${at}${what}.`;
-    await logLead(db, current.id, actor.userId, 'follow_up', note);
-  }
+  const move = moveLine(current, { patch, step, stage, lost });
+  if (move) await logLead(db, current.id, actor.userId, move.kind, move.note);
+  const followUp = followUpNote(current, patch);
+  if (followUp) await logLead(db, current.id, actor.userId, 'follow_up', followUp);
   if (!owner || owner === current.owner?.id) return;
   const [person] = await db.select({ name: users.fullName }).from(users).where(eq(users.id, owner));
   const note = `Owner set to ${person?.name ?? 'someone new'}.`;
   await logLead(db, current.id, actor.userId, 'note', note, true);
   if (owner !== actor.userId) await tellLeadOwner(db, owner, current, actor.fullName);
+}
+
+/** The stage move (with why it was lost), or why a lost lead's revisit day changed. */
+function moveLine(
+  current: LeadDetail,
+  { patch, step, stage, lost }: Omit<LeadChange, 'owner'>,
+): { readonly kind: ActivityKind; readonly note: string } | null {
+  const moved = movedNote(current, step, patch.stage);
+  const lostNow = stage === 'lost' && current.stage !== 'lost';
+  if (moved) {
+    return { kind: 'stage_change', note: lostNow ? `${moved} ${lostNote(lost)}` : moved };
+  }
+  if (stage === 'lost' && patch.revisitOn !== undefined) {
+    return { kind: 'follow_up', note: lostNote(lost) };
+  }
+  return null;
+}
+
+/** "Next action on <day> at <time>: <what>." when the day or time changed; else null. */
+function followUpNote(current: LeadDetail, patch: LeadPatch): string | null {
+  const day = patch.nextActionOn ?? current.nextActionOn;
+  const time = patch.nextActionTime === undefined ? current.nextActionTime : patch.nextActionTime;
+  const newDay = Boolean(patch.nextActionOn) && patch.nextActionOn !== current.nextActionOn;
+  const newTime =
+    patch.nextActionTime !== undefined && patch.nextActionTime !== current.nextActionTime;
+  if (!day || !(newDay || newTime)) return null;
+  const what = patch.nextActionNote ? `: ${patch.nextActionNote}` : '';
+  const at = newDay && patch.nextActionTime === undefined ? '' : time ? ` at ${time}` : '';
+  return `Next action on ${day}${at}${what}.`;
 }
 
 /**

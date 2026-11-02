@@ -1,6 +1,8 @@
 {
   "extends": "@oneohm/tsconfig/library.json",
-  "compilerOptions": { "types": ["node"] },
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.fixtures.ts"]
 }
