@@ -74,7 +74,7 @@ export function GpsFields({
   readonly errors: (field: string) => string | undefined;
 }) {
   const t = useTranslations('customers.property');
-  const mapsT = useTranslations('common.maps');
+  const mapsT = useTranslations('maps');
   const mapsKey = useMapsKey();
   const company = useCompany();
   const [latitude, setLatitude] = useState(text(initial?.latitude));

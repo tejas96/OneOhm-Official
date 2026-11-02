@@ -34,7 +34,7 @@ export function PinMap(props: PinMapProps) {
 }
 
 function PinMapCanvas({ value, onChange, radiusM, fallbackCenter }: PinMapProps) {
-  const t = useTranslations('common.maps');
+  const t = useTranslations('maps');
   return (
     <div className="flex flex-col gap-1.5">
       <div
