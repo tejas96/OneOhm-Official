@@ -151,9 +151,12 @@ export class QuotationsService {
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be accepted.', 'not_open');
     await this.assertManagerFor(actor, id);
-    await this.db.transaction((tx) =>
-      acceptInTx(tx, quotation, actor.userId, { totalPaise: quotation.totalPaise }),
-    );
+    await this.db.transaction(async (tx) => {
+      const data = { totalPaise: quotation.totalPaise };
+      // Accepted a moment ago (by the customer on WhatsApp, say): the same answer as before.
+      if (!(await acceptInTx(tx, quotation, actor.userId, data)))
+        throw conflict('Only open quotations can be accepted.', 'not_open');
+    });
     return this.get(id);
   }
 
@@ -175,12 +178,13 @@ export class QuotationsService {
     return this.db.transaction(async (tx) => {
       const verdict = await customerVerdict(tx, quotation, input.phoneE164);
       if (verdict !== 'open') return verdict;
-      await acceptInTx(tx, quotation, null, {
+      const accepted = await acceptInTx(tx, quotation, null, {
         by: 'customer',
         phone: input.phoneE164,
         channel: 'whatsapp',
         totalPaise: quotation.totalPaise,
       });
+      if (!accepted) return 'already';
       await tellStartProject(tx, quotation);
       return 'accepted';
     });

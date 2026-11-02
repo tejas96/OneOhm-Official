@@ -23,19 +23,23 @@ export type CustomerAcceptance = 'accepted' | 'already' | 'not_open' | 'not_owne
 /**
  * Marks the quotation accepted in the caller's transaction: other revisions of its number
  * are replaced, the lead moves to won, and the audit row says who and how. `actorUserId`
- * is null when the customer accepted it themselves.
+ * is null when the customer accepted it themselves. False, with nothing changed, when the
+ * quotation was no longer open: someone else accepted (or closed) it a moment before.
  */
 export async function acceptInTx(
   tx: Transaction,
   quotation: QuotationDetail,
   actorUserId: string | null,
   auditData: Record<string, unknown>,
-): Promise<void> {
+): Promise<boolean> {
   const id = quotation.id;
-  await tx
+  // Only an open quotation moves; a staff Accept racing the customer's "yes" waits here.
+  const [accepted] = await tx
     .update(quotations)
     .set({ status: 'accepted', acceptedAt: new Date(), updatedAt: new Date() })
-    .where(eq(quotations.id, id));
+    .where(and(eq(quotations.id, id), inArray(quotations.status, ['draft', 'sent'])))
+    .returning({ id: quotations.id });
+  if (!accepted) return false;
   await tx
     .update(quotations)
     .set({ status: 'superseded', updatedAt: new Date() })
@@ -59,6 +63,7 @@ export async function acceptInTx(
     await closeStaleChanges(tx, id, quotation.number, actorUserId);
   }
   await recordAudit(tx, actorUserId, 'quotation.accepted', 'quotation', id, auditData);
+  return true;
 }
 
 /**

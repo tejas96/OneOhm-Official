@@ -154,6 +154,26 @@ describe('WhatsApp quote and pay', () => {
     expect(await thanks(quotation.id)).toHaveLength(1);
   });
 
+  it('accepts once when the customer and staff accept at the same moment', async () => {
+    // The staff call starts a little later each round, so some round lands inside the
+    // customer's transaction whatever the machine's speed.
+    for (let delay = 0; delay < 60; delay += 6) {
+      const { customer, quotation } = await sentQuote('Quote Race Customer (test)');
+      const [, staff] = await Promise.all([
+        sendInbound(customer.phone, { buttonPayload: `quote_yes:${quotation.id}` }),
+        new Promise((done) => setTimeout(done, delay)).then(() =>
+          admin.raw('POST', `/quotations/${quotation.id}/accept`),
+        ),
+      ]);
+
+      expect(await statusOf(quotation.id)).toBe('accepted');
+      expect(await acceptances(quotation.id)).toHaveLength(1);
+      // Whoever lost the race was told: staff get a 409, the customer only a thank-you.
+      expect([200, 409]).toContain(staff.status);
+      expect(await thanks(quotation.id)).toHaveLength(1);
+    }
+  });
+
   it('refuses an old revision and hands over', async () => {
     const { customer, quotation: first } = await sentQuote('Quote Old Revision Customer (test)');
     const second = await createQuotation(admin, customer, { targetWp: 4000 });
