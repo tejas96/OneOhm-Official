@@ -1,4 +1,5 @@
 import type { PointsEntry } from '@oneohm/api-contracts';
+import { isMissedLine } from '@oneohm/domain';
 import { Card, Text, useTheme } from '@oneohm/mobile-ui';
 import { StyleSheet, View } from 'react-native';
 import { REWARDS } from '@/copy/engagement';
@@ -29,7 +30,7 @@ export function PointsHistory({ entries }: { readonly entries: readonly PointsEn
               {REWARDS.source[entry.sourceType]} · {dayOf(entry.createdAt)}
             </Text>
           </View>
-          {entry.points === 0 ? (
+          {isMissedLine(entry) ? (
             <Text variant="label" color={theme.status.atRisk.fg}>
               {REWARDS.missedPoints}
             </Text>

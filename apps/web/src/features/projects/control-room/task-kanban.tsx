@@ -89,7 +89,9 @@ export function TaskKanban({ tasks }: { readonly tasks: readonly ProjectTask[] }
               count={columns[column].length}
             >
               {column === 'completed' && !showDone ? (
-                columns.completed.length > 0 && (
+                columns.completed.length === 0 ? (
+                  <p className="px-1 py-3 type-body-sm text-ink-faint">{t('doneHidden')}</p>
+                ) : (
                   <Button size="sm" variant="quiet" onClick={() => setShowDone(true)}>
                     {t('show', { count: columns.completed.length })}
                   </Button>
@@ -126,6 +128,11 @@ const jumpColumns: KeyboardCoordinateGetter = (event, { active, currentCoordinat
   const { collisionRect, droppableRects, over } = context;
   if (!collisionRect) return undefined;
   const from = (over?.id ?? context.active?.data.current?.task?.status) as BoardColumn | undefined;
+  // Up and down mean nothing on the board: hold the card and keep the page still.
+  if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+    event.preventDefault();
+    return currentCoordinates;
+  }
   const to = from ? columnStep(from, event.code) : null;
   if (!to) return undefined;
   event.preventDefault();

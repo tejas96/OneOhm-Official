@@ -16,7 +16,7 @@ export type BoardMove =
   | { readonly kind: 'step'; readonly step: TaskStep }
   | {
       readonly kind: 'denied';
-      readonly reason: 'blocked' | 'backwards' | 'notAllowed' | 'same';
+      readonly reason: 'blocked' | 'backwards' | 'automatic' | 'notAllowed' | 'same';
     };
 
 /** Which task step a drop on each column means, best match first. */
@@ -41,6 +41,8 @@ export function boardMove(task: ProjectTask, to: BoardColumn, rights: TaskRights
     if (step) return { kind: 'step', step };
   }
   if (to === task.status) return { kind: 'denied', reason: 'same' };
+  // Not started turns Ready on its own once the work before it is done.
+  if (to === 'ready' && task.status === 'pending') return { kind: 'denied', reason: 'automatic' };
   if (to === 'pending' || to === 'ready') return { kind: 'denied', reason: 'backwards' };
   if (isBlocked(task)) return { kind: 'denied', reason: 'blocked' };
   return { kind: 'denied', reason: 'notAllowed' };

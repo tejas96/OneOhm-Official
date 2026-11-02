@@ -53,9 +53,7 @@ describe('Stale tasks and the Urgent notice', () => {
     ) as ProjectTask;
     await setTaskDates(ready.id, { dueDate: addDays(today(), 5) });
     await ageTask(ready.id, 4);
-    expect((await project(admin, other.project.id)).toneLabel).toBe(
-      '1 task not updated',
-    );
+    expect((await project(admin, other.project.id)).toneLabel).toBe('1 task not updated');
   });
 
   it("the team's own late work shows before a wait on the bank", async () => {

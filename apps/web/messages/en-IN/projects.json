@@ -532,8 +532,14 @@
       "timelineError": "Could not load the history.",
       "postUpdate": "Post update",
       "blocker": "{title} · {who}, {days, plural, =0 {on time} one {# day late} other {# days late}}",
-      "blockerOutside": "{title} · waiting on the {party}",
-      "nobody": "unassigned"
+      "blockerOutside": "{title} · waiting on {party}{days, plural, =0 {} one {, # day late} other {, # days late}}",
+      "nobody": "unassigned",
+      "party": {
+        "internal": "our team",
+        "customer": "the customer",
+        "bank": "the bank",
+        "discom": "the DISCOM"
+      }
     },
     "kanban": {
       "drag": "Move {title}",
@@ -545,14 +551,16 @@
       "denied": {
         "blocked": "Blocked: finish the tasks it waits for first.",
         "backwards": "Tasks cannot move back to not started.",
-        "notAllowed": "You cannot make this move on this task."
+        "notAllowed": "You cannot make this move on this task.",
+        "automatic": "Not started tasks become Ready by themselves when the work before them is done."
       },
       "announce": {
         "start": "Picked up {title}.",
         "over": "{title} is over {column}.",
         "end": "{title} dropped on {column}.",
         "cancel": "Move cancelled. {title} stays where it was."
-      }
+      },
+      "doneHidden": "Done tasks show when the view is set to All."
     },
     "priority": {
       "none": "No priority",

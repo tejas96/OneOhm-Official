@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { MyWorkday } from '@oneohm/api-contracts';
 import { leaveRequests, pointsEntries } from '@oneohm/database';
-import { todayIn } from '@oneohm/shared';
+import { monthOf, todayIn } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
 import { AttendanceService } from './attendance.service';
+import { lifetimePoints } from './points-total';
 import { loadPolicy } from './policy';
 import { trackingFor } from './tracking';
 import { balancesOf, readDays, readLeave, readPoints } from './workforce-read';
@@ -32,7 +33,9 @@ export class WorkdayService {
         500,
       ),
     ]);
-    const month = today.slice(0, 7);
+    // India months, the same rule as My rewards and the monthly review.
+    const month = monthOf(new Date());
+    const total = await lifetimePoints(this.db, actor.userId);
     return {
       today: days.get(actor.userId) ?? null,
       consent: {
@@ -60,9 +63,9 @@ export class WorkdayService {
         .filter((record) => record.toDate >= today || record.status === 'pending')
         .slice(0, 10),
       points: {
-        total: points.reduce((sum, entry) => sum + entry.points, 0),
+        total,
         thisMonth: points
-          .filter((entry) => entry.createdAt.slice(0, 7) === month)
+          .filter((entry) => monthOf(new Date(entry.createdAt)) === month)
           .reduce((sum, entry) => sum + entry.points, 0),
         recent: points.slice(0, 8),
       },

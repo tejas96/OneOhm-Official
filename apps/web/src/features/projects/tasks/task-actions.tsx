@@ -13,8 +13,21 @@ import { useTaskSteps } from './use-task-steps';
  * person may do is offered (see `useTaskRights`).
  */
 export function TaskActions({ task }: { readonly task: ProjectTask }) {
-  const t = useTranslations('projects.task.actions');
   const steps = useTaskSteps(task);
+  return (
+    <>
+      <TaskStepButtons steps={steps} />
+      {steps.dialogs}
+    </>
+  );
+}
+
+/**
+ * The button and menu for steps someone already holds (the task panel), so its dialogs
+ * are rendered once by that holder, never twice.
+ */
+export function TaskStepButtons({ steps }: { readonly steps: ReturnType<typeof useTaskSteps> }) {
+  const t = useTranslations('projects.task.actions');
   const [menuOpen, setMenuOpen] = useState(false);
   const { primary, menu } = steps;
   if (!primary && menu.length === 0) return null;
@@ -66,7 +79,6 @@ export function TaskActions({ task }: { readonly task: ProjectTask }) {
           </ul>
         </Popover>
       )}
-      {steps.dialogs}
     </div>
   );
 }

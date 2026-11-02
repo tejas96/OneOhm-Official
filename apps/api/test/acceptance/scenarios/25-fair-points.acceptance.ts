@@ -1,10 +1,19 @@
 import type { PointsEntry, ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addTaskWait, ageHandIns, ageWait, closeDb, rows, setTaskDates } from '../support/db';
+import {
+  addLeave,
+  addTaskWait,
+  ageHandIns,
+  ageWait,
+  closeDb,
+  rows,
+  setTaskDates,
+} from '../support/db';
+import { upload } from '../support/files';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
-import { project, surveyFacts, taskByKey, workTask } from '../support/tasks';
+import { factsFor, project, surveyFacts, taskByKey, workTask } from '../support/tasks';
 
 // Spec 3.7: on time is judged on the hand-in day, against a due date moved later by
 // outside waits and leave; first-time right needs an approval step; a missed part
@@ -173,6 +182,45 @@ describe('Fair points', () => {
       reason: 'First-time right: Site survey and measurements',
     });
     await retire(admin, [other]);
+  });
+
+  it('a full day of leave counts, a half day does not', async () => {
+    const full = await fresh('Leave Day (test)', 'electricity_details');
+    await setTaskDates(full.task.id, {
+      startDate: addDays(today(), -6),
+      dueDate: addDays(today(), -1),
+    });
+    await addLeave(doer.id, addDays(today(), -4), addDays(today(), -4));
+    await workTask(admin, full.task, { as: me });
+    expect((await entriesFor(full.task))[0]?.points).toBe(10);
+
+    const half = await fresh('Half Day (test)', 'electricity_details');
+    await setTaskDates(half.task.id, {
+      startDate: addDays(today(), -3),
+      dueDate: addDays(today(), -1),
+    });
+    await addLeave(doer.id, addDays(today(), -2), addDays(today(), -2), true);
+    await workTask(admin, half.task, { as: me });
+    expect((await entriesFor(half.task))[0]?.points).toBe(0);
+  });
+
+  it('two people completing at the same moment: one finishes it, one person is credited', async () => {
+    const { task } = await fresh('Double Complete (test)', 'electricity_details');
+    await me.post(`/tasks/${task.id}/start`);
+    for (const kind of ['photo', 'document', 'signature'] as const)
+      if (task.missingEvidence.includes(kind)) await upload(me, kind, { taskId: task.id });
+    const body = { facts: factsFor(task), note: 'Done (test)' };
+    const replies = await Promise.all([
+      me.raw('POST', `/tasks/${task.id}/complete`, body),
+      admin.raw('POST', `/tasks/${task.id}/complete`, body),
+      me.raw('POST', `/tasks/${task.id}/complete`, body),
+    ]);
+    expect(replies.filter((reply) => reply.status === 200)).toHaveLength(1);
+    const credited = await rows<{ userId: string }>(
+      'SELECT DISTINCT user_id AS "userId" FROM points_entries WHERE source_id = $1',
+      [task.id],
+    );
+    expect(credited.length).toBeLessThanOrEqual(1);
   });
 
   it('a task without approval gets only the on-time line', async () => {

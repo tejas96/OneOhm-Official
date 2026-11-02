@@ -11,6 +11,7 @@ import {
   stageRatings,
   users,
 } from '@oneohm/database';
+import { isMissedLine } from '@oneohm/domain';
 import { monthRange, previousMonth } from '@oneohm/shared';
 import { and, asc, eq, inArray, type SQL, sql } from 'drizzle-orm';
 
@@ -20,12 +21,9 @@ export function inMonth(column: typeof pointsEntries.createdAt, month: string): 
   return sql`(${column} at time zone 'Asia/Kolkata')::date between ${start}::date and ${end}::date`;
 }
 
-/**
- * A judged part was earned when its reason starts so (spec 3.7). Only the start is read,
- * never the task title after it.
- */
-export const earned = (reason: string) =>
-  reason.startsWith('On time') || reason.startsWith('First-time right');
+/** A judged part was earned unless the shared rule reads it as missed (spec 3.7). */
+export const earned = (line: { readonly sourceType: string; readonly reason: string }) =>
+  !isMissedLine(line);
 
 /** When the fair points rules started; null only before migration 0055. */
 export async function fairPointsSince(db: DatabaseExecutor): Promise<Date | null> {
@@ -57,8 +55,8 @@ export function monthTotals(
   return {
     points: lines.reduce((sum, line) => sum + line.points, 0),
     tasksJudged: onTime.length,
-    onTimeRate: rate(onTime.filter((line) => earned(line.reason)).length, onTime.length),
-    firstTimeRate: rate(first.filter((line) => earned(line.reason)).length, first.length),
+    onTimeRate: rate(onTime.filter(earned).length, onTime.length),
+    firstTimeRate: rate(first.filter(earned).length, first.length),
   };
 }
 

@@ -2,6 +2,7 @@
 
 import type { MonthlyRow } from '@oneohm/api-contracts';
 import { cn, EmptyState, Sheet } from '@oneohm/design-system/web';
+import { isMissedLine } from '@oneohm/domain';
 import { ListChecks } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -47,7 +48,7 @@ export function MonthlyPersonSheet({
                   <span
                     className={cn(
                       'type-body-sm',
-                      line.points === 0 ? 'text-ink-muted' : 'text-ink',
+                      isMissedLine(line) ? 'text-ink-muted' : 'text-ink',
                     )}
                   >
                     {line.reason}
@@ -55,10 +56,10 @@ export function MonthlyPersonSheet({
                   <span
                     className={cn(
                       'shrink-0 font-mono text-[0.8125rem] tabular-nums',
-                      line.points === 0 ? 'text-at-risk' : 'text-on-track',
+                      isMissedLine(line) ? 'text-at-risk' : 'text-on-track',
                     )}
                   >
-                    {line.points === 0 ? t('missed') : `+${line.points}`}
+                    {isMissedLine(line) ? t('missed') : `+${line.points}`}
                   </span>
                 </li>
               ))}

@@ -123,3 +123,12 @@ export function judgeTask(facts: TaskPointFacts): {
         };
   return { onTime: { ...onTime, judgedDue, daysLate }, firstTimeRight };
 }
+
+/**
+ * A task line the person did not earn (spec 3.7). Read from the start of its reason,
+ * never from its points (a part can be set to 0 in Settings) or the task title.
+ */
+export function isMissedLine(line: { readonly sourceType: string; readonly reason: string }) {
+  if (!line.sourceType.startsWith('task_')) return false;
+  return !(line.reason.startsWith('On time') || line.reason.startsWith('First-time right'));
+}

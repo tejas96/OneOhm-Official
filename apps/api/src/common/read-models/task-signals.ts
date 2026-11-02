@@ -3,6 +3,7 @@ import type { projectTasks, TaskFreshness } from '@oneohm/database';
 import { blockerDetails } from './task-blockers';
 import type { loadTaskLinks } from './task-blocking';
 import { blockingTitles } from './task-blocking';
+import { unlocksPayment } from './unlocks-payment';
 
 type Links = Awaited<ReturnType<typeof loadTaskLinks>>;
 
@@ -10,6 +11,8 @@ interface SignalContext extends Links {
   readonly setters: readonly { readonly id: string; readonly fullName: string }[];
   readonly freshness: ReadonlyMap<string, TaskFreshness>;
   readonly today: string;
+  /** `projectId:trigger` of payments still waiting for their task. */
+  readonly waitingPayments: ReadonlySet<string>;
 }
 
 /**
@@ -43,7 +46,7 @@ export function ownershipSignals(
           .map((dep) => blockerDetails(dep, context.today)),
     priority: task.priority,
     prioritySetBy: context.setters.find((user) => user.id === task.prioritySetByUserId) ?? null,
-    unlocksPayment: Boolean(task.onComplete) && task.onComplete !== 'project_operational',
+    unlocksPayment: unlocksPayment(task.projectId, task.onComplete, context.waitingPayments),
     blocksUrgent:
       !done &&
       context.dependents.some(

@@ -20,7 +20,11 @@ export interface RankInput {
 
 /** Why a task sits where it does, best reason first. */
 export type DoNextReason =
-  | { readonly kind: 'priority'; readonly priority: 'urgent' | 'high'; readonly by: string | null }
+  | {
+      readonly kind: 'priority';
+      readonly priority: 'urgent' | 'high' | 'low';
+      readonly by: string | null;
+    }
   | { readonly kind: 'blocksUrgent' }
   | { readonly kind: 'overdue'; readonly days: number }
   | { readonly kind: 'blocks'; readonly count: number; readonly payment: boolean }
@@ -69,6 +73,9 @@ export function rankTasks<T extends RankInput>(tasks: readonly T[], _today: stri
 export function doNextReason(task: RankInput, today: string): DoNextReason {
   if (task.priority === 'urgent' || task.priority === 'high')
     return { kind: 'priority', priority: task.priority, by: task.prioritySetBy?.fullName ?? null };
+  // Low sits below other work on purpose; say so rather than "overdue".
+  if (task.priority === 'low')
+    return { kind: 'priority', priority: 'low', by: task.prioritySetBy?.fullName ?? null };
   if (task.blocksUrgent) return { kind: 'blocksUrgent' };
   if (task.overdue) return { kind: 'overdue', days: Math.max(1, daysBetween(task.dueDate, today)) };
   if (task.blocking.length > 0 || task.unlocksPayment)

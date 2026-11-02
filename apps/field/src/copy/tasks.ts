@@ -69,7 +69,8 @@ export const TASK = {
   blockingBody: 'These start when you finish this one.',
   blocker: (title: string, who: string | null, daysLate: number) =>
     `${title} · ${who ?? 'unassigned'}, ${daysLate === 0 ? 'on time' : `${daysLate} ${daysLate === 1 ? 'day' : 'days'} late`}`,
-  blockerOutside: (title: string, party: string) => `${title} · waiting on the ${party}`,
+  blockerOutside: (title: string, party: string, daysLate: number) =>
+    `${title} · waiting on the ${party}${daysLate === 0 ? '' : `, ${daysLate} ${daysLate === 1 ? 'day' : 'days'} late`}`,
   updatedLabel: 'Last update',
   stale: (days: number) => `No update for ${days} ${days === 1 ? 'day' : 'days'}`,
   blockedTitle: 'Finish these first',

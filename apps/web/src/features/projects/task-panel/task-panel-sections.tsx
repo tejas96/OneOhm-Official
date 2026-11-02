@@ -7,6 +7,16 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { blockingOf } from '../tasks/task-status';
 
+/** Stable keys for lines that may repeat (two tasks can share a title). */
+const keyed = (lines: readonly string[]) => {
+  const seen = new Map<string, number>();
+  return lines.map((text) => {
+    const count = (seen.get(text) ?? 0) + 1;
+    seen.set(text, count);
+    return { key: `${text}#${count}`, text };
+  });
+};
+
 /** A titled block in the task panel. */
 export function PanelSection({
   title,
@@ -31,7 +41,7 @@ export function PanelSection({
 /** What this task waits for, and what waits for it (spec 3.4). */
 export function BlockersSection({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.panel');
-  const partyT = useTranslations('commandCenter.party');
+  const partyT = useTranslations('projects.panel.party');
   const details = task.blockers ?? [];
   // Change requests and budget holds have no task behind them: titles only.
   const others = (task.status === 'completed' ? [] : task.blockedBy).filter(
@@ -41,7 +51,11 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
     ...details.map((blocker) => ({
       key: blocker.title,
       text: blocker.waitingOn
-        ? t('blockerOutside', { title: blocker.title, party: partyT(blocker.waitingOn) })
+        ? t('blockerOutside', {
+            title: blocker.title,
+            party: partyT(blocker.waitingOn),
+            days: blocker.daysLate,
+          })
         : t('blocker', {
             title: blocker.title,
             who: blocker.assignee ?? t('nobody'),
@@ -56,8 +70,11 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
       {waiting.length > 0 && (
         <PanelSection title={t('waitingFor')}>
           <ul className="flex flex-col gap-1.5">
-            {waiting.map((line) => (
-              <li key={line.key} className="flex items-start gap-2 type-body text-ink">
+            {waiting.map((line, index) => (
+              <li
+                key={`${index}-${line.key}`}
+                className="flex items-start gap-2 type-body text-ink"
+              >
                 <Lock aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
                 {line.text}
               </li>
@@ -68,10 +85,10 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
       {blocking.length > 0 && (
         <PanelSection title={t('blocking', { count: blocking.length })}>
           <ul className="flex flex-col gap-1.5">
-            {blocking.map((title) => (
-              <li key={title} className="flex items-start gap-2 type-body text-ink">
+            {keyed(blocking).map((line) => (
+              <li key={line.key} className="flex items-start gap-2 type-body text-ink">
                 <ArrowRight aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
-                {title}
+                {line.text}
               </li>
             ))}
           </ul>

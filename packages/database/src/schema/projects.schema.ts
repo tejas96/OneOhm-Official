@@ -144,7 +144,11 @@ export const taskDependencies = pgTable(
       .notNull()
       .references(() => projectTasks.id, { onDelete: 'cascade' }),
   },
-  (table) => [primaryKey({ columns: [table.taskId, table.dependsOnTaskId] })],
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.dependsOnTaskId] }),
+    // What a task is blocking (spec 3.4): looked up from the other side on every task list.
+    index('task_dependencies_depends_on_idx').on(table.dependsOnTaskId),
+  ],
 );
 
 /** Facts captured once by tasks and reused by reports and documents (PRD 3.18). */

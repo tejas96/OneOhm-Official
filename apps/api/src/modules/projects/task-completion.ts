@@ -9,6 +9,7 @@ import {
 } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { conflict } from '../../common/http/errors';
 import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
@@ -28,10 +29,14 @@ type TaskRow = typeof projectTasks.$inferSelect;
  */
 export async function finishTask(tx: Transaction, task: TaskRow, userId: string): Promise<void> {
   const now = new Date();
-  await tx
+  // Only one finish wins: a second one at the same moment finds it done and stops, so
+  // nothing after this (payments, points) runs twice.
+  const finished = await tx
     .update(projectTasks)
     .set({ status: 'completed', completedAt: now, completedByUserId: userId, updatedAt: now })
-    .where(eq(projectTasks.id, task.id));
+    .where(and(eq(projectTasks.id, task.id), ne(projectTasks.status, 'completed')))
+    .returning({ id: projectTasks.id });
+  if (finished.length === 0) throw conflict('This task is already done.', 'done');
 
   const dependents = await tx
     .select({ taskId: taskDependencies.taskId })

@@ -9,7 +9,7 @@ import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
 import { StaleBadge } from '../tasks/stale-badge';
-import { TaskActions } from '../tasks/task-actions';
+import { TaskStepButtons } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
 import { taskStatusKey, taskTone } from '../tasks/task-status';
@@ -101,7 +101,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
           ) : (
             <span />
           )}
-          <TaskActions task={task} />
+          <TaskStepButtons steps={steps} />
         </div>
       </div>
 
