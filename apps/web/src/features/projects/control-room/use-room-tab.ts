@@ -14,7 +14,7 @@ export const ROOM_TABS = [
 ] as const;
 export type RoomTab = (typeof ROOM_TABS)[number];
 
-export const TASK_LAYOUTS = ['board', 'list'] as const;
+export const TASK_LAYOUTS = ['board', 'list', 'kanban'] as const;
 export type TaskLayout = (typeof TASK_LAYOUTS)[number];
 
 function pick<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {

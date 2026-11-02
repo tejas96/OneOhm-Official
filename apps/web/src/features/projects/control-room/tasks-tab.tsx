@@ -2,12 +2,13 @@
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { EmptyState, SegmentedControl } from '@oneohm/design-system/web';
-import { CircleCheck, ListChecks, ListTree, Rows3 } from 'lucide-react';
+import { CircleCheck, Columns3, ListChecks, ListTree, Rows3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useCurrentUser } from '@/providers/current-user';
 import type { ProjectSignals } from './room-signals';
 import { TaskBoard } from './task-board';
+import { TaskKanban } from './task-kanban';
 import { inScope, TASK_SCOPES, type TaskScope } from './task-scope';
 import { TaskTable } from './task-table';
 import { useRoomTab } from './use-room-tab';
@@ -54,6 +55,7 @@ export function TasksTab({
             options={[
               { value: 'board', label: tabT('board'), icon: <ListTree aria-hidden /> },
               { value: 'list', label: tabT('list'), icon: <Rows3 aria-hidden /> },
+              { value: 'kanban', label: tabT('kanban'), icon: <Columns3 aria-hidden /> },
             ]}
           />
         </div>
@@ -65,6 +67,8 @@ export function TasksTab({
         />
       ) : layout === 'list' ? (
         <TaskTable tasks={shown} />
+      ) : layout === 'kanban' ? (
+        <TaskKanban tasks={shown} />
       ) : (
         <TaskBoard project={project} scope={scope} />
       )}
