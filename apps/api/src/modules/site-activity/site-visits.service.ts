@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SiteVisit, TaskSite } from '@oneohm/api-contracts';
 import { properties, siteVisits } from '@oneohm/database';
-import { siteDistance } from '@oneohm/domain';
+import { type GeoPoint, locationChange, siteDistance } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, isNull, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -10,6 +10,7 @@ import { conflict, forbidden, invalid } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
 import { type Position, trackingFor, usableReading } from '../workforce/tracking';
+import { SitePinService } from './site-pin.service';
 import { loadSiteTask, type SiteTask } from './site-task';
 import { noteCheckIn, noteCheckOut, noteSiteSaved } from './site-visit-events';
 import { checkInPoint, readVisits, visitRecords } from './site-visit-read';
@@ -26,7 +27,10 @@ const accuracy = (position: Position) =>
  */
 @Injectable()
 export class SiteVisitsService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly pins: SitePinService,
+  ) {}
 
   async taskSite(actor: Actor, taskId: string): Promise<TaskSite> {
     const task = await loadSiteTask(this.db, actor, taskId);
@@ -114,26 +118,45 @@ export class SiteVisitsService {
   }
 
   /**
-   * The person at the site saves their check-in spot as the site's location, when none
-   * is saved yet. Later check-ins are measured against it.
+   * The person at the site sets the site's location: the roof they pinned on the map, or
+   * (older apps, no map) their check-in reading, which only fills an empty location.
+   * Later check-ins are measured against it.
    */
-  async saveSiteLocation(actor: Actor, taskId: string): Promise<TaskSite> {
+  async saveSiteLocation(actor: Actor, taskId: string, pin?: GeoPoint): Promise<TaskSite> {
     const task = await this.ownSiteTask(actor, taskId);
-    if (task.site) throw conflict('This site already has a saved location.', 'site_located');
     const open = await this.openVisitOn(actor, task.id);
+    if (pin) {
+      if (!open) throw invalid('Check in at this site first.');
+      await this.pins.pin(actor, task, open, pin);
+      return this.taskSite(actor, taskId);
+    }
+    if (locationChange({ point: task.site, source: task.siteSource }, 'gps') === 'ask')
+      throw conflict('This site already has a saved location.', 'site_located');
     const point = open ? checkInPoint(open) : null;
     if (!open || !point)
       throw invalid('Check in here with your location shared first.', { position: 'Missing.' });
     await this.db.transaction(async (tx) => {
+      const now = new Date();
       await tx
         .update(properties)
-        .set({ latitude: point.latitude, longitude: point.longitude, updatedAt: new Date() })
+        .set({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          locationSource: 'gps',
+          locationAccuracyM: open.checkInAccuracyM,
+          locatedAt: now,
+          locatedByUserId: actor.userId,
+          locationFlagged: false,
+          locationFlagDistanceM: null,
+          updatedAt: now,
+        })
         .where(and(eq(properties.id, task.propertyId), isNull(properties.latitude)));
       await tx
         .update(siteVisits)
-        .set({ checkInDistanceM: 0, checkInFar: false, updatedAt: new Date() })
+        .set({ checkInDistanceM: 0, checkInFar: false, updatedAt: now })
         .where(eq(siteVisits.id, open.id));
       await recordAudit(tx, actor.userId, 'property.located', 'property', task.propertyId, {
+        source: 'gps',
         fromVisit: open.id,
         accuracyM: open.checkInAccuracyM,
       });
@@ -195,6 +218,9 @@ export class SiteVisitsService {
         task.site === null &&
         task.assigneeUserId === actor.userId &&
         Boolean(openHere && checkInPoint(openHere.row)),
+      sitePoint: task.site,
+      siteFlagged: task.siteFlagged,
+      canPinSite: task.assigneeUserId === actor.userId && Boolean(openHere),
     };
   }
 }

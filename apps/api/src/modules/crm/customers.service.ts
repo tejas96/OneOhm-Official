@@ -20,6 +20,7 @@ import { type CustomerPatch, editCustomer } from './customer-edit';
 import { logLead } from './lead-history';
 import { LeadsService } from './leads.service';
 import { addSite, editSite, insertLeadSite } from './site-edit';
+import { confirmSiteLocation, restoreSiteLocation } from './site-location';
 import { savingSite } from './site-rules';
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
@@ -186,6 +187,18 @@ export class CustomersService {
 
   async updateProperty(actor: Actor, id: string, patch: Patch<PropertyInput>): Promise<Property> {
     await editSite(this.db, actor, await this.property(id), patch);
+    return presentProperty(await this.property(id));
+  }
+
+  /** The office keeps a flagged site pin (design 6.2). */
+  async confirmLocation(actor: Actor, id: string): Promise<Property> {
+    await confirmSiteLocation(this.db, actor, id);
+    return presentProperty(await this.property(id));
+  }
+
+  /** The office puts back the site's earlier point. */
+  async restoreLocation(actor: Actor, id: string): Promise<Property> {
+    await restoreSiteLocation(this.db, actor, id);
     return presentProperty(await this.property(id));
   }
 

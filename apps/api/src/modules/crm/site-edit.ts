@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { definedOnly, type Patch } from '../../common/patch';
+import { webLocation } from './site-location';
 import { assertConsumerNumberFree, assertLabelFree, freeLabel, savingSite } from './site-rules';
 
 /** Staff who may see customers are told whose site already has a consumer number. */
@@ -21,11 +22,21 @@ export async function insertLeadSite(
     reveal: reveals(actor),
   });
   const label = await freeLabel(tx, customerId, input.label);
+  const { locationSource, ...fields } = input;
+  const located = webLocation(actor, null, input, locationSource);
   const [created] = await tx
     .insert(properties)
-    .values({ customerId, ...input, label, households: input.households ?? null })
+    .values({
+      customerId,
+      ...fields,
+      ...located?.fields,
+      label,
+      households: input.households ?? null,
+    })
     .returning({ id: properties.id });
   if (!created) throw new Error('Property insert returned nothing.');
+  if (located)
+    await recordAudit(tx, actor.userId, 'property.located', 'property', created.id, located.audit);
   return created.id;
 }
 
@@ -41,11 +52,13 @@ export async function addSite(
     field: 'consumerNumber',
     reveal: reveals(actor),
   });
+  const { locationSource, ...fields } = input;
+  const located = webLocation(actor, null, input, locationSource);
   return savingSite('consumerNumber', () =>
     db.transaction(async (tx) => {
       const [created] = await tx
         .insert(properties)
-        .values({ customerId, ...input, households: input.households ?? null })
+        .values({ customerId, ...fields, ...located?.fields, households: input.households ?? null })
         .returning({ id: properties.id });
       if (!created) throw new Error('Property insert returned nothing.');
       await recordAudit(tx, actor.userId, 'property.created', 'property', created.id, {
@@ -53,6 +66,15 @@ export async function addSite(
         label: input.label,
         consumerNumber: input.consumerNumber ?? null,
       });
+      if (located)
+        await recordAudit(
+          tx,
+          actor.userId,
+          'property.located',
+          'property',
+          created.id,
+          located.audit,
+        );
       return created.id;
     }),
   );
@@ -76,11 +98,15 @@ export async function editSite(
     field: 'consumerNumber',
     reveal: reveals(actor),
   });
+  const { locationSource, ...fields } = patch;
+  const located = webLocation(actor, current, patch, locationSource);
   await savingSite('consumerNumber', () =>
     db
       .update(properties)
-      .set({ ...definedOnly(patch), updatedAt: new Date() })
+      .set({ ...definedOnly(fields), ...located?.fields, updatedAt: new Date() })
       .where(eq(properties.id, current.id)),
   );
   await recordAudit(db, actor.userId, 'property.updated', 'property', current.id, patch);
+  if (located)
+    await recordAudit(db, actor.userId, 'property.located', 'property', current.id, located.audit);
 }
