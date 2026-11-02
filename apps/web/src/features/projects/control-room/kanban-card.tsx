@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 import { TaskTitleButton } from '../task-panel/task-title-button';
 import { ReworkBadge } from '../tasks/task-card-notes';
 import type { TaskRights, TaskStep } from '../tasks/task-menu';
-import { isBlocked } from '../tasks/task-status';
+import { blockingOf, isBlocked } from '../tasks/task-status';
 import { useTaskSteps } from '../tasks/use-task-steps';
 
 /** What the board needs from a card to act on a drop: who may do what, and how. */
@@ -40,6 +40,7 @@ export function KanbanCard({
   });
   const done = task.status === 'completed';
   const blocked = isBlocked(task);
+  const blocking = blockingOf(task);
 
   useEffect(() => {
     register(task.id, { rights: steps.rights, run: steps.run });
@@ -97,10 +98,10 @@ export function KanbanCard({
             </span>
           </p>
         )}
-        {!done && task.blocking.length > 0 && (
+        {!done && blocking.length > 0 && (
           <p className="flex items-center gap-1.5 type-body-sm text-at-risk">
             <ArrowRight aria-hidden className="size-3.5 shrink-0" />
-            {t('blocking', { count: task.blocking.length })}
+            {t('blocking', { count: blocking.length })}
           </p>
         )}
       </div>

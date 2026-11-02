@@ -5,6 +5,7 @@ import { cn } from '@oneohm/design-system/web';
 import { ArrowRight, Circle, CircleCheck, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { blockingOf } from '../tasks/task-status';
 
 /** A titled block in the task panel. */
 export function PanelSection({
@@ -31,6 +32,7 @@ export function PanelSection({
 export function BlockersSection({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.panel');
   const waiting = task.status === 'completed' ? [] : task.blockedBy;
+  const blocking = blockingOf(task);
   return (
     <>
       {waiting.length > 0 && (
@@ -45,10 +47,10 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
           </ul>
         </PanelSection>
       )}
-      {task.blocking.length > 0 && (
-        <PanelSection title={t('blocking', { count: task.blocking.length })}>
+      {blocking.length > 0 && (
+        <PanelSection title={t('blocking', { count: blocking.length })}>
           <ul className="flex flex-col gap-1.5">
-            {task.blocking.map((title) => (
+            {blocking.map((title) => (
               <li key={title} className="flex items-start gap-2 type-body text-ink">
                 <ArrowRight aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
                 {title}

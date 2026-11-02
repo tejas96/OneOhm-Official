@@ -8,6 +8,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError } from '@/lib/api/api-error';
 import { TaskPanelBody } from './task-panel-body';
+import { panelView } from './task-panel-url';
 import { taskKey, useTaskPanel } from './use-task-panel';
 
 /** One task panel for the whole app, opened by `?task=<id>` from any task list. */
@@ -31,6 +32,12 @@ function OpenTaskPanel({
     retry: (count, error) => !isMissing(error) && count < 2,
   });
   const task = query.data;
+  const view = panelView({
+    data: task,
+    isPending: query.isPending,
+    isError: query.isError,
+    missing: isMissing(query.error),
+  });
 
   return (
     <Sheet
@@ -40,17 +47,15 @@ function OpenTaskPanel({
       title={task?.title ?? t('title')}
       {...(task ? { description: `${task.projectCode} · ${task.projectName}` } : {})}
     >
-      {query.isPending ? (
-        <ListSkeleton label={t('loading')} rows={4} />
-      ) : query.isError ? (
-        isMissing(query.error) ? (
-          <EmptyState icon={<SearchX />} title={t('notFound')} description={t('notFoundBody')} />
-        ) : (
-          <LoadError error={query.error} onRetry={() => query.refetch()} />
-        )
-      ) : task ? (
+      {view === 'body' && task ? (
         <TaskPanelBody task={task} />
-      ) : null}
+      ) : view === 'missing' ? (
+        <EmptyState icon={<SearchX />} title={t('notFound')} description={t('notFoundBody')} />
+      ) : view === 'error' ? (
+        <LoadError error={query.error} onRetry={() => query.refetch()} />
+      ) : (
+        <ListSkeleton label={t('loading')} rows={4} />
+      )}
     </Sheet>
   );
 }
