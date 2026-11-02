@@ -30,6 +30,7 @@ export * from './inventory.schema';
 export * from './lead-step.schema';
 export * from './list-page.schema';
 export * from './material-custody.schema';
+export * from './monthly-review.schema';
 export * from './notification.schema';
 export * from './payment-link.schema';
 export * from './payment-plan.schema';

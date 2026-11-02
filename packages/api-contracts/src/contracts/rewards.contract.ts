@@ -2,6 +2,12 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { idSchema } from '../common/primitives';
 import {
+  decideMonthInputSchema,
+  monthlyPersonSchema,
+  monthlyReviewSchema,
+  monthSchema,
+} from '../schemas/monthly-review.schema';
+import {
   decisionStatusSchema,
   pointsEntrySchema,
   pointsStandingSchema,
@@ -46,6 +52,28 @@ export const rewardsContract = c.router({
     pathParams: idParams,
     body: z.object({ approve: z.boolean() }),
     responses: { 200: pointsEntrySchema },
+  },
+  monthlyReview: {
+    method: 'GET',
+    path: '/points/monthly',
+    query: z.object({ month: monthSchema }),
+    responses: { 200: monthlyReviewSchema },
+    summary: 'Each staff member’s month: points, rates and the owner’s decision.',
+  },
+  monthlyPerson: {
+    method: 'GET',
+    path: '/points/monthly/:id',
+    pathParams: idParams,
+    query: z.object({ month: monthSchema }),
+    responses: { 200: monthlyPersonSchema },
+  },
+  decideMonth: {
+    method: 'POST',
+    path: '/points/monthly/:id/decide',
+    pathParams: idParams,
+    body: decideMonthInputSchema,
+    responses: { 200: monthlyReviewSchema },
+    summary: 'No money, or propose a bonus that still needs payment approval.',
   },
   workforceSettings: {
     method: 'GET',

@@ -8,10 +8,11 @@ import {
   stageRatings,
 } from '@oneohm/database';
 import { achievementsFrom, onTimeStreak } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
+import { monthOf } from '@oneohm/shared';
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { bonusesOf } from './bonus-read';
+import { earned, monthTotals } from './monthly-review.read';
 import { readPoints } from './workforce-read';
 
 /** Finished on or before its due date, in India time. */
@@ -37,18 +38,25 @@ export class MyRewardsService {
       this.feedback(userId),
       bonusesOf(this.db, userId),
     ]);
-    const month = todayIn().slice(0, 7);
+    // India months everywhere, so a point earned just after midnight IST is in the new month.
+    const month = monthOf(new Date());
+    const monthLines = points.filter((entry) => monthOf(new Date(entry.createdAt)) === month);
     const total = points.reduce((sum, entry) => sum + entry.points, 0);
     const money = (status: 'approved' | 'paid') =>
       bonuses
         .filter((bonus) => bonus.status === 'approved' && bonus.payableStatus === status)
         .reduce((sum, bonus) => sum + bonus.amountPaise, 0);
     return {
+      month: {
+        month,
+        ...monthTotals(monthLines),
+        missed: monthLines
+          .filter((entry) => entry.sourceType.startsWith('task_') && !earned(entry.reason))
+          .map((entry) => ({ reason: entry.reason, createdAt: entry.createdAt })),
+      },
       points: {
         total,
-        thisMonth: points
-          .filter((entry) => entry.createdAt.slice(0, 7) === month)
-          .reduce((sum, entry) => sum + entry.points, 0),
+        thisMonth: monthLines.reduce((sum, entry) => sum + entry.points, 0),
         history: points.slice(0, 60),
       },
       achievements: achievementsFrom({

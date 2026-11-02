@@ -101,3 +101,12 @@ export async function ageHandIns(taskId: string, days: number): Promise<void> {
     `${days} days`,
   ]);
 }
+
+/** Moves a person's points rows into the middle of a past month (acceptance only). */
+export async function movePointsToMonth(userId: string, month: string): Promise<void> {
+  await rows(
+    `UPDATE points_entries SET created_at = ($2::date + time '12:00') AT TIME ZONE 'Asia/Kolkata'
+     WHERE user_id = $1`,
+    [userId, `${month}-15`],
+  );
+}
