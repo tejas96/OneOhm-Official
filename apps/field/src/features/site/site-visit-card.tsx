@@ -88,7 +88,7 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       ) : null}
       {here ? (
         <Button
-          label={SITE.checkOut}
+          label={checkOut.label ?? SITE.checkOut}
           variant="secondary"
           icon={<LogOut size={18} color={theme.colors.textPrimary} />}
           pending={checkOut.isPending}
@@ -98,7 +98,7 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       ) : null}
       {!here && !elsewhere && task.status !== 'completed' ? (
         <Button
-          label={SITE.checkIn}
+          label={checkIn.label ?? SITE.checkIn}
           icon={<LogIn size={18} color={theme.colors.onAccent} />}
           pending={checkIn.isPending}
           onPress={() => run(checkIn, SITE.checkedIn)}

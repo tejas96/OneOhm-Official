@@ -28,6 +28,8 @@ export const SITE = {
   },
   checkIn: 'Check in at site',
   checkOut: 'Check out of site',
+  finding: (metres: number | null) =>
+    metres === null ? 'Finding your location…' : `Finding your location… ${Math.round(metres)} m`,
   inSince: (time: string) => `Checked in at ${time}`,
   visit: (from: string, to: string, minutes: number) => `${from} to ${to} · ${duration(minutes)}`,
   fromSite: (metres: number) => `${distance(metres)} from the site`,
