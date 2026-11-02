@@ -7,6 +7,7 @@ import {
   PROJECT_TYPES,
   ROLE_KINDS,
   SUBSIDY_CATEGORIES,
+  TASK_PRIORITIES,
   WAITING_PARTIES,
 } from '@oneohm/domain';
 import { pgEnum } from 'drizzle-orm/pg-core';
@@ -61,6 +62,7 @@ export const taskStatusEnum = pgEnum('task_status', [
   'in_review',
   'completed',
 ]);
+export const taskPriorityEnum = pgEnum('task_priority', TASK_PRIORITIES);
 export const payerEnum = pgEnum('payer', ['customer', 'bank']);
 export const milestoneStatusEnum = pgEnum('milestone_status', [
   'upcoming',

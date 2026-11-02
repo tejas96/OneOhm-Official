@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ProjectTask, RescheduleTaskInput, TaskActivity } from '@oneohm/api-contracts';
 import { projectActivities, projectTasks } from '@oneohm/database';
-import { siteVisitKindOf } from '@oneohm/domain';
+import { siteVisitKindOf, type TaskPriority } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -14,6 +14,7 @@ import { canViewTask } from './task-access';
 import { taskTimeline } from './task-activity';
 import { tellSurveyDate } from './task-messages';
 import { tellRescheduled, tellReturned } from './task-notices';
+import { setPriority } from './task-priority';
 import { assertMayReview, closeReview } from './task-review';
 import { followLine, moveLaterTasks } from './task-schedule';
 
@@ -32,6 +33,15 @@ const sentence = (text: string) => {
 @Injectable()
 export class TaskFlowService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  /** A manager sets the task's priority; done work keeps the one it had. */
+  async setPriority(actor: Actor, id: string, priority: TaskPriority): Promise<ProjectTask> {
+    assertCan(actor, 'tasks.assign');
+    const task = await this.row(id);
+    if (task.status === 'completed') throw conflict('This task is already done.', 'done');
+    await this.db.transaction((tx) => setPriority(tx, actor.userId, task, priority));
+    return this.present(id);
+  }
 
   /** A new due date with a reason; tasks waiting on it move later when they must. */
   async reschedule(actor: Actor, id: string, input: RescheduleTaskInput): Promise<ProjectTask> {

@@ -16,6 +16,7 @@ import {
   epcStageEnum,
   projectStatusEnum,
   projectTypeEnum,
+  taskPriorityEnum,
   taskStatusEnum,
   waitingPartyEnum,
 } from './enums';
@@ -98,6 +99,11 @@ export const projectTasks = pgTable(
     outsideTeam: boolean('outside_team').notNull().default(false),
     status: taskStatusEnum('status').notNull().default('pending'),
     waitingParty: waitingPartyEnum('waiting_party').notNull().default('internal'),
+    /** Set by a manager (spec 3.3); `none` lets the automatic order decide. */
+    priority: taskPriorityEnum('priority').notNull().default('none'),
+    prioritySetByUserId: uuid('priority_set_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     startDate: calendarDate('start_date').notNull(),
     dueDate: calendarDate('due_date').notNull(),
     startedAt: instant('started_at'),
