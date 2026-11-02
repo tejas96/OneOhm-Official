@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import type { Environment } from '../../config/environment';
 
 export interface SharedFile {
   /** `report` links point at a project (`id`) and name the report in `key`. */
@@ -18,6 +19,16 @@ const sign = (secret: string, data: string) =>
 export function signFileLink(secret: string, file: SharedFile): string {
   const data = Buffer.from(JSON.stringify(file)).toString('base64url');
   return `${data}.${sign(secret, data)}`;
+}
+
+/** The public link to a shared file, valid for FILE_LINK_HOURS from `now`. */
+export function sharedFileUrl(
+  env: Pick<Environment, 'API_PUBLIC_URL' | 'FILE_LINK_SECRET' | 'FILE_LINK_HOURS'>,
+  file: Omit<SharedFile, 'exp'>,
+  now = Date.now(),
+): string {
+  const exp = Math.floor(now / 1000) + env.FILE_LINK_HOURS * 3600;
+  return `${env.API_PUBLIC_URL}/v1/files/shared/${signFileLink(env.FILE_LINK_SECRET, { ...file, exp })}`;
 }
 
 /** The file a link points to, or null when it was altered or has expired. */

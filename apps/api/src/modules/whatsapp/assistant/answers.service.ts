@@ -10,7 +10,7 @@ import { CustomerDocumentsService } from '../../customer-portal/customer-documen
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { openLinksFor } from '../../online-payments/open-links';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
-import { type SharedFile, signFileLink } from '../file-links';
+import { type SharedFile, sharedFileUrl } from '../file-links';
 import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
@@ -128,9 +128,8 @@ export class AnswersService {
 
   /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */
   async documents(customerId: string): Promise<string> {
-    const exp = Math.floor(Date.now() / 1000) + this.env.FILE_LINK_HOURS * 3600;
     const link = (kind: SharedFile['kind'], id: string, key?: string) =>
-      `${this.env.API_PUBLIC_URL}/v1/files/shared/${signFileLink(this.env.FILE_LINK_SECRET, { kind, id, customerId, exp, ...(key ? { key } : {}) })}`;
+      sharedFileUrl(this.env, { kind, id, customerId, ...(key ? { key } : {}) });
     const { projects: own } = await this.portal.home(customerId);
     const receipts = await this.db
       .select({ id: payments.id, number: payments.receiptNumber, amount: payments.amountPaise })

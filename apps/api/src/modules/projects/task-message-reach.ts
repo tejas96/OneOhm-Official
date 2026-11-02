@@ -2,7 +2,7 @@ import { customerContacts, type DatabaseExecutor, documents } from '@oneohm/data
 import { readTaskAttachment } from '@oneohm/domain';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { environmentOnce } from '../../config/environment-once';
-import { signFileLink } from '../whatsapp/file-links';
+import { sharedFileUrl } from '../whatsapp/file-links';
 
 /**
  * Who a task's customer message goes to (PRD 6.2 "recipient"): the customer's own number,
@@ -34,19 +34,14 @@ export async function attachmentLink(
 ): Promise<string | null> {
   const chosen = readTaskAttachment(attachment);
   if (!chosen) return null;
-  const { FILE_LINK_SECRET, FILE_LINK_HOURS, API_PUBLIC_URL } = environmentOnce();
-  const exp = Math.floor(Date.now() / 1000) + FILE_LINK_HOURS * 3600;
-  const link = (token: string) => `${API_PUBLIC_URL}/v1/files/shared/${token}`;
+  const env = environmentOnce();
   if (chosen.kind === 'report')
-    return link(
-      signFileLink(FILE_LINK_SECRET, {
-        kind: 'report',
-        id: project.id,
-        key: chosen.key,
-        customerId: project.customerId,
-        exp,
-      }),
-    );
+    return sharedFileUrl(env, {
+      kind: 'report',
+      id: project.id,
+      key: chosen.key,
+      customerId: project.customerId,
+    });
   const [paper] = await db
     .select({ id: documents.id })
     .from(documents)
@@ -54,12 +49,5 @@ export async function attachmentLink(
     .orderBy(desc(documents.createdAt))
     .limit(1);
   if (!paper) return null;
-  return link(
-    signFileLink(FILE_LINK_SECRET, {
-      kind: 'document',
-      id: paper.id,
-      customerId: project.customerId,
-      exp,
-    }),
-  );
+  return sharedFileUrl(env, { kind: 'document', id: paper.id, customerId: project.customerId });
 }
