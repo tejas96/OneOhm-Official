@@ -53,6 +53,7 @@ export * from './state-support.schema';
 export * from './subsidy-rule.schema';
 export * from './task-board.schema';
 export * from './task-flow.schema';
+export * from './task-priority.schema';
 export * from './team-load.schema';
 export * from './template.schema';
 export * from './whatsapp.schema';

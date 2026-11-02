@@ -1,4 +1,4 @@
-import { EPC_STAGES, PROJECT_TYPES, TASK_PRIORITIES, WAITING_PARTIES } from '@oneohm/domain';
+import { EPC_STAGES, PROJECT_TYPES, WAITING_PARTIES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
@@ -6,12 +6,10 @@ import { attachmentSchema } from './document.schema';
 import { openLinkSchema } from './payment-link.schema';
 import { projectSetupSchema } from './project-team.schema';
 import { taskReturnSchema, taskReviewerSchema } from './task-flow.schema';
+import { taskBlockerSchema, taskPrioritySchema } from './task-priority.schema';
 
 export const epcStageSchema = z.enum(EPC_STAGES);
 export const waitingPartySchema = z.enum(WAITING_PARTIES);
-export const taskPrioritySchema = z.enum(TASK_PRIORITIES);
-export const setTaskPriorityInputSchema = z.object({ priority: taskPrioritySchema });
-export type SetTaskPriorityInput = z.infer<typeof setTaskPriorityInputSchema>;
 export const projectTypeSchema = z.enum(PROJECT_TYPES);
 
 /** One fact a task records: key, readable label, input kind and an optional hint. */
@@ -140,15 +138,7 @@ export const projectTaskSchema = z.object({
   /** Open tasks that wait for this one to finish. */
   blocking: z.array(z.string()),
   /** Earlier tasks this one waits for: who holds each, how late, or the outside party. */
-  blockers: z.array(
-    z.object({
-      title: z.string(),
-      assignee: z.string().nullable(),
-      daysLate: z.number().int(),
-      waitingOn: waitingPartySchema.nullable(),
-    }),
-  ),
-  /** Set by a manager (spec 3.3); `none` lets the automatic order decide. */
+  blockers: z.array(taskBlockerSchema),
   priority: taskPrioritySchema,
   prioritySetBy: userRefSchema.nullable(),
   /** Finishing it makes a payment milestone due. */

@@ -1,13 +1,14 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { idSchema } from '../common/primitives';
-import { projectTaskSchema, setTaskPriorityInputSchema } from '../schemas/project.schema';
+import { projectTaskSchema } from '../schemas/project.schema';
 import {
   rescheduleTaskInputSchema,
   returnTaskInputSchema,
   taskActivitySchema,
   taskUpdateInputSchema,
 } from '../schemas/task-flow.schema';
+import { setTaskPriorityInputSchema } from '../schemas/task-priority.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
