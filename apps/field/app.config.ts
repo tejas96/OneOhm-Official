@@ -53,7 +53,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: { favicon: './assets/images/favicon.png', output: 'single' },
   extra: {
     ...config.extra,
-    mapsEnabled: Boolean(MAPS_ANDROID_KEY || MAPS_IOS_KEY),
+    // Per platform: an iOS build without its key must not show the Google map.
+    mapsEnabledIos: Boolean(MAPS_IOS_KEY),
+    mapsEnabledAndroid: Boolean(MAPS_ANDROID_KEY),
     ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),
   },
   plugins: [

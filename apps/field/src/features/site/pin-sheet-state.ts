@@ -1,3 +1,5 @@
+import { PIN } from '../../copy/site';
+
 /** The map in the pin sheet: still loading, showing, or given up on (no signal). */
 export type MapState = 'loading' | 'ready' | 'failed';
 
@@ -28,4 +30,32 @@ export function regionAround(
   const latitudeDelta = spanM / METRES_PER_DEGREE;
   const longitudeDelta = latitudeDelta / Math.max(Math.cos((point.latitude * Math.PI) / 180), 0.01);
   return { latitude: point.latitude, longitude: point.longitude, latitudeDelta, longitudeDelta };
+}
+
+export type SheetAction = 'confirm' | 'gps' | 'close';
+type SheetButton = { readonly label: string; readonly action: SheetAction };
+
+/**
+ * The sheet's buttons. The GPS reading only fills an empty location, so with a saved
+ * point it is never offered (the server would refuse it); a failed map then just keeps
+ * the saved location.
+ */
+export function sheetActions(
+  state: MapState,
+  hasSaved: boolean,
+): { message: string | null; primary: SheetButton; secondary: SheetButton | null } {
+  if (state === 'failed') {
+    return hasSaved
+      ? {
+          message: PIN.failedSaved,
+          primary: { label: PIN.keepSaved, action: 'close' },
+          secondary: null,
+        }
+      : { message: null, primary: { label: PIN.failed, action: 'gps' }, secondary: null };
+  }
+  return {
+    message: null,
+    primary: { label: PIN.confirm, action: 'confirm' },
+    secondary: hasSaved ? null : { label: PIN.useGps, action: 'gps' },
+  };
 }

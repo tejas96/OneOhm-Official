@@ -7,6 +7,7 @@ import { api, keys } from '@/api/api';
 import { SITE } from '@/copy/site';
 import { type Reading, readLocation } from '@/features/attendance/location';
 import { readPreciseLocation } from '@/features/attendance/precise-location';
+import { pinQueue } from './pin-queue';
 
 export const siteKeys = {
   task: (taskId: string) => ['site', 'task', taskId] as const,
@@ -62,8 +63,12 @@ export function useSiteAction(taskId: string, kind: 'in' | 'out' | 'save') {
       const params = { id: taskId };
       if (kind === 'save') {
         // With a pin: the roof point from the map. Without: today's check-in reading.
-        const body = pin ? { pin: { latitude: pin.latitude, longitude: pin.longitude } } : {};
-        const site = await unwrap(api.siteActivity.saveSiteLocation({ params, body }));
+        // Both wait behind any pin re-send for this task, so the newest save lands last.
+        const site = pin
+          ? await pinQueue.confirm(taskId, pin)
+          : await pinQueue.exclusive(taskId, () =>
+              unwrap(api.siteActivity.saveSiteLocation({ params, body: {} })),
+            );
         return { site, missed: null as Missed };
       }
       setProgress({ reading: true, accuracyM: null });

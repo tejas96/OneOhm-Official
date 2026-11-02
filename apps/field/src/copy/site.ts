@@ -65,6 +65,8 @@ export const PIN = {
   confirm: 'This is the roof',
   useGps: 'Use my GPS reading',
   failed: 'Map not loading. Use my GPS reading',
+  failedSaved: 'Map not loading.',
+  keepSaved: 'Keep the saved location',
 } as const;
 
 export const TRAVEL = {

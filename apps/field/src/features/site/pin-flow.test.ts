@@ -15,14 +15,17 @@ describe('pinLabel', () => {
 describe('pinOutcome', () => {
   it('opens on the reading when there is one', () => {
     const start = { ...point, accuracyM: 6 };
-    expect(pinOutcome(start, null)).toEqual({ open: true, start });
+    expect(pinOutcome(start, null, false)).toEqual({ kind: 'open', start });
   });
   it('opens on the saved point when there is no reading', () => {
-    expect(pinOutcome(null, point)).toEqual({ open: true, start: null });
+    expect(pinOutcome(null, point, true)).toEqual({ kind: 'open', start: null });
   });
-  it('cannot open with neither', () => {
-    expect(pinOutcome(null, null)).toEqual({
-      open: false,
+  it('saves the check-in reading, as before maps, when it cannot open but that is possible', () => {
+    expect(pinOutcome(null, null, true)).toEqual({ kind: 'gps' });
+  });
+  it('asks to share the location when nothing else works', () => {
+    expect(pinOutcome(null, null, false)).toEqual({
+      kind: 'toast',
       message: 'Share your location to pin the roof.',
     });
   });

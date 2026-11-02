@@ -7,7 +7,13 @@ import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PIN } from '@/copy/site';
 import type { PinStart } from './pin-flow';
-import { MAP_GIVE_UP_MS, nextMapState, regionAround } from './pin-sheet-state';
+import {
+  MAP_GIVE_UP_MS,
+  nextMapState,
+  regionAround,
+  type SheetAction,
+  sheetActions,
+} from './pin-sheet-state';
 
 export interface PinSheetProps {
   /** The worker's reading; the map centres here, else on `saved`. */
@@ -25,7 +31,8 @@ const PIN_SIZE = 40;
 /**
  * A satellite map with a pin fixed in the centre: the worker moves the map until the pin
  * sits on the roof (design 6.2). If the map has not loaded within 8 s (no signal), the
- * only action left is today's GPS reading, so the work is never blocked.
+ * only action left is today's GPS reading, or keeping the saved location when there is
+ * one (the GPS reading never replaces a saved point), so the work is never blocked.
  */
 export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinSheetProps) {
   const theme = useTheme();
@@ -42,6 +49,12 @@ export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinShee
     );
     return () => clearTimeout(timer);
   }, []);
+  const bar = sheetActions(state, saved !== null);
+  const act = (action: SheetAction) => {
+    if (action === 'gps') onUseGps();
+    else if (action === 'close') onClose();
+    else if (centre) onConfirm(centre);
+  };
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
@@ -80,10 +93,13 @@ export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinShee
                   center={start}
                   radius={start.accuracyM}
                   strokeColor={theme.colors.accent}
-                  fillColor="rgba(11, 111, 164, 0.15)"
+                  // The accent at about 15 %, so the roof still shows through.
+                  fillColor={`${theme.colors.accent}26`}
                 />
               ) : null}
-              {saved ? <Marker coordinate={saved} title={PIN.saved} pinColor="wheat" /> : null}
+              {saved ? (
+                <Marker coordinate={saved} title={PIN.saved} pinColor={theme.colors.accent} />
+              ) : null}
             </MapView>
           ) : null}
           {/* The pin is fixed: its tip marks the map's centre, which is what is saved. */}
@@ -111,28 +127,27 @@ export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinShee
             },
           ]}
         >
-          {state === 'failed' ? (
-            <Button label={PIN.failed} size="lg" fullWidth onPress={onUseGps} />
-          ) : (
-            <>
-              <Button
-                label={PIN.confirm}
-                size="lg"
-                fullWidth
-                disabled={state !== 'ready' || !centre}
-                onPress={() => {
-                  if (centre) onConfirm(centre);
-                }}
-              />
-              <Button
-                label={PIN.useGps}
-                size="lg"
-                variant="secondary"
-                fullWidth
-                onPress={onUseGps}
-              />
-            </>
-          )}
+          {bar.message ? (
+            <Text variant="bodySm" tone="secondary">
+              {bar.message}
+            </Text>
+          ) : null}
+          <Button
+            label={bar.primary.label}
+            size="lg"
+            fullWidth
+            disabled={bar.primary.action === 'confirm' && (state !== 'ready' || !centre)}
+            onPress={() => act(bar.primary.action)}
+          />
+          {bar.secondary ? (
+            <Button
+              label={bar.secondary.label}
+              size="lg"
+              variant="secondary"
+              fullWidth
+              onPress={() => act(bar.secondary?.action ?? 'close')}
+            />
+          ) : null}
         </View>
       </View>
     </Modal>

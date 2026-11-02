@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_GIVE_UP_MS, nextMapState, regionAround } from './pin-sheet-state';
+import { MAP_GIVE_UP_MS, nextMapState, regionAround, sheetActions } from './pin-sheet-state';
 
 describe('nextMapState', () => {
   it('is ready once the map says so', () => {
@@ -29,5 +29,32 @@ describe('regionAround', () => {
   it('widens the longitude span away from the equator', () => {
     const region = regionAround({ latitude: 60, longitude: 0 }, 40);
     expect(region.longitudeDelta).toBeCloseTo(region.latitudeDelta * 2, 8);
+  });
+});
+
+describe('sheetActions', () => {
+  it('offers the roof and the GPS reading when no point is saved', () => {
+    expect(sheetActions('ready', false)).toEqual({
+      message: null,
+      primary: { label: 'This is the roof', action: 'confirm' },
+      secondary: { label: 'Use my GPS reading', action: 'gps' },
+    });
+    expect(sheetActions('failed', false)).toEqual({
+      message: null,
+      primary: { label: 'Map not loading. Use my GPS reading', action: 'gps' },
+      secondary: null,
+    });
+  });
+  it('never offers the GPS reading when a point is saved (it would be refused)', () => {
+    expect(sheetActions('loading', true)).toEqual({
+      message: null,
+      primary: { label: 'This is the roof', action: 'confirm' },
+      secondary: null,
+    });
+    expect(sheetActions('failed', true)).toEqual({
+      message: 'Map not loading.',
+      primary: { label: 'Keep the saved location', action: 'close' },
+      secondary: null,
+    });
   });
 });

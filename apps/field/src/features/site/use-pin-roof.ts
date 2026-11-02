@@ -7,13 +7,13 @@ import { useState } from 'react';
 import { Platform } from 'react-native';
 import { useToast } from '@/components/toast';
 import { SITE } from '@/copy/site';
+import { mapsOn } from './maps-enabled';
 import { type PinStart, pinOutcome, pinSavedMessage, shouldKeepPin } from './pin-flow';
 import { resendPendingPin, usePendingPin } from './use-pending-pin';
 import { readIfAllowed, useSiteAction } from './use-task-site';
 
-/** A Google key was set at build time (Task 4); without one the old button shows. */
-export const mapsEnabled =
-  Platform.OS !== 'web' && Constants.expoConfig?.extra?.mapsEnabled === true;
+/** A Google key for this platform was set at build time; without one the old button shows. */
+export const mapsEnabled = mapsOn(Platform.OS, Constants.expoConfig?.extra);
 
 /**
  * Pinning the roof from the site visit card: a precise reading, then the map sheet. The
@@ -26,6 +26,18 @@ export function usePinRoof(taskId: string, site: TaskSite) {
   const pending = usePendingPin(taskId);
   const [progress, setProgress] = useState<{ accuracyM: number | null } | null>(null);
   const [sheet, setSheet] = useState<{ start: PinStart | null } | null>(null);
+
+  // Today's path: the check-in reading becomes the site location.
+  const saveGps = () => {
+    setSheet(null);
+    save.mutate(
+      { tracking: site.tracking },
+      {
+        onSuccess: () => toast(SITE.siteSaved),
+        onError: (error) => toast(describeError(error)),
+      },
+    );
+  };
 
   const begin = async () => {
     setProgress({ accuracyM: null });
@@ -40,8 +52,9 @@ export function usePinRoof(taskId: string, site: TaskSite) {
           accuracyM: position.accuracyM,
         }
       : null;
-    const outcome = pinOutcome(start, site.sitePoint);
-    if (outcome.open) setSheet({ start: outcome.start });
+    const outcome = pinOutcome(start, site.sitePoint, site.canSetSite);
+    if (outcome.kind === 'open') setSheet({ start: outcome.start });
+    else if (outcome.kind === 'gps') saveGps();
     else toast(outcome.message);
   };
 
@@ -52,22 +65,9 @@ export function usePinRoof(taskId: string, site: TaskSite) {
       {
         onSuccess: ({ site: saved }) => toast(pinSavedMessage(saved.siteFlagged)),
         onError: (error) => {
-          if (!shouldKeepPin(error)) return toast(describeError(error));
-          pending.keep(pin);
-          toast(SITE.pinWaiting);
+          // The queue keeps a pin that failed for want of signal, to send again.
+          toast(shouldKeepPin(error) ? SITE.pinWaiting : describeError(error));
         },
-      },
-    );
-  };
-
-  // Today's path: the check-in reading becomes the site location.
-  const saveGps = () => {
-    setSheet(null);
-    save.mutate(
-      { tracking: site.tracking },
-      {
-        onSuccess: () => toast(SITE.siteSaved),
-        onError: (error) => toast(describeError(error)),
       },
     );
   };
@@ -79,7 +79,10 @@ export function usePinRoof(taskId: string, site: TaskSite) {
     saveGps,
     close: () => setSheet(null),
     /** Sends a waiting pin first, e.g. before checking out (the server needs the visit). */
-    flush: () => resendPendingPin(taskId, client),
+    flush: async () => {
+      const refused = await resendPendingPin(taskId, client);
+      if (refused) toast(refused);
+    },
     waiting: pending.pending !== null,
     isPending: save.isPending,
     /** What the button says while the precise reading runs, else null. */

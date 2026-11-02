@@ -32,3 +32,17 @@ describe('createPendingPins', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe('clear', () => {
+  it('drops any pin for the task and tells listeners', () => {
+    const pins = createPendingPins();
+    const listener = vi.fn();
+    pins.keep('t1', a);
+    pins.subscribe(listener);
+    pins.clear('t1');
+    expect(pins.get('t1')).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
+    pins.clear('t1');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});

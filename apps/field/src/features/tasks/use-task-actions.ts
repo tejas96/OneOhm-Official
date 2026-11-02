@@ -44,7 +44,8 @@ export function useTaskActions(task: ProjectTask) {
   const complete = useMutation({
     mutationFn: async (input: { facts: Record<string, string>; note: string }) => {
       // A roof pin kept on the phone for want of signal goes first (design 9).
-      await resendPendingPin(task.id, client);
+      const refused = await resendPendingPin(task.id, client);
+      if (refused) toast(refused);
       return unwrap(
         api.tasks.completeTask({
           params,

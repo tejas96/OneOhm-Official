@@ -10,15 +10,18 @@ export function pinLabel(sitePoint: GeoPoint | null): string {
 }
 
 /**
- * Whether the sheet can open: it centres on the reading, else on the saved point. With
- * neither it has nowhere to start, so the worker is asked to share their location.
+ * What tapping "Pin the roof" does: open the sheet on the reading, else on the saved
+ * point. With neither, save the check-in reading as before maps when the visit has one
+ * (`canSetSite`), else ask the worker to share their location.
  */
 export function pinOutcome(
   start: PinStart | null,
   saved: GeoPoint | null,
-): { open: true; start: PinStart | null } | { open: false; message: string } {
-  if (start || saved) return { open: true, start };
-  return { open: false, message: SITE.pinNeedsLocation };
+  canSetSite: boolean,
+): { kind: 'open'; start: PinStart | null } | { kind: 'gps' } | { kind: 'toast'; message: string } {
+  if (start || saved) return { kind: 'open', start };
+  if (canSetSite) return { kind: 'gps' };
+  return { kind: 'toast', message: SITE.pinNeedsLocation };
 }
 
 /** The toast once a pin is saved; a flagged pin waits for the office to check it. */

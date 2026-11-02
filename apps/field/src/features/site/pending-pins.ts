@@ -24,6 +24,10 @@ export function createPendingPins() {
       pins.delete(taskId);
       tell();
     },
+    /** Drops any pin for the task: a newer save made it stale. */
+    clear(taskId: string) {
+      if (pins.delete(taskId)) tell();
+    },
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => {
