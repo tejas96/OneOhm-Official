@@ -118,6 +118,29 @@ describe('Monthly review', () => {
     expect(reply.status).toBe(409);
   });
 
+  it('a rejected bonus frees the month to be decided again', async () => {
+    const row = await rowFor(lastMonth());
+    await admin.post(`/bonuses/${row?.review?.bonusId}/decide`, {
+      approve: false,
+      note: 'Not this month (test)',
+    });
+    expect((await rowFor(lastMonth()))?.review?.status).toBe('rejected');
+    await admin.post(`/points/monthly/${doer.id}/decide`, { month: lastMonth(), decision: 'none' });
+    expect((await rowFor(lastMonth()))?.review?.decision).toBe('none');
+  });
+
+  it('an unknown person gives not found', async () => {
+    const reply = await admin.raw(
+      'POST',
+      '/points/monthly/00000000-0000-4000-8000-000000000000/decide',
+      {
+        month: lastMonth(),
+        decision: 'none',
+      },
+    );
+    expect(reply.status).toBe(404);
+  });
+
   it("my rewards shows this month's missed lines", async () => {
     const sale = await sellProject(admin, { name: 'Missed Line (test)' });
     const bill = taskByKey(

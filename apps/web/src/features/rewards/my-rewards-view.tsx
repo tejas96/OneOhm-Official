@@ -2,6 +2,7 @@
 
 import type { MyRewards } from '@oneohm/api-contracts';
 import { cn, EmptyState } from '@oneohm/design-system/web';
+import { isMissedLine } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Award } from 'lucide-react';
@@ -86,7 +87,7 @@ export function MyRewardsView() {
             {data.points.history.map((entry) => (
               <li key={entry.id} className="flex items-start justify-between gap-4 py-2.5">
                 <span
-                  className={cn('type-body', entry.points === 0 ? 'text-ink-muted' : 'text-ink')}
+                  className={cn('type-body', isMissedLine(entry) ? 'text-ink-muted' : 'text-ink')}
                 >
                   {entry.reason}
                   <span className="ml-2 type-body-sm text-ink-faint">{day(entry.createdAt)}</span>
@@ -94,10 +95,10 @@ export function MyRewardsView() {
                 <span
                   className={cn(
                     'shrink-0 font-mono tabular-nums',
-                    entry.points === 0 ? 'text-at-risk' : 'text-on-track',
+                    isMissedLine(entry) ? 'text-at-risk' : 'text-on-track',
                   )}
                 >
-                  {entry.points === 0 ? t('missed') : `+${entry.points}`}
+                  {isMissedLine(entry) ? t('missed') : `+${entry.points}`}
                 </span>
               </li>
             ))}

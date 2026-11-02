@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DecideMonthInput, MonthlyPerson, MonthlyReview } from '@oneohm/api-contracts';
-import { monthlyReviews, users } from '@oneohm/database';
+import { monthlyReviews, projectBonuses, users } from '@oneohm/database';
 import { monthOf } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -36,12 +36,26 @@ export class MonthlyReviewService {
     return readPersonMonth(this.db, user, month);
   }
 
+  /** A bonus that was rejected or cancelled does not lock the month: it can be decided again. */
+  private async freeIfBonusRefused(userId: string, month: string): Promise<void> {
+    const [review] = await this.db
+      .select({ id: monthlyReviews.id, status: projectBonuses.status })
+      .from(monthlyReviews)
+      .innerJoin(projectBonuses, eq(projectBonuses.id, monthlyReviews.bonusId))
+      .where(and(eq(monthlyReviews.userId, userId), eq(monthlyReviews.month, month)));
+    if (review && (review.status === 'rejected' || review.status === 'cancelled'))
+      await this.db.delete(monthlyReviews).where(eq(monthlyReviews.id, review.id));
+  }
+
   async decide(actor: Actor, userId: string, input: DecideMonthInput): Promise<MonthlyReview> {
     if (userId === actor.userId) throw forbidden('Someone else decides your month.');
     if (input.month >= monthOf(new Date()))
       throw invalid('Only a month that is over can be decided.', {
         month: 'Pick an earlier month.',
       });
+    const [person] = await this.db.select({ id: users.id }).from(users).where(eq(users.id, userId));
+    if (!person) throw notFound('That person');
+    await this.freeIfBonusRefused(userId, input.month);
     const [claimed] = await this.db
       .insert(monthlyReviews)
       .values({

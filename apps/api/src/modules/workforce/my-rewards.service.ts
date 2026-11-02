@@ -13,6 +13,7 @@ import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { bonusesOf } from './bonus-read';
 import { earned, fairPointsSince, monthTotals } from './monthly-review.read';
+import { lifetimePoints } from './points-total';
 import { readPoints } from './workforce-read';
 
 /** Finished on or before its due date, in India time. */
@@ -42,7 +43,7 @@ export class MyRewardsService {
     // India months everywhere, so a point earned just after midnight IST is in the new month.
     const month = monthOf(new Date());
     const monthLines = points.filter((entry) => monthOf(new Date(entry.createdAt)) === month);
-    const total = points.reduce((sum, entry) => sum + entry.points, 0);
+    const total = await lifetimePoints(this.db, userId);
     const money = (status: 'approved' | 'paid') =>
       bonuses
         .filter((bonus) => bonus.status === 'approved' && bonus.payableStatus === status)
@@ -52,7 +53,7 @@ export class MyRewardsService {
         month,
         ...monthTotals(monthLines, fairSince),
         missed: monthLines
-          .filter((entry) => entry.sourceType.startsWith('task_') && !earned(entry.reason))
+          .filter((entry) => !earned(entry))
           .map((entry) => ({ reason: entry.reason, createdAt: entry.createdAt })),
       },
       points: {

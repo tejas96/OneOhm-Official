@@ -127,3 +127,17 @@ export async function setFairPointsSince(date: string): Promise<void> {
     [date],
   );
 }
+
+/** Adds approved leave for a person (acceptance only). */
+export async function addLeave(
+  userId: string,
+  from: string,
+  to: string,
+  halfDay = false,
+): Promise<void> {
+  await rows(
+    `INSERT INTO leave_requests (user_id, leave_type, from_date, to_date, half_day, half_days, status)
+     VALUES ($1, 'casual', $2, $3, $4, $5, 'approved')`,
+    [userId, from, to, halfDay, halfDay ? 1 : 2],
+  );
+}

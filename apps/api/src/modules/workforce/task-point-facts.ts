@@ -51,7 +51,14 @@ export async function taskPointFacts(
     tx
       .select({ from: leaveRequests.fromDate, to: leaveRequests.toDate })
       .from(leaveRequests)
-      .where(and(eq(leaveRequests.userId, userId), eq(leaveRequests.status, 'approved'))),
+      // Whole days only: a half day of leave does not move the due date a full day.
+      .where(
+        and(
+          eq(leaveRequests.userId, userId),
+          eq(leaveRequests.status, 'approved'),
+          eq(leaveRequests.halfDay, false),
+        ),
+      ),
     tx
       .select({ data: projectActivities.data })
       .from(projectActivities)

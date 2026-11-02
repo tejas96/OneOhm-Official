@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { judgeTask, type TaskPointFacts } from './task-points';
+import { isMissedLine, judgeTask, type TaskPointFacts } from './task-points';
 
 /** A wait from midnight IST on `from` to midnight IST on `to`: whole days. */
 const wait = (party: string, from: string, to: string) => ({
@@ -142,5 +142,30 @@ describe('judgeTask: first-time right', () => {
     expect(judgeTask(facts({ needsApproval: true, returns: 2 })).firstTimeRight?.reason).toBe(
       'Sent back 2 times: first-time right not earned',
     );
+  });
+});
+
+describe('isMissedLine', () => {
+  it('reads a task line as missed from its reason, not its points', () => {
+    expect(
+      isMissedLine({
+        sourceType: 'task_on_time',
+        reason: 'Late by 2 days: on-time not earned: Survey',
+      }),
+    ).toBe(true);
+    expect(isMissedLine({ sourceType: 'task_on_time', reason: 'On time: Survey' })).toBe(false);
+    expect(
+      isMissedLine({ sourceType: 'task_first_time', reason: 'First-time right: Survey' }),
+    ).toBe(false);
+  });
+
+  it('never marks other kinds of points as missed', () => {
+    expect(isMissedLine({ sourceType: 'recognition', reason: 'Great handover' })).toBe(false);
+  });
+
+  it('is not fooled by a task title', () => {
+    expect(
+      isMissedLine({ sourceType: 'task_on_time', reason: 'On time: Fix not earned bill' }),
+    ).toBe(false);
   });
 });

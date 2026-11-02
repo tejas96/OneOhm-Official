@@ -1,6 +1,14 @@
 import type { PointsEntry, ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addTaskWait, ageHandIns, ageWait, closeDb, rows, setTaskDates } from '../support/db';
+import {
+  addLeave,
+  addTaskWait,
+  ageHandIns,
+  ageWait,
+  closeDb,
+  rows,
+  setTaskDates,
+} from '../support/db';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
@@ -173,6 +181,26 @@ describe('Fair points', () => {
       reason: 'First-time right: Site survey and measurements',
     });
     await retire(admin, [other]);
+  });
+
+  it('a full day of leave counts, a half day does not', async () => {
+    const full = await fresh('Leave Day (test)', 'electricity_details');
+    await setTaskDates(full.task.id, {
+      startDate: addDays(today(), -6),
+      dueDate: addDays(today(), -1),
+    });
+    await addLeave(doer.id, addDays(today(), -4), addDays(today(), -4));
+    await workTask(admin, full.task, { as: me });
+    expect((await entriesFor(full.task))[0]?.points).toBe(10);
+
+    const half = await fresh('Half Day (test)', 'electricity_details');
+    await setTaskDates(half.task.id, {
+      startDate: addDays(today(), -3),
+      dueDate: addDays(today(), -1),
+    });
+    await addLeave(doer.id, addDays(today(), -2), addDays(today(), -2), true);
+    await workTask(admin, half.task, { as: me });
+    expect((await entriesFor(half.task))[0]?.points).toBe(0);
   });
 
   it('a task without approval gets only the on-time line', async () => {
