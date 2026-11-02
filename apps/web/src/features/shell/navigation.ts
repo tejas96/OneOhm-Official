@@ -1,5 +1,6 @@
 import type { Capability } from '@oneohm/domain';
 import {
+  Award,
   Boxes,
   ChartColumn,
   CircleGauge,
@@ -40,6 +41,7 @@ export const NAVIGATION: readonly NavGroup[] = [
     key: null,
     items: [
       { key: 'today', href: '/today', icon: Sun, built: true },
+      { key: 'rewards', href: '/rewards', icon: Award, built: true },
       {
         key: 'commandCenter',
         href: '/command-center',

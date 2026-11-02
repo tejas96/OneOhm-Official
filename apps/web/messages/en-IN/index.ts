@@ -26,6 +26,7 @@ import reportSales from './report-sales.json';
 import reportService from './report-service.json';
 import reportTeam from './report-team.json';
 import reports from './reports.json';
+import rewards from './rewards.json';
 import scopeChanges from './scope-changes.json';
 import service from './service.json';
 import settings from './settings.json';
@@ -60,6 +61,7 @@ const messages = {
   ...purchasing,
   ...quotations,
   ...reports,
+  ...rewards,
   ...businessReports,
   ...reportSales,
   ...reportDelivery,

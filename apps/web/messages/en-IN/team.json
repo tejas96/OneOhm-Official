@@ -375,6 +375,64 @@
         "recognition": "Recognition",
         "recognitionDetail": "Given by a manager, with a reason.",
         "upTo": "up to {max}"
+      },
+      "monthly": {
+        "title": "Monthly review",
+        "intro": "Each person's month: points against last month, how their work was judged, and your decision. A bonus is a proposal; it still needs payment approval.",
+        "month": "Month",
+        "loading": "Loading the month…",
+        "empty": "Nobody earned points in {month}.",
+        "caption": "Points and rates per person for {month}",
+        "columns": {
+          "person": "Person",
+          "points": "Points",
+          "tasks": "Tasks",
+          "onTime": "On time",
+          "firstTime": "First-time right",
+          "rating": "Rating",
+          "attention": "Needs attention",
+          "decision": "Decision"
+        },
+        "up": "Up on last month",
+        "down": "Down on last month",
+        "attention": {
+          "onTime": "On time only {rate}",
+          "firstTime": "First-time right only {rate}",
+          "none": "All good"
+        },
+        "decided": {
+          "none": "No money",
+          "bonus": {
+            "pending": "Bonus {amount} · waiting for approval",
+            "approved": "Bonus {amount} · approved",
+            "rejected": "Bonus {amount} · rejected",
+            "cancelled": "Bonus {amount} · cancelled"
+          }
+        },
+        "decide": "Decide",
+        "open": "Not decided",
+        "person": {
+          "description": "Every point line for {month}, by project.",
+          "loading": "Loading…",
+          "empty": "No points this month.",
+          "missed": "Missed"
+        },
+        "decideDialog": {
+          "title": "{name} · {month}",
+          "description": "Decide once for this month. A bonus is only proposed here; someone who approves payments still has to approve it.",
+          "decision": "Decision",
+          "none": "No money",
+          "bonus": "Propose a bonus",
+          "amount": "Bonus amount",
+          "amountHint": "In rupees.",
+          "note": "Note",
+          "noteHint": "Optional. Shown with the bonus.",
+          "cancel": "Cancel",
+          "submitNone": "Save decision",
+          "submitBonus": "Propose bonus",
+          "saved": "Saved for {name}",
+          "proposed": "Bonus proposed for {name}"
+        }
       }
     },
     "resellers": {
