@@ -38,6 +38,15 @@ describe('boardMove', () => {
     ).toEqual({ kind: 'denied', reason: 'blocked' });
   });
 
+  it('explains that Not started becomes Ready by itself', () => {
+    expect(
+      boardMove(taskOf({ status: 'pending', blockedBy: ['Survey'] }), 'ready', worker),
+    ).toEqual({
+      kind: 'denied',
+      reason: 'automatic',
+    });
+  });
+
   it('refuses moving back to not started', () => {
     expect(boardMove(taskOf({ status: 'in_progress' }), 'ready', worker)).toEqual({
       kind: 'denied',

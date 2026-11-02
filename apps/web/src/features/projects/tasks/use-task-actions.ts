@@ -21,6 +21,9 @@ export function useInvalidateWork() {
       client.invalidateQueries({ queryKey: ['tasks'] }),
       client.invalidateQueries({ queryKey: ['command-center'] }),
       client.invalidateQueries({ queryKey: ['team'] }),
+      // Finishing a task writes points: standings, the review and My rewards refresh too.
+      client.invalidateQueries({ queryKey: ['points'] }),
+      client.invalidateQueries({ queryKey: ['me', 'rewards'] }),
     ]);
 }
 

@@ -40,8 +40,8 @@ export function TaskBlockersCard({ task }: { readonly task: ProjectTask }) {
           <Text variant="bodySm" tone="secondary">
             {TASK.blockedBody}
           </Text>
-          {waitingFor.map((line) => (
-            <Text key={line} variant="body">
+          {waitingFor.map((line, index) => (
+            <Text key={`${index}-${line}`} variant="body">
               · {line}
             </Text>
           ))}
@@ -56,8 +56,8 @@ export function TaskBlockersCard({ task }: { readonly task: ProjectTask }) {
           <Text variant="bodySm" tone="secondary">
             {TASK.blockingBody}
           </Text>
-          {blocking.map((title) => (
-            <Text key={title} variant="body">
+          {blocking.map((title, index) => (
+            <Text key={`${index}-${title}`} variant="body">
               · {title}
             </Text>
           ))}

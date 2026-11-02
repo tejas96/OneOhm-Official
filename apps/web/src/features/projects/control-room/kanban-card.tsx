@@ -55,7 +55,9 @@ export function KanbanCard({
       className={cn(
         'flex gap-2 rounded-lg border border-hairline bg-surface p-3 shadow-e1',
         isDragging && 'opacity-40',
+        steps.pendingKey && 'pointer-events-none opacity-60',
       )}
+      aria-busy={steps.pendingKey ? true : undefined}
     >
       <button
         type="button"

@@ -60,8 +60,11 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
       {waiting.length > 0 && (
         <PanelSection title={t('waitingFor')}>
           <ul className="flex flex-col gap-1.5">
-            {waiting.map((line) => (
-              <li key={line.key} className="flex items-start gap-2 type-body text-ink">
+            {waiting.map((line, index) => (
+              <li
+                key={`${index}-${line.key}`}
+                className="flex items-start gap-2 type-body text-ink"
+              >
                 <Lock aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
                 {line.text}
               </li>
@@ -72,8 +75,8 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
       {blocking.length > 0 && (
         <PanelSection title={t('blocking', { count: blocking.length })}>
           <ul className="flex flex-col gap-1.5">
-            {blocking.map((title) => (
-              <li key={title} className="flex items-start gap-2 type-body text-ink">
+            {blocking.map((title, index) => (
+              <li key={`${index}-${title}`} className="flex items-start gap-2 type-body text-ink">
                 <ArrowRight aria-hidden className="mt-1 size-3.5 shrink-0 text-ink-faint" />
                 {title}
               </li>

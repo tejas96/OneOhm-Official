@@ -551,14 +551,16 @@
       "denied": {
         "blocked": "Blocked: finish the tasks it waits for first.",
         "backwards": "Tasks cannot move back to not started.",
-        "notAllowed": "You cannot make this move on this task."
+        "notAllowed": "You cannot make this move on this task.",
+        "automatic": "Not started tasks become Ready by themselves when the work before them is done."
       },
       "announce": {
         "start": "Picked up {title}.",
         "over": "{title} is over {column}.",
         "end": "{title} dropped on {column}.",
         "cancel": "Move cancelled. {title} stays where it was."
-      }
+      },
+      "doneHidden": "Done tasks show when the view is set to All."
     },
     "priority": {
       "none": "No priority",
