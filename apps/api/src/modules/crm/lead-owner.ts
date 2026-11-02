@@ -7,7 +7,7 @@ import {
   userRoles,
   users,
 } from '@oneohm/database';
-import { type OwnerCandidate, pickLeadOwner } from '@oneohm/domain';
+import { DEFAULT_LEAD_ASSIGNMENT, type OwnerCandidate, pickLeadOwner } from '@oneohm/domain';
 import { and, asc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { invalid } from '../../common/http/errors';
 
@@ -55,7 +55,8 @@ async function withLoads(db: DatabaseExecutor, rows: readonly Holder[]): Promise
     return {
       userId,
       name: holder?.name ?? '',
-      onLeave: holder?.onLeave ?? false,
+      away: holder?.onLeave ?? false,
+      lastLeadAt: null,
       openLeads: loads.find((load) => load.userId === userId)?.count ?? 0,
     };
   });
@@ -69,7 +70,10 @@ async function withLoads(db: DatabaseExecutor, rows: readonly Holder[]): Promise
 export async function ownerByRule(db: DatabaseExecutor): Promise<string | null> {
   const all = await holders(db);
   const sellers = all.filter((holder) => !holder.system);
-  return pickLeadOwner(await withLoads(db, sellers.length > 0 ? sellers : all));
+  return pickLeadOwner(
+    await withLoads(db, sellers.length > 0 ? sellers : all),
+    DEFAULT_LEAD_ASSIGNMENT,
+  );
 }
 
 /** Everyone a lead can be given to, for the owner pickers. */
@@ -79,7 +83,7 @@ export async function leadOwnerOptions(db: DatabaseExecutor): Promise<LeadOwner[
     id: person.userId,
     fullName: person.name,
     openLeads: person.openLeads,
-    onLeave: person.onLeave,
+    onLeave: person.away,
   }));
 }
 
