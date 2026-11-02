@@ -31,7 +31,7 @@ export function PanelSection({
 /** What this task waits for, and what waits for it (spec 3.4). */
 export function BlockersSection({ task }: { readonly task: ProjectTask }) {
   const t = useTranslations('projects.panel');
-  const partyT = useTranslations('commandCenter.party');
+  const partyT = useTranslations('projects.panel.party');
   const details = task.blockers ?? [];
   // Change requests and budget holds have no task behind them: titles only.
   const others = (task.status === 'completed' ? [] : task.blockedBy).filter(
@@ -41,7 +41,11 @@ export function BlockersSection({ task }: { readonly task: ProjectTask }) {
     ...details.map((blocker) => ({
       key: blocker.title,
       text: blocker.waitingOn
-        ? t('blockerOutside', { title: blocker.title, party: partyT(blocker.waitingOn) })
+        ? t('blockerOutside', {
+            title: blocker.title,
+            party: partyT(blocker.waitingOn),
+            days: blocker.daysLate,
+          })
         : t('blocker', {
             title: blocker.title,
             who: blocker.assignee ?? t('nobody'),

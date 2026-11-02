@@ -20,6 +20,8 @@ export function DoNextReasonLine({ task }: { readonly task: ProjectTask }) {
   let strong = true;
   switch (reason.kind) {
     case 'priority':
+      // Low is a quiet reason: it explains a low place, it does not call for action.
+      strong = reason.priority !== 'low';
       text = reason.by
         ? t('priorityBy', { level: priorityT(reason.priority), name: reason.by })
         : t('priority', { level: priorityT(reason.priority) });

@@ -532,8 +532,14 @@
       "timelineError": "Could not load the history.",
       "postUpdate": "Post update",
       "blocker": "{title} · {who}, {days, plural, =0 {on time} one {# day late} other {# days late}}",
-      "blockerOutside": "{title} · waiting on the {party}",
-      "nobody": "unassigned"
+      "blockerOutside": "{title} · waiting on {party}{days, plural, =0 {} one {, # day late} other {, # days late}}",
+      "nobody": "unassigned",
+      "party": {
+        "internal": "our team",
+        "customer": "the customer",
+        "bank": "the bank",
+        "discom": "the DISCOM"
+      }
     },
     "kanban": {
       "drag": "Move {title}",

@@ -94,4 +94,18 @@ describe('doNextReason', () => {
     });
     expect(doNextReason(rank({}), today)).toEqual({ kind: 'due', date: '2026-11-10' });
   });
+
+  it('says a Low task was marked Low, so its place makes sense', () => {
+    expect(
+      doNextReason(
+        rank({
+          priority: 'low',
+          overdue: true,
+          dueDate: '2026-10-30',
+          prioritySetBy: { fullName: 'Asha' },
+        }),
+        today,
+      ),
+    ).toEqual({ kind: 'priority', priority: 'low', by: 'Asha' });
+  });
 });

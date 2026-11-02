@@ -22,7 +22,7 @@ export function TaskBlockersCard({ task }: { readonly task: ProjectTask }) {
   const waitingFor = [
     ...details.map((blocker) =>
       blocker.waitingOn
-        ? TASK.blockerOutside(blocker.title, partyName(blocker.waitingOn))
+        ? TASK.blockerOutside(blocker.title, partyName(blocker.waitingOn), blocker.daysLate)
         : TASK.blocker(blocker.title, blocker.assignee, blocker.daysLate),
     ),
     ...others,
