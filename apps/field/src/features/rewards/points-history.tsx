@@ -29,9 +29,15 @@ export function PointsHistory({ entries }: { readonly entries: readonly PointsEn
               {REWARDS.source[entry.sourceType]} · {dayOf(entry.createdAt)}
             </Text>
           </View>
-          <Text variant="titleMd" tone="accent">
-            {REWARDS.points(entry.points)}
-          </Text>
+          {entry.points === 0 ? (
+            <Text variant="label" color={theme.status.atRisk.fg}>
+              {REWARDS.missedPoints}
+            </Text>
+          ) : (
+            <Text variant="titleMd" tone="accent">
+              {REWARDS.points(entry.points)}
+            </Text>
+          )}
         </View>
       ))}
     </Card>

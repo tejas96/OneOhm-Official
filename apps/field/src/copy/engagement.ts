@@ -36,7 +36,15 @@ export const REWARDS = {
   thisMonth: (points: number) => `${points} points this month`,
   total: 'points in all',
   points: (points: number) => (points > 0 ? `+${points}` : String(points)),
+  missedPoints: 'Missed',
+  month: {
+    onTime: 'On time',
+    firstTime: 'First-time right',
+    tasks: 'Tasks judged',
+    noneMissed: 'Nothing missed this month. Well done.',
+  },
   sections: {
+    month: 'THIS MONTH',
     achievements: 'ACHIEVEMENTS',
     money: 'BONUSES AND INCENTIVES',
     feedback: 'WHAT CUSTOMERS SAID',
