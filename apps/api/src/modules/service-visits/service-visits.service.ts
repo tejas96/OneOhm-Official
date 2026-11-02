@@ -102,6 +102,7 @@ export class ServiceVisitsService {
       openVisit: open,
       tracking: tracking.status,
       farFromSiteM: tracking.policy.travel.farFromSiteM,
+      sitePoint: job.place?.point ?? null,
       canWork: job.assigneeUserId === actor.userId && job.ticket.status !== 'resolved',
     };
   }

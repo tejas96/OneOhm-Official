@@ -94,6 +94,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'OneOhm turns what you say into text for your task notes. You can check and edit it before saving.',
       },
     ],
+    // react-native-maps: on iOS the Google map needs its pods and key at start-up, which
+    // only this plugin adds. Android reads the key from `android.config.googleMaps`.
+    ['react-native-maps', MAPS_IOS_KEY ? { iosGoogleMapsApiKey: MAPS_IOS_KEY } : {}],
     [
       'expo-splash-screen',
       {

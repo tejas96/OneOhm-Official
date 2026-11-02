@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
 import { type ToastOptions, useToast } from '@/components/toast';
 import { TASK } from '@/copy/tasks';
+import { resendPendingPin } from '@/features/site/use-pending-pin';
 import { activityKey } from './task-timeline';
 
 /**
@@ -41,8 +42,10 @@ export function useTaskActions(task: ProjectTask) {
     onSuccess: settle(TASK.done.waiting),
   });
   const complete = useMutation({
-    mutationFn: (input: { facts: Record<string, string>; note: string }) =>
-      unwrap(
+    mutationFn: async (input: { facts: Record<string, string>; note: string }) => {
+      // A roof pin kept on the phone for want of signal goes first (design 9).
+      await resendPendingPin(task.id, client);
+      return unwrap(
         api.tasks.completeTask({
           params,
           body: {
@@ -52,7 +55,8 @@ export function useTaskActions(task: ProjectTask) {
             note: input.note.trim() || null,
           },
         }),
-      ),
+      );
+    },
     // A finished task gets the small success illustration (PRD 9.2).
     onSuccess: (updated) =>
       updated.status === 'in_review'

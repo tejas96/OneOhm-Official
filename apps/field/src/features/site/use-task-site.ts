@@ -1,4 +1,5 @@
 import type { TaskSite, TrackingStatus } from '@oneohm/api-contracts';
+import type { GeoPoint } from '@oneohm/domain';
 import { unwrap } from '@oneohm/mobile-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -44,6 +45,12 @@ export async function readIfAllowed(
   return { position: reading, missed: null };
 }
 
+export interface SiteActionInput {
+  readonly tracking: TrackingStatus | undefined;
+  /** Saving only: the roof point the worker pinned on the map. */
+  readonly pin?: GeoPoint | undefined;
+}
+
 export function useSiteAction(taskId: string, kind: 'in' | 'out' | 'save') {
   const client = useQueryClient();
   const [progress, setProgress] = useState<{ reading: boolean; accuracyM: number | null }>({
@@ -51,10 +58,12 @@ export function useSiteAction(taskId: string, kind: 'in' | 'out' | 'save') {
     accuracyM: null,
   });
   const mutation = useMutation({
-    mutationFn: async (tracking: TrackingStatus | undefined) => {
+    mutationFn: async ({ tracking, pin }: SiteActionInput) => {
       const params = { id: taskId };
       if (kind === 'save') {
-        const site = await unwrap(api.siteActivity.saveSiteLocation({ params, body: {} }));
+        // With a pin: the roof point from the map. Without: today's check-in reading.
+        const body = pin ? { pin: { latitude: pin.latitude, longitude: pin.longitude } } : {};
+        const site = await unwrap(api.siteActivity.saveSiteLocation({ params, body }));
         return { site, missed: null as Missed };
       }
       setProgress({ reading: true, accuracyM: null });

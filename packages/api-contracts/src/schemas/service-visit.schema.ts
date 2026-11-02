@@ -82,6 +82,8 @@ export const serviceVisitSchema = serviceJobSchema.extend({
   openVisit: siteVisitSchema.nullable(),
   tracking: trackingStatusSchema,
   farFromSiteM: z.number().int(),
+  /** The site's saved point, so directions go to the roof rather than the address text. */
+  sitePoint: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
   /** The person may check in, add evidence and finish: it is theirs and not resolved. */
   canWork: z.boolean(),
 });
