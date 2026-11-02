@@ -43,6 +43,7 @@ export const workforcePolicySchema = z.object({
     farFromSiteM: z.number().int().min(50).max(5000),
     ratePaisePerKm: z.number().int().min(0).max(10_000),
     hoursMarginMinutes: z.number().int().min(0).max(240),
+    pinTrustM: z.number().int().min(25).max(2000).default(100),
   }),
   /** Open tasks one person should carry (PRD 3.12); 0 means no limit. */
   capacity: z

@@ -142,6 +142,7 @@ describe('workforce policy defaults', () => {
       farFromSiteM: 300,
       ratePaisePerKm: 500,
       hoursMarginMinutes: 60,
+      pinTrustM: 100,
     });
   });
 });
