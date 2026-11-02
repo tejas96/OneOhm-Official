@@ -59,6 +59,8 @@ export const taskSiteSchema = z.object({
   /** Null when the task is office work: no check-in is offered. */
   kind: siteVisitKindSchema.nullable(),
   siteLabel: z.string().nullable(),
+  /** The site's street address and city, what Navigate searches when no point is saved. */
+  siteAddress: z.string().nullable(),
   siteLocated: z.boolean(),
   farFromSiteM: z.number().int(),
   /** The person's open visit anywhere (it may be another task's). */

@@ -37,7 +37,8 @@ export class SitePinService {
           ? { latitude: current.latitude, longitude: current.longitude }
           : null;
       // A second tap on the same spot changes nothing.
-      if (previous && distanceMeters(previous, pin) === 0) return;
+      // The same pin sent twice: within 0.5 m (distanceMeters rounds to whole metres).
+      if (previous && distanceMeters(previous, pin) < 1) return;
       const point = checkInPoint(open);
       const reading = point ? { ...point, accuracyM: open.checkInAccuracyM } : null;
       const judged = judgeSitePin(pin, reading, policy.travel.pinTrustM);

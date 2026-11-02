@@ -89,6 +89,8 @@ export function GpsFields({
   const typed = (name: 'latitude' | 'longitude', next: string) => {
     (name === 'latitude' ? setLatitude : setLongitude)(next);
     setSource('typed');
+    // Someone typing keeps the inputs, even if the map loads meanwhile.
+    setTyping(true);
   };
 
   return (

@@ -13,6 +13,11 @@ describe('judgeSitePin', () => {
     expect(judgeSitePin(pin, reading, 100)).toMatchObject({ flagged: true });
     expect(judgeSitePin(pin, reading, 100).distanceM).toBeGreaterThan(200);
   });
+  it('trusts a pin exactly at the limit and flags one a metre past it', () => {
+    const pin = { latitude: 16.853, longitude: 74.5815 }; // 67 m
+    expect(judgeSitePin(pin, reading, 67)).toEqual({ distanceM: 67, flagged: false });
+    expect(judgeSitePin(pin, reading, 66)).toEqual({ distanceM: 67, flagged: true });
+  });
   it('flags a pin with no reading to compare', () => {
     expect(judgeSitePin(reading, null, 100)).toEqual({ distanceM: null, flagged: true });
   });

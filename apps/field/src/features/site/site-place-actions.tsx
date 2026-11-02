@@ -22,7 +22,7 @@ export function SitePlaceActions({
 }) {
   const theme = useTheme();
   const canPin = mapsEnabled && site.canPinSite;
-  const navigateTo = directionsUrl(site.sitePoint, site.siteLabel);
+  const navigateTo = directionsUrl(site.sitePoint, site.siteAddress);
   return (
     <>
       {canPin || navigateTo ? (
@@ -56,6 +56,7 @@ export function SitePlaceActions({
         <PinSheet
           start={pin.sheet.start}
           saved={site.sitePoint}
+          canSetSite={pin.sheet.canSetSite}
           onConfirm={pin.confirm}
           onUseGps={pin.saveGps}
           onClose={pin.close}

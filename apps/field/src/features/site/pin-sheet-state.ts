@@ -32,30 +32,58 @@ export function regionAround(
   return { latitude: point.latitude, longitude: point.longitude, latitudeDelta, longitudeDelta };
 }
 
-export type SheetAction = 'confirm' | 'gps' | 'close';
+/**
+ * `gps` saves the check-in reading (today's path); `gpsPin` sends the fresh reading as a
+ * pin, for a visit checked in without a fix (the server saves it flagged, no distance).
+ */
+export type SheetAction = 'confirm' | 'gps' | 'gpsPin' | 'close';
 type SheetButton = { readonly label: string; readonly action: SheetAction };
+
+export interface SheetFacts {
+  /** The site already has a point. */
+  readonly hasSaved: boolean;
+  /** The open visit has a check-in point that may become the site's location. */
+  readonly canSetSite: boolean;
+  /** The phone has a fresh reading to start the sheet from. */
+  readonly hasStart: boolean;
+}
+
+/** What "Use my GPS reading" does here, or null when there is no reading to use. */
+function gpsAction({ hasSaved, canSetSite, hasStart }: SheetFacts): SheetAction | null {
+  if (hasSaved) return null;
+  if (canSetSite) return 'gps';
+  return hasStart ? 'gpsPin' : null;
+}
 
 /**
  * The sheet's buttons. The GPS reading only fills an empty location, so with a saved
  * point it is never offered (the server would refuse it); a failed map then just keeps
- * the saved location.
+ * the saved location. With no reading to use at all, a failed map can only be closed.
  */
 export function sheetActions(
   state: MapState,
-  hasSaved: boolean,
+  facts: SheetFacts,
 ): { message: string | null; primary: SheetButton; secondary: SheetButton | null } {
+  const gps = gpsAction(facts);
   if (state === 'failed') {
-    return hasSaved
-      ? {
+    if (facts.hasSaved) {
+      return {
+        message: PIN.failedSaved,
+        primary: { label: PIN.keepSaved, action: 'close' },
+        secondary: null,
+      };
+    }
+    return gps
+      ? { message: null, primary: { label: PIN.failed, action: gps }, secondary: null }
+      : {
           message: PIN.failedSaved,
-          primary: { label: PIN.keepSaved, action: 'close' },
+          primary: { label: PIN.closeShort, action: 'close' },
           secondary: null,
-        }
-      : { message: null, primary: { label: PIN.failed, action: 'gps' }, secondary: null };
+        };
   }
   return {
     message: null,
     primary: { label: PIN.confirm, action: 'confirm' },
-    secondary: hasSaved ? null : { label: PIN.useGps, action: 'gps' },
+    secondary: gps ? { label: PIN.useGps, action: gps } : null,
   };
 }

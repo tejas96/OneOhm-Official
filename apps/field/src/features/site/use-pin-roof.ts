@@ -25,7 +25,10 @@ export function usePinRoof(taskId: string, site: TaskSite) {
   const save = useSiteAction(taskId, 'save');
   const pending = usePendingPin(taskId);
   const [progress, setProgress] = useState<{ accuracyM: number | null } | null>(null);
-  const [sheet, setSheet] = useState<{ start: PinStart | null } | null>(null);
+  const [sheet, setSheet] = useState<{
+    start: PinStart | null;
+    canSetSite: boolean;
+  } | null>(null);
 
   // Today's path: the check-in reading becomes the site location.
   const saveGps = () => {
@@ -53,7 +56,9 @@ export function usePinRoof(taskId: string, site: TaskSite) {
         }
       : null;
     const outcome = pinOutcome(start, site.sitePoint, site.canSetSite);
-    if (outcome.kind === 'open') setSheet({ start: outcome.start });
+    // The sheet's "Use my GPS reading" saves the check-in point when the visit has one,
+    // else sends this fresh reading as a pin.
+    if (outcome.kind === 'open') setSheet({ start: outcome.start, canSetSite: site.canSetSite });
     else if (outcome.kind === 'gps') saveGps();
     else toast(outcome.message);
   };

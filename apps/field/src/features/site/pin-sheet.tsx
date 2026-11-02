@@ -20,7 +20,10 @@ export interface PinSheetProps {
   readonly start: PinStart | null;
   /** The site's saved point, shown as a second marker. */
   readonly saved: GeoPoint | null;
+  /** The visit's check-in point may become the site's location ("Use my GPS reading"). */
+  readonly canSetSite: boolean;
   readonly onConfirm: (pin: GeoPoint) => void;
+  /** Saves the check-in reading; without one the fresh reading is sent as a pin. */
   readonly onUseGps: () => void;
   readonly onClose: () => void;
 }
@@ -34,7 +37,14 @@ const PIN_SIZE = 40;
  * only action left is today's GPS reading, or keeping the saved location when there is
  * one (the GPS reading never replaces a saved point), so the work is never blocked.
  */
-export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinSheetProps) {
+export function PinSheet({
+  start,
+  saved,
+  canSetSite,
+  onConfirm,
+  onUseGps,
+  onClose,
+}: PinSheetProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const first = start ?? saved;
@@ -49,9 +59,15 @@ export function PinSheet({ start, saved, onConfirm, onUseGps, onClose }: PinShee
     );
     return () => clearTimeout(timer);
   }, []);
-  const bar = sheetActions(state, saved !== null);
+  const bar = sheetActions(state, {
+    hasSaved: saved !== null,
+    canSetSite,
+    hasStart: start !== null,
+  });
   const act = (action: SheetAction) => {
     if (action === 'gps') onUseGps();
+    else if (action === 'gpsPin' && start)
+      onConfirm({ latitude: start.latitude, longitude: start.longitude });
     else if (action === 'close') onClose();
     else if (centre) onConfirm(centre);
   };

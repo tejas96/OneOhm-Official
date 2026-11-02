@@ -33,28 +33,62 @@ describe('regionAround', () => {
 });
 
 describe('sheetActions', () => {
-  it('offers the roof and the GPS reading when no point is saved', () => {
-    expect(sheetActions('ready', false)).toEqual({
+  const empty = { hasSaved: false, canSetSite: true, hasStart: true };
+  const noCheckInFix = { hasSaved: false, canSetSite: false, hasStart: true };
+  const noReading = { hasSaved: false, canSetSite: false, hasStart: false };
+  const saved = { hasSaved: true, canSetSite: false, hasStart: true };
+
+  it('offers the roof and the check-in reading when no point is saved', () => {
+    expect(sheetActions('ready', empty)).toEqual({
       message: null,
       primary: { label: 'This is the roof', action: 'confirm' },
       secondary: { label: 'Use my GPS reading', action: 'gps' },
     });
-    expect(sheetActions('failed', false)).toEqual({
+    expect(sheetActions('failed', empty)).toEqual({
       message: null,
       primary: { label: 'Map not loading. Use my GPS reading', action: 'gps' },
       secondary: null,
     });
   });
-  it('never offers the GPS reading when a point is saved (it would be refused)', () => {
-    expect(sheetActions('loading', true)).toEqual({
+  it('keeps the check-in path when the visit has a point, even with no fresh reading', () => {
+    expect(sheetActions('failed', { ...empty, hasStart: false }).primary.action).toBe('gps');
+  });
+  it('sends the fresh reading as a pin when the check-in had no fix', () => {
+    expect(sheetActions('ready', noCheckInFix)).toEqual({
+      message: null,
+      primary: { label: 'This is the roof', action: 'confirm' },
+      secondary: { label: 'Use my GPS reading', action: 'gpsPin' },
+    });
+    expect(sheetActions('failed', noCheckInFix)).toEqual({
+      message: null,
+      primary: { label: 'Map not loading. Use my GPS reading', action: 'gpsPin' },
+      secondary: null,
+    });
+  });
+  it('only offers Close when there is no reading to use at all', () => {
+    expect(sheetActions('loading', noReading)).toEqual({
       message: null,
       primary: { label: 'This is the roof', action: 'confirm' },
       secondary: null,
     });
-    expect(sheetActions('failed', true)).toEqual({
+    expect(sheetActions('failed', noReading)).toEqual({
       message: 'Map not loading.',
-      primary: { label: 'Keep the saved location', action: 'close' },
+      primary: { label: 'Close', action: 'close' },
       secondary: null,
     });
+  });
+  it('never offers the GPS reading when a point is saved (it would be refused)', () => {
+    for (const facts of [saved, { ...saved, canSetSite: true }, { ...saved, hasStart: false }]) {
+      expect(sheetActions('loading', facts)).toEqual({
+        message: null,
+        primary: { label: 'This is the roof', action: 'confirm' },
+        secondary: null,
+      });
+      expect(sheetActions('failed', facts)).toEqual({
+        message: 'Map not loading.',
+        primary: { label: 'Keep the saved location', action: 'close' },
+        secondary: null,
+      });
+    }
   });
 });

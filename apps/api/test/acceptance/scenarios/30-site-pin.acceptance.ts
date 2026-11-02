@@ -103,6 +103,8 @@ describe('Site pin', () => {
     const site = await pin(crew, surveyId, north(67));
     expect(site.siteFlagged).toBe(false);
     expect(site.canPinSite).toBe(true);
+    // Navigate searches the street address, not the site's name.
+    expect(site.siteAddress).toBe('12 Vishrambag Road (test), Sangli');
     expect(near(site.openVisit?.checkInDistanceM, 67)).toBe(true);
     const saved = await property();
     expect(saved.locationSource).toBe('map_pin');

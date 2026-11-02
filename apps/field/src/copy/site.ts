@@ -67,6 +67,7 @@ export const PIN = {
   failed: 'Map not loading. Use my GPS reading',
   failedSaved: 'Map not loading.',
   keepSaved: 'Keep the saved location',
+  closeShort: 'Close',
 } as const;
 
 export const TRAVEL = {

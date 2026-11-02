@@ -209,6 +209,7 @@ export class SiteVisitsService {
       taskId: task.id,
       kind: task.kind,
       siteLabel: task.siteLabel,
+      siteAddress: task.siteAddress,
       siteLocated: task.site !== null,
       farFromSiteM: tracking.policy.travel.farFromSiteM,
       openVisit: mine[0] ?? null,

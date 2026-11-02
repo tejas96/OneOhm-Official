@@ -20,6 +20,8 @@ export interface SiteTask {
   readonly managerUserId: string | null;
   readonly propertyId: string;
   readonly siteLabel: string;
+  /** The street address with its city, for directions ("addressLine, city"). */
+  readonly siteAddress: string;
   readonly site: GeoPoint | null;
   /** How the site's point was set; empty when it has none or predates sources. */
   readonly siteSource: LocationSource | null;
@@ -42,6 +44,7 @@ export async function loadSiteTask(
       propertyId: properties.id,
       siteLabel: properties.label,
       city: properties.city,
+      addressLine: properties.addressLine,
       latitude: properties.latitude,
       longitude: properties.longitude,
       locationSource: properties.locationSource,
@@ -64,6 +67,7 @@ export async function loadSiteTask(
     managerUserId: row.managerUserId,
     propertyId: row.propertyId,
     siteLabel: `${row.siteLabel}, ${row.city}`,
+    siteAddress: `${row.addressLine}, ${row.city}`,
     site:
       row.latitude !== null && row.longitude !== null
         ? { latitude: row.latitude, longitude: row.longitude }

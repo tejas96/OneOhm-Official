@@ -39,7 +39,7 @@ DATABASE_URL=postgres://oneohm:oneohm-local-only@127.0.0.1:5460/oneohm node pack
 pnpm --filter @oneohm/database db:seed
 ```
 
-Maps need `GOOGLE_MAPS_API_KEY` in `.env`, and the field app needs a new dev build (`npx expo run:ios` / `run:android`) because `react-native-maps` is native.
+Maps: the API and web read `GOOGLE_MAPS_API_KEY` from the root `.env`. The field app does not load the root `.env`: Expo reads only `apps/field/.env` (git-ignored) and the shell, so set the key there when building, e.g. `GOOGLE_MAPS_API_KEY=<key> npx expo run:ios` (or the per-platform `GOOGLE_MAPS_IOS_KEY` / `GOOGLE_MAPS_ANDROID_KEY`). It needs a new dev build (`npx expo run:ios` / `run:android`) because `react-native-maps` is native. EAS builds need these as EAS environment variables.
 
 Then start each part in its own terminal:
 
