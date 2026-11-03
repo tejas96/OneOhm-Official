@@ -5,7 +5,9 @@ import {
   DEFAULT_APPROVAL_POLICY,
   DEFAULT_ASSIGNMENT_RULES,
   DEFAULT_DASHBOARD_SETTINGS,
+  DEFAULT_LEAD_ASSIGNMENT,
   DEFAULT_REMINDER_TIMING,
+  type LeadAssignmentRules,
   type ReminderTiming,
   withDefaults,
 } from '@oneohm/domain';
@@ -19,6 +21,7 @@ export interface BusinessSettingsMap {
   readonly assignment: AssignmentRules;
   readonly approvals: ApprovalPolicy;
   readonly dashboard: DashboardSettings;
+  readonly lead_assignment: LeadAssignmentRules;
 }
 export type BusinessSettingKey = keyof BusinessSettingsMap;
 
@@ -29,6 +32,7 @@ export const BUSINESS_SETTING_DEFAULTS: {
   assignment: DEFAULT_ASSIGNMENT_RULES,
   approvals: DEFAULT_APPROVAL_POLICY,
   dashboard: DEFAULT_DASHBOARD_SETTINGS,
+  lead_assignment: DEFAULT_LEAD_ASSIGNMENT,
 };
 
 /** The saved values for one area over the shipped ones; never throws for a missing row. */

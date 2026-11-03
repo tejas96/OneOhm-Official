@@ -8,7 +8,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { SOURCE_LABEL } from './lead-labels';
-import { ownerByRule } from './lead-owner';
+import { alertNobodyFree, ownerByRule } from './lead-owner';
 
 export interface IntakeInput {
   readonly name: string;
@@ -98,10 +98,11 @@ export class LeadIntakeService {
   }
 
   private async insert(tx: DatabaseExecutor, input: IntakeInput): Promise<IntakeResult> {
-    const owner = await ownerByRule(tx);
-    if (!owner) {
+    const ruled = await ownerByRule(tx, { city: input.city });
+    if (!ruled) {
       throw conflict('Nobody can take new leads yet. Give a staff role the leads permission.');
     }
+    const owner = ruled.userId;
     const today = todayIn();
     const [lead] = await tx
       .insert(leads)
@@ -122,6 +123,7 @@ export class LeadIntakeService {
       .insert(leadActivities)
       .values({ leadId: lead.id, kind: 'note', note: input.firstNote });
     await this.tellOwner(tx, owner, lead, input, today);
+    if (ruled.fallback) await alertNobodyFree(tx, lead);
     return { leadId: lead.id, name: lead.name, createdAt: lead.createdAt, created: true };
   }
 

@@ -8,7 +8,9 @@ import { users } from './identity.schema';
  * the value is merged over the shipped defaults when read.
  */
 export const businessSettings = pgTable('business_settings', {
-  key: text('key', { enum: ['reminders', 'assignment', 'approvals', 'dashboard'] }).primaryKey(),
+  key: text('key', {
+    enum: ['reminders', 'assignment', 'approvals', 'dashboard', 'lead_assignment'],
+  }).primaryKey(),
   value: jsonb('value').notNull(),
   updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   updatedAt: updatedAt(),

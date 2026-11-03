@@ -12,6 +12,7 @@ import {
   checkDashboardSettings,
   checkReminderTiming,
   isAssignmentRules,
+  isLeadAssignmentRules,
   type SettingErrors,
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
@@ -28,6 +29,8 @@ const CHECKS: {
   assignment: (value) => (isAssignmentRules(value) ? {} : { strategy: 'Pick a way to assign.' }),
   approvals: checkApprovalPolicy,
   dashboard: checkDashboardSettings,
+  lead_assignment: (value) =>
+    isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
 };
 
 const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
@@ -35,6 +38,7 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   assignment: 'Check the assignment rules.',
   approvals: 'Check the approval limits.',
   dashboard: 'Check the dashboard numbers.',
+  lead_assignment: 'Check the lead rule.',
 };
 
 /**
