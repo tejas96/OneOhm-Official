@@ -34,8 +34,10 @@ export interface OnboardingSettings {
 
 export const MIN_BILL_BANDS = 2;
 export const MAX_BILL_BANDS = 9;
-/** WhatsApp lists hold 10 rows and "Other" takes one. */
-export const MAX_SERVICE_CITIES = 9;
+/** WhatsApp lists hold 10 rows; "Other" and "Talk to a person" take two. */
+export const MAX_SERVICE_CITIES = 8;
+/** WhatsApp list row titles hold 24 characters. */
+export const MAX_ROW_TITLE = 24;
 
 export const DEFAULT_ONBOARDING: OnboardingSettings = {
   enabled: true,
@@ -65,9 +67,24 @@ function isBillBand(value: unknown): value is BillBand {
   return (
     isText(band.id) &&
     isText(band.label) &&
+    band.label.length <= MAX_ROW_TITLE &&
     (targetWp === null || isPositive(targetWp)) &&
     (maxRupees === undefined || maxRupees === null || isPositive(maxRupees))
   );
+}
+
+/** Typed amounts are matched in order, so numbers must rise and "no limit" can only be last. */
+function areBandsOrdered(bands: readonly BillBand[]): boolean {
+  let previous = 0;
+  for (const [index, band] of bands.entries()) {
+    if (band.maxRupees === null) {
+      if (index !== bands.length - 1) return false;
+    } else if (band.maxRupees !== undefined) {
+      if (band.maxRupees <= previous) return false;
+      previous = band.maxRupees;
+    }
+  }
+  return true;
 }
 
 function isPanelOverrides(value: unknown): boolean {
@@ -87,11 +104,12 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
     typeof s.enabled === 'boolean' &&
     Array.isArray(cities) &&
     cities.length <= MAX_SERVICE_CITIES &&
-    cities.every(isText) &&
+    cities.every((city) => isText(city) && city.length <= MAX_ROW_TITLE) &&
     Array.isArray(bands) &&
     bands.length >= MIN_BILL_BANDS &&
     bands.length <= MAX_BILL_BANDS &&
     bands.every(isBillBand) &&
+    areBandsOrdered(bands) &&
     new Set(bands.map((band: BillBand) => band.id)).size === bands.length &&
     isPositive(s.tariffPaisePerUnit) &&
     isPositive(s.unitsPerKwMonth) &&

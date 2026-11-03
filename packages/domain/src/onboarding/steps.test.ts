@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_ONBOARDING, type OnboardingSettings } from './settings';
-import { nextStep, parseAnswer, previousStep } from './steps';
+import { CITY_OTHER_CHOICE, nextStep, parseAnswer, previousStep } from './steps';
 
 const s: OnboardingSettings = { ...DEFAULT_ONBOARDING, serviceCities: ['Pune', 'Nashik'] };
 const typed = (step: Parameters<typeof parseAnswer>[0], text: string) =>
@@ -36,6 +36,23 @@ describe('parseAnswer typed', () => {
     expect(typed('roof', 'पत्रा')).toEqual({ ok: true, value: 'tin' });
     expect(typed('photo', '2')).toEqual({ ok: true, value: 'later' });
     expect(typed('site', 'banana')).toEqual({ ok: false });
+  });
+  it('asks again when two options are named, or the word is only a greeting', () => {
+    expect(typed('site', 'farm house')).toEqual({ ok: false });
+    expect(typed('site', 'society flat')).toEqual({ ok: false });
+    expect(typed('site', 'shop house')).toEqual({ ok: false });
+    expect(typed('site', 'flat')).toEqual({ ok: false });
+    expect(typed('site', 'my house')).toEqual({ ok: true, value: 'home' });
+    expect(typed('language', 'hi')).toEqual({ ok: false });
+    expect(typed('language', 'hi there')).toEqual({ ok: false });
+    expect(typed('language', 'Hindi')).toEqual({ ok: true, value: 'hi' });
+    expect(typed('language', 'हिंदी')).toEqual({ ok: true, value: 'hi' });
+  });
+  it('reads a city by option number, the last number being Other', () => {
+    expect(typed('city', '2')).toEqual({ ok: true, value: 'Nashik' });
+    expect(typed('city', '3')).toEqual({ ok: true, value: CITY_OTHER_CHOICE });
+    expect(typed('city', '4')).toEqual({ ok: false });
+    expect(chose('city', CITY_OTHER_CHOICE)).toEqual({ ok: true, value: CITY_OTHER_CHOICE });
   });
   it('reads a bill as a band', () => {
     expect(typed('bill', '3000')).toEqual({ ok: true, value: '2000_3000' });

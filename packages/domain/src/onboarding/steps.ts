@@ -30,7 +30,10 @@ export interface OnboardAnswers {
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false };
 
-/** The choice id of the "Other" city row; the bot then asks for the city as text. */
+/**
+ * What the city answer is when the customer picks the "Other" row (tapped, or typed as
+ * the number after the last city); the bot then asks for the city as text.
+ */
 export const CITY_OTHER_CHOICE = 'ob:city:other';
 
 const NO: Parsed<never> = { ok: false };
@@ -38,11 +41,12 @@ const yes = <T>(value: T): Parsed<T> => ({ ok: true, value });
 
 /** Plain words a customer may type for each option, in English, Marathi and Hindi. */
 const SYNONYMS: Record<string, readonly string[]> = {
-  en: ['en', 'english', 'inglish', 'इंग्लिश', 'अंग्रेजी', 'अंग्रेज़ी'],
-  mr: ['mr', 'marathi', 'मराठी'],
-  hi: ['hi', 'hindi', 'हिंदी', 'हिन्दी'],
-  home: ['home', 'house', 'flat', 'ghar', 'घर', 'बंगला', 'बंगलो'],
-  society: ['society', 'housing', 'सोसायटी', 'सोसाइटी'],
+  en: ['english', 'inglish', 'इंग्लिश', 'अंग्रेजी', 'अंग्रेज़ी'],
+  mr: ['marathi', 'मराठी'],
+  hi: ['hindi', 'हिंदी', 'हिन्दी'],
+  home: ['home', 'house', 'ghar', 'flat', 'apartment', 'फ्लॅट', 'फ्लैट', 'घर', 'बंगला', 'बंगलो'],
+  // "flat" is in both home and society: it could be either, so it is asked again.
+  society: ['society', 'flat', 'apartment', 'फ्लॅट', 'फ्लैट', 'housing', 'सोसायटी', 'सोसाइटी'],
   business: ['shop', 'business', 'office', 'factory', 'dukan', 'दुकान', 'व्यवसाय', 'व्यापार'],
   farm: ['farm', 'farming', 'shet', 'khet', 'शेत', 'खेत'],
   rcc: ['rcc', 'slab', 'concrete', 'स्लॅब', 'स्लैब', 'सिमेंट'],
@@ -73,11 +77,13 @@ function matchOption<T extends string>(
     return picked && !wordless.includes(picked) ? yes(picked) : NO;
   }
   const tokens = word.split(/[\s,.;:!?]+/u);
-  for (const option of options) {
+  const hits = options.filter((option) => {
     const words = SYNONYMS[option] ?? [];
-    if (words.includes(word) || tokens.some((token) => words.includes(token))) return yes(option);
-  }
-  return NO;
+    return words.includes(word) || tokens.some((token) => words.includes(token));
+  });
+  // Two options named ("farm house") is a guess we must not make: ask again.
+  const [only] = hits;
+  return hits.length === 1 && only !== undefined ? yes(only) : NO;
 }
 
 /** Highest-bill-first lookup: the band whose range holds the typed monthly amount. */
@@ -114,6 +120,13 @@ function parseFloors(text: string): Parsed<1 | 2 | 3> {
 
 function parseCityText(text: string, settings: OnboardingSettings): Parsed<string> {
   const value = clean(text);
+  if (/^\d+$/u.test(value)) {
+    // Option numbers: the cities in order, then "Other". Any other number is no city.
+    const index = Number(value) - 1;
+    if (index === settings.serviceCities.length) return yes(CITY_OTHER_CHOICE);
+    const listed = settings.serviceCities[index];
+    return listed !== undefined ? yes(listed) : NO;
+  }
   const key = value.toLowerCase().replace(/\s/gu, '');
   const listed = settings.serviceCities.find(
     (city) => city.toLowerCase().replace(/\s/gu, '') === key,
@@ -137,6 +150,7 @@ function parseChoice(step: OnboardStep, id: string, settings: OnboardingSettings
     case 'floors':
       return ['1', '2', '3'].includes(value) ? yes(Number(value)) : NO;
     case 'city':
+      if (id === CITY_OTHER_CHOICE) return yes(CITY_OTHER_CHOICE);
       return settings.serviceCities.includes(value) ? yes(value) : NO;
     default:
       return NO;
@@ -146,8 +160,8 @@ function parseChoice(step: OnboardStep, id: string, settings: OnboardingSettings
 /**
  * Reads one customer answer for a step: a tapped choice ("ob:<step>:<value>") or typed
  * text (option number, a word in English/Marathi/Hindi, an amount). {ok:false} means
- * "ask again more simply". The "Other" city row ({@link CITY_OTHER_CHOICE}) is not an
- * answer; the bot waits for the city as text.
+ * "ask again more simply". The "Other" city row answers {@link CITY_OTHER_CHOICE}, which
+ * is not a city: the bot then waits for the city as text.
  */
 export function parseAnswer(
   step: OnboardStep,

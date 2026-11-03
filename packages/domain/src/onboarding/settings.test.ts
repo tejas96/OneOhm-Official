@@ -25,4 +25,34 @@ describe('isOnboardingSettings', () => {
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: -1 })).toBe(false);
     expect(isOnboardingSettings(null)).toBe(false);
   });
+  it('allows 8 cities and rejects 9, since the list also carries two other rows', () => {
+    const cities = (n: number) => Array.from({ length: n }, (_, i) => `City${i}`);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(8) })).toBe(true);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(9) })).toBe(false);
+  });
+  it('caps city names and band labels at 24 characters', () => {
+    const at = { ...DEFAULT_ONBOARDING, serviceCities: ['a'.repeat(24)] };
+    expect(isOnboardingSettings(at)).toBe(true);
+    expect(isOnboardingSettings({ ...at, serviceCities: ['a'.repeat(25)] })).toBe(false);
+    const band = (label: string) => [
+      { id: 'x', label, targetWp: 1000, maxRupees: 1000 },
+      { id: 'y', label: 'Y', targetWp: null, maxRupees: null },
+    ];
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: band('b'.repeat(24)) })).toBe(
+      true,
+    );
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: band('b'.repeat(25)) })).toBe(
+      false,
+    );
+  });
+  it('needs rising band limits with "no limit" only last', () => {
+    const [a, b, c] = DEFAULT_ONBOARDING.billBands;
+    const last = DEFAULT_ONBOARDING.billBands[4];
+    if (!a || !b || !c || !last) throw new Error('defaults changed');
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: [b, a, c, last] })).toBe(false);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: [a, last, b] })).toBe(false);
+    expect(
+      isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: [a, { ...b, maxRupees: 1000 }] }),
+    ).toBe(false);
+  });
 });
