@@ -90,7 +90,7 @@ Messages the bot sends while you are chatting are free-form replies and need no 
 | R4 | "Before dispatch" falls due | ✅ Marathi `payment_link` template delivered |
 | R5 | Open the pay link | ✅ Landing page, Continue opens Razorpay. ⚠️ No UPI: the amount (₹1,19,580) is above the UPI limit of ₹1 lakh |
 | R6 | Pay (netbanking, test) | ✅ Marathi receipt template with the receipt PDF (`payment_received_file`), then the next step with Priya's name and phone and taps. Order correct |
-| R7 | Tap the old pay link again | Asked the tester for what they saw |
+| R7 | Tap the old pay link again | ✅ "Already paid" shown |
 | R8 | Send a voice note | ✅ Warm Marathi hand-over: "Priya will listen and reply here" |
 | R9 | `STOP`, then `START` | ✅ Both confirmed in Marathi; the opt-out flag cleared |
 
