@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { payments, projects, quotations } from '@oneohm/database';
+import { payments, projects, properties, quotations } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
@@ -79,6 +79,16 @@ export class AnswersService {
   async payments(customerId: string, withLinks: boolean): Promise<string> {
     const online = withLinks && this.links.setup().mode !== 'off';
     return paymentsText(this.db, this.env, customerId, online);
+  }
+
+  /** True when the customer has a project, so "Pay now" or "Track my project" leads somewhere. */
+  async hasProject(customerId: string): Promise<boolean> {
+    const [own] = await this.db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.customerId, customerId))
+      .limit(1);
+    return Boolean(own);
   }
 
   /** A "Pay now" message for each due amount; the text answer is sent first. */
@@ -164,7 +174,13 @@ export class AnswersService {
 
   /** Each installed item's warranty and the AMC with its next visit (PRD 6.1). */
   async warranty(customerId: string): Promise<string> {
-    return coverText(await this.after.cover(customerId));
+    const towns = await this.db
+      .select({ id: projects.id, city: properties.city })
+      .from(projects)
+      .innerJoin(properties, eq(properties.id, projects.propertyId))
+      .where(eq(projects.customerId, customerId));
+    const places = new Map(towns.map((town) => [town.id, town.city]));
+    return coverText(await this.after.cover(customerId), places);
   }
 
   /** The people this customer referred and their rewards (PRD 5.6). */

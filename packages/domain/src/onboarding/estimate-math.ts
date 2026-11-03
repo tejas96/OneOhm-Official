@@ -41,11 +41,14 @@ export function pricingInputsFor(
 
 /**
  * The most a month's bill in this band can be, in paise: its typed-amount limit, else the
- * last amount in its label ("₹2,000–2,500" → ₹2,500). Null for the open top band.
+ * last amount in its label ("₹2,000–2,500" → ₹2,500). Null for the open top band, and for
+ * a last band with no limit: its label names its lower end ("Over ₹5,000").
  */
-function bandCapPaise(band: BillBand | undefined): number | null {
+function bandCapPaise(bands: readonly BillBand[], id: string | undefined): number | null {
+  const band = bands.find((candidate) => candidate.id === id);
   if (!band || band.maxRupees === null) return null;
   if (typeof band.maxRupees === 'number') return band.maxRupees * 100;
+  if (band === bands.at(-1)) return null;
   const amounts = band.label.replaceAll(',', '').match(/\d+/g);
   const last = amounts?.at(-1);
   return last ? Number(last) * 100 : null;
@@ -66,7 +69,7 @@ export function savingAndPayback(
   const made = Math.round(
     (capacityWp / 1000) * settings.unitsPerKwMonth * settings.tariffPaisePerUnit,
   );
-  const cap = bandCapPaise(settings.billBands.find((band) => band.id === billBandId));
+  const cap = bandCapPaise(settings.billBands, billBandId);
   const monthlySavingPaise = cap === null ? made : Math.min(made, cap);
   if (monthlySavingPaise <= 0) return { monthlySavingPaise: 0, paybackYears: 0 };
   const years = effectivePaise / (monthlySavingPaise * 12);

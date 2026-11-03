@@ -2,6 +2,7 @@ import type { OnboardStep } from '@oneohm/domain';
 import type { LeadIntakeService } from '../../crm/lead-intake.service';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { queueReply } from '../chat-store';
+import { ONBOARD_WORDS } from './onboard-words';
 import { type ChatFilesService, type FileOutcome, fileWords } from './onboarding-files';
 import { makeLead, NO_NAME } from './onboarding-lead';
 import { speak, type Turn } from './onboarding-turn';
@@ -72,3 +73,20 @@ export async function ensureLead(
   await fileHeldBill(turn, deps.files, leadId);
   return leadId;
 }
+
+/** A voice note or a video: a person listens or watches and replies (C12, fix round 1). */
+export type HeardMedia = 'audio' | 'video';
+
+/** The media type when it is a voice note or a video, else null. */
+export const heardMedia = (type: string | undefined): HeardMedia | null =>
+  type === 'audio' || type === 'video' ? type : null;
+
+/** The lead's next action and the staff note for each. */
+export const HEARD: Record<HeardMedia, { readonly call: string; readonly note: string }> = {
+  audio: { call: 'Call — sent a voice note during onboarding', note: 'Sent a voice note' },
+  video: { call: 'Call — sent a video during onboarding', note: 'Sent a video' },
+};
+
+/** The warm reply, in the language being spoken, naming who will reply. */
+export const heardReply = (media: HeardMedia, name: string | null) =>
+  media === 'audio' ? ONBOARD_WORDS.voiceHandOver(name) : ONBOARD_WORDS.videoHandOver(name);

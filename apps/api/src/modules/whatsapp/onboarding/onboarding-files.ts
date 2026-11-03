@@ -40,7 +40,7 @@ export function fileWords(outcome: FileOutcome): string {
     case 'held':
       return ONBOARD_WORDS.firstDetails;
     case 'unreadable':
-      return MEDIA_WORDS.notRead;
+      return ONBOARD_WORDS.notRead;
     case 'too_large':
       return MEDIA_WORDS.tooLarge;
     case 'failed':

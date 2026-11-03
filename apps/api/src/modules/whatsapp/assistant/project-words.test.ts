@@ -6,6 +6,8 @@ describe('the customer’s words for a project (live review C9)', () => {
   it('names the project by its town, the size in panels and the instalments in order', () => {
     expect(PROJECT_WORDS.projectIn('Sangli')).toBe('Your solar project in Sangli');
     expect(PROJECT_WORDS.size(6, 3270)).toBe('6 panels (3.27 kW)');
+    // No panel count known: the size alone, never "0 panels".
+    expect(PROJECT_WORDS.size(0, 3270)).toBe('3.27 kW');
     expect([0, 1, 2].map((index) => PROJECT_WORDS.instalment(index, 3))).toEqual([
       '1st instalment',
       '2nd instalment',
@@ -39,6 +41,10 @@ describe('the customer’s words for a project (live review C9)', () => {
       expect(said, language).toContain('Priya Kulkarni');
       expect(said, language).toContain('+919800000001');
       expect(words.paidNext('commissioning_completed', null, null), language).not.toContain('null');
+      // Only the business phone known: the team, with that phone.
+      expect(words.paidNext('quotation_accepted', null, '+912000000000'), language).toContain(
+        '+912000000000',
+      );
       expect(said.length, language).toBeLessThanOrEqual(1024);
     }
     expect(PROJECT_LISTS.en.paidNext('quotation_accepted', 'Priya', '+919800000001')).toBe(

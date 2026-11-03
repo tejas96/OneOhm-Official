@@ -5,11 +5,13 @@ import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
+import { ensureChatOwner } from '../chat-owner';
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import { isOnboardingChat } from '../onboarding/onboarding-context';
 import { ChatFilesService, fileWords } from '../onboarding/onboarding-files';
 import { OnboardingFlowService } from '../onboarding/onboarding-flow';
 import { openLeadFor } from '../onboarding/onboarding-lead';
+import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { Incoming, IncomingMedia } from '../whatsapp-events';
 import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
@@ -44,12 +46,20 @@ export class StrangerFlowService {
   }
 
   /**
-   * A photo or paper from a number with an open lead the team made: filed on that lead.
+   * A photo or paper from a number with an open lead the team made: filed on that lead;
+   * a voice note or a video goes to their person.
    * False when there is no lead, so a stranger with none still stores nothing.
    */
   private async fileOnLead(chat: Conversation, media: IncomingMedia): Promise<boolean> {
     const lead = await openLeadFor(this.db, chat.phone);
     if (!lead) return false;
+    // A voice note or a video goes warmly to their person, as in onboarding (C12).
+    if (media.type === 'audio' || media.type === 'video') {
+      const owned = await ensureChatOwner(this.db, chat);
+      const reply = heardReply(media.type, await this.people.answererName(owned));
+      await this.people.passToOwner(owned, { summary: HEARD[media.type].note, reply });
+      return true;
+    }
     const file = await this.files.download(media);
     const got = await this.db.transaction((tx) =>
       this.files.receive(tx, file, { id: chat.id, leadId: lead.id }),

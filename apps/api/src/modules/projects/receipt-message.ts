@@ -1,13 +1,4 @@
-import {
-  customers,
-  type DatabaseExecutor,
-  leads,
-  messageTemplates,
-  projects,
-  quotations,
-  users,
-  waConversations,
-} from '@oneohm/database';
+import { type DatabaseExecutor, messageTemplates, waConversations } from '@oneohm/database';
 import { chatWindowOpen, type MilestoneTrigger } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
@@ -15,10 +6,11 @@ import { queueWhatsApp } from '../../common/outbox';
 import { environmentOnce } from '../../config/environment-once';
 import { customerPdfName } from '../reports/pdf-file-name';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
-import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
+import { inLanguage } from '../whatsapp/assistant/language';
 import { PROJECT_WORDS } from '../whatsapp/assistant/project-words';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
+import { contactFor } from './payment-contact';
 
 export interface PaidNews {
   readonly paymentId: string;
@@ -33,33 +25,6 @@ export interface PaidNews {
   /** What the paid instalment was for, so the chat says what happens next. */
   readonly trigger: MilestoneTrigger;
   readonly dedupeKey: string;
-}
-
-/**
- * The customer's language and the person they can call about the project: its manager,
- * else the owner of the lead it came from (live review C6).
- */
-async function contactFor(tx: DatabaseExecutor, projectId: string) {
-  const [row] = await tx
-    .select({
-      language: customers.preferredLanguage,
-      manager: projects.managerUserId,
-      leadOwner: leads.ownerUserId,
-    })
-    .from(projects)
-    .innerJoin(customers, eq(customers.id, projects.customerId))
-    .innerJoin(quotations, eq(quotations.id, projects.quotationId))
-    .leftJoin(leads, eq(leads.id, quotations.leadId))
-    .where(eq(projects.id, projectId))
-    .limit(1);
-  const userId = row?.manager ?? row?.leadOwner;
-  const [person] = userId
-    ? await tx
-        .select({ name: users.fullName, phone: users.phoneE164 })
-        .from(users)
-        .where(eq(users.id, userId))
-    : [];
-  return { language: assistantLanguage(row?.language), person: person ?? null };
 }
 
 /**
@@ -108,7 +73,7 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
     .where(eq(waConversations.phone, news.phone))
     .limit(1);
   if (!chat || !chatWindowOpen(chat.at)) return;
-  const { language, person } = await contactFor(tx, news.projectId);
+  const { language, contact } = await contactFor(tx, news.projectId);
   await inLanguage(language, async () => {
     // The template's own version with the file already carries the receipt.
     if (!template?.extrasApproved) {
@@ -116,7 +81,7 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
       const document = { kind: 'document', ...receipt, caption } as const;
       await queueReply(tx, chat, document, null, `receipt_pdf:${news.paymentId}`);
     }
-    const next = PROJECT_WORDS.paidNext(news.trigger, person?.name ?? null, person?.phone ?? null);
+    const next = PROJECT_WORDS.paidNext(news.trigger, contact.name, contact.phone);
     const taps = ['receipt', 'track', 'menu'] as const;
     await sayWithTaps(tx, chat, next, taps, `paid_next:${news.paymentId}`);
   });

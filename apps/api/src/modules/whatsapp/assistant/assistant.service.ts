@@ -122,7 +122,14 @@ export class AssistantService {
   /** Each answer ends with taps (live review C5): the menu and the next step. */
   private async choose(chat: Conversation, customerId: string, choice: MenuChoice) {
     const text = (body: string) => this.say(chat, { kind: 'text', body });
-    const answer = (body: string, taps: readonly Tap[]) => sayWithTaps(this.db, chat, body, taps);
+    // With no project yet, only Menu and Talk to us: the rest lead back to "no project".
+    const answer = async (body: string, taps: readonly Tap[]) =>
+      sayWithTaps(
+        this.db,
+        chat,
+        body,
+        (await this.answers.hasProject(customerId)) ? taps : ['menu', 'talk'],
+      );
     switch (choice) {
       case 'progress':
         return answer(await this.answers.progress(customerId), ['menu', 'pay', 'talk']);

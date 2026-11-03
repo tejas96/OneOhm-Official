@@ -1,6 +1,7 @@
 import type { CustomerAfterSales, CustomerCover } from '@oneohm/api-contracts';
 import { daysBetween } from '@oneohm/shared';
 import { plainDate } from './plain-date';
+import { PROJECT_WORDS } from './project-words';
 import { COVER_WORDS, WORDS } from './words';
 
 type Asset = CustomerCover['assets'][number];
@@ -48,19 +49,19 @@ function amcLines(amc: CustomerCover['amc'], next: Visit | undefined): string {
 /**
  * Each home's installed items with their warranty length and end date, then its AMC
  * with the next planned visit: what the app's warranty screen shows, in a few lines.
+ * `places` gives each project's town, by project id.
  */
-export function coverText(after: CustomerAfterSales): string {
+export function coverText(after: CustomerAfterSales, places: ReadonlyMap<string, string>): string {
   if (after.projects.length === 0) return WORDS.noProject;
   const blocks = after.projects.map((cover) => {
+    // Named by its town (live review C9); the code only when the town is unknown.
+    const place = places.get(cover.projectId);
+    const title = `*${place ? PROJECT_WORDS.projectIn(place) : cover.projectCode}*`;
     const next = after.upcomingVisits.find((visit) => visit.projectCode === cover.projectCode);
     if (cover.assets.length === 0)
-      return lines([
-        `*${cover.projectCode}*`,
-        COVER_WORDS.notYet,
-        cover.amc ? amcLines(cover.amc, next) : '',
-      ]);
+      return lines([title, COVER_WORDS.notYet, cover.amc ? amcLines(cover.amc, next) : '']);
     return lines([
-      `*${cover.projectCode}*`,
+      title,
       cover.commissionedOn ? COVER_WORDS.since(plainDate(cover.commissionedOn)) : '',
       ...cover.assets.map(assetLines),
       amcLines(cover.amc, next),

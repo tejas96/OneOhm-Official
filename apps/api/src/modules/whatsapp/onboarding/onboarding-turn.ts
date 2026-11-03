@@ -4,6 +4,7 @@ import {
   type OnboardAnswers,
   type OnboardingSettings,
   type OnboardStep,
+  previousStep,
 } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { assistantLanguage, inLanguage } from '../assistant/language';
@@ -72,4 +73,14 @@ export async function saveTurn(turn: Turn, step: OnboardStep): Promise<void> {
     .update(waConversations)
     .set({ state: onboardState(step), context, updatedAt: new Date() })
     .where(eq(waConversations.id, turn.chat.id));
+}
+
+/**
+ * Where Back goes, and the typed-answer wait is over: the step before, except that Back
+ * from typing a city (after "Other city") is the city list again (fix round 1).
+ */
+export function backTo(turn: Turn, step: OnboardStep): OnboardStep {
+  const typingCity = step === 'city' && turn.awaiting === 'city';
+  turn.awaiting = undefined;
+  return typingCity && turn.settings.serviceCities.length > 0 ? 'city' : previousStep(step);
 }

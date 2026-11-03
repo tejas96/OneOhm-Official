@@ -72,11 +72,11 @@ Please choose your language.
 
 ## 7. After the call: customer, quotation, quote sent
 
-**Bot:** _(template quotation_sent)_ Hello Ravi Patil (test), your OneOhm solar quotation OH-Q-2026-0042 is ready. Total price: ₹1,83,015. Expected government subsidy: ₹78,000. Your cost after subsidy: ₹1,05,015. Reply here if you have any questions.  
+**Bot:** _(template quotation_sent)_ Hello Ravi Patil (test), your OneOhm solar quotation OH-Q-2026-0001 is ready. Total price: ₹1,83,015. Expected government subsidy: ₹78,000. Your cost after subsidy: ₹1,05,015. Reply here if you have any questions.  
 📄 OneOhm-Ravi-Patil-test-quote.pdf  
 [Accept quote] [I have a question]  
 
-> **Our side:** Bharat Pune Sales (test) converted the lead (customer + Pune site; audit lead.converted) and sent quotation OH-Q-2026-0042 made from it: quotation_sent with the PDF header and Accept / Question buttons; lead stage quoted.
+> **Our side:** Bharat Pune Sales (test) converted the lead (customer + Pune site; audit lead.converted) and sent quotation OH-Q-2026-0001 made from it: quotation_sent with the PDF header and Accept / Question buttons; lead stage quoted.
 
 ## 8a. A family member taps Accept
 
@@ -99,8 +99,8 @@ Please choose your language.
 
 ## 9. Project started, advance due
 
-**Bot:** _(template project_started)_ Hello Ravi Patil (test), your solar project OH-2026-026 (3.27 kWp) has started. We will keep you posted here.  
-**Bot:** _(template payment_link)_ Hello Ravi Patil (test), please pay ₹45,753 for Advance on order confirmation on project OH-2026-026. Pay securely here: http://localhost:4330/v1/pay/due/WyI2YzI2MjVlMi05N2QwLTQ5NzAtODQ1OS1mOWFjYTlmYmE4NzEiLCIxY2FjYmNlNi1jMzJkLTQ2MDktOGRkMi03YjFkZjdmMDAyZjUiLDE3OTYzMDU0OTZd.GKwg_FrkIAlenG7R3x65YgIenPiPav5g3NsAwDYgM6M Reply here if you need help.  
+**Bot:** _(template project_started)_ Hello Ravi Patil (test), your solar project OH-2026-001 (3.27 kWp) has started. We will keep you posted here.  
+**Bot:** _(template payment_link)_ Hello Ravi Patil (test), please pay ₹45,753 for Advance on order confirmation on project OH-2026-001. Pay securely here: http://localhost:4330/v1/pay/due/WyI1MmI2OTFjMi03NTc3LTRlNWEtOGVmYS03YjgyNDQxYWMxYmQiLCI2ZjE4MDJiOS1lZDU5LTQ0YmYtOTZjZS00ZTFhOTY2ODYwOWEiLDE3OTYzMDY0NDld.Y561AAze6d-6ZbFe9BI_AFyqF2WGgomztxMPdysp4Go Reply here if you need help.  
 [Pay now]  
 **Customer:** "payments"  
 **Bot:** *Pune येथील तुमचा सोलर प्रकल्प*  
@@ -111,16 +111,16 @@ Please choose your language.
 • पहिला हप्ता: ₹45,753 बाकी  
 [आता भरा] (link)  
 
-> **Our side:** Project OH-2026-026 made from the accepted quote; advance "Advance on order confirmation" (₹45753) due; payment_link queued with a Pay now token that opens the Razorpay sandbox page; the Payments menu answers with a Pay now button.
+> **Our side:** Project OH-2026-001 made from the accepted quote; advance "Advance on order confirmation" (₹45753) due; payment_link queued with a Pay now token that opens the Razorpay sandbox page; the Payments menu answers with a Pay now button.
 
 ## 10. The customer pays
 
-**Bot:** _(template payment_received)_ Hello Ravi Patil (test), we received your payment of ₹45,753 for Advance on order confirmation on your solar project OH-2026-026. Thank you. You can see all your payments in the OneOhm app.  
+**Bot:** _(template payment_received)_ Hello Ravi Patil (test), we received your payment of ₹45,753 for Advance on order confirmation on your solar project OH-2026-001. Thank you. You can see all your payments in the OneOhm app.  
 📄 OneOhm-Ravi-Patil-test-receipt.pdf  
-**Bot:** धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: OneOhm Admin.  
+**Bot:** धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: Bharat Pune Sales (test), +919045271742.  
 [पावती पाहा] [प्रकल्प पाहा] [मेनू]  
 
-> **Our side:** Advance paid: payment OH/RCPT/2026-27/0007 (₹45753), milestone paid, receipt sent as OneOhm-Ravi-Patil-test-receipt.pdf; payment_online alert to the project owner and accounts (3 people); project activity written; the old Pay now link now says "already paid".
+> **Our side:** Advance paid: payment OH/RCPT/2026-27/0001 (₹45753), milestone paid, receipt sent as OneOhm-Ravi-Patil-test-receipt.pdf; payment_online alert to the project owner and accounts (3 people); project activity written; the old Pay now link now says "already paid".
 
 ## 11. Reports
 
@@ -128,4 +128,4 @@ Please choose your language.
 
 ## 12. The lead history
 
-> **Our side:** Lead history, oldest first: “Started onboarding on WhatsApp” → “Site: Home” → “Bill: ₹2,000–3,000 (about 3 kW)” → “Roof: RCC, 2 floors” → “Bill file received on WhatsApp (not checked)” → “Estimate sent: 3.27 kW, ₹1,83,969 (₹1,05,969 after subsidy).” → “Asked for a call tomorrow morning after the estimate” → “Converted to a customer, with a new site.” → “Quotation OH-Q-2026-0042 sent. Moved from New to Quotation sent.” → “Next action on 2026-11-05: Follow up quote OH-Q-2026-0042.” → “Quotation OH-Q-2026-0042 accepted by the customer on WhatsApp. Moved from Quotation sent to Won.” → “Next action on 2026-11-03: Start project for OH-Q-2026-0042.” → “Done: Start project for OH-Q-2026-0042.”. Audit log: lead.converted, quotation.accepted.
+> **Our side:** Lead history, oldest first: “Started onboarding on WhatsApp” → “Site: Home” → “Bill: ₹2,000–3,000 (about 3 kW)” → “Roof: RCC, 2 floors” → “Bill file received on WhatsApp (not checked)” → “Estimate sent: 3.27 kW, ₹1,83,969 (₹1,05,969 after subsidy).” → “Asked for a call tomorrow morning after the estimate” → “Converted to a customer, with a new site.” → “Quotation OH-Q-2026-0001 sent. Moved from New to Quotation sent.” → “Next action on 2026-11-05: Follow up quote OH-Q-2026-0001.” → “Quotation OH-Q-2026-0001 accepted by the customer on WhatsApp. Moved from Quotation sent to Won.” → “Next action on 2026-11-03: Start project for OH-Q-2026-0001.” → “Done: Start project for OH-Q-2026-0001.”. Audit log: lead.converted, quotation.accepted.

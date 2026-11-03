@@ -13,10 +13,27 @@ describe('the money line on the quote and the accept check (live review C1)', ()
     expect(money.line).toBe(
       'Full price ₹1,83,969, paid in 3 parts: ₹45,992 on acceptance, ₹1,19,579 before dispatch, ₹18,398 after installation. Subsidy ₹78,000 comes back to your bank after commissioning.',
     );
-    expect(money.firstPaise).toBe(4_599_200);
-    expect(QUOTE_MONEY_LISTS.en.confirm('₹1,83,969', '₹45,992')).toBe(
+    expect(money.first).toBe('₹45,992');
+    expect(money.firstWhen).toBe('on acceptance');
+    expect(QUOTE_MONEY_LISTS.en.confirm('₹1,83,969', '₹45,992', 'on acceptance')).toBe(
       'Accept your solar quotation for ₹1,83,969? The 1st instalment, ₹45,992, is due on acceptance.',
     );
+  });
+
+  // Fix round 1: the parts always add up to the full price shown.
+  it('makes the last part the full price minus the others, and says when the 1st is due', () => {
+    const steps = [
+      { key: 'a', label: 'A', shareBp: 3333, trigger: 'material_dispatch' as const },
+      { key: 'b', label: 'B', shareBp: 3333, trigger: 'material_dispatch' as const },
+      { key: 'c', label: 'C', shareBp: 3334, trigger: 'commissioning_completed' as const },
+    ];
+    const money = quoteMoney(10_000_049, 0, steps);
+    const amounts = [...money.line.matchAll(/₹([\d,]+)/g)].map((m) =>
+      Number(m[1]?.replaceAll(',', '')),
+    );
+    const [total, ...parts] = amounts;
+    expect(parts.reduce((sum, part) => sum + part, 0)).toBe(total);
+    expect(money.firstWhen).toBe('before dispatch');
   });
 
   it('leaves the subsidy out when there is none, and says it in Marathi and Hindi', async () => {

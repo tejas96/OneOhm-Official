@@ -12,7 +12,7 @@ import {
   upToSite,
   withOnboarding,
 } from '../support/onboarding';
-import { newCustomer, uniquePhone } from '../support/sales';
+import { newCustomer, sellProject, today, uniquePhone } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
 
 // Live review C5, C10–C14: what a homeowner sees on WhatsApp. The bot welcomes them by
@@ -88,7 +88,7 @@ describe('Customer clarity on WhatsApp', () => {
   });
 
   it('C5: a customer types Marathi words and every answer ends with taps', async () => {
-    const customer = await newCustomer(admin, { name: 'tejas clarity (test)' });
+    const { customer } = await sellProject(admin, { name: 'tejas clarity (test)' });
     await sendInbound(customer.phone, { text: 'मेनू' });
     const menu = await lastReply(customer.phone);
     expect(menu?.kind).toBe('list');
@@ -102,5 +102,44 @@ describe('Customer clarity on WhatsApp', () => {
     expect(choices(await lastReply(customer.phone))).toEqual(['menu', 'payments', 'human']);
     await sendInbound(customer.phone, { buttonReply: 'menu' });
     expect((await lastReply(customer.phone))?.kind).toBe('list');
+  });
+
+  // Fix round 1: with no project yet, Pay now and Track my project would lead nowhere.
+  it('C5: a customer with no project gets only Menu and Talk to us', async () => {
+    const customer = await newCustomer(admin, { name: 'No Project Clarity (test)' });
+    for (const text of ['progress', 'payments']) {
+      await sendInbound(customer.phone, { text });
+      expect(choices(await lastReply(customer.phone)), text).toEqual(['menu', 'human']);
+    }
+  });
+
+  it('C12: a voice note or a video from a team-made lead goes warmly to their person', async () => {
+    const phone = uniquePhone();
+    await admin.post('/leads', {
+      name: 'Team Lead Voice (test)',
+      phone,
+      city: 'Pune',
+      subsidyCategory: 'individual',
+      nextActionOn: today(),
+    });
+    await sendInbound(phone, {
+      media: { type: 'video', fileId: 'video-1', mimeType: 'video/mp4' },
+    });
+    expect((await chatOf(phone)).state).toBe('human');
+    expect((await lastReply(phone))?.body).toMatch(/^Thank you for the video\. .+ will watch it/);
+    const alerts = await handOverAlerts((await chatOf(phone)).id);
+    expect(alerts[0]?.body).toContain('Sent a video');
+  });
+
+  it('C14: Back from typing a city goes back to the city list', async () => {
+    const phone = uniquePhone();
+    await say(phone, 'hi');
+    await tap(phone, 'ob:language:en');
+    await tap(phone, 'ob:name:yes');
+    await tap(phone, 'ob:city:other');
+    expect(choices(await lastReply(phone))).toEqual(['ob:city:back', 'ob:person']);
+    await sendInbound(phone, { buttonReply: 'ob:city:back' });
+    expect(choices(await lastReply(phone))).toContain('ob:city:Pune');
+    expect((await chatOf(phone)).state).toBe('onboard:city');
   });
 });

@@ -56,6 +56,11 @@ const EN_ONBOARD = {
   /** A voice note goes to a person, who listens and replies (C12). */
   voiceHandOver: (name: string | null) =>
     `Thank you for the voice note. ${name ?? 'Our team'} will listen to it and reply to you here.`,
+  videoHandOver: (name: string | null) =>
+    `Thank you for the video. ${name ?? 'Our team'} will watch it and reply to you here.`,
+  /** A file we cannot read; the question that follows shows "Talk to a person". */
+  notRead:
+    'Sorry, I can only take photos and PDF papers here. Please write it in a few words, or tap "Talk to a person".',
   /** The one nudge after a customer goes quiet halfway. */
   nudge: 'Shall we continue? It takes a minute.',
   continue: 'Continue',
@@ -103,6 +108,10 @@ const MR_ONBOARD: Words<OnboardWords> = {
   badFile: 'माफ करा, ही फाईल वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.',
   voiceHandOver: (name) =>
     `व्हॉइस नोटसाठी धन्यवाद. ${name ? `${name} ती ऐकून तुम्हाला इथेच उत्तर देतील.` : 'आमची टीम ती ऐकून तुम्हाला इथेच उत्तर देईल.'}`,
+  videoHandOver: (name) =>
+    `व्हिडिओसाठी धन्यवाद. ${name ? `${name} तो पाहून तुम्हाला इथेच उत्तर देतील.` : 'आमची टीम तो पाहून तुम्हाला इथेच उत्तर देईल.'}`,
+  notRead:
+    'माफ करा, इथे फक्त फोटो आणि PDF कागद घेता येतात. कृपया थोडक्यात लिहा, किंवा "व्यक्तीशी बोला" दाबा.',
   nudge: 'पुढे जायचे का? फक्त एक मिनिट लागेल.',
   continue: 'पुढे चला',
 };
@@ -147,6 +156,10 @@ const HI_ONBOARD: Words<OnboardWords> = {
   badFile: 'माफ़ कीजिए, यह फाइल इस्तेमाल नहीं हो सकी. कृपया साफ़ फोटो या PDF भेजें.',
   voiceHandOver: (name) =>
     `वॉइस नोट के लिए धन्यवाद. ${name ? `${name} इसे सुनकर आपको यहीं जवाब देंगे.` : 'हमारी टीम इसे सुनकर आपको यहीं जवाब देगी.'}`,
+  videoHandOver: (name) =>
+    `वीडियो के लिए धन्यवाद. ${name ? `${name} इसे देखकर आपको यहीं जवाब देंगे.` : 'हमारी टीम इसे देखकर आपको यहीं जवाब देगी.'}`,
+  notRead:
+    'माफ़ कीजिए, यहाँ सिर्फ़ फ़ोटो और PDF कागज़ लिए जा सकते हैं। कृपया कुछ शब्दों में लिखें, या "व्यक्ति से बात करें" दबाएँ।',
   nudge: 'आगे बढ़ें? बस एक मिनट लगेगा.',
   continue: 'आगे बढ़ें',
 };

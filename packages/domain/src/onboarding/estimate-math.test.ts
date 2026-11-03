@@ -68,11 +68,22 @@ describe('savingAndPayback', () => {
     expect(savingAndPayback(3000, 10_700_000, d, '2000_3000').monthlySavingPaise).toBe(288_000);
   });
   it('reads the cap from the label when the band has no typed-amount limit', () => {
-    const bands = [{ id: 'a', label: '₹2,000–2,500', targetWp: 3000 }];
+    const bands = [
+      { id: 'a', label: '₹2,000–2,500', targetWp: 3000 },
+      { id: 'b', label: 'More', targetWp: null, maxRupees: null },
+    ];
     const settings = { ...d, billBands: bands };
     expect(savingAndPayback(3270, 10_596_900, settings, 'a').monthlySavingPaise).toBe(250_000);
     // The open top band has no cap.
     expect(savingAndPayback(9000, 1, d, 'over_5000').monthlySavingPaise).toBe(864_000);
+    // Nor a tap-only top band whose label names its lower end ("Over ₹5,000").
+    const tapOnly = [
+      { id: 'low', label: 'Up to ₹5,000', targetWp: 5000 },
+      { id: 'top', label: 'Over ₹5,000', targetWp: 9000 },
+    ];
+    const open = { ...d, billBands: tapOnly };
+    expect(savingAndPayback(9000, 1, open, 'top').monthlySavingPaise).toBe(864_000);
+    expect(savingAndPayback(9000, 1, open, 'low').monthlySavingPaise).toBe(500_000);
   });
   it('gives no payback when nothing is saved', () => {
     expect(savingAndPayback(0, 100, d)).toEqual({ monthlySavingPaise: 0, paybackYears: 0 });

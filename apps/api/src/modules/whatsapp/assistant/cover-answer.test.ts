@@ -72,9 +72,16 @@ describe('warranty and AMC answer', () => {
     expect(coverLength('2026-01-01', '2026-06-30')).toBe('6 months');
   });
 
+  // Live review C9: the chat names each home by its town; codes stay in the PDFs.
+  const places = new Map([
+    ['p1', 'Sangli'],
+    ['p2', 'Pune'],
+  ]);
+
   it('lists each item with its years and end date, then the AMC and next visit', () => {
-    const text = coverText(after);
-    expect(text).toContain('*OH-2026-005*');
+    const text = coverText(after, places);
+    expect(text).toContain('*Your solar project in Sangli*');
+    expect(text).not.toContain('OH-2026');
     expect(text).toContain('Switched on 22 September 2026.');
     expect(text).toContain(
       '• Solar panels (12 × Waaree WS-540): 25 years, until 21 September 2051',
@@ -89,10 +96,12 @@ describe('warranty and AMC answer', () => {
   });
 
   it('says when cover starts for a home not switched on yet', () => {
-    const text = coverText(after);
-    expect(text).toMatch(/\*OH-2026-007\*\nYour warranties start on the day/);
-    expect(coverText({ projects: [], upcomingVisits: [] })).toMatch(/do not have a project/);
+    const text = coverText(after, places);
+    expect(text).toMatch(/\*Your solar project in Pune\*\nYour warranties start on the day/);
+    expect(coverText({ projects: [], upcomingVisits: [] }, places)).toMatch(
+      /do not have a project/,
+    );
     const waiting = { projects: after.projects.slice(1), upcomingVisits: [] };
-    expect(coverText(waiting)).not.toContain('Report a problem');
+    expect(coverText(waiting, places)).not.toContain('Report a problem');
   });
 });

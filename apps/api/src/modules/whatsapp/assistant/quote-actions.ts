@@ -1,10 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { formatInr } from '@oneohm/shared';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { planSteps } from '../../payment-plans/payment-plans.service';
 import { QuotationsService } from '../../quotations/quotations.service';
-import { QUOTE_MONEY_WORDS, quoteMoney } from '../../quotations/quote-money-words';
+import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
 import { type Conversation, queueReply } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
@@ -53,7 +52,8 @@ export class QuoteActionsService {
   }
 
   /**
-   * "Accept your solar quotation for ₹…? The 1st instalment, ₹…, is due on acceptance." — only to the customer's own number. A family number
+   * "Accept your solar quotation for ₹…? The 1st instalment, ₹…, is due on acceptance." (or
+   * whenever the plan's first share falls due) — only to the customer's own number. A family number
    * reaches the same chat but cannot accept: it goes to the customer's person at once,
    * whatever state the quote is in (never silent, even when it is already accepted).
    */
@@ -67,15 +67,11 @@ export class QuoteActionsService {
     if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
     if (quotation.status === 'accepted') return this.thank(chat, quotationId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
-    const money = quoteMoney(
-      quotation.totalPaise,
-      quotation.subsidyPaise,
-      await planSteps(this.db),
-    );
-    const first = formatInr(Math.round(money.firstPaise / 100) * 100);
+    const steps = await planSteps(this.db);
+    const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
     await queueReply(this.db, chat, {
       kind: 'buttons',
-      body: QUOTE_MONEY_WORDS.confirm(formatInr(quotation.totalPaise), first),
+      body: QUOTE_MONEY_WORDS.confirm(rupees(quotation.totalPaise), money.first, money.firstWhen),
       buttons: [
         { id: `quote_yes:${quotationId}`, title: WORDS.quoteYes },
         { id: `quote_ask:${quotationId}`, title: WORDS.quoteNotYet },

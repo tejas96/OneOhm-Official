@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { readBusinessSetting, waConversations } from '@oneohm/database';
-import { nextStep, type OnboardAnswers, type OnboardStep, previousStep } from '@oneohm/domain';
+import { nextStep, type OnboardAnswers, type OnboardStep } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
@@ -11,14 +11,21 @@ import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
 import { EstimateNextStepsService } from './estimate-next-steps';
-import { ONBOARD_WORDS } from './onboard-words';
 import { readAnswer } from './onboarding-answer';
 import { firstMissing, isOnboardingChat, readOnboard, stepOfState } from './onboarding-context';
 import { ChatFilesService, type Fetched } from './onboarding-files';
 import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
-import { goesBack, saveTurn, speak, type Turn, wantsPerson } from './onboarding-turn';
-import { ensureLead, fileHeldBill, takeChatFile } from './onboarding-turn-files';
+import { backTo, goesBack, saveTurn, speak, type Turn, wantsPerson } from './onboarding-turn';
+import {
+  ensureLead,
+  fileHeldBill,
+  HEARD,
+  type HeardMedia,
+  heardMedia,
+  heardReply,
+  takeChatFile,
+} from './onboarding-turn-files';
 
 /**
  * The guided WhatsApp onboarding for a new number (Part 3): language, name, city, site,
@@ -107,8 +114,9 @@ export class OnboardingFlowService {
     if (incoming && turn.chat.state === 'human') return null;
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
-    // A voice note is a person's to hear (C12); a photo or paper is filed.
-    if (incoming?.media?.type === 'audio') return this.toPerson(turn, current, 'voice');
+    // A voice note or a video is a person's to hear (C12); a photo or paper is filed.
+    const heard = heardMedia(incoming?.media?.type);
+    if (heard) return this.toPerson(turn, current, heard);
     if (incoming?.media) return this.takeFile(turn, current);
     if (current === 'done') return this.afterEstimate(turn, incoming);
     if (!incoming) return this.ask(turn, current);
@@ -119,10 +127,7 @@ export class OnboardingFlowService {
     // Nothing to read: a tap on another question (an older list, the nudge's "Continue"),
     // or words in the first message after a person handed the chat back: ask the question.
     if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) return this.ask(turn, current);
-    if (goesBack(current, choice, word)) {
-      turn.awaiting = undefined;
-      return this.ask(turn, previousStep(current));
-    }
+    if (goesBack(current, choice, word)) return this.ask(turn, backTo(turn, current));
     const read = readAnswer(
       current,
       { choiceId: choice, text },
@@ -197,18 +202,19 @@ export class OnboardingFlowService {
    * A person takes over with the answers summary, in this transaction: the state, the
    * alert and the reply commit together. `ob` keeps this step for when the chat returns.
    */
-  private async toPerson(turn: Turn, step: OnboardStep, why?: 'voice'): Promise<null> {
+  private async toPerson(turn: Turn, step: OnboardStep, media?: HeardMedia): Promise<null> {
     const { tx, chat } = turn;
     turn.misses = 0;
     turn.awaiting = undefined;
-    await ensureLead(turn, { intake: this.intake, files: this.files });
+    const deps = { intake: this.intake, files: this.files };
+    await ensureLead(turn, deps, media ? HEARD[media].call : undefined);
     await saveTurn(turn, step);
-    const said = why === 'voice' ? 'Sent a voice note' : null;
+    const said = media ? HEARD[media].note : null;
     const summary = [said, summaryOf(turn.answers, turn.settings)].filter(Boolean).join('. ');
     await speak(turn, async () => {
-      const name = why && (await this.people.answererName(await ensureChatOwner(tx, chat), tx));
-      const reply = why ? ONBOARD_WORDS.voiceHandOver(name || null) : undefined;
-      return this.people.passToOwner(chat, { summary, db: tx, reply });
+      if (!media) return this.people.passToOwner(chat, { summary, db: tx });
+      const name = await this.people.answererName(await ensureChatOwner(tx, chat), tx);
+      return this.people.passToOwner(chat, { summary, db: tx, reply: heardReply(media, name) });
     });
     return null;
   }

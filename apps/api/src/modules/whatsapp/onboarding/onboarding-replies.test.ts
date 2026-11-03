@@ -109,6 +109,10 @@ describe('files and voice notes (live review C11, C12)', () => {
 
   it('hands a voice note warmly to a named person, in every language', () => {
     for (const [language, words] of Object.entries(ONBOARD_LISTS)) {
+      expect(words.videoHandOver('Priya'), language).toContain('Priya');
+      expect(words.videoHandOver(null), language).not.toContain('null');
+      // A file we cannot read names the button the question actually shows (fix round 1).
+      expect(words.notRead, language).toContain(`"${words.talkToPerson}"`);
       expect(words.voiceHandOver('Priya'), language).toContain('Priya');
       expect(words.voiceHandOver(null), language).not.toContain('null');
     }
