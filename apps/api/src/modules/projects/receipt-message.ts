@@ -1,4 +1,5 @@
 import { type DatabaseExecutor, messageTemplates, waConversations } from '@oneohm/database';
+import { chatWindowOpen } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
@@ -6,8 +7,6 @@ import { environmentOnce } from '../../config/environment-once';
 import { pdfFileName } from '../reports/pdf-file-name';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
-
-const WINDOW_MS = 24 * 3600 * 1000;
 
 export interface PaidNews {
   readonly paymentId: string;
@@ -65,7 +64,7 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
     .from(waConversations)
     .where(eq(waConversations.phone, news.phone))
     .limit(1);
-  if (!chat?.at || Date.now() - chat.at.getTime() >= WINDOW_MS) return;
+  if (!chat || !chatWindowOpen(chat.at)) return;
   await queueReply(
     tx,
     chat,

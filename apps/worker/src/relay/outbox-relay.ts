@@ -1,10 +1,22 @@
 import { type Database, outbox } from '@oneohm/database';
 import { type Client, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import { asc, eq } from 'drizzle-orm';
+import { failPendingDelivery } from '../activities/fail-delivery';
 
 const BATCH = 50;
 /** Pending rows read per poll: new ones plus those still being sent or retried. */
 const WINDOW = 1000;
+/** Longer than a delivery's whole retry budget: a row in flight this long lost its workflow. */
+const STUCK_MS = 5 * 3600_000;
+export const DELIVERY_STOPPED = 'Delivery stopped — please resend.';
+
+/** A row that started but has not finished for hours, so it no longer holds the queue. */
+export function isStuck(
+  row: { attempts: number; startedAt: Date | null; createdAt: Date },
+  now: Date,
+): boolean {
+  return row.attempts > 0 && now.getTime() - (row.startedAt ?? row.createdAt).getTime() > STUCK_MS;
+}
 
 /**
  * The rows to start now: each recipient's oldest pending row, unless it is already being
@@ -64,13 +76,23 @@ export class OutboxRelay {
 
   async tick(): Promise<number> {
     const pending = await this.db
-      .select({ id: outbox.id, recipient: outbox.recipient, attempts: outbox.attempts })
+      .select({
+        id: outbox.id,
+        recipient: outbox.recipient,
+        attempts: outbox.attempts,
+        startedAt: outbox.startedAt,
+        createdAt: outbox.createdAt,
+      })
       .from(outbox)
       .where(eq(outbox.status, 'pending'))
       .orderBy(asc(outbox.createdAt), asc(outbox.id))
       .limit(WINDOW);
+    const now = new Date();
+    // Failed rows show in Messages with a resend; a late workflow then finds them done.
+    for (const row of pending.filter((row) => isStuck(row, now)))
+      await failPendingDelivery(this.db, row.id, DELIVERY_STOPPED);
     let started = 0;
-    for (const row of nextPerRecipient(pending)) {
+    for (const row of nextPerRecipient(pending.filter((row) => !isStuck(row, now)))) {
       try {
         await this.client.workflow.start('deliverMessageWorkflow', {
           workflowId: `outbox-${row.id}`,

@@ -10,6 +10,20 @@ export const WORK_END_MIN = 18 * 60 + 30;
 export const FIRST_NUDGE_MIN = 30;
 export const LATE_MIN = 120;
 
+/**
+ * Meta accepts chat messages (not templates) for 24 hours after the customer last wrote.
+ * OneOhm stops an hour early, so a message queued or retried late never reaches a closed
+ * chat. The API (choosing chat or template) and the worker (at send time) share this.
+ */
+export const CHAT_WINDOW_HOURS = 23;
+
+/** Whether a chat message can still go to this customer now. */
+export function chatWindowOpen(lastInboundAt: Date | null | undefined, now = new Date()): boolean {
+  return (
+    lastInboundAt != null && now.getTime() - lastInboundAt.getTime() < CHAT_WINDOW_HOURS * 3_600_000
+  );
+}
+
 /** The business clock now: the minute of the day there and when today began there. */
 function clockAt(now: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {

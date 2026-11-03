@@ -201,6 +201,14 @@ export class ProjectCreationService {
           candidates,
         );
       }
+      // Before the milestones, which queue the advance notice: "started" arrives first.
+      await queueWhatsApp(
+        tx,
+        customer.phoneE164,
+        'project_started',
+        { customer: customer.name, project: code, capacity: formatKwp(quotation.capacityWp) },
+        `project_started:${project.id}`,
+      );
       await activateMilestones(
         tx,
         project.id,
@@ -225,13 +233,6 @@ export class ProjectCreationService {
         message: createdMessage(quotation.number, generated.length, unassigned, toConfirm),
         userId: actor.userId,
       });
-      await queueWhatsApp(
-        tx,
-        customer.phoneE164,
-        'project_started',
-        { customer: customer.name, project: code, capacity: formatKwp(quotation.capacityWp) },
-        `project_started:${project.id}`,
-      );
       await tellTeam(tx, project.id, code, perPerson, actor.userId);
       await recordAudit(tx, actor.userId, 'project.created', 'project', project.id, {
         code,

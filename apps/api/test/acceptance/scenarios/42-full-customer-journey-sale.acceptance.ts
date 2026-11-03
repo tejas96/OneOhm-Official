@@ -133,6 +133,9 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const created = await J.startProject(admin, quote.id);
     project = await admin.get<ProjectDetail>(`/projects/${created.id}`);
     expect(advance().status).toBe('due');
+    // The worker sends one person's messages in queued order: "started" before "please pay".
+    const order = await J.sendOrder(phone, ['project_started', 'payment_link']);
+    expect(order).toEqual(['project_started', 'payment_link']);
     await t.collect();
     const [link] = await J.outboxOf(phone, 'payment_link');
     payToken = link?.payload.payToken ?? '';

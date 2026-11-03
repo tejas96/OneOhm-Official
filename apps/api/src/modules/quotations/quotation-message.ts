@@ -5,14 +5,13 @@ import {
   messageTemplates,
   waConversations,
 } from '@oneohm/database';
+import { chatWindowOpen } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
 import { pdfFileName } from '../reports/pdf-file-name';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
-
-const WINDOW_MS = 24 * 3600 * 1000;
 
 /** The quote's PDF as a link the customer's phone can open, named by the quote number. */
 function pdfOf(env: Environment, quotation: QuotationDetail) {
@@ -67,7 +66,7 @@ export async function queueQuotePdf(
     .from(waConversations)
     .where(eq(waConversations.phone, quotation.customerPhone))
     .limit(1);
-  if (!chat?.at || Date.now() - chat.at.getTime() >= WINDOW_MS) return;
+  if (!chat || !chatWindowOpen(chat.at)) return;
   const pdf = pdfOf(env, quotation);
   await queueReply(
     tx,

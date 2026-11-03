@@ -1,5 +1,5 @@
 import { routeFor, smsText } from '@oneohm/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
 import { customers } from './schema/crm.schema';
@@ -62,6 +62,8 @@ export async function routeCustomerMessage(
           }
         : message.payload,
       dedupeKey: sms ? `${message.dedupeKey}:sms` : message.dedupeKey,
+      // The clock, not the transaction's start: messages queued together go out in order.
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });
@@ -117,6 +119,7 @@ export async function fallBackToSms(
       template: row.template,
       payload: { ...payload, text: smsText(said.title, said.body, await brandName(db)) },
       dedupeKey: `${row.dedupeKey ?? row.id}:sms`,
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });

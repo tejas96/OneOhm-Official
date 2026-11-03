@@ -1,15 +1,7 @@
 import { type DatabaseExecutor, type Notice, notifyStaffHolders } from '@oneohm/database';
 
-/** Meta closes a chat 24 hours after the customer last wrote; an hour is kept spare. */
-const CHAT_WINDOW_MS = 23 * 3600_000;
-
 export const CHAT_WINDOW_CLOSED =
   'Not sent: the chat window closed (the customer last wrote over 23 hours ago).';
-
-/** Whether a chat message (not a template) can still reach the customer now. */
-export function chatWindowOpen(lastInboundAt: Date | null, now: Date): boolean {
-  return lastInboundAt !== null && now.getTime() - lastInboundAt.getTime() < CHAT_WINDOW_MS;
-}
 
 /** One alert a day while the WhatsApp token is refused. */
 export function tokenExpiredNotice(now: Date): Notice {

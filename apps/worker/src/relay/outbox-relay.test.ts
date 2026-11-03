@@ -1,13 +1,22 @@
 import type { Database } from '@oneohm/database';
 import type { Client } from '@temporalio/client';
 import { WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
-import { describe, expect, it } from 'vitest';
-import { OutboxRelay } from './outbox-relay';
+import { describe, expect, it, vi } from 'vitest';
+import { DELIVERY_STOPPED, OutboxRelay } from './outbox-relay';
+
+const stopped = vi.hoisted(() => [] as { id: string; reason: string }[]);
+vi.mock('../activities/fail-delivery', () => ({
+  failPendingDelivery: async (_db: unknown, id: string, reason: string) => {
+    stopped.push({ id, reason });
+  },
+}));
 
 interface Row {
   id: string;
   recipient: string;
   attempts: number;
+  startedAt?: Date | null;
+  createdAt?: Date;
 }
 
 /** Pending rows, oldest first, as the relay's query returns them. */
@@ -17,7 +26,7 @@ function fakeDb(pending: Row[]): Database {
     from: () => chain,
     where: () => chain,
     orderBy: () => chain,
-    limit: async () => pending.map((row) => ({ ...row })),
+    limit: async () => pending.map((row) => ({ startedAt: null, createdAt: new Date(), ...row })),
   };
   return chain as unknown as Database;
 }
@@ -71,5 +80,22 @@ describe('OutboxRelay order per recipient', () => {
     const { started, client } = fakeClient();
     await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
     expect(started).toEqual(['b1', 'c1']);
+  });
+});
+
+describe('OutboxRelay stuck deliveries', () => {
+  it('gives up a row stuck in flight for hours, so the next one can go', async () => {
+    const longAgo = new Date(Date.now() - 6 * 3600_000);
+    const pending: Row[] = [
+      { id: 'a1', recipient: '+911', attempts: 3, startedAt: longAgo, createdAt: longAgo },
+      { id: 'a2', recipient: '+911', attempts: 0 },
+      { id: 'b1', recipient: '+912', attempts: 2, startedAt: new Date() },
+      { id: 'b2', recipient: '+912', attempts: 0 },
+    ];
+    const { started, client } = fakeClient();
+    await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
+    expect(stopped).toEqual([{ id: 'a1', reason: DELIVERY_STOPPED }]);
+    expect(DELIVERY_STOPPED.toLowerCase()).toContain('delivery stopped — please resend');
+    expect(started).toEqual(['a2']);
   });
 });

@@ -100,6 +100,8 @@ export const outbox = pgTable(
     dedupeKey: text('dedupe_key').notNull(),
     status: outboxStatusEnum('status').notNull().default('pending'),
     attempts: integer('attempts').notNull().default(0),
+    /** When the worker last began an attempt; a row stuck long after it is given up. */
+    startedAt: instant('started_at'),
     lastError: text('last_error'),
     sentAt: instant('sent_at'),
     /** The provider's ID for the sent message, to match delivery receipts. */

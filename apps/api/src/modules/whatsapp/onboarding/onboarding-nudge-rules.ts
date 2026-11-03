@@ -1,5 +1,10 @@
 import { leads, type Transaction } from '@oneohm/database';
-import { isWorkingTime, MAX_NUDGE_AFTER_HOURS, type OnboardingSettings } from '@oneohm/domain';
+import {
+  CHAT_WINDOW_HOURS,
+  isWorkingTime,
+  MAX_NUDGE_AFTER_HOURS,
+  type OnboardingSettings,
+} from '@oneohm/domain';
 import { and, eq, gte, notInArray, or } from 'drizzle-orm';
 import type { Conversation } from '../chat-store';
 import { type OnboardContext, readOnboard } from './onboarding-context';
@@ -16,8 +21,8 @@ export const LEAD_AFTER_HOURS = 3;
 export const leadAfterHours = (settings: OnboardingSettings): number =>
   Math.min(Math.max(settings.nudgeAfterHours, LEAD_AFTER_HOURS), MAX_NUDGE_AFTER_HOURS);
 
-/** The nudge is a session message, so it only goes inside WhatsApp's free 24 hours. */
-export const WINDOW_HOURS = 24;
+/** The nudge is a session message, so it only goes inside WhatsApp's chat window. */
+export const WINDOW_HOURS = CHAT_WINDOW_HOURS;
 /** Chats silent longer than this are left alone, so a deploy never floods sales with old chats. */
 export const GIVE_UP_HOURS = 7 * 24;
 /** At most this many chats are handled per tick. */

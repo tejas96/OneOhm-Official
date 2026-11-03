@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHAT_WINDOW_HOURS,
   chatWaitStage,
+  chatWindowOpen,
   isWorkingTime,
   lastWorkEnd,
   pickAnswerer,
@@ -77,5 +79,22 @@ describe('the customer behind a family number', () => {
       ]),
     ).toBeNull();
     expect(soleCustomer([])).toBeNull();
+  });
+});
+
+describe('chat window', () => {
+  const now = new Date('2026-11-03T12:00:00Z');
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3600_000);
+
+  it('is open within 23 hours of the customer writing, an hour before Meta closes it', () => {
+    expect(CHAT_WINDOW_HOURS).toBe(23);
+    expect(chatWindowOpen(hoursAgo(1), now)).toBe(true);
+    expect(chatWindowOpen(hoursAgo(22.9), now)).toBe(true);
+    expect(chatWindowOpen(hoursAgo(23.1), now)).toBe(false);
+  });
+
+  it('is closed when the customer never wrote', () => {
+    expect(chatWindowOpen(null, now)).toBe(false);
+    expect(chatWindowOpen(undefined, now)).toBe(false);
   });
 });

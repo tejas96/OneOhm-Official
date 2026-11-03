@@ -7,11 +7,10 @@ import {
   GENERIC_WORDS,
   messageTemplates,
   outbox,
-  recordDeliveryFailure,
   tellChatFileFailed,
   waConversations,
 } from '@oneohm/database';
-import { isNotOnWhatsApp } from '@oneohm/domain';
+import { chatWindowOpen, isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
@@ -19,7 +18,7 @@ import {
   MESSAGE_TEMPLATES,
   MissingFieldError,
 } from '../channels/message-templates';
-import { PermanentSendError } from '../channels/send-errors';
+import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
 import type {
   SendResult,
@@ -29,8 +28,12 @@ import type {
   WhatsAppSender,
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
+import { failPendingDelivery } from './fail-delivery';
 import { deliverPush } from './push-delivery';
-import { alertTokenExpired, CHAT_WINDOW_CLOSED, chatWindowOpen } from './send-checks';
+import { alertTokenExpired, CHAT_WINDOW_CLOSED } from './send-checks';
+
+/** Written just before the provider call; found on entry, the last attempt died mid-send. */
+export const SENDING = 'sending';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
@@ -144,10 +147,11 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       .from(waConversations)
       .where(eq(waConversations.phone, phone))
       .limit(1);
-    return chatWindowOpen(chat?.lastInboundAt ?? null, new Date());
+    return chatWindowOpen(chat?.lastInboundAt);
   };
 
   const send = async (row: typeof outbox.$inferSelect, call: () => Promise<SendResult>) => {
+    await db.update(outbox).set({ lastError: SENDING }).where(eq(outbox.id, row.id));
     try {
       const result = await call();
       if (result.outcome === 'logged') {
@@ -179,9 +183,14 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     async deliverOutboxMessage(id: string): Promise<DeliveryOutcome> {
       const [row] = await db.select().from(outbox).where(eq(outbox.id, id));
       if (row?.status !== 'pending') return 'not_pending';
+      // The provider may have the message already: never send it a second time.
+      if (row.lastError === SENDING) {
+        await failWithAlerts(id, MAYBE_SENT);
+        return 'failed';
+      }
       await db
         .update(outbox)
-        .set({ attempts: sql`${outbox.attempts} + 1` })
+        .set({ attempts: sql`${outbox.attempts} + 1`, startedAt: new Date() })
         .where(eq(outbox.id, id));
       if (row.channel === 'push') {
         const outcome = await deliverPush(db, push, row.recipient);
@@ -222,22 +231,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       );
     },
 
-    /**
-     * Called once retries run out, so the failure is visible to the office; a chat file
-     * that never arrived also tells the chat's people.
-     */
-    async markOutboxFailed(id: string, reason: string): Promise<void> {
-      const failed = await db.transaction(async (tx) => {
-        const rows = await tx
-          .update(outbox)
-          .set({ status: 'failed', lastError: reason })
-          .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`)
-          .returning({ id: outbox.id });
-        if (rows.length > 0) await tellChatFileFailed(tx, id);
-        return rows;
-      });
-      // Kept in Settings → Automation runs with a retry (PRD 7.1 failure visibility).
-      if (failed.length > 0) await recordDeliveryFailure(db, id, reason);
-    },
+    /** Called once retries run out, so the failure is visible to the office. */
+    markOutboxFailed: (id: string, reason: string) => failPendingDelivery(db, id, reason),
   };
 }

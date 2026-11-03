@@ -171,6 +171,15 @@ export function outboxOf(phone: string, template: string) {
   );
 }
 
+/** The listed templates queued for this phone, in the order the worker sends them. */
+export async function sendOrder(phone: string, templates: readonly string[]) {
+  const found = await rows<{ template: string }>(
+    'SELECT template FROM outbox WHERE recipient = $1 AND template = ANY($2) ORDER BY created_at, id',
+    [phone, templates],
+  );
+  return found.map((row) => row.template);
+}
+
 /** Fetches a public file link the way Meta would; returns its status and type. */
 export async function fetchFile(url: string): Promise<{ status: number; type: string }> {
   const res = await fetch(url);
