@@ -8,6 +8,7 @@ import { type Conversation, queueReply, setState } from '../chat-store';
 import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
+import { stepOf } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
@@ -71,7 +72,7 @@ export class MediaIntakeService {
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
     }
     const now = Date.now();
-    if (chat.state === 'await_problem') {
+    if (stepOf(chat) === 'await_problem') {
       const file = await this.fetchOrSay(chat, media);
       if (!file) return;
       const earlier = await this.fetchPending(pendingMedia(chat.context, now));

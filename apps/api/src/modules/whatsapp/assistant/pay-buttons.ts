@@ -3,6 +3,7 @@ import { paymentMilestones, payments, projects, properties } from '@oneohm/datab
 import { formatInr } from '@oneohm/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Environment } from '../../../config/environment';
+import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { paySigningSecret, signPayToken } from '../../online-payments/pay-token';
 import type { ChatReply } from '../chat-store';
 import { PROJECT_WORDS } from './project-words';
@@ -40,7 +41,7 @@ export async function payNowReplies(
     .innerJoin(properties, eq(properties.id, projects.propertyId))
     .where(
       and(
-        eq(projects.customerId, customerId),
+        activeProjectsOf(customerId),
         eq(paymentMilestones.payer, 'customer'),
         inArray(paymentMilestones.status, ['due', 'partly_paid']),
       ),

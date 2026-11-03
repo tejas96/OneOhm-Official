@@ -12,6 +12,7 @@ import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
 import { HandOverService } from './assistant/hand-over';
 import { MediaIntakeService } from './assistant/media-intake';
+import { MenuAnswersService } from './assistant/menu-answers';
 import { PaperRepliesService } from './assistant/paper-replies';
 import { ProblemFlowService } from './assistant/problem-flow';
 import { QuoteActionsService } from './assistant/quote-actions';
@@ -49,6 +50,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
   providers: [
     AssistantService,
     AnswersService,
+    MenuAnswersService,
     PaperRepliesService,
     ChatsService,
     DeliveriesService,

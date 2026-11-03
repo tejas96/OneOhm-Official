@@ -101,8 +101,8 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
 
 /**
  * Part of an instalment paid (UPI takes ₹1 lakh at a time): what came in and what is
- * left, with Pay now on the same pay page, which reopens the same Razorpay link. What
- * happens next waits until the instalment is paid.
+ * left, with Pay now on the same pay page, which reopens the same Razorpay link, then
+ * Menu · Talk to us. What happens next waits until the instalment is paid.
  */
 async function tellLeft(
   tx: DatabaseExecutor,
@@ -116,4 +116,6 @@ async function tellLeft(
   const url = payPageUrl(env, news.customerId, news.milestoneId);
   const payNow = { kind: 'cta_url', body, label: TAP_WORDS.pay, url } as const;
   await queueReply(tx, chat, payNow, null, key);
+  // A link button has no reply taps, so the way on follows it (menu audit M3).
+  await sayWithTaps(tx, chat, TAP_WORDS.whatNext, ['menu', 'talk'], `${key}:taps`);
 }

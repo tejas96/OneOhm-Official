@@ -2,6 +2,7 @@ import { type Database, paymentMilestones, payments, projects, properties } from
 import { formatInr } from '@oneohm/shared';
 import { eq, inArray } from 'drizzle-orm';
 import type { Environment } from '../../../config/environment';
+import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { payPageUrl } from './pay-buttons';
 import { PROJECT_WORDS } from './project-words';
 import { ANSWER_WORDS, WORDS } from './words';
@@ -40,7 +41,7 @@ export async function paymentsText(
     .select({ id: projects.id, city: properties.city })
     .from(projects)
     .innerJoin(properties, eq(properties.id, projects.propertyId))
-    .where(eq(projects.customerId, customerId));
+    .where(activeProjectsOf(customerId));
   if (own.length === 0) return WORDS.noProject;
   const ids = own.map((project) => project.id);
   const milestones = await db

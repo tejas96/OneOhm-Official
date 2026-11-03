@@ -86,9 +86,8 @@ export class ChatsService {
   }
 
   /**
-   * A team member answers; the assistant stays quiet until released or "menu". Inside
-   * WhatsApp's 24-hour window the words go as they are; after it, inside the approved
-   * follow-up template, so the team never has to switch to a personal phone.
+   * A team member answers: the assistant stays quiet until released or "menu", and a bot
+   * step left waiting ends (menu audit M6). Past the 24 hours, in the follow-up template.
    */
   async reply(actor: Actor, id: string, text: string): Promise<ChatDetail> {
     const { chat } = await this.get(actor, id);
@@ -97,6 +96,7 @@ export class ChatsService {
         .update(waConversations)
         .set({
           state: 'human',
+          context: sql`${waConversations.context} - 'step'`,
           handedOverAt: sql`coalesce(${waConversations.handedOverAt}, now())`,
           handledByUserId: actor.userId,
           assignedUserId: sql`coalesce(${waConversations.assignedUserId}, ${actor.userId}::uuid)`,

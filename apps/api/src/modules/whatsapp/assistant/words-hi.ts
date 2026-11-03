@@ -40,6 +40,7 @@ export const HI: Words<AssistantWords> = {
       not_applicable: 'इस प्रोजेक्ट पर सब्सिडी नहीं है।',
       pending: 'सब्सिडी: अभी आवेदन नहीं हुआ',
       applied: 'सब्सिडी: आवेदन हो गया, सरकार का इंतज़ार',
+      inspected: 'सब्सिडी: जाँच हो गई, राशि जारी होने का इंतज़ार',
       released: 'सब्सिडी: जारी हो गई',
     },
     waitingOn: {
@@ -154,6 +155,7 @@ export const HI: Words<AssistantWords> = {
   },
   ANSWER_WORDS: {
     now: (stage, done, steps) => `अभी: ${stage} (${steps} में से ${done} चरण पूरे)`,
+    allDone: (steps) => `सभी ${steps} चरण पूरे. आपका सोलर सिस्टम पूरा हो गया है.`,
     next: (title, when) => `आगे: ${title}, ${when} को तय`,
     waitingSince: (who, when) => `${when} से ${who}`,
     paid: (label, amount) => `✓ ${label}: ${amount} भरा`,

@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
-import { type Conversation, queueReply, setState } from '../chat-store';
+import { type Conversation, queueReply } from '../chat-store';
+import { setStep } from './chat-step';
 import { sayWithTaps, type Tap } from './closing-taps';
+import { PAPER_WORDS } from './paper-words';
 import { projectToRate } from './rating-rule';
 import { FEEDBACK_WORDS, RATINGS, WORDS } from './words';
 
@@ -29,7 +31,8 @@ export class FeedbackFlowService {
       kind: 'list',
       body: WORDS.askRating,
       button: WORDS.menuButton,
-      rows: RATINGS,
+      // Back to menu under the ratings (menu audit L5).
+      rows: [...RATINGS, { id: 'menu', title: PAPER_WORDS.back }],
     });
   }
 
@@ -39,7 +42,8 @@ export class FeedbackFlowService {
     const target = await this.target(customerId);
     if (target.kind !== 'rate') return this.closing(chat, target.body, ['menu', 'talk']);
     await this.portal.feedback(customerId, { projectId: target.projectId, rating });
-    await setState(this.db, chat.id, AWAIT_COMMENT, { projectId: target.projectId, rating });
+    // A held chat stays with its person (menu audit H3); only the step is remembered.
+    await setStep(this.db, chat, AWAIT_COMMENT, { projectId: target.projectId, rating });
     // Tapping Menu skips the comment; typed words are the comment.
     return this.closing(chat, FEEDBACK_WORDS.askComment, ['menu']);
   }
@@ -47,7 +51,7 @@ export class FeedbackFlowService {
   /** The answer to "Anything to add?": saved as the comment, unless they skip. */
   async comment(chat: Conversation, customerId: string, said: string): Promise<void> {
     const { projectId, rating } = chat.context as { projectId?: string; rating?: number };
-    await setState(this.db, chat.id, 'menu');
+    await setStep(this.db, chat, 'menu');
     const comment = said.trim().slice(0, MAX_COMMENT);
     if (
       !projectId ||

@@ -40,6 +40,7 @@ export const MR: Words<AssistantWords> = {
       not_applicable: 'या प्रकल्पावर अनुदान नाही.',
       pending: 'अनुदान: अजून अर्ज केलेला नाही',
       applied: 'अनुदान: अर्ज केला, सरकारची वाट पाहत आहोत',
+      inspected: 'अनुदान: तपासणी झाली, रक्कम जमा होण्याची वाट पाहत आहोत',
       released: 'अनुदान: जमा झाले',
     },
     waitingOn: {
@@ -156,6 +157,7 @@ export const MR: Words<AssistantWords> = {
   },
   ANSWER_WORDS: {
     now: (stage, done, steps) => `आता: ${stage} (${steps} पैकी ${done} टप्पे पूर्ण)`,
+    allDone: (steps) => `सर्व ${steps} टप्पे पूर्ण. तुमची सोलर सिस्टम पूर्ण झाली आहे.`,
     next: (title, when) => `पुढे: ${title}, ${when} रोजी नियोजित`,
     waitingSince: (who, when) => `${when} पासून ${who}`,
     paid: (label, amount) => `✓ ${label}: ${amount} भरले`,

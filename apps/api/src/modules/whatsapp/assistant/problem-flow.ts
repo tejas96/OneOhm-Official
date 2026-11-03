@@ -1,12 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { projects } from '@oneohm/database';
-import { desc, eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import type { IncomingFile } from '../../documents/upload-file';
-import { type Conversation, queueReply, setState } from '../chat-store';
+import type { Conversation } from '../chat-store';
+import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { guessCategory } from './guess-category';
 import { CATEGORY_WORDS, MEDIA_WORDS, WORDS } from './words';
@@ -28,8 +28,8 @@ export function recentRequest(context: unknown, now: number): RaisedRequest | nu
 }
 
 /**
- * "Report a problem" (PRD 6.1): the customer's words become a service request on their
- * newest project, with any photos they sent attached, exactly as in the app.
+ * "Report a problem" (PRD 6.1): the customer's words become a service request on the home
+ * they picked (or their only active one), with any photos sent attached, as in the app.
  */
 @Injectable()
 export class ProblemFlowService {
@@ -50,22 +50,19 @@ export class ProblemFlowService {
     const typed = said.trim();
     // A photo with no words (or one word) still raises a request; the photo says the rest.
     const words = typed.length >= 5 || files.length === 0 ? typed : MEDIA_WORDS.photoOnly;
-    if (words.length < 5) return this.text(chat, WORDS.tooShort);
+    if (words.length < 5) return sayWithTaps(this.db, chat, WORDS.tooShort, ['menu']);
     const { category, label: plain } = guessCategory(words);
     const label = CATEGORY_WORDS[category] ?? plain;
-    const [project] = await this.db
-      .select({ id: projects.id })
-      .from(projects)
-      .where(eq(projects.customerId, customerId))
-      .orderBy(desc(projects.createdAt))
-      .limit(1);
+    // The home picked from the list (menu audit M10), else the newest active one (M7).
+    const picked = (chat.context as { projectId?: string } | null)?.projectId;
+    const projectId = picked ?? (await activeHomes(this.db, customerId))[0]?.id ?? null;
     const request = await this.portal.raiseServiceRequest(customerId, {
-      projectId: project?.id ?? null,
+      projectId,
       category,
       description: `${words} (via WhatsApp)`,
     });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
-    await setState(this.db, chat.id, 'menu', { raised });
+    await setStep(this.db, chat, 'menu', { raised });
     let added = 0;
     for (const file of files) if (await this.attach(customerId, request.id, file)) added += 1;
     const lines = [
@@ -78,7 +75,8 @@ export class ProblemFlowService {
   /** Another photo for the request just raised. */
   async addPhoto(chat: Conversation, customerId: string, requestId: string, file: IncomingFile) {
     const added = await this.attach(customerId, requestId, file);
-    return this.text(chat, added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded);
+    const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
+    return sayWithTaps(this.db, chat, body, ['requests', 'menu']);
   }
 
   /** The app's own photo rule (photos only, six at most); a refusal is not an error. */
@@ -91,9 +89,5 @@ export class ProblemFlowService {
       this.log.log(`Photo not added to request ${requestId}: ${error.message}`);
       return false;
     }
-  }
-
-  private async text(chat: Conversation, body: string): Promise<void> {
-    await queueReply(this.db, chat, { kind: 'text', body });
   }
 }

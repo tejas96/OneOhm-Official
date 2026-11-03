@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { assistantAnswersTap } from './handled-taps';
+import { assistantAnswers, assistantAnswersTap } from './handled-taps';
 
 const tap = (choiceId: string) => ({ kind: 'choice' as const, choiceId });
+const typed = { kind: 'text' as const, choiceId: null };
+const HOME = 'home:0b6f2f9e-6c1a-4f43-9d55-3f3c2a1b7e10';
 
 describe('taps the assistant answers while a person has the chat', () => {
   it('treats the Menu tap as the bot’s own, for customers and strangers alike', () => {
@@ -17,7 +19,23 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: 'c1' }, tap('paper:nonsense'))).toBe(false);
   });
 
+  it('answers its own rating and which-home taps (menu audit H3, M10)', () => {
+    for (const rating of ['rate:1', 'rate:5'])
+      expect(assistantAnswersTap({ customerId: 'c1' }, tap(rating)), rating).toBe(true);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('rate:9'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap(HOME))).toBe(true);
+    expect(assistantAnswersTap({ customerId: null }, tap('rate:5'))).toBe(false);
+  });
+
   it('leaves typed words to the person', () => {
-    expect(assistantAnswersTap({ customerId: 'c1' }, { kind: 'text', choiceId: null })).toBe(false);
+    expect(assistantAnswersTap({ customerId: 'c1' }, typed)).toBe(false);
+  });
+
+  it('takes typed words in a held chat only when its own step waits for them (M6)', () => {
+    const held = { customerId: 'c1', state: 'human', context: {} };
+    expect(assistantAnswers(held, typed)).toBe(false);
+    const waiting = { ...held, context: { step: 'await_problem' } };
+    expect(assistantAnswers(waiting, typed)).toBe(true);
+    expect(assistantAnswers(waiting, tap('menu'))).toBe(true);
   });
 });

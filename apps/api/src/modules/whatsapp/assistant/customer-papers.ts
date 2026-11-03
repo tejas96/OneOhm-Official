@@ -109,16 +109,7 @@ export async function customerPapers(sources: Sources, customerId: string): Prom
         caption: QUOTE_MONEY_WORDS.caption(quote.number),
       }),
     ),
-    ...(await receipts(db, customerId)).map((receipt) =>
-      paper('receipt', receipt.id, {
-        title: receipt.instalment
-          ? PAPER_WORDS.receipt(receipt.instalment)
-          : PAPER_WORDS.plainReceipt,
-        description: PAPER_WORDS.paid(formatInr(receipt.amount), plainDate(receipt.on)),
-        filename: customerPdfName(name, 'receipt'),
-        caption: PROJECT_WORDS.receiptCaption(receipt.number ?? ''),
-      }),
-    ),
+    ...(await receipts(db, customerId)).map((receipt) => receiptPaper(customerId, name, receipt)),
     ...(await issuedInvoices(db, customerId, LATEST)).map((invoice) =>
       paper('invoice', invoice.id, {
         title: PAPER_WORDS.invoice,
@@ -149,8 +140,39 @@ export async function customerPapers(sources: Sources, customerId: string): Prom
   ];
 }
 
-/** The newest receipts, each with its instalment ("1st instalment", "Bank loan"). */
-async function receipts(db: Database, customerId: string) {
+type Receipt = Awaited<ReturnType<typeof receipts>>[number];
+
+function receiptPaper(customerId: string, name: string, receipt: Receipt): Paper {
+  return {
+    id: paperTap('receipt', receipt.id),
+    file: { kind: 'receipt', id: receipt.id, customerId },
+    title: receipt.instalment ? PAPER_WORDS.receipt(receipt.instalment) : PAPER_WORDS.plainReceipt,
+    description: PAPER_WORDS.paid(formatInr(receipt.amount), plainDate(receipt.on)),
+    filename: customerPdfName(name, 'receipt'),
+    caption: PROJECT_WORDS.receiptCaption(receipt.number ?? ''),
+  };
+}
+
+/**
+ * One receipt of this customer by its payment id, however old (menu audit M12): "View
+ * receipt" sends that PDF even when it is no longer among the newest three.
+ */
+export async function receiptById(
+  db: Database,
+  customerId: string,
+  paymentId: string,
+): Promise<Paper | null> {
+  const [receipt] = await receipts(db, customerId, paymentId);
+  if (!receipt) return null;
+  const [customer] = await db
+    .select({ name: customers.name })
+    .from(customers)
+    .where(eq(customers.id, customerId));
+  return receiptPaper(customerId, customer?.name ?? '', receipt);
+}
+
+/** The newest receipts (or the one asked for), each with its instalment ("Bank loan"). */
+async function receipts(db: Database, customerId: string, paymentId?: string) {
   const rows = await db
     .select({
       id: payments.id,
@@ -164,7 +186,13 @@ async function receipts(db: Database, customerId: string) {
     .from(payments)
     .innerJoin(projects, eq(projects.id, payments.projectId))
     .leftJoin(paymentMilestones, eq(paymentMilestones.id, payments.milestoneId))
-    .where(and(eq(projects.customerId, customerId), isNotNull(payments.receiptNumber)))
+    .where(
+      and(
+        eq(projects.customerId, customerId),
+        isNotNull(payments.receiptNumber),
+        paymentId ? eq(payments.id, paymentId) : undefined,
+      ),
+    )
     .orderBy(desc(payments.createdAt))
     .limit(LATEST);
   return rows.map((row) => ({

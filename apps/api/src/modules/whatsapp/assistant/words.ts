@@ -43,6 +43,7 @@ const EN_WORDS = {
     not_applicable: 'No subsidy on this project.',
     pending: 'Subsidy: not applied yet',
     applied: 'Subsidy: applied, waiting for the government',
+    inspected: 'Subsidy: inspection done, waiting for the release',
     released: 'Subsidy: released',
   } as Record<string, string>,
   waitingOn: {
@@ -175,6 +176,7 @@ const EN_FEEDBACK_WORDS = {
 const EN_ANSWER_WORDS = {
   now: (stage: string, done: number, steps: number) =>
     `Now: ${stage} (${done} of ${steps} steps done)`,
+  allDone: (steps: number) => `All ${steps} steps done. Your solar system is complete.`,
   next: (title: string, when: string) => `Next: ${title}, planned ${when}`,
   waitingSince: (who: string, when: string) => `${who} since ${when}`,
   paid: (label: string, amount: string) => `✓ ${label}: ${amount} paid`,

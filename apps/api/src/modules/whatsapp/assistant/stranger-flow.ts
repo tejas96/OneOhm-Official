@@ -13,6 +13,7 @@ import { OnboardingFlowService } from '../onboarding/onboarding-flow';
 import { openLeadFor } from '../onboarding/onboarding-lead';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { Incoming, IncomingMedia } from '../whatsapp-events';
+import { sayWithTaps } from './closing-taps';
 import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
 import { MEDIA_WORDS, WORDS } from './words';
@@ -42,6 +43,9 @@ export class StrangerFlowService {
     if (incoming.media && (await this.fileOnLead(chat, incoming.media))) return;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text)) return this.answer(chat, 'human');
+    // Typed words from a lead the team made reach that lead's person (menu audit M13).
+    if (incoming.kind === 'text' && (await openLeadFor(this.db, chat.phone)))
+      return this.people.passToOwner(chat);
     return this.answer(chat, word);
   }
 
@@ -136,7 +140,7 @@ export class StrangerFlowService {
     });
     await clearEntry(this.db, chat);
     await this.people.toPerson(chat);
-    return this.say(chat, { kind: 'text', body: WORDS.callbackNoted });
+    return sayWithTaps(this.db, chat, WORDS.callbackNoted, ['menu']);
   }
 
   private say(chat: Conversation, reply: ChatReply) {

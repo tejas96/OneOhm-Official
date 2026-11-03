@@ -71,6 +71,12 @@ describe('WhatsApp quote and pay', () => {
     );
   const thanks = (id: string) =>
     rows('select 1 from outbox where dedupe_key = $1', [`quote_thanks:${id}`]);
+  /** "This quote is already accepted", one per tap after acceptance (menu audit H4). */
+  const alreadySaid = (phone: string) =>
+    rows<{ payload: { body: string; buttons: { id: string }[] } }>(
+      "select payload from outbox where recipient = $1 and dedupe_key like 'quote_already:%'",
+      [phone],
+    );
 
   it('asks to confirm, then accepts on yes', async () => {
     const { customer, quotation } = await sentQuote('Quote Accept Customer (test)');
@@ -112,7 +118,7 @@ describe('WhatsApp quote and pay', () => {
     expect(await thanks(quotation.id)).toHaveLength(1);
   });
 
-  it('accepts once when the yes arrives twice', async () => {
+  it('accepts once when the yes arrives twice, and the second tap hears it is accepted', async () => {
     const { customer, quotation } = await sentQuote('Quote Twice Customer (test)');
     const yes = { buttonPayload: `quote_yes:${quotation.id}`, id: `wamid.twice-${quotation.id}` };
 
@@ -126,6 +132,16 @@ describe('WhatsApp quote and pay', () => {
     expect(await statusOf(quotation.id)).toBe('accepted');
     expect(await acceptances(quotation.id)).toHaveLength(1);
     expect(await thanks(quotation.id)).toHaveLength(1);
+    // The second tap is told, with Menu; Meta's retry of the first tap hears nothing more.
+    const already = await alreadySaid(customer.phone);
+    expect(already).toHaveLength(1);
+    expect(already[0]?.payload.body).toBe('This quote is already accepted. Thank you!');
+    expect(already[0]?.payload.buttons.map((button) => button.id)).toEqual(['menu']);
+
+    // "Accept quote" on the accepted quote is answered the same way, not silent.
+    await sendInbound(customer.phone, { buttonPayload: `quote_accept:${quotation.id}` });
+    expect(await alreadySaid(customer.phone)).toHaveLength(2);
+    expect(await acceptances(quotation.id)).toHaveLength(1);
   });
 
   it('accepts once when the customer and staff accept at the same moment', async () => {
@@ -142,9 +158,11 @@ describe('WhatsApp quote and pay', () => {
 
       expect(await statusOf(quotation.id)).toBe('accepted');
       expect(await acceptances(quotation.id)).toHaveLength(1);
-      // Whoever lost the race was told: staff get a 409, the customer only a thank-you.
+      // Whoever lost the race was told: staff get a 409, the customer one thank-you (or,
+      // when staff were first, "already accepted. Thank you!").
       expect([200, 409]).toContain(staff.status);
-      expect(await thanks(quotation.id)).toHaveLength(1);
+      const told = (await thanks(quotation.id)).length + (await alreadySaid(customer.phone)).length;
+      expect(told).toBe(1);
     }
   });
 

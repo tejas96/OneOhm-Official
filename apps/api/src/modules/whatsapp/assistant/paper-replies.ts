@@ -6,7 +6,7 @@ import { CustomerPortalService } from '../../customer-portal/customer-portal.ser
 import { type Conversation, queueReply } from '../chat-store';
 import { sharedFileUrl } from '../file-links';
 import { sayWithTaps, TAP_WORDS } from './closing-taps';
-import { customerPapers, type Paper } from './customer-papers';
+import { customerPapers, type Paper, receiptById } from './customer-papers';
 import { PAPER_WORDS } from './paper-words';
 import { WORDS } from './words';
 
@@ -49,9 +49,15 @@ export class PaperRepliesService {
     });
   }
 
-  /** A tapped paper; one no longer theirs (or too old to list) shows the list again. */
+  /**
+   * A tapped paper; one no longer theirs shows the list again. A receipt is looked up by
+   * its own id, so "View receipt" works on any receipt, however old (menu audit M12).
+   */
   async tapped(chat: Conversation, customerId: string, tapId: string): Promise<void> {
-    const paper = (await this.papers(customerId)).find((entry) => entry.id === tapId);
+    const receiptId = /^paper:receipt:([0-9a-f-]{36})$/.exec(tapId)?.[1];
+    const paper = receiptId
+      ? await receiptById(this.db, customerId, receiptId)
+      : (await this.papers(customerId)).find((entry) => entry.id === tapId);
     return paper ? this.send(chat, paper) : this.show(chat, customerId);
   }
 

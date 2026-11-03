@@ -9,7 +9,7 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { isWorkingTime, lastWorkEnd } from '@oneohm/domain';
-import { and, desc, eq, gt, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
@@ -82,9 +82,8 @@ export class HandOverService {
         subject: { type: 'chat', id: chat.id },
         dedupeKey: alert.key,
       });
-    // The plain hand-over keeps a Menu tap to go back to the assistant.
-    if (reply === undefined) return sayWithTaps(db, chat, WORDS.humanSoon, ['menu']);
-    return queueReply(db, chat, { kind: 'text', body: reply });
+    // Every hand-over reply keeps a Menu tap to go back to the assistant (menu audit M2).
+    return sayWithTaps(db, chat, reply ?? WORDS.humanSoon, ['menu']);
   }
 
   /** To the chat's own person (or its desk), named in the reply; options as in handOver. */
@@ -99,11 +98,19 @@ export class HandOverService {
     );
   }
 
-  /** The chat is a person's now, without telling anyone (they asked for a call back). */
+  /**
+   * The chat is a person's now, without telling anyone (they asked for a call back). A bot
+   * step left waiting ends, so the next words are the person's, not a complaint.
+   */
   toPerson(chat: Conversation, db: DatabaseExecutor = this.db) {
     return db
       .update(waConversations)
-      .set({ state: 'human', handedOverAt: new Date(), updatedAt: new Date() })
+      .set({
+        state: 'human',
+        context: sql`${waConversations.context} - 'step'`,
+        handedOverAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(waConversations.id, chat.id));
   }
 

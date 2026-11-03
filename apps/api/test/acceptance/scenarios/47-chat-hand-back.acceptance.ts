@@ -60,12 +60,29 @@ describe('Chat hand-back and alert noise', () => {
     expect((await replies(phone)).length).toBeLessThanOrEqual(before + 1);
   });
 
-  it('a tap the assistant does not answer while a person has the chat alerts and waits', async () => {
+  it('a rating tap while a person has the chat is the bot’s own: answered, quiet, still held', async () => {
     const { phone, chatId } = await chatWithPerson('Old Tap Customer (test)');
-    // A rating tap is not one the assistant answers once a person has the chat.
+    // The bot sent the rating list, so its rows are its own taps in any state (menu audit H3).
+    const before = (await replies(phone)).length;
     await tap(phone, 'rate:5');
+    expect((await replies(phone)).length).toBeGreaterThan(before);
+    expect(await messageAlerts(chatId)).toHaveLength(0);
+    expect(await summaryOf(chatId)).toMatchObject({ needsReply: false, state: 'human' });
+  });
+
+  it('a hello typed while a person has the chat is for that person (menu audit M5)', async () => {
+    const { phone, chatId } = await chatWithPerson('Held Hello Customer (test)');
+    const menus = async () =>
+      (await replies(phone)).filter((reply) => reply.kind === 'list').length;
+    const before = await menus();
+    await say(phone, 'नमस्कार');
+    expect(await menus()).toBe(before);
+    expect((await chatOf(phone)).state).toBe('human');
     expect(await messageAlerts(chatId)).not.toHaveLength(0);
-    expect((await summaryOf(chatId)).needsReply).toBe(true);
+    // The Menu tap still takes the chat back to the assistant.
+    await tap(phone, 'menu');
+    expect(await menus()).toBe(before + 1);
+    expect((await chatOf(phone)).state).toBe('menu');
   });
 
   it('after 4 working hours with no word from the team the chat goes back to the assistant', async () => {

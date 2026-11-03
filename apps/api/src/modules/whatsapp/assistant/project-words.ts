@@ -27,6 +27,8 @@ const EN_PROJECT = {
   receiptCaption: (number: string) => `Your payment receipt (${number})`,
   partPaid: (amount: string, left: string) =>
     `${amount} received. ${left} is left on this instalment.`,
+  /** Over the list of towns when a customer with 2+ homes raises a complaint (M10). */
+  whichHome: 'Which home is the problem at?',
 };
 const EN_NEXT = EN_PROJECT.next;
 
@@ -47,6 +49,7 @@ const MR_PROJECT: Words<typeof EN_PROJECT> = {
     `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: ${MR_NEXT[trigger] ?? MR_NEXT.loan_disbursement}.${name || phone ? ` तुमचा संपर्क: ${name ?? 'आमची टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `तुमची पेमेंट पावती (${number})`,
   partPaid: (amount, left) => `${amount} मिळाले. या हप्त्याचे ${left} बाकी आहेत.`,
+  whichHome: 'समस्या कोणत्या घरी आहे?',
 };
 
 const HI_NEXT: Record<MilestoneTrigger, string> = {
@@ -66,6 +69,7 @@ const HI_PROJECT: Words<typeof EN_PROJECT> = {
     `धन्यवाद, आपका पेमेंट मिल गया. आगे: ${HI_NEXT[trigger] ?? HI_NEXT.loan_disbursement}.${name || phone ? ` आपके संपर्क: ${name ?? 'हमारी टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `आपकी पेमेंट रसीद (${number})`,
   partPaid: (amount, left) => `${amount} मिल गए. इस किस्त के ${left} बाकी हैं.`,
+  whichHome: 'समस्या किस घर में है?',
 };
 
 /** Every language, for the checks. */

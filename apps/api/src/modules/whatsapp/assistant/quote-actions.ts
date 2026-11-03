@@ -45,10 +45,11 @@ export class QuoteActionsService {
     private readonly people: HandOverService,
   ) {}
 
-  async tap(chat: Conversation, tap: QuoteTap): Promise<void> {
+  /** `messageId` is the tap's own WhatsApp id: an "already accepted" reply goes once per tap. */
+  async tap(chat: Conversation, tap: QuoteTap, messageId: string): Promise<void> {
     if (tap.action === 'ask') return this.people.passToOwner(chat);
-    if (tap.action === 'accept') return this.askToConfirm(chat, tap.quotationId);
-    return this.accept(chat, tap.quotationId);
+    if (tap.action === 'accept') return this.askToConfirm(chat, tap.quotationId, messageId);
+    return this.accept(chat, tap.quotationId, messageId);
   }
 
   /**
@@ -57,7 +58,7 @@ export class QuoteActionsService {
    * reaches the same chat but cannot accept: it goes to the customer's person at once,
    * whatever state the quote is in (never silent, even when it is already accepted).
    */
-  private async askToConfirm(chat: Conversation, quotationId: string) {
+  private async askToConfirm(chat: Conversation, quotationId: string, messageId: string) {
     const quotation = await this.quotations.get(quotationId).catch((error: unknown) => {
       if (error instanceof AppError) return null;
       throw error;
@@ -65,7 +66,7 @@ export class QuoteActionsService {
     if (!quotation || quotation.customer.id !== chat.customerId)
       return this.refuse(chat, WORDS.quoteChanged);
     if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
-    if (quotation.status === 'accepted') return this.thank(chat, quotationId);
+    if (quotation.status === 'accepted') return this.already(chat, messageId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
     const steps = await planSteps(this.db);
     const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
@@ -79,7 +80,7 @@ export class QuoteActionsService {
     });
   }
 
-  private async accept(chat: Conversation, quotationId: string) {
+  private async accept(chat: Conversation, quotationId: string, messageId: string) {
     const result = chat.customerId
       ? await this.quotations.acceptByCustomer({
           customerId: chat.customerId,
@@ -89,13 +90,16 @@ export class QuoteActionsService {
       : 'not_owner';
     if (result === 'not_open') return this.refuse(chat, WORDS.quoteChanged);
     if (result === 'not_owner') return this.refuse(chat, WORDS.quoteOwnerOnly);
-    // Accepted now or before: the thank-you goes once, however often "yes" arrives.
-    return this.thank(chat, quotationId);
-  }
-
-  private thank(chat: Conversation, quotationId: string) {
+    if (result === 'already') return this.already(chat, messageId);
+    // Accepted now: the thank-you goes once, however often "yes" arrives.
     const taps = ['menu', 'talk'] as const;
     return sayWithTaps(this.db, chat, QUOTE_WORDS.quoteThanks, taps, `quote_thanks:${quotationId}`);
+  }
+
+  /** Accepted before: said for each new tap, never twice for Meta's retry of one tap (H4). */
+  private already(chat: Conversation, messageId: string) {
+    const key = `quote_already:${messageId}`;
+    return sayWithTaps(this.db, chat, QUOTE_WORDS.alreadyAccepted, ['menu'], key);
   }
 
   /** Says why it cannot go ahead, then hands the chat to the customer's person. */
