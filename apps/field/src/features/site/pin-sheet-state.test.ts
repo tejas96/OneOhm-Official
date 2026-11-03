@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_GIVE_UP_MS, nextMapState, regionAround, sheetActions } from './pin-sheet-state';
+import {
+  MAP_GIVE_UP_MS,
+  nextMapState,
+  regionAround,
+  sheetActions,
+  zoomAround,
+} from './pin-sheet-state';
 
 describe('nextMapState', () => {
   it('is ready once the map says so', () => {
@@ -29,6 +35,18 @@ describe('regionAround', () => {
   it('widens the longitude span away from the equator', () => {
     const region = regionAround({ latitude: 60, longitude: 0 }, 40);
     expect(region.longitudeDelta).toBeCloseTo(region.latitudeDelta * 2, 8);
+  });
+});
+
+describe('zoomAround', () => {
+  it('turns a 40 m span into the zoom whose view is that wide', () => {
+    const point = { latitude: 18.5, longitude: 73.8 };
+    const zoom = zoomAround(point, 40);
+    expect(360 / 2 ** zoom).toBeCloseTo(regionAround(point, 40).longitudeDelta, 10);
+  });
+  it('zooms in further when the view is several tiles wide (Google Maps)', () => {
+    const point = { latitude: 0, longitude: 0 };
+    expect(zoomAround(point, 40, 2) - zoomAround(point, 40)).toBeCloseTo(1, 10);
   });
 });
 

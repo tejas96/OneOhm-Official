@@ -12,8 +12,8 @@ import { type PinStart, pinOutcome, pinSavedMessage, shouldKeepPin } from './pin
 import { resendPendingPin, usePendingPin } from './use-pending-pin';
 import { readIfAllowed, useSiteAction } from './use-task-site';
 
-/** A Google key for this platform was set at build time; without one the old button shows. */
-export const mapsEnabled = mapsOn(Platform.OS, Constants.expoConfig?.extra);
+/** The satellite map can show on this phone (see `mapsOn`); without it the old button shows. */
+export const mapsEnabled = mapsOn(Platform.OS, Constants.expoConfig?.extra, Platform.Version);
 
 /**
  * Pinning the roof from the site visit card: a precise reading, then the map sheet. The

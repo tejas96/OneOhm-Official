@@ -11,10 +11,12 @@ const APP_ID = 'in.oneohm.field';
 /** Set in EAS (or .env) once the Expo project exists; push alerts need both. */
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID;
 const GOOGLE_SERVICES_JSON = process.env.GOOGLE_SERVICES_JSON;
-/** Google Maps keys: a per-platform key wins, then the shared development key. */
-const MAPS_SHARED_KEY = process.env.GOOGLE_MAPS_API_KEY || undefined;
-const MAPS_ANDROID_KEY = process.env.GOOGLE_MAPS_ANDROID_KEY || MAPS_SHARED_KEY;
-const MAPS_IOS_KEY = process.env.GOOGLE_MAPS_IOS_KEY || MAPS_SHARED_KEY;
+/**
+ * The pin sheet's map is expo-maps: Apple Maps on iOS (no key) and Google Maps on Android,
+ * whose key is the Android one, else the shared development key.
+ */
+const MAPS_ANDROID_KEY =
+  process.env.GOOGLE_MAPS_ANDROID_KEY || process.env.GOOGLE_MAPS_API_KEY || undefined;
 const LIGHT_CANVAS = '#F5F6F8';
 const DARK_CANVAS = '#0F1113';
 
@@ -33,12 +35,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: '1',
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
-    ...(MAPS_IOS_KEY ? { config: { googleMapsApiKey: MAPS_IOS_KEY } } : {}),
   },
   android: {
     package: APP_ID,
     versionCode: 1,
     ...(GOOGLE_SERVICES_JSON ? { googleServicesFile: GOOGLE_SERVICES_JSON } : {}),
+    // Written to the manifest as `com.google.android.geo.API_KEY`, which Google Maps reads.
     ...(MAPS_ANDROID_KEY ? { config: { googleMaps: { apiKey: MAPS_ANDROID_KEY } } } : {}),
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
@@ -53,8 +55,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: { favicon: './assets/images/favicon.png', output: 'single' },
   extra: {
     ...config.extra,
-    // Per platform: an iOS build without its key must not show the Google map.
-    mapsEnabledIos: Boolean(MAPS_IOS_KEY),
+    // Apple Maps needs no key; an Android build without its key must not show the map.
+    mapsEnabledIos: true,
     mapsEnabledAndroid: Boolean(MAPS_ANDROID_KEY),
     ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),
   },
@@ -96,9 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'OneOhm turns what you say into text for your task notes. You can check and edit it before saving.',
       },
     ],
-    // react-native-maps: on iOS the Google map needs its pods and key at start-up, which
-    // only this plugin adds. Android reads the key from `android.config.googleMaps`.
-    ['react-native-maps', MAPS_IOS_KEY ? { iosGoogleMapsApiKey: MAPS_IOS_KEY } : {}],
+    // No 'expo-maps' plugin: it only adds location permissions, which expo-location adds.
     [
       'expo-splash-screen',
       {

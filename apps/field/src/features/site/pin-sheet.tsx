@@ -3,17 +3,11 @@ import { Button, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
 import { MapPin, X } from 'lucide-react-native';
 import { useEffect, useReducer, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PIN } from '@/copy/site';
 import type { PinStart } from './pin-flow';
-import {
-  MAP_GIVE_UP_MS,
-  nextMapState,
-  regionAround,
-  type SheetAction,
-  sheetActions,
-} from './pin-sheet-state';
+import { PinMapView } from './pin-map-view';
+import { MAP_GIVE_UP_MS, nextMapState, type SheetAction, sheetActions } from './pin-sheet-state';
 
 export interface PinSheetProps {
   /** The worker's reading; the map centres here, else on `saved`. */
@@ -28,7 +22,6 @@ export interface PinSheetProps {
   readonly onClose: () => void;
 }
 
-const SPAN_M = 40;
 const PIN_SIZE = 40;
 
 /**
@@ -93,30 +86,15 @@ export function PinSheet({
         </View>
         <View style={styles.mapBox}>
           {first ? (
-            <MapView
-              style={StyleSheet.absoluteFill}
-              provider={PROVIDER_GOOGLE}
-              mapType="satellite"
-              showsUserLocation
-              initialRegion={regionAround(first, SPAN_M)}
-              onMapLoaded={() => dispatch({ type: 'mapReady' })}
-              onRegionChangeComplete={(region) =>
-                setCentre({ latitude: region.latitude, longitude: region.longitude })
-              }
-            >
-              {start?.accuracyM ? (
-                <Circle
-                  center={start}
-                  radius={start.accuracyM}
-                  strokeColor={theme.colors.accent}
-                  // The accent at about 15 %, so the roof still shows through.
-                  fillColor={`${theme.colors.accent}26`}
-                />
-              ) : null}
-              {saved ? (
-                <Marker coordinate={saved} title={PIN.saved} pinColor={theme.colors.accent} />
-              ) : null}
-            </MapView>
+            <PinMapView
+              first={first}
+              start={start}
+              saved={saved}
+              savedTitle={PIN.saved}
+              accent={theme.colors.accent}
+              onReady={() => dispatch({ type: 'mapReady' })}
+              onCentre={setCentre}
+            />
           ) : null}
           {/* The pin is fixed: its tip marks the map's centre, which is what is saved. */}
           <View pointerEvents="none" style={styles.pinWrap}>

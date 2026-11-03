@@ -33,6 +33,19 @@ export function regionAround(
 }
 
 /**
+ * The map zoom that shows about `spanM` metres across the point. expo-maps takes a zoom,
+ * where the world is 360 degrees wide at zoom 0: on Apple Maps across the whole view, on
+ * Google Maps across one 256 dp tile, so Google passes how many tiles the view is wide.
+ */
+export function zoomAround(
+  point: { readonly latitude: number; readonly longitude: number },
+  spanM: number,
+  tilesAcross = 1,
+): number {
+  return Math.log2((360 * tilesAcross) / regionAround(point, spanM).longitudeDelta);
+}
+
+/**
  * `gps` saves the check-in reading (today's path); `gpsPin` sends the fresh reading as a
  * pin, for a visit checked in without a fix (the server saves it flagged, no distance).
  */

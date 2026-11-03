@@ -10,7 +10,7 @@ import { PinSheet } from './pin-sheet';
 import { mapsEnabled, type usePinRoof } from './use-pin-roof';
 
 /**
- * Pin the roof on the map (when a Google key is set and the person is checked in here)
+ * Pin the roof on the map (when the map can show here and the person is checked in)
  * and Navigate to the site: to its point when saved, else to its address text.
  */
 export function SitePlaceActions({
@@ -33,7 +33,7 @@ export function SitePlaceActions({
               variant="secondary"
               icon={<MapPinned size={16} color={theme.colors.textPrimary} />}
               onPress={() => void pin.begin()}
-              style={styles.flex}
+              fullWidth
             />
           ) : null}
           {navigateTo ? (
@@ -42,7 +42,7 @@ export function SitePlaceActions({
               variant="secondary"
               icon={<Navigation size={16} color={theme.colors.textPrimary} />}
               onPress={() => void Linking.openURL(navigateTo)}
-              style={styles.flex}
+              fullWidth
             />
           ) : null}
         </View>
@@ -66,7 +66,5 @@ export function SitePlaceActions({
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  flex: { flexGrow: 1, flexBasis: 140 },
-});
+// Stacked, full width: "Move the roof pin" does not fit half a phone's width.
+const styles = StyleSheet.create({ row: { gap: 8 } });
