@@ -49,3 +49,23 @@ export async function setManagerTerms(
       current.userId,
     ]);
 }
+
+/** Like `setManagerTerms`, with exact dates: each entry runs from `from` until `until` (null = still open). */
+export async function setManagerTermsAt(
+  projectId: string,
+  history: readonly { userId: string; from: Date; until: Date | null }[],
+): Promise<void> {
+  await rows('DELETE FROM project_manager_terms WHERE project_id = $1', [projectId]);
+  for (const entry of history)
+    await rows(
+      `INSERT INTO project_manager_terms (project_id, user_id, started_at, ended_at)
+       VALUES ($1, $2, $3, $4)`,
+      [projectId, entry.userId, entry.from, entry.until],
+    );
+  const current = history.at(-1);
+  if (current)
+    await rows('UPDATE projects SET manager_user_id = $2 WHERE id = $1', [
+      projectId,
+      current.userId,
+    ]);
+}
