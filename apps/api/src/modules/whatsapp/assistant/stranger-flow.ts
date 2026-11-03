@@ -13,7 +13,7 @@ import { openLeadFor } from '../onboarding/onboarding-lead';
 import type { Incoming, IncomingMedia } from '../whatsapp-events';
 import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
-import { WORDS } from './words';
+import { MEDIA_WORDS, WORDS } from './words';
 
 /**
  * Numbers not saved on any customer (PRD 6.1, 3.3): they see nothing private. A new
@@ -74,7 +74,7 @@ export class StrangerFlowService {
       body: WORDS.unknownNumber,
       buttons: [
         { id: 'callback', title: WORDS.callMeBack },
-        { id: 'human', title: 'Talk to a person' },
+        { id: 'human', title: MEDIA_WORDS.talkToPerson },
       ],
     });
   }

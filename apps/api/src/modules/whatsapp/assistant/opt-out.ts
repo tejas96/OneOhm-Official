@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { type Conversation, queueReply } from '../chat-store';
 import { localized } from './language';
 
-/** Short and plain, in the three languages; they follow the language of the message. */
+/** Short and plain, in the three languages; they follow the chat's language. */
 export const OPT_OUT_WORDS = localized(
   {
     stopped: 'You will not get WhatsApp messages from us now. Send START anytime to begin again.',
@@ -21,12 +21,13 @@ export const OPT_OUT_WORDS = localized(
   },
 );
 
-const STOP_WORDS = new Set(['stop', 'unsubscribe', 'बंद', 'रद्द']);
+/** Never a bare "बंद" or "रद्द": "inverter बंद" or "booking रद्द" is about the work. */
+const STOP_WORDS = new Set(['stop', 'unsubscribe', 'मेसेज बंद', 'संदेश बंद', 'मेसेज नको', 'मैसेज बंद']);
 const START_WORDS = new Set(['start', 'सुरू', 'शुरू']);
 
 /** STOP or START when that is the whole message (any case); anything longer is not one. */
 export function optOutWord(text: string): 'stop' | 'start' | null {
-  const word = text.trim().toLowerCase();
+  const word = text.trim().toLowerCase().replace(/\s+/g, ' ');
   if (STOP_WORDS.has(word)) return 'stop';
   return START_WORDS.has(word) ? 'start' : null;
 }

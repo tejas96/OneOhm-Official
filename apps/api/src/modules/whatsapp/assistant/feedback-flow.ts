@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type Conversation, queueReply, setState } from '../chat-store';
+import { sayWithTaps, type Tap } from './closing-taps';
 import { projectToRate } from './rating-rule';
 import { FEEDBACK_WORDS, RATINGS, WORDS } from './words';
 
@@ -23,7 +24,7 @@ export class FeedbackFlowService {
 
   async offer(chat: Conversation, customerId: string): Promise<void> {
     const target = await this.target(customerId);
-    if (target.kind !== 'rate') return this.text(chat, target.body);
+    if (target.kind !== 'rate') return this.closing(chat, target.body, ['menu', 'talk']);
     await queueReply(this.db, chat, {
       kind: 'list',
       body: WORDS.askRating,
@@ -36,10 +37,11 @@ export class FeedbackFlowService {
     if (!(Number.isInteger(rating) && rating >= 1 && rating <= 5))
       return this.text(chat, WORDS.notUnderstood);
     const target = await this.target(customerId);
-    if (target.kind !== 'rate') return this.text(chat, target.body);
+    if (target.kind !== 'rate') return this.closing(chat, target.body, ['menu', 'talk']);
     await this.portal.feedback(customerId, { projectId: target.projectId, rating });
     await setState(this.db, chat.id, AWAIT_COMMENT, { projectId: target.projectId, rating });
-    return this.text(chat, FEEDBACK_WORDS.askComment);
+    // Tapping Menu skips the comment; typed words are the comment.
+    return this.closing(chat, FEEDBACK_WORDS.askComment, ['menu']);
   }
 
   /** The answer to "Anything to add?": saved as the comment, unless they skip. */
@@ -53,9 +55,9 @@ export class FeedbackFlowService {
       !comment ||
       FEEDBACK_WORDS.skipWords.includes(comment.toLowerCase())
     )
-      return this.text(chat, WORDS.ratingSaved);
+      return this.closing(chat, WORDS.ratingSaved, ['menu']);
     await this.portal.feedback(customerId, { projectId, rating, comment });
-    return this.text(chat, FEEDBACK_WORDS.commentSaved);
+    return this.closing(chat, FEEDBACK_WORDS.commentSaved, ['menu']);
   }
 
   private async target(
@@ -69,5 +71,9 @@ export class FeedbackFlowService {
 
   private async text(chat: Conversation, body: string): Promise<void> {
     await queueReply(this.db, chat, { kind: 'text', body });
+  }
+
+  private closing(chat: Conversation, body: string, taps: readonly Tap[]): Promise<void> {
+    return sayWithTaps(this.db, chat, body, taps);
   }
 }

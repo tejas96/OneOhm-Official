@@ -9,10 +9,11 @@ describe('isOnboardingSettings', () => {
     expect(isOnboardingSettings(DEFAULT_ONBOARDING)).toBe(true);
     expect(DEFAULT_ONBOARDING.billBands).toHaveLength(5);
   });
-  it('rejects 1 band and 10 bands', () => {
+  // The bill list also carries "Back" and "Talk to a person": 8 bands fill its 10 rows.
+  it('rejects 1 band and 9 bands', () => {
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: bands(1) })).toBe(false);
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: bands(10) })).toBe(false);
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: bands(9) })).toBe(true);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: bands(9) })).toBe(false);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: bands(8) })).toBe(true);
   });
   it('rejects a negative tariff and a non-positive targetWp', () => {
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, tariffPaisePerUnit: -1 })).toBe(false);
@@ -25,14 +26,24 @@ describe('isOnboardingSettings', () => {
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: -1 })).toBe(false);
     expect(isOnboardingSettings(null)).toBe(false);
   });
-  it('caps the nudge at 23 hours, so the nudge and the stalled lead stay inside a day', () => {
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 23 })).toBe(true);
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 24 })).toBe(false);
+  it('caps the nudge at 22 hours, so it goes out inside the 23-hour chat window', () => {
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 22 })).toBe(true);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 23 })).toBe(false);
   });
-  it('allows 8 cities and rejects 9, since the list also carries two other rows', () => {
+  it('allows 7 cities and rejects 8, since the list also carries Other, Back and a person', () => {
     const cities = (n: number) => Array.from({ length: n }, (_, i) => `City${i}`);
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(8) })).toBe(true);
-    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(9) })).toBe(false);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(7) })).toBe(true);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(8) })).toBe(false);
+  });
+  it('takes optional Marathi and Hindi band labels of up to 24 characters', () => {
+    const [first, ...rest] = DEFAULT_ONBOARDING.billBands;
+    if (!first) throw new Error('defaults changed');
+    const withLabels = (labelMr: string) => ({
+      ...DEFAULT_ONBOARDING,
+      billBands: [{ ...first, labelMr, labelHi: '₹1,000 तक' }, ...rest],
+    });
+    expect(isOnboardingSettings(withLabels('₹1,000 पर्यंत'))).toBe(true);
+    expect(isOnboardingSettings(withLabels('म'.repeat(25)))).toBe(false);
   });
   it('caps city names and band labels at 24 characters', () => {
     const at = { ...DEFAULT_ONBOARDING, serviceCities: ['a'.repeat(24)] };

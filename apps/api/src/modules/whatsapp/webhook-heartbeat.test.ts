@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { webhookLooksSilent } from './webhook-heartbeat';
+import { WEBHOOK_SILENT_TITLE, webhookLooksSilent } from './webhook-heartbeat';
 
 describe('WhatsApp webhook heartbeat', () => {
   const now = new Date('2026-11-03T10:00:00Z');
@@ -35,5 +35,9 @@ describe('WhatsApp webhook heartbeat', () => {
   it('counts delivery receipts as webhooks: sends delivered but no reply is not silent', () => {
     const seen = { latestInboundAt: hoursAgo(48), latestDeliveredAt: hoursAgo(2), sentSince: 5 };
     expect(webhookLooksSilent(seen, now)).toBe(false);
+  });
+
+  it('alerts in plain words: what is wrong and what to check', () => {
+    expect(WEBHOOK_SILENT_TITLE).toBe('No WhatsApp webhooks for 24 hours — check the connection');
   });
 });

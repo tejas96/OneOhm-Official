@@ -187,7 +187,7 @@ describe('WhatsApp quote and pay', () => {
       redirect: 'manual',
     });
     expect(page.status).toBe(200);
-    expect(await page.text()).toContain('href="?go=1">Continue to pay</a>');
+    expect(await page.text()).toContain('href="?go=1" rel="nofollow">Continue to pay</a>');
     const go = await fetch(`${API}/pay/due/${sent?.payload.payToken}?go=1`, {
       redirect: 'manual',
     });

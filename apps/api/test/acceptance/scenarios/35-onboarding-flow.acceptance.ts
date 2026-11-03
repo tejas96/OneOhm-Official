@@ -54,6 +54,7 @@ describe('WhatsApp onboarding flow', () => {
       'ob:city:Pune',
       'ob:city:Satara',
       'ob:city:other',
+      'ob:city:back',
       'ob:person',
     ]);
 
@@ -90,7 +91,11 @@ describe('WhatsApp onboarding flow', () => {
       'Bill: ₹2,000–3,000 (about 3 kW)',
       'Roof: RCC, 2 floors',
     ]);
-    expect(choices(await lastReply(phone))).toEqual(['ob:photo:later', 'ob:person']);
+    expect(choices(await lastReply(phone))).toEqual([
+      'ob:photo:later',
+      'ob:photo:back',
+      'ob:person',
+    ]);
 
     await tap(phone, 'ob:photo:later');
     expect((await chatOf(phone)).state).toBe('onboard:done');

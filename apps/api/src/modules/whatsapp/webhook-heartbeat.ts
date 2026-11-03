@@ -12,6 +12,8 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 
 const SILENT_HOURS = 24;
+/** The alert owners get: plain words, what to check. */
+export const WEBHOOK_SILENT_TITLE = 'No WhatsApp webhooks for 24 hours — check the connection';
 const EVERY_MINUTES = 60;
 const HOUR = 3_600_000;
 
@@ -86,7 +88,7 @@ export class WebhookHeartbeatService implements OnApplicationBootstrap, OnModule
       if (!webhookLooksSilent(seen, now)) return false;
       await notifyHolders(this.db, 'settings.manage', {
         kind: 'whatsapp_webhook_silent',
-        title: 'No WhatsApp messages have come in for 24 hours — check the webhook',
+        title: WEBHOOK_SILENT_TITLE,
         body: 'Messages are going out, but no customer message or delivery receipt has come in for a day. Check the WhatsApp webhook URL in the Meta app settings.',
         dedupeKey: `whatsapp_webhook_silent:${todayIn('Asia/Kolkata', now)}`,
       });

@@ -6,7 +6,7 @@ import { API, Session } from '../support/http';
 import * as J from '../support/journey';
 import { JOURNEY, onboardFromAd } from '../support/journey-onboard';
 import { Transcript } from '../support/journey-transcript';
-import { milestoneOf, owed } from '../support/money';
+import { expectPaidNews, milestoneOf, owed } from '../support/money';
 import { chatOf, choices, lastReply, promisedCall, replies } from '../support/onboarding';
 import { quoteInput, uniquePhone } from '../support/sales';
 
@@ -63,7 +63,8 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     expect(sent?.payload).toMatchObject({
       acceptPayload: `quote_accept:${quote.id}`,
       askPayload: `quote_ask:${quote.id}`,
-      documentName: `${quote.number}.pdf`,
+      // Easy to find again in the customer's WhatsApp media (live review C16).
+      documentName: 'OneOhm-Ravi-Patil-test-quote.pdf',
     });
     expect(await J.fetchFile(sent?.payload.documentUrl ?? '')).toMatchObject(pdfType);
     // The approved template carries the file: no second copy as a chat file (only the estimate).
@@ -93,10 +94,10 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
   it('8b. the customer accepts on WhatsApp: accepted by the customer, lead won, project setup told', async () => {
     t.step('8b. The customer accepts');
     await t.send({ buttonPayload: `quote_accept:${quote.id}` });
-    expect(choices(await lastReply(phone))).toEqual([
-      `quote_yes:${quote.id}`,
-      `quote_ask:${quote.id}`,
-    ]);
+    const check = await lastReply(phone);
+    expect(choices(check)).toEqual([`quote_yes:${quote.id}`, `quote_ask:${quote.id}`]);
+    // The accept check says the first instalment in whole rupees, with no quote code (C1, C9).
+    expect(check?.body).toMatch(/^₹[\d,]+ चे सोलर कोटेशन स्वीकारायचे\? पहिला हप्ता ₹[\d,]+ स्वीकारताना/);
     await t.tap(`quote_yes:${quote.id}`);
     expect(await J.statusOf('quotations', quote.id)).toBe('accepted');
     expect(await J.auditsOf('quotation.accepted', quote.id)).toEqual([
@@ -118,7 +119,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
   });
 
   it('8c. after becoming a customer they are still answered in the Marathi they chose', async () => {
-    const [thanks] = await J.outboxOf(phone, 'session:text').then((sent) =>
+    const [thanks] = await J.outboxOf(phone, 'session:buttons').then((sent) =>
       sent.filter((row) => row.dedupe_key === `quote_thanks:${quote.id}`),
     );
     const [sent] = await J.outboxOf(phone, 'quotation_sent');
@@ -159,15 +160,15 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     expect(paidAt.status).toBeLessThan(300);
     await t.collect();
     expect(await J.statusOf('payment_milestones', advance().id)).toBe('paid');
-    const [payment] = await rows<{ receipt_number: string; amount_paise: string }>(
-      'SELECT receipt_number, amount_paise FROM payments WHERE milestone_id = $1',
+    const [payment] = await rows<{ id: string; receipt_number: string; amount_paise: string }>(
+      'SELECT id, receipt_number, amount_paise FROM payments WHERE milestone_id = $1',
       [advance().id],
     );
     expect(Number(payment?.amount_paise)).toBe(owed(advance()));
     const [received] = await J.outboxOf(phone, 'payment_received');
-    const receiptFile = `${payment?.receipt_number.replaceAll('/', '-')}.pdf`;
-    expect(received?.payload.documentName).toBe(receiptFile);
-    expect(receiptFile).not.toContain('/');
+    const receiptFile = received?.payload.documentName ?? '';
+    // Named for the customer (C16); the chat then says what is next, who to call, with taps (C6).
+    await expectPaidNews(receiptFile, payment?.id ?? '', project.id);
     expect(await J.fetchFile(received?.payload.documentUrl ?? '')).toMatchObject(pdfType);
     const [owner] = await rows<{ id: string }>(
       'SELECT coalesce(manager_user_id, $2) AS id FROM projects WHERE id = $1',

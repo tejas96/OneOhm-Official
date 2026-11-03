@@ -134,7 +134,7 @@ describe('The journey side paths: sources, links and messages', () => {
     await admin.post(`/quotations/${quotation.id}/send`);
     const [sent] = await J.outboxOf(customer.phone, 'quotation_sent');
     expect(sent?.payload).toMatchObject({
-      documentName: `${quotation.number}.pdf`,
+      documentName: 'OneOhm-Journey-Extras-Off-test-quote.pdf',
       acceptPayload: `quote_accept:${quotation.id}`,
       askPayload: `quote_ask:${quotation.id}`,
     });
@@ -150,7 +150,10 @@ describe('The journey side paths: sources, links and messages', () => {
     expect(off).not.toHaveProperty('header');
     expect(off).not.toHaveProperty('buttons');
     const on = approvedMessage('quotation_sent', template.fields, template, sent?.payload, true);
-    expect(on.header).toMatchObject({ kind: 'document', filename: `${quotation.number}.pdf` });
+    expect(on.header).toMatchObject({
+      kind: 'document',
+      filename: 'OneOhm-Journey-Extras-Off-test-quote.pdf',
+    });
     expect(on.buttons?.map((button) => button.kind)).toEqual(['quick_reply', 'quick_reply']);
   });
 });

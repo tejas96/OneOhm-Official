@@ -4,8 +4,14 @@ import { OPT_OUT_WORDS, optOutWord } from './opt-out';
 
 describe('STOP and START words', () => {
   it('knows STOP words as the whole message, any case, trimmed', () => {
-    for (const text of ['stop', ' STOP ', 'Unsubscribe', 'बंद', 'रद्द'])
+    for (const text of ['stop', ' STOP ', 'Unsubscribe', 'मेसेज बंद', 'संदेश बंद', 'मेसेज नको', 'मैसेज बंद'])
       expect(optOutWord(text), text).toBe('stop');
+  });
+
+  // "बंद" or "रद्द" alone is often about the system ("inverter बंद", "booking रद्द").
+  it('does not stop messages on a bare बंद or रद्द', () => {
+    for (const text of ['बंद', 'रद्द', 'inverter बंद', 'booking रद्द'])
+      expect(optOutWord(text), text).toBeNull();
   });
 
   it('knows START words', () => {

@@ -28,12 +28,21 @@ describe('WhatsApp quote chat file', () => {
     await admin.post(`/quotations/${quotation.id}/send`);
     await admin.post(`/quotations/${quotation.id}/send`);
 
-    const files = await rows<{ payload: { kind: string; filename: string } }>(
+    const files = await rows<{ payload: { kind: string; filename: string; caption: string } }>(
       "select payload from outbox where recipient = $1 and template = 'session:document'",
       [customer.phone],
     );
     expect(files).toHaveLength(1);
-    expect(files[0]?.payload.filename).toBe(`${quotation.number}.pdf`);
+    // Named for the customer, with a caption that still carries the number (C16, C9).
+    expect(files[0]?.payload.filename).toBe('OneOhm-Quote-Open-Window-Customer-test-quote.pdf');
+    expect(files[0]?.payload.caption).toBe(`Your solar quotation (${quotation.number})`);
+    // The buttons say the money plainly: full price, the 3 parts, the subsidy (C1).
+    const [buttons] = await newestOutbox(customer.phone, 'session:buttons');
+    const body = buttons?.payload.body ?? '';
+    expect(body).toMatch(
+      /^Your solar quotation is above\.\nFull price ₹[\d,]+, paid in 3 parts: ₹[\d,]+ on acceptance, ₹[\d,]+ before dispatch, ₹[\d,]+ after installation\./,
+    );
+    expect(body).not.toContain(quotation.number);
   });
 
   it('"Send again" sends the buttons again, the PDF only when the first one failed', async () => {

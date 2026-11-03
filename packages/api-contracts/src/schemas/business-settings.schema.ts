@@ -58,6 +58,8 @@ export const onboardingSettingsSchema = z.object({
       z.object({
         id: z.string().min(1).max(40),
         label: z.string().max(MAX_ROW_TITLE),
+        labelMr: z.string().max(MAX_ROW_TITLE).optional(),
+        labelHi: z.string().max(MAX_ROW_TITLE).optional(),
         targetWp: z.number().int().positive().nullable(),
         maxRupees: z.number().positive().nullable().optional(),
       }),

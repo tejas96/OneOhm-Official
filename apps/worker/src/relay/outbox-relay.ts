@@ -1,6 +1,7 @@
 import { type Database, outbox } from '@oneohm/database';
 import { type Client, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import { asc, eq } from 'drizzle-orm';
+import { SENDING } from '../activities/delivery.activities';
 import { failPendingDelivery } from '../activities/fail-delivery';
 
 const BATCH = 50;
@@ -9,6 +10,9 @@ const WINDOW = 1000;
 /** Longer than a delivery's whole retry budget: a row in flight this long lost its workflow. */
 const STUCK_MS = 5 * 3600_000;
 export const DELIVERY_STOPPED = 'Delivery stopped — please resend.';
+/** Stuck after the send began: the provider may have it, so never "please resend" (A6). */
+export const DELIVERY_MAYBE_SENT =
+  'Delivery stopped while sending: this message may have been sent — check before resending.';
 
 /** A row that started but has not finished for hours, so it no longer holds the queue. */
 export function isStuck(
@@ -82,6 +86,7 @@ export class OutboxRelay {
         attempts: outbox.attempts,
         startedAt: outbox.startedAt,
         createdAt: outbox.createdAt,
+        lastError: outbox.lastError,
       })
       .from(outbox)
       .where(eq(outbox.status, 'pending'))
@@ -90,7 +95,11 @@ export class OutboxRelay {
     const now = new Date();
     // Failed rows show in Messages with a resend; a late workflow then finds them done.
     for (const row of pending.filter((row) => isStuck(row, now)))
-      await failPendingDelivery(this.db, row.id, DELIVERY_STOPPED);
+      await failPendingDelivery(
+        this.db,
+        row.id,
+        row.lastError === SENDING ? DELIVERY_MAYBE_SENT : DELIVERY_STOPPED,
+      );
     let started = 0;
     for (const row of nextPerRecipient(pending.filter((row) => !isStuck(row, now)))) {
       try {

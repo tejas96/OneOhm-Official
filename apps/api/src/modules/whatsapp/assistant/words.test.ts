@@ -72,11 +72,14 @@ describe('hand-over and night words', () => {
       expect(words.WORDS.passedToOwner(null)).not.toContain('null');
       expect(words.WORDS.nightReply(null)).not.toContain('null');
     }
+    // A named person takes the respectful plural in Marathi (live review C15).
+    expect(MR.WORDS.passedToOwner('Bharat')).toBe('धन्यवाद. Bharat तुम्हाला इथेच उत्तर देतील.');
+    expect(MR.WORDS.passedToOwner(null)).toBe('धन्यवाद. आमची टीम तुम्हाला इथेच उत्तर देईल.');
   });
 });
 
 describe('onboarding questions', () => {
-  // The longest lists an owner can set: 8 cities (+ Other + a person) and 9 bill bands.
+  // The longest lists an owner can set: 7 cities (+ Other, Back, a person) and 8 bill bands.
   const settings = {
     ...DEFAULT_ONBOARDING,
     serviceCities: Array.from({ length: MAX_SERVICE_CITIES }, (_, i) =>
@@ -136,7 +139,8 @@ describe('onboarding questions', () => {
       expect(choicesOf(later).at(-1)?.id).toBe('ob:person');
       const words = ONBOARD_LISTS[language];
       // A document caption holds 1024 characters.
-      const caption = words.estimateCaption('10 kWp', '₹10,00,00,000', '₹10,00,00,000');
+      const size = '1000 panels (545.45 kW)';
+      const caption = words.estimateCaption(size, '₹10,00,00,000', '₹10,00,00,000', '₹10,00,000');
       expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
       expect(words.willCall('Asha', false)).toContain('Asha');
       expect(words.willCall(null, true)).not.toBe(words.willCall(null, false));
@@ -145,7 +149,7 @@ describe('onboarding questions', () => {
     expect(ONBOARD_LISTS.en.willCall('Asha', true)).toBe(
       'Thank you. Asha will call you tomorrow morning.',
     );
-    expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1')).toContain(
+    expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1', '₹1')).toContain(
       'Estimate — final price in your quotation after a free call or visit',
     );
   });
@@ -165,7 +169,7 @@ describe('onboarding questions', () => {
     for (const [language, words] of Object.entries(ONBOARD_LISTS)) {
       expect(words.nudge.length, `${language} nudge`).toBeGreaterThan(0);
       expect(words.nudge.length, `${language} nudge`).toBeLessThanOrEqual(1024);
-      for (const button of [words.continue, words.talkToPerson])
+      for (const button of [words.continue, words.talkToPerson, words.back])
         expect(button.length, `${language} ${button}`).toBeLessThanOrEqual(20);
     }
   });

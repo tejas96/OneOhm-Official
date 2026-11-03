@@ -59,6 +59,21 @@ describe('savingAndPayback', () => {
     });
     expect(savingAndPayback(3000, 12_000_000, d).paybackYears).toBe(3.5);
   });
+  // Live review C2: a 3.27 kW system "saves ₹3,139" on a ₹2,000–3,000 bill; it is capped.
+  it('never saves more a month than the top of the chosen bill band', () => {
+    expect(savingAndPayback(3270, 10_596_900, d, '2000_3000')).toEqual({
+      monthlySavingPaise: 300_000,
+      paybackYears: 3,
+    });
+    expect(savingAndPayback(3000, 10_700_000, d, '2000_3000').monthlySavingPaise).toBe(288_000);
+  });
+  it('reads the cap from the label when the band has no typed-amount limit', () => {
+    const bands = [{ id: 'a', label: '₹2,000–2,500', targetWp: 3000 }];
+    const settings = { ...d, billBands: bands };
+    expect(savingAndPayback(3270, 10_596_900, settings, 'a').monthlySavingPaise).toBe(250_000);
+    // The open top band has no cap.
+    expect(savingAndPayback(9000, 1, d, 'over_5000').monthlySavingPaise).toBe(864_000);
+  });
   it('gives no payback when nothing is saved', () => {
     expect(savingAndPayback(0, 100, d)).toEqual({ monthlySavingPaise: 0, paybackYears: 0 });
   });

@@ -86,7 +86,8 @@ export class EstimatePdfService {
         effective: formatInr(estimate.effectivePaise ?? 0),
       },
       saving: {
-        monthly: formatInr(Math.round((estimate.monthlySavingPaise ?? 0) / 100) * 100),
+        // Never more than the customer's bill band, so it reads "up to" (live review C2).
+        monthly: `Up to ${formatInr(Math.round((estimate.monthlySavingPaise ?? 0) / 100) * 100)}`,
         payback: estimate.paybackYears ? `About ${estimate.paybackYears} years` : '—',
         units: assumptions.unitsPerKwMonth,
         tariff: formatInr(assumptions.tariffPaisePerUnit),

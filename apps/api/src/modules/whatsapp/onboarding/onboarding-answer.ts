@@ -4,6 +4,7 @@ import {
   type OnboardStep,
   parseAnswer,
 } from '@oneohm/domain';
+import { titleCaseName } from '@oneohm/shared';
 
 /** What one message says for the question the chat is on. */
 export type ReadAnswer =
@@ -59,8 +60,8 @@ function readName(
   if (choiceId === 'ob:name:change' || (!typing && !choiceId && NOT_NAME.has(word)))
     return { kind: 'await', what: 'name' };
   if (choiceId === 'ob:name:yes' || (!typing && !choiceId && YES.has(word)))
-    return profile ? value(profile) : { kind: 'await', what: 'name' };
+    return profile ? value(titleCaseName(profile)) : { kind: 'await', what: 'name' };
   if (choiceId) return MISS;
   const parsed = parseAnswer('name', { choiceId: null, text }, view.settings);
-  return parsed.ok ? value(parsed.value) : MISS;
+  return parsed.ok ? value(titleCaseName(String(parsed.value))) : MISS;
 }

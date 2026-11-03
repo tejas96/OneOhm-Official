@@ -7,6 +7,9 @@
 export interface BillBand {
   readonly id: string;
   readonly label: string;
+  /** The label in the Marathi and Hindi chats; the label is used when left out. */
+  readonly labelMr?: string;
+  readonly labelHi?: string;
   /** System size to price in watts; null means "too big to price here — an expert does it". */
   readonly targetWp: number | null;
   /**
@@ -20,7 +23,7 @@ export interface OnboardingSettings {
   readonly enabled: boolean;
   /** Cities shown as list rows; "Other" is always added. */
   readonly serviceCities: readonly string[];
-  /** 2 to 9 bands, smallest bill first. */
+  /** 2 to 8 bands, smallest bill first. */
   readonly billBands: readonly BillBand[];
   /** What one unit of electricity costs the customer, in paise (800 = ₹8). */
   readonly tariffPaisePerUnit: number;
@@ -33,14 +36,16 @@ export interface OnboardingSettings {
 }
 
 export const MIN_BILL_BANDS = 2;
-export const MAX_BILL_BANDS = 9;
-/** WhatsApp lists hold 10 rows; "Other" and "Talk to a person" take two. */
-export const MAX_SERVICE_CITIES = 8;
+/** WhatsApp lists hold 10 rows; "Back" and "Talk to a person" take two. */
+export const MAX_BILL_BANDS = 8;
+/** The city list also carries "Other", "Back" and "Talk to a person". */
+export const MAX_SERVICE_CITIES = 7;
 /**
- * The nudge is a session message, so it must go inside WhatsApp's free 24 hours; a larger
- * wait would also hold back the lead made for a chat that stalls before the city.
+ * The nudge is a session message, so it must go inside the chat window (23 hours here,
+ * inside WhatsApp's 24); a larger wait would also hold back the lead made for a chat that
+ * stalls before the city.
  */
-export const MAX_NUDGE_AFTER_HOURS = 23;
+export const MAX_NUDGE_AFTER_HOURS = 22;
 /** WhatsApp list row titles hold 24 characters. */
 export const MAX_ROW_TITLE = 24;
 
@@ -62,6 +67,8 @@ export const DEFAULT_ONBOARDING: OnboardingSettings = {
 
 const isText = (value: unknown): value is string =>
   typeof value === 'string' && value.trim() !== '';
+const isRowTitle = (value: unknown) =>
+  value === undefined || (isText(value) && value.length <= MAX_ROW_TITLE);
 const isPositive = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
@@ -73,6 +80,8 @@ function isBillBand(value: unknown): value is BillBand {
     isText(band.id) &&
     isText(band.label) &&
     band.label.length <= MAX_ROW_TITLE &&
+    isRowTitle(band.labelMr) &&
+    isRowTitle(band.labelHi) &&
     (targetWp === null || isPositive(targetWp)) &&
     (maxRupees === undefined || maxRupees === null || isPositive(maxRupees))
   );

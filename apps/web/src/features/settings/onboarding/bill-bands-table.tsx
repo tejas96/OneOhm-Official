@@ -7,10 +7,11 @@ import { NumberInput } from '../number-input';
 
 type Bands = OnboardingSettingsRecord['billBands'];
 
-const COLUMNS = 'sm:grid-cols-[1fr_9rem_9rem]';
+const COLUMNS = 'sm:grid-cols-[1fr_1fr_1fr_8rem_8rem]';
 
 /**
- * The monthly-bill choices as a table of label, system size in kW and the highest bill
+ * The monthly-bill choices as a table of label (with optional Marathi and Hindi words for
+ * those chats), system size in kW and the highest bill
  * (₹) a typed amount may have to land on the choice. An empty size means "our expert
  * prices it"; an empty "Up to" means no upper limit, which only the last choice may have.
  */
@@ -30,6 +31,8 @@ export function BillBandsTable({
     <div className="flex flex-col gap-3">
       <div className={`hidden gap-3 type-label text-ink-muted sm:grid ${COLUMNS}`}>
         <span>{t('bandLabel')}</span>
+        <span>{t('bandLabelMr')}</span>
+        <span>{t('bandLabelHi')}</span>
         <span>{t('bandSize')}</span>
         <span>{t('bandMax')}</span>
       </div>
@@ -40,6 +43,20 @@ export function BillBandsTable({
             value={band.label}
             maxLength={24}
             onChange={(event) => change(index, { label: event.target.value })}
+          />
+          <Input
+            aria-label={t('bandLabelMr')}
+            value={band.labelMr ?? ''}
+            maxLength={24}
+            placeholder={band.label}
+            onChange={(event) => change(index, { labelMr: event.target.value })}
+          />
+          <Input
+            aria-label={t('bandLabelHi')}
+            value={band.labelHi ?? ''}
+            maxLength={24}
+            placeholder={band.label}
+            onChange={(event) => change(index, { labelHi: event.target.value })}
           />
           <NumberInput
             aria-label={t('bandSize')}

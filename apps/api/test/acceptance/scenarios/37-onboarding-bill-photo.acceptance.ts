@@ -88,14 +88,16 @@ describe('The bill photo on the lead', () => {
     expect(opened.bytes.length).toBeGreaterThan(0);
   });
 
-  it('answers audio with the existing reply and the same question, with no miss', async () => {
+  // Live review C12: low-literacy customers send voice notes; a person listens and replies.
+  it('hands a voice note to a person warmly, never as an unclear answer', async () => {
     const phone = uniquePhone();
     await say(phone, 'hi');
     await tap(phone, 'ob:language:en');
     await sendInbound(phone, { media: { type: 'audio', fileId: 'voice-1' } });
     const sent = await replies(phone);
-    expect(sent.at(-2)?.body).toContain('only take photos and PDF papers');
-    expect(choices(sent.at(-1))).toEqual(['ob:name:yes', 'ob:name:change', 'ob:person']);
+    expect(sent.at(-1)?.body).toMatch(/^Thank you for the voice note\. .+ will listen to it/);
+    expect(sent.some((reply) => reply.body?.includes('only take photos'))).toBe(false);
+    expect((await chatOf(phone)).state).toBe('human');
     expect((await chatOf(phone)).ob?.misses).toBe(0);
   });
 

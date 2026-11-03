@@ -2,8 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { formatInr } from '@oneohm/shared';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { planSteps } from '../../payment-plans/payment-plans.service';
 import { QuotationsService } from '../../quotations/quotations.service';
+import { QUOTE_MONEY_WORDS, quoteMoney } from '../../quotations/quote-money-words';
 import { type Conversation, queueReply } from '../chat-store';
+import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
 import { QUOTE_WORDS } from './quote-words';
 import { WORDS } from './words';
@@ -50,7 +53,7 @@ export class QuoteActionsService {
   }
 
   /**
-   * "Accept quote QT-… for ₹…?" — only to the customer's own number. A family number
+   * "Accept your solar quotation for ₹…? The 1st instalment, ₹…, is due on acceptance." — only to the customer's own number. A family number
    * reaches the same chat but cannot accept: it goes to the customer's person at once,
    * whatever state the quote is in (never silent, even when it is already accepted).
    */
@@ -64,9 +67,15 @@ export class QuoteActionsService {
     if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
     if (quotation.status === 'accepted') return this.thank(chat, quotationId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
+    const money = quoteMoney(
+      quotation.totalPaise,
+      quotation.subsidyPaise,
+      await planSteps(this.db),
+    );
+    const first = formatInr(Math.round(money.firstPaise / 100) * 100);
     await queueReply(this.db, chat, {
       kind: 'buttons',
-      body: WORDS.quoteConfirm(quotation.number, formatInr(quotation.totalPaise)),
+      body: QUOTE_MONEY_WORDS.confirm(formatInr(quotation.totalPaise), first),
       buttons: [
         { id: `quote_yes:${quotationId}`, title: WORDS.quoteYes },
         { id: `quote_ask:${quotationId}`, title: WORDS.quoteNotYet },
@@ -89,8 +98,8 @@ export class QuoteActionsService {
   }
 
   private thank(chat: Conversation, quotationId: string) {
-    const reply = { kind: 'text', body: QUOTE_WORDS.quoteThanks } as const;
-    return queueReply(this.db, chat, reply, null, `quote_thanks:${quotationId}`);
+    const taps = ['menu', 'talk'] as const;
+    return sayWithTaps(this.db, chat, QUOTE_WORDS.quoteThanks, taps, `quote_thanks:${quotationId}`);
   }
 
   /** Says why it cannot go ahead, then hands the chat to the customer's person. */

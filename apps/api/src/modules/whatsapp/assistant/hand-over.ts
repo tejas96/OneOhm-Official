@@ -14,6 +14,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
+import { sayWithTaps } from './closing-taps';
 import { WORDS } from './words';
 
 export interface HandOverOptions {
@@ -37,14 +38,14 @@ export class HandOverService {
   ) {}
 
   /**
-   * A person takes over; the assistant stays quiet until the customer types "menu".
+   * A person takes over; the assistant stays quiet until the customer taps Menu.
    * `summary` (such as the onboarding answers so far) is added to the staff alert; pass
    * `db` (a transaction) so the state, the alert and the reply commit together.
    */
   async handOver(
     chat: Conversation,
     capability: string,
-    reply: string = WORDS.humanSoon,
+    reply?: string,
     { summary, db = this.db }: HandOverOptions = {},
   ) {
     await this.toPerson(chat, db);
@@ -66,6 +67,8 @@ export class HandOverService {
         subject: { type: 'chat', id: chat.id },
         dedupeKey: alert.key,
       });
+    // The plain hand-over keeps a Menu tap to go back to the assistant.
+    if (reply === undefined) return sayWithTaps(db, chat, WORDS.humanSoon, ['menu']);
     return queueReply(db, chat, { kind: 'text', body: reply });
   }
 

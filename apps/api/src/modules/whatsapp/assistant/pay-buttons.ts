@@ -1,10 +1,11 @@
 import type { Database } from '@oneohm/database';
-import { paymentMilestones, payments, projects } from '@oneohm/database';
+import { paymentMilestones, payments, projects, properties } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Environment } from '../../../config/environment';
 import { paySigningSecret, signPayToken } from '../../online-payments/pay-token';
 import type { ChatReply } from '../chat-store';
+import { PROJECT_WORDS } from './project-words';
 import { ANSWER_WORDS, WORDS } from './words';
 
 /** Our pay page for one due amount: it makes the gateway page only when opened. */
@@ -27,13 +28,16 @@ export async function payNowReplies(
   const rows = await db
     .select({
       id: paymentMilestones.id,
-      label: paymentMilestones.label,
       amount: paymentMilestones.amountPaise,
-      code: projects.code,
+      city: properties.city,
+      // Its place among the project's customer shares, for "1st instalment" (C9).
+      index: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer' and m.position < ${paymentMilestones.position})::int`,
+      count: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer')::int`,
       paid: sql<string>`coalesce((select sum(${payments.amountPaise}) from ${payments} where ${payments.milestoneId} = ${paymentMilestones.id}), 0)`,
     })
     .from(paymentMilestones)
     .innerJoin(projects, eq(projects.id, paymentMilestones.projectId))
+    .innerJoin(properties, eq(properties.id, projects.propertyId))
     .where(
       and(
         eq(projects.customerId, customerId),
@@ -48,7 +52,7 @@ export async function payNowReplies(
     return [
       {
         kind: 'cta_url' as const,
-        body: `*${row.code}*\n${ANSWER_WORDS.due(row.label, formatInr(left))}`,
+        body: `*${PROJECT_WORDS.projectIn(row.city)}*\n${ANSWER_WORDS.due(PROJECT_WORDS.instalment(Number(row.index), Number(row.count)), formatInr(left))}`,
         label: WORDS.payNow,
         url: payPageUrl(env, customerId, row.id),
       },

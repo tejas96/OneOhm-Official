@@ -10,7 +10,7 @@ import { type PayToken, readPayTokenFor } from './pay-token';
 
 /** What the customer reads when a pay link cannot open a payment page. */
 const WORDS = {
-  expired: 'This link has expired. Open the OneOhm app, or ask us on WhatsApp for a new one.',
+  expired: 'This link has expired. Ask us on WhatsApp for a new one.',
   title: 'Solar payment',
   ask: (amount: string, label: string) => `Pay ${amount} to OneOhm for ${label}.`,
   go: 'Continue to pay',
@@ -22,8 +22,12 @@ const WORDS = {
   } as Readonly<Record<string, string>>,
 } as const;
 
-const page = (body: string) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${WORDS.title}</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem;color:#14181c}a.go{display:inline-block;padding:.75rem 1.25rem;border-radius:.6rem;background:#0b6fa4;color:#fff;text-decoration:none}</style></head><body>${body}</body></html>`;
+/**
+ * The page around a message; `withContinue` adds the Continue link. Search engines and
+ * link checkers are asked not to index the page or follow Continue.
+ */
+export const payPage = (body: string, withContinue = false) =>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${WORDS.title}</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem;color:#14181c}a.go{display:inline-block;padding:.75rem 1.25rem;border-radius:.6rem;background:#0b6fa4;color:#fff;text-decoration:none}</style></head><body>${body}${withContinue ? `<p><a class="go" href="?go=1" rel="nofollow">${WORDS.go}</a></p>` : ''}</body></html>`;
 
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
 
@@ -61,7 +65,7 @@ export class DuePayController {
       response
         .status(200)
         .type('html')
-        .send(page(`<p>${ask}</p><p><a class="go" href="?go=1">${WORDS.go}</a></p>`));
+        .send(payPage(`<p>${ask}</p>`, true));
     });
   }
 
@@ -76,7 +80,7 @@ export class DuePayController {
       response
         .status(410)
         .type('html')
-        .send(page(`<p>${WORDS.expired}</p>`));
+        .send(payPage(`<p>${WORDS.expired}</p>`));
       return;
     }
     try {
@@ -87,7 +91,7 @@ export class DuePayController {
       response
         .status(200)
         .type('html')
-        .send(page(`<p>${words}</p>`));
+        .send(payPage(`<p>${words}</p>`));
     }
   }
 }

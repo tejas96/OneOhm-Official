@@ -6,8 +6,9 @@ import { localized, type Words } from '../assistant/language';
  * within 24, as WhatsApp requires; `words.test.ts` checks them.
  */
 const EN_ONBOARD = {
-  /** Asked before a language is known, so it is the same in every language. */
-  askLanguage: 'Hello! Please choose your language.\nकृपया तुमची भाषा निवडा.\nकृपया अपनी भाषा चुनें.',
+  /** Asked before a language is known, so it is the same in every language (C10). */
+  askLanguage:
+    'Welcome to OneOhm Solar 🙏\nOneOhm सोलरमध्ये आपले स्वागत 🙏\nOneOhm सोलर में आपका स्वागत है 🙏\n\nPlease choose your language.\nकृपया तुमची भाषा निवडा.\nकृपया अपनी भाषा चुनें.',
   languages: { en: 'English', mr: 'मराठी', hi: 'हिंदी' },
   askName: (name: string) => `Shall we call you ${name}?`,
   yes: 'Yes',
@@ -17,6 +18,8 @@ const EN_ONBOARD = {
   otherCity: 'Other city',
   typeCity: 'Please type your city name.',
   choose: 'Choose',
+  /** The row (or button) that goes back one question. */
+  back: 'Back',
   askSite: 'Where do you want solar?',
   sites: { home: 'Home', society: 'Housing society', business: 'Shop or business', farm: 'Farm' },
   askBill: 'About how much is your monthly electricity bill?',
@@ -31,9 +34,9 @@ const EN_ONBOARD = {
   /** Before the question again, after one unclear answer. */
   notClear: 'Sorry, I did not get that. Please tap one option below.',
   notClearTyped: 'Sorry, I did not get that. Please type it again.',
-  /** With the estimate PDF; the second line is the same as on the PDF. */
-  estimateCaption: (size: string, price: string, after: string) =>
-    `Your solar estimate: ${size}, ${price} (${after} after subsidy).\nEstimate — final price in your quotation after a free call or visit.`,
+  /** With the estimate PDF; the last line is the same as on the PDF. */
+  estimateCaption: (size: string, price: string, after: string, saving: string) =>
+    `Your solar estimate: ${size}, ${price} (${after} after subsidy). You could save up to ${saving} a month.\nEstimate — final price in your quotation after a free call or visit.`,
   estimateNext: 'What would you like to do next?',
   callMeBack: 'Call me back',
   notNow: 'Not now',
@@ -47,8 +50,12 @@ const EN_ONBOARD = {
   expertPrice: 'Thank you! Our expert will prepare your price and call you.',
   /** A photo or paper arrived before the lead exists: kept, and the questions go on. */
   firstDetails: "Thanks — let's first get a few details. We have your file.",
-  billThanks: 'Thank you, we got your electricity bill.',
+  /** Nobody has looked at the file yet, so it is never called "your bill" (C11). */
+  billThanks: 'Thank you. File received — our team will check it.',
   badFile: 'Sorry, we could not use that file. Please send a clear photo or a PDF.',
+  /** A voice note goes to a person, who listens and replies (C12). */
+  voiceHandOver: (name: string | null) =>
+    `Thank you for the voice note. ${name ?? 'Our team'} will listen to it and reply to you here.`,
   /** The one nudge after a customer goes quiet halfway. */
   nudge: 'Shall we continue? It takes a minute.',
   continue: 'Continue',
@@ -67,6 +74,7 @@ const MR_ONBOARD: Words<OnboardWords> = {
   otherCity: 'दुसरे शहर',
   typeCity: 'कृपया तुमच्या शहराचे नाव लिहा.',
   choose: 'निवडा',
+  back: 'मागे',
   askSite: 'सोलर कुठे बसवायचे आहे?',
   sites: { home: 'घर', society: 'हाउसिंग सोसायटी', business: 'दुकान किंवा व्यवसाय', farm: 'शेत' },
   askBill: 'तुमचे महिन्याचे वीज बिल साधारण किती येते?',
@@ -74,25 +82,27 @@ const MR_ONBOARD: Words<OnboardWords> = {
   roofs: { rcc: 'RCC स्लॅब', tin: 'पत्र्याचे छत', other: 'इतर' },
   askFloors: 'इमारत किती मजली आहे?',
   floors: { 1: 'फक्त तळमजला', 2: '2 मजले', 3: '3 किंवा जास्त' },
-  askPhoto: 'कृपया तुमच्या नवीन वीज बिलाचा फोटो पाठवा. त्यामुळे योग्य सिस्टम ठरवता येते.',
+  askPhoto: 'कृपया तुमच्या अलीकडच्या वीज बिलाचा फोटो पाठवा. त्यामुळे योग्य सिस्टम ठरवता येते.',
   sendLater: 'नंतर पाठवतो',
   talkToPerson: 'व्यक्तीशी बोला',
   notClear: 'माफ करा, समजले नाही. कृपया खालीलपैकी एक पर्याय दाबा.',
   notClearTyped: 'माफ करा, समजले नाही. कृपया पुन्हा लिहा.',
-  estimateCaption: (size, price, after) =>
-    `तुमचा सोलर अंदाज: ${size}, ${price} (सबसिडीनंतर ${after}).\nहा अंदाज आहे — मोफत कॉल किंवा भेटीनंतर कोटेशनमध्ये अंतिम किंमत.`,
+  estimateCaption: (size, price, after, saving) =>
+    `तुमचा सोलर अंदाज: ${size}, ${price} (सबसिडीनंतर ${after}). दर महिन्याला ${saving} पर्यंत बचत होऊ शकते.\nहा अंदाज आहे — मोफत कॉल किंवा भेटीनंतर कोटेशनमध्ये अंतिम किंमत.`,
   estimateNext: 'पुढे काय करायचे?',
   callMeBack: 'मला कॉल करा',
   notNow: 'आत्ता नको',
   askWhenLater: 'आम्ही तुम्हाला पुन्हा केव्हा संपर्क करू?',
   later: { '1w': '1 आठवड्यात', '1m': '1 महिन्यात', '3m': '3 महिन्यांत' },
   willCall: (name, tomorrow) =>
-    `धन्यवाद. ${tomorrow ? 'उद्या सकाळी' : 'आज'} ${name ?? 'आमच्या टीम'}कडून तुम्हाला कॉल येईल.`,
+    `धन्यवाद. ${tomorrow ? 'उद्या सकाळी' : 'आज'} ${name ? `${name} यांच्याकडून` : 'आमच्या टीमकडून'} तुम्हाला कॉल येईल.`,
   laterThanks: 'धन्यवाद! आम्ही तेव्हा तुमच्याशी पुन्हा संपर्क करू.',
   expertPrice: 'धन्यवाद! आमचे तज्ज्ञ तुमची किंमत तयार करून तुम्हाला कॉल करतील.',
   firstDetails: 'धन्यवाद — आधी काही माहिती घेऊया. तुमची फाईल आमच्याकडे आहे.',
-  billThanks: 'धन्यवाद, तुमचे वीज बिल मिळाले.',
+  billThanks: 'धन्यवाद. फाईल मिळाली — आमची टीम ती तपासेल.',
   badFile: 'माफ करा, ही फाईल वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.',
+  voiceHandOver: (name) =>
+    `व्हॉइस नोटसाठी धन्यवाद. ${name ? `${name} ती ऐकून तुम्हाला इथेच उत्तर देतील.` : 'आमची टीम ती ऐकून तुम्हाला इथेच उत्तर देईल.'}`,
   nudge: 'पुढे जायचे का? फक्त एक मिनिट लागेल.',
   continue: 'पुढे चला',
 };
@@ -108,6 +118,7 @@ const HI_ONBOARD: Words<OnboardWords> = {
   otherCity: 'दूसरा शहर',
   typeCity: 'कृपया अपने शहर का नाम लिखें.',
   choose: 'चुनें',
+  back: 'पीछे',
   askSite: 'सोलर कहाँ लगवाना है?',
   sites: { home: 'घर', society: 'हाउसिंग सोसाइटी', business: 'दुकान या व्यवसाय', farm: 'खेत' },
   askBill: 'आपका महीने का बिजली बिल लगभग कितना आता है?',
@@ -115,13 +126,13 @@ const HI_ONBOARD: Words<OnboardWords> = {
   roofs: { rcc: 'RCC स्लैब', tin: 'टीन शेड', other: 'अन्य' },
   askFloors: 'इमारत कितनी मंज़िल की है?',
   floors: { 1: 'सिर्फ़ ग्राउंड', 2: '2 मंज़िल', 3: '3 या ज़्यादा' },
-  askPhoto: 'कृपया अपने नए बिजली बिल की फोटो भेजें. इससे सही सिस्टम तय होता है.',
+  askPhoto: 'कृपया अपने हाल के बिजली बिल की फोटो भेजें. इससे सही सिस्टम तय होता है.',
   sendLater: 'बाद में भेजूँगा',
   talkToPerson: 'व्यक्ति से बात करें',
   notClear: 'माफ़ कीजिए, समझ नहीं आया. कृपया नीचे से एक विकल्प दबाएँ.',
   notClearTyped: 'माफ़ कीजिए, समझ नहीं आया. कृपया फिर से लिखें.',
-  estimateCaption: (size, price, after) =>
-    `आपका सोलर अनुमान: ${size}, ${price} (सब्सिडी के बाद ${after}).\nयह अनुमान है — मुफ़्त कॉल या विज़िट के बाद कोटेशन में अंतिम कीमत.`,
+  estimateCaption: (size, price, after, saving) =>
+    `आपका सोलर अनुमान: ${size}, ${price} (सब्सिडी के बाद ${after}). हर महीने ${saving} तक की बचत हो सकती है.\nयह अनुमान है — मुफ़्त कॉल या विज़िट के बाद कोटेशन में अंतिम कीमत.`,
   estimateNext: 'आगे क्या करना चाहेंगे?',
   callMeBack: 'मुझे कॉल करें',
   notNow: 'अभी नहीं',
@@ -132,8 +143,10 @@ const HI_ONBOARD: Words<OnboardWords> = {
   laterThanks: 'धन्यवाद! हम तब आपसे फिर संपर्क करेंगे.',
   expertPrice: 'धन्यवाद! हमारे विशेषज्ञ आपकी कीमत तैयार करके आपको कॉल करेंगे.',
   firstDetails: 'धन्यवाद — पहले कुछ जानकारी ले लें. आपकी फाइल हमारे पास है.',
-  billThanks: 'धन्यवाद, आपका बिजली बिल मिल गया.',
+  billThanks: 'धन्यवाद. फ़ाइल मिल गई — हमारी टीम इसे देखेगी.',
   badFile: 'माफ़ कीजिए, यह फाइल इस्तेमाल नहीं हो सकी. कृपया साफ़ फोटो या PDF भेजें.',
+  voiceHandOver: (name) =>
+    `वॉइस नोट के लिए धन्यवाद. ${name ? `${name} इसे सुनकर आपको यहीं जवाब देंगे.` : 'हमारी टीम इसे सुनकर आपको यहीं जवाब देगी.'}`,
   nudge: 'आगे बढ़ें? बस एक मिनट लगेगा.',
   continue: 'आगे बढ़ें',
 };

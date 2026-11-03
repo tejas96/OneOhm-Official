@@ -119,9 +119,20 @@ describe('WhatsApp onboarding settings', () => {
     expect((await put({ ...current, billBands: [first] })).status).toBe(400);
     const notPanel = { ...current, panelProductIds: { commercial: inverter3k } };
     expect((await put(notPanel)).status).toBe(400);
-    // Over 23 hours the nudge and the stalled-chat lead would fall outside WhatsApp's day.
-    expect((await put({ ...current, nudgeAfterHours: 24 })).status).toBe(400);
-    expect((await put({ ...current, nudgeAfterHours: 23 })).status).toBe(200);
+    // Over 22 hours the nudge would fall outside the 23-hour chat window.
+    expect((await put({ ...current, nudgeAfterHours: 23 })).status).toBe(400);
+    expect((await put({ ...current, nudgeAfterHours: 22 })).status).toBe(200);
+    // The city list also carries Other, Back and a person: 7 cities at most (C14).
+    const cities = (n: number) => Array.from({ length: n }, (_, i) => `City ${i}`);
+    expect((await put({ ...current, serviceCities: cities(8) })).status).toBe(400);
+    // A Marathi bill label is kept; a blank one means "use the label" (C13).
+    const [band, ...rest] = current.billBands;
+    const labelled = [{ ...band, labelMr: '₹1,000 पर्यंत', labelHi: ' ' }, ...rest];
+    expect((await put({ ...current, billBands: labelled })).status).toBe(200);
+    const saved = (await read()).billBands[0];
+    expect(saved).toMatchObject({ labelMr: '₹1,000 पर्यंत' });
+    expect(saved).not.toHaveProperty('labelHi');
+    await put(current);
 
     await rows(`UPDATE products SET active = false WHERE id = $1`, [dcrPanel]);
     try {

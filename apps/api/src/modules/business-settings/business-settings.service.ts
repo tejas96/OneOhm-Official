@@ -133,7 +133,8 @@ export class BusinessSettingsService {
 
   /**
    * Saves the onboarding settings. City names are trimmed with blanks and repeats
-   * dropped, and a panel override must be an active panel from the catalog.
+   * dropped, blank band translations are left out, and a panel override must be an
+   * active panel from the catalog.
    */
   async saveOnboarding(
     actor: Actor,
@@ -150,9 +151,13 @@ export class BusinessSettingsService {
       panelProductIds[type] = id;
     }
     if (Object.keys(errors).length > 0) throw invalid('Check the panels you picked.', errors);
-    const billBands = settings.billBands.map(({ maxRupees, ...band }) =>
-      maxRupees === undefined ? band : { ...band, maxRupees },
-    );
+    // A blank Marathi or Hindi label means "use the label".
+    const billBands = settings.billBands.map(({ maxRupees, labelMr, labelHi, ...band }) => ({
+      ...band,
+      ...(maxRupees === undefined ? {} : { maxRupees }),
+      ...(labelMr?.trim() ? { labelMr: labelMr.trim() } : {}),
+      ...(labelHi?.trim() ? { labelHi: labelHi.trim() } : {}),
+    }));
     await this.save(actor, 'onboarding', {
       ...settings,
       serviceCities,

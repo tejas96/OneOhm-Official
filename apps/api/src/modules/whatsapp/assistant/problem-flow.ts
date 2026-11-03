@@ -7,6 +7,7 @@ import { CustomerPortalService } from '../../customer-portal/customer-portal.ser
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import type { IncomingFile } from '../../documents/upload-file';
 import { type Conversation, queueReply, setState } from '../chat-store';
+import { sayWithTaps } from './closing-taps';
 import { guessCategory } from './guess-category';
 import { CATEGORY_WORDS, MEDIA_WORDS, WORDS } from './words';
 
@@ -71,7 +72,7 @@ export class ProblemFlowService {
       added > 0 ? MEDIA_WORDS.problemSavedWithPhotos(label, added) : WORDS.problemSaved(label),
       added < files.length ? MEDIA_WORDS.photoNotAdded : '',
     ];
-    return this.text(chat, lines.filter(Boolean).join('\n\n'));
+    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['requests', 'menu']);
   }
 
   /** Another photo for the request just raised. */

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type Product, quotationPreviewInputSchema } from '@oneohm/api-contracts';
+import { quotationPreviewInputSchema } from '@oneohm/api-contracts';
 import { leadEstimates, readBusinessSetting, type Transaction } from '@oneohm/database';
 import {
   type OnboardAnswers,
@@ -20,9 +20,12 @@ import {
   QuotationPricingService,
 } from '../../quotations/quotation-pricing.service';
 import type { EstimateSnapshot } from '../../reports/estimate-pdf.service';
+import { customerPdfName } from '../../reports/pdf-file-name';
 import { HandOverService } from '../assistant/hand-over';
+import { PROJECT_WORDS } from '../assistant/project-words';
 import { type Conversation, queueReply } from '../chat-store';
 import { sharedFileUrl } from '../file-links';
+import { onGridFirst } from './estimate-inverters';
 import { ONBOARD_WORDS } from './onboard-words';
 import { type QuestionView, question } from './onboarding-replies';
 
@@ -49,6 +52,10 @@ export type EstimateResult =
       readonly kind: 'sent';
       readonly estimateId: string;
       readonly size: string;
+      readonly panels: number;
+      readonly watts: number;
+      /** The most a month may save: never more than the bill band (C2). */
+      readonly saving: string;
       readonly price: string;
       readonly after: string;
     }
@@ -56,18 +63,6 @@ export type EstimateResult =
 
 /** "3 kW", "3.3 kW": the size as the customer and the owner read it. */
 const kw = (watts: number) => `${Number((watts / 1000).toFixed(2))} kW`;
-
-/** On-grid models before hybrid ones at the same rating, then the cheaper. */
-const onGridFirst = (inverters: readonly Product[]) =>
-  inverters
-    .filter((product) => product.active && product.ratedW)
-    .sort(
-      (left, right) =>
-        (left.ratedW ?? 0) - (right.ratedW ?? 0) ||
-        Number(/hybrid/i.test(left.name)) - Number(/hybrid/i.test(right.name)) ||
-        left.pricePaise - right.pricePaise,
-    )
-    .map((product) => ({ id: product.id, ratedW: product.ratedW ?? 0 }));
 
 /**
  * The instant estimate at the end of onboarding (Part 3): the answers priced by the real
@@ -128,7 +123,12 @@ export class EstimateService {
     const totals = priced.preview.totals;
     if (totals.capacityWp <= 0 || totals.totalPaise <= 0 || totals.effectivePaise < 0)
       return this.expert(tx, leadId, 'pricing_failed');
-    const saving = savingAndPayback(totals.capacityWp, totals.effectivePaise, settings);
+    const saving = savingAndPayback(
+      totals.capacityWp,
+      totals.effectivePaise,
+      settings,
+      answers.bill,
+    );
     const snapshot: EstimateSnapshot & Record<string, unknown> = {
       preview: priced.preview,
       panelProductId: panel.id,
@@ -172,7 +172,19 @@ export class EstimateService {
       { nextAction: { on: this.today(), note: `Call — estimate sent (${size}, ${price})` } },
       null,
     );
-    return { kind: 'sent', estimateId: row.id, size, price, after };
+    const monthly = formatInr(Math.round(saving.monthlySavingPaise / 100) * 100);
+    const count = totals.moduleCount;
+    const watts = totals.capacityWp;
+    return {
+      kind: 'sent',
+      estimateId: row.id,
+      size,
+      panels: count,
+      watts,
+      saving: monthly,
+      price,
+      after,
+    };
   }
 
   /**
@@ -204,11 +216,12 @@ export class EstimateService {
       customerId: '',
       leadId,
     });
+    const size = PROJECT_WORDS.size(result.panels, result.watts);
     await queueReply(tx, chat, {
       kind: 'document',
       link,
-      filename: 'Solar-estimate.pdf',
-      caption: W.estimateCaption(result.size, result.price, result.after),
+      filename: customerPdfName(answers.name ?? chat.profileName ?? '', 'estimate'),
+      caption: W.estimateCaption(size, result.price, result.after, result.saving),
     });
     await queueReply(tx, chat, question('done', view));
   }

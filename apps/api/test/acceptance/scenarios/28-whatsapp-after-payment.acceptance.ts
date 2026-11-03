@@ -58,12 +58,9 @@ describe('WhatsApp after payment', () => {
     const file = await fetch(received?.payload.documentUrl ?? '');
     expect(file.status).toBe(200);
     expect(file.headers.get('content-type')).toContain('application/pdf');
-    const [receipt] = await rows<{ receipt_number: string }>(
-      'select receipt_number from payments where milestone_id = $1',
-      [milestone.id],
-    );
+    // Named for the customer, easy to find again in their WhatsApp media (live review C16).
     expect(received?.payload.documentName).toBe(
-      `${receipt?.receipt_number.replaceAll('/', '-')}.pdf`,
+      'OneOhm-After-Pay-Receipt-Customer-test-receipt.pdf',
     );
 
     const alerts = await rows<{ user_id: string; body: string }>(

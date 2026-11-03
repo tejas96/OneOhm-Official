@@ -2,7 +2,8 @@ import type { Database } from '@oneohm/database';
 import type { Client } from '@temporalio/client';
 import { WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import { describe, expect, it, vi } from 'vitest';
-import { DELIVERY_STOPPED, OutboxRelay } from './outbox-relay';
+import { SENDING } from '../activities/delivery.activities';
+import { DELIVERY_MAYBE_SENT, DELIVERY_STOPPED, OutboxRelay } from './outbox-relay';
 
 const stopped = vi.hoisted(() => [] as { id: string; reason: string }[]);
 vi.mock('../activities/fail-delivery', () => ({
@@ -17,6 +18,7 @@ interface Row {
   attempts: number;
   startedAt?: Date | null;
   createdAt?: Date;
+  lastError?: string | null;
 }
 
 /** Pending rows, oldest first, as the relay's query returns them. */
@@ -26,7 +28,8 @@ function fakeDb(pending: Row[]): Database {
     from: () => chain,
     where: () => chain,
     orderBy: () => chain,
-    limit: async () => pending.map((row) => ({ startedAt: null, createdAt: new Date(), ...row })),
+    limit: async () =>
+      pending.map((row) => ({ startedAt: null, createdAt: new Date(), lastError: null, ...row })),
   };
   return chain as unknown as Database;
 }
@@ -97,5 +100,18 @@ describe('OutboxRelay stuck deliveries', () => {
     expect(stopped).toEqual([{ id: 'a1', reason: DELIVERY_STOPPED }]);
     expect(DELIVERY_STOPPED.toLowerCase()).toContain('delivery stopped — please resend');
     expect(started).toEqual(['a2']);
+  });
+
+  // Stuck mid-send: the provider may have it, so nobody is told to simply resend (A6).
+  it('says a row stuck mid-send may have been sent', async () => {
+    stopped.length = 0;
+    const longAgo = new Date(Date.now() - 6 * 3600_000);
+    const pending: Row[] = [
+      { id: 'm1', recipient: '+914', attempts: 1, startedAt: longAgo, lastError: SENDING },
+    ];
+    const { client } = fakeClient();
+    await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
+    expect(stopped).toEqual([{ id: 'm1', reason: DELIVERY_MAYBE_SENT }]);
+    expect(DELIVERY_MAYBE_SENT).toContain('may have been sent — check before resending');
   });
 });

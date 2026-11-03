@@ -10,7 +10,7 @@ import {
   projects,
   type Transaction,
 } from '@oneohm/database';
-import { customerTdsProblem } from '@oneohm/domain';
+import { customerTdsProblem, type MilestoneTrigger } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -178,9 +178,11 @@ export class FinanceService {
           phone: project.phone,
           customerName: project.name,
           customerId: project.customerId,
+          projectId,
           projectCode: project.code,
           amountPaise: input.amountPaise,
           milestoneLabel: milestone.label,
+          trigger: milestone.trigger as MilestoneTrigger,
           dedupeKey: `payment:${milestone.id}:${total}`,
         });
       }

@@ -1,4 +1,4 @@
-import type { OnboardingSettings } from './settings';
+import type { BillBand, OnboardingSettings } from './settings';
 import type { OnboardAnswers } from './steps';
 
 export type PricingInputs =
@@ -40,17 +40,34 @@ export function pricingInputsFor(
 }
 
 /**
+ * The most a month's bill in this band can be, in paise: its typed-amount limit, else the
+ * last amount in its label ("₹2,000–2,500" → ₹2,500). Null for the open top band.
+ */
+function bandCapPaise(band: BillBand | undefined): number | null {
+  if (!band || band.maxRupees === null) return null;
+  if (typeof band.maxRupees === 'number') return band.maxRupees * 100;
+  const amounts = band.label.replaceAll(',', '').match(/\d+/g);
+  const last = amounts?.at(-1);
+  return last ? Number(last) * 100 : null;
+}
+
+/**
  * What the system saves each month (kW × units per kW × tariff) and how many years the
- * price takes to pay back, rounded to the nearest half year.
+ * price takes to pay back, rounded to the nearest half year. The saving is never more
+ * than the top of the customer's bill band (live review C2): nobody saves more than
+ * they pay.
  */
 export function savingAndPayback(
   capacityWp: number,
   effectivePaise: number,
   settings: OnboardingSettings,
+  billBandId?: string,
 ): { monthlySavingPaise: number; paybackYears: number } {
-  const monthlySavingPaise = Math.round(
+  const made = Math.round(
     (capacityWp / 1000) * settings.unitsPerKwMonth * settings.tariffPaisePerUnit,
   );
+  const cap = bandCapPaise(settings.billBands.find((band) => band.id === billBandId));
+  const monthlySavingPaise = cap === null ? made : Math.min(made, cap);
   if (monthlySavingPaise <= 0) return { monthlySavingPaise: 0, paybackYears: 0 };
   const years = effectivePaise / (monthlySavingPaise * 12);
   return { monthlySavingPaise, paybackYears: Math.round(years * 2) / 2 };

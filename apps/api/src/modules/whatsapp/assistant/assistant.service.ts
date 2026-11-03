@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { brandName, customers, waConversations, waMessages } from '@oneohm/database';
 import { asksForPerson, findCampaignCode, saysHello } from '@oneohm/domain';
+import { titleCaseName } from '@oneohm/shared';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
@@ -9,6 +10,7 @@ import { CustomerPortalService } from '../../customer-portal/customer-portal.ser
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { AnswersService } from './answers.service';
+import { sayWithTaps, type Tap } from './closing-taps';
 import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readReferral } from './guess-category';
@@ -16,28 +18,21 @@ import { HandOverService } from './hand-over';
 import { assistantAnswersTap } from './handled-taps';
 import { assistantLanguage, inLanguage } from './language';
 import { keepPending, MediaIntakeService } from './media-intake';
+import { menuWordChoice } from './menu-words';
 import { answerOptOut } from './opt-out';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
 import { ALL_MENU_ROWS, MENU_ROWS, type MenuChoice, WORDS } from './words';
 
-const GREETINGS = new Set([
-  'menu',
-  'hi',
-  'hii',
-  'hello',
-  'hey',
-  'start',
-  'namaste',
-  'namaskar',
-  'मेनू',
-  'मेन्यू',
-]);
+const GREETINGS = new Set(['hi', 'hii', 'hello', 'hey', 'start', 'namaste', 'namaskar']);
+const greets = (word: string) => GREETINGS.has(word) || menuWordChoice(word) === 'menu';
 
-/** A menu row picked by its number, its id, or its title in any language. */
+/** A menu row picked by its number, its id, its title in any language, or a plain word. */
 function menuChoice(word: string): MenuChoice | undefined {
   if (/^\d{1,2}$/.test(word)) return MENU_ROWS[Number(word) - 1]?.id;
-  return ALL_MENU_ROWS.find((row) => row.id === word || row.title.toLowerCase() === word)?.id;
+  const row = ALL_MENU_ROWS.find((row) => row.id === word || row.title.toLowerCase() === word);
+  const plain = menuWordChoice(word);
+  return row?.id ?? (plain === 'menu' ? undefined : plain);
 }
 
 /** A hello, or a new number's ad opener such as "Hi OneOhm DIWALI26": both show the first menu. */
@@ -85,7 +80,7 @@ export class AssistantService {
 
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
     const word = (incoming.choiceId ?? incoming.text).trim().toLowerCase();
-    if (GREETINGS.has(word) || opensChat(chat, incoming.text)) return this.restart(chat);
+    if (greets(word) || opensChat(chat, incoming.text)) return this.restart(chat);
     // With a person, the assistant answers only the taps that are its own (menu rows).
     if (chat.state === 'human' && !assistantAnswersTap(chat, incoming)) return;
     if (!chat.customerId) return this.strangers.route(chat, incoming, word);
@@ -124,24 +119,28 @@ export class AssistantService {
     return this.repliedToUpdate(chat.id);
   }
 
+  /** Each answer ends with taps (live review C5): the menu and the next step. */
   private async choose(chat: Conversation, customerId: string, choice: MenuChoice) {
     const text = (body: string) => this.say(chat, { kind: 'text', body });
+    const answer = (body: string, taps: readonly Tap[]) => sayWithTaps(this.db, chat, body, taps);
     switch (choice) {
       case 'progress':
-        return text(await this.answers.progress(customerId));
+        return answer(await this.answers.progress(customerId), ['menu', 'pay', 'talk']);
       case 'payments': {
         // Pay now buttons open our pay page; without them the text carries that link.
         const buttons = await this.answers.payNow(customerId);
-        await text(await this.answers.payments(customerId, buttons.length === 0));
+        const body = await this.answers.payments(customerId, buttons.length === 0);
+        if (buttons.length === 0) return answer(body, ['menu', 'track', 'talk']);
+        await text(body);
         for (const button of buttons) await this.say(chat, button);
         return;
       }
       case 'documents':
-        return text(await this.answers.documents(customerId));
+        return answer(await this.answers.documents(customerId), ['menu', 'track', 'talk']);
       case 'requests':
-        return text(await this.answers.requests(customerId));
+        return answer(await this.answers.requests(customerId), ['menu', 'talk']);
       case 'warranty':
-        return text(await this.answers.warranty(customerId));
+        return answer(await this.answers.warranty(customerId), ['menu', 'talk']);
       case 'service':
         await setState(this.db, chat.id, 'await_problem', keepPending(chat.context));
         return text(WORDS.askProblem);
@@ -149,7 +148,7 @@ export class AssistantService {
         await setState(this.db, chat.id, 'await_referral');
         return text(WORDS.askReferral);
       case 'rewards':
-        return text(await this.answers.rewards(customerId));
+        return answer(await this.answers.rewards(customerId), ['menu', 'talk']);
       case 'feedback':
         return this.feedback.offer(chat, customerId);
       case 'human':
@@ -177,7 +176,7 @@ export class AssistantService {
           .where(eq(customers.id, chat.customerId))
       : [];
     if (!customer) return this.strangers.answer(chat, '');
-    const first = customer.name.split(/\s+/)[0] ?? customer.name;
+    const first = titleCaseName(customer.name.split(/\s+/)[0] ?? customer.name);
     const brand = await brandName(this.db);
     await this.say(chat, {
       kind: 'list',
@@ -198,7 +197,7 @@ export class AssistantService {
       if (error instanceof AppError) return this.say(chat, { kind: 'text', body: error.message });
       throw error;
     }
-    return this.say(chat, { kind: 'text', body: WORDS.referralSaved(friend.name) });
+    return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['menu']);
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */

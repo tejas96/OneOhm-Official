@@ -20,7 +20,8 @@ import { sendInbound } from '../support/whatsapp';
 // alert and one reply, committed with the hand-over itself, and "change" at the name
 // question means a new name, not the step before.
 /** "… will reply to you here", in English or Marathi. */
-const HANDED = ['will reply to you here', 'तुम्हाला इथेच उत्तर देईल'];
+// A named person takes the respectful plural (देतील), the team the singular (देईल).
+const HANDED = ['will reply to you here', 'तुम्हाला इथेच उत्तर देईल', 'तुम्हाला इथेच उत्तर देतील'];
 const handedReplies = async (phone: string) =>
   (await replies(phone)).filter((reply) => HANDED.some((words) => reply.body.includes(words)));
 

@@ -3,7 +3,7 @@ import type { AssistantWords } from './words';
 
 /**
  * What the WhatsApp assistant says in Hindi: the same shape as the English words.
- * "menu", "requests" and "skip" stay as typed keywords, so they work in every language.
+ * Taps carry the customer around; typed words in any language work too.
  */
 export const HI: Words<AssistantWords> = {
   MENU_ROWS: [
@@ -20,13 +20,13 @@ export const HI: Words<AssistantWords> = {
   ],
   WORDS: {
     menu: (name, company) =>
-      `नमस्ते ${name}! मैं ${company ? `${company} का ` : ''}सहायक हूँ। आप क्या देखना चाहेंगे? कभी भी "menu" लिखें।`,
+      `नमस्ते ${name}! मैं ${company ? `${company} का ` : ''}सहायक हूँ। आप क्या देखना चाहेंगे?`,
     menuButton: 'चुनें',
     unknownNumber:
       'नमस्ते! यह नंबर अभी हमारे किसी ग्राहक से जुड़ा नहीं है। अगर आप सोलर में रुचि रखते हैं, तो "मुझे कॉल करें" दबाएँ। अगर आप किसी दूसरे नंबर से ग्राहक हैं, तो कृपया उसी नंबर से लिखें।',
     callMeBack: 'मुझे कॉल करें',
     callbackNoted: 'धन्यवाद! हमारी टीम का कोई सदस्य जल्द ही आपको कॉल करेगा।',
-    noProject: 'आपका प्रोजेक्ट अभी शुरू नहीं हुआ है। हमसे बात करने के लिए मेनू में "टीम से बात करें" दबाएँ।',
+    noProject: 'आपका प्रोजेक्ट अभी शुरू नहीं हुआ है। हमसे बात करने के लिए "हमसे बात करें" दबाएँ।',
     stage: {
       survey: 'साइट विज़िट',
       design: 'सिस्टम डिज़ाइन',
@@ -55,7 +55,7 @@ export const HI: Words<AssistantWords> = {
     askProblem:
       'कृपया समस्या एक मैसेज में बताएँ (जैसे "सुबह से इन्वर्टर पर एरर दिख रहा है")। फ़ोटो के साथ कैप्शन भी भेज सकते हैं।',
     problemSaved: (category) =>
-      `धन्यवाद। आपका ${category} अनुरोध दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "requests" लिखें।`,
+      `धन्यवाद। आपका ${category} अनुरोध दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "मेरे अनुरोध" दबाएँ।`,
     tooShort: 'कृपया कुछ और शब्द लिखें, ताकि हम मदद कर सकें।',
     noRequests: 'आपका कोई सर्विस अनुरोध नहीं है।',
     askReferral:
@@ -67,13 +67,12 @@ export const HI: Words<AssistantWords> = {
     askRating: 'अब तक आप हमसे कितने खुश हैं?',
     ratingSaved: 'रेटिंग के लिए धन्यवाद! इससे टीम को मदद मिलती है।',
     humanSoon:
-      'टीम का कोई सदस्य जल्द ही यहाँ जवाब देगा (सोमवार से शनिवार, सुबह 9:30 से शाम 6:30)। सहायक पर वापस जाने के लिए "menu" लिखें।',
+      'टीम का कोई सदस्य जल्द ही यहाँ जवाब देगा (सोमवार से शनिवार, सुबह 9:30 से शाम 6:30)। सहायक पर वापस जाने के लिए "मेनू" दबाएँ।',
     notUnderstood: 'माफ़ कीजिए, मैं समझ नहीं पाया। मैं इनमें मदद कर सकता हूँ:',
     passedToOwner: (name) =>
       name ? `धन्यवाद। ${name} आपको यहीं जवाब देंगे।` : 'धन्यवाद। हमारी टीम आपको यहीं जवाब देगी।',
     nightReply: (name) =>
       `धन्यवाद। हम सुबह 9:30 से शाम 6:30 तक जवाब देते हैं। आपका मैसेज ${name ? `${name} के पास` : 'हमारी टीम के पास'} है।`,
-    quoteConfirm: (number, total) => `कोटेशन ${number} (${total}) स्वीकार करें?`,
     quoteYes: 'हाँ, स्वीकार है',
     quoteNotYet: 'अभी नहीं',
     quoteChanged: 'यह कोटेशन बदल गया है या अब खुला नहीं है।',
@@ -92,7 +91,7 @@ export const HI: Words<AssistantWords> = {
     receipt: (number, amount, url) => `रसीद ${number} (${amount}): ${url}`,
     report: (name, code, url) => `${name} (${code}): ${url}`,
     paper: (name, url) => `${name}: ${url}`,
-    more: 'और दस्तावेज़ OneOhm ऐप में हैं।',
+    more: 'पुराने दस्तावेज़ों के लिए "हमसे बात करें" दबाएँ।',
   },
   MEDIA_WORDS: {
     what: { image: 'फ़ोटो', document: 'कागज़', video: 'वीडियो', audio: 'वॉइस नोट' },
@@ -109,11 +108,11 @@ export const HI: Words<AssistantWords> = {
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
     notRead:
-      'माफ़ कीजिए, यहाँ सिर्फ़ फ़ोटो और PDF कागज़ लिए जा सकते हैं। कृपया कुछ शब्दों में लिखें, या "menu" लिखकर "टीम से बात करें" दबाएँ।',
+      'माफ़ कीजिए, यहाँ सिर्फ़ फ़ोटो और PDF कागज़ लिए जा सकते हैं। कृपया कुछ शब्दों में लिखें, या "हमसे बात करें" दबाएँ।',
     tooLarge: 'यह फ़ाइल बहुत बड़ी है। कृपया छोटी फ़ोटो या PDF भेजें।',
     failed: 'माफ़ कीजिए, वह फ़ाइल खुल नहीं सकी। कृपया थोड़ी देर बाद फिर से भेजें।',
     problemSavedWithPhotos: (category, photos) =>
-      `धन्यवाद। आपका ${category} अनुरोध ${photos === 1 ? 'फ़ोटो के साथ' : `${photos} फ़ोटो के साथ`} दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "requests" लिखें।`,
+      `धन्यवाद। आपका ${category} अनुरोध ${photos === 1 ? 'फ़ोटो के साथ' : `${photos} फ़ोटो के साथ`} दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "मेरे अनुरोध" दबाएँ।`,
   },
   COVER_WORDS: {
     notYet: 'आपकी वारंटी उस दिन से शुरू होती है जिस दिन सिस्टम चालू होता है। तब यह यहाँ दिखेगी।',
@@ -134,7 +133,7 @@ export const HI: Words<AssistantWords> = {
     amcState: { upcoming: 'जल्द शुरू', active: 'चालू', ended: 'खत्म', cancelled: 'रद्द' },
     amcVisits: (done, total) => `${total} में से ${done} विज़िट हुईं`,
     nextVisit: (name, date) => `अगली ${name} विज़िट: ${date}`,
-    noAmc: 'AMC: अभी नहीं। सालाना सफ़ाई और जाँच विज़िट के लिए "menu" लिखकर "टीम से बात करें" दबाएँ।',
+    noAmc: 'AMC: अभी नहीं। सालाना सफ़ाई और जाँच विज़िट के लिए "हमसे बात करें" दबाएँ।',
     help: 'इनमें से किसी में भी समस्या हो, तो मेनू में "शिकायत दर्ज करें" दबाएँ।',
   },
   REWARD_WORDS: {
@@ -155,11 +154,11 @@ export const HI: Words<AssistantWords> = {
     },
     paidTotal: (amount) => `आपको दिया गया: ${amount}`,
     comingTotal: (amount) => `आने वाला: ${amount}`,
-    more: (count) => `और ${count} OneOhm ऐप में।`,
+    more: (count) => `और ${count}।`,
   },
   FEEDBACK_WORDS: {
-    later: 'धन्यवाद! आपका सोलर सिस्टम चालू होने पर हम आपकी रेटिंग पूछेंगे। दूसरे विकल्प देखने के लिए "menu" लिखें।',
-    askComment: 'रेटिंग के लिए धन्यवाद! कुछ और कहना है? यहाँ लिखें, या "skip" लिखें।',
+    later: 'धन्यवाद! आपका सोलर सिस्टम चालू होने पर हम आपकी रेटिंग पूछेंगे।',
+    askComment: 'रेटिंग के लिए धन्यवाद! कुछ और कहना है? यहाँ लिखें, या "मेनू" दबाएँ।',
     commentSaved: 'धन्यवाद, हमने इसे नोट कर लिया है। इससे टीम को और बेहतर काम करने में मदद मिलती है।',
     skipWords: ['skip', 'no', 'nahi', 'नहीं', 'नही', 'कुछ नहीं'],
   },

@@ -73,10 +73,12 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
 
   it('3. onboarding in Marathi: the city makes the lead for the Pune owner at work; each answer writes it', async () => {
     await t.tap('ob:name:yes');
+    // Each list after the first question has a Back row above the person (C14).
     expect(choices(await lastReply(phone))).toEqual([
       'ob:city:Pune',
       'ob:city:Satara',
       'ob:city:other',
+      'ob:city:back',
       'ob:person',
     ]);
     await t.tap('ob:city:Pune');
@@ -120,7 +122,11 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
       if (note) expect(history.at(-1), id).toBe(note);
       expect(await lead()).toMatchObject(change);
     }
-    expect(choices(await lastReply(phone))).toEqual(['ob:photo:later', 'ob:person']);
+    expect(choices(await lastReply(phone))).toEqual([
+      'ob:photo:later',
+      'ob:photo:back',
+      'ob:person',
+    ]);
   });
 
   it('4. the bill photo at the photo step is filed on the lead; staff list and open it', async () => {
@@ -138,21 +144,30 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     expect(opened.status).toBe(200);
     expect(opened.bytes.length).toBeGreaterThan(0);
     expect(await J.historyOf(leadId)).toContain('Bill file received on WhatsApp (not checked)');
-    expect((await replies(phone)).some((reply) => reply.body?.includes('वीज बिल मिळाले'))).toBe(
-      true,
-    );
+    // Nobody has checked the file yet, so it is never called "your bill" (C11).
+    expect((await replies(phone)).some((reply) => reply.body?.includes('फाईल मिळाली'))).toBe(true);
   });
 
   it('5. the instant estimate: stored, PDF sent, next steps offered, lead still New with a call today', async () => {
-    const [estimate, ...more] = await rows<{ id: string; capacity_wp: number }>(
-      'SELECT id, capacity_wp FROM lead_estimates WHERE lead_id = $1',
+    const [estimate, ...more] = await rows<{
+      id: string;
+      capacity_wp: number;
+      module_count: number;
+      monthly_saving_paise: string;
+    }>(
+      'SELECT id, capacity_wp, module_count, monthly_saving_paise FROM lead_estimates WHERE lead_id = $1',
       [leadId],
     );
     expect(more).toEqual([]);
     expect(estimate?.capacity_wp).toBeGreaterThanOrEqual(3000);
+    // Never more saved than the ₹2,000–3,000 bill band (C2).
+    expect(Number(estimate?.monthly_saving_paise)).toBeLessThanOrEqual(300_000);
     const pdf = (await replies(phone)).find((reply) => reply.kind === 'document');
-    expect(pdf?.filename).toMatch(/\.pdf$/);
+    expect(pdf?.filename).toBe('OneOhm-Ravi-Patil-test-estimate.pdf');
     expect(pdf?.caption).toContain('हा अंदाज आहे');
+    // Size in panels, saving "up to" (C2, C9).
+    expect(pdf?.caption).toContain(`${estimate?.module_count} पॅनल (`);
+    expect(pdf?.caption).toMatch(/दर महिन्याला ₹[\d,]+ पर्यंत बचत/);
     expect(await J.fetchFile(pdf?.link ?? '')).toMatchObject(pdfType);
     expect(choices(await lastReply(phone))).toEqual([
       'ob:done:call',
@@ -185,7 +200,7 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     const told = await J.alerted('whatsapp_callback', chat.id);
     expect(told).toContain(j.owner.id);
     expect((await lastReply(phone))?.body).toBe(
-      `धन्यवाद. ${promise.when === 'today' ? 'आज' : 'उद्या सकाळी'} ${j.owner.name.split(' ')[0]}कडून तुम्हाला कॉल येईल.`,
+      `धन्यवाद. ${promise.when === 'today' ? 'आज' : 'उद्या सकाळी'} ${j.owner.name.split(' ')[0]} यांच्याकडून तुम्हाला कॉल येईल.`,
     );
     await t.tap('ob:done:call');
     expect(await J.alerted('whatsapp_callback', chat.id)).toHaveLength(told.length);

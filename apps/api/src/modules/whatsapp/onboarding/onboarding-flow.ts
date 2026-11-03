@@ -6,22 +6,18 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { HandOverService } from '../assistant/hand-over';
 import { assistantLanguage } from '../assistant/language';
+import { ensureChatOwner } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
 import { EstimateNextStepsService } from './estimate-next-steps';
-import { changesName, readAnswer } from './onboarding-answer';
-import {
-  firstMissing,
-  isOnboardingChat,
-  onboardState,
-  readOnboard,
-  stepOfState,
-} from './onboarding-context';
+import { ONBOARD_WORDS } from './onboard-words';
+import { readAnswer } from './onboarding-answer';
+import { firstMissing, isOnboardingChat, readOnboard, stepOfState } from './onboarding-context';
 import { ChatFilesService, type Fetched } from './onboarding-files';
 import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
-import { BACK, speak, type Turn, wantsPerson } from './onboarding-turn';
+import { goesBack, saveTurn, speak, type Turn, wantsPerson } from './onboarding-turn';
 import { ensureLead, fileHeldBill, takeChatFile } from './onboarding-turn-files';
 
 /**
@@ -111,6 +107,8 @@ export class OnboardingFlowService {
     if (incoming && turn.chat.state === 'human') return null;
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
+    // A voice note is a person's to hear (C12); a photo or paper is filed.
+    if (incoming?.media?.type === 'audio') return this.toPerson(turn, current, 'voice');
     if (incoming?.media) return this.takeFile(turn, current);
     if (current === 'done') return this.afterEstimate(turn, incoming);
     if (!incoming) return this.ask(turn, current);
@@ -121,8 +119,7 @@ export class OnboardingFlowService {
     // Nothing to read: a tap on another question (an older list, the nudge's "Continue"),
     // or words in the first message after a person handed the chat back: ask the question.
     if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) return this.ask(turn, current);
-    // At the name question "change" (बदला, बदलें…) means a new name, not the step before.
-    if (!choice && BACK.has(word) && !(current === 'name' && changesName(word))) {
+    if (goesBack(current, choice, word)) {
       turn.awaiting = undefined;
       return this.ask(turn, previousStep(current));
     }
@@ -183,7 +180,7 @@ export class OnboardingFlowService {
         { intake: this.intake, files: this.files },
         'Call — finished onboarding',
       ));
-    await this.save(turn, 'done');
+    await saveTurn(turn, 'done');
     const after = { view: this.view(turn), summary: summaryOf(turn.answers, turn.settings) };
     await speak(turn, () => this.estimates.finish(tx, chat, leadId, turn.answers, after));
     return null;
@@ -200,42 +197,28 @@ export class OnboardingFlowService {
    * A person takes over with the answers summary, in this transaction: the state, the
    * alert and the reply commit together. `ob` keeps this step for when the chat returns.
    */
-  private async toPerson(turn: Turn, step: OnboardStep): Promise<null> {
+  private async toPerson(turn: Turn, step: OnboardStep, why?: 'voice'): Promise<null> {
+    const { tx, chat } = turn;
     turn.misses = 0;
     turn.awaiting = undefined;
     await ensureLead(turn, { intake: this.intake, files: this.files });
-    await this.save(turn, step);
-    const summary = summaryOf(turn.answers, turn.settings);
-    await speak(turn, () => this.people.passToOwner(turn.chat, { summary, db: turn.tx }));
+    await saveTurn(turn, step);
+    const said = why === 'voice' ? 'Sent a voice note' : null;
+    const summary = [said, summaryOf(turn.answers, turn.settings)].filter(Boolean).join('. ');
+    await speak(turn, async () => {
+      const name = why && (await this.people.answererName(await ensureChatOwner(tx, chat), tx));
+      const reply = why ? ONBOARD_WORDS.voiceHandOver(name || null) : undefined;
+      return this.people.passToOwner(chat, { summary, db: tx, reply });
+    });
     return null;
   }
 
   private async ask(turn: Turn, step: OnboardStep, retry = false): Promise<null> {
-    await this.save(turn, step);
+    await saveTurn(turn, step);
     await speak(turn, () =>
       queueReply(turn.tx, turn.chat, question(step, { ...this.view(turn), retry })),
     );
     return null;
-  }
-
-  private async save(turn: Turn, step: OnboardStep): Promise<void> {
-    const { entry, ...rest } = turn.chat.context as Record<string, unknown>;
-    const { nudgedAt, followedUpAt, startedAt } = readOnboard(turn.chat) ?? {};
-    const ob = {
-      answers: turn.answers,
-      startedAt: startedAt ?? new Date().toISOString(),
-      // The one nudge is never sent twice, even after the customer comes back and stalls again.
-      ...(nudgedAt ? { nudgedAt } : {}),
-      ...(followedUpAt ? { followedUpAt } : {}),
-      misses: turn.misses,
-      ...(turn.awaiting ? { awaiting: turn.awaiting } : {}),
-      ...(turn.pendingFile ? { pendingFile: turn.pendingFile } : {}),
-    };
-    const context = { ...rest, ...(turn.dropEntry || entry === undefined ? {} : { entry }), ob };
-    await turn.tx
-      .update(waConversations)
-      .set({ state: onboardState(step), context, updatedAt: new Date() })
-      .where(eq(waConversations.id, turn.chat.id));
   }
 
   private view(turn: Turn): QuestionView {

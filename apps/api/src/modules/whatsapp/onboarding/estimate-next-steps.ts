@@ -15,7 +15,12 @@ import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { ONBOARD_WORDS } from './onboard-words';
-import { ESTIMATE_CHOICES, LATER_PERIODS, type LaterPeriod } from './onboarding-context';
+import {
+  ESTIMATE_CHOICES,
+  LATER_PERIODS,
+  type LaterPeriod,
+  PERSON_CHOICE,
+} from './onboarding-context';
 import { laterQuestion } from './onboarding-replies';
 
 /** "Check back" dates, from today. */
@@ -98,7 +103,12 @@ export class EstimateNextStepsService {
         key,
       });
       const name = await this.people.answererName(owned, tx);
-      await queueReply(tx, chat, { kind: 'text', body: W.willCall(name, tomorrow) });
+      // Every closing message ends with a tap (C5): a person stays one tap away.
+      await queueReply(tx, chat, {
+        kind: 'buttons',
+        body: W.willCall(name, tomorrow),
+        buttons: [{ id: PERSON_CHOICE, title: W.talkToPerson }],
+      });
       return true;
     }
     if (choiceId === ESTIMATE_CHOICES.notNow) {
@@ -114,7 +124,14 @@ export class EstimateNextStepsService {
       { nextAction: { on: later.from(today), note: 'Check back (customer chose)' } },
       `Not now after the estimate: check back ${later.label}`,
     );
-    await queueReply(tx, chat, { kind: 'text', body: W.laterThanks });
+    await queueReply(tx, chat, {
+      kind: 'buttons',
+      body: W.laterThanks,
+      buttons: [
+        { id: ESTIMATE_CHOICES.call, title: W.callMeBack },
+        { id: PERSON_CHOICE, title: W.talkToPerson },
+      ],
+    });
     return true;
   }
 }

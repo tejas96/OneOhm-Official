@@ -38,7 +38,7 @@ describe('Payment safety', () => {
     expect(page.status).toBe(200);
     const text = await page.text();
     // A plain link, not a form: form-action 'self' would block the redirect to Razorpay.
-    expect(text).toContain('<a class="go" href="?go=1">Continue to pay</a>');
+    expect(text).toContain('<a class="go" href="?go=1" rel="nofollow">Continue to pay</a>');
     expect(text).not.toContain('<form');
     expect(text).toContain(advance.label);
     expect(text).toMatch(/Pay ₹[\d,]+ to OneOhm/);

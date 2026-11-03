@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { paymentMilestones, payments, projects, quotations } from '@oneohm/database';
-import { formatInr, formatKwp } from '@oneohm/shared';
+import { payments, projects, quotations } from '@oneohm/database';
+import { formatInr } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
@@ -13,7 +13,9 @@ import { type SharedFile, sharedFileUrl } from '../file-links';
 import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
-import { payNowReplies, payPageUrl } from './pay-buttons';
+import { payNowReplies } from './pay-buttons';
+import { paymentsText } from './payments-answer';
+import { PROJECT_WORDS } from './project-words';
 import { rewardsText } from './rewards-answer';
 import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
 
@@ -37,12 +39,23 @@ export class AnswersService {
   async progress(customerId: string): Promise<string> {
     const { projects: own } = await this.portal.home(customerId);
     if (own.length === 0) return WORDS.noProject;
+    // The size in panels (C9): the panel count is on each project's quotation.
+    const counts = await this.db
+      .select({ id: quotations.id, panels: quotations.moduleCount })
+      .from(quotations)
+      .where(
+        inArray(
+          quotations.id,
+          own.map((project) => project.quotation.id),
+        ),
+      );
     return own
       .map((project) => {
         const done = project.stages.filter((stage) => stage.state === 'done').length;
         const steps = project.stages.filter((stage) => stage.state !== 'skipped').length;
+        const panels = counts.find((row) => row.id === project.quotation.id)?.panels ?? 0;
         return list([
-          `*${project.code}* · ${formatKwp(project.capacityWp)} · ${project.place}`,
+          `*${PROJECT_WORDS.projectIn(project.place)}* · ${PROJECT_WORDS.size(panels, project.capacityWp)}`,
           ANSWER_WORDS.now(WORDS.stage[project.currentStage] ?? project.currentStage, done, steps),
           project.nextStep
             ? ANSWER_WORDS.next(
@@ -62,69 +75,15 @@ export class AnswersService {
       .join('\n\n');
   }
 
-  /**
-   * What is paid and due. `withLinks` (no Pay now buttons follow) adds our pay page link
-   * under each due amount; never the raw gateway link, which our page makes when opened.
-   */
+  /** What is paid and due (see paymentsText); our pay page links only with no buttons. */
   async payments(customerId: string, withLinks: boolean): Promise<string> {
-    const own = await this.db
-      .select({ id: projects.id, code: projects.code })
-      .from(projects)
-      .where(eq(projects.customerId, customerId));
-    if (own.length === 0) return WORDS.noProject;
-    const milestones = await this.db
-      .select()
-      .from(paymentMilestones)
-      .where(
-        inArray(
-          paymentMilestones.projectId,
-          own.map((project) => project.id),
-        ),
-      )
-      .orderBy(paymentMilestones.position);
-    const paid = await this.db
-      .select({ milestoneId: payments.milestoneId, amount: payments.amountPaise })
-      .from(payments)
-      .where(
-        inArray(
-          payments.projectId,
-          own.map((project) => project.id),
-        ),
-      );
     const online = withLinks && this.links.setup().mode !== 'off';
-    const blocks: string[] = [];
-    for (const project of own) {
-      const lines = [`*${project.code}*`];
-      for (const milestone of milestones.filter((row) => row.projectId === project.id)) {
-        const got = paid
-          .filter((row) => row.milestoneId === milestone.id)
-          .reduce((sum, row) => sum + row.amount, 0);
-        lines.push(this.milestoneLine(customerId, milestone, got, online));
-      }
-      blocks.push(list(lines));
-    }
-    return blocks.join('\n\n');
+    return paymentsText(this.db, this.env, customerId, online);
   }
 
   /** A "Pay now" message for each due amount; the text answer is sent first. */
   payNow(customerId: string) {
     return payNowReplies(this.db, this.env, customerId);
-  }
-
-  /** One line per milestone: paid, later, the bank's share, or due (with a pay link). */
-  private milestoneLine(
-    customerId: string,
-    milestone: typeof paymentMilestones.$inferSelect,
-    got: number,
-    withLink: boolean,
-  ): string {
-    const left = milestone.amountPaise - got;
-    if (left <= 0) return ANSWER_WORDS.paid(milestone.label, formatInr(milestone.amountPaise));
-    if (milestone.payer === 'bank') return ANSWER_WORDS.bank(milestone.label, formatInr(left));
-    if (milestone.status !== 'due' && milestone.status !== 'partly_paid')
-      return ANSWER_WORDS.later(milestone.label, formatInr(left));
-    const url = withLink ? payPageUrl(this.env, customerId, milestone.id) : null;
-    return `${ANSWER_WORDS.due(milestone.label, formatInr(left))}${url ? `\n  ${WORDS.payHere}: ${url}` : ''}`;
   }
 
   /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */

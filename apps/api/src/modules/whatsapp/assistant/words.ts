@@ -23,14 +23,13 @@ export type MenuChoice = (typeof EN_MENU_ROWS)[number]['id'];
 
 const EN_WORDS = {
   menu: (name: string, company: string) =>
-    `Hello ${name}! I am the ${company ? `${company} ` : ''}assistant. What would you like to see? You can type "menu" at any time.`,
+    `Hello ${name}! I am the ${company ? `${company} ` : ''}assistant. What would you like to see?`,
   menuButton: 'Choose',
   unknownNumber:
     'Hello! This number is not linked to any of our customers yet. If you are interested in solar, tap "Call me back". If you are a customer with another number, please write from that number.',
   callMeBack: 'Call me back',
   callbackNoted: 'Thank you! Someone from our team will call you soon.',
-  noProject:
-    'We do not have a project for you yet. Tap "Talk to a person" in the menu to speak to us.',
+  noProject: 'We do not have a project for you yet. Tap "Talk to us" to speak to us.',
   stage: {
     survey: 'Site visit',
     design: 'System design',
@@ -59,7 +58,7 @@ const EN_WORDS = {
   askProblem:
     'Please tell us the problem in one message (for example "inverter shows an error since morning"). You can send a photo with a caption.',
   problemSaved: (category: string) =>
-    `Thank you. Your ${category} request is raised. Our team will call you. Type "requests" to see its status.`,
+    `Thank you. Your ${category} request is raised. Our team will call you. Tap "My requests" to see its status.`,
   tooShort: 'Please write a few more words so we can help.',
   noRequests: 'You have no service requests.',
   askReferral:
@@ -72,7 +71,7 @@ const EN_WORDS = {
   askRating: 'How happy are you with us so far?',
   ratingSaved: 'Thank you for rating us! It helps the team.',
   humanSoon:
-    'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Type "menu" to go back to the assistant.',
+    'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Tap "Menu" to go back to the assistant.',
   notUnderstood: 'Sorry, I did not get that. Here is what I can help with.',
   /** A reply to one of our updates goes to their person, with this warm note. */
   passedToOwner: (name: string | null) =>
@@ -80,8 +79,7 @@ const EN_WORDS = {
   /** Once a night, when a person has the chat and it is outside working hours. */
   nightReply: (name: string | null) =>
     `Thank you. We reply from 9:30 am to 6:30 pm. Your message is with ${name ?? 'our team'}.`,
-  /** A tap on "Accept quote": one check before it binds. Buttons keep 20 characters. */
-  quoteConfirm: (number: string, total: string) => `Accept quotation ${number} for ${total}?`,
+  /** The buttons of the check before an accept binds (its words: quote-money-words). */
   quoteYes: 'Yes, accept',
   quoteNotYet: 'Not yet',
   quoteChanged: 'This quote has changed or is no longer open.',
@@ -104,7 +102,7 @@ const EN_FILE_WORDS = {
   receipt: (number: string, amount: string, url: string) => `Receipt ${number} (${amount}): ${url}`,
   report: (name: string, code: string, url: string) => `${name} (${code}): ${url}`,
   paper: (name: string, url: string) => `${name}: ${url}`,
-  more: 'More papers are in the OneOhm app.',
+  more: 'For older papers, tap "Talk to us".',
 } as const;
 
 /** Photos and papers the customer sends (PRD 6.1). */
@@ -123,11 +121,11 @@ const EN_MEDIA_WORDS = {
   photoNotAdded: 'We could not add the file to the request. Please send a photo of the problem.',
   photoOnly: 'Photo or paper sent on WhatsApp.',
   notRead:
-    'Sorry, I can only take photos and PDF papers here. Please type it in a few words, or type "menu" and tap "Talk to a person".',
+    'Sorry, I can only take photos and PDF papers here. Please write it in a few words, or tap "Talk to us".',
   tooLarge: 'This file is too large. Please send a smaller photo or PDF.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
   problemSavedWithPhotos: (category: string, photos: number) =>
-    `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Type "requests" to see its status.`,
+    `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
 } as const;
 
 /** The "Warranty and AMC" answer, the same cover the app shows (PRD 5.5). */
@@ -151,8 +149,7 @@ const EN_COVER_WORDS = {
   amcState: { upcoming: 'starts soon', active: 'active', ended: 'ended', cancelled: 'cancelled' },
   amcVisits: (done: number, total: number) => `${done} of ${total} visits done`,
   nextVisit: (name: string, date: string) => `Next ${name} visit: ${date}`,
-  noAmc:
-    'AMC: none yet. For yearly cleaning and check-up visits, type "menu" and tap "Talk to a person".',
+  noAmc: 'AMC: none yet. For yearly cleaning and check-up visits, tap "Talk to us".',
   help: 'For a problem with any of these, tap "Report a problem" in the menu.',
 } as const;
 
@@ -176,14 +173,13 @@ const EN_REWARD_WORDS = {
   },
   paidTotal: (amount: string) => `Paid to you: ${amount}`,
   comingTotal: (amount: string) => `On the way: ${amount}`,
-  more: (count: number) => `And ${count} more in the OneOhm app.`,
+  more: (count: number) => `And ${count} more.`,
 } as const;
 
 /** Rating OneOhm on WhatsApp (PRD 6.1), asked only once the system is switched on. */
 const EN_FEEDBACK_WORDS = {
-  later:
-    'Thank you! We will ask for your rating once your solar system is switched on. Type "menu" to see other options.',
-  askComment: 'Thank you for rating us! Anything to add? Type it here, or type "skip".',
+  later: 'Thank you! We will ask for your rating once your solar system is switched on.',
+  askComment: 'Thank you for rating us! Anything to add? Write it here, or tap "Menu".',
   commentSaved: 'Thank you, we have noted it. It helps the team do better.',
   skipWords: ['skip', 'no', 'nothing', 'no thanks', 'none', 'nahi', 'nako'] as readonly string[],
 } as const;

@@ -1,10 +1,13 @@
 import {
+  type BillBand,
   CITY_OTHER_CHOICE,
   type OnboardingSettings,
   type OnboardStep,
   type RoofChoice,
   type SiteChoice,
 } from '@oneohm/domain';
+import { titleCaseName } from '@oneohm/shared';
+import { languageNow } from '../assistant/language';
 import type { ChatReply } from '../chat-store';
 import { ONBOARD_WORDS } from './onboard-words';
 import { ESTIMATE_CHOICES, LATER_PERIODS, PERSON_CHOICE } from './onboarding-context';
@@ -23,27 +26,38 @@ export interface QuestionView {
 const SITES: readonly SiteChoice[] = ['home', 'society', 'business', 'farm'];
 const ROOFS: readonly RoofChoice[] = ['rcc', 'tin', 'other'];
 const FLOORS = [1, 2, 3] as const;
+/** WhatsApp lists hold 10 rows. */
+const MAX_ROWS = 10;
+
+/** A bill band in the chat's language: the owner's translation, else the label (C13). */
+function bandLabel(band: BillBand): string {
+  const language = languageNow();
+  return (language === 'mr' ? band.labelMr : language === 'hi' ? band.labelHi : null) ?? band.label;
+}
 
 /**
  * One onboarding question as a WhatsApp reply, in the language of the message being
  * handled. Every question but the language one offers "Talk to a person" (last row or
- * last button); free-text questions keep it as their only button.
+ * last button); free-text questions keep it as their only button. Lists, the photo and
+ * typed questions after the name also offer "Back" (C14), unless a list is full.
  */
 export function question(step: OnboardStep, view: QuestionView): ChatReply {
   const W = ONBOARD_WORDS;
   const person = { id: PERSON_CHOICE, title: W.talkToPerson };
+  const back = { id: `ob:${step}:back`, title: W.back };
   const body = (text: string, typed = false) =>
     view.retry ? `${typed ? W.notClearTyped : W.notClear}\n${text}` : text;
   const list = (text: string, rows: readonly { id: string; title: string }[]): ChatReply => ({
     kind: 'list',
     body: body(text),
     button: W.choose,
-    rows: [...rows, person],
+    // A list saved before the row limits were cut keeps its rows; typed "back" still works.
+    rows: rows.length + 2 <= MAX_ROWS ? [...rows, back, person] : [...rows, person],
   });
   const typed = (text: string): ChatReply => ({
     kind: 'buttons',
     body: body(text, true),
-    buttons: [person],
+    buttons: step === 'name' ? [person] : [back, person],
   });
   switch (step) {
     case 'language':
@@ -56,7 +70,7 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
         })),
       };
     case 'name': {
-      const name = view.profileName?.trim();
+      const name = view.profileName?.trim() && titleCaseName(view.profileName);
       if (!name || view.awaiting === 'name') return typed(W.typeName);
       return {
         kind: 'buttons',
@@ -84,7 +98,10 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
     case 'bill':
       return list(
         W.askBill,
-        view.settings.billBands.map((band) => ({ id: `ob:bill:${band.id}`, title: band.label })),
+        view.settings.billBands.map((band) => ({
+          id: `ob:bill:${band.id}`,
+          title: bandLabel(band),
+        })),
       );
     case 'roof':
       return list(
@@ -100,7 +117,7 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
       return {
         kind: 'buttons',
         body: body(W.askPhoto),
-        buttons: [{ id: 'ob:photo:later', title: W.sendLater }, person],
+        buttons: [{ id: 'ob:photo:later', title: W.sendLater }, back, person],
       };
     // After the estimate PDF: what next, with a person in the middle.
     case 'done':

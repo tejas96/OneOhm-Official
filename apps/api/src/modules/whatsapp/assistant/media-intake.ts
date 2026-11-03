@@ -7,6 +7,7 @@ import type { IncomingFile } from '../../documents/upload-file';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
 import type { IncomingMedia } from '../whatsapp-events';
+import { sayWithTaps } from './closing-taps';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
 
@@ -62,7 +63,7 @@ export class MediaIntakeService {
     said: string,
   ): Promise<void> {
     if (media.type === 'audio' || media.type === 'video')
-      return this.text(chat, MEDIA_WORDS.notRead);
+      return sayWithTaps(this.db, chat, MEDIA_WORDS.notRead, ['talk', 'menu']);
     const now = Date.now();
     if (chat.state === 'await_problem') {
       const file = await this.fetchOrSay(chat, media);
@@ -79,7 +80,8 @@ export class MediaIntakeService {
     }
     // Meta's retry of a file already filed (the reply after it failed): not filed again.
     const filed = (chat.context as { filedMedia?: { id: string; title: string } }).filedMedia;
-    if (filed?.id === media.id) return this.text(chat, MEDIA_WORDS.paperSaved(filed.title));
+    if (filed?.id === media.id)
+      return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(filed.title), ['menu']);
     const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
     if (open.length > 0) return this.fulfil(chat, customerId, open, media);
     return this.ask(chat, media, now);
@@ -119,7 +121,7 @@ export class MediaIntakeService {
       MEDIA_WORDS.paperSaved(oldest.title),
       left.length > 0 ? MEDIA_WORDS.stillNeed(left.join(', ')) : '',
     ];
-    return this.text(chat, lines.filter(Boolean).join('\n\n'));
+    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['menu']);
   }
 
   /** Nothing waits for this file: keep only its reference and ask once what it is about. */

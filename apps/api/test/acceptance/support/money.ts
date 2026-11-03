@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import type { ProjectDetail, TrialBalance } from '@oneohm/api-contracts';
+import { expect } from 'vitest';
 import { rows } from './db';
 import { API, type Session } from './http';
 import { today } from './sales';
@@ -88,4 +89,28 @@ export async function providerId(table: 'payment_links' | 'bank_payouts', id: st
     id,
   ]);
   return row?.ref ?? '';
+}
+
+/**
+ * After a payment (live review C6, C16): the receipt is named for the customer, and the
+ * chat says in Marathi what happens next and who to call, ending with taps.
+ */
+export async function expectPaidNews(receiptFile: string, paymentId: string, projectId: string) {
+  expect(receiptFile).toBe('OneOhm-Ravi-Patil-test-receipt.pdf');
+  const [next] = await rows<{ payload: { body: string; buttons: { id: string }[] } }>(
+    'SELECT payload FROM outbox WHERE dedupe_key = $1',
+    [`paid_next:${paymentId}`],
+  );
+  const [manager] = await rows<{ name: string }>(
+    'SELECT u.full_name AS name FROM projects p JOIN users u ON u.id = p.manager_user_id WHERE p.id = $1',
+    [projectId],
+  );
+  expect(next?.payload.body).toBe(
+    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: ${manager?.name}.`,
+  );
+  expect(next?.payload.buttons.map((button) => button.id)).toEqual([
+    'documents',
+    'progress',
+    'menu',
+  ]);
 }
