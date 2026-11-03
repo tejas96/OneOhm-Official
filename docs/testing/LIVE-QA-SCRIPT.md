@@ -101,3 +101,15 @@ Messages the bot sends while you are chatting are free-form replies and need no 
 4. The templates still carry the milestone label and the project code ("Before dispatch of panels and inverter", "OH-2026-013") (Medium, C9).
 5. The STOP and START replies have no taps (Low).
 6. The old test project still shows paise amounts. It was made before the rounding fix, so new projects show whole rupees (no action).
+
+## Round 3 — after the round 2 fixes (2026-11-03)
+
+| # | Step | Result |
+|---|---|---|
+| S1 | Documents | ✅ A list of papers in Marathi. ⚠️ The quote and receipts showed twice (system copies with codes). Fixed in `6957b21` |
+| S2 | Tap a receipt | ✅ The receipt PDF came as a file, then taps मेनू · आमच्याशी बोला |
+| S3 | `STOP` | ✅ Marathi reply with the "पुन्हा सुरू करा" tap |
+| S4 | Tap "पुन्हा सुरू करा" | ✅ "पुन्हा स्वागत!" with the मेनू tap |
+| S5 | Refer a friend who is already a lead | ⚠️ The reply was in English. Fixed in `6957b21` (Marathi, with a Menu tap) |
+| S6 | Last instalment falls due | ✅ Pay template values in plain words: "Last instalment (10%)", "Sangli · 3.27 kW" |
+| S7 | Pay ₹18,397 by UPI | ✅ Marathi receipt template with the PDF, then the next step (net meter and subsidy papers) with Priya's name and phone. Order correct. Staff history tagged "· sent in Marathi" |
