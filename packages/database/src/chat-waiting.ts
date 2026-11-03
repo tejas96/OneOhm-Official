@@ -3,10 +3,10 @@ import type { DatabaseExecutor } from './client';
 import { waConversations } from './schema/whatsapp.schema';
 
 /**
- * Since when each chat has waited for a person: the customer's first typed message or
- * file after a team member last replied, or the hand-over itself when the customer asked
- * for a person after that reply. Taps the assistant answers (menu rows, quote buttons) do
- * not wait, and the assistant's own words and automatic updates are not an answer. Never
+ * Since when each chat has waited for a person: the customer's first message after a
+ * team member last replied, or the hand-over itself when the customer asked for a person
+ * after that reply. Taps the assistant answers even with a person (menu rows, quote
+ * buttons: `assistant_tap`) do not wait; other taps, typed words and files do, and the assistant's own words and automatic updates are not an answer. Never
  * before the hand-over; chats with nothing unanswered are left out.
  */
 export async function chatsWaitingSince(
@@ -26,7 +26,7 @@ export async function chatsWaitingSince(
       askedAfter: sql<boolean>`${waConversations.handedOverAt} > ${answered}`,
       firstWords: sql<string | null>`(select min(m.created_at) from wa_messages m
         where m.conversation_id = ${chatId} and m.direction = 'in'
-          and m.kind <> 'choice' and m.created_at > ${answered})`,
+          and not m.assistant_tap and m.created_at > ${answered})`,
     })
     .from(waConversations)
     .where(inArray(waConversations.id, [...conversationIds]));

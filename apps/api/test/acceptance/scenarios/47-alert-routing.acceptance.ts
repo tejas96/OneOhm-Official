@@ -4,6 +4,7 @@ import { closeDb, rows } from '../support/db';
 import { API, Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import {
+  addDays,
   createQuotation,
   discomId,
   newCustomer,
@@ -18,6 +19,18 @@ import { staffId } from '../support/team';
 // manager and the lead owner once each; someone on leave today is covered by their backup.
 const TAG = 'alert routing (test)';
 
+/** Everyone except `keep` who approves leave through a role other than the Super Admin's. */
+const otherLeaveApprovers = async (keep: string) =>
+  (
+    await rows<{ id: string }>(
+      `SELECT DISTINCT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id
+         JOIN roles r ON r.id = ur.role_id AND r.archived_at IS NULL AND NOT r.system
+         JOIN role_capabilities rc ON rc.role_id = r.id AND rc.capability = 'leave.approve'
+        WHERE u.status = 'active' AND u.id <> $1`,
+      [keep],
+    )
+  ).map((row) => row.id);
+
 /** Who got alerts of this kind about this subject, or on this project. */
 const told = async (kind: string, about: string) =>
   (
@@ -28,8 +41,8 @@ const told = async (kind: string, about: string) =>
     )
   ).map((row) => row.user_id);
 
-/** Approved leave today with a named backup. */
-const onLeaveToday = (userId: string, backupUserId: string) =>
+/** Approved leave today, with a named backup or none. */
+const onLeaveToday = (userId: string, backupUserId: string | null) =>
   rows(
     `INSERT INTO leave_requests (user_id, leave_type, from_date, to_date, half_day, half_days,
        status, reason, backup_user_id)
@@ -125,5 +138,38 @@ describe('Alert routing: by duty, by owner, around leave', () => {
     const center = await admin.get<CommandCenter>('/command-center');
     const away = center.actions.find((action) => action.id === 'owner-away-leads');
     expect(away?.title).toMatch(/lead/);
+  });
+
+  /** The only HR person at work asks for leave; who hears of the request. */
+  async function soleApproverAsks(name: string, backupOfOthers: string | null) {
+    const requester = await person(name);
+    for (const id of await otherLeaveApprovers(requester.id))
+      await onLeaveToday(id, backupOfOthers);
+    try {
+      const session = await Session.code(requester.phone);
+      const asked = await session.post<{ id: string }>('/leave', {
+        leaveType: 'casual',
+        fromDate: addDays(today(), 1),
+        toDate: addDays(today(), 2),
+        halfDay: false,
+        reason: TAG,
+      });
+      return { requester, alerted: await told('leave_requested', asked.id) };
+    } finally {
+      await rows('DELETE FROM leave_requests WHERE reason = $1', [TAG]);
+    }
+  }
+
+  it('the only other approver asking for leave still reaches the desk', async () => {
+    const { requester, alerted } = await soleApproverAsks('Sole Approver (test)', null);
+    expect(alerted).toEqual([admin.userId]);
+    expect(alerted).not.toContain(requester.id);
+  });
+
+  it('a backup who is on leave too does not cover: the desk hears instead', async () => {
+    const backup = await person('Away Backup (test)', ['sales']);
+    await onLeaveToday(backup.id, null);
+    const { alerted } = await soleApproverAsks('Approver With Away Backup (test)', backup.id);
+    expect(alerted).toEqual([admin.userId]);
   });
 });

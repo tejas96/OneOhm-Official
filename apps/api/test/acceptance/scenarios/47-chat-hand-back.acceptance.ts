@@ -60,6 +60,14 @@ describe('Chat hand-back and alert noise', () => {
     expect((await replies(phone)).length).toBeLessThanOrEqual(before + 1);
   });
 
+  it('a tap the assistant does not answer while a person has the chat alerts and waits', async () => {
+    const { phone, chatId } = await chatWithPerson('Old Tap Customer (test)');
+    // A rating tap is not one the assistant answers once a person has the chat.
+    await tap(phone, 'rate:5');
+    expect(await messageAlerts(chatId)).not.toHaveLength(0);
+    expect((await summaryOf(chatId)).needsReply).toBe(true);
+  });
+
   it('after 4 working hours with no word from the team the chat goes back to the assistant', async () => {
     const { phone, chatId } = await chatWithPerson('Hand Back Customer (test)');
     const waiting = await chatWithPerson('Still Waiting Customer (test)');

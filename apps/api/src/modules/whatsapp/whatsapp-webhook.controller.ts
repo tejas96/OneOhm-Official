@@ -21,7 +21,7 @@ import { Public } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AssistantService } from './assistant/assistant.service';
-import { assistantAnswersTap } from './assistant/handled-taps';
+import { assistantAnswersTap, markAssistantTap } from './assistant/handled-taps';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
 import { DeliveriesService } from './deliveries.service';
@@ -85,6 +85,7 @@ export class WhatsAppWebhookController implements OnModuleInit {
     for (const message of incoming) {
       const chat = await ensureChatOwner(this.db, await conversationFor(this.db, message));
       if (!(await logIncoming(this.db, chat.id, message))) continue;
+      if (assistantAnswersTap(chat, message)) await markAssistantTap(this.db, message.waMessageId);
       if (isLateTap(chat, message)) {
         this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
         continue;

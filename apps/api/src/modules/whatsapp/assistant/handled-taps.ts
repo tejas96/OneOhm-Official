@@ -1,3 +1,5 @@
+import { type DatabaseExecutor, waMessages } from '@oneohm/database';
+import { and, eq } from 'drizzle-orm';
 import type { Conversation } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { readQuoteTap } from './quote-actions';
@@ -17,4 +19,12 @@ export function assistantAnswersTap(
   if (incoming.kind !== 'choice' || !incoming.choiceId) return false;
   if (readQuoteTap(incoming.choiceId)) return true;
   return chat.customerId !== null && MENU_IDS.has(incoming.choiceId);
+}
+
+/** Marks a logged tap as the assistant's, so it never counts as the customer waiting. */
+export async function markAssistantTap(db: DatabaseExecutor, waMessageId: string): Promise<void> {
+  await db
+    .update(waMessages)
+    .set({ assistantTap: true })
+    .where(and(eq(waMessages.waMessageId, waMessageId), eq(waMessages.direction, 'in')));
 }

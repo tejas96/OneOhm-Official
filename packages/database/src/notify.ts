@@ -96,7 +96,7 @@ export async function notifyHolders(
   notice: Notice,
   exceptUserId?: string | null,
 ): Promise<number> {
-  const people = (await dutyAlertTargets(db, capability)).filter((id) => id !== exceptUserId);
+  const people = await dutyAlertTargets(db, capability, { exceptUserId });
   for (const userId of people) {
     await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
   }
