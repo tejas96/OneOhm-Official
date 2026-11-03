@@ -3,7 +3,16 @@ import { DEFAULT_ONBOARDING } from '@oneohm/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { catalog, today, uniquePhone } from '../support/sales';
+import {
+  chatOf,
+  choices,
+  lastReply,
+  leadsOf,
+  say,
+  tap,
+  withOnboarding,
+} from '../support/onboarding';
+import { catalog, newCustomer, today, uniquePhone } from '../support/sales';
 
 // Part 3, task 2: storage for the WhatsApp onboarding bot. A chat remembers its language,
 // an estimate is kept per lead, and the owner's onboarding settings have a place to live.
@@ -117,5 +126,83 @@ describe('WhatsApp onboarding settings', () => {
     } finally {
       await rows(`UPDATE products SET active = true WHERE id = $1`, [dcrPanel]);
     }
+  });
+});
+
+// Part 3, task 4: who is onboarded. Only strangers with no lead (or a lead onboarding made);
+// customers keep their menu, a staff-made lead keeps today's buttons, and turning
+// onboarding off stops new chats but lets the ones in progress finish.
+describe('Who the onboarding bot talks to', () => {
+  let admin: Session;
+  let restore: () => Promise<void>;
+  const OLD_BUTTONS = ['callback', 'human'];
+
+  beforeAll(async () => {
+    admin = await Session.admin();
+    restore = await withOnboarding(admin, { enabled: true, serviceCities: ['Pune'] });
+  });
+  afterAll(() => restore());
+
+  it('a customer saying "hi" gets the customer menu', async () => {
+    const customer = await newCustomer(admin, { name: 'Onboard Menu Customer (test)' });
+    await say(customer.phone, 'hi');
+    const menu = await lastReply(customer.phone);
+    expect(menu?.kind).toBe('list');
+    expect(choices(menu)).toContain('progress');
+    expect((await chatOf(customer.phone)).ob).toBeNull();
+  });
+
+  it('a number with a lead made by staff gets the old buttons', async () => {
+    const phone = uniquePhone();
+    await admin.post('/leads', {
+      name: 'Staff Lead (test)',
+      phone,
+      city: 'Sangli',
+      nextActionOn: today(),
+    });
+    await say(phone, 'hi');
+    expect(choices(await lastReply(phone))).toEqual(OLD_BUTTONS);
+    await tap(phone, 'callback');
+    expect(await leadsOf(phone)).toHaveLength(1);
+    expect((await chatOf(phone)).ob).toBeNull();
+  });
+
+  it('with onboarding off a new number gets the old buttons; a chat in progress finishes', async () => {
+    const started = uniquePhone();
+    await say(started, 'hi');
+    await tap(started, 'ob:language:en');
+    const back = await withOnboarding(admin, { enabled: false });
+    try {
+      const fresh = uniquePhone();
+      await say(fresh, 'hi');
+      expect(choices(await lastReply(fresh))).toEqual(OLD_BUTTONS);
+      await tap(started, 'ob:name:yes');
+      await tap(started, 'ob:city:Pune');
+      expect((await chatOf(started)).state).toBe('onboard:site');
+      expect((await leadsOf(started))[0]?.city).toBe('Pune');
+    } finally {
+      await back();
+    }
+  });
+
+  it("a friend's referral code makes the referral lead, then onboarding asks the site", async () => {
+    const customer = await newCustomer(admin, { name: 'Onboard Referrer (test)' });
+    const code = `RF${String(Math.floor(Math.random() * 1e6)).padStart(6, '2')}`.replace(
+      /[01]/g,
+      '7',
+    );
+    await rows('INSERT INTO referral_codes (customer_id, code) VALUES ($1, $2)', [
+      customer.customerId,
+      code,
+    ]);
+    const phone = uniquePhone();
+    await say(phone, `Hi OneOhm, my referral code is ${code}`);
+    const [lead] = await leadsOf(phone);
+    expect(lead?.source).toBe('referral');
+    expect((await chatOf(phone)).state).toBe('onboard:site');
+    expect(choices(await lastReply(phone))).toContain('ob:site:home');
+    await tap(phone, 'ob:site:home');
+    expect((await chatOf(phone)).state).toBe('onboard:bill');
+    expect(await leadsOf(phone)).toHaveLength(1);
   });
 });

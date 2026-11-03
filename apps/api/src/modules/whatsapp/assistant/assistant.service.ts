@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { brandName, customers, waConversations, waMessages } from '@oneohm/database';
-import { asksForPerson, findCampaignCode, findReferralCode, saysHello } from '@oneohm/domain';
+import { asksForPerson, findCampaignCode, saysHello } from '@oneohm/domain';
 import { and, desc, eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
@@ -78,11 +78,10 @@ export class AssistantService {
     const word = (incoming.choiceId ?? incoming.text).trim().toLowerCase();
     if (GREETINGS.has(word) || opensChat(chat, incoming.text)) return this.restart(chat);
     if (chat.state === 'human') return;
+    if (!chat.customerId) return this.strangers.route(chat, incoming, word);
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
-    if (incoming.kind === 'text' && asksForPerson(incoming.text)) return this.toTeam(chat);
-    const code = chat.customerId ? null : findReferralCode(incoming.text);
-    if (code) return this.strangers.referredFriend(chat, code, word);
-    if (!chat.customerId) return this.strangers.answer(chat, word);
+    if (incoming.kind === 'text' && asksForPerson(incoming.text))
+      return this.choose(chat, chat.customerId, 'human');
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media)
       return this.media.receive(chat, chat.customerId, incoming.media, incoming.text);
@@ -152,14 +151,9 @@ export class AssistantService {
         .update(waConversations)
         .set({ handedOverAt: null, handledByUserId: null })
         .where(eq(waConversations.id, chat.id));
+    if (!chat.customerId) return this.strangers.greet(chat);
     await setState(this.db, chat.id, 'menu');
     return this.menu(chat);
-  }
-
-  private toTeam(chat: Conversation) {
-    return chat.customerId
-      ? this.choose(chat, chat.customerId, 'human')
-      : this.strangers.answer(chat, 'human');
   }
 
   private async menu(chat: Conversation) {
@@ -210,13 +204,13 @@ export class AssistantService {
     return last?.kind === 'template' && Date.now() - last.at.getTime() < DAY_MS;
   }
 
+  /** A customer's saved language; a stranger's is the one picked while onboarding. */
   private async languageOf(chat: Conversation) {
-    const [customer] = chat.customerId
-      ? await this.db
-          .select({ language: customers.preferredLanguage })
-          .from(customers)
-          .where(eq(customers.id, chat.customerId))
-      : [];
+    if (!chat.customerId) return assistantLanguage(chat.language);
+    const [customer] = await this.db
+      .select({ language: customers.preferredLanguage })
+      .from(customers)
+      .where(eq(customers.id, chat.customerId));
     return assistantLanguage(customer?.language);
   }
 

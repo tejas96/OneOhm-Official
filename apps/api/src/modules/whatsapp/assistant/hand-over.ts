@@ -26,14 +26,23 @@ export class HandOverService {
     @Inject(ENVIRONMENT) private readonly env: Environment,
   ) {}
 
-  /** A person takes over; the assistant stays quiet until the customer types "menu". */
-  async handOver(chat: Conversation, capability: string, reply: string = WORDS.humanSoon) {
+  /**
+   * A person takes over; the assistant stays quiet until the customer types "menu".
+   * `summary` (such as the onboarding answers so far) is added to the staff alert.
+   */
+  async handOver(
+    chat: Conversation,
+    capability: string,
+    reply: string = WORDS.humanSoon,
+    summary?: string,
+  ) {
     await this.toPerson(chat);
     const owned = await ensureChatOwner(this.db, chat);
+    const who = `${chat.profileName ?? 'A customer'} · ${chat.phone}`;
     const alert = {
       kind: 'whatsapp_handover',
       title: 'Someone wants to talk on WhatsApp',
-      body: `${chat.profileName ?? 'A customer'} · ${chat.phone}`,
+      body: summary ? `${who}. ${summary}` : who,
       key: `wa_handover:${chat.id}:${Date.now()}`,
     };
     // The owner hears first; a chat nobody owns goes to the desk that handles this kind.
@@ -49,13 +58,14 @@ export class HandOverService {
     return queueReply(this.db, chat, { kind: 'text', body: reply });
   }
 
-  /** To the chat's own person, named in the reply. */
-  async passToOwner(chat: Conversation) {
+  /** To the chat's own person (or its desk), named in the reply; `summary` as in handOver. */
+  async passToOwner(chat: Conversation, summary?: string) {
     const owned = await ensureChatOwner(this.db, chat);
     return this.handOver(
       owned,
       deskFor(owned),
       WORDS.passedToOwner(await this.answererName(owned)),
+      summary,
     );
   }
 

@@ -62,9 +62,12 @@ export class LeadIntakeService {
     return open ?? null;
   }
 
-  /** A new lead, or a nudge (note, follow-up today, alert) on the open lead with this number. */
-  receive(input: IntakeInput): Promise<IntakeResult> {
-    return this.db.transaction(async (tx) => {
+  /**
+   * A new lead, or a nudge (note, follow-up today, alert) on the open lead with this number.
+   * Pass a transaction to make it part of the caller's work (it runs as a savepoint).
+   */
+  receive(input: IntakeInput, db: DatabaseExecutor = this.db): Promise<IntakeResult> {
+    return db.transaction(async (tx) => {
       const open = await this.openLeadByPhone(tx, input.phone);
       if (!open) return this.insert(tx, input);
       const today = todayIn();

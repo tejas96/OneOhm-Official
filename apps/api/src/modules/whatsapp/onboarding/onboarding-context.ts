@@ -1,0 +1,50 @@
+import { type OnboardAnswers, type OnboardStep, STEP_ORDER } from '@oneohm/domain';
+import type { Conversation } from '../chat-store';
+
+/**
+ * What an onboarding chat remembers in `wa_conversations.context.ob`: the answers so far,
+ * how many unclear answers in a row, and whether the bot waits for a typed name or city.
+ * The chat state is `onboard:<step>`; a person's hand-over or a release keeps `ob`.
+ */
+export interface OnboardContext {
+  readonly answers: OnboardAnswers;
+  readonly misses: number;
+  readonly awaiting?: 'name' | 'city';
+}
+
+/** The tap that hands the chat to a person, offered on every question. */
+export const PERSON_CHOICE = 'ob:person';
+/** The nudge's "Continue" tap: the current question again. */
+export const CONTINUE_CHOICE = 'ob:continue';
+
+const STATE_PREFIX = 'onboard:';
+
+export const onboardState = (step: OnboardStep) => `${STATE_PREFIX}${step}`;
+
+/** The step a chat state names, or null when the chat is not on an onboarding step. */
+export function stepOfState(state: string): OnboardStep | null {
+  if (!state.startsWith(STATE_PREFIX)) return null;
+  const step = state.slice(STATE_PREFIX.length);
+  return (STEP_ORDER as readonly string[]).includes(step) ? (step as OnboardStep) : null;
+}
+
+export function readOnboard(chat: Pick<Conversation, 'context'>): OnboardContext | null {
+  const ob = (chat.context as { ob?: OnboardContext } | null)?.ob;
+  return ob && typeof ob === 'object' ? ob : null;
+}
+
+/**
+ * True for a chat the onboarding bot started: by its state, or by the kept answers after
+ * a person handed it back (a release resets the state but keeps `ob`).
+ */
+export const isOnboardingChat = (chat: Pick<Conversation, 'state' | 'context'>) =>
+  stepOfState(chat.state) !== null || readOnboard(chat) !== null;
+
+/** The first question still open: neither answered in the chat nor known from the lead. */
+export function firstMissing(answers: OnboardAnswers, known: Partial<OnboardAnswers>): OnboardStep {
+  return (
+    STEP_ORDER.find(
+      (step) => step === 'done' || (answers[step] === undefined && known[step] === undefined),
+    ) ?? 'done'
+  );
+}

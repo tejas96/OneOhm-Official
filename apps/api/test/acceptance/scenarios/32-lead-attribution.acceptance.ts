@@ -2,6 +2,7 @@ import type { LeadCampaignRecord } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { withOnboarding } from '../support/onboarding';
 import { uniquePhone } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
 
@@ -12,12 +13,16 @@ const CODE = 'DIWALI-ACC';
 
 describe('Lead attribution', () => {
   let admin: Session;
+  let restoreOnboarding: () => Promise<void>;
 
   beforeAll(async () => {
     admin = await Session.admin();
     await rows('DELETE FROM lead_campaigns WHERE code = $1', [CODE]);
+    // These chats test the call-back buttons strangers get when onboarding is off.
+    restoreOnboarding = await withOnboarding(admin, { enabled: false });
   });
   afterAll(async () => {
+    await restoreOnboarding();
     await rows('DELETE FROM lead_campaigns WHERE code = $1', [CODE]);
     await closeDb();
   });
