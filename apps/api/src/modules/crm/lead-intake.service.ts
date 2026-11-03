@@ -1,6 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { PhoneMatch } from '@oneohm/api-contracts';
-import { customers, type DatabaseExecutor, leadActivities, leads, notify } from '@oneohm/database';
+import {
+  customers,
+  type DatabaseExecutor,
+  type LeadAttribution,
+  leadActivities,
+  leads,
+  notify,
+} from '@oneohm/database';
 import type { LeadSource } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, notInArray } from 'drizzle-orm';
@@ -20,6 +27,8 @@ export interface IntakeInput {
   readonly notes?: string | null;
   /** The first line on the lead's timeline, e.g. "Sent the website form from /solar". */
   readonly firstNote: string;
+  /** Where the lead came from; written only when a lead is made (first touch wins). */
+  readonly attribution?: LeadAttribution | undefined;
 }
 
 export interface IntakeResult {
@@ -116,6 +125,7 @@ export class LeadIntakeService {
         nextActionOn: today,
         nextActionNote: input.nextActionNote,
         notes: input.notes ?? null,
+        ...input.attribution,
       })
       .returning({ id: leads.id, name: leads.name, createdAt: leads.createdAt });
     if (!lead) throw new Error('Lead insert returned nothing.');

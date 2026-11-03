@@ -8,7 +8,7 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Incoming } from './whatsapp-events';
 
 /** A reply inside WhatsApp's 24-hour window; the worker sends it like any message. */
@@ -216,6 +216,14 @@ export async function conversationForPhone(
   return again;
 }
 
+/** The new context, still carrying where the chat's lead came from (see entry-capture). */
+const keepEntry = (context: Record<string, unknown>) =>
+  context.entry === undefined
+    ? sql`CASE WHEN ${waConversations.context} ? 'entry'
+        THEN ${JSON.stringify(context)}::jsonb || jsonb_build_object('entry', ${waConversations.context}->'entry')
+        ELSE ${JSON.stringify(context)}::jsonb END`
+    : context;
+
 /** Moves the chat to the next step of the assistant, with what that step needs. */
 export async function setState(
   db: DatabaseExecutor,
@@ -225,6 +233,6 @@ export async function setState(
 ): Promise<void> {
   await db
     .update(waConversations)
-    .set({ state, context, updatedAt: new Date() })
+    .set({ state, context: keepEntry(context), updatedAt: new Date() })
     .where(eq(waConversations.id, id));
 }

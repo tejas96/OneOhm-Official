@@ -2,6 +2,8 @@ import type { LeadCampaignRecord } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { uniquePhone } from '../support/sales';
+import { sendInbound } from '../support/whatsapp';
 
 // Part 2, task 4: the owner keeps a list of ad and campaign codes (Settings → Selling).
 // Codes are stored uppercase, a name can change, a code can be turned off, and the same
@@ -68,5 +70,86 @@ describe('Lead attribution', () => {
       'SELECT campaign_code, ad_id, ad_headline, ad_source_url, utm_source, utm_medium, utm_campaign, landing_page FROM leads LIMIT 1',
     );
     if (lead) expect(Object.values(lead).every((value) => value === null)).toBe(true);
+  });
+
+  type Attribution = {
+    source: string;
+    campaign_code: string | null;
+    ad_id: string | null;
+    ad_headline: string | null;
+    ad_source_url: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+    landing_page: string | null;
+  };
+  const leadOf = async (phone: string) =>
+    (
+      await rows<Attribution>(
+        `SELECT source, campaign_code, ad_id, ad_headline, ad_source_url, utm_source, utm_medium,
+                utm_campaign, landing_page FROM leads WHERE phone_e164 = $1`,
+        [phone],
+      )
+    )[0];
+
+  it('website UTM fields land on the lead', async () => {
+    const phone = uniquePhone();
+    const sent = await new Session().raw('POST', '/public/leads', {
+      name: 'Utm Visitor',
+      phone,
+      city: 'Pune',
+      sourcePage: '/rooftop-solar',
+      utmSource: 'google',
+      utmMedium: 'cpc',
+      utmCampaign: 'summer',
+      campaignCode: 'web-1',
+    });
+    expect(sent.status).toBeLessThan(300);
+    expect(await leadOf(phone)).toMatchObject({
+      source: 'website',
+      utm_source: 'google',
+      utm_medium: 'cpc',
+      utm_campaign: 'summer',
+      campaign_code: 'WEB-1',
+      landing_page: '/rooftop-solar',
+    });
+  });
+
+  it('a WhatsApp ad referral then call-back makes a lead with adId, adHeadline and source whatsapp', async () => {
+    const phone = uniquePhone();
+    await sendInbound(phone, {
+      text: 'Hi',
+      referral: { source_id: 'ad-555', source_url: 'https://fb.me/x', headline: 'Solar offer' },
+    });
+    await sendInbound(phone, { buttonPayload: 'callback' });
+    expect(await leadOf(phone)).toMatchObject({
+      source: 'whatsapp',
+      ad_id: 'ad-555',
+      ad_headline: 'Solar offer',
+      ad_source_url: 'https://fb.me/x',
+      campaign_code: null,
+    });
+  });
+
+  it('Hi OneOhm CODE then call-back stores campaignCode; a second code while the lead is open does not overwrite', async () => {
+    const phone = uniquePhone();
+    await sendInbound(phone, { text: 'Hi OneOhm diwali-acc' });
+    const shown = await rows<{ n: string }>(
+      `SELECT count(*) AS n FROM outbox WHERE recipient = $1 AND template = 'session:buttons'`,
+      [phone],
+    );
+    expect(Number(shown[0]?.n)).toBe(1);
+    await sendInbound(phone, { buttonPayload: 'callback' });
+    expect((await leadOf(phone))?.campaign_code).toBe('DIWALI-ACC');
+    await sendInbound(phone, { text: 'Hi OneOhm OTHER-9' });
+    await sendInbound(phone, { buttonPayload: 'callback' });
+    expect((await leadOf(phone))?.campaign_code).toBe('DIWALI-ACC');
+  });
+
+  it('an unknown code is kept as typed', async () => {
+    const phone = uniquePhone();
+    await sendInbound(phone, { text: 'hello oneohm zz-unknown' });
+    await sendInbound(phone, { buttonPayload: 'callback' });
+    expect((await leadOf(phone))?.campaign_code).toBe('ZZ-UNKNOWN');
   });
 });

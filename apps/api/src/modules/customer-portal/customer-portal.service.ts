@@ -3,6 +3,7 @@ import type { CustomerHome, Referral, ServiceRequest } from '@oneohm/api-contrac
 import {
   customerFeedback,
   customers,
+  type LeadAttribution,
   notify,
   notifyHolders,
   openServiceRequest,
@@ -86,7 +87,13 @@ export class CustomerPortalService {
   /** A friend the customer referred becomes a referral lead with an owner by rule (PRD 5.6). */
   async refer(
     customerId: string,
-    input: { name: string; phone: string; city?: string | undefined; note?: string | undefined },
+    input: {
+      name: string;
+      phone: string;
+      city?: string | undefined;
+      note?: string | undefined;
+      attribution?: LeadAttribution | undefined;
+    },
   ): Promise<Referral> {
     const open = await this.intake.openLeadByPhone(this.db, input.phone);
     if (open) throw conflict('We are already in touch with this number. Thank you!', 'duplicate');
@@ -104,6 +111,7 @@ export class CustomerPortalService {
       nextActionNote: `Call: referred by ${by}`,
       notes: input.note ?? null,
       firstNote: `Referred by ${by}${input.note ? `: ${input.note}` : '.'}`,
+      attribution: input.attribution,
     });
     return {
       id: lead.leadId,
@@ -120,7 +128,7 @@ export class CustomerPortalService {
    */
   async referByCode(
     code: string,
-    friend: { name: string; phone: string },
+    friend: { name: string; phone: string; attribution?: LeadAttribution | undefined },
   ): Promise<{ referrer: string } | null> {
     const owner = await resolveReferralCode(this.db, code);
     if (!owner || owner.phone === friend.phone) return null;

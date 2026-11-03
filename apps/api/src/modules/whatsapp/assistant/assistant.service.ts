@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { brandName, customers, waConversations, waMessages } from '@oneohm/database';
-import { asksForPerson, findReferralCode, saysHello } from '@oneohm/domain';
+import { asksForPerson, findCampaignCode, findReferralCode, saysHello } from '@oneohm/domain';
 import { and, desc, eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
@@ -8,6 +8,7 @@ import { CustomerPortalService } from '../../customer-portal/customer-portal.ser
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { AnswersService } from './answers.service';
+import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
@@ -36,6 +37,10 @@ function menuChoice(word: string): MenuChoice | undefined {
   return ALL_MENU_ROWS.find((row) => row.id === word || row.title.toLowerCase() === word)?.id;
 }
 
+/** A hello, or a new number's ad opener such as "Hi OneOhm DIWALI26": both show the first menu. */
+const opensChat = (chat: Conversation, text: string) =>
+  saysHello(text) || (!chat.customerId && findCampaignCode(text) !== null);
+
 const DAY_MS = 24 * 3600 * 1000;
 
 /**
@@ -58,7 +63,8 @@ export class AssistantService {
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
-  async handle(chat: Conversation, incoming: Incoming): Promise<void> {
+  async handle(seen: Conversation, incoming: Incoming): Promise<void> {
+    const chat = await captureEntry(this.db, seen, incoming);
     // A quote button works even while a person has the chat: accepting is the customer's act.
     const tap = readQuoteTap(incoming.choiceId);
     return inLanguage(await this.languageOf(chat), () =>
@@ -68,7 +74,7 @@ export class AssistantService {
 
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
     const word = (incoming.choiceId ?? incoming.text).trim().toLowerCase();
-    if (GREETINGS.has(word) || saysHello(incoming.text)) return this.restart(chat);
+    if (GREETINGS.has(word) || opensChat(chat, incoming.text)) return this.restart(chat);
     if (chat.state === 'human') return;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text)) return this.toTeam(chat);

@@ -21,6 +21,11 @@ export const websiteLeadInputSchema = z.object({
   message: z.string().trim().max(1000).nullable().optional(),
   /** The page the form was on, e.g. /rooftop-solar. */
   sourcePage: z.string().trim().max(300).nullable().optional(),
+  /** Where the visitor came from, as the website read it from the address (each optional). */
+  utmSource: z.string().trim().max(100).nullable().optional(),
+  utmMedium: z.string().trim().max(100).nullable().optional(),
+  utmCampaign: z.string().trim().max(100).nullable().optional(),
+  campaignCode: z.string().trim().max(100).nullable().optional(),
   /** Hidden from people; a filled value means a bot, and nothing is saved. */
   website: z.string().max(200).optional(),
 });

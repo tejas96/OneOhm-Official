@@ -11,7 +11,13 @@ export const WHATSAPP_SECRET = 'oneohm-acceptance-whatsapp-secret';
  */
 export async function sendInbound(
   from: string,
-  message: { text?: string; buttonPayload?: string; id?: string },
+  message: {
+    text?: string;
+    buttonPayload?: string;
+    id?: string;
+    /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
+    referral?: Record<string, string>;
+  },
 ): Promise<void> {
   const wa = from.replace(/^\+/, '');
   const base = {
@@ -19,10 +25,11 @@ export async function sendInbound(
     id: message.id ?? `wamid.acceptance-${randomUUID()}`,
     timestamp: String(Math.floor(Date.now() / 1000)),
   };
-  const sent =
+  const sent: Record<string, unknown> =
     message.buttonPayload !== undefined
       ? { ...base, type: 'button', button: { payload: message.buttonPayload, text: 'Tap' } }
       : { ...base, type: 'text', text: { body: message.text ?? '' } };
+  if (message.referral) sent.referral = message.referral;
   const raw = JSON.stringify({
     object: 'whatsapp_business_account',
     entry: [

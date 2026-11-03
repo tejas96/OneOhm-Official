@@ -5,6 +5,7 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type ChatReply, type Conversation, queueReply } from '../chat-store';
+import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
 import { WORDS } from './words';
 
@@ -41,8 +42,10 @@ export class StrangerFlowService {
       const saved = await this.portal.referByCode(code, {
         name: chat.profileName?.trim() || 'WhatsApp contact',
         phone: chat.phone,
+        attribution: savedEntry(chat),
       });
       if (!saved) return this.answer(chat, word);
+      await clearEntry(this.db, chat);
       const welcome = WORDS.referredWelcome(saved.referrer, await brandName(this.db));
       return this.say(chat, { kind: 'text', body: welcome });
     } catch (error) {
@@ -63,7 +66,9 @@ export class StrangerFlowService {
       source: 'whatsapp',
       nextActionNote: 'Call back: asked on WhatsApp',
       firstNote: 'Asked for a call back on WhatsApp.',
+      attribution: savedEntry(chat),
     });
+    await clearEntry(this.db, chat);
     await this.people.toPerson(chat);
     return this.say(chat, { kind: 'text', body: WORDS.callbackNoted });
   }

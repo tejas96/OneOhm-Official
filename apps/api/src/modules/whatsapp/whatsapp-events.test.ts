@@ -13,6 +13,34 @@ describe('WhatsApp webhook', () => {
     expect(verifyMetaSignature(raw, 'abc', 's3cret')).toBe(false);
   });
 
+  it('reads the ad behind a click-to-WhatsApp message, and null without one', () => {
+    const { incoming } = readWebhook(
+      post({
+        messages: [
+          {
+            from: '919000000101',
+            id: 'w1',
+            type: 'text',
+            text: { body: 'Hi' },
+            referral: {
+              source_id: 'ad-77',
+              source_url: 'https://fb.me/abc',
+              headline: 'Solar for homes',
+              source_type: 'ad',
+            },
+          },
+          { from: '919000000101', id: 'w2', type: 'text', text: { body: 'Hi' } },
+        ],
+      }),
+    );
+    expect(incoming[0]?.referral).toEqual({
+      sourceId: 'ad-77',
+      sourceUrl: 'https://fb.me/abc',
+      headline: 'Solar for homes',
+    });
+    expect(incoming[1]?.referral).toBeNull();
+  });
+
   it('reads text and list taps with the sender name', () => {
     const { incoming } = readWebhook(
       post({
