@@ -30,9 +30,6 @@ describe('Project team change', () => {
   });
   afterAll(closeDb);
 
-  // Needs ProjectTeamService.update to write terms (Task 8).
-  it.todo('records a manager term at creation and on each change');
-
   it('records a manager term at creation', async () => {
     const sale = await sellProject(admin, { name: 'Term At Creation (test)' });
     expect((await terms(sale.project.id)).map((row) => [row.user_id, row.open])).toEqual([

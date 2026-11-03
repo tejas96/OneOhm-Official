@@ -4,8 +4,7 @@ import {
   contractorMembers,
   contractors,
   holdersOf,
-  notify,
-  projectActivities,
+  openManagerTerm,
   projects,
   projectTeamMembers,
   roles,
@@ -22,7 +21,8 @@ import { surveyTaskOf } from '../reports/survey-report.data';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { surveyApproved } from './budget-check.service';
 import { checkTeam, projectTeamOf } from './project-team';
-import { checkHandOver, handOverTasks } from './project-team-handover';
+import { checkHandOver, handOverTasks, refreshOutsideTeam } from './project-team-handover';
+import { tellTeamChange } from './project-team-notices';
 import { assertTeamEditable, checkManagerCandidate } from './project-team-rules';
 
 type ProjectRow = typeof projects.$inferSelect;
@@ -94,94 +94,86 @@ export class ProjectTeamService {
     };
   }
 
-  /** A new manager (told, PRD 3.6), named team or target finish; each change audited. */
+  /**
+   * A new manager (PRD 3.6), named team or target finish. Every part that changed is told
+   * (timeline, people, customer) and audited with what it was before.
+   */
   async update(actor: Actor, projectId: string, input: ProjectUpdate): Promise<void> {
     const [project] = await this.db.select().from(projects).where(eq(projects.id, projectId));
     if (!project) throw notFound('That project');
     assertTeamEditable(project);
-    if (input.managerUserId !== undefined && input.managerUserId !== project.managerUserId)
+    const managerChanged =
+      input.managerUserId !== undefined && input.managerUserId !== project.managerUserId;
+    if (managerChanged && input.managerUserId)
       await checkManagerCandidate(this.db, input.managerUserId);
-    let removed: string[] = [];
-    if (input.teamUserIds) {
-      const current = await this.db
+    const before = (
+      await this.db
         .select({ id: projectTeamMembers.userId })
         .from(projectTeamMembers)
-        .where(eq(projectTeamMembers.projectId, projectId));
-      await checkTeam(
-        this.db,
-        input.teamUserIds,
-        current.map((member) => member.id),
-      );
-      const staying = new Set(input.teamUserIds);
-      removed = current.map((member) => member.id).filter((id) => !staying.has(id));
-    }
+        .where(eq(projectTeamMembers.projectId, projectId))
+    ).map((member) => member.id);
+    const team = input.teamUserIds ? [...new Set(input.teamUserIds)] : before;
+    if (input.teamUserIds) await checkTeam(this.db, input.teamUserIds, before);
+    const removed = before.filter((id) => !team.includes(id));
+    const added = team.filter((id) => !before.includes(id));
     await checkHandOver(this.db, projectId, removed, input.handOver);
     if (input.targetFinishDate && input.targetFinishDate < project.startDate)
       throw invalid('The target finish comes after the start.', {
         targetFinishDate: 'Pick a date on or after the start date.',
       });
+    const manager = managerChanged ? (input.managerUserId ?? null) : project.managerUserId;
+    const target =
+      input.targetFinishDate !== undefined ? input.targetFinishDate : project.targetFinishDate;
+    const changes = {
+      ...(managerChanged ? { managerUserId: manager } : {}),
+      ...(input.targetFinishDate !== undefined ? { targetFinishDate: target } : {}),
+    };
     await this.db.transaction(async (tx) => {
-      const managerChanged =
-        input.managerUserId !== undefined && input.managerUserId !== project.managerUserId;
-      const saved = await tx
-        .update(projects)
-        .set({
-          ...(managerChanged ? { managerUserId: input.managerUserId } : {}),
-          ...(input.targetFinishDate !== undefined
-            ? { targetFinishDate: input.targetFinishDate }
-            : {}),
-          version: sql`${projects.version} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(projects.id, projectId), eq(projects.version, input.version)))
-        .returning({ id: projects.id });
-      if (saved.length === 0)
-        throw conflict('Someone else changed this project. Reload and try again.', 'stale');
-      if (input.teamUserIds) await replaceTeam(tx, projectId, input.teamUserIds);
+      // The version-checked update comes first: it locks the project row for the rest.
+      await saveProject(tx, projectId, input.version, changes);
+      if (managerChanged) await openManagerTerm(tx, projectId, manager, new Date());
+      if (input.teamUserIds) await replaceTeam(tx, projectId, team);
       await handOverTasks(tx, actor, projectId, input.handOver ?? []);
-      if (managerChanged && input.managerUserId) {
-        await this.tellNewManager(tx, project, input.managerUserId, actor);
-        // The customer's WhatsApp chat follows the new manager.
-        await moveCustomerChats(tx, project.customerId, input.managerUserId);
-      }
+      if (input.teamUserIds || input.handOver?.length)
+        await refreshOutsideTeam(tx, projectId, team);
+      // The customer's WhatsApp chat follows the manager of their newest live project.
+      if (managerChanged && manager)
+        await moveCustomerChats(tx, project.customerId, manager, projectId);
+      await tellTeamChange(tx, actor, project, {
+        added,
+        removed,
+        oldManager: project.managerUserId,
+        newManager: manager,
+        oldTarget: project.targetFinishDate,
+        newTarget: target,
+      });
       await recordAudit(tx, actor.userId, 'project.team_changed', 'project', projectId, {
-        managerUserId: managerChanged ? input.managerUserId : undefined,
-        previousManagerUserId: managerChanged ? project.managerUserId : undefined,
+        ...(managerChanged
+          ? { managerUserId: manager, previousManagerUserId: project.managerUserId }
+          : {}),
         teamUserIds: input.teamUserIds,
+        previousTeamUserIds: before,
         targetFinishDate: input.targetFinishDate,
+        previousTargetFinishDate: project.targetFinishDate,
       });
     });
   }
+}
 
-  private async tellNewManager(
-    tx: Transaction,
-    project: ProjectRow,
-    managerUserId: string,
-    actor: Actor,
-  ): Promise<void> {
-    const [manager] = await tx
-      .select({ name: users.fullName })
-      .from(users)
-      .where(eq(users.id, managerUserId));
-    await tx.insert(projectActivities).values({
-      projectId: project.id,
-      kind: 'manager_changed',
-      message: `${manager?.name ?? 'A new manager'} now manages this project.`,
-      userId: actor.userId,
-    });
-    if (managerUserId === actor.userId) return;
-    await notify(
-      tx,
-      { userId: managerUserId },
-      {
-        kind: 'project_manager',
-        title: `You now manage ${project.code}`,
-        body: `${actor.fullName} made you the manager of ${project.name}.`,
-        subject: { type: 'project', id: project.id, projectId: project.id },
-        dedupeKey: `project_manager:${project.id}:${managerUserId}:${Date.now()}`,
-      },
-    );
-  }
+/** Saves the project's own fields when nobody saved it since `version` was read. */
+async function saveProject(
+  tx: Transaction,
+  projectId: string,
+  version: number,
+  changes: Partial<Pick<ProjectRow, 'managerUserId' | 'targetFinishDate'>>,
+): Promise<void> {
+  const saved = await tx
+    .update(projects)
+    .set({ ...changes, version: sql`${projects.version} + 1`, updatedAt: new Date() })
+    .where(and(eq(projects.id, projectId), eq(projects.version, version)))
+    .returning({ id: projects.id });
+  if (saved.length === 0)
+    throw conflict('Someone else changed this project. Reload and try again.', 'stale');
 }
 
 async function replaceTeam(

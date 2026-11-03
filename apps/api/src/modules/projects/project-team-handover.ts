@@ -8,6 +8,7 @@ import {
   userRoles,
   users,
 } from '@oneohm/database';
+import { outsideTeamFor } from '@oneohm/domain';
 import { and, eq, inArray, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -108,4 +109,34 @@ export async function handOverTasks(
   }
   if (moved > 0) await syncWorkOrders(tx, projectId, actor.userId);
   return moved;
+}
+
+/**
+ * After the team or its tasks' people changed: each open task is flagged when its person
+ * is staff outside the named team (crew work is never "outside"), and unflagged otherwise.
+ */
+export async function refreshOutsideTeam(
+  tx: Transaction,
+  projectId: string,
+  team: readonly string[],
+): Promise<void> {
+  const crew = await tx.select({ id: contractorMembers.userId }).from(contractorMembers);
+  const crewIds = new Set(crew.map((member) => member.id));
+  const open = await tx
+    .select({
+      id: projectTasks.id,
+      assigneeUserId: projectTasks.assigneeUserId,
+      proposedUserId: projectTasks.proposedUserId,
+      outsideTeam: projectTasks.outsideTeam,
+    })
+    .from(projectTasks)
+    .where(and(eq(projectTasks.projectId, projectId), ne(projectTasks.status, 'completed')));
+  for (const task of open) {
+    const outside = outsideTeamFor(task.assigneeUserId ?? task.proposedUserId, team, crewIds);
+    if (outside !== task.outsideTeam)
+      await tx
+        .update(projectTasks)
+        .set({ outsideTeam: outside })
+        .where(eq(projectTasks.id, task.id));
+  }
 }
