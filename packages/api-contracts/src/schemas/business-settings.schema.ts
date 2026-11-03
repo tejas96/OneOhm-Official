@@ -4,7 +4,10 @@ import {
   JOB_NAMES,
   JOB_RUN_STATUSES,
   LEAD_ASSIGNMENT_STRATEGIES,
+  MAX_BILL_BANDS,
   MAX_CITIES_PER_OWNER,
+  MAX_ROW_TITLE,
+  MAX_SERVICE_CITIES,
   PROJECT_VARIANTS,
 } from '@oneohm/domain';
 import { z } from 'zod';
@@ -44,6 +47,30 @@ export const leadAssignmentRulesSchema = z.object({
   ),
 });
 export type LeadAssignmentRulesRecord = z.infer<typeof leadAssignmentRulesSchema>;
+
+/** How the WhatsApp onboarding bot greets a stranger and prices an instant estimate. */
+export const onboardingSettingsSchema = z.object({
+  enabled: z.boolean(),
+  serviceCities: z.array(z.string().max(80)).max(MAX_SERVICE_CITIES + 8),
+  billBands: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        label: z.string().max(MAX_ROW_TITLE),
+        targetWp: z.number().int().positive().nullable(),
+        maxRupees: z.number().positive().nullable().optional(),
+      }),
+    )
+    .max(MAX_BILL_BANDS),
+  tariffPaisePerUnit: z.number().positive(),
+  unitsPerKwMonth: z.number().positive(),
+  nudgeAfterHours: z.number().min(0),
+  panelProductIds: z.object({
+    individual: idSchema.optional(),
+    commercial: idSchema.optional(),
+  }),
+});
+export type OnboardingSettingsRecord = z.infer<typeof onboardingSettingsSchema>;
 
 /** Money approval limits (PRD 7.2, 7.3). Amounts in paise. */
 export const approvalPolicySchema = z.object({

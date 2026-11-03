@@ -8,6 +8,7 @@
       "company": "Company",
       "leadSteps": "Lead stages",
       "leadCampaigns": "Ad and campaign codes",
+      "whatsappOnboarding": "WhatsApp onboarding",
       "products": "Products",
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
@@ -1311,6 +1312,30 @@
         "incentive_sweep": "{count, plural, one {1 reward earned} other {# rewards earned}}",
         "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}"
       }
+    },
+    "onboarding": {
+      "title": "WhatsApp onboarding",
+      "loading": "Loading the onboarding settings",
+      "help": "The bot never shows a price it cannot work out; those chats go to sales.",
+      "enabled": "Onboard new WhatsApp numbers with a short guided chat",
+      "enabledHint": "When this is off, people we do not know get the call-back buttons. Chats already started finish as usual.",
+      "cities": "Service cities",
+      "citiesHint": "Shown as a list in the chat, up to 8, each up to 24 letters. Leave empty to ask for the city in words.",
+      "citiesPlaceholder": "Pune, Satara, Sangli",
+      "bands": "Monthly bill choices",
+      "bandsHint": "What people pick in the chat. Leave the size empty when our expert should price it.",
+      "bandLabel": "Choice shown",
+      "bandSize": "System size (kW)",
+      "bandExpert": "Our expert prices it",
+      "tariff": "Electricity price per unit (₹)",
+      "unitsPerKw": "Units per kW per month",
+      "nudge": "Nudge after (hours, 0 = off)",
+      "nudgeHint": "One reminder to a person who stops answering.",
+      "panels": "Panel to price with (optional)",
+      "panelsHint": "Leave empty to use the panel we suggest for the site.",
+      "home": "Home",
+      "business": "Shop or business",
+      "useSuggested": "Use the suggested panel"
     },
     "loading": "Loading this section"
   }

@@ -18,6 +18,7 @@ import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
 import { LeadCampaignsPanel } from './lead-campaigns/lead-campaigns-panel';
 import { LeadStepsPanel } from './lead-steps/lead-steps-panel';
+import { OnboardingPanel } from './onboarding/onboarding-panel';
 import { PaymentPlansPanel } from './payment-plans/payment-plans-panel';
 import { ProductsPanel } from './products/products-panel';
 import { RatesPanel } from './rates/rates-panel';
@@ -44,6 +45,7 @@ const TABS = [
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
   { value: 'referrals', requires: 'settings.manage', Panel: ReferralsPanel },
   { value: 'leadCampaigns', requires: 'settings.manage', Panel: LeadCampaignsPanel },
+  { value: 'whatsappOnboarding', requires: 'settings.manage', Panel: OnboardingPanel },
   { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
   { value: 'rewards', requires: 'settings.manage', Panel: RewardsPanel },
@@ -80,6 +82,7 @@ const GROUPS: readonly NavGroup<TabValue>[] = [
       'discoms',
       'referrals',
       'leadCampaigns',
+      'whatsappOnboarding',
     ],
   },
   { key: 'operations', items: ['tasks', 'documents', 'messages'] },

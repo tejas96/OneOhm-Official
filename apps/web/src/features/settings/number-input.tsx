@@ -3,15 +3,20 @@
 import { Input } from '@oneohm/design-system/web';
 import { type ComponentPropsWithRef, useEffect, useState } from 'react';
 
-type Unit = 'paise' | 'basisPoints' | 'whole';
+type Unit = 'paise' | 'basisPoints' | 'watts' | 'whole';
 
 /** Stored value → what the person types: paise as rupees, basis points as percent. */
-const SCALE: Readonly<Record<Unit, number>> = { paise: 100, basisPoints: 100, whole: 1 };
+const SCALE: Readonly<Record<Unit, number>> = {
+  paise: 100,
+  basisPoints: 100,
+  watts: 1000,
+  whole: 1,
+};
 
 function toText(value: number | null, unit: Unit): string {
   if (value === null) return '';
   const shown = value / SCALE[unit];
-  return Number.isInteger(shown) ? String(shown) : shown.toFixed(2).replace(/0$/, '');
+  return Number.isInteger(shown) ? String(shown) : shown.toFixed(3).replace(/0+$/, '');
 }
 
 function fromText(text: string, unit: Unit): number | null | undefined {
@@ -26,7 +31,7 @@ interface NumberInputProps
   extends Omit<ComponentPropsWithRef<'input'>, 'value' | 'onChange' | 'type'> {
   readonly value: number | null;
   readonly onValueChange: (value: number | null) => void;
-  /** paise (shown as ₹), basisPoints (shown as %), or whole numbers. */
+  /** paise (shown as ₹), basisPoints (shown as %), watts (shown as kW), or whole numbers. */
   readonly unit: Unit;
 }
 

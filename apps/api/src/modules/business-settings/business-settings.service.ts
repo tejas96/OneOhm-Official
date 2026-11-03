@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ApprovalPolicyView, LeadAssignmentRulesRecord } from '@oneohm/api-contracts';
+import type {
+  ApprovalPolicyView,
+  LeadAssignmentRulesRecord,
+  OnboardingSettingsRecord,
+} from '@oneohm/api-contracts';
 import {
   type BusinessSettingKey,
   type BusinessSettingsMap,
@@ -23,6 +27,7 @@ import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { CatalogService } from '../catalog/catalog.service';
 import { assertCanOwnLeads } from '../crm/lead-owner';
 
 const CHECKS: {
@@ -65,6 +70,7 @@ export class BusinessSettingsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
+    private readonly catalog: CatalogService,
   ) {}
 
   get<K extends BusinessSettingKey>(key: K): Promise<BusinessSettingsMap[K]> {
@@ -112,6 +118,48 @@ export class BusinessSettingsService {
     return copyLeadRules(
       await this.save(actor, 'lead_assignment', { strategy: rules.strategy, cityOwners }),
     );
+  }
+
+  /** The WhatsApp onboarding settings as the screen shows them. */
+  async onboarding(): Promise<OnboardingSettingsRecord> {
+    const saved = await this.get('onboarding');
+    return {
+      ...saved,
+      serviceCities: [...saved.serviceCities],
+      billBands: saved.billBands.map((band) => ({ ...band })),
+      panelProductIds: { ...saved.panelProductIds },
+    };
+  }
+
+  /**
+   * Saves the onboarding settings. City names are trimmed with blanks and repeats
+   * dropped, and a panel override must be an active panel from the catalog.
+   */
+  async saveOnboarding(
+    actor: Actor,
+    settings: OnboardingSettingsRecord,
+  ): Promise<OnboardingSettingsRecord> {
+    const serviceCities = [...new Set(settings.serviceCities.map((c) => c.trim()).filter(Boolean))];
+    const panels = new Set((await this.catalog.products('panel')).map((panel) => panel.id));
+    const errors: SettingErrors = {};
+    const panelProductIds: { individual?: string; commercial?: string } = {};
+    for (const type of ['individual', 'commercial'] as const) {
+      const id = settings.panelProductIds[type];
+      if (id === undefined) continue;
+      if (!panels.has(id)) errors[`panel_${type}`] = 'Pick an active panel from the catalog.';
+      panelProductIds[type] = id;
+    }
+    if (Object.keys(errors).length > 0) throw invalid('Check the panels you picked.', errors);
+    const billBands = settings.billBands.map(({ maxRupees, ...band }) =>
+      maxRupees === undefined ? band : { ...band, maxRupees },
+    );
+    await this.save(actor, 'onboarding', {
+      ...settings,
+      serviceCities,
+      billBands,
+      panelProductIds,
+    });
+    return this.onboarding();
   }
 
   /** The approval limits with the discount limit from the rate card, on one screen. */
