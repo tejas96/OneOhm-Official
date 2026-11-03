@@ -53,4 +53,40 @@ describe('Razorpay webhooks', () => {
     ).toMatchObject({ kind: 'payout', payout: { providerSettlementId: 'setl_1', utr: 'UTR1' } });
     expect(readEvent({ event: 'payment.authorized' })).toEqual({ kind: 'ignored' });
   });
+
+  it('reads a refund and a dispute as news for finance, keyed to the payment', () => {
+    expect(
+      readEvent({
+        event: 'refund.processed',
+        payload: {
+          refund: { entity: { id: 'rfnd_1', payment_id: 'pay_1', amount: 500_00 } },
+          payment: { entity: { id: 'pay_1' } },
+        },
+      }),
+    ).toEqual({
+      kind: 'refund',
+      refund: { what: 'refund', gatewayPaymentId: 'pay_1', amountPaise: 500_00, key: 'refund' },
+    });
+    expect(
+      readEvent({
+        event: 'payment.refunded',
+        payload: { payment: { entity: { id: 'pay_1', amount_refunded: 500_00 } } },
+      }),
+    ).toMatchObject({ kind: 'refund', refund: { what: 'refund', key: 'refund' } });
+    expect(
+      readEvent({
+        event: 'payment.dispute.lost',
+        payload: { dispute: { entity: { id: 'disp_1', payment_id: 'pay_1', amount: 900_00 } } },
+      }),
+    ).toEqual({
+      kind: 'refund',
+      refund: {
+        what: 'dispute (lost)',
+        gatewayPaymentId: 'pay_1',
+        amountPaise: 900_00,
+        key: 'disp_1:payment.dispute.lost',
+      },
+    });
+    expect(readEvent({ event: 'refund.processed', payload: {} })).toEqual({ kind: 'ignored' });
+  });
 });

@@ -20,7 +20,11 @@ describe('WhatsApp after payment', () => {
       "select payload from outbox where recipient = $1 and template = 'payment_link' order by created_at desc limit 1",
       [customer.phone],
     );
-    const opened = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, { redirect: 'manual' });
+    const opened = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
+      method: 'POST',
+      redirect: 'manual',
+    });
+    expect(opened.status).toBe(303);
     const sandboxId = (opened.headers.get('location') ?? '').split('/').pop() ?? '';
     return { customer, project, milestone, sandboxId };
   };

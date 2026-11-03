@@ -18,10 +18,12 @@ import type { Environment } from '../../config/environment';
 import { applyPayoutEvent } from '../bank-payouts/payout-events';
 import { GatewayPaymentsService } from './gateway-payments.service';
 import { readEvent, verifySignature } from './razorpay-events';
+import { flagRefund } from './refund-alerts';
 
 /**
- * Razorpay calls this when a link is paid, expires or is cancelled, and when money is
- * paid out to the bank. Each event is handled once; anything else is acknowledged.
+ * Razorpay calls this when a link is paid, expires or is cancelled, when money is paid
+ * out to the bank, and on a refund or dispute (finance is told). Each event is handled
+ * once; anything else is acknowledged.
  */
 @Public()
 @Controller('v1/webhooks/razorpay')
@@ -79,6 +81,7 @@ export class RazorpayWebhookController {
     if (news.kind === 'paid') return this.payments.recordLinkPayment(news.payment);
     if (news.kind === 'closed') return this.payments.markLink(news.providerLinkId, news.status);
     if (news.kind === 'payout') return this.payments.recordPayout(news.payout);
+    if (news.kind === 'refund') return flagRefund(this.db, news.refund);
     return 'ignored';
   }
 }

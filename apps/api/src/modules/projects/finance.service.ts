@@ -60,16 +60,19 @@ export class FinanceService {
 
   /**
    * Records the payment, its ledger entry and its side effects in one transaction.
-   * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes.
+   * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes;
+   * `within` runs it all in the caller's transaction (a gateway payment and its link).
    */
   async recordPayment(
     actor: PaymentRecorder,
     projectId: string,
     input: NewPayment,
     alsoInTransaction?: (tx: Transaction, paymentId: string) => Promise<void>,
+    within?: Transaction,
   ): Promise<string> {
     assertNotFuture(input.receivedOn, 'receivedOn');
-    const [milestone] = await this.db
+    const db = within ?? this.db;
+    const [milestone] = await db
       .select()
       .from(paymentMilestones)
       .where(
@@ -80,7 +83,7 @@ export class FinanceService {
       )
       .limit(1);
     if (!milestone) throw notFound('That payment milestone');
-    const [paid] = await this.db
+    const [paid] = await db
       .select({ total: sql<number>`coalesce(sum(${payments.amountPaise}), 0)::bigint` })
       .from(payments)
       .where(eq(payments.milestoneId, milestone.id));
@@ -100,7 +103,7 @@ export class FinanceService {
       });
     }
     checkCollected(input);
-    const id = await this.db.transaction(async (tx) => {
+    const record = async (tx: Transaction) => {
       // Lock the milestone and count again: a webhook and a person recording at the
       // same moment must not overpay it.
       await tx
@@ -200,7 +203,8 @@ export class FinanceService {
       await postGatewayFee(tx, payment.id, actor.userId);
       if (alsoInTransaction) await alsoInTransaction(tx, payment.id);
       return payment.id;
-    });
+    };
+    const id = within ? await record(within) : await this.db.transaction(record);
     if (!input.gatewayPaymentId) await closeOpenLinks(this.db, this.gateway, milestone.id);
     return id;
   }

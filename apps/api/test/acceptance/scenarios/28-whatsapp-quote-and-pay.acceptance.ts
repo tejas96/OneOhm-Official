@@ -186,8 +186,14 @@ describe('WhatsApp quote and pay', () => {
     const page = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
       redirect: 'manual',
     });
-    expect(page.status).toBe(302);
-    expect(page.headers.get('location')).toContain('/v1/pay/sandbox/');
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain('Continue to pay');
+    const go = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
+      method: 'POST',
+      redirect: 'manual',
+    });
+    expect(go.status).toBe(303);
+    expect(go.headers.get('location')).toContain('/v1/pay/sandbox/');
   });
 
   it('the Payments menu sends a Pay now button for each due amount', async () => {

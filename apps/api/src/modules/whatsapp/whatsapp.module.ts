@@ -25,6 +25,7 @@ import { OnboardingFlowService } from './onboarding/onboarding-flow';
 import { OnboardingNudgesController } from './onboarding/onboarding-nudges.controller';
 import { OnboardingNudgesService } from './onboarding/onboarding-nudges.service';
 import { SharedFilesController } from './shared-files.controller';
+import { WebhookHeartbeatService } from './webhook-heartbeat';
 import { WhatsAppController } from './whatsapp.controller';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 
@@ -60,6 +61,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     EstimateService,
     EstimateNextStepsService,
     QuoteActionsService,
+    WebhookHeartbeatService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

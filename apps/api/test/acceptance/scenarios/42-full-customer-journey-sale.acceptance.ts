@@ -140,9 +140,10 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const [link] = await J.outboxOf(phone, 'payment_link');
     payToken = link?.payload.payToken ?? '';
     expect(payToken).toBeTruthy();
-    const page = await fetch(`${API}/pay/due/${payToken}`, { redirect: 'manual' });
-    expect(page.status).toBe(302);
-    sandboxUrl = page.headers.get('location') ?? '';
+    // Opening the link shows the amount; Continue opens the gateway page.
+    expect(await (await fetch(`${API}/pay/due/${payToken}`)).text()).toContain('Continue to pay');
+    const go = await fetch(`${API}/pay/due/${payToken}`, { method: 'POST', redirect: 'manual' });
+    sandboxUrl = go.status === 303 ? (go.headers.get('location') ?? '') : '';
     expect(sandboxUrl).toContain('/v1/pay/sandbox/');
     await t.send({ text: 'payments' });
     const [button] = await J.outboxOf(phone, 'session:cta_url');
