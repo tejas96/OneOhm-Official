@@ -23,9 +23,13 @@ describe('the Documents list (live QA round 2)', () => {
       for (const title of titles)
         expect(title.length, `${language} ${title}`).toBeLessThanOrEqual(ROW_TITLE_LIMIT);
       expect(words.button.length, words.button).toBeLessThanOrEqual(20);
+      // A quote not on a project says when it was sent; a row's description keeps 72.
+      expect(words.quoteSent(true, '30 September 2026').length).toBeLessThanOrEqual(72);
     }
     expect(PAPER_WORDS.receipt('1st instalment')).toBe('Receipt · 1st instalment');
     expect(PAPER_WORDS.receipt('Last instalment')).toBe('Last instalment receipt');
+    expect(PAPER_WORDS.quoteSent(false, '3 November 2026')).toBe('Sent 3 November 2026');
+    expect(PAPER_WORDS.quoteSent(true, '3 November 2026')).toBe('Revised, sent 3 November 2026');
     expect(await inLanguage('mr', async () => PAPER_WORDS.receipt('पहिला हप्ता'))).toBe(
       'पावती · पहिला हप्ता',
     );

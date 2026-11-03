@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { API, Session } from '../support/http';
-import { milestoneOf, signedWebhook } from '../support/money';
+import { milestoneOf, recordPayment, signedWebhook } from '../support/money';
 import { replies, type SentReply } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
@@ -115,6 +115,10 @@ describe('Live QA round 2', () => {
       method: 'POST',
     });
     const [payment] = await paymentsOf(sale.advance.id);
+    // A 2nd-instalment receipt too, recorded by staff (its place comes from the plan).
+    const second = milestoneOf(sale.project, 'material_dispatch');
+    await rows("update payment_milestones set status = 'due' where id = $1", [second.id]);
+    await recordPayment(admin, sale.project.id, second, 'cash');
 
     await sendInbound(sale.customer.phone, { text: 'documents' });
 
@@ -123,6 +127,7 @@ describe('Live QA round 2', () => {
     const titles = list?.rows?.map((row) => row.title) ?? [];
     expect(titles).toContain('Your quotation');
     expect(titles).toContain('Receipt · 1st instalment');
+    expect(titles).toContain('Receipt · 2nd instalment');
     expect(titles.at(-1)).toBe('Back to menu');
     expect(list?.rows?.length).toBeLessThanOrEqual(10);
     for (const title of titles) {
@@ -164,6 +169,37 @@ describe('Live QA round 2', () => {
       `${site?.city} · ${Number(((site?.wp ?? 0) / 1000).toFixed(2))} kW`,
     );
     expect(sale.sent?.project).not.toBe(sale.project.code);
+    // A message that already carries the size names only the town (no "3.27 kW (3.27 kWp)").
+    const [started] = await rows<{ payload: Record<string, string> }>(
+      "select payload from outbox where recipient = $1 and template = 'project_started'",
+      [sale.customer.phone],
+    );
+    expect(started?.payload.project).toBe(site?.city);
+    expect(started?.payload.projectCode).toBe(sale.project.code);
+  });
+
+  it('a message shared in person still names its project for the team', async () => {
+    const sale = await soldInChat('In Person Customer (test)');
+    await openLink(sale.payToken);
+    await rows("update customers set contact_channel = 'in_person' where id = $1", [
+      sale.customer.customerId,
+    ]);
+
+    // The link runs out: the fresh Pay now becomes a "share in person" item.
+    const expired = await signedWebhook({
+      event: 'payment_link.expired',
+      payload: {
+        payment_link: { entity: { id: (await linkOf(sale.advance.id))?.provider_link_id } },
+      },
+    });
+
+    expect(expired.status).toBe(200);
+    const items = await rows<{ project_id: string | null }>(
+      "select project_id from customer_handovers where customer_id = $1 and template = 'payment_link'",
+      [sale.customer.customerId],
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0]?.project_id).toBe(sale.project.id);
   });
 
   it('the pay page says how to pay above the UPI limit, and only then', async () => {

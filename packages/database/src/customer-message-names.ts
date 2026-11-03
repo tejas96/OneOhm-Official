@@ -62,7 +62,8 @@ export function projectWords(project: { code: string; city: string; capacityWp: 
 
 /**
  * A template's values in the chat's plain words (live QA C9): `project` (the project code
- * every sender puts there) becomes the town and size, and with a `milestoneId` the
+ * every sender puts there) becomes the town and size (the town alone when the message
+ * carries its `capacity`), the code is kept as `projectCode`, and with a `milestoneId` the
  * `milestone` becomes the instalment, with its tag so Marathi and Hindi can say it too.
  */
 export async function plainNames(db: DatabaseExecutor, payload: Payload): Promise<Payload> {
@@ -74,7 +75,14 @@ export async function plainNames(db: DatabaseExecutor, payload: Payload): Promis
       .innerJoin(properties, eq(properties.id, projects.propertyId))
       .where(eq(projects.code, payload.project))
       .limit(1);
-    if (project) named.project = projectWords(project);
+    if (project) {
+      // The code stays for our side: an in-person handover finds the project by it.
+      named.projectCode = project.code;
+      // A message that already says the size ("(3.27 kWp)") names only the town.
+      named.project = payload.capacity
+        ? project.city.trim() || project.code
+        : projectWords(project);
+    }
   }
   if (payload.milestoneId) {
     const instalment = await instalmentOf(db, payload.milestoneId);

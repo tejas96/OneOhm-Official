@@ -28,7 +28,8 @@ describe('Task communication', () => {
   let admin: Session;
   let sale: Sale;
   let templates: Map<string, Template>;
-  // Templates name the project by its town and size, not its code (live QA C9).
+  // Templates name the project by its town, not its code (live QA C9); these messages
+  // carry the size already, so the town alone.
   let projectWords: string;
   const forTask = (rows: OutboxRow[], event: string, taskId: string) =>
     rows.filter((row) => row.dedupe_key === `task_${event}:${taskId}`);
@@ -38,12 +39,11 @@ describe('Task communication', () => {
     const list = await admin.get<Template[]>('/settings/task-templates');
     templates = new Map(list.map((template) => [template.key, template]));
     sale = await sellProject(admin, { name: 'Message Customer (test)' });
-    const [site] = await rows<{ city: string; wp: number }>(
-      `select pr.city, p.capacity_wp as wp from projects p
-         join properties pr on pr.id = p.property_id where p.id = $1`,
+    const [site] = await rows<{ city: string }>(
+      'select pr.city from projects p join properties pr on pr.id = p.property_id where p.id = $1',
       [sale.project.id],
     );
-    projectWords = `${site?.city} · ${Number(((site?.wp ?? 0) / 1000).toFixed(2))} kW`;
+    projectWords = site?.city ?? '';
   });
   afterAll(closeDb);
 

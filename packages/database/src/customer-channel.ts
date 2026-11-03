@@ -78,7 +78,8 @@ async function handOver(
   customerId: string,
   message: Message,
 ): Promise<boolean> {
-  const code = message.payload.project;
+  // `project` holds the town and size by now (plainNames); the code rides as `projectCode`.
+  const code = message.payload.projectCode ?? message.payload.project;
   const [project] = code
     ? await db.select({ id: projects.id }).from(projects).where(eq(projects.code, code)).limit(1)
     : [];

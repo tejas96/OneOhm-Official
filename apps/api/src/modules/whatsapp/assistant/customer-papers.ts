@@ -6,7 +6,7 @@ import {
   projects,
   quotations,
 } from '@oneohm/database';
-import { formatInr } from '@oneohm/shared';
+import { formatInr, todayIn } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { CustomerDocumentsService } from '../../customer-portal/customer-documents.service';
 import type { CustomerPortalService } from '../../customer-portal/customer-portal.service';
@@ -17,6 +17,8 @@ import { issuedInvoices } from '../shared-invoices';
 import { PAPER_WORDS } from './paper-words';
 import { plainDate } from './plain-date';
 import { PROJECT_WORDS } from './project-words';
+
+const TIME_ZONE = 'Asia/Kolkata';
 
 /** Each kind of paper shows its newest few. */
 const LATEST = 3;
@@ -70,7 +72,19 @@ export async function customerPapers(sources: Sources, customerId: string): Prom
     ...words,
   });
   const { projects: own } = await portal.home(customerId);
-  const projectQuotes = own.map((project) => ({ ...project.quotation, place: project.place }));
+  const ids = own.map((project) => project.quotation.id);
+  const revisions = ids.length
+    ? await db
+        .select({ id: quotations.id, revision: quotations.revision })
+        .from(quotations)
+        .where(inArray(quotations.id, ids))
+    : [];
+  const projectQuotes = own.map((project) => ({
+    ...project.quotation,
+    place: project.place,
+    revision: revisions.find((row) => row.id === project.quotation.id)?.revision ?? 1,
+    sentAt: null,
+  }));
   const quotes = [...projectQuotes, ...(await sentQuotes(db, customerId, projectQuotes))];
   const reports = (await documents.readyReports(customerId)).slice(0, LATEST);
   const papers = (await documents.list(customerId))
@@ -80,8 +94,14 @@ export async function customerPapers(sources: Sources, customerId: string): Prom
     ...quotes.map((quote) =>
       paper('quotation', quote.id, {
         title: PAPER_WORDS.quote,
-        ...(quote.place ? { description: PROJECT_WORDS.projectIn(quote.place) } : {}),
-        filename: customerPdfName(name, 'quote'),
+        // On a project: its town. Not on one yet: when it was sent, and whether revised.
+        description: quote.place
+          ? PROJECT_WORDS.projectIn(quote.place)
+          : PAPER_WORDS.quoteSent(
+              quote.revision > 1,
+              plainDate(todayIn(TIME_ZONE, quote.sentAt ?? new Date())),
+            ),
+        filename: customerPdfName(name, 'quote', quote.revision),
         caption: QUOTE_MONEY_WORDS.caption(quote.number),
       }),
     ),
@@ -157,7 +177,12 @@ async function receipts(db: Database, customerId: string) {
 /** The newest sent or accepted revision of each quotation not already shown with a project. */
 async function sentQuotes(db: Database, customerId: string, shown: readonly { number: string }[]) {
   const rows = await db
-    .select({ id: quotations.id, number: quotations.number })
+    .select({
+      id: quotations.id,
+      number: quotations.number,
+      revision: quotations.revision,
+      sentAt: quotations.sentAt,
+    })
     .from(quotations)
     .where(
       and(eq(quotations.customerId, customerId), inArray(quotations.status, ['sent', 'accepted'])),
