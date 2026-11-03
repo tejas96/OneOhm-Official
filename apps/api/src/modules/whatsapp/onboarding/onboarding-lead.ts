@@ -92,6 +92,34 @@ const WRITES: Partial<Record<OnboardStep, (a: OnboardAnswers, s: OnboardingSetti
 };
 
 /**
+ * Makes the lead for an onboarding chat that has none (owner by rule, follow-up today, the
+ * saved ad entry), in the caller's transaction. The caller forgets the chat's saved entry.
+ * Used at the city answer, and by a hand-over or a stalled chat before the city.
+ */
+export async function makeLead(
+  tx: DatabaseExecutor,
+  intake: LeadIntakeService,
+  chat: Conversation,
+  answers: OnboardAnswers,
+  fallbackName: string,
+  nextActionNote: string,
+): Promise<string> {
+  const made = await intake.receive(
+    {
+      name: answers.name ?? (chat.profileName?.trim() || fallbackName),
+      phone: chat.phone,
+      city: answers.city ?? NO_CITY,
+      source: 'whatsapp',
+      attribution: savedEntry(chat),
+      firstNote: 'Started onboarding on WhatsApp',
+      nextActionNote,
+    },
+    tx,
+  );
+  return made.leadId;
+}
+
+/**
  * Writes the answer just given on the lead, in the caller's transaction. The city answer
  * makes the lead (owner by rule, follow-up today, saved ad entry) when there is none.
  * Returns the lead, and whether it was made now (so the chat forgets its entry).
@@ -108,21 +136,16 @@ export async function writeAnswer(
   },
 ): Promise<{ leadId: string | null; created: boolean }> {
   const { chat, lead, step, answers } = input;
-  const name = answers.name ?? (chat.profileName?.trim() || 'WhatsApp contact');
   if (step === 'city' && !lead) {
-    const made = await intake.receive(
-      {
-        name,
-        phone: chat.phone,
-        city: answers.city ?? NO_CITY,
-        source: 'whatsapp',
-        attribution: savedEntry(chat),
-        firstNote: 'Started onboarding on WhatsApp',
-        nextActionNote: 'Finish onboarding',
-      },
+    const leadId = await makeLead(
       tx,
+      intake,
+      chat,
+      answers,
+      'WhatsApp contact',
+      'Finish onboarding',
     );
-    return { leadId: made.leadId, created: true };
+    return { leadId, created: true };
   }
   const write = lead ? WRITES[step]?.(answers, input.settings) : null;
   if (lead && write) await updateLeadFromChat(tx, lead.id, write.change, write.note);

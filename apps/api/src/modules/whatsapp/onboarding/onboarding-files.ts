@@ -128,7 +128,10 @@ export class ChatFilesService {
 
   /** Removes held objects (best effort) once the transaction that dropped them committed. */
   async discard(keys: readonly string[]): Promise<void> {
-    for (const key of keys) await this.storage.remove(key).catch(() => undefined);
+    for (const key of keys)
+      await this.storage
+        .remove(key)
+        .catch((error) => this.log.warn(`Held bill ${key} not removed: ${String(error)}`));
   }
 
   private fileOnLead(tx: DatabaseExecutor, leadId: string, fileName: string, buffer: Buffer) {

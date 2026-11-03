@@ -145,6 +145,16 @@ describe('onboarding questions', () => {
     );
   });
 
+  it('has file replies in every language that fit a WhatsApp text', () => {
+    for (const [language, words] of Object.entries(ONBOARD_LISTS))
+      for (const text of [words.firstDetails, words.billThanks, words.badFile]) {
+        expect(text.length, `${language} file reply`).toBeGreaterThan(0);
+        expect(text.length, `${language} file reply`).toBeLessThanOrEqual(1024);
+      }
+    expect(ONBOARD_LISTS.mr.billThanks).not.toBe(ONBOARD_LISTS.en.billThanks);
+    expect(ONBOARD_LISTS.hi.firstDetails).not.toBe(ONBOARD_LISTS.en.firstDetails);
+  });
+
   it('has the same words in every language', () => {
     for (const words of [ONBOARD_LISTS.mr, ONBOARD_LISTS.hi])
       expect(Object.keys(words).sort()).toEqual(Object.keys(ONBOARD_LISTS.en).sort());

@@ -22,7 +22,7 @@ import { ChatFilesService, type Fetched } from './onboarding-files';
 import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
 import { BACK, speak, type Turn, wantsPerson } from './onboarding-turn';
-import { fileHeldBill, takeChatFile } from './onboarding-turn-files';
+import { ensureLead, fileHeldBill, takeChatFile } from './onboarding-turn-files';
 
 /**
  * The guided WhatsApp onboarding for a new number (Part 3): language, name, city, site,
@@ -148,7 +148,7 @@ export class OnboardingFlowService {
 
   /** A photo or paper: at the photo question it is the answer, elsewhere the question stays. */
   private async takeFile(turn: Turn, step: OnboardStep): Promise<null> {
-    const outcome = await takeChatFile(turn, this.files);
+    const outcome = await takeChatFile(turn, this.files, step);
     if (outcome === 'filed' && step === 'photo') return this.apply(turn, 'photo', 'sent');
     return this.ask(turn, step);
   }
@@ -198,6 +198,7 @@ export class OnboardingFlowService {
   private async toPerson(turn: Turn, step: OnboardStep): Promise<null> {
     turn.misses = 0;
     turn.awaiting = undefined;
+    await ensureLead(turn, { intake: this.intake, files: this.files });
     await this.save(turn, step);
     const summary = summaryOf(turn.answers, turn.settings);
     await this.speak(turn, () => this.people.passToOwner(turn.chat, { summary, db: turn.tx }));
