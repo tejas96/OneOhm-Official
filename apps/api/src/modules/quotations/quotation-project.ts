@@ -1,5 +1,9 @@
 import { customers, type DatabaseExecutor, quotations } from '@oneohm/database';
 import { and, asc, eq, gte, type SQL, sql } from 'drizzle-orm';
+import { clearLeadNextAction } from '../crm/lead-history';
+
+/** The lead owner's next action once a quote is accepted, until its project exists. */
+export const startProjectNote = (number: string) => `Start project for ${number}`;
 
 /**
  * No project was set up from this quotation number yet: no project is on any revision of
@@ -37,4 +41,24 @@ export function acceptedWithoutProject(db: DatabaseExecutor, since?: Date) {
       ),
     )
     .orderBy(asc(quotations.acceptedAt));
+}
+
+/** How many accepted quotes wait for a project, and the oldest of them. */
+export async function acceptedWithoutProjectCount(db: DatabaseExecutor) {
+  const [counted] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(quotations)
+    .where(and(eq(quotations.status, 'accepted'), noProject));
+  const [oldest] = await acceptedWithoutProject(db).limit(1);
+  return { count: counted?.count ?? 0, oldest };
+}
+
+/** In the project's transaction: the owner's "Start project" step is done. */
+export async function projectStarted(
+  db: DatabaseExecutor,
+  quotation: { readonly leadId: string | null; readonly number: string },
+  userId: string,
+): Promise<void> {
+  if (quotation.leadId)
+    await clearLeadNextAction(db, quotation.leadId, userId, startProjectNote(quotation.number));
 }

@@ -11,23 +11,24 @@ import { lastWorkEnd } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, gte, isNotNull, like, lte, notInArray, type SQL, sql } from 'drizzle-orm';
 import { acceptedWithoutProject } from '../quotations/quotation-project';
-import { PROMISED_CALL_NOTE } from './lead-from-chat';
+import { PROMISED_CALL_HISTORY, PROMISED_CALL_NOTE } from './lead-from-chat';
 
 /** The owner hears this many days before a sent quote runs out. */
 export const VALIDITY_WARNING_DAYS = 3;
 /** Older misses are not raised again (a first run on old data stays quiet). */
 const LOOK_BACK_DAYS = 14;
 
-/** No alert with this dedupe key (or this key and a person) went out yet. */
+/** No alert with this dedupe key went out yet (the unique index answers it). */
 const notAlerted = (key: SQL) =>
-  sql`not exists (select 1 from ${notifications} n where n.dedupe_key like ${key} || '%')`;
+  sql`not exists (select 1 from ${notifications} n where n.dedupe_key = ${key})`;
 
 /** The last day whose working hours are over: today after 6:30 pm, else yesterday. */
 const lastEndedDay = (now: Date, zone: string) => todayIn(zone, lastWorkEnd(now, zone));
 
 /**
- * A sent quote with 3 days or less left, still not accepted: one alert to the lead owner
- * (or whoever made it). The customer is not messaged without an approved template.
+ * A sent quote with 3 days or less left, still not accepted and its lead not lost: one
+ * alert to the lead owner (or whoever made it). The customer is not messaged without an
+ * approved template.
  */
 export async function expiringQuotes(db: Database, now: Date, zone: string): Promise<number> {
   const today = todayIn(zone, now);
@@ -45,6 +46,7 @@ export async function expiringQuotes(db: Database, now: Date, zone: string): Pro
     .where(
       and(
         eq(quotations.status, 'sent'),
+        sql`${leads.stage} is distinct from 'lost'`,
         gte(quotations.validUntil, today),
         lte(quotations.validUntil, addDays(today, VALIDITY_WARNING_DAYS)),
         notAlerted(sql`'quote_validity:' || ${quotations.id}`),
@@ -76,7 +78,7 @@ export async function expiringQuotes(db: Database, now: Date, zone: string): Pro
 export async function missedPromisedCalls(db: Database, now: Date, zone: string): Promise<number> {
   const ended = lastEndedDay(now, zone);
   const promisedAt = sql`(select max(p.created_at) from lead_activities p
-    where p.lead_id = ${leads.id} and p.note like 'Asked for a call%')`;
+    where p.lead_id = ${leads.id} and p.note like ${`${PROMISED_CALL_HISTORY}%`})`;
   const due = await db
     .select({ id: leads.id, name: leads.name, owner: leads.ownerUserId, on: leads.nextActionOn })
     .from(leads)
@@ -89,7 +91,7 @@ export async function missedPromisedCalls(db: Database, now: Date, zone: string)
         gte(leads.nextActionOn, addDays(ended, -LOOK_BACK_DAYS)),
         sql`not exists (select 1 from lead_activities c where c.lead_id = ${leads.id}
           and c.kind = 'call' and c.created_at >= coalesce(${promisedAt}, '-infinity'))`,
-        notAlerted(sql`'call_promised:' || ${leads.id} || ':' || ${leads.nextActionOn}`),
+        notAlerted(sql`'call_promised:' || ${leads.id} || ':' || ${leads.nextActionOn}::text`),
       ),
     );
   let told = 0;

@@ -7,6 +7,8 @@ import { logLead } from './lead-history';
  * "tomorrow morning"); the end-of-day check looks for a call logged since.
  */
 export const PROMISED_CALL_NOTE = 'Customer asked for a call after the estimate';
+/** How the promise starts in the lead's history: "Asked for a call today …". */
+export const PROMISED_CALL_HISTORY = 'Asked for a call';
 
 /** What the WhatsApp bot may change on a lead as the customer answers. */
 export interface LeadChatChange {

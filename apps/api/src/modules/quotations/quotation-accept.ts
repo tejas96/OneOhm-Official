@@ -16,7 +16,7 @@ import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { applyAcceptedChange } from '../project-changes/change-accept';
 import { changeAwaiting, closeStaleChanges } from '../project-changes/change-close';
 import { projectAwaiting } from './project-revision';
-import { quoteHasProject } from './quotation-project';
+import { quoteHasProject, startProjectNote } from './quotation-project';
 import { applyAcceptedRevision } from './revision-accept';
 
 /** What the customer's own "Yes, accept" came to. */
@@ -68,7 +68,7 @@ export async function acceptInTx(
   // A new sale: starting its project is the lead owner's job today (a revision has one).
   if (quotation.input.leadId && !(await quoteHasProject(tx, id))) {
     const on = todayIn(environmentOnce().BUSINESS_TIMEZONE);
-    const note = `Start project for ${quotation.number}`;
+    const note = startProjectNote(quotation.number);
     await setLeadNextAction(tx, quotation.input.leadId, actorUserId, { on, note });
   }
   await recordAudit(tx, actorUserId, 'quotation.accepted', 'quotation', id, auditData);

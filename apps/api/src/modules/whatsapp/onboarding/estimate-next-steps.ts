@@ -5,7 +5,11 @@ import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
-import { PROMISED_CALL_NOTE, updateLeadFromChat } from '../../crm/lead-from-chat';
+import {
+  PROMISED_CALL_HISTORY,
+  PROMISED_CALL_NOTE,
+  updateLeadFromChat,
+} from '../../crm/lead-from-chat';
 import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
@@ -84,7 +88,7 @@ export class EstimateNextStepsService {
         tx,
         leadId,
         { nextAction: { on: tomorrow ? addDays(today, 1) : today, note: PROMISED_CALL_NOTE } },
-        again ? null : `Asked for a call ${when} after the estimate`,
+        again ? null : `${PROMISED_CALL_HISTORY} ${when} after the estimate`,
       );
       const owned = await ensureChatOwner(tx, chat);
       await tellChatTeam(tx, owned, {

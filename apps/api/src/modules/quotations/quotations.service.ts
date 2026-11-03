@@ -140,9 +140,10 @@ export class QuotationsService {
         const again = quotation.status === 'sent' ? ' again' : '';
         const note = `Quotation ${quotation.number} sent${again}.`;
         await autoMoveLead(tx, quotation.input.leadId, actor.userId, 'quoted', note);
+        // "Send again" keeps whatever the owner set since; so does a revision (same note).
         const on = addDays(todayIn(this.env.BUSINESS_TIMEZONE), QUOTE_FOLLOW_UP_DAYS);
         const next = { on, note: `Follow up quote ${quotation.number}`, openOnly: true };
-        await setLeadNextAction(tx, quotation.input.leadId, actor.userId, next);
+        if (!again) await setLeadNextAction(tx, quotation.input.leadId, actor.userId, next);
       }
       await recordAudit(tx, actor.userId, 'quotation.sent', 'quotation', id);
     });

@@ -57,6 +57,22 @@ describe('Next actions after a quote is sent or accepted', () => {
     );
   });
 
+  it('"Send again" keeps a sooner next action the owner set after the first send', async () => {
+    const { customer, quotation } = await sentQuote('Send Again Customer (test)');
+    const sooner = { nextActionOn: today(), nextActionNote: 'Call before the visit (test)' };
+    await admin.patch(`/leads/${customer.leadId}`, sooner);
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await nextActionOf(customer.leadId)).toEqual({
+      day: today(),
+      time: null,
+      note: 'Call before the visit (test)',
+    });
+    const followUps = (await historyOf(customer.leadId)).filter((note) =>
+      note.includes('Follow up quote'),
+    );
+    expect(followUps).toHaveLength(1);
+  });
+
   it('a staff accept sets "Start project" today for the lead owner', async () => {
     const { customer, quotation } = await sentQuote('Staff Accept Customer (test)');
     await admin.post(`/quotations/${quotation.id}/accept`);
@@ -86,6 +102,14 @@ describe('Next actions after a quote is sent or accepted', () => {
     );
   });
 
+  it('setting up the project clears "Start project" from the lead', async () => {
+    const sale = await sellProject(admin, { name: 'Started Project Customer (test)' });
+    expect(await nextActionOf(sale.customer.leadId)).toEqual({ day: null, time: null, note: null });
+    expect((await historyOf(sale.customer.leadId)).at(-1)).toBe(
+      `Done: Start project for ${sale.quotation.number}.`,
+    );
+  });
+
   it('the command centre counts accepted quotes without a project', async () => {
     const before = await startProjectsCount();
     const { quotation } = await sentQuote('Count Customer (test)');
@@ -96,13 +120,15 @@ describe('Next actions after a quote is sent or accepted', () => {
     expect(await startProjectsCount()).toBe(before + 1);
   });
 
-  it('a sent quote 3 days from running out alerts its owner once; an accepted one never', async () => {
+  it('a sent quote 3 days from running out alerts its owner once; accepted or lost never', async () => {
     const open = await sentQuote('Expiring Customer (test)');
     const closed = await sentQuote('Expiring Accepted Customer (test)');
     await admin.post(`/quotations/${closed.quotation.id}/accept`);
+    const lost = await sentQuote('Expiring Lost Customer (test)');
+    await rows(`UPDATE leads SET stage = 'lost' WHERE id = $1`, [lost.customer.leadId]);
     const validUntil = addDays(today(), 20);
     await rows('UPDATE quotations SET valid_until = $2 WHERE id = ANY($1::uuid[])', [
-      [open.quotation.id, closed.quotation.id],
+      [open.quotation.id, closed.quotation.id, lost.quotation.id],
       validUntil,
     ]);
     const key = (id: string) => `quote_validity:${id}`;
@@ -118,6 +144,7 @@ describe('Next actions after a quote is sent or accepted', () => {
     await runSalesChecks(admin, ist(addDays(validUntil, -2), '12:00'));
     expect(await alertsKeyed(key(open.quotation.id))).toHaveLength(1);
     expect(await alertsKeyed(key(closed.quotation.id))).toEqual([]);
+    expect(await alertsKeyed(key(lost.quotation.id))).toEqual([]);
   });
 
   it('accepted with no project after 1 working day alerts the project setters once', async () => {

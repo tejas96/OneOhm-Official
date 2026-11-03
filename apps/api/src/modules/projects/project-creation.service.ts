@@ -21,6 +21,7 @@ import { assertVariantOffered } from '../business-settings/project-variant-check
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { raiseProjectNameChange } from '../discom/change-request-raise';
 import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
+import { projectStarted } from '../quotations/quotation-project';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
@@ -234,6 +235,7 @@ export class ProjectCreationService {
         userId: actor.userId,
       });
       await tellTeam(tx, project.id, code, perPerson, actor.userId);
+      await projectStarted(tx, quotation, actor.userId);
       await recordAudit(tx, actor.userId, 'project.created', 'project', project.id, {
         code,
         tasks: generated.length,

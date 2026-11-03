@@ -1,7 +1,7 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
 import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { STAGE_LABEL } from './lead-labels';
 import { loadLeadSteps, movedNote } from './lead-steps-read';
@@ -142,7 +142,7 @@ export async function autoMoveLead(
 /**
  * A next action the system sets for the lead's owner (follow up a sent quote, start the
  * project of an accepted one), with its timeline line. `openOnly` leaves a won or lost
- * lead alone; false when nothing was set.
+ * lead alone, and a lead already on this very step keeps its day; false when nothing was set.
  */
 export async function setLeadNextAction(
   db: DatabaseExecutor,
@@ -161,6 +161,7 @@ export async function setLeadNextAction(
     .where(
       and(
         eq(leads.id, leadId),
+        sql`${leads.nextActionNote} is distinct from ${next.note}`,
         next.openOnly ? notInArray(leads.stage, ['won', 'lost']) : undefined,
       ),
     )
@@ -168,4 +169,19 @@ export async function setLeadNextAction(
   if (!set) return false;
   await logLead(db, leadId, userId, 'follow_up', `Next action on ${next.on}: ${next.note}.`);
   return true;
+}
+
+/** The system's next action is done (the project of an accepted quote exists): cleared. */
+export async function clearLeadNextAction(
+  db: DatabaseExecutor,
+  leadId: string,
+  userId: string | null,
+  note: string,
+): Promise<void> {
+  const [cleared] = await db
+    .update(leads)
+    .set({ nextActionOn: null, nextActionTime: null, nextActionNote: null, updatedAt: new Date() })
+    .where(and(eq(leads.id, leadId), eq(leads.nextActionNote, note)))
+    .returning({ id: leads.id });
+  if (cleared) await logLead(db, leadId, userId, 'follow_up', `Done: ${note}.`);
 }
