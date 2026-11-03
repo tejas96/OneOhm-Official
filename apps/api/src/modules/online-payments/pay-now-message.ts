@@ -25,6 +25,8 @@ export function payNowPayload(env: Environment, details: PayNowDetails): Record<
     customer: details.customerName,
     amount: formatInr(details.owedPaise),
     milestone: details.milestoneLabel,
+    // Said as "2nd instalment (65%)" when queued (plainNames).
+    milestoneId: details.milestoneId,
     project: details.projectCode,
     link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`,
     payToken: token,

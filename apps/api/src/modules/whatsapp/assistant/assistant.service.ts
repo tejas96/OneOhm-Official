@@ -11,6 +11,7 @@ import { type ChatReply, type Conversation, queueReply, setState } from '../chat
 import type { Incoming } from '../whatsapp-events';
 import { AnswersService } from './answers.service';
 import { sayWithTaps, type Tap } from './closing-taps';
+import { isPaperTap } from './customer-papers';
 import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readReferral } from './guess-category';
@@ -19,7 +20,8 @@ import { assistantAnswersTap } from './handled-taps';
 import { assistantLanguage, inLanguage } from './language';
 import { keepPending, MediaIntakeService } from './media-intake';
 import { menuWordChoice } from './menu-words';
-import { answerOptOut } from './opt-out';
+import { answerOptOut, optOutAsked } from './opt-out';
+import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
 import { ALL_MENU_ROWS, MENU_ROWS, type MenuChoice, WORDS } from './words';
@@ -59,15 +61,14 @@ export class AssistantService {
     private readonly strangers: StrangerFlowService,
     private readonly quotes: QuoteActionsService,
     private readonly intake: LeadIntakeService,
+    private readonly papers: PaperRepliesService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
   async handle(seen: Conversation, incoming: Incoming): Promise<void> {
     // STOP and START come first, before onboarding, a person's hold on the chat or a quote tap.
     const asked = await inLanguage(await this.languageOf(seen), () =>
-      incoming.kind === 'text'
-        ? answerOptOut(this.db, seen, incoming.text)
-        : Promise.resolve(false),
+      answerOptOut(this.db, seen, optOutAsked(incoming)),
     );
     if (asked) return;
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
@@ -103,12 +104,13 @@ export class AssistantService {
     if (word.startsWith('rate:'))
       return this.feedback.rate(chat, chat.customerId, Number(word.slice(5)));
     const choice = menuChoice(word);
-    if (!choice) return this.notInMenu(chat);
+    if (!choice) return this.notInMenu(chat, chat.customerId, incoming.choiceId);
     return this.choose(chat, chat.customerId, choice);
   }
 
-  /** Words that are not a menu choice. */
-  private async notInMenu(chat: Conversation) {
+  /** Words that are not a menu choice; a tap on a Documents row sends that paper. */
+  private async notInMenu(chat: Conversation, customerId: string, choiceId: string | null) {
+    if (choiceId && isPaperTap(choiceId)) return this.papers.tapped(chat, customerId, choiceId);
     await this.say(chat, { kind: 'text', body: WORDS.notUnderstood });
     return this.menu(chat);
   }
@@ -143,7 +145,7 @@ export class AssistantService {
         return;
       }
       case 'documents':
-        return answer(await this.answers.documents(customerId), ['menu', 'track', 'talk']);
+        return this.papers.show(chat, customerId);
       case 'requests':
         return answer(await this.answers.requests(customerId), ['menu', 'talk']);
       case 'warranty':

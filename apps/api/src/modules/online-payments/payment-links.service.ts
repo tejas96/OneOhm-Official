@@ -103,6 +103,7 @@ export class PaymentLinksService {
             customer: customer.name,
             amount: formatInr(owed),
             milestone: milestone.label,
+            milestoneId,
             project: project.code,
             link: created.url,
             payToken: signPayToken(paySigningSecret(this.env), {

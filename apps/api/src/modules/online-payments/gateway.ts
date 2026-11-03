@@ -4,6 +4,21 @@ import type { GatewayPayment } from './gateway-payments.service';
 
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
+/** UPI takes at most ₹1,00,000 per payment, so Razorpay hides UPI on a larger link. */
+export const UPI_LIMIT_PAISE = 10_000_000;
+
+/**
+ * A link above the UPI limit can be paid in parts, the first at least ₹1 lakh, so UPI
+ * stays open (live QA round 2); the same link takes the rest. Smaller links: one payment.
+ */
+export function partialPayment(amountPaise: number) {
+  if (amountPaise <= UPI_LIMIT_PAISE) return { accept_partial: false } as const;
+  return {
+    accept_partial: true,
+    first_min_partial_amount: Math.min(UPI_LIMIT_PAISE, amountPaise),
+  } as const;
+}
+
 export interface LinkRequest {
   readonly amountPaise: number;
   readonly referenceId: string;
@@ -72,7 +87,7 @@ function razorpay(env: Environment): PaymentGateway {
       const link = await call('/payment_links', {
         amount: request.amountPaise,
         currency: 'INR',
-        accept_partial: false,
+        ...partialPayment(request.amountPaise),
         reference_id: request.referenceId,
         description: request.description,
         customer: {

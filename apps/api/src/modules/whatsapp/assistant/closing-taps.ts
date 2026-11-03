@@ -14,6 +14,8 @@ const EN_TAPS = {
   talk: 'Talk to us',
   receipt: 'View receipt',
   requests: 'My requests',
+  /** Under the STOP reply: answered like typing START. */
+  start: 'Start again',
   /** Over the taps when the answer itself is too long for a buttons message. */
   whatNext: 'What next?',
 };
@@ -25,6 +27,7 @@ const MR_TAPS: Words<typeof EN_TAPS> = {
   talk: 'आमच्याशी बोला',
   receipt: 'पावती पाहा',
   requests: 'माझ्या विनंत्या',
+  start: 'पुन्हा सुरू करा',
   whatNext: 'पुढे काय?',
 };
 
@@ -35,6 +38,7 @@ const HI_TAPS: Words<typeof EN_TAPS> = {
   talk: 'हमसे बात करें',
   receipt: 'रसीद देखें',
   requests: 'मेरे अनुरोध',
+  start: 'फिर से शुरू करें',
   whatNext: 'आगे क्या?',
 };
 
@@ -52,7 +56,11 @@ const TAP_IDS: Record<Tap, string> = {
   talk: 'human',
   receipt: 'documents',
   requests: 'requests',
+  start: 'start',
 };
+
+/** A tap, or a tap that answers one thing (View receipt for one receipt). */
+export type TapChoice = Tap | { readonly tap: Tap; readonly id: string };
 
 /** WhatsApp keeps a buttons message's body to 1024 characters. */
 const BUTTONS_BODY_LIMIT = 1024;
@@ -61,9 +69,13 @@ const BUTTONS_BODY_LIMIT = 1024;
  * The answer with 1–3 taps under it: one buttons message, or (an answer too long for
  * one) the text and then the taps under "What next?". Call it in the chat's language.
  */
-export function withTaps(body: string, taps: readonly Tap[]): ChatReply[] {
+export function withTaps(body: string, taps: readonly TapChoice[]): ChatReply[] {
   if (taps.length === 0 || taps.length > 3) throw new Error('A message ends with 1 to 3 taps.');
-  const buttons = taps.map((tap) => ({ id: TAP_IDS[tap], title: TAP_WORDS[tap] }));
+  const buttons = taps.map((choice) =>
+    typeof choice === 'string'
+      ? { id: TAP_IDS[choice], title: TAP_WORDS[choice] }
+      : { id: choice.id, title: TAP_WORDS[choice.tap] },
+  );
   if (body.length <= BUTTONS_BODY_LIMIT) return [{ kind: 'buttons', body, buttons }];
   return [
     { kind: 'text', body },
@@ -76,7 +88,7 @@ export async function sayWithTaps(
   db: DatabaseExecutor,
   chat: Pick<Conversation, 'id' | 'phone'>,
   body: string,
-  taps: readonly Tap[],
+  taps: readonly TapChoice[],
   dedupeKey?: string,
 ): Promise<void> {
   for (const [index, reply] of withTaps(body, taps).entries())

@@ -37,8 +37,9 @@ describe('Final payment', () => {
     rows<{ id: string }>('select id from payment_links where milestone_id = $1', [finalId]);
   const linkMessages = () =>
     rows<{ id: string }>(
-      "select id from outbox where recipient = $1 and template = 'payment_link' and payload->>'milestone' = $2",
-      [sale.customer.phone, 'After installation and commissioning'],
+      // The template says "Last instalment (10%)" now (live QA C9): match the milestone by id.
+      "select id from outbox where recipient = $1 and template = 'payment_link' and payload->>'milestoneId' = $2",
+      [sale.customer.phone, finalId],
     );
   /** The final link goes out by itself within a minute (the API checks every 60 s). */
   async function waitForFinalLink(): Promise<void> {

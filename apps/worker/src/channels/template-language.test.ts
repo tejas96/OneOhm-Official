@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approvedMessage, MissingFieldError, templateFor } from './message-templates';
+import { approvedMessage, MissingFieldError, sentInTag, templateFor } from './message-templates';
 
 const names = { metaName: 'project_milestone', language: 'en', metaNameMr: 'project_milestone_mr' };
 
@@ -28,6 +28,18 @@ describe('templateFor', () => {
       language: 'en',
       local: false,
     });
+  });
+});
+
+describe('sentInTag', () => {
+  // Staff read English: the chat history keeps the English words and says what went out.
+  it('tags a template that went in Marathi or Hindi, nothing for English', () => {
+    expect(sentInTag(names, 'mr-IN')).toBe(' · sent in Marathi');
+    expect(sentInTag({ ...names, metaNameHi: 'project_milestone_hi' }, 'hi-IN')).toBe(
+      ' · sent in Hindi',
+    );
+    expect(sentInTag(names, 'hi-IN')).toBe('');
+    expect(sentInTag(names, 'en-IN')).toBe('');
   });
 });
 

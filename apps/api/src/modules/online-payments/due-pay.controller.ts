@@ -8,6 +8,7 @@ import type { Environment } from '../../config/environment';
 import { inLanguage, languageNow } from '../whatsapp/assistant/language';
 import { CustomerPayService } from './customer-pay.service';
 import { PAY_PAGE_WORDS } from './due-pay-words';
+import { UPI_LIMIT_PAISE } from './gateway';
 import { type PayToken, readPayTokenFor } from './pay-token';
 
 const WORDS = PAY_PAGE_WORDS;
@@ -52,10 +53,15 @@ export class DuePayController {
     await this.answer(token, response, async (due) => {
       const owed = await this.pay.preview(due.customerId, due.milestoneId);
       const ask = escapeHtml(WORDS.ask(formatInr(owed.amountPaise), owed.label));
+      // Above the UPI limit the link takes parts: one short line says how (live QA round 2).
+      const parts =
+        owed.amountPaise > UPI_LIMIT_PAISE
+          ? `<p>${escapeHtml(WORDS.upiParts(formatInr(UPI_LIMIT_PAISE)))}</p>`
+          : '';
       response
         .status(200)
         .type('html')
-        .send(payPage(`<p>${ask}</p>`, true));
+        .send(payPage(`<p>${ask}</p>${parts}`, true));
     });
   }
 

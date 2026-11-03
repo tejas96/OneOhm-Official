@@ -1,28 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { payments, projects, properties, quotations } from '@oneohm/database';
-import { formatInr } from '@oneohm/shared';
-import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { projects, properties, quotations } from '@oneohm/database';
+import { eq, inArray } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CustomerAfterSalesService } from '../../after-sales/customer-after-sales.service';
-import { CustomerDocumentsService } from '../../customer-portal/customer-documents.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
-import { type SharedFile, sharedFileUrl } from '../file-links';
-import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
-import { fitMessage } from './fit-message';
 import { payNowReplies } from './pay-buttons';
 import { paymentsText } from './payments-answer';
 import { PROJECT_WORDS } from './project-words';
 import { rewardsText } from './rewards-answer';
-import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
+import { ANSWER_WORDS, WORDS } from './words';
 
 const list = (lines: readonly string[]) => lines.filter(Boolean).join('\n');
-
-/** Each kind of file in the "Documents" answer shows its newest few. */
-const LATEST = 3;
 
 /** The assistant's answers, each built from the customer's live records. */
 @Injectable()
@@ -31,7 +23,6 @@ export class AnswersService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly portal: CustomerPortalService,
-    private readonly papers: CustomerDocumentsService,
     private readonly links: PaymentLinksService,
     private readonly after: CustomerAfterSalesService,
   ) {}
@@ -94,70 +85,6 @@ export class AnswersService {
   /** A "Pay now" message for each due amount; the text answer is sent first. */
   payNow(customerId: string) {
     return payNowReplies(this.db, this.env, customerId);
-  }
-
-  /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */
-  async documents(customerId: string): Promise<string> {
-    const link = (kind: SharedFile['kind'], id: string, key?: string) =>
-      sharedFileUrl(this.env, { kind, id, customerId, ...(key ? { key } : {}) });
-    const { projects: own } = await this.portal.home(customerId);
-    const receipts = await this.db
-      .select({ id: payments.id, number: payments.receiptNumber, amount: payments.amountPaise })
-      .from(payments)
-      .innerJoin(projects, eq(projects.id, payments.projectId))
-      .where(and(eq(projects.customerId, customerId), isNotNull(payments.receiptNumber)))
-      .orderBy(desc(payments.createdAt))
-      .limit(LATEST);
-    const papers = (await this.papers.list(customerId))
-      .filter((paper) => paper.category !== 'site_photo')
-      .slice(0, LATEST);
-    const invoices = await issuedInvoices(this.db, customerId, LATEST);
-    const reports = (await this.papers.readyReports(customerId)).slice(0, LATEST);
-    const projectQuotes = own.map((project) => project.quotation);
-    const quotes = [...projectQuotes, ...(await this.sentQuotes(customerId, projectQuotes))];
-    const lines = [
-      ...quotes.map((quote) => FILE_WORDS.quotation(quote.number, link('quotation', quote.id))),
-      ...invoices.map((invoice) =>
-        FILE_WORDS.invoice(
-          invoice.number,
-          formatInr(invoice.totalPaise),
-          link('invoice', invoice.id),
-        ),
-      ),
-      ...receipts.map((receipt) =>
-        FILE_WORDS.receipt(
-          receipt.number ?? '',
-          formatInr(receipt.amount),
-          link('receipt', receipt.id),
-        ),
-      ),
-      ...reports.map((report) =>
-        FILE_WORDS.report(
-          report.name,
-          report.projectCode,
-          link('report', report.projectId, report.key),
-        ),
-      ),
-      ...papers.map((paper) => FILE_WORDS.paper(paper.name, link('document', paper.id))),
-    ];
-    if (lines.length === 0) return WORDS.noDocuments;
-    return fitMessage(lines, WORDS.linksExpire(this.env.FILE_LINK_HOURS), FILE_WORDS.more);
-  }
-
-  /** The newest sent or accepted revision of each quotation not already shown with a project. */
-  private async sentQuotes(customerId: string, shown: readonly { number: string }[]) {
-    const rows = await this.db
-      .select({ id: quotations.id, number: quotations.number })
-      .from(quotations)
-      .where(
-        and(
-          eq(quotations.customerId, customerId),
-          inArray(quotations.status, ['sent', 'accepted']),
-        ),
-      )
-      .orderBy(desc(quotations.revision), desc(quotations.createdAt));
-    const seen = new Set(shown.map((quote) => quote.number));
-    return rows.filter((row) => !seen.has(row.number) && seen.add(row.number)).slice(0, LATEST);
   }
 
   async requests(customerId: string): Promise<string> {

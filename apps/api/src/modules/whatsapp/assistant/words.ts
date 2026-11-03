@@ -54,7 +54,6 @@ const EN_WORDS = {
   payHere: 'Pay here',
   payNow: 'Pay now',
   noDocuments: 'No documents yet. They will appear here as your project moves.',
-  linksExpire: (hours: number) => `Links work for ${hours} hours.`,
   askProblem:
     'Please tell us the problem in one message (for example "inverter shows an error since morning"). You can send a photo with a caption.',
   problemSaved: (category: string) =>
@@ -93,17 +92,6 @@ const EN_RATINGS = [
   { id: 'rate:2', title: 'Not happy', description: '2 of 5' },
   { id: 'rate:1', title: 'Very unhappy', description: '1 of 5' },
 ] as const;
-
-/** Each file line in the "Documents" answer. */
-const EN_FILE_WORDS = {
-  quotation: (number: string, url: string) => `Quotation ${number}: ${url}`,
-  invoice: (number: string, amount: string, url: string) =>
-    `Tax invoice ${number} (${amount}): ${url}`,
-  receipt: (number: string, amount: string, url: string) => `Receipt ${number} (${amount}): ${url}`,
-  report: (name: string, code: string, url: string) => `${name} (${code}): ${url}`,
-  paper: (name: string, url: string) => `${name}: ${url}`,
-  more: 'For older papers, tap "Talk to us".',
-} as const;
 
 /** Photos and papers the customer sends (PRD 6.1). */
 const EN_MEDIA_WORDS = {
@@ -212,7 +200,6 @@ export const EN = {
   MENU_ROWS: EN_MENU_ROWS,
   WORDS: EN_WORDS,
   RATINGS: EN_RATINGS,
-  FILE_WORDS: EN_FILE_WORDS,
   MEDIA_WORDS: EN_MEDIA_WORDS,
   COVER_WORDS: EN_COVER_WORDS,
   REWARD_WORDS: EN_REWARD_WORDS,
@@ -228,7 +215,6 @@ const pick = <K extends keyof AssistantWords>(key: K) =>
 export const MENU_ROWS = pick('MENU_ROWS');
 export const WORDS = pick('WORDS');
 export const RATINGS = pick('RATINGS');
-export const FILE_WORDS = pick('FILE_WORDS');
 export const MEDIA_WORDS = pick('MEDIA_WORDS');
 export const COVER_WORDS = pick('COVER_WORDS');
 export const REWARD_WORDS = pick('REWARD_WORDS');

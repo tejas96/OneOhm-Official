@@ -7,6 +7,7 @@ export * from './client';
 export * from './company-brand';
 export * from './customer-channel';
 export * from './customer-message';
+export * from './customer-message-names';
 export { localAlertTitle, localValues } from './customer-message-words';
 export * from './duty-alerts';
 export * from './job-runs';

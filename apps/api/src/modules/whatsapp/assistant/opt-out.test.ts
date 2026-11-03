@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { inLanguage } from './language';
-import { OPT_OUT_WORDS, optOutWord } from './opt-out';
+import { OPT_OUT_WORDS, optOutAsked, optOutWord } from './opt-out';
 
 describe('STOP and START words', () => {
   it('knows STOP words as the whole message, any case, trimmed', () => {
@@ -23,6 +23,13 @@ describe('STOP and START words', () => {
       expect(optOutWord(text), text).toBeNull();
   });
 
+  it('takes the Start again tap like typing START, and no other tap', () => {
+    expect(optOutAsked({ kind: 'choice', text: 'Start again', choiceId: 'start' })).toBe('start');
+    expect(optOutAsked({ kind: 'text', text: ' STOP ', choiceId: null })).toBe(' STOP ');
+    expect(optOutAsked({ kind: 'choice', text: 'Stop', choiceId: 'menu' })).toBe('');
+    expect(optOutAsked({ kind: 'media', text: 'stop', choiceId: null })).toBe('');
+  });
+
   it('answers in all three languages', async () => {
     for (const language of ['en', 'mr', 'hi'] as const)
       await inLanguage(language, async () => {
@@ -30,7 +37,7 @@ describe('STOP and START words', () => {
         expect(OPT_OUT_WORDS.welcomeBack.length).toBeGreaterThan(10);
       });
     expect(OPT_OUT_WORDS.stopped).toBe(
-      'You will not get WhatsApp messages from us now. Send START anytime to begin again.',
+      'You will not get WhatsApp messages from us now. Tap "Start again" whenever you want them back.',
     );
     expect(await inLanguage('mr', async () => OPT_OUT_WORDS.stopped)).not.toBe(
       OPT_OUT_WORDS.stopped,

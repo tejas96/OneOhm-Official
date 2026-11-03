@@ -51,7 +51,6 @@ export const HI: Words<AssistantWords> = {
     payHere: 'यहाँ भुगतान करें',
     payNow: 'अभी भुगतान करें',
     noDocuments: 'अभी कोई दस्तावेज़ नहीं हैं। प्रोजेक्ट आगे बढ़ने पर वे यहाँ दिखेंगे।',
-    linksExpire: (hours) => `लिंक ${hours} घंटे तक चलेंगे।`,
     askProblem:
       'कृपया समस्या एक मैसेज में बताएँ (जैसे "सुबह से इन्वर्टर पर एरर दिख रहा है")। फ़ोटो के साथ कैप्शन भी भेज सकते हैं।',
     problemSaved: (category) =>
@@ -85,14 +84,6 @@ export const HI: Words<AssistantWords> = {
     { id: 'rate:2', title: 'खुश नहीं', description: '5 में से 2' },
     { id: 'rate:1', title: 'बिल्कुल खुश नहीं', description: '5 में से 1' },
   ],
-  FILE_WORDS: {
-    quotation: (number, url) => `कोटेशन ${number}: ${url}`,
-    invoice: (number, amount, url) => `टैक्स इनवॉइस ${number} (${amount}): ${url}`,
-    receipt: (number, amount, url) => `रसीद ${number} (${amount}): ${url}`,
-    report: (name, code, url) => `${name} (${code}): ${url}`,
-    paper: (name, url) => `${name}: ${url}`,
-    more: 'पुराने दस्तावेज़ों के लिए "हमसे बात करें" दबाएँ।',
-  },
   MEDIA_WORDS: {
     what: { image: 'फ़ोटो', document: 'कागज़', video: 'वीडियो', audio: 'वॉइस नोट' },
     ask: (what) => `धन्यवाद, आपका ${what} मिल गया। क्या यह आपके सोलर सिस्टम की किसी समस्या के बारे में है?`,

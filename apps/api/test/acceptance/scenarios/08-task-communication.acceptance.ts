@@ -1,6 +1,6 @@
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeDb, type OutboxRow, outboxFor } from '../support/db';
+import { closeDb, type OutboxRow, outboxFor, rows } from '../support/db';
 import { Session } from '../support/http';
 import { type Sale, sellProject } from '../support/sales';
 import {
@@ -28,6 +28,8 @@ describe('Task communication', () => {
   let admin: Session;
   let sale: Sale;
   let templates: Map<string, Template>;
+  // Templates name the project by its town and size, not its code (live QA C9).
+  let projectWords: string;
   const forTask = (rows: OutboxRow[], event: string, taskId: string) =>
     rows.filter((row) => row.dedupe_key === `task_${event}:${taskId}`);
 
@@ -36,6 +38,12 @@ describe('Task communication', () => {
     const list = await admin.get<Template[]>('/settings/task-templates');
     templates = new Map(list.map((template) => [template.key, template]));
     sale = await sellProject(admin, { name: 'Message Customer (test)' });
+    const [site] = await rows<{ city: string; wp: number }>(
+      `select pr.city, p.capacity_wp as wp from projects p
+         join properties pr on pr.id = p.property_id where p.id = $1`,
+      [sale.project.id],
+    );
+    projectWords = `${site?.city} · ${Number(((site?.wp ?? 0) / 1000).toFixed(2))} kW`;
   });
   afterAll(closeDb);
 
@@ -73,7 +81,7 @@ describe('Task communication', () => {
     expect(row?.channel).toBe('whatsapp');
     expect(row?.template).toBe('project_milestone');
     expect(row?.recipient).toBe(sale.customer.phone);
-    expect(row?.payload.project).toBe(sale.project.code);
+    expect(row?.payload.project).toBe(projectWords);
     expect(row?.payload.step).toBe('site_survey');
     expect(row?.payload.customer).toBe(sale.customer.name);
     const survTemplate = templates.get('site_survey');
@@ -87,7 +95,7 @@ describe('Task communication', () => {
     await crew.post(`/tasks/${structure.id}/start`);
     const [row] = forTask(await outboxFor(sale.customer.phone), 'started', structure.id);
     expect(row?.template).toBe('installation_started');
-    expect(row?.payload.project).toBe(sale.project.code);
+    expect(row?.payload.project).toBe(projectWords);
     // Starting again after a pause does not message twice.
     await crew.post(`/tasks/${structure.id}/waiting`, {
       party: 'customer',
@@ -104,7 +112,7 @@ describe('Task communication', () => {
     expect(done.status).toBe('completed');
     const [row] = forTask(await outboxFor(sale.customer.phone), 'completed', done.id);
     expect(row?.template).toBe('commissioning_completed');
-    expect(row?.payload.project).toBe(sale.project.code);
+    expect(row?.payload.project).toBe(projectWords);
   });
 
   it('messages exactly the configured steps among everything finished so far', async () => {

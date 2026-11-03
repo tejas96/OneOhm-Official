@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
+import { plainNames } from './customer-message-names';
 import { languageOf, localWords } from './customer-message-words';
 import { type Notice, notify } from './notify';
 import { customers } from './schema/crm.schema';
@@ -103,15 +104,17 @@ export function customerNotice(
 /**
  * Queues a customer WhatsApp message in the caller's transaction (the worker sends it
  * with retries) and puts the same news in the customer's app inbox. The dedupe key stops
- * the same event messaging twice. Returns whether the message was new.
+ * the same event messaging twice. Project and instalment are said in plain words (see
+ * plainNames). Returns whether the message was new.
  */
 export async function queueCustomerMessage(
   db: DatabaseExecutor,
   recipientE164: string,
   template: string,
-  payload: Record<string, string>,
+  given: Record<string, string>,
   dedupeKey: string,
 ): Promise<boolean> {
+  const payload = await plainNames(db, given);
   const notice = customerNotice(template, payload, dedupeKey);
   // WhatsApp first; SMS or in person when the customer is not on WhatsApp.
   const queued = await routeCustomerMessage(db, {

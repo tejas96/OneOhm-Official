@@ -181,7 +181,9 @@ export class FinanceService {
           projectId,
           projectCode: project.code,
           amountPaise: input.amountPaise,
+          milestoneId: milestone.id,
           milestoneLabel: milestone.label,
+          leftPaise: milestone.amountPaise - total,
           trigger: milestone.trigger as MilestoneTrigger,
           dedupeKey: `payment:${milestone.id}:${total}`,
         });

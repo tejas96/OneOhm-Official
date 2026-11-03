@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { HINDI_WORDS } from './customer-message-hi';
 import { MARATHI_WORDS } from './customer-message-mr';
+import { instalmentWords } from './customer-message-names';
 import { customers } from './schema/crm.schema';
 
 type Payload = Readonly<Record<string, string>>;
@@ -127,10 +128,16 @@ function statusWords(template: string, status: string | undefined, words: Langua
 }
 
 /** The payload with OneOhm's own English names said in the customer's language. */
-function localPayload(template: string, p: Payload, words: LanguageWords): Payload {
+function localPayload(
+  template: string,
+  p: Payload,
+  words: LanguageWords,
+  language: 'mr-IN' | 'hi-IN',
+): Payload {
   const paymentKey = PAYMENT_BY_LABEL.get(p.milestone?.toLowerCase() ?? '');
   const categoryKey = CATEGORY_BY_LABEL.get(p.topic?.toLowerCase() ?? '');
   const milestone =
+    instalmentWords(language, p.instalment) ??
     (has(words.steps, p.step) ? words.steps[p.step] : undefined) ??
     (has(words.payments, paymentKey) ? words.payments[paymentKey] : undefined);
   const topic = has(words.categories, categoryKey) ? words.categories[categoryKey] : undefined;
@@ -150,7 +157,7 @@ export function localWords(language: string | undefined, template: string): Loca
   const words = TABLES[code];
   if (!has(words.messages, template)) return undefined;
   const say = words.messages[template];
-  return (payload) => say(localPayload(template, payload, words));
+  return (payload) => say(localPayload(template, payload, words, code));
 }
 
 /**
@@ -159,7 +166,7 @@ export function localWords(language: string | undefined, template: string): Loca
  */
 export function localValues(language: string | undefined, template: string, payload: Payload) {
   const code = customerLanguage(language);
-  return code === 'en-IN' ? payload : localPayload(template, payload, TABLES[code]);
+  return code === 'en-IN' ? payload : localPayload(template, payload, TABLES[code], code);
 }
 
 /** The title of an app-only alert in the customer's language; undefined for English. */

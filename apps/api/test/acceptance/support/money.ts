@@ -114,8 +114,9 @@ export async function expectPaidNews(receiptFile: string, paymentId: string, pro
   expect(next?.payload.body).toBe(
     `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: ${contact?.name}, ${contact?.phone}.`,
   );
+  // View receipt sends this receipt's PDF (live QA round 2).
   expect(next?.payload.buttons.map((button) => button.id)).toEqual([
-    'documents',
+    `paper:receipt:${paymentId}`,
     'progress',
     'menu',
   ]);

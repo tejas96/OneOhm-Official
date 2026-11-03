@@ -1,21 +1,24 @@
 import { customers, type Database, waConversations } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
-import { type Conversation, queueReply } from '../chat-store';
+import type { Conversation } from '../chat-store';
+import type { Incoming } from '../whatsapp-events';
+import { sayWithTaps } from './closing-taps';
 import { localized } from './language';
 
 /** Short and plain, in the three languages; they follow the chat's language. */
 export const OPT_OUT_WORDS = localized(
   {
-    stopped: 'You will not get WhatsApp messages from us now. Send START anytime to begin again.',
+    stopped:
+      'You will not get WhatsApp messages from us now. Tap "Start again" whenever you want them back.',
     welcomeBack: 'Welcome back! You will get updates here again.',
   },
   {
     mr: {
-      stopped: 'आता तुम्हाला आमचे WhatsApp संदेश मिळणार नाहीत. पुन्हा सुरू करण्यासाठी केव्हाही START पाठवा.',
+      stopped: 'आता तुम्हाला आमचे WhatsApp संदेश मिळणार नाहीत. पुन्हा हवे असतील तेव्हा "पुन्हा सुरू करा" दाबा.',
       welcomeBack: 'पुन्हा स्वागत! तुम्हाला इथे पुन्हा अपडेट मिळतील.',
     },
     hi: {
-      stopped: 'अब आपको हमारे WhatsApp संदेश नहीं मिलेंगे। दोबारा शुरू करने के लिए कभी भी START भेजें।',
+      stopped: 'अब आपको हमारे WhatsApp संदेश नहीं मिलेंगे। जब फिर चाहिए हों, "फिर से शुरू करें" दबाएँ।',
       welcomeBack: 'फिर से स्वागत है! आपको यहाँ फिर अपडेट मिलेंगे।',
     },
   },
@@ -32,10 +35,16 @@ export function optOutWord(text: string): 'stop' | 'start' | null {
   return START_WORDS.has(word) ? 'start' : null;
 }
 
+/** The words to read for STOP or START: a typed message, or the Start again tap. */
+export function optOutAsked(incoming: Pick<Incoming, 'kind' | 'text' | 'choiceId'>): string {
+  if (incoming.kind === 'text') return incoming.text;
+  return incoming.kind === 'choice' && incoming.choiceId === 'start' ? 'start' : '';
+}
+
 /**
- * STOP marks the number opted out and says so once; START (only from an opted-out number,
- * otherwise it is a hello) clears it. The customer's own record follows in the same step.
- * Returns true when the message was one of these and is answered.
+ * STOP marks the number opted out and says so once; START or the Start again tap (only
+ * from an opted-out number, otherwise it is a hello) clears it. The customer's own record
+ * follows in the same step. Returns true when the message was one of these and is answered.
  */
 export async function answerOptOut(
   db: Database,
@@ -54,10 +63,9 @@ export async function answerOptOut(
       .update(customers)
       .set({ whatsappOptIn: !stop })
       .where(eq(customers.phoneE164, chat.phone));
-    await queueReply(tx, chat, {
-      kind: 'text',
-      body: stop ? OPT_OUT_WORDS.stopped : OPT_OUT_WORDS.welcomeBack,
-    });
+    // Each ends with a tap: Start again under STOP, the Menu under START.
+    if (stop) await sayWithTaps(tx, chat, OPT_OUT_WORDS.stopped, ['start']);
+    else await sayWithTaps(tx, chat, OPT_OUT_WORDS.welcomeBack, ['menu']);
   });
   return true;
 }

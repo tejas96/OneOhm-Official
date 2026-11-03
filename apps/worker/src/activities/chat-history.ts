@@ -8,6 +8,7 @@ import {
 } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
+import { sentInTag } from '../channels/message-templates';
 
 interface SentTemplate {
   readonly id: string;
@@ -45,7 +46,14 @@ export async function logTemplateInChat(db: Database, row: SentTemplate): Promis
   // Staff digests and other people's numbers have no customer chat to join.
   if (!customer) return;
   const [config] = await db
-    .select({ fields: messageTemplates.fields, preview: messageTemplates.preview })
+    .select({
+      fields: messageTemplates.fields,
+      preview: messageTemplates.preview,
+      metaName: messageTemplates.metaName,
+      language: messageTemplates.language,
+      metaNameMr: messageTemplates.metaNameMr,
+      metaNameHi: messageTemplates.metaNameHi,
+    })
     .from(messageTemplates)
     .where(eq(messageTemplates.key, row.template))
     .limit(1);
@@ -68,7 +76,8 @@ export async function logTemplateInChat(db: Database, row: SentTemplate): Promis
     conversationId: chat.id,
     direction: 'out',
     kind: 'template',
-    body: renderTemplate(words.preview, words.fields, values),
+    // Staff read English; a Marathi or Hindi template says so at the end.
+    body: `${renderTemplate(words.preview, words.fields, values)}${config ? sentInTag(config, values.language) : ''}`,
     outboxId: row.id,
   });
 }

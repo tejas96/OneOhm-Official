@@ -1,3 +1,4 @@
+import { BANK_SHARE_NAMES, INSTALMENT_NAMES } from '@oneohm/database';
 import type { MilestoneTrigger } from '@oneohm/domain';
 import { localized, type Words } from './language';
 
@@ -13,11 +14,8 @@ const EN_PROJECT = {
   projectIn: (city: string) => `Your solar project in ${city}`,
   size: (panels: number, watts: number) =>
     panels > 0 ? `${panels} panels (${kw(watts)})` : kw(watts),
-  instalment: (index: number, count: number) =>
-    index === count - 1 && count > 1
-      ? 'Last instalment'
-      : `${['1st', '2nd', '3rd'][index] ?? `${index + 1}th`} instalment`,
-  bankShare: 'Bank loan',
+  instalment: INSTALMENT_NAMES['en-IN'],
+  bankShare: BANK_SHARE_NAMES['en-IN'],
   next: {
     quotation_accepted: 'a site visit to plan your system',
     material_dispatch: 'we send your panels and inverter and fix the installation day',
@@ -27,6 +25,8 @@ const EN_PROJECT = {
   paidNext: (trigger: MilestoneTrigger, name: string | null, phone: string | null) =>
     `Thank you, your payment is received. Next: ${EN_NEXT[trigger] ?? EN_NEXT.loan_disbursement}.${name || phone ? ` Your contact: ${name ?? 'our team'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number: string) => `Your payment receipt (${number})`,
+  partPaid: (amount: string, left: string) =>
+    `${amount} received. ${left} is left on this instalment.`,
 };
 const EN_NEXT = EN_PROJECT.next;
 
@@ -40,15 +40,13 @@ const MR_NEXT: Record<MilestoneTrigger, string> = {
 const MR_PROJECT: Words<typeof EN_PROJECT> = {
   projectIn: (city) => `${city} येथील तुमचा सोलर प्रकल्प`,
   size: (panels, watts) => (panels > 0 ? `${panels} पॅनल (${kw(watts)})` : kw(watts)),
-  instalment: (index, count) =>
-    index === count - 1 && count > 1
-      ? 'शेवटचा हप्ता'
-      : `${['पहिला', 'दुसरा', 'तिसरा'][index] ?? `${index + 1}वा`} हप्ता`,
-  bankShare: 'बँक कर्ज',
+  instalment: INSTALMENT_NAMES['mr-IN'],
+  bankShare: BANK_SHARE_NAMES['mr-IN'],
   next: MR_NEXT,
   paidNext: (trigger, name, phone) =>
     `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: ${MR_NEXT[trigger] ?? MR_NEXT.loan_disbursement}.${name || phone ? ` तुमचा संपर्क: ${name ?? 'आमची टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `तुमची पेमेंट पावती (${number})`,
+  partPaid: (amount, left) => `${amount} मिळाले. या हप्त्याचे ${left} बाकी आहेत.`,
 };
 
 const HI_NEXT: Record<MilestoneTrigger, string> = {
@@ -61,15 +59,13 @@ const HI_NEXT: Record<MilestoneTrigger, string> = {
 const HI_PROJECT: Words<typeof EN_PROJECT> = {
   projectIn: (city) => `${city} में आपका सोलर प्रोजेक्ट`,
   size: (panels, watts) => (panels > 0 ? `${panels} पैनल (${kw(watts)})` : kw(watts)),
-  instalment: (index, count) =>
-    index === count - 1 && count > 1
-      ? 'आखिरी किस्त'
-      : `${['पहली', 'दूसरी', 'तीसरी'][index] ?? `${index + 1}वीं`} किस्त`,
-  bankShare: 'बैंक लोन',
+  instalment: INSTALMENT_NAMES['hi-IN'],
+  bankShare: BANK_SHARE_NAMES['hi-IN'],
   next: HI_NEXT,
   paidNext: (trigger, name, phone) =>
     `धन्यवाद, आपका पेमेंट मिल गया. आगे: ${HI_NEXT[trigger] ?? HI_NEXT.loan_disbursement}.${name || phone ? ` आपके संपर्क: ${name ?? 'हमारी टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `आपकी पेमेंट रसीद (${number})`,
+  partPaid: (amount, left) => `${amount} मिल गए. इस किस्त के ${left} बाकी हैं.`,
 };
 
 /** Every language, for the checks. */

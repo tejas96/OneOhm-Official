@@ -47,6 +47,21 @@ describe('the taps that end every bot message (live review C5)', () => {
     });
   });
 
+  it('lets a tap answer one thing, such as View receipt sending that receipt', () => {
+    const [reply] = withTaps('Paid.', [{ tap: 'receipt', id: 'paper:receipt:p1' }, 'menu']);
+    expect(reply).toMatchObject({
+      buttons: [
+        { id: 'paper:receipt:p1', title: 'View receipt' },
+        { id: 'menu', title: 'Menu' },
+      ],
+    });
+  });
+
+  it('offers Start again after STOP, answered like typing START', () => {
+    const [reply] = withTaps('Stopped.', ['start']);
+    expect(reply).toMatchObject({ buttons: [{ id: 'start', title: 'Start again' }] });
+  });
+
   it('never offers more than three taps', () => {
     expect(() => withTaps('x', ['menu', 'pay', 'track', 'talk'])).toThrow();
   });

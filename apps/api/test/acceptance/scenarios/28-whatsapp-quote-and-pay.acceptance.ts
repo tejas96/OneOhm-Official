@@ -34,19 +34,21 @@ describe('WhatsApp quote and pay', () => {
     expect(file.headers.get('content-type')).toContain('application/pdf');
   });
 
-  it('lists a sent, not yet accepted quote in the Documents answer', async () => {
+  it('sends a sent, not yet accepted quote as the file from Documents', async () => {
     const customer = await newCustomer(admin, { name: 'Quote Documents Customer (test)' });
     const quotation = await createQuotation(admin, customer);
     await admin.post(`/quotations/${quotation.id}/send`);
 
     await sendInbound(customer.phone, { text: 'documents' });
 
-    const [reply] = await rows<{ text: string }>(
-      "select payload::text as text from outbox where recipient = $1 and template like 'session:%' order by created_at desc limit 1",
+    // The only paper goes at once, as the PDF itself (live QA round 2).
+    const [file] = await rows<{ payload: Record<string, string> }>(
+      "select payload from outbox where recipient = $1 and template = 'session:document' order by created_at desc limit 1",
       [customer.phone],
     );
-    expect(reply?.text).toContain(quotation.number);
-    expect(reply?.text).toContain('/v1/files/shared/');
+    expect(file?.payload.caption).toContain(quotation.number);
+    expect(file?.payload.filename).toBe('OneOhm-Quote-Documents-Customer-test-quote.pdf');
+    expect(file?.payload.link).toContain('/v1/files/shared/');
   });
 
   const sentQuote = async (name: string) => {

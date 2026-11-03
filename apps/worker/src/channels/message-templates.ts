@@ -56,6 +56,13 @@ export function templateFor(
   return { name: names.metaName, language: names.language, local: false };
 }
 
+/** " · sent in Marathi" when the Marathi or Hindi template went out; empty for English. */
+export function sentInTag(names: TemplateNames, customerLanguage: string | undefined): string {
+  const chosen = templateFor(names, customerLanguage);
+  if (!chosen.local) return '';
+  return chosen.language === 'mr' ? ' · sent in Marathi' : ' · sent in Hindi';
+}
+
 /** A payload value the message needs; fails when it is missing. */
 function required(key: string, field: string, values: Readonly<Record<string, unknown>>): string {
   return templateParameters(key, [field], values)[0] as string;

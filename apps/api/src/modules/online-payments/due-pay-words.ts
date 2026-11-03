@@ -7,6 +7,8 @@ export const PAY_PAGE_WORDS = localized(
     title: 'Solar payment',
     ask: (amount: string, label: string) => `Pay ${amount} to OneOhm for ${label}.`,
     go: 'Continue to pay',
+    upiParts: (limit: string) =>
+      `UPI takes up to ${limit} at a time: pay ${limit} now, then open this same link again for the rest.`,
     byCode: {
       not_due: 'This payment is not due yet. We will tell you when it is.',
       paid: 'This is already paid. Thank you!',
@@ -20,6 +22,8 @@ export const PAY_PAGE_WORDS = localized(
       title: 'सोलर पेमेंट',
       ask: (amount, label) => `${label} साठी OneOhm ला ${amount} भरा.`,
       go: 'पेमेंट करा',
+      upiParts: (limit) =>
+        `UPI ने एका वेळी ${limit} पर्यंतच भरता येतात: आता ${limit} भरा, उरलेल्या रकमेसाठी हीच लिंक पुन्हा उघडा.`,
       byCode: {
         not_due: 'हे पेमेंट अजून देय नाही. वेळ आल्यावर आम्ही कळवू.',
         paid: 'हे आधीच भरले आहे. धन्यवाद!',
@@ -32,6 +36,8 @@ export const PAY_PAGE_WORDS = localized(
       title: 'सोलर भुगतान',
       ask: (amount, label) => `${label} के लिए OneOhm को ${amount} का भुगतान करें।`,
       go: 'भुगतान करें',
+      upiParts: (limit) =>
+        `UPI से एक बार में ${limit} तक ही भरे जा सकते हैं: अभी ${limit} भरें, बाकी के लिए यही लिंक फिर खोलें।`,
       byCode: {
         not_due: 'यह भुगतान अभी देय नहीं है। समय आने पर हम बताएँगे।',
         paid: 'इसका भुगतान हो चुका है। धन्यवाद!',

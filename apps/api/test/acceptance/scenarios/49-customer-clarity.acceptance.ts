@@ -7,6 +7,7 @@ import {
   handOverAlerts,
   lastReply,
   leadsOf,
+  replies,
   say,
   tap,
   upToSite,
@@ -95,9 +96,11 @@ describe('Customer clarity on WhatsApp', () => {
     expect(menu?.body).toContain('Tejas');
     expect(menu?.body).not.toContain('"menu"');
     await sendInbound(customer.phone, { text: 'कागद' });
-    const papers = await lastReply(customer.phone);
+    // The only paper (the quote) goes as the file, then Menu · Talk to us (live QA round 2).
+    const [file, papers] = (await replies(customer.phone)).slice(-2);
+    expect(file?.kind).toBe('document');
     expect(papers?.kind).toBe('buttons');
-    expect(choices(papers)).toEqual(['menu', 'progress', 'human']);
+    expect(choices(papers)).toEqual(['menu', 'human']);
     await sendInbound(customer.phone, { buttonReply: 'progress' });
     expect(choices(await lastReply(customer.phone))).toEqual(['menu', 'payments', 'human']);
     await sendInbound(customer.phone, { buttonReply: 'menu' });
