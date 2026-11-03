@@ -1,5 +1,6 @@
-import { index, integer, pgTable, primaryKey, text, uuid } from 'drizzle-orm/pg-core';
-import { createdAt, updatedAt } from './columns';
+import { sql } from 'drizzle-orm';
+import { index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { contractors } from './contractors.schema';
 import { users } from './identity.schema';
 import { projects } from './projects.schema';
@@ -40,6 +41,32 @@ export const projectTeamMembers = pgTable(
   (table) => [
     primaryKey({ columns: [table.projectId, table.userId] }),
     index('project_team_members_user_idx').on(table.userId),
+  ],
+);
+
+/**
+ * Who managed a project, and when. At most one open term (no end) per project; a change
+ * of manager closes it and opens the next, so reports can split by who was in charge.
+ */
+export const projectManagerTerms = pgTable(
+  'project_manager_terms',
+  {
+    id: primaryId(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    startedAt: instant('started_at').notNull(),
+    endedAt: instant('ended_at'),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('project_manager_terms_project_idx').on(table.projectId),
+    uniqueIndex('project_manager_terms_open_unique')
+      .on(table.projectId)
+      .where(sql`${table.endedAt} IS NULL`),
   ],
 );
 

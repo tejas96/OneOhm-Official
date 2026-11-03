@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
   discoms,
+  openManagerTerm,
   products,
   projectActivities,
   projectFacts,
@@ -180,6 +181,7 @@ export class ProjectCreationService {
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
+      await openManagerTerm(tx, project.id, managerUserId, new Date());
       // The customer's WhatsApp chat goes to the project's manager from now on.
       await moveCustomerChats(tx, customer.id, managerUserId);
 

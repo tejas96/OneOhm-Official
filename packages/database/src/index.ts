@@ -11,6 +11,7 @@ export { localAlertTitle, localValues } from './customer-message-words';
 export * from './job-runs';
 export * from './ledger';
 export * from './location-retention';
+export * from './manager-terms';
 export * from './migrate';
 export * from './notify';
 export * from './pending-approvals';
