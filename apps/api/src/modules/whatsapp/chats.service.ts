@@ -116,7 +116,7 @@ export class ChatsService {
           },
           actor.userId,
         );
-      await contactLeadsByPhone(tx, chat.phone, actor.userId);
+      if (actor.kind !== 'reseller') await contactLeadsByPhone(tx, chat.phone, actor.userId);
     });
     return this.get(actor, id);
   }

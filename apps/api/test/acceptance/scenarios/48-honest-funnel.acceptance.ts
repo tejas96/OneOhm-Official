@@ -4,6 +4,7 @@ import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { chatOf, say } from '../support/onboarding';
 import { today, uniquePhone } from '../support/sales';
+import { RESELLERS } from '../support/team';
 
 // Live review B9/B11: "Contacted" means a person got in touch, and the chat panel shows
 // the newest messages, oldest of those first.
@@ -43,6 +44,21 @@ describe('Honest funnel and chat panel', () => {
       expect(moves).toHaveLength(1);
     },
   );
+
+  it('a reseller logging a call does not make the lead Contacted; staff doing so does', async () => {
+    const reseller = await Session.code(RESELLERS.first.phone);
+    const lead = await reseller.post<{ id: string }>('/leads', {
+      name: 'Reseller Call Lead (test)',
+      phone: uniquePhone(),
+      city: 'Sangli',
+      subsidyCategory: 'individual',
+      nextActionOn: today(),
+    });
+    await reseller.post(`/leads/${lead.id}/activities`, { kind: 'call', note: 'Rang (test)' });
+    expect((await admin.get<LeadDetail>(`/leads/${lead.id}`)).stage).toBe('new');
+    await admin.post(`/leads/${lead.id}/activities`, { kind: 'call', note: 'Rang (test)' });
+    expect((await admin.get<LeadDetail>(`/leads/${lead.id}`)).stage).toBe('contacted');
+  });
 
   it("the first staff WhatsApp reply in the lead's chat moves it to Contacted", async () => {
     const phone = uniquePhone();

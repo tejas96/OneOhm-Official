@@ -51,6 +51,9 @@ describe('WhatsApp quote chat file', () => {
         ])
       ).length;
     await admin.post(`/quotations/${quotation.id}/send`);
+    // Still queued: sending again does not queue a second PDF.
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(1);
     await rows(
       `update outbox set status = 'sent', delivery_status = 'delivered'
         where recipient = $1 and template = 'session:document'`,
@@ -58,7 +61,7 @@ describe('WhatsApp quote chat file', () => {
     );
     await admin.post(`/quotations/${quotation.id}/send`);
     expect(await count('session:document')).toBe(1);
-    expect(await count('session:buttons')).toBe(2);
+    expect(await count('session:buttons')).toBe(3);
 
     await rows(
       `update outbox set status = 'failed' where recipient = $1 and template = 'session:document'`,
@@ -66,7 +69,7 @@ describe('WhatsApp quote chat file', () => {
     );
     await admin.post(`/quotations/${quotation.id}/send`);
     expect(await count('session:document')).toBe(2);
-    expect(await count('session:buttons')).toBe(3);
+    expect(await count('session:buttons')).toBe(4);
     await admin.post(`/quotations/${quotation.id}/send`);
     expect(await count('session:document')).toBe(2);
   });

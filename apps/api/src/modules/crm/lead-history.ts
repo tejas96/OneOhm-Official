@@ -19,10 +19,6 @@ export async function logLead(
   internal = false,
 ): Promise<void> {
   await db.insert(leadActivities).values({ leadId, userId, kind, note, internal });
-  // A person's first call, visit or WhatsApp reply is the first human contact.
-  if (userId && (kind === 'call' || kind === 'visit' || kind === 'whatsapp')) {
-    await autoMoveLead(db, leadId, userId, 'contacted', `First ${kind} by the team.`);
-  }
 }
 
 /** Tells the new owner the lead is theirs, with a link to it. */
