@@ -8,6 +8,7 @@ import {
   choices,
   lastReply,
   leadsOf,
+  notesOf,
   say,
   tap,
   withOnboarding,
@@ -185,7 +186,7 @@ describe('Who the onboarding bot talks to', () => {
     }
   });
 
-  it("a friend's referral code makes the referral lead, then onboarding asks the site", async () => {
+  it("a friend's referral code makes the referral lead; onboarding asks the city it lacks", async () => {
     const customer = await newCustomer(admin, { name: 'Onboard Referrer (test)' });
     const code = `RF${String(Math.floor(Math.random() * 1e6)).padStart(6, '2')}`.replace(
       /[01]/g,
@@ -198,9 +199,13 @@ describe('Who the onboarding bot talks to', () => {
     const phone = uniquePhone();
     await say(phone, `Hi OneOhm, my referral code is ${code}`);
     const [lead] = await leadsOf(phone);
-    expect(lead?.source).toBe('referral');
+    expect(lead).toMatchObject({ source: 'referral', city: 'Not given' });
+    expect((await chatOf(phone)).state).toBe('onboard:city');
+    await tap(phone, 'ob:city:Pune');
+    const [updated] = await leadsOf(phone);
+    expect(updated).toMatchObject({ city: 'Pune', owner_user_id: lead?.owner_user_id });
+    expect((await notesOf(lead?.id ?? '')).map((row) => row.note)).toContain('City: Pune');
     expect((await chatOf(phone)).state).toBe('onboard:site');
-    expect(choices(await lastReply(phone))).toContain('ob:site:home');
     await tap(phone, 'ob:site:home');
     expect((await chatOf(phone)).state).toBe('onboard:bill');
     expect(await leadsOf(phone)).toHaveLength(1);

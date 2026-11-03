@@ -19,6 +19,9 @@ const value = (answer: unknown): ReadAnswer => ({ kind: 'value', value: answer }
 const YES = new Set(['yes', 'y', 'ok', 'okay', 'ho', 'haan', 'हो', 'होय', 'हां', 'हाँ']);
 const NOT_NAME = new Set(['no', 'change', 'nahi', 'नाही', 'नहीं', 'बदला', 'बदलें']);
 
+/** Words at the name question that ask for a different name ("Change"). */
+export const changesName = (word: string) => NOT_NAME.has(word);
+
 /**
  * Reads a tap or typed words as the answer to `step`, on top of the domain's parseAnswer:
  * the name question offers the WhatsApp name (Yes / Change), and after "Other city" (or

@@ -89,13 +89,23 @@ export async function notesOf(leadId: string): Promise<{ kind: string; note: str
   );
 }
 
-/** Staff alerts raised when this chat was handed to a person. */
-export async function handOverAlerts(chatId: string): Promise<{ user_id: string; body: string }[]> {
+/** Staff alerts raised when this chat was handed to a person (one row per person told). */
+export async function handOverAlerts(
+  chatId: string,
+): Promise<{ user_id: string; body: string; dedupe_key: string }[]> {
   return rows(
-    `SELECT user_id, body FROM notifications
+    `SELECT user_id, body, dedupe_key FROM notifications
       WHERE kind = 'whatsapp_handover' AND subject_id = $1`,
     [chatId],
   );
+}
+
+/** How many hand-overs alerted staff: one alert may reach several people of a desk. */
+export async function handOverCount(chatId: string): Promise<number> {
+  const keys = (await handOverAlerts(chatId)).map((alert) =>
+    alert.dedupe_key.split(':').slice(0, 3).join(':'),
+  );
+  return new Set(keys).size;
 }
 
 /** A tap by id: the language, name and photo questions are buttons, the rest lists. */

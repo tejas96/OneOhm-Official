@@ -15,7 +15,7 @@ import { HandOverService } from '../assistant/hand-over';
 import { assistantLanguage, inLanguage } from '../assistant/language';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
-import { readAnswer } from './onboarding-answer';
+import { changesName, readAnswer } from './onboarding-answer';
 import {
   firstMissing,
   isOnboardingChat,
@@ -90,11 +90,12 @@ export class OnboardingFlowService {
   }
 
   private async run(seen: Conversation, incoming: Incoming | null, referral = false) {
-    const outcome = await this.db.transaction(async (tx) => {
+    await this.db.transaction(async (tx) => {
       const chat = await lockedChat(tx, seen.id);
       const lead = await openLeadFor(tx, chat.phone);
       const kept = readOnboard(chat);
-      const seeded = referral && lead ? { name: lead.name, city: lead.city } : {};
+      // A referral lead's name (and its city, when given) stand; the rest is asked.
+      const seeded = referral ? knownFrom(lead) : {};
       const turn: Turn = {
         tx,
         chat,
@@ -109,17 +110,16 @@ export class OnboardingFlowService {
         awaiting: kept?.awaiting,
         dropEntry: false,
       };
-      // After a referral the next open question after the city is asked straight away.
-      const summary = referral
-        ? await this.ask(turn, nextStep('city', turn.answers, turn.known))
-        : await this.take(turn, incoming);
-      return { chat, summary };
+      // After a referral the first open question after the name is asked straight away.
+      if (referral) return this.ask(turn, nextStep('name', turn.answers, turn.known));
+      return this.take(turn, incoming);
     });
-    if (outcome.summary !== null) await this.people.passToOwner(outcome.chat, outcome.summary);
   }
 
-  /** Applies one message; returns the staff summary when the chat goes to a person. */
-  private async take(turn: Turn, incoming: Incoming | null): Promise<string | null> {
+  /** Applies one message, under the chat's row lock. */
+  private async take(turn: Turn, incoming: Incoming | null): Promise<null> {
+    // A message that waited for the lock behind a hand-over: the person has the chat now.
+    if (incoming && turn.chat.state === 'human') return null;
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
     if (current === 'done') return this.toPerson(turn, current);
@@ -131,7 +131,8 @@ export class OnboardingFlowService {
     // Nothing to read: a tap on another question (an older list, the nudge's "Continue"),
     // or words in the first message after a person handed the chat back: ask the question.
     if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) return this.ask(turn, current);
-    if (!choice && BACK.has(word) && !(current === 'name' && word === 'change')) {
+    // At the name question "change" (बदला, बदलें…) means a new name, not the step before.
+    if (!choice && BACK.has(word) && !(current === 'name' && changesName(word))) {
       turn.awaiting = undefined;
       return this.ask(turn, previousStep(current));
     }
@@ -183,12 +184,17 @@ export class OnboardingFlowService {
     return null;
   }
 
-  /** The chat stays on this step for when it comes back; a person gets the summary. */
-  private async toPerson(turn: Turn, step: OnboardStep): Promise<string> {
+  /**
+   * A person takes over with the answers summary, in this transaction: the state, the
+   * alert and the reply commit together. `ob` keeps this step for when the chat returns.
+   */
+  private async toPerson(turn: Turn, step: OnboardStep): Promise<null> {
     turn.misses = 0;
     turn.awaiting = undefined;
     await this.save(turn, step);
-    return summaryOf(turn.answers, turn.settings);
+    const summary = summaryOf(turn.answers, turn.settings);
+    await this.speak(turn, () => this.people.passToOwner(turn.chat, { summary, db: turn.tx }));
+    return null;
   }
 
   private async ask(turn: Turn, step: OnboardStep, retry = false): Promise<null> {

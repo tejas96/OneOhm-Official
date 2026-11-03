@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   answererFor,
+  type DatabaseExecutor,
   notifyStaffHolders,
   readBusinessSetting,
   users,
@@ -15,6 +16,13 @@ import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import { WORDS } from './words';
 
+export interface HandOverOptions {
+  /** Added to the staff alert, such as the onboarding answers so far. */
+  readonly summary?: string | undefined;
+  /** The caller's transaction; the hand-over then commits with the caller's work. */
+  readonly db?: DatabaseExecutor | undefined;
+}
+
 /**
  * Handing a WhatsApp chat to a person: the chat goes quiet for the assistant, its owner
  * (or the desk for its kind) is told, and the customer hears who will reply.
@@ -28,16 +36,17 @@ export class HandOverService {
 
   /**
    * A person takes over; the assistant stays quiet until the customer types "menu".
-   * `summary` (such as the onboarding answers so far) is added to the staff alert.
+   * `summary` (such as the onboarding answers so far) is added to the staff alert; pass
+   * `db` (a transaction) so the state, the alert and the reply commit together.
    */
   async handOver(
     chat: Conversation,
     capability: string,
     reply: string = WORDS.humanSoon,
-    summary?: string,
+    { summary, db = this.db }: HandOverOptions = {},
   ) {
-    await this.toPerson(chat);
-    const owned = await ensureChatOwner(this.db, chat);
+    await this.toPerson(chat, db);
+    const owned = await ensureChatOwner(db, chat);
     const who = `${chat.profileName ?? 'A customer'} · ${chat.phone}`;
     const alert = {
       kind: 'whatsapp_handover',
@@ -46,32 +55,33 @@ export class HandOverService {
       key: `wa_handover:${chat.id}:${Date.now()}`,
     };
     // The owner hears first; a chat nobody owns goes to the desk that handles this kind.
-    if (owned.assignedUserId) await tellChatTeam(this.db, owned, alert);
+    if (owned.assignedUserId) await tellChatTeam(db, owned, alert);
     else
-      await notifyStaffHolders(this.db, capability, {
+      await notifyStaffHolders(db, capability, {
         kind: alert.kind,
         title: alert.title,
         body: alert.body,
         subject: { type: 'chat', id: chat.id },
         dedupeKey: alert.key,
       });
-    return queueReply(this.db, chat, { kind: 'text', body: reply });
+    return queueReply(db, chat, { kind: 'text', body: reply });
   }
 
-  /** To the chat's own person (or its desk), named in the reply; `summary` as in handOver. */
-  async passToOwner(chat: Conversation, summary?: string) {
-    const owned = await ensureChatOwner(this.db, chat);
+  /** To the chat's own person (or its desk), named in the reply; options as in handOver. */
+  async passToOwner(chat: Conversation, options: HandOverOptions = {}) {
+    const db = options.db ?? this.db;
+    const owned = await ensureChatOwner(db, chat);
     return this.handOver(
       owned,
       deskFor(owned),
-      WORDS.passedToOwner(await this.answererName(owned)),
-      summary,
+      WORDS.passedToOwner(await this.answererName(owned, db)),
+      options,
     );
   }
 
   /** The chat is a person's now, without telling anyone (they asked for a call back). */
-  toPerson(chat: Conversation) {
-    return this.db
+  toPerson(chat: Conversation, db: DatabaseExecutor = this.db) {
+    return db
       .update(waConversations)
       .set({ state: 'human', handedOverAt: new Date(), updatedAt: new Date() })
       .where(eq(waConversations.id, chat.id));
@@ -104,10 +114,13 @@ export class HandOverService {
   }
 
   /** The first name of whoever answers this chat today, or null for the team. */
-  private async answererName(chat: Conversation): Promise<string | null> {
-    const userId = await answererFor(this.db, chat.assignedUserId ?? chat.handledByUserId);
+  private async answererName(
+    chat: Conversation,
+    db: DatabaseExecutor = this.db,
+  ): Promise<string | null> {
+    const userId = await answererFor(db, chat.assignedUserId ?? chat.handledByUserId);
     if (!userId) return null;
-    const [user] = await this.db
+    const [user] = await db
       .select({ name: users.fullName })
       .from(users)
       .where(eq(users.id, userId));
