@@ -5,6 +5,7 @@ export * from './capacity';
 export * from './leave';
 export * from './leave-handover';
 export * from './policy';
+export * from './rating-split';
 export * from './reporting-line';
 export * from './site-pin';
 export * from './site-visits';
