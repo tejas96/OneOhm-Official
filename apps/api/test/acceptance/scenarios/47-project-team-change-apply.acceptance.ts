@@ -97,6 +97,7 @@ describe('Project team change: applying it', () => {
       battery: false,
       groundMount: false,
       startDate: today(),
+      managerUserId: admin.userId,
     });
     await rows(
       `INSERT INTO wa_conversations (phone, customer_id, assigned_user_id) VALUES ($1, $2, $3)`,
