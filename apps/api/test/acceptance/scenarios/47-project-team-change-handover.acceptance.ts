@@ -67,11 +67,14 @@ describe('Project team change: handing over open tasks', () => {
     expect(after[t.open]?.assignee_user_id).toBe(t.y.id);
     expect(after[t.proposed]?.proposed_user_id).toBe(t.y.id);
     expect(after[t.done]?.assignee_user_id).toBe(t.x.id);
-    const told = await rows(
-      `SELECT 1 FROM notifications WHERE user_id = $1 AND kind = 'task_assigned'`,
+    const told = await rows<{ dedupe_key: string }>(
+      `SELECT dedupe_key FROM notifications WHERE user_id = $1 AND kind = 'task_assigned'`,
       [t.y.id],
     );
-    expect(told.length).toBeGreaterThan(0);
+    const keys = told.map((row) => row.dedupe_key);
+    expect(keys.some((key) => key.startsWith(`task_assigned:${t.open}:`))).toBe(true);
+    // A proposal is only told once a manager confirms it.
+    expect(keys.some((key) => key.startsWith(`task_assigned:${t.proposed}:`))).toBe(false);
     await retire(admin, [t.x, t.y]);
   });
 

@@ -56,12 +56,14 @@ export function TeamSheet({
   const { reset } = form;
   const [manager, setManager] = useState<string | undefined>(undefined);
   const [team, setTeam] = useState<string[]>([]);
+  const [initialTeam, setInitialTeam] = useState<string[]>([]);
   const [target, setTarget] = useState('');
   const [picks, setPicks] = useState<Record<string, string>>({});
   const seed = useCallback((from: ProjectDetail) => {
     const seeded = seedTeamForm(from);
     setManager(seeded.manager);
     setTeam(seeded.team);
+    setInitialTeam(seeded.team);
     setTarget(seeded.target);
     setPicks({});
   }, []);
@@ -83,7 +85,7 @@ export function TeamSheet({
     t('cannotManage'),
   );
 
-  const needs = handOverNeeds(project, team);
+  const needs = handOverNeeds(project, initialTeam, team);
   const missing = needs.some((need) => !picks[need.id]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {

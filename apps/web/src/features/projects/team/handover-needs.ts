@@ -10,12 +10,16 @@ export interface HandOverNeed {
 }
 
 /**
- * Who is being taken off the team (on it now, not in `team`) and still holds open
+ * Who is being taken off the team (on it when the sheet opened, `initialTeam`, and not in `team`) and still holds open
  * tasks or proposals on this project: each needs a choice before saving.
  */
-export function handOverNeeds(project: ProjectDetail, team: readonly string[]): HandOverNeed[] {
+export function handOverNeeds(
+  project: ProjectDetail,
+  initialTeam: readonly string[],
+  team: readonly string[],
+): HandOverNeed[] {
   return project.setup.team
-    .filter((member) => !team.includes(member.id))
+    .filter((member) => initialTeam.includes(member.id) && !team.includes(member.id))
     .map((member) => ({
       id: member.id,
       fullName: member.fullName,

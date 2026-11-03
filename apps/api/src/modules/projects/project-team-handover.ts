@@ -101,7 +101,8 @@ export async function handOverTasks(
         userId: toUserId,
         reason: 'team_change',
       });
-      await tellAssignee(tx, task, toUserId, actor.userId);
+      // A proposal is only told once a manager confirms it, so only a real assignment notifies.
+      if (task.assigneeUserId === fromUserId) await tellAssignee(tx, task, toUserId, actor.userId);
       moved += 1;
     }
   }

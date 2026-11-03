@@ -23,13 +23,22 @@ describe('handOverNeeds', () => {
       task('a', null, 'completed'),
       task('b', null, 'ready'),
     ]);
-    expect(handOverNeeds(p, ['b', 'c'])).toEqual([{ id: 'a', fullName: 'A', open: 2 }]);
+    expect(handOverNeeds(p, ['a', 'b', 'c'], ['b', 'c'])).toEqual([
+      { id: 'a', fullName: 'A', open: 2 },
+    ]);
   });
 
   it('skips removed people with nothing open and counts a task once', () => {
     const p = project([task('a', 'a', 'ready'), task('b', null, 'completed')]);
-    expect(handOverNeeds(p, ['c'])).toEqual([{ id: 'a', fullName: 'A', open: 1 }]);
-    expect(handOverNeeds(p, ['a', 'b', 'c'])).toEqual([]);
+    expect(handOverNeeds(p, ['a', 'b', 'c'], ['c'])).toEqual([{ id: 'a', fullName: 'A', open: 1 }]);
+    expect(handOverNeeds(p, ['a', 'b', 'c'], ['a', 'b', 'c'])).toEqual([]);
+  });
+});
+
+describe('handOverNeeds snapshot', () => {
+  it('ignores people who joined the team after the sheet opened', () => {
+    const p = project([task('a', null, 'ready')]);
+    expect(handOverNeeds(p, ['b', 'c'], ['b', 'c'])).toEqual([]);
   });
 });
 
