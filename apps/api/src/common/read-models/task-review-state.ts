@@ -3,6 +3,7 @@ import {
   activeUserIds,
   type DatabaseExecutor,
   holdersOf,
+  liveOnly,
   taskReviews,
   users,
 } from '@oneohm/database';
@@ -21,9 +22,6 @@ interface TaskForReview {
   readonly reviewer: string;
   readonly managerUserId: string | null;
 }
-
-/** An inactive manager counts as no manager. */
-const liveOnly = (id: string | null, live: ReadonlySet<string>) => (id && live.has(id) ? id : null);
 
 const NONE: ReviewState = { reviewerIds: [], returned: null, reworkCount: 0 };
 

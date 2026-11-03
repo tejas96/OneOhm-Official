@@ -46,15 +46,18 @@ export async function managerTermsOf(
   db: DatabaseExecutor,
   projectId: string,
 ): Promise<ManagerTerm[]> {
-  return db
-    .select({
-      userId: projectManagerTerms.userId,
-      startedAt: projectManagerTerms.startedAt,
-      endedAt: projectManagerTerms.endedAt,
-    })
-    .from(projectManagerTerms)
-    .where(eq(projectManagerTerms.projectId, projectId))
-    .orderBy(asc(projectManagerTerms.startedAt));
+  return (
+    db
+      .select({
+        userId: projectManagerTerms.userId,
+        startedAt: projectManagerTerms.startedAt,
+        endedAt: projectManagerTerms.endedAt,
+      })
+      .from(projectManagerTerms)
+      .where(eq(projectManagerTerms.projectId, projectId))
+      // Same start (two changes in one instant): the one made first comes first.
+      .orderBy(asc(projectManagerTerms.startedAt), asc(projectManagerTerms.createdAt))
+  );
 }
 
 /**
