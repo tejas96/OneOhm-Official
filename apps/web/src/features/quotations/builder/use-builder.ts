@@ -1,6 +1,7 @@
 'use client';
 
 import type { Property } from '@oneohm/api-contracts';
+import { suggestPanel } from '@oneohm/domain';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +12,6 @@ import {
   EMPTY_BUILDER,
   fromQuotation,
   suggestInverter,
-  suggestPanel,
   toInput,
   withProperty,
 } from './builder-state';
@@ -100,7 +100,7 @@ export function useBuilder() {
   const products = catalog.data;
   useEffect(() => {
     if (!products || state.panelChosen) return;
-    const suggested = suggestPanel(products.panels, state.subsidyCategory);
+    const suggested = suggestPanel(products.panels, state.subsidyCategory)?.id ?? null;
     if (suggested !== state.panelProductId) patch({ panelProductId: suggested });
   }, [products, state.panelChosen, state.subsidyCategory, state.panelProductId, patch]);
 

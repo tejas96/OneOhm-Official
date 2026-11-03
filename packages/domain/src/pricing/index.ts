@@ -6,6 +6,7 @@ export * from './card-checks';
 export * from './cost-buildup';
 export * from './costing-card';
 export * from './costing-detail';
+export * from './default-products';
 export * from './extra-lines';
 export * from './install-estimate';
 export * from './inverter-picks';

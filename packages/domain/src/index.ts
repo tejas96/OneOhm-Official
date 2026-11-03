@@ -11,6 +11,7 @@ export * from './incentives';
 export * from './inventory';
 export * from './language';
 export * from './messaging';
+export * from './onboarding';
 export * from './pricing';
 export * from './project-changes';
 export * from './project-health';
