@@ -9,13 +9,28 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { isWorkingTime, lastWorkEnd } from '@oneohm/domain';
-import { and, eq, gt, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
 import { WORDS } from './words';
+
+/**
+ * One "asked for a person" alert per customer message: keyed by the message that asked,
+ * so Meta's retry after a later failure does not alert again. A clock key only when the
+ * chat has no message from the customer yet.
+ */
+async function handOverKey(db: DatabaseExecutor, chatId: string): Promise<string> {
+  const [asked] = await db
+    .select({ id: waMessages.waMessageId })
+    .from(waMessages)
+    .where(and(eq(waMessages.conversationId, chatId), eq(waMessages.direction, 'in')))
+    .orderBy(desc(waMessages.createdAt))
+    .limit(1);
+  return `wa_handover:${chatId}:${asked?.id ?? Date.now()}`;
+}
 
 export interface HandOverOptions {
   /** Added to the staff alert, such as the onboarding answers so far. */
@@ -55,7 +70,7 @@ export class HandOverService {
       kind: 'whatsapp_handover',
       title: 'Someone wants to talk on WhatsApp',
       body: summary ? `${who}. ${summary}` : who,
-      key: `wa_handover:${chat.id}:${Date.now()}`,
+      key: await handOverKey(db, chat.id),
     };
     // The owner hears first; a chat nobody owns goes to the desk that handles this kind.
     if (owned.assignedUserId) await tellChatTeam(db, owned, alert);

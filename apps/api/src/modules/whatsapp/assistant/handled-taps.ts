@@ -10,14 +10,15 @@ const MENU_IDS = new Set<string>(ALL_MENU_ROWS.map((row) => row.id));
 /**
  * Taps the assistant answers even while a person has the chat (live review B4, B5): the
  * quote buttons, and a customer's menu rows (payments among them). They are the customer
- * choosing the assistant, so they never alert staff; typed words and files still do.
+ * choosing the assistant, so they never alert staff; typed words and files still do. The
+ * Menu tap on every closing message is the bot's own in any chat, since strangers restart too.
  */
 export function assistantAnswersTap(
   chat: Pick<Conversation, 'customerId'>,
   incoming: Pick<Incoming, 'kind' | 'choiceId'>,
 ): boolean {
   if (incoming.kind !== 'choice' || !incoming.choiceId) return false;
-  if (readQuoteTap(incoming.choiceId)) return true;
+  if (incoming.choiceId === 'menu' || readQuoteTap(incoming.choiceId)) return true;
   return chat.customerId !== null && MENU_IDS.has(incoming.choiceId);
 }
 

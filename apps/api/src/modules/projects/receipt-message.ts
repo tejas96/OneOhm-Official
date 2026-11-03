@@ -68,11 +68,13 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
       id: waConversations.id,
       phone: waConversations.phone,
       at: waConversations.lastInboundAt,
+      optedOutAt: waConversations.optedOutAt,
     })
     .from(waConversations)
     .where(eq(waConversations.phone, news.phone))
     .limit(1);
-  if (!chat || !chatWindowOpen(chat.at)) return;
+  // A chat that sent STOP gets no chat messages, even inside the 24 hours.
+  if (!chat || chat.optedOutAt || !chatWindowOpen(chat.at)) return;
   const { language, contact } = await contactFor(tx, news.projectId);
   await inLanguage(language, async () => {
     // The template's own version with the file already carries the receipt.

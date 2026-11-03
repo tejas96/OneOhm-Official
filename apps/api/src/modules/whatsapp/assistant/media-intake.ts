@@ -6,8 +6,10 @@ import { CustomerDocumentRequestsService } from '../../customer-portal/customer-
 import type { IncomingFile } from '../../documents/upload-file';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
+import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { sayWithTaps } from './closing-taps';
+import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
 
@@ -50,6 +52,7 @@ export class MediaIntakeService {
     @Inject(WHATSAPP_MEDIA) private readonly gateway: MediaGateway,
     private readonly papers: CustomerDocumentRequestsService,
     private readonly problems: ProblemFlowService,
+    private readonly people: HandOverService,
   ) {}
 
   /**
@@ -62,8 +65,11 @@ export class MediaIntakeService {
     media: IncomingMedia,
     said: string,
   ): Promise<void> {
-    if (media.type === 'audio' || media.type === 'video')
-      return sayWithTaps(this.db, chat, MEDIA_WORDS.notRead, ['talk', 'menu']);
+    // A voice note or a video goes warmly to their person, as for leads (C12).
+    if (media.type === 'audio' || media.type === 'video') {
+      const reply = heardReply(media.type, await this.people.answererName(chat));
+      return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
+    }
     const now = Date.now();
     if (chat.state === 'await_problem') {
       const file = await this.fetchOrSay(chat, media);

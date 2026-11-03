@@ -107,8 +107,6 @@ export const HI: Words<AssistantWords> = {
     photoNotAdded: 'फ़ाइल अनुरोध में नहीं जुड़ सकी। कृपया समस्या की फ़ोटो भेजें।',
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
-    notRead:
-      'माफ़ कीजिए, यहाँ सिर्फ़ फ़ोटो और PDF कागज़ लिए जा सकते हैं। कृपया कुछ शब्दों में लिखें, या "हमसे बात करें" दबाएँ।',
     tooLarge: 'यह फ़ाइल बहुत बड़ी है। कृपया छोटी फ़ोटो या PDF भेजें।',
     failed: 'माफ़ कीजिए, वह फ़ाइल खुल नहीं सकी। कृपया थोड़ी देर बाद फिर से भेजें।',
     problemSavedWithPhotos: (category, photos) =>

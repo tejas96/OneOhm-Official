@@ -109,8 +109,6 @@ export const MR: Words<AssistantWords> = {
     photoNotAdded: 'फाइल विनंतीला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
-    notRead:
-      'माफ करा, इथे फक्त फोटो आणि PDF कागद घेता येतात. कृपया थोडक्यात लिहा, किंवा "आमच्याशी बोला" दाबा.',
     tooLarge: 'ही फाइल खूप मोठी आहे. कृपया लहान फोटो किंवा PDF पाठवा.',
     failed: 'माफ करा, ती फाइल उघडता आली नाही. कृपया थोड्या वेळाने पुन्हा पाठवा.',
     problemSavedWithPhotos: (category, photos) =>

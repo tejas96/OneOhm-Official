@@ -120,8 +120,6 @@ const EN_MEDIA_WORDS = {
   photoAdded: 'Thank you, the photo is added to your request.',
   photoNotAdded: 'We could not add the file to the request. Please send a photo of the problem.',
   photoOnly: 'Photo or paper sent on WhatsApp.',
-  notRead:
-    'Sorry, I can only take photos and PDF papers here. Please write it in a few words, or tap "Talk to us".',
   tooLarge: 'This file is too large. Please send a smaller photo or PDF.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
   problemSavedWithPhotos: (category: string, photos: number) =>
