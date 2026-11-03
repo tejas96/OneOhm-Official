@@ -13,10 +13,10 @@ import {
   userRoles,
   users,
 } from '@oneohm/database';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { invalid, notFound } from '../../common/http/errors';
+import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { surveyTaskOf } from '../reports/survey-report.data';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
@@ -100,7 +100,17 @@ export class ProjectTeamService {
     assertTeamEditable(project);
     if (input.managerUserId !== undefined && input.managerUserId !== project.managerUserId)
       await checkManagerCandidate(this.db, input.managerUserId);
-    if (input.teamUserIds) await checkTeam(this.db, input.teamUserIds);
+    if (input.teamUserIds) {
+      const current = await this.db
+        .select({ id: projectTeamMembers.userId })
+        .from(projectTeamMembers)
+        .where(eq(projectTeamMembers.projectId, projectId));
+      await checkTeam(
+        this.db,
+        input.teamUserIds,
+        current.map((member) => member.id),
+      );
+    }
     if (input.targetFinishDate && input.targetFinishDate < project.startDate)
       throw invalid('The target finish comes after the start.', {
         targetFinishDate: 'Pick a date on or after the start date.',
@@ -108,16 +118,20 @@ export class ProjectTeamService {
     await this.db.transaction(async (tx) => {
       const managerChanged =
         input.managerUserId !== undefined && input.managerUserId !== project.managerUserId;
-      await tx
+      const saved = await tx
         .update(projects)
         .set({
           ...(managerChanged ? { managerUserId: input.managerUserId } : {}),
           ...(input.targetFinishDate !== undefined
             ? { targetFinishDate: input.targetFinishDate }
             : {}),
+          version: sql`${projects.version} + 1`,
           updatedAt: new Date(),
         })
-        .where(eq(projects.id, projectId));
+        .where(and(eq(projects.id, projectId), eq(projects.version, input.version)))
+        .returning({ id: projects.id });
+      if (saved.length === 0)
+        throw conflict('Someone else changed this project. Reload and try again.', 'stale');
       if (input.teamUserIds) await replaceTeam(tx, projectId, input.teamUserIds);
       if (managerChanged && input.managerUserId) {
         await this.tellNewManager(tx, project, input.managerUserId, actor);

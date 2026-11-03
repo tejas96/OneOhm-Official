@@ -10,6 +10,7 @@ import { Session } from '../support/http';
 import { addDays, type Sale, sellProject, today } from '../support/sales';
 import { advanceTo, project, sessionOf, taskByKey } from '../support/tasks';
 import { staffId } from '../support/team';
+import { patchTeam, setManagerTerms } from '../support/team-change';
 
 // PRD 13 "Owner dashboard": the owner sees the major risks and the causes of delay without
 // opening every project. Three scenario projects carry a problem each: work running late
@@ -44,15 +45,17 @@ describe('Owner dashboard', () => {
       project: { startDate: addDays(today(), -45) },
     });
     overdue = (await project(admin, late.project.id)).tasks.filter((task) => task.overdue);
-    lateWatcherId = await staffId(admin, 'accounts');
-    await admin.patch(`/projects/${late.project.id}`, { managerUserId: lateWatcherId });
+    lateWatcherId = await staffId(admin, 'liaisoning');
+    await patchTeam(admin, late.project.id, { managerUserId: lateWatcherId });
+    // Reports follow who managed the project when; this manager has had it since it began.
+    await setManagerTerms(late.project.id, [{ userId: lateWatcherId, days: 45 }]);
 
     utility = await sellProject(admin, { name: 'Dashboard DISCOM Wait (test)' });
     const sanction = await advanceTo(admin, utility.project.id, 'discom_sanction');
     discomTask = await waitOn(sanction, 'discom');
     // A manager of their own, so the owner can narrow the dashboard to just this project.
-    watcherId = await staffId(admin, 'hr');
-    await admin.patch(`/projects/${utility.project.id}`, { managerUserId: watcherId });
+    watcherId = await staffId(admin, 'execution');
+    await patchTeam(admin, utility.project.id, { managerUserId: watcherId });
 
     papers = await sellProject(admin, { name: 'Dashboard Customer Wait (test)' });
     const details = taskByKey(await project(admin, papers.project.id), 'electricity_details');

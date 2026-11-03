@@ -28,7 +28,6 @@
       "contractor": "Contractor",
       "noContractor": "No contractor",
       "contractorOff": "Switched off",
-      "named": "Named team",
       "anyone": "Anyone in the company",
       "outside": "{count, plural, one {# task went outside the team: nobody in it fits} other {# tasks went outside the team: nobody in it fits}}",
       "change": "Change",
@@ -40,7 +39,9 @@
       "manager": "Project manager",
       "managerHint": "The new manager is told straight away.",
       "save": "Save",
-      "saved": "Project team saved"
+      "saved": "Project team saved",
+      "inactive": "(inactive)",
+      "cannotManage": "(cannot manage)"
     },
     "budget": {
       "recheck": "Recheck price",

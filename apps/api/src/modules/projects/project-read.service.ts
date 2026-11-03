@@ -83,6 +83,7 @@ export class ProjectReadService {
         project.managerUserId && managerName
           ? { id: project.managerUserId, fullName: managerName }
           : null,
+      version: project.version,
       startDate: project.startDate,
       loan: project.loan,
       lenderName: project.lenderName,

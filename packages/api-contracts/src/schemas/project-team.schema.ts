@@ -7,7 +7,8 @@ export const projectSetupSchema = z.object({
   /** The one crew company all crew work goes to. */
   contractor: z.object({ id: idSchema, name: z.string(), active: z.boolean() }).nullable(),
   /** Staff named for the project; empty means anyone in the company. */
-  team: z.array(userRefSchema),
+  /** `active` is false once the person has left, so the sheet can still show and remove them. */
+  team: z.array(userRefSchema.extend({ active: z.boolean() })),
   targetFinishDate: calendarDateSchema.nullable(),
   /** The survey is approved but the budget is still not locked: a manager can recheck. */
   canRecheckBudget: z.boolean(),
@@ -43,6 +44,8 @@ export type TeamOptions = z.infer<typeof teamOptionsSchema>;
 
 /** A later change to the project's manager, team or target finish. */
 export const projectUpdateSchema = z.object({
+  /** The project version the person read: a save on an older one is rejected as stale. */
+  version: z.number().int(),
   managerUserId: idSchema.optional(),
   teamUserIds: z.array(idSchema).max(30).optional(),
   targetFinishDate: calendarDateSchema.nullable().optional(),

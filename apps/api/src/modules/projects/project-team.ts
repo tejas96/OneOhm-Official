@@ -16,7 +16,7 @@ import {
   type GeneratedTask,
   type ProjectPool,
 } from '@oneohm/domain';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { invalid } from '../../common/http/errors';
 import { loadContractorOptions } from './task-library.loader';
 
@@ -33,17 +33,26 @@ export interface ResolvedTeam {
   readonly contractorChosen: boolean;
 }
 
-/** The named people must be active staff, not a contractor's crew. */
-export async function checkTeam(db: DatabaseExecutor, userIds: readonly string[]): Promise<void> {
-  if (userIds.length === 0) return;
+/**
+ * The named people must be active staff, not a contractor's crew. People in `keep` (the
+ * project's current team) are not checked again, so a member who has since left can stay
+ * on the list or be taken off it.
+ */
+export async function checkTeam(
+  db: DatabaseExecutor,
+  userIds: readonly string[],
+  keep: readonly string[] = [],
+): Promise<void> {
+  const ids = userIds.filter((id) => !keep.includes(id));
+  if (ids.length === 0) return;
   const found = await db
     .selectDistinct({ id: users.id, crew: contractorMembers.contractorId })
     .from(users)
     .innerJoin(userRoles, eq(userRoles.userId, users.id))
     .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.kind, 'staff')))
     .leftJoin(contractorMembers, eq(contractorMembers.userId, users.id))
-    .where(and(inArray(users.id, [...userIds]), eq(users.status, 'active')));
-  if (found.length !== new Set(userIds).size || found.some((person) => person.crew !== null))
+    .where(and(inArray(users.id, ids), eq(users.status, 'active')));
+  if (found.length !== new Set(ids).size || found.some((person) => person.crew !== null))
     throw invalid('Pick active team members from your own staff.', {
       teamUserIds: 'Only active staff can be on the team, not crews or resellers.',
     });
@@ -112,7 +121,11 @@ export async function projectTeamOf(db: DatabaseExecutor, projectId: string) {
     .where(eq(projectContractors.projectId, projectId))
     .limit(1);
   const members = await db
-    .select({ id: users.id, fullName: users.fullName })
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      active: sql<boolean>`${users.status} = 'active'`,
+    })
     .from(projectTeamMembers)
     .innerJoin(users, eq(users.id, projectTeamMembers.userId))
     .where(eq(projectTeamMembers.projectId, projectId));
