@@ -26,7 +26,7 @@ export interface OnboardingSettings {
   readonly tariffPaisePerUnit: number;
   /** Units one kW makes in a month. */
   readonly unitsPerKwMonth: number;
-  /** Hours of silence before one nudge; 0 = no nudge. */
+  /** Hours of silence before one nudge; 0 = no nudge; at most MAX_NUDGE_AFTER_HOURS. */
   readonly nudgeAfterHours: number;
   /** Optional panel product to use instead of the suggested one. */
   readonly panelProductIds: Partial<Record<'individual' | 'commercial', string>>;
@@ -36,6 +36,11 @@ export const MIN_BILL_BANDS = 2;
 export const MAX_BILL_BANDS = 9;
 /** WhatsApp lists hold 10 rows; "Other" and "Talk to a person" take two. */
 export const MAX_SERVICE_CITIES = 8;
+/**
+ * The nudge is a session message, so it must go inside WhatsApp's free 24 hours; a larger
+ * wait would also hold back the lead made for a chat that stalls before the city.
+ */
+export const MAX_NUDGE_AFTER_HOURS = 23;
 /** WhatsApp list row titles hold 24 characters. */
 export const MAX_ROW_TITLE = 24;
 
@@ -116,6 +121,7 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
     typeof s.nudgeAfterHours === 'number' &&
     Number.isFinite(s.nudgeAfterHours) &&
     s.nudgeAfterHours >= 0 &&
+    s.nudgeAfterHours <= MAX_NUDGE_AFTER_HOURS &&
     isPanelOverrides(s.panelProductIds)
   );
 }

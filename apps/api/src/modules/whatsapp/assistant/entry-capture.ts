@@ -5,7 +5,7 @@ import {
   waConversations,
 } from '@oneohm/database';
 import { findCampaignCode } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { LeadIntakeService } from '../../crm/lead-intake.service';
 import type { Conversation } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
@@ -49,9 +49,17 @@ export async function captureEntry(
   const entry = entryOf(incoming, incoming.kind === 'text' ? await listedCodes(db) : undefined);
   if (!entry) return chat;
   if (await intake.openLeadByPhone(db, chat.phone)) return chat;
-  const context = { ...(chat.context as Record<string, unknown>), entry };
-  await db.update(waConversations).set({ context }).where(eq(waConversations.id, chat.id));
-  return { ...chat, context };
+  // Merged in the database, not from the copy read before the lock: two quick messages
+  // never overwrite each other's keys (such as the onboarding answers), and the first wins.
+  const [saved] = await db
+    .update(waConversations)
+    .set({
+      context: sql`case when ${waConversations.context} ? 'entry' then ${waConversations.context}
+        else coalesce(${waConversations.context}, '{}'::jsonb) || jsonb_build_object('entry', ${JSON.stringify(entry)}::jsonb) end`,
+    })
+    .where(eq(waConversations.id, chat.id))
+    .returning({ context: waConversations.context });
+  return { ...chat, context: saved?.context ?? chat.context };
 }
 
 /** Forgets the saved entry once a lead has been made from it. */

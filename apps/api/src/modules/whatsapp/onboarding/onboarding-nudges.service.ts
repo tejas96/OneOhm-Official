@@ -28,7 +28,7 @@ import {
   due,
   GIVE_UP_HOURS,
   HOUR,
-  LEAD_AFTER_HOURS,
+  leadAfterHours,
   leadOfThisOnboarding,
   nudgeTurn,
   PER_TICK,
@@ -109,9 +109,10 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
   }
 
   /**
-   * The chats worth locking: onboarding chats, silent under 7 days, not a customer and not
-   * followed up, that either have no lead from this onboarding (the lead rule) or have an open lead and
-   * are due the nudge now. Night and nudges-off ticks therefore lock nothing for a lead.
+   * The chats worth locking: onboarding chats, silent under 7 days, not a customer, that
+   * either are not followed up and have no lead from this onboarding (the lead rule) or
+   * have an open lead and are due the nudge now. Night and nudges-off ticks therefore
+   * lock nothing for a chat that already has its lead.
    */
   private async stalled(now: Date, settings: OnboardingSettings): Promise<string[]> {
     const ago = (hours: number) => new Date(now.getTime() - hours * HOUR);
@@ -133,8 +134,8 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
           isNull(waConversations.customerId),
           sql`${silentAt} > ${ago(GIVE_UP_HOURS)}`,
           sql`not exists (select 1 from customers where customers.phone_e164 = ${waConversations.phone})`,
-          sql`${waConversations.context}->'ob'->>'followedUpAt' is null`,
-          sql`((${silentAt} <= ${ago(Math.max(settings.nudgeAfterHours, LEAD_AFTER_HOURS))}
+          sql`((${waConversations.context}->'ob'->>'followedUpAt' is null
+              and ${silentAt} <= ${ago(leadAfterHours(settings))}
               and not exists (select 1 from leads where leads.phone_e164 = ${waConversations.phone}
                 and (leads.stage not in ('won', 'lost')
                   or leads.created_at >= (${waConversations.context}->'ob'->>'startedAt')::timestamptz))) ${nudgeDue})`,

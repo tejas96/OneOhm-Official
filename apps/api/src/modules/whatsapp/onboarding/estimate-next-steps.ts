@@ -66,7 +66,8 @@ export class EstimateNextStepsService {
         kind: 'whatsapp_callback',
         title: 'Call back today: asked after the estimate',
         body: `${chat.profileName ?? 'A customer'} · ${chat.phone}`,
-        key: `wa_callback:${chat.id}:${Date.now()}`,
+        // One alert a day: a second tap the same day is already on the owner's Today.
+        key: `wa_callback:${chat.id}:${today}`,
       });
       const name = await this.people.answererName(owned, tx);
       await queueReply(tx, chat, { kind: 'text', body: W.willCall(name) });

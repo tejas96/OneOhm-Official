@@ -1,5 +1,5 @@
 import { leads, type Transaction } from '@oneohm/database';
-import { isWorkingTime, type OnboardingSettings } from '@oneohm/domain';
+import { isWorkingTime, MAX_NUDGE_AFTER_HOURS, type OnboardingSettings } from '@oneohm/domain';
 import { and, eq, gte, notInArray, or } from 'drizzle-orm';
 import type { Conversation } from '../chat-store';
 import { type OnboardContext, readOnboard } from './onboarding-context';
@@ -9,6 +9,13 @@ import type { Turn } from './onboarding-turn';
 export const HOUR = 3_600_000;
 /** A chat with no lead gets one after this many silent hours, even with nudges off. */
 export const LEAD_AFTER_HOURS = 3;
+/**
+ * How long a chat with no lead waits for one: the nudge wait, but at least 3 hours and at
+ * most 23, so it always comes well before the job gives the chat up.
+ */
+export const leadAfterHours = (settings: OnboardingSettings): number =>
+  Math.min(Math.max(settings.nudgeAfterHours, LEAD_AFTER_HOURS), MAX_NUDGE_AFTER_HOURS);
+
 /** The nudge is a session message, so it only goes inside WhatsApp's free 24 hours. */
 export const WINDOW_HOURS = 24;
 /** Chats silent longer than this are left alone, so a deploy never floods sales with old chats. */
@@ -28,13 +35,15 @@ interface Due {
   readonly hadLead: boolean;
 }
 
-/** What is due for a silent chat: a lead (none ever, not followed up) and/or the one nudge. */
+/**
+ * What is due for a silent chat: a lead (none ever, not followed up) and/or the one nudge.
+ * Being followed up only stops a second lead: a chat whose lead was made at night still
+ * gets its nudge next morning, if it has an open lead and was never nudged.
+ */
 export function due(input: Due): { makeLead: boolean; nudge: boolean } {
   const { settings, silent, kept } = input;
   const makeLead =
-    !input.hadLead &&
-    !kept?.followedUpAt &&
-    silent >= Math.max(settings.nudgeAfterHours, LEAD_AFTER_HOURS) * HOUR;
+    !input.hadLead && !kept?.followedUpAt && silent >= leadAfterHours(settings) * HOUR;
   const nudge =
     settings.nudgeAfterHours > 0 &&
     !kept?.nudgedAt &&

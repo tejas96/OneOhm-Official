@@ -1,6 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Delivery } from '@oneohm/api-contracts';
-import { customerNotice, fallBackToSms, GENERIC_WORDS, outbox } from '@oneohm/database';
+import {
+  customerNotice,
+  fallBackToSms,
+  GENERIC_WORDS,
+  outbox,
+  tellChatFileFailed,
+} from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
@@ -60,23 +66,30 @@ export class DeliveriesService {
         .where(eq(outbox.providerMessageId, update.providerMessageId))
         .limit(1);
       if (!row || !laterStatus(row.deliveryStatus, update.status)) continue;
-      await this.db
-        .update(outbox)
-        .set({
-          deliveryStatus: update.status,
-          ...(update.status === 'delivered' ? { deliveredAt: update.at } : {}),
-          // A read message was delivered too, even if that receipt never came.
-          ...(update.status === 'read'
-            ? { readAt: update.at, deliveredAt: sql`coalesce(${outbox.deliveredAt}, ${update.at})` }
-            : {}),
-          ...(update.status === 'failed'
-            ? {
-                status: 'failed' as const,
-                lastError: update.error ?? 'WhatsApp could not deliver it.',
-              }
-            : {}),
-        })
-        .where(eq(outbox.id, row.id));
+      await this.db.transaction(async (tx) => {
+        await tx
+          .update(outbox)
+          .set({
+            deliveryStatus: update.status,
+            ...(update.status === 'delivered' ? { deliveredAt: update.at } : {}),
+            // A read message was delivered too, even if that receipt never came.
+            ...(update.status === 'read'
+              ? {
+                  readAt: update.at,
+                  deliveredAt: sql`coalesce(${outbox.deliveredAt}, ${update.at})`,
+                }
+              : {}),
+            ...(update.status === 'failed'
+              ? {
+                  status: 'failed' as const,
+                  lastError: update.error ?? 'WhatsApp could not deliver it.',
+                }
+              : {}),
+          })
+          .where(eq(outbox.id, row.id));
+        // A chat file WhatsApp could not deliver: the chat's people are told to send it again.
+        if (update.status === 'failed') await tellChatFileFailed(tx, row.id);
+      });
       // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
       if (update.status === 'failed' && isNotOnWhatsApp(update.errorCode)) {
         await fallBackToSms(

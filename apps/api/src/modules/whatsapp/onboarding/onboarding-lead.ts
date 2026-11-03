@@ -22,6 +22,9 @@ const ROOF = { rcc: 'RCC', tin: 'Tin sheet', other: 'Other roof' };
 const CATEGORY = { home: 'individual', society: 'society', business: 'commercial' } as const;
 /** A lead made by a call-back or a nudge before the city was asked. */
 const NO_CITY = 'Not given';
+/** Names a lead gets when the chat has no WhatsApp name: not the customer's, so still asked. */
+export const NO_NAME = { handOver: 'WhatsApp enquiry', city: 'WhatsApp contact' } as const;
+const PLACEHOLDER_NAMES: ReadonlySet<string> = new Set(Object.values(NO_NAME));
 
 export interface OpenLead {
   readonly id: string;
@@ -40,7 +43,12 @@ export async function openLeadFor(db: DatabaseExecutor, phone: string): Promise<
 
 /** What the lead already tells us, so those questions are skipped. */
 export const knownFrom = (lead: OpenLead | null): Partial<OnboardAnswers> =>
-  lead ? { name: lead.name, ...(lead.city !== NO_CITY ? { city: lead.city } : {}) } : {};
+  lead
+    ? {
+        ...(PLACEHOLDER_NAMES.has(lead.name) ? {} : { name: lead.name }),
+        ...(lead.city !== NO_CITY ? { city: lead.city } : {}),
+      }
+    : {};
 
 const floorsText = (floors: number) => (floors === 1 ? '1 floor' : `${floors} floors`);
 const roofAnd = (roof: OnboardAnswers['roof']) => (roof ? `${ROOF[roof]}, ` : '');
@@ -137,14 +145,7 @@ export async function writeAnswer(
 ): Promise<{ leadId: string | null; created: boolean }> {
   const { chat, lead, step, answers } = input;
   if (step === 'city' && !lead) {
-    const leadId = await makeLead(
-      tx,
-      intake,
-      chat,
-      answers,
-      'WhatsApp contact',
-      'Finish onboarding',
-    );
+    const leadId = await makeLead(tx, intake, chat, answers, NO_NAME.city, 'Finish onboarding');
     return { leadId, created: true };
   }
   const write = lead ? WRITES[step]?.(answers, input.settings) : null;

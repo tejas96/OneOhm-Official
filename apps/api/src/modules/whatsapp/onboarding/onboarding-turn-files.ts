@@ -3,7 +3,7 @@ import type { LeadIntakeService } from '../../crm/lead-intake.service';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { queueReply } from '../chat-store';
 import { type ChatFilesService, type FileOutcome, fileWords } from './onboarding-files';
-import { makeLead } from './onboarding-lead';
+import { makeLead, NO_NAME } from './onboarding-lead';
 import { speak, type Turn } from './onboarding-turn';
 
 /**
@@ -55,18 +55,20 @@ export async function fileHeldBill(
 }
 
 /**
- * Before a person takes the chat there must be a lead, so nothing stays only in chat:
- * made now when there is none (city "Not given" unless answered), with any held bill filed
- * on it. Stalled chats (Task 7) call this too, with their own next-action note.
+ * Before a person takes the chat, or the estimate is made, there must be a lead, so nothing
+ * stays only in chat: the open lead's id, or a lead made now (city "Not given" unless
+ * answered) with any held bill filed on it. Stalled chats (Task 7) call this too, with
+ * their own next-action note.
  */
 export async function ensureLead(
   turn: Turn,
   deps: { readonly intake: LeadIntakeService; readonly files: ChatFilesService },
   nextActionNote = 'Call — asked for a person during onboarding',
-): Promise<void> {
-  if (turn.lead) return;
+): Promise<string> {
+  if (turn.lead) return turn.lead.id;
   const { tx, chat, answers } = turn;
-  const leadId = await makeLead(tx, deps.intake, chat, answers, 'WhatsApp enquiry', nextActionNote);
+  const leadId = await makeLead(tx, deps.intake, chat, answers, NO_NAME.handOver, nextActionNote);
   turn.dropEntry = true;
   await fileHeldBill(turn, deps.files, leadId);
+  return leadId;
 }

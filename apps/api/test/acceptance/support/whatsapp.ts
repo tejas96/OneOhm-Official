@@ -23,6 +23,8 @@ export interface InboundMessage {
   };
   /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
   referral?: Record<string, string>;
+  /** The sender's WhatsApp name; null sends none (a number without a profile name). */
+  profileName?: string | null;
 }
 
 /**
@@ -47,7 +49,15 @@ export async function sendInbound(from: string, message: InboundMessage): Promis
           {
             field: 'messages',
             value: {
-              contacts: [{ wa_id: wa, profile: { name: 'Acceptance Customer (test)' } }],
+              contacts:
+                message.profileName === null
+                  ? []
+                  : [
+                      {
+                        wa_id: wa,
+                        profile: { name: message.profileName ?? 'Acceptance Customer (test)' },
+                      },
+                    ],
               messages: [sent],
             },
           },
@@ -55,6 +65,32 @@ export async function sendInbound(from: string, message: InboundMessage): Promis
       },
     ],
   });
+  await postSigned(raw);
+}
+
+/** Meta's delivery receipt for one of our messages, by its WhatsApp message id. */
+export async function sendStatus(
+  providerMessageId: string,
+  status: 'sent' | 'delivered' | 'read' | 'failed',
+): Promise<void> {
+  const error = { code: 131053, title: 'Media upload error' };
+  const receipt = {
+    id: providerMessageId,
+    status,
+    timestamp: String(Math.floor(Date.now() / 1000)),
+    ...(status === 'failed' ? { errors: [error] } : {}),
+  };
+  const value = { statuses: [receipt] };
+  await postSigned(
+    JSON.stringify({
+      object: 'whatsapp_business_account',
+      entry: [{ changes: [{ field: 'messages', value }] }],
+    }),
+  );
+}
+
+/** Posts to the webhook signed with the app secret, as Meta does. */
+async function postSigned(raw: string): Promise<void> {
   const res = await fetch(`${API}/webhooks/whatsapp`, {
     method: 'POST',
     headers: {

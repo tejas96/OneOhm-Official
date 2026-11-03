@@ -2,11 +2,13 @@ import {
   customerNotice,
   customers,
   type Database,
+  type DatabaseExecutor,
   fallBackToSms,
   GENERIC_WORDS,
   messageTemplates,
   outbox,
   recordDeliveryFailure,
+  tellChatFileFailed,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
@@ -56,8 +58,9 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     status: 'sent' | 'skipped' | 'failed',
     note: string | null,
     providerMessageId: string | null = null,
+    executor: DatabaseExecutor = db,
   ) => {
-    await db
+    await executor
       .update(outbox)
       .set({
         status,
@@ -144,7 +147,11 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
           return 'skipped';
         }
-        await finish(row.id, 'failed', reason);
+        // A file in a chat that never arrived: the chat's people are told, with the failure.
+        await db.transaction(async (tx) => {
+          await finish(row.id, 'failed', reason, null, tx);
+          await tellChatFileFailed(tx, row.id);
+        });
         return 'failed';
       }
       await db.update(outbox).set({ lastError: reason }).where(eq(outbox.id, row.id));
@@ -194,13 +201,20 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       );
     },
 
-    /** Called once retries run out, so the failure is visible to the office. */
+    /**
+     * Called once retries run out, so the failure is visible to the office; a chat file
+     * that never arrived also tells the chat's people.
+     */
     async markOutboxFailed(id: string, reason: string): Promise<void> {
-      const failed = await db
-        .update(outbox)
-        .set({ status: 'failed', lastError: reason })
-        .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`)
-        .returning({ id: outbox.id });
+      const failed = await db.transaction(async (tx) => {
+        const rows = await tx
+          .update(outbox)
+          .set({ status: 'failed', lastError: reason })
+          .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`)
+          .returning({ id: outbox.id });
+        if (rows.length > 0) await tellChatFileFailed(tx, id);
+        return rows;
+      });
       // Kept in Settings → Automation runs with a retry (PRD 7.1 failure visibility).
       if (failed.length > 0) await recordDeliveryFailure(db, id, reason);
     },

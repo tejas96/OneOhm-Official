@@ -175,11 +175,17 @@ export class OnboardingFlowService {
     if (written.leadId) await fileHeldBill(turn, this.files, written.leadId);
     const next = nextStep(step, turn.answers, turn.known);
     if (next !== 'done') return this.ask(turn, next);
+    // Its lead was closed on the way: a new one, so the estimate or the expert has a lead.
+    const leadId =
+      written.leadId ??
+      (await ensureLead(
+        turn,
+        { intake: this.intake, files: this.files },
+        'Call — finished onboarding',
+      ));
     await this.save(turn, 'done');
     const after = { view: this.view(turn), summary: summaryOf(turn.answers, turn.settings) };
-    await this.speak(turn, () =>
-      this.estimates.finish(tx, chat, written.leadId, turn.answers, after),
-    );
+    await speak(turn, () => this.estimates.finish(tx, chat, leadId, turn.answers, after));
     return null;
   }
 
@@ -187,7 +193,7 @@ export class OnboardingFlowService {
   private async afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
     const { tx, chat, lead } = turn;
     const tap = incoming?.choiceId ?? null;
-    const answered = await this.speak(turn, () => this.nextSteps.answer(tx, chat, lead, tap));
+    const answered = await speak(turn, () => this.nextSteps.answer(tx, chat, lead, tap));
     return answered ? null : this.toPerson(turn, 'done');
   }
 
@@ -201,13 +207,13 @@ export class OnboardingFlowService {
     await ensureLead(turn, { intake: this.intake, files: this.files });
     await this.save(turn, step);
     const summary = summaryOf(turn.answers, turn.settings);
-    await this.speak(turn, () => this.people.passToOwner(turn.chat, { summary, db: turn.tx }));
+    await speak(turn, () => this.people.passToOwner(turn.chat, { summary, db: turn.tx }));
     return null;
   }
 
   private async ask(turn: Turn, step: OnboardStep, retry = false): Promise<null> {
     await this.save(turn, step);
-    await this.speak(turn, () =>
+    await speak(turn, () =>
       queueReply(turn.tx, turn.chat, question(step, { ...this.view(turn), retry })),
     );
     return null;
@@ -231,11 +237,6 @@ export class OnboardingFlowService {
       .update(waConversations)
       .set({ state: onboardState(step), context, updatedAt: new Date() })
       .where(eq(waConversations.id, turn.chat.id));
-  }
-
-  /** Replies go out in the language chosen, from the moment it is chosen. */
-  private speak<T>(turn: Turn, say: () => Promise<T>): Promise<T> {
-    return speak(turn, say);
   }
 
   private view(turn: Turn): QuestionView {

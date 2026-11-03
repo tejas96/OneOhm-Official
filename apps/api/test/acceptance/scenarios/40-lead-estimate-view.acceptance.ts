@@ -100,6 +100,10 @@ describe('Staff see the estimate the customer got', () => {
          FROM lead_estimates WHERE lead_id = $1`,
       [withEstimate],
     );
+    // A row without a size is not an estimate the customer saw, as on the lead page.
+    await rows(`INSERT INTO lead_estimates (lead_id, answers, priced) VALUES ($1, '{}', '{}')`, [
+      without?.id,
+    ]);
     const report = await admin.get<SalesReport>('/business-reports/sales');
     expect(report.byCampaign.find((row) => row.key === CODE)).toMatchObject({
       leads: 2,

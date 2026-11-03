@@ -119,6 +119,9 @@ describe('WhatsApp onboarding settings', () => {
     expect((await put({ ...current, billBands: [first] })).status).toBe(400);
     const notPanel = { ...current, panelProductIds: { commercial: inverter3k } };
     expect((await put(notPanel)).status).toBe(400);
+    // Over 23 hours the nudge and the stalled-chat lead would fall outside WhatsApp's day.
+    expect((await put({ ...current, nudgeAfterHours: 24 })).status).toBe(400);
+    expect((await put({ ...current, nudgeAfterHours: 23 })).status).toBe(200);
 
     await rows(`UPDATE products SET active = false WHERE id = $1`, [dcrPanel]);
     try {

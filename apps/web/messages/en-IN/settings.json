@@ -1332,7 +1332,7 @@
       "tariff": "Electricity price per unit (₹)",
       "unitsPerKw": "Units per kW per month",
       "nudge": "Nudge after (hours, 0 = off)",
-      "nudgeHint": "One reminder to a person who stops answering.",
+      "nudgeHint": "One reminder to a person who stops answering. At most 23 hours.",
       "panels": "Panel to price with (optional)",
       "panelsHint": "Leave empty to use the panel we suggest for the site.",
       "home": "Home",

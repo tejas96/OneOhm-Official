@@ -6,6 +6,7 @@ import {
   LEAD_ASSIGNMENT_STRATEGIES,
   MAX_BILL_BANDS,
   MAX_CITIES_PER_OWNER,
+  MAX_NUDGE_AFTER_HOURS,
   MAX_ROW_TITLE,
   MAX_SERVICE_CITIES,
   PROJECT_VARIANTS,
@@ -64,7 +65,7 @@ export const onboardingSettingsSchema = z.object({
     .max(MAX_BILL_BANDS),
   tariffPaisePerUnit: z.number().positive(),
   unitsPerKwMonth: z.number().positive(),
-  nudgeAfterHours: z.number().min(0),
+  nudgeAfterHours: z.number().min(0).max(MAX_NUDGE_AFTER_HOURS),
   panelProductIds: z.object({
     individual: idSchema.optional(),
     commercial: idSchema.optional(),

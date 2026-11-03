@@ -97,8 +97,9 @@ export class EstimateService {
     if (inputs.kind === 'expert') return this.expert(tx, leadId, inputs.reason);
     const panels = await this.catalog.products('panel');
     const chosen = settings.panelProductIds[inputs.subsidyCategory];
+    // The owner's panel only while it is on sale; otherwise the suggested one.
     const panel =
-      panels.find((product) => product.id === chosen) ??
+      panels.find((product) => product.id === chosen && product.active) ??
       suggestPanel(panels, inputs.subsidyCategory);
     if (!panel) return this.expert(tx, leadId, 'no_panel');
     const inverters = suggestInverterMix(
@@ -175,19 +176,20 @@ export class EstimateService {
 
   /**
    * The end of onboarding, in the chat's transaction and language: the estimate PDF and
-   * its next-step buttons, or the expert reply with a hand-over to the owner.
+   * its next-step buttons, or the expert reply with a hand-over to the owner. The caller
+   * makes sure there is a lead, so the price and the hand-over are always kept on one.
    */
   async finish(
     tx: Transaction,
     chat: Conversation,
-    leadId: string | null,
+    leadId: string,
     answers: OnboardAnswers,
     { view, summary }: { readonly view: QuestionView; readonly summary: string },
   ): Promise<void> {
     const W = ONBOARD_WORDS;
-    const result = leadId ? await this.make(tx, leadId, answers) : null;
-    if (!leadId || result?.kind !== 'sent') {
-      const why = REASON[result?.kind === 'expert' ? result.reason : 'missing'];
+    const result = await this.make(tx, leadId, answers);
+    if (result.kind !== 'sent') {
+      const why = REASON[result.reason];
       await this.people.passToOwner(chat, {
         summary: `${summary}. No instant estimate: ${why}`,
         db: tx,

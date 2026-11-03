@@ -155,6 +155,16 @@ describe('onboarding questions', () => {
     expect(ONBOARD_LISTS.hi.firstDetails).not.toBe(ONBOARD_LISTS.en.firstDetails);
   });
 
+  // The nudge is a buttons message: a body of up to 1024 characters and 20-character buttons.
+  it('fits the nudge and its buttons in every language', () => {
+    for (const [language, words] of Object.entries(ONBOARD_LISTS)) {
+      expect(words.nudge.length, `${language} nudge`).toBeGreaterThan(0);
+      expect(words.nudge.length, `${language} nudge`).toBeLessThanOrEqual(1024);
+      for (const button of [words.continue, words.talkToPerson])
+        expect(button.length, `${language} ${button}`).toBeLessThanOrEqual(20);
+    }
+  });
+
   it('has the same words in every language', () => {
     for (const words of [ONBOARD_LISTS.mr, ONBOARD_LISTS.hi])
       expect(Object.keys(words).sort()).toEqual(Object.keys(ONBOARD_LISTS.en).sort());

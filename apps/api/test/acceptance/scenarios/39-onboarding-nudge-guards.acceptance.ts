@@ -45,6 +45,24 @@ describe('Onboarding nudge guards', () => {
     expect(await leadsOf(phone)).toHaveLength(1);
   });
 
+  it('a chat stalled in the evening gets its lead at night and its nudge next morning', async () => {
+    const evening = new Date(`${today()}T21:00:00+05:30`);
+    const morning = new Date(evening.getTime() + 13 * HOUR);
+    const phone = uniquePhone();
+    await say(phone, 'hi');
+    await tap(phone, 'ob:language:en');
+    await silent(phone, 4, evening);
+    await run(evening);
+    expect(await leadsOf(phone)).toHaveLength(1);
+    expect(await nudges(phone)).toHaveLength(0);
+    // 17 hours silent: still inside WhatsApp's 24 hours, and now working time.
+    await run(morning);
+    expect(await nudges(phone)).toHaveLength(1);
+    await run(new Date(morning.getTime() + HOUR));
+    expect(await nudges(phone)).toHaveLength(1);
+    expect(await leadsOf(phone)).toHaveLength(1);
+  });
+
   it('makes a new lead for a number whose old lead was lost before this chat began', async () => {
     const phone = uniquePhone();
     const old = await admin.post<{ id: string }>('/leads', {

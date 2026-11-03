@@ -9,7 +9,7 @@ import {
   users,
 } from '@oneohm/database';
 import type { ProjectType } from '@oneohm/domain';
-import { and, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { ReportScope } from './report-scope';
 
@@ -217,7 +217,10 @@ export async function readCollectedByLead(
   return new Map(rows.flatMap((row) => (row.leadId ? [[row.leadId, Number(row.paise)]] : [])));
 }
 
-/** The leads among these that got an instant estimate on WhatsApp (at least one row). */
+/**
+ * The leads among these that got an instant estimate on WhatsApp: at least one row with a
+ * size, as the lead page shows it (a row without one is not an estimate the customer saw).
+ */
 export async function readEstimatedLeadIds(
   db: DatabaseExecutor,
   leadIds: readonly string[],
@@ -226,6 +229,6 @@ export async function readEstimatedLeadIds(
   const rows = await db
     .selectDistinct({ leadId: leadEstimates.leadId })
     .from(leadEstimates)
-    .where(inArray(leadEstimates.leadId, [...leadIds]));
+    .where(and(inArray(leadEstimates.leadId, [...leadIds]), isNotNull(leadEstimates.capacityWp)));
   return new Set(rows.map((row) => row.leadId));
 }

@@ -25,6 +25,10 @@ describe('isOnboardingSettings', () => {
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: -1 })).toBe(false);
     expect(isOnboardingSettings(null)).toBe(false);
   });
+  it('caps the nudge at 23 hours, so the nudge and the stalled lead stay inside a day', () => {
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 23 })).toBe(true);
+    expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 24 })).toBe(false);
+  });
   it('allows 8 cities and rejects 9, since the list also carries two other rows', () => {
     const cities = (n: number) => Array.from({ length: n }, (_, i) => `City${i}`);
     expect(isOnboardingSettings({ ...DEFAULT_ONBOARDING, serviceCities: cities(8) })).toBe(true);
