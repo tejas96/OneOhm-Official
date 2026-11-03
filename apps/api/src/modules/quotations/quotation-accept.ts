@@ -7,6 +7,7 @@ import {
   notifyHolders,
   quotations,
   type Transaction,
+  whoCovers,
 } from '@oneohm/database';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, gt, inArray, ne } from 'drizzle-orm';
@@ -125,12 +126,11 @@ export async function tellStartProject(tx: Transaction, quotation: QuotationDeta
         .from(leads)
         .where(eq(leads.id, quotation.input.leadId))
     : [];
-  // The same per-person key as notifyHolders, so an owner who also sets up projects hears once.
-  if (lead?.owner)
-    await notify(
-      tx,
-      { userId: lead.owner },
-      { ...notice, dedupeKey: `${notice.dedupeKey}:${lead.owner}` },
-    );
+  // The same per-person key as notifyHolders, so an owner who also sets up projects hears
+  // once; an owner on leave today is covered by their backup.
+  if (lead?.owner) {
+    const userId = await whoCovers(tx, lead.owner);
+    await notify(tx, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
+  }
   await notifyHolders(tx, 'projects.create', notice);
 }

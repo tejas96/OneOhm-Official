@@ -66,6 +66,11 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
   const t = useTranslations('service.whatsapp');
   const format = useFormatter();
   const outgoing = message.direction === 'out';
+  // A line about the chat itself (the assistant took it back), never sent to the customer.
+  if (message.kind === 'note')
+    return (
+      <li className="self-center px-1 text-center type-label text-ink-faint">{message.body}</li>
+    );
   return (
     <li className={cn('flex flex-col gap-1', outgoing ? 'items-end' : 'items-start')}>
       <div

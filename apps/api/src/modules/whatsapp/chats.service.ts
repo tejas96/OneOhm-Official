@@ -16,6 +16,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { contactLeadsByPhone } from '../crm/lead-history';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
 import {
   conversationForPhone,
@@ -68,11 +69,11 @@ export class ChatsService {
       .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
       .leftJoin(users, eq(users.id, waMessages.sentByUserId))
       .where(eq(waMessages.conversationId, id))
-      .orderBy(waMessages.createdAt)
-      .limit(500);
+      .orderBy(desc(waMessages.createdAt))
+      .limit(200); // the newest 200, shown oldest first
     return {
       chat,
-      messages: rows.map(({ message, status, deliveryStatus, sentBy }) => ({
+      messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy }) => ({
         id: message.id,
         direction: message.direction as 'in' | 'out',
         kind: message.kind,
@@ -115,6 +116,7 @@ export class ChatsService {
           },
           actor.userId,
         );
+      if (actor.kind !== 'reseller') await contactLeadsByPhone(tx, chat.phone, actor.userId);
     });
     return this.get(actor, id);
   }

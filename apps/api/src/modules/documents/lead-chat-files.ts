@@ -47,7 +47,13 @@ export async function storeLeadDocument(
       })
       .returning({ id: documents.id });
     if (!row) throw new Error('Document insert returned nothing');
-    await logLead(tx, input.leadId, null, 'whatsapp', 'Electricity bill received on WhatsApp');
+    await logLead(
+      tx,
+      input.leadId,
+      null,
+      'whatsapp',
+      'Bill file received on WhatsApp (not checked)',
+    );
     return row.id;
   } catch (error) {
     await storage.remove(storageKey).catch(() => undefined);

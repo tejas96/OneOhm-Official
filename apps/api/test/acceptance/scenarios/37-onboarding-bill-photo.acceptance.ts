@@ -72,7 +72,7 @@ describe('The bill photo on the lead', () => {
     expect(more).toEqual([]);
     expect(doc).toMatchObject({ customer_id: null, category: 'electricity_bill' });
     const notes = (await notesOf(lead?.id ?? '')).map((row) => row.note);
-    expect(notes).toContain('Electricity bill received on WhatsApp');
+    expect(notes).toContain('Bill file received on WhatsApp (not checked)');
     expect((await chatOf(phone)).ob).not.toHaveProperty('pendingFile');
 
     // The bill is already on the lead, so the photo question is skipped.
@@ -115,7 +115,7 @@ describe('The bill photo on the lead', () => {
       category: 'electricity_bill',
     });
     const notes = (await notesOf(lead?.id ?? '')).map((row) => row.note);
-    expect(notes).toContain('Electricity bill received on WhatsApp');
+    expect(notes).toContain('Bill file received on WhatsApp (not checked)');
     expect((await bodies(phone)).some((body) => body.includes('Thank'))).toBe(true);
     const estimate = (await replies(phone)).find((reply) => reply.filename);
     expect(estimate?.caption).toContain('Estimate');

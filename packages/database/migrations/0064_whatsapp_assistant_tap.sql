@@ -1,0 +1,1 @@
+ALTER TABLE "wa_messages" ADD COLUMN "assistant_tap" boolean DEFAULT false NOT NULL;

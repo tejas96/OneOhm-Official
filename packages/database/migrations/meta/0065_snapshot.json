@@ -1,6 +1,6 @@
 {
-  "id": "cc65dcc4-acee-42fd-9226-4a3774e1e09e",
-  "prevId": "bbd5f575-281c-4df0-99ac-16b59f469fef",
+  "id": "5deaf395-a8de-4dfc-b8bf-8219565feba8",
+  "prevId": "41ac06c8-5e0d-41bb-a354-c1a3031116c0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13476,7 +13476,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -19197,6 +19197,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "assistant_tap": {
+          "name": "assistant_tap",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "outbox_id": {
           "name": "outbox_id",

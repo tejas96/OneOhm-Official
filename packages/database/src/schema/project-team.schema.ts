@@ -57,7 +57,7 @@ export const projectManagerTerms = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     userId: uuid('user_id')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => users.id, { onDelete: 'restrict' }),
     startedAt: instant('started_at').notNull(),
     endedAt: instant('ended_at'),
     createdAt: createdAt(),

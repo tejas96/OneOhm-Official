@@ -14,13 +14,8 @@ import { PeriodNumbers } from '../parts/period-numbers';
 import { ReportBody, ReportNote } from '../parts/report-body';
 import { decimal, formatRate, kwp, money, useBucketNames, whole } from '../parts/report-format';
 import { useSalesReport } from '../use-business-reports';
-import {
-  LostReasons,
-  SalesByCampaign,
-  SalesByOwner,
-  SalesBySource,
-  SalesFunnel,
-} from './sales-tables';
+import { SalesByCampaign } from './sales-campaign-table';
+import { LostReasons, SalesByOwner, SalesBySource, SalesFunnel } from './sales-tables';
 
 function Kpis({ data }: { readonly data: SalesReport }) {
   const t = useTranslations('salesReport.kpis');

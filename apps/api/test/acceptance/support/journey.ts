@@ -150,16 +150,17 @@ export async function alerted(kind: string, about: string): Promise<string[]> {
   return found.map((row) => row.user_id);
 }
 
-/** Active staff whose role carries this capability (who `notifyHolders` tells). */
+/** Active staff with this capability, as `notifyHolders` picks them (leave aside). */
 export async function holdersOf(capability: string): Promise<string[]> {
-  const found = await rows<{ id: string }>(
-    `SELECT DISTINCT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id
+  const found = await rows<{ id: string; desk: boolean }>(
+    `SELECT u.id, bool_and(r.system) AS desk FROM users u JOIN user_roles ur ON ur.user_id = u.id
        JOIN roles r ON r.id = ur.role_id AND r.archived_at IS NULL AND r.kind = 'staff'
        JOIN role_capabilities rc ON rc.role_id = r.id AND rc.capability = $1
-      WHERE u.status = 'active'`,
+      WHERE u.status = 'active' GROUP BY u.id`,
     [capability],
   );
-  return found.map((row) => row.id);
+  const others = found.filter((row) => !row.desk);
+  return (others.length > 0 ? others : found).map((row) => row.id);
 }
 
 /** The customer-facing outbox rows of one template for this phone, oldest first. */
@@ -229,6 +230,7 @@ export async function startProject(admin: Session, quotationId: string) {
   return admin.post<{ id: string }>('/projects', {
     quotationId,
     discomId: await discomId(admin, 'MSEDCL'),
+    managerUserId: admin.userId,
     ...{ loan: false, lenderName: null, loanPaise: 0, battery: false, groundMount: false },
     startDate: today(),
   });

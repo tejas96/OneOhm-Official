@@ -6,6 +6,7 @@ import {
   notify,
   notifyHolders,
   quotations,
+  whoCovers,
 } from '@oneohm/database';
 import { lastWorkEnd } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
@@ -57,7 +58,7 @@ export async function expiringQuotes(db: Database, now: Date, zone: string): Pro
     if (!quote.owner) continue;
     await notify(
       db,
-      { userId: quote.owner },
+      { userId: await whoCovers(db, quote.owner) },
       {
         kind: 'quotation_expiring',
         title: `${quote.number} for ${quote.customer} runs out on ${quote.validUntil}`,
@@ -99,7 +100,7 @@ export async function missedPromisedCalls(db: Database, now: Date, zone: string)
     if (!lead.owner) continue;
     await notify(
       db,
-      { userId: lead.owner },
+      { userId: await whoCovers(db, lead.owner) },
       {
         kind: 'call_not_logged',
         title: `Promised call to ${lead.name}: no call logged`,

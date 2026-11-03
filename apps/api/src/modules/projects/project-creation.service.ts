@@ -24,6 +24,7 @@ import { raiseProjectNameChange } from '../discom/change-request-raise';
 import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
 import { projectStarted } from '../quotations/quotation-project';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
+import { checkProjectInput } from './project-input';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
@@ -117,12 +118,7 @@ export class ProjectCreationService {
     const quotation = await this.acceptedQuotation(input.quotationId);
     const [discom] = await this.db.select().from(discoms).where(eq(discoms.id, input.discomId));
     if (!discom) throw invalid('Choose the DISCOM.', { discomId: 'Unknown DISCOM.' });
-    if (input.loan && input.loanPaise <= 0)
-      throw invalid('Enter the loan amount.', { loanPaise: 'Required for a loan project.' });
-    if (input.targetFinishDate && input.targetFinishDate < input.startDate)
-      throw invalid('The target finish comes after the start.', {
-        targetFinishDate: 'Pick a date on or after the start date.',
-      });
+    const managerUserId = checkProjectInput(input);
     const partner = await loadLoanPartner(this.db, input);
     const { property, customer, panel, inverters } = await this.parts(quotation);
 
@@ -149,8 +145,7 @@ export class ProjectCreationService {
       property.city,
     ]);
 
-    if (input.managerUserId) await checkManagerCandidate(this.db, input.managerUserId);
-    const managerUserId = input.managerUserId ?? actor.userId;
+    await checkManagerCandidate(this.db, managerUserId);
     return this.db.transaction(async (tx) => {
       const code = await nextCode(tx, input.startDate.slice(0, 4));
       const name =

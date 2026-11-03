@@ -9,7 +9,7 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { resolveReferralCode } from '../referrals/referral-codes';
-import { logLead, logLeadChanges, tellLeadOwner } from './lead-history';
+import { autoMoveLead, logLead, logLeadChanges, tellLeadOwner } from './lead-history';
 import { alertNobodyFree, assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
 import { leadVisibility, needsFollowUp, readLeadDetail, unownedLeads } from './lead-read';
@@ -176,6 +176,10 @@ export class LeadsService {
   ): Promise<LeadDetail> {
     await this.get(actor, id);
     await logLead(this.db, id, actor.userId, kind, note, internal && actor.kind !== 'reseller');
+    // OneOhm staff's first call, visit or WhatsApp is the first contact; a reseller's is not.
+    if (kind !== 'note' && actor.kind !== 'reseller') {
+      await autoMoveLead(this.db, id, actor.userId, 'contacted', `First ${kind} by the team.`);
+    }
     return this.get(actor, id);
   }
 

@@ -14,6 +14,7 @@ import { deadlinesIn, risksIn } from './command-center-lists';
 import { materialRisks } from './command-center-materials';
 import { moneyFigures } from './command-center-money';
 import { type CenterScope, centerScope } from './command-center-scope';
+import { ownerAwayActions } from './owner-away-leads';
 
 const SEVERITY: Readonly<Record<ProjectSummary['tone'], number>> = {
   overdue: 0,
@@ -58,11 +59,15 @@ export class CommandCenterService {
         buildActions(this.db, scope.today, scope.settings),
         materialRisks(this.db, scope),
         startProjectActions(this.db),
+        ownerAwayActions(this.db, scope.today),
       ]),
     ]);
     const [installedFigures, waiting, sales] = flows;
-    const [risks, deadlines, decisions, others, materials, startProjects] = lists;
-    const actions = [...startProjects, ...others].slice(0, scope.settings.actionsShown);
+    const [risks, deadlines, decisions, others, materials, startProjects, ownersAway] = lists;
+    const actions = [...startProjects, ...ownersAway, ...others].slice(
+      0,
+      scope.settings.actionsShown,
+    );
     const overdue = open.filter((task) => task.dueDate < scope.today).length;
     const unassigned = open.filter((task) => task.assignee === null).length;
     const delivery = open.length ? Math.round(100 * (1 - overdue / open.length)) : 100;

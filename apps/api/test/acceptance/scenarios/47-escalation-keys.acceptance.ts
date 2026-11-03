@@ -33,7 +33,7 @@ describe('Escalation alert keys', () => {
       );
     const file = join(
       process.cwd(),
-      '../../../../packages/database/migrations/0065_escalation_key_recipient.sql',
+      '../../../../packages/database/migrations/0066_escalation_key_recipient.sql',
     );
     for (const statement of readFileSync(file, 'utf8').split('--> statement-breakpoint'))
       await rows(statement);

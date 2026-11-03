@@ -1,5 +1,5 @@
 {
-  "id": "bbd5f575-281c-4df0-99ac-16b59f469fef",
+  "id": "41ac06c8-5e0d-41bb-a354-c1a3031116c0",
   "prevId": "ef2733dc-c97c-43f1-9eb8-eab04a5ecae0",
   "version": "7",
   "dialect": "postgresql",
@@ -13376,116 +13376,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.project_manager_terms": {
-      "name": "project_manager_terms",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ended_at": {
-          "name": "ended_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "project_manager_terms_project_idx": {
-          "name": "project_manager_terms_project_idx",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "project_manager_terms_open_unique": {
-          "name": "project_manager_terms_open_unique",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"project_manager_terms\".\"ended_at\" IS NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "project_manager_terms_project_id_projects_id_fk": {
-          "name": "project_manager_terms_project_id_projects_id_fk",
-          "tableFrom": "project_manager_terms",
-          "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "project_manager_terms_user_id_users_id_fk": {
-          "name": "project_manager_terms_user_id_users_id_fk",
-          "tableFrom": "project_manager_terms",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.project_team_members": {
       "name": "project_team_members",
       "schema": "",
@@ -19197,6 +19087,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "assistant_tap": {
+          "name": "assistant_tap",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "outbox_id": {
           "name": "outbox_id",

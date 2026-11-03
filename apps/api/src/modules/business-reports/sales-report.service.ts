@@ -4,6 +4,7 @@ import { bucketIndexOf, LEAD_SOURCES, share } from '@oneohm/domain';
 import { DATABASE, type Database } from '../../config/core.module';
 import { type CsvTable, percent, rupees } from './csv';
 import { average, indiaDate, type ReportScope, reportScope } from './report-scope';
+import { readAdvancePaidLeadIds } from './sales-advance.read';
 import { byCampaign } from './sales-campaigns';
 import {
   type LeadFact,
@@ -157,6 +158,10 @@ export class SalesReportService {
       ),
       quotedLeadIds,
       await readEstimatedLeadIds(
+        this.db,
+        cohort.map((lead) => lead.id),
+      ),
+      await readAdvancePaidLeadIds(
         this.db,
         cohort.map((lead) => lead.id),
       ),

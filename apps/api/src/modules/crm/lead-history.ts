@@ -97,10 +97,11 @@ function followUpNote(current: LeadDetail, patch: LeadPatch): string | null {
 }
 
 /**
- * A move the system makes on its own (an estimate or a quotation sent, a quotation
- * accepted), written to the timeline with why. `note` says what happened; the move is
- * added when the stage changes. Only a new lead becomes contacted; sending never pulls a
- * lead back from won, and never reopens a lost lead.
+ * A move the system makes on its own (a person's first contact, a quotation sent, a
+ * quotation accepted), written to the timeline with why. `note` says what happened; the
+ * move is added when the stage changes. Only a new lead becomes contacted, and a lead past
+ * new is left alone without a line; sending never pulls a lead back from won, and never
+ * reopens a lost lead.
  */
 export async function autoMoveLead(
   db: DatabaseExecutor,
@@ -117,7 +118,8 @@ export async function autoMoveLead(
     .limit(1);
   if (!lead) return;
   const blocked = stage === 'quoted' ? ['quoted', 'won', 'lost'] : ['won'];
-  if (stage === 'contacted' ? lead.stage !== 'new' : blocked.includes(lead.stage)) {
+  if (stage === 'contacted' && lead.stage !== 'new') return;
+  if (blocked.includes(lead.stage)) {
     await logLead(db, leadId, userId, 'note', note);
     return;
   }
@@ -137,6 +139,21 @@ export async function autoMoveLead(
     .where(eq(leads.id, leadId));
   const moved = `Moved from ${from?.name ?? STAGE_LABEL[lead.stage]} to ${to?.name ?? STAGE_LABEL[stage]}.`;
   await logLead(db, leadId, userId, 'stage_change', `${note} ${moved}`);
+}
+
+/** A person answered this number on WhatsApp: its new leads are contacted. */
+export async function contactLeadsByPhone(
+  db: DatabaseExecutor,
+  phone: string,
+  userId: string,
+): Promise<void> {
+  const fresh = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.phoneE164, phone), eq(leads.stage, 'new')));
+  for (const lead of fresh) {
+    await autoMoveLead(db, lead.id, userId, 'contacted', 'First WhatsApp reply by the team.');
+  }
 }
 
 /**

@@ -108,6 +108,7 @@ describe('Staff see the estimate the customer got', () => {
     expect(report.byCampaign.find((row) => row.key === CODE)).toMatchObject({
       leads: 2,
       estimates: 1,
+      advancePaid: 0,
     });
   });
 });

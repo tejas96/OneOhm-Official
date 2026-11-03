@@ -7,7 +7,7 @@ import * as J from '../support/journey';
 import { JOURNEY, onboardFromAd } from '../support/journey-onboard';
 import { Transcript } from '../support/journey-transcript';
 import { milestoneOf, owed } from '../support/money';
-import { chatOf, choices, lastReply, replies } from '../support/onboarding';
+import { chatOf, choices, lastReply, promisedCall, replies } from '../support/onboarding';
 import { quoteInput, uniquePhone } from '../support/sales';
 
 // The full WhatsApp customer journey, second half (Steps 7-12): one customer from the Diwali
@@ -15,9 +15,9 @@ import { quoteInput, uniquePhone } from '../support/sales';
 // acceptance on WhatsApp, the project and the paid advance, to the reports and the history.
 // The run writes the owner's transcript of this customer's whole journey.
 const OUT = 'docs/testing/2026-11-03-whatsapp-journey-transcript.md';
-const MR_THANKS = 'धन्यवाद. आमची टीम तुमचा प्रकल्प सुरू करेल आणि आगाऊ रकमेची पेमेंट लिंक पाठवेल.';
+const MR_THANKS =
+  'धन्यवाद. तुमचे प्रोजेक्ट मॅनेजर आज (किंवा पुढच्या कामाच्या दिवशी) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील.';
 const pdfType = { status: 200, type: expect.stringContaining('application/pdf') };
-const { statusOf } = J;
 
 describe('The full WhatsApp customer journey: quote to paid advance', () => {
   const phone = uniquePhone();
@@ -83,11 +83,11 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const state = (await chatOf(family)).state;
     const spec = ' ⚠ Spec: a family tap on Accept hands the chat to the owner at once (check 8a).';
     t.ourSide(
-      `Family chat: ${state}; quotation ${await statusOf('quotations', quote.id)}.${state === 'human' ? '' : spec}`,
+      `Family chat: ${state}; quotation ${await J.statusOf('quotations', quote.id)}.${state === 'human' ? '' : spec}`,
     );
     expect((await replies(family)).flatMap(choices)).not.toContain(`quote_yes:${quote.id}`);
     expect((await chatOf(family)).state).toBe('human');
-    expect(await statusOf('quotations', quote.id)).toBe('sent');
+    expect(await J.statusOf('quotations', quote.id)).toBe('sent');
   });
 
   it('8b. the customer accepts on WhatsApp: accepted by the customer, lead won, project setup told', async () => {
@@ -98,7 +98,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       `quote_ask:${quote.id}`,
     ]);
     await t.tap(`quote_yes:${quote.id}`);
-    expect(await statusOf('quotations', quote.id)).toBe('accepted');
+    expect(await J.statusOf('quotations', quote.id)).toBe('accepted');
     expect(await J.auditsOf('quotation.accepted', quote.id)).toEqual([
       {
         actor_user_id: null,
@@ -158,7 +158,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const paidAt = await fetch(sandboxUrl.replace(/^.*\/v1/, API), { method: 'POST' });
     expect(paidAt.status).toBeLessThan(300);
     await t.collect();
-    expect(await statusOf('payment_milestones', advance().id)).toBe('paid');
+    expect(await J.statusOf('payment_milestones', advance().id)).toBe('paid');
     const [payment] = await rows<{ receipt_number: string; amount_paise: string }>(
       'SELECT receipt_number, amount_paise FROM payments WHERE milestone_id = $1',
       [advance().id],
@@ -221,11 +221,10 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       'Started onboarding on WhatsApp',
       'Site: Home',
       'Bill: ₹2,000–3,000',
-      'Roof: RCC',
       'Roof: RCC, 2 floors',
-      'Electricity bill received on WhatsApp',
+      'Bill file received on WhatsApp (not checked)',
       'Estimate sent: ',
-      'Asked for a call today after the estimate',
+      `Asked for a call ${promisedCall().when} after the estimate`,
       'Converted to a customer',
       `Quotation ${quote.number} sent`,
       `Quotation ${quote.number} accepted by the customer on WhatsApp`,

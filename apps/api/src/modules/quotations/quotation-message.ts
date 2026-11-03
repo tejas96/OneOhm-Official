@@ -1,13 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import type { QuotationDetail } from '@oneohm/api-contracts';
 import {
   customers,
   type DatabaseExecutor,
   messageTemplates,
+  outbox,
   waConversations,
 } from '@oneohm/database';
 import { chatWindowOpen } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
-import { eq } from 'drizzle-orm';
+import { desc, eq, like } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
 import { pdfFileName } from '../reports/pdf-file-name';
 import { queueReply } from '../whatsapp/chat-store';
@@ -43,8 +45,9 @@ export function quoteMessage(env: Environment, quotation: QuotationDetail): Reco
 
 /**
  * When the customer wrote in the last 24 hours, the PDF also goes as a chat file, so it
- * arrives even if the approved template has no file slot yet. Sent once per quotation.
- * Not queued when the template's extras switch is on: its header already carries the file.
+ * arrives even if the approved template has no file slot yet. Sent once per quotation;
+ * "Send again" sends it again only when the earlier one failed, but always sends the
+ * buttons again. Not queued when the template's extras switch is on: its header already carries the file.
  */
 export async function queueQuotePdf(
   tx: DatabaseExecutor,
@@ -68,13 +71,22 @@ export async function queueQuotePdf(
     .limit(1);
   if (!chat || !chatWindowOpen(chat.at)) return;
   const pdf = pdfOf(env, quotation);
-  await queueReply(
-    tx,
-    chat,
-    { kind: 'document', ...pdf, caption: `Quotation ${quotation.number}` },
-    null,
-    `quote_pdf:${quotation.id}`,
-  );
+  const [earlier] = await tx
+    .select({ status: outbox.status, delivery: outbox.deliveryStatus })
+    .from(outbox)
+    .where(like(outbox.dedupeKey, `quote_pdf:${quotation.id}%`))
+    .orderBy(desc(outbox.createdAt))
+    .limit(1);
+  const failed = earlier?.status === 'failed' || earlier?.delivery === 'failed';
+  if (!earlier || failed) {
+    await queueReply(
+      tx,
+      chat,
+      { kind: 'document', ...pdf, caption: `Quotation ${quotation.number}` },
+      null,
+      earlier ? `quote_pdf:${quotation.id}:${randomUUID()}` : `quote_pdf:${quotation.id}`,
+    );
+  }
   // The approved plain template has no buttons, so the chat gets them right after the PDF.
   const [customer] = await tx
     .select({ language: customers.preferredLanguage })
@@ -94,7 +106,7 @@ export async function queueQuotePdf(
       ],
     },
     null,
-    `quote_buttons:${quotation.id}`,
+    `quote_buttons:${quotation.id}:${randomUUID()}`,
   );
 }
 

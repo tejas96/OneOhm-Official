@@ -180,7 +180,8 @@ export async function sellProject(admin: Session, options: SaleOptions = {}): Pr
     groundMount: options.groundMount ?? false,
     startDate: today(),
     ...(options.contractorId !== undefined ? { contractorId: options.contractorId } : {}),
-    ...(options.managerUserId ? { managerUserId: options.managerUserId } : {}),
+    // A project always has a named manager; the admin when the scenario names none.
+    managerUserId: options.managerUserId ?? admin.userId,
     ...options.project,
   });
   const project = await admin.get<ProjectDetail>(`/projects/${created.id}`);

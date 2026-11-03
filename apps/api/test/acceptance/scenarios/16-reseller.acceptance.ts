@@ -106,6 +106,7 @@ describe('Reseller app', () => {
     const created = await admin.post<{ id: string }>('/projects', {
       quotationId: mineQuote.id,
       discomId: await discomId(admin, 'MSEDCL'),
+      managerUserId: admin.userId,
       startDate: today(),
     });
     projectId = created.id;

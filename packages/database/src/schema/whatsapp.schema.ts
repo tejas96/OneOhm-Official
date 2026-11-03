@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers } from './crm.schema';
 import { users } from './identity.schema';
@@ -55,6 +55,8 @@ export const waMessages = pgTable(
     waMessageId: text('wa_message_id').unique(),
     kind: text('kind').notNull(),
     body: text('body').notNull(),
+    /** A customer's tap the assistant answers even while a person has the chat (never waits). */
+    assistantTap: boolean('assistant_tap').notNull().default(false),
     outboxId: uuid('outbox_id').references(() => outbox.id, { onDelete: 'set null' }),
     sentByUserId: uuid('sent_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),

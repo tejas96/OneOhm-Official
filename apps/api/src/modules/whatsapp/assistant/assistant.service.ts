@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { brandName, customers, waConversations, waMessages } from '@oneohm/database';
 import { asksForPerson, findCampaignCode, saysHello } from '@oneohm/domain';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
@@ -13,6 +13,7 @@ import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
+import { assistantAnswersTap } from './handled-taps';
 import { assistantLanguage, inLanguage } from './language';
 import { keepPending, MediaIntakeService } from './media-intake';
 import { answerOptOut } from './opt-out';
@@ -85,7 +86,8 @@ export class AssistantService {
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
     const word = (incoming.choiceId ?? incoming.text).trim().toLowerCase();
     if (GREETINGS.has(word) || opensChat(chat, incoming.text)) return this.restart(chat);
-    if (chat.state === 'human') return;
+    // With a person, the assistant answers only the taps that are its own (menu rows).
+    if (chat.state === 'human' && !assistantAnswersTap(chat, incoming)) return;
     if (!chat.customerId) return this.strangers.route(chat, incoming, word);
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
@@ -209,7 +211,13 @@ export class AssistantService {
     const [last] = await this.db
       .select({ kind: waMessages.kind, at: waMessages.createdAt })
       .from(waMessages)
-      .where(and(eq(waMessages.conversationId, chatId), eq(waMessages.direction, 'out')))
+      .where(
+        and(
+          eq(waMessages.conversationId, chatId),
+          eq(waMessages.direction, 'out'),
+          ne(waMessages.kind, 'note'),
+        ),
+      )
       .orderBy(desc(waMessages.createdAt))
       .limit(1);
     return last?.kind === 'template' && Date.now() - last.at.getTime() < DAY_MS;

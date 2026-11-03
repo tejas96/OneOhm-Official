@@ -75,7 +75,7 @@ describe('WhatsApp onboarding flow', () => {
     expect(choices(await lastReply(phone)).at(-1)).toBe('ob:person');
   });
 
-  it('writes site, bill, roof and floors on the lead with one note each', async () => {
+  it('writes site, bill, roof and floors on the lead with one note for roof and floors', async () => {
     const phone = uniquePhone();
     await upToSite(phone);
     const [lead] = await leadsOf(phone);
@@ -88,7 +88,6 @@ describe('WhatsApp onboarding flow', () => {
     expect(await whatsappNotes(lead?.id ?? '')).toEqual([
       'Site: Shop or business',
       'Bill: ₹2,000–3,000 (about 3 kW)',
-      'Roof: RCC',
       'Roof: RCC, 2 floors',
     ]);
     expect(choices(await lastReply(phone))).toEqual(['ob:photo:later', 'ob:person']);
@@ -183,7 +182,8 @@ describe('WhatsApp onboarding flow', () => {
     await tap(phone, 'ob:bill:up_to_1000');
     await say(phone, 'rcc');
     expect((await chatOf(phone)).state).toBe('onboard:floors');
-    expect((await whatsappNotes(lead?.id ?? '')).at(-1)).toBe('Roof: RCC');
+    // The roof waits for the floors: one note for both.
+    expect((await whatsappNotes(lead?.id ?? '')).at(-1)).toMatch(/^Bill: /);
   });
 
   it('asks the next question in Marathi once Marathi is chosen', async () => {
