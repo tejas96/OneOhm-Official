@@ -9,6 +9,7 @@ import {
   outbox,
   recordDeliveryFailure,
   tellChatFileFailed,
+  waConversations,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
@@ -18,17 +19,18 @@ import {
   MESSAGE_TEMPLATES,
   MissingFieldError,
 } from '../channels/message-templates';
+import { PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
-import {
-  PermanentSendError,
-  type SendResult,
-  type SessionMessage,
-  type TemplateButton,
-  type TemplateHeader,
-  type WhatsAppSender,
+import type {
+  SendResult,
+  SessionMessage,
+  TemplateButton,
+  TemplateHeader,
+  WhatsAppSender,
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
 import { deliverPush } from './push-delivery';
+import { alertTokenExpired, CHAT_WINDOW_CLOSED, chatWindowOpen } from './send-checks';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
@@ -127,6 +129,24 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     }
   };
 
+  /** A file in a chat that never arrived tells the chat's people; a bad token tells admins. */
+  const failWithAlerts = (id: string, reason: string, tokenInvalid = false) =>
+    db.transaction(async (tx) => {
+      await finish(id, 'failed', reason, null, tx);
+      await tellChatFileFailed(tx, id);
+      if (tokenInvalid) await alertTokenExpired(tx);
+    });
+
+  /** Meta refuses a chat message once the window closes, so retries check it again. */
+  const windowOpenFor = async (phone: string) => {
+    const [chat] = await db
+      .select({ lastInboundAt: waConversations.lastInboundAt })
+      .from(waConversations)
+      .where(eq(waConversations.phone, phone))
+      .limit(1);
+    return chatWindowOpen(chat?.lastInboundAt ?? null, new Date());
+  };
+
   const send = async (row: typeof outbox.$inferSelect, call: () => Promise<SendResult>) => {
     try {
       const result = await call();
@@ -147,11 +167,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
           return 'skipped';
         }
-        // A file in a chat that never arrived: the chat's people are told, with the failure.
-        await db.transaction(async (tx) => {
-          await finish(row.id, 'failed', reason, null, tx);
-          await tellChatFileFailed(tx, row.id);
-        });
+        await failWithAlerts(row.id, reason, error.tokenInvalid);
         return 'failed';
       }
       await db.update(outbox).set({ lastError: reason }).where(eq(outbox.id, row.id));
@@ -181,8 +197,13 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return send(row, () => sms.send(row.recipient, text));
       }
       // A chat reply (the customer wrote first), so no template and no opt-in check.
-      if (row.template.startsWith('session:'))
+      if (row.template.startsWith('session:')) {
+        if (!(await windowOpenFor(row.recipient))) {
+          await failWithAlerts(id, CHAT_WINDOW_CLOSED);
+          return 'failed';
+        }
         return send(row, () => sender.sendSession(row.recipient, row.payload as SessionMessage));
+      }
       const prepared = await prepare(row);
       if (prepared.verdict !== 'send') {
         await finish(id, prepared.verdict, prepared.note);

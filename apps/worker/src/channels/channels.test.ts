@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../config';
 import { MESSAGE_TEMPLATES, MissingFieldError, templateParameters } from './message-templates';
-import {
-  createWhatsAppSender,
-  isRetryableStatus,
-  sessionRequestBody,
-  templateRequestBody,
-} from './whatsapp-cloud';
+import { isRetryableStatus } from './send-errors';
+import { createWhatsAppSender, sessionRequestBody, templateRequestBody } from './whatsapp-cloud';
 
 describe('templateParameters', () => {
   it('orders values as the template expects', () => {
