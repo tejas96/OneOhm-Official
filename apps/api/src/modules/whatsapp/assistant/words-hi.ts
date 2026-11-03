@@ -78,7 +78,6 @@ export const HI: Words<AssistantWords> = {
     quoteNotYet: 'अभी नहीं',
     quoteChanged: 'यह कोटेशन बदल गया है या अब खुला नहीं है।',
     quoteOwnerOnly: 'कोटेशन सिर्फ़ ग्राहक के अपने नंबर से स्वीकार हो सकता है।',
-    quoteThanks: 'धन्यवाद। हमारी टीम आपका प्रोजेक्ट शुरू करेगी और एडवांस पेमेंट लिंक भेजेगी।',
   },
   RATINGS: [
     { id: 'rate:5', title: 'बहुत खुश', description: '5 में से 5' },

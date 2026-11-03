@@ -138,8 +138,13 @@ describe('onboarding questions', () => {
       // A document caption holds 1024 characters.
       const caption = words.estimateCaption('10 kWp', '₹10,00,00,000', '₹10,00,00,000');
       expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
-      expect(words.willCall('Asha')).toContain('Asha');
+      expect(words.willCall('Asha', false)).toContain('Asha');
+      expect(words.willCall(null, true)).not.toBe(words.willCall(null, false));
     }
+    expect(ONBOARD_LISTS.en.willCall('Asha', false)).toBe('Thank you. Asha will call you today.');
+    expect(ONBOARD_LISTS.en.willCall('Asha', true)).toBe(
+      'Thank you. Asha will call you tomorrow morning.',
+    );
     expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1')).toContain(
       'Estimate — final price in your quotation after a free call or visit',
     );

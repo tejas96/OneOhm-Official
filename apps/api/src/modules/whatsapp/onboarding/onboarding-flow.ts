@@ -192,8 +192,7 @@ export class OnboardingFlowService {
   /** After the estimate its own taps are answered; anything else, typed too, goes to the owner. */
   private async afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
     const { tx, chat, lead } = turn;
-    const tap = incoming?.choiceId ?? null;
-    const answered = await speak(turn, () => this.nextSteps.answer(tx, chat, lead, tap));
+    const answered = await speak(turn, () => this.nextSteps.answer(tx, chat, lead, incoming));
     return answered ? null : this.toPerson(turn, 'done');
   }
 

@@ -5,7 +5,7 @@ import { Session } from '../support/http';
 import * as J from '../support/journey';
 import { JOURNEY } from '../support/journey-onboard';
 import { Transcript } from '../support/journey-transcript';
-import { chatOf, choices, lastReply, replies } from '../support/onboarding';
+import { chatOf, choices, lastReply, promisedCall, replies } from '../support/onboarding';
 import { today, uniquePhone } from '../support/sales';
 
 // The full WhatsApp customer journey, first half (Steps 1-6): from the Diwali ad to "Call
@@ -170,17 +170,21 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
   });
 
   it('6. "Call me back" puts a call on the owner\'s Today and alerts them once a day', async () => {
+    // "Today" inside working hours, else "tomorrow morning" (the suite may run at night).
+    const promise = promisedCall();
     await t.tap('ob:done:call');
     expect(await lead()).toMatchObject({
-      next_action_on: today(),
+      next_action_on: promise.day,
       next_action_note: 'Customer asked for a call after the estimate',
     });
-    expect((await J.historyOf(leadId)).at(-1)).toBe('Asked for a call today after the estimate');
+    expect((await J.historyOf(leadId)).at(-1)).toBe(
+      `Asked for a call ${promise.when} after the estimate`,
+    );
     const chat = await chatOf(phone);
     const told = await J.alerted('whatsapp_callback', chat.id);
     expect(told).toContain(j.owner.id);
     expect((await lastReply(phone))?.body).toBe(
-      `धन्यवाद. आज ${j.owner.name.split(' ')[0]}कडून तुम्हाला कॉल येईल.`,
+      `धन्यवाद. ${promise.when === 'today' ? 'आज' : 'उद्या सकाळी'} ${j.owner.name.split(' ')[0]}कडून तुम्हाला कॉल येईल.`,
     );
     await t.tap('ob:done:call');
     expect(await J.alerted('whatsapp_callback', chat.id)).toHaveLength(told.length);

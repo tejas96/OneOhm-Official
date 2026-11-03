@@ -5,6 +5,7 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { type Conversation, queueReply } from '../chat-store';
 import { HandOverService } from './hand-over';
+import { QUOTE_WORDS } from './quote-words';
 import { WORDS } from './words';
 
 export interface QuoteTap {
@@ -88,7 +89,7 @@ export class QuoteActionsService {
   }
 
   private thank(chat: Conversation, quotationId: string) {
-    const reply = { kind: 'text', body: WORDS.quoteThanks } as const;
+    const reply = { kind: 'text', body: QUOTE_WORDS.quoteThanks } as const;
     return queueReply(this.db, chat, reply, null, `quote_thanks:${quotationId}`);
   }
 

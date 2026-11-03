@@ -78,7 +78,6 @@ export const MR: Words<AssistantWords> = {
     quoteNotYet: 'आत्ता नाही',
     quoteChanged: 'हे कोटेशन बदलले आहे किंवा आता खुले नाही.',
     quoteOwnerOnly: 'कोटेशन फक्त ग्राहकाच्या स्वतःच्या नंबरवरून स्वीकारता येते.',
-    quoteThanks: 'धन्यवाद. आमची टीम तुमचा प्रकल्प सुरू करेल आणि आगाऊ रकमेची पेमेंट लिंक पाठवेल.',
   },
   RATINGS: [
     { id: 'rate:5', title: 'खूप खूश', description: '5 पैकी 5' },

@@ -2,6 +2,12 @@ import { type DatabaseExecutor, leads } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
 import { logLead } from './lead-history';
 
+/**
+ * The next action when the bot promised the customer a call ("will call you today" or
+ * "tomorrow morning"); the end-of-day check looks for a call logged since.
+ */
+export const PROMISED_CALL_NOTE = 'Customer asked for a call after the estimate';
+
 /** What the WhatsApp bot may change on a lead as the customer answers. */
 export interface LeadChatChange {
   readonly name?: string;

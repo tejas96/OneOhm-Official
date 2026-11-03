@@ -11,10 +11,12 @@ import {
 import { formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, gt, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { autoMoveLead } from '../crm/lead-history';
+import { environmentOnce } from '../../config/environment-once';
+import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { applyAcceptedChange } from '../project-changes/change-accept';
 import { changeAwaiting, closeStaleChanges } from '../project-changes/change-close';
 import { projectAwaiting } from './project-revision';
+import { quoteHasProject } from './quotation-project';
 import { applyAcceptedRevision } from './revision-accept';
 
 /** What the customer's own "Yes, accept" came to. */
@@ -22,9 +24,10 @@ export type CustomerAcceptance = 'accepted' | 'already' | 'not_open' | 'not_owne
 
 /**
  * Marks the quotation accepted in the caller's transaction: other revisions of its number
- * are replaced, the lead moves to won, and the audit row says who and how. `actorUserId`
- * is null when the customer accepted it themselves. False, with nothing changed, when the
- * quotation was no longer open: someone else accepted (or closed) it a moment before.
+ * are replaced, the lead moves to won with "Start project" as its next action today, and
+ * the audit row says who and how. `actorUserId` is null when the customer accepted it
+ * themselves. False, with nothing changed, when the quotation was no longer open: someone
+ * else accepted (or closed) it a moment before.
  */
 export async function acceptInTx(
   tx: Transaction,
@@ -61,6 +64,12 @@ export async function acceptInTx(
     // A revision carrying a project change applies it (PRD 3.15); other open changes lapse.
     await applyAcceptedChange(tx, id, actorUserId);
     await closeStaleChanges(tx, id, quotation.number, actorUserId);
+  }
+  // A new sale: starting its project is the lead owner's job today (a revision has one).
+  if (quotation.input.leadId && !(await quoteHasProject(tx, id))) {
+    const on = todayIn(environmentOnce().BUSINESS_TIMEZONE);
+    const note = `Start project for ${quotation.number}`;
+    await setLeadNextAction(tx, quotation.input.leadId, actorUserId, { on, note });
   }
   await recordAudit(tx, actorUserId, 'quotation.accepted', 'quotation', id, auditData);
   return true;

@@ -1,14 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { notifications, type Transaction } from '@oneohm/database';
-import { addMonths } from '@oneohm/domain';
+import { addMonths, isWorkingTime, lastWorkEnd } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
-import { updateLeadFromChat } from '../../crm/lead-from-chat';
+import { PROMISED_CALL_NOTE, updateLeadFromChat } from '../../crm/lead-from-chat';
 import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
+import type { Incoming } from '../whatsapp-events';
 import { ONBOARD_WORDS } from './onboard-words';
 import { ESTIMATE_CHOICES, LATER_PERIODS, type LaterPeriod } from './onboarding-context';
 import { laterQuestion } from './onboarding-replies';
@@ -41,11 +42,16 @@ const laterPeriod = (choiceId: string): LaterPeriod | null => {
     : null;
 };
 
+/** After working hours the call is promised for the next morning, never "today" at 11 pm. */
+function afterHours(now: Date, zone: string): boolean {
+  return !isWorkingTime(now, zone) && todayIn(zone, lastWorkEnd(now, zone)) === todayIn(zone, now);
+}
+
 /**
  * The customer's taps under the estimate, in the chat's transaction. "Call me back" puts
- * a call on the owner's Today and alerts them; "Not now" asks when to check back and
- * sets that date. ("Talk to a person" is the usual hand-over.) Part 4 replaces the call
- * back with slot booking.
+ * a call on the owner's Today (tomorrow after working hours, by the tap's time) and alerts
+ * them; "Not now" asks when to check back and sets that date. ("Talk to a person" is the
+ * usual hand-over.) Part 4 replaces the call back with slot booking.
  */
 @Injectable()
 export class EstimateNextStepsService {
@@ -59,31 +65,36 @@ export class EstimateNextStepsService {
     tx: Transaction,
     chat: Conversation,
     lead: { readonly id: string } | null,
-    choiceId: string | null,
+    incoming: Incoming | null,
   ): Promise<boolean> {
+    const choiceId = incoming?.choiceId;
     if (!lead || !choiceId) return false;
     const leadId = lead.id;
     const W = ONBOARD_WORDS;
-    const today = todayIn(this.env.BUSINESS_TIMEZONE);
+    const zone = this.env.BUSINESS_TIMEZONE;
+    const now = incoming.at;
+    const today = todayIn(zone, now);
     if (choiceId === ESTIMATE_CHOICES.call) {
       // One alert and one history note a day: a second tap is already on the owner's Today.
       const key = `wa_callback:${chat.id}:${today}`;
       const again = await alertedAlready(tx, key);
+      const tomorrow = afterHours(now, zone);
+      const when = tomorrow ? 'tomorrow morning' : 'today';
       await updateLeadFromChat(
         tx,
         leadId,
-        { nextAction: { on: today, note: 'Customer asked for a call after the estimate' } },
-        again ? null : 'Asked for a call today after the estimate',
+        { nextAction: { on: tomorrow ? addDays(today, 1) : today, note: PROMISED_CALL_NOTE } },
+        again ? null : `Asked for a call ${when} after the estimate`,
       );
       const owned = await ensureChatOwner(tx, chat);
       await tellChatTeam(tx, owned, {
         kind: 'whatsapp_callback',
-        title: 'Call back today: asked after the estimate',
+        title: `Call back ${when}: asked after the estimate`,
         body: `${chat.profileName ?? 'A customer'} · ${chat.phone}`,
         key,
       });
       const name = await this.people.answererName(owned, tx);
-      await queueReply(tx, chat, { kind: 'text', body: W.willCall(name) });
+      await queueReply(tx, chat, { kind: 'text', body: W.willCall(name, tomorrow) });
       return true;
     }
     if (choiceId === ESTIMATE_CHOICES.notNow) {

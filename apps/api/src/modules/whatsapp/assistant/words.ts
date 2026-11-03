@@ -86,7 +86,6 @@ const EN_WORDS = {
   quoteNotYet: 'Not yet',
   quoteChanged: 'This quote has changed or is no longer open.',
   quoteOwnerOnly: 'Only the customer’s own number can accept a quote.',
-  quoteThanks: 'Thank you. Our team will start your project and send the advance payment link.',
 } as const;
 
 const EN_RATINGS = [

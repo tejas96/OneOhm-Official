@@ -35,6 +35,8 @@ export function apiEnvironment(databaseUrl) {
     MSG91_AUTH_KEY: '',
     // The nudge job runs only when a scenario asks for it, at a clock the scenario sets.
     ONBOARDING_NUDGE_TIMER: 'false',
+    // The same for the sales checks (quote validity, promised calls, start project).
+    SALES_CHECKS_TIMER: 'false',
     // Uploaded test files go to their own bucket, created on start-up.
     STORAGE_BUCKET: 'oneohm-acceptance',
   };

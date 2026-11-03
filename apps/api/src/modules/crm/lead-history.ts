@@ -1,7 +1,7 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
 import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { STAGE_LABEL } from './lead-labels';
 import { loadLeadSteps, movedNote } from './lead-steps-read';
@@ -137,4 +137,35 @@ export async function autoMoveLead(
     .where(eq(leads.id, leadId));
   const moved = `Moved from ${from?.name ?? STAGE_LABEL[lead.stage]} to ${to?.name ?? STAGE_LABEL[stage]}.`;
   await logLead(db, leadId, userId, 'stage_change', `${note} ${moved}`);
+}
+
+/**
+ * A next action the system sets for the lead's owner (follow up a sent quote, start the
+ * project of an accepted one), with its timeline line. `openOnly` leaves a won or lost
+ * lead alone; false when nothing was set.
+ */
+export async function setLeadNextAction(
+  db: DatabaseExecutor,
+  leadId: string,
+  userId: string | null,
+  next: { readonly on: string; readonly note: string; readonly openOnly?: boolean },
+): Promise<boolean> {
+  const [set] = await db
+    .update(leads)
+    .set({
+      nextActionOn: next.on,
+      nextActionTime: null,
+      nextActionNote: next.note,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(leads.id, leadId),
+        next.openOnly ? notInArray(leads.stage, ['won', 'lost']) : undefined,
+      ),
+    )
+    .returning({ id: leads.id });
+  if (!set) return false;
+  await logLead(db, leadId, userId, 'follow_up', `Next action on ${next.on}: ${next.note}.`);
+  return true;
 }

@@ -10,6 +10,7 @@ import {
   lastReply,
   leadsOf,
   notesOf,
+  promisedCall,
   replies,
   say,
   tap,
@@ -124,12 +125,13 @@ describe('The instant estimate after onboarding', () => {
     expect((await chatOf(phone)).state).toBe('onboard:done');
   });
 
-  it('"Call me back" sets a call for today and alerts the owner', async () => {
+  it('"Call me back" sets a call (today in working hours) and alerts the owner', async () => {
     const phone = uniquePhone();
     await onboard(phone);
+    const promise = promisedCall();
     await tap(phone, 'ob:done:call');
     const [lead] = await leadsOf(phone);
-    expect(lead?.next_action_on).toBe(today());
+    expect(lead?.next_action_on).toBe(promise.day);
     expect(lead?.next_action_note).toBe('Customer asked for a call after the estimate');
     const chat = await chatOf(phone);
     const alerts = await rows<{ user_id: string }>(
@@ -137,7 +139,7 @@ describe('The instant estimate after onboarding', () => {
       [chat.id],
     );
     expect(alerts.map((alert) => alert.user_id)).toContain(lead?.owner_user_id);
-    expect((await lastReply(phone))?.body).toContain('will call you today');
+    expect((await lastReply(phone))?.body).toContain(`will call you ${promise.when}`);
   });
 
   it('a farm gets no number: the expert reply, a hand-over and a call today', async () => {

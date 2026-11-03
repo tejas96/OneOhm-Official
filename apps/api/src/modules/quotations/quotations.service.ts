@@ -12,7 +12,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
-import { autoMoveLead } from '../crm/lead-history';
+import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { changeAwaiting, changeTurnedDown } from '../project-changes/change-close';
 import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import {
@@ -28,6 +28,9 @@ import { queueQuotePdf, quoteMessage } from './quotation-message';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { lineRows, quotationRow } from './quotation-rows';
+
+/** A sent quote is followed up this many days later (the lead owner's next action). */
+const QUOTE_FOLLOW_UP_DAYS = 2;
 
 @Injectable()
 export class QuotationsService {
@@ -137,6 +140,9 @@ export class QuotationsService {
         const again = quotation.status === 'sent' ? ' again' : '';
         const note = `Quotation ${quotation.number} sent${again}.`;
         await autoMoveLead(tx, quotation.input.leadId, actor.userId, 'quoted', note);
+        const on = addDays(todayIn(this.env.BUSINESS_TIMEZONE), QUOTE_FOLLOW_UP_DAYS);
+        const next = { on, note: `Follow up quote ${quotation.number}`, openOnly: true };
+        await setLeadNextAction(tx, quotation.input.leadId, actor.userId, next);
       }
       await recordAudit(tx, actor.userId, 'quotation.sent', 'quotation', id);
     });

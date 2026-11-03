@@ -11,6 +11,8 @@ import { LeadIntakeService } from './lead-intake.service';
 import { LeadStepsController } from './lead-steps.controller';
 import { LeadStepsService } from './lead-steps.service';
 import { LeadsService } from './leads.service';
+import { SalesChecksController } from './sales-checks.controller';
+import { SalesChecksService } from './sales-checks.service';
 import { SiteConnectionController } from './site-connection.controller';
 import { SiteConnectionService } from './site-connection.service';
 
@@ -24,6 +26,7 @@ import { SiteConnectionService } from './site-connection.service';
     PhoneMatchController,
     WebsiteLeadController,
     SiteConnectionController,
+    SalesChecksController,
   ],
   providers: [
     LeadsService,
@@ -34,6 +37,7 @@ import { SiteConnectionService } from './site-connection.service';
     CustomerContactService,
     LeadIntakeService,
     SiteConnectionService,
+    SalesChecksService,
   ],
   exports: [CustomersService, LeadsService, LeadIntakeService],
 })

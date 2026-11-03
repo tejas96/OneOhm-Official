@@ -80,6 +80,8 @@ const environmentSchema = z
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
     /** Runs the WhatsApp onboarding nudge every 5 minutes; the acceptance suite turns it off. */
     ONBOARDING_NUDGE_TIMER: flag,
+    /** Runs the sales checks (quote validity, promised calls, start project) every 15 minutes. */
+    SALES_CHECKS_TIMER: flag,
   })
   .superRefine((env, context) => {
     const issues = [

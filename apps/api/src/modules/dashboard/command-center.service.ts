@@ -6,6 +6,7 @@ import { todayIn } from '@oneohm/shared';
 import { and, eq, ne } from 'drizzle-orm';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { DATABASE, type Database } from '../../config/core.module';
+import { startProjectActions } from './accepted-without-project';
 import { buildActions } from './command-center-actions';
 import { decisionsWaiting } from './command-center-decisions';
 import { installed, pipeline, waitingDays } from './command-center-flows';
@@ -56,10 +57,12 @@ export class CommandCenterService {
         decisionsWaiting(this.db),
         buildActions(this.db, scope.today, scope.settings),
         materialRisks(this.db, scope),
+        startProjectActions(this.db),
       ]),
     ]);
     const [installedFigures, waiting, sales] = flows;
-    const [risks, deadlines, decisions, actions, materials] = lists;
+    const [risks, deadlines, decisions, others, materials, startProjects] = lists;
+    const actions = [...startProjects, ...others].slice(0, scope.settings.actionsShown);
     const overdue = open.filter((task) => task.dueDate < scope.today).length;
     const unassigned = open.filter((task) => task.assignee === null).length;
     const delivery = open.length ? Math.round(100 * (1 - overdue / open.length)) : 100;
