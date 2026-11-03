@@ -9,6 +9,8 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError } from '@/lib/api/api-error';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { HandOverField } from './handover-field';
+import { handOverBody, handOverNeeds } from './handover-needs';
 import { seedTeamForm } from './seed-team-form';
 import { TeamMembersField } from './team-members-field';
 import { useTeamOptions } from './use-team-options';
@@ -55,11 +57,13 @@ export function TeamSheet({
   const [manager, setManager] = useState<string | undefined>(undefined);
   const [team, setTeam] = useState<string[]>([]);
   const [target, setTarget] = useState('');
+  const [picks, setPicks] = useState<Record<string, string>>({});
   const seed = useCallback((from: ProjectDetail) => {
     const seeded = seedTeamForm(from);
     setManager(seeded.manager);
     setTeam(seeded.team);
     setTarget(seeded.target);
+    setPicks({});
   }, []);
 
   // The form starts from the project as it is when the sheet opens; a refetch while the
@@ -79,6 +83,9 @@ export function TeamSheet({
     t('cannotManage'),
   );
 
+  const needs = handOverNeeds(project, team);
+  const missing = needs.some((need) => !picks[need.id]);
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await form.run(
@@ -92,6 +99,7 @@ export function TeamSheet({
                 ...(manager ? { managerUserId: manager } : {}),
                 teamUserIds: team,
                 targetFinishDate: target || null,
+                handOver: handOverBody(needs, picks),
               },
             }),
             200,
@@ -125,7 +133,13 @@ export function TeamSheet({
       title={t('title')}
       description={t('description')}
       footer={
-        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          pending={form.pending}
+          disabled={missing}
+        >
           {t('save')}
         </Button>
       }
@@ -157,6 +171,14 @@ export function TeamSheet({
           value={team}
           onChange={setTeam}
           error={errors.teamUserIds}
+        />
+        <HandOverField
+          needs={needs}
+          people={options.data?.people ?? []}
+          team={team}
+          picks={picks}
+          onPick={(from, value) => setPicks((now) => ({ ...now, [from]: value }))}
+          error={errors.handOver}
         />
         <FormError message={form.error} />
       </form>

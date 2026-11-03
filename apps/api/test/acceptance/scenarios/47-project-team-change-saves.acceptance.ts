@@ -35,7 +35,11 @@ describe('Project team change: saving', () => {
         [y.id, true],
       ].sort(),
     );
-    const added = await patchTeam(admin, sale.project.id, { teamUserIds: [y.id] });
+    // The leaver may hold tasks from the team they were on: hand them to y.
+    const added = await patchTeam(admin, sale.project.id, {
+      teamUserIds: [y.id],
+      handOver: [{ fromUserId: x.id, toUserId: y.id }],
+    });
     expect(added.status).toBe(200);
     await retire(admin, [y]);
   });

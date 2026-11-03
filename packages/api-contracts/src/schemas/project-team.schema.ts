@@ -49,6 +49,11 @@ export const projectUpdateSchema = z.object({
   managerUserId: idSchema.optional(),
   teamUserIds: z.array(idSchema).max(30).optional(),
   targetFinishDate: calendarDateSchema.nullable().optional(),
+  /** What happens to each removed person's open tasks: `null` keeps them with that person. */
+  handOver: z
+    .array(z.object({ fromUserId: idSchema, toUserId: idSchema.nullable() }))
+    .max(30)
+    .optional(),
 });
 export type ProjectUpdate = z.infer<typeof projectUpdateSchema>;
 

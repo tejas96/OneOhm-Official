@@ -22,6 +22,7 @@ import { surveyTaskOf } from '../reports/survey-report.data';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { surveyApproved } from './budget-check.service';
 import { checkTeam, projectTeamOf } from './project-team';
+import { checkHandOver, handOverTasks } from './project-team-handover';
 import { assertTeamEditable, checkManagerCandidate } from './project-team-rules';
 
 type ProjectRow = typeof projects.$inferSelect;
@@ -100,6 +101,7 @@ export class ProjectTeamService {
     assertTeamEditable(project);
     if (input.managerUserId !== undefined && input.managerUserId !== project.managerUserId)
       await checkManagerCandidate(this.db, input.managerUserId);
+    let removed: string[] = [];
     if (input.teamUserIds) {
       const current = await this.db
         .select({ id: projectTeamMembers.userId })
@@ -110,7 +112,10 @@ export class ProjectTeamService {
         input.teamUserIds,
         current.map((member) => member.id),
       );
+      const staying = new Set(input.teamUserIds);
+      removed = current.map((member) => member.id).filter((id) => !staying.has(id));
     }
+    await checkHandOver(this.db, projectId, removed, input.handOver);
     if (input.targetFinishDate && input.targetFinishDate < project.startDate)
       throw invalid('The target finish comes after the start.', {
         targetFinishDate: 'Pick a date on or after the start date.',
@@ -133,6 +138,7 @@ export class ProjectTeamService {
       if (saved.length === 0)
         throw conflict('Someone else changed this project. Reload and try again.', 'stale');
       if (input.teamUserIds) await replaceTeam(tx, projectId, input.teamUserIds);
+      await handOverTasks(tx, actor, projectId, input.handOver ?? []);
       if (managerChanged && input.managerUserId) {
         await this.tellNewManager(tx, project, input.managerUserId, actor);
         // The customer's WhatsApp chat follows the new manager.
