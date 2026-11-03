@@ -48,7 +48,11 @@ export class QuoteActionsService {
     return this.accept(chat, tap.quotationId);
   }
 
-  /** "Accept quote QT-… for ₹…?" — only to the chat of the customer the quote is for. */
+  /**
+   * "Accept quote QT-… for ₹…?" — only to the customer's own number. A family number
+   * reaches the same chat but cannot accept: it goes to the customer's person at once,
+   * whatever state the quote is in (never silent, even when it is already accepted).
+   */
   private async askToConfirm(chat: Conversation, quotationId: string) {
     const quotation = await this.quotations.get(quotationId).catch((error: unknown) => {
       if (error instanceof AppError) return null;
@@ -56,6 +60,7 @@ export class QuoteActionsService {
     });
     if (!quotation || quotation.customer.id !== chat.customerId)
       return this.refuse(chat, WORDS.quoteChanged);
+    if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
     if (quotation.status === 'accepted') return this.thank(chat, quotationId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
     await queueReply(this.db, chat, {

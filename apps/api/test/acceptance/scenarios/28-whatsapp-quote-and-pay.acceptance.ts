@@ -207,5 +207,12 @@ describe('WhatsApp quote and pay', () => {
     expect(buttons.length).toBeGreaterThan(0);
     expect(buttons[0]?.payload.label).toBe('Pay now');
     expect(buttons[0]?.payload.url).toContain('/v1/pay/due/');
+    // The summary before the buttons keeps the amounts but no raw gateway link.
+    const [summary] = await rows<{ payload: { body: string } }>(
+      "select payload from outbox where recipient = $1 and template = 'session:text' order by created_at desc limit 1",
+      [customer.phone],
+    );
+    expect(summary?.payload.body).toContain('₹');
+    expect(summary?.payload.body).not.toMatch(/https?:\/\//);
   });
 });

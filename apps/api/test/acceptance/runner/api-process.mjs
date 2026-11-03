@@ -20,6 +20,8 @@ export function apiEnvironment(databaseUrl) {
     OTP_PROVIDER: 'local',
     OTP_DEVELOPMENT_CODE: '123456',
     OTP_REQUESTS_PER_10_MIN: '1000',
+    // Every scenario posts the website form from this one machine.
+    WEBSITE_ENQUIRIES_PER_10_MIN: '1000',
     RAZORPAY_MODE: 'sandbox',
     RAZORPAYX_MODE: 'sandbox',
     // Known secrets so the suite can sign gateway webhooks like Razorpay does.

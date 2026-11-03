@@ -7,6 +7,13 @@ import type { Environment } from '../../../config/environment';
 import type { ChatReply } from '../chat-store';
 import { ANSWER_WORDS, WORDS } from './words';
 
+/** Our pay page for one due amount: it makes the gateway page only when opened. */
+export function payPageUrl(env: Environment, customerId: string, milestoneId: string): string {
+  const exp = Math.floor(Date.now() / 1000) + env.PAYMENT_LINK_DAYS * 86_400;
+  const token = signPayToken(env.FILE_LINK_SECRET, { milestoneId, customerId, exp });
+  return `${env.API_PUBLIC_URL}/v1/pay/due/${token}`;
+}
+
 /**
  * One "Pay now" message for each amount the customer owes, each opening the web pay page
  * (never paying inside WhatsApp). Nothing when online payments are off.
@@ -35,21 +42,15 @@ export async function payNowReplies(
       ),
     )
     .orderBy(paymentMilestones.position);
-  const exp = Math.floor(Date.now() / 1000) + env.PAYMENT_LINK_DAYS * 86_400;
   return rows.flatMap((row) => {
     const left = row.amount - Number(row.paid);
     if (left <= 0) return [];
-    const token = signPayToken(env.FILE_LINK_SECRET, {
-      milestoneId: row.id,
-      customerId,
-      exp,
-    });
     return [
       {
         kind: 'cta_url' as const,
         body: `*${row.code}*\n${ANSWER_WORDS.due(row.label, formatInr(left))}`,
         label: WORDS.payNow,
-        url: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`,
+        url: payPageUrl(env, customerId, row.id),
       },
     ];
   });

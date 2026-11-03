@@ -210,7 +210,8 @@ curl -X POST https://<domain>/api/v1/public/leads \
   - `message` (up to 1000 characters) and `sourcePage`: optional. `sourcePage` becomes the lead's landing page.
   - `utmSource`, `utmMedium`, `utmCampaign` and `campaignCode` (up to 100 characters each): optional. Send what the website read from the address (for example `?utm_source=google&utm_campaign=summer`, or an ad code such as `DIWALI26`). They are kept on the lead as its first-touch source; `campaignCode` is stored uppercase and shows in the "By campaign" report.
   - `website`: put this in a hidden field that people cannot see. Bots fill it in, and a filled one is quietly ignored.
-- Rate limit: 5 enquiries per address every 10 minutes, and 3 per phone number a day. Over
+- Rate limit: 5 enquiries per address every 10 minutes (`WEBSITE_ENQUIRIES_PER_10_MIN`; keep 5
+  in production), and 3 per phone number a day. Over
   the limit, the answer is `429` with a polite message. The production compose file already
   sets `TRUST_PROXY=true`, so the limit counts each visitor's own address.
 - Mistakes come back as `400` with `fieldErrors` per field.

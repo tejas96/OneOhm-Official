@@ -36,17 +36,10 @@ describe('The journey side paths: sources, links and messages', () => {
   it('f) a website lead keeps its UTM fields; "By campaign" has a row for its UTM campaign', async () => {
     const phone = uniquePhone();
     const utm = `journey-utm-${phone.slice(-6)}`;
-    // The form takes 5 posts per address in 10 minutes and scenarios 29 and 32 use all 5 from
-    // this machine: the suite's earlier posts are moved out of that window, before and after.
-    const freeFormBudget = () =>
-      rows(`UPDATE website_enquiries SET created_at = created_at - interval '10 minutes'
-             WHERE created_at > now() - interval '10 minutes'`);
-    await freeFormBudget();
     const sent = await new Session().raw('POST', '/public/leads', {
       ...{ name: 'Utm Journey Visitor (test)', phone, city: 'Pune' },
       ...{ sourcePage: '/rooftop-solar', utmSource: 'google', utmMedium: 'cpc', utmCampaign: utm },
     });
-    await freeFormBudget();
     expect(sent.status).toBe(202);
     const [lead] = await leadsOf(phone);
     const detail = await admin.get<LeadDetail>(`/leads/${lead?.id}`);

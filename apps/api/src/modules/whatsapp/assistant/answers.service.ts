@@ -8,13 +8,12 @@ import type { Environment } from '../../../config/environment';
 import { CustomerAfterSalesService } from '../../after-sales/customer-after-sales.service';
 import { CustomerDocumentsService } from '../../customer-portal/customer-documents.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
-import { openLinksFor } from '../../online-payments/open-links';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { type SharedFile, sharedFileUrl } from '../file-links';
 import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
-import { payNowReplies } from './pay-buttons';
+import { payNowReplies, payPageUrl } from './pay-buttons';
 import { rewardsText } from './rewards-answer';
 import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
 
@@ -63,8 +62,11 @@ export class AnswersService {
       .join('\n\n');
   }
 
-  /** What is paid and due, with a pay link for each due amount (made when needed). */
-  async payments(customerId: string): Promise<string> {
+  /**
+   * What is paid and due. `withLinks` (no Pay now buttons follow) adds our pay page link
+   * under each due amount; never the raw gateway link, which our page makes when opened.
+   */
+  async payments(customerId: string, withLinks: boolean): Promise<string> {
     const own = await this.db
       .select({ id: projects.id, code: projects.code })
       .from(projects)
@@ -89,11 +91,7 @@ export class AnswersService {
           own.map((project) => project.id),
         ),
       );
-    const open = await openLinksFor(
-      this.db,
-      milestones.map((milestone) => milestone.id),
-    );
-    const online = this.links.setup().mode !== 'off';
+    const online = withLinks && this.links.setup().mode !== 'off';
     const blocks: string[] = [];
     for (const project of own) {
       const lines = [`*${project.code}*`];
@@ -101,9 +99,7 @@ export class AnswersService {
         const got = paid
           .filter((row) => row.milestoneId === milestone.id)
           .reduce((sum, row) => sum + row.amount, 0);
-        lines.push(
-          await this.milestoneLine(milestone, got, open.get(milestone.id)?.url ?? null, online),
-        );
+        lines.push(this.milestoneLine(customerId, milestone, got, online));
       }
       blocks.push(list(lines));
     }
@@ -115,20 +111,19 @@ export class AnswersService {
     return payNowReplies(this.db, this.env, customerId);
   }
 
-  /** One line per milestone: paid, later, the bank's share, or due with a pay link. */
-  private async milestoneLine(
+  /** One line per milestone: paid, later, the bank's share, or due (with a pay link). */
+  private milestoneLine(
+    customerId: string,
     milestone: typeof paymentMilestones.$inferSelect,
     got: number,
-    openUrl: string | null,
-    online: boolean,
-  ): Promise<string> {
+    withLink: boolean,
+  ): string {
     const left = milestone.amountPaise - got;
     if (left <= 0) return ANSWER_WORDS.paid(milestone.label, formatInr(milestone.amountPaise));
     if (milestone.payer === 'bank') return ANSWER_WORDS.bank(milestone.label, formatInr(left));
     if (milestone.status !== 'due' && milestone.status !== 'partly_paid')
       return ANSWER_WORDS.later(milestone.label, formatInr(left));
-    const url =
-      openUrl ?? (online ? (await this.links.create({ userId: null }, milestone.id)).url : null);
+    const url = withLink ? payPageUrl(this.env, customerId, milestone.id) : null;
     return `${ANSWER_WORDS.due(milestone.label, formatInr(left))}${url ? `\n  ${WORDS.payHere}: ${url}` : ''}`;
   }
 

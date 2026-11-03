@@ -3,7 +3,8 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import type { Request } from 'express';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor, Public } from '../../common/auth/auth.decorators';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
 import { apiContract } from '../../contract';
 import { LeadIntakeService } from './lead-intake.service';
 import { leadOwnerOptions } from './lead-owner';
@@ -40,13 +41,15 @@ export class PhoneMatchController {
 export class WebsiteLeadController {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly intake: LeadIntakeService,
   ) {}
 
   @TsRestHandler(apiContract.leadIntake.websiteLead)
   handler(@Req() request: Request) {
     return tsRestHandler(apiContract.leadIntake.websiteLead, async ({ body }) => {
-      await receiveWebsiteLead(this.db, this.intake, body, request.ip ?? null);
+      const perAddress = this.env.WEBSITE_ENQUIRIES_PER_10_MIN;
+      await receiveWebsiteLead(this.db, this.intake, body, request.ip ?? null, perAddress);
       return { status: 202, body: { received: true as const } };
     });
   }

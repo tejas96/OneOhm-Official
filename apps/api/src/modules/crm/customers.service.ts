@@ -6,6 +6,7 @@ import {
   projects,
   properties,
   quotations,
+  waConversations,
 } from '@oneohm/database';
 import { and, asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -22,6 +23,18 @@ import { LeadsService } from './leads.service';
 import { addSite, editSite, insertLeadSite } from './site-edit';
 import { confirmSiteLocation, restoreSiteLocation } from './site-location';
 import { savingSite } from './site-rules';
+
+const CHAT_LANGUAGES: Record<string, string> = { en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' };
+
+/** The language the number picked on WhatsApp, as a customer's preferred language. */
+async function chatLanguage(db: DatabaseExecutor, phone: string): Promise<string | undefined> {
+  const [chat] = await db
+    .select({ language: waConversations.language })
+    .from(waConversations)
+    .where(eq(waConversations.phone, phone))
+    .limit(1);
+  return CHAT_LANGUAGES[chat?.language ?? ''];
+}
 
 const presentProperty = (row: typeof properties.$inferSelect): Property => {
   const {
@@ -107,6 +120,8 @@ export class CustomersService {
           .limit(1);
         const matched = Boolean(customer);
         if (!customer) {
+          // A new customer keeps the language they chose in the chat; a match keeps theirs.
+          const language = await chatLanguage(tx, lead.phone);
           [customer] = await tx
             .insert(customers)
             .values({
@@ -114,6 +129,7 @@ export class CustomersService {
               name: lead.name,
               phoneE164: lead.phone,
               email: lead.email,
+              ...(language ? { preferredLanguage: language } : {}),
               createdByUserId: actor.userId,
             })
             .returning({ id: customers.id });

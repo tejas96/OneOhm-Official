@@ -5,10 +5,11 @@ import {
   type DatabaseExecutor,
   type LeadAttribution,
   leadActivities,
+  leadCampaigns,
   leads,
   notify,
 } from '@oneohm/database';
-import type { LeadSource } from '@oneohm/domain';
+import { campaignLabel, type LeadSource } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, notInArray } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
@@ -29,6 +30,23 @@ export interface IntakeInput {
   readonly firstNote: string;
   /** Where the lead came from; written only when a lead is made (first touch wins). */
   readonly attribution?: LeadAttribution | undefined;
+}
+
+/** The lead's campaign in words (its listed name, else code, ad or UTM), or null. */
+async function campaignOf(db: DatabaseExecutor, leadId: string): Promise<string | null> {
+  const [row] = await db
+    .select({
+      campaignCode: leads.campaignCode,
+      campaignName: leadCampaigns.name,
+      adId: leads.adId,
+      adHeadline: leads.adHeadline,
+      utmCampaign: leads.utmCampaign,
+    })
+    .from(leads)
+    .leftJoin(leadCampaigns, eq(leadCampaigns.code, leads.campaignCode))
+    .where(eq(leads.id, leadId))
+    .limit(1);
+  return row ? campaignLabel(row) : null;
 }
 
 export interface IntakeResult {
@@ -140,20 +158,23 @@ export class LeadIntakeService {
     return { leadId: lead.id, name: lead.name, createdAt: lead.createdAt, created: true };
   }
 
-  private tellOwner(
+  /** "New lead · <source>", with the campaign it came from when it has one. */
+  private async tellOwner(
     tx: DatabaseExecutor,
     ownerUserId: string,
     lead: { readonly id: string; readonly name: string },
     input: IntakeInput,
     today: string,
   ) {
+    const campaign = await campaignOf(tx, lead.id);
+    const from = campaign ? ` Campaign: ${campaign}.` : '';
     return notify(
       tx,
       { userId: ownerUserId },
       {
         kind: 'lead_assigned',
         title: `New lead · ${SOURCE_LABEL[input.source]}`,
-        body: `${lead.name}, ${input.city}. ${input.nextActionNote}.`,
+        body: `${lead.name}, ${input.city}.${from} ${input.nextActionNote}.`,
         subject: { type: 'lead', id: lead.id },
         dedupeKey: `lead_intake:${lead.id}:${ownerUserId}:${today}`,
       },

@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Transaction } from '@oneohm/database';
+import { notifications, type Transaction } from '@oneohm/database';
 import { addMonths } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
+import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { updateLeadFromChat } from '../../crm/lead-from-chat';
@@ -21,6 +22,16 @@ const LATER: Record<
   '1m': { label: 'in 1 month', from: (day) => addMonths(day, 1) },
   '3m': { label: 'in 3 months', from: (day) => addMonths(day, 3) },
 };
+
+/** True when this day's call-back alert (its dedupe key) has gone out already. */
+async function alertedAlready(tx: Transaction, key: string): Promise<boolean> {
+  const [sent] = await tx
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(like(notifications.dedupeKey, `${key}:%`))
+    .limit(1);
+  return Boolean(sent);
+}
 
 const laterPeriod = (choiceId: string): LaterPeriod | null => {
   const period = choiceId.slice(ESTIMATE_CHOICES.later.length);
@@ -55,19 +66,21 @@ export class EstimateNextStepsService {
     const W = ONBOARD_WORDS;
     const today = todayIn(this.env.BUSINESS_TIMEZONE);
     if (choiceId === ESTIMATE_CHOICES.call) {
+      // One alert and one history note a day: a second tap is already on the owner's Today.
+      const key = `wa_callback:${chat.id}:${today}`;
+      const again = await alertedAlready(tx, key);
       await updateLeadFromChat(
         tx,
         leadId,
         { nextAction: { on: today, note: 'Customer asked for a call after the estimate' } },
-        'Asked for a call today after the estimate',
+        again ? null : 'Asked for a call today after the estimate',
       );
       const owned = await ensureChatOwner(tx, chat);
       await tellChatTeam(tx, owned, {
         kind: 'whatsapp_callback',
         title: 'Call back today: asked after the estimate',
         body: `${chat.profileName ?? 'A customer'} · ${chat.phone}`,
-        // One alert a day: a second tap the same day is already on the owner's Today.
-        key: `wa_callback:${chat.id}:${today}`,
+        key,
       });
       const name = await this.people.answererName(owned, tx);
       await queueReply(tx, chat, { kind: 'text', body: W.willCall(name) });

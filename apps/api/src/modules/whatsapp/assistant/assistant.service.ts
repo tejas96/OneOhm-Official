@@ -119,10 +119,13 @@ export class AssistantService {
     switch (choice) {
       case 'progress':
         return text(await this.answers.progress(customerId));
-      case 'payments':
-        await text(await this.answers.payments(customerId));
-        for (const button of await this.answers.payNow(customerId)) await this.say(chat, button);
+      case 'payments': {
+        // Pay now buttons open our pay page; without them the text carries that link.
+        const buttons = await this.answers.payNow(customerId);
+        await text(await this.answers.payments(customerId, buttons.length === 0));
+        for (const button of buttons) await this.say(chat, button);
         return;
+      }
       case 'documents':
         return text(await this.answers.documents(customerId));
       case 'requests':

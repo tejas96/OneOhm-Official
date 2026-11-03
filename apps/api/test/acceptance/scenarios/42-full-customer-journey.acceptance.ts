@@ -98,6 +98,12 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
       next_action_note: 'Finish onboarding',
     });
     expect(await J.alerted('lead_assigned', leadId)).toEqual([j.owner.id]);
+    const [alert] = await rows<{ title: string; body: string }>(
+      `SELECT title, body FROM notifications WHERE kind = 'lead_assigned' AND subject_id = $1`,
+      [leadId],
+    );
+    expect(alert?.title).toContain('WhatsApp');
+    expect(alert?.body).toContain(CAMPAIGN);
     expect(await J.historyOf(leadId)).toEqual(['Started onboarding on WhatsApp']);
     const answers: [string, string, Partial<J.LeadState>][] = [
       ['ob:site:home', 'Site: Home', { subsidy_category: 'individual' }],
@@ -178,5 +184,7 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     );
     await t.tap('ob:done:call');
     expect(await J.alerted('whatsapp_callback', chat.id)).toHaveLength(told.length);
+    const asked = (await J.historyOf(leadId)).filter((note) => note.startsWith('Asked for a call'));
+    expect(asked).toHaveLength(1);
   });
 });

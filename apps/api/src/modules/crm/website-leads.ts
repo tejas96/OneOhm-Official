@@ -4,9 +4,9 @@ import { and, eq, gt, sql } from 'drizzle-orm';
 import { tooMany } from '../../common/http/errors';
 import type { LeadIntakeService } from './lead-intake.service';
 
-/** How often the public form may be sent: per address, and per phone number. */
+/** How often the public form may be sent: per address (count set by the env), and per phone. */
 export const WEBSITE_LIMITS = {
-  perAddress: { count: 5, minutes: 10 },
+  perAddress: { minutes: 10 },
   perPhone: { count: 3, minutes: 24 * 60 },
 } as const;
 
@@ -21,10 +21,15 @@ async function sent(db: DatabaseExecutor, where: ReturnType<typeof eq>, minutes:
 }
 
 /** Refuses a flood from one address or onto one number (HTTP 429). */
-async function assertBudget(db: DatabaseExecutor, ip: string | null, phone: string) {
+async function assertBudget(
+  db: DatabaseExecutor,
+  ip: string | null,
+  phone: string,
+  perAddressCount: number,
+) {
   const { perAddress, perPhone } = WEBSITE_LIMITS;
   const message = 'Thank you, we have your details. Please wait a little before sending again.';
-  if (ip && (await sent(db, eq(websiteEnquiries.ip, ip), perAddress.minutes)) >= perAddress.count)
+  if (ip && (await sent(db, eq(websiteEnquiries.ip, ip), perAddress.minutes)) >= perAddressCount)
     throw tooMany(message);
   if ((await sent(db, eq(websiteEnquiries.phoneE164, phone), perPhone.minutes)) >= perPhone.count)
     throw tooMany(message);
@@ -41,9 +46,10 @@ export async function receiveWebsiteLead(
   intake: LeadIntakeService,
   input: WebsiteLeadInput,
   ip: string | null,
+  perAddressCount: number,
 ): Promise<void> {
   if (input.website?.trim()) return;
-  await assertBudget(db, ip, input.phone);
+  await assertBudget(db, ip, input.phone, perAddressCount);
   const message = input.message?.trim() || null;
   const page = input.sourcePage?.trim() || null;
   const result = await intake.receive({
