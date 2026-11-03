@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/api';
 import { ToastProvider } from '@/components/toast';
@@ -18,18 +19,20 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
   return (
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <ThemeProvider storageKey="oneohm.field.theme">
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider>
-              <ToastProvider>
-                {/* Text is measured with the real faces only: render once fonts are in. */}
-                {fontsLoaded || fontError !== null ? <RootNavigator /> : null}
-              </ToastProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <ThemeProvider storageKey="oneohm.field.theme">
+            <QueryClientProvider client={queryClient}>
+              <SessionProvider>
+                <ToastProvider>
+                  {/* Text is measured with the real faces only: render once fonts are in. */}
+                  {fontsLoaded || fontError !== null ? <RootNavigator /> : null}
+                </ToastProvider>
+              </SessionProvider>
+            </QueryClientProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

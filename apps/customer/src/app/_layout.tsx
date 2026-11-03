@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/api';
 import { ToastProvider } from '@/components/toast';
@@ -26,19 +27,21 @@ export default function RootLayout() {
   const ready = (fontsLoaded || fontError !== null) && languageRead;
   return (
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <ThemeProvider storageKey="oneohm.customer.theme">
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider>
-              <ToastProvider>
-                {/* Text is measured with the real faces only: render once fonts are in. */}
-                {/* A new language re-mounts the screens; navigation state is kept. */}
-                {ready ? <RootNavigator key={language} /> : null}
-              </ToastProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <ThemeProvider storageKey="oneohm.customer.theme">
+            <QueryClientProvider client={queryClient}>
+              <SessionProvider>
+                <ToastProvider>
+                  {/* Text is measured with the real faces only: render once fonts are in. */}
+                  {/* A new language re-mounts the screens; navigation state is kept. */}
+                  {ready ? <RootNavigator key={language} /> : null}
+                </ToastProvider>
+              </SessionProvider>
+            </QueryClientProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
