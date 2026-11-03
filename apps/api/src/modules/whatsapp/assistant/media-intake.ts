@@ -77,6 +77,9 @@ export class MediaIntakeService {
       const file = await this.fetchOrSay(chat, media);
       return file ? this.problems.addPhoto(chat, customerId, raised.id, file) : undefined;
     }
+    // Meta's retry of a file already filed (the reply after it failed): not filed again.
+    const filed = (chat.context as { filedMedia?: { id: string; title: string } }).filedMedia;
+    if (filed?.id === media.id) return this.text(chat, MEDIA_WORDS.paperSaved(filed.title));
     const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
     if (open.length > 0) return this.fulfil(chat, customerId, open, media);
     return this.ask(chat, media, now);
@@ -106,6 +109,8 @@ export class MediaIntakeService {
       if (error instanceof AppError) return this.text(chat, MEDIA_WORDS.paperRefused(oldest.title));
       throw error;
     }
+    const filedMedia = { id: media.id, title: oldest.title };
+    await setState(this.db, chat.id, chat.state, { ...(chat.context as object), filedMedia });
     const left = open
       .slice(0, -1)
       .reverse()

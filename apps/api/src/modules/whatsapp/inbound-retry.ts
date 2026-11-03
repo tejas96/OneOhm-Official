@@ -31,7 +31,8 @@ export async function tellNotHandled(
   await tellChatTeam(db, chat, {
     kind: 'whatsapp_not_handled',
     title: 'A WhatsApp message was not handled',
-    body: `A WhatsApp message from ${name} could not be handled — please check the chat.`,
+    // The message itself is forgotten so Meta's retry is handled: the alert keeps its words.
+    body: `A WhatsApp message from ${name} could not be handled — please check the chat. They sent: ${message.text ? message.text.slice(0, 140) : 'a file'}`,
     key: `wa_not_handled:${message.waMessageId}`,
   });
 }

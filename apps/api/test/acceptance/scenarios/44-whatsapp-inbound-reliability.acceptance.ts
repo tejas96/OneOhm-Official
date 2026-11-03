@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { chatOf, replies, say, tap, withOnboarding } from '../support/onboarding';
-import { uniquePhone } from '../support/sales';
+import { newCustomer, uniquePhone } from '../support/sales';
 import { postInbound, sendInbound } from '../support/whatsapp';
 
 // Live review A3/A4: a customer message the API could not handle is answered 500 (so Meta
@@ -10,6 +10,20 @@ import { postInbound, sendInbound } from '../support/whatsapp';
 // tap from an older message changes nothing; the chat's last-inbound time never goes back.
 
 const MINUTE = 60 * 1000;
+
+/** Until the returned undo runs, the database refuses every reply to this number. */
+async function refuseRepliesTo(phone: string): Promise<() => Promise<void>> {
+  const name = `refuse_reply_${phone.slice(1)}`;
+  await rows(`CREATE OR REPLACE FUNCTION ${name}() RETURNS trigger AS $$
+    BEGIN IF NEW.recipient = '${phone}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END;
+    $$ LANGUAGE plpgsql`);
+  await rows(`CREATE TRIGGER ${name} BEFORE INSERT ON outbox
+    FOR EACH ROW EXECUTE FUNCTION ${name}()`);
+  return async () => {
+    await rows(`DROP TRIGGER ${name} ON outbox`);
+    await rows(`DROP FUNCTION ${name}()`);
+  };
+}
 
 const lastInboundOf = async (phone: string) => {
   const [chat] = await rows<{ at: Date }>(
@@ -45,11 +59,7 @@ describe('WhatsApp inbound reliability', () => {
   it('a message that fails is answered 500, alerted once, and handled when Meta retries', async () => {
     const phone = uniquePhone();
     // The database refuses every reply to this number, so handling the message fails.
-    await rows(`CREATE OR REPLACE FUNCTION refuse_reply_${phone.slice(1)}() RETURNS trigger AS $$
-      BEGIN IF NEW.recipient = '${phone}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END;
-      $$ LANGUAGE plpgsql`);
-    await rows(`CREATE TRIGGER refuse_reply_${phone.slice(1)} BEFORE INSERT ON outbox
-      FOR EACH ROW EXECUTE FUNCTION refuse_reply_${phone.slice(1)}()`);
+    const undo = await refuseRepliesTo(phone);
     const id = `wamid.acceptance-retry-${phone.slice(1)}`;
     const hi = { id, text: 'hi', profileName: 'Retry (test)' };
     try {
@@ -60,10 +70,11 @@ describe('WhatsApp inbound reliability', () => {
       const alerts = await failedAlerts(chat.id);
       expect(new Set(alerts.map((alert) => alert.key))).toEqual(new Set([id]));
       expect(alerts[0]?.body).toContain('Retry (test)');
+      // The message is forgotten until it is handled, so the alert carries what was sent.
+      expect(alerts[0]?.body).toContain('They sent: hi');
       expect(await replies(phone)).toEqual([]);
     } finally {
-      await rows(`DROP TRIGGER refuse_reply_${phone.slice(1)} ON outbox`);
-      await rows(`DROP FUNCTION refuse_reply_${phone.slice(1)}()`);
+      await undo();
     }
     // The database is fine again: Meta's next retry of the same message is handled.
     await sendInbound(phone, hi);
@@ -95,5 +106,36 @@ describe('WhatsApp inbound reliability', () => {
     const newest = await lastInboundOf(phone);
     await sendInbound(phone, { text: 'hello', at: new Date(Date.now() - 60 * MINUTE) });
     expect(await lastInboundOf(phone)).toBe(newest);
+  });
+
+  it('a paper photo filed before the reply failed is not filed again on the retry', async () => {
+    const customer = await newCustomer(admin, { name: 'Retry Papers (test)' });
+    for (const title of ['Aadhaar card (test)', 'Light bill (test)'])
+      await rows(
+        `INSERT INTO document_requests (customer_id, category, title, created_at)
+          VALUES ($1, 'customer_kyc', $2, now() - interval '1 hour' + $3::interval)`,
+        [customer.customerId, title, title.startsWith('Aadhaar') ? '0 minutes' : '1 minute'],
+      );
+    const photo = {
+      id: `wamid.acceptance-paper-${customer.phone.slice(1)}`,
+      media: { type: 'image' as const, fileId: 'retry-paper', mimeType: 'image/jpeg' },
+    };
+    const undo = await refuseRepliesTo(customer.phone);
+    try {
+      expect((await postInbound(customer.phone, photo)).status).toBe(500);
+    } finally {
+      await undo();
+    }
+    await sendInbound(customer.phone, photo);
+    const papers = await rows<{ title: string; status: string }>(
+      `SELECT title, status::text AS status FROM document_requests WHERE customer_id = $1
+        ORDER BY created_at`,
+      [customer.customerId],
+    );
+    expect(papers).toEqual([
+      { title: 'Aadhaar card (test)', status: 'received' },
+      { title: 'Light bill (test)', status: 'open' },
+    ]);
+    expect((await replies(customer.phone)).at(-1)?.body).toContain('Aadhaar card (test)');
   });
 });

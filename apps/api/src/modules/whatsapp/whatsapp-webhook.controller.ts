@@ -95,15 +95,20 @@ export class WhatsAppWebhookController implements OnModuleInit {
         // One bad message must not stop the rest; Meta resends the post after the 500.
         failed += 1;
         this.log.error(`Assistant failed on ${message.waMessageId}: ${String(error)}`);
-        await forgetIncoming(this.db, message.waMessageId);
-        await tellNotHandled(this.db, chat, message).catch((alertError: unknown) =>
-          this.log.error(`Could not alert about ${message.waMessageId}: ${String(alertError)}`),
-        );
+        await this.recover(chat, message);
       }
     }
     const receipts = await this.deliveries.applyUpdates(updates);
     if (failed > 0) throw new InternalServerErrorException(`${failed} message(s) not handled.`);
     return { messages: handled, receipts };
+  }
+
+  /** Alerts the chat's people, then forgets the message so Meta's retry is handled. */
+  private async recover(chat: Conversation, message: Incoming) {
+    const failure = (what: string) => (error: unknown) =>
+      this.log.error(`Could not ${what} ${message.waMessageId}: ${String(error)}`);
+    await tellNotHandled(this.db, chat, message).catch(failure('alert about'));
+    await forgetIncoming(this.db, message.waMessageId).catch(failure('forget'));
   }
 
   private async handle(chat: Conversation, message: Incoming) {
