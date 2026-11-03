@@ -11,7 +11,6 @@ import {
   queueCustomerMessage,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
-import { signPayToken } from '@oneohm/shared/pay-token';
 import { desc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -20,6 +19,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { PAYMENT_GATEWAY, type PaymentGateway } from './gateway';
 import { openLinksFor } from './open-links';
+import { paySigningSecret, signPayToken } from './pay-token';
 import { presentLink } from './present-link';
 
 /** Links for what customers still owe, sent on WhatsApp and shown in their app. */
@@ -105,7 +105,7 @@ export class PaymentLinksService {
             milestone: milestone.label,
             project: project.code,
             link: created.url,
-            payToken: signPayToken(this.env.FILE_LINK_SECRET, {
+            payToken: signPayToken(paySigningSecret(this.env), {
               milestoneId,
               customerId: project.customerId,
               exp: Math.floor(expiresAt.getTime() / 1000),

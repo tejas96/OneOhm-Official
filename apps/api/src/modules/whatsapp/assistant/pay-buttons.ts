@@ -1,16 +1,16 @@
 import type { Database } from '@oneohm/database';
 import { paymentMilestones, payments, projects } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
-import { signPayToken } from '@oneohm/shared/pay-token';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Environment } from '../../../config/environment';
+import { paySigningSecret, signPayToken } from '../../online-payments/pay-token';
 import type { ChatReply } from '../chat-store';
 import { ANSWER_WORDS, WORDS } from './words';
 
 /** Our pay page for one due amount: it makes the gateway page only when opened. */
 export function payPageUrl(env: Environment, customerId: string, milestoneId: string): string {
   const exp = Math.floor(Date.now() / 1000) + env.PAYMENT_LINK_DAYS * 86_400;
-  const token = signPayToken(env.FILE_LINK_SECRET, { milestoneId, customerId, exp });
+  const token = signPayToken(paySigningSecret(env), { milestoneId, customerId, exp });
   return `${env.API_PUBLIC_URL}/v1/pay/due/${token}`;
 }
 

@@ -41,6 +41,8 @@ const schema = z.object({
   MSG91_SMS_TEMPLATE_ID: z.string().optional(),
   /** Signs the Pay now links in payment reminders; must equal the API's value. */
   FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
+  /** Signs the Pay now links; falls back to FILE_LINK_SECRET outside production. */
+  PAY_LINK_SECRET: z.string().min(16).optional(),
   PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
 });
 
@@ -56,6 +58,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     throw new Error(`Worker settings are invalid or missing: ${fields}`);
   }
   const config = parsed.data;
+  if (config.NODE_ENV === 'production') {
+    if (config.FILE_LINK_SECRET.startsWith('oneohm-local'))
+      throw new Error('FILE_LINK_SECRET is still the default; set a real secret in production.');
+    if (!config.PAY_LINK_SECRET || config.PAY_LINK_SECRET === config.FILE_LINK_SECRET)
+      throw new Error(
+        'PAY_LINK_SECRET must be set, and differ from FILE_LINK_SECRET, in production.',
+      );
+  }
   if (
     config.WHATSAPP_DELIVERY === 'live' &&
     (!config.WHATSAPP_ACCESS_TOKEN || !config.WHATSAPP_PHONE_NUMBER_ID)

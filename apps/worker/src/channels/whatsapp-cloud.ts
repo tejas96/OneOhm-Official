@@ -1,4 +1,5 @@
 import type { WorkerConfig } from '../config';
+import { maskPhone, withoutLinks } from './log-mask';
 
 /** A file shown at the top of a template message. */
 export interface TemplateHeader {
@@ -195,16 +196,18 @@ export function createWhatsAppSender(
       async send(message) {
         const header = message.header ? ` header=${message.header.filename}` : '';
         const buttons = (message.buttons ?? []).map((b) =>
-          b.kind === 'quick_reply' ? b.payload : b.suffix,
+          b.kind === 'quick_reply' ? b.payload : '[link]',
         );
         log(
-          `[whatsapp:log] ${message.template} → ${message.toE164} ${JSON.stringify(message.parameters)}${header}${buttons.length > 0 ? ` buttons=${JSON.stringify(buttons)}` : ''}`,
+          `[whatsapp:log] ${message.template} → ${maskPhone(message.toE164)} ${withoutLinks(JSON.stringify(message.parameters))}${header}${buttons.length > 0 ? ` buttons=${JSON.stringify(buttons)}` : ''}`,
         );
         return { outcome: 'logged' };
       },
       async sendSession(toE164, message) {
         const what = message.kind === 'document' ? message.filename : message.body;
-        log(`[whatsapp:log] ${message.kind} → ${toE164} ${JSON.stringify(what)}`);
+        log(
+          `[whatsapp:log] ${message.kind} → ${maskPhone(toE164)} ${withoutLinks(JSON.stringify(what))}`,
+        );
         return { outcome: 'logged' };
       },
     };
@@ -233,7 +236,7 @@ export function createWhatsAppSender(
   const allowed = config.WHATSAPP_TEST_NUMBERS;
   const held = (to: string, what: string): SendResult | null => {
     if (allowed.length === 0 || allowed.includes(to)) return null;
-    log(`[whatsapp:test] held ${what} → ${to} (not in WHATSAPP_TEST_NUMBERS)`);
+    log(`[whatsapp:test] held ${what} → ${maskPhone(to)} (not in WHATSAPP_TEST_NUMBERS)`);
     return { outcome: 'logged', note: 'Not sent: only test numbers get messages right now.' };
   };
   return {

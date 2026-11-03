@@ -61,6 +61,13 @@ Fill in `/opt/oneohm/.env`:
 - Strong passwords. Generate them with `openssl rand -base64 32`.
 - `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` for the first Super Admin.
 - The MSG91 and WhatsApp keys.
+- `FILE_LINK_SECRET` and `PAY_LINK_SECRET`: two different random values (`openssl rand -base64 32`).
+  The API and the worker both refuse to start in production with the default file secret or
+  without a pay-link secret of its own. Pay links already sent (signed with the file secret)
+  keep opening until they expire.
+- `API_PUBLIC_URL`: the stable `https://` domain. The API refuses to start in production
+  with `http`, `localhost`, `trycloudflare.com` or `loca.lt`, because every link sent to a
+  customer carries this address for good.
 
 Use fresh keys for production. Do not reuse the test keys that were shared during development.
 
@@ -115,7 +122,8 @@ messages, and the worker refuses to start in production with it set.
 1. In Meta's app settings, set the webhook to `https://<domain>/api/v1/webhooks/whatsapp`,
    use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` as the verify token, and subscribe to `messages`.
 2. Put the app secret in `WHATSAPP_APP_SECRET`: every post is then checked against Meta's
-   signature.
+   signature, and unsigned posts are refused with 401 even on the key path. The API will
+   not start in production with `WHATSAPP_DELIVERY=live` and no app secret.
 3. Without the app secret (no Meta console access), set a long random
    `WHATSAPP_WEBHOOK_PATH_KEY` and point the webhook at
    `https://<domain>/api/v1/webhooks/whatsapp/<key>`. It can be set with the access token:

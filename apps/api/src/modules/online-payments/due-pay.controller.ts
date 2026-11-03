@@ -5,7 +5,7 @@ import { AppError } from '../../common/http/errors';
 import { ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CustomerPayService } from './customer-pay.service';
-import { readPayToken } from './pay-token';
+import { readPayTokenFor } from './pay-token';
 
 /** What the customer reads when a pay link cannot open a payment page. */
 const WORDS = {
@@ -38,7 +38,7 @@ export class DuePayController {
 
   @Get(':token')
   async open(@Param('token') token: string, @Res() response: Response): Promise<void> {
-    const due = readPayToken(this.env.FILE_LINK_SECRET, token);
+    const due = readPayTokenFor(this.env, token);
     if (!due) {
       response.status(410).type('html').send(page(WORDS.expired));
       return;
