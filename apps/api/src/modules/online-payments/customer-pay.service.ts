@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerPayLink } from '@oneohm/api-contracts';
-import { paymentMilestones, payments, projects } from '@oneohm/database';
+import { customers, paymentMilestones, payments, projects } from '@oneohm/database';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { type AssistantLanguage, assistantLanguage } from '../whatsapp/assistant/language';
 import { PaymentLinksService } from './payment-links.service';
 
 /** What the pay page shows before the customer taps Continue. */
@@ -23,6 +24,16 @@ export class CustomerPayService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly links: PaymentLinksService,
   ) {}
+
+  /** The customer's language for the pay page (English when unknown). */
+  async language(customerId: string): Promise<AssistantLanguage> {
+    const [customer] = await this.db
+      .select({ language: customers.preferredLanguage })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+    return assistantLanguage(customer?.language);
+  }
 
   /** What is left to pay, with the same refusals as `pay`, and nothing made at the gateway. */
   async preview(customerId: string, milestoneId: string): Promise<PayPreview> {

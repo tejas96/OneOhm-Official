@@ -65,8 +65,18 @@ describe('Razorpay webhooks', () => {
       }),
     ).toEqual({
       kind: 'refund',
-      refund: { what: 'refund', gatewayPaymentId: 'pay_1', amountPaise: 500_00, key: 'refund' },
+      refund: { what: 'refund', gatewayPaymentId: 'pay_1', amountPaise: 500_00, key: 'rfnd_1' },
     });
+    // The same refund told twice (both events) is one alert; a second partial refund is another.
+    expect(
+      readEvent({
+        event: 'payment.refunded',
+        payload: {
+          refund: { entity: { id: 'rfnd_2', payment_id: 'pay_1', amount: 200_00 } },
+          payment: { entity: { id: 'pay_1', amount_refunded: 700_00 } },
+        },
+      }),
+    ).toMatchObject({ kind: 'refund', refund: { what: 'refund', key: 'rfnd_2' } });
     expect(
       readEvent({
         event: 'payment.refunded',

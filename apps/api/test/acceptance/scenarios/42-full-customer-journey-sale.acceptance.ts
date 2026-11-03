@@ -141,8 +141,8 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const [link] = await J.outboxOf(phone, 'payment_link');
     payToken = link?.payload.payToken ?? '';
     expect(payToken).toBeTruthy();
-    // Opening the link shows the amount; Continue opens the gateway page.
-    expect(await (await fetch(`${API}/pay/due/${payToken}`)).text()).toContain('Continue to pay');
+    // Opening the link shows the amount in Marathi (her language); Continue opens the gateway.
+    expect(await (await fetch(`${API}/pay/due/${payToken}`)).text()).toContain('पेमेंट करा');
     const go = await fetch(`${API}/pay/due/${payToken}?go=1`, { redirect: 'manual' });
     sandboxUrl = go.status === 302 ? (go.headers.get('location') ?? '') : '';
     expect(sandboxUrl).toContain('/v1/pay/sandbox/');
@@ -188,7 +188,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     );
     expect(activity.length).toBeGreaterThan(0);
     const old = await fetch(`${API}/pay/due/${payToken}`, { redirect: 'manual' });
-    expect(await old.text()).toContain('This is already paid. Thank you!');
+    expect(await old.text()).toContain('हे आधीच भरले आहे. धन्यवाद!');
     t.ourSide(
       `Advance paid: payment ${payment?.receipt_number} (₹${Number(payment?.amount_paise) / 100}), milestone paid, receipt sent as ${receiptFile}; payment_online alert to the project owner and accounts (${told.length} people); project activity written; the old Pay now link now says "already paid".`,
     );

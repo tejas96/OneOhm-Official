@@ -3,11 +3,6 @@ import { answererFor } from './chat-answerer';
 import type { DatabaseExecutor } from './client';
 import { roleCapabilities, roles, userRoles, users } from './schema/identity.schema';
 
-/** Who covers for this person today: their backup while they are away, else themselves. */
-export async function whoCovers(db: DatabaseExecutor, userId: string): Promise<string> {
-  return (await answererFor(db, userId)) ?? userId;
-}
-
 /** Each person here, or whoever covers for them today, leaving out `except`. */
 async function atWork(
   db: DatabaseExecutor,

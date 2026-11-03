@@ -113,7 +113,13 @@ function readRefund(event: RazorpayEvent): GatewayNews {
   const amountPaise = refund?.amount ?? payment?.amount_refunded ?? 0;
   return {
     kind: 'refund',
-    refund: { what: 'refund', gatewayPaymentId: paymentId, amountPaise, key: 'refund' },
+    // Keyed by the refund itself, so a second partial refund alerts too (one only if absent).
+    refund: {
+      what: 'refund',
+      gatewayPaymentId: paymentId,
+      amountPaise,
+      key: refund?.id ?? 'refund',
+    },
   };
 }
 

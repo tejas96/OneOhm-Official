@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { answererFor } from './chat-answerer';
 import type { DatabaseExecutor } from './client';
 import { dutyAlertTargets } from './duty-alerts';
 import { roleCapabilities, roles, userRoles, users } from './schema/identity.schema';
@@ -101,6 +102,23 @@ export async function notifyHolders(
     await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
   }
   return people.length;
+}
+
+/**
+ * Alerts one person, or whoever covers for them today. When nobody covers (they are away
+ * with no backup at work, or have left), the holders of `capability` hear instead, so the
+ * alert never goes to an empty desk. Keys are per person, as in `notifyHolders`.
+ */
+export async function notifyCover(
+  db: DatabaseExecutor,
+  userId: string,
+  capability: string,
+  notice: Notice,
+): Promise<number> {
+  const cover = await answererFor(db, userId);
+  if (!cover) return notifyHolders(db, capability, notice);
+  await notify(db, { userId: cover }, { ...notice, dedupeKey: `${notice.dedupeKey}:${cover}` });
+  return 1;
 }
 
 /** Marks a person's alerts as read: the listed ones, or all of them. */

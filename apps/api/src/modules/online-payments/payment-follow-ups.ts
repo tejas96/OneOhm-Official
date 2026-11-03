@@ -3,14 +3,13 @@ import {
   type DatabaseExecutor,
   leads,
   type Notice,
-  notify,
+  notifyCover,
   notifyHolders,
   paymentLinks,
   paymentMilestones,
   payments,
   projects,
   quotations,
-  whoCovers,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { eq, sql } from 'drizzle-orm';
@@ -30,13 +29,12 @@ async function peopleOf(db: DatabaseExecutor, projectId: string) {
   return { manager: row?.manager ?? null, leadOwner: row?.lead ?? null };
 }
 
-/** Tells each person (or whoever covers for them today) once per key. */
+/**
+ * Tells each person (or whoever covers for them today) once per key; with nobody covering,
+ * the people who run projects hear instead.
+ */
 async function tellEach(db: DatabaseExecutor, ids: readonly (string | null)[], notice: Notice) {
-  for (const id of ids) {
-    if (!id) continue;
-    const userId = await whoCovers(db, id);
-    await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
-  }
+  for (const id of ids) if (id) await notifyCover(db, id, 'projects.manage', notice);
 }
 
 /** Tells the project's owner: its manager, else the lead's owner (or their cover today). */

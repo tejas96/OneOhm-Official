@@ -3,10 +3,9 @@ import {
   type Database,
   leads,
   notifications,
-  notify,
+  notifyCover,
   notifyHolders,
   quotations,
-  whoCovers,
 } from '@oneohm/database';
 import { lastWorkEnd } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
@@ -19,9 +18,10 @@ export const VALIDITY_WARNING_DAYS = 3;
 /** Older misses are not raised again (a first run on old data stays quiet). */
 const LOOK_BACK_DAYS = 14;
 
-/** No alert with this dedupe key went out yet (the unique index answers it). */
+/** No alert with this dedupe key went out yet, to anyone (keys are per person: `key:user`). */
 const notAlerted = (key: SQL) =>
-  sql`not exists (select 1 from ${notifications} n where n.dedupe_key = ${key})`;
+  sql`not exists (select 1 from ${notifications} n
+    where n.dedupe_key = ${key} or n.dedupe_key like ${key} || ':%')`;
 
 /** The last day whose working hours are over: today after 6:30 pm, else yesterday. */
 const lastEndedDay = (now: Date, zone: string) => todayIn(zone, lastWorkEnd(now, zone));
@@ -56,17 +56,14 @@ export async function expiringQuotes(db: Database, now: Date, zone: string): Pro
   let told = 0;
   for (const quote of due) {
     if (!quote.owner) continue;
-    await notify(
-      db,
-      { userId: await whoCovers(db, quote.owner) },
-      {
-        kind: 'quotation_expiring',
-        title: `${quote.number} for ${quote.customer} runs out on ${quote.validUntil}`,
-        body: 'Not accepted yet. Call the customer before the quote runs out.',
-        subject: { type: 'quotation', id: quote.id },
-        dedupeKey: `quote_validity:${quote.id}`,
-      },
-    );
+    // The owner, their backup today, or (when nobody covers) the people who run leads.
+    await notifyCover(db, quote.owner, 'leads.manage', {
+      kind: 'quotation_expiring',
+      title: `${quote.number} for ${quote.customer} runs out on ${quote.validUntil}`,
+      body: 'Not accepted yet. Call the customer before the quote runs out.',
+      subject: { type: 'quotation', id: quote.id },
+      dedupeKey: `quote_validity:${quote.id}`,
+    });
     told += 1;
   }
   return told;
@@ -98,17 +95,13 @@ export async function missedPromisedCalls(db: Database, now: Date, zone: string)
   let told = 0;
   for (const lead of due) {
     if (!lead.owner) continue;
-    await notify(
-      db,
-      { userId: await whoCovers(db, lead.owner) },
-      {
-        kind: 'call_not_logged',
-        title: `Promised call to ${lead.name}: no call logged`,
-        body: `WhatsApp told them we would call on ${lead.on}. Call, then log the call on the lead.`,
-        subject: { type: 'lead', id: lead.id },
-        dedupeKey: `call_promised:${lead.id}:${lead.on}`,
-      },
-    );
+    await notifyCover(db, lead.owner, 'leads.manage', {
+      kind: 'call_not_logged',
+      title: `Promised call to ${lead.name}: no call logged`,
+      body: `WhatsApp told them we would call on ${lead.on}. Call, then log the call on the lead.`,
+      subject: { type: 'lead', id: lead.id },
+      dedupeKey: `call_promised:${lead.id}:${lead.on}`,
+    });
     told += 1;
   }
   return told;
