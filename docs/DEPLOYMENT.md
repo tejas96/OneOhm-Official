@@ -93,6 +93,14 @@ cd /opt/oneohm/app && git pull
 docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/oneohm/.env up -d --build
 ```
 
+### Upgrade notes
+
+- **Live review fixes (November 2026):** before this update, add `PAY_LINK_SECRET` (its own
+  random value, not `FILE_LINK_SECRET`) to the production `.env`, or the API and the worker
+  will not start. The same release also refuses to start in production with the default
+  `FILE_LINK_SECRET`, with a temporary or `http` `API_PUBLIC_URL`, and (API) with
+  `WHATSAPP_DELIVERY=live` but no `WHATSAPP_APP_SECRET`.
+
 ## 5. WhatsApp
 
 ### Templates
@@ -124,7 +132,9 @@ messages, and the worker refuses to start in production with it set.
 2. Put the app secret in `WHATSAPP_APP_SECRET`: every post is then checked against Meta's
    signature, and unsigned posts are refused with 401 even on the key path. The API will
    not start in production with `WHATSAPP_DELIVERY=live` and no app secret.
-3. Without the app secret (no Meta console access), set a long random
+3. **Testing only.** In production with `WHATSAPP_DELIVERY=live` the API needs
+   `WHATSAPP_APP_SECRET` (step 2) and will not start without it. For a test setup without
+   the app secret (no Meta console access), set a long random
    `WHATSAPP_WEBHOOK_PATH_KEY` and point the webhook at
    `https://<domain>/api/v1/webhooks/whatsapp/<key>`. It can be set with the access token:
    `POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/subscribed_apps` with `override_callback_uri` and
