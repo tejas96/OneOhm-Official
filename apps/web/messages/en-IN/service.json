@@ -102,6 +102,7 @@
         "hint": "Ctrl or ⌘ + Enter sends.",
         "closed": "Over 24 hours since they last wrote. Your message goes as a WhatsApp update, and the chat opens again when they reply.",
         "failed": "The reply did not go",
+        "optedOut": "Opted out of WhatsApp",
         "takeOver": "Replying takes this chat over from the assistant until you hand it back.",
         "followUpPlaceholder": "Write a message"
       },

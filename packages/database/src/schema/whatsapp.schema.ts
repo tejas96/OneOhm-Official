@@ -20,6 +20,8 @@ export const waConversations = pgTable(
     state: text('state').notNull().default('menu'),
     context: jsonb('context').notNull().default({}),
     lastInboundAt: instant('last_inbound_at'),
+    /** When the person sent STOP; empty once they send START. Templates and nudges skip them. */
+    optedOutAt: instant('opted_out_at'),
     handedOverAt: instant('handed_over_at'),
     handledByUserId: uuid('handled_by_user_id').references(() => users.id, {
       onDelete: 'set null',

@@ -119,7 +119,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
     const silentAt = waConversations.lastInboundAt;
     const nudgeDue =
       settings.nudgeAfterHours > 0 && isWorkingTime(now, this.env.BUSINESS_TIMEZONE)
-        ? sql`or (${waConversations.context}->'ob'->>'nudgedAt' is null
+        ? sql`or (${waConversations.optedOutAt} is null and ${waConversations.context}->'ob'->>'nudgedAt' is null
               and ${silentAt} <= ${ago(settings.nudgeAfterHours)} and ${silentAt} > ${ago(WINDOW_HOURS)}
               and exists (select 1 from leads where leads.phone_e164 = ${waConversations.phone}
                 and leads.stage not in ('won', 'lost')))`
@@ -162,7 +162,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
       const note = `Call — stopped at ${step} question`;
       const lead = await openLeadFor(tx, chat.phone);
       const here = await leadOfThisOnboarding(tx, chat.phone, kept?.startedAt);
-      const { makeLead, nudge } = due({
+      const { makeLead, nudge: wanted } = due({
         settings,
         silent,
         now,
@@ -171,6 +171,8 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
         hasLead: lead !== null,
         hadLead: here,
       });
+      // A person who sent STOP still gets their lead followed up by staff, but no nudge.
+      const nudge = wanted && !chat.optedOutAt;
       if (!makeLead && !nudge) return none;
       const turn = nudgeTurn({ tx, chat, lead, settings, discard });
       if (makeLead) await ensureLead(turn, { intake: this.intake, files: this.files }, note);

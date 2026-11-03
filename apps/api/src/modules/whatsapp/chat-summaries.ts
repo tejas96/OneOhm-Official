@@ -80,6 +80,7 @@ export async function chatSummaries(
         : null,
       lastInboundAt: chat.lastInboundAt?.toISOString() ?? null,
       windowOpen: chatWindowOpen(chat.lastInboundAt),
+      optedOut: chat.optedOutAt !== null,
     };
   });
 }

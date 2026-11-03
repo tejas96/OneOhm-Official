@@ -1,0 +1,1 @@
+ALTER TABLE "wa_conversations" ADD COLUMN "opted_out_at" timestamp with time zone;

@@ -35,6 +35,8 @@ import { alertTokenExpired, CHAT_WINDOW_CLOSED } from './send-checks';
 /** Written just before the provider call; found on entry, the last attempt died mid-send. */
 export const SENDING = 'sending';
 
+const OPTED_OUT_NOTE = 'The person asked not to get WhatsApp messages';
+
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
 interface DeliveryDeps {
@@ -77,6 +79,23 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       .where(eq(outbox.id, id));
   };
 
+  /** Why this number gets no template: the customer opted out, or the person sent STOP. */
+  const optOutNote = async (phone: string) => {
+    const [chat] = await db
+      .select({ optedOutAt: waConversations.optedOutAt })
+      .from(waConversations)
+      .where(eq(waConversations.phone, phone))
+      .limit(1);
+    if (chat?.optedOutAt) return OPTED_OUT_NOTE;
+    const [customer] = await db
+      .select({ optIn: customers.whatsappOptIn })
+      .from(customers)
+      .where(eq(customers.phoneE164, phone))
+      .limit(1);
+    if (customer && !customer.optIn) return 'The customer has opted out of WhatsApp messages.';
+    return null;
+  };
+
   /** Why a message cannot go out as is, or the approved template and values it needs. */
   const prepare = async (
     row: typeof outbox.$inferSelect,
@@ -106,14 +125,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     if (config && !config.active) {
       return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
     }
-    const [customer] = await db
-      .select({ optIn: customers.whatsappOptIn })
-      .from(customers)
-      .where(eq(customers.phoneE164, row.recipient))
-      .limit(1);
-    if (customer && !customer.optIn) {
-      return { verdict: 'skipped', note: 'The customer has opted out of WhatsApp messages.' };
-    }
+    const unwanted = await optOutNote(row.recipient);
+    if (unwanted) return { verdict: 'skipped', note: unwanted };
     try {
       const names = { metaName: row.template, language, ...config };
       return {

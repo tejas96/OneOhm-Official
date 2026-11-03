@@ -15,6 +15,7 @@ import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
 import { assistantLanguage, inLanguage } from './language';
 import { keepPending, MediaIntakeService } from './media-intake';
+import { answerOptOut } from './opt-out';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
 import { ALL_MENU_ROWS, MENU_ROWS, type MenuChoice, WORDS } from './words';
@@ -66,6 +67,13 @@ export class AssistantService {
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
   async handle(seen: Conversation, incoming: Incoming): Promise<void> {
+    // STOP and START come first, before onboarding, a person's hold on the chat or a quote tap.
+    const asked = await inLanguage(await this.languageOf(seen), () =>
+      incoming.kind === 'text'
+        ? answerOptOut(this.db, seen, incoming.text)
+        : Promise.resolve(false),
+    );
+    if (asked) return;
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works even while a person has the chat: accepting is the customer's act.
     const tap = readQuoteTap(incoming.choiceId);
