@@ -19,7 +19,11 @@ export async function readLocation(): Promise<Reading | 'denied' | null> {
   try {
     const [fix, device] = await Promise.all([
       Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          // Android: never show Google's accuracy prompt; declining it failed the read.
+          mayShowUserSettingsDialog: false,
+        }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
       ]),
       readDeviceState(),

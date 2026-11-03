@@ -28,7 +28,14 @@ export async function readPreciseLocation(
       };
       const timer = setTimeout(finish, GIVE_UP_MS);
       Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Highest, timeInterval: 1000, distanceInterval: 0 },
+        {
+          accuracy: Location.Accuracy.Highest,
+          timeInterval: 1000,
+          distanceInterval: 0,
+          // Android: no Google "Location Accuracy" prompt. Declining it made the read fail
+          // even with GPS on; GPS alone is accurate enough outdoors.
+          mayShowUserSettingsDialog: false,
+        },
         (fix) => {
           const accuracyM = fix.coords.accuracy ?? null;
           fixes.push({
