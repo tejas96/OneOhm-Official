@@ -50,6 +50,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, an update on your solar project {{2}}: {{3}}. We will keep you posted here.',
   },
   {
+    key: 'project_manager_changed',
+    audience: 'customer',
+    fields: ['customer', 'project', 'manager', 'phone'],
+    preview:
+      'Hello {{1}}, your solar project {{2}} now has a new project manager: {{3}}. You can reach them on {{4}}. Reply here if you have any questions.',
+  },
+  {
     key: 'payment_received',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],

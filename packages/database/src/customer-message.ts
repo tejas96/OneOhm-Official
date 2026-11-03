@@ -22,6 +22,10 @@ const WORDS: Readonly<Record<string, Words>> = {
     body: `${p.project}: a ${p.capacity} system.`,
   }),
   project_milestone: (p) => ({ title: p.milestone ?? 'Project update', body: p.project ?? '' }),
+  project_manager_changed: (p) => ({
+    title: 'Your new project manager',
+    body: `${p.project}: ${p.manager} now looks after your project. Phone: ${p.phone}.`,
+  }),
   payment_received: (p) => ({
     title: 'Payment received',
     body: `${p.amount} for ${p.milestone}. Thank you.`,

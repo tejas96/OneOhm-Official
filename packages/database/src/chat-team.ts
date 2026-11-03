@@ -17,19 +17,24 @@ export interface ChatPeople {
 }
 
 /**
- * Who answers a chat: the manager of the customer's newest project, else the owner of
- * the newest lead with this customer or number. Null sends it to the service team.
+ * Who answers a chat: the manager of the customer's newest live project (else their newest
+ * project of any status), else the owner of the newest lead with this customer or number.
+ * Null sends it to the service team.
  */
 export async function chatOwnerFor(
   db: DatabaseExecutor,
   chat: Pick<ChatPeople, 'customerId' | 'phone'>,
 ): Promise<string | null> {
   if (chat.customerId) {
+    // The newest live project leads; a finished or paused one only when none is live.
     const [project] = await db
       .select({ userId: projects.managerUserId })
       .from(projects)
       .where(and(eq(projects.customerId, chat.customerId), isNotNull(projects.managerUserId)))
-      .orderBy(desc(projects.createdAt))
+      .orderBy(
+        sql`case when ${projects.status} in ('active', 'operational') then 0 else 1 end`,
+        desc(projects.createdAt),
+      )
       .limit(1);
     if (project?.userId) return project.userId;
   }

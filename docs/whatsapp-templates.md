@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 20 templates. Each one:
+The app sends these 22 templates. Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -173,9 +173,18 @@ Fields: customer, project, milestone, reason
 
 Examples: Ramesh Patil · PRJ-0087 · Net meter installation · the electricity board (DISCOM)
 
+### 20. `project_manager_changed` — **New**
+Fields: customer, project, manager, phone
+
+Sent when a live project gets a new project manager.
+
+> Hello {{1}}, your solar project {{2}} now has a new project manager: {{3}}. You can reach them on {{4}}. Reply here if you have any questions.
+
+Examples: Ramesh Patil · PRJ-0087 · Vikram Jadhav · +91 98765 43210
+
 ## Staff template
 
-### 20. `staff_daily_digest` — Changed
+### 21. `staff_daily_digest` — Changed
 Fields: name, overdue, today, followUps
 
 > Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.
@@ -184,7 +193,7 @@ Examples: Priya · 2 · 5 · 3
 
 ## Chat template
 
-### 21. `chat_follow_up`
+### 22. `chat_follow_up`
 Fields: customer, staff, message
 
 Used when a team member writes to a customer more than 24 hours after the customer's last

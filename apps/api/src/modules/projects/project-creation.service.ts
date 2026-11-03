@@ -181,7 +181,7 @@ export class ProjectCreationService {
       if (!project) throw new Error('Project insert returned nothing.');
       await openManagerTerm(tx, project.id, managerUserId, new Date());
       // The customer's WhatsApp chat goes to the project's manager from now on.
-      await moveCustomerChats(tx, customer.id, managerUserId);
+      await moveCustomerChats(tx, customer.id, managerUserId, project.id);
 
       await saveProjectTeam(tx, project.id, team, actor.userId);
       const { unassigned, toConfirm, perPerson } = await writeGeneratedTasks(

@@ -13,6 +13,7 @@ export const IN_APP_MESSAGES = [
   'quotation_sent',
   'project_started',
   'project_milestone',
+  'project_manager_changed',
   'payment_received',
   'payment_link',
   'payment_reminder',
