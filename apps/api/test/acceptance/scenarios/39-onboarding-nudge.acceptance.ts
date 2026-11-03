@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { NIGHT, NOON, nudgesTo, runNudges, silentFor } from '../support/nudges';
 import {
   chatOf,
   choices,
   lastReply,
   leadsOf,
   notesOf,
-  replies,
   say,
   tap,
   upToSite,
@@ -19,10 +19,6 @@ import { sendInbound } from '../support/whatsapp';
 // Part 3, task 7: one gentle nudge when a customer stops halfway, and no silent paths: a
 // chat that stalls before a lead exists gets a lead (city "Not given") with a call today.
 // The job is run by hand with a chosen clock; the timer is off in this suite.
-const HOUR = 3_600_000;
-const NOON = new Date(`${today()}T11:00:00+05:30`);
-const NIGHT = new Date(`${today()}T23:00:00+05:30`);
-const NUDGE = 'Shall we continue? It takes a minute.';
 
 describe('Onboarding nudge and stalled leads', () => {
   let admin: Session;
@@ -35,18 +31,9 @@ describe('Onboarding nudge and stalled leads', () => {
       nudgeAfterHours: hours,
     });
   };
-  /** The customer went quiet this many hours before `now`. */
-  const silent = (phone: string, hours: number, now = NOON) =>
-    rows(`UPDATE wa_conversations SET last_inbound_at = $2 WHERE phone = $1 RETURNING id`, [
-      phone,
-      new Date(now.getTime() - hours * HOUR),
-    ]);
-  const run = (now = NOON) =>
-    admin.post<{ nudged: number; leads: number }>('/whatsapp/onboarding-nudges/run', {
-      now: now.toISOString(),
-    });
-  const nudges = async (phone: string) =>
-    (await replies(phone)).filter((reply) => reply.body === NUDGE);
+  const silent = silentFor;
+  const run = (now = NOON) => runNudges(admin, now);
+  const nudges = nudgesTo;
 
   beforeAll(async () => {
     admin = await Session.admin();

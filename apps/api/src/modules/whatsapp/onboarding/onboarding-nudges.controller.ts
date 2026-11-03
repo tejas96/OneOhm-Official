@@ -1,15 +1,20 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, Post } from '@nestjs/common';
 import { type Actor, assertCan } from '../../../common/auth/actor';
 import { CurrentActor } from '../../../common/auth/auth.decorators';
+import { ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
 import { OnboardingNudgesService } from './onboarding-nudges.service';
 
 /**
  * "Run now" for the onboarding follow-up, for the owner and for the acceptance suite. A
- * pretend time (`now`) is read only outside production, so a real server always uses its clock.
+ * pretend time (`now`) is read only when the server is a test one (test mode, or WhatsApp in log mode), so a live server always uses its clock.
  */
 @Controller('v1/whatsapp/onboarding-nudges')
 export class OnboardingNudgesController {
-  constructor(private readonly nudges: OnboardingNudgesService) {}
+  constructor(
+    private readonly nudges: OnboardingNudgesService,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
+  ) {}
 
   @Post('run')
   @HttpCode(200)
@@ -17,7 +22,9 @@ export class OnboardingNudgesController {
     assertCan(actor, 'settings.manage');
     const pretend = body?.now ? new Date(body.now) : null;
     const usable =
-      pretend && !Number.isNaN(pretend.getTime()) && process.env.NODE_ENV !== 'production';
+      pretend &&
+      !Number.isNaN(pretend.getTime()) &&
+      (this.env.NODE_ENV === 'test' || this.env.WHATSAPP_DELIVERY === 'log');
     return this.nudges.run(usable ? pretend : new Date());
   }
 }
