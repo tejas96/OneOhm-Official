@@ -84,6 +84,10 @@ export async function activeUserIds(
   return new Set(rows.map((row) => row.id));
 }
 
+/** The id when that person is in `live` (from `activeUserIds`), else null: an inactive manager counts as none. */
+export const liveOnly = (id: string | null, live: ReadonlySet<string>): string | null =>
+  id && live.has(id) ? id : null;
+
 /** For queries over `projects`: join this, and select `liveManagerId` for the active manager. */
 export const managerUser = alias(users, 'manager_user');
 export const liveManagerId = sql<

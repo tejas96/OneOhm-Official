@@ -1,7 +1,7 @@
 import { type PendingApproval, reviewersOf } from '@oneohm/domain';
 import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
-import { activeUserIds } from './manager-terms';
+import { activeUserIds, liveOnly } from './manager-terms';
 import { holdersOf } from './notify';
 import { moneyApprovals } from './pending-approvals-money';
 import { readableDay } from './readable-day';
@@ -64,7 +64,7 @@ async function taskReviewRows(db: DatabaseExecutor): Promise<PendingApprovalRow[
     const reviewer = row.reviewer === 'project_manager' ? 'project_manager' : 'approvers';
     const people = {
       reviewer,
-      managerUserId: row.managerUserId && live.has(row.managerUserId) ? row.managerUserId : null,
+      managerUserId: liveOnly(row.managerUserId, live),
       approvers,
     } as const;
     return {
