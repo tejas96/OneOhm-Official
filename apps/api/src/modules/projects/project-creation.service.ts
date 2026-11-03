@@ -28,6 +28,7 @@ import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
 import { resolveProjectTeam, saveProjectTeam, type TeamChoice } from './project-team';
+import { checkManagerCandidate } from './project-team-rules';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 import { tellTeam } from './task-notices';
 
@@ -114,11 +115,7 @@ export class ProjectCreationService {
 
   async create(actor: Actor, input: NewProject): Promise<CreatedProject> {
     const quotation = await this.acceptedQuotation(input.quotationId);
-    const [discom] = await this.db
-      .select()
-      .from(discoms)
-      .where(eq(discoms.id, input.discomId))
-      .limit(1);
+    const [discom] = await this.db.select().from(discoms).where(eq(discoms.id, input.discomId));
     if (!discom) throw invalid('Choose the DISCOM.', { discomId: 'Unknown DISCOM.' });
     if (input.loan && input.loanPaise <= 0)
       throw invalid('Enter the loan amount.', { loanPaise: 'Required for a loan project.' });
@@ -152,6 +149,7 @@ export class ProjectCreationService {
       property.city,
     ]);
 
+    if (input.managerUserId) await checkManagerCandidate(this.db, input.managerUserId);
     const managerUserId = input.managerUserId ?? actor.userId;
     return this.db.transaction(async (tx) => {
       const code = await nextCode(tx, input.startDate.slice(0, 4));

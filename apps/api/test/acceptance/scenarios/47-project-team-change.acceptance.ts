@@ -1,7 +1,8 @@
-import type { DeliveryReport } from '@oneohm/api-contracts';
+import type { DeliveryReport, TeamOptions } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { ownPerson, retire } from '../support/people';
 import { sellProject } from '../support/sales';
 import { STAFF } from '../support/team';
 import { patchTeam, setManagerTerms, setManagerTermsAt } from '../support/team-change';
@@ -51,6 +52,56 @@ describe('Project team change', () => {
     const after = await terms(sale.project.id);
     expect(after).toEqual(before);
     expect(after.map((row) => [row.user_id, row.open])).toEqual([[manager1, true]]);
+  });
+
+  describe('who may manage and closed projects', () => {
+    type Failure = { code?: string; fieldErrors?: Record<string, string> };
+    let hr: string;
+    beforeAll(async () => {
+      hr = await userByPhone(STAFF.hr.phone);
+    });
+
+    it('rejects an HR person as manager', async () => {
+      const sale = await sellProject(admin, { name: 'HR Manager (test)' });
+      const reply = await patchTeam(admin, sale.project.id, { managerUserId: hr });
+      expect(reply.status).toBe(400);
+      expect((reply.body as Failure).fieldErrors?.managerUserId).toBeTruthy();
+    });
+
+    it('rejects an HR person as manager at creation', async () => {
+      await expect(
+        sellProject(admin, { name: 'HR At Creation (test)', managerUserId: hr }),
+      ).rejects.toThrow(/400/);
+    });
+
+    it('saves other changes while the manager is inactive', async () => {
+      const person = await ownPerson(admin, 'Short Lived Manager (test)', ['execution']);
+      const sale = await sellProject(admin, { name: 'Inactive Manager (test)' });
+      expect((await patchTeam(admin, sale.project.id, { managerUserId: person.id })).status).toBe(
+        200,
+      );
+      await retire(admin, [person]);
+      const reply = await patchTeam(admin, sale.project.id, {
+        managerUserId: person.id,
+        targetFinishDate: '2099-01-01',
+      });
+      expect(reply.status).toBe(200);
+    });
+
+    it('locks completed projects', async () => {
+      const sale = await sellProject(admin, { name: 'Closed Project (test)' });
+      await rows('UPDATE projects SET status = $2 WHERE id = $1', [sale.project.id, 'completed']);
+      const reply = await patchTeam(admin, sale.project.id, { targetFinishDate: '2099-01-01' });
+      expect(reply.status).toBe(409);
+      expect((reply.body as Failure).code).toBe('project_closed');
+    });
+
+    it('lists who can manage', async () => {
+      const options = await admin.get<TeamOptions>('/project-team/options');
+      const canManage = (id: string) => options.people.find((p) => p.id === id)?.canManage;
+      expect(canManage(manager1)).toBe(true);
+      expect(canManage(hr)).toBe(false);
+    });
   });
 
   describe('customer rating points', () => {

@@ -19,7 +19,15 @@ export type ProjectSetup = z.infer<typeof projectSetupSchema>;
 /** Who can be picked when a project is created or its team changes. */
 export const teamOptionsSchema = z.object({
   /** Staff with the names of their roles, for picking a team. */
-  people: z.array(z.object({ id: idSchema, fullName: z.string(), roles: z.array(z.string()) })),
+  people: z.array(
+    z.object({
+      id: idSchema,
+      fullName: z.string(),
+      roles: z.array(z.string()),
+      /** Can see every project, so can be its manager. */
+      canManage: z.boolean(),
+    }),
+  ),
   contractors: z.array(
     z.object({
       id: idSchema,

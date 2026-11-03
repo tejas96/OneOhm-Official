@@ -3,6 +3,7 @@ import type { ProjectSetup, ProjectUpdate, TeamOptions } from '@oneohm/api-contr
 import {
   contractorMembers,
   contractors,
+  holdersOf,
   notify,
   projectActivities,
   projects,
@@ -21,6 +22,7 @@ import { surveyTaskOf } from '../reports/survey-report.data';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { surveyApproved } from './budget-check.service';
 import { checkTeam, projectTeamOf } from './project-team';
+import { assertTeamEditable, checkManagerCandidate } from './project-team-rules';
 
 type ProjectRow = typeof projects.$inferSelect;
 
@@ -41,9 +43,15 @@ export class ProjectTeamService {
         and(eq(users.status, 'active'), eq(roles.kind, 'staff'), isNull(contractorMembers.userId)),
       )
       .orderBy(asc(users.fullName));
+    const managers = new Set(await holdersOf(this.db, 'projects.view_all'));
     const people = new Map<string, TeamOptions['people'][number]>();
     for (const row of staff) {
-      const person = people.get(row.id) ?? { id: row.id, fullName: row.fullName, roles: [] };
+      const person = people.get(row.id) ?? {
+        id: row.id,
+        fullName: row.fullName,
+        roles: [],
+        canManage: managers.has(row.id),
+      };
       people.set(row.id, { ...person, roles: [...person.roles, row.role] });
     }
     const companies = await this.db.select().from(contractors).orderBy(asc(contractors.name));
@@ -89,7 +97,9 @@ export class ProjectTeamService {
   async update(actor: Actor, projectId: string, input: ProjectUpdate): Promise<void> {
     const [project] = await this.db.select().from(projects).where(eq(projects.id, projectId));
     if (!project) throw notFound('That project');
-    if (input.managerUserId) await this.checkManager(input.managerUserId);
+    assertTeamEditable(project);
+    if (input.managerUserId !== undefined && input.managerUserId !== project.managerUserId)
+      await checkManagerCandidate(this.db, input.managerUserId);
     if (input.teamUserIds) await checkTeam(this.db, input.teamUserIds);
     if (input.targetFinishDate && input.targetFinishDate < project.startDate)
       throw invalid('The target finish comes after the start.', {
@@ -121,21 +131,6 @@ export class ProjectTeamService {
         targetFinishDate: input.targetFinishDate,
       });
     });
-  }
-
-  private async checkManager(userId: string): Promise<void> {
-    const [person] = await this.db
-      .select({ id: users.id, crew: contractorMembers.contractorId })
-      .from(users)
-      .innerJoin(userRoles, eq(userRoles.userId, users.id))
-      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.kind, 'staff')))
-      .leftJoin(contractorMembers, eq(contractorMembers.userId, users.id))
-      .where(and(eq(users.id, userId), eq(users.status, 'active')))
-      .limit(1);
-    if (!person || person.crew)
-      throw invalid('Pick an active staff member as manager.', {
-        managerUserId: 'Choose someone from your own staff.',
-      });
   }
 
   private async tellNewManager(

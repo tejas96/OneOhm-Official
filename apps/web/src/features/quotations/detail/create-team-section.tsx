@@ -44,7 +44,9 @@ export function CreateTeamSection({
             onValueChange={onManager}
             options={[
               { value: MANAGER_LATER, label: t('managerLater') },
-              ...people.map((person) => ({ value: person.id, label: person.fullName })),
+              ...people
+                .filter((person) => person.canManage)
+                .map((person) => ({ value: person.id, label: person.fullName })),
             ]}
           />
         </Field>
