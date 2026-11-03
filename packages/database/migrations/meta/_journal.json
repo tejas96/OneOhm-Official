@@ -428,6 +428,13 @@
       "when": 1793675284391,
       "tag": "0060_lead_attribution_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1793685155993,
+      "tag": "0061_whatsapp_onboarding_storage",
+      "breakpoints": true
     }
   ]
 }

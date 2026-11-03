@@ -13,6 +13,7 @@ import {
   checkReminderTiming,
   isAssignmentRules,
   isLeadAssignmentRules,
+  isOnboardingSettings,
   type LeadAssignmentRules,
   type SettingErrors,
 } from '@oneohm/domain';
@@ -33,6 +34,8 @@ const CHECKS: {
   dashboard: checkDashboardSettings,
   lead_assignment: (value) =>
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
+  onboarding: (value) =>
+    isOnboardingSettings(value) ? {} : { onboarding: 'Check the onboarding settings.' },
 };
 
 const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
@@ -41,6 +44,7 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   approvals: 'Check the approval limits.',
   dashboard: 'Check the dashboard numbers.',
   lead_assignment: 'Check the lead rule.',
+  onboarding: 'Check the onboarding settings.',
 };
 
 const copyLeadRules = (rules: LeadAssignmentRules): LeadAssignmentRulesRecord => ({

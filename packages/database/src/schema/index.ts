@@ -21,6 +21,7 @@ export * from './finance.schema';
 export * from './identity.schema';
 export * from './inventory.schema';
 export * from './lead-campaigns.schema';
+export * from './lead-estimates.schema';
 export * from './lead-intake.schema';
 export * from './lead-steps.schema';
 export * from './ledger.schema';

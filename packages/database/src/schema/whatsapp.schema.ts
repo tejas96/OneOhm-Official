@@ -15,6 +15,8 @@ export const waConversations = pgTable(
     phone: text('phone').notNull().unique(),
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
     profileName: text('profile_name'),
+    /** The language the customer picked for the onboarding chat: en, mr or hi. */
+    language: text('language'),
     state: text('state').notNull().default('menu'),
     context: jsonb('context').notNull().default({}),
     lastInboundAt: instant('last_inbound_at'),
