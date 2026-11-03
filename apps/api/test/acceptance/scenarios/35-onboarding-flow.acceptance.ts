@@ -95,7 +95,8 @@ describe('WhatsApp onboarding flow', () => {
 
     await tap(phone, 'ob:photo:later');
     expect((await chatOf(phone)).state).toBe('onboard:done');
-    expect((await lastReply(phone))?.body).toContain('preparing your estimate');
+    // The estimate follows (scenario 34): its next-step buttons are the last reply.
+    expect(choices(await lastReply(phone))).toContain('ob:done:call');
     expect((await whatsappNotes(lead?.id ?? '')).at(-1)).toBe('Bill photo: will send later');
   });
 

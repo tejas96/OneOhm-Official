@@ -31,7 +31,18 @@ const EN_ONBOARD = {
   /** Before the question again, after one unclear answer. */
   notClear: 'Sorry, I did not get that. Please tap one option below.',
   notClearTyped: 'Sorry, I did not get that. Please type it again.',
-  preparing: 'Thank you! We are preparing your estimate. It will come here shortly.',
+  /** With the estimate PDF; the second line is the same as on the PDF. */
+  estimateCaption: (size: string, price: string, after: string) =>
+    `Your solar estimate: ${size}, ${price} (${after} after subsidy).\nEstimate — final price in your quotation after a free call or visit.`,
+  estimateNext: 'What would you like to do next?',
+  callMeBack: 'Call me back',
+  notNow: 'Not now',
+  askWhenLater: 'When should we check back with you?',
+  later: { '1w': 'In 1 week', '1m': 'In 1 month', '3m': 'In 3 months' },
+  willCall: (name: string | null) => `Thank you. ${name ?? 'Our team'} will call you today.`,
+  laterThanks: 'Thank you! We will check back with you then.',
+  /** No instant price for this site (a farm, a society, other roof…): a person prices it. */
+  expertPrice: 'Thank you! Our expert will prepare your price and call you.',
 };
 
 export type OnboardWords = typeof EN_ONBOARD;
@@ -59,7 +70,16 @@ const MR_ONBOARD: Words<OnboardWords> = {
   talkToPerson: 'व्यक्तीशी बोला',
   notClear: 'माफ करा, समजले नाही. कृपया खालीलपैकी एक पर्याय दाबा.',
   notClearTyped: 'माफ करा, समजले नाही. कृपया पुन्हा लिहा.',
-  preparing: 'धन्यवाद! आम्ही तुमचा अंदाज (एस्टिमेट) तयार करत आहोत. तो लवकरच इथे येईल.',
+  estimateCaption: (size, price, after) =>
+    `तुमचा सोलर अंदाज: ${size}, ${price} (सबसिडीनंतर ${after}).\nहा अंदाज आहे — मोफत कॉल किंवा भेटीनंतर कोटेशनमध्ये अंतिम किंमत.`,
+  estimateNext: 'पुढे काय करायचे?',
+  callMeBack: 'मला कॉल करा',
+  notNow: 'आत्ता नको',
+  askWhenLater: 'आम्ही तुम्हाला पुन्हा केव्हा संपर्क करू?',
+  later: { '1w': '1 आठवड्यात', '1m': '1 महिन्यात', '3m': '3 महिन्यांत' },
+  willCall: (name) => `धन्यवाद. आज ${name ?? 'आमच्या टीम'}कडून तुम्हाला कॉल येईल.`,
+  laterThanks: 'धन्यवाद! आम्ही तेव्हा तुमच्याशी पुन्हा संपर्क करू.',
+  expertPrice: 'धन्यवाद! आमचे तज्ज्ञ तुमची किंमत तयार करून तुम्हाला कॉल करतील.',
 };
 
 const HI_ONBOARD: Words<OnboardWords> = {
@@ -85,7 +105,16 @@ const HI_ONBOARD: Words<OnboardWords> = {
   talkToPerson: 'व्यक्ति से बात करें',
   notClear: 'माफ़ कीजिए, समझ नहीं आया. कृपया नीचे से एक विकल्प दबाएँ.',
   notClearTyped: 'माफ़ कीजिए, समझ नहीं आया. कृपया फिर से लिखें.',
-  preparing: 'धन्यवाद! हम आपका अनुमान (एस्टिमेट) तैयार कर रहे हैं. यह जल्द ही यहाँ आएगा.',
+  estimateCaption: (size, price, after) =>
+    `आपका सोलर अनुमान: ${size}, ${price} (सब्सिडी के बाद ${after}).\nयह अनुमान है — मुफ़्त कॉल या विज़िट के बाद कोटेशन में अंतिम कीमत.`,
+  estimateNext: 'आगे क्या करना चाहेंगे?',
+  callMeBack: 'मुझे कॉल करें',
+  notNow: 'अभी नहीं',
+  askWhenLater: 'हम आपसे फिर कब संपर्क करें?',
+  later: { '1w': '1 हफ़्ते में', '1m': '1 महीने में', '3m': '3 महीने में' },
+  willCall: (name) => `धन्यवाद. आज ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
+  laterThanks: 'धन्यवाद! हम तब आपसे फिर संपर्क करेंगे.',
+  expertPrice: 'धन्यवाद! हमारे विशेषज्ञ आपकी कीमत तैयार करके आपको कॉल करेंगे.',
 };
 
 /** Every language, for the limit checks. */

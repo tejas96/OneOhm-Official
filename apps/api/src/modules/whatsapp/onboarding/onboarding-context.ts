@@ -17,6 +17,15 @@ export const PERSON_CHOICE = 'ob:person';
 /** The nudge's "Continue" tap: the current question again. */
 export const CONTINUE_CHOICE = 'ob:continue';
 
+/** The taps under the estimate: a call today, or "Not now" and then when to check back. */
+export const ESTIMATE_CHOICES = {
+  call: 'ob:done:call',
+  notNow: 'ob:done:notnow',
+  later: 'ob:done:later:',
+} as const;
+export const LATER_PERIODS = ['1w', '1m', '3m'] as const;
+export type LaterPeriod = (typeof LATER_PERIODS)[number];
+
 const STATE_PREFIX = 'onboard:';
 
 export const onboardState = (step: OnboardStep) => `${STATE_PREFIX}${step}`;

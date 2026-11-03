@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Solar estimate</title>
+  </head>
+  <body>
+    <header class="q-head">
+      {{> companyBrand}}
+      <div class="q-meta">
+        <p class="q-overline">Solar estimate</p>
+        <dl>
+          <div class="q-row"><dt>Date</dt><dd>{{date}}</dd></div>
+          <div class="q-row"><dt>Valid until</dt><dd>{{validUntil}}</dd></div>
+        </dl>
+        <p class="q-muted">Valid for 15 days</p>
+      </div>
+    </header>
+    <div class="q-rule"></div>
+
+    <p class="e-disclaimer">Estimate — final price in your quotation after a free call or visit</p>
+
+    <section class="e-for">
+      <p class="q-overline">Prepared for</p>
+      <p class="q-name">{{customer.name}}</p>
+      <p class="q-muted">{{customer.city}} · {{customer.site}}</p>
+    </section>
+
+    <section class="e-grid">
+      <div class="e-card">
+        <p class="q-overline">System size</p>
+        <p class="e-figure">{{system.size}}</p>
+        <p class="q-muted">{{system.modules}}</p>
+      </div>
+      <div class="e-card">
+        <p class="q-overline">Price</p>
+        <dl>
+          <div class="q-row"><dt>Estimated price</dt><dd>{{money.total}}</dd></div>
+          <div class="q-row"><dt>Expected subsidy</dt><dd>− {{money.subsidy}}</dd></div>
+          <div class="q-row e-strong"><dt>Cost after subsidy</dt><dd>{{money.effective}}</dd></div>
+        </dl>
+      </div>
+      <div class="e-card">
+        <p class="q-overline">Your saving</p>
+        <dl>
+          <div class="q-row"><dt>Monthly saving</dt><dd>{{saving.monthly}}</dd></div>
+          <div class="q-row"><dt>Payback</dt><dd>{{saving.payback}}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="e-notes">
+      <p>Prices include GST. The expected subsidy follows the PM Surya Ghar rules in force today and is paid by the government, not by {{company.brand}}.</p>
+      <p>The saving assumes about {{saving.units}} units a kW each month at {{saving.tariff}} a unit; your bill and your roof may change it.</p>
+      <p>This is an estimate, not a quotation. We confirm the system and the final price after a free call or a site visit.</p>
+    </section>
+  </body>
+</html>

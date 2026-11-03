@@ -8,13 +8,7 @@
     {{#if draft}}<div class="q-draft">Draft · not yet sent</div>{{/if}}
 
     <header class="q-head">
-      <div class="q-brand">
-        <img class="q-logo" src="{{logo}}" alt="{{company.brand}}" />
-        <p><strong>{{company.name}}</strong></p>
-        <p class="q-muted">{{company.address}}</p>
-        <p class="q-muted">GSTIN {{company.gstin}} · {{company.email}}</p>
-        <p class="q-muted">{{company.phones}}</p>
-      </div>
+      {{> companyBrand}}
       <div class="q-meta">
         <p class="q-overline">Quotation</p>
         <p class="q-number">{{number}}</p>

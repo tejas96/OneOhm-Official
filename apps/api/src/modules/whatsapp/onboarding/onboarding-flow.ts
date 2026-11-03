@@ -15,6 +15,8 @@ import { HandOverService } from '../assistant/hand-over';
 import { assistantLanguage, inLanguage } from '../assistant/language';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
+import { EstimateService } from './estimate.service';
+import { EstimateNextStepsService } from './estimate-next-steps';
 import { changesName, readAnswer } from './onboarding-answer';
 import {
   firstMissing,
@@ -24,7 +26,6 @@ import {
   readOnboard,
   stepOfState,
 } from './onboarding-context';
-import { finishOnboarding } from './onboarding-finish';
 import { knownFrom, type OpenLead, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
 
@@ -62,6 +63,8 @@ export class OnboardingFlowService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly intake: LeadIntakeService,
     private readonly people: HandOverService,
+    private readonly estimates: EstimateService,
+    private readonly nextSteps: EstimateNextStepsService,
   ) {}
 
   /**
@@ -122,7 +125,7 @@ export class OnboardingFlowService {
     if (incoming && turn.chat.state === 'human') return null;
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
-    if (current === 'done') return this.toPerson(turn, current);
+    if (current === 'done') return this.afterEstimate(turn, incoming);
     if (!incoming) return this.ask(turn, current);
     if (wantsPerson(incoming)) return this.toPerson(turn, current);
     const choice = incoming.choiceId;
@@ -178,10 +181,19 @@ export class OnboardingFlowService {
     const next = nextStep(step, turn.answers, turn.known);
     if (next !== 'done') return this.ask(turn, next);
     await this.save(turn, 'done');
+    const after = { view: this.view(turn), summary: summaryOf(turn.answers, turn.settings) };
     await this.speak(turn, () =>
-      finishOnboarding(tx, chat, written.leadId, turn.answers, this.view(turn)),
+      this.estimates.finish(tx, chat, written.leadId, turn.answers, after),
     );
     return null;
+  }
+
+  /** After the estimate its own taps are answered; anything else, typed too, goes to the owner. */
+  private async afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
+    const { tx, chat, lead } = turn;
+    const tap = incoming?.choiceId ?? null;
+    const answered = await this.speak(turn, () => this.nextSteps.answer(tx, chat, lead, tap));
+    return answered ? null : this.toPerson(turn, 'done');
   }
 
   /**

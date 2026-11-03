@@ -23,6 +23,10 @@ export interface SentReply {
   body: string;
   buttons?: { id: string; title: string }[];
   rows?: { id: string; title: string }[];
+  /** A session document: its link, file name and caption. */
+  link?: string;
+  filename?: string;
+  caption?: string;
 }
 
 /** The bot's replies to this number, oldest first. */

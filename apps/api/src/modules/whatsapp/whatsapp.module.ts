@@ -17,6 +17,8 @@ import { StrangerFlowService } from './assistant/stranger-flow';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
 import { createMediaGateway, WHATSAPP_MEDIA } from './media-gateway';
+import { EstimateService } from './onboarding/estimate.service';
+import { EstimateNextStepsService } from './onboarding/estimate-next-steps';
 import { OnboardingFlowService } from './onboarding/onboarding-flow';
 import { SharedFilesController } from './shared-files.controller';
 import { WhatsAppController } from './whatsapp.controller';
@@ -43,6 +45,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     HandOverService,
     StrangerFlowService,
     OnboardingFlowService,
+    EstimateService,
+    EstimateNextStepsService,
     QuoteActionsService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.

@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import type { ChatReply } from '../chat-store';
 import { ONBOARD_LISTS } from '../onboarding/onboard-words';
-import { question } from '../onboarding/onboarding-replies';
+import { laterQuestion, question } from '../onboarding/onboarding-replies';
 import { assistantLanguage, inLanguage } from './language';
 import { EN, MEDIA_WORDS, MENU_ROWS, RATINGS, WORDS } from './words';
 import { HI } from './words-hi';
@@ -121,9 +121,28 @@ describe('onboarding questions', () => {
     for (const language of ['en', 'mr', 'hi'] as const)
       for (const { step, reply } of await allQuestions(language)) {
         fits(reply, `${language} ${step}`);
-        if (step === 'language' || step === 'done') continue;
-        expect(choicesOf(reply).at(-1)?.id, `${language} ${step}`).toBe('ob:person');
+        if (step === 'language') continue;
+        // The estimate's buttons keep "Talk to a person" in the middle.
+        const offered = choicesOf(reply).map((choice) => choice.id);
+        if (step === 'done') expect(offered, `${language} done`).toContain('ob:person');
+        else expect(offered.at(-1), `${language} ${step}`).toBe('ob:person');
       }
+  });
+
+  it('fits the "Not now" list and the estimate words in every language', async () => {
+    for (const language of ['en', 'mr', 'hi'] as const) {
+      const later = await inLanguage(language, async () => laterQuestion());
+      fits(later, `${language} later`);
+      expect(choicesOf(later).at(-1)?.id).toBe('ob:person');
+      const words = ONBOARD_LISTS[language];
+      // A document caption holds 1024 characters.
+      const caption = words.estimateCaption('10 kWp', '₹10,00,00,000', '₹10,00,00,000');
+      expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
+      expect(words.willCall('Asha')).toContain('Asha');
+    }
+    expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1')).toContain(
+      'Estimate — final price in your quotation after a free call or visit',
+    );
   });
 
   it('has the same words in every language', () => {

@@ -97,16 +97,17 @@ function followUpNote(current: LeadDetail, patch: LeadPatch): string | null {
 }
 
 /**
- * A move the system makes on its own (a quotation sent or accepted), written to the
- * timeline with why. `note` says what happened; the move is added when the stage changes.
- * Sending never pulls a lead back from won, and never reopens a lost lead.
+ * A move the system makes on its own (an estimate or a quotation sent, a quotation
+ * accepted), written to the timeline with why. `note` says what happened; the move is
+ * added when the stage changes. Only a new lead becomes contacted; sending never pulls a
+ * lead back from won, and never reopens a lost lead.
  */
 export async function autoMoveLead(
   db: DatabaseExecutor,
   leadId: string,
   /** Null when the customer did it themselves (accepting on WhatsApp). */
   userId: string | null,
-  stage: 'quoted' | 'won',
+  stage: 'contacted' | 'quoted' | 'won',
   note: string,
 ): Promise<void> {
   const [lead] = await db
@@ -116,7 +117,7 @@ export async function autoMoveLead(
     .limit(1);
   if (!lead) return;
   const blocked = stage === 'quoted' ? ['quoted', 'won', 'lost'] : ['won'];
-  if (blocked.includes(lead.stage)) {
+  if (stage === 'contacted' ? lead.stage !== 'new' : blocked.includes(lead.stage)) {
     await logLead(db, leadId, userId, 'note', note);
     return;
   }

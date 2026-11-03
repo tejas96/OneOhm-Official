@@ -21,6 +21,8 @@ export interface HandOverOptions {
   readonly summary?: string | undefined;
   /** The caller's transaction; the hand-over then commits with the caller's work. */
   readonly db?: DatabaseExecutor | undefined;
+  /** What the customer hears instead of "<name> will reply to you here". */
+  readonly reply?: string | undefined;
 }
 
 /**
@@ -74,7 +76,7 @@ export class HandOverService {
     return this.handOver(
       owned,
       deskFor(owned),
-      WORDS.passedToOwner(await this.answererName(owned, db)),
+      options.reply ?? WORDS.passedToOwner(await this.answererName(owned, db)),
       options,
     );
   }
@@ -114,10 +116,7 @@ export class HandOverService {
   }
 
   /** The first name of whoever answers this chat today, or null for the team. */
-  private async answererName(
-    chat: Conversation,
-    db: DatabaseExecutor = this.db,
-  ): Promise<string | null> {
+  async answererName(chat: Conversation, db: DatabaseExecutor = this.db): Promise<string | null> {
     const userId = await answererFor(db, chat.assignedUserId ?? chat.handledByUserId);
     if (!userId) return null;
     const [user] = await db

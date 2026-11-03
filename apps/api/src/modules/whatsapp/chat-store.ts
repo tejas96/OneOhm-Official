@@ -142,6 +142,8 @@ export async function queueReply(
       template: `session:${reply.kind}`,
       payload: reply,
       dedupeKey: dedupeKey ?? `chat:${randomUUID()}`,
+      // The clock, not the transaction's start: replies queued together go out in order.
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });

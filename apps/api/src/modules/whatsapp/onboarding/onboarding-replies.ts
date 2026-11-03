@@ -7,7 +7,7 @@ import {
 } from '@oneohm/domain';
 import type { ChatReply } from '../chat-store';
 import { ONBOARD_WORDS } from './onboard-words';
-import { PERSON_CHOICE } from './onboarding-context';
+import { ESTIMATE_CHOICES, LATER_PERIODS, PERSON_CHOICE } from './onboarding-context';
 
 /** What a question needs to know besides its step. */
 export interface QuestionView {
@@ -102,7 +102,33 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
         body: body(W.askPhoto),
         buttons: [{ id: 'ob:photo:later', title: W.sendLater }, person],
       };
+    // After the estimate PDF: what next, with a person in the middle.
     case 'done':
-      return { kind: 'text', body: W.preparing };
+      return {
+        kind: 'buttons',
+        body: W.estimateNext,
+        buttons: [
+          { id: ESTIMATE_CHOICES.call, title: W.callMeBack },
+          person,
+          { id: ESTIMATE_CHOICES.notNow, title: W.notNow },
+        ],
+      };
   }
+}
+
+/** After "Not now": when to check back, as a list that still offers a person. */
+export function laterQuestion(): ChatReply {
+  const W = ONBOARD_WORDS;
+  return {
+    kind: 'list',
+    body: W.askWhenLater,
+    button: W.choose,
+    rows: [
+      ...LATER_PERIODS.map((period) => ({
+        id: `${ESTIMATE_CHOICES.later}${period}`,
+        title: W.later[period],
+      })),
+      { id: PERSON_CHOICE, title: W.talkToPerson },
+    ],
+  };
 }

@@ -1,5 +1,6 @@
 import { formatInr } from '@oneohm/shared';
 import Handlebars from 'handlebars';
+import { assetText } from './report-assets';
 
 /**
  * OneOhm's own Handlebars setup for the statutory templates: the helpers and partials
@@ -70,6 +71,8 @@ engine.registerPartial(
   'docTitle',
   '<div class="rpt-doc-head"><h1 class="rpt-doc-title">{{title}}</h1>{{#if subtitle}}<p class="rpt-doc-subtitle">{{subtitle}}</p>{{/if}}</div>',
 );
+/** The company's logo, name and contact lines, as at the top of the quotation and estimate. */
+engine.registerPartial('companyBrand', assetText('quotation', 'company-brand.hbs'));
 
 interface CallNode {
   readonly path: hbs.AST.PathExpression | hbs.AST.Literal;

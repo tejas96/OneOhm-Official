@@ -1,0 +1,48 @@
+/* The instant estimate: the quotation's header and type (quotation.css), plus three cards. */
+.e-disclaimer {
+  margin: 12px 0 16px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #fff4dc;
+  color: #8a5a00;
+  font-weight: 600;
+}
+
+.e-for {
+  margin-bottom: 16px;
+}
+
+.e-grid {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.e-card {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #d9dee4;
+  border-radius: 6px;
+}
+
+.e-figure {
+  font-family: "Newsreader", serif;
+  font-size: 22pt;
+  font-weight: 500;
+  color: #006eaa;
+}
+
+.e-card .q-row {
+  margin-top: 4px;
+}
+
+.e-strong dd,
+.e-strong dt {
+  font-weight: 600;
+  color: #14171a;
+}
+
+.e-notes p {
+  margin-top: 6px;
+  color: #5d6570;
+}

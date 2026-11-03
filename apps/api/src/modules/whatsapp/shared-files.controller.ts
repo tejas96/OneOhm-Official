@@ -9,6 +9,7 @@ import { CustomerDocumentsService } from '../customer-portal/customer-documents.
 import { CustomerPortalService } from '../customer-portal/customer-portal.service';
 import { CustomerBillingService } from '../finance/customer-billing.service';
 import { ReceiptPdfService } from '../finance/receipt-pdf.service';
+import { EstimatePdfService } from '../reports/estimate-pdf.service';
 import { QuotationPdfService } from '../reports/quotation-pdf.service';
 import type { PdfFile } from '../reports/report-pdf.service';
 import { readFileLink, type SharedFile } from './file-links';
@@ -33,6 +34,7 @@ export class SharedFilesController {
     private readonly quotations: QuotationPdfService,
     private readonly receipts: ReceiptPdfService,
     private readonly billing: CustomerBillingService,
+    private readonly estimates: EstimatePdfService,
   ) {}
 
   @Get(':token')
@@ -44,6 +46,11 @@ export class SharedFilesController {
       return pdf(await this.quotations.render(id));
     }
     if (file.kind === 'receipt') return pdf(await this.receipt(file));
+    // A lead's instant estimate: no customer yet, so it is scoped by the lead.
+    if (file.kind === 'estimate') {
+      if (!file.leadId) throw new NotFoundException();
+      return pdf(await this.estimates.render(file.leadId, file.id));
+    }
     if (file.kind === 'invoice') {
       // A cancelled invoice is never shared, even through a link sent before.
       if (!(await stillIssued(this.db, file.id))) throw new NotFoundException();
