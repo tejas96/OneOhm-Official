@@ -11,6 +11,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { RULE_KEYS } from '../rules/use-rule-settings';
 import { useRunColumns } from './run-columns';
+import { RunSheet } from './run-sheet';
 
 type Show = 'all' | 'failed';
 
@@ -25,6 +26,7 @@ export function AutomationPanel() {
   const client = useQueryClient();
   const [show, setShow] = useState<Show>('all');
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const query = useQuery({
     queryKey: RULE_KEYS.jobRuns,
     queryFn: () => expectStatus(api.businessSettings.jobRuns(), 200),
@@ -45,8 +47,9 @@ export function AutomationPanel() {
       setRetrying(null);
     }
   };
-  const columns = useRunColumns(retry, retrying);
+  const columns = useRunColumns(retry, retrying, (run) => setOpenId(run.id));
   const runs = (query.data?.runs ?? []).filter((run) => show === 'all' || run.status === 'failed');
+  const opened = query.data?.runs.find((run) => run.id === openId) ?? null;
   const failed = query.data?.failedLastWeek ?? 0;
 
   return (
@@ -93,6 +96,12 @@ export function AutomationPanel() {
         />
       )}
       <p className="max-w-2xl type-body-sm text-ink-faint">{t('kept')}</p>
+      <RunSheet
+        run={opened}
+        retrying={retrying === opened?.id}
+        onRetry={retry}
+        onClose={() => setOpenId(null)}
+      />
     </section>
   );
 }

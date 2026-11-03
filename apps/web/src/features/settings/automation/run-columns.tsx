@@ -4,24 +4,20 @@ import type { JobRunRecord } from '@oneohm/api-contracts';
 import { Button, StatusPill, type TableColumn } from '@oneohm/design-system/web';
 import { RotateCcw } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
+import { took } from './run-format';
 
-const TONE = {
+export const RUN_TONE = {
   succeeded: 'done',
   failed: 'overdue',
   running: 'review',
   queued: 'waiting',
 } as const;
 
-/** How long a run took, in plain words. */
-function took(run: JobRunRecord): number | null {
-  if (!run.startedAt || !run.finishedAt) return null;
-  return Math.max(0, Date.parse(run.finishedAt) - Date.parse(run.startedAt));
-}
-
 /** Columns for the runs table: the job, when, and how it went, with a retry when it is safe. */
 export function useRunColumns(
   onRetry: (run: JobRunRecord) => void,
   retrying: string | null,
+  onOpen: (run: JobRunRecord) => void,
 ): readonly TableColumn<JobRunRecord>[] {
   const t = useTranslations('settings.automation');
   const format = useFormatter();
@@ -33,7 +29,13 @@ export function useRunColumns(
       primary: true,
       cell: (run) => (
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="type-body font-medium text-ink">{t(`jobs.${run.name}`)}</span>
+          <button
+            type="button"
+            onClick={() => onOpen(run)}
+            className="oh-stretched-link text-left type-body font-medium text-ink hover:text-accent"
+          >
+            {t(`jobs.${run.name}`)}
+          </button>
           <span className="type-body-sm text-ink-faint">{t(`triggers.${run.trigger}`)}</span>
         </span>
       ),
@@ -66,13 +68,17 @@ export function useRunColumns(
       header: t('columns.result'),
       cell: (run) => (
         <span className="flex min-w-0 flex-col items-start gap-1">
-          <StatusPill size="sm" tone={TONE[run.status]} label={t(`status.${run.status}`)} />
+          <StatusPill size="sm" tone={RUN_TONE[run.status]} label={t(`status.${run.status}`)} />
           {run.status === 'succeeded' && run.result !== null && (
             <span className="type-body-sm text-ink-muted">
               {t(`results.${run.name}`, { count: Number(run.result) || 0 })}
             </span>
           )}
-          {run.error && <span className="type-body-sm break-words text-overdue">{run.error}</span>}
+          {run.error && (
+            <span className="line-clamp-2 type-body-sm break-words text-overdue" title={run.error}>
+              {run.error}
+            </span>
+          )}
           {run.retried && <span className="type-body-sm text-ink-faint">{t('retried')}</span>}
           {run.retryable && (
             <Button
@@ -81,7 +87,7 @@ export function useRunColumns(
               leadingIcon={<RotateCcw />}
               pending={retrying === run.id}
               onClick={() => onRetry(run)}
-              className="mt-1"
+              className="relative z-[1] mt-1"
             >
               {t('retry')}
             </Button>

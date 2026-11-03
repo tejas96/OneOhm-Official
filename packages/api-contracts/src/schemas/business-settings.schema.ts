@@ -102,6 +102,12 @@ export const jobRunSchema = z.object({
   retryable: z.boolean(),
   /** A retry is already waiting or ran after this failure. */
   retried: z.boolean(),
+  /** For a retry: the failed run it repeats. */
+  retryOfId: idSchema.nullable(),
+  /** What the run was about, when it has one (for message delivery, the message's ID). */
+  subjectId: idSchema.nullable(),
+  /** Who asked for a retry by hand; empty for runs the system started. */
+  requestedBy: z.object({ id: idSchema, name: z.string() }).nullable(),
   createdAt: instantSchema,
 });
 export type JobRunRecord = z.infer<typeof jobRunSchema>;

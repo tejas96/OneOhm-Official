@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { JobRunRecord, JobRunsView } from '@oneohm/api-contracts';
-import { jobRuns } from '@oneohm/database';
+import { jobRuns, users } from '@oneohm/database';
 import { compareRuns, isRetryableJob, JOB_NAMES, type JobName } from '@oneohm/domain';
 import { and, desc, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -9,6 +9,10 @@ import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 
 type Row = typeof jobRuns.$inferSelect;
+interface Listed {
+  readonly run: Row;
+  readonly requester: string | null;
+}
 const SHOWN = 120;
 const iso = (value: Date | null) => value?.toISOString() ?? null;
 const isJob = (name: string): name is JobName => (JOB_NAMES as readonly string[]).includes(name);
@@ -23,19 +27,22 @@ export class JobRunsService {
 
   async list(): Promise<JobRunsView> {
     const since = new Date(Date.now() - 14 * 86_400_000);
-    const rows = await this.db
-      .select()
+    const listed: Listed[] = await this.db
+      .select({ run: jobRuns, requester: users.fullName })
       .from(jobRuns)
+      .leftJoin(users, eq(users.id, jobRuns.requestedByUserId))
       .where(gte(jobRuns.createdAt, since))
       .orderBy(desc(jobRuns.createdAt))
       .limit(400);
+    const rows = listed.map((item) => item.run);
+    const requesters = new Map(listed.map((item) => [item.run.id, item.requester]));
     const retriedIds = new Set(
       rows.flatMap((row) => (row.retryOfId && row.trigger === 'retry' ? [row.retryOfId] : [])),
     );
     const weekAgo = Date.now() - 7 * 86_400_000;
     const runs = rows
       .filter((row) => isJob(row.name))
-      .map((row) => present(row, retriedIds.has(row.id)))
+      .map((row) => present(row, retriedIds.has(row.id), requesters.get(row.id) ?? null))
       .sort(compareRuns)
       .slice(0, SHOWN);
     // A failure put right by a retry no longer needs anyone's attention.
@@ -85,11 +92,11 @@ export class JobRunsService {
       });
       return queued;
     });
-    return present(row, false);
+    return present(row, false, actor.fullName);
   }
 }
 
-function present(row: Row, retried: boolean): JobRunRecord {
+function present(row: Row, retried: boolean, requesterName: string | null): JobRunRecord {
   return {
     id: row.id,
     name: row.name as JobName,
@@ -101,6 +108,12 @@ function present(row: Row, retried: boolean): JobRunRecord {
     error: row.error,
     retryable: row.status === 'failed' && isRetryableJob(row.name) && !retried,
     retried,
+    retryOfId: row.retryOfId,
+    subjectId: row.subjectId,
+    requestedBy:
+      row.requestedByUserId && requesterName
+        ? { id: row.requestedByUserId, name: requesterName }
+        : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
