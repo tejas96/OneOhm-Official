@@ -27,6 +27,7 @@ export * from './finance.schema';
 export * from './identity.schema';
 export * from './incentives.schema';
 export * from './inventory.schema';
+export * from './lead-campaign.schema';
 export * from './lead-step.schema';
 export * from './list-page.schema';
 export * from './material-custody.schema';

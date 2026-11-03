@@ -421,6 +421,13 @@
       "when": 1793651078456,
       "tag": "0059_property_location_source",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1793675284391,
+      "tag": "0060_lead_attribution_campaigns",
+      "breakpoints": true
     }
   ]
 }

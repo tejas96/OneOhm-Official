@@ -33,6 +33,7 @@ import { engagementContract } from './engagement.contract';
 import { financeContract } from './finance.contract';
 import { gatewayCheckContract } from './gateway-check.contract';
 import { inventoryContract } from './inventory.contract';
+import { leadCampaignsContract } from './lead-campaigns.contract';
 import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { listsContract } from './lists.contract';
@@ -113,6 +114,7 @@ export type ApiRouterDefinition = {
   readonly purchasing: typeof purchasingContract;
   readonly cashHandling: typeof cashHandlingContract;
   readonly skills: typeof skillsContract;
+  readonly leadCampaigns: typeof leadCampaignsContract;
   readonly leadSteps: typeof leadStepsContract;
   readonly documentRequirements: typeof documentRequirementsContract;
   readonly customerFamily: typeof customerFamilyContract;
@@ -182,6 +184,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   purchasing: purchasingContract,
   cashHandling: cashHandlingContract,
   skills: skillsContract,
+  leadCampaigns: leadCampaignsContract,
   leadSteps: leadStepsContract,
   documentRequirements: documentRequirementsContract,
   customerFamily: customerFamilyContract,

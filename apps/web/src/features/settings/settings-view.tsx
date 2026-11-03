@@ -16,6 +16,7 @@ import { WarrantyPanel } from './after-sales/warranty-panel';
 import { AutomationPanel } from './automation/automation-panel';
 import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
+import { LeadCampaignsPanel } from './lead-campaigns/lead-campaigns-panel';
 import { LeadStepsPanel } from './lead-steps/lead-steps-panel';
 import { PaymentPlansPanel } from './payment-plans/payment-plans-panel';
 import { ProductsPanel } from './products/products-panel';
@@ -42,6 +43,7 @@ const TABS = [
   { value: 'payments', requires: 'settings.manage', Panel: PaymentPlansPanel },
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
   { value: 'referrals', requires: 'settings.manage', Panel: ReferralsPanel },
+  { value: 'leadCampaigns', requires: 'settings.manage', Panel: LeadCampaignsPanel },
   { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
   { value: 'rewards', requires: 'settings.manage', Panel: RewardsPanel },
@@ -69,7 +71,16 @@ const GROUPS: readonly NavGroup<TabValue>[] = [
   { key: 'organisation', items: ['company', 'roles', 'workforce', 'rewards'] },
   {
     key: 'selling',
-    items: ['leadSteps', 'projectTypes', 'products', 'rates', 'payments', 'discoms', 'referrals'],
+    items: [
+      'leadSteps',
+      'projectTypes',
+      'products',
+      'rates',
+      'payments',
+      'discoms',
+      'referrals',
+      'leadCampaigns',
+    ],
   },
   { key: 'operations', items: ['tasks', 'documents', 'messages'] },
   { key: 'afterSales', items: ['serviceSla', 'warranty', 'amcPlans'] },

@@ -7,6 +7,7 @@
       "roles": "Roles & permissions",
       "company": "Company",
       "leadSteps": "Lead stages",
+      "leadCampaigns": "Ad and campaign codes",
       "products": "Products",
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
@@ -929,6 +930,27 @@
         "shareNumber": "WhatsApp number for friends",
         "shareNumberHint": "Leave empty to use the company number, {number}.",
         "shareNumberNone": "Leave empty to use the company's first phone number."
+      }
+    },
+    "leadCampaigns": {
+      "loading": "Loading ad and campaign codes",
+      "intro": "Short codes that say which ad or campaign a lead came from, for example DIWALI-26 on an ad link or at the start of a WhatsApp message. Turn a code off when the campaign ends; leads already tagged keep it.",
+      "empty": "No codes yet.",
+      "leads": "{count, plural, =0 {No leads yet} one {# lead} other {# leads}}",
+      "edit": "Rename {code}",
+      "add": "Add a code",
+      "failed": "Could not change the code",
+      "dialog": {
+        "addTitle": "Add a code",
+        "editTitle": "Rename {code}",
+        "description": "A code is typed in capitals and never changes once saved.",
+        "code": "Code",
+        "codeHint": "2 to 20 letters, digits, dashes or underscores.",
+        "name": "Campaign name",
+        "nameHint": "For example: Diwali Facebook ads.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "add": "Add code"
       }
     },
     "leadSteps": {

@@ -146,6 +146,15 @@ export const leads = pgTable(
     /** A lost lead worth another try: on this day it shows in the owner's follow-ups. */
     revisitOn: calendarDate('revisit_on'),
     notes: text('notes'),
+    /** First-touch attribution: which ad or campaign brought the lead (all optional). */
+    campaignCode: text('campaign_code'),
+    adId: text('ad_id'),
+    adHeadline: text('ad_headline'),
+    adSourceUrl: text('ad_source_url'),
+    utmSource: text('utm_source'),
+    utmMedium: text('utm_medium'),
+    utmCampaign: text('utm_campaign'),
+    landingPage: text('landing_page'),
     wonAt: instant('won_at'),
     version: version(),
     createdAt: createdAt(),
@@ -162,6 +171,21 @@ export const leads = pgTable(
     ),
   ],
 );
+
+/** Where a lead came from: the ad, campaign code and web address it arrived through. */
+export type LeadAttribution = Partial<
+  Pick<
+    typeof leads.$inferSelect,
+    | 'campaignCode'
+    | 'adId'
+    | 'adHeadline'
+    | 'adSourceUrl'
+    | 'utmSource'
+    | 'utmMedium'
+    | 'utmCampaign'
+    | 'landingPage'
+  >
+>;
 
 export const leadActivities = pgTable(
   'lead_activities',
