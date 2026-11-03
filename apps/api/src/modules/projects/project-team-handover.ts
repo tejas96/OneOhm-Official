@@ -36,16 +36,21 @@ const pickOne = () =>
 /**
  * Checked before anything is saved: every removed person who still holds open tasks has
  * a choice, every choice is about a removed person, and each person picked is active
- * staff (or crew of the project's contractor) who is not themselves being removed.
+ * staff (or crew of the project's contractor) who is not themselves being removed. The
+ * project's manager (after this change) stays on the project either way: they need no
+ * choice for their own tasks and may be picked even when off the named team.
  */
 export async function checkHandOver(
   db: DatabaseExecutor,
   projectId: string,
   removed: readonly string[],
   moves: readonly HandOverMove[] = [],
+  manager: string | null = null,
 ): Promise<void> {
   if (moves.some((move) => !removed.includes(move.fromUserId))) throw pickOne();
   for (const userId of removed) {
+    // The manager keeps their work on the project; no choice is needed for them.
+    if (userId === manager) continue;
     if (moves.some((move) => move.fromUserId === userId)) continue;
     const [open] = await db
       .select({ id: projectTasks.id })
@@ -56,7 +61,7 @@ export async function checkHandOver(
   }
   const targets = [...new Set(moves.flatMap((move) => (move.toUserId ? [move.toUserId] : [])))];
   if (targets.length === 0) return;
-  if (targets.some((id) => removed.includes(id))) throw pickOne();
+  if (targets.some((id) => id !== manager && removed.includes(id))) throw pickOne();
   const [company] = await db
     .select({ id: projectContractors.contractorId })
     .from(projectContractors)
@@ -112,13 +117,15 @@ export async function handOverTasks(
 }
 
 /**
- * After the team or its tasks' people changed: each open task is flagged when its person
- * is staff outside the named team (crew work is never "outside"), and unflagged otherwise.
+ * After the team, the manager or its tasks' people changed: each open task is flagged when
+ * its person is staff outside the named team (crew work is never "outside"), and unflagged
+ * otherwise. The project's manager is never outside: they are on the project as manager.
  */
 export async function refreshOutsideTeam(
   tx: Transaction,
   projectId: string,
   team: readonly string[],
+  manager: string | null = null,
 ): Promise<void> {
   const crew = await tx.select({ id: contractorMembers.userId }).from(contractorMembers);
   const crewIds = new Set(crew.map((member) => member.id));
@@ -132,7 +139,9 @@ export async function refreshOutsideTeam(
     .from(projectTasks)
     .where(and(eq(projectTasks.projectId, projectId), ne(projectTasks.status, 'completed')));
   for (const task of open) {
-    const outside = outsideTeamFor(task.assigneeUserId ?? task.proposedUserId, team, crewIds);
+    const holder = task.assigneeUserId ?? task.proposedUserId;
+    const outside =
+      holder !== null && holder === manager ? false : outsideTeamFor(holder, team, crewIds);
     if (outside !== task.outsideTeam)
       await tx
         .update(projectTasks)

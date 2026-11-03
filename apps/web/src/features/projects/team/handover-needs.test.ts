@@ -35,6 +35,15 @@ describe('handOverNeeds', () => {
   });
 });
 
+describe('handOverNeeds manager', () => {
+  it('skips the chosen manager: they stay on the project', () => {
+    const p = project([task('a', null, 'ready'), task('b', null, 'ready')]);
+    expect(handOverNeeds(p, ['a', 'b', 'c'], ['c'], 'a')).toEqual([
+      { id: 'b', fullName: 'B', open: 1 },
+    ]);
+  });
+});
+
 describe('handOverNeeds snapshot', () => {
   it('ignores people who joined the team after the sheet opened', () => {
     const p = project([task('a', null, 'ready')]);

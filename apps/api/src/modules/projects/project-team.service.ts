@@ -116,12 +116,12 @@ export class ProjectTeamService {
     if (input.teamUserIds) await checkTeam(this.db, input.teamUserIds, before);
     const removed = before.filter((id) => !team.includes(id));
     const added = team.filter((id) => !before.includes(id));
-    await checkHandOver(this.db, projectId, removed, input.handOver);
+    const manager = managerChanged ? (input.managerUserId ?? null) : project.managerUserId;
+    await checkHandOver(this.db, projectId, removed, input.handOver, manager);
     if (input.targetFinishDate && input.targetFinishDate < project.startDate)
       throw invalid('The target finish comes after the start.', {
         targetFinishDate: 'Pick a date on or after the start date.',
       });
-    const manager = managerChanged ? (input.managerUserId ?? null) : project.managerUserId;
     const target =
       input.targetFinishDate !== undefined ? input.targetFinishDate : project.targetFinishDate;
     const changes = {
@@ -136,8 +136,8 @@ export class ProjectTeamService {
         : null;
       if (input.teamUserIds) await replaceTeam(tx, projectId, team);
       await handOverTasks(tx, actor, projectId, input.handOver ?? []);
-      if (input.teamUserIds || input.handOver?.length)
-        await refreshOutsideTeam(tx, projectId, team);
+      if (input.teamUserIds || input.handOver?.length || managerChanged)
+        await refreshOutsideTeam(tx, projectId, team, manager);
       // The customer's WhatsApp chat follows the manager of their newest live project.
       if (managerChanged && manager)
         await moveCustomerChats(tx, project.customerId, manager, projectId);

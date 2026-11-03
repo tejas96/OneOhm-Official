@@ -213,7 +213,8 @@ export async function tellTeamChange(
       `You joined the ${project.code} team`,
       `${actor.fullName} added you to ${project.name}.`,
     );
-  for (const userId of diff.removed)
+  // Off the named team but now its manager: still on the project, so no "left" notice.
+  for (const userId of diff.removed.filter((id) => id !== diff.newManager))
     await tell(
       userId,
       'project_team_removed',

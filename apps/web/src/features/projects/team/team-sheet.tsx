@@ -86,7 +86,7 @@ export function TeamSheet({
     t(key, { name }),
   );
 
-  const needs = handOverNeeds(project, initialTeam, team);
+  const needs = handOverNeeds(project, initialTeam, team, manager);
   const picked = livePicks(needs, picks);
   const missing = needs.some((need) => !picked[need.id]);
 
