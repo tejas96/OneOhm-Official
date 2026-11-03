@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ApprovalPolicyView } from '@oneohm/api-contracts';
+import type { ApprovalPolicyView, LeadAssignmentRulesRecord } from '@oneohm/api-contracts';
 import {
   type BusinessSettingKey,
   type BusinessSettingsMap,
@@ -13,6 +13,7 @@ import {
   checkReminderTiming,
   isAssignmentRules,
   isLeadAssignmentRules,
+  type LeadAssignmentRules,
   type SettingErrors,
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
@@ -21,6 +22,7 @@ import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { assertCanOwnLeads } from '../crm/lead-owner';
 
 const CHECKS: {
   readonly [K in BusinessSettingKey]: (value: BusinessSettingsMap[K]) => SettingErrors;
@@ -40,6 +42,14 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   dashboard: 'Check the dashboard numbers.',
   lead_assignment: 'Check the lead rule.',
 };
+
+const copyLeadRules = (rules: LeadAssignmentRules): LeadAssignmentRulesRecord => ({
+  strategy: rules.strategy,
+  cityOwners: rules.cityOwners.map((owner) => ({
+    userId: owner.userId,
+    cities: [...owner.cities],
+  })),
+});
 
 /**
  * Business rules owners change in Settings without a developer (PRD 7.2): reminder
@@ -73,6 +83,31 @@ export class BusinessSettingsService {
       });
     });
     return this.get(key);
+  }
+
+  /** The lead rule as the screen shows it (plain lists, so it can be edited). */
+  async leadAssignment(): Promise<LeadAssignmentRulesRecord> {
+    return copyLeadRules(await this.get('lead_assignment'));
+  }
+
+  /**
+   * Saves the lead rule. City names are trimmed and blanks dropped (a person with no
+   * city left is dropped too), and every city owner must be someone who can own leads.
+   */
+  async saveLeadAssignment(
+    actor: Actor,
+    rules: LeadAssignmentRulesRecord,
+  ): Promise<LeadAssignmentRulesRecord> {
+    const cityOwners = rules.cityOwners
+      .map((owner) => ({
+        userId: owner.userId,
+        cities: [...new Set(owner.cities.map((city) => city.trim()).filter(Boolean))],
+      }))
+      .filter((owner) => owner.cities.length > 0);
+    for (const owner of cityOwners) await assertCanOwnLeads(this.db, owner.userId);
+    return copyLeadRules(
+      await this.save(actor, 'lead_assignment', { strategy: rules.strategy, cityOwners }),
+    );
   }
 
   /** The approval limits with the discount limit from the rate card, on one screen. */

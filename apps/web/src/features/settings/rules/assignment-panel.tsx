@@ -7,16 +7,27 @@ import { useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { SettingsSection } from '../settings-section';
+import { LeadAssignmentSection } from './lead-assignment-section';
 import { SaveBar } from './save-bar';
 import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 
 const SWITCHES = ['skipLeave', 'preferSkill', 'teamFirst'] as const;
 
 /**
- * How new project work finds a person (PRD 3.8, 7.2). Used when a project is created;
- * critical tasks still wait for a manager to confirm the person picked.
+ * Settings → Assignment (PRD 3.3, 3.8, 7.2): who gets a new lead nobody picked, and how
+ * new project work finds a person. Project tasks are picked when a project is created;
+ * critical ones still wait for a manager to confirm the person.
  */
 export function AssignmentPanel() {
+  return (
+    <div className="flex flex-col gap-12">
+      <LeadAssignmentSection />
+      <ProjectAssignmentForm />
+    </div>
+  );
+}
+
+function ProjectAssignmentForm() {
   const t = useTranslations('settings.rules.assignment');
   const rule = useRuleSettings<AssignmentRulesRecord>(
     RULE_KEYS.assignment,

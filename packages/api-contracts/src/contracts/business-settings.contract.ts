@@ -10,6 +10,7 @@ import {
   dashboardSettingsSchema,
   jobRunSchema,
   jobRunsSchema,
+  leadAssignmentRulesSchema,
   projectVariantInputSchema,
   projectVariantSchema,
   reminderTimingSchema,
@@ -43,6 +44,17 @@ export const businessSettingsContract = c.router({
     path: '/settings/assignment',
     body: assignmentRulesSchema,
     responses: { 200: assignmentRulesSchema },
+  },
+  leadAssignment: {
+    method: 'GET',
+    path: '/settings/lead-assignment',
+    responses: { 200: leadAssignmentRulesSchema },
+  },
+  saveLeadAssignment: {
+    method: 'PUT',
+    path: '/settings/lead-assignment',
+    body: leadAssignmentRulesSchema,
+    responses: { 200: leadAssignmentRulesSchema },
   },
   approvals: {
     method: 'GET',

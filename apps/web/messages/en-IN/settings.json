@@ -1048,6 +1048,26 @@
           "nightReplyPreview": "The customer gets once a night, in their language: “Thank you. We reply from 9:30 am to 6:30 pm. Your message is with Asha.”"
         }
       },
+      "leadAssignment": {
+        "title": "New leads",
+        "loading": "Loading the new-lead rule",
+        "help": "People on leave are always skipped. If everyone is away, new leads go to the admin and sales is alerted.",
+        "strategy": "Who gets the next new lead",
+        "least_busy": "Fewest open leads",
+        "round_robin": "Take turns",
+        "explain": {
+          "least_busy": "The person with the fewest open leads gets it.",
+          "round_robin": "The person who was given a lead longest ago gets it."
+        },
+        "cityOwners": "City owners (optional)",
+        "cityOwnersHint": "A lead from one of these cities goes to its owner first, when that person is at work.",
+        "cities": "Cities, separated by commas",
+        "citiesPlaceholder": "Pune, Satara",
+        "addPerson": "Add a person",
+        "add": "Add",
+        "remove": "Remove",
+        "someone": "Someone"
+      },
       "assignment": {
         "title": "Assignment rules",
         "loading": "Loading assignment rules",

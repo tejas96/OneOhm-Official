@@ -28,7 +28,7 @@ export class PhoneMatchController {
   @TsRestHandler(apiContract.leadIntake.leadOwners)
   owners(@CurrentActor() actor: Actor) {
     return tsRestHandler(apiContract.leadIntake.leadOwners, async () => {
-      assertCan(actor, 'leads.manage');
+      assertCan(actor, 'leads.manage', 'settings.manage');
       return { status: 200, body: await leadOwnerOptions(this.db) };
     });
   }

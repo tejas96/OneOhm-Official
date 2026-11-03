@@ -1,10 +1,10 @@
-import type { LeaveRequestRecord } from '@oneohm/api-contracts';
+import type { LeadAssignmentRulesRecord, LeaveRequestRecord } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, today, uniquePhone } from '../support/sales';
-import { RESELLERS, staffEmail, TEAM_PASSWORD } from '../support/team';
+import { RESELLERS, staffEmail, staffId, TEAM_PASSWORD } from '../support/team';
 
 // Part 2, task 2: a lead nobody picked goes to someone who is at work today, by the
 // Settings rule. When everyone is away it goes to the desk (the Super Admin) with an
@@ -157,6 +157,26 @@ describe('Lead assignment', () => {
     // Least busy would pick Aarav (fewest leads, first by name); the city comes first.
     await setRule({ strategy: 'least_busy', cityOwners: [{ userId: zoya.id, cities: [CITY] }] });
     expect(await websiteLead('City Owner Lead (test)', CITY)).toBe(zoya.id);
+  });
+
+  it('saves and reads the lead rule; refuses a person who cannot own leads', async () => {
+    const saved = await admin.put<LeadAssignmentRulesRecord>('/settings/lead-assignment', {
+      strategy: 'round_robin',
+      cityOwners: [{ userId: aarav.id, cities: ['  Pune ', '', 'Satara', 'Pune'] }],
+    });
+    expect(saved).toEqual({
+      strategy: 'round_robin',
+      cityOwners: [{ userId: aarav.id, cities: ['Pune', 'Satara'] }],
+    });
+    expect(await admin.get<LeadAssignmentRulesRecord>('/settings/lead-assignment')).toEqual(saved);
+
+    const accountant = await staffId(admin, 'accounts');
+    const refused = await admin.raw('PUT', '/settings/lead-assignment', {
+      strategy: 'least_busy',
+      cityOwners: [{ userId: accountant, cities: ['Pune'] }],
+    });
+    expect(refused.status).toBe(400);
+    expect(await admin.get<LeadAssignmentRulesRecord>('/settings/lead-assignment')).toEqual(saved);
   });
 
   it("keeps a staff member's own pick", async () => {
