@@ -97,7 +97,7 @@ describe('Lead assignment', () => {
     expect(await websiteLead('Skips Leave Lead (test)')).toBe(bhavna.id);
   });
 
-  it('gives the lead to the desk and alerts everyone when all are away', async () => {
+  it('gives the lead to the desk and alerts the people at work when all are away', async () => {
     await sendOnLeave([bhavna.id], today());
     const phone = uniquePhone();
     const reply = await new Session().raw('POST', '/public/leads', {
@@ -120,8 +120,8 @@ describe('Lead assignment', () => {
     expect(alerts[0]?.body).toBe(
       'Everyone Away Lead (test) came in while everyone is away. Pick an owner.',
     );
-    // Bhavna is away, yet she still hears about it: she manages leads.
-    expect(alerts.map((row) => row.user_id)).toContain(bhavna.id);
+    // Bhavna is away with nobody covering: the alert goes to people at work (live review B8).
+    expect(alerts.map((row) => row.user_id)).not.toContain(bhavna.id);
     await bringBack([aarav.id, bhavna.id]);
   });
 

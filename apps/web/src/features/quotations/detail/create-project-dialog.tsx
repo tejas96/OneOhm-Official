@@ -13,7 +13,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 import { parseNumber } from '@/lib/forms/checks';
 import { useDiscoms, useProperty } from '../builder/property-summary';
-import { CreateTeamSection, MANAGER_LATER } from './create-team-section';
+import { CreateTeamSection } from './create-team-section';
 import { type LenderChoice, LoanFields, lenderFields, NO_LENDER } from './loan-fields';
 import { DEFAULT_PLAN, PaymentPlanField } from './payment-plan-field';
 import { ProjectFactsSummary } from './project-facts-summary';
@@ -51,7 +51,7 @@ export function CreateProjectDialog({
   const [battery, setBattery] = useState(Boolean(quotation.input.batteryProductId));
   const [groundMount, setGroundMount] = useState(quotation.input.structureType === 'ground_mount');
   const [nameChange, setNameChange] = useState(false);
-  const [manager, setManager] = useState<string>(MANAGER_LATER);
+  const [manager, setManager] = useState<string | undefined>(undefined);
   const [contractor, setContractor] = useState<string>(AUTO_CONTRACTOR);
   const [team, setTeam] = useState<string[]>([]);
   const [plan, setPlan] = useState<string>(DEFAULT_PLAN);
@@ -78,7 +78,7 @@ export function CreateProjectDialog({
             battery,
             groundMount,
             nameChange,
-            managerUserId: manager === MANAGER_LATER ? null : manager,
+            managerUserId: manager ?? null,
             paymentPlanId: plan === DEFAULT_PLAN ? null : plan,
             startDate,
             targetFinishDate: targetFinish || null,
@@ -113,6 +113,7 @@ export function CreateProjectDialog({
     const found: Record<string, string> = {};
     if (!discomId) found.discomId = checkT('required');
     if (!startDate) found.startDate = checkT('required');
+    if (!manager) found.managerUserId = checkT('required');
     if (loan && loanRupees) {
       const amount = parseNumber(loanRupees);
       if (amount === null || amount <= 0) found.loanPaise = checkT('positiveAmount');
@@ -139,7 +140,7 @@ export function CreateProjectDialog({
             form="create-project"
             variant="primary"
             pending={create.isPending}
-            disabled={!discomId || !startDate}
+            disabled={!discomId || !startDate || !manager}
           >
             {t('confirm')}
           </Button>

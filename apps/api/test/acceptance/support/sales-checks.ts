@@ -5,9 +5,12 @@ import type { Session } from './http';
 export const ist = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+05:30`);
 
 export const runSalesChecks = (admin: Session, now: Date) =>
-  admin.post<{ expiring: number; calls: number; noProject: number }>('/sales-checks/run', {
-    now: now.toISOString(),
-  });
+  admin.post<{ expiring: number; calls: number; noProject: number; handedBack: number }>(
+    '/sales-checks/run',
+    {
+      now: now.toISOString(),
+    },
+  );
 
 /** The alerts whose dedupe key starts with this, one row per person told. */
 export const alertsKeyed = (prefix: string) =>

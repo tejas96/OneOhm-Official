@@ -152,7 +152,7 @@ describe('The journey side paths in the chat', () => {
     });
   });
 
-  it('e) everyone who sells is on leave: the desk (admin) owns the lead and sales is alerted', async () => {
+  it('e) everyone who sells is on leave: the desk (admin) owns the lead and is alerted', async () => {
     for (const id of await J.sellers())
       await rows(
         `INSERT INTO leave_requests (user_id, leave_type, from_date, to_date, half_day, half_days, status, reason)
@@ -164,8 +164,8 @@ describe('The journey side paths in the chat', () => {
       await upToSite(phone);
       const [lead] = await leadsOf(phone);
       expect(lead?.owner_user_id).toBe(admin.userId);
-      const told = await J.alerted('lead_needs_owner', lead?.id ?? '');
-      for (const id of await J.holdersOf('leads.manage')) expect(told).toContain(id);
+      // Everyone in sales is away with nobody covering: the desk (admin) is the one told.
+      expect(await J.alerted('lead_needs_owner', lead?.id ?? '')).toEqual([admin.userId]);
       expect((await chatOf(phone)).state).toBe('onboard:site');
     } finally {
       await rows('DELETE FROM leave_requests WHERE reason = $1', [TAG]);

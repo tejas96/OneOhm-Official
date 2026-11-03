@@ -9,7 +9,7 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { isWorkingTime, lastWorkEnd } from '@oneohm/domain';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
@@ -105,6 +105,7 @@ export class HandOverService {
         and(
           eq(waMessages.conversationId, chat.id),
           eq(waMessages.direction, 'out'),
+          ne(waMessages.kind, 'note'),
           isNull(waMessages.sentByUserId),
           gt(waMessages.createdAt, lastWorkEnd(now, zone)),
         ),
