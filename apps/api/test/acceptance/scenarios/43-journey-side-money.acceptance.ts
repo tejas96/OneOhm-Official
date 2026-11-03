@@ -121,15 +121,34 @@ describe('The journey side paths: sources, links and messages', () => {
     ]);
   });
 
-  it('i) extras switch off: the quote payload keeps its fields, the delivery has no header or buttons', async () => {
-    const templates = await admin.get<MessageTemplate[]>('/settings/message-templates');
-    const template = templates.find((row) => row.key === 'quotation_sent');
-    expect(template?.extrasApproved).toBe(false);
-    const customer = await newCustomer(admin, { name: 'Journey Extras Off (test)' });
+  it('i) extras switch off: an open chat gets the PDF and buttons, not the plain template too', async () => {
+    const customer = await newCustomer(admin, { name: 'Journey Extras Off Chat (test)' });
     await rows(
       `INSERT INTO wa_conversations (phone, customer_id, last_inbound_at) VALUES ($1, $2, now())`,
       [customer.phone, customer.customerId],
     );
+    const quotation = await createQuotation(admin, customer);
+    await admin.post(`/quotations/${quotation.id}/send`);
+    // One message, not three (live review C8); the app inbox still has the news.
+    expect(await J.outboxOf(customer.phone, 'quotation_sent')).toEqual([]);
+    expect(await J.outboxOf(customer.phone, 'session:document')).toHaveLength(1);
+    expect(await J.outboxOf(customer.phone, 'session:buttons')).toHaveLength(1);
+    const notices = await rows(
+      `SELECT id FROM notifications WHERE customer_id = $1 AND kind = 'quotation_sent'`,
+      [customer.customerId],
+    );
+    expect(notices).toHaveLength(1);
+    // Send again in the open chat follows the same rule.
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await J.outboxOf(customer.phone, 'quotation_sent')).toEqual([]);
+  });
+
+  it('i) extras switch off: the quote payload keeps its fields, the delivery has no header or buttons', async () => {
+    const templates = await admin.get<MessageTemplate[]>('/settings/message-templates');
+    const template = templates.find((row) => row.key === 'quotation_sent');
+    expect(template?.extrasApproved).toBe(false);
+    // No chat in the last 24 hours: the template is the message.
+    const customer = await newCustomer(admin, { name: 'Journey Extras Off (test)' });
     const quotation = await createQuotation(admin, customer);
     await admin.post(`/quotations/${quotation.id}/send`);
     const [sent] = await J.outboxOf(customer.phone, 'quotation_sent');
@@ -139,8 +158,6 @@ describe('The journey side paths: sources, links and messages', () => {
       askPayload: `quote_ask:${quotation.id}`,
     });
     expect(sent?.payload.documentUrl).toBeTruthy();
-    // The chat is open, so the PDF still reaches the customer, as a chat file.
-    expect(await J.outboxOf(customer.phone, 'session:document')).toHaveLength(1);
     if (!template) throw new Error('No quotation_sent template.');
     const { approvedMessage } = (await import(WORKER_TEMPLATES)) as {
       approvedMessage: ApprovedMessage;

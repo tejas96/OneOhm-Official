@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
-import { quotationInverters, quotationLines, quotations } from '@oneohm/database';
+import { noticeCustomer, quotationInverters, quotationLines, quotations } from '@oneohm/database';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -128,14 +128,13 @@ export class QuotationsService {
         .update(quotations)
         .set({ status: 'sent', sentAt: new Date(), updatedAt: new Date() })
         .where(eq(quotations.id, id));
-      await queueWhatsApp(
-        tx,
-        quotation.customerPhone,
-        'quotation_sent',
-        quoteMessage(this.env, quotation),
-        `quotation_sent:${id}`,
-      );
-      await queueQuotePdf(tx, this.env, quotation);
+      // In an open chat the PDF and buttons are the message; the app inbox is told either way.
+      const chatted = await queueQuotePdf(tx, this.env, quotation);
+      const message = quoteMessage(this.env, quotation);
+      const key = `quotation_sent:${id}`;
+      if (chatted)
+        await noticeCustomer(tx, quotation.customerPhone, 'quotation_sent', message, key);
+      else await queueWhatsApp(tx, quotation.customerPhone, 'quotation_sent', message, key);
       if (quotation.input.leadId) {
         const again = quotation.status === 'sent' ? ' again' : '';
         const note = `Quotation ${quotation.number} sent${again}.`;

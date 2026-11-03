@@ -50,29 +50,32 @@ export function quoteMessage(env: Environment, quotation: QuotationDetail): Reco
  * When the customer wrote in the last 24 hours, the PDF also goes as a chat file, so it
  * arrives even if the approved template has no file slot yet. Sent once per quotation;
  * "Send again" sends it again only when the earlier one failed, but always sends the
- * buttons again. Not queued when the template's extras switch is on: its header already carries the file.
+ * buttons again. Not queued when the template's extras switch is on: its header already carries the file,
+ * nor to a chat that sent STOP. Returns whether the PDF and buttons went, so the plain
+ * template can stay back (live review C8: one message, not three).
  */
 export async function queueQuotePdf(
   tx: DatabaseExecutor,
   env: Environment,
   quotation: QuotationDetail,
-): Promise<void> {
+): Promise<boolean> {
   const [template] = await tx
     .select({ extrasApproved: messageTemplates.extrasApproved })
     .from(messageTemplates)
     .where(eq(messageTemplates.key, 'quotation_sent'))
     .limit(1);
-  if (template?.extrasApproved) return;
+  if (template?.extrasApproved) return false;
   const [chat] = await tx
     .select({
       id: waConversations.id,
       phone: waConversations.phone,
       at: waConversations.lastInboundAt,
+      optedOutAt: waConversations.optedOutAt,
     })
     .from(waConversations)
     .where(eq(waConversations.phone, quotation.customerPhone))
     .limit(1);
-  if (!chat || !chatWindowOpen(chat.at)) return;
+  if (!chat || chat.optedOutAt || !chatWindowOpen(chat.at)) return false;
   const pdf = pdfOf(env, quotation);
   const [earlier] = await tx
     .select({ status: outbox.status, delivery: outbox.deliveryStatus })
@@ -117,4 +120,5 @@ export async function queueQuotePdf(
       `quote_buttons:${quotation.id}:${randomUUID()}`,
     );
   });
+  return true;
 }

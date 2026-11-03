@@ -122,7 +122,23 @@ export async function queueCustomerMessage(
     dedupeKey,
     words: notice ?? GENERIC_WORDS,
   });
-  if (!notice) return queued;
+  await noticeCustomer(db, recipientE164, template, payload, dedupeKey);
+  return queued;
+}
+
+/**
+ * Only the app-inbox half of a customer message, in each owner's language: for when the
+ * news already reaches WhatsApp another way (the quote's PDF and buttons in an open chat).
+ */
+export async function noticeCustomer(
+  db: DatabaseExecutor,
+  recipientE164: string,
+  template: string,
+  payload: Payload,
+  dedupeKey: string,
+): Promise<void> {
+  const notice = customerNotice(template, payload, dedupeKey);
+  if (!notice) return;
   const owners = await db
     .select({ id: customers.id, language: customers.preferredLanguage })
     .from(customers)
@@ -135,5 +151,4 @@ export async function queueCustomerMessage(
       { ...said, dedupeKey: `${notice.dedupeKey}:${owner.id}` },
     );
   }
-  return queued;
 }
