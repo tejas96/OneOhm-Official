@@ -61,6 +61,11 @@ export function FollowUpCard({
 }
 
 /** What we know about the lead, with the owner changeable by people who assign work. */
+/** The ad or campaign in words: its name, else the ad headline, else the code. */
+function campaignLabel(attribution: LeadDetail['attribution']): string | null {
+  return attribution.campaignName ?? attribution.adHeadline ?? attribution.campaignCode;
+}
+
 export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
   const t = useTranslations('leads');
   const canAssign = useCan('people.view', 'people.manage', 'tasks.assign', 'projects.manage');
@@ -94,7 +99,11 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
         </Fact>
         <Fact label={t('facts.category')}>{t(`category.${lead.subsidyCategory}`)}</Fact>
         <Fact label={t('facts.size')}>{lead.estimatedWp ? formatKwp(lead.estimatedWp) : '—'}</Fact>
-        <Fact label={t('facts.source')}>{t(`source.${lead.source}`)}</Fact>
+        <Fact label={t('facts.source')}>
+          {[t(`source.${lead.source}`), campaignLabel(lead.attribution)]
+            .filter(Boolean)
+            .join(' · ')}
+        </Fact>
         {lead.referredBy && <Fact label={t('facts.referredBy')}>{lead.referredBy.name}</Fact>}
         {lead.email && <Fact label={t('facts.email')}>{lead.email}</Fact>}
       </dl>

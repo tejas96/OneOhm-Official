@@ -80,7 +80,23 @@ export const leadQuotationSchema = z.object({
 });
 export type LeadQuotation = z.infer<typeof leadQuotationSchema>;
 
+/** Where the lead came from (first touch); every part is null when it was not captured. */
+export const leadAttributionSchema = z.object({
+  campaignCode: z.string().nullable(),
+  /** The campaign's name from Settings → Selling, when the code is on the list. */
+  campaignName: z.string().nullable(),
+  adId: z.string().nullable(),
+  adHeadline: z.string().nullable(),
+  adSourceUrl: z.string().nullable(),
+  utmSource: z.string().nullable(),
+  utmMedium: z.string().nullable(),
+  utmCampaign: z.string().nullable(),
+  landingPage: z.string().nullable(),
+});
+export type LeadAttributionRecord = z.infer<typeof leadAttributionSchema>;
+
 export const leadDetailSchema = leadSchema.extend({
+  attribution: leadAttributionSchema,
   activities: z.array(leadActivitySchema),
   quotations: z.array(leadQuotationSchema),
   /** True when the lead came from a reseller: staff notes can be kept from them. */

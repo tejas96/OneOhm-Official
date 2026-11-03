@@ -4,7 +4,15 @@ import { bucketIndexOf, LEAD_SOURCES, share } from '@oneohm/domain';
 import { DATABASE, type Database } from '../../config/core.module';
 import { type CsvTable, percent, rupees } from './csv';
 import { average, indiaDate, type ReportScope, reportScope } from './report-scope';
-import { type LeadFact, type OrderFact, readLeads, readOrders } from './sales-report.read';
+import { byCampaign } from './sales-campaigns';
+import {
+  type LeadFact,
+  type OrderFact,
+  readCampaignNames,
+  readCollectedByLead,
+  readLeads,
+  readOrders,
+} from './sales-report.read';
 
 const DAY_MS = 86_400_000;
 const within = (scope: ReportScope, at: Date | null): at is Date =>
@@ -50,6 +58,7 @@ export class SalesReportService {
       byBucket: this.buckets(scope, cohort, won),
       funnel: this.funnel(cohort, orders),
       bySource: this.bySource(cohort, orders),
+      byCampaign: await this.byCampaign(cohort, orders),
       byOwner: this.byOwner(scope, cohort, orders),
       lostReasons: this.lostReasons(cohort),
     };
@@ -131,6 +140,22 @@ export class SalesReportService {
     })
       .filter((row) => row.leads > 0)
       .sort((a, b) => b.leads - a.leads);
+  }
+
+  private async byCampaign(cohort: readonly LeadFact[], orders: readonly OrderFact[]) {
+    const quotedLeadIds = new Set(
+      orders.flatMap((order) => (order.leadId && order.sentAt ? [order.leadId] : [])),
+    );
+    return byCampaign(
+      cohort,
+      await readCampaignNames(this.db),
+      this.wonValueByLead(orders),
+      await readCollectedByLead(
+        this.db,
+        cohort.map((lead) => lead.id),
+      ),
+      quotedLeadIds,
+    );
   }
 
   private byOwner(scope: ReportScope, cohort: readonly LeadFact[], orders: readonly OrderFact[]) {

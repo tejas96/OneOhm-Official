@@ -1,5 +1,12 @@
 import type { LeadDetail, LeadQuotation } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, leadActivities, leads, quotations, users } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  leadActivities,
+  leadCampaigns,
+  leads,
+  quotations,
+  users,
+} from '@oneohm/database';
 import { and, desc, eq, inArray, isNull, lte, ne, notInArray, or, type SQL } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
@@ -61,6 +68,7 @@ export async function readLeadDetail(
     .orderBy(desc(leadActivities.createdAt));
   return {
     ...lead,
+    attribution: await attributionOf(db, row),
     activities: activityRows.map(({ activity, userName }) => ({
       id: activity.id,
       kind: activity.kind,
@@ -98,4 +106,29 @@ async function leadQuotations(
       (row.snapshot as { discountNeedsApproval?: boolean } | null)?.discountNeedsApproval === true,
     createdAt: row.createdAt.toISOString(),
   }));
+}
+
+/** The lead's first-touch attribution, with the campaign's name when its code is listed. */
+async function attributionOf(
+  db: DatabaseExecutor,
+  row: typeof leads.$inferSelect,
+): Promise<LeadDetail['attribution']> {
+  const [campaign] = row.campaignCode
+    ? await db
+        .select({ name: leadCampaigns.name })
+        .from(leadCampaigns)
+        .where(eq(leadCampaigns.code, row.campaignCode))
+        .limit(1)
+    : [];
+  return {
+    campaignCode: row.campaignCode,
+    campaignName: campaign?.name ?? null,
+    adId: row.adId,
+    adHeadline: row.adHeadline,
+    adSourceUrl: row.adSourceUrl,
+    utmSource: row.utmSource,
+    utmMedium: row.utmMedium,
+    utmCampaign: row.utmCampaign,
+    landingPage: row.landingPage,
+  };
 }

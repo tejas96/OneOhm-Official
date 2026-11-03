@@ -1,6 +1,14 @@
-import { type DatabaseExecutor, leads, projects, quotations, users } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  leadCampaigns,
+  leads,
+  payments,
+  projects,
+  quotations,
+  users,
+} from '@oneohm/database';
 import type { ProjectType } from '@oneohm/domain';
-import { and, eq, gte, inArray, lt, or } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { ReportScope } from './report-scope';
 
@@ -22,6 +30,10 @@ export interface LeadFact {
   readonly lostReason: string | null;
   readonly createdAt: Date;
   readonly wonAt: Date | null;
+  readonly campaignCode: string | null;
+  readonly adId: string | null;
+  readonly adHeadline: string | null;
+  readonly utmCampaign: string | null;
 }
 
 /** One quotation chain (all revisions share the number): when it went out, won or was lost. */
@@ -50,6 +62,10 @@ export async function readLeads(db: DatabaseExecutor, scope: ReportScope): Promi
       lostReason: leads.lostReason,
       createdAt: leads.createdAt,
       wonAt: leads.wonAt,
+      campaignCode: leads.campaignCode,
+      adId: leads.adId,
+      adHeadline: leads.adHeadline,
+      utmCampaign: leads.utmCampaign,
     })
     .from(leads)
     .leftJoin(users, eq(users.id, leads.ownerUserId))
@@ -168,4 +184,34 @@ function chains(rows: readonly QuoteRow[]): OrderFact[] {
       hasProject: revisions.some((row) => row.project !== null),
     };
   });
+}
+
+/** Campaign names by code, for the codes on the owner's list. */
+export async function readCampaignNames(db: DatabaseExecutor): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ code: leadCampaigns.code, name: leadCampaigns.name })
+    .from(leadCampaigns);
+  return new Map(rows.map((row) => [row.code, row.name]));
+}
+
+/**
+ * Money the customer paid, per lead: payments on the projects that the lead's quotations
+ * became. Bank payments (loan, subsidy) are not counted; reversals net the original off.
+ */
+export async function readCollectedByLead(
+  db: DatabaseExecutor,
+  leadIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (leadIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      leadId: quotations.leadId,
+      paise: sql<string>`coalesce(sum(${payments.amountPaise}), 0)`,
+    })
+    .from(payments)
+    .innerJoin(projects, eq(projects.id, payments.projectId))
+    .innerJoin(quotations, eq(quotations.id, projects.quotationId))
+    .where(and(inArray(quotations.leadId, [...leadIds]), eq(payments.payer, 'customer')))
+    .groupBy(quotations.leadId);
+  return new Map(rows.flatMap((row) => (row.leadId ? [[row.leadId, Number(row.paise)]] : [])));
 }
