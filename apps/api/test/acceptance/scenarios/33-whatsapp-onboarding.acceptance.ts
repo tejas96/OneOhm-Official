@@ -1,14 +1,18 @@
-import type { OnboardingSettingsRecord } from '@oneohm/api-contracts';
+import type { DocumentRecord, OnboardingSettingsRecord } from '@oneohm/api-contracts';
 import { DEFAULT_ONBOARDING } from '@oneohm/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { catalog } from '../support/sales';
+import { catalog, today, uniquePhone } from '../support/sales';
 
 // Part 3, task 2: storage for the WhatsApp onboarding bot. A chat remembers its language,
 // an estimate is kept per lead, and the owner's onboarding settings have a place to live.
 // The behaviour on top (answers writing history, filing the bill) is exercised by tasks 4-6.
 describe('WhatsApp onboarding storage', () => {
+  let admin: Session;
+  beforeAll(async () => {
+    admin = await Session.admin();
+  });
   afterAll(closeDb);
 
   it('stores a chat language and an estimate row; system lead updates write history', async () => {
@@ -37,6 +41,22 @@ describe('WhatsApp onboarding storage', () => {
         'created_at',
       ]),
     );
+  });
+
+  it('lists a paper filed on a lead that has no customer yet', async () => {
+    const lead = await admin.post<{ id: string }>('/leads', {
+      name: 'Chat Bill Lead',
+      phone: uniquePhone(),
+      city: 'Sangli',
+      nextActionOn: today(),
+    });
+    await rows(
+      `INSERT INTO documents (lead_id, category, source, name, storage_key, content_type, size_bytes)
+       VALUES ($1, 'electricity_bill', 'upload', 'bill.jpg', $2, 'image/jpeg', 10)`,
+      [lead.id, `leads/${lead.id}/bill.jpg`],
+    );
+    const listed = await admin.get<DocumentRecord[]>(`/documents?leadId=${lead.id}`);
+    expect(listed.map((doc) => doc.name)).toEqual(['bill.jpg']);
   });
 });
 

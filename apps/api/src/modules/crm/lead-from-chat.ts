@@ -20,13 +20,16 @@ export async function updateLeadFromChat(
   change: LeadChatChange,
   note: string,
 ): Promise<void> {
-  const fields = Object.fromEntries(
-    Object.entries(change).filter(([, value]) => value !== undefined),
-  );
-  if (Object.keys(fields).length > 0) {
+  const set = {
+    ...(change.name !== undefined ? { name: change.name } : {}),
+    ...(change.city !== undefined ? { city: change.city } : {}),
+    ...(change.subsidyCategory !== undefined ? { subsidyCategory: change.subsidyCategory } : {}),
+    ...(change.estimatedWp !== undefined ? { estimatedWp: change.estimatedWp } : {}),
+  };
+  if (Object.keys(set).length > 0) {
     await tx
       .update(leads)
-      .set({ ...fields, updatedAt: new Date() })
+      .set({ ...set, updatedAt: new Date() })
       .where(eq(leads.id, leadId));
   }
   await logLead(tx, leadId, null, 'whatsapp', note);

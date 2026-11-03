@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream';
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -76,6 +77,11 @@ export class ObjectStorageService implements OnModuleInit {
     );
     // Every stored photo also gets its small preview, without holding up the upload.
     if (canThumbnail(contentType) && !isThumbnailKey(key)) void this.putThumbnail(key, body);
+  }
+
+  /** Removes one stored object (used to undo a put whose record could not be saved). */
+  async remove(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   /** Whether a file is stored under this key. */
