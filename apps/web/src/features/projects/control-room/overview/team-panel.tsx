@@ -17,7 +17,7 @@ export function TeamPanel({ project }: { readonly project: ProjectDetail }) {
   const panelT = useTranslations('projectTeam.panel');
   const canManage = useCan('projects.manage');
   const [editing, setEditing] = useState(false);
-  const { manager, team, others } = panelPeople(project);
+  const { manager, team, others, othersHeading } = panelPeople(project);
   const members = [...(manager ? [manager] : []), ...team, ...others];
   const largest = Math.max(0, ...members.map((member) => member.open));
   const open = project.status !== 'completed' && project.status !== 'cancelled';
@@ -53,7 +53,7 @@ export function TeamPanel({ project }: { readonly project: ProjectDetail }) {
         {project.setup.team.length === 0 && (
           <li className="type-body-sm text-ink-faint">{panelT('anyone')}</li>
         )}
-        {others.length > 0 && (
+        {othersHeading && (
           <li className="border-t border-hairline pt-3 type-label text-ink-faint">
             {t('notOnTeam')}
           </li>

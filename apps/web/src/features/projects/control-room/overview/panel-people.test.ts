@@ -60,5 +60,13 @@ describe('panelPeople', () => {
     const result = panelPeople(projectOf('m', [], [task('x')]));
     expect(result.team).toEqual([]);
     expect(result.others.map((p) => p.id)).toEqual(['x']);
+    expect(result.othersHeading).toBe(false);
+  });
+
+  it('has the "Not on the team" heading only when a team is named', () => {
+    const named = panelPeople(projectOf('m', [{ id: 'a' }], [task('x')]));
+    expect(named.othersHeading).toBe(true);
+    const none = panelPeople(projectOf('m', [{ id: 'a' }], []));
+    expect(none.othersHeading).toBe(false);
   });
 });

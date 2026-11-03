@@ -4,11 +4,12 @@ import type { ProjectDetail, TeamOptions } from '@oneohm/api-contracts';
 import { Button, Field, Input, Select, Sheet, useToast } from '@oneohm/design-system/web';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError } from '@/lib/api/api-error';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { seedTeamForm } from './seed-team-form';
 import { TeamMembersField } from './team-members-field';
 import { useTeamOptions } from './use-team-options';
 
@@ -54,6 +55,12 @@ export function TeamSheet({
   const [manager, setManager] = useState<string | undefined>(undefined);
   const [team, setTeam] = useState<string[]>([]);
   const [target, setTarget] = useState('');
+  const seed = useCallback((from: ProjectDetail) => {
+    const seeded = seedTeamForm(from);
+    setManager(seeded.manager);
+    setTeam(seeded.team);
+    setTarget(seeded.target);
+  }, []);
 
   // The form starts from the project as it is when the sheet opens; a refetch while the
   // person edits must not wipe what they typed.
@@ -61,12 +68,9 @@ export function TeamSheet({
   latest.current = project;
   useEffect(() => {
     if (!open) return;
-    const current = latest.current;
-    setManager(current.manager?.id);
-    setTeam(current.setup.team.map((member) => member.id));
-    setTarget(current.setup.targetFinishDate ?? '');
+    seed(latest.current);
     reset();
-  }, [open, reset]);
+  }, [open, reset, seed]);
 
   const managerOptions = managerChoices(
     options.data?.people ?? [],
@@ -93,9 +97,14 @@ export function TeamSheet({
             200,
           );
         } catch (caught) {
-          // Someone saved first: show the message and load what they saved.
-          if (caught instanceof ApiError && caught.code === 'stale')
+          // Someone saved first: load what they saved into the form, and make the person
+          // look it over before saving again.
+          if (caught instanceof ApiError && caught.code === 'stale') {
             await client.invalidateQueries({ queryKey: ['project', project.id] });
+            const fresh = client.getQueryData<ProjectDetail>(['project', project.id]);
+            if (fresh) seed(fresh);
+            throw new ApiError(409, t('reloaded'), 'stale', {});
+          }
           throw caught;
         }
       },

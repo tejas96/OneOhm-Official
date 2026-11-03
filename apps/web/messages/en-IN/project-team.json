@@ -41,7 +41,8 @@
       "save": "Save",
       "saved": "Project team saved",
       "inactive": "(inactive)",
-      "cannotManage": "(cannot manage)"
+      "cannotManage": "(cannot manage)",
+      "reloaded": "Someone else changed this team. We loaded their changes — check and save again."
     },
     "budget": {
       "recheck": "Recheck price",

@@ -15,6 +15,8 @@ export interface PanelPeople {
   readonly team: PanelPerson[];
   /** Everyone else holding open work on the project. */
   readonly others: PanelPerson[];
+  /** Whether others need a "Not on the team" heading: only when a team is named. */
+  readonly othersHeading: boolean;
 }
 
 /** Who the team panel lists: the manager, the named team, then other people with open work. */
@@ -53,5 +55,6 @@ export function panelPeople(project: ProjectDetail): PanelPeople {
     manager: project.manager ? personOf(project.manager.id, project.manager.fullName) : null,
     team,
     others,
+    othersHeading: others.length > 0 && project.setup.team.length > 0,
   };
 }
