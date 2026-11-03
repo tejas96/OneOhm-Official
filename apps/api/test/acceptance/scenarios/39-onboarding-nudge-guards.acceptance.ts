@@ -45,6 +45,25 @@ describe('Onboarding nudge guards', () => {
     expect(await leadsOf(phone)).toHaveLength(1);
   });
 
+  it('makes a new lead for a number whose old lead was lost before this chat began', async () => {
+    const phone = uniquePhone();
+    const old = await admin.post<{ id: string }>('/leads', {
+      name: 'Old lead (test)',
+      phone,
+      city: 'Pune',
+      nextActionOn: today(),
+    });
+    await rows(`UPDATE leads SET stage = 'lost' WHERE id = $1`, [old.id]);
+    await stalledAtName(phone);
+    expect((await chatOf(phone)).ob).toHaveProperty('startedAt');
+    await run();
+    const found = await leadsOf(phone);
+    expect(found).toHaveLength(2);
+    expect(found.find((lead) => lead.id !== old.id)?.next_action_on).toBe(today());
+    await run();
+    expect(await leadsOf(phone)).toHaveLength(2);
+  });
+
   it('leaves alone a number that became a customer, and a lead staff made meanwhile', async () => {
     const asked = uniquePhone();
     await stalledAtName(asked);

@@ -1,5 +1,6 @@
-import type { Transaction } from '@oneohm/database';
+import { leads, type Transaction } from '@oneohm/database';
 import { isWorkingTime, type OnboardingSettings } from '@oneohm/domain';
+import { and, eq, gte, notInArray, or } from 'drizzle-orm';
 import type { Conversation } from '../chat-store';
 import { type OnboardContext, readOnboard } from './onboarding-context';
 import type { OpenLead } from './onboarding-lead';
@@ -23,7 +24,7 @@ interface Due {
   readonly kept: OnboardContext | null;
   /** An open lead exists. */
   readonly hasLead: boolean;
-  /** A lead of any stage exists (a closed one still counts). */
+  /** An open lead, or one of any stage made since this onboarding began (a closed one counts). */
   readonly hadLead: boolean;
 }
 
@@ -63,4 +64,28 @@ export function nudgeTurn(input: {
     pendingFile: kept?.pendingFile,
     dropEntry: false,
   };
+}
+
+/**
+ * True when this number has an open lead, or one of any stage made since this onboarding
+ * began (sales closing it does not bring it back). An older closed lead does not count, so
+ * a lost number that starts again gets a new lead. Chats with no start time: open only.
+ */
+export async function leadOfThisOnboarding(
+  tx: Transaction,
+  phone: string,
+  startedAt: string | undefined,
+): Promise<boolean> {
+  const open = notInArray(leads.stage, ['won', 'lost']);
+  const [found] = await tx
+    .select({ id: leads.id })
+    .from(leads)
+    .where(
+      and(
+        eq(leads.phoneE164, phone),
+        startedAt ? or(open, gte(leads.createdAt, new Date(startedAt))) : open,
+      ),
+    )
+    .limit(1);
+  return found !== undefined;
 }

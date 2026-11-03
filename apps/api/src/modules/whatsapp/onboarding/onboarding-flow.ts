@@ -215,9 +215,10 @@ export class OnboardingFlowService {
 
   private async save(turn: Turn, step: OnboardStep): Promise<void> {
     const { entry, ...rest } = turn.chat.context as Record<string, unknown>;
-    const { nudgedAt, followedUpAt } = readOnboard(turn.chat) ?? {};
+    const { nudgedAt, followedUpAt, startedAt } = readOnboard(turn.chat) ?? {};
     const ob = {
       answers: turn.answers,
+      startedAt: startedAt ?? new Date().toISOString(),
       // The one nudge is never sent twice, even after the customer comes back and stalls again.
       ...(nudgedAt ? { nudgedAt } : {}),
       ...(followedUpAt ? { followedUpAt } : {}),

@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import {
   customers,
-  leads,
   noteBackgroundRun,
   readBusinessSetting,
   type Transaction,
@@ -15,7 +14,7 @@ import {
 } from '@oneohm/database';
 import { isWorkingTime, type OnboardingSettings } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, desc, eq, isNull, like, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, like, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { updateLeadFromChat } from '../../crm/lead-from-chat';
@@ -30,6 +29,7 @@ import {
   GIVE_UP_HOURS,
   HOUR,
   LEAD_AFTER_HOURS,
+  leadOfThisOnboarding,
   nudgeTurn,
   PER_TICK,
   WINDOW_HOURS,
@@ -110,7 +110,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
 
   /**
    * The chats worth locking: onboarding chats, silent under 7 days, not a customer and not
-   * followed up, that either have no lead at all (the lead rule) or have an open lead and
+   * followed up, that either have no lead from this onboarding (the lead rule) or have an open lead and
    * are due the nudge now. Night and nudges-off ticks therefore lock nothing for a lead.
    */
   private async stalled(now: Date, settings: OnboardingSettings): Promise<string[]> {
@@ -135,10 +135,12 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
           sql`not exists (select 1 from customers where customers.phone_e164 = ${waConversations.phone})`,
           sql`${waConversations.context}->'ob'->>'followedUpAt' is null`,
           sql`((${silentAt} <= ${ago(Math.max(settings.nudgeAfterHours, LEAD_AFTER_HOURS))}
-              and not exists (select 1 from leads where leads.phone_e164 = ${waConversations.phone})) ${nudgeDue})`,
+              and not exists (select 1 from leads where leads.phone_e164 = ${waConversations.phone}
+                and (leads.stage not in ('won', 'lost')
+                  or leads.created_at >= (${waConversations.context}->'ob'->>'startedAt')::timestamptz))) ${nudgeDue})`,
         ),
       )
-      .orderBy(desc(silentAt))
+      .orderBy(asc(silentAt))
       .limit(PER_TICK);
     return rows.map((row) => row.id);
   }
@@ -158,12 +160,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
       if (await this.isCustomer(tx, chat.phone)) return none;
       const note = `Call — stopped at ${step} question`;
       const lead = await openLeadFor(tx, chat.phone);
-      // A lead that sales closed is still a lead: the chat is not "before a lead" any more.
-      const [any] = await tx
-        .select({ id: leads.id })
-        .from(leads)
-        .where(eq(leads.phoneE164, chat.phone))
-        .limit(1);
+      const here = await leadOfThisOnboarding(tx, chat.phone, kept?.startedAt);
       const { makeLead, nudge } = due({
         settings,
         silent,
@@ -171,7 +168,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
         zone,
         kept,
         hasLead: lead !== null,
-        hadLead: any !== undefined,
+        hadLead: here,
       });
       if (!makeLead && !nudge) return none;
       const turn = nudgeTurn({ tx, chat, lead, settings, discard });

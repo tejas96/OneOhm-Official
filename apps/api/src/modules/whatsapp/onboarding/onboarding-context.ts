@@ -15,6 +15,8 @@ export interface OnboardContext {
   readonly pendingFile?: PendingFile;
   /** When the one "Shall we continue?" nudge was sent (never sent twice). */
   readonly nudgedAt?: string;
+  /** When this onboarding began; a lead made since then counts even once closed. */
+  readonly startedAt?: string;
   /** When the stalled-chat job made a lead or set its call-today; it never acts twice. */
   readonly followedUpAt?: string;
 }
