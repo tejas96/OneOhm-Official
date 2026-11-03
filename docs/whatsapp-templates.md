@@ -225,7 +225,7 @@ header and buttons approved before the switch goes on, or leave their names empt
 
 To test all of this with real (test) keys, follow `docs/LIVE-TEST-WHATSAPP-RAZORPAY.md`.
 
-## Submitted on 2026-11-03 (waiting for Meta)
+## Approved by Meta on 2026-11-03
 
 All are category **Utility**. Fields and their order are the same as the English template.
 
