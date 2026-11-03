@@ -53,7 +53,8 @@ export interface PlannedMilestone {
  * Splits the project price into milestones. With a loan, the bank's share becomes its
  * own receivable (single disbursement here; tranches are added by finance), and the
  * customer's own share follows the usual schedule. Each customer instalment is a whole
- * rupee amount; the last one takes the remainder (paise included), so the sum is exact.
+ * rupee amount, rounded down; the last one takes the remainder (paise included), so the
+ * sum is exact and the last is never below its own share.
  */
 const RUPEE = 100;
 
@@ -70,7 +71,7 @@ export function planMilestones(
     const last = index === schedule.length - 1;
     const amountPaise = last
       ? customerTotal - allocated
-      : Math.round((customerTotal * item.shareBp) / totalBp / RUPEE) * RUPEE;
+      : Math.floor((customerTotal * item.shareBp) / totalBp / RUPEE) * RUPEE;
     allocated += amountPaise;
     return {
       key: item.key,

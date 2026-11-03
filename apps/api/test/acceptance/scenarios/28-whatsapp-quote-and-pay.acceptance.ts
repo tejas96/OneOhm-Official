@@ -187,12 +187,11 @@ describe('WhatsApp quote and pay', () => {
       redirect: 'manual',
     });
     expect(page.status).toBe(200);
-    expect(await page.text()).toContain('Continue to pay');
-    const go = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
-      method: 'POST',
+    expect(await page.text()).toContain('href="?go=1">Continue to pay</a>');
+    const go = await fetch(`${API}/pay/due/${sent?.payload.payToken}?go=1`, {
       redirect: 'manual',
     });
-    expect(go.status).toBe(303);
+    expect(go.status).toBe(302);
     expect(go.headers.get('location')).toContain('/v1/pay/sandbox/');
   });
 

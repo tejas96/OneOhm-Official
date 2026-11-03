@@ -172,11 +172,7 @@ export class GatewayPaymentsService {
     });
   }
 
-  /** Closes an open link; `paid` when the gateway says so and no payment was missing. */
-  async markLink(
-    providerLinkId: string,
-    status: 'expired' | 'cancelled' | 'paid',
-  ): Promise<string> {
+  async markLink(providerLinkId: string, status: 'expired' | 'cancelled'): Promise<string> {
     return this.db.transaction(async (tx) => {
       const rows = await tx
         .update(paymentLinks)

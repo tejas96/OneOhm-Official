@@ -29,7 +29,7 @@ describe('payment link check', () => {
     expect(gateway.check).not.toHaveBeenCalled();
   });
 
-  it('skips a link that fails and goes on; a paid link is closed as paid', async () => {
+  it('skips a link that fails and goes on; "paid" alone never closes a link', async () => {
     const checks: Record<string, LinkCheck> = {
       ok: { status: 'paid', payments: [payment('ok')] },
     };
@@ -42,14 +42,16 @@ describe('payment link check', () => {
     };
     const payments = {
       recordLinkPayment: vi.fn(async () => 'recorded'),
-      markLink: vi.fn(async () => 'paid'),
+      markLink: vi.fn(async () => 'expired'),
     };
     const sync = new LinkSyncService(
       fakeDb(true, ['bad', 'ok']) as never,
       gateway as never,
       payments as never,
     );
-    expect(await sync.run()).toEqual({ recorded: 1, closed: 1 });
-    expect(payments.markLink).toHaveBeenCalledWith('ok', 'paid');
+    expect(await sync.run()).toEqual({ recorded: 1, closed: 0 });
+    // Recording the payment closes the link; Razorpay's "paid" with nothing recorded
+    // (not captured yet) must keep the link open, so the check asks again.
+    expect(payments.markLink).not.toHaveBeenCalled();
   });
 });

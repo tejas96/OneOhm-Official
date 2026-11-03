@@ -17,7 +17,7 @@ import type { GatewayRefund } from './razorpay-events';
  */
 export async function flagRefund(db: Database, refund: GatewayRefund): Promise<string> {
   const found = await paymentOf(db, refund.gatewayPaymentId);
-  if (!found) return 'unknown payment';
+  if (!found) return flagUnknown(db, refund);
   const receipt = found.receiptNumber ?? `credit ${refund.gatewayPaymentId}`;
   const amount = refund.amountPaise > 0 ? ` of ${formatInr(refund.amountPaise)}` : '';
   await db.transaction(async (tx) => {
@@ -36,6 +36,32 @@ export async function flagRefund(db: Database, refund: GatewayRefund): Promise<s
     });
   });
   return `${refund.what} flagged`;
+}
+
+/** A refund or dispute on a payment OneOhm never recorded still reaches finance. */
+async function flagUnknown(db: Database, refund: GatewayRefund): Promise<string> {
+  const amount = refund.amountPaise > 0 ? ` of ${formatInr(refund.amountPaise)}` : '';
+  await db.transaction(async (tx) => {
+    await recordAudit(
+      tx,
+      null,
+      'payment.refund_or_dispute',
+      'gateway_payment',
+      refund.gatewayPaymentId,
+      {
+        what: refund.what,
+        amountPaise: refund.amountPaise,
+        receiptNumber: null,
+      },
+    );
+    await notifyHolders(tx, 'finance.record_payments', {
+      kind: 'payment_refund',
+      title: `${refund.what === 'refund' ? 'Refund' : 'Dispute'} on a payment we have no record of — please check`,
+      body: `Razorpay reports a ${refund.what}${amount} on payment ${refund.gatewayPaymentId}, which has no receipt in OneOhm. Please check it in Razorpay.`,
+      dedupeKey: `payment_refund:${refund.gatewayPaymentId}:${refund.key}`,
+    });
+  });
+  return `${refund.what} flagged (no payment on record)`;
 }
 
 /** The payment (or, when nothing was owed, the held credit) the gateway payment made. */

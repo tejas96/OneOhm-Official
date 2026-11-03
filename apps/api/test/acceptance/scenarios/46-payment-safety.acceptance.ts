@@ -37,18 +37,20 @@ describe('Payment safety', () => {
     const page = await fetch(`${API}/pay/due/${token}`, { redirect: 'manual' });
     expect(page.status).toBe(200);
     const text = await page.text();
-    expect(text).toContain('Continue to pay');
+    // A plain link, not a form: form-action 'self' would block the redirect to Razorpay.
+    expect(text).toContain('<a class="go" href="?go=1">Continue to pay</a>');
+    expect(text).not.toContain('<form');
     expect(text).toContain(advance.label);
     expect(text).toMatch(/Pay ₹[\d,]+ to OneOhm/);
     // A link preview or a scanner opening it twice makes nothing at the gateway.
     await fetch(`${API}/pay/due/${token}`, { redirect: 'manual' });
     expect(await linksOf(advance.id)).toHaveLength(0);
 
-    const go = await fetch(`${API}/pay/due/${token}`, { method: 'POST', redirect: 'manual' });
-    expect(go.status).toBe(303);
+    const go = await fetch(`${API}/pay/due/${token}?go=1`, { redirect: 'manual' });
+    expect(go.status).toBe(302);
     expect(go.headers.get('location')).toContain('/v1/pay/sandbox/');
     const again = await fetch(`${API}/pay/due/${token}?go=1`, { redirect: 'manual' });
-    expect(again.status).toBe(303);
+    expect(again.status).toBe(302);
     expect(again.headers.get('location')).toBe(go.headers.get('location'));
     expect(await linksOf(advance.id)).toHaveLength(1);
   });
@@ -58,7 +60,7 @@ describe('Payment safety', () => {
       name: 'Safe Pay Race Customer (test)',
     });
     const advance = milestoneOf(project, 'quotation_accepted');
-    await fetch(`${API}/pay/due/${await payToken(customer.phone)}`, { method: 'POST' });
+    await fetch(`${API}/pay/due/${await payToken(customer.phone)}?go=1`, { redirect: 'manual' });
     const [link] = await linksOf(advance.id);
     const paid = {
       event: 'payment_link.paid',
@@ -85,8 +87,7 @@ describe('Payment safety', () => {
   it('a refund or dispute alerts finance with the receipt and reverses nothing', async () => {
     const { customer, project } = await sellProject(admin, { name: 'Safe Refund Customer (test)' });
     const advance = milestoneOf(project, 'quotation_accepted');
-    const go = await fetch(`${API}/pay/due/${await payToken(customer.phone)}`, {
-      method: 'POST',
+    const go = await fetch(`${API}/pay/due/${await payToken(customer.phone)}?go=1`, {
       redirect: 'manual',
     });
     const sandboxId = (go.headers.get('location') ?? '').split('/').pop() ?? '';
@@ -132,6 +133,25 @@ describe('Payment safety', () => {
       [advance.id],
     );
     expect(milestone?.status).toBe('paid');
+  });
+
+  it('a refund on a payment we have no record of still alerts finance', async () => {
+    const unknown = `pay_unknown_${Date.now()}`;
+
+    const refund = await signedWebhook({
+      event: 'refund.processed',
+      payload: {
+        refund: { entity: { id: `rfnd_${Date.now()}`, payment_id: unknown, amount: 100 } },
+      },
+    });
+
+    expect(refund.status).toBe(200);
+    const alerts = await rows<{ title: string; body: string }>(
+      "select title, body from notifications where kind = 'payment_refund' and body like $1",
+      [`%${unknown}%`],
+    );
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(alerts[0]?.title).toBe('Refund on a payment we have no record of — please check');
   });
 
   it('receipt 10000 follows 9999', async () => {

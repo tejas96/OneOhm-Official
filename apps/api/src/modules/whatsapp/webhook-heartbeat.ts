@@ -15,18 +15,25 @@ const SILENT_HOURS = 24;
 const EVERY_MINUTES = 60;
 const HOUR = 3_600_000;
 
+/** When Meta last called the webhook: a customer message or a delivery receipt. */
+export interface WebhookSeen {
+  readonly latestInboundAt: Date | null;
+  readonly latestDeliveredAt: Date | null;
+  /** WhatsApp messages sent in the last 24 hours. */
+  readonly sentSince: number;
+}
+
 /**
- * Inbound WhatsApp looks cut off when nothing came in for a day while messages went out:
- * customers answer, so a silent day with sends usually means the webhook URL broke.
+ * The webhook looks cut off when Meta called it neither with a message nor a delivery
+ * receipt for a day while messages went out: that usually means the webhook URL broke.
  */
-export function webhookLooksSilent(
-  seen: { readonly latestInboundAt: Date | null; readonly sentSince: number },
-  now: Date,
-): boolean {
+export function webhookLooksSilent(seen: WebhookSeen, now: Date): boolean {
   if (seen.sentSince === 0) return false;
-  return (
-    !seen.latestInboundAt || now.getTime() - seen.latestInboundAt.getTime() > SILENT_HOURS * HOUR
+  const last = Math.max(
+    seen.latestInboundAt?.getTime() ?? 0,
+    seen.latestDeliveredAt?.getTime() ?? 0,
   );
+  return now.getTime() - last > SILENT_HOURS * HOUR;
 }
 
 /**
@@ -67,12 +74,20 @@ export class WebhookHeartbeatService implements OnApplicationBootstrap, OnModule
         .where(
           and(eq(outbox.channel, 'whatsapp'), eq(outbox.status, 'sent'), gt(outbox.sentAt, since)),
         );
-      const latestInboundAt = inbound?.at ? new Date(inbound.at) : null;
-      if (!webhookLooksSilent({ latestInboundAt, sentSince: sent?.count ?? 0 }, now)) return false;
+      const [delivered] = await this.db
+        .select({ at: sql<Date | null>`max(${outbox.deliveredAt})` })
+        .from(outbox)
+        .where(eq(outbox.channel, 'whatsapp'));
+      const seen: WebhookSeen = {
+        latestInboundAt: inbound?.at ? new Date(inbound.at) : null,
+        latestDeliveredAt: delivered?.at ? new Date(delivered.at) : null,
+        sentSince: sent?.count ?? 0,
+      };
+      if (!webhookLooksSilent(seen, now)) return false;
       await notifyHolders(this.db, 'settings.manage', {
         kind: 'whatsapp_webhook_silent',
         title: 'No WhatsApp messages have come in for 24 hours — check the webhook',
-        body: 'Messages are going out, but none have come in for a day. Check the WhatsApp webhook URL in the Meta app settings.',
+        body: 'Messages are going out, but no customer message or delivery receipt has come in for a day. Check the WhatsApp webhook URL in the Meta app settings.',
         dedupeKey: `whatsapp_webhook_silent:${todayIn('Asia/Kolkata', now)}`,
       });
       return true;

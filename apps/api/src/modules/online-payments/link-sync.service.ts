@@ -103,8 +103,10 @@ export class LinkSyncService implements OnApplicationBootstrap, OnModuleDestroy 
       const outcome = await this.payments.recordLinkPayment(payment);
       if (outcome.startsWith('recorded')) done.recorded += 1;
     }
+    // A recorded payment marks the link paid itself; Razorpay's "paid" alone does not,
+    // so a payment not captured yet keeps the link open and is asked about again.
     const status = checked.status;
-    if (status !== 'expired' && status !== 'cancelled' && status !== 'paid') return;
+    if (status !== 'expired' && status !== 'cancelled') return;
     if ((await this.payments.markLink(id, status)) !== 'no open link') done.closed += 1;
   }
 }

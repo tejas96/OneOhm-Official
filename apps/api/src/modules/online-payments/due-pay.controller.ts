@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Post, Query, Res } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Query, Res } from '@nestjs/common';
 import { formatInr } from '@oneohm/shared';
 import type { Response } from 'express';
 import { Public } from '../../common/auth/auth.decorators';
@@ -23,15 +23,16 @@ const WORDS = {
 } as const;
 
 const page = (body: string) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${WORDS.title}</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem;color:#14181c}button{font:inherit;padding:.75rem 1.25rem;border:0;border-radius:.6rem;background:#0b6fa4;color:#fff}</style></head><body>${body}</body></html>`;
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${WORDS.title}</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem;color:#14181c}a.go{display:inline-block;padding:.75rem 1.25rem;border-radius:.6rem;background:#0b6fa4;color:#fff;text-decoration:none}</style></head><body>${body}</body></html>`;
 
 const escapeHtml = (text: string) => text.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
 
 /**
  * The pay link in a "payment due" message (PRD 6.2). Opening it only shows what is owed,
- * so a link preview or a scanner makes nothing at the gateway; Continue (a POST, or the
- * same link with ?go=1) makes or reuses the Razorpay link and opens it. Paid, not due or
- * the bank's share say so.
+ * so a link preview or a scanner makes nothing at the gateway; Continue is a plain link to
+ * the same page with ?go=1, which makes or reuses the Razorpay link and opens it. (Not a
+ * form: the page's CSP form-action 'self' would block the redirect to Razorpay.) Paid,
+ * not due or the bank's share say so.
  */
 @Public()
 @Controller('v1/pay/due')
@@ -47,26 +48,20 @@ export class DuePayController {
     @Query('go') go: string | undefined,
     @Res() response: Response,
   ): Promise<void> {
-    if (go === '1') return this.continue(token, response);
+    if (go === '1') {
+      await this.answer(token, response, async (due) => {
+        const link = await this.pay.pay(due.customerId, due.milestoneId);
+        response.redirect(302, link.url);
+      });
+      return;
+    }
     await this.answer(token, response, async (due) => {
       const owed = await this.pay.preview(due.customerId, due.milestoneId);
       const ask = escapeHtml(WORDS.ask(formatInr(owed.amountPaise), owed.label));
       response
         .status(200)
         .type('html')
-        .send(
-          page(
-            `<p>${ask}</p><form method="post"><button type="submit">${WORDS.go}</button></form>`,
-          ),
-        );
-    });
-  }
-
-  @Post(':token')
-  async continue(@Param('token') token: string, @Res() response: Response): Promise<void> {
-    await this.answer(token, response, async (due) => {
-      const link = await this.pay.pay(due.customerId, due.milestoneId);
-      response.redirect(303, link.url);
+        .send(page(`<p>${ask}</p><p><a class="go" href="?go=1">${WORDS.go}</a></p>`));
     });
   }
 

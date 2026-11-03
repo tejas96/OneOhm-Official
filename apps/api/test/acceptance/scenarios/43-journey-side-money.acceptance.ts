@@ -59,11 +59,10 @@ describe('The journey side paths: sources, links and messages', () => {
   const openedAdvance = async (name: string) => {
     const { customer, project } = await sellProject(admin, { name });
     const [link] = await J.outboxOf(customer.phone, 'payment_link');
-    const page = await fetch(`${API}/pay/due/${link?.payload.payToken}`, {
-      method: 'POST',
+    const page = await fetch(`${API}/pay/due/${link?.payload.payToken}?go=1`, {
       redirect: 'manual',
     });
-    expect(page.status).toBe(303);
+    expect(page.status).toBe(302);
     const sandboxId = (page.headers.get('location') ?? '').split('/').pop() ?? '';
     return { customer, milestone: milestoneOf(project, 'quotation_accepted'), sandboxId };
   };
