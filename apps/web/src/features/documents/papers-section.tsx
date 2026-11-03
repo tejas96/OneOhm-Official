@@ -13,10 +13,15 @@ import type { GalleryScope } from './gallery/use-gallery';
 export function PapersSection({
   scope,
   name,
+  allowUpload = true,
+  uploadHint,
 }: {
   readonly scope: Exclude<GalleryScope, { readonly projectId: string }>;
   /** File name for ZIP and combined PDF downloads. */
   readonly name: string;
+  /** False hides the Add control; `uploadHint` then says why. */
+  readonly allowUpload?: boolean;
+  readonly uploadHint?: string;
 }) {
   const t = useTranslations('documents');
   const canView = useCan('documents.view');
@@ -24,7 +29,8 @@ export function PapersSection({
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">{t('title')}</h2>
-      <DocumentsGallery scope={scope} bundleName={name} />
+      {!allowUpload && uploadHint && <p className="type-body-sm text-ink-muted">{uploadHint}</p>}
+      <DocumentsGallery scope={scope} bundleName={name} allowUpload={allowUpload} />
     </section>
   );
 }

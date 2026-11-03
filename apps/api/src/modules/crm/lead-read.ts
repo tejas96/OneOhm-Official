@@ -8,7 +8,19 @@ import {
   quotations,
   users,
 } from '@oneohm/database';
-import { and, desc, eq, inArray, isNull, lte, ne, notInArray, or, type SQL } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  type SQL,
+} from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { quotationScope } from '../quotations/quotation-access';
@@ -106,13 +118,14 @@ async function latestEstimateOf(
   const [row] = await db
     .select()
     .from(leadEstimates)
-    .where(eq(leadEstimates.leadId, leadId))
+    // The bot only stores priced rows, but a row without a size is never shown as an estimate.
+    .where(and(eq(leadEstimates.leadId, leadId), isNotNull(leadEstimates.capacityWp)))
     .orderBy(desc(leadEstimates.createdAt))
     .limit(1);
   if (!row) return null;
   return {
     id: row.id,
-    capacityWp: row.capacityWp ?? 0,
+    capacityWp: row.capacityWp as number,
     totalPaise: Number(row.totalPaise),
     effectivePaise: Number(row.effectivePaise),
     monthlySavingPaise: Number(row.monthlySavingPaise),

@@ -25,6 +25,9 @@ import { useFolderLabel } from './use-labels';
 /** Tiles drawn at a time: a few screens of a photo-heavy project. */
 const TILES_PER_STEP = 48;
 
+/** The Add action, or none when uploads are not allowed here. */
+const addAction = (allowed: boolean, add: () => void) => (allowed ? add : null);
+
 /**
  * Every file of a project or customer as a gallery (PRD 3.14): folders by category with
  * counts, search and type chips, photo thumbnails and paper tiles, a preview sheet with
@@ -33,10 +36,13 @@ const TILES_PER_STEP = 48;
 export function DocumentsGallery({
   scope,
   bundleName,
+  allowUpload = true,
 }: {
   readonly scope: GalleryScope;
   /** File name for ZIP/PDF downloads, e.g. the project code. */
   readonly bundleName?: string;
+  /** False when the API would refuse an upload here (a lead with no site yet). */
+  readonly allowUpload?: boolean;
 }) {
   const t = useTranslations('documents.gallery');
   const folderLabel = useFolderLabel();
@@ -66,7 +72,7 @@ export function DocumentsGallery({
   const kind = scopeKindOf(scope);
   // Outside a project, each card says which project a file belongs to.
   const isCustomer = kind !== 'project';
-  const add = rights.upload ? () => setAdding(true) : null;
+  const add = addAction(rights.upload && allowUpload, () => setAdding(true));
   const canBundle = rights.download || rights.print;
 
   return (

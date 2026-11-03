@@ -60,7 +60,12 @@ describe('Staff see the estimate the customer got', () => {
     expect(file.bytes.subarray(0, 4).toString()).toBe('%PDF');
 
     // An estimate that belongs to another lead is not found under this one.
-    const other = await admin.download(`/leads/${leadId}/estimates/${leadId}/pdf`);
+    const otherLead = await estimated(uniquePhone());
+    const [theirs] = await rows<{ id: string }>(
+      'SELECT id FROM lead_estimates WHERE lead_id = $1',
+      [otherLead],
+    );
+    const other = await admin.download(`/leads/${leadId}/estimates/${theirs?.id}/pdf`);
     expect(other.status).toBe(404);
 
     const outsider = await Session.password(staffEmail('execution'), TEAM_PASSWORD);
@@ -86,6 +91,15 @@ describe('Staff see the estimate the customer got', () => {
     for (const id of [withEstimate, without?.id]) {
       await rows('UPDATE leads SET campaign_code = $1 WHERE id = $2', [CODE, id]);
     }
+    // A second estimate on the same lead does not count the lead twice.
+    await rows(
+      `INSERT INTO lead_estimates (lead_id, capacity_wp, module_count, total_paise, subsidy_paise,
+                                   effective_paise, monthly_saving_paise, payback_years, answers, priced)
+       SELECT lead_id, capacity_wp, module_count, total_paise, subsidy_paise, effective_paise,
+              monthly_saving_paise, payback_years, answers, priced
+         FROM lead_estimates WHERE lead_id = $1`,
+      [withEstimate],
+    );
     const report = await admin.get<SalesReport>('/business-reports/sales');
     expect(report.byCampaign.find((row) => row.key === CODE)).toMatchObject({
       leads: 2,

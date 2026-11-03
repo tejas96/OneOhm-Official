@@ -159,6 +159,7 @@
       "createQuotation": "Create quotation",
       "openCustomer": "Open customer"
     },
+    "papersNeedSite": "Add the site to this lead to upload papers.",
     "estimate": {
       "title": "Estimate sent",
       "body": "What the customer got on WhatsApp. It is an estimate, not a quotation.",

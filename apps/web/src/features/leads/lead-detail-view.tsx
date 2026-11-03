@@ -122,7 +122,12 @@ export function LeadDetailView({ id }: { readonly id: string }) {
         </aside>
       </div>
       {/* Papers collected at the lead stage (PRD 3.14), such as the bill sent on WhatsApp. */}
-      <PapersSection scope={{ leadId: lead.id }} name={lead.name} />
+      <PapersSection
+        scope={{ leadId: lead.id }}
+        name={lead.name}
+        allowUpload={lead.customerId !== null}
+        uploadHint={t('papersNeedSite')}
+      />
     </motion.div>
   );
 }
