@@ -16,6 +16,7 @@ export function useLeadOwnerOptions(enabled: boolean) {
   return (owners.data ?? []).map((owner) => ({
     value: owner.id,
     label: owner.fullName,
+    system: owner.system,
     description: owner.onLeave
       ? t('ownerOnLeave', { count: owner.openLeads })
       : t('ownerLoad', { count: owner.openLeads }),

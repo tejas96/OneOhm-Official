@@ -35,7 +35,10 @@ export function LeadAssignmentSection() {
 
   const nameOf = (userId: string) =>
     people.find((person) => person.value === userId)?.label ?? t('someone');
-  const free = people.filter((p) => !draft.cityOwners.some((o) => o.userId === p.value));
+  // System-role holders are never picked as sellers, so they are not offered here.
+  const free = people.filter(
+    (p) => !p.system && !draft.cityOwners.some((o) => o.userId === p.value),
+  );
   const setCities = (userId: string, text: string) =>
     patch({
       cityOwners: draft.cityOwners.map((o) =>

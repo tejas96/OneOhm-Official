@@ -46,6 +46,11 @@ describe('Lead attribution', () => {
     const badCode = await admin.raw('POST', '/lead-campaigns', { code: 'a b!', name: 'Bad' });
     expect(badCode.status).toBe(400);
 
+    // NONE is the report's no-campaign bucket, so it cannot be a code.
+    const none = await admin.raw('POST', '/lead-campaigns', { code: 'none', name: 'Nothing' });
+    expect(none.status).toBe(400);
+    expect(none.text).toContain('NONE is kept');
+
     const renamed = await admin.patch<LeadCampaignRecord[]>(`/lead-campaigns/${CODE}`, {
       name: 'Diwali 2026',
     });
@@ -66,10 +71,22 @@ describe('Lead attribution', () => {
     );
     expect(Number(audited?.n)).toBe(3);
 
-    const [lead] = await rows<Record<string, unknown>>(
-      'SELECT campaign_code, ad_id, ad_headline, ad_source_url, utm_source, utm_medium, utm_campaign, landing_page FROM leads LIMIT 1',
+    const columns = await rows<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'leads' AND column_name = ANY($1)",
+      [
+        [
+          'campaign_code',
+          'ad_id',
+          'ad_headline',
+          'ad_source_url',
+          'utm_source',
+          'utm_medium',
+          'utm_campaign',
+          'landing_page',
+        ],
+      ],
     );
-    if (lead) expect(Object.values(lead).every((value) => value === null)).toBe(true);
+    expect(columns).toHaveLength(8);
   });
 
   type Attribution = {

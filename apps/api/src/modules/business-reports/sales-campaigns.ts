@@ -1,15 +1,19 @@
 import type { SalesReport } from '@oneohm/api-contracts';
+import { campaignLabel } from '@oneohm/domain';
 import type { LeadFact } from './sales-report.read';
 
 const QUOTED_OR_LATER = new Set(['quoted', 'won']);
 
 /** Where a lead came from, as one report row: its campaign code, else its ad, else its UTM campaign. */
 function campaignOf(lead: LeadFact, names: ReadonlyMap<string, string>) {
-  if (lead.campaignCode) {
-    return { key: lead.campaignCode, label: names.get(lead.campaignCode) ?? lead.campaignCode };
-  }
-  if (lead.adId) return { key: `ad:${lead.adId}`, label: lead.adHeadline ?? `Ad ${lead.adId}` };
-  if (lead.utmCampaign) return { key: `utm:${lead.utmCampaign}`, label: lead.utmCampaign };
+  const label = campaignLabel({
+    ...lead,
+    campaignName: (lead.campaignCode && names.get(lead.campaignCode)) || null,
+  });
+  if (!label) return { key: 'none', label: 'No campaign' };
+  if (lead.campaignCode) return { key: lead.campaignCode, label };
+  if (lead.adId) return { key: `ad:${lead.adId}`, label };
+  if (lead.utmCampaign) return { key: `utm:${lead.utmCampaign}`, label };
   return { key: 'none', label: 'No campaign' };
 }
 

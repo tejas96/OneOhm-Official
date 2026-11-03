@@ -37,6 +37,8 @@ export const leadOwnerSchema = z.object({
   fullName: z.string(),
   openLeads: z.number().int(),
   onLeave: z.boolean(),
+  /** Only holds a system role (the Super Admin); never picked as a seller by the rule. */
+  system: z.boolean(),
 });
 export type LeadOwner = z.infer<typeof leadOwnerSchema>;
 

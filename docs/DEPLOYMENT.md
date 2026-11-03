@@ -188,8 +188,10 @@ payments. Vendors get their bank account on the vendor page; crews on the contra
 ## 5e. Website enquiry form
 
 The company website can send its enquiry form straight into OneOhm. Each enquiry becomes a
-lead with the source "Website". It gets an owner by rule: the sales person with the fewest
-open leads. That owner gets an alert, and the follow-up is set for today. If an open lead
+lead with the source "Website". It gets an owner by the rule in Settings → Assignment → New
+leads (city owners first, then least busy or round robin). Someone on leave is never picked;
+when everyone is away, the lead goes to the admin and every lead manager is alerted. That
+owner gets an alert, and the follow-up is set for today. If an open lead
 already has the same mobile number, OneOhm adds a note to that lead instead of making a
 second one. No sign-in is needed.
 
@@ -205,7 +207,8 @@ curl -X POST https://<domain>/api/v1/public/leads \
   - `name` (2–80 characters), required.
   - `phone`: a 10-digit Indian mobile, `+91` optional. Required.
   - `city`, required.
-  - `message` (up to 1000 characters) and `sourcePage`: optional.
+  - `message` (up to 1000 characters) and `sourcePage`: optional. `sourcePage` becomes the lead's landing page.
+  - `utmSource`, `utmMedium`, `utmCampaign` and `campaignCode` (up to 100 characters each): optional. Send what the website read from the address (for example `?utm_source=google&utm_campaign=summer`, or an ad code such as `DIWALI26`). They are kept on the lead as its first-touch source; `campaignCode` is stored uppercase and shows in the "By campaign" report.
   - `website`: put this in a hidden field that people cannot see. Bots fill it in, and a filled one is quietly ignored.
 - Rate limit: 5 enquiries per address every 10 minutes, and 3 per phone number a day. Over
   the limit, the answer is `429` with a polite message. The production compose file already
@@ -213,7 +216,7 @@ curl -X POST https://<domain>/api/v1/public/leads \
 - Mistakes come back as `400` with `fieldErrors` per field.
 - To post from the browser, add the website's origin to `CORS_ALLOWED_ORIGINS`, for example
   `https://www.oneohm.in`. A server-side form handler needs nothing extra.
-- Every enquiry is also kept, exactly as it arrived, in the `website_enquiries` table.
+- Every enquiry is also kept, as it arrived, in the `website_enquiries` table (name, phone, city, message, `sourcePage`, address and outcome). The UTM fields and `campaignCode` are held on the lead itself, not in that table.
 
 
 ## 6. Backups

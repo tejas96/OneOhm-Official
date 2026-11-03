@@ -138,12 +138,14 @@ export async function alertNobodyFree(
 
 /** Everyone a lead can be given to, for the owner pickers. */
 export async function leadOwnerOptions(db: DatabaseExecutor): Promise<LeadOwner[]> {
-  const people = await withLoads(db, await holders(db), await awayToday(db));
+  const all = await holders(db);
+  const people = await withLoads(db, all, await awayToday(db));
   return people.map((person) => ({
     id: person.userId,
     fullName: person.name,
     openLeads: person.openLeads,
     onLeave: person.away,
+    system: all.filter((row) => row.userId === person.userId).every((row) => row.system),
   }));
 }
 

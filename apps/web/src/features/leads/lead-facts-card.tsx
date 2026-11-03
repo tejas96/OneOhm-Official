@@ -2,6 +2,7 @@
 
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { Card, cn, Select } from '@oneohm/design-system/web';
+import { campaignLabel } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
 import { CalendarClock } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -61,11 +62,6 @@ export function FollowUpCard({
 }
 
 /** What we know about the lead, with the owner changeable by people who assign work. */
-/** The ad or campaign in words: its name, else the ad headline, else the code. */
-function campaignLabel(attribution: LeadDetail['attribution']): string | null {
-  return attribution.campaignName ?? attribution.adHeadline ?? attribution.campaignCode;
-}
-
 export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
   const t = useTranslations('leads');
   const canAssign = useCan('people.view', 'people.manage', 'tasks.assign', 'projects.manage');
