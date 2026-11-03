@@ -79,3 +79,25 @@ Messages the bot sends while you are chatting are free-form replies and need no 
 - **Click-to-WhatsApp ad referral:** this needs a real Meta ad. It is covered by the automated test.
 - **Family member tapping Accept:** this needs a second phone. It is covered by the automated test. If you have a second number, we add it to the test list and run it.
 - **A failed PDF send alert:** this cannot be forced live. It is covered by the automated test.
+
+## Round 2 — after the review fixes (2026-11-03, taps only, chat in Marathi)
+
+| # | Step | Result |
+|---|---|---|
+| R1 | Send `hi` | ✅ Marathi menu with 10 rows |
+| R2 | Tap कागदपत्रे (Documents) | ✅ Quote link, then taps मेनू · प्रकल्प पाहा · आमच्याशी बोला |
+| R3 | Tap पेमेंट (Payments) | ✅ "Your solar project in Sangli": instalment 1 paid, 2 and 3 later, with taps |
+| R4 | "Before dispatch" falls due | ✅ Marathi `payment_link` template delivered |
+| R5 | Open the pay link | ✅ Landing page, Continue opens Razorpay. ⚠️ No UPI: the amount (₹1,19,580) is above the UPI limit of ₹1 lakh |
+| R6 | Pay (netbanking, test) | ✅ Marathi receipt template with the receipt PDF (`payment_received_file`), then the next step with Priya's name and phone and taps. Order correct |
+| R7 | Tap the old pay link again | Asked the tester for what they saw |
+| R8 | Send a voice note | ✅ Warm Marathi hand-over: "Priya will listen and reply here" |
+| R9 | `STOP`, then `START` | ✅ Both confirmed in Marathi; the opt-out flag cleared |
+
+### New findings from round 2
+1. **UPI limit (High):** an instalment over ₹1,00,000 cannot be paid by UPI on one link.
+2. The Documents answer shows the quote code (OH-Q-2026-0016), and the receipts are not listed (Medium).
+3. In the staff chat history, a template shows the English text even when the customer got Marathi (Low).
+4. The templates still carry the milestone label and the project code ("Before dispatch of panels and inverter", "OH-2026-013") (Medium, C9).
+5. The STOP and START replies have no taps (Low).
+6. The old test project still shows paise amounts. It was made before the rounding fix, so new projects show whole rupees (no action).
