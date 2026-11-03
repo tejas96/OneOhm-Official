@@ -10,6 +10,7 @@ import {
   type OrderFact,
   readCampaignNames,
   readCollectedByLead,
+  readEstimatedLeadIds,
   readLeads,
   readOrders,
 } from './sales-report.read';
@@ -155,6 +156,10 @@ export class SalesReportService {
         cohort.map((lead) => lead.id),
       ),
       quotedLeadIds,
+      await readEstimatedLeadIds(
+        this.db,
+        cohort.map((lead) => lead.id),
+      ),
     );
   }
 

@@ -55,6 +55,8 @@ export const salesReportSchema = z.object({
       key: z.string(),
       label: z.string(),
       leads: z.number().int(),
+      /** Leads that got an instant estimate on WhatsApp. */
+      estimates: z.number().int(),
       /** Leads that reached quotation sent or later. */
       quoted: z.number().int(),
       won: z.number().int(),

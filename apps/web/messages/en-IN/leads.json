@@ -159,6 +159,18 @@
       "createQuotation": "Create quotation",
       "openCustomer": "Open customer"
     },
+    "estimate": {
+      "title": "Estimate sent",
+      "body": "What the customer got on WhatsApp. It is an estimate, not a quotation.",
+      "size": "System size",
+      "price": "Price",
+      "afterSubsidy": "After subsidy",
+      "saving": "Saves each month",
+      "payback": "Pays back in",
+      "years": "{years} years",
+      "sentOn": "Sent",
+      "openPdf": "Open PDF"
+    },
     "facts": {
       "title": "Details",
       "owner": "Owner",

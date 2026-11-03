@@ -4,7 +4,9 @@ import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { assertLeadVisible } from '../crm/lead-read';
 import { assertQuotationAccess } from '../quotations/quotation-access';
+import { EstimatePdfService } from './estimate-pdf.service';
 import { QuotationPdfService } from './quotation-pdf.service';
 import { ReportArchiveService } from './report-archive.service';
 import { ReportFactsService } from './report-facts.service';
@@ -33,6 +35,7 @@ export class ReportsController {
     private readonly statuses: ReportStatusService,
     private readonly reports: ReportPdfService,
     private readonly quotations: QuotationPdfService,
+    private readonly estimates: EstimatePdfService,
     private readonly archive: ReportArchiveService,
     private readonly submissions: ReportSubmissionsService,
     private readonly facts: ReportFactsService,
@@ -64,6 +67,11 @@ export class ReportsController {
       projectReportPdf: async ({ params, query }) => {
         assertCan(actor, 'reports.generate');
         const file = await this.reports.render(params.id, params.reportKey);
+        return { status: 200, body: pdfBody(file, query.disposition) };
+      },
+      leadEstimatePdf: async ({ params, query }) => {
+        await assertLeadVisible(this.db, actor, params.id);
+        const file = await this.estimates.render(params.id, params.estimateId);
         return { status: 200, body: pdfBody(file, query.disposition) };
       },
       quotationPdf: async ({ params, query }) => {

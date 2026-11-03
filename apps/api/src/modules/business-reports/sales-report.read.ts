@@ -1,6 +1,7 @@
 import {
   type DatabaseExecutor,
   leadCampaigns,
+  leadEstimates,
   leads,
   payments,
   projects,
@@ -214,4 +215,17 @@ export async function readCollectedByLead(
     .where(and(inArray(quotations.leadId, [...leadIds]), eq(payments.payer, 'customer')))
     .groupBy(quotations.leadId);
   return new Map(rows.flatMap((row) => (row.leadId ? [[row.leadId, Number(row.paise)]] : [])));
+}
+
+/** The leads among these that got an instant estimate on WhatsApp (at least one row). */
+export async function readEstimatedLeadIds(
+  db: DatabaseExecutor,
+  leadIds: readonly string[],
+): Promise<Set<string>> {
+  if (leadIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ leadId: leadEstimates.leadId })
+    .from(leadEstimates)
+    .where(inArray(leadEstimates.leadId, [...leadIds]));
+  return new Set(rows.map((row) => row.leadId));
 }

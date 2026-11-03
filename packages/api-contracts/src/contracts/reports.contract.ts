@@ -98,4 +98,12 @@ export const reportsContract = c.router({
     responses: { 200: pdfResponse },
     summary: 'The quotation as the customer receives it: price, subsidy, effective cost.',
   },
+  leadEstimatePdf: {
+    method: 'GET',
+    path: '/leads/:id/estimates/:estimateId/pdf',
+    pathParams: z.object({ id: idSchema, estimateId: idSchema }),
+    query: pdfQuery,
+    responses: { 200: pdfResponse },
+    summary: 'The estimate the WhatsApp bot sent a lead, for staff who may see that lead.',
+  },
 });

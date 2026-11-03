@@ -41,6 +41,7 @@
       "byCampaignBody": "Leads from this period by the ad or campaign that brought them, down to what customers have paid.",
       "campaign": "Campaign",
       "noCampaign": "No campaign",
+      "estimates": "Estimates",
       "quoted": "Quoted",
       "collected": "Collected",
       "person": "Salesperson",

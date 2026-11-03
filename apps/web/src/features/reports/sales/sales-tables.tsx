@@ -143,6 +143,12 @@ export function SalesByCampaign({ rows }: { readonly rows: readonly CampaignRow[
       cell: (row) => <span className={NUM}>{row.leads}</span>,
     },
     {
+      key: 'estimates',
+      header: t('estimates'),
+      align: 'end',
+      cell: (row) => <span className={NUM}>{row.estimates}</span>,
+    },
+    {
       key: 'quoted',
       header: t('quoted'),
       align: 'end',

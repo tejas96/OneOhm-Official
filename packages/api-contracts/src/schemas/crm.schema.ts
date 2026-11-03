@@ -95,8 +95,23 @@ export const leadAttributionSchema = z.object({
 });
 export type LeadAttributionRecord = z.infer<typeof leadAttributionSchema>;
 
+/** The latest instant estimate the WhatsApp bot sent this lead; `pdfUrl` is an API path. */
+export const leadEstimateSchema = z.object({
+  id: idSchema,
+  capacityWp: z.number().int(),
+  totalPaise: z.number().int(),
+  effectivePaise: z.number().int(),
+  monthlySavingPaise: z.number().int(),
+  paybackYears: z.number(),
+  createdAt: instantSchema,
+  pdfUrl: z.string(),
+});
+export type LeadEstimate = z.infer<typeof leadEstimateSchema>;
+
 export const leadDetailSchema = leadSchema.extend({
   attribution: leadAttributionSchema,
+  /** Null when the customer got no estimate (or none could be priced). */
+  latestEstimate: leadEstimateSchema.nullable(),
   activities: z.array(leadActivitySchema),
   quotations: z.array(leadQuotationSchema),
   /** True when the lead came from a reseller: staff notes can be kept from them. */
