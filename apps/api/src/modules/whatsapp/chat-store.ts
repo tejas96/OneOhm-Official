@@ -76,16 +76,16 @@ export async function conversationFor(
   incoming: Incoming,
 ): Promise<Conversation> {
   const owner = await customerForPhone(db, incoming.from);
-  const values = {
-    customerId: owner?.id ?? null,
-    profileName: incoming.profileName,
-    lastInboundAt: incoming.at,
-    updatedAt: new Date(),
-  };
+  const values = { customerId: owner?.id ?? null, profileName: incoming.profileName };
+  // Meta can deliver an older message late: the chat keeps its newest time.
+  const lastInboundAt = sql`greatest(${waConversations.lastInboundAt}, excluded.last_inbound_at)`;
   const [row] = await db
     .insert(waConversations)
-    .values({ phone: incoming.from, ...values })
-    .onConflictDoUpdate({ target: waConversations.phone, set: values })
+    .values({ phone: incoming.from, ...values, lastInboundAt: incoming.at })
+    .onConflictDoUpdate({
+      target: waConversations.phone,
+      set: { ...values, lastInboundAt, updatedAt: new Date() },
+    })
     .returning();
   if (!row) throw new Error('Conversation upsert returned nothing.');
   return row;

@@ -25,6 +25,8 @@ export interface InboundMessage {
   referral?: Record<string, string>;
   /** The sender's WhatsApp name; null sends none (a number without a profile name). */
   profileName?: string | null;
+  /** When the customer sent it (Meta's timestamp); now when left out. */
+  at?: Date;
 }
 
 /**
@@ -33,11 +35,17 @@ export interface InboundMessage {
  * The API answers while handling the post, so the reply is already in the outbox on return.
  */
 export async function sendInbound(from: string, message: InboundMessage): Promise<void> {
+  const res = await postInbound(from, message);
+  if (!res.ok) throw new Error(`POST /webhooks/whatsapp → ${res.status} ${await res.text()}`);
+}
+
+/** The same post as `sendInbound`, answering with the webhook's response whatever it is. */
+export async function postInbound(from: string, message: InboundMessage): Promise<Response> {
   const wa = from.replace(/^\+/, '');
   const base = {
     from: wa,
     id: message.id ?? `wamid.acceptance-${randomUUID()}`,
-    timestamp: String(Math.floor(Date.now() / 1000)),
+    timestamp: String(Math.floor((message.at?.getTime() ?? Date.now()) / 1000)),
   };
   const sent = messageOf(base, message);
   if (message.referral) sent.referral = message.referral;
@@ -65,7 +73,7 @@ export async function sendInbound(from: string, message: InboundMessage): Promis
       },
     ],
   });
-  await postSigned(raw);
+  return signedPost(raw);
 }
 
 /** Meta's delivery receipt for one of our messages, by its WhatsApp message id. */
@@ -91,7 +99,12 @@ export async function sendStatus(
 
 /** Posts to the webhook signed with the app secret, as Meta does. */
 async function postSigned(raw: string): Promise<void> {
-  const res = await fetch(`${API}/webhooks/whatsapp`, {
+  const res = await signedPost(raw);
+  if (!res.ok) throw new Error(`POST /webhooks/whatsapp → ${res.status} ${await res.text()}`);
+}
+
+function signedPost(raw: string): Promise<Response> {
+  return fetch(`${API}/webhooks/whatsapp`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -99,7 +112,6 @@ async function postSigned(raw: string): Promise<void> {
     },
     body: raw,
   });
-  if (!res.ok) throw new Error(`POST /webhooks/whatsapp → ${res.status} ${await res.text()}`);
 }
 
 /** An interactive tap as Meta posts it; the title is what WhatsApp shows, not the id. */

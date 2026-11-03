@@ -5,6 +5,7 @@ import {
   Headers,
   HttpCode,
   Inject,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   type OnModuleInit,
@@ -23,12 +24,14 @@ import { AssistantService } from './assistant/assistant.service';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
 import { DeliveriesService } from './deliveries.service';
+import { forgetIncoming, isLateTap, tellNotHandled } from './inbound-retry';
 import { type Incoming, readWebhook, webhookAccess } from './whatsapp-events';
 
 /**
  * Meta's WhatsApp webhook: customer messages go to the assistant, and delivery receipts
  * update the outbox. Signed with the app secret; until that is known, a secret key at the
- * end of the URL stands in (see `webhookAccess`). A repeat delivery is ignored.
+ * end of the URL stands in (see `webhookAccess`). A repeat delivery is ignored. A message
+ * that fails is forgotten and answered 500, so Meta sends it again; a late tap is ignored.
  */
 @Public()
 @Controller('v1/webhooks/whatsapp')
@@ -77,23 +80,39 @@ export class WhatsAppWebhookController implements OnModuleInit {
     if (access === 'bad_signature') throw new UnauthorizedException('Bad signature.');
     const { incoming, updates } = readWebhook(request.body);
     let handled = 0;
+    let failed = 0;
     for (const message of incoming) {
       const chat = await ensureChatOwner(this.db, await conversationFor(this.db, message));
       if (!(await logIncoming(this.db, chat.id, message))) continue;
-      // A person has this chat, so the assistant stays quiet: tell them the customer wrote.
-      if (chat.state === 'human') {
-        await this.tellAnswerer(chat, message);
-        await this.assistant.nightReply(chat);
+      if (isLateTap(chat, message)) {
+        this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
+        continue;
       }
       try {
-        await this.assistant.handle(chat, message);
+        await this.handle(chat, message);
         handled += 1;
       } catch (error) {
-        // One bad message must not stop the rest; Meta would only resend the whole post.
+        // One bad message must not stop the rest; Meta resends the post after the 500.
+        failed += 1;
         this.log.error(`Assistant failed on ${message.waMessageId}: ${String(error)}`);
+        await forgetIncoming(this.db, message.waMessageId);
+        await tellNotHandled(this.db, chat, message).catch((alertError: unknown) =>
+          this.log.error(`Could not alert about ${message.waMessageId}: ${String(alertError)}`),
+        );
       }
     }
-    return { messages: handled, receipts: await this.deliveries.applyUpdates(updates) };
+    const receipts = await this.deliveries.applyUpdates(updates);
+    if (failed > 0) throw new InternalServerErrorException(`${failed} message(s) not handled.`);
+    return { messages: handled, receipts };
+  }
+
+  private async handle(chat: Conversation, message: Incoming) {
+    // A person has this chat, so the assistant stays quiet: tell them the customer wrote.
+    if (chat.state === 'human') {
+      await this.tellAnswerer(chat, message);
+      await this.assistant.nightReply(chat);
+    }
+    await this.assistant.handle(chat, message);
   }
 
   private async tellAnswerer(chat: Conversation, message: Incoming) {
