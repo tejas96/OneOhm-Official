@@ -1292,7 +1292,8 @@
         "payment_link_sync": "Online payment check",
         "final_payment_links": "Final payment links",
         "incentive_sweep": "Referral and commission check",
-        "payout_sync": "Bank payout check"
+        "payout_sync": "Bank payout check",
+        "onboarding_nudges": "WhatsApp onboarding follow-up"
       },
       "results": {
         "payment_reminders": "{count, plural, =0 {Nobody to remind} one {1 reminder queued} other {# reminders queued}}",
@@ -1310,7 +1311,8 @@
         "payment_link_sync": "{count, plural, one {1 change recorded} other {# changes recorded}}",
         "final_payment_links": "{count, plural, one {1 link sent} other {# links sent}}",
         "incentive_sweep": "{count, plural, one {1 reward earned} other {# rewards earned}}",
-        "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}"
+        "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}",
+        "onboarding_nudges": "{count, plural, one {1 chat followed up} other {# chats followed up}}"
       }
     },
     "onboarding": {

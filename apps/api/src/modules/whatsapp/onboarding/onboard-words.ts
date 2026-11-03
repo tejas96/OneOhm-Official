@@ -47,6 +47,9 @@ const EN_ONBOARD = {
   firstDetails: "Thanks — let's first get a few details. We have your file.",
   billThanks: 'Thank you, we got your electricity bill.',
   badFile: 'Sorry, we could not use that file. Please send a clear photo or a PDF.',
+  /** The one nudge after a customer goes quiet halfway. */
+  nudge: 'Shall we continue? It takes a minute.',
+  continue: 'Continue',
 };
 
 export type OnboardWords = typeof EN_ONBOARD;
@@ -87,6 +90,8 @@ const MR_ONBOARD: Words<OnboardWords> = {
   firstDetails: 'धन्यवाद — आधी काही माहिती घेऊया. तुमची फाईल आमच्याकडे आहे.',
   billThanks: 'धन्यवाद, तुमचे वीज बिल मिळाले.',
   badFile: 'माफ करा, ही फाईल वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.',
+  nudge: 'पुढे जायचे का? फक्त एक मिनिट लागेल.',
+  continue: 'पुढे चला',
 };
 
 const HI_ONBOARD: Words<OnboardWords> = {
@@ -125,6 +130,8 @@ const HI_ONBOARD: Words<OnboardWords> = {
   firstDetails: 'धन्यवाद — पहले कुछ जानकारी ले लें. आपकी फाइल हमारे पास है.',
   billThanks: 'धन्यवाद, आपका बिजली बिल मिल गया.',
   badFile: 'माफ़ कीजिए, यह फाइल इस्तेमाल नहीं हो सकी. कृपया साफ़ फोटो या PDF भेजें.',
+  nudge: 'आगे बढ़ें? बस एक मिनट लगेगा.',
+  continue: 'आगे बढ़ें',
 };
 
 /** Every language, for the limit checks. */

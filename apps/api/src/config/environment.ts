@@ -74,6 +74,8 @@ const environmentSchema = z
     GOOGLE_MAPS_BROWSER_KEY: z.string().optional(),
     /** Where customers reach this API from outside; sandbox payment pages live here. */
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
+    /** Runs the WhatsApp onboarding nudge every 5 minutes; the acceptance suite turns it off. */
+    ONBOARDING_NUDGE_TIMER: flag,
   })
   .superRefine((env, context) => {
     const issues = [

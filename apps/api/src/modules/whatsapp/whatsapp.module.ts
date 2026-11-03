@@ -22,6 +22,8 @@ import { EstimateService } from './onboarding/estimate.service';
 import { EstimateNextStepsService } from './onboarding/estimate-next-steps';
 import { ChatFilesService } from './onboarding/onboarding-files';
 import { OnboardingFlowService } from './onboarding/onboarding-flow';
+import { OnboardingNudgesController } from './onboarding/onboarding-nudges.controller';
+import { OnboardingNudgesService } from './onboarding/onboarding-nudges.service';
 import { SharedFilesController } from './shared-files.controller';
 import { WhatsAppController } from './whatsapp.controller';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
@@ -36,7 +38,12 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     ReportsModule,
     AfterSalesModule,
   ],
-  controllers: [WhatsAppController, WhatsAppWebhookController, SharedFilesController],
+  controllers: [
+    WhatsAppController,
+    WhatsAppWebhookController,
+    SharedFilesController,
+    OnboardingNudgesController,
+  ],
   providers: [
     AssistantService,
     AnswersService,
@@ -48,6 +55,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     HandOverService,
     StrangerFlowService,
     OnboardingFlowService,
+    OnboardingNudgesService,
     ChatFilesService,
     EstimateService,
     EstimateNextStepsService,

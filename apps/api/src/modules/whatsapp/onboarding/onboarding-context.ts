@@ -13,6 +13,8 @@ export interface OnboardContext {
   readonly awaiting?: 'name' | 'city';
   /** A bill sent before the lead existed; filed on the lead when it is made. */
   readonly pendingFile?: PendingFile;
+  /** When the one "Shall we continue?" nudge was sent (never sent twice). */
+  readonly nudgedAt?: string;
 }
 
 /** The tap that hands the chat to a person, offered on every question. */

@@ -20,6 +20,7 @@ export type WorkerJob = Exclude<
   | 'final_payment_links'
   | 'incentive_sweep'
   | 'payout_sync'
+  | 'onboarding_nudges'
 >;
 
 /** Each job's work, returning how many things it queued or changed. */
