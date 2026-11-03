@@ -6,11 +6,10 @@ import {
   projects,
 } from '@oneohm/database';
 import { finalCustomerMilestones, milestoneDueNotice } from '@oneohm/domain';
-import { formatInr } from '@oneohm/shared';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
 import { environmentOnce } from '../../config/environment-once';
-import { signPayToken } from './pay-token';
+import { payNowPayload } from './pay-now-message';
 
 /**
  * Tells the customer that payment milestones just fell due (PRD 6.2 "payment milestone
@@ -55,26 +54,26 @@ export async function tellCustomerMilestonesDue(
       onlinePayments: env.RAZORPAY_MODE !== 'off',
     });
     if (!notice.send) continue;
-    const exp = Math.floor(Date.now() / 1000) + env.PAYMENT_LINK_DAYS * 86_400;
-    const token = signPayToken(env.FILE_LINK_SECRET, {
-      milestoneId: milestone.id,
+    const payload = payNowPayload(env, {
+      customerName: customer.name,
       customerId: project.customerId,
-      exp,
+      projectCode: project.code,
+      milestoneId: milestone.id,
+      milestoneLabel: milestone.label,
+      owedPaise: notice.owedPaise,
     });
+    // Only the pay-link template carries the link itself; the others keep the token.
     await queueWhatsApp(
       db,
       customer.phone,
       notice.message,
-      {
-        customer: customer.name,
-        amount: formatInr(notice.owedPaise),
-        milestone: milestone.label,
-        project: project.code,
-        ...(notice.message === 'payment_link'
-          ? { link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}` }
-          : {}),
-      },
+      notice.message === 'payment_link' ? payload : withoutLink(payload),
       `milestone_due:${milestone.id}`,
     );
   }
+}
+
+/** The other due messages carry the token but not the link itself. */
+function withoutLink({ link: _link, ...rest }: Record<string, string>): Record<string, string> {
+  return rest;
 }

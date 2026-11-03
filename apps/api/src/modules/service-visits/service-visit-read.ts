@@ -19,7 +19,7 @@ export interface ServicePlace {
   readonly address: string;
   readonly city: string;
   readonly located: boolean;
-  /** The saved site location, for measuring a check-in (never sent to the app). */
+  /** The saved site location: measures a check-in; the visit sends it for directions. */
   readonly point: GeoPoint | null;
 }
 

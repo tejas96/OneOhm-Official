@@ -1,10 +1,24 @@
 import type { WorkerConfig } from '../config';
 
+/** A file shown at the top of a template message. */
+export interface TemplateHeader {
+  readonly kind: 'document';
+  readonly link: string;
+  readonly filename: string;
+}
+
+/** A button on a template, by its position (index) in the approved template. */
+export type TemplateButton =
+  | { readonly kind: 'quick_reply'; readonly index: number; readonly payload: string }
+  | { readonly kind: 'url'; readonly index: number; readonly suffix: string };
+
 export interface WhatsAppTemplateMessage {
   readonly toE164: string;
   readonly template: string;
   readonly language: string;
   readonly parameters: readonly string[];
+  readonly header?: TemplateHeader;
+  readonly buttons?: readonly TemplateButton[];
 }
 
 export type SendResult =
@@ -22,8 +36,33 @@ export class PermanentSendError extends Error {
   }
 }
 
+function buttonComponent(button: TemplateButton) {
+  return {
+    type: 'button',
+    sub_type: button.kind,
+    index: String(button.index),
+    parameters:
+      button.kind === 'quick_reply'
+        ? [{ type: 'payload', payload: button.payload }]
+        : [{ type: 'text', text: button.suffix }],
+  };
+}
+
 /** Builds the Cloud API body for a template message. Numbers go without the "+". */
 export function templateRequestBody(message: WhatsAppTemplateMessage) {
+  const header = message.header
+    ? [
+        {
+          type: 'header',
+          parameters: [
+            {
+              type: 'document',
+              document: { link: message.header.link, filename: message.header.filename },
+            },
+          ],
+        },
+      ]
+    : [];
   return {
     messaging_product: 'whatsapp',
     to: message.toE164.replace(/^\+/, ''),
@@ -32,10 +71,12 @@ export function templateRequestBody(message: WhatsAppTemplateMessage) {
       name: message.template,
       language: { code: message.language },
       components: [
+        ...header,
         {
           type: 'body',
           parameters: message.parameters.map((text) => ({ type: 'text', text })),
         },
+        ...(message.buttons ?? []).map(buttonComponent),
       ],
     },
   };
@@ -50,6 +91,19 @@ export type SessionMessage =
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
     }
   | {
+      readonly kind: 'document';
+      readonly link: string;
+      readonly filename: string;
+      readonly caption?: string;
+    }
+  | {
+      readonly kind: 'cta_url';
+      readonly body: string;
+      /** Meta cuts the button label at 20 characters. */
+      readonly label: string;
+      readonly url: string;
+    }
+  | {
       readonly kind: 'list';
       readonly body: string;
       readonly button: string;
@@ -62,12 +116,35 @@ export type SessionMessage =
       }[];
     };
 
-/** Builds the Cloud API body for a text, reply-buttons or list message. */
+/** Builds the Cloud API body for a text, file, link-button, reply-buttons or list message. */
 export function sessionRequestBody(toE164: string, message: SessionMessage) {
   const to = toE164.replace(/^\+/, '');
   const base = { messaging_product: 'whatsapp', recipient_type: 'individual', to };
   if (message.kind === 'text')
     return { ...base, type: 'text', text: { preview_url: true, body: message.body } };
+  if (message.kind === 'document')
+    return {
+      ...base,
+      type: 'document',
+      document: {
+        link: message.link,
+        filename: message.filename,
+        ...(message.caption ? { caption: message.caption } : {}),
+      },
+    };
+  if (message.kind === 'cta_url')
+    return {
+      ...base,
+      type: 'interactive',
+      interactive: {
+        type: 'cta_url',
+        body: { text: message.body },
+        action: {
+          name: 'cta_url',
+          parameters: { display_text: message.label.slice(0, 20), url: message.url },
+        },
+      },
+    };
   if (message.kind === 'buttons')
     return {
       ...base,
@@ -116,13 +193,18 @@ export function createWhatsAppSender(
   if (config.WHATSAPP_DELIVERY === 'log') {
     return {
       async send(message) {
+        const header = message.header ? ` header=${message.header.filename}` : '';
+        const buttons = (message.buttons ?? []).map((b) =>
+          b.kind === 'quick_reply' ? b.payload : b.suffix,
+        );
         log(
-          `[whatsapp:log] ${message.template} → ${message.toE164} ${JSON.stringify(message.parameters)}`,
+          `[whatsapp:log] ${message.template} → ${message.toE164} ${JSON.stringify(message.parameters)}${header}${buttons.length > 0 ? ` buttons=${JSON.stringify(buttons)}` : ''}`,
         );
         return { outcome: 'logged' };
       },
       async sendSession(toE164, message) {
-        log(`[whatsapp:log] ${message.kind} → ${toE164} ${JSON.stringify(message.body)}`);
+        const what = message.kind === 'document' ? message.filename : message.body;
+        log(`[whatsapp:log] ${message.kind} → ${toE164} ${JSON.stringify(what)}`);
         return { outcome: 'logged' };
       },
     };

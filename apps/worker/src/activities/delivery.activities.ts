@@ -21,6 +21,8 @@ import {
   PermanentSendError,
   type SendResult,
   type SessionMessage,
+  type TemplateButton,
+  type TemplateHeader,
   type WhatsAppSender,
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
@@ -77,6 +79,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         readonly name: string;
         readonly language: string;
         readonly parameters: string[];
+        readonly header?: TemplateHeader;
+        readonly buttons?: TemplateButton[];
       }
   > => {
     if (row.channel !== 'whatsapp') {
@@ -104,7 +108,16 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     }
     try {
       const names = { metaName: row.template, language, ...config };
-      return { verdict: 'send', ...approvedMessage(row.template, fields, names, row.payload) };
+      return {
+        verdict: 'send',
+        ...approvedMessage(
+          row.template,
+          fields,
+          names,
+          row.payload,
+          config?.extrasApproved ?? false,
+        ),
+      };
     } catch (error) {
       if (!(error instanceof MissingFieldError)) throw error;
       return { verdict: 'failed', note: error.message };
@@ -168,13 +181,15 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         await finish(id, prepared.verdict, prepared.note);
         return prepared.verdict;
       }
-      const { name, parameters } = prepared;
+      const { name, parameters, header, buttons } = prepared;
       return send(row, () =>
         sender.send({
           toE164: row.recipient,
           template: name,
           language: prepared.language,
           parameters,
+          ...(header && { header }),
+          ...(buttons && { buttons }),
         }),
       );
     },

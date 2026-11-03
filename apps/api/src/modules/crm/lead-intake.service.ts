@@ -1,6 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { PhoneMatch } from '@oneohm/api-contracts';
-import { customers, type DatabaseExecutor, leadActivities, leads, notify } from '@oneohm/database';
+import {
+  customers,
+  type DatabaseExecutor,
+  type LeadAttribution,
+  leadActivities,
+  leads,
+  notify,
+} from '@oneohm/database';
 import type { LeadSource } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, notInArray } from 'drizzle-orm';
@@ -8,7 +15,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { SOURCE_LABEL } from './lead-labels';
-import { ownerByRule } from './lead-owner';
+import { alertNobodyFree, ownerByRule } from './lead-owner';
 
 export interface IntakeInput {
   readonly name: string;
@@ -20,6 +27,8 @@ export interface IntakeInput {
   readonly notes?: string | null;
   /** The first line on the lead's timeline, e.g. "Sent the website form from /solar". */
   readonly firstNote: string;
+  /** Where the lead came from; written only when a lead is made (first touch wins). */
+  readonly attribution?: LeadAttribution | undefined;
 }
 
 export interface IntakeResult {
@@ -98,10 +107,11 @@ export class LeadIntakeService {
   }
 
   private async insert(tx: DatabaseExecutor, input: IntakeInput): Promise<IntakeResult> {
-    const owner = await ownerByRule(tx);
-    if (!owner) {
+    const ruled = await ownerByRule(tx, { city: input.city });
+    if (!ruled) {
       throw conflict('Nobody can take new leads yet. Give a staff role the leads permission.');
     }
+    const owner = ruled.userId;
     const today = todayIn();
     const [lead] = await tx
       .insert(leads)
@@ -115,6 +125,7 @@ export class LeadIntakeService {
         nextActionOn: today,
         nextActionNote: input.nextActionNote,
         notes: input.notes ?? null,
+        ...input.attribution,
       })
       .returning({ id: leads.id, name: leads.name, createdAt: leads.createdAt });
     if (!lead) throw new Error('Lead insert returned nothing.');
@@ -122,6 +133,7 @@ export class LeadIntakeService {
       .insert(leadActivities)
       .values({ leadId: lead.id, kind: 'note', note: input.firstNote });
     await this.tellOwner(tx, owner, lead, input, today);
+    if (ruled.fallback) await alertNobodyFree(tx, lead);
     return { leadId: lead.id, name: lead.name, createdAt: lead.createdAt, created: true };
   }
 

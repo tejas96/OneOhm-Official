@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./pay-token": {
+      "types": "./dist/pay-token.d.ts",
+      "default": "./dist/pay-token.js"
     }
   },
   "files": [

@@ -68,11 +68,16 @@ export const Input = forwardRef<TextInputInstance, InputProps>(function Input(
       ? colors.focusRing
       : colors.borderStrong;
   return (
+    // Never flattened: Android must keep the same native box around the text input on focus.
     <View
+      collapsable={false}
       style={[
         styles.box,
         { backgroundColor: colors.surfaceRaised, borderColor },
-        focused ? { shadowColor: colors.focusRing, shadowOpacity: 0.25, shadowRadius: 6 } : null,
+        // The ring's shadow keys stay set and only the opacity changes. Adding and removing
+        // them on focus made Android rebuild the native text box, so it lost focus and the
+        // keyboard closed after the first key.
+        { shadowColor: colors.focusRing, shadowOpacity: focused ? 0.25 : 0, shadowRadius: 6 },
       ]}
     >
       {leading}

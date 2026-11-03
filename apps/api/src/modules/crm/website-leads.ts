@@ -30,6 +30,8 @@ async function assertBudget(db: DatabaseExecutor, ip: string | null, phone: stri
     throw tooMany(message);
 }
 
+const clean = (value: string | null | undefined) => value?.trim() || null;
+
 /**
  * The website enquiry form (PRD 3.3): a new lead with an owner by rule, or a nudge on
  * the open lead with this number. Kept as it arrived. A filled hidden field is a bot.
@@ -51,6 +53,13 @@ export async function receiveWebsiteLead(
     source: 'website',
     nextActionNote: 'Call back: website enquiry',
     notes: message,
+    attribution: {
+      campaignCode: clean(input.campaignCode)?.toUpperCase() ?? null,
+      utmSource: clean(input.utmSource),
+      utmMedium: clean(input.utmMedium),
+      utmCampaign: clean(input.utmCampaign),
+      landingPage: page,
+    },
     firstNote: `Website form${page ? ` on ${page}` : ''}${message ? `: ${message}` : '.'}`,
   });
   await db.insert(websiteEnquiries).values({

@@ -3,6 +3,7 @@ import { Button, Card, StatusPill, Text, useTheme } from '@oneohm/mobile-ui';
 import { Navigation, Phone } from 'lucide-react-native';
 import { Linking, StyleSheet, View } from 'react-native';
 import { SERVICE } from '@/copy/service';
+import { directionsUrl } from '@/features/site/directions';
 import { AttachmentTile } from '@/features/tasks/evidence/evidence-tiles';
 import { shortDate, shortMoment } from '@/lib/dates';
 import { slaTone } from './service-times';
@@ -61,6 +62,7 @@ export function PlaceCard({ visit }: { readonly visit: ServiceVisit }) {
   const theme = useTheme();
   const place = visit.place;
   const address = place ? [place.address, place.city].join(', ') : null;
+  const navigateTo = directionsUrl(visit.sitePoint, address);
   return (
     <Card style={styles.card}>
       <Text variant="overline" tone="tertiary">
@@ -81,17 +83,13 @@ export function PlaceCard({ visit }: { readonly visit: ServiceVisit }) {
           onPress={() => void Linking.openURL(`tel:${visit.customer.phone}`)}
           style={styles.flex}
         />
-        {address ? (
+        {navigateTo ? (
           <Button
             label={SERVICE.directions}
             variant="secondary"
             size="sm"
             icon={<Navigation size={16} color={theme.colors.textPrimary} />}
-            onPress={() =>
-              void Linking.openURL(
-                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
-              )
-            }
+            onPress={() => void Linking.openURL(navigateTo)}
             style={styles.flex}
           />
         ) : null}

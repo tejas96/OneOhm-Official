@@ -1,0 +1,1 @@
+ALTER TABLE "message_templates" ADD COLUMN "extras_approved" boolean DEFAULT false NOT NULL;

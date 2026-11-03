@@ -21,7 +21,7 @@ export function SiteTravelSection({
   const t = useTranslations('siteActivity.settings');
   return (
     <SettingsSection title={t('title')} description={t('description')}>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field
           label={t('farFromSite')}
           hint={t('farFromSiteHint')}
@@ -31,6 +31,13 @@ export function SiteTravelSection({
             unit="whole"
             value={travel.farFromSiteM}
             onValueChange={(value) => onChange({ ...travel, farFromSiteM: value ?? 0 })}
+          />
+        </Field>
+        <Field label={t('pinTrust')} hint={t('pinTrustHint')} error={errors['travel.pinTrustM']}>
+          <NumberInput
+            unit="whole"
+            value={travel.pinTrustM}
+            onValueChange={(value) => onChange({ ...travel, pinTrustM: value ?? 0 })}
           />
         </Field>
         <Field label={t('rate')} hint={t('rateHint')} error={errors['travel.ratePaisePerKm']}>

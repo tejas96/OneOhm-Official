@@ -1,5 +1,10 @@
 import { type DatabaseExecutor, projects, projectTasks, properties } from '@oneohm/database';
-import { type GeoPoint, type SiteVisitKind, siteVisitKindOf } from '@oneohm/domain';
+import {
+  type GeoPoint,
+  type LocationSource,
+  type SiteVisitKind,
+  siteVisitKindOf,
+} from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
@@ -15,7 +20,13 @@ export interface SiteTask {
   readonly managerUserId: string | null;
   readonly propertyId: string;
   readonly siteLabel: string;
+  /** The street address with its city, for directions ("addressLine, city"). */
+  readonly siteAddress: string;
   readonly site: GeoPoint | null;
+  /** How the site's point was set; empty when it has none or predates sources. */
+  readonly siteSource: LocationSource | null;
+  /** The point waits for the office to confirm it. */
+  readonly siteFlagged: boolean;
   readonly kind: SiteVisitKind | null;
 }
 
@@ -33,8 +44,11 @@ export async function loadSiteTask(
       propertyId: properties.id,
       siteLabel: properties.label,
       city: properties.city,
+      addressLine: properties.addressLine,
       latitude: properties.latitude,
       longitude: properties.longitude,
+      locationSource: properties.locationSource,
+      locationFlagged: properties.locationFlagged,
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
@@ -53,10 +67,13 @@ export async function loadSiteTask(
     managerUserId: row.managerUserId,
     propertyId: row.propertyId,
     siteLabel: `${row.siteLabel}, ${row.city}`,
+    siteAddress: `${row.addressLine}, ${row.city}`,
     site:
       row.latitude !== null && row.longitude !== null
         ? { latitude: row.latitude, longitude: row.longitude }
         : null,
+    siteSource: row.locationSource,
+    siteFlagged: row.locationFlagged,
     kind: siteVisitKindOf(row.task),
   };
 }

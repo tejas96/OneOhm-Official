@@ -39,6 +39,8 @@ DATABASE_URL=postgres://oneohm:oneohm-local-only@127.0.0.1:5460/oneohm node pack
 pnpm --filter @oneohm/database db:seed
 ```
 
+Maps: the API and web read `GOOGLE_MAPS_API_KEY` from the root `.env`. The field app's pin map is `expo-maps`: Apple Maps on iOS (iOS 17+, no key needed) and Google Maps on Android. The field app does not load the root `.env`: Expo reads only `apps/field/.env` (git-ignored) and the shell, so set the Android key there when building, e.g. `GOOGLE_MAPS_API_KEY=<key> npx expo run:android` (or `GOOGLE_MAPS_ANDROID_KEY`, which wins); without one the Android build shows no map. It needs a new dev build (`npx expo run:ios` / `run:android`) because `expo-maps` is native. EAS builds need the key as an EAS environment variable.
+
 Then start each part in its own terminal:
 
 ```bash

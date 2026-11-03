@@ -1,5 +1,6 @@
 import { type Database, recordJobRun } from '@oneohm/database';
 import { jobRunners, type WorkerJob } from './job-runners';
+import type { PayLinkSettings } from './payment-reminders';
 import { runTimedReminders } from './timed-reminders';
 
 /**
@@ -7,8 +8,8 @@ import { runTimedReminders } from './timed-reminders';
  * count or error (PRD 7.1 "workflow history and failure visibility"); a failure is
  * re-thrown so Temporal's retries still happen.
  */
-export function dailyActivities(db: Database, timeZone: string) {
-  const jobs = jobRunners(db, timeZone);
+export function dailyActivities(db: Database, timeZone: string, payLinks: PayLinkSettings) {
+  const jobs = jobRunners(db, timeZone, payLinks);
   const run = (name: WorkerJob) => () => recordJobRun(db, name, jobs[name], String);
   return {
     queuePaymentReminders: run('payment_reminders'),

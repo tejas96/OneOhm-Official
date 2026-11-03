@@ -60,6 +60,15 @@ export interface Incoming {
   readonly choiceId: string | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
+  /** Set when the chat was opened from a Meta click-to-WhatsApp ad. */
+  readonly referral?: IncomingReferral | null;
+}
+
+/** The ad behind a click-to-WhatsApp message. */
+export interface IncomingReferral {
+  readonly sourceId: string | null;
+  readonly sourceUrl: string | null;
+  readonly headline: string | null;
 }
 
 export interface DeliveryUpdate {
@@ -86,6 +95,7 @@ interface RawMessage {
   document?: RawMedia & { filename?: string };
   video?: RawMedia;
   audio?: RawMedia;
+  referral?: { source_id?: string; source_url?: string; headline?: string };
 }
 
 interface RawMedia {
@@ -125,9 +135,21 @@ interface RawValue {
 const when = (seconds: string | undefined) =>
   new Date(seconds ? Number(seconds) * 1000 : Date.now());
 
+/** The ad a click-to-WhatsApp message came from, or null for an ordinary message. */
+function readReferral(message: RawMessage): IncomingReferral | null {
+  const raw = message.referral;
+  if (!raw) return null;
+  return {
+    sourceId: raw.source_id ?? null,
+    sourceUrl: raw.source_url ?? null,
+    headline: raw.headline ?? null,
+  };
+}
+
 function readMessage(message: RawMessage, names: Map<string, string>): Incoming | null {
   if (!message.from || !message.id) return null;
   const base = {
+    referral: readReferral(message),
     from: `+${message.from.replace(/^\+/, '')}`,
     waMessageId: message.id,
     at: when(message.timestamp),

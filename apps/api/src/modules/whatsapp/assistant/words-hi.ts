@@ -49,6 +49,7 @@ export const HI: Words<AssistantWords> = {
     },
     allPaid: 'सारा भुगतान हो गया है। धन्यवाद!',
     payHere: 'यहाँ भुगतान करें',
+    payNow: 'अभी भुगतान करें',
     noDocuments: 'अभी कोई दस्तावेज़ नहीं हैं। प्रोजेक्ट आगे बढ़ने पर वे यहाँ दिखेंगे।',
     linksExpire: (hours) => `लिंक ${hours} घंटे तक चलेंगे।`,
     askProblem:
@@ -72,6 +73,12 @@ export const HI: Words<AssistantWords> = {
       name ? `धन्यवाद। ${name} आपको यहीं जवाब देंगे।` : 'धन्यवाद। हमारी टीम आपको यहीं जवाब देगी।',
     nightReply: (name) =>
       `धन्यवाद। हम सुबह 9:30 से शाम 6:30 तक जवाब देते हैं। आपका मैसेज ${name ? `${name} के पास` : 'हमारी टीम के पास'} है।`,
+    quoteConfirm: (number, total) => `कोटेशन ${number} (${total}) स्वीकार करें?`,
+    quoteYes: 'हाँ, स्वीकार है',
+    quoteNotYet: 'अभी नहीं',
+    quoteChanged: 'यह कोटेशन बदल गया है या अब खुला नहीं है।',
+    quoteOwnerOnly: 'कोटेशन सिर्फ़ ग्राहक के अपने नंबर से स्वीकार हो सकता है।',
+    quoteThanks: 'धन्यवाद। हमारी टीम आपका प्रोजेक्ट शुरू करेगी और एडवांस पेमेंट लिंक भेजेगी।',
   },
   RATINGS: [
     { id: 'rate:5', title: 'बहुत खुश', description: '5 में से 5' },

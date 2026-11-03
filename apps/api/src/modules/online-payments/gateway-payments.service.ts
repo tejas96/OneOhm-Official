@@ -14,6 +14,7 @@ import { eq, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { recordGatewayExcess } from '../finance/customer-credit-excess';
 import { FinanceService } from '../projects/finance.service';
+import { sendFreshLinkAfterExpiry } from './payment-follow-ups';
 
 export interface GatewayPayment {
   readonly providerLinkId: string;
@@ -129,18 +130,22 @@ export class GatewayPaymentsService {
   }
 
   async markLink(providerLinkId: string, status: 'expired' | 'cancelled'): Promise<string> {
-    const rows = await this.db
-      .update(paymentLinks)
-      .set({
-        status,
-        ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
-        updatedAt: new Date(),
-      })
-      .where(
-        sql`${paymentLinks.providerLinkId} = ${providerLinkId} and ${paymentLinks.status} in ('created', 'partly_paid')`,
-      )
-      .returning({ id: paymentLinks.id });
-    return rows.length > 0 ? status : 'no open link';
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .update(paymentLinks)
+        .set({
+          status,
+          ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          sql`${paymentLinks.providerLinkId} = ${providerLinkId} and ${paymentLinks.status} in ('created', 'partly_paid')`,
+        )
+        .returning({ id: paymentLinks.id });
+      // Only the call that closed the link sees a row, so a repeat sends nothing.
+      if (status === 'expired' && rows[0]) await sendFreshLinkAfterExpiry(tx, rows[0].id);
+      return rows.length > 0 ? status : 'no open link';
+    });
   }
 
   async recordPayout(payout: GatewayPayout): Promise<string> {

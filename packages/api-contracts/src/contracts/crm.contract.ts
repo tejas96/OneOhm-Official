@@ -54,6 +54,8 @@ export const propertyInputSchema = z.object({
   /** GPS of the site; staff correct it when the survey pin was off. */
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
+  /** How a changed point was set on the web; typed numbers when left out. */
+  locationSource: z.enum(['map_pin', 'typed']).optional(),
 });
 export type PropertyInput = z.infer<typeof propertyInputSchema>;
 
@@ -220,5 +222,21 @@ export const crmContract = c.router({
     pathParams: idParams,
     body: propertyInputSchema.partial(),
     responses: { 200: propertySchema },
+  },
+  confirmSiteLocation: {
+    method: 'POST',
+    path: '/properties/:id/location/confirm',
+    pathParams: idParams,
+    body: z.object({}).optional(),
+    responses: { 200: propertySchema },
+    summary: 'The office keeps a flagged site pin as it is.',
+  },
+  restoreSiteLocation: {
+    method: 'POST',
+    path: '/properties/:id/location/restore',
+    pathParams: idParams,
+    body: z.object({}).optional(),
+    responses: { 200: propertySchema },
+    summary: 'Puts back the earlier site point (the current one becomes the earlier one).',
   },
 });

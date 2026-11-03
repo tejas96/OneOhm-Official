@@ -1,14 +1,7 @@
 import { RADIUS } from '@oneohm/design-system/tokens';
 import type { ReactNode } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { Text } from './text';
@@ -24,7 +17,11 @@ export interface SheetProps {
   readonly footer?: ReactNode;
 }
 
-/** A bottom sheet for one focused job (log a follow-up, mark waiting). */
+/**
+ * A bottom sheet for one focused job (log a follow-up, mark waiting). While the keyboard
+ * is up the whole sheet rides above it on both platforms, and its body scrolls if the
+ * room left is short.
+ */
 export function Sheet({
   open,
   onClose,
@@ -40,7 +37,8 @@ export function Sheet({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
+        keyboardVerticalOffset={insets.bottom}
       >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.scrim }]}

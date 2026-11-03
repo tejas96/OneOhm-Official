@@ -1,5 +1,6 @@
 import { paymentMilestones, postMilestoneDue, type Transaction } from '@oneohm/database';
 import { planMilestones } from '@oneohm/domain';
+import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { planSteps } from '../payment-plans/payment-plans.service';
 
 /**
@@ -38,7 +39,11 @@ export async function activateMilestones(
       })),
     )
     .returning({ id: paymentMilestones.id, dueAt: paymentMilestones.dueAt });
-  for (const milestone of created) {
-    if (milestone.dueAt) await postMilestoneDue(tx, milestone.id, userId);
-  }
+  const due = created.filter((milestone) => milestone.dueAt);
+  for (const milestone of due) await postMilestoneDue(tx, milestone.id, userId);
+  // The customer hears about the advance now, with a Pay now button.
+  await tellCustomerMilestonesDue(
+    tx,
+    due.map((milestone) => milestone.id),
+  );
 }

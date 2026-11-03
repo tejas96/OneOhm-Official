@@ -1,3 +1,4 @@
+import { LOCATION_SOURCES } from '@oneohm/domain';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -5,6 +6,7 @@ import {
   doublePrecision,
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   uniqueIndex,
@@ -51,6 +53,9 @@ export const customers = pgTable(
   (table) => [index('customers_phone_idx').on(table.phoneE164)],
 );
 
+/** How a property's saved location was set: phone GPS, a dropped map pin, a searched address, or typed. */
+export const locationSourceEnum = pgEnum('location_source', LOCATION_SOURCES);
+
 /** A site that gets a system. A customer can have several (PRD 3.2). */
 export const properties = pgTable(
   'properties',
@@ -67,6 +72,20 @@ export const properties = pgTable(
     pincode: text('pincode'),
     latitude: doublePrecision('latitude'),
     longitude: doublePrecision('longitude'),
+    /** How the point above was set; empty for sites with no point. */
+    locationSource: locationSourceEnum('location_source'),
+    /** The phone's own accuracy reading when the point was set, in metres. */
+    locationAccuracyM: integer('location_accuracy_m'),
+    locatedAt: instant('located_at'),
+    locatedByUserId: uuid('located_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    /** Set when a dropped pin sat far from the phone's reading; staff review it. */
+    locationFlagged: boolean('location_flagged').notNull().default(false),
+    locationFlagDistanceM: integer('location_flag_distance_m'),
+    /** The point before the latest change, so a wrong move can be undone. */
+    previousLatitude: doublePrecision('previous_latitude'),
+    previousLongitude: doublePrecision('previous_longitude'),
     subsidyCategory: subsidyCategoryEnum('subsidy_category').notNull().default('individual'),
     households: integer('households'),
     discomId: uuid('discom_id').references(() => discoms.id),
@@ -127,6 +146,15 @@ export const leads = pgTable(
     /** A lost lead worth another try: on this day it shows in the owner's follow-ups. */
     revisitOn: calendarDate('revisit_on'),
     notes: text('notes'),
+    /** First-touch attribution: which ad or campaign brought the lead (all optional). */
+    campaignCode: text('campaign_code'),
+    adId: text('ad_id'),
+    adHeadline: text('ad_headline'),
+    adSourceUrl: text('ad_source_url'),
+    utmSource: text('utm_source'),
+    utmMedium: text('utm_medium'),
+    utmCampaign: text('utm_campaign'),
+    landingPage: text('landing_page'),
     wonAt: instant('won_at'),
     version: version(),
     createdAt: createdAt(),
@@ -143,6 +171,21 @@ export const leads = pgTable(
     ),
   ],
 );
+
+/** Where a lead came from: the ad, campaign code and web address it arrived through. */
+export type LeadAttribution = Partial<
+  Pick<
+    typeof leads.$inferSelect,
+    | 'campaignCode'
+    | 'adId'
+    | 'adHeadline'
+    | 'adSourceUrl'
+    | 'utmSource'
+    | 'utmMedium'
+    | 'utmCampaign'
+    | 'landingPage'
+  >
+>;
 
 export const leadActivities = pgTable(
   'lead_activities',

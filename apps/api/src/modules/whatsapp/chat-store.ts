@@ -8,12 +8,25 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Incoming } from './whatsapp-events';
 
 /** A reply inside WhatsApp's 24-hour window; the worker sends it like any message. */
 export type ChatReply =
   | { readonly kind: 'text'; readonly body: string }
+  | {
+      readonly kind: 'document';
+      readonly link: string;
+      readonly filename: string;
+      readonly caption?: string;
+    }
+  | {
+      /** One message with a button that opens a web page (WhatsApp keeps the label to 20). */
+      readonly kind: 'cta_url';
+      readonly body: string;
+      readonly label: string;
+      readonly url: string;
+    }
   | {
       readonly kind: 'buttons';
       readonly body: string;
@@ -100,6 +113,9 @@ export async function logIncoming(
 
 function summary(reply: ChatReply): string {
   if (reply.kind === 'text') return reply.body;
+  if (reply.kind === 'document')
+    return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
+  if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
   const options =
     reply.kind === 'buttons'
       ? reply.buttons.map((button) => button.title)
@@ -107,12 +123,16 @@ function summary(reply: ChatReply): string {
   return `${reply.body}\n[${options.join(' · ')}]`;
 }
 
-/** Queues a reply for the worker and keeps it in the chat history. */
+/**
+ * Queues a reply for the worker and keeps it in the chat history. With a `dedupeKey` the
+ * same reply is queued once; asking again changes nothing.
+ */
 export async function queueReply(
   db: DatabaseExecutor,
   conversation: Pick<Conversation, 'id' | 'phone'>,
   reply: ChatReply,
   sentByUserId: string | null = null,
+  dedupeKey?: string,
 ): Promise<void> {
   const [row] = await db
     .insert(outbox)
@@ -121,9 +141,11 @@ export async function queueReply(
       recipient: conversation.phone,
       template: `session:${reply.kind}`,
       payload: reply,
-      dedupeKey: `chat:${randomUUID()}`,
+      dedupeKey: dedupeKey ?? `chat:${randomUUID()}`,
     })
+    .onConflictDoNothing()
     .returning({ id: outbox.id });
+  if (!row && dedupeKey) return;
   await db.insert(waMessages).values({
     conversationId: conversation.id,
     direction: 'out',
@@ -194,6 +216,14 @@ export async function conversationForPhone(
   return again;
 }
 
+/** The new context, still carrying where the chat's lead came from (see entry-capture). */
+export const keepEntry = (context: Record<string, unknown>) =>
+  context.entry === undefined
+    ? sql`CASE WHEN ${waConversations.context} ? 'entry'
+        THEN ${JSON.stringify(context)}::jsonb || jsonb_build_object('entry', ${waConversations.context}->'entry')
+        ELSE ${JSON.stringify(context)}::jsonb END`
+    : context;
+
 /** Moves the chat to the next step of the assistant, with what that step needs. */
 export async function setState(
   db: DatabaseExecutor,
@@ -203,6 +233,6 @@ export async function setState(
 ): Promise<void> {
   await db
     .update(waConversations)
-    .set({ state, context, updatedAt: new Date() })
+    .set({ state, context: keepEntry(context), updatedAt: new Date() })
     .where(eq(waConversations.id, id));
 }

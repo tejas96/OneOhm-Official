@@ -1,9 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChatDetail, ChatSummary } from '@oneohm/api-contracts';
 import {
-  chatsWaitingSince,
   coveredBy,
-  customers,
   notify,
   outbox,
   roles,
@@ -12,18 +10,22 @@ import {
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { chatWaitStage, followUpText } from '@oneohm/domain';
+import { followUpText } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
-import { conversationForPhone, customerForPhone, queueReply, queueTemplate } from './chat-store';
+import {
+  conversationForPhone,
+  customerForPhone,
+  keepEntry,
+  queueReply,
+  queueTemplate,
+} from './chat-store';
+import { chatSummaries } from './chat-summaries';
 import { deliveryState } from './delivery-state';
-
-const WINDOW_MS = 24 * 3600 * 1000;
 
 /** "Sunita Jadhav (test)" → "Sunita"; a chat without a name is greeted as "there". */
 export function firstName(name: string): string {
@@ -34,8 +36,6 @@ export function firstName(name: string): string {
 /** The service and sales desks see every chat; everyone else sees the chats they answer. */
 export const seesAllChats = (actor: Actor) =>
   can(actor, 'service.manage') || can(actor, 'customers.manage');
-
-const assignee = alias(users, 'assignee');
 
 /**
  * The staff WhatsApp inbox: chats, their history and a way to answer by hand. Each chat
@@ -215,18 +215,13 @@ export class ChatsService {
       .update(waConversations)
       .set({
         state: 'menu',
-        context: {},
+        context: keepEntry({}),
         handedOverAt: null,
         handledByUserId: null,
         updatedAt: new Date(),
       })
       .where(eq(waConversations.id, id));
     return this.get(actor, id);
-  }
-
-  /** Waiting over 2 working hours for a person's answer. */
-  private isLate(since: Date | undefined, now: Date): boolean {
-    return since !== undefined && chatWaitStage(since, now, this.env.BUSINESS_TIMEZONE) === 2;
   }
 
   /** Chats this person answers: their own, ones they replied in, and ones they cover today. */
@@ -247,70 +242,7 @@ export class ChatsService {
     );
   }
 
-  private async summaries(where: SQL | undefined, limit: number): Promise<ChatSummary[]> {
-    const rows = await this.db
-      .select({
-        chat: waConversations,
-        customer: customers.name,
-        assigneeName: assignee.fullName,
-      })
-      .from(waConversations)
-      .leftJoin(customers, eq(customers.id, waConversations.customerId))
-      .leftJoin(assignee, eq(assignee.id, waConversations.assignedUserId))
-      .where(where)
-      .orderBy(desc(waConversations.updatedAt))
-      .limit(limit);
-    if (rows.length === 0) return [];
-    const last = await this.db
-      .selectDistinctOn([waMessages.conversationId], {
-        conversationId: waMessages.conversationId,
-        body: waMessages.body,
-        direction: waMessages.direction,
-        at: waMessages.createdAt,
-      })
-      .from(waMessages)
-      .where(
-        inArray(
-          waMessages.conversationId,
-          rows.map(({ chat }) => chat.id),
-        ),
-      )
-      .orderBy(waMessages.conversationId, desc(waMessages.createdAt));
-    const lastBy = new Map(last.map((row) => [row.conversationId, row]));
-    const waiting = await chatsWaitingSince(
-      this.db,
-      rows.map(({ chat }) => chat.id),
-    );
-    const now = new Date();
-    return rows.map(({ chat, customer, assigneeName }) => {
-      const message = lastBy.get(chat.id);
-      return {
-        id: chat.id,
-        phone: chat.phone,
-        name: customer ?? chat.profileName ?? chat.phone,
-        customerId: chat.customerId,
-        state: chat.state,
-        handedOverAt: chat.handedOverAt?.toISOString() ?? null,
-        handledByUserId: chat.handledByUserId,
-        assignee:
-          chat.assignedUserId && assigneeName
-            ? { id: chat.assignedUserId, name: assigneeName }
-            : null,
-        // A person has the chat and the customer spoke last: someone owes them an answer.
-        needsReply: chat.state === 'human' && waiting.has(chat.id),
-        late: chat.state === 'human' && this.isLate(waiting.get(chat.id), now),
-        lastMessage: message
-          ? {
-              body: message.body,
-              direction: message.direction as 'in' | 'out',
-              at: message.at.toISOString(),
-            }
-          : null,
-        lastInboundAt: chat.lastInboundAt?.toISOString() ?? null,
-        windowOpen: chat.lastInboundAt
-          ? Date.now() - chat.lastInboundAt.getTime() < WINDOW_MS
-          : false,
-      };
-    });
+  private summaries(where: SQL | undefined, limit: number): Promise<ChatSummary[]> {
+    return chatSummaries(this.db, this.env, where, limit);
   }
 }

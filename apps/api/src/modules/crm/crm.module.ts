@@ -4,6 +4,8 @@ import { CustomerActivityService } from './customer-activity.service';
 import { CustomerContactController } from './customer-contact.controller';
 import { CustomerContactService } from './customer-contact.service';
 import { CustomersService } from './customers.service';
+import { LeadCampaignsController } from './lead-campaigns.controller';
+import { LeadCampaignsService } from './lead-campaigns.service';
 import { PhoneMatchController, WebsiteLeadController } from './lead-intake.controller';
 import { LeadIntakeService } from './lead-intake.service';
 import { LeadStepsController } from './lead-steps.controller';
@@ -17,6 +19,7 @@ import { SiteConnectionService } from './site-connection.service';
   controllers: [
     CrmController,
     LeadStepsController,
+    LeadCampaignsController,
     CustomerContactController,
     PhoneMatchController,
     WebsiteLeadController,
@@ -27,6 +30,7 @@ import { SiteConnectionService } from './site-connection.service';
     CustomersService,
     CustomerActivityService,
     LeadStepsService,
+    LeadCampaignsService,
     CustomerContactService,
     LeadIntakeService,
     SiteConnectionService,

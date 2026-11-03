@@ -34,9 +34,12 @@ export class SiteActivityController {
         onSite();
         return { status: 200, body: await this.visits.checkOut(actor, params.id, body.position) };
       },
-      saveSiteLocation: async ({ params }) => {
+      saveSiteLocation: async ({ params, body }) => {
         onSite();
-        return { status: 200, body: await this.visits.saveSiteLocation(actor, params.id) };
+        return {
+          status: 200,
+          body: await this.visits.saveSiteLocation(actor, params.id, body?.pin),
+        };
       },
       projectSiteVisits: async ({ params }) => {
         assertCan(actor, 'projects.view_all', 'tasks.approve');

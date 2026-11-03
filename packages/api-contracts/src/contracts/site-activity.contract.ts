@@ -42,7 +42,10 @@ export const siteActivityContract = c.router({
     method: 'POST',
     path: '/tasks/:id/site/location',
     pathParams: idParams,
-    body: z.object({}).optional(),
+    /** With a pin: the roof the worker pinned on the map. Without: their check-in reading. */
+    body: z
+      .object({ pin: positionSchema.pick({ latitude: true, longitude: true }).optional() })
+      .optional(),
     responses: { 200: taskSiteSchema },
   },
   projectSiteVisits: {

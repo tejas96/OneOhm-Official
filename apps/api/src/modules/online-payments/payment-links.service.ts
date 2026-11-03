@@ -11,6 +11,7 @@ import {
   queueCustomerMessage,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
+import { signPayToken } from '@oneohm/shared/pay-token';
 import { desc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -55,6 +56,8 @@ export class PaymentLinksService {
     const { milestone, project, customer } = row;
     if (milestone.payer !== 'customer')
       throw invalid('The bank share is claimed from the bank, not paid by link.', {});
+    if (milestone.status === 'paid')
+      throw conflict('Nothing is left to pay on this milestone.', 'paid');
     if (milestone.status !== 'due' && milestone.status !== 'partly_paid')
       throw conflict('Links are sent once a milestone is due and not yet paid.', 'not_due');
     const open = (await openLinksFor(this.db, [milestoneId])).get(milestoneId);
@@ -102,6 +105,11 @@ export class PaymentLinksService {
             milestone: milestone.label,
             project: project.code,
             link: created.url,
+            payToken: signPayToken(this.env.FILE_LINK_SECRET, {
+              milestoneId,
+              customerId: project.customerId,
+              exp: Math.floor(expiresAt.getTime() / 1000),
+            }),
           },
           `payment_link:${link.id}`,
         );

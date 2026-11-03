@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { readFileLink, signFileLink } from './file-links';
+import { readFileLink, sharedFileUrl, signFileLink } from './file-links';
 
 describe('shared file links', () => {
   const file = { kind: 'receipt', id: 'p1', customerId: 'c1', exp: 2_000_000_000 } as const;
@@ -30,5 +30,26 @@ describe('shared file links', () => {
     const data = Buffer.from(JSON.stringify(file)).toString('base64url');
     const mac = createHmac('sha256', 'a-long-secret-value').update(data).digest('base64url');
     expect(readFileLink('a-long-secret-value', `${data}.${mac}`, 0)).toEqual(file);
+  });
+
+  it('sharedFileUrl builds a link readFileLink accepts until FILE_LINK_HOURS pass', () => {
+    const env = {
+      API_PUBLIC_URL: 'https://api.example.test',
+      FILE_LINK_SECRET: 'a-long-secret-value',
+      FILE_LINK_HOURS: 2,
+    };
+    const now = 1_000_000_000_000;
+    const url = sharedFileUrl(env, { kind: 'receipt', id: 'p1', customerId: 'c1' }, now);
+    const prefix = 'https://api.example.test/v1/files/shared/';
+    expect(url.startsWith(prefix)).toBe(true);
+    const token = url.slice(prefix.length);
+    const hours = 2 * 3600 * 1000;
+    expect(readFileLink(env.FILE_LINK_SECRET, token, now + hours - 1)).toEqual({
+      kind: 'receipt',
+      id: 'p1',
+      customerId: 'c1',
+      exp: now / 1000 + 2 * 3600,
+    });
+    expect(readFileLink(env.FILE_LINK_SECRET, token, now + hours + 1)).toBeNull();
   });
 });

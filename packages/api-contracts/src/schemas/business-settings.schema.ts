@@ -3,6 +3,8 @@ import {
   ASSIGNMENT_STRATEGIES,
   JOB_NAMES,
   JOB_RUN_STATUSES,
+  LEAD_ASSIGNMENT_STRATEGIES,
+  MAX_CITIES_PER_OWNER,
   PROJECT_VARIANTS,
 } from '@oneohm/domain';
 import { z } from 'zod';
@@ -30,6 +32,18 @@ export const assignmentRulesSchema = z.object({
   teamFirst: z.boolean(),
 });
 export type AssignmentRulesRecord = z.infer<typeof assignmentRulesSchema>;
+
+/** Who gets a new lead nobody picked: the way to choose, and city owners who go first. */
+export const leadAssignmentRulesSchema = z.object({
+  strategy: z.enum(LEAD_ASSIGNMENT_STRATEGIES),
+  cityOwners: z.array(
+    z.object({
+      userId: idSchema,
+      cities: z.array(z.string().max(80)).max(MAX_CITIES_PER_OWNER),
+    }),
+  ),
+});
+export type LeadAssignmentRulesRecord = z.infer<typeof leadAssignmentRulesSchema>;
 
 /** Money approval limits (PRD 7.2, 7.3). Amounts in paise. */
 export const approvalPolicySchema = z.object({
@@ -88,6 +102,12 @@ export const jobRunSchema = z.object({
   retryable: z.boolean(),
   /** A retry is already waiting or ran after this failure. */
   retried: z.boolean(),
+  /** For a retry: the failed run it repeats. */
+  retryOfId: idSchema.nullable(),
+  /** What the run was about, when it has one (for message delivery, the message's ID). */
+  subjectId: idSchema.nullable(),
+  /** Who asked for a retry by hand; empty for runs the system started. */
+  requestedBy: z.object({ id: idSchema, name: z.string() }).nullable(),
   createdAt: instantSchema,
 });
 export type JobRunRecord = z.infer<typeof jobRunSchema>;

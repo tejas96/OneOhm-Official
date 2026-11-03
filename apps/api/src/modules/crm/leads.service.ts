@@ -10,7 +10,7 @@ import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { resolveReferralCode } from '../referrals/referral-codes';
 import { logLead, logLeadChanges, tellLeadOwner } from './lead-history';
-import { assertCanOwnLeads, ownerByRule } from './lead-owner';
+import { alertNobodyFree, assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
 import { leadVisibility, needsFollowUp, readLeadDetail, unownedLeads } from './lead-read';
 import { pickStep, stepColumns } from './lead-steps-read';
@@ -94,7 +94,8 @@ export class LeadsService {
     const reseller = actor.kind === 'reseller';
     const referrer = await this.referrer(input);
     // A reseller's lead gets a OneOhm owner by rule; staff own what they add unless they pick.
-    const owner = reseller ? await ownerByRule(this.db) : (input.ownerUserId ?? actor.userId);
+    const ruled = reseller ? await ownerByRule(this.db, { city: input.city }) : null;
+    const owner = reseller ? ruled?.userId : (input.ownerUserId ?? actor.userId);
     if (!owner) throw conflict('Nobody can take new leads yet. Ask an admin to set up Sales.');
     if (input.ownerUserId) await assertCanOwnLeads(this.db, input.ownerUserId);
     const [created] = await this.db
@@ -119,6 +120,7 @@ export class LeadsService {
     if (!created) throw new Error('Lead insert returned nothing.');
     await logLead(this.db, created.id, actor.userId, 'note', createdNote(referrer));
     if (owner !== actor.userId) await tellLeadOwner(this.db, owner, created, actor.fullName);
+    if (ruled?.fallback) await alertNobodyFree(this.db, created);
     const [lead] = await presentLeads(this.db, [created]);
     if (!lead) throw notFound('That lead');
     return lead;
@@ -143,7 +145,8 @@ export class LeadsService {
     const lost = lostColumns(current, patch, stage, todayIn());
     // Reopening a lead that never had an owner gives it one by rule.
     const needsOwner = !CLOSED.includes(stage) && !current.owner && patch.ownerUserId === undefined;
-    const owner = needsOwner ? await ownerByRule(this.db) : patch.ownerUserId;
+    const ruled = needsOwner ? await ownerByRule(this.db, { city: current.city }) : null;
+    const owner = needsOwner ? ruled?.userId : patch.ownerUserId;
     if (needsOwner && !owner) throw invalid('Pick who follows this lead up.');
     await this.db
       .update(leads)
@@ -160,6 +163,7 @@ export class LeadsService {
       })
       .where(eq(leads.id, id));
     await logLeadChanges(this.db, actor, current, { patch, step, stage, lost, owner });
+    if (ruled?.fallback) await alertNobodyFree(this.db, current);
     return this.get(actor, id);
   }
 

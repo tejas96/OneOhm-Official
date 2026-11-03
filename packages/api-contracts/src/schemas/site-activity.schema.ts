@@ -59,6 +59,8 @@ export const taskSiteSchema = z.object({
   /** Null when the task is office work: no check-in is offered. */
   kind: siteVisitKindSchema.nullable(),
   siteLabel: z.string().nullable(),
+  /** The site's street address and city, what Navigate searches when no point is saved. */
+  siteAddress: z.string().nullable(),
   siteLocated: z.boolean(),
   farFromSiteM: z.number().int(),
   /** The person's open visit anywhere (it may be another task's). */
@@ -67,6 +69,12 @@ export const taskSiteSchema = z.object({
   tracking: trackingStatusSchema,
   /** The person may save their check-in spot as the site's location (none saved yet). */
   canSetSite: z.boolean(),
+  /** The site's saved point, when it has one. */
+  sitePoint: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
+  /** The saved point waits for the office to confirm it (pin far from the worker or unread). */
+  siteFlagged: z.boolean(),
+  /** The person has an open visit on this task, so may pin the roof on the map. */
+  canPinSite: z.boolean(),
 });
 export type TaskSite = z.infer<typeof taskSiteSchema>;
 

@@ -48,6 +48,21 @@ export const salesReportSchema = z.object({
       rate,
     }),
   ),
+  /** Of the leads created in the period, by the ad or campaign that brought them. */
+  byCampaign: z.array(
+    z.object({
+      /** The campaign code, else `ad:<id>`, else `utm:<campaign>`, else `none`. */
+      key: z.string(),
+      label: z.string(),
+      leads: z.number().int(),
+      /** Leads that reached quotation sent or later. */
+      quoted: z.number().int(),
+      won: z.number().int(),
+      wonValuePaise: paiseSchema,
+      /** Customer payments on the projects these leads' quotations became. */
+      collectedPaise: paiseSchema,
+    }),
+  ),
   byOwner: z.array(
     z.object({
       userId: idSchema.nullable(),

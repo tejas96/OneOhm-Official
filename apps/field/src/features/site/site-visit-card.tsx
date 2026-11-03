@@ -6,7 +6,10 @@ import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
 import { SITE } from '@/copy/site';
 import { ConsentPrompt } from '@/features/attendance/consent-prompt';
+import { buttonState } from './button-state';
+import { SitePlaceActions } from './site-place-actions';
 import { TrackingStatus } from './tracking-status';
+import { mapsEnabled, usePinRoof } from './use-pin-roof';
 import { type Missed, useSiteAction, useTaskSite } from './use-task-site';
 import { VisitLine } from './visit-line';
 
@@ -33,16 +36,20 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
   const checkIn = useSiteAction(task.id, 'in');
   const checkOut = useSiteAction(task.id, 'out');
   const save = useSiteAction(task.id, 'save');
+  const pin = usePinRoof(task.id, site);
   const open = site.openVisit;
   const here = open?.taskId === task.id ? open : null;
   const elsewhere = open && !here ? open : null;
   const earlier = site.visits.filter((visit) => visit.id !== here?.id).slice(0, 3);
   const askConsent = site.tracking.state === 'no_consent' && !site.tracking.answered;
   const run = (action: typeof checkIn, done: string) =>
-    action.mutate(site.tracking, {
-      onSuccess: ({ missed }) => toast(missedNote(missed) ?? done),
-      onError: (error) => toast(describeError(error)),
-    });
+    action.mutate(
+      { tracking: site.tracking },
+      {
+        onSuccess: ({ missed }) => toast(missedNote(missed) ?? done),
+        onError: (error) => toast(describeError(error)),
+      },
+    );
 
   return (
     <Card style={styles.card}>
@@ -57,7 +64,7 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       </Text>
       {askConsent ? <ConsentPrompt days={site.tracking.retentionDays} /> : null}
       {here ? <VisitLine visit={here} /> : null}
-      {here && site.canSetSite ? (
+      {!mapsEnabled && here && site.canSetSite ? (
         <Button
           label={SITE.saveSite}
           size="sm"
@@ -67,6 +74,7 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
           onPress={() => run(save, SITE.siteSaved)}
         />
       ) : null}
+      <SitePlaceActions site={site} pin={pin} />
       {elsewhere ? (
         <PressableScale
           accessibilityRole="button"
@@ -88,19 +96,18 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
       ) : null}
       {here ? (
         <Button
-          label={SITE.checkOut}
+          {...buttonState(checkOut.isPending, checkOut.label, SITE.checkOut)}
           variant="secondary"
           icon={<LogOut size={18} color={theme.colors.textPrimary} />}
-          pending={checkOut.isPending}
-          onPress={() => run(checkOut, SITE.checkedOut)}
+          // A roof pin waiting for signal goes first: it needs the open visit.
+          onPress={() => void pin.flush().then(() => run(checkOut, SITE.checkedOut))}
           fullWidth
         />
       ) : null}
       {!here && !elsewhere && task.status !== 'completed' ? (
         <Button
-          label={SITE.checkIn}
+          {...buttonState(checkIn.isPending, checkIn.label, SITE.checkIn)}
           icon={<LogIn size={18} color={theme.colors.onAccent} />}
-          pending={checkIn.isPending}
           onPress={() => run(checkIn, SITE.checkedIn)}
           fullWidth
         />

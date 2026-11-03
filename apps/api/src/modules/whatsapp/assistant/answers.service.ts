@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { paymentMilestones, payments, projects } from '@oneohm/database';
+import { paymentMilestones, payments, projects, quotations } from '@oneohm/database';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
@@ -10,10 +10,11 @@ import { CustomerDocumentsService } from '../../customer-portal/customer-documen
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { openLinksFor } from '../../online-payments/open-links';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
-import { type SharedFile, signFileLink } from '../file-links';
+import { type SharedFile, sharedFileUrl } from '../file-links';
 import { issuedInvoices } from '../shared-invoices';
 import { coverText } from './cover-answer';
 import { fitMessage } from './fit-message';
+import { payNowReplies } from './pay-buttons';
 import { rewardsText } from './rewards-answer';
 import { ANSWER_WORDS, FILE_WORDS, WORDS } from './words';
 
@@ -109,6 +110,11 @@ export class AnswersService {
     return blocks.join('\n\n');
   }
 
+  /** A "Pay now" message for each due amount; the text answer is sent first. */
+  payNow(customerId: string) {
+    return payNowReplies(this.db, this.env, customerId);
+  }
+
   /** One line per milestone: paid, later, the bank's share, or due with a pay link. */
   private async milestoneLine(
     milestone: typeof paymentMilestones.$inferSelect,
@@ -128,9 +134,8 @@ export class AnswersService {
 
   /** Quotation, tax invoices, receipts, reports and papers, as links that work for a few days. */
   async documents(customerId: string): Promise<string> {
-    const exp = Math.floor(Date.now() / 1000) + this.env.FILE_LINK_HOURS * 3600;
     const link = (kind: SharedFile['kind'], id: string, key?: string) =>
-      `${this.env.API_PUBLIC_URL}/v1/files/shared/${signFileLink(this.env.FILE_LINK_SECRET, { kind, id, customerId, exp, ...(key ? { key } : {}) })}`;
+      sharedFileUrl(this.env, { kind, id, customerId, ...(key ? { key } : {}) });
     const { projects: own } = await this.portal.home(customerId);
     const receipts = await this.db
       .select({ id: payments.id, number: payments.receiptNumber, amount: payments.amountPaise })
@@ -144,10 +149,10 @@ export class AnswersService {
       .slice(0, LATEST);
     const invoices = await issuedInvoices(this.db, customerId, LATEST);
     const reports = (await this.papers.readyReports(customerId)).slice(0, LATEST);
+    const projectQuotes = own.map((project) => project.quotation);
+    const quotes = [...projectQuotes, ...(await this.sentQuotes(customerId, projectQuotes))];
     const lines = [
-      ...own.map((project) =>
-        FILE_WORDS.quotation(project.quotation.number, link('quotation', project.quotation.id)),
-      ),
+      ...quotes.map((quote) => FILE_WORDS.quotation(quote.number, link('quotation', quote.id))),
       ...invoices.map((invoice) =>
         FILE_WORDS.invoice(
           invoice.number,
@@ -173,6 +178,22 @@ export class AnswersService {
     ];
     if (lines.length === 0) return WORDS.noDocuments;
     return fitMessage(lines, WORDS.linksExpire(this.env.FILE_LINK_HOURS), FILE_WORDS.more);
+  }
+
+  /** The newest sent or accepted revision of each quotation not already shown with a project. */
+  private async sentQuotes(customerId: string, shown: readonly { number: string }[]) {
+    const rows = await this.db
+      .select({ id: quotations.id, number: quotations.number })
+      .from(quotations)
+      .where(
+        and(
+          eq(quotations.customerId, customerId),
+          inArray(quotations.status, ['sent', 'accepted']),
+        ),
+      )
+      .orderBy(desc(quotations.revision), desc(quotations.createdAt));
+    const seen = new Set(shown.map((quote) => quote.number));
+    return rows.filter((row) => !seen.has(row.number) && seen.add(row.number)).slice(0, LATEST);
   }
 
   async requests(customerId: string): Promise<string> {

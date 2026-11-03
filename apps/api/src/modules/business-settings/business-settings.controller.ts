@@ -37,6 +37,14 @@ export class BusinessSettingsController {
         configure();
         return { status: 200, body: await this.settings.save(actor, 'assignment', body) };
       },
+      leadAssignment: async () => {
+        configure();
+        return { status: 200, body: await this.settings.leadAssignment() };
+      },
+      saveLeadAssignment: async ({ body }) => {
+        configure();
+        return { status: 200, body: await this.settings.saveLeadAssignment(actor, body) };
+      },
       approvals: async () => {
         configure();
         return { status: 200, body: await this.settings.approvals() };

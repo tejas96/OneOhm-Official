@@ -1,4 +1,10 @@
-import { LEAD_LOST_REASONS, LEAD_SOURCES, LEAD_STAGES, SUBSIDY_CATEGORIES } from '@oneohm/domain';
+import {
+  LEAD_LOST_REASONS,
+  LEAD_SOURCES,
+  LEAD_STAGES,
+  LOCATION_SOURCES,
+  SUBSIDY_CATEGORIES,
+} from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 
@@ -74,7 +80,23 @@ export const leadQuotationSchema = z.object({
 });
 export type LeadQuotation = z.infer<typeof leadQuotationSchema>;
 
+/** Where the lead came from (first touch); every part is null when it was not captured. */
+export const leadAttributionSchema = z.object({
+  campaignCode: z.string().nullable(),
+  /** The campaign's name from Settings → Selling, when the code is on the list. */
+  campaignName: z.string().nullable(),
+  adId: z.string().nullable(),
+  adHeadline: z.string().nullable(),
+  adSourceUrl: z.string().nullable(),
+  utmSource: z.string().nullable(),
+  utmMedium: z.string().nullable(),
+  utmCampaign: z.string().nullable(),
+  landingPage: z.string().nullable(),
+});
+export type LeadAttributionRecord = z.infer<typeof leadAttributionSchema>;
+
 export const leadDetailSchema = leadSchema.extend({
+  attribution: leadAttributionSchema,
   activities: z.array(leadActivitySchema),
   quotations: z.array(leadQuotationSchema),
   /** True when the lead came from a reseller: staff notes can be kept from them. */
@@ -108,6 +130,13 @@ export const propertySchema = z.object({
   /** The site's GPS point; photos and check-ins are checked against it. */
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  /** How the point was set, when it was, and whether a far-off pin is waiting for review. */
+  locationSource: z.enum(LOCATION_SOURCES).nullable().optional(),
+  locatedAt: instantSchema.nullable().optional(),
+  locationFlagged: z.boolean().optional(),
+  locationFlagDistanceM: z.number().int().nullable().optional(),
+  /** True when an earlier point is kept and can be restored. */
+  hasPreviousLocation: z.boolean().optional(),
 });
 export type Property = z.infer<typeof propertySchema>;
 

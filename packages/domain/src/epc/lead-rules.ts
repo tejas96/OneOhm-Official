@@ -1,3 +1,5 @@
+import type { LeadAssignmentRules } from '../settings/lead-assignment';
+
 /** Why a lead was lost, from a short list; "other" needs a few words (PRD 3.3). */
 export const LEAD_LOST_REASONS = [
   'price',
@@ -52,20 +54,47 @@ export interface OwnerCandidate {
   readonly name: string;
   /** Open leads this person already owns. */
   readonly openLeads: number;
-  readonly onLeave: boolean;
+  /** On leave today (approved leave or marked away): never given a new lead. */
+  readonly away: boolean;
+  /** When this person was last given a lead by the rule; null if never. */
+  readonly lastLeadAt: Date | null;
 }
 
-/**
- * Who takes a lead nobody picked (website, WhatsApp, referral, reseller): the person
- * with the fewest open leads, people on leave last, then by name so it never flips.
- */
-export function pickLeadOwner(candidates: readonly OwnerCandidate[]): string | null {
-  const [first] = [...candidates].sort(
-    (left, right) =>
-      Number(left.onLeave) - Number(right.onLeave) ||
-      left.openLeads - right.openLeads ||
-      left.name.localeCompare(right.name) ||
-      left.userId.localeCompare(right.userId),
+const byName = (left: OwnerCandidate, right: OwnerCandidate) =>
+  left.name.localeCompare(right.name) || left.userId.localeCompare(right.userId);
+
+function pickByStrategy(pool: readonly OwnerCandidate[], rules: LeadAssignmentRules) {
+  const time = (person: OwnerCandidate) => person.lastLeadAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+  const [first] = [...pool].sort((left, right) =>
+    rules.strategy === 'round_robin'
+      ? Math.sign(time(left) - time(right)) || byName(left, right)
+      : left.openLeads - right.openLeads || byName(left, right),
   );
   return first?.userId ?? null;
+}
+
+const cityKey = (city: string) => city.trim().toLowerCase();
+
+/**
+ * Who takes a lead nobody picked: people who are away are skipped. The city's owners
+ * come first when any of them is free; otherwise everyone free shares the lead by the
+ * strategy (fewest open leads, or longest since their last lead), then by name so it
+ * never flips. Null when everyone is away.
+ */
+export function pickLeadOwner(
+  candidates: readonly OwnerCandidate[],
+  rules: LeadAssignmentRules,
+  city?: string | null,
+): string | null {
+  const free = candidates.filter((person) => !person.away);
+  const key = city ? cityKey(city) : '';
+  const owners = new Set(
+    key
+      ? rules.cityOwners
+          .filter((owner) => owner.cities.some((name) => cityKey(name) === key))
+          .map((owner) => owner.userId)
+      : [],
+  );
+  const local = free.filter((person) => owners.has(person.userId));
+  return pickByStrategy(local.length > 0 ? local : free, rules);
 }

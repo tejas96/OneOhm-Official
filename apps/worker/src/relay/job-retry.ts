@@ -1,6 +1,7 @@
 import { type Database, jobRuns, outbox, recordJobRun } from '@oneohm/database';
 import { and, asc, eq } from 'drizzle-orm';
 import { isWorkerJob, jobRunners } from '../activities/job-runners';
+import type { PayLinkSettings } from '../activities/payment-reminders';
 
 const BATCH = 5;
 
@@ -18,10 +19,11 @@ export class JobRetryLoop {
   constructor(
     private readonly db: Database,
     timeZone: string,
+    payLinks: PayLinkSettings,
     private readonly pollMs: number,
     private readonly log: (line: string) => void,
   ) {
-    this.jobs = jobRunners(db, timeZone);
+    this.jobs = jobRunners(db, timeZone, payLinks);
   }
 
   start(): void {

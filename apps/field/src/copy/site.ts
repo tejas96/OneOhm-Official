@@ -28,6 +28,8 @@ export const SITE = {
   },
   checkIn: 'Check in at site',
   checkOut: 'Check out of site',
+  finding: (metres: number | null) =>
+    metres === null ? 'Finding your location…' : `Finding your location… ${Math.round(metres)} m`,
   inSince: (time: string) => `Checked in at ${time}`,
   visit: (from: string, to: string, minutes: number) => `${from} to ${to} · ${duration(minutes)}`,
   fromSite: (metres: number) => `${distance(metres)} from the site`,
@@ -37,6 +39,13 @@ export const SITE = {
   siteUnknown: 'This site has no saved location yet.',
   saveSite: 'Save this spot as the site location',
   siteSaved: 'Site location saved.',
+  pinRoof: 'Pin the roof',
+  movePin: 'Move the roof pin',
+  pinNeedsLocation: 'Share your location to pin the roof.',
+  pinned: 'Roof pinned',
+  pinnedFlagged: 'Roof pinned. The office will check it.',
+  pinWaiting: 'Roof pin waiting for signal',
+  navigate: 'Navigate',
   elsewhere: (task: string) => `You are checked in for ${task}. Check out there first.`,
   checkedIn: 'Checked in at the site.',
   checkedOut: 'Checked out of the site.',
@@ -44,6 +53,21 @@ export const SITE = {
   noFix: 'Your location could not be read. The visit is saved without it.',
   denied: 'Location is off for OneOhm. The visit is saved without it.',
   done: 'This task is complete.',
+} as const;
+
+/** The satellite map for pinning the roof. */
+export const PIN = {
+  title: 'Pin the roof',
+  hint: 'Move the map so the pin sits on the roof.',
+  close: 'Close the map',
+  loading: 'Loading the map…',
+  saved: 'Saved site location',
+  confirm: 'This is the roof',
+  useGps: 'Use my GPS reading',
+  failed: 'Map not loading. Use my GPS reading',
+  failedSaved: 'Map not loading.',
+  keepSaved: 'Keep the saved location',
+  closeShort: 'Close',
 } as const;
 
 export const TRAVEL = {

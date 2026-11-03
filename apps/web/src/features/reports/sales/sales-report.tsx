@@ -14,7 +14,13 @@ import { PeriodNumbers } from '../parts/period-numbers';
 import { ReportBody, ReportNote } from '../parts/report-body';
 import { decimal, formatRate, kwp, money, useBucketNames, whole } from '../parts/report-format';
 import { useSalesReport } from '../use-business-reports';
-import { LostReasons, SalesByOwner, SalesBySource, SalesFunnel } from './sales-tables';
+import {
+  LostReasons,
+  SalesByCampaign,
+  SalesByOwner,
+  SalesBySource,
+  SalesFunnel,
+} from './sales-tables';
 
 function Kpis({ data }: { readonly data: SalesReport }) {
   const t = useTranslations('salesReport.kpis');
@@ -133,6 +139,7 @@ export function SalesReportView() {
             <div className="flex min-w-0 flex-col gap-6">
               <SalesByOwner rows={data.byOwner} />
               <SalesBySource rows={data.bySource} />
+              <SalesByCampaign rows={data.byCampaign} />
             </div>
             <div className="flex min-w-0 flex-col gap-6">
               <SalesFunnel funnel={data.funnel} />

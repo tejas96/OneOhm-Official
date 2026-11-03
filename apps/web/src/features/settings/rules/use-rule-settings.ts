@@ -9,6 +9,7 @@ import { useApiForm } from '@/lib/forms/use-api-form';
 export const RULE_KEYS = {
   reminders: ['settings', 'reminders'],
   assignment: ['settings', 'assignment'],
+  leadAssignment: ['settings', 'lead-assignment'],
   approvals: ['settings', 'approvals'],
   dashboard: ['settings', 'dashboard'],
   projectTypes: ['settings', 'project-types'],

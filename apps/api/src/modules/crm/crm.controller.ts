@@ -76,6 +76,14 @@ export class CrmController {
         assertCan(actor, 'customers.manage', 'surveys.perform', 'discom.manage');
         return { status: 200, body: await this.customers.updateProperty(actor, params.id, body) };
       },
+      confirmSiteLocation: async ({ params }) => {
+        assertCan(actor, 'customers.manage', 'surveys.perform', 'discom.manage');
+        return { status: 200, body: await this.customers.confirmLocation(actor, params.id) };
+      },
+      restoreSiteLocation: async ({ params }) => {
+        assertCan(actor, 'customers.manage', 'surveys.perform', 'discom.manage');
+        return { status: 200, body: await this.customers.restoreLocation(actor, params.id) };
+      },
     });
   }
 }

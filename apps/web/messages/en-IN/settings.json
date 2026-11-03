@@ -7,6 +7,7 @@
       "roles": "Roles & permissions",
       "company": "Company",
       "leadSteps": "Lead stages",
+      "leadCampaigns": "Ad and campaign codes",
       "products": "Products",
       "rates": "Rate card",
       "discoms": "DISCOMs & subsidy",
@@ -734,7 +735,9 @@
         "saved": "{name} saved.",
         "metaNameMr": "Marathi template name (optional)",
         "metaNameHi": "Hindi template name (optional)",
-        "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one."
+        "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one.",
+        "extrasApproved": "Meta approved the version with file and buttons",
+        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off."
       }
     },
     "activity": {
@@ -748,6 +751,14 @@
       "empty": "Nothing recorded yet.",
       "more": "Show older",
       "system": "OneOhm (automatic)",
+      "sheet": {
+        "summary": "Summary",
+        "recordId": "Record ID",
+        "entryId": "Log entry ID",
+        "changes": "What changed",
+        "details": "Details",
+        "noDetails": "Nothing more was recorded."
+      },
       "failedOnly": "Only failed tries",
       "ok": "Signed in",
       "failed": "Failed",
@@ -929,6 +940,27 @@
         "shareNumberNone": "Leave empty to use the company's first phone number."
       }
     },
+    "leadCampaigns": {
+      "loading": "Loading ad and campaign codes",
+      "intro": "Short codes that say which ad or campaign a lead came from, for example DIWALI-26 on an ad link or at the start of a WhatsApp message. Turn a code off when the campaign ends to hide it from the active list; leads already tagged keep it, and new messages with the code are still recorded.",
+      "empty": "No codes yet.",
+      "leads": "{count, plural, =0 {No leads yet} one {# lead} other {# leads}}",
+      "edit": "Rename {code}",
+      "add": "Add a code",
+      "failed": "Could not change the code",
+      "dialog": {
+        "addTitle": "Add a code",
+        "editTitle": "Rename {code}",
+        "description": "A code is typed in capitals and never changes once saved.",
+        "code": "Code",
+        "codeHint": "2 to 20 letters, digits, dashes or underscores.",
+        "name": "Campaign name",
+        "nameHint": "For example: Diwali Facebook ads.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "add": "Add code"
+      }
+    },
     "leadSteps": {
       "loading": "Loading the sales pipeline",
       "intro": "Name the steps a lead goes through, in your own words. Each step sits inside one of four fixed stages that OneOhm uses for automation: sending a quotation moves a lead to Quoted, and an accepted quotation wins it.",
@@ -1045,6 +1077,26 @@
           "nightReply": "Send one calm reply at night",
           "nightReplyPreview": "The customer gets once a night, in their language: “Thank you. We reply from 9:30 am to 6:30 pm. Your message is with Asha.”"
         }
+      },
+      "leadAssignment": {
+        "title": "New leads",
+        "loading": "Loading the new-lead rule",
+        "help": "People on leave are always skipped. If everyone is away, new leads go to the admin and sales is alerted.",
+        "strategy": "Who gets the next new lead",
+        "least_busy": "Fewest open leads",
+        "round_robin": "Take turns",
+        "explain": {
+          "least_busy": "The person with the fewest open leads gets it.",
+          "round_robin": "The person who was given a lead longest ago gets it."
+        },
+        "cityOwners": "City owners (optional)",
+        "cityOwnersHint": "A lead from one of these cities goes to its owner first, when that person is at work.",
+        "cities": "Cities, separated by commas",
+        "citiesPlaceholder": "Pune, Satara",
+        "addPerson": "Add a person",
+        "add": "Add",
+        "remove": "Remove",
+        "someone": "Someone"
       },
       "assignment": {
         "title": "Assignment rules",
@@ -1188,6 +1240,25 @@
       "retried": "Run again since.",
       "took": "Took {seconds} s",
       "tookUnderSecond": "Took under a second",
+      "sheet": {
+        "outcome": "Outcome",
+        "retry": "Run again",
+        "requestedBy": "Run again by",
+        "retryOf": "Repeats run",
+        "subjectId": "About (ID)",
+        "error": "What went wrong",
+        "timing": "Timing",
+        "queued": "Queued",
+        "started": "Started",
+        "finished": "Finished",
+        "duration": "Took",
+        "minutes": "{minutes} min {seconds} s",
+        "seconds": "{seconds} s",
+        "underSecond": "Under a second",
+        "technical": "For support",
+        "jobCode": "Job code",
+        "runId": "Run ID"
+      },
       "columns": {
         "job": "Job",
         "when": "When",

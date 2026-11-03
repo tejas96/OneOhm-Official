@@ -57,6 +57,8 @@ export interface SiteTravelPolicy {
   readonly ratePaisePerKm: number;
   /** Minutes before the day starts and after it ends when location may still be read. */
   readonly hoursMarginMinutes: number;
+  /** A field pin farther than this from the worker's check-in reading is flagged for the office, in metres. */
+  readonly pinTrustM: number;
 }
 
 export interface WorkforcePolicy {
@@ -91,7 +93,7 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     recognitionMax: 200,
     stageRating: 20,
   },
-  travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60 },
+  travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60, pinTrustM: 100 },
   capacity: { defaultOpenTaskLimit: 0 },
 };
 

@@ -2,6 +2,7 @@
 
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { Card, cn, Select } from '@oneohm/design-system/web';
+import { campaignLabel } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
 import { CalendarClock } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -94,7 +95,11 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
         </Fact>
         <Fact label={t('facts.category')}>{t(`category.${lead.subsidyCategory}`)}</Fact>
         <Fact label={t('facts.size')}>{lead.estimatedWp ? formatKwp(lead.estimatedWp) : '—'}</Fact>
-        <Fact label={t('facts.source')}>{t(`source.${lead.source}`)}</Fact>
+        <Fact label={t('facts.source')}>
+          {[t(`source.${lead.source}`), campaignLabel(lead.attribution)]
+            .filter(Boolean)
+            .join(' · ')}
+        </Fact>
         {lead.referredBy && <Fact label={t('facts.referredBy')}>{lead.referredBy.name}</Fact>}
         {lead.email && <Fact label={t('facts.email')}>{lead.email}</Fact>}
       </dl>

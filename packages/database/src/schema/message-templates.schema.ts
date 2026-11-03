@@ -17,5 +17,7 @@ export const messageTemplates = pgTable('message_templates', {
   fields: text('fields').array().notNull(),
   preview: text('preview').notNull(),
   active: boolean('active').notNull().default(true),
+  /** On once Meta approved the version with a file and buttons; off sends the plain text only. */
+  extrasApproved: boolean('extras_approved').notNull().default(false),
   updatedAt: updatedAt(),
 });

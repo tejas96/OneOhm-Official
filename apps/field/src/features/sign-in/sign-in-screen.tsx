@@ -1,5 +1,6 @@
 import { OtpSignIn, SunriseSky, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/api/api';
 import { SIGN_IN } from '@/copy/common';
@@ -14,11 +15,10 @@ export function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { signIn } = useSession();
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { backgroundColor: theme.colors.canvas }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    // Both platforms: the focused field and its button scroll up above the keyboard.
+    <View style={[styles.root, { backgroundColor: theme.colors.canvas }]}>
+      <KeyboardAwareScrollView
+        bottomOffset={140}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
         bounces={false}
@@ -56,8 +56,8 @@ export function SignInScreen() {
             {SIGN_IN.customers}
           </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

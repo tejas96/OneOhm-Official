@@ -150,5 +150,10 @@
     "placeholder": "Search by name, brand or SKU",
     "empty": "Nothing matches. Try fewer words.",
     "more": "Showing {shown} of {total}. Type to narrow the list."
+  },
+  "maps": {
+    "label": "Satellite map with the site pin",
+    "hint": "Click the map to drop the pin, or drag the pin onto the roof.",
+    "typeCoordinates": "Type coordinates"
   }
 }

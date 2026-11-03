@@ -6,9 +6,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
+import { PinMap } from '@/features/maps/pin-map';
+import { KOLHAPUR, pinMapValue } from '@/features/maps/pin-map-value';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
+import { useCompany } from '../use-settings';
 import { WORKFORCE_SETTINGS_KEY } from './use-workforce-settings';
 
 const EMPTY = {
@@ -43,6 +46,7 @@ export function PlaceDialog({
   const form = useApiForm();
   const [draft, setDraft] = useState(EMPTY);
   const [checked, setChecked] = useState(false);
+  const company = useCompany();
   const { reset } = form;
 
   useEffect(() => {
@@ -109,6 +113,15 @@ export function PlaceDialog({
             onChange={(event) => setDraft({ ...draft, name: event.target.value })}
           />
         </Field>
+        <PinMap
+          value={pinMapValue.parse(draft.latitude, draft.longitude)}
+          radiusM={draft.radiusM ?? undefined}
+          fallbackCenter={
+            pinMapValue.fromNumbers(company.data?.baseLatitude, company.data?.baseLongitude) ??
+            KOLHAPUR
+          }
+          onChange={(point) => setDraft({ ...draft, ...pinMapValue.format(point) })}
+        />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             label={t('latitude')}
