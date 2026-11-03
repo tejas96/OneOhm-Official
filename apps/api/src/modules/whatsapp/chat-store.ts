@@ -217,7 +217,7 @@ export async function conversationForPhone(
 }
 
 /** The new context, still carrying where the chat's lead came from (see entry-capture). */
-const keepEntry = (context: Record<string, unknown>) =>
+export const keepEntry = (context: Record<string, unknown>) =>
   context.entry === undefined
     ? sql`CASE WHEN ${waConversations.context} ? 'entry'
         THEN ${JSON.stringify(context)}::jsonb || jsonb_build_object('entry', ${waConversations.context}->'entry')

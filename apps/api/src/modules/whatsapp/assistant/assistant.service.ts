@@ -4,6 +4,7 @@ import { asksForPerson, findCampaignCode, findReferralCode, saysHello } from '@o
 import { and, desc, eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
@@ -60,11 +61,12 @@ export class AssistantService {
     private readonly people: HandOverService,
     private readonly strangers: StrangerFlowService,
     private readonly quotes: QuoteActionsService,
+    private readonly intake: LeadIntakeService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
   async handle(seen: Conversation, incoming: Incoming): Promise<void> {
-    const chat = await captureEntry(this.db, seen, incoming);
+    const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works even while a person has the chat: accepting is the customer's act.
     const tap = readQuoteTap(incoming.choiceId);
     return inLanguage(await this.languageOf(chat), () =>

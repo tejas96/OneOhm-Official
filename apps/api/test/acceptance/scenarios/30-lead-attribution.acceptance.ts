@@ -142,6 +142,11 @@ describe('Lead attribution', () => {
     await sendInbound(phone, { buttonPayload: 'callback' });
     expect((await leadOf(phone))?.campaign_code).toBe('DIWALI-ACC');
     await sendInbound(phone, { text: 'Hi OneOhm OTHER-9' });
+    const [chat] = await rows<{ entry: unknown }>(
+      `SELECT context->'entry' AS entry FROM wa_conversations WHERE phone = $1`,
+      [phone],
+    );
+    expect(chat?.entry ?? null).toBeNull();
     await sendInbound(phone, { buttonPayload: 'callback' });
     expect((await leadOf(phone))?.campaign_code).toBe('DIWALI-ACC');
   });
@@ -151,5 +156,21 @@ describe('Lead attribution', () => {
     await sendInbound(phone, { text: 'hello oneohm zz-unknown' });
     await sendInbound(phone, { buttonPayload: 'callback' });
     expect((await leadOf(phone))?.campaign_code).toBe('ZZ-UNKNOWN');
+  });
+
+  it('an ad entry survives staff handing a stranger chat back to the bot', async () => {
+    const phone = uniquePhone();
+    await sendInbound(phone, {
+      text: 'Hi',
+      referral: { source_id: 'ad-900', source_url: 'https://fb.me/y', headline: 'Roof offer' },
+    });
+    await sendInbound(phone, { buttonPayload: 'human' });
+    const [chat] = await rows<{ id: string }>('SELECT id FROM wa_conversations WHERE phone = $1', [
+      phone,
+    ]);
+    const released = await admin.raw('POST', `/whatsapp/chats/${chat?.id}/release`);
+    expect(released.status).toBe(200);
+    await sendInbound(phone, { buttonPayload: 'callback' });
+    expect(await leadOf(phone)).toMatchObject({ ad_id: 'ad-900', ad_headline: 'Roof offer' });
   });
 });

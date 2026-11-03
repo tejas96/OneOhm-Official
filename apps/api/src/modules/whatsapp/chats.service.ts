@@ -17,7 +17,13 @@ import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
-import { conversationForPhone, customerForPhone, queueReply, queueTemplate } from './chat-store';
+import {
+  conversationForPhone,
+  customerForPhone,
+  keepEntry,
+  queueReply,
+  queueTemplate,
+} from './chat-store';
 import { chatSummaries } from './chat-summaries';
 import { deliveryState } from './delivery-state';
 
@@ -209,7 +215,7 @@ export class ChatsService {
       .update(waConversations)
       .set({
         state: 'menu',
-        context: {},
+        context: keepEntry({}),
         handedOverAt: null,
         handledByUserId: null,
         updatedAt: new Date(),

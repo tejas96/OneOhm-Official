@@ -1,6 +1,7 @@
 import { type DatabaseExecutor, type LeadAttribution, waConversations } from '@oneohm/database';
 import { findCampaignCode } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
+import type { LeadIntakeService } from '../../crm/lead-intake.service';
 import type { Conversation } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 
@@ -23,16 +24,18 @@ export function savedEntry(chat: Pick<Conversation, 'context'>): LeadAttribution
 
 /**
  * Remembers on the chat where a new person came from, so the lead made later (on call-back
- * or a friend's referral code) knows. First touch wins: once saved, it is never replaced,
- * and customers (who are not leads) are skipped. Returns the chat as it now stands.
+ * or a friend's referral code) knows. First touch wins: once saved, it is never replaced.
+ * Customers and numbers with an open lead are skipped (their lead already has its source). Returns the chat as it now stands.
  */
 export async function captureEntry(
   db: DatabaseExecutor,
+  intake: LeadIntakeService,
   chat: Conversation,
   incoming: Incoming,
 ): Promise<Conversation> {
   const entry = entryOf(incoming);
   if (!entry || chat.customerId || savedEntry(chat)) return chat;
+  if (await intake.openLeadByPhone(db, chat.phone)) return chat;
   const context = { ...(chat.context as Record<string, unknown>), entry };
   await db.update(waConversations).set({ context }).where(eq(waConversations.id, chat.id));
   return { ...chat, context };
