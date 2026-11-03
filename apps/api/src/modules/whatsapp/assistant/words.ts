@@ -64,6 +64,7 @@ const EN_WORDS = {
     'Send your friend\'s name and 10-digit mobile number in one message, for example "Suresh Patil 9876543210".',
   referralSaved: (name: string) =>
     `Thank you! We will call ${name}. You earn a reward when their solar is installed.`,
+  referralKnown: 'We are already in touch with this number. Thank you for thinking of us!',
   referralUnclear: 'I could not find a name and a 10-digit mobile number. Please try again.',
   referredWelcome: (referrer: string, company: string) =>
     `Welcome${company ? ` to ${company}` : ''}! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,

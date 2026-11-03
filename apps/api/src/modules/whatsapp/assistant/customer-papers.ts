@@ -20,6 +20,9 @@ import { PROJECT_WORDS } from './project-words';
 
 const TIME_ZONE = 'Asia/Kolkata';
 
+/** Folders already shown above, or not papers: never listed again from the documents. */
+const NOT_AGAIN = new Set(['site_photo', 'quotation', 'invoice_receipt']);
+
 /** Each kind of paper shows its newest few. */
 const LATEST = 3;
 
@@ -88,7 +91,8 @@ export async function customerPapers(sources: Sources, customerId: string): Prom
   const quotes = [...projectQuotes, ...(await sentQuotes(db, customerId, projectQuotes))];
   const reports = (await documents.readyReports(customerId)).slice(0, LATEST);
   const papers = (await documents.list(customerId))
-    .filter((entry) => entry.category !== 'site_photo')
+    // Quotes, receipts and invoices are listed above with plain names, so skip their copies.
+    .filter((entry) => !NOT_AGAIN.has(entry.category))
     .slice(0, LATEST);
   return [
     ...quotes.map((quote) =>

@@ -203,6 +203,8 @@ export class AssistantService {
     try {
       await this.portal.refer(customerId, friend);
     } catch (error) {
+      if (error instanceof AppError && error.code === 'duplicate')
+        return sayWithTaps(this.db, chat, WORDS.referralKnown, ['menu']);
       if (error instanceof AppError) return this.say(chat, { kind: 'text', body: error.message });
       throw error;
     }
