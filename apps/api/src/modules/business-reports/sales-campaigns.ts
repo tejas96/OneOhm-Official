@@ -19,7 +19,7 @@ function campaignOf(lead: LeadFact, names: ReadonlyMap<string, string>) {
 
 /**
  * The period's leads grouped by the ad or campaign that brought them: how many were
- * quoted and won, how many got an instant estimate, the value won, and the money the customers have paid since.
+ * quoted and won, how many got an instant estimate, how many paid the advance, the value won, and the money the customers have paid since.
  */
 export function byCampaign(
   cohort: readonly LeadFact[],
@@ -28,6 +28,7 @@ export function byCampaign(
   collected: ReadonlyMap<string, number>,
   quotedLeadIds: ReadonlySet<string>,
   estimatedLeadIds: ReadonlySet<string>,
+  advancePaidLeadIds: ReadonlySet<string>,
 ): SalesReport['byCampaign'] {
   const rows = new Map<string, SalesReport['byCampaign'][number]>();
   for (const lead of cohort) {
@@ -39,6 +40,7 @@ export function byCampaign(
       estimates: 0,
       quoted: 0,
       won: 0,
+      advancePaid: 0,
       wonValuePaise: 0,
       collectedPaise: 0,
     };
@@ -50,6 +52,7 @@ export function byCampaign(
       row.won += 1;
       row.wonValuePaise += wonValue.get(lead.id) ?? 0;
     }
+    if (advancePaidLeadIds.has(lead.id)) row.advancePaid += 1;
     row.collectedPaise += collected.get(lead.id) ?? 0;
     rows.set(key, row);
   }

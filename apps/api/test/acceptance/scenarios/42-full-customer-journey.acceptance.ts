@@ -108,15 +108,16 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     const answers: [string, string, Partial<J.LeadState>][] = [
       ['ob:site:home', 'Site: Home', { subsidy_category: 'individual' }],
       ['ob:bill:2000_3000', 'Bill: ₹2,000–3,000 (about 3 kW)', { estimated_wp: 3000 }],
-      ['ob:roof:rcc', 'Roof: RCC', {}],
+      // The roof and the floors make one note, written at the floors answer.
+      ['ob:roof:rcc', '', {}],
       ['ob:floors:2', 'Roof: RCC, 2 floors', {}],
     ];
     for (const [id, note, change] of answers) {
       const before = (await J.historyOf(leadId)).length;
       await t.tap(id);
       const history = await J.historyOf(leadId);
-      expect(history.length, id).toBe(before + 1);
-      expect(history.at(-1), id).toBe(note);
+      expect(history.length, id).toBe(before + (note ? 1 : 0));
+      if (note) expect(history.at(-1), id).toBe(note);
       expect(await lead()).toMatchObject(change);
     }
     expect(choices(await lastReply(phone))).toEqual(['ob:photo:later', 'ob:person']);
@@ -136,13 +137,13 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     const opened = await admin.download(`/documents/${docs[0]?.id}/file`);
     expect(opened.status).toBe(200);
     expect(opened.bytes.length).toBeGreaterThan(0);
-    expect(await J.historyOf(leadId)).toContain('Electricity bill received on WhatsApp');
+    expect(await J.historyOf(leadId)).toContain('Bill file received on WhatsApp (not checked)');
     expect((await replies(phone)).some((reply) => reply.body?.includes('वीज बिल मिळाले'))).toBe(
       true,
     );
   });
 
-  it('5. the instant estimate: stored, PDF sent, next steps offered, lead contacted with a call today', async () => {
+  it('5. the instant estimate: stored, PDF sent, next steps offered, lead still New with a call today', async () => {
     const [estimate, ...more] = await rows<{ id: string; capacity_wp: number }>(
       'SELECT id, capacity_wp FROM lead_estimates WHERE lead_id = $1',
       [leadId],
@@ -159,7 +160,7 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
       'ob:done:notnow',
     ]);
     const now = await lead();
-    expect(now).toMatchObject({ stage: 'contacted', next_action_on: today() });
+    expect(now).toMatchObject({ stage: 'new', next_action_on: today() });
     expect(now.next_action_note).toMatch(/^Call — estimate sent \(3(\.\d+)? kW, ₹/);
     expect((await J.historyOf(leadId)).at(-1)).toMatch(/^Estimate sent: 3(\.\d+)? kW, ₹/);
     const detail = await admin.get<LeadDetail>(`/leads/${leadId}`);

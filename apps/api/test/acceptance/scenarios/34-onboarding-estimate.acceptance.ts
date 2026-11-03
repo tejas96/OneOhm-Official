@@ -71,7 +71,7 @@ describe('The instant estimate after onboarding', () => {
     await closeDb();
   });
 
-  it('prices the answers, sends the estimate PDF and moves the lead to contacted', async () => {
+  it('prices the answers, sends the estimate PDF and leaves the lead New until a person gets in touch', async () => {
     const phone = uniquePhone();
     const leadId = await onboard(phone);
 
@@ -92,7 +92,7 @@ describe('The instant estimate after onboarding', () => {
     const kw = `${(estimate?.capacity_wp ?? 0) / 1000} kW`;
     const price = formatInr(estimate?.total_paise ?? 0);
     const after = formatInr(estimate?.effective_paise ?? 0);
-    expect(await stageOf(leadId)).toBe('contacted');
+    expect(await stageOf(leadId)).toBe('new');
     const notes = (await notesOf(leadId)).map((row) => row.note);
     expect(
       notes.some((note) =>

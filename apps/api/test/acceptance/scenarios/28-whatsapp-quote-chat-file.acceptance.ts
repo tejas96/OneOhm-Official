@@ -36,6 +36,41 @@ describe('WhatsApp quote chat file', () => {
     expect(files[0]?.payload.filename).toBe(`${quotation.number}.pdf`);
   });
 
+  it('"Send again" sends the buttons again, the PDF only when the first one failed', async () => {
+    const customer = await newCustomer(admin, { name: 'Quote Resend Customer (test)' });
+    await rows(
+      `insert into wa_conversations (phone, customer_id, last_inbound_at) values ($1, $2, now())`,
+      [customer.phone, customer.customerId],
+    );
+    const quotation = await createQuotation(admin, customer);
+    const count = async (template: string) =>
+      (
+        await rows('select 1 from outbox where recipient = $1 and template = $2', [
+          customer.phone,
+          template,
+        ])
+      ).length;
+    await admin.post(`/quotations/${quotation.id}/send`);
+    await rows(
+      `update outbox set status = 'sent', delivery_status = 'delivered'
+        where recipient = $1 and template = 'session:document'`,
+      [customer.phone],
+    );
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(1);
+    expect(await count('session:buttons')).toBe(2);
+
+    await rows(
+      `update outbox set status = 'failed' where recipient = $1 and template = 'session:document'`,
+      [customer.phone],
+    );
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(2);
+    expect(await count('session:buttons')).toBe(3);
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(2);
+  });
+
   it('sends no extra chat file when the template already carries the file', async () => {
     await rows(
       `insert into message_templates (key, audience, meta_name, fields, preview, extras_approved)
