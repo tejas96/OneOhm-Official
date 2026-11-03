@@ -40,13 +40,13 @@
       "managerHint": "The new manager is told straight away.",
       "save": "Save",
       "saved": "Project team saved",
-      "inactive": "(inactive)",
-      "cannotManage": "(cannot manage)",
+      "inactiveName": "{name} (inactive)",
+      "cannotManageName": "{name} (cannot manage)",
       "handOver": {
         "has": "{name} has {count, plural, one {# open task} other {# open tasks}}",
         "hint": "Who takes them?",
         "pick": "Pick a person",
-        "keep": "Keep with {name}"
+        "keep": "Leave with {name} (off the team)"
       },
       "reloaded": "Someone else changed this team. We loaded their changes — check and save again."
     },

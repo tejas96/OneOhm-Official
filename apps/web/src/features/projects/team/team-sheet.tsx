@@ -10,7 +10,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError } from '@/lib/api/api-error';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { HandOverField } from './handover-field';
-import { handOverBody, handOverNeeds } from './handover-needs';
+import { handOverBody, handOverNeeds, livePicks } from './handover-needs';
 import { seedTeamForm } from './seed-team-form';
 import { TeamMembersField } from './team-members-field';
 import { useTeamOptions } from './use-team-options';
@@ -22,8 +22,7 @@ import { useTeamOptions } from './use-team-options';
 function managerChoices(
   people: TeamOptions['people'],
   current: ProjectDetail['manager'],
-  inactive: string,
-  cannotManage: string,
+  marked: (key: 'inactiveName' | 'cannotManageName', name: string) => string,
 ) {
   const choices = people
     .filter((person) => person.canManage)
@@ -31,7 +30,10 @@ function managerChoices(
   if (!current || choices.some((choice) => choice.value === current.id)) return choices;
   const listed = people.some((person) => person.id === current.id);
   return [
-    { value: current.id, label: `${current.fullName} ${listed ? cannotManage : inactive}` },
+    {
+      value: current.id,
+      label: marked(listed ? 'cannotManageName' : 'inactiveName', current.fullName),
+    },
     ...choices,
   ];
 }
@@ -54,6 +56,7 @@ export function TeamSheet({
   const options = useTeamOptions(open);
   const form = useApiForm();
   const { reset } = form;
+  const [version, setVersion] = useState(project.version);
   const [manager, setManager] = useState<string | undefined>(undefined);
   const [team, setTeam] = useState<string[]>([]);
   const [initialTeam, setInitialTeam] = useState<string[]>([]);
@@ -61,6 +64,7 @@ export function TeamSheet({
   const [picks, setPicks] = useState<Record<string, string>>({});
   const seed = useCallback((from: ProjectDetail) => {
     const seeded = seedTeamForm(from);
+    setVersion(seeded.version);
     setManager(seeded.manager);
     setTeam(seeded.team);
     setInitialTeam(seeded.team);
@@ -78,15 +82,13 @@ export function TeamSheet({
     reset();
   }, [open, reset, seed]);
 
-  const managerOptions = managerChoices(
-    options.data?.people ?? [],
-    project.manager,
-    t('inactive'),
-    t('cannotManage'),
+  const managerOptions = managerChoices(options.data?.people ?? [], project.manager, (key, name) =>
+    t(key, { name }),
   );
 
   const needs = handOverNeeds(project, initialTeam, team);
-  const missing = needs.some((need) => !picks[need.id]);
+  const picked = livePicks(needs, picks);
+  const missing = needs.some((need) => !picked[need.id]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -97,11 +99,13 @@ export function TeamSheet({
             api.projectTeam.updateProject({
               params: { id: project.id },
               body: {
-                version: project.version,
+                // The version the form was seeded from, not the live one: a refetch on
+                // focus may already hold a colleague's save this form has not seen.
+                version,
                 ...(manager ? { managerUserId: manager } : {}),
                 teamUserIds: team,
                 targetFinishDate: target || null,
-                handOver: handOverBody(needs, picks),
+                handOver: handOverBody(needs, picked),
               },
             }),
             200,
@@ -112,7 +116,9 @@ export function TeamSheet({
           if (caught instanceof ApiError && caught.code === 'stale') {
             await client.invalidateQueries({ queryKey: ['project', project.id] });
             const fresh = client.getQueryData<ProjectDetail>(['project', project.id]);
-            if (fresh) seed(fresh);
+            // Could not load their changes: say only that it is stale.
+            if (!fresh || fresh.version === version) throw caught;
+            seed(fresh);
             throw new ApiError(409, t('reloaded'), 'stale', {});
           }
           throw caught;
@@ -178,7 +184,7 @@ export function TeamSheet({
           needs={needs}
           people={options.data?.people ?? []}
           team={team}
-          picks={picks}
+          picks={picked}
           onPick={(from, value) => setPicks((now) => ({ ...now, [from]: value }))}
           error={errors.handOver}
         />

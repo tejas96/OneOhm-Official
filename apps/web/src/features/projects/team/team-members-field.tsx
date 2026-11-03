@@ -38,7 +38,7 @@ export function TeamMembersField({
             key={member.id}
             checked={value.includes(member.id)}
             onCheckedChange={(on) => toggle(member.id, on)}
-            label={`${member.fullName} ${sheetT('inactive')}`}
+            label={sheetT('inactiveName', { name: member.fullName })}
           />
         ))}
         {people.map((person) => (

@@ -2,6 +2,7 @@
 
 import type { TeamOptions } from '@oneohm/api-contracts';
 import { Field, Select } from '@oneohm/design-system/web';
+import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type HandOverNeed, KEEP } from './handover-needs';
 
@@ -38,7 +39,6 @@ export function HandOverField({
           key={need.id}
           label={t('has', { name: need.fullName, count: need.open })}
           hint={t('hint')}
-          error={error}
         >
           <Select
             value={picks[need.id]}
@@ -51,6 +51,13 @@ export function HandOverField({
           />
         </Field>
       ))}
+      {/* The server's hand-over error covers the whole group: shown once, under it. */}
+      {error && (
+        <p role="alert" className="flex items-start gap-1.5 type-body-sm text-overdue">
+          <CircleAlert aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

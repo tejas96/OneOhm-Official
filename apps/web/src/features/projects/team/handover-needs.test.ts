@@ -1,6 +1,6 @@
 import type { ProjectDetail } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { handOverBody, handOverNeeds, KEEP } from './handover-needs';
+import { handOverBody, handOverNeeds, KEEP, livePicks } from './handover-needs';
 
 const task = (assignee: string | null, proposed: string | null, status: string) => ({
   assignee: assignee ? { id: assignee } : null,
@@ -52,5 +52,20 @@ describe('handOverBody', () => {
       { fromUserId: 'a', toUserId: 'x' },
       { fromUserId: 'b', toUserId: null },
     ]);
+  });
+});
+
+describe('livePicks', () => {
+  const needs = [
+    { id: 'a', fullName: 'A', open: 2 },
+    { id: 'b', fullName: 'B', open: 1 },
+  ];
+
+  it('clears a pick whose target now needs a hand-over too', () => {
+    expect(livePicks(needs, { a: 'b', b: 'x' })).toEqual({ b: 'x' });
+  });
+
+  it('keeps picks of staying people and keep, drops picks of people no longer leaving', () => {
+    expect(livePicks(needs, { a: 'x', b: KEEP, c: 'y' })).toEqual({ a: 'x', b: KEEP });
   });
 });

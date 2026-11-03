@@ -42,3 +42,21 @@ export function handOverBody(
     toUserId: picks[need.id] === KEEP ? null : (picks[need.id] ?? null),
   }));
 }
+
+/**
+ * The picks that still apply: a pick for someone who no longer needs a hand-over goes, and
+ * so does a pick whose target was since taken off the team with open tasks of their own
+ * (they now need a hand-over themselves), so Save waits for a new choice.
+ */
+export function livePicks(
+  needs: readonly HandOverNeed[],
+  picks: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const leaving = new Set(needs.map((need) => need.id));
+  const live: Record<string, string> = {};
+  for (const need of needs) {
+    const pick = picks[need.id];
+    if (pick && !leaving.has(pick)) live[need.id] = pick;
+  }
+  return live;
+}
