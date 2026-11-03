@@ -16,16 +16,13 @@ import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { assertNotFuture } from '../../common/dates';
 import { invalid, notFound } from '../../common/http/errors';
-import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
-import { environmentOnce } from '../../config/environment-once';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
 import { tellStaffPaidOnline } from '../online-payments/payment-follow-ups';
-import { pdfFileName } from '../reports/pdf-file-name';
-import { sharedFileUrl } from '../whatsapp/file-links';
 import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
+import { tellCustomerPaid } from './receipt-message';
 
 export interface NewPayment {
   milestoneId: string;
@@ -172,24 +169,17 @@ export class FinanceService {
         userId: actor.userId,
       });
       if (project && milestone.payer === 'customer') {
-        await queueWhatsApp(
-          tx,
-          project.phone,
-          'payment_received',
-          {
-            customer: project.name,
-            project: project.code,
-            amount: formatInr(input.amountPaise),
-            milestone: milestone.label,
-            documentUrl: sharedFileUrl(environmentOnce(), {
-              kind: 'receipt',
-              id: payment.id,
-              customerId: project.customerId,
-            }),
-            documentName: pdfFileName(receiptNumber),
-          },
-          `payment:${milestone.id}:${total}`,
-        );
+        await tellCustomerPaid(tx, {
+          paymentId: payment.id,
+          receiptNumber,
+          phone: project.phone,
+          customerName: project.name,
+          customerId: project.customerId,
+          projectCode: project.code,
+          amountPaise: input.amountPaise,
+          milestoneLabel: milestone.label,
+          dedupeKey: `payment:${milestone.id}:${total}`,
+        });
       }
       if (project && input.gatewayPaymentId)
         await tellStaffPaidOnline(tx, {

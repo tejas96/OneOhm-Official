@@ -1,5 +1,10 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, messageTemplates, waConversations } from '@oneohm/database';
+import {
+  customers,
+  type DatabaseExecutor,
+  messageTemplates,
+  waConversations,
+} from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
@@ -71,4 +76,52 @@ export async function queueQuotePdf(
     null,
     `quote_pdf:${quotation.id}`,
   );
+  // The approved plain template has no buttons, so the chat gets them right after the PDF.
+  const [customer] = await tx
+    .select({ language: customers.preferredLanguage })
+    .from(customers)
+    .where(eq(customers.id, quotation.customer.id))
+    .limit(1);
+  const words = QUOTE_BUTTONS[customer?.language ?? ''] ?? ENGLISH_BUTTONS;
+  await queueReply(
+    tx,
+    chat,
+    {
+      kind: 'buttons',
+      body: words.body(quotation.number),
+      buttons: [
+        { id: `quote_accept:${quotation.id}`, title: words.accept },
+        { id: `quote_ask:${quotation.id}`, title: words.ask },
+      ],
+    },
+    null,
+    `quote_buttons:${quotation.id}`,
+  );
 }
+
+interface QuoteButtonWords {
+  readonly body: (number: string) => string;
+  readonly accept: string;
+  readonly ask: string;
+}
+
+const ENGLISH_BUTTONS: QuoteButtonWords = {
+  body: (number) => `Your quotation ${number} is above. Happy to go ahead?`,
+  accept: 'Accept quote',
+  ask: 'I have a question',
+};
+
+/** Words for the two quote buttons, in the customer's language. Titles keep 20 characters. */
+const QUOTE_BUTTONS: Record<string, QuoteButtonWords> = {
+  'en-IN': ENGLISH_BUTTONS,
+  'mr-IN': {
+    body: (number) => `तुमचे कोटेशन ${number} वर आहे. पुढे जायचे का?`,
+    accept: 'कोटेशन स्वीकारा',
+    ask: 'मला प्रश्न आहे',
+  },
+  'hi-IN': {
+    body: (number) => `आपका कोटेशन ${number} ऊपर है. आगे बढ़ें?`,
+    accept: 'कोटेशन स्वीकारें',
+    ask: 'मेरा एक सवाल है',
+  },
+};
