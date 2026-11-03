@@ -1,18 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { readBusinessSetting, type Transaction, waConversations } from '@oneohm/database';
-import {
-  asksForPerson,
-  nextStep,
-  type OnboardAnswers,
-  type OnboardingSettings,
-  type OnboardStep,
-  previousStep,
-} from '@oneohm/domain';
+import { readBusinessSetting, waConversations } from '@oneohm/database';
+import { nextStep, type OnboardAnswers, type OnboardStep, previousStep } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { HandOverService } from '../assistant/hand-over';
-import { assistantLanguage, inLanguage } from '../assistant/language';
+import { assistantLanguage } from '../assistant/language';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
@@ -22,33 +15,14 @@ import {
   firstMissing,
   isOnboardingChat,
   onboardState,
-  PERSON_CHOICE,
   readOnboard,
   stepOfState,
 } from './onboarding-context';
-import { knownFrom, type OpenLead, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
+import { ChatFilesService, type Fetched } from './onboarding-files';
+import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
-
-/** One message being applied, inside the transaction that holds the chat row. */
-interface Turn {
-  readonly tx: Transaction;
-  readonly chat: Conversation;
-  readonly settings: OnboardingSettings;
-  readonly lead: OpenLead | null;
-  readonly known: Partial<OnboardAnswers>;
-  answers: OnboardAnswers;
-  misses: number;
-  awaiting: 'name' | 'city' | undefined;
-  /** The lead was made from the saved ad entry, so the chat forgets it. */
-  dropEntry: boolean;
-}
-
-const BACK = new Set(['back', 'change', 'मागे', 'परत', 'पीछे', 'वापस', 'बदला', 'बदलें']);
-/** Taps that hand the chat to a person, including the old stranger buttons. */
-const PERSON_TAPS = new Set([PERSON_CHOICE, 'human', 'callback']);
-const wantsPerson = (incoming: Incoming) =>
-  (incoming.choiceId !== null && PERSON_TAPS.has(incoming.choiceId)) ||
-  (incoming.kind === 'text' && asksForPerson(incoming.text));
+import { BACK, speak, type Turn, wantsPerson } from './onboarding-turn';
+import { fileHeldBill, takeChatFile } from './onboarding-turn-files';
 
 /**
  * The guided WhatsApp onboarding for a new number (Part 3): language, name, city, site,
@@ -65,6 +39,7 @@ export class OnboardingFlowService {
     private readonly people: HandOverService,
     private readonly estimates: EstimateService,
     private readonly nextSteps: EstimateNextStepsService,
+    private readonly files: ChatFilesService,
   ) {}
 
   /**
@@ -78,8 +53,9 @@ export class OnboardingFlowService {
     return settings.enabled && !(await openLeadFor(this.db, chat.phone));
   }
 
-  handle(chat: Conversation, incoming: Incoming): Promise<void> {
-    return this.run(chat, incoming);
+  /** A photo or paper is downloaded first, so the chat row is not locked during the fetch. */
+  async handle(chat: Conversation, incoming: Incoming): Promise<void> {
+    return this.run(chat, incoming, false, await this.files.download(incoming.media));
   }
 
   /** "hi", "menu" or the first message after a release: the question the chat is on. */
@@ -92,8 +68,13 @@ export class OnboardingFlowService {
     return this.run(chat, null, true);
   }
 
-  private async run(seen: Conversation, incoming: Incoming | null, referral = false) {
-    await this.db.transaction(async (tx) => {
+  private async run(
+    seen: Conversation,
+    incoming: Incoming | null,
+    referral = false,
+    file: Fetched | null = null,
+  ) {
+    const discard = await this.db.transaction(async (tx) => {
       const chat = await lockedChat(tx, seen.id);
       const lead = await openLeadFor(tx, chat.phone);
       const kept = readOnboard(chat);
@@ -111,12 +92,17 @@ export class OnboardingFlowService {
         answers: { ...kept?.answers, ...seeded },
         misses: kept?.misses ?? 0,
         awaiting: kept?.awaiting,
+        pendingFile: kept?.pendingFile,
+        file,
+        discard: [],
         dropEntry: false,
       };
       // After a referral the first open question after the name is asked straight away.
-      if (referral) return this.ask(turn, nextStep('name', turn.answers, turn.known));
-      return this.take(turn, incoming);
+      if (referral) await this.ask(turn, nextStep('name', turn.answers, turn.known));
+      else await this.take(turn, incoming);
+      return turn.discard;
     });
+    await this.files.discard(discard);
   }
 
   /** Applies one message, under the chat's row lock. */
@@ -125,6 +111,7 @@ export class OnboardingFlowService {
     if (incoming && turn.chat.state === 'human') return null;
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
+    if (incoming?.media) return this.takeFile(turn, current);
     if (current === 'done') return this.afterEstimate(turn, incoming);
     if (!incoming) return this.ask(turn, current);
     if (wantsPerson(incoming)) return this.toPerson(turn, current);
@@ -159,6 +146,13 @@ export class OnboardingFlowService {
     return this.apply(turn, current, read.value);
   }
 
+  /** A photo or paper: at the photo question it is the answer, elsewhere the question stays. */
+  private async takeFile(turn: Turn, step: OnboardStep): Promise<null> {
+    const outcome = await takeChatFile(turn, this.files);
+    if (outcome === 'filed' && step === 'photo') return this.apply(turn, 'photo', 'sent');
+    return this.ask(turn, step);
+  }
+
   /** A clear answer: kept in the chat, written on the lead, then the next question. */
   private async apply(turn: Turn, step: OnboardStep, answer: unknown): Promise<null> {
     const { tx, chat } = turn;
@@ -178,6 +172,7 @@ export class OnboardingFlowService {
       settings: turn.settings,
     });
     turn.dropEntry ||= written.created;
+    if (written.leadId) await fileHeldBill(turn, this.files, written.leadId);
     const next = nextStep(step, turn.answers, turn.known);
     if (next !== 'done') return this.ask(turn, next);
     await this.save(turn, 'done');
@@ -223,6 +218,7 @@ export class OnboardingFlowService {
       answers: turn.answers,
       misses: turn.misses,
       ...(turn.awaiting ? { awaiting: turn.awaiting } : {}),
+      ...(turn.pendingFile ? { pendingFile: turn.pendingFile } : {}),
     };
     const context = { ...rest, ...(turn.dropEntry || entry === undefined ? {} : { entry }), ob };
     await turn.tx
@@ -233,7 +229,7 @@ export class OnboardingFlowService {
 
   /** Replies go out in the language chosen, from the moment it is chosen. */
   private speak<T>(turn: Turn, say: () => Promise<T>): Promise<T> {
-    return inLanguage(assistantLanguage(turn.answers.language ?? turn.chat.language), say);
+    return speak(turn, say);
   }
 
   private view(turn: Turn): QuestionView {

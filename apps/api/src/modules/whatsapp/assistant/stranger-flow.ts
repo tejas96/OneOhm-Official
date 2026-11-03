@@ -7,8 +7,10 @@ import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import { isOnboardingChat } from '../onboarding/onboarding-context';
+import { ChatFilesService, fileWords } from '../onboarding/onboarding-files';
 import { OnboardingFlowService } from '../onboarding/onboarding-flow';
-import type { Incoming } from '../whatsapp-events';
+import { openLeadFor } from '../onboarding/onboarding-lead';
+import type { Incoming, IncomingMedia } from '../whatsapp-events';
 import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
 import { WORDS } from './words';
@@ -27,6 +29,7 @@ export class StrangerFlowService {
     private readonly intake: LeadIntakeService,
     private readonly people: HandOverService,
     private readonly onboarding: OnboardingFlowService,
+    private readonly files: ChatFilesService,
   ) {}
 
   /** A stranger's message, after hellos and while no person has the chat. */
@@ -34,9 +37,25 @@ export class StrangerFlowService {
     const code = isOnboardingChat(chat) ? null : findReferralCode(incoming.text);
     if (code && (await this.referredFriend(chat, code))) return;
     if (await this.onboarding.takes(chat)) return this.onboarding.handle(chat, incoming);
+    if (incoming.media && (await this.fileOnLead(chat, incoming.media))) return;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text)) return this.answer(chat, 'human');
     return this.answer(chat, word);
+  }
+
+  /**
+   * A photo or paper from a number with an open lead the team made: filed on that lead.
+   * False when there is no lead, so a stranger with none still stores nothing.
+   */
+  private async fileOnLead(chat: Conversation, media: IncomingMedia): Promise<boolean> {
+    const lead = await openLeadFor(this.db, chat.phone);
+    if (!lead) return false;
+    const file = await this.files.download(media);
+    const got = await this.db.transaction((tx) =>
+      this.files.receive(tx, file, { id: chat.id, leadId: lead.id }),
+    );
+    await this.say(chat, { kind: 'text', body: fileWords(got.outcome) });
+    return true;
   }
 
   /** "hi" or "menu": the onboarding question the chat is on, or the old buttons. */

@@ -1,5 +1,6 @@
 import { type OnboardAnswers, type OnboardStep, STEP_ORDER } from '@oneohm/domain';
 import type { Conversation } from '../chat-store';
+import type { PendingFile } from './onboarding-files';
 
 /**
  * What an onboarding chat remembers in `wa_conversations.context.ob`: the answers so far,
@@ -10,6 +11,8 @@ export interface OnboardContext {
   readonly answers: OnboardAnswers;
   readonly misses: number;
   readonly awaiting?: 'name' | 'city';
+  /** A bill sent before the lead existed; filed on the lead when it is made. */
+  readonly pendingFile?: PendingFile;
 }
 
 /** The tap that hands the chat to a person, offered on every question. */

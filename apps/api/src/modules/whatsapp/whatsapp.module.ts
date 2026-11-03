@@ -3,6 +3,7 @@ import { ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AfterSalesModule } from '../after-sales/after-sales.module';
 import { CustomerPortalModule } from '../customer-portal/customer-portal.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { FinanceModule } from '../finance/finance.module';
 import { OnlinePaymentsModule } from '../online-payments/online-payments.module';
 import { ReportsModule } from '../reports/reports.module';
@@ -19,6 +20,7 @@ import { DeliveriesService } from './deliveries.service';
 import { createMediaGateway, WHATSAPP_MEDIA } from './media-gateway';
 import { EstimateService } from './onboarding/estimate.service';
 import { EstimateNextStepsService } from './onboarding/estimate-next-steps';
+import { ChatFilesService } from './onboarding/onboarding-files';
 import { OnboardingFlowService } from './onboarding/onboarding-flow';
 import { SharedFilesController } from './shared-files.controller';
 import { WhatsAppController } from './whatsapp.controller';
@@ -28,6 +30,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 @Module({
   imports: [
     CustomerPortalModule,
+    DocumentsModule,
     FinanceModule,
     OnlinePaymentsModule,
     ReportsModule,
@@ -45,6 +48,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     HandOverService,
     StrangerFlowService,
     OnboardingFlowService,
+    ChatFilesService,
     EstimateService,
     EstimateNextStepsService,
     QuoteActionsService,

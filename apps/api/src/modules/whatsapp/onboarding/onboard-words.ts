@@ -43,6 +43,10 @@ const EN_ONBOARD = {
   laterThanks: 'Thank you! We will check back with you then.',
   /** No instant price for this site (a farm, a society, other roof…): a person prices it. */
   expertPrice: 'Thank you! Our expert will prepare your price and call you.',
+  /** A photo or paper arrived before the lead exists: kept, and the questions go on. */
+  firstDetails: "Thanks — let's first get a few details. We have your file.",
+  billThanks: 'Thank you, we got your electricity bill.',
+  badFile: 'Sorry, we could not use that file. Please send a clear photo or a PDF.',
 };
 
 export type OnboardWords = typeof EN_ONBOARD;
@@ -80,6 +84,9 @@ const MR_ONBOARD: Words<OnboardWords> = {
   willCall: (name) => `धन्यवाद. आज ${name ?? 'आमच्या टीम'}कडून तुम्हाला कॉल येईल.`,
   laterThanks: 'धन्यवाद! आम्ही तेव्हा तुमच्याशी पुन्हा संपर्क करू.',
   expertPrice: 'धन्यवाद! आमचे तज्ज्ञ तुमची किंमत तयार करून तुम्हाला कॉल करतील.',
+  firstDetails: 'धन्यवाद — आधी काही माहिती घेऊया. तुमची फाईल आमच्याकडे आहे.',
+  billThanks: 'धन्यवाद, तुमचे वीज बिल मिळाले.',
+  badFile: 'माफ करा, ही फाईल वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.',
 };
 
 const HI_ONBOARD: Words<OnboardWords> = {
@@ -115,6 +122,9 @@ const HI_ONBOARD: Words<OnboardWords> = {
   willCall: (name) => `धन्यवाद. आज ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
   laterThanks: 'धन्यवाद! हम तब आपसे फिर संपर्क करेंगे.',
   expertPrice: 'धन्यवाद! हमारे विशेषज्ञ आपकी कीमत तैयार करके आपको कॉल करेंगे.',
+  firstDetails: 'धन्यवाद — पहले कुछ जानकारी ले लें. आपकी फाइल हमारे पास है.',
+  billThanks: 'धन्यवाद, आपका बिजली बिल मिल गया.',
+  badFile: 'माफ़ कीजिए, यह फाइल इस्तेमाल नहीं हो सकी. कृपया साफ़ फोटो या PDF भेजें.',
 };
 
 /** Every language, for the limit checks. */
