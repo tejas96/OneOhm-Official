@@ -64,7 +64,14 @@ export class StrangerFlowService {
     const got = await this.db.transaction((tx) =>
       this.files.receive(tx, file, { id: chat.id, leadId: lead.id }),
     );
-    await this.say(chat, { kind: 'text', body: fileWords(got.outcome) });
+    const body = fileWords(got.outcome);
+    // The "can't read it" words name the "Talk to a person" tap, so send that tap with them.
+    await this.say(
+      chat,
+      got.outcome === 'unreadable'
+        ? { kind: 'buttons', body, buttons: [{ id: 'human', title: MEDIA_WORDS.talkToPerson }] }
+        : { kind: 'text', body },
+    );
     return true;
   }
 
