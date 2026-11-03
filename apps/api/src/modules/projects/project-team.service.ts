@@ -131,7 +131,9 @@ export class ProjectTeamService {
     await this.db.transaction(async (tx) => {
       // The version-checked update comes first: it locks the project row for the rest.
       await saveProject(tx, projectId, input.version, changes);
-      if (managerChanged) await openManagerTerm(tx, projectId, manager, new Date());
+      const managerTermId = managerChanged
+        ? await openManagerTerm(tx, projectId, manager, new Date())
+        : null;
       if (input.teamUserIds) await replaceTeam(tx, projectId, team);
       await handOverTasks(tx, actor, projectId, input.handOver ?? []);
       if (input.teamUserIds || input.handOver?.length)
@@ -144,6 +146,7 @@ export class ProjectTeamService {
         removed,
         oldManager: project.managerUserId,
         newManager: manager,
+        managerTermId,
         oldTarget: project.targetFinishDate,
         newTarget: target,
       });

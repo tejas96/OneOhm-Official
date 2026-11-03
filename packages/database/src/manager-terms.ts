@@ -14,27 +14,31 @@ export interface ManagerTerm {
 /**
  * Hands a project to a new manager from `at`: closes the open term and, unless `userId`
  * is null (no manager), opens the next. Nothing changes when that person already holds it.
+ * Returns the new term's id, or null when no term was opened.
  */
 export async function openManagerTerm(
   tx: Transaction,
   projectId: string,
   userId: string | null,
   at: Date,
-): Promise<void> {
+): Promise<string | null> {
   const [open] = await tx
     .select({ id: projectManagerTerms.id, userId: projectManagerTerms.userId })
     .from(projectManagerTerms)
     .where(and(eq(projectManagerTerms.projectId, projectId), isNull(projectManagerTerms.endedAt)));
-  if (open && open.userId === userId) return;
+  if (open && open.userId === userId) return null;
   if (open) {
     await tx
       .update(projectManagerTerms)
       .set({ endedAt: at })
       .where(eq(projectManagerTerms.id, open.id));
   }
-  if (userId !== null) {
-    await tx.insert(projectManagerTerms).values({ projectId, userId, startedAt: at });
-  }
+  if (userId === null) return null;
+  const [term] = await tx
+    .insert(projectManagerTerms)
+    .values({ projectId, userId, startedAt: at })
+    .returning({ id: projectManagerTerms.id });
+  return term?.id ?? null;
 }
 
 /** Every manager a project has had, oldest first. */

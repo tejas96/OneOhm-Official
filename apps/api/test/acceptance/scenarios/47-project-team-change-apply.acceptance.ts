@@ -113,6 +113,10 @@ describe('Project team change: applying it', () => {
     expect(await owner()).toBe(admin.userId);
     await ok(newer.id, { managerUserId: manager1 });
     expect(await owner()).toBe(manager1);
+    // A newer project with nobody managing it does not lead the chat (as chatOwnerFor).
+    await rows('UPDATE projects SET manager_user_id = NULL WHERE id = $1', [newer.id]);
+    await ok(older.project.id, { managerUserId: admin.userId });
+    expect(await owner()).toBe(admin.userId);
   });
 
   it('tells the customer about a new manager', async () => {
@@ -123,8 +127,12 @@ describe('Project team change: applying it', () => {
     await ok(id, { managerUserId: manager1 });
     await ok(id, { managerUserId: manager1 });
     const sent = await told(sale);
+    const [term] = await rows<{ id: string }>(
+      'SELECT id FROM project_manager_terms WHERE project_id = $1 AND ended_at IS NULL',
+      [id],
+    );
     expect(sent.map((row) => row.dedupe_key)).toEqual([
-      `project_manager_changed:${id}:${manager1}`,
+      `project_manager_changed:${id}:${term?.id}`,
     ]);
     expect(sent[0]?.payload).toMatchObject({
       customer: sale.customer.name,
@@ -132,6 +140,10 @@ describe('Project team change: applying it', () => {
       manager: STAFF.execution.name,
     });
     expect(sent[0]?.payload.phone).toBeTruthy();
+    // Back and forth: every real change is news, so the customer has the right number.
+    await ok(id, { managerUserId: admin.userId });
+    await ok(id, { managerUserId: manager1 });
+    expect(await told(sale)).toHaveLength(3);
   });
 
   it('tells added, removed people and the old manager', async () => {

@@ -19,6 +19,8 @@ export interface TeamDiff {
   readonly removed: readonly string[];
   readonly oldManager: string | null;
   readonly newManager: string | null;
+  /** The manager term this change opened; each one tells the customer once. */
+  readonly managerTermId: string | null;
   readonly oldTarget: string | null;
   readonly newTarget: string | null;
 }
@@ -114,8 +116,13 @@ async function reviewsWaiting(tx: Transaction, projectId: string): Promise<strin
 }
 
 /** The customer of a live project hears who their new manager is and how to reach them. */
-async function tellCustomer(tx: Transaction, project: ProjectRef, manager: Person): Promise<void> {
-  if (!LIVE.includes(project.status)) return;
+async function tellCustomer(
+  tx: Transaction,
+  project: ProjectRef,
+  manager: Person,
+  termId: string | null,
+): Promise<void> {
+  if (!termId || !LIVE.includes(project.status)) return;
   const [customer] = await tx
     .select({ name: customers.name, phone: customers.phoneE164 })
     .from(customers)
@@ -133,7 +140,8 @@ async function tellCustomer(tx: Transaction, project: ProjectRef, manager: Perso
     customer.phone,
     'project_manager_changed',
     { customer: customer.name, project: project.code, manager: manager.name, phone },
-    `project_manager_changed:${project.id}:${manager.id}`,
+    // Per term, not per person: a manager who comes back is news again (A→B→A→B).
+    `project_manager_changed:${project.id}:${termId}`,
   );
 }
 
@@ -157,7 +165,7 @@ async function tellManagers(
       `You now manage ${project.code}`,
       `${actor.fullName} made you the manager of ${project.name}.${waiting}`,
     );
-    await tellCustomer(tx, project, manager);
+    await tellCustomer(tx, project, manager, diff.managerTermId);
   }
   if (diff.oldManager)
     await tell(

@@ -5,7 +5,7 @@ import {
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Conversation } from './chat-store';
 
 // Who hears about a chat lives with the database, so the worker can alert the same people.
@@ -30,7 +30,8 @@ export async function ensureChatOwner<T extends Conversation>(
 /**
  * A project got a manager: the customer's chat moves to them, unless another person
  * answered it in the last 24 hours (a conversation in progress stays where it is). Only
- * the customer's newest live project leads the chat; a change on an older one moves nothing.
+ * the customer's newest live project with a manager leads the chat (the same rule as
+ * `chatOwnerFor`); a change on an older one moves nothing.
  */
 export async function moveCustomerChats(
   db: DatabaseExecutor,
@@ -42,7 +43,11 @@ export async function moveCustomerChats(
     .select({ id: projects.id })
     .from(projects)
     .where(
-      and(eq(projects.customerId, customerId), inArray(projects.status, ['active', 'operational'])),
+      and(
+        eq(projects.customerId, customerId),
+        inArray(projects.status, ['active', 'operational']),
+        isNotNull(projects.managerUserId),
+      ),
     )
     .orderBy(desc(projects.createdAt))
     .limit(1);
