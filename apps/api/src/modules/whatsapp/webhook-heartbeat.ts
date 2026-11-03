@@ -5,7 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import { notifyHolders, outbox, waMessages } from '@oneohm/database';
+import { noteBackgroundRun, notifyHolders, outbox, waMessages } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
@@ -92,9 +92,11 @@ export class WebhookHeartbeatService implements OnApplicationBootstrap, OnModule
         body: 'Messages are going out, but no customer message or delivery receipt has come in for a day. Check the WhatsApp webhook URL in the Meta app settings.',
         dedupeKey: `whatsapp_webhook_silent:${todayIn('Asia/Kolkata', now)}`,
       });
+      await noteBackgroundRun(this.db, 'whatsapp_heartbeat', { count: 1 });
       return true;
     } catch (error) {
       this.log.error(`Heartbeat check failed: ${error instanceof Error ? error.message : error}`);
+      await noteBackgroundRun(this.db, 'whatsapp_heartbeat', { error });
       return false;
     }
   }

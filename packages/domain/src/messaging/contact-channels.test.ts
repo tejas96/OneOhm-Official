@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isNotOnWhatsApp, routeFor, SMS_MAX, smsText } from './contact-channels';
+import { isNotOnWhatsApp, routeFor, SMS_MAX, skippedAfterStop, smsText } from './contact-channels';
 
 describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
   const base = { channel: 'whatsapp', whatsappUnreachable: false, whatsappOptIn: true } as const;
@@ -11,6 +11,14 @@ describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
   it('falls back to SMS when the number is not on WhatsApp or opted out', () => {
     expect(routeFor({ ...base, whatsappUnreachable: true })).toBe('sms');
     expect(routeFor({ ...base, whatsappOptIn: false })).toBe('sms');
+  });
+
+  it('after STOP skips only the nice-to-have messages; money, visits and steps still go', () => {
+    expect(skippedAfterStop('stage_rating_request', false)).toBe(true);
+    expect(skippedAfterStop('referral_reward', false)).toBe(true);
+    expect(skippedAfterStop('payment_reminder', false)).toBe(false);
+    expect(skippedAfterStop('service_visit_booked', false)).toBe(false);
+    expect(skippedAfterStop('stage_rating_request', true)).toBe(false);
   });
 
   it('keeps the channel the team set for the customer', () => {

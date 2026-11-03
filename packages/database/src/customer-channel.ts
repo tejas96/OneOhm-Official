@@ -1,4 +1,4 @@
-import { routeFor, smsText } from '@oneohm/domain';
+import { routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
@@ -24,6 +24,7 @@ interface Message {
 /**
  * Sends one customer message the way that reaches them (owner's rule): WhatsApp first,
  * SMS when they are not on WhatsApp, and a "share in person" item when neither works.
+ * A nice-to-have message to a customer who said STOP is not sent at all (`skippedAfterStop`).
  * Returns whether something new was queued.
  */
 export async function routeCustomerMessage(
@@ -40,6 +41,8 @@ export async function routeCustomerMessage(
     .from(customers)
     .where(eq(customers.phoneE164, message.recipient))
     .limit(1);
+  // After STOP the nice-to-have messages are skipped, not moved to SMS.
+  if (customer && skippedAfterStop(message.template, customer.optIn)) return false;
   const route = customer
     ? routeFor({
         channel: customer.channel,

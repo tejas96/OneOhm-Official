@@ -134,3 +134,20 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
     isPanelOverrides(s.panelProductIds)
   );
 }
+
+/**
+ * Why settings cannot be saved, naming the limit an older saved value breaks (the limits
+ * were cut to fit WhatsApp lists), or null when they are fine.
+ */
+export function onboardingProblem(value: unknown): string | null {
+  if (isOnboardingSettings(value)) return null;
+  const s = (value ?? {}) as Partial<Record<keyof OnboardingSettings, unknown>>;
+  const count = (list: unknown) => (Array.isArray(list) ? list.length : 0);
+  if (count(s.billBands) > MAX_BILL_BANDS) return `At most ${MAX_BILL_BANDS} bill bands.`;
+  if (count(s.billBands) < MIN_BILL_BANDS) return `At least ${MIN_BILL_BANDS} bill bands.`;
+  if (count(s.serviceCities) > MAX_SERVICE_CITIES)
+    return `At most ${MAX_SERVICE_CITIES} service cities.`;
+  if (typeof s.nudgeAfterHours === 'number' && s.nudgeAfterHours > MAX_NUDGE_AFTER_HOURS)
+    return `Nudge after at most ${MAX_NUDGE_AFTER_HOURS} hours.`;
+  return 'Check the onboarding settings.';
+}

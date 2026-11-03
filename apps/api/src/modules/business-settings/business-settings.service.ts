@@ -17,8 +17,8 @@ import {
   checkReminderTiming,
   isAssignmentRules,
   isLeadAssignmentRules,
-  isOnboardingSettings,
   type LeadAssignmentRules,
+  onboardingProblem,
   type SettingErrors,
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
@@ -39,8 +39,10 @@ const CHECKS: {
   dashboard: checkDashboardSettings,
   lead_assignment: (value) =>
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
-  onboarding: (value) =>
-    isOnboardingSettings(value) ? {} : { onboarding: 'Check the onboarding settings.' },
+  onboarding: (value) => {
+    const problem = onboardingProblem(value);
+    return problem ? { onboarding: problem } : {};
+  },
 };
 
 const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
@@ -83,7 +85,8 @@ export class BusinessSettingsService {
     value: BusinessSettingsMap[K],
   ): Promise<BusinessSettingsMap[K]> {
     const errors = CHECKS[key](value);
-    if (Object.keys(errors).length > 0) throw invalid(PROBLEM[key], errors);
+    // Onboarding names the limit it breaks (say "At most 8 bill bands."), not just the area.
+    if (Object.keys(errors).length > 0) throw invalid(errors.onboarding ?? PROBLEM[key], errors);
     const before = await this.get(key);
     await this.db.transaction(async (tx) => {
       await writeBusinessSetting(tx, key, value, actor.userId);

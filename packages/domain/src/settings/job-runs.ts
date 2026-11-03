@@ -21,6 +21,8 @@ export const JOB_NAMES = [
   'incentive_sweep',
   'payout_sync',
   'onboarding_nudges',
+  'sales_checks',
+  'whatsapp_heartbeat',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 

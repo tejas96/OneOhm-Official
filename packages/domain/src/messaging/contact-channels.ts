@@ -24,6 +24,15 @@ export function routeFor(customer: {
   return 'whatsapp';
 }
 
+/**
+ * STOP means "no WhatsApp", not "tell me nothing": money, visits and project steps still
+ * go by SMS. These nice-to-have messages are not sent at all to a customer who said STOP.
+ */
+export const SKIPPED_AFTER_STOP: readonly string[] = ['stage_rating_request', 'referral_reward'];
+
+export const skippedAfterStop = (template: string, whatsappOptIn: boolean): boolean =>
+  !whatsappOptIn && SKIPPED_AFTER_STOP.includes(template);
+
 /** Longest SMS text: two standard parts, so it stays cheap and reads in one glance. */
 export const SMS_MAX = 300;
 

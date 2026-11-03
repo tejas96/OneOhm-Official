@@ -5,6 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
+import { noteBackgroundRun } from '@oneohm/database';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { handBackQuietChats } from '../whatsapp/chat-hand-back';
@@ -33,6 +34,7 @@ export class SalesChecksService implements OnApplicationBootstrap, OnModuleDestr
   private readonly log = new Logger('SalesChecks');
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
+  private failed: string[] = [];
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -54,6 +56,7 @@ export class SalesChecksService implements OnApplicationBootstrap, OnModuleDestr
     const done = { expiring: 0, calls: 0, noProject: 0, handedBack: 0 };
     if (this.running) return done;
     this.running = true;
+    this.failed = [];
     const zone = this.env.BUSINESS_TIMEZONE;
     try {
       done.expiring = await this.check('expiring quotes', () => expiringQuotes(this.db, now, zone));
@@ -66,6 +69,12 @@ export class SalesChecksService implements OnApplicationBootstrap, OnModuleDestr
       done.handedBack = await this.check('quiet chats', () =>
         handBackQuietChats(this.db, now, zone),
       );
+      // Kept in job runs, so a failing check shows in Settings, not only in the logs.
+      const count = done.expiring + done.calls + done.noProject + done.handedBack;
+      const error = this.failed.length
+        ? new Error(`Sales check failed: ${this.failed.join('; ')}.`)
+        : undefined;
+      await noteBackgroundRun(this.db, 'sales_checks', error ? { error } : { count });
     } finally {
       this.running = false;
     }
@@ -76,9 +85,9 @@ export class SalesChecksService implements OnApplicationBootstrap, OnModuleDestr
     try {
       return await work();
     } catch (error) {
-      this.log.error(
-        `Sales check (${name}) failed: ${error instanceof Error ? error.message : error}`,
-      );
+      const text = error instanceof Error ? error.message : String(error);
+      this.log.error(`Sales check (${name}) failed: ${text}`);
+      this.failed.push(`${name}: ${text}`);
       return 0;
     }
   }

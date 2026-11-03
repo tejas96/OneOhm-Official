@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ONBOARDING, isOnboardingSettings } from './settings';
+import { DEFAULT_ONBOARDING, isOnboardingSettings, onboardingProblem } from './settings';
 
 const bands = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ id: `b${i}`, label: `B${i}`, targetWp: 1000 * (i + 1) }));
@@ -69,5 +69,27 @@ describe('isOnboardingSettings', () => {
     expect(
       isOnboardingSettings({ ...DEFAULT_ONBOARDING, billBands: [a, { ...b, maxRupees: 1000 }] }),
     ).toBe(false);
+  });
+});
+
+describe('onboardingProblem (live review final #11)', () => {
+  it('names the limit an old saved setting breaks', () => {
+    expect(onboardingProblem({ ...DEFAULT_ONBOARDING, billBands: bands(9) })).toBe(
+      'At most 8 bill bands.',
+    );
+    const cities = Array.from({ length: 8 }, (_, i) => `City ${i}`);
+    expect(onboardingProblem({ ...DEFAULT_ONBOARDING, serviceCities: cities })).toBe(
+      'At most 7 service cities.',
+    );
+    expect(onboardingProblem({ ...DEFAULT_ONBOARDING, nudgeAfterHours: 23 })).toBe(
+      'Nudge after at most 22 hours.',
+    );
+  });
+
+  it('says nothing for good settings, and the general line otherwise', () => {
+    expect(onboardingProblem(DEFAULT_ONBOARDING)).toBeNull();
+    expect(onboardingProblem({ ...DEFAULT_ONBOARDING, tariffPaisePerUnit: -1 })).toBe(
+      'Check the onboarding settings.',
+    );
   });
 });
