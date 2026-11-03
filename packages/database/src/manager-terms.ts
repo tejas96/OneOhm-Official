@@ -1,6 +1,9 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { DatabaseExecutor, Transaction } from './client';
+import { users } from './schema/identity.schema';
 import { projectManagerTerms } from './schema/project-team.schema';
+import { projects } from './schema/projects.schema';
 
 export interface ManagerTerm {
   userId: string;
@@ -49,3 +52,40 @@ export async function managerTermsOf(
     .where(eq(projectManagerTerms.projectId, projectId))
     .orderBy(asc(projectManagerTerms.startedAt));
 }
+
+/**
+ * One rule everywhere: a manager who is no longer active counts as no manager, so reviews
+ * and alerts fall back to the people who hold the right instead of waiting on them.
+ */
+export async function activeManagerOf(
+  db: DatabaseExecutor,
+  projectId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(projects)
+    .innerJoin(users, eq(users.id, projects.managerUserId))
+    .where(and(eq(projects.id, projectId), eq(users.status, 'active')))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+/** Which of these people are active: for lists of projects, without a lookup per row. */
+export async function activeUserIds(
+  db: DatabaseExecutor,
+  userIds: readonly (string | null)[],
+): Promise<Set<string>> {
+  const ids = [...new Set(userIds.filter((id): id is string => id !== null))];
+  if (ids.length === 0) return new Set();
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(inArray(users.id, ids), eq(users.status, 'active')));
+  return new Set(rows.map((row) => row.id));
+}
+
+/** For queries over `projects`: join this, and select `liveManagerId` for the active manager. */
+export const managerUser = alias(users, 'manager_user');
+export const liveManagerId = sql<
+  string | null
+>`case when ${managerUser.status} = 'active' then ${projects.managerUserId} end`;

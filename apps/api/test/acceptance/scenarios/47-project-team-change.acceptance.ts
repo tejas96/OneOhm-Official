@@ -1,9 +1,10 @@
-import type { DeliveryReport, TeamOptions } from '@oneohm/api-contracts';
+import type { DeliveryReport, ProjectTask, TeamOptions } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { ownPerson, retire } from '../support/people';
 import { sellProject } from '../support/sales';
+import { project, workTask } from '../support/tasks';
 import { STAFF } from '../support/team';
 import { patchTeam, setManagerTerms, setManagerTermsAt } from '../support/team-change';
 
@@ -86,6 +87,35 @@ describe('Project team change', () => {
         targetFinishDate: '2099-01-01',
       });
       expect(reply.status).toBe(200);
+    });
+
+    it('reviews go to approvers when the manager is inactive', async () => {
+      const person = await ownPerson(admin, 'Gone Reviewer (test)', ['execution']);
+      const sale = await sellProject(admin, { name: 'Inactive Reviewer (test)' });
+      expect((await patchTeam(admin, sale.project.id, { managerUserId: person.id })).status).toBe(
+        200,
+      );
+      const detail = await project(admin, sale.project.id);
+      const task = detail.tasks.find(
+        (t) =>
+          t.status === 'ready' && t.blockedBy.length === 0 && (t.assignee || t.proposedAssignee),
+      );
+      if (!task) throw new Error('No free task to review.');
+      await rows(
+        "UPDATE project_tasks SET approval = true, reviewer = 'project_manager' WHERE id = $1",
+        [task.id],
+      );
+      await retire(admin, [person]);
+      const submitted = await workTask(admin, task, { approve: false });
+      expect(submitted.status).toBe('in_review');
+      expect(submitted.reviewerIds).not.toContain(person.id);
+      expect(submitted.reviewerIds).toContain(admin.userId);
+      const after = await project(admin, sale.project.id);
+      const seen = after.tasks.find((t: ProjectTask) => t.id === task.id);
+      expect(seen?.reviewerIds).not.toContain(person.id);
+      expect(seen?.reviewerIds).toContain(admin.userId);
+      const approved = await admin.raw('POST', `/tasks/${task.id}/approve`);
+      expect(approved.status).toBe(200);
     });
 
     it('locks completed projects', async () => {
