@@ -10,7 +10,7 @@ import {
   userRoles,
 } from '@oneohm/database';
 import { judgeTask, splitRatingPoints } from '@oneohm/domain';
-import { and, eq, gte, inArray, isNull, notInArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, max, notInArray } from 'drizzle-orm';
 import { loadPolicy } from './policy';
 import { taskPointFacts } from './task-point-facts';
 
@@ -67,6 +67,27 @@ export async function awardTaskPoints(
 }
 
 /**
+ * Terms are counted up to when the work ended, not to the rating: a late rating must not
+ * hand the last manager time they never worked. A completed project ended when its last
+ * task was finished (project row's updatedAt if no task records a finish); an open one runs
+ * to now.
+ */
+async function ratingCutoff(
+  db: DatabaseExecutor,
+  projectId: string,
+  project: { readonly status: string; readonly updatedAt: Date },
+  now: Date,
+): Promise<Date> {
+  if (project.status !== 'completed') return now;
+  const [row] = await db
+    .select({ at: max(projectTasks.completedAt) })
+    .from(projectTasks)
+    .where(eq(projectTasks.projectId, projectId));
+  const ended = row?.at ?? project.updatedAt;
+  return ended < now ? ended : now;
+}
+
+/**
  * A 4 or 5 star customer rating suggests points for the project's managers, shared by how
  * long each held the project; a manager approves them, so ratings cannot be gamed into
  * automatic rewards (PRD 5.7, Flow G). Rating again moves only what is still pending: a
@@ -97,7 +118,7 @@ export async function suggestRatingPoints(
     return;
   }
   const [project] = await db
-    .select({ code: projects.code })
+    .select({ code: projects.code, status: projects.status, updatedAt: projects.updatedAt })
     .from(projects)
     .where(eq(projects.id, input.projectId))
     .limit(1);
@@ -108,7 +129,7 @@ export async function suggestRatingPoints(
   const shares = splitRatingPoints(
     terms.map((term) => ({ userId: term.userId, from: term.startedAt, to: term.endedAt })),
     points.goodRating,
-    now,
+    await ratingCutoff(db, input.projectId, project, now),
   );
   for (const share of shares)
     await db
