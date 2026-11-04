@@ -11,10 +11,14 @@ function entryFor(
   rules: readonly RuleRow[],
   lead: AttributedLead,
   project: ProjectFacts | undefined,
+  removed: ReadonlySet<string>,
 ): typeof commissionEntries.$inferInsert | null {
   if (!project || project.status === 'cancelled') return null;
-  const { rule } = effectiveRule(rules, lead.resellerId);
-  if (!rule?.active) return null;
+  const { rule, custom } = effectiveRule(rules, lead.resellerId);
+  // Removal archives a reseller's own rule, yet a lead they brought in still earns under
+  // it, pending finance's decision (spec "A lead that a removed reseller brought in").
+  const archivedOnRemoval = custom && removed.has(lead.resellerId);
+  if (!rule || !(rule.active || archivedOnRemoval)) return null;
   const earnedAt = eventReachedAt(rule.qualifyingEvent, project);
   const amountPaise = commissionPaise(rule, project);
   if (!earnedAt || amountPaise <= 0) return null;
@@ -41,8 +45,9 @@ export async function evaluateCommissions(db: Database): Promise<number> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:commissions'))`);
     const rules = await loadRules(tx);
-    if (!rules.some((rule) => rule.active)) return 0;
+    if (!rules.some((rule) => rule.active || rule.resellerUserId !== null)) return 0;
     const people = await resellers(tx);
+    const removed = new Set(people.filter((person) => !person.active).map((person) => person.id));
     const sold = await resellerLeads(
       tx,
       people.map((person) => person.id),
@@ -64,7 +69,7 @@ export async function evaluateCommissions(db: Database): Promise<number> {
     for (const lead of sold) {
       const projectId = projectOf.get(lead.id);
       if (!projectId || done.has(projectId)) continue;
-      const values = entryFor(rules, lead, facts.get(projectId));
+      const values = entryFor(rules, lead, facts.get(projectId), removed);
       if (!values) continue;
       const [row] = await tx
         .insert(commissionEntries)

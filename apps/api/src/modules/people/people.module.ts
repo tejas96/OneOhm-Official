@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DepartureService } from './departure/departure.service';
 import { PeopleController } from './people.controller';
 import { PeopleService } from './people.service';
 import { PersonInvites } from './person-invite';
@@ -8,6 +9,6 @@ import { SkillsService } from './skills.service';
 
 @Module({
   controllers: [PeopleController, SkillsController],
-  providers: [PeopleService, PersonInvites, RolesService, SkillsService],
+  providers: [DepartureService, PeopleService, PersonInvites, RolesService, SkillsService],
 })
 export class PeopleModule {}

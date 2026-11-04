@@ -1,13 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
 import { roleCapabilities, roles, sessions, userRoles, users } from '@oneohm/database';
-import { type Capability, SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import type { Capability } from '@oneohm/domain';
+import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
+import { forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { wrapUp } from './departure/departure-wrapup';
 import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 import { kindsOfRoles, queueInvite, requireNewPassword } from './person-invite';
@@ -16,6 +17,7 @@ import { assertUnique } from './person-unique';
 import { saveWork, type WorkPatch } from './person-work';
 import { saveReportingLine } from './reporting-line';
 import { archivedRolesNewlyGiven, rolesOutOfReach } from './role-grant';
+import { assertKeepsASuperAdmin } from './super-admin-guard';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -108,7 +110,7 @@ export class PeopleService {
     const fields = personFields(patch);
     await this.db.transaction(async (tx) => {
       if (patch.roleIds || patch.status === 'inactive')
-        await this.assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);
+        await assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);
       if (patch.roleIds) {
         await tx.delete(userRoles).where(eq(userRoles.userId, id));
         await tx.insert(userRoles).values(patch.roleIds.map((roleId) => ({ userId: id, roleId })));
@@ -121,9 +123,10 @@ export class PeopleService {
           .update(users)
           .set({ ...fields, updatedAt: new Date() })
           .where(eq(users.id, id));
-      // Deactivating someone signs them out everywhere. A new number signs out the phone,
-      // because the old number may belong to someone else now.
-      if (patch.status === 'inactive') await tx.delete(sessions).where(eq(sessions.userId, id));
+      // Switching someone off shuts down their sign-ins, phones and location (no handover:
+      // that is Remove from team). A new number signs out the phone, because the old
+      // number may belong to someone else now.
+      if (patch.status === 'inactive') await wrapUp(tx, id, new Date());
       else if (patch.phone !== undefined && patch.phone !== existing.phone)
         await tx
           .delete(sessions)
@@ -179,32 +182,5 @@ export class PeopleService {
       throw invalid(`${archived.join(', ')} is archived, so it cannot be given to anyone.`, {
         roleIds: 'Archived role.',
       });
-  }
-
-  /** There must always be at least one active Super Admin. */
-  private async assertKeepsASuperAdmin(
-    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    userId: string,
-    nextRoleIds: readonly string[] | undefined,
-    nextStatus: 'active' | 'inactive' | undefined,
-  ): Promise<void> {
-    const [superAdmin] = await tx
-      .select({ id: roles.id })
-      .from(roles)
-      .where(eq(roles.key, SUPER_ADMIN_ROLE_KEY))
-      .limit(1);
-    if (!superAdmin) return;
-    const keeps =
-      nextStatus !== 'inactive' && (nextRoleIds ? nextRoleIds.includes(superAdmin.id) : true);
-    if (keeps) return;
-    const holders = await tx
-      .select({ userId: userRoles.userId })
-      .from(userRoles)
-      .innerJoin(users, eq(users.id, userRoles.userId))
-      .where(
-        and(eq(userRoles.roleId, superAdmin.id), eq(users.status, 'active'), ne(users.id, userId)),
-      );
-    if (holders.length === 0)
-      throw conflict('Someone else must be a Super Admin first.', 'last_super_admin');
   }
 }

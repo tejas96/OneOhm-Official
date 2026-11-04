@@ -1,6 +1,12 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { emailSchema, idSchema, nameSchema, phoneSchema } from '../common/primitives';
+import {
+  calendarDateSchema,
+  emailSchema,
+  idSchema,
+  nameSchema,
+  phoneSchema,
+} from '../common/primitives';
 import { departureSchema } from '../schemas/departure.schema';
 import {
   capabilitySchema,
@@ -71,6 +77,18 @@ export const peopleContract = c.router({
     path: '/people/:id/departure',
     pathParams: idParams,
     responses: { 200: departureSchema },
+  },
+  /** Remove from team: all open work goes to one person in the same step (spec Flow 5). */
+  removePerson: {
+    method: 'POST',
+    path: '/people/:id/remove',
+    pathParams: idParams,
+    body: z.object({
+      handToUserId: idSchema,
+      lastWorkingDay: calendarDateSchema,
+      tellCustomers: z.boolean(),
+    }),
+    responses: { 200: personSchema },
   },
   listRoles: { method: 'GET', path: '/roles', responses: { 200: z.array(roleSchema) } },
   createRole: {

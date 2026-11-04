@@ -5,6 +5,7 @@ import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { DepartureService } from './departure/departure.service';
 import { departureSummary } from './departure/departure-summary';
 import { PeopleService } from './people.service';
 import { PersonInvites } from './person-invite';
@@ -17,6 +18,7 @@ export class PeopleController {
     private readonly people: PeopleService,
     private readonly roles: RolesService,
     private readonly invites: PersonInvites,
+    private readonly departures: DepartureService,
   ) {}
 
   @TsRestHandler(apiContract.people)
@@ -46,6 +48,10 @@ export class PeopleController {
       getDeparture: async ({ params }) => {
         assertCan(actor, 'people.manage');
         return { status: 200, body: await departureSummary(this.db, params.id) };
+      },
+      removePerson: async ({ params, body }) => {
+        assertCan(actor, 'people.manage');
+        return { status: 200, body: await this.departures.remove(actor, params.id, body) };
       },
       listRoles: async () => {
         assertCan(actor, 'people.view', 'people.manage', 'roles.manage');

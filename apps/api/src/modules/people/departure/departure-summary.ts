@@ -5,7 +5,7 @@ import { notFound } from '../../../common/http/errors';
 import { settlement, soleHolders } from './departure-settlement';
 import { type OpenWork, openWork } from './departure-work';
 
-const countsOf = (work: OpenWork): Departure['counts'] => ({
+export const countsOf = (work: OpenWork): Departure['counts'] => ({
   leads: work.leads.length,
   tasks: work.tasks.length,
   proposedTasks: work.proposedTasks.length,
