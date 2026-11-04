@@ -13,7 +13,7 @@ import {
 } from '@oneohm/database';
 import { isMissedLine } from '@oneohm/domain';
 import { monthOf, monthRange, previousMonth } from '@oneohm/shared';
-import { and, asc, eq, inArray, type SQL, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 
 /** A point line's India day falls in the month. */
 export function inMonth(column: typeof pointsEntries.createdAt, month: string): SQL {
@@ -115,12 +115,16 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
     ? await db
         .select({ id: users.id, fullName: users.fullName })
         .from(users)
-        // The current month is the live ranking: people who left drop out of it. Past
-        // months stay as they were.
+        // Someone who left during the month is still reviewed for it; someone who left
+        // before it is not. An old past member with no leaving day keeps past months only.
         .where(
           and(
             inArray(users.id, ids),
-            month === monthOf(new Date()) ? eq(users.status, 'active') : undefined,
+            or(
+              eq(users.status, 'active'),
+              gte(users.leftOn, start),
+              month === monthOf(new Date()) ? undefined : isNull(users.leftOn),
+            ),
           ),
         )
     : [];

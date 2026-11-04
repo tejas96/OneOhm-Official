@@ -64,12 +64,13 @@ describe('rejoin', () => {
     expect(reply.body.message).toBe('This person is still on the team.');
   });
 
-  it('the removed person is not in this month’s ranking but their points rows remain', async () => {
+  it('the removed person leaves the live ranking but this month’s review keeps them', async () => {
     expect(await board()).toContain(leaver.id);
     expect(await monthRows(month)).toContain(leaver.id);
     expect((await remove()).status).toBe('inactive');
     expect(await board()).not.toContain(leaver.id);
-    expect(await monthRows(month)).not.toContain(leaver.id);
+    // They left this month, so their review for it can still be finished.
+    expect(await monthRows(month)).toContain(leaver.id);
     expect(await rows(`SELECT 1 FROM points_entries WHERE user_id = $1`, [leaver.id])).toHaveLength(
       1,
     );
