@@ -16,7 +16,11 @@ export interface Owed {
   readonly paise: number;
 }
 
-/** What the company still owes the person. Nothing here is cancelled or moved on removal. */
+/**
+ * What the company still owes the person. Nothing here is cancelled or moved on removal.
+ * Travel claims and bonus shares count while pending; once approved they become payables,
+ * so `payables` is the one place that covers them (and salary) until they are paid.
+ */
 export interface Settlement {
   readonly travelClaims: Owed;
   readonly bonusShares: Owed;
@@ -34,10 +38,11 @@ export const KEY_CAPABILITIES: readonly Capability[] = [
 ];
 
 const count = sql<number>`count(*)::int`;
-const total = (amount: unknown) => sql<number>`coalesce(sum(${amount}), 0)::float8`;
-const owed = (row: { count: number; paise: number } | undefined): Owed => ({
+/** Summed as bigint and read back as text, so large totals never pass through a float. */
+const total = (amount: unknown) => sql<string>`coalesce(sum(${amount}), 0)::bigint::text`;
+const owed = (row: { count: number; paise: string } | undefined): Owed => ({
   count: row?.count ?? 0,
-  paise: Math.round(row?.paise ?? 0),
+  paise: Number(row?.paise ?? 0),
 });
 
 export async function settlement(db: DatabaseExecutor, userId: string): Promise<Settlement> {
@@ -45,19 +50,12 @@ export async function settlement(db: DatabaseExecutor, userId: string): Promise<
     db
       .select({ count, paise: total(travelClaims.amountPaise) })
       .from(travelClaims)
-      .where(
-        and(eq(travelClaims.userId, userId), inArray(travelClaims.status, ['pending', 'approved'])),
-      ),
+      .where(and(eq(travelClaims.userId, userId), eq(travelClaims.status, 'pending'))),
     db
       .select({ count, paise: total(projectBonusShares.amountPaise) })
       .from(projectBonusShares)
       .innerJoin(projectBonuses, eq(projectBonuses.id, projectBonusShares.bonusId))
-      .where(
-        and(
-          eq(projectBonusShares.userId, userId),
-          inArray(projectBonuses.status, ['pending', 'approved']),
-        ),
-      ),
+      .where(and(eq(projectBonusShares.userId, userId), eq(projectBonuses.status, 'pending'))),
     db
       .select({ count, paise: total(payables.amountPaise) })
       .from(payables)
@@ -81,7 +79,7 @@ export async function settlement(db: DatabaseExecutor, userId: string): Promise<
     bonusShares: owed(bonuses),
     payables: owed(bills),
     commissions: owed(commissions),
-    pendingPoints: Math.round(points?.points ?? 0),
+    pendingPoints: Number(points?.points ?? 0),
   };
 }
 

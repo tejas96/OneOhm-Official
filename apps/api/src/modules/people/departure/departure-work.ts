@@ -11,10 +11,14 @@ import {
   projectTeamMembers,
   reportingLines,
   serviceRequests,
+  users,
   waConversations,
 } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, gte, ne, notInArray, or } from 'drizzle-orm';
+import { and, eq, gte, inArray, ne, notInArray, or } from 'drizzle-orm';
+
+/** Projects still running; tasks and teams on finished ones are history. */
+const RUNNING = ['active', 'operational'] as const;
 
 /** Everything a leaver still holds open, as ids. Handover (the next step) moves these. */
 export interface OpenWork {
@@ -69,11 +73,25 @@ export async function openWork(
     db
       .select({ id: projectTasks.id })
       .from(projectTasks)
-      .where(and(eq(projectTasks.assigneeUserId, userId), ne(projectTasks.status, 'completed'))),
+      .innerJoin(projects, eq(projects.id, projectTasks.projectId))
+      .where(
+        and(
+          eq(projectTasks.assigneeUserId, userId),
+          ne(projectTasks.status, 'completed'),
+          inArray(projects.status, RUNNING),
+        ),
+      ),
     db
       .select({ id: projectTasks.id })
       .from(projectTasks)
-      .where(and(eq(projectTasks.proposedUserId, userId), ne(projectTasks.status, 'completed'))),
+      .innerJoin(projects, eq(projects.id, projectTasks.projectId))
+      .where(
+        and(
+          eq(projectTasks.proposedUserId, userId),
+          ne(projectTasks.status, 'completed'),
+          inArray(projects.status, RUNNING),
+        ),
+      ),
     db
       .select({ id: serviceRequests.id })
       .from(serviceRequests)
@@ -94,20 +112,17 @@ export async function openWork(
     db
       .select({ id: projects.id })
       .from(projects)
-      .where(
-        and(
-          eq(projects.managerUserId, userId),
-          notInArray(projects.status, ['completed', 'cancelled']),
-        ),
-      ),
+      .where(and(eq(projects.managerUserId, userId), inArray(projects.status, RUNNING))),
     db
       .select({ id: projectTeamMembers.projectId })
       .from(projectTeamMembers)
-      .where(eq(projectTeamMembers.userId, userId)),
+      .innerJoin(projects, eq(projects.id, projectTeamMembers.projectId))
+      .where(and(eq(projectTeamMembers.userId, userId), inArray(projects.status, RUNNING))),
     db
       .select({ id: reportingLines.userId })
       .from(reportingLines)
-      .where(eq(reportingLines.managerUserId, userId)),
+      .innerJoin(users, eq(users.id, reportingLines.userId))
+      .where(and(eq(reportingLines.managerUserId, userId), eq(users.status, 'active'))),
     db
       .select({ id: waConversations.id })
       .from(waConversations)
@@ -117,10 +132,12 @@ export async function openWork(
     db
       .select({ id: leaveManagerReviews.leaveRequestId })
       .from(leaveManagerReviews)
+      .innerJoin(leaveRequests, eq(leaveRequests.id, leaveManagerReviews.leaveRequestId))
       .where(
         and(
           eq(leaveManagerReviews.managerUserId, userId),
           eq(leaveManagerReviews.state, 'waiting'),
+          eq(leaveRequests.status, 'pending'),
         ),
       ),
     db
