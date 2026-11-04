@@ -1,4 +1,5 @@
 import {
+  chatOwnerFor,
   customerActions,
   customers,
   type Database,
@@ -7,6 +8,7 @@ import {
   notifyHolders,
   projects,
   queueCustomerMessage,
+  users,
 } from '@oneohm/database';
 import { isWorkingTime } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
@@ -33,7 +35,7 @@ const WHAT: Readonly<Record<string, string>> = {
 };
 
 /**
- * Open location, payment and call-back asks (redesign §2.3): a location is asked again at 2 days
+ * Open location, payment and call-back asks (redesign §2.3): a location (or a call time) is asked again at 2 days
  * (working hours, the approved template); the person who asked hears at 4 days for all three.
  * Payments are chased by the payment reminders already, so the customer is not messaged twice.
  * Each reminder and alert has its own key, so a repeated tick says nothing twice.
@@ -88,8 +90,10 @@ interface Row {
 /** A location is asked again with the approved template, in working hours. */
 async function remindCustomer(db: Database, row: Row, now: Date, timeZone: string) {
   const { action } = row;
-  if (action.type !== 'location' || !isWorkingTime(now, timeZone)) return false;
+  if (!isWorkingTime(now, timeZone)) return false;
   if (now.getTime() - action.createdAt.getTime() >= CUSTOMER_UNTIL) return false;
+  if (action.type === 'callback') return remindCallback(db, row, `action_reminder:${action.id}`);
+  if (action.type !== 'location') return false;
   const home = await homeNameOf(db, action.projectId, action.propertyId);
   return queueCustomerMessage(
     db,
@@ -116,4 +120,33 @@ async function alertAsker(db: Database, { action, customer, manager }: Row) {
   const person = action.requestedByUserId ?? manager;
   if (person) await notifyCover(db, person, 'projects.manage', notice);
   else await notifyHolders(db, 'projects.manage', notice);
+}
+
+/** The customer never picked a time: the three buttons again, by the approved template. */
+async function remindCallback(db: Database, { action, customer, phone }: Row, key: string) {
+  const [owner] = await db
+    .select({ name: users.fullName })
+    .from(users)
+    .where(
+      eq(
+        users.id,
+        (await chatOwnerFor(db, { customerId: action.customerId, phone })) ??
+          action.requestedByUserId ??
+          '',
+      ),
+    );
+  const tap = (slot: string) => `cb:${action.id}:${slot}`;
+  return queueCustomerMessage(
+    db,
+    phone,
+    'callback_request',
+    {
+      customer: titleCaseName(customer),
+      staff: owner?.name.split(/\s+/)[0] ?? 'our team',
+      morningPayload: tap('morning'),
+      afternoonPayload: tap('afternoon'),
+      eveningPayload: tap('evening'),
+    },
+    key,
+  );
 }

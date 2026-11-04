@@ -9,9 +9,10 @@ import type {
   SendResult,
   SendScope,
 } from '@oneohm/api-contracts';
-import { customerActions } from '@oneohm/database';
+import { auditLog, customerActions } from '@oneohm/database';
 import type { SendAction } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
@@ -30,6 +31,8 @@ import {
 import { deliver, previewOf } from './send-deliver';
 import { offersFor } from './send-offers';
 import type { Deps } from './send-papers';
+
+type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 const ACTION_OF = (request: SendRequest): SendAction => request.action;
 
@@ -78,12 +81,39 @@ export class SendToCustomerService {
     const id = randomUUID();
     const composed = await compose(this.deps, ctx, body.request, id);
     return this.db.transaction(async (tx) => {
+      // One press of Send is one send: a double tap or a retry with the same id answers the first.
+      const again = body.requestId ? await this.sentBefore(tx, body.requestId) : null;
+      if (again) return again;
       const actionId = await this.record(tx, ctx, actor.userId, composed);
       // The same ask is one message; a re-sent reminder of an open ask gets its own key.
       const key = `send:${body.request.action}:${actionId ?? id}:${id}`;
       const via = await deliver(tx, ctx, composed.built, key, actor.userId);
+      if (body.requestId)
+        await recordAudit(
+          tx,
+          actor.userId,
+          'customer.send_request',
+          'send_request',
+          body.requestId,
+          {
+            via,
+            actionId,
+          },
+        );
       return { via, actionId };
     });
+  }
+
+  /** What an earlier send with this id answered; takes the lock so two at once take turns. */
+  private async sentBefore(tx: Tx, requestId: string): Promise<SendResult | null> {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${requestId}))`);
+    const [row] = await tx
+      .select({ data: auditLog.data })
+      .from(auditLog)
+      .where(and(eq(auditLog.entity, 'send_request'), eq(auditLog.entityId, requestId)))
+      .limit(1);
+    const data = row?.data as SendResult | null | undefined;
+    return data ? { via: data.via, actionId: data.actionId ?? null } : null;
   }
 
   private async context(actor: Actor, body: SendBody): Promise<SendContext> {
@@ -93,7 +123,7 @@ export class SendToCustomerService {
   }
 
   private async record(
-    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
+    tx: Tx,
     ctx: SendContext,
     userId: string,
     { record }: Composed,
@@ -106,7 +136,7 @@ export class SendToCustomerService {
       ...(record.type === 'location' && record.propertyId ? { propertyId: record.propertyId } : {}),
       ...(record.type === 'pay' ? { milestoneId: String(record.payload.milestoneId) } : {}),
     });
-    if (existing && record.type === 'location') {
+    if (existing && (record.type === 'location' || record.type === 'callback')) {
       throw conflict('The customer has already been asked for this.', 'already_asked');
     }
     if (existing && record.type === 'pay') {

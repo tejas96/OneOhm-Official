@@ -43,6 +43,14 @@ export const sendToCustomerContract = c.router({
     responses: { 200: documentRequestSchema },
     summary: 'Use the location the customer sent for this home.',
   },
+  markCalled: {
+    method: 'POST',
+    path: '/customer-actions/:id/called',
+    pathParams: idParams,
+    body: z.object({}).optional(),
+    responses: { 200: documentRequestSchema },
+    summary: 'The call-back the customer asked for was made; the ask is done.',
+  },
   ignoreLocation: {
     method: 'POST',
     path: '/customer-actions/:id/location/ignore',

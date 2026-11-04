@@ -85,7 +85,7 @@ describe('Send to customer: delay notice and the card', () => {
     const pay = card.find((one) => one.type === 'pay');
     await admin.post(`/document-requests/${pay?.id}/cancel`);
     expect((await lastReply(customer.phone))?.body).toBe(
-      'You do not need to send a payment proof any more. Thank you.',
+      'We are not waiting for a payment proof from you any more. Your payment is still due.',
     );
     const again = await admin.raw('POST', `/document-requests/${pay?.id}/cancel`);
     expect(again.status).toBe(409);

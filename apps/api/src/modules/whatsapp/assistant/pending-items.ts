@@ -9,19 +9,30 @@ import {
   serviceRequests,
 } from '@oneohm/database';
 import { addDays } from '@oneohm/shared';
-import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
 export type PendingItem =
   | { kind: 'paper'; requestId: string; title: string; category: string; home: string | null }
   | { kind: 'pay'; milestoneId: string; leftPaise: number; home: string }
+  /** A location the team asked for ([📍 Send location]) and a call time they asked for. */
+  | { kind: 'location'; requestId: string; home: string | null }
+  | { kind: 'callback'; requestId: string }
   | { kind: 'visit'; requestId: string; on: string; home: string | null }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
   | { kind: 'quote'; quotationId: string };
 
 /** What matters first: open ask → money due → visit in 3 days → open problem → quote waiting. */
-const ORDER: readonly PendingItem['kind'][] = ['paper', 'pay', 'visit', 'problem', 'quote'];
+const ORDER: readonly PendingItem['kind'][] = [
+  'paper',
+  'pay',
+  'location',
+  'callback',
+  'visit',
+  'problem',
+  'quote',
+];
 
 /** Visits this many days ahead show on Home. */
 export const VISIT_DAYS = 3;
@@ -45,11 +56,12 @@ export async function pendingForCustomer(
   customerId: string,
   today: string,
 ): Promise<PendingItem[]> {
-  const [papers, due, problems, quotes] = await Promise.all([
+  const [papers, due, problems, quotes, asks] = await Promise.all([
     openPapers(db, customerId),
     dueInstalments(db, customerId),
     openProblems(db, customerId),
     waitingQuotes(db, customerId, today),
+    openAsks(db, customerId),
   ]);
   const until = addDays(today, VISIT_DAYS);
   const visits = problems.filter(
@@ -76,6 +88,11 @@ export async function pendingForCustomer(
           ]
         : [];
     }),
+    ...asks.map((row) =>
+      row.type === 'location'
+        ? { kind: 'location' as const, requestId: row.id, home: homeOf(row.label, row.city) }
+        : { kind: 'callback' as const, requestId: row.id },
+    ),
     ...visits.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,
@@ -116,6 +133,29 @@ function openPapers(db: DatabaseExecutor, customerId: string) {
         eq(customerActions.type, 'paper'),
         eq(customerActions.status, 'open'),
         or(isNull(customerActions.projectId), ne(projects.status, 'cancelled')),
+      ),
+    )
+    .orderBy(asc(customerActions.createdAt));
+}
+
+/** Location and call-time asks the team made that still wait for the customer. */
+function openAsks(db: DatabaseExecutor, customerId: string) {
+  return db
+    .select({
+      id: customerActions.id,
+      type: customerActions.type,
+      label: properties.label,
+      city: properties.city,
+    })
+    .from(customerActions)
+    .leftJoin(properties, eq(properties.id, customerActions.propertyId))
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        inArray(customerActions.type, ['location', 'callback']),
+        eq(customerActions.status, 'open'),
+        // A pin waiting for its home is the customer's own move, not an ask of ours.
+        isNotNull(customerActions.requestedByUserId),
       ),
     )
     .orderBy(asc(customerActions.createdAt));

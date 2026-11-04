@@ -32,6 +32,10 @@ export class SendToCustomerController {
         status: 200,
         body: await this.locations.accept(actor, params.id),
       }),
+      markCalled: async ({ params }) => ({
+        status: 200,
+        body: await this.locations.called(actor, params.id),
+      }),
       ignoreLocation: async ({ params }) => ({
         status: 200,
         body: await this.locations.ignore(actor, params.id),

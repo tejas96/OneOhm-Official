@@ -106,9 +106,10 @@ describe('a location and a payment proof', () => {
     expect(nextActionStatus('pay', 'open', 'customer_did_it')).toBe('closed');
   });
 
-  it('a callback needs no check', () => {
-    expect(nextActionStatus('callback', 'open', 'needs_check')).toBeNull();
-    expect(nextActionStatus('callback', 'open', 'customer_did_it')).toBe('closed');
+  it('a call-back waits as To call after the customer picks a time, then staff close it', () => {
+    expect(nextActionStatus('callback', 'open', 'needs_check')).toBe('received');
+    expect(nextActionStatus('callback', 'received', 'looks_good')).toBe('closed');
+    expect(nextActionStatus('callback', 'received', 'ask_again')).toBeNull();
   });
 
   it('a location is not asked again like a paper', () => {

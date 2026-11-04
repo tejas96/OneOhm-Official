@@ -14,7 +14,8 @@ import { lockedPoint, savePin } from './apply-pin';
 /**
  * "Check location" (redesign §6): a pin the customer sent for a home that already has a point
  * waits as a suggestion. The team accepts it (it becomes the home's point, the earlier one kept
- * to put back) or ignores it (the home keeps its point). Either way the action closes.
+ * to put back) or ignores it (the home keeps its point). Either way the action closes. A
+ * call-back the customer picked a time for is closed here too, with "Called".
  */
 @Injectable()
 export class LocationReviewService {
@@ -26,6 +27,37 @@ export class LocationReviewService {
 
   ignore(actor: Actor, id: string): Promise<DocumentRequest> {
     return this.settle(actor, id, false);
+  }
+
+  /** "Called": the customer picked a time and the team made the call; the "To call" ask is done. */
+  async called(actor: Actor, id: string): Promise<DocumentRequest> {
+    if (!rightsForAsk('callback').some((right) => can(actor, right as Capability)))
+      throw forbidden();
+    await this.db.transaction(async (tx) => {
+      const [action] = await tx
+        .select()
+        .from(customerActions)
+        .where(and(eq(customerActions.id, id), eq(customerActions.type, 'callback')))
+        .for('update');
+      if (!action) throw notFound('That call-back');
+      if (!nextActionStatus('callback', action.status, 'looks_good')) {
+        throw conflict('There is no call waiting to be made.', 'not_waiting');
+      }
+      await tx
+        .update(customerActions)
+        .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
+        .where(eq(customerActions.id, id));
+      await logAction(tx, action, {
+        kind: 'customer_action',
+        message: 'Called the customer back',
+        userId: actor.userId,
+        data: { customerActionId: id },
+      });
+      await recordAudit(tx, actor.userId, 'customer_action.called', 'customer_action', id);
+    });
+    const [updated] = await readRequests(this.db, eq(customerActions.id, id), true);
+    if (!updated) throw notFound('That call-back');
+    return updated;
   }
 
   private async settle(actor: Actor, id: string, accept: boolean): Promise<DocumentRequest> {

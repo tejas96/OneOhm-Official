@@ -262,6 +262,7 @@
       "status": {
         "waiting": "Waiting on customer",
         "toCheck": "To check",
+        "toCall": "To call",
         "done": "Done",
         "cancelled": "Cancelled"
       },
@@ -302,6 +303,9 @@
         "pay": "Payment",
         "callback": "Call back"
       },
+      "callback": {
+        "called": "Called"
+      },
       "location": {
         "check": "Check location",
         "suggestion": "The customer sent a pin {distance} from the saved point.",
@@ -309,6 +313,7 @@
         "accept": "Use this location",
         "ignore": "Ignore",
         "accepted": "The home location is updated",
+        "called": "Marked as called",
         "ignored": "The home keeps its location",
         "failed": "Could not update the location",
         "open": "View the pin"

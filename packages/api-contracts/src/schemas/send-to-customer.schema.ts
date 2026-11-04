@@ -35,7 +35,12 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 
-export const sendBodySchema = z.object({ scope: sendScopeSchema, request: sendRequestSchema });
+export const sendBodySchema = z.object({
+  scope: sendScopeSchema,
+  request: sendRequestSchema,
+  /** One id per press of Send: a double tap or a retry of the same press sends once. */
+  requestId: idSchema.optional(),
+});
 export type SendBody = z.infer<typeof sendBodySchema>;
 
 /** What the customer gets: the words, the buttons, and how it travels. */

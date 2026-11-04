@@ -4,6 +4,7 @@ import type { SendBody, SendScope } from '@oneohm/api-contracts';
 import { useToast } from '@oneohm/design-system/web';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useRef } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 
@@ -30,10 +31,18 @@ export function useSendAction(scope: SendScope) {
   const t = useTranslations('sendToCustomer');
   const toast = useToast();
   const client = useQueryClient();
+  // One id per press: a double tap or a retry is the same send. A new one starts after it went.
+  const pressId = useRef(crypto.randomUUID());
   return useMutation({
     mutationFn: (request: SendBody['request']) =>
-      expectStatus(api.sendToCustomer.sendToCustomer({ body: { scope, request } }), 201),
+      expectStatus(
+        api.sendToCustomer.sendToCustomer({
+          body: { scope, request, requestId: pressId.current },
+        }),
+        201,
+      ),
     onSuccess: async (result) => {
+      pressId.current = crypto.randomUUID();
       await client.invalidateQueries({ queryKey: ['document-requests'] });
       await client.invalidateQueries({ queryKey: ['send-to-customer'] });
       toast({

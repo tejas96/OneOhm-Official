@@ -29,9 +29,10 @@ const CHECKED_TYPES: readonly CustomerActionType[] = ['paper'];
 
 /**
  * The types the team may check: a paper always; a location only when it conflicts with a point
- * the home already has (`needs_check`); a payment proof waits for finance to record it.
+ * the home already has (`needs_check`); a payment proof waits for finance to record it; a call-back
+ * waits as "To call" once the customer picked a time, until staff say they called.
  */
-const CHECKABLE_TYPES: readonly CustomerActionType[] = ['paper', 'location', 'pay'];
+const CHECKABLE_TYPES: readonly CustomerActionType[] = ['paper', 'location', 'pay', 'callback'];
 
 /** What happens to an action: the customer does it, staff file it, check it, ask again or cancel. */
 export type CustomerActionEvent =

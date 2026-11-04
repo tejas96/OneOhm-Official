@@ -1,5 +1,6 @@
 import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
+import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
 import { type TapChoice, tapButton } from './closing-taps';
 import type { PendingItem } from './pending-items';
@@ -16,6 +17,10 @@ export function pendingLine(item: PendingItem): string {
       return home.paper(item.title, item.home);
     case 'pay':
       return home.pay(formatInr(item.leftPaise), item.home);
+    case 'location':
+      return SEND_WORDS.location.ask(item.home ?? SEND_WORDS.location.anyHome);
+    case 'callback':
+      return SEND_WORDS.callback.homeLine;
     case 'visit':
       return home.visit(item.home, daySpan(item.on, item.on));
     case 'problem':
@@ -39,6 +44,10 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
       return paysOnline
         ? { id: `pay:${item.milestoneId}`, title: CHAT_WORDS.pay(formatInr(item.leftPaise)) }
         : 'payments';
+    case 'location':
+      return { id: `locreq:${item.requestId}`, title: SEND_WORDS.buttons.sendLocation };
+    case 'callback':
+      return { id: `cbask:${item.requestId}`, title: SEND_WORDS.buttons.pickTime };
     case 'visit':
       return { id: 'go:visit', title: buttons.visit };
     case 'problem':
@@ -57,6 +66,8 @@ function pendingRow(item: PendingItem, paysOnline: boolean): Row {
   const description = {
     paper: () => (item.kind === 'paper' ? home.paperRow(item.home) : ''),
     pay: () => (item.kind === 'pay' ? home.payRow(item.home) : ''),
+    location: () => (item.kind === 'location' ? (item.home ?? '') : ''),
+    callback: () => SEND_WORDS.callback.homeRow,
     visit: () =>
       item.kind === 'visit'
         ? [daySpan(item.on, item.on), item.home].filter(Boolean).join(' · ')

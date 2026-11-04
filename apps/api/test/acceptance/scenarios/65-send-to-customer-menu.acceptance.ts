@@ -154,12 +154,14 @@ describe('Send to customer: the menu', () => {
     ]);
   });
 
-  it('ask call-back: three buttons; a pick closes the action, sets the lead follow-up and tells the owner', async () => {
+  it('ask call-back: three buttons; a pick makes it To call, sets an empty lead follow-up and tells the owner; Called closes it', async () => {
     const sale = await sellProject(admin, { name: 'Menu Callback (test)' });
     const { customer } = sale;
     await openChat(customer.phone, customer.customerId);
     // A customer with an open lead gets its next action set; a won lead has none to set.
-    await rows("UPDATE leads SET stage = 'new' WHERE id = $1", [customer.leadId]);
+    await rows("UPDATE leads SET stage = 'new', next_action_on = NULL WHERE id = $1", [
+      customer.leadId,
+    ]);
     const scope = { projectId: sale.project.id };
     await sendTo(admin, scope, { action: 'ask_callback' });
     const ask = await lastOf(customer.phone, 'buttons');
@@ -168,7 +170,7 @@ describe('Send to customer: the menu', () => {
     expect(action?.status).toBe('open');
     await tap(customer.phone, `cb:${action?.id}:afternoon`);
     expect((await actionsOf(customer.customerId, 'callback'))[0]).toMatchObject({
-      status: 'closed',
+      status: 'received',
     });
     expect((await lastReply(customer.phone))?.body).toMatch(/will call you in the afternoon\.$/);
     const [lead] = await rows<{ next_action_time: string; next_action_note: string }>(
@@ -185,5 +187,8 @@ describe('Send to customer: the menu', () => {
     // A second tap on the same buttons is an old message.
     await tap(customer.phone, `cb:${action?.id}:morning`);
     expect((await lastReply(customer.phone))?.body).toMatch(/earlier message/);
+    // Staff say they called: the ask is done.
+    await admin.post(`/customer-actions/${action?.id}/called`);
+    expect((await actionsOf(customer.customerId, 'callback'))[0]?.status).toBe('closed');
   });
 });

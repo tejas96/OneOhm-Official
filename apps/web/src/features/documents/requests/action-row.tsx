@@ -104,7 +104,9 @@ export function ActionRow({
         <StatusPill
           size="sm"
           tone={TONE[request.status]}
-          label={t(`status.${STATUS_KEY[request.status]}`)}
+          label={t(
+            `status.${request.type === 'callback' && request.status === 'received' ? 'toCall' : STATUS_KEY[request.status]}`,
+          )}
         />
         {request.documentId && request.status !== 'cancelled' && request.status !== 'open' && (
           <Button asChild size="sm" variant="quiet">
@@ -112,6 +114,17 @@ export function ActionRow({
               <ExternalLink aria-hidden className="size-4" />
               {t('openFile')}
             </a>
+          </Button>
+        )}
+        {canAct && request.type === 'callback' && request.status === 'received' && (
+          <Button
+            size="sm"
+            variant="secondary"
+            leadingIcon={<PhoneCall />}
+            pending={review.called.isPending}
+            onClick={() => review.called.mutate(request.id)}
+          >
+            {t('callback.called')}
           </Button>
         )}
         {canAct && suggestion && (

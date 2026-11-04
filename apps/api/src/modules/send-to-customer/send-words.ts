@@ -13,6 +13,7 @@ const EN_SEND = {
     evening: 'Evening',
     chooseHome: 'Choose a home',
     sendLocation: 'Send location',
+    pickTime: 'Pick a time',
   },
   location: {
     ask: (home: string) =>
@@ -20,6 +21,7 @@ const EN_SEND = {
     saved: (home: string) => `Thank you ✅ Location saved for your ${home} home.`,
     checking: (home: string) =>
       `Thank you ✅ We got the location of your ${home} home. Our team will check it.`,
+    anyHome: 'solar',
     which: 'Which home is this location for?',
     same: (home: string) => `Thank you ✅ We already have this location for your ${home} home.`,
   },
@@ -37,6 +39,8 @@ const EN_SEND = {
     thanks: (name: string, slot: string) => `Thank you ✅ ${name} will call you in the ${slot}.`,
     slots: { morning: 'morning', afternoon: 'afternoon', evening: 'evening' },
     team: 'our team',
+    homeLine: 'Please pick a time for our call.',
+    homeRow: 'Morning, afternoon or evening',
   },
   crew: (name: string, work: string, phone: string) =>
     `${name} from OneOhm will come for your *${work}*. You can call them on ${phone}.`,
@@ -66,11 +70,13 @@ const MR_SEND: Words<typeof EN_SEND> = {
     evening: 'संध्याकाळी',
     chooseHome: 'घर निवडा',
     sendLocation: 'लोकेशन पाठवा',
+    pickTime: 'वेळ निवडा',
   },
   location: {
     ask: (home) => `कृपया तुमच्या *${home}* घराचे लोकेशन पाठवा, म्हणजे आमची टीम सहज पोहोचेल.`,
     saved: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे लोकेशन सेव्ह केले.`,
     checking: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे लोकेशन मिळाले. आमची टीम ते तपासेल.`,
+    anyHome: 'सोलर',
     which: 'हे लोकेशन कोणत्या घराचे आहे?',
     same: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे हे लोकेशन आमच्याकडे आधीच आहे.`,
   },
@@ -88,6 +94,8 @@ const MR_SEND: Words<typeof EN_SEND> = {
     thanks: (name, slot) => `धन्यवाद ✅ ${name} तुम्हाला ${slot} फोन करतील.`,
     slots: { morning: 'सकाळी', afternoon: 'दुपारी', evening: 'संध्याकाळी' },
     team: 'आमची टीम',
+    homeLine: 'कृपया आमच्या फोनसाठी वेळ निवडा.',
+    homeRow: 'सकाळी, दुपारी किंवा संध्याकाळी',
   },
   crew: (name, work, phone) =>
     `OneOhm चे ${name} तुमच्या *${work}* साठी येतील. तुम्ही त्यांना ${phone} वर फोन करू शकता.`,
@@ -114,11 +122,13 @@ const HI_SEND: Words<typeof EN_SEND> = {
     evening: 'शाम',
     chooseHome: 'घर चुनें',
     sendLocation: 'लोकेशन भेजें',
+    pickTime: 'समय चुनें',
   },
   location: {
     ask: (home) => `कृपया अपने *${home}* घर की लोकेशन भेजें, ताकि हमारी टीम आसानी से पहुँच सके।`,
     saved: (home) => `धन्यवाद ✅ आपके ${home} घर की लोकेशन सेव कर ली।`,
     checking: (home) => `धन्यवाद ✅ आपके ${home} घर की लोकेशन मिल गई। हमारी टीम इसे जाँचेगी।`,
+    anyHome: 'सोलर',
     which: 'यह लोकेशन किस घर की है?',
     same: (home) => `धन्यवाद ✅ आपके ${home} घर की यह लोकेशन हमारे पास पहले से है।`,
   },
@@ -135,6 +145,8 @@ const HI_SEND: Words<typeof EN_SEND> = {
     thanks: (name, slot) => `धन्यवाद ✅ ${name} आपको ${slot} फ़ोन करेंगे।`,
     slots: { morning: 'सुबह', afternoon: 'दोपहर', evening: 'शाम' },
     team: 'हमारी टीम',
+    homeLine: 'कृपया हमारे फ़ोन के लिए समय चुनें।',
+    homeRow: 'सुबह, दोपहर या शाम',
   },
   crew: (name, work, phone) =>
     `OneOhm से ${name} आपके *${work}* के लिए आएँगे। आप उन्हें ${phone} पर फ़ोन कर सकते हैं।`,

@@ -53,7 +53,7 @@ export class LocationPinService {
       asked.length > 0 ? asked.map((one) => one.propertyId) : homes.map((h) => h.propertyId);
     const [only] = among;
     if (among.length === 1 && only) {
-      await this.settle(chat, customerId, only, pin);
+      await this.settle(chat, customerId, only, pin, undefined, onlyAsked);
       return true;
     }
     if (among.length === 0) return false;
@@ -131,6 +131,8 @@ export class LocationPinService {
     propertyId: string,
     pin: IncomingLocation,
     waiting?: ActionRow,
+    /** A person has the chat: they are told, the bot says nothing to the customer. */
+    quiet = false,
   ) {
     const home = await homeNameOf(this.db, null, propertyId);
     const outcome = await this.db.transaction(async (tx) => {
@@ -169,7 +171,8 @@ export class LocationPinService {
       );
       return decision;
     });
-    if (outcome === 'suggest') await this.tellTeam(chat, home);
+    if (outcome === 'suggest' || quiet) await this.tellTeam(chat, home, outcome);
+    if (quiet) return;
     const words = SEND_WORDS.location;
     const text =
       outcome === 'save'
@@ -180,13 +183,20 @@ export class LocationPinService {
     await sayWithTaps(this.db, chat, text, ['menu']);
   }
 
-  private async tellTeam(chat: Conversation, home: string) {
+  private async tellTeam(chat: Conversation, home: string, outcome: 'save' | 'same' | 'suggest') {
     const owned = await ensureChatOwner(this.db, chat);
+    const who = chat.profileName ?? 'a customer';
     await tellChatTeam(this.db, owned, {
-      kind: 'location_check',
-      title: `Check the location ${chat.profileName ?? 'a customer'} sent`,
-      body: `${home} already has a location. The customer's pin is kept as a suggestion: accept or ignore it on the property.`,
-      key: `location_check:${chat.id}:${Date.now()}`,
+      kind: outcome === 'suggest' ? 'location_check' : 'location_saved',
+      title:
+        outcome === 'suggest'
+          ? `Check the location ${who} sent`
+          : `Location of ${home} saved from ${who}`,
+      body:
+        outcome === 'suggest'
+          ? `${home} already has a location. The customer's pin is kept as a suggestion: accept or ignore it on the property.`
+          : `${who} answered the location ask while you have the chat. It is saved on ${home}.`,
+      key: `location_${outcome}:${chat.id}:${Date.now()}`,
     });
   }
 }

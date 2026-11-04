@@ -1,5 +1,5 @@
 import { customerActions, type DatabaseExecutor } from '@oneohm/database';
-import { and, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 /**
  * The customer's proof arrived (form or chat): the open `pay` actions for the instalment (or
@@ -11,6 +11,21 @@ export async function proofReceived(
   milestoneId: string | null,
   detail: { documentId: string | null; amountPaise: number | null; paidOn: string | null },
 ): Promise<number> {
+  // Proof with no named instalment answers the oldest ask still waiting, not all of them.
+  const target = await tx
+    .select({ id: customerActions.id })
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'pay'),
+        eq(customerActions.status, 'open'),
+        milestoneId ? sql`${customerActions.payload}->>'milestoneId' = ${milestoneId}` : undefined,
+      ),
+    )
+    .orderBy(asc(customerActions.createdAt))
+    .limit(milestoneId ? 10 : 1);
+  if (target.length === 0) return 0;
   const rows = await tx
     .update(customerActions)
     .set({
@@ -21,11 +36,9 @@ export async function proofReceived(
       payload: sql`${customerActions.payload} || ${JSON.stringify({ proof: detail })}::jsonb`,
     })
     .where(
-      and(
-        sql`${customerActions.customerId} = ${customerId}`,
-        sql`${customerActions.type} = 'pay'`,
-        sql`${customerActions.status} = 'open'`,
-        milestoneId ? sql`${customerActions.payload}->>'milestoneId' = ${milestoneId}` : undefined,
+      inArray(
+        customerActions.id,
+        target.map((row) => row.id),
       ),
     )
     .returning({ id: customerActions.id });

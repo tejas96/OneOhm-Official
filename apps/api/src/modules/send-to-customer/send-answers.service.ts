@@ -15,6 +15,7 @@ import { paidAnotherWayStart } from '../whatsapp/forms/paid-words';
 import type { IncomingLocation } from '../whatsapp/whatsapp-events';
 import { createCallbackFollowUp } from './callback-follow-up';
 import { LocationPinService } from './location-pin.service';
+import { callbackAsk } from './send-messages';
 import { dueInstalments } from './send-reads';
 import type { SendTap } from './send-taps';
 import { SEND_WORDS } from './send-words';
@@ -49,6 +50,8 @@ export class SendAnswersService {
         return this.askLocation(chat, customerId, tap.actionId);
       case 'paidother':
         return this.paidOther(chat, customerId, tap.milestoneId);
+      case 'cbask':
+        return this.pickTime(chat, customerId, tap.actionId);
       case 'callback':
         return this.callback(chat, customerId, tap.actionId, tap.slot);
       case 'home':
@@ -94,6 +97,26 @@ export class SendAnswersService {
     );
   }
 
+  /** [Pick a time] on Home: the three time buttons for the call the team asked for. */
+  private async pickTime(chat: Conversation, customerId: string, actionId: string) {
+    const [action] = await this.db
+      .select()
+      .from(customerActions)
+      .where(
+        and(
+          eq(customerActions.id, actionId),
+          eq(customerActions.customerId, customerId),
+          eq(customerActions.type, 'callback'),
+          eq(customerActions.status, 'open'),
+        ),
+      );
+    if (!action)
+      return void (await queueReply(this.db, chat, { kind: 'text', body: SEND_WORDS.old }));
+    const name = (await answererName(this.db, chat)) ?? SEND_WORDS.callback.team;
+    for (const reply of callbackAsk('', name, action.id).replies)
+      await queueReply(this.db, chat, reply);
+  }
+
   /** A call time picked: the action closes, the follow-up is made, the customer is thanked. */
   private async callback(
     chat: Conversation,
@@ -112,7 +135,7 @@ export class SendAnswersService {
           eq(customerActions.status, 'open'),
         ),
       );
-    const next = action && nextActionStatus('callback', action.status, 'customer_did_it');
+    const next = action && nextActionStatus('callback', action.status, 'needs_check');
     if (!action || !next) {
       return void (await queueReply(this.db, chat, { kind: 'text', body: SEND_WORDS.old }));
     }
@@ -130,7 +153,6 @@ export class SendAnswersService {
         .set({
           status: next,
           doneAt: new Date(),
-          closedAt: new Date(),
           updatedAt: new Date(),
           payload: { slot, ...made },
         })

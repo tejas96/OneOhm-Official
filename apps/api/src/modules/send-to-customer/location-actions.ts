@@ -1,5 +1,6 @@
 import { customerActions, type DatabaseExecutor, properties } from '@oneohm/database';
 import { and, eq, isNull, sql } from 'drizzle-orm';
+import { recordAudit } from '../../common/audit';
 import type { IncomingLocation } from '../whatsapp/whatsapp-events';
 
 type ActionRow = typeof customerActions.$inferSelect;
@@ -15,7 +16,7 @@ export async function parkPin(
   among: readonly string[],
 ): Promise<string> {
   return db.transaction(async (tx) => {
-    await tx
+    const replaced = await tx
       .update(customerActions)
       .set({ status: 'cancelled', cancelledAt: new Date(), updatedAt: new Date() })
       .where(
@@ -25,7 +26,10 @@ export async function parkPin(
           eq(customerActions.status, 'open'),
           isNull(customerActions.propertyId),
         ),
-      );
+      )
+      .returning({ id: customerActions.id });
+    for (const old of replaced)
+      await recordAudit(tx, null, 'customer_action.location_replaced', 'customer_action', old.id);
     const [row] = await tx
       .insert(customerActions)
       .values({
@@ -40,6 +44,40 @@ export async function parkPin(
   });
 }
 
+/**
+ * The pin waited as its own action while the customer picked a home. If the team had an open ask
+ * for that home, the pin answers it: the waiting action closes into it (log and audit say so), so
+ * no ask is left to keep reminding. Else the waiting action itself carries the answer.
+ */
+async function adoptAsk(
+  tx: DatabaseExecutor,
+  customerId: string,
+  propertyId: string,
+  waiting: ActionRow,
+): Promise<ActionRow> {
+  const [asked] = await tx
+    .select()
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.propertyId, propertyId),
+        eq(customerActions.type, 'location'),
+        eq(customerActions.status, 'open'),
+      ),
+    )
+    .for('update');
+  if (!asked) return waiting;
+  await tx
+    .update(customerActions)
+    .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
+    .where(eq(customerActions.id, waiting.id));
+  await recordAudit(tx, null, 'customer_action.location_adopted', 'customer_action', waiting.id, {
+    into: asked.id,
+  });
+  return { ...asked, payload: { ...asked.payload, pin: waiting.payload.pin } };
+}
+
 /** The ask this pin answers, else a new action that records the customer's own pin. */
 export async function actionFor(
   tx: DatabaseExecutor,
@@ -48,7 +86,7 @@ export async function actionFor(
   pin: IncomingLocation,
   waiting?: ActionRow,
 ): Promise<ActionRow> {
-  if (waiting) return waiting;
+  if (waiting) return adoptAsk(tx, customerId, propertyId, waiting);
   const [asked] = await tx
     .select()
     .from(customerActions)

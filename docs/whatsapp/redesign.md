@@ -578,9 +578,11 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   "approved message" when the chat is closed); the same builder (`send-messages.ts`) makes the preview
   and the send. Papers: the sheet opens the existing ask sheet (no second paper UI). A document row
   has its own Send icon.
-- **Rights** (any one): papers and documents `documents.upload`/`documents.manage`; location and
-  call-back `customers.manage` (call-back also `leads.manage`); payment reminder, receipt and proof
-  `finance.record_payments` or `projects.manage`; crew and delay notice `projects.manage`.
+- **Rights** (any one; `rightsFor` / `rightsForAsk` in the domain, used by the server and the web): papers and
+  documents `documents.upload`/`documents.manage`; location `customers.manage` or `projects.manage`;
+  call-back `customers.manage`, `leads.manage` or `projects.manage`; payment reminder, receipt and proof
+  `finance.record_payments` or `projects.manage`; crew and delay notice `projects.manage`. Cancelling,
+  "Check location" and "Called" need the rights of sending that kind of ask.
 - **Asks are customer actions** (`location`, `pay`, `callback`): status, project/lead log, audit
   (`customer_action.*`), reminders (a location is asked again at 2 days with its template; the asker is
   told at 4 days for all three; payments are chased by the payment reminders already), and a cancel that
@@ -598,10 +600,19 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   asks for the photo. The reply files a payment proof on the instalment's project, alerts finance
   ("Record payment", with the amount and day), pauses the reminders 2 days, moves the `pay` action to "To
   check" and thanks the customer. Recording the payment closes the action; the receipt goes as built.
-- **Call-back (§14):** Morning / Afternoon / Evening. A pick closes the action and sets the open lead's
-  next action (10:00, 14:00 or 17:30 business time; tomorrow if the slot has started); the chat's
-  person (project manager, else lead owner, else the desk) is told. A customer with no open lead has
-  no follow-up list, so that alert is the follow-up.
+- **Call-back (§14):** Morning / Afternoon / Evening. A pick makes the ask "To call" (waiting for the team,
+  not closed); staff close it with "Called", or by logging a call on the lead. The open lead's next action
+  (10:00, 14:00 or 17:30 business time; tomorrow if the slot has started) is set only when it has none or a
+  later one, otherwise the ask is logged beside it. The chat's person (project manager, else lead owner, else
+  the desk) is told. A customer with no open lead has no follow-up list, so that alert is the follow-up.
+  A call time never picked is asked again at 2 days.
+- **Staff checks:** a received location suggestion, a payment proof and a "To call" wait for the team: after
+  1 day the person who asked is told, after 2 days the project manager. A pin waiting for its home for a day
+  alerts the chat's person.
 - **Delay notice:** offered from a task that waits, only when the task's customer messages are on.
 - **Phase 2b gap:** an asked paper with no known home and 2+ homes asks "For which home?" first, then
   opens that home's form (`form:h:` rows; the home rides in the token).
+- **Review round 1:** one id per press of Send (a double tap sends once); a pin picked for a home closes the
+  team's ask for it; automatic payment reminders and pay links carry the same [I paid another way] quick reply;
+  Home lists open location and call-back asks ([📍 Send location], [Pick a time]); a pin in a chat a person holds
+  is saved and told to the person, with no bot reply; a template row missing counts as off.

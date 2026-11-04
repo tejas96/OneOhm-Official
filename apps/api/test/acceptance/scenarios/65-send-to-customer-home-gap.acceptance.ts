@@ -57,7 +57,7 @@ describe('Send to customer: the home gap and reminders', () => {
     expect((await lastReply(customer.phone))?.body).toMatch(/^Saved ✅ .*Farm \(test\)/);
   });
 
-  it('a location ask is sent again after 2 days and the asker is told after 4; payments and call-backs only tell the asker', async () => {
+  it('a location and a call time are asked again after 2 days and the asker is told after 4', async () => {
     const { customer, project } = await askedBill(admin, 'Reminders Asks (test)');
     await openChat(customer.phone, customer.customerId);
     const scope = { projectId: project.id };
@@ -81,12 +81,14 @@ describe('Send to customer: the home gap and reminders', () => {
       "SELECT template, payload FROM outbox WHERE recipient = $1 AND dedupe_key LIKE 'action_reminder:%'",
       [customer.phone],
     );
-    expect(reminders).toEqual([
-      expect.objectContaining({
-        template: 'location_request',
-        payload: expect.objectContaining({ locationPayload: `locreq:${location?.id}` }),
-      }),
+    // The location is asked again with its template, and the call time with the three buttons.
+    expect(reminders.map((one) => one.template).sort()).toEqual([
+      'callback_request',
+      'location_request',
     ]);
+    expect(reminders.find((one) => one.template === 'location_request')?.payload).toMatchObject({
+      locationPayload: `locreq:${location?.id}`,
+    });
     // Running it again says nothing twice.
     await queueActionReminders(db, noon, 'Asia/Kolkata');
     expect(
@@ -96,7 +98,7 @@ describe('Send to customer: the home gap and reminders', () => {
           [customer.phone],
         )
       ).length,
-    ).toBe(1);
+    ).toBe(2);
     await age(4.5);
     await queueActionReminders(db, noon, 'Asia/Kolkata');
     await queueActionReminders(db, noon, 'Asia/Kolkata');

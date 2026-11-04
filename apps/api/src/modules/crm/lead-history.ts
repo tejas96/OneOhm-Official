@@ -1,5 +1,12 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
+import {
+  customerActions,
+  type DatabaseExecutor,
+  leadActivities,
+  leads,
+  notify,
+  users,
+} from '@oneohm/database';
 import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
@@ -19,6 +26,18 @@ export async function logLead(
   internal = false,
 ): Promise<void> {
   await db.insert(leadActivities).values({ leadId, userId, kind, note, internal });
+  // A call written on the lead is the call the customer asked for (a "To call" ask is done).
+  if (kind === 'call')
+    await db
+      .update(customerActions)
+      .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(customerActions.type, 'callback'),
+          eq(customerActions.status, 'received'),
+          sql`${customerActions.customerId} = (select customer_id from leads where id = ${leadId})`,
+        ),
+      );
 }
 
 /** Tells the new owner the lead is theirs, with a link to it. */

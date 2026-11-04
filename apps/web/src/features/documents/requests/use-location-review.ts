@@ -22,6 +22,12 @@ export function useLocationReview() {
   const fail = (error: unknown) =>
     toast({ tone: 'error', title: t('failed'), description: describeError(error) });
   return {
+    called: useMutation({
+      mutationFn: (id: string) =>
+        expectStatus(api.sendToCustomer.markCalled({ params: { id }, body: {} }), 200),
+      onSuccess: () => done(t('called')),
+      onError: fail,
+    }),
     accept: useMutation({
       mutationFn: (id: string) =>
         expectStatus(api.sendToCustomer.acceptLocation({ params: { id }, body: {} }), 200),

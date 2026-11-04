@@ -18,7 +18,7 @@ function clockIn(timeZone: string, now: Date): string {
 
 /**
  * The customer picked a time for the call (redesign §14): the lead they have (open) gets that
- * time as its next action, and the chat's person (the project manager, else the lead owner,
+ * time as its next action when it has none or a later one (else it is logged), and the chat's person (the project manager, else the lead owner,
  * else the desk) is told with the time. Customers with no lead have no follow-up list, so the
  * alert is the follow-up. Returns the day and time set.
  */
@@ -40,7 +40,7 @@ export async function createCallbackFollowUp(
     .from(customers)
     .where(eq(customers.id, customerId));
   const [lead] = await tx
-    .select({ id: leads.id })
+    .select({ id: leads.id, on: leads.nextActionOn, time: leads.nextActionTime })
     .from(leads)
     .where(
       and(
@@ -51,11 +51,24 @@ export async function createCallbackFollowUp(
     .orderBy(desc(leads.createdAt))
     .limit(1);
   if (lead) {
-    await tx
-      .update(leads)
-      .set({ nextActionOn: on, nextActionTime: when.time, nextActionNote: note, updatedAt: now })
-      .where(eq(leads.id, lead.id));
-    await logLead(tx, lead.id, null, 'follow_up', `${note}: ${on} ${when.time}`);
+    // The lead's own next action is never overwritten by a sooner-or-equal plan of the team:
+    // it is set only when empty or later than the slot, otherwise the ask is logged beside it.
+    const planned = lead.on ? `${lead.on} ${lead.time ?? '00:00'}` : null;
+    const replace = planned === null || planned > `${on} ${when.time}`;
+    if (replace)
+      await tx
+        .update(leads)
+        .set({ nextActionOn: on, nextActionTime: when.time, nextActionNote: note, updatedAt: now })
+        .where(eq(leads.id, lead.id));
+    await logLead(
+      tx,
+      lead.id,
+      null,
+      'follow_up',
+      replace
+        ? `${note}: ${on} ${when.time}`
+        : `${note}: ${on} ${when.time}. The follow-up planned for ${lead.on} stays.`,
+    );
   }
   const owned = await ensureChatOwner(tx, chat);
   await tellChatTeam(tx, owned, {
