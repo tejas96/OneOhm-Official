@@ -13,12 +13,14 @@ import { describeError } from '@/lib/api/api-error';
 import { useInvalidateFinance } from '../use-finance';
 import { CommissionsTable } from './commissions-table';
 import { PayPayoutDialog } from './pay-payout-dialog';
+import { PayoutDetailsSheet } from './payout-details-sheet';
 import type { PayoutActions } from './payout-status';
 import { RejectPayoutDialog } from './reject-payout-dialog';
 import { RewardsTable } from './rewards-table';
 import {
   approvePayout,
   type PayoutKind,
+  type PayoutParty,
   type PayoutTarget,
   useCommissionEntries,
   useReferralRewards,
@@ -42,6 +44,7 @@ export function PayoutsTab() {
   const [filter, setFilter] = useState<IncentiveFilter>('open');
   const [paying, setPaying] = useState<PayoutTarget | null>(null);
   const [rejecting, setRejecting] = useState<PayoutTarget | null>(null);
+  const [detailsOf, setDetailsOf] = useState<PayoutParty | null>(null);
   const commissions = useCommissionEntries(filter, view === 'commissions');
   const rewards = useReferralRewards(filter, view === 'referrals');
   const query = view === 'commissions' ? commissions : rewards;
@@ -61,6 +64,7 @@ export function PayoutsTab() {
     onApprove: (target) => approve.mutate(target),
     onReject: setRejecting,
     onPay: setPaying,
+    onPayoutDetails: setDetailsOf,
   };
 
   const selectView = (next: PayoutKind) => {
@@ -103,6 +107,7 @@ export function PayoutsTab() {
       <PayoutsBody view={view} commissions={commissions} rewards={rewards} actions={actions} />
       <PayPayoutDialog target={paying} onClose={() => setPaying(null)} />
       <RejectPayoutDialog target={rejecting} onClose={() => setRejecting(null)} />
+      <PayoutDetailsSheet party={detailsOf} onClose={() => setDetailsOf(null)} />
     </section>
   );
 }

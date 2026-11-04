@@ -590,6 +590,9 @@
       "approve": "Approve",
       "reject": "Not approve",
       "pay": "Record payment",
+      "payoutMissing": "Payout details missing",
+      "addDetails": "Add payout details",
+      "viewDetails": "Payout details",
       "approved": "Approved",
       "failed": "That did not go through",
       "empty": {
@@ -619,6 +622,38 @@
         "reasonHint": "For example: the referred friend was already our customer.",
         "submit": "Do not approve",
         "done": "Marked as not approved"
+      },
+      "detailsPanel": {
+        "title": "Payout details",
+        "description": "Where {party} is paid. Changes are written to the audit log.",
+        "loading": "Loading payout details",
+        "methodLabel": "Paid by",
+        "methods": {
+          "upi": "UPI",
+          "bank": "Bank account"
+        },
+        "fields": {
+          "upiId": "UPI ID",
+          "bankAccountName": "Name on account",
+          "bankAccountNumber": "Account number",
+          "bankIfsc": "IFSC",
+          "pan": "PAN"
+        },
+        "hints": {
+          "upiId": "For example name@okaxis",
+          "pan": "10 characters, like ABCDE1234F"
+        },
+        "missing": {
+          "upiId": "Enter the UPI ID",
+          "bankAccountName": "Enter the name on the account",
+          "bankAccountNumber": "Enter the account number",
+          "bankIfsc": "Enter the IFSC",
+          "pan": "Enter the PAN"
+        },
+        "incomplete": "Payouts are blocked until PAN and a UPI ID or bank account are saved.",
+        "change": "Change",
+        "save": "Save details",
+        "saved": "Payout details saved"
       }
     },
     "cash": {
