@@ -1,5 +1,6 @@
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
-import { pickContact } from './payment-contact';
+import { currentMembers, pickContact } from './payment-contact';
 
 const pm = { name: 'Priya Kulkarni', phone: null };
 const owner = { name: 'Bharat Patil', phone: '+919800000002' };
@@ -22,5 +23,15 @@ describe('who the customer can call after paying', () => {
     });
     expect(pickContact([pm], [], null)).toEqual({ name: 'Priya Kulkarni', phone: null });
     expect(pickContact([], [], '+912000000000')).toEqual({ name: null, phone: '+912000000000' });
+  });
+});
+
+describe('the people a contact is picked from', () => {
+  it('are only current members, never someone who left', () => {
+    const condition = currentMembers(['u1']);
+    if (!condition) throw new Error('No condition built.');
+    const query = new PgDialect().sqlToQuery(condition);
+    expect(query.sql).toContain('"users"."status" = $');
+    expect(query.params).toEqual(['u1', 'active']);
   });
 });
