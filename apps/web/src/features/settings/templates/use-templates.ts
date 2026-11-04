@@ -58,6 +58,7 @@ export const SAMPLE = {
   document: 'Latest electricity bill',
   home: 'Pune',
   stage: 'installation',
+  work: 'the panel installation',
   staff: 'Priya',
   manager: 'Vikram Jadhav',
   message: 'We will reach your site at 11 am tomorrow.',

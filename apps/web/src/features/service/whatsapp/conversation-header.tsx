@@ -6,6 +6,7 @@ import { ArrowLeft, Bot, Phone, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ChatLeadAction } from '@/features/leads/chat-lead-action';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { describeError } from '@/lib/api/api-error';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
@@ -75,6 +76,7 @@ export function ConversationHeader({
       <div className="flex flex-wrap items-center gap-2">
         <PassChat chat={chat} />
         {!chat.customerId && <ChatLeadAction name={chat.name} phone={chat.phone} />}
+        {chat.customerId && <SendToCustomerButton scope={{ customerId: chat.customerId }} />}
         {chat.customerId && (
           <Button asChild size="sm" variant="quiet">
             <Link href={`/customers/${chat.customerId}`}>

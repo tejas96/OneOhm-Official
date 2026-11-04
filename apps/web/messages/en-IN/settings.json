@@ -737,7 +737,14 @@
         "commissioning_completed": "Switched on, final payment due",
         "project_update_link": "Update with a link",
         "service_visit_booked": "Technician visit booked",
-        "project_waiting": "Step waiting on someone outside"
+        "project_waiting": "Step waiting on someone outside",
+        "paper_request": "Paper requested (names the home)",
+        "location_request": "Ask for the home location",
+        "payment_due": "Payment due (Pay, I paid another way)",
+        "callback_request": "Ask when to call back",
+        "delay_notice": "Delay notice with the reason",
+        "crew_contact": "Crew or technician contact",
+        "document_share": "A document sent by the team"
       },
       "dialog": {
         "title": "Edit {name}",

@@ -249,7 +249,7 @@
     },
     "requests": {
       "title": "Asked from the customer",
-      "intro": "Papers only the customer holds. They get WhatsApp and an app alert, and send a photo or PDF from the OneOhm app.",
+      "intro": "Everything we asked the customer to do: papers, locations, payments and calls. Use Send to customer at the top to ask for more.",
       "ask": "Ask for papers",
       "loading": "Loading requests",
       "askedBy": "Asked by {name}, {when}",
@@ -297,7 +297,21 @@
       "checked": "Paper checked. The customer is told.",
       "checkFailed": "Could not mark the paper as checked",
       "type": {
-        "paper": "Paper"
+        "paper": "Paper",
+        "location": "Location",
+        "pay": "Payment",
+        "callback": "Call back"
+      },
+      "location": {
+        "check": "Check location",
+        "suggestion": "The customer sent a pin {distance} from the saved point.",
+        "suggestionNew": "The customer sent a pin; the home has no saved point.",
+        "accept": "Use this location",
+        "ignore": "Ignore",
+        "accepted": "The home location is updated",
+        "ignored": "The home keeps its location",
+        "failed": "Could not update the location",
+        "open": "View the pin"
       }
     },
     "reportVisibility": {

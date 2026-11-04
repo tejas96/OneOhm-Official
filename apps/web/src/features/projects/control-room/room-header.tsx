@@ -6,6 +6,7 @@ import { formatKwp } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ProjectChangeRequestButton } from '@/features/discom/project-change-request-button';
 import { ChangeScopeButton } from '@/features/project-changes/change-scope-button';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { RoomAlerts } from './room-alerts';
 import { RoomFacts } from './room-facts';
 import type { ProjectSignals } from './room-signals';
@@ -61,6 +62,7 @@ export function RoomHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
           <StatusPill tone={project.tone} label={project.toneLabel} />
+          <SendToCustomerButton scope={{ projectId: project.id }} />
           <ProjectChangeRequestButton projectId={project.id} />
           <ChangeScopeButton project={project} />
         </div>

@@ -6,6 +6,7 @@ import { CalendarClock, Layers, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { useCan } from '@/providers/current-user';
 import { StaleBadge } from '../tasks/stale-badge';
@@ -103,7 +104,13 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
           ) : (
             <span />
           )}
-          <TaskStepButtons steps={steps} />
+          <span className="flex flex-wrap items-center gap-2">
+            <SendToCustomerButton
+              variant="quiet"
+              scope={{ taskId: task.id, projectId: task.projectId }}
+            />
+            <TaskStepButtons steps={steps} />
+          </span>
         </div>
       </div>
 

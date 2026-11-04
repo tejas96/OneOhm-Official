@@ -10,6 +10,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { LoadError } from '@/components/query-state';
 import { SectionHeading } from '@/features/command-center/section-heading';
 import { PapersSection } from '@/features/documents/papers-section';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { OpenChatButton } from '@/features/service/whatsapp/open-chat-button';
 import { RecordChat } from '@/features/service/whatsapp/record-chat';
 import { api, expectStatus } from '@/lib/api/api-client';
@@ -101,6 +102,7 @@ export function LeadDetailView({ id }: { readonly id: string }) {
               <a href={`tel:${lead.phone}`}>{t('call')}</a>
             </Button>
             <OpenChatButton phone={lead.phone} label={t('whatsapp')} />
+            {lead.customerId && <SendToCustomerButton scope={{ leadId: lead.id }} />}
           </div>
         </div>
       </header>

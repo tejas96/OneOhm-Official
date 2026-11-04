@@ -1,0 +1,39 @@
+{
+  "sendToCustomer": {
+    "button": "Send to customer",
+    "title": "Send to customer",
+    "description": "Pick what to send. You see exactly what {name} gets, in their language.",
+    "loading": "Loading what you can send",
+    "askPaper": {
+      "title": "Ask for papers",
+      "detail": "A paper only the customer holds, such as a bill or an ID."
+    },
+    "groups": {
+      "ask_location": "Ask for the location",
+      "send_document": "Send a document",
+      "payment_reminder": "Payment reminder",
+      "ask_payment_proof": "Ask for payment proof",
+      "send_receipt": "Send a receipt",
+      "share_crew": "Share a contact",
+      "delay_notice": "Delay notice",
+      "ask_callback": "Ask when to call back"
+    },
+    "customerGets": "The customer gets",
+    "viaTemplate": "As an approved message",
+    "viaChat": "In the chat",
+    "language": {
+      "en": "English",
+      "mr": "Marathi",
+      "hi": "Hindi"
+    },
+    "send": "Send",
+    "sent": "Sent to the customer",
+    "sentTemplate": "Sent as an approved message, the chat is closed",
+    "failed": "Could not send",
+    "reason": "Why is it waiting?",
+    "reasonHint": "The customer reads this exactly as you write it.",
+    "reasonPlaceholder": "For example: the electricity board has our papers.",
+    "previewLoading": "Preparing the preview",
+    "close": "Close"
+  }
+}
