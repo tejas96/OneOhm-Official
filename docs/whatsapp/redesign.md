@@ -1,0 +1,488 @@
+# OneOhm on WhatsApp — the redesign (v2)
+
+Date: 2026-11-04 · Status: **draft for owner approval**
+Rules: [conversation-principles.md](conversation-principles.md) · Today: [flow-map.md](flow-map.md)
+v2 adds the fixes from an independent gap review (44 gaps, 17 serious) — all are covered below.
+
+**How to read:** short sections; each says *customer sees* · *behind* · *edge cases*. Mark ✅ / ❌ /
+comment anywhere. My decisions are marked **[my call]** and listed in §20; questions for you in §21.
+
+---
+
+## 0. In one page
+
+**Goal:** anyone finishes anything with OneOhm in a few taps; typing only when a tap is impossible.
+**Promise:** every ask is tracked from *sent* to *closed*; statuses, tasks and stages move by
+themselves; when they can't, a named person is told with a deadline; nothing goes silent.
+
+**The one idea that makes it work — "Customer actions" (§2):** everything we ask a customer to do
+(send a paper, share location, do a survey, pick a date, sign, pay, confirm, rate, share UPI) is
+**one kind of record** with one status line. Home, reminders, staff alerts, task waits and the web
+all read from it. No parallel status systems.
+
+**Kept from today:** papers per home (person papers vs home papers), store-once files, Move / change
+kind, team alerts, pay page and receipts, estimate PDF, STOP/START, ad and referral capture.
+
+**Removed:** 10-row menu first, "Which home?" with an Aadhaar row, silent matching of photos to
+requests, silent hand-over on unknown text, 30-minute "glue", "Talk to a person" vs "Talk to us",
+"Back to menu" rows, internal words ("request raised", "(via WhatsApp)", codes), late taps dropped
+in silence, "We'll call you" with no task behind it.
+
+**New:** Home greeting, customer actions with staff "Send to customer" menu, paper check by staff,
+property location, self survey with discount, visit booking with confirmation, signatures,
+DISCOM inspection, subsidy steps, loan updates, handover pack, AMC visits, problem reopen, one
+rating system, payment proof, referral payout.
+
+---
+
+## 1. WhatsApp rules we must follow (hard limits)
+
+| Rule | What it means for design |
+|---|---|
+| Reply buttons: max 3, title ≤ 20 chars (all 3 languages) | Short verbs; a length test for every title in en/mr/hi |
+| List: ≤ 10 rows, row ≤ 24, description ≤ 72 | Long lists → "More" |
+| **Pay link, Form and 📍 Location are single-button messages** | They can't sit with other buttons. Pattern: short text with reply buttons, and a tap on e.g. **[Pay ₹45,000]** answers with the pay-link message |
+| Outside 24 h only templates (Meta-approved, 3 languages) | Every staff action has a template with quick-reply / link / form button. Location and lists only inside 24 h → the template's button opens the chat step that sends them |
+| Template category | Survey discount offer, referral, AMC renewal = **marketing** (cost, skipped after STOP). Everything else = utility |
+| Forms (WhatsApp Flows) | Published in WhatsApp Manager; uploads arrive encrypted → we decrypt and store through the **store-once** document path with the same type/size checks |
+| Forms / location may not show on WhatsApp Web/Desktop/old apps | Every form step has a fallback: "Or just send the photo here" (inbound file path) |
+| Read receipts optional | "Opened" is info only; never drives reminders |
+| File cap 25 MB (all types) | Said clearly when exceeded |
+| SMS (not on WhatsApp / after STOP) needs DLT templates; SMS replies can't reach us | Non-WhatsApp path per action (§17) |
+
+---
+
+## 2. Customer actions — one status system
+
+### 2.1 Types
+
+| Type | Customer does | Done when | Staff check? |
+|---|---|---|---|
+| `paper` | Sends a paper (checklist item) | File received | **Yes** — Looks good / Ask again |
+| `location` | 📍 Send location | Pin received | Only if conflicts (§6) |
+| `self_survey` | Fills the survey form | Form sent | **Yes** — Approve / Ask again |
+| `visit_pick` | Picks day + slot | Picked | **Yes** — Confirm (crew free) |
+| `presence` | "I'll be there" for inspection / visit | Confirmed | No |
+| `signature` | Agrees / sends signed copy | Agreed + copy received | **Yes** |
+| `pay` | Pays (online or proof) | Paid / proof recorded | Proof → finance records |
+| `confirm` | Yes/No (installation done, subsidy reached bank, problem fixed, site ready) | Answered | No (No → task) |
+| `rating` | 5 taps | Rated | Low → alert |
+| `payout` | Shares UPI / bank for reward | Shared | **Yes** |
+| `callback` | Picks a call time | Picked | Follow-up task created |
+
+### 2.2 Status line (same for all)
+
+`Sent → (Opened) → Done by customer → Checked ✅ / Ask again ↩︎ → Closed`
+plus `Cancelled` (by staff, or automatically when the project is cancelled / lead lost — customer told once).
+
+### 2.3 Automatic behaviour (all types)
+
+- **Reminders:** customer at 2 days (working hours), staff alert at 4 days; windows as built
+  (customer 2–7 d, staff 4–14 d); escalate to manager at 7 d.
+- **Staff deadlines:** anything waiting for a staff check (paper, survey, visit confirm, signature,
+  payout) → alert to the owner after 1 working day, manager after 2.
+- **Task link:** when staff set a task to "waiting on customer" they pick the action(s) it waits for
+  (or the app suggests them). When the last one is **Checked**, the wait ends automatically, the task
+  owner is told, the project log says so.
+- **Home** (§3) shows only open actions + money due + booked visits + open problems — one source.
+- **Every change** writes the project log (or lead log) and audit; customer gets one short message.
+- **Paper requests** built today become `paper` actions (data migrated; no second system).
+
+### 2.4 Who may answer (family numbers, two customers on one phone)
+
+- Family number may: send paper, location, survey, pick visit, confirm presence, pay, rate.
+  Only the customer's own number may: accept quote, sign. Blocked tap → "Only Tejas's own number can
+  accept this. [Talk to Priya]".
+- Two customer records on one phone: ask once per chat "Who is this about?" (names list); remember.
+
+---
+
+## 3. Home (greeting) — replaces the 10-row menu
+
+**Customer sees** ("hi", Menu, or unknown text):
+
+> Hi Tejas 👋 Your **Sangli** solar is at **Installation** (4 of 7 steps).
+> We need your **electricity bill**.
+> **[Send it now]** **[Project update]** **[More]**
+
+"What matters now" — first that applies: open action → money due → visit in 3 days → open problem →
+quote waiting → "How can we help today?". 2+ items → "2 things need you" **[See them]** (list).
+**[Send it now]** / **[Pay ₹45,000]** are reply buttons; the tap answers with the form / pay-link
+message (§1).
+
+**[More]** list: Project update · Payments · Documents · Send a paper · Report a problem · My
+problems · Warranty & AMC · Refer a friend · Talk to Priya · Language.
+
+**Edge cases:** no project yet → "We are preparing your solar plan. Priya will call you by **{time}**."
+(creates a follow-up task, §2.3). Old menu ids from earlier messages map to new answers for 30 days.
+Number shortcuts 1–10 are dropped (they would now mean other rows).
+
+---
+
+## 4. The journey — every stage, every touchpoint
+
+| Stage | Customer gets / does on WhatsApp | Staff action | Automatic update |
+|---|---|---|---|
+| **Lead** | Onboarding taps (§16), bill photo | Lead screen: send estimate, book survey, ask paper | Lead made; bill → lead checklist; moves to project later |
+| **Estimate** | PDF + [Self survey −₹1000] [Book a visit] [Call me] | — | Lead next action set; Call me → callback action |
+| **Survey (visit)** | Pick day/slot → confirmed; day-before [Confirm] [Change day] | Ask to pick a date; confirm | Lead `survey_scheduled`; survey task date |
+| **Survey (self)** | Form (§7) | Approve / Ask again | Survey task done on Approve |
+| **Quotation** | PDF + [Accept] [I have a question] (+ Call me inside questions) | Send quote / **send revision (what changed)** | Accept → lead won; Not yet → check-back date |
+| **After accept** | "Thank you ✅ Priya starts your project and sends the payment link **by {time}**." | Create project | Follow-up task; escalate if no project in 1 working day; advance-due message has **[Pay ₹X]** |
+| **Advance payment** | [Pay ₹X] → pay link; or **send payment proof** | Payment reminder / receipt / ask proof | Paid → instalment paid; proof → finance "Record payment", reminders paused 2 days |
+| **Design** (optional) | "Your layout" PDF + [Looks good] [I have a question] | Send layout | Recorded on design task |
+| **Loan** (if any) | Loan papers (one action per item), "Sign at bank on …" [I'll be there], updates: sanctioned / disbursing / rejected | Ask loan papers (lender list) | Papers checked → loan task wait ends; loan status → customer message |
+| **Agreements** | Model / net-metering agreement PDF + [I agree] [I have a question] → send signed copy | Send for signature | Signed + checked → evidence complete on the task |
+| **Before dispatch** | "Is the roof ready?" [Yes, ready] [Not yet] | Site readiness check | Not yet → task waits on customer |
+| **Dispatch payment** | [Pay ₹X] | Payment reminder | As advance |
+| **Installation** | Visit pick/confirm; crew contact ("Ravi is coming, 98…"); "Is installation finished?" [Yes] [Not yet] | Share crew contact; confirm finished | `installation_started` (exists); Yes → completion confirmed; Not yet → alert |
+| **DISCOM application** | Paper actions (bill, name change, etc.) | Ask papers | Papers checked → DISCOM task wait ends |
+| **DISCOM inspection / net meter** | "Inspection on **Thu 6 Nov**, please be at home." [I'll be there] [Change day] | Tell inspection date | Change day → liaisoning owner alert; no reply in 1 day → alert |
+| **Switch-on (commissioning)** | "Your solar is ON ☀️" + [Pay ₹X] (final) | — | `commissioning_completed` (exists) now carries pay button |
+| **Subsidy** | Register on PM Surya Ghar guide [Done] [Need help]; send bank passbook; "Did ₹78,000 reach your bank?" [Yes, received] [Not yet] | Ask passbook / registration; mark released | Yes → subsidy step done; Not yet after N days → owner alert |
+| **Handover** | Handover pack (warranty cards, WCR, manuals, invoice) "Your 4 handover papers" + [Documents]; sign | Send pack / for signature | Checklist row done when sent and signed |
+| **Rating** | 5 taps after switch-on (stage rating, now on WhatsApp) | Re-send pending rating | Low (1–2) → alert + call task |
+| **Warranty / AMC** | AMC visit due → [Confirm] [Change day]; renewal 30 d before end (marketing) | AMC confirm / renewal offer | Visit confirmed on AMC record |
+| **Service problem** | Form (§12); updates; "Is it working now?" [Yes] [Still a problem] | Visit day, crew contact | Still a problem → **reopen**; Yes → rating |
+| **Referral** | Refer form; reward approved → "Share your UPI" form | Ask UPI | Payout record; staff check |
+
+---
+
+## 5. Papers (property-specific) — the main part
+
+### 5.1 What belongs where (kept rule)
+
+- **Person papers:** Aadhaar/PAN (`customer_kyc`), income proof — one per customer, all homes.
+- **Home papers:** everything else — per property (bill, property papers, DISCOM, subsidy bank,
+  loan, agreements, site photos …).
+
+### 5.2 When a file arrives
+
+| Situation | Question |
+|---|---|
+| Exactly one paper asked (any home) | "Is this your **electricity bill** for Sangli?" **[Yes]** **[No, something else]** |
+| 2+ asked | List "What is this?" = the asked papers |
+| Nothing asked | List "What is this?" built from **this customer's missing checklist items first** (per home, from the document rules by DISCOM / loan / subsidy / name change), then fixed rows: **Payment proof** · **Problem photo** · **Something else** |
+| Home paper and 2+ homes, home not known from the item | List "For which home?" (homes only; title = label else town; description "consumer no. …1234") |
+| Person paper | Never ask the home |
+
+- **Burst:** we wait until **15 s after the last file** before asking (one question for all). The
+  list has a row **"They're different"** → we ask about each file.
+- **Saved reply:** "Saved ✅ **Electricity bill** · Sangli home. We'll check it." **[Change]** **[Menu]**
+- **Payment proof** → finance task "Record payment" (§10). **Problem photo** → starts §12 with the photo.
+
+### 5.3 Staff check closes the loop
+
+- Every received paper shows on the web as **"Received – to check"** with **[Looks good]** **[Not right — ask again (reason)]**.
+- Looks good → checklist "Checked ✓", action Closed, task wait ends (§2.3), customer:
+  "Your **electricity bill** is checked ✅".
+- Ask again → customer: "Please send your bill again: **the consumer number is not visible**."
+  **[Send it now]** (reason now reaches WhatsApp; template has a reason field).
+- Not checked in 1 working day → owner alert; 2 → manager.
+
+### 5.4 Rules fixed from today
+
+- Duplicate check by **checklist item** (`requirementKey`), not by kind — so Aadhaar and PAN, or
+  several loan papers, can be asked together.
+- **Leads:** paper actions work on a lead (+ property); moved to the project when it is made.
+- **Expiry:** per checklist item in Settings (e.g. bill 90 days). Before the DISCOM application a
+  stale bill turns "missing" and a new ask goes out automatically.
+- **Single-home and multi-home** use the same flow; ID papers never mention a home.
+- Word/Excel: kept as "Something else", never answer a paper (as today).
+
+### 5.5 One-tap "Send a paper"
+
+[Send it now] → **form** "Electricity bill — Sangli": up to **4 files** **[Send]** (fallback: "Or
+send the photo here"). Unknown paper → "What do you want to send?" (same list as 5.2) → form.
+
+---
+
+## 6. Property location
+
+> Please share the location of your **Sangli** home so our team finds it easily.
+> **[📍 Send location]**  → "Thank you ✅ Location saved for Sangli home."
+
+- **Behind:** if the property has **no location**, save it (`location_source = whatsapp_pin`).
+  If it **already has one** (surveyor GPS or map pin), save as a **suggestion** and show staff
+  "Check location" — a customer pin never overwrites a surveyor's point.
+- 2+ homes and not asked for one → "Which home is this location for?". Unasked location → same.
+- Location request works only inside 24 h; the template button "Share location" opens the chat step
+  that sends it.
+
+---
+
+## 7. Self site survey with a discount
+
+- **When offered:** only once a **project exists** at the Survey stage (needs the project survey
+  task), by staff action or Home. At lead stage the estimate offers **[Book a visit]** and
+  **[Call me]**; the self survey is offered right after the project is made. **[my call]**
+- **Form:** roof type · floors · photos (roof corner A, roof corner B, meter with number, main switch
+  board) · shade (tap) · roof size range (tap) · consumer number (typed, only if missing).
+  Location by the separate 📍 step if missing.
+- **Behind:** saved as the project **survey report** (same place as a field survey) — photos as site
+  photos on the home, answers as report fields. Engineer: **[Approve]** (fills cable length,
+  shade-free area etc. in the same screen, or **[Book a visit]**) / **[Ask again: item]** (only the
+  missing item is re-asked).
+- **Discount:** after Approve, **₹1,000 credit on the next instalment** (not a quote line — a quote
+  line would block acceptance and re-pricing). Customer: "Survey approved ✅ ₹1,000 off your next
+  payment." **[my call]**
+- Engineer deadline: 1 working day → alert, 2 → manager. Unfinished form → Home "Finish your
+  survey" for 7 days.
+
+---
+
+## 8. Visits (survey, installation, AMC, service)
+
+1. "When can our team visit **Sangli** for **installation**?" list: next working days where the crew
+   is free (and material is ready for installation) + "Talk to Priya".
+2. [Morning] [Afternoon] → "Thanks — we'll confirm by **{time}**." (a **proposal**)
+3. Staff **Confirm** → "Booked ✅ **Thu 6 Nov, morning**. Ravi will call before coming." + crew contact.
+4. Day before: "Our team visits tomorrow morning." **[Confirm]** **[Change day]**
+5. Change day → back to step 1; staff alerted. Staff cancel/reschedule always tells the customer.
+
+**Behind:** new visit record (project/task, day, slot, crew, proposed/confirmed). Service visits
+keep their own date (exists) and get the same messages.
+
+---
+
+## 9. Quote
+
+> Your quotation for **Sangli · 3.3 kW** (PDF above)
+> Total **₹1,20,000** · after subsidy **₹42,000**
+> Pay in 3 parts: ₹36,000 on accepting · ₹45,000 **before dispatch** · ₹39,000 after switch-on
+> **[Accept]** **[I have a question]**
+
+- Wording uses the real payment triggers (accept, dispatch, switch-on, loan disbursement).
+- **[I have a question]** → list: Subsidy · Payment plan · Panels & brand · Warranty · Timeline ·
+  **Call me** · Something else (→ Talk to Priya). Answers are fixed text from the quote's own data.
+- **[Accept]** → "Accept for ₹1,20,000?" [Yes, accept] [Not yet] → §4 "After accept".
+- **[Not yet]** → "When should we check back?" [1 week] [1 month] [Talk to Priya].
+- **Revision:** staff send with "What changed" → customer sees the change line first.
+- Built template `quotation_sent` keeps 2 buttons (Call me lives inside the question list).
+
+---
+
+## 10. Payments
+
+> **Sangli solar** — ₹1,20,000 total
+> ✅ ₹36,000 paid · 🔴 **₹45,000 due now** · ⚪ ₹39,000 after switch-on
+> **[Pay ₹45,000]** **[Receipts]** **[I paid another way]**
+
+- [Pay ₹45,000] → pay-link message. Two homes due → one message each (max 2).
+- **[I paid another way]** → form: amount (prefilled), date, proof photo → finance task "Record
+  payment"; reminders for that instalment paused 2 days; customer: "Thanks, we'll confirm within 1
+  working day." Recorded → receipt sent automatically.
+- After paying online: receipt + "₹45,000 received ✅ Next: dispatch." [Project update] [Menu].
+- Bank loan part: "₹60,000 by bank loan".
+
+---
+
+## 11. Documents (ours to the customer)
+
+1 paper → sent with one-line caption. 2+ → list (newest first). Gone → "That paper is not available
+any more — here is the latest list." Staff can **send any document** from the web (row action).
+
+---
+
+## 12. Problems
+
+**Form:** home (2+ homes) · what is wrong (tap: Inverter error · No power · Low power · Damage ·
+Cleaning · Bill/meter · Other) · since when (Today · This week · Longer) · up to **3** photos/videos ·
+anything to add (optional).
+
+> Thank you ✅ Noted: **Inverter error · Sangli**. **{Name}** will call you by **{time}**.
+> **[My problems]** **[Menu]**
+
+- Name = assignee, else the service desk cover person; time-aware ("tomorrow from 9:30"). A call
+  task is created; missed → escalation.
+- Updates: visit day [Confirm] [Change day]; "Fixed ✅ Is it working now?" [Yes, working]
+  [Still a problem] → **reopen** (status open, response clock restarts, assignee alerted).
+  Yes → problem rating (5 taps).
+- Voice note during a problem → attached, no hand-over.
+
+---
+
+## 13. Rating — one system
+
+- Stage rating requests (built) move to WhatsApp 5 taps (no "rate it in the app").
+- Problem ratings after "Yes, working".
+- Staff "Ask for a rating" only re-sends the pending one.
+- 1–2 stars → "Sorry to hear that. Priya will call you by {time}." + alert + call task.
+
+---
+
+## 14. Talk to a person, language, unknown text, small talk
+
+- **Talk to Priya:** "Priya will reply here. She is available Mon–Sat, 9:30–6:30." Outside hours:
+  "…will reply tomorrow from 9:30." [Menu]. Bot stays usable.
+- **Hand-back** (Release / 4 working hours / Menu): told only if the customer wrote meanwhile:
+  "Priya is away now — we're here to help." [Menu].
+- **Language:** More → Language; typing in Devanagari switches automatically (ask once if Marathi
+  vs Hindi unclear).
+- **Small talk** ("ok", "thanks", 👍, "good morning") → short reply, no buttons, no alert.
+- **Known words** (grown lists en/mr/hi: when/kab/kevha, how much/kitna/kiti, visit, bill, paid,
+  subsidy, problem …) → the matching answer.
+- **Unknown text** → "Sorry, we didn't get that. Pick one below." [Talk to Priya] [Project update]
+  [More]. **Second unknown in a row** → handed to Priya with the text, said clearly.
+- **Callback:** "When should Priya call?" [Morning] [Afternoon] [Evening] → follow-up task.
+- **Late or old tap** → "That was an earlier message — here is the latest." + current step (no
+  silent drop).
+
+---
+
+## 15. Referral and rewards
+
+- Refer: form — friend's name, mobile (typed), city (tap) → "Thank you! We'll call Suresh. You get
+  ₹2,000 when their solar is installed." [My rewards] [Share my link].
+- Reward approved → "Share your UPI ID to receive ₹2,000." form → payout record → staff check →
+  paid → "₹2,000 sent to your UPI ✅".
+
+---
+
+## 16. New contacts (strangers and leads)
+
+1. Language (3 buttons) 2. "Shall we call you **Tejas**?" [Yes] [Change] (type name — only typing)
+3. City list + [📍 Send location] (fills city) 4. Where: Home / Society / Shop / Farm 5. Monthly
+bill bands 6. Roof + floors (one form) 7. Bill photo [Send bill] / [Later]
+8. Estimate PDF → **[Book a visit]** **[Call me]** **[Not now]**
+
+Fixes: "ok/thanks/👍" after the estimate → short reply (no hand-over loop); team-made lead saying
+"hi" → "Hi Suresh 👋 Priya from OneOhm is helping you." [Talk to Priya] [Quick estimate]; onboarding
+off still stores bill photos on the lead.
+
+---
+
+## 17. Customers not on WhatsApp (about 2%)
+
+| Action | Path |
+|---|---|
+| Paper, rating, problem | OneOhm app (exists) or SMS "Send it from the OneOhm app, or give it to our team" |
+| Location, survey, visit pick, signature, confirm, payout | **In person**: a task "Do with customer in person" for the owner (customer handovers list) |
+| Pay | SMS pay link |
+| Quote accept | In person (owner) |
+
+SMS texts need DLT registration (owner).
+
+---
+
+## 18. Staff side — "Send to customer"
+
+One button **"Send to customer"** on the customer, project, lead, chat, task and ticket screens;
+each opens a short sheet (preview of exactly what the customer gets).
+
+| # | Action | Where it also appears |
+|---|---|---|
+| 1 | Ask for paper(s) — pick checklist items | Documents checklist "Ask" |
+| 2 | Ask location | Property card |
+| 3 | Offer self survey | Survey task |
+| 4 | Ask to pick a visit date | Survey / installation / AMC task |
+| 5 | Confirm / reschedule / cancel visit | Visit record |
+| 6 | Share crew / technician contact | Task assignment, service ticket |
+| 7 | Send quote / revision (what changed) | Quotations |
+| 8 | Payment reminder / ask payment proof / send receipt | Finance → Receivables |
+| 9 | Send a document (invoice, WCR, warranty …) | Documents row |
+| 10 | Send for signature | Paperwork, handover task |
+| 11 | Ask loan papers | Finance → Loans |
+| 12 | Tell DISCOM inspection / net-meter date | DISCOM task, DISCOM desk |
+| 13 | Site readiness check | Dispatch task |
+| 14 | Confirm installation finished | Installation task |
+| 15 | Subsidy: registration help / passbook / confirm credit | Subsidy task |
+| 16 | Handover pack | Handover task |
+| 17 | Delay notice with reason | When a task is set to waiting |
+| 18 | AMC visit confirm / renewal offer | Customer → Aftercare |
+| 19 | Ask callback time | Chat |
+| 20 | Ask UPI for reward | Rewards |
+| 21 | Re-send pending rating | Customer → Feedback |
+| 22 | Lead: send estimate / book survey | Lead screen |
+
+Every action → a customer action record (§2) shown in one **"Asked from the customer"** card on the
+customer and project pages, with status, reminders, cancel (tells the customer) and audit.
+
+---
+
+## 19. Automatic messages (sent by the system)
+
+| Event | Message + buttons |
+|---|---|
+| Project created | "Your project has started. Priya is your project manager." [Pay ₹X] (advance) |
+| Instalment due (dispatch, switch-on) | "₹45,000 is due before dispatch." [Pay ₹45,000] [I paid another way] |
+| Payment received | Receipt PDF + next step |
+| Task waiting on customer | "We need **{item}** to continue." [Send it now] |
+| Task waiting on DISCOM/bank | "Waiting for the electricity board since 2 Nov. We'll update you." |
+| Installation started | "Our team started installing at Sangli today." |
+| Switch-on | "Your solar is ON ☀️" [Pay ₹X] / [Warranty & AMC] |
+| Handover | Pack + [Documents] |
+| Problem status / visit | Status line + [Confirm] [Change day] / "Is it working now?" |
+| Stage rating | 5 taps |
+| AMC due | [Confirm] [Change day] |
+
+---
+
+## 20. Decisions I made (please check)
+
+1. **One "customer actions" system** replaces separate paper requests, task-wait links and rating
+   asks (existing paper requests migrate into it).
+2. **Staff check** on papers, survey, visit, signature and payout; deadlines 1 / 2 working days.
+3. **Self survey** only after a project exists; discount = **₹1,000 credit on the next instalment**
+   (amount in Settings).
+4. **Customer location pin** never overwrites a surveyor's point; it becomes a suggestion.
+5. **Burst** = wait 15 s after the last file; "They're different" row.
+6. **Unknown text**: sorry + choices; person on the 2nd unknown in a row.
+7. **Visit pick** is a proposal until staff confirm.
+8. **Number shortcuts** 1–10 dropped; old menu ids work 30 days.
+9. **Rating**: one system on WhatsApp; stage ratings stop pointing to the app.
+10. **File limits**: papers 4, problems 3, survey photos 1 per item.
+11. Voice is **"we"** everywhere (never "I"); principles §10 updated to allow the staff
+    "Send to customer" menu and check screens.
+
+## 21. Owner answers (2026-11-04) — plan approved
+
+1. **Self-survey discount:** configurable in Settings (the place where survey and pricing rules
+   live). Default ₹1,000 credit on the next instalment; the owner can change the amount or switch
+   the offer off.
+2. **Referral reward:** already configurable (Settings → referral program: amount, per referral or
+   per kW, qualifying event, budget, per-customer caps, eligible project types); rewards are tracked
+   pending → approved → paid with method and reference. Missing piece we add: the customer's **UPI
+   ID** (UPI only), asked on approval, checked by staff, shown on the reward, used when marking paid.
+3. **Bill validity:** 90 days default, configurable per checklist item.
+
+## 21a. Product philosophy check (PRD v2, §1 principles)
+
+| PRD principle | How this redesign meets it |
+|---|---|
+| Exceptional, calm UX | 3-line messages, one idea each, real names, tap-first |
+| Zero learning curve | Home shows what matters now; every reply offers the next step |
+| Complete business control | Every customer action has a status, audit and owner |
+| Smart automation | Reminders, task waits, escalations, auto-cancel, receipts run by themselves |
+| Operational accuracy | One status system; papers, payments, survey and stage stay connected |
+| Customer experience | Customer always sees status, payments, subsidy, next step on WhatsApp |
+| Configurability | Discount, expiry, reminders, rewards, templates and per-task customer messages in Settings |
+| Simplicity | One "Send to customer" button and one "Asked from the customer" card; no other new screens |
+
+**PRD rule kept:** internal tasks never message customers automatically — the automatic messages in
+§19 only go out for tasks/events switched on in the task template's customer-message settings.
+
+## 22. What changes in what we built today (papers per home)
+
+Replaced: "only home with open requests → auto-file", 30-min batch glue, the Aadhaar/PAN row in
+"Which home?", "stray file → other + Saved" (now "What is this?"). Code: `paper-match.ts`,
+`file-home.ts`, `file-home-flow.ts`, `file-paper-flow.ts`, `media-intake.ts`, `paper-reminders.ts`,
+document requests → customer actions.
+
+## 23. Build order (each phase tested live on your phone)
+
+1. **Foundation:** words dictionary + length tests; Home + More; small talk; unknown text; hand-over /
+   hand-back wording; language; late-tap reply; customer actions table + "Asked from the customer"
+   card; migrate paper requests.
+2. **Papers:** "What is this?" from checklist, staff check, reason on re-ask, expiry, leads,
+   burst timer, [Change], forms + fallback.
+3. **Send to customer** menu (actions 1, 2, 4–9, 17, 19) + location + visits + payment proof.
+4. **Journey steps:** signatures, DISCOM inspection, subsidy, loan, readiness, installation
+   finished, handover pack, automatic messages with buttons.
+5. **Self survey** + discount credit + engineer approve.
+6. **Quote questions**, problems form + reopen, rating unification, referral payout, AMC.
+7. **Onboarding refresh**, non-WhatsApp paths, clean-up of old code/words/tests, full acceptance +
+   live check.
+
+**Owner tasks with Meta / telecom:** about 20 templates × 3 languages (I prepare all texts); publish
+forms in WhatsApp Manager (I prepare them); SMS DLT templates.
