@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DATABASE, type Database } from '../../../config/core.module';
-import type { CustomerHome } from '../../customer-portal/customer-homes';
+import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
 import { ChatFileKeeper } from '../chat-file-keeper';
+import { isFiled } from '../chat-files-kept';
 import {
   type Conversation,
   chatDocumentFor,
@@ -12,10 +13,7 @@ import {
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
-import { sayWithTaps } from './closing-taps';
-import { type HomeChoice, homeForFile } from './file-home';
-import { FileHomeFlowService } from './file-home-flow';
-import { FilePaperFlowService } from './file-paper-flow';
+import { withFile } from './files-wait';
 import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
@@ -44,34 +42,26 @@ export function keepPending(context: unknown, now = Date.now()): Record<string, 
   return pending.length > 0 ? { pending } : {};
 }
 
-/** The paper just filed, so Meta's retry of the same file is not filed again. */
-interface FiledMedia {
-  readonly id: string;
-  readonly title: string;
-}
-
 /**
- * Photos and papers a customer sends on WhatsApp (PRD 6.1), kept only for the customer
- * whose number sent them. Each file was stored once when it arrived (`ChatFileKeeper`);
- * here that same document is filed, through the same rules as an upload in the app.
+ * Photos and papers a customer sends on WhatsApp (PRD 6.1, redesign 5.2), kept only for the
+ * customer whose number sent them. Each file was stored once when it arrived
+ * (`ChatFileKeeper`). A photo or PDF never files itself: it waits, with the others of its
+ * burst, until we ask "What is this?" (15 seconds after the last one, `FileQuestionsService`).
+ * A problem being reported takes its photos at once.
  */
 @Injectable()
 export class MediaIntakeService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly files: ChatFileKeeper,
-    private readonly homes: FileHomeFlowService,
-    private readonly papers: FilePaperFlowService,
     private readonly problems: ProblemFlowService,
     private readonly people: HandOverService,
   ) {}
 
   /**
-   * In order: the problem being reported, the request raised a moment ago, then the home
-   * it is for: asked once when the customer has two or more ("Which home?"), then the
-   * paper OneOhm asked for on that home ("Which paper?" when two or more are open). A file
-   * that answers nothing is saved on the home and the customer is told so (decision 4).
-   * In a chat a person holds, only the questions and the answered paper go out.
+   * In order: the problem being reported, the request raised a moment ago, else the file
+   * waits for "What is this?". In a chat a person holds the questions still go out.
    */
   async receive(
     chat: Conversation,
@@ -79,13 +69,10 @@ export class MediaIntakeService {
     media: IncomingMedia,
     said: string,
   ): Promise<void> {
-    const held = chat.state === 'human' && stepOf(chat) !== 'await_problem';
-    // A voice note or a video goes warmly to their person, as for leads (C12). It is put
-    // on a home when that needs no question (`ChatFileKeeper.settle`), else it waits with
-    // the other files for "Which home?".
+    // A voice note or a video goes warmly to their person, as for leads (C12); it is put on
+    // a home when that needs no question (`ChatFileKeeper.settle`).
     if (media.type === 'audio' || media.type === 'video') {
-      await this.homes.sortLater(chat, customerId, media.id);
-      if (held) return;
+      if (chat.state === 'human' && stepOf(chat) !== 'await_problem') return;
       const reply = heardReply(media.type, await this.people.answererName(chat));
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
     }
@@ -103,36 +90,25 @@ export class MediaIntakeService {
       const file = await this.storedOrSay(chat, media);
       return file ? this.problems.addPhoto(chat, customerId, raised.id, file) : undefined;
     }
-    // Meta's retry of a file already filed (the reply after it failed): not filed again.
-    const filed = (chat.context as { filedMedia?: FiledMedia }).filedMedia;
-    if (filed?.id === media.id)
-      return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(filed.title), ['menu']);
-    return this.forHome(chat, customerId, media, held);
+    return this.wait(chat, media, now);
   }
 
-  /** "Which home?" once for two or more homes; then the papers asked for on that home. */
-  private async forHome(
-    chat: Conversation,
-    customerId: string,
-    media: IncomingMedia,
-    held: boolean,
-  ): Promise<void> {
-    const now = Date.now();
-    let { homes, choice } = await homeForFile(this.db, chat, customerId, now);
-    if (choice === 'ask') {
-      const documentId = await this.storedOrSay(chat, media);
-      // Asked (or added to the burst); else a tap picked the home a moment ago.
-      const known = documentId ? await this.homes.ask(chat, customerId, documentId) : null;
-      if (!known) return;
-      ({ homes, choice } = known);
-    }
-    if (choice) return this.fulfil(chat, customerId, homes, choice, media, held);
-    // No home at all: it stays under the customer (`ChatFileKeeper.settle` alerts the team).
-    if (held) return;
-    await this.keepForProblem(chat, media, now);
-    return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(MEDIA_WORDS.what[media.type]), [
-      'menu',
-    ]);
+  /** The file waits with its burst; the question is due `FILE_WAIT_SECONDS` after this one. */
+  private async wait(chat: Conversation, media: IncomingMedia, now: number): Promise<void> {
+    const documentId = await this.storedOrSay(chat, media);
+    // Filed already (Meta's retry of a file the customer has answered for): nothing to ask.
+    if (!documentId || (await isFiled(this.db, documentId))) return;
+    await this.db.transaction(async (tx) => {
+      const locked = await lockedChat(tx, chat.id);
+      const file = {
+        id: documentId,
+        media: media.id,
+        type: media.type === 'image' ? ('image' as const) : ('document' as const),
+        at: now,
+      };
+      const filesWait = withFile(locked.context, file, now, this.env.FILE_WAIT_SECONDS);
+      await setState(tx, locked.id, locked.state, { ...(locked.context as object), filesWait });
+    });
   }
 
   /** The words of "Report a problem": they raise it, with any photos sent just before. */
@@ -141,39 +117,19 @@ export class MediaIntakeService {
     return this.problems.raise(chat, customerId, said, await this.storedPending(pending));
   }
 
-  /** Files it on the home: the paper it answers, "Which paper?", or saved as it is. */
-  private async fulfil(
-    chat: Conversation,
-    customerId: string,
-    homes: readonly CustomerHome[],
-    choice: HomeChoice,
-    media: IncomingMedia,
-    held: boolean,
-  ): Promise<void> {
-    const documentId = await this.storedOrSay(chat, media);
-    if (!documentId) return;
-    const options = { held, mediaId: media.id };
-    const stray = await this.papers.receive(chat, customerId, homes, choice, documentId, options);
-    // A photo that answers nothing may show a problem the customer reports next.
-    if (stray && !held) await this.keepForProblem(chat, media, Date.now());
-  }
-
-  /** Keeps only the file's reference, so "Report a problem" next takes it too. */
-  private async keepForProblem(chat: Conversation, media: IncomingMedia, now: number) {
-    await this.db.transaction(async (tx) => {
-      const locked = await lockedChat(tx, chat.id);
-      const pending = [...pendingMedia(locked.context, now), { ...media, at: now }];
-      const context = { ...(locked.context as object), pending: pending.slice(-MAX_PENDING) };
-      await setState(tx, locked.id, locked.state, context);
-    });
-  }
-
   /** The document this file was stored as, or null after telling the customer it was not. */
   private async storedOrSay(chat: Conversation, media: IncomingMedia): Promise<string | null> {
     const documentId = await chatDocumentFor(this.db, media.id);
     if (documentId) return documentId;
-    const tooLarge = this.files.wasTooLarge(media.id);
-    await this.text(chat, tooLarge ? MEDIA_WORDS.tooLarge : MEDIA_WORDS.failed);
+    // Said once and true: too big, a kind we cannot open, or a download that may work later.
+    const why = this.files.refusalFor(media.id);
+    const body =
+      why === 'too_large'
+        ? MEDIA_WORDS.tooLarge
+        : why === 'wrong_type'
+          ? MEDIA_WORDS.wrongType
+          : MEDIA_WORDS.failed;
+    await queueReply(this.db, chat, { kind: 'text', body });
     return null;
   }
 
@@ -185,9 +141,5 @@ export class MediaIntakeService {
       if (documentId) stored.push(documentId);
     }
     return stored;
-  }
-
-  private async text(chat: Conversation, body: string): Promise<void> {
-    await queueReply(this.db, chat, { kind: 'text', body });
   }
 }

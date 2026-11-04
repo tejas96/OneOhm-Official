@@ -200,13 +200,13 @@ export async function conversationForPhone(
 }
 
 /**
- * The new context, still carrying the lead `entry`, onboarding `ob`, the files waiting on
- * "Which paper?" (`paperWait`), the 30-minute home and paper answers (`fileHome`,
- * `filePaper`; each checks its own time) and whether we asked the language (`langAsked`)
- * unless it sets them. A Menu tap keeps them all.
+ * The new context, still carrying the lead `entry`, onboarding `ob`, the files waiting for
+ * "What is this?" (`filesWait`), the papers just saved that [Change] can take back
+ * (`filedBatches`) and whether we asked the language (`langAsked`) unless it sets them. A
+ * Menu tap keeps them all.
  */
 export const keepEntry = (context: Record<string, unknown>) => {
-  const kept = ['entry', 'ob', 'paperWait', 'fileHome', 'filePaper', 'langAsked'].filter(
+  const kept = ['entry', 'ob', 'filesWait', 'filedBatches', 'langAsked'].filter(
     (key) => context[key] === undefined,
   );
   if (kept.length === 0) return context;

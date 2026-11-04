@@ -34,92 +34,9 @@ export class DocumentChecklistService {
   ): Promise<DocumentChecklist & { code: string; customer: string }> {
     // The accepted quotation, invoices and receipts count once they are printed and filed.
     await fileSystemPapers({ projectId });
-    const [project] = await this.db
-      .select({ project: projects, customer: customers.name, discomCode: discoms.code })
-      .from(projects)
-      .innerJoin(customers, eq(customers.id, projects.customerId))
-      .leftJoin(discoms, eq(discoms.id, projects.discomId))
-      .where(eq(projects.id, projectId))
-      .limit(1);
-    if (!project) throw notFound('That project');
-    const homes = await customerHomes(this.db, project.project.customerId);
-    const site: SiteScope = {
-      propertyId: project.project.propertyId,
-      projectId,
-      customerSites: homes.length || 1,
-    };
-    const filed = await this.db
-      .select({
-        id: documents.id,
-        category: documents.category,
-        reportKey: documents.reportKey,
-        propertyId: documents.propertyId,
-        projectId: documents.projectId,
-        checkedAt: documents.checkedAt,
-        createdAt: documents.createdAt,
-        serviceRequestId: documents.serviceRequestId,
-      })
-      .from(documents)
-      .where(
-        and(
-          or(
-            eq(documents.projectId, projectId),
-            eq(documents.customerId, project.project.customerId),
-          ),
-          isNull(documents.replacedAt),
-          isNull(documents.removedAt),
-        ),
-      );
-    const now = new Date();
-    const files = filed.filter((file) => countsForSite(file, site));
-    const asked = await this.requests(project.project.customerId, site);
-    const needed = requirementsFor(await loadRequirements(this.db), {
-      ...project.project,
-      discomCode: project.discomCode,
-    });
-    const papers: ChecklistItem[] = needed.map((requirement) => {
-      const onFile = files.filter(
-        (file) =>
-          (requirement.categories as readonly string[]).includes(file.category) && !file.reportKey,
-      );
-      // A paper older than the item's maximum age no longer counts (redesign 5.4).
-      const current = onFile.filter((file) =>
-        isCurrentPaper(file.createdAt, requirement.maxAgeDays, now),
-      );
-      const ids = current.map((file) => file.id);
-      const tooOld = onFile.length > 0 && current.length === 0;
-      const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
-      // Only a paper the customer holds waits for the team's look; a photo on a problem or a
-      // site photo from a chat is not the customer's answer to this row.
-      const unchecked = requirement.fromCustomer
-        ? files.filter((file) => ids.includes(file.id) && !file.checkedAt && !file.serviceRequestId)
-        : [];
-      const waiting = asked.received.find((one) => one.documentId && ids.includes(one.documentId));
-      return {
-        key: requirement.key,
-        label: requirement.label,
-        why: requirement.why,
-        kind: 'paper',
-        status: ids.length > 0 ? 'present' : 'missing',
-        documentIds: tooOld ? onFile.map((file) => file.id) : ids,
-        check: ids.length === 0 ? 'missing' : unchecked.length > 0 ? 'to_check' : 'checked',
-        actionId: unchecked.length > 0 ? (waiting?.id ?? null) : null,
-        missing: [],
-        askCategory,
-        tooOld,
-        requested:
-          askCategory !== null &&
-          // Any open ask of this kind on this home (or for this person) covers the row.
-          asked.open.some(
-            (one) =>
-              one.category === askCategory ||
-              sameAsk(
-                { requirementKey: requirement.key, category: askCategory },
-                { requirementKey: one.requirementKey, category: one.category },
-              ),
-          ),
-      };
-    });
+    const context = await this.context(projectId);
+    const { project, files } = context;
+    const papers = this.paperItems(context);
     const statuses = await this.statuses.statuses(projectId);
     const reports: ChecklistItem[] = statuses
       .filter((status) => status.status !== 'not_needed')
@@ -175,7 +92,9 @@ export class DocumentChecklistService {
         documentId: customerActions.documentId,
         projectId: customerActions.projectId,
         // The project's home first, else the one the ask was made on (a lead's site).
-        propertyId: sql<string | null>`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
+        propertyId: sql<
+          string | null
+        >`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
       })
       .from(customerActions)
       .leftJoin(projects, eq(projects.id, customerActions.projectId))
@@ -193,5 +112,111 @@ export class DocumentChecklistService {
       open: here.filter((row) => row.status === 'open'),
       received: here.filter((row) => row.status === 'received'),
     };
+  }
+
+  /**
+   * The papers this project's customer can still send: missing or too old, and not asked for
+   * already. "What is this?" on WhatsApp offers these (redesign 5.2).
+   */
+  async missingFromCustomer(projectId: string) {
+    const items = this.paperItems(await this.context(projectId));
+    return items.filter((item) => item.check === 'missing' && item.askCategory && !item.requested);
+  }
+
+  /** What a project's checklist is read from: its customer, home, requirements and papers. */
+  private async context(projectId: string) {
+    const [project] = await this.db
+      .select({ project: projects, customer: customers.name, discomCode: discoms.code })
+      .from(projects)
+      .innerJoin(customers, eq(customers.id, projects.customerId))
+      .leftJoin(discoms, eq(discoms.id, projects.discomId))
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    if (!project) throw notFound('That project');
+    const homes = await customerHomes(this.db, project.project.customerId);
+    const site: SiteScope = {
+      propertyId: project.project.propertyId,
+      projectId,
+      customerSites: homes.length || 1,
+    };
+    const filed = await this.db
+      .select({
+        id: documents.id,
+        category: documents.category,
+        reportKey: documents.reportKey,
+        propertyId: documents.propertyId,
+        projectId: documents.projectId,
+        checkedAt: documents.checkedAt,
+        createdAt: documents.createdAt,
+        serviceRequestId: documents.serviceRequestId,
+      })
+      .from(documents)
+      .where(
+        and(
+          or(
+            eq(documents.projectId, projectId),
+            eq(documents.customerId, project.project.customerId),
+          ),
+          isNull(documents.replacedAt),
+          isNull(documents.removedAt),
+        ),
+      );
+    const files = filed.filter((file) => countsForSite(file, site));
+    const asked = await this.requests(project.project.customerId, site);
+    const needed = requirementsFor(await loadRequirements(this.db), {
+      ...project.project,
+      discomCode: project.discomCode,
+    });
+    return { projectId, project, files, asked, needed, now: new Date() };
+  }
+
+  /** One checklist row per required paper (reports are added by `checklist`). */
+  private paperItems(
+    context: Awaited<ReturnType<DocumentChecklistService['context']>>,
+  ): ChecklistItem[] {
+    const { files, asked, needed, now } = context;
+    return needed.map((requirement) => {
+      const onFile = files.filter(
+        (file) =>
+          (requirement.categories as readonly string[]).includes(file.category) && !file.reportKey,
+      );
+      // A paper older than the item's maximum age no longer counts (redesign 5.4).
+      const current = onFile.filter((file) =>
+        isCurrentPaper(file.createdAt, requirement.maxAgeDays, now),
+      );
+      const ids = current.map((file) => file.id);
+      const tooOld = onFile.length > 0 && current.length === 0;
+      const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
+      // Only a paper the customer holds waits for the team's look; a photo on a problem or a
+      // site photo from a chat is not the customer's answer to this row.
+      const unchecked = requirement.fromCustomer
+        ? files.filter((file) => ids.includes(file.id) && !file.checkedAt && !file.serviceRequestId)
+        : [];
+      const waiting = asked.received.find((one) => one.documentId && ids.includes(one.documentId));
+      return {
+        key: requirement.key,
+        label: requirement.label,
+        why: requirement.why,
+        kind: 'paper' as const,
+        status: ids.length > 0 ? ('present' as const) : ('missing' as const),
+        documentIds: tooOld ? onFile.map((file) => file.id) : ids,
+        check: ids.length === 0 ? 'missing' : unchecked.length > 0 ? 'to_check' : 'checked',
+        actionId: unchecked.length > 0 ? (waiting?.id ?? null) : null,
+        missing: [],
+        askCategory,
+        tooOld,
+        requested:
+          askCategory !== null &&
+          // Any open ask of this kind on this home (or for this person) covers the row.
+          asked.open.some(
+            (one) =>
+              one.category === askCategory ||
+              sameAsk(
+                { requirementKey: requirement.key, category: askCategory },
+                { requirementKey: one.requirementKey, category: one.category },
+              ),
+          ),
+      };
+    });
   }
 }

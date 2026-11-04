@@ -60,6 +60,7 @@ import { SurveyReportService } from './survey-report.service';
     ReportSettingsService,
     SurveyReportService,
     StalePaperAsksService,
+    DocumentChecklistService,
   ],
 })
 export class ReportsModule {}

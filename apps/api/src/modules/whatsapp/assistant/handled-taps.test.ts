@@ -27,11 +27,21 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('rate:5'))).toBe(false);
   });
 
-  it('answers its own which-paper taps, and only well-formed ones', () => {
-    for (const id of [`f${HOME.replace('home', 'paper')}`, 'fpaper:none', 'fhome:person'])
+  it('answers its own What is this? taps and home taps, and only well-formed ones', () => {
+    const uuid = '0b6f2f9e-6c1a-4f43-9d55-3f3c2a1b7e10';
+    for (const id of [
+      'what:yes',
+      'what:diff',
+      'what:ask',
+      `what:a:${uuid}`,
+      `what:i:${uuid}:bill`,
+      `what:change:${uuid}`,
+      `where:${uuid}`,
+    ])
       expect(assistantAnswersTap({ customerId: 'c1' }, tap(id)), id).toBe(true);
-    expect(assistantAnswersTap({ customerId: 'c1' }, tap('fpaper:nonsense'))).toBe(false);
-    expect(assistantAnswersTap({ customerId: null }, tap('fpaper:none'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('what:nonsense'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('fpaper:none'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: null }, tap('what:yes'))).toBe(false);
   });
 
   it('answers a stranger’s own Call me back and Talk to a person buttons (review F5)', () => {

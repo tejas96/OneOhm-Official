@@ -14,6 +14,8 @@ import { HandOverService } from './hand-over';
 import { pendingButton, pendingLine, pendingRows } from './home-lines';
 import { pendingForCustomer } from './pending-items';
 import { stageCount } from './progress-line';
+import { waitingFileCount } from './waiting-files';
+import { WHAT_WORDS } from './what-words';
 
 /**
  * Home (redesign §3), shown for "hi", Menu or "menu": "Hi Tejas 👋", one line of what
@@ -31,13 +33,15 @@ export class HomeService {
   ) {}
 
   async show(chat: Conversation, customerId: string): Promise<void> {
-    const [items, { projects }, first, name] = await Promise.all([
+    const [items, { projects }, first, name, waiting] = await Promise.all([
       this.pending(customerId),
       this.portal.home(customerId),
       this.firstName(chat, customerId),
       this.people.answererName(chat),
+      waitingFileCount(this.db, chat.id, customerId),
     ]);
-    if (projects.length === 0 && items.length === 0) return this.noProject(chat, first, name);
+    if (projects.length === 0 && items.length === 0 && waiting === 0)
+      return this.noProject(chat, first, name);
     const [project] = projects;
     const stage = project && projects.length === 1 ? stageCount(project) : null;
     const where =
@@ -49,8 +53,10 @@ export class HomeService {
     const [top] = items;
     // Counted as [See them] lists them: one row per action (two problems are one row).
     const count = pendingRows(items, this.paysOnline()).length;
+    // Files that wait for "What is this?" come first: a Menu or hello never drops them.
     const body = [
       `${CHAT_WORDS.home.hello(first)}${where}`,
+      waiting > 0 ? WHAT_WORDS.homeLine(waiting) : '',
       top ? pendingLine(top) : CHAT_WORDS.home.nothing,
       count >= 2 ? CHAT_WORDS.home.count(count) : '',
     ].filter(Boolean);
@@ -61,9 +67,13 @@ export class HomeService {
         : projects.length > 0
           ? 'update'
           : talk;
-    const taps: TapChoice[] = top
-      ? [pendingButton(top, this.paysOnline()), next, 'more']
-      : ['update', 'problem', 'more'];
+    const whatAreThey = { id: 'what:ask', title: WHAT_WORDS.buttons.whatAreThey };
+    const taps: TapChoice[] =
+      waiting > 0
+        ? [whatAreThey, top ? pendingButton(top, this.paysOnline()) : 'update', 'more']
+        : top
+          ? [pendingButton(top, this.paysOnline()), next, 'more']
+          : ['update', 'problem', 'more'];
     return sayWithTaps(this.db, chat, body.join('\n'), taps);
   }
 

@@ -1,20 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  type DatabaseExecutor,
-  documents,
-  leads,
-  waConversations,
-  waMessages,
-} from '@oneohm/database';
+import { type DatabaseExecutor, documents, leads, waMessages } from '@oneohm/database';
 import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logLead } from '../crm/lead-history';
+import { customerHomes } from '../customer-portal/customer-homes';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
-import { answersRequests, homeForFile, placeOn } from './assistant/file-home';
+import { placeOn } from './assistant/kept-files';
 import {
   answersSomething,
   isFiled,
@@ -39,8 +34,8 @@ import type { Incoming, IncomingMedia } from './whatsapp-events';
 @Injectable()
 export class ChatFileKeeper {
   private readonly log = new Logger('WhatsApp');
-  /** Files just refused as too large, so the assistant can tell the customer why. */
-  private readonly tooLarge = new Set<string>();
+  /** Files just refused, so the assistant can tell the customer why (said once, and true). */
+  private readonly refused = new Map<string, 'too_large' | 'wrong_type'>();
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -71,9 +66,11 @@ export class ChatFileKeeper {
     }
   }
 
-  /** True once after `keep` refused this file as too large. */
-  wasTooLarge(mediaId: string): boolean {
-    return this.tooLarge.delete(mediaId);
+  /** Why `keep` refused this file (once): too big, or a kind we cannot open; null if neither. */
+  refusalFor(mediaId: string): 'too_large' | 'wrong_type' | null {
+    const why = this.refused.get(mediaId) ?? null;
+    this.refused.delete(mediaId);
+    return why;
   }
 
   /**
@@ -96,21 +93,14 @@ export class ChatFileKeeper {
       // Filed by the assistant already (saved on its home, or waiting on "Which paper?").
       if (await isFiled(this.db, documentId))
         return await this.tellKept(this.db, chat, message, media);
-      // The chat as it is now: a home picked while this file was answered counts.
-      const [now] = await this.db
-        .select({ context: waConversations.context })
-        .from(waConversations)
-        .where(eq(waConversations.id, chat.id));
-      const { homes, choice } = await homeForFile(this.db, now ?? chat, chat.customerId);
-      const place = choice && choice !== 'ask' ? placeOn(homes, choice) : null;
-      // A voice note, video, Word or Excel file is kept as `other`, even on the person row.
-      const [kept] = await this.db
-        .select({ contentType: documents.contentType })
-        .from(documents)
-        .where(eq(documents.id, documentId));
-      const sound = !kept || !answersRequests(kept.contentType);
+      // A photo or paper waits for "What is this?" (asked a moment after the last file); only
+      // a voice note or video goes on the customer's one home, since nothing asks about it.
+      const sound = media.type === 'audio' || media.type === 'video';
+      const homes = sound ? await customerHomes(this.db, chat.customerId) : [];
+      const [only] = homes;
+      const place = homes.length === 1 && only ? placeOn(homes, only.propertyId, 'other') : null;
       await this.db.transaction(async (tx) => {
-        if (place) await filePaper(tx, documentId, sound ? { ...place, category: 'other' } : place);
+        if (place) await filePaper(tx, documentId, place);
         await this.tellKept(tx, chat, message, media, leftToSort(place, sound));
       });
     } catch (error) {
@@ -191,8 +181,7 @@ export class ChatFileKeeper {
       download = await this.gateway.download(media);
     } catch (error) {
       if (error instanceof MediaTooLargeError) {
-        if (this.tooLarge.size > 100) this.tooLarge.clear();
-        this.tooLarge.add(media.id);
+        this.refuse(media.id, 'too_large');
       }
       throw error;
     }
@@ -204,9 +193,15 @@ export class ChatFileKeeper {
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
       this.log.warn(`WhatsApp file ${media.id} refused: ${error.message}`);
+      this.refuse(media.id, error.fieldErrors?.file === 'Too large.' ? 'too_large' : 'wrong_type');
       await this.tellLost(chat, message, media, error.message);
       return null;
     }
+  }
+
+  private refuse(mediaId: string, why: 'too_large' | 'wrong_type') {
+    if (this.refused.size > 100) this.refused.clear();
+    this.refused.set(mediaId, why);
   }
 
   private tellKept(

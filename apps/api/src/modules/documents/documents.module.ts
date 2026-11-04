@@ -30,6 +30,6 @@ import { ObjectStorageService } from './object-storage.service';
     DocumentRequestsService,
     DocumentThumbnailsService,
   ],
-  exports: [CompanyAssetsService, ObjectStorageService],
+  exports: [CompanyAssetsService, ObjectStorageService, DocumentMoveService],
 })
 export class DocumentsModule {}

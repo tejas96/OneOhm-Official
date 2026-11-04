@@ -1,11 +1,11 @@
 import { customerActions, type DatabaseExecutor, documents, projects } from '@oneohm/database';
-import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { isFiled } from '../chat-files-kept';
 import type { PaperPlace } from '../file-paper';
-import type { KeptFile } from './file-home';
-import type { EarlierPaper, FilePaper, OpenPaper } from './paper-match';
+import type { KeptFile } from './kept-files';
+import type { OpenPaper } from './paper-match';
 
-// The reads behind "Which paper is this?": a customer's open requests and kept files.
+// The reads behind "What is this?": a customer's open requests and kept files.
 
 /** The customer's open requests, oldest first, with the home of each one's project. */
 export async function openPapersOf(db: DatabaseExecutor, customerId: string): Promise<OpenPaper[]> {
@@ -29,58 +29,6 @@ export async function openPapersOf(db: DatabaseExecutor, customerId: string): Pr
       ),
     )
     .orderBy(asc(customerActions.createdAt), asc(customerActions.id));
-}
-
-/** The request of this customer picked a moment ago, as it is now. */
-export async function earlierPaper(
-  db: DatabaseExecutor,
-  customerId: string,
-  remembered: FilePaper | null,
-): Promise<EarlierPaper | null> {
-  if (!remembered || remembered.requestId === 'none') return null;
-  const [row] = await db
-    .select({
-      id: customerActions.id,
-      title: customerActions.title,
-      status: customerActions.status,
-      documentId: customerActions.documentId,
-    })
-    .from(customerActions)
-    .where(
-      and(eq(customerActions.id, remembered.requestId), eq(customerActions.customerId, customerId)),
-    );
-  return row ?? null;
-}
-
-/**
- * The customer's files among these still free for a paper: not removed, not on a problem
- * and not the answer to a request, in order.
- */
-export async function freeFiles(
-  db: DatabaseExecutor,
-  customerId: string,
-  documentIds: readonly string[],
-): Promise<KeptFile[]> {
-  if (documentIds.length === 0) return [];
-  const own = await db
-    .select({ id: documents.id, contentType: documents.contentType })
-    .from(documents)
-    .where(
-      and(
-        inArray(documents.id, [...documentIds]),
-        eq(documents.customerId, customerId),
-        isNull(documents.removedAt),
-        isNull(documents.serviceRequestId),
-        notExists(
-          db
-            .select({ id: customerActions.id })
-            .from(customerActions)
-            .where(eq(customerActions.documentId, documents.id)),
-        ),
-      ),
-    );
-  const byId = new Map(own.map((file) => [file.id, file]));
-  return documentIds.flatMap((id) => byId.get(id) ?? []);
 }
 
 /** The customer's own kept files among these, not removed and not filed yet, in order. */

@@ -5,13 +5,13 @@ import type { Incoming } from '../whatsapp-events';
 import { isChoiceTap } from './chat-choices';
 import { heldStep } from './chat-step';
 import { isPaperTap } from './customer-papers';
+import { isWhatTap } from './files-wait';
 import { readQuoteTap } from './quote-actions';
 
-/** The rating rows, the which-home rows of a complaint and of a file, and the which-paper rows. */
 /** The stranger buttons (review F5, audit L18). */
 const STRANGER_TAPS = new Set(['callback', 'human']);
-const OWN_TAP =
-  /^(rate:[1-5]|f?home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|f(home:person|paper:none)|fpaper:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+/** The rating rows and the which-home rows of a complaint. */
+const OWN_TAP = /^(rate:[1-5]|home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 
 /**
  * Taps the assistant answers even while a person has the chat (live review B4, B5): the
@@ -32,7 +32,7 @@ export function assistantAnswersTap(
   if (own || readQuoteTap(incoming.choiceId)) return true;
   const id = incoming.choiceId;
   if (chat.customerId === null) return STRANGER_TAPS.has(id);
-  return isChoiceTap(id) || isPaperTap(id) || OWN_TAP.test(id);
+  return isChoiceTap(id) || isPaperTap(id) || isWhatTap(id) || OWN_TAP.test(id);
 }
 
 /**

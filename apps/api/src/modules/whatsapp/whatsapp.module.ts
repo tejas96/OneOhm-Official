@@ -10,8 +10,8 @@ import { ReportsModule } from '../reports/reports.module';
 import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
-import { FileHomeFlowService } from './assistant/file-home-flow';
-import { FilePaperFlowService } from './assistant/file-paper-flow';
+import { FileQuestionsService } from './assistant/file-questions';
+import { FileQuestionsController } from './assistant/file-questions.controller';
 import { FreeTextService } from './assistant/free-text';
 import { HandOverService } from './assistant/hand-over';
 import { HomeService } from './assistant/home';
@@ -21,6 +21,7 @@ import { PaperRepliesService } from './assistant/paper-replies';
 import { ProblemFlowService } from './assistant/problem-flow';
 import { QuoteActionsService } from './assistant/quote-actions';
 import { StrangerFlowService } from './assistant/stranger-flow';
+import { WhatAnswerService } from './assistant/what-answer';
 import { ChatFileKeeper } from './chat-file-keeper';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
@@ -51,6 +52,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     WhatsAppWebhookController,
     SharedFilesController,
     OnboardingNudgesController,
+    FileQuestionsController,
   ],
   providers: [
     AssistantService,
@@ -63,8 +65,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     ChatFileKeeper,
     DeliveriesService,
     MediaIntakeService,
-    FileHomeFlowService,
-    FilePaperFlowService,
+    FileQuestionsService,
+    WhatAnswerService,
     ProblemFlowService,
     FeedbackFlowService,
     HandOverService,

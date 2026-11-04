@@ -24,9 +24,9 @@ export async function contactOf(db: DatabaseExecutor, customerId: string) {
  */
 export async function reopenRequest(
   tx: DatabaseExecutor,
-  userId: string,
+  userId: string | null,
   request: DocumentRequest,
-  change: { readonly note: string; readonly removePaper: boolean },
+  change: { readonly note: string; readonly removePaper: boolean; readonly quiet?: boolean },
 ): Promise<void> {
   const { id } = request;
   const { note } = change;
@@ -51,7 +51,7 @@ export async function reopenRequest(
       .where(and(eq(documents.id, request.documentId), isNull(documents.removedAt)));
   const reasks = (await reaskCount(tx, id)) + 1;
   const asked = { ...request, ...(await contactOf(tx, request.customerId)), ...reopened };
-  await tellAskedAgain(tx, asked, note, reasks, userId);
+  if (!change.quiet) await tellAskedAgain(tx, asked, note, reasks, userId);
   await logAction(tx, request, {
     kind: 'document_request',
     message: `Asked the customer again for ${request.title}`,

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentHome, DocumentRecord, MoveDocument } from '@oneohm/api-contracts';
-import { documents, projectActivities, projects } from '@oneohm/database';
+import { type DatabaseExecutor, documents, projectActivities, projects } from '@oneohm/database';
 import { isCustomerDocumentCategory, isPersonDocumentCategory } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -121,6 +121,51 @@ export class DocumentMoveService {
       throw conflict("That project is another customer's.", 'other_customer');
     }
     return { projectId, propertyId: project.propertyId, name: project.code };
+  }
+
+  /**
+   * The customer takes back where their WhatsApp papers went ([Change], redesign 5.2): each
+   * goes back to "not filed", in the caller's transaction, logged and audited like a move.
+   * A request a paper answered is asked again without telling the customer (they did it
+   * themselves). A paper the team already checked is left alone. Returns the ones released.
+   */
+  async release(
+    tx: DatabaseExecutor,
+    customerId: string,
+    documentIds: readonly string[],
+  ): Promise<string[]> {
+    const released: string[] = [];
+    for (const id of documentIds) {
+      const [paper] = await tx
+        .select()
+        .from(documents)
+        .where(and(eq(documents.id, id), eq(documents.customerId, customerId)));
+      if (!paper || paper.removedAt || paper.replacedAt || paper.checkedAt) continue;
+      await tx
+        .update(documents)
+        .set({ projectId: null, propertyId: null, category: 'other' })
+        .where(eq(documents.id, id));
+      if (paper.projectId)
+        await tx.insert(projectActivities).values({
+          projectId: paper.projectId,
+          kind: 'document',
+          message: `Paper moved: ${paper.name} → the customer is changing what it is`,
+          userId: null,
+          data: { documentId: id, from: paper.category, to: 'other' },
+        });
+      await recordAudit(tx, null, 'document.moved', 'document', id, {
+        via: 'whatsapp',
+        from: {
+          projectId: paper.projectId,
+          propertyId: paper.propertyId,
+          category: paper.category,
+        },
+        to: { projectId: null, propertyId: null, category: 'other' },
+      });
+      await settleAnsweredRequests(tx, null, id, { propertyId: null, category: 'other' }, true);
+      released.push(id);
+    }
+    return released;
   }
 
   /** A current paper of a customer, not a task's file. */

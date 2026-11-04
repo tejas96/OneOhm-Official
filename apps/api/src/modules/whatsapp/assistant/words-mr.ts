@@ -76,7 +76,8 @@ export const MR: Words<AssistantWords> = {
     photoNotAdded: 'फाइल तुमच्या समस्येला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
-    tooLarge: 'ही फाइल खूप मोठी आहे. कृपया लहान फोटो किंवा PDF पाठवा.',
+    tooLarge: 'ती फाइल खूप मोठी आहे (जास्तीत जास्त 25 MB). कृपया फोटो किंवा PDF पाठवा.',
+    wrongType: 'या प्रकारची फाइल आम्ही उघडू शकत नाही. कृपया फोटो किंवा PDF पाठवा.',
     failed: 'माफ करा, ती फाइल उघडता आली नाही. कृपया थोड्या वेळाने पुन्हा पाठवा.',
     whichHome: 'हे कोणत्या घरासाठी आहे?',
     personRow: 'आधार/पॅन (सर्व घरे)',

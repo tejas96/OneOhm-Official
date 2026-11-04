@@ -156,7 +156,7 @@ export async function tellAskedAgain(
   asked: Asked,
   reason: string,
   reasks: number,
-  userId: string,
+  userId: string | null,
 ) {
   const key = roundKey(`document_requested:${asked.id}`, reasks);
   const open = await openChat(tx, asked.phone);

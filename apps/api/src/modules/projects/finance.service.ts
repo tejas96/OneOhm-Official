@@ -141,7 +141,8 @@ export class FinanceService {
       const status = total >= milestone.amountPaise ? 'paid' : 'partly_paid';
       await tx
         .update(paymentMilestones)
-        .set({ status, updatedAt: new Date() })
+        // Recording a payment ends the wait a customer's proof of payment started.
+        .set({ status, remindersPausedUntil: null, updatedAt: new Date() })
         .where(eq(paymentMilestones.id, milestone.id));
       const open = await tx
         .select({ id: paymentMilestones.id })

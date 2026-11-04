@@ -17,9 +17,7 @@ import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
 import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
-import { fileHomeTapped } from './file-home';
-import { FileHomeFlowService } from './file-home-flow';
-import { FilePaperFlowService } from './file-paper-flow';
+import { readWhatTap, readWhereTap } from './files-wait';
 import { FreeTextService } from './free-text';
 import { readReferral } from './guess-category';
 import { tellHandedBack } from './hand-back';
@@ -32,13 +30,13 @@ import { inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
 import { answerOptOut, optOutAsked } from './opt-out';
-import { paperTapped } from './paper-match';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
+import { WhatAnswerService } from './what-answer';
 import { WORDS } from './words';
 
-/** The steps that wait for typed words; the others (which home, which paper) wait for a tap. */
+/** The steps that wait for typed words; the others (which home) wait for a tap. */
 const TEXT_STEPS = ['await_problem', 'await_referral', AWAIT_COMMENT];
 
 /**
@@ -60,8 +58,7 @@ export class AssistantService {
     private readonly quotes: QuoteActionsService,
     private readonly intake: LeadIntakeService,
     private readonly papers: PaperRepliesService,
-    private readonly fileHomes: FileHomeFlowService,
-    private readonly filePapers: FilePaperFlowService,
+    private readonly whatAnswers: WhatAnswerService,
     private readonly words: FreeTextService,
   ) {}
 
@@ -160,17 +157,17 @@ export class AssistantService {
   }
 
   /**
-   * A home picked for a complaint (menu audit M10): the complaint goes on that home. One
-   * picked for the files just sent ("Which home?"): they are filed on it; a paper picked
-   * for them ("Which paper?"): they answer it. Else null.
+   * A home picked for a complaint (menu audit M10): the complaint goes on that home. A tap
+   * on "What is this?" (or its Saved reply): the files waiting are filed as that; a home
+   * picked for them ("For which home?"): they go on it. Else null.
    */
   private homeTap(chat: Conversation, customerId: string, choiceId: string | null) {
     const home = homeTapped(choiceId);
     if (home) return pickHome(this.db, chat, customerId, home);
-    if (choiceId && fileHomeTapped(choiceId))
-      return this.fileHomes.tapped(chat, customerId, choiceId);
-    if (choiceId && paperTapped(choiceId))
-      return this.filePapers.tapped(chat, customerId, choiceId);
+    const what = readWhatTap(choiceId);
+    if (what) return this.whatAnswers.tapped(chat, customerId, what);
+    const where = readWhereTap(choiceId);
+    if (where) return this.whatAnswers.homeTapped(chat, customerId, where);
     return null;
   }
 
@@ -183,7 +180,6 @@ export class AssistantService {
   /** The step the chat waits on takes the message; false when it is not that step's. */
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
-    // The which-home and which-paper lists wait for a tap; typed words there are read as usual.
     if (incoming.kind === 'choice' || !TEXT_STEPS.includes(step)) return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
     else if (step === 'await_referral') await this.referral(chat, customerId, incoming);

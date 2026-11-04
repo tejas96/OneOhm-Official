@@ -34,9 +34,11 @@ export async function logOnHomeLead(
  */
 export async function settleAnsweredRequests(
   tx: DatabaseExecutor,
-  userId: string,
+  userId: string | null,
   documentId: string,
   now: { readonly propertyId: string | null; readonly category: string },
+  /** The customer moved it themselves, so they are not told their own change (WhatsApp [Change]). */
+  quiet = false,
 ): Promise<void> {
   const answered = await readRequests(
     tx,
@@ -51,13 +53,18 @@ export async function settleAnsweredRequests(
     if (request.category === now.category && sameHome) continue;
     const [open] = await openRequestsFor(tx, request.customerId, { ...request, propertyId: home });
     if (open) await closeSuperseded(tx, userId, request, open.id);
-    else await reopenRequest(tx, userId, request, { note: FILED_ELSEWHERE, removePaper: false });
+    else
+      await reopenRequest(tx, userId, request, {
+        note: FILED_ELSEWHERE,
+        removePaper: false,
+        quiet,
+      });
   }
 }
 
 async function closeSuperseded(
   tx: DatabaseExecutor,
-  userId: string,
+  userId: string | null,
   request: DocumentRequest,
   newerId: string,
 ) {

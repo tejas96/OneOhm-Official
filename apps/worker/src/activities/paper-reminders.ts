@@ -2,7 +2,6 @@ import {
   askForPaper,
   chatOwnerFor,
   customerActions,
-  customerHomes,
   customers,
   type Database,
   documents,
@@ -137,8 +136,8 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
 }
 
 /**
- * Files a customer sent on WhatsApp that stayed "to sort" (no home chosen) for over 2
- * hours, for a customer with 2 or more homes: the chat's person is told once, one alert
+ * Files a customer sent on WhatsApp that stayed "to sort" (not yet said what they are) for
+ * over 2 hours: the chat's person is told once, one alert
  * for all of the customer's waiting files. A later file makes a fresh alert (its key is
  * the newest file's), and running again says nothing twice.
  */
@@ -187,7 +186,7 @@ async function alertFilesToSort(db: Database, now: Date): Promise<number> {
       .from(notifications)
       .where(like(notifications.dedupeKey, `${key}:%`))
       .limit(1);
-    if (told || (await customerHomes(db, first.customerId)).length < 2) continue;
+    if (told) continue;
     const owner = first.chat.assignedUserId ?? (await chatOwnerFor(db, first.chat));
     await tellChatTeam(
       db,
@@ -197,8 +196,8 @@ async function alertFilesToSort(db: Database, now: Date): Promise<number> {
         title: `Files to sort from ${first.customer}`,
         body:
           files.size === 1
-            ? 'A file has no home yet. Open the chat and move it to the right home.'
-            : `${files.size} files have no home yet. Open the chat and move them to the right home.`,
+            ? 'A file has not been sorted yet. Open the chat and file it on the right home.'
+            : `${files.size} files have not been sorted yet. Open the chat and file them on the right home.`,
         key,
       },
     );
