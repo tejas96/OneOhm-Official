@@ -25,6 +25,8 @@ describe('removal tells customers', () => {
   let contactedPhone = '';
   let newLeadPhone = '';
   let quietPhone = '';
+  let stoppedPhone = '';
+  let stoppedCustomerId = '';
 
   const lead = async (stage: string, ownerId: string) => {
     const phone = uniquePhone();
@@ -75,6 +77,14 @@ describe('removal tells customers', () => {
       managerUserId: quiet.id,
     });
     quietPhone = quietSale.customer.phone;
+    // A customer who sent STOP is not messaged by WhatsApp or SMS, but still sees the news in the app.
+    const stopped = await sellProject(admin, {
+      name: 'Stopped Project (test)',
+      managerUserId: leaver.id,
+    });
+    stoppedPhone = stopped.customer.phone;
+    stoppedCustomerId = stopped.customer.customerId;
+    await rows('UPDATE customers SET whatsapp_opt_in = false WHERE id = $1', [stoppedCustomerId]);
     await remove(quiet, target, false);
     await remove(leaver, target, true);
   });
@@ -110,6 +120,15 @@ describe('removal tells customers', () => {
 
   it('queues nothing when tellCustomers is false', async () => {
     expect(await contactMessages(quietPhone)).toHaveLength(0);
+  });
+
+  it('respects STOP: no WhatsApp or SMS, but the app inbox still has the news', async () => {
+    expect(await contactMessages(stoppedPhone)).toHaveLength(0);
+    const inbox = await rows<{ kind: string }>(
+      "SELECT kind FROM notifications WHERE customer_id = $1 AND kind = 'contact_changed'",
+      [stoppedCustomerId],
+    );
+    expect(inbox).toHaveLength(1);
   });
 
   it('the customer home shows the new manager name', async () => {
