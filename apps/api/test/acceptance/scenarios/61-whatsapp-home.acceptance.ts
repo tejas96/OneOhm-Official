@@ -21,7 +21,7 @@ describe('WhatsApp Home (redesign §3)', () => {
   async function soldCustomer(name: string): Promise<Sale> {
     const sale = await sellProject(admin, { name });
     await rows(
-      `UPDATE document_requests SET status = 'cancelled', cancelled_at = now() WHERE customer_id = $1`,
+      `UPDATE customer_actions SET status = 'cancelled', cancelled_at = now() WHERE customer_id = $1`,
       [sale.customer.customerId],
     );
     return sale;

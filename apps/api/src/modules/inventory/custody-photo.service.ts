@@ -55,6 +55,7 @@ export class CustodyPhotoService {
           propertyId: row.propertyId,
           category: 'site_photo',
           source: 'upload',
+          checkedAt: new Date(),
           name: checked.name,
           storageKey,
           contentType: checked.contentType,

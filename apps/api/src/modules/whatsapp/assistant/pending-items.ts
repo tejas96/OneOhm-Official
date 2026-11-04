@@ -1,6 +1,6 @@
 import {
+  customerActions,
   type DatabaseExecutor,
-  documentRequests,
   paymentMilestones,
   payments,
   projects,
@@ -36,8 +36,8 @@ const homeOf = (label: string | null, city: string | null) => label?.trim() || c
 
 /**
  * Everything that needs this customer now, in Home's order, from one place. Open papers
- * come from the paper requests for now (phase 1b: "customer actions" replace this source);
- * then customer instalments due, service visits in the next 3 days, open problems and
+ * come from the customer actions of type paper (the other types join as their flows are
+ * built); then customer instalments due, service visits in the next 3 days, open problems and
  * sent quotations not yet accepted. `today` is the business day (YYYY-MM-DD).
  */
 export async function pendingForCustomer(
@@ -98,23 +98,27 @@ export async function pendingForCustomer(
 function openPapers(db: DatabaseExecutor, customerId: string) {
   return db
     .select({
-      id: documentRequests.id,
-      title: documentRequests.title,
-      category: documentRequests.category,
+      id: customerActions.id,
+      title: customerActions.title,
+      category: sql<string>`coalesce(${customerActions.category}, 'other')`,
       label: properties.label,
       city: properties.city,
     })
-    .from(documentRequests)
-    .leftJoin(projects, eq(projects.id, documentRequests.projectId))
-    .leftJoin(properties, eq(properties.id, projects.propertyId))
+    .from(customerActions)
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
+    .leftJoin(
+      properties,
+      eq(properties.id, sql`coalesce(${projects.propertyId}, ${customerActions.propertyId})`),
+    )
     .where(
       and(
-        eq(documentRequests.customerId, customerId),
-        eq(documentRequests.status, 'open'),
-        or(isNull(documentRequests.projectId), ne(projects.status, 'cancelled')),
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'paper'),
+        eq(customerActions.status, 'open'),
+        or(isNull(customerActions.projectId), ne(projects.status, 'cancelled')),
       ),
     )
-    .orderBy(asc(documentRequests.createdAt));
+    .orderBy(asc(customerActions.createdAt));
 }
 
 /** The customer's own instalments due now on active projects, with what is paid. */

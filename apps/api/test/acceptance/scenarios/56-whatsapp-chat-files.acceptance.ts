@@ -82,7 +82,7 @@ describe('WhatsApp chat files', () => {
       media: { type: 'document', fileId: 'held-paper', filename: 'aadhaar.pdf' },
     });
     const [request] = await rows<{ status: string; document_id: string }>(
-      `SELECT status::text AS status, document_id FROM document_requests WHERE id = $1`,
+      `SELECT status::text AS status, document_id FROM customer_actions WHERE id = $1`,
       [asked.id],
     );
     expect(request?.status).toBe('received');

@@ -75,6 +75,15 @@ export const documentsContract = c.router({
     summary:
       "File a customer's paper on another of their homes or as another kind. A request it answered that no longer matches is asked again.",
   },
+  checkDocument: {
+    method: 'POST',
+    path: '/documents/:id/check',
+    pathParams: z.object({ id: idSchema }),
+    body: z.object({}).optional(),
+    responses: { 200: documentSchema },
+    summary:
+      'Looks good: the paper the customer sent is checked, the request it answers closes and the customer is told (needs documents.upload).',
+  },
   documentHomes: {
     method: 'GET',
     path: '/documents/:id/homes',

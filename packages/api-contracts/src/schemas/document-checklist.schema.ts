@@ -11,6 +11,13 @@ export const checklistItemSchema = z.object({
   /** ready_to_save: a report whose data is complete but is not saved to documents yet. */
   status: z.enum(['present', 'missing', 'ready_to_save', 'not_ready']),
   documentIds: z.array(idSchema),
+  /**
+   * For a paper: missing, received but not checked yet (to_check), or checked. Null for a
+   * report. `status` still says only whether a file is there.
+   */
+  check: z.enum(['missing', 'to_check', 'checked']).nullable(),
+  /** The received request to ask again about, while the paper waits for its check. */
+  actionId: idSchema.nullable(),
   /** For reports not ready: what is missing, e.g. "Meter serial (Meter installation)". */
   missing: z.array(z.string()),
   /** For a missing paper the customer holds: the category to ask them for. */

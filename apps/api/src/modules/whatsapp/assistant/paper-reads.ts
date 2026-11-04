@@ -1,5 +1,5 @@
-import { type DatabaseExecutor, documentRequests, documents, projects } from '@oneohm/database';
-import { and, asc, eq, inArray, isNull, notExists } from 'drizzle-orm';
+import { customerActions, type DatabaseExecutor, documents, projects } from '@oneohm/database';
+import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
 import { isFiled } from '../chat-files-kept';
 import type { PaperPlace } from '../file-paper';
 import type { KeptFile } from './file-home';
@@ -11,15 +11,24 @@ import type { EarlierPaper, FilePaper, OpenPaper } from './paper-match';
 export async function openPapersOf(db: DatabaseExecutor, customerId: string): Promise<OpenPaper[]> {
   return db
     .select({
-      id: documentRequests.id,
-      title: documentRequests.title,
-      category: documentRequests.category,
-      propertyId: projects.propertyId,
+      id: customerActions.id,
+      title: customerActions.title,
+      category: sql<string>`coalesce(${customerActions.category}, 'other')`,
+      propertyId: sql<
+        string | null
+      >`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
+      requirementKey: customerActions.requirementKey,
     })
-    .from(documentRequests)
-    .leftJoin(projects, eq(projects.id, documentRequests.projectId))
-    .where(and(eq(documentRequests.customerId, customerId), eq(documentRequests.status, 'open')))
-    .orderBy(asc(documentRequests.createdAt), asc(documentRequests.id));
+    .from(customerActions)
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'paper'),
+        eq(customerActions.status, 'open'),
+      ),
+    )
+    .orderBy(asc(customerActions.createdAt), asc(customerActions.id));
 }
 
 /** The request of this customer picked a moment ago, as it is now. */
@@ -31,17 +40,14 @@ export async function earlierPaper(
   if (!remembered || remembered.requestId === 'none') return null;
   const [row] = await db
     .select({
-      id: documentRequests.id,
-      title: documentRequests.title,
-      status: documentRequests.status,
-      documentId: documentRequests.documentId,
+      id: customerActions.id,
+      title: customerActions.title,
+      status: customerActions.status,
+      documentId: customerActions.documentId,
     })
-    .from(documentRequests)
+    .from(customerActions)
     .where(
-      and(
-        eq(documentRequests.id, remembered.requestId),
-        eq(documentRequests.customerId, customerId),
-      ),
+      and(eq(customerActions.id, remembered.requestId), eq(customerActions.customerId, customerId)),
     );
   return row ?? null;
 }
@@ -67,9 +73,9 @@ export async function freeFiles(
         isNull(documents.serviceRequestId),
         notExists(
           db
-            .select({ id: documentRequests.id })
-            .from(documentRequests)
-            .where(eq(documentRequests.documentId, documents.id)),
+            .select({ id: customerActions.id })
+            .from(customerActions)
+            .where(eq(customerActions.documentId, documents.id)),
         ),
       ),
     );

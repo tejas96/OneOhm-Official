@@ -3,13 +3,17 @@ import {
   customerNotice,
   customers,
   type DatabaseExecutor,
+  homeNameOf,
   noticeCustomer,
+  roundKey,
   waConversations,
 } from '@oneohm/database';
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
+import { CHAT_WORDS } from '../whatsapp/assistant/chat-words';
+import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
+import type { ChatReply } from '../whatsapp/chat-reply';
 import { queueReply } from '../whatsapp/chat-store';
-import { homeNameOf, roundKey } from './document-request-home';
 
 // What the customer hears about a paper the team asked for (papers per home, review A).
 
@@ -17,6 +21,8 @@ interface Asked {
   readonly id: string;
   readonly projectId: string | null;
   readonly projectCode: string | null;
+  /** The home of a paper asked on a lead, which has no project yet. */
+  readonly propertyId?: string | null;
   readonly title: string;
   readonly customer: string;
   readonly phone: string;
@@ -30,18 +36,8 @@ export async function askCustomer(tx: DatabaseExecutor, asked: Asked, reasks: nu
   await askForPaper(tx, asked, roundKey(`document_requested:${asked.id}`, reasks));
 }
 
-/**
- * The paper is no longer needed: an app inbox alert, and the same words in WhatsApp while
- * the customer's chat window is open (a template needs Meta's approval; this does not).
- */
-export async function tellCancelled(
-  tx: DatabaseExecutor,
-  asked: Pick<Asked, 'id' | 'title' | 'phone'>,
-  userId: string,
-) {
-  const payload = { document: asked.title };
-  const key = `document_request_cancelled:${asked.id}`;
-  await noticeCustomer(tx, asked.phone, 'document_request_cancelled', payload, key);
+/** The customer's open WhatsApp chat (the 24-hour window) and the language it speaks, else null. */
+async function openChat(tx: DatabaseExecutor, phone: string) {
   const [chat] = await tx
     .select({
       id: waConversations.id,
@@ -52,21 +48,122 @@ export async function tellCancelled(
     })
     .from(waConversations)
     .leftJoin(customers, eq(customers.phoneE164, waConversations.phone))
-    .where(eq(waConversations.phone, asked.phone))
+    .where(eq(waConversations.phone, phone))
     .limit(1);
-  if (!chat || chat.optedOutAt || !chatWindowOpen(chat.at)) return;
-  const words = customerNotice('document_request_cancelled', payload, key, chat.language ?? '');
-  if (!words) return;
-  await queueReply(tx, chat, { kind: 'text', body: `${words.title}. ${words.body}` }, userId, key);
+  return !chat || chat.optedOutAt || !chatWindowOpen(chat.at) ? null : chat;
+}
+
+/**
+ * The same news in the customer's chat while the window is open (a template needs Meta's
+ * approval; this does not): their words, in their language, with the app's title and body.
+ */
+async function tellInChat(
+  tx: DatabaseExecutor,
+  asked: { readonly phone: string },
+  template: string,
+  payload: Readonly<Record<string, string>>,
+  key: string,
+  options: {
+    readonly userId: string | null;
+    /** What sits between the title and the body; null says the title alone. */
+    readonly join: string | null;
+    readonly tapPaper?: string;
+  },
+) {
+  const chat = await openChat(tx, asked.phone);
+  if (!chat) return false;
+  const words = customerNotice(template, payload, key, chat.language ?? '');
+  if (!words) return false;
+  const body = options.join === null ? words.title : `${words.title}${options.join}${words.body}`;
+  const reply: ChatReply = options.tapPaper
+    ? {
+        kind: 'buttons',
+        body,
+        buttons: [
+          {
+            id: `sendit:${options.tapPaper}`,
+            title: await inLanguage(
+              assistantLanguage(chat.language),
+              async () => CHAT_WORDS.buttons.sendItNow,
+            ),
+          },
+        ],
+      }
+    : { kind: 'text', body };
+  await queueReply(tx, chat, reply, options.userId, key);
+  return true;
+}
+
+/**
+ * The paper is no longer needed: an app inbox alert, and the same words in WhatsApp while
+ * the customer's chat window is open.
+ */
+export async function tellCancelled(
+  tx: DatabaseExecutor,
+  asked: Pick<Asked, 'id' | 'title' | 'phone'>,
+  userId: string,
+) {
+  const payload = { document: asked.title };
+  const key = `document_request_cancelled:${asked.id}`;
+  await noticeCustomer(tx, asked.phone, 'document_request_cancelled', payload, key);
+  await tellInChat(tx, asked, 'document_request_cancelled', payload, key, { userId, join: '. ' });
+}
+
+/** The reason as the end of a sentence: one full stop, never two. */
+const sentence = (reason: string) =>
+  /[.!?।]$/.test(reason.trim()) ? reason.trim() : `${reason.trim()}.`;
+
+/**
+ * "Not right, ask again": "Please send your {paper} again: {reason}." In an open chat it
+ * is words with [Send it now] (the app inbox says it too); outside the window the approved
+ * request template goes, with the reason in the app. Each round has its own key.
+ */
+export async function tellAskedAgain(
+  tx: DatabaseExecutor,
+  asked: Asked,
+  reason: string,
+  reasks: number,
+  userId: string,
+) {
+  const key = roundKey(`document_requested:${asked.id}`, reasks);
+  const open = await openChat(tx, asked.phone);
+  if (!open) {
+    await askForPaper(tx, { ...asked, reason }, key);
+    return;
+  }
+  const home = await homeNameOf(tx, asked.projectId, asked.propertyId ?? null);
+  const payload = { document: asked.title, reason, home };
+  await noticeCustomer(tx, asked.phone, 'paper_request', payload, key);
+  await tellInChat(tx, asked, 'paper_request', { ...payload, reason: sentence(reason) }, key, {
+    userId,
+    join: ': ',
+    tapPaper: asked.id,
+  });
+}
+
+/** The team checked the paper: "Your {paper} is checked ✅" in the app, and in an open chat. */
+export async function tellChecked(
+  tx: DatabaseExecutor,
+  asked: Pick<Asked, 'id' | 'title' | 'phone'>,
+  reasks: number,
+  userId: string,
+) {
+  const key = roundKey(`paper_checked:${asked.id}`, reasks);
+  await noticeCustomer(tx, asked.phone, 'paper_checked', { document: asked.title }, key);
+  // In the chat the paper's name is bold.
+  await tellInChat(tx, asked, 'paper_checked', { document: `*${asked.title}*` }, key, {
+    userId,
+    join: null,
+  });
 }
 
 /** A paper given to the team (by hand, email, a site visit) closed the request: the app says so. */
 export async function tellReceivedByTeam(
   tx: DatabaseExecutor,
-  asked: Pick<Asked, 'id' | 'projectId' | 'title' | 'phone'>,
+  asked: Pick<Asked, 'id' | 'projectId' | 'propertyId' | 'title' | 'phone'>,
   reasks: number,
 ) {
-  const home = await homeNameOf(tx, asked.projectId);
+  const home = await homeNameOf(tx, asked.projectId, asked.propertyId ?? null);
   await noticeCustomer(
     tx,
     asked.phone,

@@ -72,6 +72,14 @@ export const HINDI_WORDS: LanguageWords = {
       title: `कृपया ${p.document} भेजें`,
       body: `${p.home} पर आपके सोलर के लिए। इसे OneOhm ऐप से भेजें, या हमारी टीम को दे दें।`,
     }),
+    paper_again: (p) => ({
+      title: `कृपया अपना ${p.document} फिर से भेजें`,
+      body: p.reason ?? '',
+    }),
+    paper_checked: (p) => ({
+      title: `आपका ${p.document} जाँच लिया गया ✅`,
+      body: 'धन्यवाद।',
+    }),
     document_request_cancelled: (p) => ({
       title: `${p.document} की अब ज़रूरत नहीं है`,
       body: 'आपको इसे भेजने की ज़रूरत नहीं है।',

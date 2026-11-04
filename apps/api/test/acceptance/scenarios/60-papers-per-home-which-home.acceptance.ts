@@ -159,7 +159,7 @@ describe('Papers per home: which home', () => {
     const [voice, photo] = await customerDocs(customer.customerId);
     expect(voice).toMatchObject({ project_id: project.id, property_id: customer.propertyId });
     const [request] = await rows<{ status: string; document_id: string }>(
-      'SELECT status::text AS status, document_id FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status, document_id FROM customer_actions WHERE id = $1',
       [asked.id],
     );
     expect(request).toEqual({ status: 'received', document_id: photo?.id });

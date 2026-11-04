@@ -469,6 +469,23 @@ Replaced: "only home with open requests → auto-file", 30-min batch glue, the A
 `file-home.ts`, `file-home-flow.ts`, `file-paper-flow.ts`, `media-intake.ts`, `paper-reminders.ts`,
 document requests → customer actions.
 
+### 22a. Built in phase 1b (customer actions)
+
+- Table `customer_actions` (type, status `open → received → closed`, `cancelled`) replaced
+  `document_requests`; migration `0073` copies every row (ids, times, files, notes, askers), takes all
+  papers already on file as checked, then drops the old table. Only type `paper` has a flow.
+- Audit: new rows use entity `customer_action` and actions `customer_action.{created,answered,reasked,
+  cancelled,checked,superseded}`; rows written before 0073 keep `document_request.*` (readers count both).
+  Project log kinds (`document_request`, `document_received`) are unchanged.
+- A paper the customer sends arrives unchecked (`documents.checked_at` empty); the team's own uploads
+  are checked on upload and close the request at once. `POST /documents/:id/check` (Looks good) closes
+  the request and tells the customer; `POST /document-requests/:id/reask` (Ask again, reason 2..300)
+  reopens it and tells the customer the reason.
+- Duplicate rule: the same open `requirement_key` on the same home (a person's paper: same customer);
+  a caller with no key is compared by kind. The ask sheet keys free asks by kind and words, so Aadhaar
+  and PAN can be asked together.
+- Paper asks may be made on a lead with a site; they move to the project when it is made.
+
 ## 23. Build order (each phase tested live on your phone)
 
 1. **Foundation:** words dictionary + length tests; Home + More; small talk; unknown text; hand-over /

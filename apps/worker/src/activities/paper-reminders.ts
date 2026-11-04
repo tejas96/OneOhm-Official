@@ -1,10 +1,10 @@
 import {
   askForPaper,
   chatOwnerFor,
+  customerActions,
   customerHomes,
   customers,
   type Database,
-  documentRequests,
   documents,
   notifications,
   notifyCover,
@@ -76,36 +76,41 @@ async function tellAsker(db: Database, request: WaitingRequest, unmatched: numbe
  */
 async function remindOpenRequests(db: Database, now: Date, timeZone: string): Promise<number> {
   // The team asking again starts a new round: its age and its keys count from there.
-  const reasks = sql<number>`(select count(*)::int from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked')`;
-  const askedAt = sql<Date>`greatest(${documentRequests.createdAt}, coalesce((select max(a.created_at) from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked'), ${documentRequests.createdAt}))`;
+  // Rows from before customer actions were audited as `document_request.*`.
+  const reasked = sql`a.entity in ('customer_action', 'document_request') and a.action in ('customer_action.reasked', 'document_request.reasked')`;
+  const reasks = sql<number>`(select count(*)::int from audit_log a where ${reasked} and a.entity_id = ${customerActions.id}::text)`;
+  const askedAt = sql<Date>`greatest(${customerActions.createdAt}, coalesce((select max(a.created_at) from audit_log a where ${reasked} and a.entity_id = ${customerActions.id}::text), ${customerActions.createdAt}))`;
   const at = (ms: number) => new Date(now.getTime() - ms);
   const open = await db
     .select({
-      id: documentRequests.id,
-      title: documentRequests.title,
-      projectId: documentRequests.projectId,
+      id: customerActions.id,
+      title: customerActions.title,
+      projectId: customerActions.projectId,
       projectCode: projects.code,
-      customerId: documentRequests.customerId,
-      propertyId: projects.propertyId,
+      customerId: customerActions.customerId,
+      propertyId: sql<
+        string | null
+      >`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
       managerUserId: projects.managerUserId,
-      requestedByUserId: documentRequests.requestedByUserId,
+      requestedByUserId: customerActions.requestedByUserId,
       askedAt: sql<Date>`${askedAt}`.mapWith((value) => new Date(value as string)),
       round: reasks,
       customer: customers.name,
       phone: customers.phoneE164,
     })
-    .from(documentRequests)
-    .innerJoin(customers, eq(customers.id, documentRequests.customerId))
-    .leftJoin(projects, eq(projects.id, documentRequests.projectId))
+    .from(customerActions)
+    .innerJoin(customers, eq(customers.id, customerActions.customerId))
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        eq(documentRequests.status, 'open'),
+        eq(customerActions.type, 'paper'),
+        eq(customerActions.status, 'open'),
         // A cancelled project needs no papers.
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
         lte(askedAt, at(CUSTOMER_AFTER)),
         gt(askedAt, at(TEAM_UNTIL)),
         // Once the asker has been told for this round, there is nothing left to do.
-        sql`not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${documentRequests.id}::text || ':' || ${reasks}::text || ':%')`,
+        sql`not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${customerActions.id}::text || ':' || ${reasks}::text || ':%')`,
       ),
     )
     .orderBy(asc(askedAt))

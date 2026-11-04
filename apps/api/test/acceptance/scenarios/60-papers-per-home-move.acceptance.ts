@@ -12,7 +12,7 @@ import { newCustomer, sellProject } from '../support/sales';
 const requestOf = async (id: string) =>
   (
     await rows<{ status: string; document_id: string | null; note: string }>(
-      'SELECT status::text AS status, document_id, note FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status, document_id, reason AS note FROM customer_actions WHERE id = $1',
       [id],
     )
   )[0];
@@ -163,7 +163,7 @@ describe('Papers per home: move / change kind', () => {
     });
     const doc = await upload(admin, 'document', { projectId: project.id, category: 'other' });
     await move(doc.id, { projectId: farm.projectId, category: 'electricity_bill' });
-    expect(await requestOf(farmBill.id)).toMatchObject({ status: 'received', document_id: doc.id });
+    expect(await requestOf(farmBill.id)).toMatchObject({ status: 'closed', document_id: doc.id });
   });
 
   it('a paper moves to a lead-only home, changes kind there, and joins its project', async () => {

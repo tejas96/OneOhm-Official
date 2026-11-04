@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
-import { customers, type DatabaseExecutor, documentRequests, documents } from '@oneohm/database';
+import { customerActions, customers, type DatabaseExecutor, documents } from '@oneohm/database';
 import { ACCEPTED_FILE_TYPES } from '@oneohm/domain';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -25,7 +25,7 @@ export class CustomerDocumentRequestsService {
   async list(customerId: string): Promise<CustomerDocumentRequest[]> {
     const rows = await readRequests(
       this.db,
-      and(eq(documentRequests.customerId, customerId), ne(documentRequests.status, 'cancelled')),
+      and(eq(customerActions.customerId, customerId), ne(customerActions.status, 'cancelled')),
     );
     return rows.map(forCustomer);
   }
@@ -46,8 +46,9 @@ export class CustomerDocumentRequestsService {
         .values({
           customerId,
           projectId: asked.projectId,
-          propertyId: await propertyOfProject(tx, asked.projectId),
-          category: asked.category,
+          leadId: asked.leadId,
+          propertyId: (await propertyOfProject(tx, asked.projectId)) ?? asked.propertyId,
+          category: asked.category ?? 'other',
           source: 'upload',
           name: checked.name,
           storageKey,
@@ -96,8 +97,9 @@ export class CustomerDocumentRequestsService {
         .update(documents)
         .set({
           projectId: asked.projectId,
-          propertyId: await propertyOfProject(tx, asked.projectId),
-          category: asked.category,
+          leadId: asked.leadId,
+          propertyId: (await propertyOfProject(tx, asked.projectId)) ?? asked.propertyId,
+          category: asked.category ?? 'other',
           name: `${asked.title.trim().slice(0, 150)}${extension}`,
         })
         .where(eq(documents.id, documentId));
@@ -111,16 +113,22 @@ export class CustomerDocumentRequestsService {
 
   private async openRequest(customerId: string, id: string, db: DatabaseExecutor = this.db) {
     const [request] = await db
-      .select({ asked: documentRequests, customer: customers.name })
-      .from(documentRequests)
-      .innerJoin(customers, eq(customers.id, documentRequests.customerId))
-      .where(and(eq(documentRequests.id, id), eq(documentRequests.customerId, customerId)))
+      .select({ asked: customerActions, customer: customers.name })
+      .from(customerActions)
+      .innerJoin(customers, eq(customers.id, customerActions.customerId))
+      .where(
+        and(
+          eq(customerActions.id, id),
+          eq(customerActions.customerId, customerId),
+          eq(customerActions.type, 'paper'),
+        ),
+      )
       .limit(1);
     if (!request) throw notFound('That request');
     const { asked } = request;
     if (asked.status !== 'open') {
       throw conflict(
-        asked.status === 'received'
+        asked.status === 'received' || asked.status === 'closed'
           ? 'You have already sent this. Thank you.'
           : 'This paper is no longer needed.',
         asked.status,
@@ -130,7 +138,7 @@ export class CustomerDocumentRequestsService {
   }
 
   private async read(id: string, db: DatabaseExecutor = this.db): Promise<CustomerDocumentRequest> {
-    const [updated] = await readRequests(db, eq(documentRequests.id, id));
+    const [updated] = await readRequests(db, eq(customerActions.id, id));
     if (!updated) throw notFound('That request');
     return forCustomer(updated);
   }

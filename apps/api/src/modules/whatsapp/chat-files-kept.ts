@@ -1,4 +1,4 @@
-import { type DatabaseExecutor, documentRequests, documents } from '@oneohm/database';
+import { customerActions, type DatabaseExecutor, documents } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../config/core.module';
 import type { ObjectStorageService } from '../documents/object-storage.service';
@@ -87,9 +87,9 @@ export async function isFiled(db: DatabaseExecutor, documentId: string): Promise
     return true;
   if (document.category !== 'other') return true;
   const [answer] = await db
-    .select({ id: documentRequests.id })
-    .from(documentRequests)
-    .where(eq(documentRequests.documentId, documentId))
+    .select({ id: customerActions.id })
+    .from(customerActions)
+    .where(eq(customerActions.documentId, documentId))
     .limit(1);
   return Boolean(answer);
 }
@@ -102,9 +102,9 @@ export async function answersSomething(db: DatabaseExecutor, documentId: string)
     .where(eq(documents.id, documentId));
   if (!document || document.serviceRequestId) return true;
   const [answer] = await db
-    .select({ id: documentRequests.id })
-    .from(documentRequests)
-    .where(eq(documentRequests.documentId, documentId))
+    .select({ id: customerActions.id })
+    .from(customerActions)
+    .where(eq(customerActions.documentId, documentId))
     .limit(1);
   return Boolean(answer);
 }

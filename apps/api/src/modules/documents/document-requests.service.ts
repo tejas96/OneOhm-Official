@@ -5,23 +5,36 @@ import type {
   NewDocumentRequest,
   ReaskDocumentRequest,
 } from '@oneohm/api-contracts';
-import { customers, documentRequests, projectActivities, projects } from '@oneohm/database';
+import { customerActions, customers, leads, projects } from '@oneohm/database';
+import { nextActionStatus } from '@oneohm/domain';
 import { eq, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
-import { propertyOfProject } from './document-links';
-import { openRequestsFor } from './document-request-home';
+import { homeOfRequest, openRequestsFor } from './document-request-home';
 import { askCustomer, tellCancelled } from './document-request-messages';
 import { readRequests } from './document-request-read';
 import { contactOf, reopenRequest } from './document-request-reopen';
 
+/** Where a paper is asked: a project, or a lead's site before any project exists. */
+interface Target {
+  readonly customerId: string;
+  readonly customer: string;
+  readonly phone: string;
+  readonly projectId: string | null;
+  readonly projectCode: string | null;
+  readonly leadId: string | null;
+  readonly propertyId: string | null;
+}
+
 /**
  * The team asks a customer for a paper only they hold, such as the latest electricity
- * bill (PRD 5.4, 6.1). The customer gets WhatsApp and an app alert, and answers in the app.
- * A home's paper is asked once per home; an ID or income paper once for the customer.
+ * bill (PRD 5.4, 6.1): a customer action of type paper. The customer gets WhatsApp and an
+ * app alert, and answers in the app or on WhatsApp; the team then checks the paper. A
+ * home's paper is asked once per checklist item; an ID or income paper once for the customer.
  */
 @Injectable()
 export class DocumentRequestsService {
@@ -30,61 +43,54 @@ export class DocumentRequestsService {
   async list(actor: Actor, query: DocumentRequestQuery): Promise<DocumentRequest[]> {
     if (!canViewAllDocuments(actor)) throw forbidden();
     const scope = [
-      query.projectId ? eq(documentRequests.projectId, query.projectId) : undefined,
-      query.customerId ? eq(documentRequests.customerId, query.customerId) : undefined,
+      query.projectId ? eq(customerActions.projectId, query.projectId) : undefined,
+      query.customerId ? eq(customerActions.customerId, query.customerId) : undefined,
+      query.leadId ? eq(customerActions.leadId, query.leadId) : undefined,
     ].filter((condition) => condition !== undefined);
     if (scope.length === 0) {
-      throw invalid('Choose a project or a customer.', { projectId: 'Required.' });
+      throw invalid('Choose a project, a lead or a customer.', { projectId: 'Required.' });
     }
     return readRequests(this.db, or(...scope));
   }
 
   async create(actor: Actor, input: NewDocumentRequest): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
-    const [project] = await this.db
-      .select({
-        id: projects.id,
-        code: projects.code,
-        customerId: customers.id,
-        propertyId: projects.propertyId,
-        customer: customers.name,
-        phone: customers.phoneE164,
-      })
-      .from(projects)
-      .innerJoin(customers, eq(customers.id, projects.customerId))
-      .where(eq(projects.id, input.projectId))
-      .limit(1);
-    if (!project) throw notFound('That project');
-    const [open] = await openRequestsFor(this.db, project.customerId, {
+    const target = await this.target(input);
+    const title = input.title.trim();
+    const requirementKey = input.requirementKey ?? null;
+    const [open] = await openRequestsFor(this.db, target.customerId, {
       category: input.category,
-      propertyId: project.propertyId,
+      propertyId: target.propertyId,
+      requirementKey,
     });
     if (open) throw conflict('The customer has already been asked for this.', 'already_asked');
     const id = await this.db.transaction(async (tx) => {
       const [row] = await tx
-        .insert(documentRequests)
+        .insert(customerActions)
         .values({
-          customerId: project.customerId,
-          projectId: project.id,
+          type: 'paper',
+          customerId: target.customerId,
+          projectId: target.projectId,
+          leadId: target.leadId,
+          propertyId: target.propertyId,
           category: input.category,
-          title: input.title.trim(),
+          title,
+          requirementKey,
           note: input.note?.trim() ?? '',
           requestedByUserId: actor.userId,
         })
-        .returning({ id: documentRequests.id });
-      if (!row) throw new Error('Document request insert returned nothing');
-      const { customer, phone } = project;
-      const asked = { id: row.id, projectId: project.id, projectCode: project.code };
-      await askCustomer(tx, { ...asked, customer, phone, title: input.title.trim() }, 0);
-      await tx.insert(projectActivities).values({
-        projectId: project.id,
+        .returning({ id: customerActions.id });
+      if (!row) throw new Error('Customer action insert returned nothing');
+      await askCustomer(tx, { ...target, id: row.id, title }, 0);
+      await logAction(tx, target, {
         kind: 'document_request',
-        message: `Asked the customer for ${input.title.trim()} (WhatsApp and app)`,
+        message: `Asked the customer for ${title} (WhatsApp and app)`,
         userId: actor.userId,
-        data: { documentRequestId: row.id },
+        data: { customerActionId: row.id },
       });
-      await recordAudit(tx, actor.userId, 'document_request.created', 'document_request', row.id, {
-        project: project.code,
+      await recordAudit(tx, actor.userId, 'customer_action.created', 'customer_action', row.id, {
+        type: 'paper',
+        ...(target.projectCode ? { project: target.projectCode } : { leadId: target.leadId }),
         category: input.category,
       });
       return row.id;
@@ -95,42 +101,42 @@ export class DocumentRequestsService {
   async cancel(actor: Actor, id: string): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
     const request = await this.one(id);
-    if (request.status !== 'open') {
+    if (!nextActionStatus('paper', request.status, 'cancel')) {
       throw conflict('Only an open request can be cancelled.', 'not_open');
     }
     const { phone } = await contactOf(this.db, request.customerId);
     await this.db.transaction(async (tx) => {
       await tx
-        .update(documentRequests)
+        .update(customerActions)
         .set({ status: 'cancelled', cancelledAt: new Date(), updatedAt: new Date() })
-        .where(eq(documentRequests.id, id));
-      if (request.projectId)
-        await tx.insert(projectActivities).values({
-          projectId: request.projectId,
-          kind: 'document_request',
-          message: `Request for ${request.title} cancelled`,
-          userId: actor.userId,
-          data: { documentRequestId: id },
-        });
-      await recordAudit(tx, actor.userId, 'document_request.cancelled', 'document_request', id);
+        .where(eq(customerActions.id, id));
+      await logAction(tx, request, {
+        kind: 'document_request',
+        message: `Request for ${request.title} cancelled`,
+        userId: actor.userId,
+        data: { customerActionId: id },
+      });
+      await recordAudit(tx, actor.userId, 'customer_action.cancelled', 'customer_action', id);
       await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
     });
     return this.one(id);
   }
 
   /**
-   * "Not right, ask again" on a received request: it opens again with the staff note the
-   * customer sees, the paper is taken off, and the customer is asked again.
+   * "Not right, ask again" on a received (or closed) request: it opens again with the
+   * staff reason the customer sees, the paper is taken off, and the customer is asked again.
    */
   async reask(actor: Actor, id: string, input: ReaskDocumentRequest): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
     const request = await this.one(id);
-    if (request.status !== 'received') {
+    if (!nextActionStatus('paper', request.status, 'ask_again')) {
       throw conflict('Only a received paper can be asked for again.', 'not_received');
     }
     // A newer request for the same paper may already be open: the customer is not asked twice.
-    const propertyId = await propertyOfProject(this.db, request.projectId);
-    const [open] = await openRequestsFor(this.db, request.customerId, { ...request, propertyId });
+    const [open] = await openRequestsFor(this.db, request.customerId, {
+      ...request,
+      propertyId: await homeOfRequest(this.db, id),
+    });
     if (open) throw conflict('The customer has already been asked for this.', 'already_asked');
     await this.db.transaction((tx) =>
       reopenRequest(tx, actor.userId, request, { note: input.note.trim(), removePaper: true }),
@@ -138,8 +144,47 @@ export class DocumentRequestsService {
     return this.one(id);
   }
 
+  /** The project's (or lead's) customer, contact and home for a new ask. */
+  private async target(input: NewDocumentRequest): Promise<Target> {
+    if (input.projectId) {
+      const [project] = await this.db
+        .select({
+          projectId: projects.id,
+          projectCode: projects.code,
+          customerId: customers.id,
+          propertyId: projects.propertyId,
+          customer: customers.name,
+          phone: customers.phoneE164,
+        })
+        .from(projects)
+        .innerJoin(customers, eq(customers.id, projects.customerId))
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+      if (!project) throw notFound('That project');
+      return { ...project, leadId: null };
+    }
+    const [lead] = await this.db
+      .select({
+        leadId: leads.id,
+        customerId: customers.id,
+        propertyId: leads.propertyId,
+        customer: customers.name,
+        phone: customers.phoneE164,
+      })
+      .from(leads)
+      .innerJoin(customers, eq(customers.id, leads.customerId))
+      .where(eq(leads.id, input.leadId ?? ''))
+      .limit(1);
+    if (!lead) {
+      throw invalid('Add the site to this lead first, then ask for its papers.', {
+        leadId: 'Add the site first.',
+      });
+    }
+    return { ...lead, projectId: null, projectCode: null };
+  }
+
   private async one(id: string): Promise<DocumentRequest> {
-    const [request] = await readRequests(this.db, eq(documentRequests.id, id));
+    const [request] = await readRequests(this.db, eq(customerActions.id, id));
     if (!request) throw notFound('That request');
     return request;
   }

@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { homeName } from './customer-homes';
 import { queueCustomerMessage } from './customer-message';
@@ -23,19 +23,31 @@ export async function paperRequestTemplate(
 }
 
 /**
- * How a message names the project's home: its site label, else its town, with the end of
- * its consumer number when another home of the customer has the same name. SOME_HOME
- * (said in the customer's language) when there is no project.
+ * How a message names the home a paper is asked on: the project's, else the lead's `propertyId`.
+ * Its site label, else its town, with the end of its consumer number when another home of the
+ * customer has the same name. SOME_HOME (said in the customer's language) when there is none.
  */
-export async function homeNameOf(db: DatabaseExecutor, projectId: string | null) {
+export async function homeNameOf(
+  db: DatabaseExecutor,
+  projectId: string | null,
+  propertyId: string | null = null,
+) {
   const [project] = projectId
     ? await db
-        .select({ propertyId: projects.propertyId, customerId: projects.customerId })
+        .select({ propertyId: projects.propertyId })
         .from(projects)
         .where(eq(projects.id, projectId))
         .limit(1)
     : [];
-  if (!project) return SOME_HOME;
+  const wanted = project?.propertyId ?? propertyId;
+  const [site] = wanted
+    ? await db
+        .select({ customerId: properties.customerId })
+        .from(properties)
+        .where(eq(properties.id, wanted))
+        .limit(1)
+    : [];
+  if (!site) return SOME_HOME;
   const homes = await db
     .select({
       propertyId: properties.id,
@@ -44,8 +56,8 @@ export async function homeNameOf(db: DatabaseExecutor, projectId: string | null)
       consumerNumber: properties.consumerNumber,
     })
     .from(properties)
-    .where(eq(properties.customerId, project.customerId));
-  const home = homes.find((one) => one.propertyId === project.propertyId);
+    .where(eq(properties.customerId, site.customerId));
+  const home = homes.find((one) => one.propertyId === wanted);
   return home ? homeName(home, homes) : SOME_HOME;
 }
 
@@ -59,9 +71,10 @@ export async function reaskCount(db: DatabaseExecutor, requestId: string): Promi
     .from(auditLog)
     .where(
       and(
-        eq(auditLog.entity, 'document_request'),
+        // Rows from before customer actions were audited as `document_request`.
+        inArray(auditLog.entity, ['customer_action', 'document_request']),
         eq(auditLog.entityId, requestId),
-        eq(auditLog.action, 'document_request.reasked'),
+        inArray(auditLog.action, ['customer_action.reasked', 'document_request.reasked']),
       ),
     );
   return row?.n ?? 0;
@@ -75,9 +88,13 @@ export const roundKey = (base: string, reasks: number) =>
 export interface AskedPaper {
   readonly projectId: string | null;
   readonly projectCode: string | null;
+  /** The home of a paper asked on a lead, which has no project yet. */
+  readonly propertyId?: string | null;
   readonly title: string;
   readonly customer: string;
   readonly phone: string;
+  /** Why the team asks again; the app says it, with the paper's name. */
+  readonly reason?: string;
 }
 
 /**
@@ -93,7 +110,7 @@ export async function askForPaper(
   chosen?: 'paper_request' | 'document_requested',
 ) {
   const template = chosen ?? (await paperRequestTemplate(db));
-  const home = await homeNameOf(db, asked.projectId);
+  const home = await homeNameOf(db, asked.projectId, asked.propertyId ?? null);
   return queueCustomerMessage(
     db,
     asked.phone,
@@ -104,6 +121,7 @@ export async function askForPaper(
       // WhatsApp's document_requested needs a project: plain words when there is none.
       project: asked.projectCode ?? home,
       home,
+      ...(asked.reason ? { reason: asked.reason } : {}),
     },
     dedupeKey,
   );

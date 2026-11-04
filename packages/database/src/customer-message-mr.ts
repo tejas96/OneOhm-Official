@@ -72,6 +72,14 @@ export const MARATHI_WORDS: LanguageWords = {
       title: `कृपया ${p.document} पाठवा`,
       body: `${p.home} येथील तुमच्या सोलरसाठी. OneOhm ॲपमधून पाठवा, किंवा आमच्या टीमकडे द्या.`,
     }),
+    paper_again: (p) => ({
+      title: `कृपया तुमचे ${p.document} पुन्हा पाठवा`,
+      body: p.reason ?? '',
+    }),
+    paper_checked: (p) => ({
+      title: `तुमचे ${p.document} तपासले ✅`,
+      body: 'धन्यवाद.',
+    }),
     document_request_cancelled: (p) => ({
       title: `${p.document} आता लागणार नाही`,
       body: 'तुम्हाला ते पाठवण्याची गरज नाही.',

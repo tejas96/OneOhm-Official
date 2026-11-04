@@ -77,7 +77,7 @@ describe('Papers per home', () => {
     );
     expect(answered.id).toBe(asked.id);
     const [request] = await rows<{ document_id: string }>(
-      'SELECT document_id FROM document_requests WHERE id = $1',
+      'SELECT document_id FROM customer_actions WHERE id = $1',
       [asked.id],
     );
     expect(await documentOf(request?.document_id ?? '')).toEqual([

@@ -1,6 +1,6 @@
-import { type DatabaseExecutor, documentRequests, projects } from '@oneohm/database';
+import { customerActions, type DatabaseExecutor, projects } from '@oneohm/database';
 import { ACCEPTED_FILE_TYPES, PERSON_DOCUMENT_CATEGORIES } from '@oneohm/domain';
-import { and, eq, isNotNull, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { type CustomerHome, customerHomes } from '../../customer-portal/customer-homes';
 import type { PaperPlace } from '../file-paper';
 import { STEP_MINUTES } from './chat-step';
@@ -84,15 +84,19 @@ export function withToSort(context: unknown, documentId: string, now: number): T
 /** The properties whose projects have open requests for a site paper (not ID or income). */
 async function openSiteRequestHomes(db: DatabaseExecutor, customerId: string) {
   const rows = await db
-    .selectDistinct({ propertyId: projects.propertyId })
-    .from(documentRequests)
-    .innerJoin(projects, eq(projects.id, documentRequests.projectId))
+    .selectDistinct({
+      propertyId: sql<
+        string | null
+      >`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
+    })
+    .from(customerActions)
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        eq(documentRequests.customerId, customerId),
-        eq(documentRequests.status, 'open'),
-        notInArray(documentRequests.category, [...PERSON_DOCUMENT_CATEGORIES]),
-        isNotNull(projects.propertyId),
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'paper'),
+        eq(customerActions.status, 'open'),
+        notInArray(customerActions.category, [...PERSON_DOCUMENT_CATEGORIES]),
       ),
     );
   return rows.map((row) => row.propertyId).filter((id): id is string => Boolean(id));

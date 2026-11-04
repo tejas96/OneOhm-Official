@@ -102,8 +102,8 @@ describe('WhatsApp inbound reliability', () => {
       ['Light bill (test)', 'electricity_bill'],
     ])
       await rows(
-        `INSERT INTO document_requests (customer_id, category, title, created_at)
-          VALUES ($1, $4, $2, now() - interval '1 hour' + $3::interval)`,
+        `INSERT INTO customer_actions (type, customer_id, category, title, created_at)
+          VALUES ('paper', $1, $4, $2, now() - interval '1 hour' + $3::interval)`,
         [
           customer.customerId,
           title,
@@ -123,7 +123,7 @@ describe('WhatsApp inbound reliability', () => {
     }
     await sendInbound(customer.phone, photo);
     const papers = await rows<{ title: string; status: string }>(
-      `SELECT title, status::text AS status FROM document_requests WHERE customer_id = $1
+      `SELECT title, status::text AS status FROM customer_actions WHERE customer_id = $1
         ORDER BY created_at`,
       [customer.customerId],
     );

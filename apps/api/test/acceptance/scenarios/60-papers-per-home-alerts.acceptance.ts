@@ -185,7 +185,7 @@ describe('Papers per home: alerts that were missing', () => {
     );
     expect(kept).toEqual([{ content_type: WORD, category: 'other' }]);
     const [request] = await rows<{ status: string }>(
-      'SELECT status::text AS status FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status FROM customer_actions WHERE id = $1',
       [asked.id],
     );
     expect(request?.status).toBe('open');

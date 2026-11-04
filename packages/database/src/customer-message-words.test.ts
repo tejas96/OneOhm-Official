@@ -146,3 +146,36 @@ describe('a paper asked for with no project', () => {
     );
   });
 });
+
+describe('a paper checked, and a paper asked again with the reason', () => {
+  const paper = { customer: 'Ramesh', document: 'Electricity bill', home: 'Sangli' };
+  const again = { ...paper, reason: 'The photo is blurred' };
+
+  it('says the checked paper in all three languages', () => {
+    expect(customerNotice('paper_checked', paper, 'k')?.title).toBe(
+      'Your Electricity bill is checked ✅',
+    );
+    for (const language of ['mr-IN', 'hi-IN']) {
+      const notice = customerNotice('paper_checked', paper, 'k', language);
+      expect(notice?.title, language).toContain('Electricity bill');
+      expect(notice?.title, language).toContain('✅');
+    }
+  });
+
+  it('puts the reason after "Please send your … again" for either request template', () => {
+    for (const template of ['document_requested', 'paper_request']) {
+      const notice = customerNotice(template, again, 'k');
+      expect(notice).toMatchObject({
+        kind: template,
+        title: 'Please send your Electricity bill again',
+        body: 'The photo is blurred',
+      });
+      for (const language of ['mr-IN', 'hi-IN']) {
+        const local = customerNotice(template, again, 'k', language);
+        expect(local?.body, `${template} ${language}`).toBe('The photo is blurred');
+        expect(local?.title, `${template} ${language}`).toContain('Electricity bill');
+        expect(local?.title, `${template} ${language}`).not.toBe(notice?.title);
+      }
+    }
+  });
+});

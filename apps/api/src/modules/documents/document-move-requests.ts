@@ -1,16 +1,11 @@
 import type { DocumentRequest } from '@oneohm/api-contracts';
-import {
-  type DatabaseExecutor,
-  documentRequests,
-  leads,
-  projectActivities,
-} from '@oneohm/database';
+import { customerActions, type DatabaseExecutor, leads } from '@oneohm/database';
 import { isPersonDocumentCategory } from '@oneohm/domain';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logLead } from '../crm/lead-history';
-import { propertyOfProject } from './document-links';
-import { openRequestsFor } from './document-request-home';
+import { logAction } from './customer-action-log';
+import { homeOfRequest, openRequestsFor } from './document-request-home';
 import { readRequests } from './document-request-read';
 import { reopenRequest } from './document-request-reopen';
 
@@ -45,10 +40,13 @@ export async function settleAnsweredRequests(
 ): Promise<void> {
   const answered = await readRequests(
     tx,
-    and(eq(documentRequests.documentId, documentId), eq(documentRequests.status, 'received')),
+    and(
+      eq(customerActions.documentId, documentId),
+      inArray(customerActions.status, ['received', 'closed']),
+    ),
   );
   for (const request of answered) {
-    const home = await propertyOfProject(tx, request.projectId);
+    const home = await homeOfRequest(tx, request.id);
     const sameHome = isPersonDocumentCategory(request.category) || home === now.propertyId;
     if (request.category === now.category && sameHome) continue;
     const [open] = await openRequestsFor(tx, request.customerId, { ...request, propertyId: home });
@@ -65,18 +63,21 @@ async function closeSuperseded(
 ) {
   const now = new Date();
   await tx
-    .update(documentRequests)
+    .update(customerActions)
     .set({ status: 'cancelled', documentId: null, cancelledAt: now, updatedAt: now })
-    .where(and(eq(documentRequests.id, request.id), eq(documentRequests.status, 'received')));
-  if (request.projectId)
-    await tx.insert(projectActivities).values({
-      projectId: request.projectId,
-      kind: 'document_request',
-      message: `Request for ${request.title} closed: paper filed on another home; newer request open`,
-      userId,
-      data: { documentRequestId: request.id, documentId: request.documentId, newerId },
-    });
-  await recordAudit(tx, userId, 'document_request.superseded', 'document_request', request.id, {
+    .where(
+      and(
+        eq(customerActions.id, request.id),
+        inArray(customerActions.status, ['received', 'closed']),
+      ),
+    );
+  await logAction(tx, request, {
+    kind: 'document_request',
+    message: `Request for ${request.title} closed: paper filed on another home; newer request open`,
+    userId,
+    data: { customerActionId: request.id, documentId: request.documentId, newerId },
+  });
+  await recordAudit(tx, userId, 'customer_action.superseded', 'customer_action', request.id, {
     documentId: request.documentId,
     newerId,
   });

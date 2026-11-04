@@ -56,6 +56,11 @@ export const documents = pgTable(
     contractorId: uuid('contractor_id').references(() => contractors.id, {
       onDelete: 'set null',
     }),
+    /** When the team looked at a paper the customer sent; staff papers are checked on upload. */
+    checkedAt: instant('checked_at'),
+    checkedByUserId: uuid('checked_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (table) => [

@@ -11,7 +11,7 @@ import { sellProject } from '../support/sales';
 const requestOf = async (id: string) =>
   (
     await rows<{ status: string; document_id: string | null; note: string }>(
-      'SELECT status::text AS status, document_id, note FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status, document_id, reason AS note FROM customer_actions WHERE id = $1',
       [id],
     )
   )[0];
@@ -84,7 +84,7 @@ describe('Papers per home: moves and requests', () => {
       'Request for Electricity bill (test) closed: paper filed on another home; newer request open',
     );
     const audit = await rows(
-      `SELECT 1 FROM audit_log WHERE action = 'document_request.superseded' AND entity_id = $1`,
+      `SELECT 1 FROM audit_log WHERE action = 'customer_action.superseded' AND entity_id = $1`,
       [first.id],
     );
     expect(audit).toHaveLength(1);

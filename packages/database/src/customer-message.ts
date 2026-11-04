@@ -64,6 +64,16 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Please send your ${p.document}`,
     body: `For your solar at ${p.home}. Send it from the OneOhm app, or give it to our team.`,
   }),
+  // The team asks again, with the reason (papers: redesign §2); the same words for both requests.
+  paper_again: (p) => ({
+    title: `Please send your ${p.document} again`,
+    body: p.reason ?? '',
+  }),
+  // The team looked at the paper and it is fine.
+  paper_checked: (p) => ({
+    title: `Your ${p.document} is checked ✅`,
+    body: 'Thank you.',
+  }),
   document_request_cancelled: (p) => ({
     title: `${p.document} is no longer needed`,
     body: 'You do not need to send it.',
@@ -120,7 +130,11 @@ export function customerNotice(
   dedupeKey: string,
   language?: string,
 ): Notice | null {
-  const words = localWords(language, template) ?? WORDS[template];
+  // A paper asked again carries the reason; the app says it in the same words either way.
+  const asked =
+    payload.reason && (template === 'document_requested' || template === 'paper_request');
+  const said = asked ? 'paper_again' : template;
+  const words = localWords(language, said) ?? WORDS[said];
   if (!words) return null;
   return { kind: template, ...words(payload), dedupeKey: `notice:${dedupeKey}` };
 }

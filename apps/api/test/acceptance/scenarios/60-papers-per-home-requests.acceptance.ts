@@ -11,7 +11,7 @@ import { sellProject } from '../support/sales';
 const requestOf = async (id: string) =>
   (
     await rows<{ status: string; document_id: string | null; note: string }>(
-      'SELECT status::text AS status, document_id, note FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status, document_id, reason AS note FROM customer_actions WHERE id = $1',
       [id],
     )
   )[0];
@@ -131,7 +131,7 @@ describe('Papers per home: requests', () => {
       category: 'electricity_bill',
       name: 'Bill given on site (test)',
     });
-    expect(await requestOf(bill.id)).toMatchObject({ status: 'received', document_id: doc.id });
+    expect(await requestOf(bill.id)).toMatchObject({ status: 'closed', document_id: doc.id });
     expect((await requestOf(farmBill.id))?.status).toBe('open');
     const [told] = await customerAlerts(customer.customerId, 'document_received_by_team');
     expect(told?.title).toContain('Electricity bill (test)');
@@ -151,7 +151,7 @@ describe('Papers per home: requests', () => {
       category: 'customer_kyc',
       name: 'Aadhaar given on site (test)',
     });
-    expect(await requestOf(kyc.id)).toMatchObject({ status: 'received', document_id: doc.id });
+    expect(await requestOf(kyc.id)).toMatchObject({ status: 'closed', document_id: doc.id });
     expect(await customerAlerts(customer.customerId, 'document_received_by_team')).toHaveLength(1);
   });
 

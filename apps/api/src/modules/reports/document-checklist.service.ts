@@ -1,13 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChecklistItem, DocumentChecklist } from '@oneohm/api-contracts';
-import { customers, discoms, documentRequests, documents, projects } from '@oneohm/database';
+import { customerActions, customers, discoms, documents, projects } from '@oneohm/database';
 import {
   countsForSite,
   customerCategoryFor,
   requirementsFor,
   type SiteScope,
+  sameAsk,
 } from '@oneohm/domain';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { customerHomes } from '../customer-portal/customer-homes';
@@ -53,6 +54,7 @@ export class DocumentChecklistService {
         reportKey: documents.reportKey,
         propertyId: documents.propertyId,
         projectId: documents.projectId,
+        checkedAt: documents.checkedAt,
       })
       .from(documents)
       .where(
@@ -66,7 +68,7 @@ export class DocumentChecklistService {
         ),
       );
     const files = filed.filter((file) => countsForSite(file, site));
-    const asked = await this.openRequests(project.project.customerId, site);
+    const asked = await this.requests(project.project.customerId, site);
     const needed = requirementsFor(await loadRequirements(this.db), {
       ...project.project,
       discomCode: project.discomCode,
@@ -80,6 +82,8 @@ export class DocumentChecklistService {
         )
         .map((file) => file.id);
       const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
+      const unchecked = files.filter((file) => ids.includes(file.id) && !file.checkedAt);
+      const waiting = asked.received.find((one) => one.documentId && ids.includes(one.documentId));
       return {
         key: requirement.key,
         label: requirement.label,
@@ -87,9 +91,18 @@ export class DocumentChecklistService {
         kind: 'paper',
         status: ids.length > 0 ? 'present' : 'missing',
         documentIds: ids,
+        check: ids.length === 0 ? 'missing' : unchecked.length > 0 ? 'to_check' : 'checked',
+        actionId: unchecked.length > 0 ? (waiting?.id ?? null) : null,
         missing: [],
         askCategory,
-        requested: askCategory !== null && asked.has(askCategory),
+        requested:
+          askCategory !== null &&
+          asked.open.some((one) =>
+            sameAsk(
+              { requirementKey: requirement.key, category: askCategory },
+              { requirementKey: one.requirementKey, category: one.category },
+            ),
+          ),
       };
     });
     const statuses = await this.statuses.statuses(projectId);
@@ -119,6 +132,8 @@ export class DocumentChecklistService {
             // Made only once the task it certifies is done (PRD 3.18 triggers).
             ...(status.waitingFor ? [`“${status.waitingFor}” to be done`] : []),
           ],
+          check: null,
+          actionId: null,
           askCategory: null,
           requested: false,
         };
@@ -133,12 +148,32 @@ export class DocumentChecklistService {
     };
   }
 
-  /** Categories the customer has been asked for and not yet sent. */
-  private async openRequests(customerId: string, site: SiteScope): Promise<ReadonlySet<string>> {
+  /** This home's paper requests: still open, and received (waiting for the team's check). */
+  private async requests(customerId: string, site: SiteScope) {
     const rows = await this.db
-      .select({ category: documentRequests.category, projectId: documentRequests.projectId })
-      .from(documentRequests)
-      .where(and(eq(documentRequests.customerId, customerId), eq(documentRequests.status, 'open')));
-    return new Set(rows.filter((row) => countsForSite(row, site)).map((row) => row.category));
+      .select({
+        id: customerActions.id,
+        category: customerActions.category,
+        requirementKey: customerActions.requirementKey,
+        status: customerActions.status,
+        documentId: customerActions.documentId,
+        projectId: customerActions.projectId,
+        propertyId: customerActions.propertyId,
+      })
+      .from(customerActions)
+      .where(
+        and(
+          eq(customerActions.customerId, customerId),
+          eq(customerActions.type, 'paper'),
+          inArray(customerActions.status, ['open', 'received']),
+        ),
+      );
+    const here = rows
+      .filter((row) => row.category && countsForSite({ ...row, category: row.category }, site))
+      .map((row) => ({ ...row, category: row.category as string }));
+    return {
+      open: here.filter((row) => row.status === 'open'),
+      received: here.filter((row) => row.status === 'received'),
+    };
   }
 }

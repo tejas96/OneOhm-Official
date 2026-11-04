@@ -13,7 +13,7 @@ import { sendInbound } from '../support/whatsapp';
 const requestOf = async (id: string) =>
   (
     await rows<{ status: string; document_id: string | null }>(
-      'SELECT status::text AS status, document_id FROM document_requests WHERE id = $1',
+      'SELECT status::text AS status, document_id FROM customer_actions WHERE id = $1',
       [id],
     )
   )[0];
@@ -90,7 +90,7 @@ describe('Papers per home: which paper', () => {
     const deed = await ask(project.id, 'property', 'Sale deed (test)');
     const tax = await ask(project.id, 'other', 'Tax receipt (test)');
     await sendInbound(customer.phone, { media: { type: 'image', fileId: 'stale-paper-1' } });
-    await rows("UPDATE document_requests SET status = 'cancelled' WHERE id = $1", [deed.id]);
+    await rows("UPDATE customer_actions SET status = 'cancelled' WHERE id = $1", [deed.id]);
     await tap(customer.phone, `fpaper:${deed.id}`);
     expect((await requestOf(deed.id))?.status).toBe('cancelled');
     const lists = await paperLists(customer.phone);

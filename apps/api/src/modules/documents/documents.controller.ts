@@ -13,6 +13,7 @@ import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import { CompanyAssetsService } from './company-assets.service';
 import { canViewAllDocuments } from './document-access';
+import { DocumentCheckService } from './document-check.service';
 import { DocumentMoveService } from './document-move.service';
 import { DocumentsService } from './documents.service';
 import { fileSystemPapers } from './system-papers-hook';
@@ -40,12 +41,14 @@ export class DocumentsController {
     private readonly documents: DocumentsService,
     private readonly assets: CompanyAssetsService,
     private readonly moves: DocumentMoveService,
+    private readonly checks: DocumentCheckService,
   ) {}
 
   @TsRestHandler({
     listDocuments: routes.listDocuments,
     documentFile: routes.documentFile,
     moveDocument: routes.moveDocument,
+    checkDocument: routes.checkDocument,
     documentHomes: routes.documentHomes,
     removeDocument: routes.removeDocument,
     companyAssets: routes.companyAssets,
@@ -56,6 +59,7 @@ export class DocumentsController {
         listDocuments: routes.listDocuments,
         documentFile: routes.documentFile,
         moveDocument: routes.moveDocument,
+        checkDocument: routes.checkDocument,
         documentHomes: routes.documentHomes,
         removeDocument: routes.removeDocument,
         companyAssets: routes.companyAssets,
@@ -86,6 +90,10 @@ export class DocumentsController {
         moveDocument: async ({ params, body }) => ({
           status: 200,
           body: await this.moves.move(actor, params.id, body),
+        }),
+        checkDocument: async ({ params }) => ({
+          status: 200,
+          body: await this.checks.check(actor, params.id),
         }),
         documentHomes: async ({ params }) => ({
           status: 200,

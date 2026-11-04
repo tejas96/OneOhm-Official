@@ -21,7 +21,7 @@ const ask = (admin: Session, projectId: string, title: string) =>
   });
 
 const askedHoursAgo = (id: string, hours: number) =>
-  rows('UPDATE document_requests SET created_at = $2 WHERE id = $1', [
+  rows('UPDATE customer_actions SET created_at = $2 WHERE id = $1', [
     id,
     new Date(Date.now() - hours * HOUR),
   ]);

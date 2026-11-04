@@ -9,6 +9,8 @@ export interface OpenPaper {
   readonly title: string;
   readonly category: string;
   readonly propertyId: string | null;
+  /** The checklist item it answers; absent on older requests. */
+  readonly requirementKey?: string | null;
 }
 
 /** The paper picked (or answered) for a home, kept in the chat's context for STEP_MINUTES. */
@@ -103,7 +105,7 @@ export function matchPaper(input: {
   if (remembered && earlier?.id === remembered.requestId) {
     const again = open.find((paper) => paper.id === earlier.id);
     if (again) return { kind: 'answer', request: again };
-    if (earlier.status === 'received' && earlier.documentId)
+    if ((earlier.status === 'received' || earlier.status === 'closed') && earlier.documentId)
       return { kind: 'same', title: earlier.title, documentId: earlier.documentId };
   }
   const [only] = open;
