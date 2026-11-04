@@ -30,7 +30,7 @@ export function MonthCard({ month }: { readonly month: MyRewards['month'] }) {
       </View>
       {month.missed.length === 0 ? (
         <Text variant="bodySm" tone="secondary">
-          {REWARDS.month.noneMissed}
+          {month.tasksJudged === 0 ? REWARDS.month.noneJudged : REWARDS.month.noneMissed}
         </Text>
       ) : (
         month.missed.map((line) => (

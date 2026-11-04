@@ -17,6 +17,8 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertMayDecide } from './leave-approver';
+import { clashesFor, NO_CLASHES } from './leave-clash-read';
 import { handOverWork, tellProjectManagers } from './leave-handover';
 import { affectedCount, affectedWork, type LeaveWindow, leaveImpact } from './leave-impact';
 import { loadPolicy } from './policy';
@@ -47,7 +49,14 @@ export class LeaveService {
 
   async list(where?: SQL): Promise<LeaveRequestRecord[]> {
     const policy = await loadPolicy(this.db);
-    return (await readLeave(this.db, policy, where)).map((item) => item.record);
+    const items = await readLeave(this.db, policy, where);
+    // Pending requests carry their clashes, for the approver and the person asking.
+    const pending = items.filter((item) => item.row.status === 'pending').map((item) => item.row);
+    const clashes = await clashesFor(this.db, pending);
+    return items.map((item) => ({
+      ...item.record,
+      clashes: clashes.get(item.row.id) ?? NO_CLASHES,
+    }));
   }
 
   async impact(actor: Actor, window: LeaveWindow): Promise<LeaveImpact> {
@@ -120,7 +129,7 @@ export class LeaveService {
     const [row] = await this.db.select().from(leaveRequests).where(eq(leaveRequests.id, id));
     if (!row) throw notFound('That leave request');
     const policy = await loadPolicy(this.db);
-    return leaveImpact(this.db, policy, row.userId, row, row.id);
+    return leaveImpact(this.db, policy, row.userId, row, row.id, row.backupUserId);
   }
 
   /**
@@ -139,8 +148,7 @@ export class LeaveService {
       if (!row) throw notFound('That leave request');
       if (row.status !== 'pending')
         throw conflict('This request has already been decided.', 'decided');
-      if (row.userId === actor.userId)
-        throw conflict('Someone else approves your own leave.', 'own');
+      await assertMayDecide(tx, actor.userId, row);
       const outcome = decision.approve
         ? await this.approve(tx, actor, row, decision)
         : { handed: 0, skipped: false, backupId: row.backupUserId };

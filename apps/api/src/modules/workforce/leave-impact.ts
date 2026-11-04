@@ -18,6 +18,7 @@ import {
 import { todayIn } from '@oneohm/shared';
 import { and, eq, isNotNull, lte, ne, notInArray, or } from 'drizzle-orm';
 import { backupsFor } from './leave-backups';
+import { clashesFor, NO_CLASHES } from './leave-clash-read';
 import { balancesOf, readLeave } from './workforce-read';
 
 export interface LeaveWindow {
@@ -136,6 +137,7 @@ export async function leaveImpact(
   userId: string,
   window: LeaveWindow,
   requestId?: string,
+  backupUserId: string | null = null,
 ): Promise<LeaveImpact> {
   const halfDays = leaveHalfDays({
     from: window.fromDate,
@@ -159,10 +161,13 @@ export async function leaveImpact(
       window.fromDate <= row.toDate,
   );
   const work = await affectedWork(db, userId, window);
+  const clashes = await clashesFor(db, [{ id: requestId, userId, backupUserId, ...window }]);
   return {
     halfDays,
     balanceAfterHalfDays: left - halfDays,
     overlapsExisting,
+    clashes: clashes.get(requestId ?? '') ?? NO_CLASHES,
+    dueInWindow: work.tasks.filter((task) => task.reason === 'due').length,
     tasks: work.tasks.map((task) => ({
       id: task.id,
       title: task.title,

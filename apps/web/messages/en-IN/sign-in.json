@@ -46,9 +46,9 @@
       "logoAlt": "OneOhm — Energy for everyone",
       "hello": {
         "morning": "Good morning",
-        "midday": "Good afternoon",
+        "afternoon": "Good afternoon",
         "evening": "Good evening",
-        "night": "Good evening"
+        "late": "Hello"
       },
       "line": {
         "morning": "The panels are waking up.",

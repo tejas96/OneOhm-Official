@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
+import { leaveClashesSchema } from './leave-impact.schema';
 
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 09:30.');
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -126,6 +127,8 @@ export const leaveRequestSchema = z.object({
   tasksHandedOver: z.number().int(),
   /** Emergency leave approved with work affected and nobody covering it. */
   handoverSkipped: z.boolean(),
+  /** For pending requests: leave that clashes (warnings only). */
+  clashes: leaveClashesSchema.default({ backupAway: [], covering: [] }),
   createdAt: instantSchema,
 });
 export type LeaveRequestRecord = z.infer<typeof leaveRequestSchema>;
@@ -186,7 +189,13 @@ export const myWorkdaySchema = z.object({
 });
 export type MyWorkday = z.infer<typeof myWorkdaySchema>;
 
-export { type LeaveImpact, leaveImpactSchema } from './leave-impact.schema';
+export {
+  type LeaveClashes,
+  type LeaveClashItem,
+  type LeaveImpact,
+  leaveClashesSchema,
+  leaveImpactSchema,
+} from './leave-impact.schema';
 
 export const correctionSchema = z.object({
   id: idSchema,

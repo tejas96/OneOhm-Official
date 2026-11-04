@@ -47,6 +47,8 @@ export class CapacityService {
           userId: leaveRequests.userId,
           from: leaveRequests.fromDate,
           to: leaveRequests.toDate,
+          halfDay: leaveRequests.halfDay,
+          status: leaveRequests.status,
         })
         .from(leaveRequests)
         .where(
@@ -78,8 +80,13 @@ export class CapacityService {
           own.map((task) => task.dueDate),
           weeks,
         ),
+        // Only approved leave is time away; pending leave is shown beside it.
         leaveDaysByWeek: leaveDaysByWeek(
-          leave.filter((row) => row.userId === id),
+          leave.filter((row) => row.userId === id && row.status === 'approved'),
+          weeks,
+        ),
+        pendingLeaveDaysByWeek: leaveDaysByWeek(
+          leave.filter((row) => row.userId === id && row.status === 'pending'),
           weeks,
         ),
       };

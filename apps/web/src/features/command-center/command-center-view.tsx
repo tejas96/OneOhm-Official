@@ -7,8 +7,9 @@ import { Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
-import { LoadError } from '@/components/query-state';
+import { BlockedPage, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { useCan } from '@/providers/current-user';
 import { ActionList } from './action-list';
 import { CenterFilterBar } from './center-filter-bar';
 import { CenterKpis } from './center-kpis';
@@ -35,8 +36,15 @@ const COLUMNS = 'grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.7fr
  */
 export function CommandCenterView() {
   const t = useTranslations('commandCenter');
+  if (!useCan('dashboard.view_business')) return <BlockedPage title={t('title')} />;
+  return <CommandCenterContent />;
+}
+
+function CommandCenterContent() {
+  const t = useTranslations('commandCenter');
   const format = useFormatter();
   const now = useNow({ updateInterval: 30_000 });
+  const canQuote = useCan('quotations.create');
   const { query } = useCenterFilters();
   const center = useQuery({
     queryKey: ['command-center', query],
@@ -62,9 +70,11 @@ export function CommandCenterView() {
             : undefined
         }
         actions={
-          <Button asChild variant="primary" leadingIcon={<Plus />}>
-            <Link href="/quotations/new">{t('newQuotation')}</Link>
-          </Button>
+          canQuote && (
+            <Button asChild variant="primary" leadingIcon={<Plus />}>
+              <Link href="/quotations/new">{t('newQuotation')}</Link>
+            </Button>
+          )
         }
       />
       <CenterFilterBar />

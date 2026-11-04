@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { helpRecipients, leaveFirstReviewer, reportingLineProblem } from './reporting-line';
+import {
+  helpRecipients,
+  leaveFirstReviewer,
+  mayDecidePoints,
+  reportingLineProblem,
+} from './reporting-line';
 
 describe('reports to', () => {
   const managers = new Map([
@@ -77,5 +82,46 @@ describe('help asked on a task', () => {
     expect(
       helpRecipients({ askerUserId: 'asha', projectManagerUserId: 'pm', askerManagerUserId: 'pm' }),
     ).toEqual({ userIds: ['pm'], projectManagers: false });
+  });
+});
+
+describe('who may decide points', () => {
+  const managers = new Map([
+    ['asha', 'vikas'],
+    ['vikas', 'meena'],
+  ]);
+  const base = {
+    deciderUserId: 'vikas',
+    deciderIsSuperAdmin: false,
+    earnerUserId: 'asha',
+    earnerIsSuperAdmin: false,
+    managers,
+  };
+
+  it('lets a manager, directly or higher up, decide', () => {
+    expect(mayDecidePoints(base)).toBe(true);
+    expect(mayDecidePoints({ ...base, deciderUserId: 'meena' })).toBe(true);
+  });
+
+  it('refuses peers, people below and people with no line to the earner', () => {
+    expect(mayDecidePoints({ ...base, deciderUserId: 'priya' })).toBe(false);
+    expect(mayDecidePoints({ ...base, deciderUserId: 'asha', earnerUserId: 'vikas' })).toBe(false);
+    expect(mayDecidePoints({ ...base, managers: new Map() })).toBe(false);
+  });
+
+  it('never lets anyone decide their own, Super Admin included', () => {
+    expect(mayDecidePoints({ ...base, deciderUserId: 'asha' })).toBe(false);
+    const own = { ...base, deciderUserId: 'root', earnerUserId: 'root', deciderIsSuperAdmin: true };
+    expect(mayDecidePoints(own)).toBe(false);
+  });
+
+  it('lets a Super Admin decide anyone else’s, and keeps a Super Admin’s to Super Admins', () => {
+    const root = { ...base, deciderUserId: 'root', deciderIsSuperAdmin: true };
+    expect(mayDecidePoints({ ...root, managers: new Map() })).toBe(true);
+    const adminEarns = { ...base, earnerUserId: 'root', earnerIsSuperAdmin: true };
+    expect(mayDecidePoints(adminEarns)).toBe(false);
+    expect(
+      mayDecidePoints({ ...adminEarns, deciderUserId: 'boss', deciderIsSuperAdmin: true }),
+    ).toBe(true);
   });
 });

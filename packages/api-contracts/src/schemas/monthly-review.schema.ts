@@ -78,6 +78,8 @@ export type DecideMonthInput = z.infer<typeof decideMonthInputSchema>;
 export const myMonthSchema = z.object({
   month: monthSchema,
   points: z.number().int(),
+  /** Rates and "tasks judged" count only work from this moment; null before the rules. */
+  fairSince: instantSchema.nullable(),
   tasksJudged: z.number().int(),
   onTimeRate: rate,
   firstTimeRate: rate,

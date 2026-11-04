@@ -78,6 +78,7 @@ function presentLeave(
     decisionNote: row.decisionNote,
     tasksHandedOver: row.tasksHandedOver,
     handoverSkipped: row.handoverSkipped,
+    clashes: { backupAway: [], covering: [] },
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -1,9 +1,9 @@
 export const TODAY = {
   greeting: {
     morning: 'Good morning',
-    midday: 'Good afternoon',
+    afternoon: 'Good afternoon',
     evening: 'Good evening',
-    night: 'Good evening',
+    late: 'Hello',
   },
   summary: (open: number, overdue: number) =>
     open === 0

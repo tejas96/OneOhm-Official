@@ -91,6 +91,7 @@ async function assigneeRows(db: DatabaseExecutor): Promise<PendingApprovalRow[]>
       at: projectTasks.updatedAt,
       projectId: projects.id,
       code: projects.code,
+      proposedUserId: projectTasks.proposedUserId,
       proposed: users.fullName,
     })
     .from(projectTasks)
@@ -108,7 +109,8 @@ async function assigneeRows(db: DatabaseExecutor): Promise<PendingApprovalRow[]>
     kind: 'assignee_confirm',
     id: row.id,
     requestedAt: iso(row.at),
-    requestedByUserId: null,
+    // The proposed person: they may not confirm a proposal that names themselves.
+    requestedByUserId: row.proposedUserId,
     amountPaise: null,
     subject: row.title,
     requesterName: row.proposed,

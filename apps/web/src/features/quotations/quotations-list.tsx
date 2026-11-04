@@ -27,7 +27,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadMore } from '@/components/load-more';
-import { ListSkeleton, LoadError } from '@/components/query-state';
+import { BlockedPage, ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -57,6 +57,12 @@ function useQuotationFilter(): readonly [Filter, (next: Filter) => void] {
 /** Every quotation, newest first, filtered by status and found by number or customer. */
 export function QuotationsList() {
   const t = useTranslations('quotations.list');
+  const allowed = useCan('quotations.view', 'quotations.create');
+  return allowed ? <QuotationsContent /> : <BlockedPage title={t('title')} />;
+}
+
+function QuotationsContent() {
+  const t = useTranslations('quotations.list');
   const statusT = useTranslations('quotations.status');
   const format = useFormatter();
   const canCreate = useCan('quotations.create');
@@ -65,7 +71,6 @@ export function QuotationsList() {
   const search = useDebouncedValue(term.trim());
   const list = useQuotationPage(filter, search);
   const waiting = list.first?.waitingApproval ?? 0;
-  const none = filter === 'all' && !search;
 
   const columns: readonly TableColumn<QuotationSummary>[] = [
     {
@@ -178,7 +183,7 @@ export function QuotationsList() {
           {t('approvalCallout', { count: waiting })}
         </button>
       )}
-      <QuotationRows list={list} columns={columns} unfiltered={none} />
+      <QuotationRows list={list} columns={columns} unfiltered={filter === 'all' && !search} />
     </motion.div>
   );
 }

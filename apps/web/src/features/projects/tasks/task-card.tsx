@@ -16,6 +16,7 @@ import { StaleBadge } from './stale-badge';
 import { TaskActions } from './task-actions';
 import { ReworkBadge, TaskCardNotes } from './task-card-notes';
 import { isBlocked, taskGlyph, taskStatusKey, taskTone } from './task-status';
+import { UnassignedLabel } from './unassigned-label';
 
 const DISC: Readonly<Record<string, string>> = {
   onTrack: 'bg-on-track-tint text-on-track',
@@ -113,7 +114,7 @@ export function TaskCard({
               {task.assignee.fullName}
             </span>
           ) : (
-            <span className="text-at-risk">{t('unassigned')}</span>
+            <UnassignedLabel task={task} />
           )}
           <span
             className={cn(
