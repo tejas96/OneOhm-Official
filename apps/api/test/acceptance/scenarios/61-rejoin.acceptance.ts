@@ -80,6 +80,34 @@ describe('rejoin', () => {
     expect(await monthRows('2026-01')).toContain(leaver.id);
   });
 
+  it('finance reads a past member settlement but cannot add them back', async () => {
+    const finance = await Session.code(STAFF.accounts.phone);
+    const read = await finance.raw('GET', `/people/${leaver.id}/departure`);
+    expect(read.status).toBe(200);
+    expect((await rejoin(finance, leaver.id)).status).toBe(403);
+  });
+
+  it('a past member cannot be made to set a new password', async () => {
+    const reply = await admin.raw<{ code: string }>('PATCH', `/people/${leaver.id}`, {
+      requireNewPassword: true,
+    });
+    expect([reply.status, reply.body.code]).toEqual([409, 'not_active']);
+  });
+
+  it('a skipped newest invite shows no invite, not an older one', async () => {
+    await rows(
+      `UPDATE outbox SET status = 'sent' WHERE template = 'staff_welcome' AND dedupe_key LIKE $1`,
+      [`staff_welcome:${leaver.id}:%`],
+    );
+    await rows(
+      `INSERT INTO outbox (channel, recipient, template, payload, dedupe_key, status, created_at)
+       VALUES ('whatsapp', $1, 'staff_welcome', '{}'::jsonb, $2, 'skipped', now() + interval '1 second')`,
+      [leaver.phone, `staff_welcome:${leaver.id}:skipped-test`],
+    );
+    const people = await admin.get<Person[]>('/people');
+    expect(people.find((entry) => entry.id === leaver.id)?.inviteDelivery).toBeNull();
+  });
+
   it('rejoin makes them active with no password and queues an invite', async () => {
     const before = (await invites()).length;
     const refused = await rejoin(await Session.code(STAFF.sales.phone), leaver.id);
@@ -108,5 +136,21 @@ describe('rejoin', () => {
     ).toHaveLength(1);
     // Their points count again, and the work stays with the heir.
     expect(await board()).toContain(leaver.id);
+  });
+
+  it('rejoin with no mobile number asks for one first', async () => {
+    const phoneless = await person('Phoneless (rejoin test)');
+    await admin.post(`/people/${phoneless.id}/remove`, {
+      handToUserId: heir.id,
+      lastWorkingDay: today(),
+      tellCustomers: false,
+    });
+    await admin.post(`/people/${phoneless.id}/release-phone`);
+    const reply = await rejoin(admin, phoneless.id);
+    expect([reply.status, reply.body.code, reply.body.message]).toEqual([
+      409,
+      'phone_needed',
+      'Add their mobile number first.',
+    ]);
   });
 });

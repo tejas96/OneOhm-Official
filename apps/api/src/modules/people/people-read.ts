@@ -88,6 +88,7 @@ export async function readPeople(
       inviteText: row.lastActiveAt
         ? null
         : inviteTextFor({ ...row, roleKinds: kinds.get(row.id) ?? [] }, env),
+      invitesOn: env.STAFF_INVITES === 'on',
       leftOn: row.leftOn,
     };
   });

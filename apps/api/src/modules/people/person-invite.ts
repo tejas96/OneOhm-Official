@@ -93,7 +93,10 @@ export async function kindsOfRoles(
   return rows.map((row) => row.kind);
 }
 
-/** What became of each person's newest invite: sent, failed, queued, or null for none. */
+/**
+ * What became of each person's newest invite: sent, failed, queued, or null for none. The
+ * newest row is final: one skipped (say, on removal) means no invite, not an older one's state.
+ */
 export async function inviteDeliveries(
   db: DatabaseExecutor,
   userIds: readonly string[],
@@ -110,11 +113,18 @@ export async function inviteDeliveries(
   for (const row of rows) {
     const userId = row.key.split(':')[1] ?? '';
     if (!wanted.has(userId) || result.has(userId)) continue; // newest first
-    if (row.status === 'failed' || row.delivery === 'failed') result.set(userId, 'failed');
-    else if (row.status === 'sent') result.set(userId, 'sent');
-    else if (row.status === 'pending') result.set(userId, 'queued');
+    result.set(userId, deliveryOf(row));
   }
   return result;
+}
+
+export function deliveryOf(row: {
+  readonly status: string;
+  readonly delivery: string | null;
+}): Person['inviteDelivery'] {
+  if (row.status === 'failed' || row.delivery === 'failed') return 'failed';
+  if (row.status === 'sent') return 'sent';
+  return row.status === 'pending' ? 'queued' : null;
 }
 
 /** Clears the web password, signs the person out everywhere and sends the invite again. */
@@ -125,6 +135,8 @@ export async function requireNewPassword(
 ): Promise<void> {
   const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw notFound('That person');
+  if (user.status !== 'active')
+    throw conflict('They have left the team. Add them back first.', 'not_active');
   if (!user.phoneE164) {
     throw invalid('Add a mobile number first: the new password is set with a code sent to it.', {
       phone: 'Mobile number is required.',
@@ -148,6 +160,8 @@ export class PersonInvites {
 
   /** Sends the invite again: only before the first sign-in, and once every 10 minutes. */
   async resend(actor: Actor, id: string): Promise<Person> {
+    if (this.env.STAFF_INVITES !== 'on')
+      throw conflict('WhatsApp invites are off. Copy the invite text instead.', 'invites_off');
     const [user] = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
     if (!user) throw notFound('That person');
     if (user.lastActiveAt) throw conflict('They have already signed in.', 'already_signed_in');

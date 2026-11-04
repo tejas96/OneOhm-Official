@@ -52,6 +52,8 @@ export const personSchema = z.object({
   inviteDelivery: z.enum(['sent', 'failed', 'queued']).nullable(),
   /** The invite sentence to copy, only while they have not signed in. */
   inviteText: z.string().nullable(),
+  /** Whether WhatsApp invites are on (STAFF_INVITES); off, the admin copies the invite text. */
+  invitesOn: z.boolean(),
   /** The day they left the team; null for current members. */
   leftOn: z.string().nullable(),
 });
