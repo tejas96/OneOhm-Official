@@ -115,6 +115,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, please send your {{2}} for project {{3}}. Open the OneOhm app, go to Documents and tap Send.',
   },
   {
+    key: 'paper_request',
+    audience: 'customer',
+    fields: ['customer', 'document', 'home'],
+    preview:
+      'Hello {{1}}, please send your {{2}} for your solar at {{3}}. Reply here with a clear photo or PDF. You can also send it from the OneOhm app.',
+  },
+  {
     key: 'referral_reward',
     audience: 'customer',
     fields: ['customer', 'friend', 'amount', 'status'],

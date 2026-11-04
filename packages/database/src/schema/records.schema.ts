@@ -67,6 +67,7 @@ export const documents = pgTable(
     index('documents_task_idx').on(table.taskId),
     index('documents_customer_idx').on(table.customerId),
     index('documents_category_idx').on(table.category),
+    index('documents_property_idx').on(table.propertyId),
   ],
 );
 
