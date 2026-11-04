@@ -7,6 +7,11 @@ export type SessionMessage =
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
     }
   | {
+      /** WhatsApp's "Send location" button (location_request_message). */
+      readonly kind: 'location_request';
+      readonly body: string;
+    }
+  | {
       readonly kind: 'document';
       readonly link: string;
       readonly filename: string;
@@ -72,6 +77,16 @@ export function sessionRequestBody(toE164: string, message: SessionMessage) {
           name: 'cta_url',
           parameters: { display_text: message.label.slice(0, 20), url: message.url },
         },
+      },
+    };
+  if (message.kind === 'location_request')
+    return {
+      ...base,
+      type: 'interactive',
+      interactive: {
+        type: 'location_request_message',
+        body: { text: message.body },
+        action: { name: 'send_location' },
       },
     };
   if (message.kind === 'flow')

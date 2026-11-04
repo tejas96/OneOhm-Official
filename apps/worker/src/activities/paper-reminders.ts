@@ -16,6 +16,7 @@ import {
 } from '@oneohm/database';
 import { isWorkingTime } from '@oneohm/domain';
 import { and, asc, desc, eq, gt, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
+import { queueActionReminders } from './action-reminders';
 import { filesNotMatched, unmatchedBody } from './paper-unmatched';
 
 const HOUR = 3_600_000;
@@ -219,5 +220,6 @@ export async function queuePaperReminders(
   timeZone: string,
 ): Promise<number> {
   const reminded = await remindOpenRequests(db, now, timeZone);
-  return reminded + (await alertFilesToSort(db, now));
+  const asked = await queueActionReminders(db, now, timeZone);
+  return reminded + asked + (await alertFilesToSort(db, now));
 }

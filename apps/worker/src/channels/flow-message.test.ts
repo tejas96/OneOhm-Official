@@ -36,4 +36,21 @@ describe('a form message', () => {
       },
     });
   });
+
+  it('sessionRequestBody location_request is the WhatsApp Send location button', () => {
+    expect(
+      sessionRequestBody('+919800000000', {
+        kind: 'location_request',
+        body: 'Share your location.',
+      }),
+    ).toMatchObject({
+      to: '919800000000',
+      type: 'interactive',
+      interactive: {
+        type: 'location_request_message',
+        body: { text: 'Share your location.' },
+        action: { name: 'send_location' },
+      },
+    });
+  });
 });
