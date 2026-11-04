@@ -2,20 +2,20 @@
 
 import type { PayoutDetailsView } from '@oneohm/api-contracts';
 import { Field, Input, SegmentedControl } from '@oneohm/design-system/web';
-import { useTranslations } from 'next-intl';
-import { type FormEvent, useState } from 'react';
-import { FormError } from '@/components/form-error';
-import type { ApiFormState } from '@/lib/forms/use-api-form';
 import {
-  checkDraft,
-  draftFrom,
-  fieldsFor,
+  checkPayoutDraft,
   type PayoutDraft,
   type PayoutField,
   type PayoutMethod,
   type PayoutProblems,
-  payloadOf,
-} from './payout-draft';
+  payoutDraftFrom,
+  payoutFieldsFor,
+  payoutPayloadOf,
+} from '@oneohm/domain';
+import { useTranslations } from 'next-intl';
+import { type FormEvent, useState } from 'react';
+import { FormError } from '@/components/form-error';
+import type { ApiFormState } from '@/lib/forms/use-api-form';
 import { savePayoutDetails } from './use-payouts';
 
 const METHODS: readonly PayoutMethod[] = ['upi', 'bank'];
@@ -47,7 +47,7 @@ export function PayoutDetailsForm({
   readonly onSaved: (saved: PayoutDetailsView) => Promise<void>;
 }) {
   const t = useTranslations('finance.payouts.detailsPanel');
-  const [draft, setDraft] = useState<PayoutDraft>(() => draftFrom(saved));
+  const [draft, setDraft] = useState<PayoutDraft>(() => payoutDraftFrom(saved));
   const [problems, setProblems] = useState<PayoutProblems>({});
   const missing = (field: PayoutField) => t(`missing.${field}`);
 
@@ -59,10 +59,10 @@ export function PayoutDetailsForm({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const found = checkDraft(draft, missing);
+    const found = checkPayoutDraft(draft, missing);
     setProblems(found);
     if (Object.keys(found).length > 0) return;
-    await form.run(() => savePayoutDetails(resellerId, payloadOf(draft)), onSaved);
+    await form.run(() => savePayoutDetails(resellerId, payoutPayloadOf(draft)), onSaved);
   };
 
   return (
@@ -76,7 +76,7 @@ export function PayoutDetailsForm({
         label={t('methodLabel')}
         options={METHODS.map((value) => ({ value, label: t(`methods.${value}`) }))}
       />
-      {fieldsFor(draft.method).map((field) => (
+      {payoutFieldsFor(draft.method).map((field) => (
         <Field
           key={field}
           label={t(`fields.${field}`)}

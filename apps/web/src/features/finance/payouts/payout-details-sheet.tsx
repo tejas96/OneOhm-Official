@@ -2,6 +2,7 @@
 
 import type { PayoutDetailsView } from '@oneohm/api-contracts';
 import { Button, Sheet, useToast } from '@oneohm/design-system/web';
+import { type PayoutField, payoutFieldsFor } from '@oneohm/domain';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,7 +11,6 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useInvalidateFinance } from '../use-finance';
 import { PayoutDetailsForm } from './payout-details-form';
-import { fieldsFor, type PayoutField } from './payout-draft';
 import { type PayoutParty, payoutKeys, usePayoutDetails } from './use-payouts';
 
 /**
@@ -97,7 +97,7 @@ export function PayoutDetailsSheet({
 /** The saved way to pay and PAN, as a short list. */
 function SavedDetails({ details }: { readonly details: PayoutDetailsView }) {
   const t = useTranslations('finance.payouts.detailsPanel');
-  const fields: readonly PayoutField[] = fieldsFor(details.upiId ? 'upi' : 'bank');
+  const fields: readonly PayoutField[] = payoutFieldsFor(details.upiId ? 'upi' : 'bank');
   return (
     <dl className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">

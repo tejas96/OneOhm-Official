@@ -7,7 +7,10 @@ import { PayoutDetailsSheet } from '@/features/profile/payout-details-sheet';
 import { useCurrentUser } from '@/session/session-provider';
 import { usePayoutDetails } from './use-reseller';
 
-/** Until a reseller's payout details are complete: one banner that opens the form. */
+/**
+ * Until a reseller's payout details are complete: one banner, on Today and on Earnings,
+ * that opens the payout form in place.
+ */
 export function PayoutBanner() {
   const theme = useTheme();
   const user = useCurrentUser();

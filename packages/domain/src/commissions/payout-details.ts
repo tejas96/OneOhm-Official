@@ -22,10 +22,17 @@ export function payoutDetailsComplete(d: PayoutDetails | null): boolean {
   return isSet(d.upiId) || bankComplete;
 }
 
+const MASK = '••••';
+
 /** Shows only the last 4 characters. Values shorter than 4 are fully kept after the mask. */
 export function maskAccount(value: string | null): string | null {
   if (value === null) return null;
-  return `••••${value.slice(-4)}`;
+  return `${MASK}${value.slice(-4)}`;
+}
+
+/** True for a value `maskAccount` produced; sent back unchanged, it keeps what is stored. */
+export function isMaskedAccount(value: string | null | undefined): value is string {
+  return Boolean(value?.startsWith(MASK));
 }
 
 /** Format problems per field, after trimming and uppercasing. Empty fields are not problems. */

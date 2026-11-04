@@ -1,5 +1,14 @@
 import type { PayoutDetailsView } from '@oneohm/api-contracts';
 import {
+  checkPayoutDraft,
+  type PayoutDraft,
+  type PayoutField,
+  type PayoutMethod,
+  payoutDraftFrom,
+  payoutFieldsFor,
+  payoutPayloadOf,
+} from '@oneohm/domain';
+import {
   Button,
   ChoiceChips,
   describeError,
@@ -18,18 +27,10 @@ import { COMMON } from '@/copy/common';
 import { PAYOUT } from '@/copy/reseller';
 import { useCurrentUser } from '@/session/session-provider';
 import { useSavePayoutDetails } from '../reseller/use-reseller';
-import {
-  checkDraft,
-  draftFrom,
-  fieldsFor,
-  type PayoutDraft,
-  type PayoutField,
-  type PayoutMethod,
-  payloadOf,
-} from './payout-draft';
 
 const METHODS: readonly PayoutMethod[] = ['upi', 'bank'];
 const UPPER: ReadonlySet<PayoutField> = new Set(['pan', 'bankIfsc']);
+const missing = (field: PayoutField) => PAYOUT.missing[field];
 
 /** Keyboard and look for each box, so the phone offers the right keys. */
 const INPUT: Readonly<Record<PayoutField, TextInputProps & { mono?: boolean }>> = {
@@ -63,19 +64,19 @@ export function PayoutDetailsSheet({
   const toast = useToast();
   const user = useCurrentUser();
   const save = useSavePayoutDetails(user.id);
-  const [draft, setDraft] = useState<PayoutDraft>(() => draftFrom(saved));
+  const [draft, setDraft] = useState<PayoutDraft>(() => payoutDraftFrom(saved));
   const [checked, setChecked] = useState(false);
   const { reset } = save;
 
   // Each opening starts from what is saved now.
   useEffect(() => {
     if (!open) return;
-    setDraft(draftFrom(saved));
+    setDraft(payoutDraftFrom(saved));
     setChecked(false);
     reset();
   }, [open, saved, reset]);
 
-  const problems = checked ? checkDraft(draft) : {};
+  const problems = checked ? checkPayoutDraft(draft, missing) : {};
   const serverErrors = save.error ? fieldErrorsOf(save.error) : {};
   const setValue = (field: PayoutField, text: string) =>
     setDraft((current) => ({
@@ -85,8 +86,8 @@ export function PayoutDetailsSheet({
 
   const submit = () => {
     setChecked(true);
-    if (save.isPending || Object.keys(checkDraft(draft)).length > 0) return;
-    save.mutate(payloadOf(draft), {
+    if (save.isPending || Object.keys(checkPayoutDraft(draft, missing)).length > 0) return;
+    save.mutate(payoutPayloadOf(draft), {
       onSuccess: () => {
         toast(PAYOUT.saved);
         onClose();
@@ -111,7 +112,7 @@ export function PayoutDetailsSheet({
           onChange={(method) => setDraft((current) => ({ ...current, method }))}
           choices={METHODS.map((value) => ({ value, label: PAYOUT.methods[value] }))}
         />
-        {fieldsFor(draft.method).map((field) => {
+        {payoutFieldsFor(draft.method).map((field) => {
           const { mono, ...input } = INPUT[field];
           const kept = draft.kept[field];
           const error = problems[field] ?? serverErrors[field];
