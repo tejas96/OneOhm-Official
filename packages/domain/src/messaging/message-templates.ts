@@ -81,6 +81,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, your service request "{{2}}" is now {{3}}. We will keep you posted here.',
   },
   {
+    key: 'contact_changed',
+    audience: 'customer',
+    fields: ['customer', 'staff', 'subject', 'phone'],
+    preview:
+      'Hi {{1}}, {{2}} is now your OneOhm contact for {{3}}. You can call them on {{4}}, or reply here any time.',
+  },
+  {
     key: 'change_request_raised',
     audience: 'customer',
     fields: ['customer', 'request', 'number'],

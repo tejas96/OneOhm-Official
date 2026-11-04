@@ -11,6 +11,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { readPeople } from '../people-read';
 import { assertKeepsASuperAdmin } from '../super-admin-guard';
+import { tellCustomers } from './departure-customers';
 import { handOver } from './departure-handover';
 import { checkRemoval, type RemovalProblem } from './departure-rules';
 import { countsOf } from './departure-summary';
@@ -20,7 +21,7 @@ import { wrapUp } from './departure-wrapup';
 export interface Removal {
   readonly handToUserId: string;
   readonly lastWorkingDay: string;
-  /** Checked here; the customer messages come with the next step (C4). */
+  /** On: each customer of the leaver is told their new contact, once. */
   readonly tellCustomers: boolean;
 }
 
@@ -35,7 +36,12 @@ const PROBLEMS: Record<RemovalProblem, string> = {
 /** Both people's rows, locked in id order so two removals at once never deadlock. */
 async function lockBoth(tx: Transaction, leaverId: string, targetId: string) {
   const rows = await tx
-    .select({ id: users.id, fullName: users.fullName, status: users.status })
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      phoneE164: users.phoneE164,
+      status: users.status,
+    })
     .from(users)
     .where(inArray(users.id, [leaverId, targetId]))
     .orderBy(asc(users.id))
@@ -83,6 +89,7 @@ export class DepartureService {
       const work = await openWork(tx, id);
       const now = new Date();
       await handOver(tx, actor.userId, leaver, target, work);
+      if (input.tellCustomers) await tellCustomers(tx, id, target, work);
       await wrapUp(tx, id, now);
       await tx
         .update(users)

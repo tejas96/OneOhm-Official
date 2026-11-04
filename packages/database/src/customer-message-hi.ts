@@ -48,6 +48,10 @@ export const HINDI_WORDS: LanguageWords = {
       title: 'आपकी सर्विस रिक्वेस्ट की जानकारी',
       body: `${p.topic}: ${p.status}।`,
     }),
+    contact_changed: (p) => ({
+      title: 'आपका OneOhm संपर्क बदल गया है',
+      body: `${p.staff} अब ${p.subject} के लिए आपके संपर्क हैं। ${p.phone} पर कॉल करें।`,
+    }),
     change_request_raised: (p) => ({
       title: 'बदलाव की रिक्वेस्ट शुरू हुई',
       body: `${p.request}, नंबर ${p.number}।`,

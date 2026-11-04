@@ -18,6 +18,7 @@ export const IN_APP_MESSAGES = [
   'payment_link',
   'payment_reminder',
   'service_update',
+  'contact_changed',
   'change_request_raised',
   'change_request_completed',
   'document_requested',

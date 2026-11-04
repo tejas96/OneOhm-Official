@@ -48,6 +48,10 @@ export const MARATHI_WORDS: LanguageWords = {
       title: 'तुमच्या सर्व्हिस विनंतीची माहिती',
       body: `${p.topic}: ${p.status}.`,
     }),
+    contact_changed: (p) => ({
+      title: 'तुमचा OneOhm संपर्क बदलला आहे',
+      body: `${p.staff} आता ${p.subject} साठी तुमचे संपर्क आहेत. ${p.phone} वर फोन करा.`,
+    }),
     change_request_raised: (p) => ({
       title: 'बदलाची विनंती सुरू झाली',
       body: `${p.request}, क्रमांक ${p.number}.`,
