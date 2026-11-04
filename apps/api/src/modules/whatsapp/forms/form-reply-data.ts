@@ -17,12 +17,19 @@ export interface FormFile {
 export interface IncomingForm {
   readonly token: string | null;
   readonly files: readonly FormFile[];
+  /** The "I paid another way" form: the amount typed (digits) and the day picked. */
+  readonly amount: string | null;
+  readonly date: string | null;
   /** The top-level keys of the reply, kept for the log when no file could be read. */
   readonly keys: readonly string[];
 }
 
 const text = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
+
+/** A typed or picked value, whether the form posts it as text or as a number. */
+const scalar = (value: unknown): string | null =>
+  typeof value === 'number' ? String(value) : text(value)?.trim() || null;
 
 function readFile(raw: unknown): FormFile | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -53,7 +60,13 @@ export function readForm(responseJson: unknown): IncomingForm {
     const list = data[name];
     return Array.isArray(list) ? list.flatMap((raw) => readFile(raw) ?? []) : [];
   }).slice(0, MAX_FORM_FILES);
-  return { token: text(data.flow_token), files, keys: Object.keys(data) };
+  return {
+    token: text(data.flow_token),
+    files,
+    amount: scalar(data.amount),
+    date: scalar(data.date),
+    keys: Object.keys(data),
+  };
 }
 
 /** What the chat shows for a form reply ("Sent a form (2 files)"). */

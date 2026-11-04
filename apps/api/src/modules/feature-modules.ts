@@ -25,6 +25,7 @@ import { PurchasingModule } from './purchasing/purchasing.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { SearchModule } from './search/search.module';
+import { SendToCustomerModule } from './send-to-customer/send-to-customer.module';
 import { ServiceDeskModule } from './service-desk/service-desk.module';
 import { ServiceVisitsModule } from './service-visits/service-visits.module';
 import { SiteActivityModule } from './site-activity/site-activity.module';
@@ -57,6 +58,7 @@ export const FEATURE_MODULES = [
   GatewayModule,
   OnlinePaymentsModule,
   WhatsAppModule,
+  SendToCustomerModule,
   TemplatesModule,
   AuditModule,
   BankPayoutsModule,

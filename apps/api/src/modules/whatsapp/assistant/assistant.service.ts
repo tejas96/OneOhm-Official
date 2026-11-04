@@ -2,10 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { waConversations } from '@oneohm/database';
 import { asksForPerson } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
-import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
+import { SendAnswersService } from '../../send-to-customer/send-answers.service';
+import { readSendTap } from '../../send-to-customer/send-taps';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { FormPickService, readFormTap } from '../forms/form-pick';
 import { FormReplyService } from '../forms/form-reply';
@@ -14,14 +15,12 @@ import { languageTapped, payTapped, sendTapped } from './chat-choices';
 import { chatLanguage, languageForMessage } from './chat-language';
 import { heldStep, setStep, stepOf, WAITING_STEPS } from './chat-step';
 import { CHAT_WORDS } from './chat-words';
-import { sayWithTaps } from './closing-taps';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
 import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readWhatTap, readWhereTap } from './files-wait';
 import { FreeTextService } from './free-text';
-import { readReferral } from './guess-category';
 import { tellHandedBack } from './hand-back';
 import { HandOverService } from './hand-over';
 import { assistantAnswers } from './handled-taps';
@@ -34,9 +33,9 @@ import { MenuAnswersService } from './menu-answers';
 import { answerOptOut, optOutAsked } from './opt-out';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
+import { takeReferral } from './referral-step';
 import { StrangerFlowService } from './stranger-flow';
 import { WhatAnswerService } from './what-answer';
-import { WORDS } from './words';
 
 /** The steps that wait for typed words; the others (which home) wait for a tap. */
 const TEXT_STEPS = ['await_problem', 'await_referral', AWAIT_COMMENT];
@@ -64,6 +63,7 @@ export class AssistantService {
     private readonly words: FreeTextService,
     private readonly formReplies: FormReplyService,
     private readonly formPicks: FormPickService,
+    private readonly sends: SendAnswersService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -112,7 +112,9 @@ export class AssistantService {
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     // A "Send a paper" form came back: its files answer the paper it was sent for.
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
-    // A location pin, a contact card or a sticker is never answered: their person is told
+    // A pin answers the location the team asked for (else "which home"); it is never answered otherwise.
+    if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location))) return;
+    // A contact card or a sticker is never answered: their person is told
     // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
     if (incoming.kind === 'other')
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
@@ -143,6 +145,8 @@ export class AssistantService {
     if (milestone) return this.menus.pay(chat, customerId, milestone);
     const request = sendTapped(id);
     if (request) return this.menus.askPaper(chat, customerId, request);
+    const sendTap = readSendTap(id);
+    if (sendTap) return this.sends.tapped(chat, customerId, sendTap);
     const formTap = readFormTap(id);
     if (formTap) return this.formPicks.tapped(chat, customerId, formTap);
     const language = languageTapped(id);
@@ -161,6 +165,8 @@ export class AssistantService {
     if (chat.state !== 'human' || assistantAnswers(chat, incoming)) return false;
     if (chat.customerId && incoming.media)
       await this.media.receive(chat, chat.customerId, incoming.media, incoming.text);
+    if (chat.customerId && incoming.location)
+      await this.sends.pin(chat, chat.customerId, incoming.location, true);
     return true;
   }
 
@@ -190,7 +196,8 @@ export class AssistantService {
     const step = stepOf(chat);
     if (incoming.kind === 'choice' || !TEXT_STEPS.includes(step)) return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
-    else if (step === 'await_referral') await this.referral(chat, customerId, incoming);
+    else if (step === 'await_referral')
+      await takeReferral(this.db, this.portal, chat, customerId, incoming.text);
     else if (step === AWAIT_COMMENT) await this.feedback.comment(chat, customerId, incoming.text);
     return true;
   }
@@ -222,21 +229,6 @@ export class AssistantService {
     if (!customerId) return this.strangers.greet(chat);
     await setState(this.db, chat.id, 'menu');
     return this.home.show(chat, customerId);
-  }
-
-  private async referral(chat: Conversation, customerId: string, incoming: Incoming) {
-    const friend = readReferral(incoming.text);
-    if (!friend) return sayWithTaps(this.db, chat, WORDS.referralUnclear, ['menu']);
-    await setStep(this.db, chat, 'menu');
-    try {
-      await this.portal.refer(customerId, friend);
-    } catch (error) {
-      if (error instanceof AppError && error.code === 'duplicate')
-        return sayWithTaps(this.db, chat, WORDS.referralKnown, ['menu']);
-      if (error instanceof AppError) return sayWithTaps(this.db, chat, error.message, ['menu']);
-      throw error;
-    }
-    return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['rewards', 'menu']);
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */

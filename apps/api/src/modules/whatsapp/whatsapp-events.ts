@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { formText, type IncomingForm, readForm } from './forms/form-reply-data';
-import { readOther } from './incoming-other';
+import { type IncomingLocation, readLocation, readOther } from './incoming-other';
+
+export type { IncomingLocation } from './incoming-other';
 
 /** Meta signs each webhook post: `sha256=` and the HMAC of the raw body with the app secret. */
 export function verifyMetaSignature(
@@ -64,6 +66,8 @@ export interface Incoming {
   readonly form?: IncomingForm | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
+  /** Set on a location pin: the point (and the place's name or address, when WhatsApp gives them). */
+  readonly location?: IncomingLocation | null;
   /** Set on a message the chat shows but nobody is alerted to (a reaction). */
   readonly quiet?: boolean;
   /** Set when the chat was opened from a Meta click-to-WhatsApp ad. */
@@ -196,11 +200,13 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
       choiceId: null,
       media,
     };
+  const location = readLocation(message);
   return {
     ...base,
     kind: 'other',
     text: readOther(message),
     choiceId: null,
+    ...(location ? { location } : {}),
     ...(message.type === 'reaction' ? { quiet: true } : {}),
   };
 }

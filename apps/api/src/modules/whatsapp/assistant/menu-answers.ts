@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { paperKindWords } from '../../documents/paper-kind-words';
+import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { type Conversation, queueReply } from '../chat-store';
 import { FormPickService } from '../forms/form-pick';
 import { FormSendService } from '../forms/form-send';
@@ -119,16 +120,22 @@ export class MenuAnswersService {
     for (const [index, { body: text, due }] of shown.slice(0, 2).entries()) {
       // A third home that owes is one line under the second message (redesign §10).
       const body = index === 1 && moreDue > 0 ? `${text}\n\n${CHAT_WORDS.moreDue(moreDue)}` : text;
+      // Something due: [Pay ₹X] [Receipts] [I paid another way] (§10); the proof form opens from the third.
+      const paid = due && {
+        id: `paidother:${due.milestoneId}`,
+        title: SEND_WORDS.buttons.paidOther,
+      };
       const pay =
         due && online
           ? { id: `pay:${due.milestoneId}`, title: CHAT_WORDS.pay(formatInr(due.leftPaise)) }
           : null;
-      await sayWithTaps(
-        this.db,
-        chat,
-        body,
-        pay ? [pay, 'receipts', 'menu'] : ['receipts', 'update', 'menu'],
-      );
+      const taps: readonly TapChoice[] =
+        pay && paid
+          ? [pay, 'receipts', paid]
+          : paid
+            ? [paid, 'receipts', 'menu']
+            : ['receipts', 'update', 'menu'];
+      await sayWithTaps(this.db, chat, body, taps);
     }
   }
 
@@ -160,6 +167,9 @@ export class MenuAnswersService {
       : (open.find((item) => item.requestId === requestId) ??
         (open.length === 1 ? open[0] : undefined));
     if (asked) {
+      // A home paper with no known home and 2+ homes: "For which home?" first, then its form.
+      const paperRow = { id: asked.requestId, category: asked.category, propertyId: null };
+      if (!asked.home && (await this.picks.askHome(chat, customerId, paperRow))) return;
       const paper = isPersonDocumentCategory(asked.category)
         ? paperKindWords(languageNow(), asked.category)
         : asked.title;

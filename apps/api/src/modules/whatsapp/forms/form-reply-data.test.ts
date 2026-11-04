@@ -35,7 +35,36 @@ describe('reading a form reply (nfm_reply response_json)', () => {
     const many = Array.from({ length: 7 }, (_, n) => ({ id: `m${n}` }));
     expect(readForm(reply({ flow_token: 't', photos: many })).files).toHaveLength(4);
     expect(readForm(reply({ photos: [{ file_name: 'x' }, null, 'x'] })).files).toEqual([]);
-    expect(readForm('not json')).toEqual({ token: null, files: [], keys: [] });
-    expect(readForm(undefined)).toEqual({ token: null, files: [], keys: [] });
+    expect(readForm('not json')).toEqual({
+      token: null,
+      files: [],
+      amount: null,
+      date: null,
+      keys: [],
+    });
+    expect(readForm(undefined)).toEqual({
+      token: null,
+      files: [],
+      amount: null,
+      date: null,
+      keys: [],
+    });
+  });
+
+  it('reads the amount and day of the I paid another way form, as text or numbers', () => {
+    const form = readForm(
+      JSON.stringify({
+        flow_token: 't',
+        amount: 45000,
+        date: '2026-11-03',
+        photos: [{ id: 'm1', file_name: 'p.jpg' }],
+      }),
+    );
+    expect(form).toMatchObject({ amount: '45000', date: '2026-11-03' });
+    expect(form.files).toHaveLength(1);
+    expect(readForm(JSON.stringify({ amount: ' 1,200 ', date: 1762128000000 }))).toMatchObject({
+      amount: '1,200',
+      date: '1762128000000',
+    });
   });
 });

@@ -37,6 +37,16 @@ export const documentRequestSchema = z.object({
   /** The paper was filed by the team (a staff upload): asking again keeps it. */
   documentByTeam: z.boolean().nullable(),
   requestedBy: z.string().nullable(),
+  /** A pin the customer sent for a home that already has a point, waiting for the team to check. */
+  suggestion: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+      /** Metres from the point the home has; null when it has none. */
+      distanceM: z.number().int().nullable(),
+    })
+    .nullable()
+    .default(null),
   /** Reminders sent to the customer since the latest ask. */
   remindersSent: z.number().int(),
   createdAt: z.string(),

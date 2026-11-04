@@ -1,5 +1,6 @@
 import { type DatabaseExecutor, waMessages } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
+import { isSendTap } from '../../send-to-customer/send-taps';
 import type { Conversation } from '../chat-store';
 import { isFormTap } from '../forms/form-pick';
 import type { Incoming } from '../whatsapp-events';
@@ -33,7 +34,14 @@ export function assistantAnswersTap(
   if (own || readQuoteTap(incoming.choiceId)) return true;
   const id = incoming.choiceId;
   if (chat.customerId === null) return STRANGER_TAPS.has(id);
-  return isChoiceTap(id) || isPaperTap(id) || isWhatTap(id) || isFormTap(id) || OWN_TAP.test(id);
+  return (
+    isChoiceTap(id) ||
+    isPaperTap(id) ||
+    isWhatTap(id) ||
+    isFormTap(id) ||
+    isSendTap(id) ||
+    OWN_TAP.test(id)
+  );
 }
 
 /**

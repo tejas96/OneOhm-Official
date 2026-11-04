@@ -28,6 +28,11 @@ export type ChatReply =
       readonly fallbackText?: string;
     }
   | {
+      /** WhatsApp's own "📍 Send location" button; a single-button message (redesign §1, §6). */
+      readonly kind: 'location_request';
+      readonly body: string;
+    }
+  | {
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
@@ -51,6 +56,7 @@ export function chatReplySummary(reply: ChatReply): string {
   if (reply.kind === 'document')
     return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
   if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
+  if (reply.kind === 'location_request') return `${reply.body}\n[📍 Send location]`;
   if (reply.kind === 'flow') return `${reply.body}\n[${reply.button}]`;
   const options =
     reply.kind === 'buttons'

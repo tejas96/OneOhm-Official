@@ -13,6 +13,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { leadVisibility } from '../crm/lead-read';
+import { tellActionCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
 import { homeOfRequest, openRequestsFor } from './document-request-home';
@@ -51,7 +52,7 @@ export class DocumentRequestsService {
     if (scope.length === 0) {
       throw invalid('Choose a project, a lead or a customer.', { projectId: 'Required.' });
     }
-    return readRequests(this.db, or(...scope));
+    return readRequests(this.db, or(...scope), true);
   }
 
   async create(actor: Actor, input: NewDocumentRequest): Promise<DocumentRequest> {
@@ -102,10 +103,14 @@ export class DocumentRequestsService {
   async cancel(actor: Actor, id: string): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
     const request = await this.one(id);
-    if (!nextActionStatus('paper', request.status, 'cancel')) {
+    if (!nextActionStatus(request.type, request.status, 'cancel')) {
       throw conflict('Only an open request can be cancelled.', 'not_open');
     }
     const { phone } = await contactOf(this.db, request.customerId);
+    const [row] = await this.db
+      .select({ propertyId: customerActions.propertyId })
+      .from(customerActions)
+      .where(eq(customerActions.id, id));
     await this.db.transaction(async (tx) => {
       await tx
         .update(customerActions)
@@ -118,7 +123,20 @@ export class DocumentRequestsService {
         data: { customerActionId: id },
       });
       await recordAudit(tx, actor.userId, 'customer_action.cancelled', 'customer_action', id);
-      await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
+      if (request.type === 'paper')
+        await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
+      else if (request.type === 'location' || request.type === 'pay' || request.type === 'callback')
+        await tellActionCancelled(
+          tx,
+          {
+            id,
+            type: request.type,
+            projectId: request.projectId,
+            propertyId: row?.propertyId ?? null,
+          },
+          phone,
+          actor.userId,
+        );
     });
     return this.one(id);
   }
@@ -130,7 +148,7 @@ export class DocumentRequestsService {
   async reask(actor: Actor, id: string, input: ReaskDocumentRequest): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
     const request = await this.one(id);
-    if (!nextActionStatus('paper', request.status, 'ask_again')) {
+    if (request.type !== 'paper' || !nextActionStatus('paper', request.status, 'ask_again')) {
       throw conflict('Only a received paper can be asked for again.', 'not_received');
     }
     // A newer request for the same paper may already be open: the customer is not asked twice.
@@ -210,7 +228,7 @@ export class DocumentRequestsService {
   }
 
   private async one(id: string): Promise<DocumentRequest> {
-    const [request] = await readRequests(this.db, eq(customerActions.id, id));
+    const [request] = await readRequests(this.db, eq(customerActions.id, id), true);
     if (!request) throw notFound('That request');
     return request;
   }

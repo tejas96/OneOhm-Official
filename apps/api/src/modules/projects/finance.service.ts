@@ -20,6 +20,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
 import { tellStaffPaidOnline } from '../online-payments/payment-follow-ups';
+import { payRecorded } from '../send-to-customer/pay-actions';
 import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
 import { tellCustomerPaid } from './receipt-message';
@@ -144,6 +145,7 @@ export class FinanceService {
         // Recording a payment ends the wait a customer's proof of payment started.
         .set({ status, remindersPausedUntil: null, updatedAt: new Date() })
         .where(eq(paymentMilestones.id, milestone.id));
+      await payRecorded(tx, milestone.id, status === 'paid');
       const open = await tx
         .select({ id: paymentMilestones.id })
         .from(paymentMilestones)

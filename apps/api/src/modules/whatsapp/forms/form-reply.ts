@@ -2,8 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
+import { sayWithTaps } from '../assistant/closing-taps';
 import type { Chosen } from '../assistant/files-wait';
 import { HomeService } from '../assistant/home';
+import { takePaymentProof } from '../assistant/payment-proof';
+import { WHAT_WORDS } from '../assistant/what-words';
 import { MEDIA_WORDS } from '../assistant/words';
 import { tellChatTeam } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
@@ -11,7 +14,9 @@ import type { Incoming } from '../whatsapp-events';
 import { type FlowToken, releaseFlowToken, takeFlowToken } from './flow-token';
 import { answerFromForm } from './form-answer';
 import { FormFileKeeper, type FormRefusal, type KeptFormFile, showFormFiles } from './form-files';
+import { type IncomingForm } from './form-reply-data';
 import { FORM_WORDS } from './form-words';
+import { dayFrom, paiseFrom } from './paid-parse';
 
 const REFUSAL_WORDS: Record<FormRefusal, () => string> = {
   too_large: () => MEDIA_WORDS.tooLarge,
@@ -74,7 +79,7 @@ export class FormReplyService {
     try {
       const kept: KeptFormFile[] = [];
       for (const file of form.files) kept.push(await this.files.keep(chat, customerId, file));
-      await this.fileThem(chat, customerId, token, kept);
+      await this.fileThem(chat, customerId, token, kept, form);
     } catch (error) {
       // Nothing was answered: give the form back so Meta's retry of this reply is handled.
       await releaseFlowToken(this.db, token.token);
@@ -87,11 +92,14 @@ export class FormReplyService {
     customerId: string,
     token: FlowToken,
     kept: readonly KeptFormFile[],
+    form: IncomingForm,
   ) {
     const saved = kept.flatMap((file) => (file.ok ? [file] : []));
     const reasons = [...new Set(kept.flatMap((file) => (file.ok ? [] : [file.why])))];
     const chosen = chosenBy(token.payload);
-    if (saved.length > 0 && chosen) {
+    if (saved.length > 0 && token.formKey === 'paid_another_way') {
+      await this.takeProof(chat, customerId, token, saved, form);
+    } else if (saved.length > 0 && chosen) {
       await this.db.transaction(async (tx) => {
         const locked = await lockedChat(tx, chat.id);
         await showFormFiles(tx, chat.id, saved);
@@ -104,12 +112,37 @@ export class FormReplyService {
           })),
           now: Date.now(),
           waitSeconds: this.env.FILE_WAIT_SECONDS,
+          homeId: typeof token.payload.propertyId === 'string' ? token.payload.propertyId : null,
         });
       });
     }
     // The true reason, once each: too big, a kind we cannot open, empty, or "send it again".
     for (const why of reasons)
       await queueReply(this.db, chat, { kind: 'text', body: REFUSAL_WORDS[why]() });
+  }
+
+  /** Proof of a payment made another way: filed, finance told, reminders paused, customer thanked. */
+  private async takeProof(
+    chat: Conversation,
+    customerId: string,
+    token: FlowToken,
+    saved: readonly Extract<KeptFormFile, { ok: true }>[],
+    form: IncomingForm,
+  ) {
+    const milestoneId =
+      typeof token.payload.milestoneId === 'string' ? token.payload.milestoneId : null;
+    await this.db.transaction(async (tx) => {
+      const locked = await lockedChat(tx, chat.id);
+      await showFormFiles(tx, chat.id, saved);
+      await takePaymentProof(
+        tx,
+        customerId,
+        saved.map((file) => ({ id: file.id, contentType: file.contentType })),
+        Date.now(),
+        { milestoneId, amountPaise: paiseFrom(form.amount), paidOn: dayFrom(form.date) },
+      );
+      await sayWithTaps(tx, locked, WHAT_WORDS.payment, ['menu']);
+    });
   }
 
   private async old(chat: Conversation, customerId: string) {

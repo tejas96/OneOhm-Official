@@ -7,6 +7,8 @@ import { DocumentsModule } from '../documents/documents.module';
 import { FinanceModule } from '../finance/finance.module';
 import { OnlinePaymentsModule } from '../online-payments/online-payments.module';
 import { ReportsModule } from '../reports/reports.module';
+import { LocationPinService } from '../send-to-customer/location-pin.service';
+import { SendAnswersService } from '../send-to-customer/send-answers.service';
 import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
@@ -88,6 +90,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     FormSettingsService,
     FormReplyService,
     FormFileKeeper,
+    LocationPinService,
+    SendAnswersService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

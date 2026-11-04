@@ -9,7 +9,7 @@ export async function logAction(
   tx: DatabaseExecutor,
   action: { readonly projectId: string | null; readonly leadId: string | null },
   entry: {
-    readonly kind: 'document_request' | 'document_received';
+    readonly kind: 'document_request' | 'document_received' | 'customer_action';
     readonly message: string;
     readonly userId: string | null;
     readonly data: Record<string, unknown>;

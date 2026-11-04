@@ -7,7 +7,11 @@ import {
   properties,
   users,
 } from '@oneohm/database';
-import { type CustomerRequestableCategory, isCustomerRequestable } from '@oneohm/domain';
+import {
+  type CustomerRequestableCategory,
+  distanceMeters,
+  isCustomerRequestable,
+} from '@oneohm/domain';
 import { and, asc, desc, eq, type SQL, sql } from 'drizzle-orm';
 import { describeHome } from '../customer-portal/customer-homes';
 
@@ -21,10 +25,35 @@ const category = (value: string | null): CustomerRequestableCategory =>
 const reasksOf = sql`(select count(*)::int from audit_log a where a.entity in ('customer_action', 'document_request') and a.action in ('customer_action.reasked', 'document_request.reasked') and a.entity_id = ${customerActions.id}::text)`;
 const remindersOf = sql<number>`(select count(*)::int from outbox o where o.dedupe_key = 'paper_reminder:' || ${customerActions.id}::text || ':' || ${reasksOf}::text)`;
 
-/** Paper requests matching `where`, open ones first, newest first. */
+/** The pin a customer sent for a home that already has a point, with how far it is from it. */
+function suggestionOf(
+  request: typeof customerActions.$inferSelect,
+  point: { latitude: number | null; longitude: number | null } | null,
+): DocumentRequest['suggestion'] {
+  const pin = request.payload.pin as { latitude?: number; longitude?: number } | undefined;
+  if (request.type !== 'location' || request.status !== 'received') return null;
+  if (typeof pin?.latitude !== 'number' || typeof pin.longitude !== 'number') return null;
+  const here =
+    point?.latitude != null && point.longitude != null
+      ? { latitude: point.latitude, longitude: point.longitude }
+      : null;
+  return {
+    latitude: pin.latitude,
+    longitude: pin.longitude,
+    distanceM: here
+      ? distanceMeters(here, { latitude: pin.latitude, longitude: pin.longitude })
+      : null,
+  };
+}
+
+/**
+ * Customer actions matching `where`, open ones first, newest first. Papers only unless
+ * `all` (the staff card lists every type; the customer's app and the paper checks read papers).
+ */
 export async function readRequests(
   db: DatabaseExecutor,
   where: SQL | undefined,
+  all = false,
 ): Promise<DocumentRequest[]> {
   const rows = await db
     .select({
@@ -35,6 +64,7 @@ export async function readRequests(
         city: properties.city,
         consumerNumber: properties.consumerNumber,
       },
+      point: { latitude: properties.latitude, longitude: properties.longitude },
       by: users.fullName,
       checkedAt: documents.checkedAt,
       uploadedBy: documents.uploadedByUserId,
@@ -48,12 +78,12 @@ export async function readRequests(
     )
     .leftJoin(users, eq(users.id, customerActions.requestedByUserId))
     .leftJoin(documents, eq(documents.id, customerActions.documentId))
-    .where(and(eq(customerActions.type, 'paper'), where))
+    .where(and(all ? undefined : eq(customerActions.type, 'paper'), where))
     .orderBy(
       asc(sql`case when ${customerActions.status} = 'open' then 0 else 1 end`),
       desc(customerActions.createdAt),
     );
-  return rows.map(({ request, code, home, by, checkedAt, uploadedBy, reminders }) => ({
+  return rows.map(({ request, code, home, by, point, checkedAt, uploadedBy, reminders }) => ({
     id: request.id,
     type: request.type,
     customerId: request.customerId,
@@ -71,6 +101,7 @@ export async function readRequests(
     documentChecked: request.documentId ? checkedAt !== null : null,
     documentByTeam: request.documentId ? uploadedBy !== null : null,
     requestedBy: by,
+    suggestion: suggestionOf(request, point),
     remindersSent: reminders,
     createdAt: request.createdAt.toISOString(),
     receivedAt: request.doneAt?.toISOString() ?? null,

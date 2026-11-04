@@ -7,12 +7,7 @@ interface OtherMessage {
 }
 
 /** The place a pin names, as a map link. */
-function readLocation({
-  latitude,
-  longitude,
-  name,
-  address,
-}: NonNullable<OtherMessage['location']>) {
+function pinLine({ latitude, longitude, name, address }: NonNullable<OtherMessage['location']>) {
   const place = [name, address].filter(Boolean).join(', ');
   return `📍 Location: ${place ? `${place} ` : ''}https://maps.google.com/?q=${latitude},${longitude}`;
 }
@@ -20,7 +15,7 @@ function readLocation({
 /** What a message that is not text or a file says in the chat; its type when we do not know it. */
 export function readOther(message: OtherMessage): string {
   if (message.type === 'sticker') return 'Sticker';
-  if (message.type === 'location' && message.location) return readLocation(message.location);
+  if (message.type === 'location' && message.location) return pinLine(message.location);
   const cards = (message.type === 'contacts' ? message.contacts : null) ?? [];
   if (cards.length > 0)
     return cards
@@ -32,4 +27,22 @@ export function readOther(message: OtherMessage): string {
     return `Reaction${message.reaction?.emoji ? ` ${message.reaction.emoji}` : ''}`;
   if (message.type === 'unsupported') return 'Unsupported message';
   return message.type ? `Message (${message.type})` : 'Message';
+}
+
+/** A pin the customer sent. */
+export interface IncomingLocation {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly name: string | null;
+  readonly address: string | null;
+}
+
+/** The pin in a location message; null for a message with no usable point. */
+export function readLocation(message: OtherMessage): IncomingLocation | null {
+  const raw = message.location;
+  if (message.type !== 'location' || !raw) return null;
+  const { latitude, longitude } = raw;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  return { latitude, longitude, name: raw.name ?? null, address: raw.address ?? null };
 }

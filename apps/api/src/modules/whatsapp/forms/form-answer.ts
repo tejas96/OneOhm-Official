@@ -28,12 +28,16 @@ export async function answerFromForm(
     files: readonly (KeptFile & { media: string })[];
     now: number;
     waitSeconds: number;
+    /** The home the customer picked for an asked paper that had none ("For which home?"). */
+    homeId?: string | null;
   },
 ): Promise<boolean> {
   const { chosen, files, now } = about;
   const homes = await customerHomes(tx, customerId);
   const asked = await openPapersOf(tx, customerId);
-  const target = await targetOf(tx, chosen, asked, homes.length, homes[0]?.propertyId ?? null);
+  const found = await targetOf(tx, chosen, asked, homes.length, homes[0]?.propertyId ?? null);
+  const picked = homes.find((h) => h.propertyId === about.homeId)?.propertyId ?? null;
+  const target = found && found.home === null && picked ? { ...found, home: picked } : found;
   const request =
     chosen.kind === 'ask' ? asked.find((one) => one.id === chosen.actionId) : undefined;
   if (!target || (chosen.kind === 'ask' && !request) || target.home === null) {

@@ -9,6 +9,7 @@ import {
   reaskDocumentRequestSchema,
 } from '../schemas/document-request.schema';
 import { reportKeySchema } from './reports.contract';
+import { sendToCustomerContract } from './send-to-customer.contract';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -95,3 +96,11 @@ export const reportSettingsContract = c.router({
     responses: { 200: reportSettingSchema },
   },
 });
+
+/** The contracts about what the team asks of a customer: papers, reports, "Send to customer". */
+export const customerActionContracts = {
+  documentRequests: documentRequestsContract,
+  customerDocumentRequests: customerDocumentRequestsContract,
+  reportSettings: reportSettingsContract,
+  sendToCustomer: sendToCustomerContract,
+};
