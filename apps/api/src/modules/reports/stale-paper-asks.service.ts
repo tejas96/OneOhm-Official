@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { customerActions, customers, documents, projects } from '@oneohm/database';
 import { eq, inArray, max } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -20,10 +20,29 @@ function monthOf(at: Date, language: string): string {
  */
 @Injectable()
 export class StalePaperAsksService {
+  private readonly log = new Logger('StalePaperAsks');
+
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly checklists: DocumentChecklistService,
   ) {}
+
+  /**
+   * A task has just started: if it is the DISCOM application (MSEDCL's, or another's
+   * `<code>_application`; not the subsidy's), stale papers are asked for. Never undoes the start.
+   */
+  async afterStart(task: { projectId: string; templateKey: string }): Promise<void> {
+    const key = task.templateKey;
+    const application =
+      key === 'discom_application' ||
+      (key.endsWith('_application') && key !== 'subsidy_application');
+    if (!application) return;
+    try {
+      await this.askForStale(task.projectId);
+    } catch (error) {
+      this.log.error(`Stale papers not asked for ${task.projectId}: ${String(error)}`);
+    }
+  }
 
   /** Returns how many papers were asked for. */
   async askForStale(projectId: string): Promise<number> {

@@ -4,6 +4,7 @@ import { fileForm, upload } from '../support/files';
 import { Session } from '../support/http';
 import { choices, lastReply, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
+import { askAboutFiles } from '../support/what-is-this';
 import { sendInbound } from '../support/whatsapp';
 
 // Customer actions (redesign §5.3): a paper the customer sends waits for the team's check.
@@ -57,6 +58,9 @@ describe('Customer actions: the paper check', () => {
     await sendInbound(phone, {
       media: { type: 'document', fileId: `kyc-${phone}`, filename: 'aadhaar.pdf' },
     });
+    // "Is this your Aadhaar card?" Yes.
+    await askAboutFiles(admin);
+    await tap(phone, 'what:yes');
     const action = await actionOf(asked.id);
     return { ...sale, askedId: asked.id, documentId: action?.document_id ?? '' };
   }
@@ -145,6 +149,8 @@ describe('Customer actions: the paper check', () => {
     await sendInbound(phone, {
       media: { type: 'document', fileId: `kyc-${phone}`, filename: 'a.pdf' },
     });
+    await askAboutFiles(admin);
+    await tap(phone, 'what:yes');
     const waiting = await itemOf();
     expect(waiting).toMatchObject({ check: 'to_check', actionId: asked.id });
     expect(waiting.documentIds).toHaveLength(1);

@@ -30,8 +30,6 @@ describe('assistant words in three languages', () => {
         expect(row.title.length, `${language} ${row.title}`).toBeLessThanOrEqual(24);
         expect(row.description.length, `${language} ${row.description}`).toBeLessThanOrEqual(72);
       }
-      for (const row of [words.MEDIA_WORDS.personRow, words.MEDIA_WORDS.somethingElse])
-        expect(row.length, `${language} ${row}`).toBeLessThanOrEqual(24);
       for (const button of [
         words.WORDS.payNow,
         words.WORDS.callMeBack,
@@ -54,7 +52,7 @@ describe('assistant words in three languages', () => {
   it('is a working list in Marathi for ratings and media', async () => {
     await inLanguage('mr', async () => {
       expect(RATINGS.map((rating) => rating.id)).toEqual(EN.RATINGS.map((rating) => rating.id));
-      expect(MEDIA_WORDS.savedFor('फोटो', 'पुणे')).toContain('फोटो');
+      expect(MEDIA_WORDS.problemSavedWithPhotos('इन्व्हर्टर', 2)).toContain('2 फोटोंसह');
     });
   });
 });

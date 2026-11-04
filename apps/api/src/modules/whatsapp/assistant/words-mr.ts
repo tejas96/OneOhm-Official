@@ -66,12 +66,7 @@ export const MR: Words<AssistantWords> = {
     { id: 'rate:1', title: 'अजिबात खूश नाही', description: '5 पैकी 1' },
   ],
   MEDIA_WORDS: {
-    what: { image: 'फोटो', document: 'कागद', video: 'व्हिडिओ', audio: 'व्हॉइस नोट' },
     talkToPerson: 'व्यक्तीशी बोला',
-    paperSaved: (title) =>
-      `धन्यवाद! तुमचे ${title} मिळाले. ते तुमच्या कागदपत्रांसोबत ठेवले आहे आणि टीमला कळवले आहे.`,
-    paperRefused: (title) =>
-      `माफ करा, ही फाइल तुमच्या ${title} साठी वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.`,
     photoAdded: 'धन्यवाद, फोटो तुमच्या समस्येला जोडला आहे.',
     photoNotAdded: 'फाइल तुमच्या समस्येला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
     // Saved as the request's description, which the team reads: kept in English.
@@ -79,13 +74,6 @@ export const MR: Words<AssistantWords> = {
     tooLarge: 'ती फाइल खूप मोठी आहे (जास्तीत जास्त 25 MB). कृपया फोटो किंवा PDF पाठवा.',
     wrongType: 'या प्रकारची फाइल आम्ही उघडू शकत नाही. कृपया फोटो किंवा PDF पाठवा.',
     failed: 'माफ करा, ती फाइल उघडता आली नाही. कृपया थोड्या वेळाने पुन्हा पाठवा.',
-    whichHome: 'हे कोणत्या घरासाठी आहे?',
-    personRow: 'आधार/पॅन (सर्व घरे)',
-    savedFor: (kind, home) => `जतन केले: *${kind}*, तुमच्या *${home}* येथील घरासाठी.`,
-    stillNeeded: (list) => `या घरासाठी अजून हवे: ${list}.`,
-    homeChosen: (home) => `नोंद केली: आता पाठवलेल्या फाइल *${home}* साठी आहेत.`,
-    whichPaper: 'हा कोणता कागद आहे?',
-    somethingElse: 'दुसरे काहीतरी',
     paperGone: 'तो कागद आता लागत नाही, किंवा आमच्याकडे आधीच आहे. काहीही बदलले नाही.',
     paperAskEnded: 'तुमच्या फाइल आधीच जतन केल्या आहेत. दुसरे काहीही बदलले नाही.',
     problemSavedWithPhotos: (category, photos) =>

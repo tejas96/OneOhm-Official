@@ -67,25 +67,13 @@ const EN_RATINGS = [
 
 /** Photos and papers the customer sends (PRD 6.1). */
 const EN_MEDIA_WORDS = {
-  what: { image: 'photo', document: 'paper', video: 'video', audio: 'voice note' },
   talkToPerson: 'Talk to a person',
-  paperSaved: (title: string) =>
-    `Thank you! We got your ${title}. It is saved with your documents and the team is told.`,
-  paperRefused: (title: string) =>
-    `Sorry, we could not use that file for your ${title}. Please send a clear photo or a PDF.`,
   photoAdded: 'Thank you, the photo is added to your problem.',
   photoNotAdded: 'We could not add the file to your problem. Please send a photo of it.',
   photoOnly: 'Photo or paper sent on WhatsApp.',
   tooLarge: 'That file is too big (max 25 MB). Please send a photo or PDF.',
   wrongType: "We can't open this kind of file. Please send a photo or PDF.",
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
-  whichHome: 'Which home is this for?',
-  personRow: 'Aadhaar/PAN (all homes)',
-  savedFor: (kind: string, home: string) => `Saved: *${kind}* for your home at *${home}*.`,
-  stillNeeded: (list: string) => `Still needed for this home: ${list}.`,
-  homeChosen: (home: string) => `Noted: files you send now are for *${home}*.`,
-  whichPaper: 'Which paper is this?',
-  somethingElse: 'Something else',
   paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
   paperAskEnded: 'Your files are already saved. Nothing else was changed.',
   problemSavedWithPhotos: (category: string, photos: number) =>

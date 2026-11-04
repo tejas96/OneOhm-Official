@@ -105,12 +105,17 @@ export function mediaFileName(media: IncomingMedia): string {
 /** In log mode this media id stands in for a file over the size cap (used by the tests). */
 export const SAMPLE_TOO_LARGE_ID = 'sample-too-large';
 
+/** In log mode this media id stands in for a file of a kind we cannot open (plain text). */
+export const SAMPLE_WRONG_TYPE_ID = 'sample-wrong-type';
+
 /** Local and test mode: nothing leaves the machine, and the flow still runs end to end. */
 export function logMediaGateway(log: (line: string) => void): MediaGateway {
   return {
     mode: 'log',
     async download(media) {
       if (media.id === SAMPLE_TOO_LARGE_ID) throw new MediaTooLargeError('Stand-in large file.');
+      if (media.id === SAMPLE_WRONG_TYPE_ID)
+        return { buffer: Buffer.from('Just some plain text.'), fileName: 'notes.txt' };
       log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
       // A paper named like a Word or Excel file stands in as one (the tests send those).
       const office = /\.(docx|xlsx)$/i.exec(media.fileName ?? '')?.[1]?.toLowerCase();

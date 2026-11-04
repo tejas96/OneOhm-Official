@@ -13,7 +13,8 @@ import {
   today,
   uniquePhone,
 } from '../support/sales';
-import { postInbound, refuseRepliesTo, sendInbound } from '../support/whatsapp';
+import { askAboutFiles, questions } from '../support/what-is-this';
+import { postInbound, sendInbound } from '../support/whatsapp';
 
 // Every paper is kept with its home: a request answered in the app, a bill held in
 // WhatsApp before the lead existed, and the lead's papers once the project is made.
@@ -207,30 +208,35 @@ describe('Papers per home', () => {
     await sendInbound(customer.phone, { media: { type: 'image', fileId: 'stored-once-1' } });
     const docs = await customerDocs(customer.customerId);
     expect(docs.map((doc) => doc.project_id)).toEqual([null]);
+    // Kept at once; nothing is asked until 15 seconds after the last file.
+    expect(await questions(customer.phone)).toHaveLength(0);
+    expect(await chatFileIds(admin, customer.phone)).toEqual([docs[0]?.id]);
+    await askAboutFiles(admin);
     const [asked] = await rows<{ at: Date }>(
       'SELECT min(created_at) AS at FROM outbox WHERE recipient = $1',
       [customer.phone],
     );
-    // Kept before the assistant asked what the file is about.
     expect(docs[0]?.created_at.getTime()).toBeLessThan(asked?.at.getTime() ?? 0);
-    expect(await chatFileIds(admin, customer.phone)).toEqual([docs[0]?.id]);
+    expect(await questions(customer.phone)).toHaveLength(1);
   });
 
-  it('retry keeps one document', async () => {
+  it('retry keeps one document, and one question', async () => {
     const customer = await newCustomer(admin, { name: 'Retry Once (test)' });
     const photo = {
       id: `wamid.acceptance-once-${customer.phone.slice(1)}`,
       media: { type: 'image' as const, fileId: 'retry-once-1' },
     };
-    const undo = await refuseRepliesTo(customer.phone);
-    const failed = await postInbound(customer.phone, photo);
-    await undo();
-    expect(failed.status).toBe(500);
-    // Stored before the reply failed, so Meta's retry finds it.
+    expect((await postInbound(customer.phone, photo)).status).toBe(200);
     const before = await customerDocs(customer.customerId);
+    // Meta sends the same message again (the same WhatsApp id): nothing is stored twice.
     await sendInbound(customer.phone, photo);
+    await sendInbound(customer.phone, {
+      media: { type: 'image', fileId: 'retry-once-1' },
+    });
     const after = await customerDocs(customer.customerId);
     expect(after.map((doc) => doc.id)).toEqual(before.map((doc) => doc.id));
-    expect(await chatFileIds(admin, customer.phone)).toEqual([before[0]?.id]);
+    expect(new Set(await chatFileIds(admin, customer.phone))).toEqual(new Set([before[0]?.id]));
+    await askAboutFiles(admin);
+    expect(await questions(customer.phone)).toHaveLength(1);
   });
 });

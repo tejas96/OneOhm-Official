@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { projectActivities, projectFacts, projectTasks } from '@oneohm/database';
 import { factLabel, measurementsFor, type WaitingParty } from '@oneohm/domain';
-import { and, eq, ne, or } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
@@ -21,11 +21,6 @@ import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
 import { closeOpenWait, nextWaitStart } from './task-waits';
-
-/** The net-metering application of any DISCOM (MSEDCL's, or another's `<code>_application`). */
-const isDiscomApplication = (templateKey: string) =>
-  templateKey === 'discom_application' ||
-  (templateKey.endsWith('_application') && templateKey !== 'subsidy_application');
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
@@ -94,24 +89,9 @@ export class TasksService {
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
     // Only the first start counts; resuming after a wait does not message again.
-    if (!task.startedAt) {
-      await tellCustomerAbout(this.db, task, 'started');
-      await this.askForStalePapers(task);
-    }
+    if (!task.startedAt)
+      await Promise.all([tellCustomerAbout(this.db, task, 'started'), this.stale.afterStart(task)]);
     return this.present(id);
-  }
-
-  /**
-   * The DISCOM application needs a current electricity bill: any paper on that home older
-   * than its checklist item allows is asked for again (redesign 5.4). Never undoes the start.
-   */
-  private async askForStalePapers(task: { projectId: string; templateKey: string }) {
-    if (!isDiscomApplication(task.templateKey)) return;
-    try {
-      await this.stale.askForStale(task.projectId);
-    } catch (error) {
-      this.log.error(`Stale papers not asked for ${task.projectId}: ${String(error)}`);
-    }
   }
 
   async markWaiting(
@@ -263,10 +243,7 @@ export class TasksService {
   }
 
   private async present(id: string): Promise<ProjectTask> {
-    const [task] = await presentTasks(
-      this.db,
-      or(eq(projectTasks.id, id)) ?? eq(projectTasks.id, id),
-    );
+    const [task] = await presentTasks(this.db, eq(projectTasks.id, id));
     if (!task) throw notFound('That task');
     return task;
   }

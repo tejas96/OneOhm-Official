@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { chatOf, lastReply, say, tap } from '../support/onboarding';
+import { chatOf, replies, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
+import { askAboutFiles } from '../support/what-is-this';
 import { sendInbound } from '../support/whatsapp';
 
 // Every file a customer sends on WhatsApp shows in the chat and is kept under Documents,
@@ -61,11 +62,14 @@ describe('WhatsApp chat files', () => {
     const id = `wamid.acceptance-held-${customer.phone.slice(1)}`;
     await sendInbound(customer.phone, { id, media: { type: 'image', fileId: 'held-1' } });
     expect(await chatFiles(admin, customer.phone)).toHaveLength(1);
-    expect((await projectDocs(project.id)).some((doc) => doc.category === 'other')).toBe(true);
     const alerts = await rows(`SELECT id FROM notifications WHERE dedupe_key LIKE $1`, [
       `wa_in:${id}:%`,
     ]);
     expect(alerts).toHaveLength(1);
+    // The question still goes out in a held chat; "Something else" keeps it on the home.
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:other');
+    expect((await projectDocs(project.id)).some((doc) => doc.category === 'other')).toBe(true);
   });
 
   it('a paper sent while a person has the chat answers the open request, filed once', async () => {
@@ -81,14 +85,16 @@ describe('WhatsApp chat files', () => {
     await sendInbound(customer.phone, {
       media: { type: 'document', fileId: 'held-paper', filename: 'aadhaar.pdf' },
     });
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:yes');
     const [request] = await rows<{ status: string; document_id: string }>(
       `SELECT status::text AS status, document_id FROM customer_actions WHERE id = $1`,
       [asked.id],
     );
     expect(request?.status).toBe('received');
-    // The customer hears it was saved for their home, as in a chat the bot holds.
-    expect((await lastReply(customer.phone))?.body).toContain(
-      'Saved: *Aadhaar card (test)* for your home at',
+    // An ID paper names no home.
+    expect((await replies(customer.phone)).at(-1)?.body).toBe(
+      "Saved ✅ *Aadhaar card (test)*. We'll check it.",
     );
     const shown = await chatFiles(admin, customer.phone);
     expect(shown.map((message) => message.file?.id)).toEqual([request?.document_id]);
@@ -100,9 +106,11 @@ describe('WhatsApp chat files', () => {
   it('a photo kept before the problem was told moves onto the problem, stored once', async () => {
     const { customer, project } = await sellProject(admin, { name: 'Problem Photo (test)' });
     await sendInbound(customer.phone, { media: { type: 'image', fileId: 'problem-1' } });
-    const [kept] = await projectDocs(project.id);
-    expect(kept?.category).toBe('other');
-    await tap(customer.phone, 'service');
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:prob');
+    const [kept] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
     await say(customer.phone, 'The inverter shows a red light (test)');
     // The same document now shows the problem: no second copy, nothing removed.
     const docs = await projectDocs(project.id);

@@ -22,7 +22,7 @@ export interface SentReply {
   kind: string;
   body: string;
   buttons?: { id: string; title: string }[];
-  rows?: { id: string; title: string }[];
+  rows?: { id: string; title: string; description?: string }[];
   /** A session document: its link, file name and caption. */
   link?: string;
   filename?: string;

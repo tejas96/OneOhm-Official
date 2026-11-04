@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { type DatabaseExecutor, documents, waMessages } from '@oneohm/database';
-import { eq, inArray } from 'drizzle-orm';
+import { type DatabaseExecutor } from '@oneohm/database';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
@@ -8,25 +7,22 @@ import { customerHomes } from '../../customer-portal/customer-homes';
 import { DocumentMoveService } from '../../documents/document-move.service';
 import { type Conversation, lockedChat, queueReply, setState } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
-import { startComplaint } from './complaint-start';
 import { fileAs } from './file-as';
 import { FileQuestionsService } from './file-questions';
 import {
   type Chosen,
   type FilesWait,
-  filedBatchesOf,
   filesWaitOf,
   isOldQuestion,
   type WhatTap,
-  whereTap,
   withBatch,
   withoutFiles,
 } from './files-wait';
 import { type KeptFile, placeOn } from './kept-files';
-import { keepPending, type PendingMedia } from './media-intake';
 import { openPapersOf, unfiledFiles } from './paper-reads';
 import { takePaymentProof } from './payment-proof';
 import { PROJECT_WORDS } from './project-words';
+import { askWhichHome, changeSaved, startProblem } from './what-actions';
 import { savedTitle, saySaved, stillAsked } from './what-saved';
 import { targetOf } from './what-targets';
 import { WHAT_WORDS } from './what-words';
@@ -53,7 +49,16 @@ export class WhatAnswerService {
     return this.db.transaction(async (tx) => {
       const locked = await lockedChat(tx, chat.id);
       const now = Date.now();
-      if (tap.t === 'change') return this.change(tx, locked, customerId, tap.first, now);
+      if (tap.t === 'change')
+        return changeSaved(
+          tx,
+          this.moves,
+          (changed) => this.questions.ask(tx, changed, customerId, now),
+          locked,
+          customerId,
+          tap.first,
+          now,
+        );
       const wait = filesWaitOf(locked.context);
       if (!wait) return this.say(tx, locked, MEDIA_WORDS.paperAskEnded);
       // [What are they?] on Home asks again about everything that waits.
@@ -64,26 +69,35 @@ export class WhatAnswerService {
       }
       const files = await unfiledFiles(tx, customerId, wait.focus ?? wait.files.map((f) => f.id));
       if (files.length === 0) return this.askAgain(tx, locked, customerId, now, true);
-      if (tap.t === 'more')
-        return void (await this.questions.ask(tx, locked, customerId, now, { stage: 'more' }));
-      if (tap.t === 'diff') {
-        const [first] = files;
-        const each = { of: files.length };
-        return void (await this.questions.ask(tx, locked, customerId, now, {
-          focus: first ? [first.id] : null,
-          each,
-        }));
-      }
-      if (tap.t === 'prob') return this.problem(tx, locked, customerId, wait, files, now);
-      if (tap.t === 'pay') {
-        await takePaymentProof(tx, customerId, files, now);
-        await sayWithTaps(tx, locked, WHAT_WORDS.payment, ['menu']);
-        return this.settle(tx, locked, customerId, wait, files, now);
-      }
-      const chosen = this.chosenBy(tap, wait);
-      if (!chosen) return this.askAgain(tx, locked, customerId, now);
-      return this.choose(tx, locked, customerId, { wait, files, chosen, now });
+      return this.answerTap(tx, locked, customerId, { wait, files, tap, now });
     });
+  }
+
+  /** The tap on a live question: more rows, one by one, a fixed row, or a paper. */
+  private async answerTap(
+    tx: DatabaseExecutor,
+    chat: Conversation,
+    customerId: string,
+    about: { wait: FilesWait; files: readonly KeptFile[]; tap: WhatTap; now: number },
+  ): Promise<void> {
+    const { wait, files, tap, now } = about;
+    if (tap.t === 'more')
+      return void (await this.questions.ask(tx, chat, customerId, now, { stage: 'more' }));
+    if (tap.t === 'diff') {
+      const [first] = files;
+      const each = { of: files.length };
+      const focus = first ? [first.id] : null;
+      return void (await this.questions.ask(tx, chat, customerId, now, { focus, each }));
+    }
+    if (tap.t === 'prob') return startProblem(tx, chat, customerId, wait, files, now);
+    if (tap.t === 'pay') {
+      await takePaymentProof(tx, customerId, files, now);
+      await sayWithTaps(tx, chat, WHAT_WORDS.payment, ['menu']);
+      return this.settle(tx, chat, customerId, wait, files, now);
+    }
+    const chosen = this.chosenBy(tap, wait);
+    if (!chosen) return this.askAgain(tx, chat, customerId, now);
+    return this.choose(tx, chat, customerId, { wait, files, chosen, now });
   }
 
   /** A row of "For which home?" tapped: the picked paper goes on that home. */
@@ -99,7 +113,7 @@ export class WhatAnswerService {
       if (!wait?.pick || files.length === 0) return this.say(tx, locked, MEDIA_WORDS.paperAskEnded);
       if (!homes.some((home) => home.propertyId === propertyId)) {
         await queueReply(tx, locked, { kind: 'text', body: PROJECT_WORDS.homeGone });
-        return this.askHome(tx, locked, homes, wait, wait.pick);
+        return askWhichHome(tx, locked, homes, wait, wait.pick);
       }
       return this.choose(tx, locked, customerId, {
         wait,
@@ -142,7 +156,7 @@ export class WhatAnswerService {
     }
     const target = found.home === null && pick.home ? { ...found, home: pick.home } : found;
     if (target.home === null && homes.length >= 2)
-      return this.askHome(tx, chat, homes, wait, chosen);
+      return askWhichHome(tx, chat, homes, wait, chosen);
     const place = (target.home && placeOn(homes, target.home, target.category)) || {
       projectId: null,
       propertyId: null,
@@ -210,107 +224,6 @@ export class WhatAnswerService {
   ): Promise<void> {
     const asked = await this.questions.ask(tx, chat, customerId, now, { focus: null, each: null });
     if (!asked && ended) await this.say(tx, chat, MEDIA_WORDS.paperAskEnded);
-  }
-
-  private async askHome(
-    tx: DatabaseExecutor,
-    chat: Conversation,
-    homes: Awaited<ReturnType<typeof customerHomes>>,
-    wait: FilesWait,
-    chosen: Chosen,
-  ): Promise<void> {
-    await queueReply(tx, chat, {
-      kind: 'list',
-      body: WHAT_WORDS.whichHome,
-      button: WHAT_WORDS.choose,
-      rows: homes.slice(0, 10).map((home) => ({
-        id: whereTap(home.propertyId),
-        title: home.title,
-        description: home.description,
-      })),
-    });
-    const context = { ...(chat.context as object), filesWait: { ...wait, pick: chosen } };
-    await setState(tx, chat.id, chat.state, context);
-  }
-
-  /** "Problem photo": the photos wait for the problem's words, as "Report a problem" asks. */
-  private async problem(
-    tx: DatabaseExecutor,
-    chat: Conversation,
-    customerId: string,
-    wait: FilesWait,
-    files: readonly KeptFile[],
-    now: number,
-  ): Promise<void> {
-    const ids = files.map((file) => file.id);
-    const photos: PendingMedia[] = wait.files
-      .filter((file) => ids.includes(file.id))
-      .map((file) => ({
-        type: file.type,
-        id: file.media,
-        mimeType: null,
-        fileName: null,
-        at: now,
-      }));
-    const left = withoutFiles(wait, ids);
-    const before = keepPending(chat.context, now).pending as PendingMedia[] | undefined;
-    const context = {
-      ...(chat.context as object),
-      filesWait: left,
-      pending: [...(before ?? []), ...photos].slice(-6),
-    };
-    await setState(tx, chat.id, chat.state, context);
-    await startComplaint(tx, { ...chat, context }, customerId);
-  }
-
-  /** [Change]: the batch goes back to "not filed" and the customer is asked again. */
-  private async change(
-    tx: DatabaseExecutor,
-    chat: Conversation,
-    customerId: string,
-    firstId: string,
-    now: number,
-  ): Promise<void> {
-    const batches = filedBatchesOf(chat.context, now);
-    const batch = batches.find((one) => one.ids[0] === firstId);
-    const released = batch ? await this.moves.release(tx, customerId, batch.ids) : [];
-    if (!batch || released.length === 0)
-      return sayWithTaps(tx, chat, WHAT_WORDS.changeLate, ['talk', 'menu']);
-    const rows = await tx
-      .select({ id: documents.id, type: documents.contentType, media: waMessages.mediaId })
-      .from(documents)
-      .innerJoin(waMessages, eq(waMessages.documentId, documents.id))
-      .where(inArray(documents.id, released));
-    const back = rows.flatMap((row) =>
-      row.media && row.id
-        ? [
-            {
-              id: row.id,
-              media: row.media,
-              type: row.type.startsWith('image/') ? ('image' as const) : ('document' as const),
-              at: now,
-            },
-          ]
-        : [],
-    );
-    const before = filesWaitOf(chat.context);
-    const wait: FilesWait = {
-      files: [...(before?.files ?? []).filter((file) => !released.includes(file.id)), ...back],
-      askAt: null,
-      askedAt: null,
-      focus: null,
-      each: false,
-      eachOf: 0,
-      offered: null,
-      pick: null,
-    };
-    const context = {
-      ...(chat.context as object),
-      filesWait: wait,
-      filedBatches: batches.filter((one) => one !== batch),
-    };
-    await setState(tx, chat.id, chat.state, context);
-    await this.questions.ask(tx, { ...chat, context }, customerId, now);
   }
 
   private say(tx: DatabaseExecutor, chat: Conversation, body: string) {

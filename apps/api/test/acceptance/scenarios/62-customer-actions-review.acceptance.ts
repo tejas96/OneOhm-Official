@@ -3,8 +3,9 @@ import { closeDb, rows } from '../support/db';
 import { fileForm, upload } from '../support/files';
 import { sellOn } from '../support/homes';
 import { Session } from '../support/http';
-import { lastReply, say } from '../support/onboarding';
+import { lastReply, say, tap } from '../support/onboarding';
 import { newCustomer, sellProject } from '../support/sales';
+import { askAboutFiles } from '../support/what-is-this';
 import { sendInbound } from '../support/whatsapp';
 
 // Customer actions, review round 1: long titles, who sees what, ask again from closed or
@@ -163,6 +164,8 @@ describe('Customer actions: review round 1', () => {
     await sendInbound(customer.phone, {
       media: { type: 'document', fileId: `lead-${customer.phone}`, filename: 'bill.pdf' },
     });
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:yes');
     expect((await actionOf(asked.id))?.status).toBe('received');
     const log = await rows(
       `SELECT 1 FROM lead_activities WHERE lead_id = $1 AND note LIKE '%sent Light bill (test)%'`,

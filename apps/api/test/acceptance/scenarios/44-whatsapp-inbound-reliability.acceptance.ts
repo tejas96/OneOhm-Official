@@ -3,6 +3,7 @@ import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { chatOf, replies, say, tap, withOnboarding } from '../support/onboarding';
 import { newCustomer, uniquePhone } from '../support/sales';
+import { askAboutFiles, questions } from '../support/what-is-this';
 import { postInbound, refuseRepliesTo, sendInbound } from '../support/whatsapp';
 
 // Live review A3/A4: a customer message the API could not handle is answered 500 (so Meta
@@ -94,49 +95,41 @@ describe('WhatsApp inbound reliability', () => {
     expect(await lastInboundOf(phone)).toBe(newest);
   });
 
-  it('a paper photo filed before the reply failed is not filed again on the retry', async () => {
+  it('a question that cannot be queued is asked on the next run, and the photo is kept once', async () => {
     const customer = await newCustomer(admin, { name: 'Retry Papers (test)' });
-    // The home's own paper is the one a photo answers; the ID paper waits (decision 2).
     for (const [title, category] of [
       ['Aadhaar card (test)', 'customer_kyc'],
       ['Light bill (test)', 'electricity_bill'],
     ])
       await rows(
         `INSERT INTO customer_actions (type, customer_id, category, title, created_at)
-          VALUES ('paper', $1, $4, $2, now() - interval '1 hour' + $3::interval)`,
-        [
-          customer.customerId,
-          title,
-          title.startsWith('Aadhaar') ? '0 minutes' : '1 minute',
-          category,
-        ],
+          VALUES ('paper', $1, $3, $2, now() - interval '1 hour')`,
+        [customer.customerId, title, category],
       );
     const photo = {
       id: `wamid.acceptance-paper-${customer.phone.slice(1)}`,
       media: { type: 'image' as const, fileId: 'retry-paper', mimeType: 'image/jpeg' },
     };
+    // The photo is kept at once; nothing is asked yet, so nothing can fail on it.
+    expect((await postInbound(customer.phone, photo)).status).toBe(200);
     const undo = await refuseRepliesTo(customer.phone);
     try {
-      expect((await postInbound(customer.phone, photo)).status).toBe(500);
+      // The question cannot be queued: it stays due and nothing is half done.
+      expect(await askAboutFiles(admin)).toBe(0);
     } finally {
       await undo();
     }
     await sendInbound(customer.phone, photo);
-    const papers = await rows<{ title: string; status: string }>(
-      `SELECT title, status::text AS status FROM customer_actions WHERE customer_id = $1
-        ORDER BY created_at`,
-      [customer.customerId],
-    );
-    expect(papers).toEqual([
-      { title: 'Aadhaar card (test)', status: 'open' },
-      { title: 'Light bill (test)', status: 'received' },
+    expect(await askAboutFiles(admin)).toBe(1);
+    expect(await questions(customer.phone)).toHaveLength(1);
+    const kept = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
     ]);
-    expect((await replies(customer.phone)).at(-1)?.body).toContain('Light bill (test)');
-    // A home paper asked for with no project still lands on the customer's one home.
-    const kept = await rows<{ property_id: string | null }>(
-      'SELECT property_id FROM documents WHERE customer_id = $1',
+    expect(kept).toHaveLength(1);
+    const papers = await rows<{ status: string }>(
+      'SELECT status::text AS status FROM customer_actions WHERE customer_id = $1',
       [customer.customerId],
     );
-    expect(kept).toEqual([{ property_id: customer.propertyId }]);
+    expect(papers).toEqual([{ status: 'open' }, { status: 'open' }]);
   });
 });

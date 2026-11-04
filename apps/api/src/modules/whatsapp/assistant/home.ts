@@ -12,7 +12,7 @@ import { CHAT_WORDS, ROW_MAX, talkTitle } from './chat-words';
 import { sayWithTaps, type TapChoice } from './closing-taps';
 import { HandOverService } from './hand-over';
 import { pendingButton, pendingLine, pendingRows } from './home-lines';
-import { pendingForCustomer } from './pending-items';
+import { type PendingItem, pendingForCustomer } from './pending-items';
 import { stageCount } from './progress-line';
 import { waitingFileCount } from './waiting-files';
 import { WHAT_WORDS } from './what-words';
@@ -67,14 +67,15 @@ export class HomeService {
         : projects.length > 0
           ? 'update'
           : talk;
-    const whatAreThey = { id: 'what:ask', title: WHAT_WORDS.buttons.whatAreThey };
-    const taps: TapChoice[] =
-      waiting > 0
-        ? [whatAreThey, top ? pendingButton(top, this.paysOnline()) : 'update', 'more']
-        : top
-          ? [pendingButton(top, this.paysOnline()), next, 'more']
-          : ['update', 'problem', 'more'];
-    return sayWithTaps(this.db, chat, body.join('\n'), taps);
+    return sayWithTaps(this.db, chat, body.join('\n'), this.taps(top, next, waiting));
+  }
+
+  /** The action for what matters most, the next most useful, then More; files first if any wait. */
+  private taps(top: PendingItem | undefined, next: TapChoice, waiting: number): TapChoice[] {
+    const action: TapChoice = top ? pendingButton(top, this.paysOnline()) : 'update';
+    if (waiting > 0)
+      return [{ id: 'what:ask', title: WHAT_WORDS.buttons.whatAreThey }, action, 'more'];
+    return top ? [action, next, 'more'] : ['update', 'problem', 'more'];
   }
 
   /** [See them]: every item that needs the customer, each row opening its answer. */

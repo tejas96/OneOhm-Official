@@ -65,12 +65,7 @@ export const HI: Words<AssistantWords> = {
     { id: 'rate:1', title: 'बिल्कुल खुश नहीं', description: '5 में से 1' },
   ],
   MEDIA_WORDS: {
-    what: { image: 'फ़ोटो', document: 'कागज़', video: 'वीडियो', audio: 'वॉइस नोट' },
     talkToPerson: 'टीम से बात करें',
-    paperSaved: (title) =>
-      `धन्यवाद! आपका ${title} मिल गया। इसे आपके दस्तावेज़ों के साथ रखा गया है और टीम को बता दिया गया है।`,
-    paperRefused: (title) =>
-      `माफ़ कीजिए, यह फ़ाइल आपके ${title} के लिए इस्तेमाल नहीं हो सकी। कृपया साफ़ फ़ोटो या PDF भेजें।`,
     photoAdded: 'धन्यवाद, फ़ोटो आपकी समस्या में जोड़ दी गई है।',
     photoNotAdded: 'फ़ाइल आपकी समस्या में नहीं जुड़ सकी। कृपया समस्या की फ़ोटो भेजें।',
     // Saved as the request's description, which the team reads: kept in English.
@@ -78,13 +73,6 @@ export const HI: Words<AssistantWords> = {
     wrongType: 'हम इस तरह की फ़ाइल नहीं खोल सकते। कृपया फ़ोटो या PDF भेजें।',
     tooLarge: 'वह फ़ाइल बहुत बड़ी है (अधिकतम 25 MB)। कृपया फ़ोटो या PDF भेजें।',
     failed: 'माफ़ कीजिए, वह फ़ाइल खुल नहीं सकी। कृपया थोड़ी देर बाद फिर से भेजें।',
-    whichHome: 'यह किस घर के लिए है?',
-    personRow: 'आधार/पैन (सभी घर)',
-    savedFor: (kind, home) => `सहेजा गया: *${kind}*, आपके *${home}* वाले घर के लिए।`,
-    stillNeeded: (list) => `इस घर के लिए अभी चाहिए: ${list}।`,
-    homeChosen: (home) => `नोट किया: अब भेजी गई फ़ाइलें *${home}* के लिए हैं।`,
-    whichPaper: 'यह कौन सा कागज़ है?',
-    somethingElse: 'कुछ और',
     paperGone: 'वह कागज़ अब नहीं चाहिए, या हमारे पास पहले से है। कुछ नहीं बदला गया।',
     paperAskEnded: 'आपकी फ़ाइलें पहले ही सहेजी जा चुकी हैं। और कुछ नहीं बदला गया।',
     problemSavedWithPhotos: (category, photos) =>

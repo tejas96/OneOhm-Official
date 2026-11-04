@@ -175,7 +175,7 @@ describe('Papers per home: reminders', () => {
       {
         user_id: admin.userId,
         title: 'Files to sort from To Sort (test)',
-        body: '3 files have no home yet. Open the chat and move them to the right home.',
+        body: '3 files have not been sorted yet. Open the chat and file them on the right home.',
       },
     ]);
     await runPaperReminders();
@@ -193,7 +193,7 @@ describe('Papers per home: reminders', () => {
     expect(await sortAlerts()).toHaveLength(2);
   });
 
-  it('one home has nothing to sort', async () => {
+  it('a customer with one home is alerted about waiting files too', async () => {
     const { customer } = await sellProject(admin, { name: 'Single Home (test)' });
     await sendInbound(customer.phone, { media: { type: 'image', fileId: `one-${randomUUID()}` } });
     await rows('UPDATE documents SET created_at = $2 WHERE customer_id = $1', [
@@ -201,9 +201,9 @@ describe('Papers per home: reminders', () => {
       new Date(Date.now() - 3 * HOUR),
     ]);
     await runPaperReminders();
-    const docs = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+    const [doc] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
       customer.customerId,
     ]);
-    for (const doc of docs) expect(await alertsKeyed(`paper_sort:${doc.id}`)).toHaveLength(0);
+    expect(await alertsKeyed(`paper_sort:${doc?.id}`)).toHaveLength(1);
   });
 });
