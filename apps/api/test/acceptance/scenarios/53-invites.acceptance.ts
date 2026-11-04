@@ -203,13 +203,17 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect((await web.raw('GET', '/auth/me')).status).toBe(200);
   });
 
-  it('the invite status survives a phone change', async () => {
+  it('a phone change before the first sign-in sends the invite again to the new number', async () => {
     const person = await created('Number Changed Early (test)');
     await acceptanceDb().pool.query(`UPDATE outbox SET status = 'sent' WHERE dedupe_key LIKE $1`, [
       `staff_welcome:${person.id}:%`,
     ]);
-    await admin.patch(`/people/${person.id}`, { phone: uniquePhone() });
+    const newPhone = uniquePhone();
+    await admin.patch(`/people/${person.id}`, { phone: newPhone });
     const listed = (await admin.get<Reply[]>('/people')).find((entry) => entry.id === person.id);
-    expect(listed?.inviteDelivery).toBe('sent');
+    // The newest invite is the one to the new number, still on its way.
+    expect(listed?.inviteDelivery).toBe('queued');
+    const sent = await invites(person.id);
+    expect(sent.map((row) => row.recipient)).toEqual([person.phone, newPhone]);
   });
 });
