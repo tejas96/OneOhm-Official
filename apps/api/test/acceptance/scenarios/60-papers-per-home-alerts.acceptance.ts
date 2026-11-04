@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { chatOf, lastReply, say } from '../support/onboarding';
+import { chatOf, replies, say } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { sendInbound, sendStatus } from '../support/whatsapp';
 
@@ -27,6 +27,12 @@ const alertsOf = (kind: string, chatId: string) =>
     `SELECT user_id, body FROM notifications WHERE kind = $1 AND subject_id = $2`,
     [kind, chatId],
   );
+
+/** The alerts the chat's people got for one inbound message. */
+const heardOf = (waMessageId: string) =>
+  rows<{ body: string }>('SELECT body FROM notifications WHERE dedupe_key LIKE $1', [
+    `wa_in:${waMessageId}:%`,
+  ]);
 
 /** Marks the latest reply to this number as sent, so a failed receipt can find it. */
 async function sentAs(phone: string, wamid: string) {
@@ -77,9 +83,12 @@ describe('Papers per home: alerts that were missing', () => {
   });
   afterAll(closeDb);
 
-  it('a location pin alerts the person', async () => {
+  it('a location pin alerts the person and keeps the assistant', async () => {
     const { customer } = await sellProject(admin, { name: 'Pin Sender (test)' });
+    const id = `wamid.acceptance-pin-${customer.phone.slice(1)}`;
+    const before = (await replies(customer.phone)).length;
     await sendInbound(customer.phone, {
+      id,
       location: { latitude: 18.52, longitude: 73.85, name: 'Our roof (test)' },
     });
     const chat = await chatOf(customer.phone);
@@ -87,29 +96,37 @@ describe('Papers per home: alerts that were missing', () => {
     expect((await chatMessages(admin, customer.phone)).map((row) => row.body)).toEqual([
       `📍 Location: Our roof (test) ${link}`,
     ]);
-    // Their person is told, with what was sent; the customer is not told "not understood".
-    const told = await alertsOf('whatsapp_handover', chat.id);
+    // Their person is told once, with what was sent; the chat is not handed over and the
+    // customer is told nothing ("not understood" or "passed to").
+    const told = await heardOf(id);
     expect(told).toHaveLength(1);
     expect(told[0]?.body).toContain(link);
-    expect((await lastReply(customer.phone))?.body ?? '').not.toMatch(/did not understand/i);
-    // The person holds the chat now: the next pin is just an inbound alert.
-    const id = `wamid.acceptance-pin-${customer.phone.slice(1)}`;
-    await sendInbound(customer.phone, { id, location: { latitude: 1, longitude: 2 } });
-    const heard = await rows(`SELECT id FROM notifications WHERE dedupe_key LIKE $1`, [
-      `wa_in:${id}:%`,
-    ]);
-    expect(heard).toHaveLength(1);
+    expect(await alertsOf('whatsapp_handover', chat.id)).toHaveLength(0);
+    expect(chat.state).not.toBe('human');
+    expect(await replies(customer.phone)).toHaveLength(before);
   });
 
   it('a contact card shows in the chat', async () => {
     const { customer } = await sellProject(admin, { name: 'Card Sender (test)' });
+    const id = `wamid.acceptance-card-${customer.phone.slice(1)}`;
     await sendInbound(customer.phone, {
+      id,
       contact: { name: 'Ravi Patil (test)', phone: '+919000000102' },
     });
     expect((await chatMessages(admin, customer.phone)).map((row) => row.body)).toEqual([
       '👤 Contact: Ravi Patil (test) +919000000102',
     ]);
-    expect(await alertsOf('whatsapp_handover', (await chatOf(customer.phone)).id)).toHaveLength(1);
+    expect(await heardOf(id)).toHaveLength(1);
+    expect((await chatOf(customer.phone)).state).not.toBe('human');
+  });
+
+  it('a sticker alerts once and gets no reply', async () => {
+    const { customer } = await sellProject(admin, { name: 'Sticker Sender (test)' });
+    const id = `wamid.acceptance-sticker-${customer.phone.slice(1)}`;
+    const before = (await replies(customer.phone)).length;
+    await sendInbound(customer.phone, { id, sticker: true });
+    expect(await heardOf(id)).toHaveLength(1);
+    expect(await replies(customer.phone)).toHaveLength(before);
   });
 
   it('a failed reply alerts the person', async () => {

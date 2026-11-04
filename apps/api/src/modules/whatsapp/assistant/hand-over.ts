@@ -86,6 +86,20 @@ export class HandOverService {
     return sayWithTaps(db, chat, reply ?? WORDS.humanSoon, ['menu']);
   }
 
+  /**
+   * A location pin, a contact card or a sticker: the chat shows it and its person (or the
+   * desk) is told once. The chat stays with the assistant and nothing is said back.
+   */
+  async tellSent(chat: Conversation, waMessageId: string, sent: string) {
+    const owned = await ensureChatOwner(this.db, chat);
+    await tellChatTeam(this.db, owned, {
+      kind: 'whatsapp_message',
+      title: `WhatsApp from ${chat.profileName ?? chat.phone}`,
+      body: sent.slice(0, 140),
+      key: `wa_in:${waMessageId}`,
+    });
+  }
+
   /** To the chat's own person (or its desk), named in the reply; options as in handOver. */
   async passToOwner(chat: Conversation, options: HandOverOptions = {}) {
     const db = options.db ?? this.db;

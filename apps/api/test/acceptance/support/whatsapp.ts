@@ -40,6 +40,8 @@ export interface InboundMessage {
   location?: { latitude: number; longitude: number; name?: string; address?: string };
   /** A shared contact card, as Meta posts it. */
   contact?: { name: string; phone: string };
+  /** A sticker, as Meta posts it. */
+  sticker?: boolean;
   /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
   referral?: Record<string, string>;
   /** The sender's WhatsApp name; null sends none (a number without a profile name). */
@@ -147,20 +149,23 @@ function interactive(
   };
 }
 
+/** A location pin, a contact card or a sticker as Meta posts it; null for anything else. */
+function otherOf(base: Record<string, string>, message: InboundMessage) {
+  if (message.location) return { ...base, type: 'location', location: message.location };
+  if (message.sticker) return { ...base, type: 'sticker', sticker: { id: 'sticker-1' } };
+  if (!message.contact) return null;
+  const { name, phone } = message.contact;
+  return {
+    ...base,
+    type: 'contacts',
+    contacts: [{ name: { formatted_name: name }, phones: [{ phone }] }],
+  };
+}
+
 /** The Meta message object for what the test sends: media, a tap, or typed text. */
 function messageOf(base: Record<string, string>, message: InboundMessage): Record<string, unknown> {
-  if (message.location) return { ...base, type: 'location', location: message.location };
-  if (message.contact)
-    return {
-      ...base,
-      type: 'contacts',
-      contacts: [
-        {
-          name: { formatted_name: message.contact.name },
-          phones: [{ phone: message.contact.phone }],
-        },
-      ],
-    };
+  const other = otherOf(base, message);
+  if (other) return other;
   return message.media
     ? {
         ...base,

@@ -85,9 +85,10 @@ export class AssistantService {
       return this.menus.choose(chat, customerId, 'human');
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
-    // A location pin, a contact card or a sticker is never answered by the menu: their person
-    // is told what it was (the chat shows it).
-    if (incoming.kind === 'other') return this.people.passToOwner(chat, { summary: incoming.text });
+    // A location pin, a contact card or a sticker is never answered: their person is told
+    // what it was (the chat shows it) and the assistant stays on.
+    if (incoming.kind === 'other')
+      return this.people.tellSent(chat, incoming.waMessageId, incoming.text);
     // "ok", "thanks", 👍: a warm word back, no alert (review F7); a held chat's go to the person.
     if (this.thanksOnly(chat, incoming)) return sayWithTaps(this.db, chat, WORDS.welcome, ['menu']);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.
