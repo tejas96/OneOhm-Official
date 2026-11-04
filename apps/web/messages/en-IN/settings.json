@@ -1360,6 +1360,19 @@
         "whatsapp_heartbeat": "{count, plural, other {Webhook looks silent: settings team told}}"
       }
     },
+    "forms": {
+      "title": "Forms",
+      "help": "Forms we send in WhatsApp chats. A form that is not published is not offered: customers are asked to send the photo in the chat instead.",
+      "loading": "Loading the forms",
+      "version": "Version {version}",
+      "published": "Published",
+      "notPublished": "Not published",
+      "flowId": "Flow ID",
+      "flowIdHint": "Printed by the publish script, or copied from WhatsApp Manager if you published it by hand. Clear it to stop using the form.",
+      "flowIdPlaceholder": "Numbers only",
+      "save": "Save",
+      "saved": "Form saved"
+    },
     "onboarding": {
       "title": "WhatsApp onboarding",
       "loading": "Loading the onboarding settings",

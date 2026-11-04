@@ -10,6 +10,7 @@ import { SaveBar } from '../rules/save-bar';
 import { RULE_KEYS, useRuleSettings } from '../rules/use-rule-settings';
 import { SettingsSection } from '../settings-section';
 import { BillBandsTable } from './bill-bands-table';
+import { FormsSection } from './forms-section';
 import { PanelPickers } from './panel-pickers';
 
 /**
@@ -34,72 +35,75 @@ export function OnboardingPanel() {
   const narrow = 'sm:max-w-48';
 
   return (
-    <form onSubmit={rule.submit} noValidate className="flex max-w-5xl flex-col gap-8">
-      <SettingsSection title={t('title')} description={t('help')}>
-        <Switch
-          checked={draft.enabled}
-          onCheckedChange={(enabled) => patch({ enabled })}
-          label={t('enabled')}
-          description={t('enabledHint')}
-        />
-        <Field label={t('cities')} hint={t('citiesHint')} error={errors.serviceCities}>
-          <Input
-            value={draft.serviceCities.join(',')}
-            onChange={(event) => patch({ serviceCities: event.target.value.split(',') })}
-            placeholder={t('citiesPlaceholder')}
+    <div className="flex max-w-5xl flex-col gap-8">
+      <form onSubmit={rule.submit} noValidate className="flex flex-col gap-8">
+        <SettingsSection title={t('title')} description={t('help')}>
+          <Switch
+            checked={draft.enabled}
+            onCheckedChange={(enabled) => patch({ enabled })}
+            label={t('enabled')}
+            description={t('enabledHint')}
           />
-        </Field>
-      </SettingsSection>
-      <SettingsSection title={t('bands')} description={t('bandsHint')}>
-        <BillBandsTable
-          bands={draft.billBands}
-          errors={errors}
-          onChange={(billBands) => patch({ billBands })}
-        />
-        {errors.billBands && <p className="type-body-sm text-overdue">{errors.billBands}</p>}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('tariff')} error={errors.tariffPaisePerUnit}>
-            <div className={narrow}>
-              <NumberInput
-                unit="paise"
-                value={draft.tariffPaisePerUnit}
-                onValueChange={(value) => patch({ tariffPaisePerUnit: value ?? 0 })}
-              />
-            </div>
-          </Field>
-          <Field label={t('unitsPerKw')} error={errors.unitsPerKwMonth}>
-            <div className={narrow}>
-              <NumberInput
-                unit="decimal"
-                value={draft.unitsPerKwMonth}
-                onValueChange={(value) => patch({ unitsPerKwMonth: value ?? 0 })}
-              />
-            </div>
-          </Field>
-        </div>
-        <Field label={t('nudge')} hint={t('nudgeHint')} error={errors.nudgeAfterHours}>
-          <div className={narrow}>
-            <NumberInput
-              unit="whole"
-              value={draft.nudgeAfterHours}
-              onValueChange={(value) => patch({ nudgeAfterHours: value ?? 0 })}
+          <Field label={t('cities')} hint={t('citiesHint')} error={errors.serviceCities}>
+            <Input
+              value={draft.serviceCities.join(',')}
+              onChange={(event) => patch({ serviceCities: event.target.value.split(',') })}
+              placeholder={t('citiesPlaceholder')}
             />
+          </Field>
+        </SettingsSection>
+        <SettingsSection title={t('bands')} description={t('bandsHint')}>
+          <BillBandsTable
+            bands={draft.billBands}
+            errors={errors}
+            onChange={(billBands) => patch({ billBands })}
+          />
+          {errors.billBands && <p className="type-body-sm text-overdue">{errors.billBands}</p>}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('tariff')} error={errors.tariffPaisePerUnit}>
+              <div className={narrow}>
+                <NumberInput
+                  unit="paise"
+                  value={draft.tariffPaisePerUnit}
+                  onValueChange={(value) => patch({ tariffPaisePerUnit: value ?? 0 })}
+                />
+              </div>
+            </Field>
+            <Field label={t('unitsPerKw')} error={errors.unitsPerKwMonth}>
+              <div className={narrow}>
+                <NumberInput
+                  unit="decimal"
+                  value={draft.unitsPerKwMonth}
+                  onValueChange={(value) => patch({ unitsPerKwMonth: value ?? 0 })}
+                />
+              </div>
+            </Field>
           </div>
-        </Field>
-      </SettingsSection>
-      <SettingsSection title={t('panels')} description={t('panelsHint')}>
-        <PanelPickers
-          value={draft.panelProductIds}
-          errors={errors}
-          onChange={(panelProductIds) => patch({ panelProductIds })}
+          <Field label={t('nudge')} hint={t('nudgeHint')} error={errors.nudgeAfterHours}>
+            <div className={narrow}>
+              <NumberInput
+                unit="whole"
+                value={draft.nudgeAfterHours}
+                onValueChange={(value) => patch({ nudgeAfterHours: value ?? 0 })}
+              />
+            </div>
+          </Field>
+        </SettingsSection>
+        <SettingsSection title={t('panels')} description={t('panelsHint')}>
+          <PanelPickers
+            value={draft.panelProductIds}
+            errors={errors}
+            onChange={(panelProductIds) => patch({ panelProductIds })}
+          />
+        </SettingsSection>
+        <SaveBar
+          dirty={rule.dirty}
+          pending={form.pending}
+          error={form.error}
+          onDiscard={rule.discard}
         />
-      </SettingsSection>
-      <SaveBar
-        dirty={rule.dirty}
-        pending={form.pending}
-        error={form.error}
-        onDiscard={rule.discard}
-      />
-    </form>
+      </form>
+      <FormsSection />
+    </div>
   );
 }
