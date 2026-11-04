@@ -6,6 +6,9 @@ import {
   VIDEO_FILE_TYPES,
 } from './media-type';
 
+const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 /**
  * Every paper and photo OneOhm accepts. The type comes from the file's bytes, never its
  * name. Voice notes and videos are accepted only as field evidence (`EVIDENCE_FILE_TYPES`).
@@ -16,6 +19,8 @@ export const ACCEPTED_FILE_TYPES = [
   'image/webp',
   'image/heic',
   'application/pdf',
+  DOCX_TYPE,
+  XLSX_TYPE,
 ] as const;
 export type AcceptedFileType = (typeof ACCEPTED_FILE_TYPES)[number];
 
@@ -60,8 +65,27 @@ function ascii(bytes: Uint8Array, start: number, length: number): string {
   return String.fromCharCode(...bytes.subarray(start, start + length));
 }
 
+/** How far into a ZIP the entry names are looked for. */
+const ZIP_HEAD_BYTES = 64 * 1024;
+
 /**
- * Detects JPEG, PNG, WebP, HEIC/HEIF and PDF, and the accepted audio and video formats,
+ * Word and Excel files are ZIPs: `PK\x03\x04`, then entries whose names start `word/` or
+ * `xl/`. Each entry's local header (30 bytes, then the name) is read; no other ZIP passes.
+ */
+function detectOffice(bytes: Uint8Array): DetectedFileType | null {
+  if (bytes.length < 30 || ascii(bytes, 0, 4) !== 'PK\x03\x04') return null;
+  const head = bytes.subarray(0, ZIP_HEAD_BYTES);
+  for (let at = 0; at + 30 <= head.length; at += 1) {
+    if (head[at] !== 0x50 || ascii(head, at, 4) !== 'PK\x03\x04') continue;
+    const name = ascii(head, at + 30, Math.min(head[at + 26] ?? 0, 64));
+    if (name.startsWith('word/')) return DOCX_TYPE;
+    if (name.startsWith('xl/')) return XLSX_TYPE;
+  }
+  return null;
+}
+
+/**
+ * Detects JPEG, PNG, WebP, HEIC/HEIF, PDF, Word and Excel files, and the accepted audio and video formats,
  * from their signatures; anything else is null.
  */
 export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
@@ -84,7 +108,7 @@ export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
     return 'image/heic';
   }
   if (bytes.length >= 5 && ascii(bytes, 0, 5) === '%PDF-') return 'application/pdf';
-  return detectMediaType(bytes);
+  return detectOffice(bytes) ?? detectMediaType(bytes);
 }
 
 export const isImageType = (contentType: string): boolean => contentType.startsWith('image/');

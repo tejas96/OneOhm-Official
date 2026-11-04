@@ -5,7 +5,7 @@ import {
   fallBackToSms,
   GENERIC_WORDS,
   outbox,
-  tellChatFileFailed,
+  tellChatSendFailed,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
@@ -87,8 +87,10 @@ export class DeliveriesService {
               : {}),
           })
           .where(eq(outbox.id, row.id));
-        // A chat file WhatsApp could not deliver: the chat's people are told to send it again.
-        if (update.status === 'failed') await tellChatFileFailed(tx, row.id);
+        // A message WhatsApp could not deliver tells the chat's people; a number not on
+        // WhatsApp gets the same news by SMS instead, so nobody is bothered.
+        if (update.status === 'failed' && !isNotOnWhatsApp(update.errorCode))
+          await tellChatSendFailed(tx, row.id);
       });
       // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
       if (update.status === 'failed' && isNotOnWhatsApp(update.errorCode)) {

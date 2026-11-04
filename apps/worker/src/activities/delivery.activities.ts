@@ -7,7 +7,7 @@ import {
   GENERIC_WORDS,
   messageTemplates,
   outbox,
-  tellChatFileFailed,
+  tellChatSendFailed,
   waConversations,
 } from '@oneohm/database';
 import { chatWindowOpen, isNotOnWhatsApp } from '@oneohm/domain';
@@ -144,11 +144,11 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     }
   };
 
-  /** A file in a chat that never arrived tells the chat's people; a bad token tells admins. */
+  /** A message in a chat that never arrived tells the chat's people; a bad token tells admins. */
   const failWithAlerts = (id: string, reason: string, tokenInvalid = false) =>
     db.transaction(async (tx) => {
       await finish(id, 'failed', reason, null, tx);
-      await tellChatFileFailed(tx, id);
+      await tellChatSendFailed(tx, id);
       if (tokenInvalid) await alertTokenExpired(tx);
     });
 

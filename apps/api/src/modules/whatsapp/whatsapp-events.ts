@@ -95,6 +95,8 @@ interface RawMessage {
   document?: RawMedia & { filename?: string };
   video?: RawMedia;
   audio?: RawMedia;
+  location?: { latitude?: number; longitude?: number; name?: string; address?: string };
+  contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string }[] }[];
   referral?: { source_id?: string; source_url?: string; headline?: string };
 }
 
@@ -146,6 +148,23 @@ function readReferral(message: RawMessage): IncomingReferral | null {
   };
 }
 
+/** What a location pin, a contact card or a sticker says in the chat. */
+function readOther(message: RawMessage): string {
+  if (message.type === 'sticker') return 'Sticker';
+  if (message.type === 'location' && message.location) {
+    const { latitude, longitude, name, address } = message.location;
+    const place = [name, address].filter(Boolean).join(', ');
+    return `📍 Location: ${place ? `${place} ` : ''}https://maps.google.com/?q=${latitude},${longitude}`;
+  }
+  if (message.type === 'contacts')
+    return (message.contacts ?? [])
+      .map((card) =>
+        `👤 Contact: ${card.name?.formatted_name ?? ''} ${card.phones?.[0]?.phone ?? ''}`.trim(),
+      )
+      .join('\n');
+  return '';
+}
+
 function readMessage(message: RawMessage, names: Map<string, string>): Incoming | null {
   if (!message.from || !message.id) return null;
   const base = {
@@ -182,7 +201,7 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
       choiceId: null,
       media,
     };
-  return { ...base, kind: 'other', text: '', choiceId: null };
+  return { ...base, kind: 'other', text: readOther(message), choiceId: null };
 }
 
 const STATUSES = new Set(['sent', 'delivered', 'read', 'failed']);

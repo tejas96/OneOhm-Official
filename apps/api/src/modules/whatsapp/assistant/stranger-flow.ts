@@ -44,9 +44,15 @@ export class StrangerFlowService {
     if (incoming.media && (await this.fileOnLead(chat, incoming.media))) return;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text)) return this.answer(chat, 'human');
-    // Typed words from a lead the team made reach that lead's person (menu audit M13).
-    if (incoming.kind === 'text' && (await openLeadFor(this.db, chat.phone)))
-      return this.people.passToOwner(chat);
+    // Typed words, a pin or a card from a lead the team made reach that lead's person (menu audit M13).
+    if (
+      (incoming.kind === 'text' || incoming.kind === 'other') &&
+      (await openLeadFor(this.db, chat.phone))
+    )
+      return this.people.passToOwner(
+        chat,
+        incoming.kind === 'other' ? { summary: incoming.text } : {},
+      );
     return this.answer(chat, word);
   }
 

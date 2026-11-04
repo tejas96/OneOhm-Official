@@ -58,6 +58,14 @@ export function samplePdf(): Buffer {
   return Buffer.from(body, 'latin1');
 }
 
+/** The front of a Word or Excel file: a ZIP whose first entry is `word/` or `xl/`. */
+function sampleOffice(entry: string): Buffer {
+  const header = Buffer.alloc(30);
+  header.write('PK\x03\x04', 0, 'latin1');
+  header.writeUInt16LE(entry.length, 26);
+  return Buffer.concat([header, Buffer.from(entry, 'latin1')]);
+}
+
 const EXTENSION: Readonly<Record<IncomingMedia['type'], string>> = {
   image: 'jpg',
   document: 'pdf',
@@ -83,9 +91,13 @@ export function logMediaGateway(log: (line: string) => void): MediaGateway {
     async download(media) {
       if (media.id === SAMPLE_TOO_LARGE_ID) throw new MediaTooLargeError('Stand-in large file.');
       log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
+      // A paper named like a Word or Excel file stands in as one (the tests send those).
+      const office = /\.(docx|xlsx)$/i.exec(media.fileName ?? '')?.[1]?.toLowerCase();
       const [buffer, extension] = {
         image: [Buffer.from(SAMPLE_PNG), 'png'],
-        document: [samplePdf(), 'pdf'],
+        document: office
+          ? [sampleOffice(office === 'docx' ? 'word/document.xml' : 'xl/workbook.xml'), office]
+          : [samplePdf(), 'pdf'],
         audio: [SAMPLE_OGG, 'ogg'],
         video: [SAMPLE_MP4, 'mp4'],
       }[media.type] as [Buffer, string];

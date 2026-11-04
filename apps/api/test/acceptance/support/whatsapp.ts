@@ -36,6 +36,10 @@ export interface InboundMessage {
     filename?: string;
     caption?: string;
   };
+  /** A location pin, as Meta posts it. */
+  location?: { latitude: number; longitude: number; name?: string; address?: string };
+  /** A shared contact card, as Meta posts it. */
+  contact?: { name: string; phone: string };
   /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
   referral?: Record<string, string>;
   /** The sender's WhatsApp name; null sends none (a number without a profile name). */
@@ -95,8 +99,9 @@ export async function postInbound(from: string, message: InboundMessage): Promis
 export async function sendStatus(
   providerMessageId: string,
   status: 'sent' | 'delivered' | 'read' | 'failed',
+  errorCode = 131053,
 ): Promise<void> {
-  const error = { code: 131053, title: 'Media upload error' };
+  const error = { code: errorCode, title: 'Media upload error' };
   const receipt = {
     id: providerMessageId,
     status,
@@ -144,6 +149,18 @@ function interactive(
 
 /** The Meta message object for what the test sends: media, a tap, or typed text. */
 function messageOf(base: Record<string, string>, message: InboundMessage): Record<string, unknown> {
+  if (message.location) return { ...base, type: 'location', location: message.location };
+  if (message.contact)
+    return {
+      ...base,
+      type: 'contacts',
+      contacts: [
+        {
+          name: { formatted_name: message.contact.name },
+          phones: [{ phone: message.contact.phone }],
+        },
+      ],
+    };
   return message.media
     ? {
         ...base,

@@ -25,6 +25,37 @@ describe('detectFileType', () => {
   });
 });
 
+/** A stored ZIP with one empty entry per name: the front of a Word or Excel file. */
+const zipOf = (...names: string[]) =>
+  Uint8Array.from(
+    names.flatMap((name) => [
+      ...[0x50, 0x4b, 0x03, 0x04, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ...Array<number>(12).fill(0),
+      name.length,
+      0,
+      0,
+      0,
+      ...[...name].map((char) => char.charCodeAt(0)),
+    ]),
+  );
+
+describe('detectFileType Word and Excel', () => {
+  it('recognises a Word file by its word/ entry and an Excel file by its xl/ entry', () => {
+    expect(detectFileType(zipOf('[Content_Types].xml', '_rels/.rels', 'word/document.xml'))).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    expect(detectFileType(zipOf('[Content_Types].xml', 'xl/workbook.xml'))).toBe(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+  });
+
+  it('refuses any other ZIP, whatever the name says', () => {
+    expect(detectFileType(zipOf('readme.txt'))).toBeNull();
+    expect(detectFileType(zipOf('docs/word/notes.txt'))).toBeNull();
+    expect(detectFileType(bytes('word/document.xml'))).toBeNull();
+  });
+});
+
 describe('safeFileName', () => {
   it('keeps names readable and safe', () => {
     expect(safeFileName('Roof photo (east) #1.jpg')).toBe('Roof-photo-east-1.jpg');
