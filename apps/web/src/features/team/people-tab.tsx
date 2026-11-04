@@ -3,6 +3,7 @@
 import type { Person } from '@oneohm/api-contracts';
 import {
   Button,
+  Checkbox,
   EmptyState,
   Input,
   ResponsiveTable,
@@ -16,8 +17,11 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { AddPersonDialog } from './add-person-dialog';
 import { LoadCell } from './capacity/overload-badge';
+import { isPastMember } from './departure';
 import { EditPersonSheet } from './edit-person-sheet';
+import { PastMemberSheet } from './past-member-sheet';
 import { PersonContact, PersonIdentity, PersonRoles, PersonStatus } from './person-row';
+import { RemovePersonSheet } from './remove-person-sheet';
 import { usePeople, useRoles } from './use-team';
 
 const ALL = 'all';
@@ -31,7 +35,7 @@ function matches(person: Person, search: string, roleId: string): boolean {
     .some((value) => value.toLowerCase().includes(needle));
 }
 
-/** Everyone on the team with their roles, contact and current load. */
+/** Everyone on the team with their roles, contact and current load; past members on request. */
 export function PeopleTab() {
   const t = useTranslations('team');
   const canManage = useCan('people.manage');
@@ -40,13 +44,22 @@ export function PeopleTab() {
   const [search, setSearch] = useState('');
   const [roleId, setRoleId] = useState<string>(ALL);
   const [adding, setAdding] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [pastId, setPastId] = useState<string | null>(null);
 
   const visible = useMemo(
-    () => (people.data ?? []).filter((person) => matches(person, search, roleId)),
-    [people.data, search, roleId],
+    () =>
+      (people.data ?? [])
+        .filter((person) => (showPast || !isPastMember(person)) && matches(person, search, roleId))
+        // Past members after everyone still on the team.
+        .sort((left, right) => Number(isPastMember(left)) - Number(isPastMember(right))),
+    [people.data, search, roleId, showPast],
   );
-  const editing = people.data?.find((person) => person.id === editingId) ?? null;
+  const find = (id: string | null) => people.data?.find((person) => person.id === id) ?? null;
+  const open = (person: Person) =>
+    isPastMember(person) ? setPastId(person.id) : setEditingId(person.id);
   const roleOptions = [
     { value: ALL, label: t('allRoles') },
     ...(roles.data ?? [])
@@ -60,10 +73,7 @@ export function PeopleTab() {
       header: t('columns.person'),
       primary: true,
       cell: (person) => (
-        <PersonIdentity
-          person={person}
-          onOpen={canManage ? () => setEditingId(person.id) : undefined}
-        />
+        <PersonIdentity person={person} onOpen={canManage ? () => open(person) : undefined} />
       ),
     },
     { key: 'roles', header: t('columns.roles'), cell: (person) => <PersonRoles person={person} /> },
@@ -107,6 +117,12 @@ export function PeopleTab() {
           label={t('roleFilter')}
           className="sm:w-56"
         />
+        <Checkbox
+          checked={showPast}
+          onCheckedChange={setShowPast}
+          label={t('showPast')}
+          className="sm:shrink-0"
+        />
         {people.data && (
           <p className="type-body-sm text-ink-faint sm:ml-auto">
             {t('count', { count: visible.length })}
@@ -137,10 +153,24 @@ export function PeopleTab() {
           rowKey={(person) => person.id}
         />
       )}
+      <RemovePersonSheet
+        person={find(removingId)}
+        people={people.data ?? []}
+        onClose={() => setRemovingId(null)}
+      />
+      <PastMemberSheet person={find(pastId)} onClose={() => setPastId(null)} />
       {roles.data && (
         <>
           <AddPersonDialog open={adding} onOpenChange={setAdding} roles={roles.data} />
-          <EditPersonSheet person={editing} roles={roles.data} onClose={() => setEditingId(null)} />
+          <EditPersonSheet
+            person={find(editingId)}
+            roles={roles.data}
+            onClose={() => setEditingId(null)}
+            onRemove={(person) => {
+              setEditingId(null);
+              setRemovingId(person.id);
+            }}
+          />
         </>
       )}
     </div>

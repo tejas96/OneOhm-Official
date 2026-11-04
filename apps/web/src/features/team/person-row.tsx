@@ -4,6 +4,7 @@ import type { Person } from '@oneohm/api-contracts';
 import { Avatar, Badge, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { awaitsSignIn, InviteBadge, InviteMenu } from './invite-status';
+import { LeftTag } from './left-tag';
 import { useSkills } from './skills/use-skills';
 
 /** +919876543210 → +91 98765 43210 */
@@ -85,7 +86,7 @@ export function PersonContact({ person }: { readonly person: Person }) {
   );
 }
 
-/** Active, on leave or inactive; then, until their first sign-in, the invite and its menu. */
+/** Active, on leave or left (with the day); then, until their first sign-in, the invite. */
 export function PersonStatus({
   person,
   manage = false,
@@ -97,7 +98,7 @@ export function PersonStatus({
   const t = useTranslations('team.status');
   const status =
     person.status === 'inactive' ? (
-      <StatusPill tone="neutral" label={t('inactive')} size="sm" />
+      <LeftTag leftOn={person.leftOn} />
     ) : person.onLeave ? (
       <StatusPill tone="waiting" label={t('onLeave')} size="sm" />
     ) : (

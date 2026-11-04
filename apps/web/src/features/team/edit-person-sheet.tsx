@@ -3,12 +3,14 @@
 import type { Person, Role } from '@oneohm/api-contracts';
 import { Button, Sheet, Switch, useToast } from '@oneohm/design-system/web';
 import { useQueryClient } from '@tanstack/react-query';
+import { UserRoundMinus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { useWorkforceSettings } from '@/features/settings/workforce/use-workforce-settings';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { useCurrentUser } from '@/providers/current-user';
 import {
   PersonWorkFields,
   type WorkDraft,
@@ -20,24 +22,27 @@ import { RequireNewPassword } from './require-new-password';
 import { SkillsPicker } from './skills/skills-picker';
 import { PEOPLE_KEY, ROLES_KEY } from './use-team';
 
-/** Details, roles, leave and sign-in access for one person. */
+/** Details, roles, leave and sign-in for one person; Remove from team starts the handover. */
 export function EditPersonSheet({
   person,
   roles,
   onClose,
+  onRemove,
 }: {
   readonly person: Person | null;
   readonly roles: readonly Role[];
   readonly onClose: () => void;
+  /** Opens the removal sheet for this person (spec Flow 5). */
+  readonly onRemove: (person: Person) => void;
 }) {
   const t = useTranslations('team.editSheet');
   const formId = useId();
   const toast = useToast();
+  const me = useCurrentUser();
   const queryClient = useQueryClient();
   const form = useApiForm();
   const [draft, setDraft] = useState(EMPTY_PERSON);
   const [onLeave, setOnLeave] = useState(false);
-  const [active, setActive] = useState(true);
   const [skills, setSkills] = useState<string[]>([]);
   const [work, setWork] = useState<WorkDraft>({ limit: '', tracking: 'follow' });
   const settings = useWorkforceSettings(person !== null);
@@ -48,7 +53,6 @@ export function EditPersonSheet({
     if (!person) return;
     setDraft(draftFrom(person));
     setOnLeave(person.onLeave);
-    setActive(person.status === 'active');
     setSkills(person.skills);
     setWork(workDraftFrom(person));
     reset();
@@ -60,7 +64,6 @@ export function EditPersonSheet({
     const body = {
       ...bodyFrom(draft),
       onLeave,
-      status: active ? 'active' : 'inactive',
       skills,
       ...workBodyFrom(work),
     } as const;
@@ -127,18 +130,29 @@ export function EditPersonSheet({
             label={t('onLeave')}
             description={t('onLeaveHint')}
           />
-          <Switch
-            checked={active}
-            onCheckedChange={setActive}
-            label={t('active')}
-            description={t('activeHint')}
-          />
-          {person?.status === 'active' && (
+          {person && (
             <div className="mt-3 flex flex-col">
               <RequireNewPassword person={person} />
             </div>
           )}
         </section>
+        {/* Nobody removes themselves (spec Flow 5): another admin does it. */}
+        {person && person.id !== me.id && (
+          <section className="flex flex-col gap-3 border-t border-hairline pt-6">
+            <div className="flex flex-col gap-1">
+              <h3 className="type-overline text-ink-faint uppercase">{t('leaving')}</h3>
+              <p className="type-body-sm text-ink-faint">{t('leavingHint')}</p>
+            </div>
+            <Button
+              variant="danger"
+              leadingIcon={<UserRoundMinus />}
+              onClick={() => onRemove(person)}
+              className="self-start"
+            >
+              {t('remove')}
+            </Button>
+          </section>
+        )}
         <FormError message={form.error} />
       </form>
     </Sheet>

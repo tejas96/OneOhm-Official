@@ -9,8 +9,9 @@ import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { type PastMember, pastMemberOf } from './past-member';
-import { PastMemberPrompt } from './past-member-prompt';
+import { type PastMemberChoice, PastMemberPrompt } from './past-member-prompt';
 import { bodyFrom, EMPTY_PERSON, type PersonDraft, PersonFields } from './person-fields';
+import { useRejoin } from './use-departure';
 import { PEOPLE_KEY, ROLES_KEY } from './use-team';
 
 /** Adds someone by mobile number; they get a WhatsApp invite and set their own password. */
@@ -32,6 +33,8 @@ export function AddPersonDialog({
   const [draft, setDraft] = useState(EMPTY_PERSON);
   const [phoneMissing, setPhoneMissing] = useState(false);
   const [pastMember, setPastMember] = useState<PastMember | null>(null);
+  const [choice, setChoice] = useState<PastMemberChoice | null>(null);
+  const rejoin = useRejoin();
 
   const close = (next: boolean) => {
     onOpenChange(next);
@@ -90,11 +93,25 @@ export function AddPersonDialog({
   const giveNumber = async () => {
     if (!pastMember) return;
     const from = pastMember.userId;
+    setChoice('giveNumber');
     await form.run(async () => {
       await expectStatus(api.people.releasePhone({ params: { id: from } }), 200);
       setPastMember(null);
       return create();
     }, added);
+    setChoice(null);
+  };
+
+  /** The number's owner is the one coming back: rejoin them instead of adding anyone new. */
+  const addBack = async () => {
+    if (!pastMember) return;
+    const userId = pastMember.userId;
+    setChoice('addBack');
+    await form.run(
+      () => rejoin(userId),
+      () => close(false),
+    );
+    setChoice(null);
   };
 
   const errors = phoneMissing
@@ -124,7 +141,12 @@ export function AddPersonDialog({
       <form id={formId} onSubmit={submit} noValidate className="flex flex-col gap-5">
         <PersonFields draft={draft} onChange={change} roles={roles} errors={errors} phoneRequired />
         {pastMember && (
-          <PastMemberPrompt member={pastMember} pending={form.pending} onGiveNumber={giveNumber} />
+          <PastMemberPrompt
+            member={pastMember}
+            pending={form.pending ? choice : null}
+            onAddBack={addBack}
+            onGiveNumber={giveNumber}
+          />
         )}
         <FormError message={form.error} />
       </form>

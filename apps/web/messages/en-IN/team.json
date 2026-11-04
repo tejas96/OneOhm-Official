@@ -7,6 +7,7 @@
     "search": "Search by name, phone, email or ID",
     "allRoles": "All roles",
     "roleFilter": "Filter by role",
+    "showPast": "Show past members",
     "count": "{count, plural, one {# person} other {# people}}",
     "emptyTitle": "No one matches",
     "emptyBody": "Try another name or clear the role filter.",
@@ -19,8 +20,9 @@
     },
     "status": {
       "active": "Active",
-      "inactive": "Inactive",
-      "onLeave": "On leave"
+      "onLeave": "On leave",
+      "left": "Left {date}",
+      "leftNoDate": "Left"
     },
     "noRole": "No role",
     "openTasks": "{count, plural, =0 {None} one {# task} other {# tasks}}",
@@ -60,8 +62,9 @@
       "access": "Access",
       "onLeave": "On leave",
       "onLeaveHint": "New tasks go to someone else in the same role while they are away.",
-      "active": "Can sign in",
-      "activeHint": "Turning this off signs them out and keeps their history.",
+      "leaving": "Leaving the team",
+      "leavingHint": "Hand their open work to one person, then sign them out for good. Their history stays.",
+      "remove": "Remove from team",
       "save": "Save changes",
       "saved": "Changes saved",
       "cancel": "Cancel",
@@ -87,6 +90,64 @@
         "cancel": "Cancel",
         "done": "New invite sent"
       }
+    },
+    "remove": {
+      "title": "Remove {name} from the team",
+      "description": "Their open work goes to one person. They are signed out and their history stays.",
+      "loading": "Checking what {name} has open",
+      "openTitle": "What they have open",
+      "nothingOpen": "Nothing open. There is no work to hand over.",
+      "open": {
+        "leads": "{count, plural, one {# open lead} other {# open leads}}",
+        "tasks": "{count, plural, one {# task} other {# tasks}}",
+        "proposedTasks": "{count, plural, one {# task offered to them} other {# tasks offered to them}}",
+        "serviceRequests": "{count, plural, one {# service request} other {# service requests}}",
+        "discomSteps": "{count, plural, one {# DISCOM request} other {# DISCOM requests}}",
+        "managedProjects": "{count, plural, one {# project they manage} other {# projects they manage}}",
+        "teamProjects": "{count, plural, one {# project team they are on} other {# project teams they are on}}",
+        "chats": "{count, plural, one {# WhatsApp chat} other {# WhatsApp chats}}",
+        "directReports": "{count, plural, one {# person who reports to them} other {# people who report to them}}",
+        "leaveApprovals": "{count, plural, one {# leave request waiting for their approval} other {# leave requests waiting for their approval}}",
+        "backupFor": "{count, plural, one {Backup for # upcoming leave} other {Backup for # upcoming leaves}}",
+        "ownPendingLeave": "{count, plural, one {# leave request of their own, which will be cancelled} other {# leave requests of their own, which will be cancelled}}",
+        "commissionRules": "{count, plural, one {# commission rule, which will be archived} other {# commission rules, which will be archived}}"
+      },
+      "handTo": "Hand everything to",
+      "handToHint": "Active staff only. Their manager is picked for you when there is one.",
+      "handToPlaceholder": "Pick a person",
+      "noOneToHandTo": "There is no other active staff member to hand the work to. Add someone first.",
+      "lastDay": "Last working day",
+      "lastDayHint": "Today or earlier.",
+      "tellCustomers": "Tell customers who their new contact is",
+      "tellCustomersHint": "Each customer gets one WhatsApp message with the new name and number.",
+      "sole": {
+        "approvePayments": "Nobody else can approve payments after this.",
+        "managePeople": "Nobody else can manage the team after this.",
+        "manageRoles": "Nobody else can change roles after this.",
+        "other": "Nobody else holds one of their permissions after this."
+      },
+      "submit": "Remove and hand over",
+      "cancel": "Cancel",
+      "removed": "{count, plural, =0 {{name} removed.} one {{name} removed. # item is now with {target}.} other {{name} removed. # items are now with {target}.}}"
+    },
+    "settlement": {
+      "title": "Still to settle for {name}",
+      "hint": "Nothing here is cancelled. Finance settles it as usual.",
+      "travelClaims": "{count, plural, one {# travel claim} other {# travel claims}} ({amount})",
+      "bonusShares": "{count, plural, one {# bonus share} other {# bonus shares}} ({amount})",
+      "payables": "{count, plural, one {# salary or bonus payment} other {# salary or bonus payments}} ({amount})",
+      "commissions": "{count, plural, one {# commission} other {# commissions}} ({amount})",
+      "pendingPoints": "{count, plural, one {# pending point} other {# pending points}}"
+    },
+    "pastMember": {
+      "leftOn": "Left the team on {date}",
+      "leftNoDate": "Left the team",
+      "loading": "Checking what is still owed to {name}",
+      "nothingOwed": "Nothing is still owed to {name}.",
+      "addBack": "Add back to team",
+      "addBackHint": "They get a new WhatsApp invite and set a new password. Work that was handed over stays where it is.",
+      "addedBack": "{name} is back on the team",
+      "close": "Close"
     },
     "tabsLabel": "Team sections",
     "noAccess": "You do not have permission to see the team.",
