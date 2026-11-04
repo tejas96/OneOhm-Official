@@ -111,3 +111,32 @@ export function callbackWhen(
   const time = CALLBACK_TIMES[slot];
   return { time, nextDay: clock >= time };
 }
+
+const minutesOf = (time: string | null | undefined): number => {
+  const [hours = '0', minutes = '0'] = (time ?? '00:00').split(':');
+  return Number(hours) * 60 + Number(minutes);
+};
+
+/** Day and "HH:MM" as one number to compare as times (a missing time is the start of the day). */
+const instant = (day: string, time: string | null | undefined): [string, number] => [
+  day,
+  minutesOf(time),
+];
+const earlier = (a: [string, number], b: [string, number]) =>
+  a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
+
+/**
+ * Whether the time the customer picked becomes the lead's next action. It does when the lead has
+ * none, when its own is already overdue (it blocks nothing), or when it is later than the slot. A
+ * plan the team made for before the slot stays, and the ask is only logged beside it.
+ */
+export function slotReplacesFollowUp(
+  planned: { readonly on: string | null; readonly time: string | null } | null,
+  slot: { readonly on: string; readonly time: string },
+  now: { readonly on: string; readonly time: string },
+): boolean {
+  if (!planned?.on) return true;
+  const plan = instant(planned.on, planned.time);
+  if (earlier(plan, instant(now.on, now.time))) return true;
+  return earlier(instant(slot.on, slot.time), plan);
+}

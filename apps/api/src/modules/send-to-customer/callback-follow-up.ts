@@ -1,5 +1,5 @@
 import { customers, type DatabaseExecutor, leads, tellChatTeam } from '@oneohm/database';
-import { type CallbackSlot, callbackWhen } from '@oneohm/domain';
+import { type CallbackSlot, callbackWhen, slotReplacesFollowUp } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, desc, eq, notInArray, or } from 'drizzle-orm';
 import { logLead } from '../crm/lead-history';
@@ -53,8 +53,11 @@ export async function createCallbackFollowUp(
   if (lead) {
     // The lead's own next action is never overwritten by a sooner-or-equal plan of the team:
     // it is set only when empty or later than the slot, otherwise the ask is logged beside it.
-    const planned = lead.on ? `${lead.on} ${lead.time ?? '00:00'}` : null;
-    const replace = planned === null || planned > `${on} ${when.time}`;
+    const replace = slotReplacesFollowUp(
+      lead,
+      { on, time: when.time },
+      { on: today, time: clockIn(timeZone, now) },
+    );
     if (replace)
       await tx
         .update(leads)

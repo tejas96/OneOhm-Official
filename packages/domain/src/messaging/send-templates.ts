@@ -51,3 +51,14 @@ export const SEND_MESSAGE_TEMPLATES = [
     preview: 'Hello {{1}}, here is your {{2}} from OneOhm. Reply here if you have any questions.',
   },
 ] as const satisfies readonly MessageTemplateDefault[];
+
+/**
+ * Whether a template is on, from its settings row. One rule for the staff preview and the worker's
+ * send, so they never disagree: a row says so itself; with no row (a database not migrated yet) the
+ * templates behind "Send to customer", which Meta has not approved, are off, and the older built-in
+ * ones keep sending as they always did.
+ */
+export function templateIsOn(key: string, row: { readonly active: boolean } | null | undefined) {
+  if (row) return row.active;
+  return !SEND_MESSAGE_TEMPLATES.some((template) => template.key === key);
+}

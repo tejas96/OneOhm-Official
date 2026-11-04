@@ -115,10 +115,8 @@ describe('approvedMessage', () => {
         { customer: 'R', payToken: 'tok', paidPayload: 'paidother:m1' },
         true,
       );
-      expect(pay.buttons).toEqual([
-        { kind: 'quick_reply', index: 0, payload: 'paidother:m1' },
-        { kind: 'url', index: 1, suffix: 'tok' },
-      ]);
+      // The newer quick reply has its own switch: off, the link button stays at position 0.
+      expect(pay.buttons).toEqual([{ kind: 'url', index: 0, suffix: 'tok' }]);
       expect(pay.header).toBeUndefined();
     });
   });

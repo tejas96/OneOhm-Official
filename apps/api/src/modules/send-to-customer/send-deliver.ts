@@ -5,22 +5,26 @@ import {
   noticeCustomer,
   queueCustomerMessage,
 } from '@oneohm/database';
-import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, SEND_TEMPLATE_WORDS } from '@oneohm/domain';
+import {
+  DEFAULT_MESSAGE_TEMPLATES,
+  renderTemplate,
+  SEND_TEMPLATE_WORDS,
+  templateIsOn,
+} from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { chatReplySummary } from '../whatsapp/chat-reply';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
 import type { SendContext } from './send-context';
 import type { Built } from './send-messages';
 
-/** Whether the template the customer would get outside the chat window is switched on. */
+/** Whether the template the customer would get outside the chat window is switched on (the worker's rule). */
 async function templateOn(db: DatabaseExecutor, key: string): Promise<boolean> {
   const [row] = await db
     .select({ active: messageTemplates.active })
     .from(messageTemplates)
     .where(eq(messageTemplates.key, key))
     .limit(1);
-  // No row (a database not migrated yet) means off: an unapproved template is never sent.
-  return row?.active ?? false;
+  return templateIsOn(key, row);
 }
 
 /** What the customer would get now: the chat message, or the template when the chat is closed. */

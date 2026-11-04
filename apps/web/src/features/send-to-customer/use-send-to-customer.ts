@@ -8,6 +8,18 @@ import { useRef } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 
+/** A fresh id for one press of Send; `crypto.randomUUID` needs a secure origin, so fall back. */
+export function newPressId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+  const hex = bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export const sendOptionsKey = (scope: SendScope) => ['send-to-customer', 'options', scope];
 
 /** What fits this place, each with the customer's preview; loads when the sheet opens. */
@@ -32,7 +44,7 @@ export function useSendAction(scope: SendScope) {
   const toast = useToast();
   const client = useQueryClient();
   // One id per press: a double tap or a retry is the same send. A new one starts after it went.
-  const pressId = useRef(crypto.randomUUID());
+  const pressId = useRef(newPressId());
   return useMutation({
     mutationFn: (request: SendBody['request']) =>
       expectStatus(
@@ -42,7 +54,7 @@ export function useSendAction(scope: SendScope) {
         201,
       ),
     onSuccess: async (result) => {
-      pressId.current = crypto.randomUUID();
+      pressId.current = newPressId();
       await client.invalidateQueries({ queryKey: ['document-requests'] });
       await client.invalidateQueries({ queryKey: ['send-to-customer'] });
       toast({

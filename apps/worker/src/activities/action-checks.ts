@@ -3,12 +3,14 @@ import {
   customerActions,
   customers,
   type Database,
+  notifications,
   notifyCover,
   notifyHolders,
+  notifyStaffHolders,
   projects,
 } from '@oneohm/database';
 import { workingMinutesBetween } from '@oneohm/domain';
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, like, lte, ne, or } from 'drizzle-orm';
 
 const DAY = 86_400_000;
 const UNTIL = 14 * DAY;
@@ -114,10 +116,24 @@ async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string)
     ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
     dedupeKey: `action_check:${action.id}:${due}`,
   };
+  // Once this tier's alert exists, nothing more is asked of the database or the notifier.
+  const [told] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(like(notifications.dedupeKey, `${notice.dedupeKey}%`))
+    .limit(1);
+  if (told) return false;
   const owner =
     action.requestedByUserId ?? (await chatOwnerFor(db, { customerId: action.customerId, phone }));
-  const person = due === 'manager' ? manager : owner;
-  if (person) await notifyCover(db, person, 'projects.manage', notice);
-  else await notifyHolders(db, 'projects.manage', notice);
+  if (due === 'owner') {
+    if (owner) await notifyCover(db, owner, 'projects.manage', notice);
+    else await notifyHolders(db, 'projects.manage', notice);
+  } else if (manager) {
+    await notifyCover(db, manager, 'projects.manage', notice);
+  } else {
+    // No project (a pin waiting for its home, a call-back on a lead): the customer desk, not
+    // everyone who manages projects.
+    await notifyStaffHolders(db, 'service.manage', notice);
+  }
   return true;
 }

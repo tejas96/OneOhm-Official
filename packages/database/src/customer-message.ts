@@ -86,7 +86,8 @@ const WORDS: Readonly<Record<string, Words>> = {
   // The team cancelled something other than a paper (a location, a payment proof, a call time).
   action_cancelled: (p) => ({
     title: `${p.what} is no longer needed`,
-    body: 'You do not need to do anything.',
+    // A cancelled payment proof says the payment is still due (the sender fills `note`).
+    body: p.note ?? 'You do not need to do anything.',
   }),
   document_received_by_team: (p) => ({
     title: `We have your ${p.document}`,

@@ -29,6 +29,7 @@ interface Draft {
   preview: string;
   active: boolean;
   extrasApproved: boolean;
+  quickRepliesApproved: boolean;
 }
 
 /** Edit how one message maps onto its approved WhatsApp template. */
@@ -80,6 +81,7 @@ export function MessageTemplateDialog({
       preview: draft.preview,
       active: draft.active,
       extrasApproved: draft.extrasApproved,
+      quickRepliesApproved: draft.quickRepliesApproved,
     };
     await form.run(
       () =>
@@ -187,6 +189,16 @@ export function MessageTemplateDialog({
               label={t('extrasApproved')}
             />
             <p className="type-body-sm text-ink-muted">{t('extrasApprovedHint')}</p>
+          </div>
+        )}
+        {templateExtras(template.key)?.optionalQuickReplies && (
+          <div className="flex flex-col gap-1">
+            <Switch
+              checked={draft.quickRepliesApproved}
+              onCheckedChange={(value) => set('quickRepliesApproved', value)}
+              label={t('quickRepliesApproved')}
+            />
+            <p className="type-body-sm text-ink-muted">{t('quickRepliesApprovedHint')}</p>
           </div>
         )}
         <FormError message={form.error} />

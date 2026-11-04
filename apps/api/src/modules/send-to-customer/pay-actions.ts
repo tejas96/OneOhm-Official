@@ -24,7 +24,10 @@ export async function proofReceived(
       ),
     )
     .orderBy(asc(customerActions.createdAt))
-    .limit(milestoneId ? 10 : 1);
+    .limit(milestoneId ? 10 : 1)
+    // Locked until this transaction ends: a second proof at the same moment waits, then finds the
+    // ask already received and answers nothing (one proof updates one ask once).
+    .for('update');
   if (target.length === 0) return 0;
   const rows = await tx
     .update(customerActions)
@@ -36,9 +39,12 @@ export async function proofReceived(
       payload: sql`${customerActions.payload} || ${JSON.stringify({ proof: detail })}::jsonb`,
     })
     .where(
-      inArray(
-        customerActions.id,
-        target.map((row) => row.id),
+      and(
+        eq(customerActions.status, 'open'),
+        inArray(
+          customerActions.id,
+          target.map((row) => row.id),
+        ),
       ),
     )
     .returning({ id: customerActions.id });

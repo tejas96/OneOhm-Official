@@ -24,6 +24,8 @@ export const messageTemplateSchema = z.object({
   preview: z.string(),
   active: z.boolean(),
   extrasApproved: z.boolean(),
+  /** The newer version with the extra quick reply is approved (payment reminder and link). */
+  quickRepliesApproved: z.boolean(),
   /** How many task templates send this message. */
   usedByTasks: z.number().int(),
 });
@@ -56,6 +58,7 @@ export const messageTemplateInputSchema = z.object({
   active: z.boolean(),
   /** Left out, the switch keeps its value. */
   extrasApproved: z.boolean().optional(),
+  quickRepliesApproved: z.boolean().optional(),
 });
 
 const conditionsSchema = z.object({

@@ -55,6 +55,7 @@ const EN_SEND = {
       `You do not need to share the location of your ${home} home any more. Thank you.`,
     pay: 'We are not waiting for a payment proof from you any more. Your payment is still due.',
     callback: 'You do not need to pick a time for the call any more. Thank you.',
+    stillDue: 'Your payment is still due.',
     what: {
       location: 'sharing your location',
       pay: 'your payment proof',
@@ -108,6 +109,7 @@ const MR_SEND: Words<typeof EN_SEND> = {
     location: (home) => `तुमच्या ${home} घराचे लोकेशन पाठवण्याची आता गरज नाही. धन्यवाद.`,
     pay: 'आम्ही आता तुमच्याकडून पेमेंटच्या पुराव्याची वाट पाहत नाही. तुमचे पेमेंट अजून बाकी आहे.',
     callback: 'फोनसाठी वेळ निवडण्याची आता गरज नाही. धन्यवाद.',
+    stillDue: 'तुमचे पेमेंट अजून बाकी आहे.',
     what: {
       location: 'लोकेशन पाठवणे',
       pay: 'पेमेंटचा पुरावा',
@@ -160,6 +162,7 @@ const HI_SEND: Words<typeof EN_SEND> = {
     location: (home) => `अब आपको ${home} घर की लोकेशन भेजने की ज़रूरत नहीं है। धन्यवाद।`,
     pay: 'अब हम आपसे भुगतान के सबूत का इंतज़ार नहीं कर रहे। आपका भुगतान अभी बाकी है।',
     callback: 'अब आपको फ़ोन के लिए समय चुनने की ज़रूरत नहीं है। धन्यवाद।',
+    stillDue: 'आपका भुगतान अभी बाकी है।',
     what: {
       location: 'लोकेशन भेजना',
       pay: 'पेमेंट का सबूत',

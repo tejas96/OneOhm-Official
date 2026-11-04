@@ -1,5 +1,5 @@
 import { localValues } from '@oneohm/database';
-import type { CallbackSlot } from '@oneohm/domain';
+import { type CallbackSlot, CUSTOMER_STEP_TITLES } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { CHAT_WORDS } from '../whatsapp/assistant/chat-words';
 import type { Paper } from '../whatsapp/assistant/customer-papers';
@@ -179,7 +179,8 @@ export function stageForCustomer(
   language: 'en' | 'mr' | 'hi',
 ): string {
   if (!task.stage) return SEND_LISTS[language].stageFallback;
-  if (language === 'en') return task.stage;
+  // What the owner typed as the step's customer title wins; only the standard name is translated.
+  if (language === 'en' || task.stage !== CUSTOMER_STEP_TITLES[task.templateKey]) return task.stage;
   const said = localValues(`${language}-IN`, 'project_milestone', {
     milestone: task.stage,
     step: task.templateKey,

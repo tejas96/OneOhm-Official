@@ -616,3 +616,8 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   team's ask for it; automatic payment reminders and pay links carry the same [I paid another way] quick reply;
   Home lists open location and call-back asks ([📍 Send location], [Pick a time]); a pin in a chat a person holds
   is saved and told to the person, with no bot reply; a template row missing counts as off.
+- **Review round 2:** the [I paid another way] quick reply on payment_reminder / payment_link has its own switch
+  (`message_templates.quick_replies_approved`, off by default, in the message's settings dialog): off keeps the
+  older shape (the Pay link alone at position 0) so a live template never breaks; submit the newer version to
+  Meta first, then switch on. A missing template row is off for the Send to customer templates, by one rule
+  (`templateIsOn`) in both the staff preview and the worker.

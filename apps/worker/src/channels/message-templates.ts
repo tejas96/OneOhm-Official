@@ -70,26 +70,43 @@ function required(key: string, field: string, values: Readonly<Record<string, un
 
 /**
  * The file and buttons for the Meta version that has them. Quick replies take positions
- * 0, 1… in order; the URL button comes after them.
+ * 0, 1… in order; the URL button comes after them. The optional quick replies (a newer version of
+ * payment_reminder / payment_link) count only while `quickRepliesApproved` is on; the older shape
+ * (the link at position 0) keeps going until then. A required button without its payload fails
+ * early and clearly; an optional one without it (a message queued before it existed) is left out
+ * and the link button keeps its place.
  */
 export function templateExtraParts(
   key: string,
   values: Readonly<Record<string, unknown>>,
+  quickRepliesApproved = false,
 ): { readonly header?: TemplateHeader; readonly buttons?: TemplateButton[] } {
   const extras = templateExtras(key);
   if (!extras) return {};
-  const quickReplies = extras.quickReplies ?? [];
-  // A quick reply without its payload (a message queued before the button existed) is left
-  // out, not failed; the link button keeps its place after all the quick replies.
-  const buttons: TemplateButton[] = quickReplies.flatMap((field, index) =>
-    String(values[field] ?? '').trim()
-      ? [{ kind: 'quick_reply' as const, index, payload: String(values[field]) }]
-      : [],
-  );
+  const required_ = extras.quickReplies ?? [];
+  const optional = quickRepliesApproved ? (extras.optionalQuickReplies ?? []) : [];
+  const buttons: TemplateButton[] = [
+    ...required_.map((field, index) => ({
+      kind: 'quick_reply' as const,
+      index,
+      payload: required(key, field, values),
+    })),
+    ...optional.flatMap((field, at) =>
+      String(values[field] ?? '').trim()
+        ? [
+            {
+              kind: 'quick_reply' as const,
+              index: required_.length + at,
+              payload: String(values[field]),
+            },
+          ]
+        : [],
+    ),
+  ];
   if (extras.urlButton)
     buttons.push({
       kind: 'url',
-      index: quickReplies.length,
+      index: required_.length + optional.length,
       suffix: required(key, extras.urlButton, values),
     });
   return {
@@ -115,6 +132,7 @@ export function approvedMessage(
   names: TemplateNames,
   stored: unknown,
   extrasApproved = false,
+  quickRepliesApproved = false,
 ): {
   readonly name: string;
   readonly language: string;
@@ -129,6 +147,6 @@ export function approvedMessage(
     name: chosen.name,
     language: chosen.language,
     parameters: templateParameters(key, fields, values),
-    ...(extrasApproved && templateExtraParts(key, values)),
+    ...(extrasApproved && templateExtraParts(key, values, quickRepliesApproved)),
   };
 }

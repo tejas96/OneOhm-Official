@@ -35,7 +35,8 @@ export async function logLead(
         and(
           eq(customerActions.type, 'callback'),
           eq(customerActions.status, 'received'),
-          sql`${customerActions.customerId} = (select customer_id from leads where id = ${leadId})`,
+          // The lead's customer, or the customer with the lead's number (a lead not linked yet).
+          sql`${customerActions.customerId} in (select c.id from customers c, leads l where l.id = ${leadId} and (c.id = l.customer_id or c.phone_e164 = l.phone_e164))`,
         ),
       );
 }

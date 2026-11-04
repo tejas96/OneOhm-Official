@@ -4,4 +4,5 @@ export * from './contact-channels';
 export * from './customer-steps';
 export * from './message-templates';
 export * from './send-template-words';
+export * from './send-templates';
 export * from './send-to-customer';

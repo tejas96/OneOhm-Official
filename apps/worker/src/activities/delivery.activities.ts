@@ -10,7 +10,7 @@ import {
   tellChatSendFailed,
   waConversations,
 } from '@oneohm/database';
-import { chatWindowOpen, isNotOnWhatsApp } from '@oneohm/domain';
+import { chatWindowOpen, isNotOnWhatsApp, templateIsOn } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
@@ -122,9 +122,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     if (!fields) {
       return { verdict: 'failed', note: `No WhatsApp template is set up for "${row.template}".` };
     }
-    if (config && !config.active) {
+    if (!templateIsOn(row.template, config))
       return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
-    }
     const unwanted = await optOutNote(row.recipient);
     if (unwanted) return { verdict: 'skipped', note: unwanted };
     try {
@@ -136,7 +135,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           fields,
           names,
           row.payload,
-          config?.extrasApproved ?? false,
+          config?.extrasApproved,
+          config?.quickRepliesApproved,
         ),
       };
     } catch (error) {

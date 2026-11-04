@@ -90,7 +90,7 @@ export const HINDI_WORDS: LanguageWords = {
     }),
     action_cancelled: (p) => ({
       title: `${p.what} अब ज़रूरी नहीं है`,
-      body: 'आपको कुछ करने की ज़रूरत नहीं है।',
+      body: p.note ?? 'आपको कुछ करने की ज़रूरत नहीं है।',
     }),
     document_received_by_team: (p) => ({
       title: `आपका ${p.document} हमें मिल गया`,

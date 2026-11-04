@@ -68,9 +68,13 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087
 - Sample for `{{1}}`: any short text, for example `abc123`. The app fills `{{1}}` with the customer's pay token.
 - This is a button field, separate from the body fields.
 
-**Quick reply (button version, first button):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`. The
-app sends the payload `paidother:<instalment id>`, which opens the proof form. Order: this quick reply first,
-then the `Pay now` link button. The payload is optional; a message queued without it still sends.
+**Newer version with a quick reply (optional):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`, as
+the FIRST button, then the `Pay now` link button. The app sends the payload `paidother:<instalment id>`, which opens
+the proof form. **Submit the new version first, then switch on.** Submit it under a new name, wait for Meta to
+approve en, mr and hi, set the new names in Settings, and only then turn on "Meta approved the newer version
+with I paid another way" for this message (its own switch, off by default). While it is off the app keeps
+sending the older shape: the `Pay now` link button alone at position 0, so a template approved without the
+quick reply never breaks. The payload is optional; a message queued without it still sends.
 
 ### 6. `payment_link` — Changed
 Fields: customer, amount, milestone, project, link
@@ -84,9 +88,13 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087 · https
 - Button text: `Pay now`.
 - URL: `<API_PUBLIC_URL>/v1/pay/due/{{1}}`, where `{{1}}` is the pay token. Same rule as above: the base is fixed at approval, so use the production `API_PUBLIC_URL`.
 
-**Quick reply (button version, first button):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`. The
-app sends the payload `paidother:<instalment id>`, which opens the proof form. Order: this quick reply first,
-then the `Pay now` link button. The payload is optional; a message queued without it still sends.
+**Newer version with a quick reply (optional):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`, as
+the FIRST button, then the `Pay now` link button. The app sends the payload `paidother:<instalment id>`, which opens
+the proof form. **Submit the new version first, then switch on.** Submit it under a new name, wait for Meta to
+approve en, mr and hi, set the new names in Settings, and only then turn on "Meta approved the newer version
+with I paid another way" for this message (its own switch, off by default). While it is off the app keeps
+sending the older shape: the `Pay now` link button alone at position 0, so a template approved without the
+quick reply never breaks. The payload is optional; a message queued without it still sends.
 
 ### 7. `service_update` — Changed
 Fields: customer, topic, status

@@ -34,7 +34,10 @@ export async function tellActionCancelled(
       tx,
       phone,
       'action_cancelled',
-      { what: SEND_WORDS.cancelled.what[action.type] },
+      {
+        what: SEND_WORDS.cancelled.what[action.type],
+        ...(action.type === 'pay' ? { note: SEND_WORDS.cancelled.stillDue } : {}),
+      },
       key,
     );
     const [chat] = await tx

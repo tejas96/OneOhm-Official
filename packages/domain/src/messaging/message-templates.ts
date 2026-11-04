@@ -21,6 +21,13 @@ export interface MessageTemplateDefault {
     readonly quickReplies?: readonly string[];
     /** The payload field holding the URL button's suffix. */
     readonly urlButton?: string;
+    /**
+     * Quick replies placed before the URL button in a NEWER version of the template. They send only
+     * while the template's own "quick replies approved" switch is on, so the older version (the link
+     * button alone) keeps working until the owner submits and approves the new one. A message
+     * queued without the payload still sends.
+     */
+    readonly optionalQuickReplies?: readonly string[];
   };
 }
 
@@ -69,8 +76,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_reminder',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
-    // [I paid another way] first (quick reply), then [Pay now] (link); the payload is optional.
-    extras: { quickReplies: ['paidPayload'], urlButton: 'payToken' },
+    // The newer version adds [I paid another way] before [Pay now]; its own switch turns it on.
+    extras: { optionalQuickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience. If you have already paid, please ignore this message.',
   },
@@ -78,8 +85,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_link',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project', 'link'],
-    // [I paid another way] first (quick reply), then [Pay now] (link); the payload is optional.
-    extras: { quickReplies: ['paidPayload'], urlButton: 'payToken' },
+    // The newer version adds [I paid another way] before [Pay now]; its own switch turns it on.
+    extras: { optionalQuickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.',
   },

@@ -554,6 +554,13 @@
       "when": 1793832482206,
       "tag": "0078_send_to_customer",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1793836008688,
+      "tag": "0079_quick_replies_approved",
+      "breakpoints": true
     }
   ]
 }

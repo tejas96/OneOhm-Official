@@ -15,6 +15,34 @@ import { SEND_WORDS } from './send-words';
 
 type ActionRow = typeof customerActions.$inferSelect;
 
+/** What the team reads for each outcome of a pin. */
+const LOOK = {
+  suggest: {
+    kind: 'location_check',
+    title: (who: string) => `Check the location ${who} sent`,
+    body: (_who: string, home: string) =>
+      `${home} already has a location. The customer's pin is kept as a suggestion: accept or ignore it on the property.`,
+  },
+  parked: {
+    kind: 'location_home_waiting',
+    title: (who: string) => `${who} sent a location but has not said which home`,
+    body: () =>
+      'They have 2 or more homes and you have the chat. Ask which home it is for, or add it on the property yourself.',
+  },
+  save: {
+    kind: 'location_saved',
+    title: (who: string, home: string) => `Location of ${home} saved from ${who}`,
+    body: (who: string, home: string) =>
+      `${who} answered the location ask while you have the chat. It is saved on ${home}.`,
+  },
+  same: {
+    kind: 'location_saved',
+    title: (who: string, home: string) => `Location of ${home} saved from ${who}`,
+    body: (who: string, home: string) =>
+      `${who} answered the location ask while you have the chat. It is saved on ${home}.`,
+  },
+} as const;
+
 /** The tap id of a home in "Which home is this location for?": the action and the home. */
 export const homeTap = (actionId: string, propertyId: string) => `locn:${actionId}:${propertyId}`;
 const HOME_TAP = /^locn:([0-9a-f-]{36}):([0-9a-f-]{36})$/;
@@ -57,6 +85,12 @@ export class LocationPinService {
       return true;
     }
     if (among.length === 0) return false;
+    if (onlyAsked) {
+      // A person has the chat: the bot sends no "Which home?" into it. The pin is kept and the person told.
+      await parkPin(this.db, customerId, pin, among);
+      await this.tellTeam(chat, '', 'parked');
+      return true;
+    }
     await this.askWhich(chat, customerId, pin, among);
     return true;
   }
@@ -183,19 +217,17 @@ export class LocationPinService {
     await sayWithTaps(this.db, chat, text, ['menu']);
   }
 
-  private async tellTeam(chat: Conversation, home: string, outcome: 'save' | 'same' | 'suggest') {
+  private async tellTeam(
+    chat: Conversation,
+    home: string,
+    outcome: 'save' | 'same' | 'suggest' | 'parked',
+  ) {
     const owned = await ensureChatOwner(this.db, chat);
     const who = chat.profileName ?? 'a customer';
     await tellChatTeam(this.db, owned, {
-      kind: outcome === 'suggest' ? 'location_check' : 'location_saved',
-      title:
-        outcome === 'suggest'
-          ? `Check the location ${who} sent`
-          : `Location of ${home} saved from ${who}`,
-      body:
-        outcome === 'suggest'
-          ? `${home} already has a location. The customer's pin is kept as a suggestion: accept or ignore it on the property.`
-          : `${who} answered the location ask while you have the chat. It is saved on ${home}.`,
+      kind: LOOK[outcome].kind,
+      title: LOOK[outcome].title(who, home),
+      body: LOOK[outcome].body(who, home),
       key: `location_${outcome}:${chat.id}:${Date.now()}`,
     });
   }

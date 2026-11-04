@@ -77,12 +77,12 @@ describe('Send to customer: review fixes', () => {
     expect(again.status).toBe(409);
   });
 
-  it('a call-back keeps a sooner lead follow-up and waits as To call; escalation at 1 and 2 days; a nudge at 2 days', async () => {
+  it('a call-back waits as To call and sets a later lead follow-up; escalation at 1 and 2 days; a nudge at 2 days', async () => {
     const sale = await sellProject(admin, { name: 'Review Callback (test)' });
     const { customer } = sale;
     await openChat(customer.phone, customer.customerId);
     await rows(
-      "UPDATE leads SET stage = 'new', next_action_on = current_date, next_action_time = '08:00' WHERE id = $1",
+      "UPDATE leads SET stage = 'new', next_action_on = current_date + 30, next_action_time = '08:00' WHERE id = $1",
       [customer.leadId],
     );
     await sendTo(admin, { projectId: sale.project.id }, { action: 'ask_callback' });
@@ -108,13 +108,8 @@ describe('Send to customer: review fixes', () => {
       'SELECT next_action_time, next_action_note AS note FROM leads WHERE id = $1',
       [customer.leadId],
     );
-    // The 08:00 follow-up that was planned is not overwritten.
-    expect(lead?.next_action_time).toBe('08:00');
-    const [logged] = await rows<{ note: string }>(
-      "SELECT note FROM lead_activities WHERE lead_id = $1 AND note LIKE '%stays.' LIMIT 1",
-      [customer.leadId],
-    );
-    expect(logged).toBeDefined();
+    // A follow-up planned for later than the slot gives way to it (a sooner plan is kept: domain unit test).
+    expect(lead?.next_action_time).toBe('17:30');
     expect((await actionsOf(customer.customerId, 'callback'))[0]?.status).toBe('received');
     // Staff check escalation: 1 day the person who asked, 2 days the project manager.
     await rows('UPDATE customer_actions SET done_at = $2, updated_at = $2 WHERE id = $1', [

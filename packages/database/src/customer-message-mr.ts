@@ -90,7 +90,7 @@ export const MARATHI_WORDS: LanguageWords = {
     }),
     action_cancelled: (p) => ({
       title: `${p.what} आता नको आहे`,
-      body: 'तुम्हाला काही करण्याची गरज नाही.',
+      body: p.note ?? 'तुम्हाला काही करण्याची गरज नाही.',
     }),
     document_received_by_team: (p) => ({
       title: `तुमचे ${p.document} आम्हाला मिळाले`,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_MESSAGE_TEMPLATES } from './message-templates';
 import { SEND_TEMPLATE_WORDS } from './send-template-words';
+import { templateIsOn } from './send-templates';
 import {
   CALLBACK_SLOTS,
   callbackWhen,
@@ -9,6 +10,7 @@ import {
   rightsForAsk,
   type SendPlace,
   sendActionsFor,
+  slotReplacesFollowUp,
 } from './send-to-customer';
 
 const place = (over: Partial<SendPlace>): SendPlace => ({
@@ -104,5 +106,38 @@ describe('rightsForAsk', () => {
     expect(rightsForAsk('location')).toEqual(rightsFor('ask_location'));
     expect(rightsForAsk('pay')).toEqual(rightsFor('payment_reminder'));
     expect(rightsForAsk('callback')).toEqual(rightsFor('ask_callback'));
+  });
+});
+
+describe('slotReplacesFollowUp', () => {
+  const now = { on: '2026-11-05', time: '11:00' };
+  const slot = { on: '2026-11-05', time: '14:00' };
+  it('sets an empty follow-up and replaces a later one', () => {
+    expect(slotReplacesFollowUp(null, slot, now)).toBe(true);
+    expect(slotReplacesFollowUp({ on: null, time: null }, slot, now)).toBe(true);
+    expect(slotReplacesFollowUp({ on: '2026-11-06', time: '09:00' }, slot, now)).toBe(true);
+  });
+  it('keeps a sooner plan, comparing times and not text', () => {
+    expect(slotReplacesFollowUp({ on: '2026-11-05', time: '12:00' }, slot, now)).toBe(false);
+    expect(
+      slotReplacesFollowUp({ on: '2026-11-05', time: '9:30' }, slot, {
+        on: '2026-11-05',
+        time: '08:00',
+      }),
+    ).toBe(false);
+    expect(slotReplacesFollowUp({ on: '2026-11-05', time: '15:00' }, slot, now)).toBe(true);
+  });
+  it('an overdue plan blocks nothing', () => {
+    expect(slotReplacesFollowUp({ on: '2026-11-03', time: null }, slot, now)).toBe(true);
+    expect(slotReplacesFollowUp({ on: '2026-11-05', time: '08:00' }, slot, now)).toBe(true);
+  });
+});
+
+describe('templateIsOn', () => {
+  it('a row decides; with no row only the unapproved Send to customer templates are off', () => {
+    expect(templateIsOn('location_request', { active: true })).toBe(true);
+    expect(templateIsOn('payment_received', { active: false })).toBe(false);
+    expect(templateIsOn('location_request', undefined)).toBe(false);
+    expect(templateIsOn('payment_received', null)).toBe(true);
   });
 });
