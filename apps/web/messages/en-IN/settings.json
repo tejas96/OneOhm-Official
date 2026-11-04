@@ -763,7 +763,9 @@
         "metaNameHi": "Hindi template name (optional)",
         "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one.",
         "extrasApproved": "Meta approved the version with file and buttons",
-        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off."
+        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off.",
+        "quickRepliesApproved": "Meta approved the newer version with I paid another way",
+        "quickRepliesApprovedHint": "Needs \"Meta approved the version with file and buttons\" on too, and the newer version approved in English, Marathi and Hindi first. If messages fail, turn it off."
       }
     },
     "activity": {

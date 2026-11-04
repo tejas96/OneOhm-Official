@@ -83,10 +83,10 @@ export function templateExtraParts(
 ): { readonly header?: TemplateHeader; readonly buttons?: TemplateButton[] } {
   const extras = templateExtras(key);
   if (!extras) return {};
-  const required_ = extras.quickReplies ?? [];
+  const requiredReplies = extras.quickReplies ?? [];
   const optional = quickRepliesApproved ? (extras.optionalQuickReplies ?? []) : [];
   const buttons: TemplateButton[] = [
-    ...required_.map((field, index) => ({
+    ...requiredReplies.map((field, index) => ({
       kind: 'quick_reply' as const,
       index,
       payload: required(key, field, values),
@@ -96,7 +96,7 @@ export function templateExtraParts(
         ? [
             {
               kind: 'quick_reply' as const,
-              index: required_.length + at,
+              index: requiredReplies.length + at,
               payload: String(values[field]),
             },
           ]
@@ -106,7 +106,7 @@ export function templateExtraParts(
   if (extras.urlButton)
     buttons.push({
       kind: 'url',
-      index: required_.length + optional.length,
+      index: requiredReplies.length + optional.length,
       suffix: required(key, extras.urlButton, values),
     });
   return {

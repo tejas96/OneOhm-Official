@@ -72,7 +72,7 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087
 the FIRST button, then the `Pay now` link button. The app sends the payload `paidother:<instalment id>`, which opens
 the proof form. **Submit the new version first, then switch on.** Submit it under a new name, wait for Meta to
 approve en, mr and hi, set the new names in Settings, and only then turn on "Meta approved the newer version
-with I paid another way" for this message (its own switch, off by default). While it is off the app keeps
+with I paid another way" for this message (its own switch, off by default; it stays greyed out until "Meta approved the version with file and buttons" is on). While it is off the app keeps
 sending the older shape: the `Pay now` link button alone at position 0, so a template approved without the
 quick reply never breaks. The payload is optional; a message queued without it still sends.
 
@@ -92,7 +92,7 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087 · https
 the FIRST button, then the `Pay now` link button. The app sends the payload `paidother:<instalment id>`, which opens
 the proof form. **Submit the new version first, then switch on.** Submit it under a new name, wait for Meta to
 approve en, mr and hi, set the new names in Settings, and only then turn on "Meta approved the newer version
-with I paid another way" for this message (its own switch, off by default). While it is off the app keeps
+with I paid another way" for this message (its own switch, off by default; it stays greyed out until "Meta approved the version with file and buttons" is on). While it is off the app keeps
 sending the older shape: the `Pay now` link button alone at position 0, so a template approved without the
 quick reply never breaks. The payload is optional; a message queued without it still sends.
 

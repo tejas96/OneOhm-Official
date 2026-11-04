@@ -10,11 +10,13 @@ import {
   projects,
 } from '@oneohm/database';
 import { workingMinutesBetween } from '@oneohm/domain';
-import { and, asc, eq, gt, inArray, isNotNull, isNull, like, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
 
 const DAY = 86_400_000;
 const UNTIL = 14 * DAY;
 const PER_TICK = 200;
+/** The least wall-clock time in which two working days (18 working hours) can pass. */
+const MANAGER_NOT_BEFORE = 30 * 3_600_000;
 
 const WHAT: Readonly<Record<string, (customer: string, slot: unknown) => string>> = {
   location: (customer) => `Check the location ${customer} sent`,
@@ -52,6 +54,8 @@ export async function queueActionChecks(
   now: Date,
   timeZone = 'Asia/Kolkata',
 ): Promise<number> {
+  const tierOf = sql<string | null>`${customerActions.payload}->>'checkedTier'`;
+  const managerFrom = new Date(now.getTime() - MANAGER_NOT_BEFORE);
   const waiting = await db
     .select({
       action: customerActions,
@@ -76,6 +80,10 @@ export async function queueActionChecks(
         gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),
         // A working day can pass in 9 hours; the working clock decides below.
         lte(customerActions.updatedAt, new Date(now.getTime() - 9 * 3_600_000)),
+        // Rows already told at their last tier cannot crowd out new ones: all done after the
+        // manager tier; after the owner tier they wait until the manager tier can be due.
+        or(isNull(tierOf), ne(tierOf, 'manager')),
+        or(isNull(tierOf), ne(tierOf, 'owner'), lte(customerActions.updatedAt, managerFrom)),
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
       ),
     )
@@ -122,18 +130,39 @@ async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string)
     .from(notifications)
     .where(like(notifications.dedupeKey, `${notice.dedupeKey}%`))
     .limit(1);
-  if (told) return false;
+  if (told) {
+    await markChecked(db, action, due);
+    return false;
+  }
   const owner =
     action.requestedByUserId ?? (await chatOwnerFor(db, { customerId: action.customerId, phone }));
+  let sent = 0;
   if (due === 'owner') {
-    if (owner) await notifyCover(db, owner, 'projects.manage', notice);
-    else await notifyHolders(db, 'projects.manage', notice);
+    sent = owner
+      ? await notifyCover(db, owner, 'projects.manage', notice)
+      : await notifyHolders(db, 'projects.manage', notice);
   } else if (manager) {
-    await notifyCover(db, manager, 'projects.manage', notice);
+    sent = await notifyCover(db, manager, 'projects.manage', notice);
   } else {
     // No project (a pin waiting for its home, a call-back on a lead): the customer desk, not
     // everyone who manages projects.
-    await notifyStaffHolders(db, 'service.manage', notice);
+    sent = await notifyStaffHolders(db, 'service.manage', notice);
   }
-  return true;
+  // The tier is recorded either way, so a desk with nobody on it is not looked at every tick.
+  await markChecked(db, action, due);
+  if (sent === 0)
+    console.warn(`action check ${action.id} (${due}): nobody to tell, will not ask again`);
+  return sent > 0;
+}
+
+/** Remembers the tier an answer was last checked at (without moving its updated time). */
+async function markChecked(
+  db: Database,
+  action: typeof customerActions.$inferSelect,
+  tier: 'owner' | 'manager',
+) {
+  await db
+    .update(customerActions)
+    .set({ payload: { ...action.payload, checkedTier: tier }, updatedAt: action.updatedAt })
+    .where(eq(customerActions.id, action.id));
 }

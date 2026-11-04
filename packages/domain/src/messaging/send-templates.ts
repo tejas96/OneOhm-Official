@@ -54,7 +54,7 @@ export const SEND_MESSAGE_TEMPLATES = [
 
 /**
  * Whether a template is on, from its settings row. One rule for the staff preview and the worker's
- * send, so they never disagree: a row says so itself; with no row (a database not migrated yet) the
+ * send, so they never disagree. A row says so itself. With no row (a database not migrated yet) the
  * templates behind "Send to customer", which Meta has not approved, are off, and the older built-in
  * ones keep sending as they always did.
  */

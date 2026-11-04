@@ -194,7 +194,8 @@ export function MessageTemplateDialog({
         {templateExtras(template.key)?.optionalQuickReplies && (
           <div className="flex flex-col gap-1">
             <Switch
-              checked={draft.quickRepliesApproved}
+              checked={draft.quickRepliesApproved && draft.extrasApproved}
+              disabled={!draft.extrasApproved}
               onCheckedChange={(value) => set('quickRepliesApproved', value)}
               label={t('quickRepliesApproved')}
             />
