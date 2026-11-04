@@ -11,6 +11,7 @@ const file = (over: Partial<Parameters<typeof filedAs>[0]>) => ({
   projectId: null,
   propertyId: null,
   serviceRequestId: null,
+  leadId: null,
   ...over,
 });
 
@@ -25,8 +26,14 @@ describe('filedAs', () => {
   });
 
   it('is the kind alone for ID papers and for a project with no home', () => {
-    expect(filedAs(file({ category: 'customer_kyc' }), [pune])).toBe('Aadhaar / PAN');
+    expect(filedAs(file({ category: 'customer_kyc' }), [pune])).toBe('Customer ID and KYC');
     expect(filedAs(file({ category: 'other', projectId: 'x' }), [pune])).toBe('Other');
+  });
+
+  it("names a lead's file as on the lead, not to sort", () => {
+    expect(filedAs(file({ category: 'electricity_bill', leadId: 'l1' }), [])).toBe(
+      'Electricity bill · Lead',
+    );
   });
 
   it('tells two homes of one name apart', () => {

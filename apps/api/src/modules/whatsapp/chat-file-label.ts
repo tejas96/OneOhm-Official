@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 const KIND_LABELS: Readonly<Record<DocumentCategory, string>> = {
   site_photo: 'Site photo',
   site_survey: 'Site survey',
-  customer_kyc: 'Aadhaar / PAN',
+  customer_kyc: 'Customer ID and KYC',
   electricity_bill: 'Electricity bill',
   property: 'Property papers',
   quotation: 'Quotation',
@@ -34,6 +34,7 @@ export const chatFileColumns = {
   projectId: documents.projectId,
   propertyId: documents.propertyId,
   serviceRequestId: documents.serviceRequestId,
+  leadId: documents.leadId,
 };
 
 type Home = Parameters<typeof homeName>[0];
@@ -46,6 +47,7 @@ interface FileRow {
   readonly projectId: string | null;
   readonly propertyId: string | null;
   readonly serviceRequestId: string | null;
+  readonly leadId: string | null;
 }
 
 /** The customer's properties: a home's name needs them to tell two of the same name apart. */
@@ -64,18 +66,21 @@ export async function homesOf(db: DatabaseExecutor, customerId: string | null): 
 
 /**
  * Where a chat file was filed: "Electricity bill · Pune", the folder alone for ID papers
- * (they serve every home), null while it is still to sort.
+ * (they serve every home), "Electricity bill · Lead" for a lead's file with no home yet,
+ * null while it is still to sort.
  */
 export function filedAs(file: FileRow, homes: readonly Home[]): string | null {
   const category = file.category ?? 'other';
-  const filed = file.projectId || file.propertyId || file.serviceRequestId;
+  const filed = file.projectId || file.propertyId || file.serviceRequestId || file.leadId;
   if (category === 'other' && !filed) return null;
   const kind = KIND_LABELS[category as DocumentCategory] ?? category;
   const home =
     file.propertyId && !isPersonDocumentCategory(category)
       ? homes.find((one) => one.propertyId === file.propertyId)
       : undefined;
-  return home ? `${kind} · ${homeName(home, homes)}` : kind;
+  if (home) return `${kind} · ${homeName(home, homes)}`;
+  const onLead = file.leadId && !file.projectId && !file.propertyId;
+  return onLead && !isPersonDocumentCategory(category) ? `${kind} · Lead` : kind;
 }
 
 /** The file as the chat shows it; null when the message has none. */
