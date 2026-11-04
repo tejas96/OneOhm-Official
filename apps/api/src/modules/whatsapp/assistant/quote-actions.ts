@@ -7,8 +7,10 @@ import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
 import { quotedSteps } from '../../quotations/quoted-terms';
 import { type Conversation, queueReply } from '../chat-store';
+import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
+import { PaperRepliesService } from './paper-replies';
 import { QUOTE_WORDS } from './quote-words';
 import { WORDS } from './words';
 
@@ -51,6 +53,7 @@ export class QuoteActionsService {
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly quotations: QuotationsService,
     private readonly people: HandOverService,
+    private readonly papers: PaperRepliesService,
   ) {}
 
   /** `messageId` is the tap's own WhatsApp id: an "already accepted" reply goes once per tap. */
@@ -105,15 +108,26 @@ export class QuoteActionsService {
     return sayWithTaps(this.db, chat, QUOTE_WORDS.quoteThanks, taps, `quote_thanks:${quotationId}`);
   }
 
-  /** [See quotation]: the quote's PDF and its two buttons again; another's quote shows nothing. */
+  /**
+   * [See quotation]: the open quote's PDF and its two buttons again. One no longer open
+   * (accepted, revised, expired) or not theirs is said so, then the latest papers list:
+   * never an old PDF with Accept.
+   */
   private async show(chat: Conversation, quotationId: string) {
     const quotation = await this.quotations.get(quotationId).catch((error: unknown) => {
       if (error instanceof AppError) return null;
       throw error;
     });
-    if (!quotation || quotation.customer.id !== chat.customerId)
-      return this.refuse(chat, WORDS.quoteChanged);
-    return queueQuoteInChat(this.db, this.env, quotation, chat);
+    const customerId = chat.customerId;
+    if (
+      quotation &&
+      customerId &&
+      quotation.customer.id === customerId &&
+      quotation.status === 'sent'
+    )
+      return queueQuoteInChat(this.db, this.env, quotation, chat);
+    await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.quoteChanged });
+    if (customerId) await this.papers.show(chat, customerId);
   }
 
   /** Accepted before: said for each new tap, never twice for Meta's retry of one tap (H4). */

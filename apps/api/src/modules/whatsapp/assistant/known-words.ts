@@ -89,6 +89,12 @@ const TITLES: readonly (readonly [string, Choice])[] = Object.values(CHAT_LISTS)
     [words.buttons.talkTeam, 'talk'] as const,
     [words.buttons.receipts, 'receipts'] as const,
     [words.buttons.rewards, 'rewards'] as const,
+    [words.buttons.sendBill, 'sendbill'] as const,
+    [words.buttons.invoice, 'invoices'] as const,
+    [words.buttons.payments, 'payments'] as const,
+    [words.buttons.documents, 'documents'] as const,
+    [words.buttons.problem, 'problem'] as const,
+    [words.buttons.refer, 'refer'] as const,
   ],
 );
 

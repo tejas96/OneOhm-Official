@@ -66,6 +66,27 @@ export function replyTime(now: Date, timeZone: string): ReplyTime {
   return weekday === 6 ? 'monday' : 'tomorrow';
 }
 
+/** The day a promised call is due: today, the next working day, or Monday. */
+export type CallDay = 'today' | 'tomorrow' | 'monday';
+
+/** How a promised call's day is said (the English words; the staff history uses them). */
+export const CALL_DAY_WORDS: Record<CallDay, string> = {
+  today: 'today',
+  tomorrow: 'tomorrow morning',
+  monday: 'on Monday morning',
+};
+
+/**
+ * When a call promised at `now` is due, by the same clock as `replyTime`: today in working
+ * hours (or before 9:30 on a working day), else the next working morning — Monday after
+ * Saturday evening — with the days to add to today.
+ */
+export function callDay(now: Date, timeZone: string): { day: CallDay; add: 0 | 1 | 2 } {
+  const time = replyTime(now, timeZone);
+  if (time === 'now' || time === 'today') return { day: 'today', add: 0 };
+  return time === 'monday' ? { day: 'monday', add: 2 } : { day: 'tomorrow', add: 1 };
+}
+
 /**
  * When working hours last ended: 6:30 pm today once it is past, else 6:30 pm on the working
  * day before. Sunday is closed, so all Sunday and Monday morning it is Saturday's 6:30 pm.

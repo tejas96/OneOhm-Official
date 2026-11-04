@@ -41,12 +41,16 @@ export const HI_CHAT: Words<ChatWords> = {
     refer: 'दोस्त को बताएँ',
     rewards: 'मेरे इनाम',
     talkTeam: 'टीम से बात करें',
-    sendBill: 'बिजली बिल भेजें',
+    sendBill: 'बिल की फ़ोटो भेजें',
+    invoice: 'हमारा इनवॉइस',
     start: 'फिर से शुरू करें',
     viewReceipt: 'रसीद देखें',
   },
   pay: (amount) => `${amount} भरें`,
-  payLink: (amount, when, home) => `${home} वाले घर के लिए ${when} *${amount}* भरने हैं।`,
+  payLink: (amount, when, home) =>
+    `${home} वाले घर के लिए ${when ? `${when} ` : ''}*${amount}* भरने हैं।`,
+  moreDue: (count) => `${count} और घरों का पेमेंट बाकी है। उसके लिए हमसे यहाँ पूछें।`,
+  quoteChanged: 'वह कोटेशन बदल गया है — यह ताज़ा है।',
   talkTo: (name) => `${name} से बात करें`,
   whatNext: 'आगे क्या?',
   listButton: 'चुनें',
@@ -101,7 +105,7 @@ export const HI_CHAT: Words<ChatWords> = {
   handedBack: (name) =>
     `${name ? `${name} अभी उपलब्ध नहीं हैं` : 'हमारी टीम अभी उपलब्ध नहीं है'} — हम मदद के लिए यहाँ हैं।`,
   earlier: 'वह पुराना मेसेज था — यह ताज़ा है।',
-  bill: { ask: 'आप कौन सा बिल कह रहे हैं?', paper: 'बिजली बिल' },
+  bill: { ask: 'आप किस बिल की बात कर रहे हैं?', paper: 'बिजली बिल' },
   language: {
     ask: 'हम किस भाषा में लिखें?',
     saved: 'ठीक है ✅ अब हम हिंदी में लिखेंगे।',

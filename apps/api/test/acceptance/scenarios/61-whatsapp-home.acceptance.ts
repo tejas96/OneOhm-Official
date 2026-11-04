@@ -147,13 +147,16 @@ describe('WhatsApp Home (redesign §3)', () => {
     expect(choices(buttons)).toEqual([`quote_accept:${quote.id}`, `quote_ask:${quote.id}`]);
   });
 
-  it('a typed "bill" asks which bill: the light bill to send, or Payments', async () => {
+  it('a typed "bill" asks which: a photo of their bill, our invoice, or Payments', async () => {
     const sale = await soldCustomer('Which Bill Customer (test)');
     await say(sale.customer.phone, 'hi');
     await say(sale.customer.phone, 'bill');
     const ask = await endsWithTaps(sale.customer.phone);
     expect(ask?.body).toBe('Which bill do you mean?');
-    expect(choices(ask)).toEqual(['go:sendbill', 'go:payments']);
+    expect(choices(ask)).toEqual(['go:sendbill', 'go:invoices', 'go:payments']);
+    // Typing a button's title is that button, not the question again.
+    await say(sale.customer.phone, 'Our invoice');
+    expect((await lastReply(sale.customer.phone))?.body).not.toBe('Which bill do you mean?');
     await tap(sale.customer.phone, 'go:sendbill');
     expect((await lastReply(sale.customer.phone))?.body).toBe(
       'Please send your *electricity bill* here as a photo or PDF.',

@@ -11,7 +11,7 @@ import type { Incoming } from '../whatsapp-events';
 import { languageTapped, payTapped, sendTapped } from './chat-choices';
 import { chatLanguage, languageForMessage } from './chat-language';
 import { heldStep, setStep, stepOf, WAITING_STEPS } from './chat-step';
-import { CHAT_WORDS, LANGUAGE_BUTTONS } from './chat-words';
+import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
@@ -83,8 +83,9 @@ export class AssistantService {
     await inLanguage(language, () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
-    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14).
-    if (ask) await this.askLanguage(chat);
+    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14) —
+    // unless the answer opened a step that waits for words; then on a later message.
+    if (ask) await this.menus.askLanguage(chat);
   }
 
   /** A tap Meta delivered after a newer message: said so, then Home (redesign §14). */
@@ -232,12 +233,6 @@ export class AssistantService {
       throw error;
     }
     return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['rewards', 'menu']);
-  }
-
-  /** Which language: the three buttons, each in its own script. */
-  private askLanguage(chat: Conversation) {
-    const buttons = LANGUAGE_BUTTONS;
-    return queueReply(this.db, chat, { kind: 'buttons', body: CHAT_WORDS.language.ask, buttons });
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */

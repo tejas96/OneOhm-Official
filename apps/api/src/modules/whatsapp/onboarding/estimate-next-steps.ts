@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { notifications, type Transaction } from '@oneohm/database';
-import { addMonths, replyTime } from '@oneohm/domain';
+import { addMonths, CALL_DAY_WORDS, callDay } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
@@ -14,7 +14,7 @@ import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
-import { type CallDay, ONBOARD_WORDS } from './onboard-words';
+import { ONBOARD_WORDS } from './onboard-words';
 import {
   ESTIMATE_CHOICES,
   LATER_PERIODS,
@@ -52,17 +52,6 @@ const laterPeriod = (choiceId: string): LaterPeriod | null => {
 };
 
 /**
- * When the call is promised: today in working hours (or before 9:30 on a working day),
- * else the next working morning — never "today" at 11 pm or on a Sunday, and Monday after
- * Saturday evening. With the days to add to today.
- */
-function callDay(now: Date, zone: string): { day: CallDay; add: number } {
-  const time = replyTime(now, zone);
-  if (time === 'now' || time === 'today') return { day: 'today', add: 0 };
-  return time === 'monday' ? { day: 'monday', add: 2 } : { day: 'tomorrow', add: 1 };
-}
-
-/**
  * The customer's taps under the estimate, in the chat's transaction. "Call me back" puts
  * a call on the owner's Today (tomorrow after working hours, by the tap's time) and alerts
  * them; "Not now" asks when to check back and sets that date. ("Talk to a person" is the
@@ -94,9 +83,7 @@ export class EstimateNextStepsService {
       const key = `wa_callback:${chat.id}:${today}`;
       const again = await alertedAlready(tx, key);
       const call = callDay(now, zone);
-      const when = { today: 'today', tomorrow: 'tomorrow morning', monday: 'on Monday morning' }[
-        call.day
-      ];
+      const when = CALL_DAY_WORDS[call.day];
       await updateLeadFromChat(
         tx,
         leadId,

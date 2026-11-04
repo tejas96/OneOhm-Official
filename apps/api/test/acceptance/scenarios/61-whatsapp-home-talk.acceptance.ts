@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeDb, rows } from '../support/db';
+import { closeDb } from '../support/db';
 import { Session } from '../support/http';
 import { alerts, customerInChat, endsWithTaps } from '../support/menu-chat';
 import {
@@ -104,31 +104,6 @@ describe('WhatsApp talk (redesign §14)', () => {
       at: new Date(Date.now() - 60_000),
     });
     expect((await replies(phone)).length).toBe(before + 2);
-  });
-
-  it('More → Language → हिंदी saves the language and answers in it at once', async () => {
-    const { customer } = await customerInChat(admin, 'Language Customer (test)');
-    const { phone, customerId } = customer;
-    await tap(phone, 'go:language');
-    expect(choices(await lastReply(phone))).toEqual(['lang:en', 'lang:mr', 'lang:hi']);
-    await tap(phone, 'lang:hi');
-    const [saved, home] = (await replies(phone)).slice(-2);
-    expect(saved?.body).toBe('ठीक है ✅ अब हम हिंदी में लिखेंगे।');
-    expect(home?.body).toMatch(/^नमस्ते Language 👋/);
-    const [row] = await rows<{ language: string }>(
-      'SELECT preferred_language AS language FROM customers WHERE id = $1',
-      [customerId],
-    );
-    expect(row?.language).toBe('hi-IN');
-    expect((await chatOf(phone)).language).toBe('hi');
-  });
-
-  it('Marathi typed while English is set switches to Marathi', async () => {
-    const { customer } = await customerInChat(admin, 'Typed Marathi Customer (test)');
-    await say(customer.phone, 'माझे पेमेंट किती बाकी आहे?');
-    expect((await lastReply(customer.phone))?.body).toContain('🔴');
-    expect((await lastReply(customer.phone))?.body).toContain('भरायचे');
-    expect((await chatOf(customer.phone)).language).toBe('mr');
   });
 
   it('hand-back: a customer who wrote while held hears their person is away', async () => {

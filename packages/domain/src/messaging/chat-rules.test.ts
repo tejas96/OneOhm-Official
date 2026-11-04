@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CALL_DAY_WORDS,
   CHAT_WINDOW_HOURS,
+  callDay,
   chatWaitStage,
   chatWindowOpen,
   isWorkingTime,
@@ -79,6 +81,18 @@ describe('the last work end skips Sunday', () => {
     const sat = new Date('2026-10-31T18:30:00+05:30').toISOString();
     for (const at of ['2026-11-01T10:00', '2026-11-01T21:00', '2026-11-02T08:00'])
       expect(lastWorkEnd(new Date(`${at}:00+05:30`), TZ).toISOString(), at).toBe(sat);
+  });
+});
+
+describe('when a promised call is due', () => {
+  const at = (iso: string) => callDay(new Date(`${iso}:00+05:30`), TZ);
+  it('is today in working hours; Friday evening → Saturday; Saturday evening and Sunday → Monday', () => {
+    expect(at('2026-11-06T11:00')).toEqual({ day: 'today', add: 0 });
+    expect(at('2026-11-06T20:00')).toEqual({ day: 'tomorrow', add: 1 });
+    expect(at('2026-11-07T20:00')).toEqual({ day: 'monday', add: 2 });
+    expect(at('2026-11-08T11:00')).toEqual({ day: 'tomorrow', add: 1 });
+    expect(at('2026-11-09T08:00')).toEqual({ day: 'today', add: 0 });
+    expect(CALL_DAY_WORDS.monday).toBe('on Monday morning');
   });
 });
 

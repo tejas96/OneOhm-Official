@@ -28,13 +28,16 @@ export class PaperRepliesService {
     private readonly documents: CustomerDocumentsService,
   ) {}
 
-  async show(chat: Conversation, customerId: string, only?: (paper: Paper) => boolean) {
+  async show(
+    chat: Conversation,
+    customerId: string,
+    only?: (paper: Paper) => boolean,
+    none: string = WORDS.noDocuments,
+  ) {
     const papers = (await this.papers(customerId)).filter(only ?? (() => true));
     const [first] = papers;
-    if (!first) {
-      const none = only ? PAPER_WORDS.none : WORDS.noDocuments;
+    if (!first)
       return sayWithTaps(this.db, chat, none, only ? ['payments', 'menu'] : ['update', 'menu']);
-    }
     if (papers.length === 1) return this.send(chat, first);
     const more = papers.length > PAPER_ROWS ? `\n${PAPER_WORDS.more}` : '';
     await queueReply(this.db, chat, {
@@ -52,7 +55,14 @@ export class PaperRepliesService {
 
   /** The customer's payment receipts only (Payments → Receipts). */
   receipts(chat: Conversation, customerId: string): Promise<void> {
-    return this.show(chat, customerId, (paper) => paper.id.startsWith('paper:receipt:'));
+    const receipt = (paper: Paper) => paper.id.startsWith('paper:receipt:');
+    return this.show(chat, customerId, receipt, PAPER_WORDS.none);
+  }
+
+  /** Our invoices and receipts ("Which bill?" → Our invoice). */
+  invoices(chat: Conversation, customerId: string): Promise<void> {
+    const ours = (paper: Paper) => /^paper:(invoice|receipt):/.test(paper.id);
+    return this.show(chat, customerId, ours, PAPER_WORDS.noInvoices);
   }
 
   /**

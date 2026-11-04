@@ -60,7 +60,8 @@ function milestoneLine(milestone: Milestone, left: number) {
   if (milestone.payer === 'bank') return ANSWER_WORDS.bank(formatInr(left));
   if (!isDue(milestone)) {
     const when = QUOTE_MONEY_WORDS.when[milestone.trigger as MilestoneTrigger] ?? '';
-    return ANSWER_WORDS.later(formatInr(left), when);
+    // A trigger without words leaves no double space.
+    return ANSWER_WORDS.later(formatInr(left), when).replace(/\s+/g, ' ').trim();
   }
   return ANSWER_WORDS.due(formatInr(left));
 }

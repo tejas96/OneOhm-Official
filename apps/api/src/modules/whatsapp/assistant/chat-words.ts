@@ -27,7 +27,8 @@ const EN_CHAT = {
     refer: 'Refer a friend',
     rewards: 'My rewards',
     talkTeam: 'Talk to our team',
-    sendBill: 'Send light bill',
+    sendBill: 'Send bill photo',
+    invoice: 'Our invoice',
     start: 'Start again',
     viewReceipt: 'View receipt',
   },
@@ -35,7 +36,14 @@ const EN_CHAT = {
   pay: (amount: string) => `Pay ${amount}`,
   /** The pay-link message (one button, redesign §1): what is due, when, for which home. */
   payLink: (amount: string, when: string, home: string) =>
-    `*${amount}* is due ${when} for your ${home} home.`,
+    `*${amount}* is due ${when ? `${when} ` : ''}for your ${home} home.`,
+  /** Under the second Payments message when a third home also owes. */
+  moreDue: (count: number) =>
+    count === 1
+      ? '1 more home has a payment due. Ask us here for it.'
+      : `${count} more homes have a payment due. Ask us here for them.`,
+  /** [See quotation] on a quote that is no longer open. */
+  quoteChanged: 'That quotation has changed — here is the latest.',
   /** "Talk to Priya"; too long for a title, it is "Talk to our team" (talk-title.ts). */
   talkTo: (name: string) => `Talk to ${name}`,
   /** Over the taps when an answer is too long for one buttons message. */
@@ -104,7 +112,7 @@ const EN_CHAT = {
     `Thank you. Your message is with ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
   handedBack: (name: string | null) => `${name ?? 'Our team'} is away now — we’re here to help.`,
   earlier: 'That was an earlier message — here is the latest.',
-  /** A typed "bill": the electricity bill we need, or what they owe? */
+  /** A typed "bill": their electricity bill we need, our invoice, or what they owe? */
   bill: { ask: 'Which bill do you mean?', paper: 'electricity bill' },
   language: {
     ask: 'Which language would you like us to write in?',

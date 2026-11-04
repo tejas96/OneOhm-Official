@@ -6,8 +6,9 @@ import {
   projects,
   quotations,
 } from '@oneohm/database';
+import type { MilestoneTrigger } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
-import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { CustomerDocumentsService } from '../../customer-portal/customer-documents.service';
 import type { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { QUOTE_MONEY_WORDS } from '../../quotations/quote-money-words';
@@ -146,8 +147,11 @@ function receiptPaper(customerId: string, name: string, receipt: Receipt): Paper
   return {
     id: paperTap('receipt', receipt.id),
     file: { kind: 'receipt', id: receipt.id, customerId },
-    title: receipt.instalment ? PAPER_WORDS.receipt(receipt.instalment) : PAPER_WORDS.plainReceipt,
-    description: PAPER_WORDS.paid(formatInr(receipt.amount), plainDate(receipt.on)),
+    // Named by when it fell due ("before dispatch"), never "2nd instalment" (redesign §10).
+    title: PAPER_WORDS.plainReceipt,
+    description: [PAPER_WORDS.paid(formatInr(receipt.amount), plainDate(receipt.on)), receipt.when]
+      .filter(Boolean)
+      .join(' · '),
     filename: customerPdfName(name, 'receipt'),
     caption: PROJECT_WORDS.receiptCaption(receipt.number ?? ''),
   };
@@ -171,7 +175,7 @@ export async function receiptById(
   return receiptPaper(customerId, customer?.name ?? '', receipt);
 }
 
-/** The newest receipts (or the one asked for), each with its instalment ("Bank loan"). */
+/** The newest receipts (or the one asked for), each with when its payment fell due. */
 async function receipts(db: Database, customerId: string, paymentId?: string) {
   const rows = await db
     .select({
@@ -179,9 +183,7 @@ async function receipts(db: Database, customerId: string, paymentId?: string) {
       number: payments.receiptNumber,
       amount: payments.amountPaise,
       on: payments.receivedOn,
-      payer: paymentMilestones.payer,
-      index: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer' and m.position < ${paymentMilestones.position})::int`,
-      count: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer')::int`,
+      trigger: paymentMilestones.trigger,
     })
     .from(payments)
     .innerJoin(projects, eq(projects.id, payments.projectId))
@@ -197,12 +199,7 @@ async function receipts(db: Database, customerId: string, paymentId?: string) {
     .limit(LATEST);
   return rows.map((row) => ({
     ...row,
-    instalment:
-      row.payer === 'bank'
-        ? PROJECT_WORDS.bankShare
-        : row.payer
-          ? PROJECT_WORDS.instalment(Number(row.index), Number(row.count))
-          : null,
+    when: row.trigger ? (QUOTE_MONEY_WORDS.when[row.trigger as MilestoneTrigger] ?? '') : '',
   }));
 }
 

@@ -1,7 +1,6 @@
+import { CALL_DAY_WORDS, type CallDay } from '@oneohm/domain';
 import { localized, type Words } from '../assistant/language';
 
-/** The day a promised call is due: today, the next working day, or Monday after Saturday evening. */
-export type CallDay = 'today' | 'tomorrow' | 'monday';
 /**
  * What the onboarding bot says to a new number, in English, Marathi and Hindi (kept here
  * because `words.ts` is full). Button titles stay within 20 characters and list rows
@@ -46,7 +45,7 @@ const EN_ONBOARD = {
   later: { '1w': 'In 1 week', '1m': 'In 1 month', '3m': 'In 3 months' },
   /** The call promise: today in working hours, else the next working morning. */
   willCall: (name: string | null, day: CallDay) =>
-    `Thank you. ${name ?? 'Our team'} will call you ${{ today: 'today', tomorrow: 'tomorrow morning', monday: 'on Monday morning' }[day]}.`,
+    `Thank you. ${name ?? 'Our team'} will call you ${CALL_DAY_WORDS[day]}.`,
   laterThanks: 'Thank you! We will check back with you then.',
   /** No instant price for this site (a farm, a society, other roof…): a person prices it. */
   expertPrice: 'Thank you! Our expert will prepare your price and call you.',

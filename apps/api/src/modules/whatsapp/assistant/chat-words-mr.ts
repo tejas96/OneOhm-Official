@@ -43,12 +43,16 @@ export const MR_CHAT: Words<ChatWords> = {
     refer: 'मित्राला सुचवा',
     rewards: 'माझी बक्षिसे',
     talkTeam: 'आमच्या टीमशी बोला',
-    sendBill: 'वीज बिल पाठवा',
+    sendBill: 'बिलाचा फोटो पाठवा',
+    invoice: 'आमचे इनव्हॉइस',
     start: 'पुन्हा सुरू करा',
     viewReceipt: 'पावती पाहा',
   },
   pay: (amount) => `${amount} भरा`,
-  payLink: (amount, when, home) => `तुमच्या ${home} येथील घरासाठी ${when} *${amount}* भरायचे आहेत.`,
+  payLink: (amount, when, home) =>
+    `तुमच्या ${home} येथील घरासाठी ${when ? `${when} ` : ''}*${amount}* भरायचे आहेत.`,
+  moreDue: (count) => `आणखी ${count} घरांसाठी पेमेंट बाकी आहे. त्यासाठी आम्हाला इथे विचारा.`,
+  quoteChanged: 'ते कोटेशन बदलले आहे — हे सध्याचे आहे.',
   talkTo: (name) => `${name} शी बोला`,
   whatNext: 'पुढे काय?',
   listButton: 'निवडा',
@@ -104,7 +108,7 @@ export const MR_CHAT: Words<ChatWords> = {
   handedBack: (name) =>
     `${name ? `${name} आता उपलब्ध नाहीत` : 'आमची टीम आता उपलब्ध नाही'} — आम्ही मदतीसाठी इथे आहोत.`,
   earlier: 'तो आधीचा मेसेज होता — हा सध्याचा आहे.',
-  bill: { ask: 'कोणते बिल म्हणायचे आहे?', paper: 'वीज बिल' },
+  bill: { ask: 'तुम्हाला कोणते बिल हवे आहे?', paper: 'वीज बिल' },
   language: {
     ask: 'आम्ही कोणत्या भाषेत लिहावे?',
     saved: 'ठीक आहे ✅ आता आम्ही मराठीत लिहू.',

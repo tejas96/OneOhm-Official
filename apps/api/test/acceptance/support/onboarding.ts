@@ -1,7 +1,6 @@
 import type { OnboardingSettingsRecord } from '@oneohm/api-contracts';
 import { rows } from './db';
 import type { Session } from './http';
-import { addDays, today } from './sales';
 import { sendInbound } from './whatsapp';
 
 /**
@@ -129,19 +128,5 @@ export async function upToSite(phone: string): Promise<void> {
   await tap(phone, 'ob:city:Pune');
 }
 
-/** What "Call me back" promises right now: a call today until 6:30 pm in India, then tomorrow morning. */
-export function promisedCall(now = new Date()): {
-  day: string;
-  when: 'today' | 'tomorrow morning';
-} {
-  const clock = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(now);
-  const [hour = 0, minute = 0] = clock.split(':').map(Number);
-  return hour * 60 + minute >= 18 * 60 + 30
-    ? { day: addDays(today(), 1), when: 'tomorrow morning' }
-    : { day: today(), when: 'today' };
-}
+/** What "Call me back" promises (the same working-time rule as the API). */
+export { promisedCall } from './work-days';

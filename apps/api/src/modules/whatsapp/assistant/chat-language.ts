@@ -2,25 +2,26 @@ import { customers, type DatabaseExecutor, waConversations } from '@oneohm/datab
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../../common/audit';
 import type { Conversation } from '../chat-store';
-import { markContext } from './chat-step';
 import { scriptLanguage } from './known-words';
 import { type AssistantLanguage, assistantLanguage } from './language';
 
 /**
- * The language to speak in this chat: the one picked in this chat (a family member's own
- * choice stays on their number), else the customer's saved one; a stranger's is the one
- * picked while onboarding.
+ * The language to speak in this chat: on the customer's own number, the customer's saved
+ * language (the app, staff and this chat all keep it); on a family member's number, the
+ * one picked in that chat, else the customer's. A stranger's is the one picked while
+ * onboarding.
  */
 export async function chatLanguage(
   db: DatabaseExecutor,
-  chat: Pick<Conversation, 'customerId' | 'language'>,
+  chat: Pick<Conversation, 'customerId' | 'language' | 'phone'>,
 ): Promise<AssistantLanguage> {
-  if (!chat.customerId || chat.language) return assistantLanguage(chat.language);
+  if (!chat.customerId) return assistantLanguage(chat.language);
   const [customer] = await db
-    .select({ language: customers.preferredLanguage })
+    .select({ language: customers.preferredLanguage, phone: customers.phoneE164 })
     .from(customers)
     .where(eq(customers.id, chat.customerId));
-  return assistantLanguage(customer?.language);
+  const family = customer?.phone !== chat.phone;
+  return assistantLanguage(family && chat.language ? chat.language : customer?.language);
 }
 
 /**
@@ -58,9 +59,9 @@ export async function saveLanguage(
 /**
  * The language to answer this message in (principles §2): the saved one, or, when that is
  * English and a known customer types in Devanagari, Marathi or Hindi by its words (saved
- * at once). `ask` when the words do not tell which, the first time only: the message is
- * answered first, then the chat asks with the three language buttons. Never while a step
- * waits for these words or a person holds the chat.
+ * at once). `ask` when the words do not tell which, until asked once: the message is
+ * answered first, then the chat asks with the three language buttons (not while a step
+ * waits for words, before or after the answer, nor while a person holds the chat).
  */
 export async function languageForMessage(
   db: DatabaseExecutor,
@@ -78,6 +79,5 @@ export async function languageForMessage(
     return { language: written, ask: false };
   }
   if (stepWaits || (chat.context as { langAsked?: unknown } | null)?.langAsked) return keep;
-  await markContext(db, chat.id, { langAsked: true });
   return { language: saved, ask: true };
 }

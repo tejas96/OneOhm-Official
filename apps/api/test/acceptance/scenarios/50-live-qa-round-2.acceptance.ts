@@ -126,8 +126,11 @@ describe('Live QA round 2', () => {
     expect(list?.kind).toBe('list');
     const titles = list?.rows?.map((row) => row.title) ?? [];
     expect(titles).toContain('Your quotation');
-    expect(titles).toContain('Receipt · 1st instalment');
-    expect(titles).toContain('Receipt · 2nd instalment');
+    // Receipts say when the payment fell due, never "2nd instalment" (redesign §10).
+    expect(titles.filter((title) => title === 'Payment receipt')).toHaveLength(2);
+    const notes = list?.rows?.map((row) => (row as { description?: string }).description ?? '');
+    expect(notes?.some((note) => note.includes('on acceptance'))).toBe(true);
+    expect(notes?.some((note) => note.includes('before dispatch'))).toBe(true);
     expect(list?.rows?.length).toBeLessThanOrEqual(10);
     for (const title of titles) {
       expect(title.length).toBeLessThanOrEqual(24);

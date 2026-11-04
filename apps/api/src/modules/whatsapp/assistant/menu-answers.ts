@@ -1,12 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { waConversations } from '@oneohm/database';
 import { formatInr, todayIn } from '@oneohm/shared';
+import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { type Conversation, queueReply } from '../chat-store';
 import { AnswersService } from './answers.service';
 import type { Choice } from './chat-choices';
 import { saveLanguage } from './chat-language';
-import { setStep } from './chat-step';
+import { markContext, setStep, stepOf, WAITING_STEPS } from './chat-step';
 import { CHAT_WORDS, LANGUAGE_BUTTONS, talkTitle } from './chat-words';
 import { sayWithTaps, type TapChoice } from './closing-taps';
 import { startComplaint } from './complaint-start';
@@ -55,8 +57,11 @@ export class MenuAnswersService {
       case 'bill':
         return say(CHAT_WORDS.bill.ask, [
           { id: 'go:sendbill', title: CHAT_WORDS.buttons.sendBill },
+          { id: 'go:invoices', title: CHAT_WORDS.buttons.invoice },
           'payments',
         ]);
+      case 'invoices':
+        return this.papers.invoices(chat, customerId);
       case 'sendbill':
         return this.askPaper(chat, customerId, null, 'electricity_bill');
       case 'problem':
@@ -74,11 +79,7 @@ export class MenuAnswersService {
       case 'talk':
         return this.people.handOver(chat, 'service.manage');
       case 'language':
-        return queueReply(this.db, chat, {
-          kind: 'buttons',
-          body: CHAT_WORDS.language.ask,
-          buttons: LANGUAGE_BUTTONS,
-        });
+        return this.languageButtons(chat);
       case 'feedback':
         return this.feedback.offer(chat, customerId);
     }
@@ -107,7 +108,10 @@ export class MenuAnswersService {
     if (homes.length === 0) return this.noProject(chat);
     const online = this.home.paysOnline();
     const shown = [...homes].sort((a, b) => Number(b.due !== null) - Number(a.due !== null));
-    for (const { body, due } of shown.slice(0, 2)) {
+    const moreDue = shown.slice(2).filter((home) => home.due !== null).length;
+    for (const [index, { body: text, due }] of shown.slice(0, 2).entries()) {
+      // A third home that owes is one line under the second message (redesign §10).
+      const body = index === 1 && moreDue > 0 ? `${text}\n\n${CHAT_WORDS.moreDue(moreDue)}` : text;
       const pay =
         due && online
           ? { id: `pay:${due.milestoneId}`, title: CHAT_WORDS.pay(formatInr(due.leftPaise)) }
@@ -155,6 +159,26 @@ export class MenuAnswersService {
           ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
           : CHAT_WORDS.paper.any;
     return sayWithTaps(this.db, chat, body, ['menu']);
+  }
+
+  /**
+   * Devanagari we could not place as Marathi or Hindi: asked once per chat, after the
+   * answer, unless that answer opened a step waiting for words (then a later message asks).
+   */
+  async askLanguage(chat: Conversation): Promise<void> {
+    const [now] = await this.db
+      .select()
+      .from(waConversations)
+      .where(eq(waConversations.id, chat.id));
+    if (!now || WAITING_STEPS.includes(stepOf(now))) return;
+    await markContext(this.db, chat.id, { langAsked: true });
+    return this.languageButtons(chat);
+  }
+
+  /** "Which language?" with [English] [मराठी] [हिंदी], each in its own script. */
+  private languageButtons(chat: Conversation) {
+    const buttons = LANGUAGE_BUTTONS;
+    return queueReply(this.db, chat, { kind: 'buttons', body: CHAT_WORDS.language.ask, buttons });
   }
 
   /** A language button: saved on the customer and the chat, then Home in that language. */

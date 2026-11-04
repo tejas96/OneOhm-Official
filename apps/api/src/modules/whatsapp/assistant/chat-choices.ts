@@ -22,6 +22,7 @@ export const CHOICES = [
   'see',
   'bill',
   'sendbill',
+  'invoices',
   'feedback',
 ] as const;
 
