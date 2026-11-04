@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { emailSchema, idSchema, nameSchema, phoneSchema } from '../common/primitives';
+import { departureSchema } from '../schemas/departure.schema';
 import {
   capabilitySchema,
   personSchema,
@@ -64,6 +65,12 @@ export const peopleContract = c.router({
     pathParams: idParams,
     body: c.noBody(),
     responses: { 200: personSchema },
+  },
+  getDeparture: {
+    method: 'GET',
+    path: '/people/:id/departure',
+    pathParams: idParams,
+    responses: { 200: departureSchema },
   },
   listRoles: { method: 'GET', path: '/roles', responses: { 200: z.array(roleSchema) } },
   createRole: {
