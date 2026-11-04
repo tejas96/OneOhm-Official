@@ -126,6 +126,35 @@ describe('first sign-in and forgotten password', () => {
     expect(failed[0]?.n).toBeGreaterThanOrEqual(5);
   });
 
+  it('using one code cancels the other codes and the same code cannot be used twice', async () => {
+    const person = await newPerson('Two Codes Person (test)');
+    const guest = new Session();
+    await guest.post('/auth/password/code', { phone: person.phone });
+    await guest.post('/auth/password/code', { phone: person.phone });
+    const body = { phone: person.phone, code: OTP_CODE, password: 'Once-only-pass-5' };
+    expect((await guest.raw('POST', '/auth/password', body)).status).toBe(200);
+    const again = await new Session().raw<{ code: string }>('POST', '/auth/password', body);
+    expect(again.status).toBe(401);
+    expect(again.body.code).toBe('bad_code');
+    const open = await rows(
+      `SELECT 1 FROM otp_challenges WHERE phone_e164 = $1 AND purpose = 'password_reset' AND consumed_at IS NULL`,
+      [person.phone],
+    );
+    expect(open).toHaveLength(0);
+  });
+
+  it('two parallel requests with the right code: exactly one wins', async () => {
+    const person = await newPerson('Parallel Person (test)');
+    await new Session().post('/auth/password/code', { phone: person.phone });
+    const body = { phone: person.phone, code: OTP_CODE, password: 'Parallel-pass-6' };
+    const replies = await Promise.all([
+      new Session().raw('POST', '/auth/password', body),
+      new Session().raw('POST', '/auth/password', body),
+    ]);
+    expect(replies.map((reply) => reply.status).sort()).toEqual([200, 401]);
+    expect(await audits(person.id, 'auth.password_set')).toHaveLength(1);
+  });
+
   it('password budget is separate from login budget', async () => {
     const person = await newPerson('Separate Budget Person (test)');
     // Use up the login budget (1000 per 10 minutes in the acceptance API).

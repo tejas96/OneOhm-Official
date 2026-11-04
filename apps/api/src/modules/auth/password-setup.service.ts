@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { hashPassword, otpChallenges, sessions, users } from '@oneohm/database';
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { assertOtpBudget, recordAttempt } from '../../common/auth/sign-in-guard';
 import { AppError } from '../../common/http/errors';
@@ -84,10 +84,17 @@ export class PasswordSetupService {
     }
     if (challenge.codeHash !== hashSecret(`${phoneE164}:${code}`)) {
       await recordAttempt(this.db, { ...attempt, success: false });
+      // Counted in the database, so parallel wrong guesses cannot get round the cap.
       await this.db
         .update(otpChallenges)
-        .set({ attempts: challenge.attempts + 1 })
-        .where(eq(otpChallenges.id, challenge.id));
+        .set({ attempts: sql`${otpChallenges.attempts} + 1` })
+        .where(
+          and(
+            eq(otpChallenges.id, challenge.id),
+            isNull(otpChallenges.consumedAt),
+            lt(otpChallenges.attempts, OTP_MAX_ATTEMPTS),
+          ),
+        );
       throw wrong;
     }
     const [user] = await this.db
@@ -100,11 +107,31 @@ export class PasswordSetupService {
       throw wrong;
     }
     const passwordHash = await hashPassword(password);
-    await this.db.transaction(async (tx) => {
+    const done = await this.db.transaction(async (tx) => {
+      // Only one request can use the code: the others find it already consumed.
+      const used = await tx
+        .update(otpChallenges)
+        .set({ consumedAt: new Date() })
+        .where(
+          and(
+            eq(otpChallenges.id, challenge.id),
+            isNull(otpChallenges.consumedAt),
+            lt(otpChallenges.attempts, OTP_MAX_ATTEMPTS),
+          ),
+        )
+        .returning({ id: otpChallenges.id });
+      if (used.length === 0) return false;
+      // Any other unused code for this phone dies with it.
       await tx
         .update(otpChallenges)
         .set({ consumedAt: new Date() })
-        .where(eq(otpChallenges.id, challenge.id));
+        .where(
+          and(
+            eq(otpChallenges.phoneE164, phoneE164),
+            eq(otpChallenges.purpose, PURPOSE),
+            isNull(otpChallenges.consumedAt),
+          ),
+        );
       await tx.update(users).set({ passwordHash }).where(eq(users.id, user.id));
       await tx.delete(sessions).where(eq(sessions.userId, user.id));
       await recordAudit(
@@ -116,7 +143,12 @@ export class PasswordSetupService {
         { ip },
       );
       await recordAttempt(tx, { ...attempt, userId: user.id, success: true });
+      return true;
     });
+    if (!done) {
+      await recordAttempt(this.db, { ...attempt, success: false });
+      throw wrong;
+    }
     return issueSession(this.db, this.env, user.id, 'web');
   }
 }
