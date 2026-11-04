@@ -486,6 +486,34 @@ document requests → customer actions.
   and PAN can be asked together.
 - Paper asks may be made on a lead with a site; they move to the project when it is made.
 
+### 22b. Built in phase 2a (papers: first what, then where)
+
+- A photo or PDF from a known customer is stored at once and **waits** (`filesWait` in the chat's
+  context; `assistant/files-wait.ts`). Nothing is filed until the customer says what it is.
+- **The question** (`file-questions.ts`, `what-question.ts`): one paper asked → "Is this your *bill* for
+  Sangli?" [Yes] [Something else]; two or more → list of them; nothing asked → the customer's missing
+  checklist papers (per home, ID papers once) then Payment proof, Problem photo, Something else. A
+  home paper asks "For which home?" only with two or more homes. ID papers never ask.
+- **Burst**: the question goes 15 s after the last file (`FILE_WAIT_SECONDS`). The due time is in the
+  chat context; the API looks for due questions every 2 s (`FILE_QUESTION_TIMER`, the same kind of
+  timer as the onboarding nudge), so a restart loses nothing. `POST /v1/whatsapp/file-questions/run`
+  runs it by hand with a pretend clock (the acceptance suite). "They're different" asks about each file.
+- **Saved ✅** + [Change] [Menu] (`what-answer.ts`, `what-saved.ts`); [Change] works for 24 h on papers
+  the team has not checked yet (`DocumentMoveService.release`: audit, project log, a request the paper
+  answered is asked again quietly). "We still need your X" [Send it now] when that home still waits.
+- **Payment proof** → document kind `payment_proof` (customer-visible, never on a checklist), alert to
+  `finance.record_payments` holders, `payment_milestones.reminders_paused_until` = +2 days (ends when a
+  payment is recorded; the worker's reminder job skips it). **Problem photo** → the Report-a-problem
+  flow with the photo.
+- **Home** says "You have {n} files not saved yet." [What are they?]; after 2 h the staff alert
+  "Files to sort" (now for every customer, not only those with two homes).
+- **Expiry**: `document_requirements.max_age_days` (Settings → required papers; the electricity bill is 90
+  days). A paper older than that shows "Too old — ask again" and counts as missing; when the DISCOM
+  application task starts, a stale paper is asked for again with "We need your latest electricity bill
+  for {home}. The one we have is from {month}."
+- Removed: remembered-home filing, "only home with open requests", the 30-minute glue, the Aadhaar/PAN
+  home row, "stray file → other + Saved" (`file-home*.ts`, `file-paper-flow.ts`, `paper-steps.ts`).
+
 ## 23. Build order (each phase tested live on your phone)
 
 1. **Foundation:** words dictionary + length tests; Home + More; small talk; unknown text; hand-over /
