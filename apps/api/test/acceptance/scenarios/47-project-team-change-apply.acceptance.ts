@@ -135,9 +135,16 @@ describe('Project team change: applying it', () => {
     expect(sent.map((row) => row.dedupe_key)).toEqual([
       `project_manager_changed:${id}:${term?.id}`,
     ]);
+    // Customer messages name the project by town and size; the code rides as projectCode.
+    const [site] = await rows<{ words: string }>(
+      `SELECT pr.city || ' · ' || round(p.capacity_wp / 1000.0, 2)::float8 || ' kW' AS words
+       FROM projects p JOIN properties pr ON pr.id = p.property_id WHERE p.id = $1`,
+      [id],
+    );
     expect(sent[0]?.payload).toMatchObject({
       customer: sale.customer.name,
-      project: sale.project.code,
+      project: site?.words,
+      projectCode: sale.project.code,
       manager: STAFF.execution.name,
     });
     expect(sent[0]?.payload.phone).toBeTruthy();

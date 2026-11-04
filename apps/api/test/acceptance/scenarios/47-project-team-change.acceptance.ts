@@ -2,7 +2,7 @@ import type { DeliveryReport, ProjectTask, TeamOptions } from '@oneohm/api-contr
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { ownPerson, retire } from '../support/people';
+import { ownPerson, pastMemberAsBefore } from '../support/people';
 import { sellProject } from '../support/sales';
 import { project, workTask } from '../support/tasks';
 import { STAFF } from '../support/team';
@@ -78,7 +78,9 @@ describe('Project team change', () => {
       expect((await patchTeam(admin, sale.project.id, { managerUserId: person.id })).status).toBe(
         200,
       );
-      await retire(admin, [person]);
+      // Inactive with no handover (a past member from before Remove from team): Remove
+      // from team would hand the project over, which is not what this case is about.
+      await pastMemberAsBefore(person.id);
       const reply = await patchTeam(admin, sale.project.id, {
         managerUserId: person.id,
         targetFinishDate: '2099-01-01',
@@ -102,7 +104,9 @@ describe('Project team change', () => {
         "UPDATE project_tasks SET approval = true, reviewer = 'project_manager' WHERE id = $1",
         [task.id],
       );
-      await retire(admin, [person]);
+      // Inactive with no handover (a past member from before Remove from team): Remove
+      // from team would hand the project over, which is not what this case is about.
+      await pastMemberAsBefore(person.id);
       const submitted = await workTask(admin, task, { approve: false });
       expect(submitted.status).toBe('in_review');
       expect(submitted.reviewerIds).not.toContain(person.id);

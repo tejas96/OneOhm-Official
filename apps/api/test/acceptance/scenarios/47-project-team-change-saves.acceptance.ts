@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb } from '../support/db';
 import { Session } from '../support/http';
-import { ownPerson, retire } from '../support/people';
+import { ownPerson, pastMemberAsBefore, retire } from '../support/people';
 import { sellProject } from '../support/sales';
 import { project } from '../support/tasks';
 import { patchTeam } from '../support/team-change';
@@ -22,7 +22,9 @@ describe('Project team change: saving', () => {
     expect((await patchTeam(admin, sale.project.id, { teamUserIds: [x.id, y.id] })).status).toBe(
       200,
     );
-    await retire(admin, [x]);
+    // Inactive with no handover (a past member from before Remove from team): Remove from
+    // team would take them off the project's team, which is not what this case is about.
+    await pastMemberAsBefore(x.id);
     const kept = await patchTeam(admin, sale.project.id, {
       teamUserIds: [x.id, y.id],
       targetFinishDate: '2099-01-01',
