@@ -46,6 +46,7 @@ export class DocumentsController {
     listDocuments: routes.listDocuments,
     documentFile: routes.documentFile,
     moveDocument: routes.moveDocument,
+    documentHomes: routes.documentHomes,
     removeDocument: routes.removeDocument,
     companyAssets: routes.companyAssets,
   })
@@ -55,6 +56,7 @@ export class DocumentsController {
         listDocuments: routes.listDocuments,
         documentFile: routes.documentFile,
         moveDocument: routes.moveDocument,
+        documentHomes: routes.documentHomes,
         removeDocument: routes.removeDocument,
         companyAssets: routes.companyAssets,
       },
@@ -84,6 +86,10 @@ export class DocumentsController {
         moveDocument: async ({ params, body }) => ({
           status: 200,
           body: await this.moves.move(actor, params.id, body),
+        }),
+        documentHomes: async ({ params }) => ({
+          status: 200,
+          body: await this.moves.homes(actor, params.id),
         }),
         removeDocument: async ({ params }) => {
           await this.documents.remove(actor, params.id);

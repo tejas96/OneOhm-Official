@@ -1,28 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { DocumentRecord, MoveDocument } from '@oneohm/api-contracts';
-import {
-  type DatabaseExecutor,
-  documentRequests,
-  documents,
-  projectActivities,
-  projects,
-} from '@oneohm/database';
-import { isPersonDocumentCategory } from '@oneohm/domain';
-import { and, eq } from 'drizzle-orm';
+import type { DocumentHome, DocumentRecord, MoveDocument } from '@oneohm/api-contracts';
+import { documents, projectActivities, projects } from '@oneohm/database';
+import { isCustomerDocumentCategory, isPersonDocumentCategory } from '@oneohm/domain';
+import { and, eq, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { customerHomes } from '../customer-portal/customer-homes';
 import { canUploadDocuments } from './document-access';
-import { propertyOfProject } from './document-links';
+import { settleAnsweredRequests } from './document-move-requests';
 import { presentDocuments } from './document-read';
-import { openRequestsFor } from './document-request-home';
-import { readRequests } from './document-request-read';
-import { reopenRequest } from './document-request-reopen';
 import { closeRequestWithUpload } from './request-received';
-
-/** What the customer reads on a request reopened because its paper went elsewhere. */
-export const FILED_ELSEWHERE = 'Filed on another home';
 
 /**
  * Staff file a customer's paper on another of their homes or as another kind (papers per
@@ -33,15 +22,19 @@ export const FILED_ELSEWHERE = 'Filed on another home';
 export class DocumentMoveService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
+  /** The homes the paper may go to: its customer's, one row per home (sheet choices). */
+  async homes(actor: Actor, id: string): Promise<DocumentHome[]> {
+    if (!canUploadDocuments(actor)) throw forbidden();
+    const paper = await this.paperOf(id);
+    return customerHomes(this.db, paper.customerId);
+  }
+
   async move(actor: Actor, id: string, input: MoveDocument): Promise<DocumentRecord> {
     if (!canUploadDocuments(actor)) throw forbidden();
-    const [paper] = await this.db.select().from(documents).where(eq(documents.id, id)).limit(1);
-    if (!paper) throw notFound('That document');
-    if (paper.removedAt || paper.replacedAt) {
-      throw conflict('This file was replaced or removed. Refresh and try again.', 'changed');
-    }
-    if (!paper.customerId || paper.taskId) {
-      throw invalid("Only a customer's paper can be moved; a task's file stays on its task.");
+    const paper = await this.paperOf(id);
+    // Internal kinds (vendor papers, working photos) would hide it from the customer.
+    if (!isCustomerDocumentCategory(input.category)) {
+      throw invalid('Choose a kind the customer keeps.', { category: 'Not a customer paper.' });
     }
     const target = await this.targetOf(paper.customerId, input);
     const { projectId, propertyId, code } = target;
@@ -49,10 +42,14 @@ export class DocumentMoveService {
     const same = paper.projectId === projectId && paper.propertyId === propertyId;
     if (same && paper.category === category) return this.one(id);
     await this.db.transaction(async (tx) => {
-      await tx
+      const [changed] = await tx
         .update(documents)
-        .set({ projectId, propertyId, category })
-        .where(eq(documents.id, id));
+        // A lead's paper given no home stays the person's: not re-homed when the lead sells.
+        .set({ projectId, propertyId, category, ...(projectId ? {} : { leadId: null }) })
+        .where(and(eq(documents.id, id), isNull(documents.removedAt), isNull(documents.replacedAt)))
+        .returning({ id: documents.id });
+      if (!changed)
+        throw conflict('This file was replaced or removed. Refresh and try again.', 'changed');
       const message = `Paper moved: ${paper.name} → ${code ?? 'no home (ID / income papers)'}`;
       const onProjects = new Set([paper.projectId, projectId].filter((one) => one !== null));
       for (const onProject of onProjects)
@@ -71,7 +68,7 @@ export class DocumentMoveService {
         },
         to: { projectId, propertyId, category },
       });
-      await this.reaskAnswered(tx, actor.userId, id, { propertyId, category });
+      await settleAnsweredRequests(tx, actor.userId, id, { propertyId, category });
       await closeRequestWithUpload(tx, actor, id, {
         customerId: paper.customerId,
         ...target,
@@ -105,29 +102,17 @@ export class DocumentMoveService {
     return { projectId: input.projectId, propertyId: project.propertyId, code: project.code };
   }
 
-  /** A request this paper answered for another home or kind is asked again ("ask again"). */
-  private async reaskAnswered(
-    tx: DatabaseExecutor,
-    userId: string,
-    documentId: string,
-    now: { readonly propertyId: string | null; readonly category: string },
-  ) {
-    const answered = await readRequests(
-      tx,
-      and(eq(documentRequests.documentId, documentId), eq(documentRequests.status, 'received')),
-    );
-    for (const request of answered) {
-      const home = await propertyOfProject(tx, request.projectId);
-      const sameHome = isPersonDocumentCategory(request.category) || home === now.propertyId;
-      if (request.category === now.category && sameHome) continue;
-      // A newer request for that paper is already open: the customer is not asked twice.
-      const [open] = await openRequestsFor(tx, request.customerId, {
-        ...request,
-        propertyId: home,
-      });
-      if (open) continue;
-      await reopenRequest(tx, userId, request, { note: FILED_ELSEWHERE, removePaper: false });
+  /** A current paper of a customer, not a task's file. */
+  private async paperOf(id: string) {
+    const [paper] = await this.db.select().from(documents).where(eq(documents.id, id)).limit(1);
+    if (!paper) throw notFound('That document');
+    if (paper.removedAt || paper.replacedAt) {
+      throw conflict('This file was replaced or removed. Refresh and try again.', 'changed');
     }
+    if (!paper.customerId || paper.taskId) {
+      throw invalid("Only a customer's paper can be moved; a task's file stays on its task.");
+    }
+    return { ...paper, customerId: paper.customerId };
   }
 
   private async one(id: string): Promise<DocumentRecord> {

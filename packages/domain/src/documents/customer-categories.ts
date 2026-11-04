@@ -22,5 +22,7 @@ export const CUSTOMER_DOCUMENT_CATEGORIES = [
   'other',
 ] as const satisfies readonly DocumentCategory[];
 
-export const isCustomerDocumentCategory = (value: string): boolean =>
+export type CustomerDocumentCategory = (typeof CUSTOMER_DOCUMENT_CATEGORIES)[number];
+
+export const isCustomerDocumentCategory = (value: string): value is CustomerDocumentCategory =>
   (CUSTOMER_DOCUMENT_CATEGORIES as readonly string[]).includes(value);

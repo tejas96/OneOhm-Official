@@ -2,7 +2,7 @@ import type { DocumentChecklist } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { fileForm, upload } from '../support/files';
-import { anotherHome } from '../support/homes';
+import { anotherHome, sellOn } from '../support/homes';
 import { Session } from '../support/http';
 import { sellProject } from '../support/sales';
 
@@ -136,8 +136,11 @@ describe('Papers per home: move / change kind', () => {
     const { customer, project } = await sellProject(admin, { name: 'Move No Home (test)' });
     await anotherHome(admin, customer, 'Farm (test)');
     const doc = await upload(admin, 'photo', { projectId: project.id, category: 'other' });
-    const homeless = await move(doc.id, { projectId: null, category: 'site_photo' });
+    const homeless = await move(doc.id, { projectId: null, category: 'electricity_bill' });
     expect(homeless.status).toBe(400);
+    // Only kinds the customer sees: a vendor's paper would hide it from their app.
+    const internal = await move(doc.id, { projectId: project.id, category: 'vendor' });
+    expect(internal.status).toBe(400);
     const person = await move(doc.id, { projectId: null, category: 'customer_kyc' });
     expect(person.status).toBe(200);
     expect(await paperOf(doc.id)).toMatchObject({
@@ -158,6 +161,22 @@ describe('Papers per home: move / change kind', () => {
     const doc = await upload(admin, 'document', { projectId: project.id, category: 'other' });
     await move(doc.id, { projectId: farm.projectId, category: 'electricity_bill' });
     expect(await requestOf(farmBill.id)).toMatchObject({ status: 'received', document_id: doc.id });
+  });
+
+  it('the sheet lists one row per home', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Move Homes (test)' });
+    const second = await sellOn(admin, customer, customer.propertyId);
+    const farm = await anotherHome(admin, customer, 'Farm (test)');
+    const doc = await upload(admin, 'document', { projectId: project.id, category: 'other' });
+    const homes = await admin.get<{ projectId: string | null; propertyId: string }[]>(
+      `/documents/${doc.id}/homes`,
+    );
+    expect(homes.map((home) => home.propertyId).sort()).toEqual(
+      [customer.propertyId, farm.propertyId].sort(),
+    );
+    expect(homes.find((home) => home.propertyId === customer.propertyId)?.projectId).toBe(
+      second.id,
+    );
   });
 });
 

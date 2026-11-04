@@ -5,6 +5,7 @@ import {
   companyAssetKindSchema,
   companyAssetsSchema,
   documentFilterSchema,
+  documentHomeSchema,
   documentSchema,
   moveDocumentSchema,
 } from '../schemas/document.schema';
@@ -73,6 +74,13 @@ export const documentsContract = c.router({
     responses: { 200: documentSchema },
     summary:
       "File a customer's paper on another of their homes or as another kind. A request it answered that no longer matches is asked again.",
+  },
+  documentHomes: {
+    method: 'GET',
+    path: '/documents/:id/homes',
+    pathParams: z.object({ id: idSchema }),
+    responses: { 200: z.array(documentHomeSchema) },
+    summary: "The homes of the paper's customer, one row per home, for moving it.",
   },
   removeDocument: {
     method: 'DELETE',

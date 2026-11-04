@@ -119,6 +119,15 @@ export const moveDocumentSchema = z.object({
 });
 export type MoveDocument = z.infer<typeof moveDocumentSchema>;
 
+/** One home of the paper's customer; `projectId` is null while the home is only a lead. */
+export const documentHomeSchema = z.object({
+  propertyId: idSchema,
+  projectId: idSchema.nullable(),
+  title: z.string(),
+  description: z.string(),
+});
+export type DocumentHome = z.infer<typeof documentHomeSchema>;
+
 /** The company's logo, signature and stamp as printed on quotations and reports. */
 export const companyAssetsSchema = z.object({
   logo: attachmentSchema.nullable(),
