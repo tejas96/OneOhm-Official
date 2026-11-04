@@ -13,7 +13,7 @@ import {
   requestFileKind,
   VOICE_NOTE_CATEGORY,
 } from '@oneohm/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { propertyOfProject } from '../documents/document-links';
@@ -80,7 +80,7 @@ export class CustomerRequestPhotosService {
     if (!stored) throw notFound('That file');
     if (!(PHOTO_FILE_TYPES as readonly string[]).includes(stored.contentType))
       throw invalid('Send a photo.', { file: 'This file type is not accepted.' });
-    return this.roomFor(customerId, requestId, stored.contentType);
+    return this.roomFor(customerId, requestId, stored.contentType, documentId);
   }
 
   private async store(
@@ -112,8 +112,16 @@ export class CustomerRequestPhotosService {
     return row.id;
   }
 
-  /** The customer's own open request, with room for one more file of this type. */
-  private async roomFor(customerId: string, requestId: string, contentType: string) {
+  /**
+   * The customer's own open request, with room for one more file of this type. The file
+   * being filed (`filing`) is not counted: on a retry it may already sit on the request.
+   */
+  private async roomFor(
+    customerId: string,
+    requestId: string,
+    contentType: string,
+    filing?: string,
+  ) {
     const [request] = await this.db
       .select({
         id: serviceRequests.id,
@@ -134,6 +142,7 @@ export class CustomerRequestPhotosService {
           eq(documents.serviceRequestId, requestId),
           isNull(documents.uploadedByUserId),
           isNull(documents.removedAt),
+          filing ? ne(documents.id, filing) : undefined,
         ),
       );
     const types = existing.map((row) => row.contentType);

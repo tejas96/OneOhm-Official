@@ -10,7 +10,7 @@ import { activeHomes } from '../customer-portal/active-projects';
 import { propertyOfProject } from '../documents/document-links';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
-import { isFiled, keptFile } from './chat-files-kept';
+import { isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
 import { FILE_WORDS, filePaper } from './file-paper';
@@ -107,7 +107,7 @@ export class ChatFileKeeper {
     media: IncomingMedia,
     customerId: string,
   ): Promise<string | null> {
-    const scope = `customers/${customerId}/whatsapp/${media.id.replace(/[^\w.-]/g, '_')}/`;
+    const scope = whatsappFileScope(customerId, media.id);
     const [earlier] = await this.db
       .select({ id: documents.id })
       .from(documents)

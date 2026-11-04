@@ -12,6 +12,11 @@ interface KeptFor {
   readonly alsoDo?: (tx: DatabaseExecutor, documentId: string) => Promise<unknown>;
 }
 
+/** The storage folder of a customer's WhatsApp file; only letters, digits, `_` and `-` of the media id stay (no dots, so no `..`). */
+export function whatsappFileScope(customerId: string, mediaId: string): string {
+  return `customers/${customerId}/whatsapp/${mediaId.replace(/[^\w-]/g, '_')}/`;
+}
+
 /**
  * Stores a WhatsApp file once under Documents (category `other`, no home yet) and shows it
  * on its chat message. The stored bytes are taken back if the row cannot be written.

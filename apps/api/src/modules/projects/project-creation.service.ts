@@ -1,9 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
-  type DatabaseExecutor,
   discoms,
-  documents,
   openManagerTerm,
   products,
   projectActivities,
@@ -14,7 +12,7 @@ import {
 } from '@oneohm/database';
 import { generateTasks, type ProjectType } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
-import { and, eq, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -27,6 +25,7 @@ import { inverterProducts, invertersOf } from '../quotations/quotation-inverters
 import { projectStarted } from '../quotations/quotation-project';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
 import { checkProjectInput } from './project-input';
+import { moveLeadPapers } from './project-lead-papers';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
@@ -56,22 +55,6 @@ const PROJECT_TYPE = {
   society: 'society',
   commercial: 'commercial',
 } as const satisfies Record<string, ProjectType>;
-
-/** Papers the customer sent while only a lead now belong to the project and its home. */
-async function moveLeadPapers(
-  tx: DatabaseExecutor,
-  leadId: string | null,
-  projectId: string,
-  propertyId: string,
-): Promise<void> {
-  if (!leadId) return;
-  await tx
-    .update(documents)
-    .set({ projectId, propertyId })
-    .where(
-      and(eq(documents.leadId, leadId), isNull(documents.projectId), isNull(documents.removedAt)),
-    );
-}
 
 export interface CreatedProject {
   id: string;
