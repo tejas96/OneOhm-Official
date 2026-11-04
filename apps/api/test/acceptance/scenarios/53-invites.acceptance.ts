@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { acceptanceDb, closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { setWebPassword } from '../support/password';
-import { type OwnPerson, retire } from '../support/people';
+import { type OwnPerson, removeNow, retire } from '../support/people';
 import { today, uniquePhone } from '../support/sales';
 import { roleIds } from '../support/team';
 
@@ -167,14 +167,14 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect(active.body.message).toBe('This mobile number belongs to Past Member (test).');
 
     expect((await admin.raw('POST', `/people/${past.id}/release-phone`)).status).toBe(409);
-    await admin.patch(`/people/${past.id}`, { status: 'inactive' });
+    await removeNow(admin, past.id);
     const blocked = await add('Wants Past Number (test)', { phone: holder });
     expect(blocked.status).toBe(409);
     expect(blocked.body.code).toBe('phone_of_past_member');
     expect((blocked.body as unknown as { details: Record<string, unknown> }).details).toEqual({
       userId: past.id,
       fullName: 'Past Member (test)',
-      // The status switch stores the leaving day too.
+      // Removal stores the leaving day.
       leftOn: today(),
     });
 

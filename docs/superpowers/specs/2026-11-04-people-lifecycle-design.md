@@ -103,7 +103,7 @@ In the person's edit sheet, the admin's password box becomes one button: **Make 
 
 ## Flow 5: Someone leaves
 
-**Team → person → Remove from team** replaces the raw status switch.
+**Team → person → Remove from team** replaces the raw status switch. The API refuses the old switch: `PATCH /people/:id` with `status: 'inactive'` returns 409 `use_remove` ("Use Remove from team so their work is handed over."), and `status: 'active'` on a past member returns 409 `use_rejoin`.
 
 The removal sheet shows:
 - **What they have open**, as counts: leads they own, tasks, service requests, DISCOM requests, projects they manage, project teams they're on, and people who report to them. For a reseller, it also shows pending and approved commission entries.

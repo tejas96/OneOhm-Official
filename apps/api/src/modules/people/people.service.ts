@@ -2,14 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
 import { roleCapabilities, roles, sessions, userRoles, users } from '@oneohm/database';
 import type { Capability } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
-import { wrapUp } from './departure/departure-wrapup';
 import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 import { kindsOfRoles, queueInvite, requireNewPassword } from './person-invite';
@@ -95,6 +93,9 @@ export class PeopleService {
     // Coming back clears the password and sends a fresh invite: that is rejoin, not a switch.
     if (patch.status === 'active' && existing.status === 'inactive')
       throw conflict('Use Add back to team.', 'use_rejoin');
+    // Leaving hands work over and wraps up: that is Remove from team, not a switch.
+    if (patch.status === 'inactive' && existing.status === 'active')
+      throw conflict('Use Remove from team so their work is handed over.', 'use_remove');
     const email = patch.email === undefined ? existing.email : patch.email;
     const phone = patch.phone === undefined ? existing.phone : patch.phone;
     if (!email && !phone) {
@@ -116,11 +117,9 @@ export class PeopleService {
       await this.assertCanGrant(actor, changed);
     }
     await assertUnique(this.db, patch, id);
-    const leaving = patch.status === 'inactive' && existing.status === 'active';
-    const fields = { ...personFields(patch), ...(leaving ? { leftOn: todayIn() } : {}) };
+    const fields = personFields(patch);
     await this.db.transaction(async (tx) => {
-      if (patch.roleIds || patch.status === 'inactive')
-        await assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);
+      if (patch.roleIds) await assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);
       if (patch.roleIds) {
         await tx.delete(userRoles).where(eq(userRoles.userId, id));
         await tx.insert(userRoles).values(patch.roleIds.map((roleId) => ({ userId: id, roleId })));
@@ -133,11 +132,8 @@ export class PeopleService {
           .update(users)
           .set({ ...fields, updatedAt: new Date() })
           .where(eq(users.id, id));
-      // Switching someone off shuts down their sign-ins, phones and location (no handover:
-      // that is Remove from team). A new number signs out the phone, because the old
-      // number may belong to someone else now.
-      if (patch.status === 'inactive') await wrapUp(tx, id, new Date());
-      else if (patch.phone !== undefined && patch.phone !== existing.phone)
+      // A new number signs out the phone, because the old number may belong to someone else.
+      if (patch.phone !== undefined && patch.phone !== existing.phone)
         await tx
           .delete(sessions)
           .where(and(eq(sessions.userId, id), eq(sessions.client, 'mobile')));

@@ -2,7 +2,7 @@ import type { CommissionEntry, PayoutDetailsView } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, removeNow, retire } from '../support/people';
 import { createQuotation, discomId, newCustomer, today } from '../support/sales';
 import { STAFF } from '../support/team';
 
@@ -165,7 +165,7 @@ describe('reseller payout details', () => {
   });
 
   it('finance can fill details for an inactive reseller', async () => {
-    await admin.patch(`/people/${away.id}`, { status: 'inactive' });
+    await removeNow(admin, away.id);
     const saved = await finance.put<PayoutDetailsView>(path(away.id), NO_BANK);
     expect(saved).toMatchObject({ pan: 'ABCDE1234F', complete: false });
     const upi = await finance.put<PayoutDetailsView>(path(away.id), {

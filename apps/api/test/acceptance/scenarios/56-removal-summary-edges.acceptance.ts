@@ -2,7 +2,7 @@ import type { Departure } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, pastMemberAsBefore, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
 
 // The removal summary leaves out what is not open work or not money still owed: items on
@@ -87,7 +87,7 @@ describe('removal summary: what is not counted', () => {
       gone.id,
       other.id,
     ]);
-    await admin.patch(`/people/${gone.id}`, { status: 'inactive' });
+    await pastMemberAsBefore(gone.id);
     const [kept] = await rows<{ count: number }>(
       'SELECT count(*)::int AS count FROM reporting_lines WHERE manager_user_id = $1',
       [other.id],

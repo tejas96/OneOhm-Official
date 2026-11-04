@@ -1,14 +1,13 @@
-import type { CommissionEntry, Person, QuotationDetail } from '@oneohm/api-contracts';
+import type { CommissionEntry, QuotationDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
-import { seedWrapUp, WRAPPED_UP, wrapUpState } from '../support/departure';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, removeNow, retire } from '../support/people';
 import { addDays, createQuotation, discomId, newCustomer, today } from '../support/sales';
 import { STAFF } from '../support/team';
 
 // Remove from team, the guards around it: bad picks, two admins at once, the last Super
-// Admin, the old status switch, and a removed reseller's leads (spec "Edge cases").
+// Admin, the old status switch (refused), and a removed reseller's leads (spec "Edge cases").
 const TAG = 'removal guards (test)';
 
 describe('removal guards', () => {
@@ -81,12 +80,24 @@ describe('removal guards', () => {
     expect(still?.status).toBe('active');
   });
 
-  it('PATCH status inactive still works, wraps up and stores left_on', async () => {
+  it('the PATCH status switch points to Remove from team and Add back to team', async () => {
     const leaver = await person('Switched Off (guard test)');
-    await seedWrapUp(leaver, TAG);
-    const off = await admin.patch<Person>(`/people/${leaver.id}`, { status: 'inactive' });
-    expect(await wrapUpState(leaver, TAG)).toEqual(WRAPPED_UP);
-    expect(off.leftOn).toBe(today());
+    const off = await admin.raw<{ code: string; message: string }>(
+      'PATCH',
+      `/people/${leaver.id}`,
+      { status: 'inactive' },
+    );
+    expect([off.status, off.body.code, off.body.message]).toEqual([
+      409,
+      'use_remove',
+      'Use Remove from team so their work is handed over.',
+    ]);
+    const [still] = await rows<{ status: string; left_on: string | null }>(
+      'SELECT status, left_on FROM users WHERE id = $1',
+      [leaver.id],
+    );
+    expect(still).toEqual({ status: 'active', left_on: null });
+    await removeNow(admin, leaver.id);
     // Switching back on is Add back to team, which clears the password and re-invites.
     const back = await admin.raw<{ code: string; message: string }>(
       'PATCH',

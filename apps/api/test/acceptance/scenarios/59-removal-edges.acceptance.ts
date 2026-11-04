@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, pastMemberAsBefore, retire } from '../support/people';
 import { sellProject, today } from '../support/sales';
 
 // Remove from team, the edges of a handover: reporting chains deeper than one level, an
@@ -62,7 +62,7 @@ describe('removal edges', () => {
     const target = await person('Target Under Leaver (edge test)');
     await line(leaver, gone);
     await line(target, leaver);
-    await admin.patch(`/people/${gone.id}`, { status: 'inactive' });
+    await pastMemberAsBefore(gone.id);
     expect((await remove(leaver.id, target.id)).status).toBe(200);
     expect(await managerOf(target)).toBeNull();
   });
@@ -112,7 +112,7 @@ describe('removal edges', () => {
     );
     expect(audits).toHaveLength(1);
     const switchedOff = await person('Switched Off Earlier (edge test)');
-    await admin.patch(`/people/${switchedOff.id}`, { status: 'inactive' });
+    await pastMemberAsBefore(switchedOff.id);
     expect((await remove(switchedOff.id, target.id)).body.code).toBe('already_removed');
   });
 });

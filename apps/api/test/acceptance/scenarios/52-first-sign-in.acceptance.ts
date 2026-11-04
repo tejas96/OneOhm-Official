@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { OTP_CODE, Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, removeNow, retire } from '../support/people';
 import { uniquePhone } from '../support/sales';
 
 // A person with no web password (or who forgot it) proves their phone with a text code,
@@ -88,7 +88,7 @@ describe('first sign-in and forgotten password', () => {
   it('unknown and inactive numbers get 202 and no challenge', async () => {
     const unknown = uniquePhone();
     const gone = await newPerson('Switched Off Person (test)');
-    await admin.patch(`/people/${gone.id}`, { status: 'inactive' });
+    await removeNow(admin, gone.id);
     for (const phone of [unknown, gone.phone]) {
       const reply = await new Session().raw('POST', '/auth/password/code', { phone });
       expect(reply.status).toBe(202);
