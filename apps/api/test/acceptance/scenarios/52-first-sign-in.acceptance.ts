@@ -34,9 +34,6 @@ describe('first sign-in and forgotten password', () => {
 
   it('a new person with no password sets one and is signed in', async () => {
     const person = await newPerson('First Sign-in Person (test)');
-    const code = `FS${person.id.slice(0, 8)}`.toUpperCase();
-    await admin.patch(`/people/${person.id}`, { employeeCode: code });
-
     const guest = new Session();
     const asked = await guest.raw('POST', '/auth/password/code', { phone: person.phone });
     expect(asked.status).toBe(202);
@@ -51,7 +48,7 @@ describe('first sign-in and forgotten password', () => {
     expect((await guest.raw('GET', '/auth/me')).status).toBe(200);
 
     const later = await new Session().raw('POST', '/auth/sign-in', {
-      identifier: code,
+      identifier: person.phone,
       password: 'Brand-new-pass-1',
     });
     expect(later.status).toBe(200);
@@ -191,5 +188,54 @@ describe('first sign-in and forgotten password', () => {
     const reset = await new Session().raw('POST', '/auth/password/code', { phone: person.phone });
     expect(reset.status).toBe(202);
     expect(await challenges(person.phone)).toHaveLength(1);
+  });
+
+  async function withPassword(person: OwnPerson, password: string): Promise<void> {
+    const guest = new Session();
+    await guest.post('/auth/password/code', { phone: person.phone });
+    await guest.post('/auth/password', { phone: person.phone, code: OTP_CODE, password });
+  }
+
+  it('sign in with mobile and password', async () => {
+    const person = await newPerson('Mobile Sign-in Person (test)');
+    await withPassword(person, 'Mobile-pass-8');
+    const national = person.phone.replace('+91', '');
+    for (const identifier of [person.phone, national, `0${national}`, `91${national}`]) {
+      const reply = await new Session().raw('POST', '/auth/sign-in', {
+        identifier,
+        password: 'Mobile-pass-8',
+      });
+      expect(reply.status).toBe(200);
+    }
+  });
+
+  it('an active person with no password gets password_not_set', async () => {
+    const person = await newPerson('No Password Person (test)');
+    const reply = await new Session().raw<{ code: string; message: string }>(
+      'POST',
+      '/auth/sign-in',
+      { identifier: person.phone, password: 'Anything-9' },
+    );
+    expect(reply.status).toBe(401);
+    expect(reply.body.code).toBe('password_not_set');
+    expect(reply.body.message).toBe(
+      'You haven\'t set a password yet. Tap "First time here?" below.',
+    );
+    const failed = await rows<{ n: number }>(
+      `SELECT count(*)::int AS n FROM sign_in_attempts WHERE identifier = $1 AND success = false`,
+      [person.phone],
+    );
+    expect(failed[0]?.n).toBe(1);
+  });
+
+  it('a wrong password for a person who has one keeps bad_credentials', async () => {
+    const person = await newPerson('Wrong Password Person (test)');
+    await withPassword(person, 'Right-pass-10');
+    const reply = await new Session().raw<{ code: string }>('POST', '/auth/sign-in', {
+      identifier: person.phone,
+      password: 'Wrong-pass-10',
+    });
+    expect(reply.status).toBe(401);
+    expect(reply.body.code).toBe('bad_credentials');
   });
 });

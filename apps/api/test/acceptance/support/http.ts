@@ -34,7 +34,7 @@ export class Session {
   userId = '';
   name = '';
 
-  /** Web sign-in with email or employee ID and password. */
+  /** Web sign-in with email, employee ID or mobile number and password. */
   static async password(identifier: string, password: string): Promise<Session> {
     const session = new Session();
     const signed = await session.post<{ user: { id: string; fullName: string } }>('/auth/sign-in', {

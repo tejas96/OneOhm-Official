@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { otpChallenges, sessions, users, verifyPassword } from '@oneohm/database';
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { assertNotLocked, assertOtpBudget, recordAttempt } from '../../common/auth/sign-in-guard';
@@ -11,6 +11,7 @@ import type { Environment } from '../../config/environment';
 import { loadCurrentUser } from './current-user.loader';
 import { createOtpSender, type OtpSender } from './otp-sender';
 import { hashSecret, type IssuedSession, issueSession } from './session-issuer';
+import { parseIdentifier } from './sign-in-identifier';
 
 const OTP_TTL_SECONDS = 300;
 const OTP_MAX_ATTEMPTS = 5;
@@ -28,7 +29,7 @@ export class AuthService {
   }
 
   /**
-   * Web: email or employee ID with a password. One answer for every failure; too many
+   * Web: email, employee ID or mobile number with a password. One answer for every failure; too many
    * wrong tries lock the name (and a noisy address) for a while. Every try is recorded.
    */
   async signInWithPassword(
@@ -36,12 +37,18 @@ export class AuthService {
     password: string,
     ip: string | null = null,
   ): Promise<IssuedSession> {
-    const value = identifier.trim().toLowerCase();
+    const { kind, value } = parseIdentifier(identifier);
     await assertNotLocked(this.db, value, ip);
     const [user] = await this.db
       .select({ id: users.id, passwordHash: users.passwordHash, status: users.status })
       .from(users)
-      .where(or(eq(users.email, value), eq(sql`lower(${users.employeeCode})`, value)))
+      .where(
+        kind === 'phone'
+          ? eq(users.phoneE164, value)
+          : kind === 'email'
+            ? eq(users.email, value)
+            : eq(sql`lower(${users.employeeCode})`, value),
+      )
       .limit(1);
     const valid =
       user?.passwordHash &&
@@ -55,7 +62,18 @@ export class AuthService {
     };
     if (!user || !valid) {
       await recordAttempt(this.db, { ...attempt, success: false });
-      throw new AppError(401, 'That email or ID and password do not match.', 'bad_credentials');
+      if (user && user.status === 'active' && !user.passwordHash) {
+        throw new AppError(
+          401,
+          'You haven\'t set a password yet. Tap "First time here?" below.',
+          'password_not_set',
+        );
+      }
+      throw new AppError(
+        401,
+        'That email, ID or mobile number and password do not match.',
+        'bad_credentials',
+      );
     }
     await recordAttempt(this.db, { ...attempt, success: true });
     await recordAudit(this.db, user.id, 'auth.signed_in', 'user', user.id, {

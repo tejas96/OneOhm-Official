@@ -10,11 +10,12 @@ export const authContract = c.router({
     method: 'POST',
     path: '/auth/sign-in',
     body: z.object({
-      identifier: z.string().trim().min(1, 'Enter your email or employee ID.'),
+      identifier: z.string().trim().min(1, 'Enter your email, employee ID or mobile number.'),
       password: z.string().min(1, 'Enter your password.'),
     }),
     responses: { 200: z.object({ user: currentUserSchema }) },
-    summary: 'Web sign-in with email or employee ID and password. Sets the session cookie.',
+    summary:
+      'Web sign-in with email, employee ID or mobile number and password. Sets the session cookie.',
   },
   requestOtp: {
     method: 'POST',
