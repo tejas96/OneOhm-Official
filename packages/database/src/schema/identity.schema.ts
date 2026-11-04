@@ -8,7 +8,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { createdAt, instant, primaryId, updatedAt, version } from './columns';
+import { calendarDate, createdAt, instant, primaryId, updatedAt, version } from './columns';
 import { roleKindEnum, sessionClientEnum, userStatusEnum } from './enums';
 
 /** One identity per person, whatever roles they hold (PRD 3.2). */
@@ -25,6 +25,8 @@ export const users = pgTable(
     designation: text('designation'),
     status: userStatusEnum('status').notNull().default('active'),
     onLeave: boolean('on_leave').notNull().default(false),
+    /** Last working day; set when an admin removes the person. */
+    leftOn: calendarDate('left_on'),
     avatarSwatch: integer('avatar_swatch').notNull().default(0),
     lastActiveAt: instant('last_active_at'),
     version: version(),

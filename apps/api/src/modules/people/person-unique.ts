@@ -30,7 +30,12 @@ export async function assertUnique(
   for (const [field, condition, message] of checks) {
     if (!condition) continue;
     const [found] = await db
-      .select({ id: users.id, fullName: users.fullName, status: users.status })
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        status: users.status,
+        leftOn: users.leftOn,
+      })
       .from(users)
       .where(exceptUserId ? and(condition, ne(users.id, exceptUserId)) : condition)
       .limit(1);
@@ -44,7 +49,7 @@ export async function assertUnique(
       {
         userId: found.id,
         fullName: found.fullName,
-        leftOn: null,
+        leftOn: found.leftOn,
       },
     );
   }

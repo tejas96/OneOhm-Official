@@ -463,6 +463,13 @@
       "when": 1793773306075,
       "tag": "0065_reseller_payout_details",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793774733412,
+      "tag": "0066_user_left_on",
+      "breakpoints": true
     }
   ]
 }

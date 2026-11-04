@@ -88,7 +88,7 @@ export async function readPeople(
       inviteText: row.lastActiveAt
         ? null
         : inviteTextFor({ ...row, roleKinds: kinds.get(row.id) ?? [] }, env),
-      leftOn: null, // filled in when removal stores the day they left
+      leftOn: row.leftOn,
     };
   });
 }
