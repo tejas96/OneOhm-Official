@@ -170,7 +170,7 @@ export class MenuAnswersService {
       .select()
       .from(waConversations)
       .where(eq(waConversations.id, chat.id));
-    if (!now || WAITING_STEPS.includes(stepOf(now))) return;
+    if (!now || now.state === 'human' || WAITING_STEPS.includes(stepOf(now))) return;
     await markContext(this.db, chat.id, { langAsked: true });
     return this.languageButtons(chat);
   }

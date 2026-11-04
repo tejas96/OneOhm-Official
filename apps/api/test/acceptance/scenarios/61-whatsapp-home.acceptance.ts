@@ -147,6 +147,22 @@ describe('WhatsApp Home (redesign §3)', () => {
     expect(choices(buttons)).toEqual([`quote_accept:${quote.id}`, `quote_ask:${quote.id}`]);
   });
 
+  it('[See quotation] on a quote past its last day says it has changed, with no Accept', async () => {
+    const customer = await newCustomer(admin, { name: 'Expired Quote Customer (test)' });
+    const quote = await createQuotation(admin, customer);
+    await admin.post(`/quotations/${quote.id}/send`);
+    await say(customer.phone, 'hi');
+    await rows(`UPDATE quotations SET valid_until = current_date - 1 WHERE id = $1`, [quote.id]);
+    await tap(customer.phone, `quote_show:${quote.id}`);
+    const sent = await replies(customer.phone);
+    expect(sent.some((reply) => reply.body.includes('has changed — here is the latest'))).toBe(
+      true,
+    );
+    expect(sent.some((reply) => JSON.stringify(reply).includes(`quote_accept:${quote.id}`))).toBe(
+      false,
+    );
+  });
+
   it('a typed "bill" asks which: a photo of their bill, our invoice, or Payments', async () => {
     const sale = await soldCustomer('Which Bill Customer (test)');
     await say(sale.customer.phone, 'hi');

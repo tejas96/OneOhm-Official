@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { quoteIsOpen } from '../../quotations/quotation-accept';
 import { queueQuoteInChat } from '../../quotations/quotation-message';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
@@ -123,7 +124,7 @@ export class QuoteActionsService {
       quotation &&
       customerId &&
       quotation.customer.id === customerId &&
-      quotation.status === 'sent'
+      (await quoteIsOpen(this.db, quotation))
     )
       return queueQuoteInChat(this.db, this.env, quotation, chat);
     await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.quoteChanged });
