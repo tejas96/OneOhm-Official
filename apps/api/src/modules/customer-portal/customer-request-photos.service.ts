@@ -14,7 +14,7 @@ import {
   VOICE_NOTE_CATEGORY,
 } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
-import { conflict, notFound } from '../../common/http/errors';
+import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { propertyOfProject } from '../documents/document-links';
 import { ObjectStorageService } from '../documents/object-storage.service';
@@ -45,11 +45,6 @@ export class CustomerRequestPhotosService {
     return this.attach(customerId, requestId, file, PHOTO_FILE_TYPES);
   }
 
-  /** One photo from the WhatsApp assistant; returns the stored document's id. */
-  addPhotoFile(customerId: string, requestId: string, file: IncomingFile): Promise<string> {
-    return this.store(customerId, requestId, file, PHOTO_FILE_TYPES);
-  }
-
   /** A photo, a short video or a voice note. */
   addFile(customerId: string, requestId: string, file: IncomingFile | undefined) {
     return this.attach(customerId, requestId, file, REQUEST_FILE_TYPES);
@@ -69,38 +64,33 @@ export class CustomerRequestPhotosService {
     return updated;
   }
 
+  /**
+   * The app's photo rule for a photo the customer already sent on WhatsApp (stored once
+   * when it arrived): the request it may join, or an error saying why it cannot.
+   */
+  async roomForStoredPhoto(
+    customerId: string,
+    requestId: string,
+    documentId: string,
+  ): Promise<{ readonly projectId: string | null }> {
+    const [stored] = await this.db
+      .select({ contentType: documents.contentType })
+      .from(documents)
+      .where(and(eq(documents.id, documentId), eq(documents.customerId, customerId)));
+    if (!stored) throw notFound('That file');
+    if (!(PHOTO_FILE_TYPES as readonly string[]).includes(stored.contentType))
+      throw invalid('Send a photo.', { file: 'This file type is not accepted.' });
+    return this.roomFor(customerId, requestId, stored.contentType);
+  }
+
   private async store(
     customerId: string,
     requestId: string,
     file: IncomingFile | undefined,
     allowed: readonly DetectedFileType[],
   ): Promise<string> {
-    const [request] = await this.db
-      .select({
-        id: serviceRequests.id,
-        projectId: serviceRequests.projectId,
-        status: serviceRequests.status,
-      })
-      .from(serviceRequests)
-      .where(and(eq(serviceRequests.id, requestId), eq(serviceRequests.customerId, customerId)));
-    if (!request) throw notFound('That request');
-    if (request.status === 'resolved')
-      throw conflict('This request is already resolved.', 'resolved');
     const checked = checkFile(file, allowed);
-    const existing = await this.db
-      .select({ contentType: documents.contentType })
-      .from(documents)
-      // The customer's own files only; the technician's visit files do not count.
-      .where(
-        and(
-          eq(documents.serviceRequestId, requestId),
-          isNull(documents.uploadedByUserId),
-          isNull(documents.removedAt),
-        ),
-      );
-    const types = existing.map((row) => row.contentType);
-    if (!requestFileFits(checked.contentType, types))
-      throw conflict(FULL[requestFileKind(checked.contentType)], 'too_many');
+    const request = await this.roomFor(customerId, requestId, checked.contentType);
     const storageKey = `customers/${customerId}/service/${requestId}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     const [row] = await this.db
@@ -120,5 +110,35 @@ export class CustomerRequestPhotosService {
       .returning({ id: documents.id });
     if (!row) throw new Error('Document insert returned nothing');
     return row.id;
+  }
+
+  /** The customer's own open request, with room for one more file of this type. */
+  private async roomFor(customerId: string, requestId: string, contentType: string) {
+    const [request] = await this.db
+      .select({
+        id: serviceRequests.id,
+        projectId: serviceRequests.projectId,
+        status: serviceRequests.status,
+      })
+      .from(serviceRequests)
+      .where(and(eq(serviceRequests.id, requestId), eq(serviceRequests.customerId, customerId)));
+    if (!request) throw notFound('That request');
+    if (request.status === 'resolved')
+      throw conflict('This request is already resolved.', 'resolved');
+    const existing = await this.db
+      .select({ contentType: documents.contentType })
+      .from(documents)
+      // The customer's own files only; the technician's visit files do not count.
+      .where(
+        and(
+          eq(documents.serviceRequestId, requestId),
+          isNull(documents.uploadedByUserId),
+          isNull(documents.removedAt),
+        ),
+      );
+    const types = existing.map((row) => row.contentType);
+    if (!requestFileFits(contentType, types))
+      throw conflict(FULL[requestFileKind(contentType)], 'too_many');
+    return request;
   }
 }

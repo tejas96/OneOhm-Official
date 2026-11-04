@@ -3,27 +3,13 @@ import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { chatOf, replies, say, tap, withOnboarding } from '../support/onboarding';
 import { newCustomer, uniquePhone } from '../support/sales';
-import { postInbound, sendInbound } from '../support/whatsapp';
+import { postInbound, refuseRepliesTo, sendInbound } from '../support/whatsapp';
 
 // Live review A3/A4: a customer message the API could not handle is answered 500 (so Meta
 // sends it again) and handled on that retry, with one alert to the chat's people; a late
 // tap from an older message changes nothing; the chat's last-inbound time never goes back.
 
 const MINUTE = 60 * 1000;
-
-/** Until the returned undo runs, the database refuses every reply to this number. */
-async function refuseRepliesTo(phone: string): Promise<() => Promise<void>> {
-  const name = `refuse_reply_${phone.slice(1)}`;
-  await rows(`CREATE OR REPLACE FUNCTION ${name}() RETURNS trigger AS $$
-    BEGIN IF NEW.recipient = '${phone}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END;
-    $$ LANGUAGE plpgsql`);
-  await rows(`CREATE TRIGGER ${name} BEFORE INSERT ON outbox
-    FOR EACH ROW EXECUTE FUNCTION ${name}()`);
-  return async () => {
-    await rows(`DROP TRIGGER ${name} ON outbox`);
-    await rows(`DROP FUNCTION ${name}()`);
-  };
-}
 
 const lastInboundOf = async (phone: string) => {
   const [chat] = await rows<{ at: Date }>(

@@ -93,18 +93,19 @@ describe('WhatsApp chat files', () => {
     expect(kinds).toEqual(expect.arrayContaining(['document_request', 'document_received']));
   });
 
-  it('a photo kept before the problem was told moves onto the problem, filed once', async () => {
+  it('a photo kept before the problem was told moves onto the problem, stored once', async () => {
     const { customer, project } = await sellProject(admin, { name: 'Problem Photo (test)' });
     await sendInbound(customer.phone, { media: { type: 'image', fileId: 'problem-1' } });
     const [kept] = await projectDocs(project.id);
     expect(kept?.category).toBe('other');
     await tap(customer.phone, 'service');
     await say(customer.phone, 'The inverter shows a red light (test)');
+    // The same document now shows the problem: no second copy, nothing removed.
     const docs = await projectDocs(project.id);
-    const onProblem = docs.find((doc) => doc.request !== null);
-    expect(onProblem).toBeDefined();
-    expect(docs.find((doc) => doc.id === kept?.id)?.removed).toBe(true);
+    expect(docs).toHaveLength(1);
+    expect(docs[0]).toMatchObject({ id: kept?.id, removed: false });
+    expect(docs[0]?.request).not.toBeNull();
     const shown = await chatFiles(admin, customer.phone);
-    expect(shown.map((message) => message.file?.id)).toEqual([onProblem?.id]);
+    expect(shown.map((message) => message.file?.id)).toEqual([kept?.id]);
   });
 });

@@ -4,8 +4,15 @@ import { closeDb, rows } from '../support/db';
 import { fileForm, upload } from '../support/files';
 import { Session } from '../support/http';
 import { chatOf, leadsOf, say, tap, withOnboarding } from '../support/onboarding';
-import { createQuotation, discomId, sellProject, today, uniquePhone } from '../support/sales';
-import { sendInbound } from '../support/whatsapp';
+import {
+  createQuotation,
+  discomId,
+  newCustomer,
+  sellProject,
+  today,
+  uniquePhone,
+} from '../support/sales';
+import { postInbound, refuseRepliesTo, sendInbound } from '../support/whatsapp';
 
 // Every paper is kept with its home: a request answered in the app, a bill held in
 // WhatsApp before the lead existed, and the lead's papers once the project is made.
@@ -14,6 +21,20 @@ interface ChatMessageRow {
   readonly direction: string;
   readonly file: { id: string } | null;
 }
+
+async function chatFileIds(admin: Session, phone: string) {
+  const chat = await chatOf(phone);
+  const detail = await admin.get<{ messages: ChatMessageRow[] }>(`/whatsapp/chats/${chat.id}`);
+  return detail.messages
+    .filter((row) => row.direction === 'in' && row.file)
+    .map((row) => row.file?.id);
+}
+
+const customerDocs = (customerId: string) =>
+  rows<{ id: string; project_id: string | null; created_at: Date }>(
+    'SELECT id, project_id, created_at FROM documents WHERE customer_id = $1',
+    [customerId],
+  );
 
 const documentOf = (id: string) =>
   rows<{ project_id: string | null; property_id: string | null }>(
@@ -123,10 +144,7 @@ describe('Papers per home', () => {
       lead?.id,
     ]);
     expect(doc).toBeDefined();
-    const chat = await chatOf(phone);
-    const detail = await admin.get<{ messages: ChatMessageRow[] }>(`/whatsapp/chats/${chat.id}`);
-    const shown = detail.messages.filter((message) => message.direction === 'in' && message.file);
-    expect(shown.map((message) => message.file?.id)).toEqual([doc?.id]);
+    expect(await chatFileIds(admin, phone)).toEqual([doc?.id]);
   });
 
   it("a lead's bill outside onboarding alerts the lead owner", async () => {
@@ -196,5 +214,37 @@ describe('Papers per home', () => {
     expect(await billCounts()).toBe('present');
     await rows("UPDATE projects SET status = 'active' WHERE id = $1", [onFarm.id]);
     expect(await billCounts()).toBe('missing');
+  });
+
+  it('a file is stored once and the chat shows it before any question', async () => {
+    const customer = await newCustomer(admin, { name: 'Stored Once (test)' });
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'stored-once-1' } });
+    const docs = await customerDocs(customer.customerId);
+    expect(docs.map((doc) => doc.project_id)).toEqual([null]);
+    const [asked] = await rows<{ at: Date }>(
+      'SELECT min(created_at) AS at FROM outbox WHERE recipient = $1',
+      [customer.phone],
+    );
+    // Kept before the assistant asked what the file is about.
+    expect(docs[0]?.created_at.getTime()).toBeLessThan(asked?.at.getTime() ?? 0);
+    expect(await chatFileIds(admin, customer.phone)).toEqual([docs[0]?.id]);
+  });
+
+  it('retry keeps one document', async () => {
+    const customer = await newCustomer(admin, { name: 'Retry Once (test)' });
+    const photo = {
+      id: `wamid.acceptance-once-${customer.phone.slice(1)}`,
+      media: { type: 'image' as const, fileId: 'retry-once-1' },
+    };
+    const undo = await refuseRepliesTo(customer.phone);
+    const failed = await postInbound(customer.phone, photo);
+    await undo();
+    expect(failed.status).toBe(500);
+    // Stored before the reply failed, so Meta's retry finds it.
+    const before = await customerDocs(customer.customerId);
+    await sendInbound(customer.phone, photo);
+    const after = await customerDocs(customer.customerId);
+    expect(after.map((doc) => doc.id)).toEqual(before.map((doc) => doc.id));
+    expect(await chatFileIds(admin, customer.phone)).toEqual([before[0]?.id]);
   });
 });

@@ -4,8 +4,9 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
-import { type Conversation, linkChatFile } from '../chat-store';
-import type { ChatFile } from '../media-gateway';
+import { propertyOfProject } from '../../documents/document-links';
+import type { Conversation } from '../chat-store';
+import { filePaper } from '../file-paper';
 import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { guessCategory } from './guess-category';
@@ -45,7 +46,7 @@ export class ProblemFlowService {
     chat: Conversation,
     customerId: string,
     said: string,
-    files: readonly ChatFile[] = [],
+    files: readonly string[] = [],
   ): Promise<void> {
     const typed = said.trim();
     // A photo with no words (or one word) still raises a request; the photo says the rest.
@@ -72,18 +73,28 @@ export class ProblemFlowService {
     return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['requests', 'menu']);
   }
 
-  /** Another photo for the request just raised. */
-  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: ChatFile) {
+  /** Another photo for the request just raised (the document it was stored as). */
+  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: string) {
     const added = await this.attach(customerId, requestId, file);
     const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
     return sayWithTaps(this.db, chat, body, ['requests', 'menu']);
   }
 
-  /** The app's own photo rule (photos only, six at most); a refusal is not an error. */
-  private async attach(customerId: string, requestId: string, file: ChatFile) {
+  /**
+   * The app's own photo rule (photos only, six at most); a refusal is not an error. The
+   * photo was stored when it arrived: only that same document moves onto the problem.
+   */
+  private async attach(customerId: string, requestId: string, documentId: string) {
     try {
-      const documentId = await this.photos.addPhotoFile(customerId, requestId, file);
-      await linkChatFile(this.db, file.mediaId, documentId);
+      const { projectId } = await this.photos.roomForStoredPhoto(customerId, requestId, documentId);
+      await this.db.transaction(async (tx) =>
+        filePaper(tx, documentId, {
+          projectId,
+          propertyId: await propertyOfProject(tx, projectId),
+          category: 'site_photo',
+          serviceRequestId: requestId,
+        }),
+      );
       return true;
     } catch (error) {
       if (!(error instanceof AppError)) throw error;

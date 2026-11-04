@@ -22,10 +22,11 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AssistantService } from './assistant/assistant.service';
 import { assistantAnswers, markAssistantTap } from './assistant/handled-taps';
-import { ChatFileKeeper, FILE_WORDS } from './chat-file-keeper';
+import { ChatFileKeeper } from './chat-file-keeper';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
 import { DeliveriesService } from './deliveries.service';
+import { FILE_WORDS } from './file-paper';
 import { forgetIncoming, isLateTap, tellNotHandled } from './inbound-retry';
 import { type Incoming, readWebhook, webhookAccess } from './whatsapp-events';
 
@@ -92,6 +93,10 @@ export class WhatsAppWebhookController implements OnModuleInit {
         this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
         continue;
       }
+      // A customer's file is stored before the assistant answers, so every flow files
+      // that one document (never throws).
+      const early = chat.customerId !== null;
+      if (early) await this.files.keep(chat, message);
       try {
         await this.handle(chat, message);
         handled += 1;
@@ -102,8 +107,10 @@ export class WhatsAppWebhookController implements OnModuleInit {
         await this.recover(chat, message);
         continue;
       }
-      // Any file the assistant did not file goes under Documents (never throws).
-      await this.files.keep(chat, message);
+      // Any file the assistant did not file goes on the newest project or the lead
+      // (never throws).
+      if (early) await this.files.settle(chat, message);
+      else await this.files.keep(chat, message);
     }
     const receipts = await this.deliveries.applyUpdates(updates);
     if (failed > 0) throw new InternalServerErrorException(`${failed} message(s) not handled.`);

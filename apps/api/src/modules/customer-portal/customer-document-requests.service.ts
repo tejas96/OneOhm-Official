@@ -3,14 +3,16 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
 import {
   customers,
+  type DatabaseExecutor,
   documentRequests,
   documents,
   notify,
   projectActivities,
 } from '@oneohm/database';
-import { and, eq, ne } from 'drizzle-orm';
+import { ACCEPTED_FILE_TYPES } from '@oneohm/domain';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { conflict, notFound } from '../../common/http/errors';
+import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { propertyOfProject, storageScope } from '../documents/document-links';
 import { forCustomer, readRequests } from '../documents/document-request-read';
@@ -38,34 +40,12 @@ export class CustomerDocumentRequestsService {
     id: string,
     file: IncomingFile | undefined,
   ): Promise<CustomerDocumentRequest> {
-    const [request] = await this.db
-      .select({ request: documentRequests, customer: customers.name })
-      .from(documentRequests)
-      .innerJoin(customers, eq(customers.id, documentRequests.customerId))
-      .where(and(eq(documentRequests.id, id), eq(documentRequests.customerId, customerId)))
-      .limit(1);
-    if (!request) throw notFound('That request');
-    const { request: asked } = request;
-    if (asked.status !== 'open') {
-      throw conflict(
-        asked.status === 'received'
-          ? 'You have already sent this. Thank you.'
-          : 'This paper is no longer needed.',
-        asked.status,
-      );
-    }
+    const { asked, customer } = await this.openRequest(customerId, id);
     const checked = checkFile(file, undefined, asked.title);
     const scope = storageScope({ projectId: asked.projectId, customerId });
     const storageKey = `${scope}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
     await this.db.transaction(async (tx) => {
-      // Claim the request first: of two uploads at once, only one is filed.
-      const [claimed] = await tx
-        .update(documentRequests)
-        .set({ status: 'received', updatedAt: new Date() })
-        .where(and(eq(documentRequests.id, id), eq(documentRequests.status, 'open')))
-        .returning({ id: documentRequests.id });
-      if (!claimed) throw conflict('You have already sent this. Thank you.', 'received');
       const [document] = await tx
         .insert(documents)
         .values({
@@ -81,37 +61,115 @@ export class CustomerDocumentRequestsService {
         })
         .returning({ id: documents.id });
       if (!document) throw new Error('Document insert returned nothing');
-      const now = new Date();
-      await tx
-        .update(documentRequests)
-        .set({ status: 'received', documentId: document.id, receivedAt: now, updatedAt: now })
-        .where(eq(documentRequests.id, id));
-      if (asked.projectId)
-        await tx.insert(projectActivities).values({
-          projectId: asked.projectId,
-          kind: 'document_received',
-          message: `${request.customer} sent ${asked.title}`,
-          data: { documentRequestId: id, documentId: document.id },
-        });
-      if (asked.requestedByUserId) {
-        await notify(
-          tx,
-          { userId: asked.requestedByUserId },
-          {
-            kind: 'document_received',
-            title: `${request.customer} sent ${asked.title}`,
-            body: 'It is filed in the project documents.',
-            ...(asked.projectId
-              ? { subject: { type: 'project', id: asked.projectId, projectId: asked.projectId } }
-              : {}),
-            dedupeKey: `document_received:${id}`,
-          },
-        );
-      }
-      await recordAudit(tx, null, 'document_request.answered', 'document_request', id, {
-        documentId: document.id,
-      });
+      await this.received(tx, asked, customer, document.id);
     });
+    return this.read(id);
+  }
+
+  /**
+   * Answers the request with a file already stored for this customer (a WhatsApp file is
+   * kept once, the moment it arrives): the same document is filed on the request's home
+   * under its kind and named after it, with no second copy.
+   */
+  async answerWithDocument(
+    customerId: string,
+    requestId: string,
+    documentId: string,
+  ): Promise<CustomerDocumentRequest> {
+    const { asked, customer } = await this.openRequest(customerId, requestId);
+    const [stored] = await this.db
+      .select({ name: documents.name, contentType: documents.contentType })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.id, documentId),
+          eq(documents.customerId, customerId),
+          isNull(documents.removedAt),
+        ),
+      );
+    if (!stored) throw notFound('That file');
+    if (!(ACCEPTED_FILE_TYPES as readonly string[]).includes(stored.contentType))
+      throw invalid('Send a photo or a PDF.', { file: 'This file type is not accepted.' });
+    const extension = stored.name.match(/\.[a-z0-9]{1,5}$/i)?.[0] ?? '';
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(documents)
+        .set({
+          projectId: asked.projectId,
+          propertyId: await propertyOfProject(tx, asked.projectId),
+          category: asked.category,
+          name: `${asked.title.trim().slice(0, 150)}${extension}`,
+        })
+        .where(eq(documents.id, documentId));
+      await this.received(tx, asked, customer, documentId);
+    });
+    return this.read(requestId);
+  }
+
+  private async openRequest(customerId: string, id: string) {
+    const [request] = await this.db
+      .select({ asked: documentRequests, customer: customers.name })
+      .from(documentRequests)
+      .innerJoin(customers, eq(customers.id, documentRequests.customerId))
+      .where(and(eq(documentRequests.id, id), eq(documentRequests.customerId, customerId)))
+      .limit(1);
+    if (!request) throw notFound('That request');
+    const { asked } = request;
+    if (asked.status !== 'open') {
+      throw conflict(
+        asked.status === 'received'
+          ? 'You have already sent this. Thank you.'
+          : 'This paper is no longer needed.',
+        asked.status,
+      );
+    }
+    return request;
+  }
+
+  /** The request is received with this document: logged, its asker told, audited. */
+  private async received(
+    tx: DatabaseExecutor,
+    asked: typeof documentRequests.$inferSelect,
+    customer: string,
+    documentId: string,
+  ): Promise<void> {
+    const id = asked.id;
+    const now = new Date();
+    // Of two answers at once, only one is filed; the other rolls back.
+    const [claimed] = await tx
+      .update(documentRequests)
+      .set({ status: 'received', documentId, receivedAt: now, updatedAt: now })
+      .where(and(eq(documentRequests.id, id), eq(documentRequests.status, 'open')))
+      .returning({ id: documentRequests.id });
+    if (!claimed) throw conflict('You have already sent this. Thank you.', 'received');
+    if (asked.projectId)
+      await tx.insert(projectActivities).values({
+        projectId: asked.projectId,
+        kind: 'document_received',
+        message: `${customer} sent ${asked.title}`,
+        data: { documentRequestId: id, documentId },
+      });
+    if (asked.requestedByUserId) {
+      await notify(
+        tx,
+        { userId: asked.requestedByUserId },
+        {
+          kind: 'document_received',
+          title: `${customer} sent ${asked.title}`,
+          body: 'It is filed in the project documents.',
+          ...(asked.projectId
+            ? { subject: { type: 'project', id: asked.projectId, projectId: asked.projectId } }
+            : {}),
+          dedupeKey: `document_received:${id}`,
+        },
+      );
+    }
+    await recordAudit(tx, null, 'document_request.answered', 'document_request', id, {
+      documentId,
+    });
+  }
+
+  private async read(id: string): Promise<CustomerDocumentRequest> {
     const [updated] = await readRequests(this.db, eq(documentRequests.id, id));
     if (!updated) throw notFound('That request');
     return forCustomer(updated);
