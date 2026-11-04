@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { quotations } from '@oneohm/database';
+import { localValues, quotations } from '@oneohm/database';
 import { inArray } from 'drizzle-orm';
 import { daySpan } from '../../../common/notices';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
@@ -9,6 +9,7 @@ import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { coverText } from './cover-answer';
+import { languageNow } from './language';
 import { payNowReplies } from './pay-buttons';
 import { paymentsText } from './payments-answer';
 import { stageLine } from './progress-line';
@@ -50,7 +51,7 @@ export class AnswersService {
           stageLine(project),
           project.nextStep
             ? ANSWER_WORDS.next(
-                project.nextStep.title,
+                stepTitle(project.nextStep.key, project.nextStep.title),
                 daySpan(project.nextStep.date, project.nextStep.date),
               )
             : '',
@@ -108,4 +109,13 @@ export class AnswersService {
   async rewards(customerId: string): Promise<string> {
     return rewardsText(await this.portal.referrals(customerId));
   }
+}
+
+/** A OneOhm step's name in the chat's language; a step the team named itself stays as typed. */
+function stepTitle(key: string | null, title: string): string {
+  if (!key) return title;
+  return (
+    localValues(languageNow(), 'project_milestone', { step: key, milestone: title }).milestone ??
+    title
+  );
 }

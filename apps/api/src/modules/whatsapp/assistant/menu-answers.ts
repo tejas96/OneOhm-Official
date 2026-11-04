@@ -36,8 +36,12 @@ export class MenuAnswersService {
         (await this.answers.hasProject(customerId)) ? taps : ['menu', 'talk'],
       );
     switch (choice) {
-      case 'progress':
-        return answer(await this.answers.progress(customerId), ['menu', 'pay', 'talk']);
+      case 'progress': {
+        // Pay now only while something is due; all paid, it would lead to "nothing to pay".
+        const due = (await this.answers.payNow(customerId)).length > 0;
+        const taps: Tap[] = due ? ['menu', 'pay', 'talk'] : ['menu', 'talk'];
+        return answer(await this.answers.progress(customerId), taps);
+      }
       case 'payments':
         return this.payments(chat, customerId, answer);
       case 'documents':
