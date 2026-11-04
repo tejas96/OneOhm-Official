@@ -58,13 +58,23 @@ export async function keptFile(
   }
 }
 
-/** Filed already: on a home, on a problem, or as the answer to a paper request. */
+/**
+ * Filed already: on a home, on a problem, as an ID paper (the person row), or as the
+ * answer to a paper request.
+ */
 export async function isFiled(db: DatabaseExecutor, documentId: string): Promise<boolean> {
   const [document] = await db
-    .select({ projectId: documents.projectId, serviceRequestId: documents.serviceRequestId })
+    .select({
+      projectId: documents.projectId,
+      propertyId: documents.propertyId,
+      serviceRequestId: documents.serviceRequestId,
+      category: documents.category,
+    })
     .from(documents)
     .where(eq(documents.id, documentId));
-  if (!document || document.projectId || document.serviceRequestId) return true;
+  if (!document || document.projectId || document.propertyId || document.serviceRequestId)
+    return true;
+  if (document.category !== 'other') return true;
   const [answer] = await db
     .select({ id: documentRequests.id })
     .from(documentRequests)

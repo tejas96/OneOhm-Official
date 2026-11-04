@@ -107,15 +107,76 @@ describe('Papers per home: which home', () => {
     const docs = await customerDocs(customer.customerId);
     expect(docs.map((doc) => doc.project_id)).toEqual([null]);
     expect(await chatFileIds(admin, customer.phone)).toEqual([docs[0]?.id]);
-    const chat = await rows<{ to_sort: string[] }>(
+    const chat = await rows<{ to_sort: { id: string }[] }>(
       `SELECT context->'toSort' AS to_sort FROM wa_conversations WHERE phone = $1`,
       [customer.phone],
     );
-    expect(chat[0]?.to_sort).toEqual([docs[0]?.id]);
+    expect(chat[0]?.to_sort.map((entry) => entry.id)).toEqual([docs[0]?.id]);
     // The chat's person hears of it once.
     const alerts = await rows(`SELECT id FROM notifications WHERE dedupe_key LIKE $1`, [
       `wa_in:${id}:%`,
     ]);
     expect(alerts).toHaveLength(1);
+  });
+
+  it('a burst sent all at once is asked once and filed whole', async () => {
+    const { customer } = await sellProject(admin, { name: 'Parallel Burst (test)' });
+    const farm = await anotherHome(admin, customer, 'Farm (test)');
+    await Promise.all(
+      [1, 2, 3, 4].map((n) =>
+        sendInbound(customer.phone, { media: { type: 'image', fileId: `parallel-${n}` } }),
+      ),
+    );
+    expect(await homeLists(customer.phone)).toHaveLength(1);
+    await tap(customer.phone, `fhome:${farm.propertyId}`);
+    const docs = await customerDocs(customer.customerId);
+    expect(docs.map(({ project_id, property_id }) => ({ project_id, property_id }))).toEqual(
+      Array(4).fill({ project_id: farm.projectId, property_id: farm.propertyId }),
+    );
+    expect((await lastReply(customer.phone))?.body).toContain('(4)');
+  });
+
+  it('a voice note waits with the photos; the person row files ID papers', async () => {
+    const { customer } = await sellProject(admin, { name: 'Voice Waits (test)' });
+    await anotherHome(admin, customer, 'Farm (test)');
+    await sendInbound(customer.phone, { media: { type: 'audio', fileId: 'waits-voice' } });
+    // A voice note alone does not ask.
+    expect(await homeLists(customer.phone)).toEqual([]);
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'waits-photo' } });
+    expect(await homeLists(customer.phone)).toHaveLength(1);
+    await tap(customer.phone, `fhome:${customer.propertyId}`);
+    const docs = await customerDocs(customer.customerId);
+    expect(docs.map((doc) => doc.property_id)).toEqual([customer.propertyId, customer.propertyId]);
+    // Within the next 30 minutes the pick stands; the person row is kept as an ID paper.
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'waits-aadhaar' } });
+    await tap(customer.phone, 'fhome:person');
+    const kinds = await rows<{ category: string; property_id: string | null }>(
+      `SELECT category, property_id FROM documents WHERE customer_id = $1 ORDER BY created_at`,
+      [customer.customerId],
+    );
+    expect(kinds[2]?.property_id).toBe(customer.propertyId);
+  });
+
+  it('a tap with nothing to sort does not claim a save', async () => {
+    const { customer } = await sellProject(admin, { name: 'Nothing To Sort (test)' });
+    const farm = await anotherHome(admin, customer, 'Farm (test)');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'nothing-1' } });
+    await tap(customer.phone, `fhome:${farm.propertyId}`);
+    await tap(customer.phone, `fhome:${farm.propertyId}`);
+    expect((await lastReply(customer.phone))?.body).not.toContain('Saved');
+    const docs = await customerDocs(customer.customerId);
+    expect(docs).toHaveLength(1);
+  });
+
+  it('the person row files the waiting papers as ID papers, on no home', async () => {
+    const { customer } = await sellProject(admin, { name: 'Person Row (test)' });
+    await anotherHome(admin, customer, 'Farm (test)');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'person-row-1' } });
+    await tap(customer.phone, 'fhome:person');
+    const docs = await rows<{ category: string; project_id: string | null }>(
+      'SELECT category, project_id FROM documents WHERE customer_id = $1',
+      [customer.customerId],
+    );
+    expect(docs).toEqual([{ category: 'customer_kyc', project_id: null }]);
   });
 });

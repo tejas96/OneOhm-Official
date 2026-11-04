@@ -71,9 +71,11 @@ export class MediaIntakeService {
     said: string,
   ): Promise<void> {
     const held = chat.state === 'human' && stepOf(chat) !== 'await_problem';
-    // A voice note or a video goes warmly to their person, as for leads (C12); it is put
-    // on a home only when that needs no question (`ChatFileKeeper.settle`).
+    // A voice note or a video goes warmly to their person, as for leads (C12). It is put
+    // on a home when that needs no question (`ChatFileKeeper.settle`), else it waits with
+    // the other files for "Which home?".
     if (media.type === 'audio' || media.type === 'video') {
+      await this.homes.sortLater(chat, customerId, media.id);
       if (held) return;
       const reply = heardReply(media.type, await this.people.answererName(chat));
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });

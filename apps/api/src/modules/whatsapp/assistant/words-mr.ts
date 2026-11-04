@@ -109,6 +109,7 @@ export const MR: Words<AssistantWords> = {
     personRow: 'आधार/पॅन (सर्व घरे)',
     savedFor: (kind, home) => `जतन केले: *${kind}*, तुमच्या *${home}* येथील घरासाठी.`,
     stillNeeded: (list) => `या घरासाठी अजून हवे: ${list}.`,
+    homeChosen: (home) => `नोंद केली: आता पाठवलेल्या फाइल *${home}* साठी आहेत.`,
     problemSavedWithPhotos: (category, photos) =>
       `धन्यवाद. तुमची ${category} विनंती ${photos === 1 ? 'फोटोसह' : `${photos} फोटोंसह`} नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "माझ्या विनंत्या" दाबा.`,
   },

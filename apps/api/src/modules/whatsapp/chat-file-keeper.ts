@@ -83,8 +83,7 @@ export class ChatFileKeeper {
       const place = choice && choice !== 'ask' ? placeOn(homes, choice) : null;
       await this.db.transaction(async (tx) => {
         if (place) await filePaper(tx, documentId, place);
-        // The person row keeps a paper off every home on purpose: it is not "to sort".
-        await this.tellKept(tx, chat, message, media, !place && !(choice && choice !== 'ask'));
+        await this.tellKept(tx, chat, message, media, !place);
       });
     } catch (error) {
       this.log.error(`WhatsApp file ${media.id} not filed: ${String(error)}`);

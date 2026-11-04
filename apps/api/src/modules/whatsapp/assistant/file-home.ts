@@ -56,10 +56,28 @@ export function rememberedHome(context: unknown): FileHome | null {
   return { propertyId: kept.propertyId, at: kept.at };
 }
 
-/** The files waiting for "Which home?", oldest first. */
-export function toSortOf(context: unknown): string[] {
+/** A file waiting for "Which home?": its document, and when it came. */
+export interface ToSort {
+  readonly id: string;
+  readonly at: number;
+}
+
+/** The files waiting for "Which home?", oldest first: only those sent in the last 30 minutes. */
+export function toSortOf(context: unknown, now: number): ToSort[] {
   const list = (context as { toSort?: unknown } | null)?.toSort;
-  return Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : [];
+  if (!Array.isArray(list)) return [];
+  return (list as Partial<ToSort>[])
+    .filter(
+      (entry): entry is ToSort => typeof entry?.id === 'string' && typeof entry.at === 'number',
+    )
+    .filter((entry) => now - entry.at <= STEP_MINUTES * 60_000)
+    .slice(-MAX_TO_SORT);
+}
+
+/** The waiting files with this one added (once), the oldest dropped past MAX_TO_SORT. */
+export function withToSort(context: unknown, documentId: string, now: number): ToSort[] {
+  const before = toSortOf(context, now).filter((entry) => entry.id !== documentId);
+  return [...before, { id: documentId, at: now }].slice(-MAX_TO_SORT);
 }
 
 /** The properties whose projects have open requests for a site paper (not ID or income). */
@@ -100,13 +118,17 @@ export async function homeForFile(
   return { homes, choice };
 }
 
-/** Where a file of this home is filed; the person row keeps it off every home. */
+/**
+ * Where a file of this home is filed. The person row ("Aadhaar/PAN") keeps it off every
+ * home as an ID paper, so it is never mistaken for one still to sort; staff may change it.
+ */
 export function placeOn(
   homes: readonly CustomerHome[],
   choice: HomeChoice,
   category = 'other',
 ): PaperPlace | null {
-  if (choice.propertyId === 'person') return null;
+  if (choice.propertyId === 'person')
+    return { projectId: null, propertyId: null, category: 'customer_kyc' };
   const home = homes.find((each) => each.propertyId === choice.propertyId);
   return home ? { projectId: home.projectId, propertyId: home.propertyId, category } : null;
 }
@@ -114,3 +136,14 @@ export function placeOn(
 /** Whether an open request is answered by a file for this home. */
 export const requestFits = (choice: HomeChoice, category: string): boolean =>
   choice.propertyId !== 'person' || isPersonDocumentCategory(category);
+
+/** The chat's context without the "Which home?" step and its files. */
+export function withoutStep(context: unknown): Record<string, unknown> {
+  const {
+    toSort: _toSort,
+    step: _step,
+    stepAt: _stepAt,
+    ...rest
+  } = (context ?? {}) as Record<string, unknown>;
+  return rest;
+}

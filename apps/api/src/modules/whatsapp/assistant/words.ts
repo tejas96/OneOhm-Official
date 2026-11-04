@@ -118,6 +118,7 @@ const EN_MEDIA_WORDS = {
   personRow: 'Aadhaar/PAN (all homes)',
   savedFor: (kind: string, home: string) => `Saved: *${kind}* for your home at *${home}*.`,
   stillNeeded: (list: string) => `Still needed for this home: ${list}.`,
+  homeChosen: (home: string) => `Noted: files you send now are for *${home}*.`,
   problemSavedWithPhotos: (category: string, photos: number) =>
     `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
 } as const;

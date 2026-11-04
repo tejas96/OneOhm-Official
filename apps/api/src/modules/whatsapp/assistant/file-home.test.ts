@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CustomerHome } from '../../customer-portal/customer-homes';
-import { chooseHome, fileHomeTapped } from './file-home';
+import { chooseHome, fileHomeTapped, placeOn, toSortOf, withToSort } from './file-home';
 
 const home = (propertyId: string): CustomerHome => ({
   propertyId,
@@ -65,5 +65,34 @@ describe('which home a WhatsApp file is for', () => {
     expect(fileHomeTapped(`home:${A.propertyId}`)).toBeNull();
     expect(fileHomeTapped('fhome:nope')).toBeNull();
     expect(fileHomeTapped(null)).toBeNull();
+  });
+
+  it('keeps only the files sent in the last 30 minutes to sort, at most 10', () => {
+    const context = {
+      toSort: [
+        { id: 'old', at: minutesAgo(31) },
+        { id: 'new', at: minutesAgo(2) },
+      ],
+    };
+    expect(toSortOf(context, now)).toEqual([{ id: 'new', at: minutesAgo(2) }]);
+    let many: unknown = {};
+    for (let n = 0; n < 12; n += 1) many = { toSort: withToSort(many, `d${n}`, now) };
+    expect(toSortOf(many, now).map((entry) => entry.id)).toEqual(
+      Array.from({ length: 10 }, (_, n) => `d${n + 2}`),
+    );
+    expect(withToSort(context, 'new', now)).toEqual([{ id: 'new', at: now }]);
+  });
+
+  it('files a person-row paper as ID, on no home', () => {
+    expect(placeOn([A, B], { propertyId: 'person' })).toEqual({
+      projectId: null,
+      propertyId: null,
+      category: 'customer_kyc',
+    });
+    expect(placeOn([A, B], { propertyId: A.propertyId })).toEqual({
+      projectId: null,
+      propertyId: A.propertyId,
+      category: 'other',
+    });
   });
 });

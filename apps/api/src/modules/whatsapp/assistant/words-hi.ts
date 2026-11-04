@@ -107,6 +107,7 @@ export const HI: Words<AssistantWords> = {
     personRow: 'आधार/पैन (सभी घर)',
     savedFor: (kind, home) => `सहेजा गया: *${kind}*, आपके *${home}* वाले घर के लिए।`,
     stillNeeded: (list) => `इस घर के लिए अभी चाहिए: ${list}।`,
+    homeChosen: (home) => `नोट किया: अब भेजी गई फ़ाइलें *${home}* के लिए हैं।`,
     problemSavedWithPhotos: (category, photos) =>
       `धन्यवाद। आपका ${category} अनुरोध ${photos === 1 ? 'फ़ोटो के साथ' : `${photos} फ़ोटो के साथ`} दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "मेरे अनुरोध" दबाएँ।`,
   },
