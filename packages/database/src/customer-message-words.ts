@@ -34,6 +34,9 @@ export const IN_APP_MESSAGES = [
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
+/** contact_changed says what the new contact looks after as one of these, never in English. */
+export type ContactSubject = 'project' | 'service' | 'enquiry';
+
 /** Project steps by task key, as the customer app names them. */
 export const STEP_KEYS = [
   'site_survey',
@@ -80,6 +83,8 @@ export interface LanguageWords {
   readonly categories: Readonly<Record<(typeof CATEGORIES)[number], string>>;
   readonly service: Readonly<Record<'open' | 'in_progress' | 'resolved', string>>;
   readonly reward: Readonly<Record<'pending' | 'approved' | 'paid' | 'rejected', string>>;
+  /** What a new contact looks after (contact_changed), by the payload's `subjectKind`. */
+  readonly contactSubjects: Readonly<Record<ContactSubject, string>>;
   /** Titles of alerts written straight into the app, with no WhatsApp message behind them. */
   readonly alerts: Readonly<Record<'stage_rating_reply', string>>;
 }
@@ -128,6 +133,13 @@ function statusWords(template: string, status: string | undefined, words: Langua
   return template === 'service_update' && service ? words.service[service] : undefined;
 }
 
+/** contact_changed's subject in the language: a project also names its town and size. */
+function contactSubject(template: string, p: Payload, words: LanguageWords) {
+  if (template !== 'contact_changed' || !has(words.contactSubjects, p.subjectKind)) return;
+  const said = words.contactSubjects[p.subjectKind];
+  return p.subjectKind === 'project' && p.projectWords ? `${said} (${p.projectWords})` : said;
+}
+
 /** The payload with OneOhm's own English names said in the customer's language. */
 function localPayload(
   template: string,
@@ -143,8 +155,10 @@ function localPayload(
     (has(words.payments, paymentKey) ? words.payments[paymentKey] : undefined);
   const topic = has(words.categories, categoryKey) ? words.categories[categoryKey] : undefined;
   const status = statusWords(template, p.status, words);
+  const subject = contactSubject(template, p, words);
   return {
     ...p,
+    ...(subject ? { subject } : {}),
     ...(milestone ? { milestone } : {}),
     ...(topic ? { topic } : {}),
     ...(status ? { status } : {}),

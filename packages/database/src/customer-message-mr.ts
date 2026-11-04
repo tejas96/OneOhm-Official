@@ -145,5 +145,10 @@ export const MARATHI_WORDS: LanguageWords = {
     paid: 'तुम्हाला दिले',
     rejected: 'मंजूर झाले नाही',
   },
+  contactSubjects: {
+    project: 'तुमच्या सोलर प्रोजेक्ट',
+    service: 'तुमच्या सर्व्हिस विनंती',
+    enquiry: 'तुमच्या सोलर चौकशी',
+  },
   alerts: { stage_rating_reply: 'आम्ही तुमच्या अभिप्रायाला उत्तर दिले' },
 };

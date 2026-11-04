@@ -96,3 +96,31 @@ describe('WhatsApp values for a Marathi or Hindi template (PRD 6.2)', () => {
     expect(localValues('hi-IN', 'project_milestone', values).customer).toBe('Ramesh');
   });
 });
+
+describe('contact_changed in Marathi and Hindi', () => {
+  const told = (subjectKind: string) => ({
+    customer: 'Ramesh',
+    staff: 'Priya',
+    subject: subjectKind === 'project' ? 'your solar project (Pune · 3 kW)' : 'your solar enquiry',
+    subjectKind,
+    ...(subjectKind === 'project' ? { projectWords: 'Pune · 3 kW' } : {}),
+    phone: '+91 98000 00000',
+  });
+
+  it.each(['mr-IN', 'hi-IN'])('%s says what the contact looks after with no English', (lang) => {
+    for (const kind of ['project', 'service', 'enquiry']) {
+      const alert = localWords(lang, 'contact_changed')?.(told(kind));
+      const values = localValues(lang, 'contact_changed', told(kind));
+      for (const text of [alert?.body ?? '', values.subject ?? '']) {
+        expect(text, `${lang} ${kind}`).not.toMatch(/your|solar|project|service|enquiry/i);
+      }
+    }
+    expect(localValues(lang, 'contact_changed', told('project')).subject).toContain('Pune · 3 kW');
+  });
+
+  it('keeps the English subject for the English template', () => {
+    expect(localValues('en-IN', 'contact_changed', told('project')).subject).toBe(
+      'your solar project (Pune · 3 kW)',
+    );
+  });
+});

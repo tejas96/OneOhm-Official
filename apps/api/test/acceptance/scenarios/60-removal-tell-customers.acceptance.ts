@@ -116,6 +116,9 @@ describe('removal tells customers', () => {
     expect(sent[0]?.payload).toMatchObject({
       staff: 'Target',
       subject: expect.stringContaining('your solar project'),
+      // Marathi and Hindi say the subject from its kind, never from the English words.
+      subjectKind: 'project',
+      projectWords: expect.any(String),
     });
     expect(sent[0]?.payload.phone).toMatch(/^\+91 \d{5} \d{5}$/);
   });
@@ -124,6 +127,7 @@ describe('removal tells customers', () => {
     const contacted = await contactMessages(contactedPhone);
     expect(contacted).toHaveLength(1);
     expect(contacted[0]?.payload.subject).toBe('your solar enquiry');
+    expect(contacted[0]?.payload.subjectKind).toBe('enquiry');
     expect(await contactMessages(newLeadPhone)).toHaveLength(0);
   });
 

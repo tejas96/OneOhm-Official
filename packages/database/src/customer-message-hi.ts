@@ -145,5 +145,10 @@ export const HINDI_WORDS: LanguageWords = {
     paid: 'आपको दे दिया गया',
     rejected: 'मंज़ूर नहीं हुआ',
   },
+  contactSubjects: {
+    project: 'आपके सोलर प्रोजेक्ट',
+    service: 'आपकी सर्विस रिक्वेस्ट',
+    enquiry: 'आपकी सोलर पूछताछ',
+  },
   alerts: { stage_rating_reply: 'हमने आपकी राय का जवाब दिया' },
 };

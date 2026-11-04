@@ -14,10 +14,16 @@ import { formatPhone } from '../../reports/quotation-document';
 import { firstNameOf } from '../person-invite';
 import type { OpenWork } from './departure-work';
 
+/**
+ * The English subject fills the WhatsApp template's own field; the kind and the project's
+ * words let Marathi and Hindi say it in their language (customer-message-words).
+ */
 interface Recipient {
   readonly phone: string;
   readonly name: string;
   readonly subject: string;
+  readonly subjectKind: 'project' | 'service' | 'enquiry';
+  readonly projectWords?: string;
 }
 
 /** One customer to tell, from the work the leaver held, in the order of the three kinds. */
@@ -38,10 +44,13 @@ async function recipientsOf(tx: Transaction, work: OpenWork): Promise<Recipient[
       .where(inArray(projects.id, [...work.managedProjects]))
       .orderBy(asc(projects.createdAt), asc(projects.id));
     for (const row of rows) {
+      const words = projectWords(row);
       found.push({
         phone: row.phone,
         name: row.name,
-        subject: `your solar project (${projectWords(row)})`,
+        subject: `your solar project (${words})`,
+        subjectKind: 'project',
+        projectWords: words,
       });
     }
   }
@@ -52,7 +61,8 @@ async function recipientsOf(tx: Transaction, work: OpenWork): Promise<Recipient[
       .innerJoin(customers, eq(customers.id, serviceRequests.customerId))
       .where(inArray(serviceRequests.id, [...work.serviceRequests]))
       .orderBy(asc(serviceRequests.createdAt), asc(serviceRequests.id));
-    for (const row of rows) found.push({ ...row, subject: 'your service request' });
+    for (const row of rows)
+      found.push({ ...row, subject: 'your service request', subjectKind: 'service' });
   }
   if (work.leads.length > 0) {
     // A lead still in `new` has not been contacted yet, so does not know anyone to be told about.
@@ -69,7 +79,8 @@ async function recipientsOf(tx: Transaction, work: OpenWork): Promise<Recipient[
         ),
       )
       .orderBy(asc(leads.createdAt), asc(leads.id));
-    for (const row of rows) found.push({ ...row, subject: 'your solar enquiry' });
+    for (const row of rows)
+      found.push({ ...row, subject: 'your solar enquiry', subjectKind: 'enquiry' });
   }
   return found;
 }
@@ -98,7 +109,14 @@ export async function tellCustomers(
       tx,
       person.phone,
       'contact_changed',
-      { customer: person.name, staff, subject: person.subject, phone },
+      {
+        customer: person.name,
+        staff,
+        subject: person.subject,
+        subjectKind: person.subjectKind,
+        ...(person.projectWords ? { projectWords: person.projectWords } : {}),
+        phone,
+      },
       // Per removal: someone added back and removed again tells their customers again.
       `contact_changed:${removal.leaverId}:${removal.targetId}:${removal.on}:${person.phone}`,
     );
