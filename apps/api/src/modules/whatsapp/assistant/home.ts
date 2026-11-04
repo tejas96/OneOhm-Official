@@ -14,7 +14,7 @@ import { HandOverService } from './hand-over';
 import { pendingButton, pendingLine, pendingRows } from './home-lines';
 import { type PendingItem, pendingForCustomer } from './pending-items';
 import { stageCount } from './progress-line';
-import { waitingFileCount } from './waiting-files';
+import { holdQuestion, waitingFileCount } from './waiting-files';
 import { WHAT_WORDS } from './what-words';
 
 /**
@@ -40,6 +40,7 @@ export class HomeService {
       this.people.answererName(chat),
       waitingFileCount(this.db, chat.id, customerId),
     ]);
+    if (waiting > 0) await holdQuestion(this.db, chat.id);
     if (projects.length === 0 && items.length === 0 && waiting === 0)
       return this.noProject(chat, first, name);
     const [project] = projects;

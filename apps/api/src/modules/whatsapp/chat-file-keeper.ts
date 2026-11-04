@@ -35,7 +35,7 @@ import type { Incoming, IncomingMedia } from './whatsapp-events';
 export class ChatFileKeeper {
   private readonly log = new Logger('WhatsApp');
   /** Files just refused, so the assistant can tell the customer why (said once, and true). */
-  private readonly refused = new Map<string, 'too_large' | 'wrong_type'>();
+  private readonly refused = new Map<string, 'too_large' | 'wrong_type' | 'empty'>();
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -67,17 +67,18 @@ export class ChatFileKeeper {
   }
 
   /** Why `keep` refused this file (once): too big, or a kind we cannot open; null if neither. */
-  refusalFor(mediaId: string): 'too_large' | 'wrong_type' | null {
+  refusalFor(mediaId: string): 'too_large' | 'wrong_type' | 'empty' | null {
     const why = this.refused.get(mediaId) ?? null;
     this.refused.delete(mediaId);
     return why;
   }
 
   /**
-   * After the assistant answered: a customer's file no flow filed goes on its home when
-   * that needs no question (`homeForFile`); else it stays "To sort" under the customer.
-   * Either way, and for a file the assistant filed without answering a request, the
-   * chat's person hears once. Never throws.
+   * After the assistant answered: a voice note or video goes on the customer's one home
+   * (else it stays "To sort" and the chat's person is told once). A photo or paper waits
+   * for "What is this?" and says nothing yet: the "Files to sort" alert covers it if it is
+   * never answered. A file the assistant filed without answering a request is told once.
+   * Never throws.
    */
   async settle(chat: Conversation, message: Incoming): Promise<void> {
     const media = message.media;
@@ -90,18 +91,18 @@ export class ChatFileKeeper {
       const documentId = row?.documentId;
       // An answered paper or a problem photo: the asker or the complaint's people hear.
       if (!documentId || (await answersSomething(this.db, documentId))) return;
-      // Filed by the assistant already (saved on its home, or waiting on "Which paper?").
+      // Filed by the assistant already (saved on a home).
       if (await isFiled(this.db, documentId))
         return await this.tellKept(this.db, chat, message, media);
-      // A photo or paper waits for "What is this?" (asked a moment after the last file); only
-      // a voice note or video goes on the customer's one home, since nothing asks about it.
+      // Only a voice note or video goes on the customer's one home, since nothing asks about it.
       const sound = media.type === 'audio' || media.type === 'video';
-      const homes = sound ? await customerHomes(this.db, chat.customerId) : [];
+      if (!sound) return;
+      const homes = await customerHomes(this.db, chat.customerId);
       const [only] = homes;
       const place = homes.length === 1 && only ? placeOn(homes, only.propertyId, 'other') : null;
       await this.db.transaction(async (tx) => {
         if (place) await filePaper(tx, documentId, place);
-        await this.tellKept(tx, chat, message, media, leftToSort(place, sound));
+        await this.tellKept(tx, chat, message, media, leftToSort(place, true));
       });
     } catch (error) {
       this.log.error(`WhatsApp file ${media.id} not filed: ${String(error)}`);
@@ -193,13 +194,17 @@ export class ChatFileKeeper {
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
       this.log.warn(`WhatsApp file ${media.id} refused: ${error.message}`);
-      this.refuse(media.id, error.fieldErrors?.file === 'Too large.' ? 'too_large' : 'wrong_type');
+      const why = error.fieldErrors?.file;
+      this.refuse(
+        media.id,
+        why === 'Too large.' ? 'too_large' : why === 'Required.' ? 'empty' : 'wrong_type',
+      );
       await this.tellLost(chat, message, media, error.message);
       return null;
     }
   }
 
-  private refuse(mediaId: string, why: 'too_large' | 'wrong_type') {
+  private refuse(mediaId: string, why: 'too_large' | 'wrong_type' | 'empty') {
     if (this.refused.size > 100) this.refused.clear();
     this.refused.set(mediaId, why);
   }

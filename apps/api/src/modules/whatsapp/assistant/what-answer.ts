@@ -5,7 +5,7 @@ import type { Environment } from '../../../config/environment';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
 import { customerHomes } from '../../customer-portal/customer-homes';
 import { DocumentMoveService } from '../../documents/document-move.service';
-import { type Conversation, lockedChat, queueReply, setState } from '../chat-store';
+import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
 import { fileAs } from './file-as';
 import { FileQuestionsService } from './file-questions';
@@ -18,11 +18,13 @@ import {
   withBatch,
   withoutFiles,
 } from './files-wait';
+import { saveWait } from './files-wait-store';
 import { type KeptFile, placeOn } from './kept-files';
 import { openPapersOf, unfiledFiles } from './paper-reads';
 import { takePaymentProof } from './payment-proof';
+import { ProblemFlowService } from './problem-flow';
 import { PROJECT_WORDS } from './project-words';
-import { askWhichHome, changeSaved, startProblem } from './what-actions';
+import { addToProblem, askWhichHome, changeSaved, startProblem } from './what-actions';
 import { savedTitle, saySaved, stillAsked } from './what-saved';
 import { targetOf } from './what-targets';
 import { WHAT_WORDS } from './what-words';
@@ -42,6 +44,7 @@ export class WhatAnswerService {
     private readonly questions: FileQuestionsService,
     private readonly requests: CustomerDocumentRequestsService,
     private readonly moves: DocumentMoveService,
+    private readonly problems: ProblemFlowService,
   ) {}
 
   /** A tap on the question, or on a Saved reply. */
@@ -53,11 +56,10 @@ export class WhatAnswerService {
         return changeSaved(
           tx,
           this.moves,
-          (changed) => this.questions.ask(tx, changed, customerId, now),
+          (changed, focus) => this.questions.ask(tx, changed, customerId, now, { focus }),
           locked,
-          customerId,
           tap.first,
-          now,
+          { customerId, now, delay: this.delay() },
         );
       const wait = filesWaitOf(locked.context);
       if (!wait) return this.say(tx, locked, MEDIA_WORDS.paperAskEnded);
@@ -82,14 +84,24 @@ export class WhatAnswerService {
   ): Promise<void> {
     const { wait, files, tap, now } = about;
     if (tap.t === 'more')
-      return void (await this.questions.ask(tx, chat, customerId, now, { stage: 'more' }));
+      return void (await this.questions.ask(tx, chat, customerId, now, {
+        stage: 'more',
+        focus: wait.focus,
+      }));
     if (tap.t === 'diff') {
       const [first] = files;
       const each = { of: files.length };
       const focus = first ? [first.id] : null;
       return void (await this.questions.ask(tx, chat, customerId, now, { focus, each }));
     }
-    if (tap.t === 'prob') return startProblem(tx, chat, customerId, wait, files, now);
+    if (tap.t === 'prob')
+      return startProblem(tx, chat, customerId, { wait, files, now, delay: this.delay() });
+    if (tap.t === 'probadd') {
+      const added = await addToProblem(tx, this.problems, chat, customerId, files, now);
+      return added
+        ? this.settle(tx, chat, customerId, wait, files, now)
+        : this.askAgain(tx, chat, customerId, now);
+    }
     if (tap.t === 'pay') {
       await takePaymentProof(tx, customerId, files, now);
       await sayWithTaps(tx, chat, WHAT_WORDS.payment, ['menu']);
@@ -191,21 +203,17 @@ export class WhatAnswerService {
       wait,
       files.map((file) => file.id),
     );
-    const delay = this.env.FILE_WAIT_SECONDS * 1000;
+    // Files that came meanwhile keep their own time; with none scheduled they are asked soon.
     const next = left
       ? {
           ...left,
           pick: null,
           offered: null,
-          askAt: left.each ? null : (left.askAt ?? now + delay),
+          askAt: left.each ? null : (left.askAt ?? now + this.delay()),
         }
       : null;
-    const context = {
-      ...(chat.context as object),
-      filesWait: next,
-      ...(filedBatches ? { filedBatches } : {}),
-    };
-    await setState(tx, chat.id, chat.state, context);
+    await saveWait(tx, chat, next, filedBatches ? { filedBatches } : {});
+    const context = { ...(chat.context as object), filesWait: next };
     // After "They're different", the next file is asked about at once.
     if (next?.each) {
       const [following] = next.files;
@@ -213,6 +221,10 @@ export class WhatAnswerService {
         focus: following ? [following.id] : null,
       });
     }
+  }
+
+  private delay(): number {
+    return this.env.FILE_WAIT_SECONDS * 1000;
   }
 
   private async askAgain(

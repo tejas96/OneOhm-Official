@@ -1,6 +1,8 @@
-import { type DatabaseExecutor, waConversations } from '@oneohm/database';
+import { type Database, type DatabaseExecutor, waConversations } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
+import { lockedChat } from '../chat-store';
 import { filesWaitOf } from './files-wait';
+import { saveWait } from './files-wait-store';
 import { unfiledFiles } from './paper-reads';
 
 /**
@@ -25,4 +27,16 @@ export async function waitingFileCount(
     wait.files.map((file) => file.id),
   );
   return live.length;
+}
+
+/**
+ * Home is showing "You have {n} files not saved yet." with [What are they?]: the question
+ * that was due is not sent as well, so the customer gets it once.
+ */
+export async function holdQuestion(db: Database, chatId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const chat = await lockedChat(tx, chatId);
+    const wait = filesWaitOf(chat.context);
+    if (wait && wait.askAt !== null) await saveWait(tx, chat, { ...wait, askAt: null });
+  });
 }

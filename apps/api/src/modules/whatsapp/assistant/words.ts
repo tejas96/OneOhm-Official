@@ -73,6 +73,7 @@ const EN_MEDIA_WORDS = {
   photoOnly: 'Photo or paper sent on WhatsApp.',
   tooLarge: 'That file is too big (max 25 MB). Please send a photo or PDF.',
   wrongType: "We can't open this kind of file. Please send a photo or PDF.",
+  emptyFile: 'That file is empty. Please send it again.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
   paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
   paperAskEnded: 'Your files are already saved. Nothing else was changed.',

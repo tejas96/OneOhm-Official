@@ -25,6 +25,7 @@ export async function filesNotMatched(db: Database, asked: AskedPaper): Promise<
       and(
         eq(documents.customerId, asked.customerId),
         eq(documents.category, 'other'),
+        isNull(documents.sortedAt),
         isNull(documents.removedAt),
         gt(documents.createdAt, asked.askedAt),
         home,

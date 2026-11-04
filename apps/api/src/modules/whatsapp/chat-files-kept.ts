@@ -80,12 +80,13 @@ export async function isFiled(db: DatabaseExecutor, documentId: string): Promise
       propertyId: documents.propertyId,
       serviceRequestId: documents.serviceRequestId,
       category: documents.category,
+      sortedAt: documents.sortedAt,
     })
     .from(documents)
     .where(eq(documents.id, documentId));
   if (!document || document.projectId || document.propertyId || document.serviceRequestId)
     return true;
-  if (document.category !== 'other') return true;
+  if (document.category !== 'other' || document.sortedAt) return true;
   const [answer] = await db
     .select({ id: customerActions.id })
     .from(customerActions)

@@ -3,19 +3,14 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { ChatFileKeeper } from '../chat-file-keeper';
 import { isFiled } from '../chat-files-kept';
-import {
-  type Conversation,
-  chatDocumentFor,
-  lockedChat,
-  queueReply,
-  setState,
-} from '../chat-store';
+import { type Conversation, chatDocumentFor, lockedChat, queueReply } from '../chat-store';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
 import { withFile } from './files-wait';
+import { saveWait } from './files-wait-store';
 import { HandOverService } from './hand-over';
-import { ProblemFlowService, recentRequest } from './problem-flow';
+import { ProblemFlowService } from './problem-flow';
 import { MEDIA_WORDS } from './words';
 
 /** Files sent before the customer said what they are about wait this long, at most six. */
@@ -60,8 +55,8 @@ export class MediaIntakeService {
   ) {}
 
   /**
-   * In order: the problem being reported, the request raised a moment ago, else the file
-   * waits for "What is this?". In a chat a person holds the questions still go out.
+   * The problem being reported takes its photos; any other file waits for "What is this?"
+   * (which offers a problem told a moment ago). In a chat a person holds the questions still go out.
    */
   async receive(
     chat: Conversation,
@@ -85,11 +80,6 @@ export class MediaIntakeService {
       const words = said === media.fileName ? '' : said;
       return this.problems.raise(chat, customerId, words, [...earlier, file]);
     }
-    const raised = recentRequest(chat.context, now);
-    if (raised) {
-      const file = await this.storedOrSay(chat, media);
-      return file ? this.problems.addPhoto(chat, customerId, raised.id, file) : undefined;
-    }
     return this.wait(chat, media, now);
   }
 
@@ -107,7 +97,7 @@ export class MediaIntakeService {
         at: now,
       };
       const filesWait = withFile(locked.context, file, now, this.env.FILE_WAIT_SECONDS);
-      await setState(tx, locked.id, locked.state, { ...(locked.context as object), filesWait });
+      await saveWait(tx, locked, filesWait);
     });
   }
 
@@ -128,7 +118,9 @@ export class MediaIntakeService {
         ? MEDIA_WORDS.tooLarge
         : why === 'wrong_type'
           ? MEDIA_WORDS.wrongType
-          : MEDIA_WORDS.failed;
+          : why === 'empty'
+            ? MEDIA_WORDS.emptyFile
+            : MEDIA_WORDS.failed;
     await queueReply(this.db, chat, { kind: 'text', body });
     return null;
   }

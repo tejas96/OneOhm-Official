@@ -5,8 +5,8 @@
  * a restart loses nothing and Menu, hello or any other step never drops a file.
  */
 
-/** At most this many files wait (one list's worth); the oldest are dropped from the memory. */
-export const MAX_WAITING = 10;
+/** One question is about this many files at most (a list's worth); the rest wait for the next. */
+export const ASK_AT_MOST = 10;
 /** A question older than this is "old": tapping it asks again with the latest files. */
 export const QUESTION_HOURS = 24;
 const HOUR = 3_600_000;
@@ -30,7 +30,7 @@ export interface FilesWait {
   /** When the question goes out; null once it has gone (or nothing is scheduled). */
   readonly askAt: number | null;
   readonly askedAt: number | null;
-  /** The files the open question is about: one at a time after "They're different". */
+  /** The files the open question was asked about (an answer files only these). */
   readonly focus: readonly string[] | null;
   readonly each: boolean;
   /** How many files were being asked about one by one (for "File 2 of 3"). */
@@ -66,17 +66,9 @@ export function withFile(
   delaySeconds: number,
 ): FilesWait {
   const before = filesWaitOf(context) ?? EMPTY;
-  const files = [...before.files.filter((one) => one.id !== file.id), file].slice(-MAX_WAITING);
-  // A new file makes the open question about all the waiting files again.
-  return {
-    ...before,
-    files,
-    askAt: now + delaySeconds * 1000,
-    focus: null,
-    each: false,
-    offered: null,
-    pick: null,
-  };
+  const files = [...before.files.filter((one) => one.id !== file.id), file];
+  // The open question stays about the files it was asked about; the new file waits for its own.
+  return { ...before, files, askAt: now + delaySeconds * 1000 };
 }
 
 /** Whether the question is due now. */
@@ -105,7 +97,8 @@ export function asked(
 ): FilesWait {
   return {
     ...wait,
-    askAt: null,
+    // A file that came meanwhile keeps its own time; the question just asked used up a due one.
+    askAt: wait.askAt !== null && wait.askAt > now ? wait.askAt : null,
     askedAt: now,
     focus: about.focus,
     offered: about.offered,
@@ -117,13 +110,15 @@ export function asked(
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const TAP = new RegExp(
-  `^what:(yes|more|diff|pay|prob|other|ask|a:(${UUID})|i:(${UUID}|person):([a-z0-9_]{1,50})|change:(${UUID}))$`,
+  `^what:(yes|more|diff|pay|prob|probadd|other|ask|a:(${UUID})|i:(${UUID}|person):([a-z0-9_]{1,50})|change:(${UUID}))$`,
 );
 const WHERE = new RegExp(`^where:(${UUID})$`);
 
+type PlainTap = 'yes' | 'more' | 'diff' | 'pay' | 'prob' | 'probadd' | 'other' | 'ask';
+
 /** A tap on the "What is this?" question or the Saved reply. */
 export type WhatTap =
-  | { readonly t: 'yes' | 'more' | 'diff' | 'pay' | 'prob' | 'other' | 'ask' }
+  | { readonly t: PlainTap }
   | { readonly t: 'a'; readonly actionId: string }
   | { readonly t: 'i'; readonly key: string; readonly propertyId: string | null }
   | { readonly t: 'change'; readonly first: string };
@@ -135,7 +130,7 @@ export function readWhatTap(id: string | null | undefined): WhatTap | null {
   if (m[2]) return { t: 'a', actionId: m[2] };
   if (m[3] && m[4]) return { t: 'i', key: m[4], propertyId: m[3] === 'person' ? null : m[3] };
   if (m[5]) return { t: 'change', first: m[5] };
-  return { t: m[1] as 'yes' | 'more' | 'diff' | 'pay' | 'prob' | 'other' | 'ask' };
+  return { t: m[1] as PlainTap };
 }
 
 /** The home a "For which home?" row was tapped for, or null. */

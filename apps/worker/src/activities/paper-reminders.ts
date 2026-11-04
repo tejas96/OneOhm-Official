@@ -164,6 +164,7 @@ async function alertFilesToSort(db: Database, now: Date): Promise<number> {
         isNull(documents.projectId),
         isNull(documents.propertyId),
         isNull(documents.removedAt),
+        isNull(documents.sortedAt),
         eq(documents.category, 'other'),
         lte(documents.createdAt, new Date(now.getTime() - SORT_AFTER)),
         gt(documents.createdAt, new Date(now.getTime() - SORT_UNTIL)),

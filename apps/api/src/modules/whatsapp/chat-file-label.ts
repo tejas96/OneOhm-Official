@@ -36,6 +36,7 @@ export const chatFileColumns = {
   propertyId: documents.propertyId,
   serviceRequestId: documents.serviceRequestId,
   leadId: documents.leadId,
+  sortedAt: documents.sortedAt,
 };
 
 type Home = Parameters<typeof homeName>[0];
@@ -49,6 +50,7 @@ interface FileRow {
   readonly propertyId: string | null;
   readonly serviceRequestId: string | null;
   readonly leadId: string | null;
+  readonly sortedAt?: Date | null;
 }
 
 /** The customer's properties: a home's name needs them to tell two of the same name apart. */
@@ -72,7 +74,8 @@ export async function homesOf(db: DatabaseExecutor, customerId: string | null): 
  */
 export function filedAs(file: FileRow, homes: readonly Home[]): string | null {
   const category = file.category ?? 'other';
-  const filed = file.projectId || file.propertyId || file.serviceRequestId || file.leadId;
+  const filed =
+    file.projectId || file.propertyId || file.serviceRequestId || file.leadId || file.sortedAt;
   if (category === 'other' && !filed) return null;
   const kind = KIND_LABELS[category as DocumentCategory] ?? category;
   const home =

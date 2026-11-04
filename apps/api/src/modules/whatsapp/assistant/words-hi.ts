@@ -71,6 +71,7 @@ export const HI: Words<AssistantWords> = {
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
     wrongType: 'हम इस तरह की फ़ाइल नहीं खोल सकते। कृपया फ़ोटो या PDF भेजें।',
+    emptyFile: 'वह फ़ाइल खाली है। कृपया उसे फिर से भेजें।',
     tooLarge: 'वह फ़ाइल बहुत बड़ी है (अधिकतम 25 MB)। कृपया फ़ोटो या PDF भेजें।',
     failed: 'माफ़ कीजिए, वह फ़ाइल खुल नहीं सकी। कृपया थोड़ी देर बाद फिर से भेजें।',
     paperGone: 'वह कागज़ अब नहीं चाहिए, या हमारे पास पहले से है। कुछ नहीं बदला गया।',

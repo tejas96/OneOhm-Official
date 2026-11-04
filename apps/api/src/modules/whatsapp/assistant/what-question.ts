@@ -8,6 +8,8 @@ export interface AskedRow {
   readonly id: string;
   readonly title: string;
   readonly home: string | null;
+  /** An ID or income paper: it serves every home. */
+  readonly person: boolean;
 }
 
 /** A paper on a checklist that the customer has not sent: offered when nothing is asked. */
@@ -30,6 +32,8 @@ export interface QuestionInput {
   readonly stage: 'first' | 'more';
   readonly asked: readonly AskedRow[];
   readonly missing: readonly MissingRow[];
+  /** A problem was told in the last half hour: these photos may be for it. */
+  readonly problem: boolean;
 }
 
 /** A list keeps 10 rows. */
@@ -45,31 +49,42 @@ const row = (id: string, title: string, description?: string) => ({
  * The "What is this?" message for files that just arrived (redesign 5.2). One paper asked:
  * "Is this your electricity bill for Sangli?" with Yes / Something else. Two or more: the
  * asked papers. Nothing asked: the customer's missing checklist papers (trimmed to fit), then
- * Payment proof, Problem photo and Something else. A burst adds "They're different".
+ * Payment proof, Problem photo and Something else. A burst adds "They're different". A
+ * problem told in the last half hour is offered first ("Photo for your problem"); with
+ * nothing asked it is the one question, Yes / Something else. Nothing is ever attached unasked.
  */
 export function buildQuestion(input: QuestionInput): { reply: ChatReply; offered: string | null } {
   const words = WHAT_WORDS;
-  const { count, asked, stage } = input;
+  const { count, asked, stage, problem } = input;
   const burst = count > 1 && input.each === null;
   const body = input.each
     ? words.askEach(input.each.n, input.each.of)
     : burst
       ? words.askMany(count, input.photos)
       : words.ask;
-  const different = burst
-    ? [row('what:diff', words.rows.different.title, words.rows.different.description)]
-    : [];
+  const confirmButtons = (yes: string) => [
+    { id: yes, title: words.buttons.yes },
+    { id: 'what:more', title: words.buttons.else },
+    ...(burst ? [{ id: 'what:diff', title: words.buttons.different }] : []),
+  ];
   const [only] = asked;
+  if (stage === 'first' && asked.length === 0 && problem)
+    return {
+      reply: {
+        kind: 'buttons',
+        body: words.confirmProblem(count),
+        buttons: confirmButtons('what:probadd'),
+      },
+      offered: null,
+    };
   if (stage === 'first' && asked.length === 1 && only) {
     const confirm = burst
       ? words.confirmMany(count, input.photos, only.title, only.home)
       : words.confirmOne(only.title, only.home);
-    const buttons = [
-      { id: 'what:yes', title: words.buttons.yes },
-      { id: 'what:more', title: words.buttons.else },
-      ...(burst ? [{ id: 'what:diff', title: words.buttons.different }] : []),
-    ];
-    return { reply: { kind: 'buttons', body: confirm, buttons }, offered: only.id };
+    return {
+      reply: { kind: 'buttons', body: confirm, buttons: confirmButtons('what:yes') },
+      offered: only.id,
+    };
   }
   const list = (rows: ReturnType<typeof row>[]): ChatReply => ({
     kind: 'list',
@@ -77,13 +92,17 @@ export function buildQuestion(input: QuestionInput): { reply: ChatReply; offered
     button: words.choose,
     rows,
   });
+  const different = burst
+    ? [row('what:diff', words.rows.different.title, words.rows.different.description)]
+    : [];
+  const forProblem = problem
+    ? [row('what:probadd', words.rows.problemAdd.title, words.rows.problemAdd.description)]
+    : [];
   if (stage === 'first' && asked.length >= 2) {
-    const room = ROWS - 1 - different.length;
-    const rows = asked
-      .slice(0, room)
-      .map((one) => row(askedTap(one.id), one.title, one.home ?? words.allHomes));
+    const room = ROWS - 1 - different.length - forProblem.length;
+    const rows = asked.slice(0, room).map((one) => row(askedTap(one.id), one.title, describe(one)));
     const elsewhere = row('what:more', words.rows.other.title, words.rows.other.description);
-    return { reply: list([...rows, elsewhere, ...different]), offered: null };
+    return { reply: list([...forProblem, ...rows, elsewhere, ...different]), offered: null };
   }
   const fixed = [
     row('what:pay', words.rows.pay.title, words.rows.pay.description),
@@ -92,7 +111,17 @@ export function buildQuestion(input: QuestionInput): { reply: ChatReply; offered
     ...different,
   ];
   const rows = input.missing
-    .slice(0, ROWS - fixed.length)
-    .map((one) => row(itemTap(one.key, one.propertyId), one.title, one.home ?? words.allHomes));
-  return { reply: list([...rows, ...fixed]), offered: null };
+    .slice(0, ROWS - fixed.length - forProblem.length)
+    .map((one) =>
+      row(
+        itemTap(one.key, one.propertyId),
+        one.title,
+        one.propertyId === null ? words.allHomes : (one.home ?? undefined),
+      ),
+    );
+  return { reply: list([...forProblem, ...rows, ...fixed]), offered: null };
 }
+
+/** The home a row is for; "For all your homes" only for an ID paper, nothing when unknown. */
+const describe = (paper: AskedRow): string | undefined =>
+  paper.person ? WHAT_WORDS.allHomes : (paper.home ?? undefined);

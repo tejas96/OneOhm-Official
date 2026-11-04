@@ -29,6 +29,7 @@ export async function askedRows(
     id: paper.id,
     title: paper.title,
     home: homeOfPaper(homes, paper)?.title ?? null,
+    person: isPersonDocumentCategory(paper.category),
   }));
   return { rows, papers };
 }

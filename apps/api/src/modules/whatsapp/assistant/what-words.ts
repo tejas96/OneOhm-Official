@@ -18,6 +18,10 @@ const EN_WHAT = {
   askMany: (count: number, photos: boolean) =>
     `Got your ${count} ${photos ? 'photos' : 'files'} ✅ What are they?`,
   askEach: (n: number, of: number) => `File ${n} of ${of} — what is it?`,
+  confirmProblem: (count: number) =>
+    count === 1
+      ? 'Is this a photo for the problem you told us about?'
+      : 'Are these photos for the problem you told us about?',
   confirmOne: (paper: string, home: string | null) =>
     `Is this your *${paper}*${home ? ` for ${home}` : ''}?`,
   confirmMany: (count: number, photos: boolean, paper: string, home: string | null) =>
@@ -25,6 +29,10 @@ const EN_WHAT = {
   rows: {
     pay: { title: 'Payment proof', description: 'Money you paid us' },
     problem: { title: 'Problem photo', description: 'Something is wrong' },
+    problemAdd: {
+      title: 'Photo for your problem',
+      description: 'Add it to the problem you told us',
+    },
     other: { title: 'Something else', description: 'Any other paper or photo' },
     different: { title: "They're different", description: 'We ask about each one' },
   },
@@ -55,12 +63,15 @@ const MR_WHAT: Words<typeof EN_WHAT> = {
   ask: 'हे काय आहे?',
   askMany: (count, photos) => `तुमचे ${count} ${photos ? 'फोटो' : 'फाइल'} मिळाले ✅ ते काय आहेत?`,
   askEach: (n, of) => `${of} पैकी फाइल ${n} — ही काय आहे?`,
+  confirmProblem: (count) =>
+    count === 1 ? 'हा तुम्ही सांगितलेल्या समस्येचा फोटो आहे का?' : 'हे तुम्ही सांगितलेल्या समस्येचे फोटो आहेत का?',
   confirmOne: (paper, home) => `हे ${home ? `${home} साठीचे ` : ''}तुमचे *${paper}* आहे का?`,
   confirmMany: (count, photos, paper, home) =>
     `तुमचे ${count} ${photos ? 'फोटो' : 'फाइल'} मिळाले ✅ ते ${home ? `${home} साठीचे ` : ''}तुमचे *${paper}* आहेत का?`,
   rows: {
     pay: { title: 'पेमेंटचा पुरावा', description: 'तुम्ही आम्हाला दिलेले पैसे' },
     problem: { title: 'समस्येचा फोटो', description: 'काहीतरी बिघडले आहे' },
+    problemAdd: { title: 'तुमच्या समस्येचा फोटो', description: 'तुम्ही सांगितलेल्या समस्येला जोडा' },
     other: { title: 'दुसरे काहीतरी', description: 'इतर कोणताही कागद किंवा फोटो' },
     different: { title: 'त्या वेगळ्या आहेत', description: 'आम्ही प्रत्येकाबद्दल विचारू' },
   },
@@ -89,12 +100,15 @@ const HI_WHAT: Words<typeof EN_WHAT> = {
   ask: 'यह क्या है?',
   askMany: (count, photos) => `आपकी ${count} ${photos ? 'फ़ोटो' : 'फ़ाइलें'} मिल गईं ✅ ये क्या हैं?`,
   askEach: (n, of) => `${of} में से फ़ाइल ${n} — यह क्या है?`,
+  confirmProblem: (count) =>
+    count === 1 ? 'क्या यह आपकी बताई समस्या की फ़ोटो है?' : 'क्या ये आपकी बताई समस्या की फ़ोटो हैं?',
   confirmOne: (paper, home) => `क्या यह ${home ? `${home} के लिए ` : ''}आपका *${paper}* है?`,
   confirmMany: (count, photos, paper, home) =>
     `आपकी ${count} ${photos ? 'फ़ोटो' : 'फ़ाइलें'} मिल गईं ✅ क्या ये ${home ? `${home} के लिए ` : ''}आपका *${paper}* हैं?`,
   rows: {
     pay: { title: 'भुगतान का सबूत', description: 'आपने हमें जो पैसे दिए' },
     problem: { title: 'समस्या की फ़ोटो', description: 'कुछ गड़बड़ है' },
+    problemAdd: { title: 'आपकी समस्या की फ़ोटो', description: 'बताई गई समस्या में जोड़ें' },
     other: { title: 'कुछ और', description: 'कोई और कागज़ या फ़ोटो' },
     different: { title: 'ये अलग-अलग हैं', description: 'हम हर एक के बारे में पूछेंगे' },
   },

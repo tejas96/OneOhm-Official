@@ -8,10 +8,6 @@ export interface KeptFile {
   readonly contentType: string;
 }
 
-/** A voice note or a video: kept and shown, never the answer to a paper request. */
-export const isSound = (contentType: string): boolean =>
-  contentType.startsWith('audio/') || contentType.startsWith('video/');
-
 /** A photo or PDF: the files an asked-for paper accepts. */
 export const answersRequests = (contentType: string): boolean =>
   (ACCEPTED_FILE_TYPES as readonly string[]).includes(contentType);

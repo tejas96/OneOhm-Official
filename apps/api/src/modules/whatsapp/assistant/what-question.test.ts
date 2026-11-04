@@ -11,9 +11,10 @@ const base: QuestionInput = {
   stage: 'first',
   asked: [],
   missing: [],
+  problem: false,
 };
-const bill = { id: 'a1', title: 'Electricity bill', home: 'Sangli' };
-const pan = { id: 'a2', title: 'PAN card', home: null };
+const bill = { id: 'a1', title: 'Electricity bill', home: 'Sangli', person: false };
+const pan = { id: 'a2', title: 'PAN card', home: null, person: true };
 const missing = (count: number): MissingRow[] =>
   Array.from({ length: count }, (_, n) => ({
     key: `k${n}`,
@@ -91,6 +92,27 @@ describe('What is this? (redesign 5.2)', () => {
     const { reply } = buildQuestion({ ...base, count: 3, each: { n: 2, of: 3 } });
     expect(reply).toMatchObject({ body: 'File 2 of 3 — what is it?' });
     expect(reply.kind === 'list' ? reply.rows.map((row) => row.id) : []).not.toContain('what:diff');
+  });
+
+  it('only an ID paper says "For all your homes"; an unknown home says nothing', () => {
+    const unknown = { id: 'a3', title: 'Sale deed', home: null, person: false };
+    const { reply } = buildQuestion({ ...base, asked: [pan, unknown] });
+    const rows = reply.kind === 'list' ? reply.rows : [];
+    expect(rows[0]?.description).toBe('For all your homes');
+    expect(rows[1]?.description).toBeUndefined();
+  });
+
+  it('offers a problem told a moment ago, never attaching the photo unasked', () => {
+    const only = buildQuestion({ ...base, problem: true }).reply;
+    expect(only).toMatchObject({
+      kind: 'buttons',
+      body: 'Is this a photo for the problem you told us about?',
+    });
+    expect(only.kind === 'buttons' ? only.buttons[0]?.id : '').toBe('what:probadd');
+    const withPaper = buildQuestion({ ...base, problem: true, asked: [bill, pan] }).reply;
+    expect(withPaper.kind === 'list' ? withPaper.rows[0]?.id : '').toBe('what:probadd');
+    const nothing = buildQuestion({ ...base, problem: true, stage: 'more' }).reply;
+    expect(nothing.kind === 'list' ? nothing.rows[0]?.title : '').toBe('Photo for your problem');
   });
 
   it('after Something else, never offers the asked papers again', () => {

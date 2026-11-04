@@ -35,23 +35,32 @@ describe('files waiting for "What is this?"', () => {
     expect(isDue(second, now + 25_000)).toBe(true);
   });
 
-  it('counts a retried file once and keeps ten at most', () => {
+  it('counts a retried file once and never drops a file', () => {
     let wait = withFile({}, file('a'), now, 15);
     wait = withFile({ filesWait: wait }, file('a'), now, 15);
     expect(wait.files).toHaveLength(1);
     for (let n = 0; n < 12; n += 1) wait = withFile({ filesWait: wait }, file(`f${n}`), now, 15);
-    expect(wait.files).toHaveLength(10);
+    expect(wait.files).toHaveLength(13);
     expect(wait.files.at(-1)?.id).toBe('f11');
   });
 
-  it('a new file makes the open question about all the files again', () => {
-    const before = asked(withFile({}, file('a'), now, 15), now, {
+  it('a late file waits for its own question and leaves the open one alone', () => {
+    const before = asked(withFile({}, file('a'), now, 15), now + 15_000, {
       focus: ['a'],
       offered: 'x',
       each: { of: 1 },
     });
-    const after = withFile({ filesWait: before }, file('b'), now, 15);
-    expect(after).toMatchObject({ focus: null, each: false, offered: null });
+    expect(before.askAt).toBeNull();
+    const after = withFile({ filesWait: before }, file('b', now + 20_000), now + 20_000, 15);
+    expect(after).toMatchObject({ focus: ['a'], each: true, offered: 'x', askAt: now + 35_000 });
+  });
+
+  it('asking about some files keeps the time of a file that came meanwhile', () => {
+    const wait = withFile({}, file('a'), now, 15);
+    // A tap at `now` while the late file's question is still in the future.
+    expect(asked(wait, now, { focus: ['a'], offered: null }).askAt).toBe(now + 15_000);
+    // The timer's own question (due) uses the time up.
+    expect(asked(wait, now + 20_000, { focus: ['a'], offered: null }).askAt).toBeNull();
   });
 
   it('drops filed files and ends when none are left', () => {

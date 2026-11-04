@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { DatabaseExecutor } from '@oneohm/database';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { activeHomes } from '../../customer-portal/active-projects';
@@ -73,11 +74,18 @@ export class ProblemFlowService {
     return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['problems', 'menu']);
   }
 
-  /** Another photo for the request just raised (the document it was stored as). */
-  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: string) {
-    const added = await this.attach(customerId, requestId, file);
-    const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
-    return sayWithTaps(this.db, chat, body, ['problems', 'menu']);
+  /** More photos for the request just raised (the documents they were stored as). */
+  async addPhotos(
+    db: DatabaseExecutor,
+    chat: Conversation,
+    customerId: string,
+    requestId: string,
+    files: readonly string[],
+  ) {
+    let added = 0;
+    for (const file of files) if (await this.attach(customerId, requestId, file)) added += 1;
+    const body = added === files.length ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
+    return sayWithTaps(db, chat, body, ['problems', 'menu']);
   }
 
   /**

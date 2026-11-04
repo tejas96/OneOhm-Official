@@ -51,6 +51,8 @@ export async function filePaper(
       projectId: to.projectId,
       propertyId: to.propertyId,
       category: to.category,
+      // Said where it goes (or that it stays as Other): no longer "to sort".
+      sortedAt: new Date(),
       ...(to.serviceRequestId ? { serviceRequestId: to.serviceRequestId } : {}),
     })
     .where(eq(documents.id, documentId));

@@ -59,7 +59,11 @@ export async function saySaved(
 
 /** What a picked row is called in the Saved reply: the asked title, or its kind. */
 export function savedTitle(asked: OpenPaper | undefined, target: Target): string {
-  if (asked) return asked.title;
+  // An ID paper is named by its kind, not by what the team typed when asking.
+  if (asked)
+    return isPersonDocumentCategory(asked.category)
+      ? paperKindWords(languageNow(), asked.category)
+      : asked.title;
   if (target.category === 'other') return WHAT_WORDS.otherFile;
   return paperKindWords(languageNow(), target.category);
 }
