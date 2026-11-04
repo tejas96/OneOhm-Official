@@ -31,6 +31,7 @@ const PROBLEMS: Record<RemovalProblem, string> = {
   target_is_leaver: 'The work cannot go to the person who is leaving. Pick someone else.',
   target_not_active: 'That person is no longer on the team. Pick someone else.',
   target_is_reseller: 'Work cannot go to a reseller. Pick someone else.',
+  target_not_staff: 'Pick someone else',
   future_date: 'The last working day is today or earlier. Remove them on the day they leave.',
 };
 

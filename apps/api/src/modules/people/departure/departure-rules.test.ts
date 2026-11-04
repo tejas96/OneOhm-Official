@@ -31,6 +31,17 @@ describe('checkRemoval', () => {
     );
   });
 
+  it('blocks a target with no staff role', () => {
+    for (const kinds of [['partner'], ['partner', 'reseller']] as const) {
+      expect(checkRemoval({ ...base, target: { ...target, kinds: [...kinds] } })).toBe(
+        'target_not_staff',
+      );
+    }
+    expect(
+      checkRemoval({ ...base, target: { ...target, kinds: ['partner', 'staff'] } }),
+    ).toBeNull();
+  });
+
   it('blocks a future last day', () => {
     expect(checkRemoval({ ...base, lastWorkingDay: '2026-11-05' })).toBe('future_date');
   });

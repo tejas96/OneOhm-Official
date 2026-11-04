@@ -46,6 +46,13 @@ describe('removal guards', () => {
     const bad = await remove(admin, leaver.id, reseller.id);
     expect([bad.status, bad.body.code]).toEqual([409, 'target_is_reseller']);
     expect(bad.body.message).toContain('Pick someone else');
+    const crew = await person('Crew Pick (guard test)', ['ic_partner']);
+    const notStaff = await remove(admin, leaver.id, crew.id);
+    expect([notStaff.status, notStaff.body.code, notStaff.body.message]).toEqual([
+      409,
+      'target_not_staff',
+      'Pick someone else',
+    ]);
   });
 
   it('two removals racing: exactly one succeeds', async () => {
