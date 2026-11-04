@@ -1,10 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChecklistItem, DocumentChecklist } from '@oneohm/api-contracts';
-import { customerActions, customers, discoms, documents, projects } from '@oneohm/database';
+import {
+  customerActions,
+  customers,
+  discoms,
+  documents,
+  projects,
+  projectTasks,
+} from '@oneohm/database';
 import {
   countsForSite,
   customerCategoryFor,
   isCurrentPaper,
+  isDiscomApplication,
   requirementsFor,
   type SiteScope,
   sameAsk,
@@ -16,6 +24,41 @@ import { customerHomes } from '../customer-portal/customer-homes';
 import { fileSystemPapers } from '../documents/system-papers-hook';
 import { loadRequirements } from './document-requirements.service';
 import { ReportStatusService } from './report-status.service';
+
+/**
+ * The files that still count for an item: a checked paper older than the item's maximum age
+ * no longer does (redesign 5.4, until the DISCOM application is done); one still waiting
+ * for its check does.
+ */
+const currentFiles = <T extends { checkedAt: Date | null; createdAt: Date }>(
+  files: readonly T[],
+  maxAgeDays: number | null | undefined,
+  now: Date,
+): T[] =>
+  files.filter((file) => !file.checkedAt || isCurrentPaper(file.createdAt, maxAgeDays, now));
+
+/** missing, received and waiting for the team's look, or checked. */
+const checkOf = (onFile: number, unchecked: number) =>
+  onFile === 0
+    ? ('missing' as const)
+    : unchecked > 0
+      ? ('to_check' as const)
+      : ('checked' as const);
+
+/** Any open ask of this kind on this home (or for this person), or of this item, covers the row. */
+const isAsked = (
+  open: readonly { category: string; requirementKey: string | null }[],
+  key: string,
+  category: string,
+): boolean =>
+  open.some(
+    (one) =>
+      one.category === category ||
+      sameAsk(
+        { requirementKey: key, category },
+        { requirementKey: one.requirementKey, category: one.category },
+      ),
+  );
 
 /**
  * Which papers and reports a project needs and which it has (PRD 3.14, 3.18). ID papers
@@ -167,23 +210,26 @@ export class DocumentChecklistService {
       ...project.project,
       discomCode: project.discomCode,
     });
-    return { projectId, project, files, asked, needed, now: new Date() };
+    // A paper's maximum age matters until the DISCOM application is done (redesign 5.4).
+    const tasks = await this.db
+      .select({ key: projectTasks.templateKey })
+      .from(projectTasks)
+      .where(and(eq(projectTasks.projectId, projectId), eq(projectTasks.status, 'completed')));
+    const applied = tasks.some((task) => isDiscomApplication(task.key));
+    return { projectId, project, files, asked, needed, applied, now: new Date() };
   }
 
   /** One checklist row per required paper (reports are added by `checklist`). */
   private paperItems(
     context: Awaited<ReturnType<DocumentChecklistService['context']>>,
   ): ChecklistItem[] {
-    const { files, asked, needed, now } = context;
+    const { files, asked, needed, applied, now } = context;
     return needed.map((requirement) => {
       const onFile = files.filter(
         (file) =>
           (requirement.categories as readonly string[]).includes(file.category) && !file.reportKey,
       );
-      // A paper older than the item's maximum age no longer counts (redesign 5.4).
-      const current = onFile.filter((file) =>
-        isCurrentPaper(file.createdAt, requirement.maxAgeDays, now),
-      );
+      const current = currentFiles(onFile, applied ? null : requirement.maxAgeDays, now);
       const ids = current.map((file) => file.id);
       const tooOld = onFile.length > 0 && current.length === 0;
       const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
@@ -200,22 +246,12 @@ export class DocumentChecklistService {
         kind: 'paper' as const,
         status: ids.length > 0 ? ('present' as const) : ('missing' as const),
         documentIds: tooOld ? onFile.map((file) => file.id) : ids,
-        check: ids.length === 0 ? 'missing' : unchecked.length > 0 ? 'to_check' : 'checked',
+        check: checkOf(ids.length, unchecked.length),
         actionId: unchecked.length > 0 ? (waiting?.id ?? null) : null,
         missing: [],
         askCategory,
         tooOld,
-        requested:
-          askCategory !== null &&
-          // Any open ask of this kind on this home (or for this person) covers the row.
-          asked.open.some(
-            (one) =>
-              one.category === askCategory ||
-              sameAsk(
-                { requirementKey: requirement.key, category: askCategory },
-                { requirementKey: one.requirementKey, category: one.category },
-              ),
-          ),
+        requested: askCategory !== null && isAsked(asked.open, requirement.key, askCategory),
       };
     });
   }

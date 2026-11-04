@@ -70,7 +70,7 @@ describe('Papers: a burst, Change, and files that wait', () => {
     expect((await actionOf(asked.id))?.status).toBe('received');
     const after = (await replies(customer.phone)).slice(before);
     expect(after).toHaveLength(1);
-    expect(after[0]?.body).toBe("Saved ✅ 3 files as *Aadhaar card (test)*. We'll check them.");
+    expect(after[0]?.body).toBe("Saved ✅ 3 files as *Aadhaar / PAN*. We'll check them.");
   });
 
   it("They're different: one question per file, one at a time", async () => {

@@ -1,6 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { customerActions, customers, documents, projects } from '@oneohm/database';
-import { eq, inArray, max } from 'drizzle-orm';
+import {
+  customerActions,
+  customers,
+  documents,
+  projects,
+  type Transaction,
+} from '@oneohm/database';
+import { isDiscomApplication } from '@oneohm/domain';
+import { eq, inArray, max, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logAction } from '../documents/customer-action-log';
@@ -32,11 +39,7 @@ export class StalePaperAsksService {
    * `<code>_application`; not the subsidy's), stale papers are asked for. Never undoes the start.
    */
   async afterStart(task: { projectId: string; templateKey: string }): Promise<void> {
-    const key = task.templateKey;
-    const application =
-      key === 'discom_application' ||
-      (key.endsWith('_application') && key !== 'subsidy_application');
-    if (!application) return;
+    if (!isDiscomApplication(task.templateKey)) return;
     try {
       await this.askForStale(task.projectId);
     } catch (error) {
@@ -46,10 +49,18 @@ export class StalePaperAsksService {
 
   /** Returns how many papers were asked for. */
   async askForStale(projectId: string): Promise<number> {
+    // Two starts at once (a retry, a double tap) take turns, so the paper is asked for once.
+    return this.db.transaction(async (lock) => {
+      await lock.execute(sql`select pg_advisory_xact_lock(hashtext(${`stale-ask:${projectId}`}))`);
+      return this.askLocked(lock, projectId);
+    });
+  }
+
+  private async askLocked(lock: Transaction, projectId: string): Promise<number> {
     const { items } = await this.checklists.checklist(projectId);
     const stale = items.filter((item) => item.tooOld && item.askCategory && !item.requested);
     if (stale.length === 0) return 0;
-    const [project] = await this.db
+    const [project] = await lock
       .select({
         code: projects.code,
         propertyId: projects.propertyId,
@@ -65,11 +76,11 @@ export class StalePaperAsksService {
     for (const item of stale) {
       const category = item.askCategory;
       if (!category) continue;
-      const [newest] = await this.db
+      const [newest] = await lock
         .select({ at: max(documents.createdAt) })
         .from(documents)
         .where(inArray(documents.id, item.documentIds));
-      await this.db.transaction(async (tx) => {
+      await lock.transaction(async (tx) => {
         const [row] = await tx
           .insert(customerActions)
           .values({

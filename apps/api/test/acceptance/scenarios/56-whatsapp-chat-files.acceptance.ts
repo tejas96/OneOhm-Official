@@ -94,7 +94,7 @@ describe('WhatsApp chat files', () => {
     expect(request?.status).toBe('received');
     // An ID paper names no home.
     expect((await replies(customer.phone)).at(-1)?.body).toBe(
-      "Saved ✅ *Aadhaar card (test)*. We'll check it.",
+      "Saved ✅ *Aadhaar / PAN*. We'll check it.",
     );
     const shown = await chatFiles(admin, customer.phone);
     expect(shown.map((message) => message.file?.id)).toEqual([request?.document_id]);

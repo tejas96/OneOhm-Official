@@ -120,7 +120,7 @@ describe('Papers: What is this?', () => {
     await tap(customer.phone, 'what:yes');
     expect((await actionOf(id.id))?.status).toBe('received');
     expect((await lastReply(customer.phone))?.body).toBe(
-      "Saved ✅ *Aadhaar card (test)*. We'll check it.",
+      "Saved ✅ *Aadhaar / PAN*. We'll check it.",
     );
     expect(
       (await replies(customer.phone)).some((reply) => choices(reply)[0]?.startsWith('where:')),

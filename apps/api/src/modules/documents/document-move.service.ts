@@ -143,7 +143,7 @@ export class DocumentMoveService {
       if (!paper || paper.removedAt || paper.replacedAt || paper.checkedAt) continue;
       await tx
         .update(documents)
-        .set({ projectId: null, propertyId: null, category: 'other' })
+        .set({ projectId: null, propertyId: null, category: 'other', sortedAt: null })
         .where(eq(documents.id, id));
       if (paper.projectId)
         await tx.insert(projectActivities).values({

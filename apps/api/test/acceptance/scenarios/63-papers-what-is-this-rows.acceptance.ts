@@ -117,7 +117,11 @@ describe('Papers: Payment proof, Problem photo, errors and old papers', () => {
     expect((await lastReply(customer.phone))?.body).toBe(
       "We can't open this kind of file. Please send a photo or PDF.",
     );
-    // Neither is waiting for a question.
+    await sendInbound(customer.phone, { media: { type: 'document', fileId: 'sample-empty' } });
+    expect((await lastReply(customer.phone))?.body).toBe(
+      'That file is empty. Please send it again.',
+    );
+    // None is waiting for a question.
     expect(await askAboutFiles(admin)).toBe(0);
     expect((await replies(customer.phone)).filter((r) => r.body.includes('try'))).toHaveLength(0);
   });
@@ -135,6 +139,12 @@ describe('Papers: Payment proof, Problem photo, errors and old papers', () => {
         }>(`/projects/${project.id}/document-checklist`)
       ).items.find((item) => item.key === 'bill');
     expect(await itemOf()).toMatchObject({ status: 'present', tooOld: false });
+    // Still waiting for the team's look: it counts. Once checked, an old one stops counting.
+    expect(await itemOf()).toMatchObject({ status: 'present', tooOld: false });
+    const [kept] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
+    await admin.post(`/documents/${kept?.id}/check`, {});
     await rows(
       "UPDATE documents SET created_at = now() - interval '100 days' WHERE customer_id = $1",
       [customer.customerId],
@@ -155,6 +165,60 @@ describe('Papers: Payment proof, Problem photo, errors and old papers', () => {
     );
     // Starting again asks nothing more.
     await admin.post(`/tasks/${task.id}/start`);
+    const asks = await rows(
+      "SELECT 1 FROM customer_actions WHERE customer_id = $1 AND requirement_key = 'bill'",
+      [customer.customerId],
+    );
+    expect(asks).toHaveLength(1);
+  });
+
+  it('after the DISCOM application is done a bill never turns too old', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Applied Bill (test)' });
+    await sendPhoto(customer.phone);
+    await askAboutFiles(admin);
+    const bill = choices(await lastReply(customer.phone)).find((id) => id.includes(':bill'));
+    await tap(customer.phone, bill ?? '');
+    const [kept] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
+    await admin.post(`/documents/${kept?.id}/check`, {});
+    await rows(
+      "UPDATE documents SET created_at = now() - interval '100 days' WHERE customer_id = $1",
+      [customer.customerId],
+    );
+    await rows(
+      `UPDATE project_tasks SET status = 'completed' WHERE project_id = $1
+        AND template_key = 'discom_application'`,
+      [project.id],
+    );
+    const list = await admin.get<{ items: { key: string; status: string; tooOld: boolean }[] }>(
+      `/projects/${project.id}/document-checklist`,
+    );
+    expect(list.items.find((item) => item.key === 'bill')).toMatchObject({
+      status: 'present',
+      tooOld: false,
+    });
+  });
+
+  it('two starts of the DISCOM application at once ask for the old bill once', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Double Start (test)' });
+    await sendPhoto(customer.phone);
+    await askAboutFiles(admin);
+    const bill = choices(await lastReply(customer.phone)).find((id) => id.includes(':bill'));
+    await tap(customer.phone, bill ?? '');
+    const [kept] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
+    await admin.post(`/documents/${kept?.id}/check`, {});
+    await rows(
+      "UPDATE documents SET created_at = now() - interval '100 days' WHERE customer_id = $1",
+      [customer.customerId],
+    );
+    const task = await advanceTo(admin, project.id, 'discom_application');
+    await Promise.allSettled([
+      admin.post(`/tasks/${task.id}/start`),
+      admin.post(`/tasks/${task.id}/start`),
+    ]);
     const asks = await rows(
       "SELECT 1 FROM customer_actions WHERE customer_id = $1 AND requirement_key = 'bill'",
       [customer.customerId],
