@@ -109,6 +109,16 @@ export const uploadFieldsSchema = z
   );
 export type UploadFields = z.infer<typeof uploadFieldsSchema>;
 
+/**
+ * Staff move a paper to another home (a project of the same customer) or kind. No home
+ * (`projectId` null) only for an ID or income paper, which is the person's.
+ */
+export const moveDocumentSchema = z.object({
+  projectId: idSchema.nullable(),
+  category: documentCategorySchema,
+});
+export type MoveDocument = z.infer<typeof moveDocumentSchema>;
+
 /** The company's logo, signature and stamp as printed on quotations and reports. */
 export const companyAssetsSchema = z.object({
   logo: attachmentSchema.nullable(),

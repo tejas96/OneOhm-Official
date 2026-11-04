@@ -177,7 +177,8 @@
           "remove": "Remove document"
         },
         "removed": "Document removed",
-        "removeFailed": "Could not remove the document"
+        "removeFailed": "Could not remove the document",
+        "move": "Move / change kind"
       },
       "upload": {
         "description": "One photo or PDF, filed in a folder so the team can find it.",
@@ -207,6 +208,20 @@
         "done": "Done",
         "failed": "The download did not work.",
         "defaultName": "OneOhm documents"
+      },
+      "move": {
+        "title": "Move / change kind",
+        "description": "File this paper on another home of this customer, or as another kind. Nothing is sent to the customer, unless a request it answered is now asked again.",
+        "home": "Home",
+        "homePlaceholder": "Choose a home",
+        "noHome": "No home (ID / income papers)",
+        "kind": "Kind",
+        "needsHome": "Choose the home this paper belongs to.",
+        "loadFailed": "Could not load the customer's homes",
+        "save": "Move",
+        "cancel": "Cancel",
+        "moved": "Paper moved",
+        "failed": "Could not move the paper"
       }
     },
     "checklist": {

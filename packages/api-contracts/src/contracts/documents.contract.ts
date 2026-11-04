@@ -6,6 +6,7 @@ import {
   companyAssetsSchema,
   documentFilterSchema,
   documentSchema,
+  moveDocumentSchema,
 } from '../schemas/document.schema';
 
 const c = initContract();
@@ -63,6 +64,15 @@ export const documentsContract = c.router({
     body: c.type<FormData>(),
     responses: { 201: documentSchema },
     summary: 'Replace the file; the old one is kept in the audit trail with who replaced it.',
+  },
+  moveDocument: {
+    method: 'PATCH',
+    path: '/documents/:id',
+    pathParams: z.object({ id: idSchema }),
+    body: moveDocumentSchema,
+    responses: { 200: documentSchema },
+    summary:
+      "File a customer's paper on another of their homes or as another kind. A request it answered that no longer matches is asked again.",
   },
   removeDocument: {
     method: 'DELETE',

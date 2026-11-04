@@ -5,23 +5,18 @@ import type {
   NewDocumentRequest,
   ReaskDocumentRequest,
 } from '@oneohm/api-contracts';
-import {
-  customers,
-  documentRequests,
-  documents,
-  projectActivities,
-  projects,
-} from '@oneohm/database';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { customers, documentRequests, projectActivities, projects } from '@oneohm/database';
+import { eq, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
 import { propertyOfProject } from './document-links';
-import { openRequestsFor, reaskCount } from './document-request-home';
+import { openRequestsFor } from './document-request-home';
 import { askCustomer, tellCancelled } from './document-request-messages';
 import { readRequests } from './document-request-read';
+import { contactOf, reopenRequest } from './document-request-reopen';
 
 /**
  * The team asks a customer for a paper only they hold, such as the latest electricity
@@ -103,7 +98,7 @@ export class DocumentRequestsService {
     if (request.status !== 'open') {
       throw conflict('Only an open request can be cancelled.', 'not_open');
     }
-    const { phone } = await this.contactOf(request.customerId);
+    const { phone } = await contactOf(this.db, request.customerId);
     await this.db.transaction(async (tx) => {
       await tx
         .update(documentRequests)
@@ -137,46 +132,10 @@ export class DocumentRequestsService {
     const propertyId = await propertyOfProject(this.db, request.projectId);
     const [open] = await openRequestsFor(this.db, request.customerId, { ...request, propertyId });
     if (open) throw conflict('The customer has already been asked for this.', 'already_asked');
-    const customer = await this.contactOf(request.customerId);
-    const note = input.note.trim();
-    await this.db.transaction(async (tx) => {
-      const now = new Date();
-      const [reopened] = await tx
-        .update(documentRequests)
-        .set({ status: 'open', documentId: null, receivedAt: null, note, updatedAt: now })
-        .where(and(eq(documentRequests.id, id), eq(documentRequests.status, 'received')))
-        .returning({ id: documentRequests.id });
-      if (!reopened) throw conflict('This request has changed. Refresh and try again.', 'changed');
-      if (request.documentId)
-        await tx
-          .update(documents)
-          .set({ removedAt: now, removedByUserId: actor.userId })
-          .where(and(eq(documents.id, request.documentId), isNull(documents.removedAt)));
-      const reasks = (await reaskCount(tx, id)) + 1;
-      await askCustomer(tx, { ...request, ...customer }, reasks);
-      if (request.projectId)
-        await tx.insert(projectActivities).values({
-          projectId: request.projectId,
-          kind: 'document_request',
-          message: `Asked the customer again for ${request.title}`,
-          userId: actor.userId,
-          data: { documentRequestId: id, documentId: request.documentId },
-        });
-      await recordAudit(tx, actor.userId, 'document_request.reasked', 'document_request', id, {
-        note,
-        documentId: request.documentId,
-      });
-    });
+    await this.db.transaction((tx) =>
+      reopenRequest(tx, actor.userId, request, { note: input.note.trim(), removePaper: true }),
+    );
     return this.one(id);
-  }
-
-  private async contactOf(customerId: string) {
-    const [customer] = await this.db
-      .select({ customer: customers.name, phone: customers.phoneE164 })
-      .from(customers)
-      .where(eq(customers.id, customerId));
-    if (!customer) throw notFound('That customer');
-    return customer;
   }
 
   private async one(id: string): Promise<DocumentRequest> {
