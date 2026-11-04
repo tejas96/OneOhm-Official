@@ -83,34 +83,68 @@ describe('Papers per home: reminders', () => {
     expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(1);
   });
 
+  it('a request older than the windows is left alone', async () => {
+    const { project } = await sellProject(admin, { name: 'Long Ago (test)' });
+    const asked = await ask(admin, project.id, 'Electricity bill (test)');
+    await askedHoursAgo(asked.id, 30 * 24);
+    await runPaperReminders();
+    expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
+    expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(0);
+    // 8 days: too late to remind the customer, still time to tell the asker.
+    await askedHoursAgo(asked.id, 8 * 24);
+    await runPaperReminders();
+    expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
+    expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(1);
+  });
+
   it("files left to sort alert the chat's person after 2 hours", async () => {
     const { customer } = await sellProject(admin, { name: 'To Sort (test)' });
     await anotherHome(admin, customer, 'Farm (test)');
-    for (const n of [1, 2])
+    for (const n of [1, 2, 3])
       await sendInbound(customer.phone, {
         media: { type: 'image', fileId: `sort-${randomUUID()}-${n}` },
       });
-    const docs = await rows<{ id: string }>(
-      'SELECT id FROM documents WHERE customer_id = $1 AND project_id IS NULL',
-      [customer.customerId],
-    );
-    expect(docs).toHaveLength(2);
-    const sortAlerts = async () =>
-      (await Promise.all(docs.map((doc) => alertsKeyed(`paper_sort:${doc.id}`)))).flat();
+    const age = (hours: number) =>
+      rows('UPDATE documents SET created_at = $2 WHERE customer_id = $1', [
+        customer.customerId,
+        new Date(Date.now() - hours * HOUR),
+      ]);
+    const sortAlerts = () =>
+      rows<{ user_id: string; title: string; body: string }>(
+        `SELECT n.user_id, n.title, n.body FROM notifications n
+          WHERE n.dedupe_key LIKE 'paper_sort:%'
+            AND n.dedupe_key LIKE ANY (SELECT 'paper_sort:' || id || ':%' FROM documents
+                                        WHERE customer_id = $1)`,
+        [customer.customerId],
+      );
     await runPaperReminders();
     expect(await sortAlerts()).toHaveLength(0);
-    await rows('UPDATE documents SET created_at = $2 WHERE customer_id = $1', [
-      customer.customerId,
-      new Date(Date.now() - 3 * HOUR),
+    // Sent 8 days ago: too old for this job.
+    await age(8 * 24);
+    await runPaperReminders();
+    expect(await sortAlerts()).toHaveLength(0);
+    await age(3);
+    await runPaperReminders();
+    expect(await sortAlerts()).toEqual([
+      {
+        user_id: admin.userId,
+        title: 'Files to sort from To Sort (test)',
+        body: '3 files have no home yet. Open the chat and move them to the right home.',
+      },
     ]);
     await runPaperReminders();
-    const told = await sortAlerts();
-    expect(told.length).toBeGreaterThan(0);
-    for (const alert of told) {
-      expect(alert).toEqual({ user_id: admin.userId, title: 'Files to sort from To Sort (test)' });
-    }
+    expect(await sortAlerts()).toHaveLength(1);
+    // A later file gives one fresh alert.
+    await sendInbound(customer.phone, {
+      media: { type: 'image', fileId: `sort-${randomUUID()}-4` },
+    });
+    await rows(
+      `UPDATE documents SET created_at = now() - interval '3 hours'
+        WHERE customer_id = $1 AND created_at > now() - interval '1 hour'`,
+      [customer.customerId],
+    );
     await runPaperReminders();
-    expect(await sortAlerts()).toHaveLength(told.length);
+    expect(await sortAlerts()).toHaveLength(2);
   });
 
   it('one home has nothing to sort', async () => {

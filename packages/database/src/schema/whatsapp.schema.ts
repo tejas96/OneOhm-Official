@@ -68,5 +68,6 @@ export const waMessages = pgTable(
   (table) => [
     index('wa_messages_conversation_idx').on(table.conversationId, table.createdAt),
     index('wa_messages_media_idx').on(table.mediaId),
+    index('wa_messages_document_idx').on(table.documentId),
   ],
 );

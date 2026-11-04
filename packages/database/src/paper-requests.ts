@@ -1,4 +1,4 @@
-import { and, count, eq, max } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { homeName } from './customer-homes';
 import { queueCustomerMessage } from './customer-message';
@@ -50,16 +50,12 @@ export async function homeNameOf(db: DatabaseExecutor, projectId: string | null)
 }
 
 /**
- * How many times the team asked again for this request, and when they last did. Keys of
- * messages and alerts that follow an "ask again" carry the count, so the next answer or
- * reminder is told, not taken for the first.
+ * How many times the team asked again for this request. Keys of messages and alerts that
+ * follow an "ask again" carry it, so the next answer is told, not taken for the first.
  */
-export async function reaskRound(
-  db: DatabaseExecutor,
-  requestId: string,
-): Promise<{ readonly count: number; readonly lastAt: Date | null }> {
+export async function reaskCount(db: DatabaseExecutor, requestId: string): Promise<number> {
   const [row] = await db
-    .select({ n: count(), lastAt: max(auditLog.createdAt) })
+    .select({ n: count() })
     .from(auditLog)
     .where(
       and(
@@ -68,11 +64,7 @@ export async function reaskRound(
         eq(auditLog.action, 'document_request.reasked'),
       ),
     );
-  return { count: row?.n ?? 0, lastAt: row?.lastAt ?? null };
-}
-
-export async function reaskCount(db: DatabaseExecutor, requestId: string): Promise<number> {
-  return (await reaskRound(db, requestId)).count;
+  return row?.n ?? 0;
 }
 
 /** The dedupe key of one round of a request: `base`, then `base:reask:<n>` after asking again. */
@@ -93,8 +85,14 @@ export interface AskedPaper {
  * on, else `document_requested`; app inbox and SMS say the same. The request and its
  * reminders all go through here, each with its own key.
  */
-export async function askForPaper(db: DatabaseExecutor, asked: AskedPaper, dedupeKey: string) {
-  const template = await paperRequestTemplate(db);
+export async function askForPaper(
+  db: DatabaseExecutor,
+  asked: AskedPaper,
+  dedupeKey: string,
+  /** Already read by a caller that asks many at once. */
+  chosen?: 'paper_request' | 'document_requested',
+) {
+  const template = chosen ?? (await paperRequestTemplate(db));
   const home = await homeNameOf(db, asked.projectId);
   return queueCustomerMessage(
     db,

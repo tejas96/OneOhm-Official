@@ -6,32 +6,46 @@ import {
   type Database,
   documentRequests,
   documents,
+  notifications,
   notifyCover,
   notifyHolders,
+  paperRequestTemplate,
   projects,
-  reaskRound,
   tellChatTeam,
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { and, asc, eq, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, like, lte, sql } from 'drizzle-orm';
 
 const HOUR = 3_600_000;
-/** The customer is reminded once after 2 days, the asker told once after 4 (per ask). */
-const CUSTOMER_AFTER = 48 * HOUR;
-const TEAM_AFTER = 96 * HOUR;
-/** Files a customer sent that nobody has put on a home yet are chased after 2 hours. */
+const DAY = 24 * HOUR;
+/**
+ * A request's customer is reminded once from 2 days after the latest ask, the asker told
+ * once from 4 days; nothing for a request this old when the job first runs (7 and 14
+ * days). Files left to sort are chased from 2 hours to 7 days.
+ */
+const CUSTOMER_AFTER = 2 * DAY;
+const CUSTOMER_UNTIL = 7 * DAY;
+const TEAM_AFTER = 4 * DAY;
+const TEAM_UNTIL = 14 * DAY;
 const SORT_AFTER = 2 * HOUR;
+const SORT_UNTIL = 7 * DAY;
+/** At most this many are looked at in one tick; the rest wait for the next. */
+const PER_TICK = 200;
 
 /** What an open request is due for, counted from the latest time the customer was asked. */
 export function paperReminderDue(askedAt: Date, now: Date): 'customer' | 'team' | null {
   const age = now.getTime() - askedAt.getTime();
-  if (age >= TEAM_AFTER) return 'team';
-  return age >= CUSTOMER_AFTER ? 'customer' : null;
+  if (age < CUSTOMER_AFTER || age >= TEAM_UNTIL) return null;
+  return age >= TEAM_AFTER ? 'team' : 'customer';
 }
 
 /** Open requests: remind the customer at 2 days, tell the asker at 4. Each once per ask. */
 async function remindOpenRequests(db: Database, now: Date): Promise<number> {
+  // The team asking again starts a new round: its age and its keys count from there.
+  const reasks = sql<number>`(select count(*)::int from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked')`;
+  const askedAt = sql<Date>`greatest(${documentRequests.createdAt}, coalesce((select max(a.created_at) from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked'), ${documentRequests.createdAt}))`;
+  const at = (ms: number) => new Date(now.getTime() - ms);
   const open = await db
     .select({
       id: documentRequests.id,
@@ -40,7 +54,8 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
       projectCode: projects.code,
       managerUserId: projects.managerUserId,
       requestedByUserId: documentRequests.requestedByUserId,
-      askedAt: documentRequests.createdAt,
+      askedAt: sql<Date>`${askedAt}`.mapWith((value) => new Date(value as string)),
+      round: reasks,
       customer: customers.name,
       phone: customers.phoneE164,
     })
@@ -50,16 +65,24 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
     .where(
       and(
         eq(documentRequests.status, 'open'),
-        lte(documentRequests.createdAt, new Date(now.getTime() - CUSTOMER_AFTER)),
+        lte(askedAt, at(CUSTOMER_AFTER)),
+        gt(askedAt, at(TEAM_UNTIL)),
+        // Once the asker has been told for this round, there is nothing left to do.
+        sql`not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${documentRequests.id}::text || ':' || ${reasks}::text || ':%')`,
       ),
-    );
+    )
+    .orderBy(asc(askedAt))
+    .limit(PER_TICK);
+  let template: Awaited<ReturnType<typeof paperRequestTemplate>> | undefined;
   let done = 0;
   for (const request of open) {
-    // A re-ask starts a new round: its age and its keys count from there.
-    const round = await reaskRound(db, request.id);
-    const due = paperReminderDue(round.lastAt ?? request.askedAt, now);
+    const due = paperReminderDue(request.askedAt, now);
     if (!due) continue;
-    if (await askForPaper(db, request, `paper_reminder:${request.id}:${round.count}`)) done += 1;
+    if (now.getTime() - request.askedAt.getTime() < CUSTOMER_UNTIL) {
+      template ??= await paperRequestTemplate(db);
+      const key = `paper_reminder:${request.id}:${request.round}`;
+      if (await askForPaper(db, request, key, template)) done += 1;
+    }
     if (due !== 'team') continue;
     const notice = {
       kind: 'paper_waiting',
@@ -68,7 +91,7 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
       ...(request.projectId
         ? { subject: { type: 'project' as const, id: request.projectId } }
         : {}),
-      dedupeKey: `paper_waiting:${request.id}:${round.count}`,
+      dedupeKey: `paper_waiting:${request.id}:${request.round}`,
     };
     const person = request.requestedByUserId ?? request.managerUserId;
     // Nobody to ask: those who manage projects hear, so it is never silent.
@@ -81,13 +104,14 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
 
 /**
  * Files a customer sent on WhatsApp that stayed "to sort" (no home chosen) for over 2
- * hours, for a customer with 2 or more homes: the chat's person is told, once per file.
+ * hours, for a customer with 2 or more homes: the chat's person is told once, one alert
+ * for all of the customer's waiting files. A later file makes a fresh alert (its key is
+ * the newest file's), and running again says nothing twice.
  */
 async function alertFilesToSort(db: Database, now: Date): Promise<number> {
   const waiting = await db
     .select({
       id: documents.id,
-      name: documents.name,
       customerId: customers.id,
       customer: customers.name,
       chat: {
@@ -109,31 +133,39 @@ async function alertFilesToSort(db: Database, now: Date): Promise<number> {
         isNull(documents.removedAt),
         eq(documents.category, 'other'),
         lte(documents.createdAt, new Date(now.getTime() - SORT_AFTER)),
+        gt(documents.createdAt, new Date(now.getTime() - SORT_UNTIL)),
       ),
     )
-    .orderBy(asc(documents.createdAt));
-  if (waiting.length === 0) return 0;
-  const told = new Set<string>();
-  const manyHomes = new Map<string, boolean>();
-  let alerted = 0;
+    .orderBy(desc(documents.createdAt))
+    .limit(PER_TICK);
+  // Newest first: the first file seen for a customer is the one that names the alert.
+  const byCustomer = new Map<string, { files: Set<string>; first: (typeof waiting)[number] }>();
   for (const file of waiting) {
-    if (told.has(file.id)) continue;
-    told.add(file.id);
-    let many = manyHomes.get(file.customerId);
-    if (many === undefined) {
-      many = (await customerHomes(db, file.customerId)).length >= 2;
-      manyHomes.set(file.customerId, many);
-    }
-    if (!many) continue;
-    const owner = file.chat.assignedUserId ?? (await chatOwnerFor(db, file.chat));
+    const group = byCustomer.get(file.customerId) ?? { files: new Set(), first: file };
+    group.files.add(file.id);
+    byCustomer.set(file.customerId, group);
+  }
+  let alerted = 0;
+  for (const { files, first } of byCustomer.values()) {
+    const key = `paper_sort:${first.id}`;
+    const [told] = await db
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(like(notifications.dedupeKey, `${key}:%`))
+      .limit(1);
+    if (told || (await customerHomes(db, first.customerId)).length < 2) continue;
+    const owner = first.chat.assignedUserId ?? (await chatOwnerFor(db, first.chat));
     await tellChatTeam(
       db,
-      { ...file.chat, assignedUserId: owner },
+      { ...first.chat, assignedUserId: owner },
       {
         kind: 'papers_to_sort',
-        title: `Files to sort from ${file.customer}`,
-        body: `${file.name} has no home yet. Open the chat and move it to the right home.`,
-        key: `paper_sort:${file.id}`,
+        title: `Files to sort from ${first.customer}`,
+        body:
+          files.size === 1
+            ? 'A file has no home yet. Open the chat and move it to the right home.'
+            : `${files.size} files have no home yet. Open the chat and move them to the right home.`,
+        key,
       },
     );
     alerted += 1;

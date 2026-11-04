@@ -18,3 +18,10 @@ describe('paperReminderDue', () => {
     expect(paperReminderDue(askedHoursAgo(97), now)).toBe('team');
   });
 });
+
+describe('paperReminderDue windows', () => {
+  it('leaves requests older than 14 days alone', () => {
+    expect(paperReminderDue(askedHoursAgo(13 * 24), now)).toBe('team');
+    expect(paperReminderDue(askedHoursAgo(30 * 24), now)).toBeNull();
+  });
+});

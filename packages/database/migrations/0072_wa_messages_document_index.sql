@@ -1,0 +1,1 @@
+CREATE INDEX "wa_messages_document_idx" ON "wa_messages" USING btree ("document_id");
