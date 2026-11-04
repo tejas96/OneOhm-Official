@@ -19,10 +19,13 @@ export function AddPersonDialog({
   open,
   onOpenChange,
   roles,
+  invitesOn,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly roles: readonly Role[];
+  /** WhatsApp invites are on (STAFF_INVITES); off, the admin copies the invite text. */
+  readonly invitesOn: boolean;
 }) {
   const t = useTranslations('team.addDialog');
   const tForm = useTranslations('team.form');
@@ -66,7 +69,8 @@ export function AddPersonDialog({
       queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
       queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
     ]);
-    toast({ title: t('added', { name: created.fullName }), tone: 'success' });
+    const title = created.invitesOn ? 'added' : 'addedNoInvite';
+    toast({ title: t(title, { name: created.fullName }), tone: 'success' });
     close(false);
   };
 
@@ -89,7 +93,11 @@ export function AddPersonDialog({
     }, added);
   };
 
-  /** Takes the number off the past member's record, then adds the new person with it. */
+  /**
+   * Takes the number off the past member's record, then adds the new person with it. If
+   * the add fails, the number stays free: the list is refreshed so it shows that, and the
+   * error stays on screen for another try.
+   */
   const giveNumber = async () => {
     if (!pastMember) return;
     const from = pastMember.userId;
@@ -97,7 +105,11 @@ export function AddPersonDialog({
     await form.run(async () => {
       await expectStatus(api.people.releasePhone({ params: { id: from } }), 200);
       setPastMember(null);
-      return create();
+      try {
+        return await create();
+      } finally {
+        await queryClient.invalidateQueries({ queryKey: PEOPLE_KEY });
+      }
     }, added);
     setChoice(null);
   };
@@ -123,7 +135,7 @@ export function AddPersonDialog({
       open={open}
       onOpenChange={close}
       title={t('title')}
-      description={t('description')}
+      description={t(invitesOn ? 'description' : 'descriptionNoInvite')}
       size="lg"
       autoFocusField
       footer={

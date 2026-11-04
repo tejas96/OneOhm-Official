@@ -49,7 +49,9 @@
       "title": "Add a person",
       "description": "We send them a WhatsApp invite. They sign in with their mobile number.",
       "submit": "Add person",
-      "added": "{name} added",
+      "added": "{name} added. Their WhatsApp invite is on its way.",
+      "addedNoInvite": "{name} added. Copy their invite text from their row to send it.",
+      "descriptionNoInvite": "WhatsApp invites are off, so copy their invite text after adding them. They sign in with their mobile number.",
       "pastMember": {
         "left": "This number belongs to {name} (left on {date}).",
         "leftNoDate": "This number belongs to {name}, who left the team.",
@@ -705,8 +707,11 @@
       "sendAgain": "Send invite again",
       "sent": "Invite sent",
       "copyText": "Copy invite text",
+      "copyTextFor": "Copy invite text for {name}",
       "copied": "Invite text copied",
-      "copyFailed": "Could not copy. Try again."
+      "copyTitle": "Copy the invite",
+      "copyHint": "Your browser did not copy it. The text is selected: copy it and paste it in any chat.",
+      "copyDone": "Done"
     }
   }
 }

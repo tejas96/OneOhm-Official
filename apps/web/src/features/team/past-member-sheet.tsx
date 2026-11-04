@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { FormError } from '@/components/form-error';
 import { LoadError } from '@/components/query-state';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { useCan } from '@/providers/current-user';
 import { owesAnything, SettlementList } from './departure-lists';
 import { useLeftDate } from './left-tag';
 import { useDeparture, useHeldPerson, useRejoin } from './use-departure';
@@ -24,6 +25,8 @@ export function PastMemberSheet({
   readonly onClose: () => void;
 }) {
   const t = useTranslations('team.pastMember');
+  // Finance opens this page to settle; only people managers bring someone back.
+  const canManage = useCan('people.manage');
   const shown = useHeldPerson(person);
   const leftDate = useLeftDate();
   const departure = useDeparture(shown?.id ?? null);
@@ -55,14 +58,16 @@ export function PastMemberSheet({
           <Button variant="quiet" onClick={onClose}>
             {t('close')}
           </Button>
-          <Button
-            variant="primary"
-            leadingIcon={<UserRoundPlus />}
-            pending={form.pending}
-            onClick={addBack}
-          >
-            {t('addBack')}
-          </Button>
+          {canManage && (
+            <Button
+              variant="primary"
+              leadingIcon={<UserRoundPlus />}
+              pending={form.pending}
+              onClick={addBack}
+            >
+              {t('addBack')}
+            </Button>
+          )}
         </>
       }
     >
@@ -81,9 +86,11 @@ export function PastMemberSheet({
           ) : (
             <p className="type-body-sm text-ink-muted">{t('nothingOwed', { name })}</p>
           ))}
-        <p className="border-t border-hairline pt-6 type-body-sm text-ink-faint">
-          {t('addBackHint')}
-        </p>
+        {canManage && (
+          <p className="border-t border-hairline pt-6 type-body-sm text-ink-faint">
+            {t('addBackHint')}
+          </p>
+        )}
         <FormError message={form.error} />
       </div>
     </Sheet>

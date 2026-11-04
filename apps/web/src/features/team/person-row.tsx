@@ -3,7 +3,8 @@
 import type { Person } from '@oneohm/api-contracts';
 import { Avatar, Badge, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
-import { awaitsSignIn, InviteBadge, InviteMenu } from './invite-status';
+import { awaitsSignIn } from './invite-actions';
+import { InviteBadge, InviteMenu } from './invite-status';
 import { LeftTag } from './left-tag';
 import { useSkills } from './skills/use-skills';
 

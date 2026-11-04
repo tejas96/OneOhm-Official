@@ -39,6 +39,8 @@ function matches(person: Person, search: string, roleId: string): boolean {
 export function PeopleTab() {
   const t = useTranslations('team');
   const canManage = useCan('people.manage');
+  // Finance settles what a past member is still owed from their page.
+  const canSettle = useCan('finance.record_payments');
   const people = usePeople();
   const roles = useRoles();
   const [search, setSearch] = useState('');
@@ -58,8 +60,11 @@ export function PeopleTab() {
     [people.data, search, roleId, showPast],
   );
   const find = (id: string | null) => people.data?.find((person) => person.id === id) ?? null;
-  const open = (person: Person) =>
-    isPastMember(person) ? setPastId(person.id) : setEditingId(person.id);
+  const opener = (person: Person) => {
+    if (isPastMember(person))
+      return canManage || canSettle ? () => setPastId(person.id) : undefined;
+    return canManage ? () => setEditingId(person.id) : undefined;
+  };
   const roleOptions = [
     { value: ALL, label: t('allRoles') },
     ...(roles.data ?? [])
@@ -72,9 +77,7 @@ export function PeopleTab() {
       key: 'person',
       header: t('columns.person'),
       primary: true,
-      cell: (person) => (
-        <PersonIdentity person={person} onOpen={canManage ? () => open(person) : undefined} />
-      ),
+      cell: (person) => <PersonIdentity person={person} onOpen={opener(person)} />,
     },
     { key: 'roles', header: t('columns.roles'), cell: (person) => <PersonRoles person={person} /> },
     {
@@ -165,7 +168,12 @@ export function PeopleTab() {
       <PastMemberSheet person={find(pastId)} onClose={() => setPastId(null)} />
       {roles.data && (
         <>
-          <AddPersonDialog open={adding} onOpenChange={setAdding} roles={roles.data} />
+          <AddPersonDialog
+            open={adding}
+            onOpenChange={setAdding}
+            roles={roles.data}
+            invitesOn={people.data?.[0]?.invitesOn ?? true}
+          />
           <EditPersonSheet
             person={find(editingId)}
             roles={roles.data}
