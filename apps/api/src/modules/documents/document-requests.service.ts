@@ -192,7 +192,10 @@ export class DocumentRequestsService {
       .where(and(eq(quotations.leadId, lead.leadId), ne(projects.status, 'cancelled')))
       .limit(1);
     if (started) {
-      throw conflict(`This lead already has project ${started.code}. Ask on the project.`, 'has_project');
+      throw conflict(
+        `This lead already has project ${started.code}. Ask on the project.`,
+        'has_project',
+      );
     }
     return { ...lead, projectId: null, projectCode: null };
   }

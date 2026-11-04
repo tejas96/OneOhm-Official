@@ -12,6 +12,7 @@ import { canUploadDocuments } from './document-access';
 import { presentDocuments } from './document-read';
 import { reaskCount } from './document-request-home';
 import { tellChecked } from './document-request-messages';
+import { paperKindWords } from './paper-kind-words';
 
 /**
  * "Looks good": the team has looked at a paper the customer sent (redesign §5.3). The
@@ -83,12 +84,12 @@ export class DocumentCheckService {
   /** A paper nobody asked for (sent on its own) is checked too: the customer hears it. */
   private async tellUnasked(tx: Transaction, actor: Actor, id: string) {
     const [paper] = await tx
-      .select({ name: documents.name, phone: customers.phoneE164 })
+      .select({ category: documents.category, phone: customers.phoneE164 })
       .from(documents)
       .innerJoin(customers, eq(customers.id, documents.customerId))
       .where(eq(documents.id, id));
     if (!paper) return;
-    const title = paper.name.replace(/\.[a-z0-9]{1,5}$/i, '');
+    const title = await paperKindWords(tx, paper.phone, paper.category);
     await tellChecked(tx, { id, title, phone: paper.phone }, 0, actor.userId);
   }
 }
