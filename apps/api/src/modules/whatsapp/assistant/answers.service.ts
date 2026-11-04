@@ -7,7 +7,6 @@ import type { Environment } from '../../../config/environment';
 import { CustomerAfterSalesService } from '../../after-sales/customer-after-sales.service';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
-import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { coverText } from './cover-answer';
 import { shownProblem } from './home-lines';
 import { languageNow } from './language';
@@ -27,7 +26,6 @@ export class AnswersService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly portal: CustomerPortalService,
-    private readonly links: PaymentLinksService,
     private readonly after: CustomerAfterSalesService,
   ) {}
 
@@ -75,11 +73,6 @@ export class AnswersService {
   /** What is paid and due, one block per home (see paymentsText). */
   payments(customerId: string) {
     return paymentsText(this.db, customerId);
-  }
-
-  /** True when online payment is on, so a due amount gets its Pay ₹X button. */
-  paysOnline(): boolean {
-    return this.links.setup().mode !== 'off' && this.env.RAZORPAY_MODE !== 'off';
   }
 
   /** The pay-link message for each due amount (or only `milestoneId`'s). */

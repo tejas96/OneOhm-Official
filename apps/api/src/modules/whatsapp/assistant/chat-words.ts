@@ -27,11 +27,15 @@ const EN_CHAT = {
     refer: 'Refer a friend',
     rewards: 'My rewards',
     talkTeam: 'Talk to our team',
+    sendBill: 'Send light bill',
     start: 'Start again',
     viewReceipt: 'View receipt',
   },
   /** "Pay ₹45,000": a reply button; its tap answers with the pay-link message. */
   pay: (amount: string) => `Pay ${amount}`,
+  /** The pay-link message (one button, redesign §1): what is due, when, for which home. */
+  payLink: (amount: string, when: string, home: string) =>
+    `*${amount}* is due ${when} for your ${home} home.`,
   /** "Talk to Priya"; too long for a title, it is "Talk to our team" (talk-title.ts). */
   talkTo: (name: string) => `Talk to ${name}`,
   /** Over the taps when an answer is too long for one buttons message. */
@@ -55,7 +59,7 @@ const EN_CHAT = {
   },
   /** Home: "Hi Tejas 👋" and one line of what matters now (redesign §3). */
   home: {
-    hello: (name: string) => `Hi ${name} 👋`,
+    hello: (name: string) => (name ? `Hi ${name} 👋` : 'Hi 👋'),
     stage: (home: string, stage: string, done: number, steps: number) =>
       `Your ${home} solar is at *${stage}* (${done} of ${steps} steps).`,
     complete: (home: string) => `Your ${home} solar is complete.`,
@@ -95,8 +99,13 @@ const EN_CHAT = {
   /** The second message in a row we did not understand. */
   passedUnknown: (name: string | null, when: ReplyTime) =>
     `Sorry, we still didn’t get that. We’ve passed your message to ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
+  /** Once a night, outside working hours, while a person has the chat. */
+  nightReply: (name: string | null, when: ReplyTime) =>
+    `Thank you. Your message is with ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
   handedBack: (name: string | null) => `${name ?? 'Our team'} is away now — we’re here to help.`,
   earlier: 'That was an earlier message — here is the latest.',
+  /** A typed "bill": the electricity bill we need, or what they owe? */
+  bill: { ask: 'Which bill do you mean?', paper: 'electricity bill' },
   language: {
     ask: 'Which language would you like us to write in?',
     saved: 'Done ✅ We will write in English now.',
@@ -152,6 +161,18 @@ export function talkTitle(name: string | null, max = BUTTON_MAX): string {
   return title && title.length <= max ? title : CHAT_WORDS.buttons.talkTeam;
 }
 
-/** A title cut to fit, with "…" when it was longer. */
-export const fitTitle = (text: string, max: number) =>
-  text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+/**
+ * A title cut to fit, with "…" when it was longer. It is cut between whole letters, never
+ * inside one (a Devanagari letter with its vowel sign stays together).
+ */
+export function fitTitle(text: string, max: number): string {
+  if (text.length <= max) return text;
+  let cut = '';
+  for (const { segment } of graphemes.segment(text)) {
+    if (cut.length + segment.length > max - 1) break;
+    cut += segment;
+  }
+  return `${cut}…`;
+}

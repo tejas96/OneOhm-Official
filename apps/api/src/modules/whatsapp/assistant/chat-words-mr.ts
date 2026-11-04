@@ -43,10 +43,12 @@ export const MR_CHAT: Words<ChatWords> = {
     refer: 'मित्राला सुचवा',
     rewards: 'माझी बक्षिसे',
     talkTeam: 'आमच्या टीमशी बोला',
+    sendBill: 'वीज बिल पाठवा',
     start: 'पुन्हा सुरू करा',
     viewReceipt: 'पावती पाहा',
   },
   pay: (amount) => `${amount} भरा`,
+  payLink: (amount, when, home) => `तुमच्या ${home} येथील घरासाठी ${when} *${amount}* भरायचे आहेत.`,
   talkTo: (name) => `${name} शी बोला`,
   whatNext: 'पुढे काय?',
   listButton: 'निवडा',
@@ -66,7 +68,7 @@ export const MR_CHAT: Words<ChatWords> = {
     },
   },
   home: {
-    hello: (name) => `नमस्कार ${name} 👋`,
+    hello: (name) => (name ? `नमस्कार ${name} 👋` : 'नमस्कार 👋'),
     stage: (home, stage, done, steps) =>
       `तुमचे ${home} येथील सोलर *${stage}* टप्प्यावर आहे (${steps} पैकी ${done} टप्पे).`,
     complete: (home) => `तुमचे ${home} येथील सोलर पूर्ण झाले आहे.`,
@@ -97,9 +99,12 @@ export const MR_CHAT: Words<ChatWords> = {
   passed: (name, when) => `धन्यवाद. आम्ही हे ${toWhom(name)} कळवले आहे. ${replies(name, when)}`,
   passedUnknown: (name, when) =>
     `माफ करा, आम्हाला अजूनही समजले नाही. तुमचा मेसेज ${toWhom(name)} पाठवला आहे. ${replies(name, when)}`,
+  nightReply: (name, when) =>
+    `धन्यवाद. तुमचा मेसेज ${name ? `${name} यांच्याकडे` : 'आमच्या टीमकडे'} आहे. ${replies(name, when)}`,
   handedBack: (name) =>
     `${name ? `${name} आता उपलब्ध नाहीत` : 'आमची टीम आता उपलब्ध नाही'} — आम्ही मदतीसाठी इथे आहोत.`,
   earlier: 'तो आधीचा मेसेज होता — हा सध्याचा आहे.',
+  bill: { ask: 'कोणते बिल म्हणायचे आहे?', paper: 'वीज बिल' },
   language: {
     ask: 'आम्ही कोणत्या भाषेत लिहावे?',
     saved: 'ठीक आहे ✅ आता आम्ही मराठीत लिहू.',

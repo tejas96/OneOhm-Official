@@ -8,6 +8,7 @@ describe('a tap on a quote button', () => {
     expect(readQuoteTap(`quote_accept:${ID}`)).toEqual({ action: 'accept', quotationId: ID });
     expect(readQuoteTap(`quote_yes:${ID}`)).toEqual({ action: 'confirm', quotationId: ID });
     expect(readQuoteTap(`quote_ask:${ID}`)).toEqual({ action: 'ask', quotationId: ID });
+    expect(readQuoteTap(`quote_show:${ID}`)).toEqual({ action: 'show', quotationId: ID });
   });
 
   it('is not a quote tap for anything else', () => {

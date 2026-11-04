@@ -3,11 +3,16 @@ import {
   BUTTON_MAX,
   CHAT_LISTS,
   DESCRIPTION_MAX,
+  fitTitle,
   LANGUAGE_BUTTONS,
   ROW_MAX,
   talkTitle,
 } from './chat-words';
 import { inLanguage } from './language';
+import { PAPER_LISTS } from './paper-words';
+import { EN } from './words';
+import { HI } from './words-hi';
+import { MR } from './words-mr';
 
 const LANGUAGES = ['en', 'mr', 'hi'] as const;
 
@@ -29,6 +34,9 @@ describe('the chat dictionary (redesign §1: WhatsApp limits)', () => {
       const buttons = [
         ...Object.values(words.buttons),
         words.listButton,
+        // Every list's open button: Choose (homes, ratings), Choose a paper, See them.
+        { en: EN, mr: MR, hi: HI }[language].WORDS.menuButton,
+        PAPER_LISTS[language].button,
         words.pay('₹99,99,999'),
         ...LANGUAGE_BUTTONS.map((button) => button.title),
       ];
@@ -75,6 +83,9 @@ describe('the chat dictionary (redesign §1: WhatsApp limits)', () => {
     expect(en.talkReply('Priya', 'now')).toBe('Priya will reply here soon (Mon–Sat, 9:30–6:30).');
     expect(en.talkReply('Priya', 'tomorrow')).toBe('Priya will reply here tomorrow from 9:30.');
     expect(en.talkReply(null, 'monday')).toBe('Our team will reply here on Monday from 9:30.');
+    expect(en.nightReply('Priya', 'monday')).toBe(
+      'Thank you. Your message is with Priya, who will reply here on Monday from 9:30.',
+    );
     expect(en.handedBack('Priya')).toBe('Priya is away now — we’re here to help.');
     for (const language of LANGUAGES) {
       const words = CHAT_LISTS[language];
@@ -83,10 +94,23 @@ describe('the chat dictionary (redesign §1: WhatsApp limits)', () => {
         words.passed('Priya', 'today'),
         words.passedUnknown('Priya', 'monday'),
         words.handedBack('Priya'),
+        words.nightReply('Priya', 'monday'),
         words.home.noProject('Priya', 'tomorrow'),
       ])
         expect(text, language).toContain('Priya');
       expect(words.passed(null, 'now'), language).not.toContain('null');
     }
+  });
+  it('cuts a long title between whole letters, never inside a Devanagari letter', () => {
+    expect(fitTitle('Electricity bill for the farm house', 24)).toBe('Electricity bill for th…');
+    const cut = fitTitle('वीज बिल आणि मालमत्ता कागदपत्रे सर्व', 24);
+    expect(cut.length).toBeLessThanOrEqual(24);
+    // The last kept letter is whole: "कागदपत्रे" is never cut between क and its sign.
+    expect(cut.slice(0, -1).normalize()).toBe(cut.slice(0, -1));
+    expect(/[ा-्]$/u.test(cut.slice(0, -1)) || /[क-ह]$/u.test(cut.slice(0, -1))).toBe(true);
+    expect(fitTitle('पावती', 24)).toBe('पावती');
+    // "कागदपत्रे" in 5: "का" and "ग" whole, never "क" without its sign.
+    expect(fitTitle('कागदपत्रे', 4)).toBe('काग…');
+    expect(fitTitle('कागदपत्रे', 3)).toBe('का…');
   });
 });

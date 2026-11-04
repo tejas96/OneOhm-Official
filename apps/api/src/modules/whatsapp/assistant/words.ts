@@ -50,11 +50,6 @@ const EN_WORDS = {
   askRating: 'How happy are you with us so far?',
   ratingSaved: 'Thank you for rating us! It helps the team.',
   notUnderstood: 'Sorry, we didn’t get that.',
-  /** The answer to a short thanks or ack (review F7). */
-  /** A reply to one of our updates goes to their person, with this warm note. */
-  /** Once a night, when a person has the chat and it is outside working hours. */
-  nightReply: (name: string | null) =>
-    `Thank you. We reply from 9:30 am to 6:30 pm. Your message is with ${name ?? 'our team'}.`,
   /** The buttons of the check before an accept binds (its words: quote-money-words). */
   quoteYes: 'Yes, accept',
   quoteNotYet: 'Not yet',

@@ -2,7 +2,6 @@ import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
 import { type TapChoice, tapButton } from './closing-taps';
-import { paperTap } from './customer-papers';
 import type { PendingItem } from './pending-items';
 
 /** A problem as the customer wrote it: the stored "(via WhatsApp)" note is not shown. */
@@ -45,7 +44,7 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
     case 'problem':
       return { id: 'go:problems', title: buttons.problemUpdate };
     case 'quote':
-      return { id: paperTap('quotation', item.quotationId), title: buttons.quote };
+      return { id: `quote_show:${item.quotationId}`, title: buttons.quote };
   }
 }
 

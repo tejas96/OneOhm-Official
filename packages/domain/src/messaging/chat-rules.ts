@@ -66,11 +66,17 @@ export function replyTime(now: Date, timeZone: string): ReplyTime {
   return weekday === 6 ? 'monday' : 'tomorrow';
 }
 
-/** When working hours last ended: 6:30 pm today once it is past, else 6:30 pm yesterday. */
+/**
+ * When working hours last ended: 6:30 pm today once it is past, else 6:30 pm on the working
+ * day before. Sunday is closed, so all Sunday and Monday morning it is Saturday's 6:30 pm.
+ */
 export function lastWorkEnd(now: Date, timeZone: string): Date {
-  const { minute, midnight } = clockAt(now, timeZone);
+  const { minute, midnight, weekday } = clockAt(now, timeZone);
   const todayEnd = new Date(midnight.getTime() + WORK_END_MIN * 60_000);
-  return minute >= WORK_END_MIN ? todayEnd : new Date(todayEnd.getTime() - 24 * 3600_000);
+  // Sunday is closed: its evening is no work end (Saturday's is).
+  let back = minute >= WORK_END_MIN && weekday !== 0 ? 0 : 1;
+  if ((weekday - back + 7) % 7 === 0) back += 1;
+  return new Date(todayEnd.getTime() - back * 24 * 3600_000);
 }
 
 /**

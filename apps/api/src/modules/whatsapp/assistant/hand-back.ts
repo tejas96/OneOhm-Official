@@ -1,6 +1,6 @@
 import { type DatabaseExecutor, waMessages } from '@oneohm/database';
 import { chatWindowOpen } from '@oneohm/domain';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, ne } from 'drizzle-orm';
 import { answererName } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import { chatLanguage } from './chat-language';
@@ -24,13 +24,15 @@ type HeldChat = Pick<
  * The chat went back to the assistant (Release, 4 quiet working hours, or the customer's
  * Menu tap): a customer who wrote since the hand-over hears it, once, in their language
  * (redesign §14). Taps on our own buttons are not "writing". `withMenu` adds the Menu
- * button; the Menu tap itself is answered by Home right after, so it goes without.
+ * button; the Menu tap itself is answered by Home right after, so it goes without, and
+ * `menuMessage` (that message's id) does not count as writing.
  */
 export async function tellHandedBack(
   db: DatabaseExecutor,
   chat: HeldChat,
   handedOverAt: Date | null,
   withMenu = true,
+  menuMessage?: string,
 ): Promise<void> {
   if (!chat.customerId || !handedOverAt || chat.optedOutAt) return;
   if (!chatWindowOpen(chat.lastInboundAt)) return;
@@ -43,6 +45,8 @@ export async function tellHandedBack(
         eq(waMessages.direction, 'in'),
         eq(waMessages.assistantTap, false),
         gt(waMessages.createdAt, handedOverAt),
+        // The typed "menu" that ends the hold is not "writing to the person".
+        menuMessage ? ne(waMessages.waMessageId, menuMessage) : undefined,
       ),
     )
     .limit(1);

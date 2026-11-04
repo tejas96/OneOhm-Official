@@ -34,7 +34,7 @@ export class HomeService {
     const [items, { projects }, first, name] = await Promise.all([
       this.pending(customerId),
       this.portal.home(customerId),
-      this.firstName(customerId),
+      this.firstName(chat, customerId),
       this.people.answererName(chat),
     ]);
     if (projects.length === 0 && items.length === 0) return this.noProject(chat, first, name);
@@ -47,14 +47,16 @@ export class HomeService {
           ? ` ${CHAT_WORDS.home.complete(project.place)}`
           : ` ${CHAT_WORDS.home.stage(project.place, stage.stage, stage.done, stage.steps)}`;
     const [top] = items;
+    // Counted as [See them] lists them: one row per action (two problems are one row).
+    const count = pendingRows(items, this.paysOnline()).length;
     const body = [
       `${CHAT_WORDS.home.hello(first)}${where}`,
       top ? pendingLine(top) : CHAT_WORDS.home.nothing,
-      items.length >= 2 ? CHAT_WORDS.home.count(items.length) : '',
+      count >= 2 ? CHAT_WORDS.home.count(count) : '',
     ].filter(Boolean);
     const talk = { id: 'go:talk', title: talkTitle(name) };
     const next: TapChoice =
-      items.length >= 2
+      count >= 2
         ? { id: 'go:see', title: CHAT_WORDS.buttons.seeThem }
         : projects.length > 0
           ? 'update'
@@ -120,12 +122,17 @@ export class HomeService {
     return this.env.RAZORPAY_MODE !== 'off' && this.links.setup().mode !== 'off';
   }
 
-  private async firstName(customerId: string): Promise<string> {
+  /**
+   * Whom we greet: the customer's first name on their own number; on a family member's
+   * number, the WhatsApp profile name (never the holder's). Empty when there is none.
+   */
+  private async firstName(chat: Conversation, customerId: string): Promise<string> {
     const [customer] = await this.db
-      .select({ name: customers.name })
+      .select({ name: customers.name, phone: customers.phoneE164 })
       .from(customers)
       .where(eq(customers.id, customerId));
-    const name = customer?.name ?? '';
-    return titleCaseName(name.split(/\s+/)[0] ?? name);
+    const own = customer?.phone === chat.phone;
+    const name = (own ? customer?.name : chat.profileName)?.trim() ?? '';
+    return name ? titleCaseName(name.split(/\s+/)[0] ?? name) : '';
   }
 }

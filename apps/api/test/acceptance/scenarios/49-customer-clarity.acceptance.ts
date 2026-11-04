@@ -7,6 +7,7 @@ import {
   handOverAlerts,
   lastReply,
   leadsOf,
+  replies,
   say,
   tap,
   upToSite,
@@ -89,9 +90,11 @@ describe('Customer clarity on WhatsApp', () => {
 
   it('C5: a customer types Marathi words and every answer ends with taps', async () => {
     const { customer } = await sellProject(admin, { name: 'tejas clarity (test)' });
-    // "मेनू" is Marathi and Hindi alike: asked once which (redesign §14), then Home in it.
+    // "मेनू" is Marathi and Hindi alike: answered (Home), then asked once which (§14).
     await sendInbound(customer.phone, { text: 'मेनू' });
-    expect(choices(await lastReply(customer.phone))).toEqual(['lang:en', 'lang:mr', 'lang:hi']);
+    const [first, ask] = (await replies(customer.phone)).slice(-2);
+    expect(choices(first)).toContain('go:more');
+    expect(choices(ask)).toEqual(['lang:en', 'lang:mr', 'lang:hi']);
     await sendInbound(customer.phone, { buttonReply: 'lang:mr' });
     const home = await lastReply(customer.phone);
     expect(home?.body).toContain('Tejas');

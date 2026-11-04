@@ -11,6 +11,8 @@ import { HandOverService } from './hand-over';
 import type { SmallTalk } from './known-words';
 
 const DAY_MS = 24 * 3600 * 1000;
+/** Words not understood count as "in a row" only within this long of the first. */
+export const UNKNOWN_ROW_MINUTES = 30;
 
 /**
  * Typed words that are not a choice (redesign §14, decision 6): small talk gets a short
@@ -39,15 +41,22 @@ export class FreeTextService {
       });
     }
     if (incoming.kind === 'text')
-      await markContext(this.db, chat.id, { unknown: incoming.waMessageId });
+      await markContext(this.db, chat.id, { unknown: incoming.waMessageId, unknownAt: Date.now() });
     const talk = { id: 'go:talk', title: talkTitle(await this.people.answererName(chat)) };
     return sayWithTaps(this.db, chat, CHAT_WORDS.unknown, [talk, 'update', 'more']);
   }
 
-  /** True when the customer's message just before this one was also not understood. */
+  /**
+   * True when the customer's message just before this one was also not understood, less
+   * than UNKNOWN_ROW_MINUTES ago; an older one starts the count again.
+   */
   private async secondInARow(chat: Conversation, waMessageId: string): Promise<boolean> {
-    const earlier = (chat.context as { unknown?: unknown } | null)?.unknown;
-    if (typeof earlier !== 'string') return false;
+    const { unknown: earlier, unknownAt } = (chat.context ?? {}) as {
+      unknown?: unknown;
+      unknownAt?: unknown;
+    };
+    if (typeof earlier !== 'string' || typeof unknownAt !== 'number') return false;
+    if (Date.now() - unknownAt > UNKNOWN_ROW_MINUTES * 60_000) return false;
     const [before] = await this.db
       .select({ id: waMessages.waMessageId })
       .from(waMessages)

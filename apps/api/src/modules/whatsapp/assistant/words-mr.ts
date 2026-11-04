@@ -53,9 +53,6 @@ export const MR: Words<AssistantWords> = {
     askRating: 'आतापर्यंत तुम्ही आमच्यावर किती खूश आहात?',
     ratingSaved: 'रेटिंगसाठी धन्यवाद! त्यामुळे टीमला मदत होते.',
     notUnderstood: 'माफ करा, आम्हाला समजले नाही.',
-    // A person is named with the respectful plural (देतील); the team is singular (C15).
-    nightReply: (name) =>
-      `धन्यवाद. आम्ही सकाळी 9:30 ते संध्याकाळी 6:30 उत्तर देतो. तुमचा मेसेज ${name ? `${name} यांच्याकडे` : 'आमच्या टीमकडे'} आहे.`,
     quoteYes: 'हो, स्वीकारतो',
     quoteNotYet: 'आत्ता नाही',
     quoteChanged: 'हे कोटेशन बदलले आहे किंवा आता खुले नाही.',

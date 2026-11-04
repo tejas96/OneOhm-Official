@@ -59,15 +59,6 @@ describe('assistant words in three languages', () => {
   });
 });
 
-describe('night words', () => {
-  it('names the person in every language, and falls back to the team', () => {
-    for (const words of [EN, MR, HI]) {
-      expect(words.WORDS.nightReply('Asha')).toContain('Asha');
-      expect(words.WORDS.nightReply(null)).not.toContain('null');
-    }
-  });
-});
-
 describe('onboarding questions', () => {
   // The longest lists an owner can set: 7 cities (+ Other, Back, a person) and 8 bill bands.
   const settings = {
@@ -132,11 +123,11 @@ describe('onboarding questions', () => {
       const size = '1000 panels (545.45 kW)';
       const caption = words.estimateCaption(size, '₹10,00,00,000', '₹10,00,00,000', '₹10,00,000');
       expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
-      expect(words.willCall('Asha', false)).toContain('Asha');
-      expect(words.willCall(null, true)).not.toBe(words.willCall(null, false));
+      expect(words.willCall('Asha', 'today')).toContain('Asha');
+      expect(words.willCall(null, 'tomorrow')).not.toBe(words.willCall(null, 'today'));
     }
-    expect(ONBOARD_LISTS.en.willCall('Asha', false)).toBe('Thank you. Asha will call you today.');
-    expect(ONBOARD_LISTS.en.willCall('Asha', true)).toBe(
+    expect(ONBOARD_LISTS.en.willCall('Asha', 'today')).toBe('Thank you. Asha will call you today.');
+    expect(ONBOARD_LISTS.en.willCall('Asha', 'tomorrow')).toBe(
       'Thank you. Asha will call you tomorrow morning.',
     );
     expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1', '₹1')).toContain(

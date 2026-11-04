@@ -1,5 +1,7 @@
 import { localized, type Words } from '../assistant/language';
 
+/** The day a promised call is due: today, the next working day, or Monday after Saturday evening. */
+export type CallDay = 'today' | 'tomorrow' | 'monday';
 /**
  * What the onboarding bot says to a new number, in English, Marathi and Hindi (kept here
  * because `words.ts` is full). Button titles stay within 20 characters and list rows
@@ -42,9 +44,9 @@ const EN_ONBOARD = {
   notNow: 'Not now',
   askWhenLater: 'When should we check back with you?',
   later: { '1w': 'In 1 week', '1m': 'In 1 month', '3m': 'In 3 months' },
-  /** The call promise: today in working hours, else tomorrow morning. */
-  willCall: (name: string | null, tomorrow: boolean) =>
-    `Thank you. ${name ?? 'Our team'} will call you ${tomorrow ? 'tomorrow morning' : 'today'}.`,
+  /** The call promise: today in working hours, else the next working morning. */
+  willCall: (name: string | null, day: CallDay) =>
+    `Thank you. ${name ?? 'Our team'} will call you ${{ today: 'today', tomorrow: 'tomorrow morning', monday: 'on Monday morning' }[day]}.`,
   laterThanks: 'Thank you! We will check back with you then.',
   /** No instant price for this site (a farm, a society, other roof…): a person prices it. */
   expertPrice: 'Thank you! Our expert will prepare your price and call you.',
@@ -99,8 +101,8 @@ const MR_ONBOARD: Words<OnboardWords> = {
   notNow: 'आत्ता नको',
   askWhenLater: 'आम्ही तुम्हाला पुन्हा केव्हा संपर्क करू?',
   later: { '1w': '1 आठवड्यात', '1m': '1 महिन्यात', '3m': '3 महिन्यांत' },
-  willCall: (name, tomorrow) =>
-    `धन्यवाद. ${tomorrow ? 'उद्या सकाळी' : 'आज'} ${name ? `${name} यांच्याकडून` : 'आमच्या टीमकडून'} तुम्हाला कॉल येईल.`,
+  willCall: (name, day) =>
+    `धन्यवाद. ${{ today: 'आज', tomorrow: 'उद्या सकाळी', monday: 'सोमवारी सकाळी' }[day]} ${name ? `${name} यांच्याकडून` : 'आमच्या टीमकडून'} तुम्हाला कॉल येईल.`,
   laterThanks: 'धन्यवाद! आम्ही तेव्हा तुमच्याशी पुन्हा संपर्क करू.',
   expertPrice: 'धन्यवाद! आमचे तज्ज्ञ तुमची किंमत तयार करून तुम्हाला कॉल करतील.',
   firstDetails: 'धन्यवाद — आधी काही माहिती घेऊया. तुमची फाईल आमच्याकडे आहे.',
@@ -147,8 +149,8 @@ const HI_ONBOARD: Words<OnboardWords> = {
   notNow: 'अभी नहीं',
   askWhenLater: 'हम आपसे फिर कब संपर्क करें?',
   later: { '1w': '1 हफ़्ते में', '1m': '1 महीने में', '3m': '3 महीने में' },
-  willCall: (name, tomorrow) =>
-    `धन्यवाद. ${tomorrow ? 'कल सुबह' : 'आज'} ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
+  willCall: (name, day) =>
+    `धन्यवाद. ${{ today: 'आज', tomorrow: 'कल सुबह', monday: 'सोमवार सुबह' }[day]} ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
   laterThanks: 'धन्यवाद! हम तब आपसे फिर संपर्क करेंगे.',
   expertPrice: 'धन्यवाद! हमारे विशेषज्ञ आपकी कीमत तैयार करके आपको कॉल करेंगे.',
   firstDetails: 'धन्यवाद — पहले कुछ जानकारी ले लें. आपकी फाइल हमारे पास है.',

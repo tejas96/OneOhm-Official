@@ -1,3 +1,4 @@
+import { fitTitle } from './chat-words';
 import { localized, type Words } from './language';
 
 /** WhatsApp keeps a list row's title to 24 characters. */
@@ -6,7 +7,7 @@ export const ROW_TITLE_LIMIT = 24;
 /** The longest form of a title that fits a list row; the shorter forms come after it. */
 const fit = (...forms: string[]) =>
   forms.find((form) => form.length <= ROW_TITLE_LIMIT) ??
-  `${(forms.at(-1) ?? '').slice(0, ROW_TITLE_LIMIT - 1)}…`;
+  fitTitle(forms.at(-1) ?? '', ROW_TITLE_LIMIT);
 
 /**
  * The Documents answer (live QA round 2): a list of the customer's papers in plain words

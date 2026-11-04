@@ -3,7 +3,7 @@ import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { endsWithTaps } from '../support/menu-chat';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
-import { type Sale, sellProject } from '../support/sales';
+import { createQuotation, newCustomer, type Sale, sellProject } from '../support/sales';
 
 // Redesign phase 1a (4 Nov 2026), end to end over the webhook: "hi" shows Home (what
 // matters now and three buttons), More lists the ten rows, a paper ask is one tap, and
@@ -131,5 +131,32 @@ describe('WhatsApp Home (redesign §3)', () => {
     await say(phone, '2');
     expect((await lastReply(phone))?.body).toBe('Sorry, we didn’t get that. Pick one below.');
     expect((await replies(phone)).some((reply) => reply.body.includes('🔴'))).toBe(false);
+  });
+
+  it('a quote waiting: [See quotation] sends the PDF and its Accept / question buttons', async () => {
+    const customer = await newCustomer(admin, { name: 'Quote Home Customer (test)' });
+    const quote = await createQuotation(admin, customer);
+    await admin.post(`/quotations/${quote.id}/send`);
+    await say(customer.phone, 'hi');
+    const home = await endsWithTaps(customer.phone);
+    expect(home?.body).toContain('Your quotation is waiting for your answer.');
+    expect(choices(home)[0]).toBe(`quote_show:${quote.id}`);
+    await tap(customer.phone, `quote_show:${quote.id}`);
+    const [file, buttons] = (await replies(customer.phone)).slice(-2);
+    expect(file?.kind).toBe('document');
+    expect(choices(buttons)).toEqual([`quote_accept:${quote.id}`, `quote_ask:${quote.id}`]);
+  });
+
+  it('a typed "bill" asks which bill: the light bill to send, or Payments', async () => {
+    const sale = await soldCustomer('Which Bill Customer (test)');
+    await say(sale.customer.phone, 'hi');
+    await say(sale.customer.phone, 'bill');
+    const ask = await endsWithTaps(sale.customer.phone);
+    expect(ask?.body).toBe('Which bill do you mean?');
+    expect(choices(ask)).toEqual(['go:sendbill', 'go:payments']);
+    await tap(sale.customer.phone, 'go:sendbill');
+    expect((await lastReply(sale.customer.phone))?.body).toBe(
+      'Please send your *electricity bill* here as a photo or PDF.',
+    );
   });
 });

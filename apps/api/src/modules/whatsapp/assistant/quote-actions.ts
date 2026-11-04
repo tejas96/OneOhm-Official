@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AppError } from '../../../common/http/errors';
-import { DATABASE, type Database } from '../../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
+import { queueQuoteInChat } from '../../quotations/quotation-message';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
 import { quotedSteps } from '../../quotations/quoted-terms';
@@ -11,17 +13,22 @@ import { QUOTE_WORDS } from './quote-words';
 import { WORDS } from './words';
 
 export interface QuoteTap {
-  readonly action: 'accept' | 'confirm' | 'ask';
+  readonly action: 'accept' | 'confirm' | 'ask' | 'show';
   readonly quotationId: string;
 }
 
-const ACTIONS = { quote_accept: 'accept', quote_yes: 'confirm', quote_ask: 'ask' } as const;
+const ACTIONS = {
+  quote_accept: 'accept',
+  quote_yes: 'confirm',
+  quote_ask: 'ask',
+  quote_show: 'show',
+} as const;
 const TAP =
-  /^(quote_accept|quote_yes|quote_ask):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+  /^(quote_accept|quote_yes|quote_ask|quote_show):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 /**
  * A tap on a quote button: "Accept quote" and "I have a question" on the quote message,
- * and "Yes, accept" on the check that follows. Null for anything else.
+ * "Yes, accept" on the check that follows, and Home's "See quotation". Null for anything else.
  */
 export function readQuoteTap(choiceId: string | null): QuoteTap | null {
   const match = TAP.exec(choiceId?.trim() ?? '');
@@ -41,6 +48,7 @@ export function readQuoteTap(choiceId: string | null): QuoteTap | null {
 export class QuoteActionsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly quotations: QuotationsService,
     private readonly people: HandOverService,
   ) {}
@@ -48,6 +56,7 @@ export class QuoteActionsService {
   /** `messageId` is the tap's own WhatsApp id: an "already accepted" reply goes once per tap. */
   async tap(chat: Conversation, tap: QuoteTap, messageId: string): Promise<void> {
     if (tap.action === 'ask') return this.people.passToOwner(chat);
+    if (tap.action === 'show') return this.show(chat, tap.quotationId);
     if (tap.action === 'accept') return this.askToConfirm(chat, tap.quotationId, messageId);
     return this.accept(chat, tap.quotationId, messageId);
   }
@@ -94,6 +103,17 @@ export class QuoteActionsService {
     // Accepted now: the thank-you goes once, however often "yes" arrives.
     const taps = ['menu', 'talk'] as const;
     return sayWithTaps(this.db, chat, QUOTE_WORDS.quoteThanks, taps, `quote_thanks:${quotationId}`);
+  }
+
+  /** [See quotation]: the quote's PDF and its two buttons again; another's quote shows nothing. */
+  private async show(chat: Conversation, quotationId: string) {
+    const quotation = await this.quotations.get(quotationId).catch((error: unknown) => {
+      if (error instanceof AppError) return null;
+      throw error;
+    });
+    if (!quotation || quotation.customer.id !== chat.customerId)
+      return this.refuse(chat, WORDS.quoteChanged);
+    return queueQuoteInChat(this.db, this.env, quotation, chat);
   }
 
   /** Accepted before: said for each new tap, never twice for Meta's retry of one tap (H4). */

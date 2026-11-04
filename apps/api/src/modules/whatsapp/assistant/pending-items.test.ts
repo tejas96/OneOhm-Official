@@ -16,6 +16,7 @@ const paper: PendingItem = {
   kind: 'paper',
   requestId: ID,
   title: 'Electricity bill',
+  category: 'electricity_bill',
   home: 'Sangli',
 };
 
@@ -39,7 +40,7 @@ describe('what matters now (redesign §3)', () => {
     // Online payments off: the Payments answer instead of a pay link.
     expect(pendingButton(pay, false)).toBe('payments');
     expect(pendingButton(quote, true)).toEqual({
-      id: `paper:quotation:${ID}`,
+      id: `quote_show:${ID}`,
       title: 'See quotation',
     });
   });

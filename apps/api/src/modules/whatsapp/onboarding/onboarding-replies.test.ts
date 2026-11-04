@@ -90,10 +90,10 @@ describe('names and Marathi wording (live review C15)', () => {
   });
 
   it('uses respectful forms for the person who will call', () => {
-    expect(ONBOARD_LISTS.mr.willCall('Priya', false)).toBe(
+    expect(ONBOARD_LISTS.mr.willCall('Priya', 'today')).toBe(
       'धन्यवाद. आज Priya यांच्याकडून तुम्हाला कॉल येईल.',
     );
-    expect(ONBOARD_LISTS.mr.willCall(null, true)).toBe(
+    expect(ONBOARD_LISTS.mr.willCall(null, 'tomorrow')).toBe(
       'धन्यवाद. उद्या सकाळी आमच्या टीमकडून तुम्हाला कॉल येईल.',
     );
     expect(ONBOARD_LISTS.mr.askPhoto).not.toContain('नवीन');

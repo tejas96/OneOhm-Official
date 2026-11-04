@@ -14,7 +14,7 @@ import { activeProjectsOf } from '../../customer-portal/active-projects';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
 export type PendingItem =
-  | { kind: 'paper'; requestId: string; title: string; home: string | null }
+  | { kind: 'paper'; requestId: string; title: string; category: string; home: string | null }
   | { kind: 'pay'; milestoneId: string; leftPaise: number; home: string }
   | { kind: 'visit'; requestId: string; on: string; home: string | null }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
@@ -60,6 +60,7 @@ export async function pendingForCustomer(
       kind: 'paper' as const,
       requestId: row.id,
       title: row.title,
+      category: row.category,
       home: homeOf(row.label, row.city),
     })),
     ...due.flatMap((row) => {
@@ -99,6 +100,7 @@ function openPapers(db: DatabaseExecutor, customerId: string) {
     .select({
       id: documentRequests.id,
       title: documentRequests.title,
+      category: documentRequests.category,
       label: properties.label,
       city: properties.city,
     })

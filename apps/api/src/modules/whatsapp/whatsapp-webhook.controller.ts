@@ -128,15 +128,18 @@ export class WhatsAppWebhookController implements OnModuleInit {
   }
 
   private async handle(chat: Conversation, message: Incoming) {
-    // A customer's late tap: "That was an earlier message", then Home (redesign §14).
-    if (isLateTap(chat, message)) return this.assistant.earlier(chat);
     // A person has this chat, so the assistant stays quiet: tell them the customer wrote.
     // Menu and quote taps (and the words a bot step waits for) are the assistant's, and
     // alert nobody.
-    if (chat.state === 'human' && !assistantAnswers(chat, message)) {
+    const held = chat.state === 'human';
+    if (held && !assistantAnswers(chat, message)) {
       await this.tellAnswerer(chat, message);
       await this.assistant.nightReply(chat);
+      if (isLateTap(chat, message)) return;
     }
+    // A customer's late tap: "That was an earlier message", then Home; in a held chat
+    // (one of the bot's own taps) without Home, so the person keeps the chat (§14).
+    if (isLateTap(chat, message)) return this.assistant.earlier(chat, !held);
     await this.assistant.handle(chat, message);
   }
 

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { notifications, type Transaction } from '@oneohm/database';
-import { addMonths, isWorkingTime, lastWorkEnd } from '@oneohm/domain';
+import { addMonths, replyTime } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
@@ -14,7 +14,7 @@ import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
-import { ONBOARD_WORDS } from './onboard-words';
+import { type CallDay, ONBOARD_WORDS } from './onboard-words';
 import {
   ESTIMATE_CHOICES,
   LATER_PERIODS,
@@ -51,9 +51,15 @@ const laterPeriod = (choiceId: string): LaterPeriod | null => {
     : null;
 };
 
-/** After working hours the call is promised for the next morning, never "today" at 11 pm. */
-function afterHours(now: Date, zone: string): boolean {
-  return !isWorkingTime(now, zone) && todayIn(zone, lastWorkEnd(now, zone)) === todayIn(zone, now);
+/**
+ * When the call is promised: today in working hours (or before 9:30 on a working day),
+ * else the next working morning — never "today" at 11 pm or on a Sunday, and Monday after
+ * Saturday evening. With the days to add to today.
+ */
+function callDay(now: Date, zone: string): { day: CallDay; add: number } {
+  const time = replyTime(now, zone);
+  if (time === 'now' || time === 'today') return { day: 'today', add: 0 };
+  return time === 'monday' ? { day: 'monday', add: 2 } : { day: 'tomorrow', add: 1 };
 }
 
 /**
@@ -87,12 +93,14 @@ export class EstimateNextStepsService {
       // One alert and one history note a day: a second tap is already on the owner's Today.
       const key = `wa_callback:${chat.id}:${today}`;
       const again = await alertedAlready(tx, key);
-      const tomorrow = afterHours(now, zone);
-      const when = tomorrow ? 'tomorrow morning' : 'today';
+      const call = callDay(now, zone);
+      const when = { today: 'today', tomorrow: 'tomorrow morning', monday: 'on Monday morning' }[
+        call.day
+      ];
       await updateLeadFromChat(
         tx,
         leadId,
-        { nextAction: { on: tomorrow ? addDays(today, 1) : today, note: PROMISED_CALL_NOTE } },
+        { nextAction: { on: addDays(today, call.add), note: PROMISED_CALL_NOTE } },
         again ? null : `${PROMISED_CALL_HISTORY} ${when} after the estimate`,
       );
       const owned = await ensureChatOwner(tx, chat);
@@ -106,7 +114,7 @@ export class EstimateNextStepsService {
       // Every closing message ends with a tap (C5): a person stays one tap away.
       await queueReply(tx, chat, {
         kind: 'buttons',
-        body: W.willCall(name, tomorrow),
+        body: W.willCall(name, call.day),
         buttons: [{ id: PERSON_CHOICE, title: W.talkToPerson }],
       });
       return true;

@@ -6,7 +6,7 @@ import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
-import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
+import { type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { languageTapped, payTapped, sendTapped } from './chat-choices';
 import { chatLanguage, languageForMessage } from './chat-language';
@@ -37,6 +37,9 @@ import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
 import { WORDS } from './words';
+
+/** The steps that wait for typed words; the others (which home, which paper) wait for a tap. */
+const TEXT_STEPS = ['await_problem', 'await_referral', AWAIT_COMMENT];
 
 /**
  * The customer WhatsApp assistant (PRD 6.1, redesign §3, §14): Home over the customer's
@@ -76,25 +79,26 @@ export class AssistantService {
     if (tap && WAITING_STEPS.includes(stepOf(chat))) await setStep(this.db, chat, 'menu');
     const typed = incoming.kind === 'text' ? incoming.text : null;
     const waits = WAITING_STEPS.includes(stepOf(chat));
-    const language = await languageForMessage(this.db, chat, typed, waits);
-    if (language === 'ask') return this.askLanguage(chat);
-    return inLanguage(language, () =>
+    const { language, ask } = await languageForMessage(this.db, chat, typed, waits);
+    await inLanguage(language, () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
+    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14).
+    if (ask) await this.askLanguage(chat);
   }
 
   /** A tap Meta delivered after a newer message: said so, then Home (redesign §14). */
-  async earlier(chat: Conversation): Promise<void> {
+  async earlier(chat: Conversation, withHome = true): Promise<void> {
     if (!chat.customerId) return;
     const customerId = chat.customerId;
     await inLanguage(await chatLanguage(this.db, chat), async () => {
       await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.earlier });
-      await this.home.show(chat, customerId);
+      if (withHome) await this.home.show(chat, customerId);
     });
   }
 
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
-    if (restartsChat(chat, incoming)) return this.restart(chat);
+    if (restartsChat(chat, incoming)) return this.restart(chat, incoming.waMessageId);
     // With a person, the assistant answers only its own taps and its own steps' words.
     if (await this.heldByPerson(chat, incoming)) return;
     if (!chat.customerId) return this.stranger(chat, incoming, wordOf(incoming));
@@ -109,8 +113,10 @@ export class AssistantService {
     if (incoming.kind === 'other')
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     const waits = WAITING_STEPS.includes(stepOf(chat));
-    // "ok", "thanks", 👍: a short word back (redesign §14); a waiting step gets its words first.
-    const small = incoming.kind === 'text' && !waits ? smallTalkOf(incoming.text) : null;
+    // "ok", "thanks", 👍: a short word back (redesign §14). A step waiting for words gets
+    // them first; a step waiting for a tap (which home, which paper) stays as it is.
+    const wordsWait = TEXT_STEPS.includes(stepOf(chat));
+    const small = incoming.kind === 'text' && !wordsWait ? smallTalkOf(incoming.text) : null;
     if (small) return this.words.smallTalk(chat, small);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.
     if (await this.answersOurUpdate(chat, incoming)) return this.people.passToOwner(chat);
@@ -177,11 +183,7 @@ export class AssistantService {
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
     // The which-home and which-paper lists wait for a tap; typed words there are read as usual.
-    if (
-      incoming.kind === 'choice' ||
-      ['await_home', 'await_file_home', 'await_file_paper'].includes(step)
-    )
-      return false;
+    if (incoming.kind === 'choice' || !TEXT_STEPS.includes(step)) return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
     else if (step === 'await_referral') await this.referral(chat, customerId, incoming);
     else if (step === AWAIT_COMMENT) await this.feedback.comment(chat, customerId, incoming.text);
@@ -199,7 +201,7 @@ export class AssistantService {
    * hold ends only the step: the person and the reminders stay (review F2). Menu out of a
    * hold tells a customer who wrote meanwhile that their person is away (redesign §14).
    */
-  private async restart(chat: Conversation) {
+  private async restart(chat: Conversation, menuMessage: string) {
     const customerId = chat.customerId;
     if (heldStep(chat)) {
       await setStep(this.db, chat, 'menu');
@@ -210,7 +212,7 @@ export class AssistantService {
         .update(waConversations)
         .set({ handedOverAt: null, handledByUserId: null })
         .where(eq(waConversations.id, chat.id));
-      await tellHandedBack(this.db, chat, chat.handedOverAt, false);
+      await tellHandedBack(this.db, chat, chat.handedOverAt, false, menuMessage);
     }
     if (!customerId) return this.strangers.greet(chat);
     await setState(this.db, chat.id, 'menu');
@@ -232,14 +234,10 @@ export class AssistantService {
     return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['rewards', 'menu']);
   }
 
-  /** Devanagari we cannot place as Marathi or Hindi: asked once, with the three buttons. */
+  /** Which language: the three buttons, each in its own script. */
   private askLanguage(chat: Conversation) {
-    const ask: ChatReply = {
-      kind: 'buttons',
-      body: CHAT_WORDS.language.ask,
-      buttons: LANGUAGE_BUTTONS,
-    };
-    return queueReply(this.db, chat, ask);
+    const buttons = LANGUAGE_BUTTONS;
+    return queueReply(this.db, chat, { kind: 'buttons', body: CHAT_WORDS.language.ask, buttons });
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */

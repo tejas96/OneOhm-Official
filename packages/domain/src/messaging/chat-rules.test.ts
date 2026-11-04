@@ -74,6 +74,14 @@ describe('working time', () => {
   });
 });
 
+describe('the last work end skips Sunday', () => {
+  it('is Saturday 6:30 pm all through Sunday and Monday morning', () => {
+    const sat = new Date('2026-10-31T18:30:00+05:30').toISOString();
+    for (const at of ['2026-11-01T10:00', '2026-11-01T21:00', '2026-11-02T08:00'])
+      expect(lastWorkEnd(new Date(`${at}:00+05:30`), TZ).toISOString(), at).toBe(sat);
+  });
+});
+
 describe('when a person can reply', () => {
   const at = (iso: string) => replyTime(new Date(`${iso}:00+05:30`), TZ);
   it('is now in working hours, else the next 9:30 (Saturday evening → Monday)', () => {
@@ -98,8 +106,9 @@ describe('who answers', () => {
 describe('last end of working hours', () => {
   it('is 6:30 pm today after 6:30 pm, else 6:30 pm yesterday', () => {
     expect(lastWorkEnd(ist('22:15'), TZ).toISOString()).toBe(ist('18:30').toISOString());
+    // 2 Nov is a Monday: yesterday was Sunday (closed), so Saturday's end.
     expect(lastWorkEnd(ist('06:30'), TZ).toISOString()).toBe(
-      new Date('2026-11-01T18:30:00+05:30').toISOString(),
+      new Date('2026-10-31T18:30:00+05:30').toISOString(),
     );
   });
 });

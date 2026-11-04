@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { NIGHT, NOON, nudgesTo, runNudges, silentFor } from '../support/nudges';
+import { NIGHT, NOON, NUDGE_DAY, nudgesTo, runNudges, silentFor } from '../support/nudges';
 import {
   chatOf,
   choices,
@@ -55,7 +55,7 @@ describe('Onboarding nudge and stalled leads', () => {
     expect(choices(nudge)).toEqual(['ob:continue', 'ob:person']);
     expect(((await chatOf(phone)).ob as { nudgedAt?: string }).nudgedAt).toBeTruthy();
     const [after] = await leadsOf(phone);
-    expect(after).toMatchObject({ id: lead?.id, next_action_on: today() });
+    expect(after).toMatchObject({ id: lead?.id, next_action_on: NUDGE_DAY });
     expect(after?.next_action_note).toBe('Call — stopped at site question');
     expect(
       (await notesOf(lead?.id ?? '')).some((n) => n.note.includes('stopped at the site')),

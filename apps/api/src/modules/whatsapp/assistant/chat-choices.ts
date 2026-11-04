@@ -20,6 +20,8 @@ export const CHOICES = [
   'receipts',
   'visit',
   'see',
+  'bill',
+  'sendbill',
   'feedback',
 ] as const;
 

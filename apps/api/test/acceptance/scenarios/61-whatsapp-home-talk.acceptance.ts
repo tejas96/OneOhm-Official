@@ -113,7 +113,7 @@ describe('WhatsApp talk (redesign §14)', () => {
     expect(choices(await lastReply(phone))).toEqual(['lang:en', 'lang:mr', 'lang:hi']);
     await tap(phone, 'lang:hi');
     const [saved, home] = (await replies(phone)).slice(-2);
-    expect(saved?.body).toBe('ठीक है ✅ अब हम हिंदी में लिखेंगे.');
+    expect(saved?.body).toBe('ठीक है ✅ अब हम हिंदी में लिखेंगे।');
     expect(home?.body).toMatch(/^नमस्ते Language 👋/);
     const [row] = await rows<{ language: string }>(
       'SELECT preferred_language AS language FROM customers WHERE id = $1',
@@ -156,5 +156,22 @@ describe('WhatsApp talk (redesign §14)', () => {
     expect(told?.body).toMatch(/ is away now — we’re here to help\.$/);
     expect(told?.kind).toBe('text');
     expect(choices(home)).toContain('go:more');
+  });
+
+  it('a late tap while a person holds the chat: the person is told, the bot says nothing', async () => {
+    const { customer } = await customerInChat(admin, 'Held Late Tap Customer (test)');
+    const { phone } = customer;
+    const chat = await chatOf(phone);
+    await admin.post(`/whatsapp/chats/${chat.id}/reply`, { text: 'Hello from the office (test)' });
+    await say(phone, 'I will call you back (test)');
+    const before = (await replies(phone)).length;
+    const told = (await alerts(chat.id, 'whatsapp_message')).length;
+    await sendInbound(phone, { buttonReply: 'go:nonsense', at: new Date(Date.now() - 60_000) });
+    expect((await replies(phone)).length).toBeLessThanOrEqual(before + 1);
+    expect((await replies(phone)).some((reply) => reply.body.includes('earlier message'))).toBe(
+      false,
+    );
+    expect((await alerts(chat.id, 'whatsapp_message')).length).toBe(told + 1);
+    expect((await chatOf(phone)).state).toBe('human');
   });
 });

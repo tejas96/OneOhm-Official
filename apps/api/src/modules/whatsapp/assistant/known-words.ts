@@ -61,9 +61,11 @@ const KNOWN: readonly (readonly [Choice, readonly string[]])[] = [
   [
     'documents',
     list(
-      'receipt|invoice|bill|document|documents|papers|quotation|पावती|रसीद|बिल|कागद|कागदपत्र|कागदपत्रे|दस्तावेज|दस्तावेज़|कोटेशन',
+      'receipt|invoice|document|documents|papers|quotation|पावती|रसीद|कागद|कागदपत्र|कागदपत्रे|दस्तावेज|दस्तावेज़|कागज़|कागज|कोटेशन',
     ),
   ],
+  // "bill" alone could be the electricity bill or what they owe: asked ("Which bill?").
+  ['bill', list('bill|bills|light bill|बिल|बिजली बिल|वीज बिल')],
   ['warranty', list('warranty|amc|guarantee|वॉरंटी|वारंटी|गॅरंटी|गारंटी')],
   ['refer', list('refer|referral')],
   ['rewards', list('reward|rewards|बक्षीस|इनाम')],
@@ -135,12 +137,12 @@ export function knownChoice(text: string): Choice | undefined {
 /** Words only Marathi or only Hindi uses, to tell the two apart in Devanagari. */
 const MARATHI = set(
   list(
-    'आहे|आहेत|नाही|नाहीये|काय|कधी|केव्हा|किती|मला|माझे|माझा|माझी|माझ्या|तुम्ही|तुमचे|आणि|झाले|झालं|पाहिजे|कसे|हवे|येणार|करा|सांगा|नमस्कार|बरं|पावती|तक्रार',
+    'आहे|आहेत|नाही|नाहीये|काय|कधी|केव्हा|किती|मला|माझे|माझा|माझी|माझ्या|तुम्ही|तुमचे|आणि|झाले|झालं|पाहिजे|कसे|हवे|येणार|करा|सांगा|बरं|पावती|तक्रार',
   ),
 );
 const HINDI = set(
   list(
-    'है|हैं|नहीं|क्या|कब|कितना|कितने|कितनी|मुझे|मेरा|मेरी|मेरे|आप|आपका|और|गया|चाहिए|कैसे|करें|बताएँ|बताइए|शुक्रिया|नमस्ते|रसीद|शिकायत',
+    'है|हैं|नहीं|क्या|कब|कितना|कितने|कितनी|मुझे|मेरा|मेरी|मेरे|आप|आपका|और|गया|चाहिए|कैसे|करें|बताएँ|बताइए|शुक्रिया|रसीद|शिकायत',
   ),
 );
 

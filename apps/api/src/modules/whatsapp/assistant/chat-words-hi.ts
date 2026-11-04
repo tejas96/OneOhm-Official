@@ -18,7 +18,7 @@ const CALL: Record<ReplyTime, string> = {
 };
 
 const replies = (name: string | null, when: ReplyTime) =>
-  name ? `${name} आपको ${WHEN[when]} यहीं जवाब देंगे.` : `हमारी टीम आपको ${WHEN[when]} यहीं जवाब देगी.`;
+  name ? `${name} आपको ${WHEN[when]} यहीं जवाब देंगे।` : `हमारी टीम आपको ${WHEN[when]} यहीं जवाब देगी।`;
 
 const toWhom = (name: string | null) => (name ? `${name} को` : 'हमारी टीम को');
 
@@ -41,10 +41,12 @@ export const HI_CHAT: Words<ChatWords> = {
     refer: 'दोस्त को बताएँ',
     rewards: 'मेरे इनाम',
     talkTeam: 'टीम से बात करें',
+    sendBill: 'बिजली बिल भेजें',
     start: 'फिर से शुरू करें',
     viewReceipt: 'रसीद देखें',
   },
   pay: (amount) => `${amount} भरें`,
+  payLink: (amount, when, home) => `${home} वाले घर के लिए ${when} *${amount}* भरने हैं।`,
   talkTo: (name) => `${name} से बात करें`,
   whatNext: 'आगे क्या?',
   listButton: 'चुनें',
@@ -64,20 +66,20 @@ export const HI_CHAT: Words<ChatWords> = {
     },
   },
   home: {
-    hello: (name) => `नमस्ते ${name} 👋`,
+    hello: (name) => (name ? `नमस्ते ${name} 👋` : 'नमस्ते 👋'),
     stage: (home, stage, done, steps) =>
-      `${home} में आपका सोलर *${stage}* पर है (${steps} में से ${done} चरण).`,
-    complete: (home) => `${home} में आपका सोलर पूरा हो गया है.`,
-    paper: (paper, home) => `हमें ${home ? `${home} वाले घर के लिए ` : ''}आपका *${paper}* चाहिए.`,
-    pay: (amount, home) => `${home} वाले घर के लिए *${amount}* भरने हैं.`,
-    visit: (home, day) => `हमारी टीम *${day}* को आपके ${home ? `${home} वाले ` : ''}घर आएगी.`,
-    problem: (home) => `हम ${home ? `${home} वाले घर की ` : 'आपकी '}समस्या पर काम कर रहे हैं.`,
-    quote: 'आपका कोटेशन आपके जवाब का इंतज़ार कर रहा है.',
+      `${home} में आपका सोलर *${stage}* पर है (${steps} में से ${done} चरण)।`,
+    complete: (home) => `${home} में आपका सोलर पूरा हो गया है।`,
+    paper: (paper, home) => `हमें ${home ? `${home} वाले घर के लिए ` : ''}आपका *${paper}* चाहिए।`,
+    pay: (amount, home) => `${home} वाले घर के लिए *${amount}* भरने हैं।`,
+    visit: (home, day) => `हमारी टीम *${day}* को आपके ${home ? `${home} वाले ` : ''}घर आएगी।`,
+    problem: (home) => `हम ${home ? `${home} वाले घर की ` : 'आपकी '}समस्या पर काम कर रहे हैं।`,
+    quote: 'आपका कोटेशन आपके जवाब का इंतज़ार कर रहा है।',
     nothing: 'आज हम कैसे मदद करें?',
-    count: (count) => `${count} चीज़ें आपसे चाहिए.`,
+    count: (count) => `${count} चीज़ें आपसे चाहिए।`,
     noProject: (name, when) =>
-      `हम आपका सोलर प्लान तैयार कर रहे हैं. ${name ? `${name} आपको ${CALL[when]} कॉल करेंगे` : `हमारी टीम आपको ${CALL[when]} कॉल करेगी`}.`,
-    seeThem: 'अभी आपसे यह चाहिए.',
+      `हम आपका सोलर प्लान तैयार कर रहे हैं। ${name ? `${name} आपको ${CALL[when]} कॉल करेंगे` : `हमारी टीम आपको ${CALL[when]} कॉल करेगी`}।`,
+    seeThem: 'अभी आपसे यह चाहिए।',
     paperRow: (home) => (home ? `${home} वाले घर के लिए चाहिए` : 'आपसे चाहिए'),
     payRow: (home) => `${home} वाले घर के लिए बाकी`,
     quoteRow: 'आपके जवाब का इंतज़ार',
@@ -89,22 +91,25 @@ export const HI_CHAT: Words<ChatWords> = {
     evening: 'शुभ संध्या 🙏',
     night: 'शुभ रात्रि 🙏',
   },
-  unknown: 'माफ़ कीजिए, हम समझ नहीं पाए. नीचे से एक चुनें.',
+  unknown: 'माफ़ कीजिए, हम समझ नहीं पाए। नीचे से एक चुनें।',
   talkReply: replies,
-  passed: (name, when) => `धन्यवाद. हमने यह ${toWhom(name)} बता दिया है. ${replies(name, when)}`,
+  passed: (name, when) => `धन्यवाद। हमने यह ${toWhom(name)} बता दिया है। ${replies(name, when)}`,
   passedUnknown: (name, when) =>
-    `माफ़ कीजिए, हम अब भी समझ नहीं पाए. आपका मेसेज ${toWhom(name)} भेज दिया है. ${replies(name, when)}`,
+    `माफ़ कीजिए, हम अब भी समझ नहीं पाए। आपका मेसेज ${toWhom(name)} भेज दिया है। ${replies(name, when)}`,
+  nightReply: (name, when) =>
+    `धन्यवाद। आपका मेसेज ${name ? `${name} के पास` : 'हमारी टीम के पास'} है। ${replies(name, when)}`,
   handedBack: (name) =>
-    `${name ? `${name} अभी उपलब्ध नहीं हैं` : 'हमारी टीम अभी उपलब्ध नहीं है'} — हम मदद के लिए यहाँ हैं.`,
-  earlier: 'वह पुराना मेसेज था — यह ताज़ा है.',
+    `${name ? `${name} अभी उपलब्ध नहीं हैं` : 'हमारी टीम अभी उपलब्ध नहीं है'} — हम मदद के लिए यहाँ हैं।`,
+  earlier: 'वह पुराना मेसेज था — यह ताज़ा है।',
+  bill: { ask: 'आप कौन सा बिल कह रहे हैं?', paper: 'बिजली बिल' },
   language: {
     ask: 'हम किस भाषा में लिखें?',
-    saved: 'ठीक है ✅ अब हम हिंदी में लिखेंगे.',
+    saved: 'ठीक है ✅ अब हम हिंदी में लिखेंगे।',
   },
   paper: {
     ask: (paper, home) =>
-      `कृपया ${home ? `${home} वाले घर के लिए ` : ''}अपना *${paper}* यहाँ फ़ोटो या PDF में भेजें.`,
-    list: (papers) => `हमें अभी भी चाहिए: ${papers}.\nफ़ोटो या PDF यहाँ भेजें.`,
-    any: 'फ़ोटो या PDF यहाँ भेजें और बताएँ कि यह क्या है.',
+      `कृपया ${home ? `${home} वाले घर के लिए ` : ''}अपना *${paper}* यहाँ फ़ोटो या PDF में भेजें।`,
+    list: (papers) => `हमें अभी भी चाहिए: ${papers}।\nफ़ोटो या PDF यहाँ भेजें।`,
+    any: 'फ़ोटो या PDF यहाँ भेजें और बताएँ कि यह क्या है।',
   },
 };

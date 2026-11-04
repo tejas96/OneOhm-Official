@@ -52,6 +52,13 @@ export class MenuAnswersService {
         return this.papers.receipts(chat, customerId);
       case 'paper':
         return this.askPaper(chat, customerId, null);
+      case 'bill':
+        return say(CHAT_WORDS.bill.ask, [
+          { id: 'go:sendbill', title: CHAT_WORDS.buttons.sendBill },
+          'payments',
+        ]);
+      case 'sendbill':
+        return this.askPaper(chat, customerId, null, 'electricity_bill');
       case 'problem':
         return startComplaint(this.db, chat, customerId);
       case 'problems':
@@ -91,12 +98,16 @@ export class MenuAnswersService {
       );
   }
 
-  /** Payments (redesign §10): one message per home, [Pay ₹X] when something is due now. */
+  /**
+   * Payments (redesign §10): one message per home, [Pay ₹X] when something is due now; at
+   * most two messages, homes with money due first.
+   */
   private async payments(chat: Conversation, customerId: string) {
     const homes = await this.answers.payments(customerId);
     if (homes.length === 0) return this.noProject(chat);
     const online = this.home.paysOnline();
-    for (const { body, due } of homes) {
+    const shown = [...homes].sort((a, b) => Number(b.due !== null) - Number(a.due !== null));
+    for (const { body, due } of shown.slice(0, 2)) {
       const pay =
         due && online
           ? { id: `pay:${due.milestoneId}`, title: CHAT_WORDS.pay(formatInr(due.leftPaise)) }
@@ -122,19 +133,27 @@ export class MenuAnswersService {
    * here as a photo or PDF (today's paper path files it); else what we still need, else
    * "send it and tell us what it is".
    */
-  async askPaper(chat: Conversation, customerId: string, requestId: string | null) {
+  async askPaper(
+    chat: Conversation,
+    customerId: string,
+    requestId: string | null,
+    category?: string,
+  ) {
     const today = todayIn(this.env.BUSINESS_TIMEZONE, new Date());
     const open = (await pendingForCustomer(this.db, customerId, today)).flatMap((item) =>
       item.kind === 'paper' ? [item] : [],
     );
-    const asked =
-      open.find((item) => item.requestId === requestId) ??
-      (open.length === 1 ? open[0] : undefined);
+    const asked = category
+      ? open.find((item) => item.category === category)
+      : (open.find((item) => item.requestId === requestId) ??
+        (open.length === 1 ? open[0] : undefined));
     const body = asked
       ? CHAT_WORDS.paper.ask(asked.title, asked.home)
-      : open.length > 0
-        ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
-        : CHAT_WORDS.paper.any;
+      : category
+        ? CHAT_WORDS.paper.ask(CHAT_WORDS.bill.paper, null)
+        : open.length > 0
+          ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
+          : CHAT_WORDS.paper.any;
     return sayWithTaps(this.db, chat, body, ['menu']);
   }
 

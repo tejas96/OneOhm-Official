@@ -14,7 +14,6 @@ import { answererName, deskFor, ensureChatOwner, tellChatTeam } from '../chat-ow
 import { type Conversation, queueReply } from '../chat-store';
 import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
-import { WORDS } from './words';
 
 /**
  * One "asked for a person" alert per customer message: keyed by the message that asked,
@@ -154,7 +153,10 @@ export class HandOverService {
       .limit(1);
     if (said) return;
     const name = await this.answererName(chat);
-    await queueReply(this.db, chat, { kind: 'text', body: WORDS.nightReply(name) });
+    await queueReply(this.db, chat, {
+      kind: 'text',
+      body: CHAT_WORDS.nightReply(name, this.when()),
+    });
   }
 
   /** The first name of whoever answers this chat today, or null for the team. */
