@@ -143,6 +143,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     preview:
       'Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.',
   },
+  {
+    key: 'staff_welcome',
+    audience: 'staff',
+    fields: ['name', 'link'],
+    preview:
+      'Hi {{1}}, you have been added to the OneOhm team. Open the app here: {{2}}. Sign in with this mobile number. For the website, choose "First time here?" to set your password.',
+  },
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /** The file and buttons a message can add once Meta approves them, if it has any. */

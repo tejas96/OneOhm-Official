@@ -39,7 +39,11 @@ export function AddPersonDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await form.run(
-      () => expectStatus(api.people.createPerson({ body: bodyFrom(draft) }), 201),
+      () =>
+        expectStatus(
+          api.people.createPerson({ body: { ...bodyFrom(draft), phone: draft.phone.trim() } }),
+          201,
+        ),
       async (created) => {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),

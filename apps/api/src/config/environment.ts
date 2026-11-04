@@ -12,6 +12,10 @@ const environmentSchema = z
     API_PORT: z.coerce.number().int().default(4200),
     DATABASE_URL: z.string().min(1),
     WEB_BASE_URL: z.string().url().default('http://localhost:3200'),
+    /** The field-app link new resellers and field staff get in their WhatsApp invite. */
+    FIELD_APP_URL: z.string().url().default('http://localhost:8081'),
+    /** `on` sends the staff_welcome WhatsApp invite; off until Meta approves the template. */
+    STAFF_INVITES: z.enum(['on', 'off']).default('off'),
     CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3200,http://localhost:8081'),
     BUSINESS_TIMEZONE: z.string().default('Asia/Kolkata'),
     TRUST_PROXY: flag,

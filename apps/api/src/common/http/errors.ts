@@ -5,6 +5,8 @@ export class AppError extends Error {
     message: string,
     readonly code: string,
     readonly fieldErrors?: Record<string, string>,
+    /** Facts the screen needs to offer a next step, like who holds a number. */
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -15,7 +17,8 @@ export const forbidden = (message = 'You do not have permission to do this.') =>
   new AppError(403, message, 'forbidden');
 export const unauthenticated = (message = 'Your session has ended. Please sign in again.') =>
   new AppError(401, message, 'unauthenticated');
-export const conflict = (message: string, code = 'conflict') => new AppError(409, message, code);
+export const conflict = (message: string, code = 'conflict', details?: Record<string, unknown>) =>
+  new AppError(409, message, code, undefined, details);
 export const invalid = (message: string, fieldErrors?: Record<string, string>) =>
   new AppError(400, message, 'invalid', fieldErrors);
 export const tooMany = (message: string) => new AppError(429, message, 'too_many');
