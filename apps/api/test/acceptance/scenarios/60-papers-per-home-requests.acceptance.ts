@@ -180,4 +180,54 @@ describe('Papers per home: requests', () => {
       await rows("UPDATE message_templates SET active = false WHERE key = 'paper_request'");
     }
   });
+
+  it('a change request counts homes, not every property', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Change Homes (test)' });
+    // A second property with no project and no open lead is not a home.
+    await admin.post(`/customers/${customer.customerId}/properties`, {
+      label: 'Old plot (test)',
+      addressLine: '5 Station Road (test)',
+      city: 'Sangli',
+      district: 'Sangli',
+      state: 'Maharashtra',
+      pincode: '416416',
+      subsidyCategory: 'individual',
+      floors: 1,
+    });
+    await upload(admin, 'document', {
+      customerId: customer.customerId,
+      category: 'electricity_bill',
+    });
+    const [{ discom_id: discomId } = { discom_id: '' }] = await rows<{ discom_id: string }>(
+      'SELECT discom_id FROM projects WHERE id = $1',
+      [project.id],
+    );
+    const title = `Bill check ${Date.now()} (test)`;
+    const step = {
+      title: 'Collect (test)',
+      roleKey: 'liaisoning',
+      durationDays: 1,
+      waitingParty: 'customer',
+      captures: [],
+    };
+    const type = await admin.post<{ id: string }>(`/discoms/${discomId}/change-request-types`, {
+      title,
+      description: '',
+      fields: [],
+      documents: ['electricity_bill'],
+      steps: [step],
+      blocks: { stages: [], taskKeys: [] },
+      updates: [],
+      active: true,
+    });
+    try {
+      const offered = await admin.get<{
+        options: { title: string; documents: { category: string; onFile: boolean }[] }[];
+      }>(`/change-request-options?projectId=${project.id}`);
+      const mine = offered.options.find((option) => option.title === title);
+      expect(mine?.documents).toEqual([{ category: 'electricity_bill', onFile: true }]);
+    } finally {
+      await rows('UPDATE change_request_types SET active = false WHERE id = $1', [type.id]);
+    }
+  });
 });

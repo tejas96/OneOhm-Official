@@ -54,7 +54,10 @@ const WORDS: Readonly<Record<string, Words>> = {
   }),
   document_requested: (p) => ({
     title: `Please send your ${p.document}`,
-    body: `${p.project}: open Documents and tap Send to add a photo or PDF.`,
+    // With no project (a person's paper) the plain words alone, never "undefined:".
+    body: p.project
+      ? `${p.project}: open Documents and tap Send to add a photo or PDF.`
+      : 'Open Documents and tap Send to add a photo or PDF.',
   }),
   // The request naming the home (papers per home); app inbox and SMS say the same.
   paper_request: (p) => ({

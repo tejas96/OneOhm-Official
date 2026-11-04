@@ -113,6 +113,12 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
   `FILE_LINK_SECRET`, with a temporary or `http` `API_PUBLIC_URL`, and (API) with
   `WHATSAPP_DELIVERY=live` but no `WHATSAPP_APP_SECRET`.
 
+- **Papers per home (November 2026):** migrations `0071_papers_per_home` and
+  `0072_wa_messages_document_index` build indexes on `documents` and `wa_messages` and fill
+  `documents.property_id` from each paper's project, each in one transaction that holds
+  those tables' write locks until it ends. Deploy off-peak (evening or Sunday), when few
+  people upload papers or send WhatsApp messages.
+
 ## 5. WhatsApp
 
 ### Templates

@@ -101,7 +101,8 @@ export async function askForPaper(
     {
       customer: asked.customer,
       document: asked.title,
-      ...(asked.projectCode ? { project: asked.projectCode } : {}),
+      // WhatsApp's document_requested needs a project: plain words when there is none.
+      project: asked.projectCode ?? home,
       home,
     },
     dedupeKey,

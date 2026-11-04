@@ -66,7 +66,7 @@ export const HINDI_WORDS: LanguageWords = {
     }),
     document_requested: (p) => ({
       title: `कृपया ${p.document} भेजें`,
-      body: `${p.project}: ‘दस्तावेज़’ खोलें और फ़ोटो या PDF भेजें।`,
+      body: `${p.project ? `${p.project}: ` : ''}‘दस्तावेज़’ खोलें और फ़ोटो या PDF भेजें।`,
     }),
     paper_request: (p) => ({
       title: `कृपया ${p.document} भेजें`,

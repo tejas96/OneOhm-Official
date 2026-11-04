@@ -132,3 +132,17 @@ describe('contact_changed in Marathi and Hindi', () => {
     expect(customerNotice('paper_request', paper, 'k', 'hi-IN')?.body).toContain('आपके घर पर');
   });
 });
+
+describe('a paper asked for with no project', () => {
+  it('says plain words, never "undefined"', () => {
+    const { project: _project, ...noProject } = payload;
+    for (const language of [undefined, 'mr-IN', 'hi-IN']) {
+      const notice = customerNotice('document_requested', noProject, 'k', language);
+      expect(notice?.body, language).not.toContain('undefined');
+      expect(notice?.body, language).not.toMatch(/^:/);
+    }
+    expect(customerNotice('document_requested', noProject, 'k')?.body).toBe(
+      'Open Documents and tap Send to add a photo or PDF.',
+    );
+  });
+});

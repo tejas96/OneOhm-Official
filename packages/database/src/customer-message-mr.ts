@@ -66,7 +66,7 @@ export const MARATHI_WORDS: LanguageWords = {
     }),
     document_requested: (p) => ({
       title: `कृपया ${p.document} पाठवा`,
-      body: `${p.project}: ‘कागदपत्रे’ उघडा आणि फोटो किंवा PDF पाठवा.`,
+      body: `${p.project ? `${p.project}: ` : ''}‘कागदपत्रे’ उघडा आणि फोटो किंवा PDF पाठवा.`,
     }),
     paper_request: (p) => ({
       title: `कृपया ${p.document} पाठवा`,

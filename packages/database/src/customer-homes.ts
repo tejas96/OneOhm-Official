@@ -55,10 +55,6 @@ export function homeName(home: NamedHome, homes: readonly NamedHome[]): string {
   return end ? `${title} (consumer no. ending ${end})` : title;
 }
 
-/** How a reply names a home: "your home at Pune". */
-export const homeLabel = (home: Pick<CustomerHome, 'title'>): string =>
-  `your home at ${home.title}`;
-
 /**
  * The customer's homes, newest first. A home is a property with a project that is not
  * cancelled or a lead that is still open; two projects on one property are one home.

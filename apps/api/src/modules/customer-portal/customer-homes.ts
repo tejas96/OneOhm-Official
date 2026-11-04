@@ -3,6 +3,5 @@ export {
   type CustomerHome,
   customerHomes,
   describeHome,
-  homeLabel,
   homeName,
 } from '@oneohm/database';

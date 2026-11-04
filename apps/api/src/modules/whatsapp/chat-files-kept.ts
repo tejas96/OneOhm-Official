@@ -12,6 +12,17 @@ interface KeptFor {
   readonly alsoDo?: (tx: DatabaseExecutor, documentId: string) => Promise<unknown>;
 }
 
+/**
+ * Whether a kept file is left "to sort": no home chosen, or a voice note or video on the
+ * person row (kept as Other, which no home or person paper holds).
+ */
+export function leftToSort(
+  place: { readonly propertyId: string | null } | null,
+  sound: boolean,
+): boolean {
+  return !place || (sound && !place.propertyId);
+}
+
 /** The storage folder of a customer's WhatsApp file; only letters, digits, `_` and `-` of the media id stay (no dots, so no `..`). */
 export function whatsappFileScope(customerId: string, mediaId: string): string {
   return `customers/${customerId}/whatsapp/${mediaId.replace(/[^\w-]/g, '_')}/`;

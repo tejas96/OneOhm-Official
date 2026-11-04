@@ -7,8 +7,9 @@ import {
   properties,
 } from '@oneohm/database';
 import { countsForSite, defaultDiscomId } from '@oneohm/domain';
-import { and, count, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { invalid, notFound } from '../../common/http/errors';
+import { customerHomes } from '../customer-portal/customer-homes';
 
 export interface RequestScope {
   readonly propertyId?: string | undefined;
@@ -105,14 +106,12 @@ export async function papersOnFile(
         isNull(documents.removedAt),
       ),
     );
-  const [sites] = await db
-    .select({ count: count() })
-    .from(properties)
-    .where(eq(properties.customerId, site.customer.id));
+  // Homes, as the checklist counts them: a property with no live project or lead is none.
+  const homes = await customerHomes(db, site.customer.id);
   const scope = {
     propertyId: site.property.id,
     projectId: site.project?.id ?? null,
-    customerSites: sites?.count ?? 1,
+    customerSites: homes.length || 1,
   };
   return new Set(rows.filter((row) => countsForSite(row, scope)).map((row) => row.category));
 }

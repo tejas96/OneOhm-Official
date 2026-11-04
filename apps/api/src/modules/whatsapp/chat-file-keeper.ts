@@ -15,7 +15,13 @@ import { logLead } from '../crm/lead-history';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
 import { answersRequests, homeForFile, placeOn } from './assistant/file-home';
-import { answersSomething, isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
+import {
+  answersSomething,
+  isFiled,
+  keptFile,
+  leftToSort,
+  whatsappFileScope,
+} from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
 import { FILE_WORDS, filePaper } from './file-paper';
@@ -105,7 +111,7 @@ export class ChatFileKeeper {
       const sound = !kept || !answersRequests(kept.contentType);
       await this.db.transaction(async (tx) => {
         if (place) await filePaper(tx, documentId, sound ? { ...place, category: 'other' } : place);
-        await this.tellKept(tx, chat, message, media, !place);
+        await this.tellKept(tx, chat, message, media, leftToSort(place, sound));
       });
     } catch (error) {
       this.log.error(`WhatsApp file ${media.id} not filed: ${String(error)}`);
