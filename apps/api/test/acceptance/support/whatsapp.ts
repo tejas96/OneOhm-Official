@@ -36,6 +36,8 @@ export interface InboundMessage {
     filename?: string;
     caption?: string;
   };
+  /** A reply to a form (Flow) we sent: our token, and the files it carries as Meta posts them. */
+  form?: { token: string; files: Record<string, unknown>[] };
   /** A location pin, as Meta posts it. */
   location?: { latitude: number; longitude: number; name?: string; address?: string };
   /** A shared contact card, as Meta posts it. */
@@ -174,6 +176,22 @@ function otherOf(base: Record<string, string>, message: InboundMessage) {
 function messageOf(base: Record<string, string>, message: InboundMessage): Record<string, unknown> {
   const other = otherOf(base, message);
   if (other) return other;
+  if (message.form)
+    return {
+      ...base,
+      type: 'interactive',
+      interactive: {
+        type: 'nfm_reply',
+        nfm_reply: {
+          name: 'flow',
+          body: 'Sent',
+          response_json: JSON.stringify({
+            flow_token: message.form.token,
+            files: message.form.files,
+          }),
+        },
+      },
+    };
   return message.media
     ? {
         ...base,

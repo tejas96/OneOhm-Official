@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { type IncomingForm, readForm } from './forms/form-reply-data';
 import { readOther } from './incoming-other';
 
 /** Meta signs each webhook post: `sha256=` and the HMAC of the raw body with the app secret. */
@@ -56,9 +57,11 @@ export interface Incoming {
   readonly at: Date;
   readonly profileName: string | null;
   /** `choice` is a tap on a button or list row; its id is in `choiceId`. */
-  readonly kind: 'text' | 'choice' | 'media' | 'other';
+  readonly kind: 'text' | 'choice' | 'media' | 'form' | 'other';
   readonly text: string;
   readonly choiceId: string | null;
+  /** Set on a `form` message: the token we sent and the files the customer added. */
+  readonly form?: IncomingForm | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
   /** Set on a message the chat shows but nobody is alerted to (a reaction). */
@@ -92,6 +95,7 @@ interface RawMessage {
   interactive?: {
     button_reply?: { id?: string; title?: string };
     list_reply?: { id?: string; title?: string };
+    nfm_reply?: { name?: string; body?: string; response_json?: string };
   };
   button?: { payload?: string; text?: string };
   image?: RawMedia;
@@ -164,6 +168,9 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
   const reply = message.interactive?.button_reply ?? message.interactive?.list_reply;
   if (reply?.id)
     return { ...base, kind: 'choice', text: reply.title ?? reply.id, choiceId: reply.id };
+  const form = message.interactive?.nfm_reply;
+  if (form)
+    return { ...base, kind: 'form', text: '', choiceId: null, form: readForm(form.response_json) };
   if (message.button?.payload)
     return {
       ...base,

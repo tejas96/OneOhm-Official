@@ -531,3 +531,29 @@ document requests → customer actions.
 
 **Owner tasks with Meta / telecom:** about 20 templates × 3 languages (I prepare all texts); publish
 forms in WhatsApp Manager (I prepare them); SMS DLT templates.
+
+---
+
+## 22c. Phase 2b — forms (WhatsApp Flows) and "Send a paper"
+
+- **Where:** `apps/api/src/modules/whatsapp/forms/`. The form list is `form-registry.ts`; the
+  Flow JSON of "Send a paper" is `send-paper.flow.ts` (versioned; one DocumentPicker, 1 to 4
+  photos or PDFs, Flow JSON 6.0). All words come from the start data (`form-words.ts`), so one
+  published flow serves English, Marathi and Hindi. No data endpoint: the message opens the
+  screen with `flow_action: navigate` and the files return in the `nfm_reply` webhook.
+- **Sending:** `FormSendService.sendForm(chat, customerId, formKey, start, fallbackText)` queues a
+  new outbox session kind `flow` (the worker builds the interactive flow message). A form with
+  no flow id (Settings → WhatsApp onboarding → Forms) or a chat outside 24 h gets the fallback
+  text instead. The form message ends "Or just send the photo here."
+- **Token:** every form carries a random `flow_token` saved in `wa_flow_tokens` (form, chat,
+  customer, `{actionId}`, 24 h expiry, used once). Unknown, used or expired: "That form is old —
+  please try again." and Home.
+- **Files:** WhatsApp posts form files as media ids (`id`) when there is no endpoint; files with
+  `cdn_url` and `encryption_metadata` (endpoint forms) are decrypted too
+  (`media-decrypt.ts`: SHA-256 of the download, HMAC-SHA256 of iv + ciphertext first 10 bytes,
+  AES-256-CBC, SHA-256 of the plaintext). Each file goes through the same type/size/empty checks
+  and the store-once path; a failure tells the customer the true reason once and alerts the team.
+- **Answer:** the files answer the paper the form was sent for (no "What is this?"), then the
+  normal Saved reply with [Change]. If that paper is gone, nothing is guessed: the files wait.
+- **Publishing:** `pnpm --filter @oneohm/api forms:publish` prints what it would do; with `--yes`
+  it creates, uploads and publishes the flow in the business account and prints the flow id.

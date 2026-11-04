@@ -1,10 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { waConversations } from '@oneohm/database';
+import { isPersonDocumentCategory } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { paperKindWords } from '../../documents/paper-kind-words';
 import { type Conversation, queueReply } from '../chat-store';
+import { FormSendService } from '../forms/form-send';
+import { sendPaperStart } from '../forms/form-words';
 import { AnswersService } from './answers.service';
 import type { Choice } from './chat-choices';
 import { saveLanguage } from './chat-language';
@@ -15,7 +19,7 @@ import { startComplaint } from './complaint-start';
 import { FeedbackFlowService } from './feedback-flow';
 import { HandOverService } from './hand-over';
 import { HomeService } from './home';
-import { type AssistantLanguage, inLanguage } from './language';
+import { type AssistantLanguage, inLanguage, languageNow } from './language';
 import { PaperRepliesService } from './paper-replies';
 import { pendingForCustomer } from './pending-items';
 import { WORDS } from './words';
@@ -34,6 +38,7 @@ export class MenuAnswersService {
     private readonly feedback: FeedbackFlowService,
     private readonly people: HandOverService,
     private readonly home: HomeService,
+    private readonly forms: FormSendService,
   ) {}
 
   async choose(chat: Conversation, customerId: string, choice: Choice): Promise<void> {
@@ -133,8 +138,9 @@ export class MenuAnswersService {
   }
 
   /**
-   * Send a paper / [Send it now]: the paper we still need, named with its home, to send
-   * here as a photo or PDF (today's paper path files it); else what we still need, else
+   * Send a paper / [Send it now]: the paper we still need, named with its home, opens the
+   * "Send a paper" form (up to 4 files answer that paper); without a published form it asks
+   * for the photo or PDF here, which "What is this?" files. Else what we still need, else
    * "send it and tell us what it is".
    */
   async askPaper(
@@ -151,13 +157,19 @@ export class MenuAnswersService {
       ? open.find((item) => item.category === category)
       : (open.find((item) => item.requestId === requestId) ??
         (open.length === 1 ? open[0] : undefined));
-    const body = asked
-      ? CHAT_WORDS.paper.ask(asked.title, asked.home)
-      : category
-        ? CHAT_WORDS.paper.ask(CHAT_WORDS.bill.paper, null)
-        : open.length > 0
-          ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
-          : CHAT_WORDS.paper.any;
+    if (asked) {
+      const paper = isPersonDocumentCategory(asked.category)
+        ? paperKindWords(languageNow(), asked.category)
+        : asked.title;
+      const start = sendPaperStart(paper, asked.home, asked.requestId);
+      const fallback = CHAT_WORDS.paper.ask(asked.title, asked.home);
+      return void (await this.forms.sendForm(chat, customerId, 'send_paper', start, fallback));
+    }
+    const body = category
+      ? CHAT_WORDS.paper.ask(CHAT_WORDS.bill.paper, null)
+      : open.length > 0
+        ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
+        : CHAT_WORDS.paper.any;
     return sayWithTaps(this.db, chat, body, ['menu']);
   }
 

@@ -44,6 +44,8 @@ export function assistantAnswers(
   incoming: Pick<Incoming, 'kind' | 'choiceId'>,
 ): boolean {
   if (assistantAnswersTap(chat, incoming)) return true;
+  // A form we sent: the customer is using the assistant's own form, so it answers in a held chat.
+  if (incoming.kind === 'form') return true;
   const step = chat.customerId === null ? null : heldStep(chat);
   // Only the complaint takes a file; a file sent at any other step is for the person.
   if (incoming.kind === 'media') return step === 'await_problem';

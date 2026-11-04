@@ -25,6 +25,10 @@ import { WhatAnswerService } from './assistant/what-answer';
 import { ChatFileKeeper } from './chat-file-keeper';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
+import { FormFileKeeper } from './forms/form-files';
+import { FormReplyService } from './forms/form-reply';
+import { FormSendService } from './forms/form-send';
+import { FormSettingsService } from './forms/form-settings';
 import { createMediaGateway, WHATSAPP_MEDIA } from './media-gateway';
 import { EstimateService } from './onboarding/estimate.service';
 import { EstimateNextStepsService } from './onboarding/estimate-next-steps';
@@ -78,6 +82,10 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     EstimateNextStepsService,
     QuoteActionsService,
     WebhookHeartbeatService,
+    FormSendService,
+    FormSettingsService,
+    FormReplyService,
+    FormFileKeeper,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

@@ -7,6 +7,7 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type Conversation, queueReply, setState } from '../chat-store';
+import { FormReplyService } from '../forms/form-reply';
 import type { Incoming } from '../whatsapp-events';
 import { languageTapped, payTapped, sendTapped } from './chat-choices';
 import { chatLanguage, languageForMessage } from './chat-language';
@@ -60,6 +61,7 @@ export class AssistantService {
     private readonly papers: PaperRepliesService,
     private readonly whatAnswers: WhatAnswerService,
     private readonly words: FreeTextService,
+    private readonly formReplies: FormReplyService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -106,6 +108,8 @@ export class AssistantService {
       return this.menus.choose(chat, customerId, 'talk');
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
+    // A "Send a paper" form came back: its files answer the paper it was sent for.
+    if (incoming.form) return this.formReplies.receive(chat, customerId, incoming.form);
     // A location pin, a contact card or a sticker is never answered: their person is told
     // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
     if (incoming.kind === 'other')
