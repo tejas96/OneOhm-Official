@@ -1,16 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChatDetail, ChatSummary } from '@oneohm/api-contracts';
-import {
-  coveredBy,
-  documents,
-  notify,
-  outbox,
-  roles,
-  userRoles,
-  users,
-  waConversations,
-  waMessages,
-} from '@oneohm/database';
+import { coveredBy, notify, roles, userRoles, users, waConversations } from '@oneohm/database';
 import { followUpText } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
@@ -18,6 +8,7 @@ import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { contactLeadsByPhone } from '../crm/lead-history';
+import { chatMessages } from './chat-history';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
 import {
   conversationForPhone,
@@ -27,7 +18,6 @@ import {
   queueTemplate,
 } from './chat-store';
 import { chatSummaries } from './chat-summaries';
-import { deliveryState } from './delivery-state';
 
 /** "Sunita Jadhav (test)" → "Sunita"; a chat without a name is greeted as "there". */
 export function firstName(name: string): string {
@@ -59,37 +49,7 @@ export class ChatsService {
     const [chat] = await this.summaries(eq(waConversations.id, id), 1);
     if (!chat) throw notFound('That chat');
     if (!(await this.mayAnswer(actor, chat))) throw forbidden();
-    const rows = await this.db
-      .select({
-        message: waMessages,
-        status: outbox.status,
-        deliveryStatus: outbox.deliveryStatus,
-        sentBy: users.fullName,
-        file: { id: documents.id, name: documents.name, contentType: documents.contentType },
-      })
-      .from(waMessages)
-      .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
-      .leftJoin(users, eq(users.id, waMessages.sentByUserId))
-      .leftJoin(
-        documents,
-        and(eq(documents.id, waMessages.documentId), isNull(documents.removedAt)),
-      )
-      .where(eq(waMessages.conversationId, id))
-      .orderBy(desc(waMessages.createdAt))
-      .limit(200); // the newest 200, shown oldest first
-    return {
-      chat,
-      messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy, file }) => ({
-        id: message.id,
-        direction: message.direction as 'in' | 'out',
-        kind: message.kind,
-        body: message.body,
-        at: message.createdAt.toISOString(),
-        delivery: status ? deliveryState({ status, deliveryStatus }) : null,
-        sentBy,
-        file: file?.id ? file : null,
-      })),
-    };
+    return { chat, messages: await chatMessages(this.db, id) };
   }
 
   /**

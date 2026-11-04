@@ -10,41 +10,10 @@ import {
 } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
+import { type ChatReply, chatReplySummary } from './chat-reply';
 import type { Incoming } from './whatsapp-events';
 
-/** A reply inside WhatsApp's 24-hour window; the worker sends it like any message. */
-export type ChatReply =
-  | { readonly kind: 'text'; readonly body: string }
-  | {
-      readonly kind: 'document';
-      readonly link: string;
-      readonly filename: string;
-      readonly caption?: string;
-    }
-  | {
-      /** One message with a button that opens a web page (WhatsApp keeps the label to 20). */
-      readonly kind: 'cta_url';
-      readonly body: string;
-      readonly label: string;
-      readonly url: string;
-    }
-  | {
-      readonly kind: 'buttons';
-      readonly body: string;
-      readonly buttons: readonly { readonly id: string; readonly title: string }[];
-    }
-  | {
-      readonly kind: 'list';
-      readonly body: string;
-      readonly button: string;
-      /** The heading over the rows (WhatsApp keeps 24 characters); none when left out. */
-      readonly section?: string;
-      readonly rows: readonly {
-        readonly id: string;
-        readonly title: string;
-        readonly description?: string;
-      }[];
-    };
+export type { ChatReply } from './chat-reply';
 
 export type Conversation = typeof waConversations.$inferSelect;
 
@@ -136,18 +105,6 @@ export async function linkChatFile(
       .where(and(eq(documents.id, before.documentId), isNull(documents.removedAt)));
 }
 
-function summary(reply: ChatReply): string {
-  if (reply.kind === 'text') return reply.body;
-  if (reply.kind === 'document')
-    return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
-  if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
-  const options =
-    reply.kind === 'buttons'
-      ? reply.buttons.map((button) => button.title)
-      : reply.rows.map((row) => row.title);
-  return `${reply.body}\n[${options.join(' · ')}]`;
-}
-
 /**
  * Queues a reply for the worker and keeps it in the chat history. With a `dedupeKey` the
  * same reply is queued once; asking again changes nothing.
@@ -177,7 +134,7 @@ export async function queueReply(
     conversationId: conversation.id,
     direction: 'out',
     kind: reply.kind,
-    body: summary(reply),
+    body: chatReplySummary(reply),
     outboxId: row?.id ?? null,
     sentByUserId,
   });

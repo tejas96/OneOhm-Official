@@ -1,0 +1,46 @@
+/** A reply inside WhatsApp's 24-hour window; the worker sends it like any message. */
+export type ChatReply =
+  | { readonly kind: 'text'; readonly body: string }
+  | {
+      readonly kind: 'document';
+      readonly link: string;
+      readonly filename: string;
+      readonly caption?: string;
+    }
+  | {
+      /** One message with a button that opens a web page (WhatsApp keeps the label to 20). */
+      readonly kind: 'cta_url';
+      readonly body: string;
+      readonly label: string;
+      readonly url: string;
+    }
+  | {
+      readonly kind: 'buttons';
+      readonly body: string;
+      readonly buttons: readonly { readonly id: string; readonly title: string }[];
+    }
+  | {
+      readonly kind: 'list';
+      readonly body: string;
+      readonly button: string;
+      /** The heading over the rows (WhatsApp keeps 24 characters); none when left out. */
+      readonly section?: string;
+      readonly rows: readonly {
+        readonly id: string;
+        readonly title: string;
+        readonly description?: string;
+      }[];
+    };
+
+/** The chat history's one-line text for a reply: its words, then any file or options. */
+export function chatReplySummary(reply: ChatReply): string {
+  if (reply.kind === 'text') return reply.body;
+  if (reply.kind === 'document')
+    return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
+  if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
+  const options =
+    reply.kind === 'buttons'
+      ? reply.buttons.map((button) => button.title)
+      : reply.rows.map((row) => row.title);
+  return `${reply.body}\n[${options.join(' · ')}]`;
+}
