@@ -62,3 +62,14 @@ export const SAMPLE = {
   subject: 'your solar project (OH-2026-014)',
   phone: '+91 98765 43210',
 } as const;
+
+/** Samples that differ by message: the invite carries the app link, not a pay link. */
+const SAMPLE_BY_KEY: Readonly<Record<string, Partial<Record<keyof typeof SAMPLE, string>>>> = {
+  staff_welcome: { link: 'https://app.oneohm.in' },
+};
+
+/** The sample details for one message's preview. */
+export const sampleFor = (key: string): Readonly<Record<string, string>> => ({
+  ...SAMPLE,
+  ...SAMPLE_BY_KEY[key],
+});
