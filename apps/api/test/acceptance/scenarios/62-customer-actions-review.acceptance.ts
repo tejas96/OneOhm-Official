@@ -66,8 +66,12 @@ describe('Customer actions: review round 1', () => {
        VALUES ($1, $2, 'site_photo', 'upload', 'from-chat.jpg', 'k', 'image/jpeg', 1)`,
       [sale.project.id, sale.customer.customerId],
     );
-    await ask(sale.project.id, 'Aadhaar card (test)', { requirementKey: 'free:customer_kyc:aadhaar' });
-    const list = await admin.get<{ items: Item[] }>(`/projects/${sale.project.id}/document-checklist`);
+    await ask(sale.project.id, 'Aadhaar card (test)', {
+      requirementKey: 'free:customer_kyc:aadhaar',
+    });
+    const list = await admin.get<{ items: Item[] }>(
+      `/projects/${sale.project.id}/document-checklist`,
+    );
     const byKey = (key: string) => list.items.find((one) => one.key === key);
     expect(byKey('survey')?.check).toBe('checked');
     expect(byKey('kyc')).toMatchObject({ check: 'missing', requested: true });
@@ -126,15 +130,27 @@ describe('Customer actions: review round 1', () => {
     const sale = await sellProject(admin, { name: 'Unasked Paper (test)' });
     const { phone, customerId } = sale.customer;
     await say(phone, 'hello');
-    const doc = await upload(admin, 'document', { customerId, category: 'electricity_bill', name: 'Light bill' });
-    await rows('UPDATE documents SET checked_at = NULL, checked_by_user_id = NULL WHERE id = $1', [doc.id]);
+    const doc = await upload(admin, 'document', { customerId, category: 'electricity_bill' });
+    await rows('UPDATE documents SET checked_at = NULL, checked_by_user_id = NULL WHERE id = $1', [
+      doc.id,
+    ]);
     await admin.post(`/documents/${doc.id}/check`, {});
-    expect((await lastReply(phone))?.body).toBe('Your *Light bill* is checked ✅');
+    expect((await lastReply(phone))?.body).toBe('Your *Electricity bill* is checked ✅');
+    // In Marathi, by the kind, not the file name.
+    await rows(`UPDATE customers SET preferred_language = 'mr-IN' WHERE id = $1`, [customerId]);
+    const other = await upload(admin, 'document', { customerId, category: 'customer_kyc' });
+    await rows('UPDATE documents SET checked_at = NULL WHERE id = $1', [other.id]);
+    await admin.post(`/documents/${other.id}/check`, {});
+    const marathi = await rows<{ title: string }>(
+      `SELECT title FROM notifications WHERE customer_id = $1 AND kind = 'paper_checked' ORDER BY created_at DESC LIMIT 1`,
+      [customerId],
+    );
+    expect(marathi[0]?.title).toContain('आधार / पॅन');
     const inbox = await rows(
       `SELECT 1 FROM notifications WHERE customer_id = $1 AND kind = 'paper_checked'`,
       [customerId],
     );
-    expect(inbox).toHaveLength(1);
+    expect(inbox).toHaveLength(2);
   });
 
   it('a lead’s WhatsApp paper answers the ask and is logged on the lead; a lead with a project is asked on the project', async () => {
