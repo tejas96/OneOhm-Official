@@ -139,7 +139,8 @@ describe('rejoin', () => {
   });
 
   it('rejoin with no mobile number asks for one first', async () => {
-    const phoneless = await person('Phoneless (rejoin test)');
+    // Not in `people`: they end inactive with no number, which the retire PATCH would refuse.
+    const phoneless = await ownPerson(admin, 'Phoneless (rejoin test)');
     await admin.post(`/people/${phoneless.id}/remove`, {
       handToUserId: heir.id,
       lastWorkingDay: today(),

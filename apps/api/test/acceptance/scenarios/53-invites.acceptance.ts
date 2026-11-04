@@ -3,7 +3,7 @@ import { acceptanceDb, closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { setWebPassword } from '../support/password';
 import { type OwnPerson, retire } from '../support/people';
-import { uniquePhone } from '../support/sales';
+import { today, uniquePhone } from '../support/sales';
 import { roleIds } from '../support/team';
 
 interface Reply {
@@ -174,7 +174,8 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect((blocked.body as unknown as { details: Record<string, unknown> }).details).toEqual({
       userId: past.id,
       fullName: 'Past Member (test)',
-      leftOn: null,
+      // The status switch stores the leaving day too.
+      leftOn: today(),
     });
 
     const released = await admin.raw<Reply>('POST', `/people/${past.id}/release-phone`);
