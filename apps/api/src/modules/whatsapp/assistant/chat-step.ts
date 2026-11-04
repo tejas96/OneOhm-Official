@@ -8,6 +8,7 @@ export const WAITING_STEPS = [
   'await_referral',
   'await_comment',
   'await_file_home',
+  'await_file_paper',
 ];
 
 /** A step waits this long; older, the customer's words are read as new ones (to a person). */

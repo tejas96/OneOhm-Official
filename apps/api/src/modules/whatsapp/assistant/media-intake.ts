@@ -2,13 +2,20 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type Database } from '../../../config/core.module';
 import type { CustomerHome } from '../../customer-portal/customer-homes';
 import { ChatFileKeeper } from '../chat-file-keeper';
-import { type Conversation, chatDocumentFor, queueReply, setState } from '../chat-store';
+import {
+  type Conversation,
+  chatDocumentFor,
+  lockedChat,
+  queueReply,
+  setState,
+} from '../chat-store';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { type HomeChoice, homeForFile } from './file-home';
 import { FileHomeFlowService } from './file-home-flow';
+import { FilePaperFlowService } from './file-paper-flow';
 import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
@@ -54,15 +61,17 @@ export class MediaIntakeService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly files: ChatFileKeeper,
     private readonly homes: FileHomeFlowService,
+    private readonly papers: FilePaperFlowService,
     private readonly problems: ProblemFlowService,
     private readonly people: HandOverService,
   ) {}
 
   /**
    * In order: the problem being reported, the request raised a moment ago, then the home
-   * it is for: asked once when the customer has two or more ("Which home?"), else the
-   * oldest paper OneOhm asked for on it. Anything else: we ask what it is about. In a
-   * chat a person holds, only the home question and the paper go out.
+   * it is for: asked once when the customer has two or more ("Which home?"), then the
+   * paper OneOhm asked for on that home ("Which paper?" when two or more are open). A file
+   * that answers nothing is saved on the home and the customer is told so (decision 4).
+   * In a chat a person holds, only the questions and the answered paper go out.
    */
   async receive(
     chat: Conversation,
@@ -101,7 +110,7 @@ export class MediaIntakeService {
     return this.forHome(chat, customerId, media, held);
   }
 
-  /** "Which home?" once for two or more homes; else the paper asked for on the home. */
+  /** "Which home?" once for two or more homes; then the papers asked for on that home. */
   private async forHome(
     chat: Conversation,
     customerId: string,
@@ -117,10 +126,13 @@ export class MediaIntakeService {
       if (!known) return;
       ({ homes, choice } = known);
     }
-    if (choice && (await this.homes.openFor(customerId, choice)).length > 0)
-      return this.fulfil(chat, customerId, homes, choice, media);
-    // Filed on its home after the answer (`ChatFileKeeper.settle`).
-    return held ? undefined : this.ask(chat, media, now);
+    if (choice) return this.fulfil(chat, customerId, homes, choice, media, held);
+    // No home at all: it stays under the customer (`ChatFileKeeper.settle` alerts the team).
+    if (held) return;
+    await this.keepForProblem(chat, media, now);
+    return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(MEDIA_WORDS.what[media.type]), [
+      'menu',
+    ]);
   }
 
   /** The words of "Report a problem": they raise it, with any photos sent just before. */
@@ -129,42 +141,30 @@ export class MediaIntakeService {
     return this.problems.raise(chat, customerId, said, await this.storedPending(pending));
   }
 
-  /** Answers the oldest open paper request of the home, as an upload in the app would. */
+  /** Files it on the home: the paper it answers, "Which paper?", or saved as it is. */
   private async fulfil(
     chat: Conversation,
     customerId: string,
     homes: readonly CustomerHome[],
     choice: HomeChoice,
     media: IncomingMedia,
+    held: boolean,
   ): Promise<void> {
     const documentId = await this.storedOrSay(chat, media);
     if (!documentId) return;
-    const filed = await this.homes.fileOnHome(customerId, homes, choice, [documentId]);
-    if (filed.refused) return this.text(chat, MEDIA_WORDS.paperRefused(filed.refused));
-    if (!filed.answered) return this.ask(chat, media, Date.now());
-    const filedMedia: FiledMedia = { id: media.id, title: filed.answered };
-    await setState(this.db, chat.id, chat.state, { ...(chat.context as object), filedMedia });
-    const left = filed.left;
-    const lines = [
-      MEDIA_WORDS.paperSaved(filed.answered),
-      left.length > 0 ? MEDIA_WORDS.stillNeed(left.join(', ')) : '',
-    ];
-    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['menu']);
+    const options = { held, mediaId: media.id };
+    const stray = await this.papers.receive(chat, customerId, homes, choice, documentId, options);
+    // A photo that answers nothing may show a problem the customer reports next.
+    if (stray && !held) await this.keepForProblem(chat, media, Date.now());
   }
 
-  /** Nothing waits for this file: keep only its reference and ask once what it is about. */
-  private async ask(chat: Conversation, media: IncomingMedia, now: number): Promise<void> {
-    const before = pendingMedia(chat.context, now);
-    const pending = [...before, { ...media, at: now }].slice(-MAX_PENDING);
-    await setState(this.db, chat.id, chat.state, { ...(chat.context as object), pending });
-    if (before.length > 0) return;
-    await queueReply(this.db, chat, {
-      kind: 'buttons',
-      body: MEDIA_WORDS.ask(MEDIA_WORDS.what[media.type]),
-      buttons: [
-        { id: 'service', title: MEDIA_WORDS.reportProblem },
-        { id: 'human', title: MEDIA_WORDS.talkToPerson },
-      ],
+  /** Keeps only the file's reference, so "Report a problem" next takes it too. */
+  private async keepForProblem(chat: Conversation, media: IncomingMedia, now: number) {
+    await this.db.transaction(async (tx) => {
+      const locked = await lockedChat(tx, chat.id);
+      const pending = [...pendingMedia(locked.context, now), { ...media, at: now }];
+      const context = { ...(locked.context as object), pending: pending.slice(-MAX_PENDING) };
+      await setState(tx, locked.id, locked.state, context);
     });
   }
 

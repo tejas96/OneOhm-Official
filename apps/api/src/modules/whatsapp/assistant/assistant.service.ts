@@ -16,6 +16,7 @@ import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { fileHomeTapped } from './file-home';
 import { FileHomeFlowService } from './file-home-flow';
+import { FilePaperFlowService } from './file-paper-flow';
 import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
 import { assistantAnswers } from './handled-taps';
@@ -24,6 +25,7 @@ import { assistantLanguage, inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
 import { answerOptOut, optOutAsked } from './opt-out';
+import { paperTapped } from './paper-match';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
@@ -51,6 +53,7 @@ export class AssistantService {
     private readonly intake: LeadIntakeService,
     private readonly papers: PaperRepliesService,
     private readonly fileHomes: FileHomeFlowService,
+    private readonly filePapers: FilePaperFlowService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -119,13 +122,16 @@ export class AssistantService {
 
   /**
    * A home picked for a complaint (menu audit M10): the complaint goes on that home. One
-   * picked for the files just sent ("Which home?"): they are filed on it. Else null.
+   * picked for the files just sent ("Which home?"): they are filed on it; a paper picked
+   * for them ("Which paper?"): they answer it. Else null.
    */
   private homeTap(chat: Conversation, customerId: string, choiceId: string | null) {
     const home = homeTapped(choiceId);
     if (home) return pickHome(this.db, chat, customerId, home);
     if (choiceId && fileHomeTapped(choiceId))
       return this.fileHomes.tapped(chat, customerId, choiceId);
+    if (choiceId && paperTapped(choiceId))
+      return this.filePapers.tapped(chat, customerId, choiceId);
     return null;
   }
 
@@ -144,8 +150,11 @@ export class AssistantService {
   /** The step the chat waits on takes the message; false when it is not that step's. */
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
-    // The which-home lists wait for a tap; typed words there are read as usual.
-    if (incoming.kind === 'choice' || step === 'await_home' || step === 'await_file_home')
+    // The which-home and which-paper lists wait for a tap; typed words there are read as usual.
+    if (
+      incoming.kind === 'choice' ||
+      ['await_home', 'await_file_home', 'await_file_paper'].includes(step)
+    )
       return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
     else if (step === 'await_referral') await this.referral(chat, customerId, incoming);

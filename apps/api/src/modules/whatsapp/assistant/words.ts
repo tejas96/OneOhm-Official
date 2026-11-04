@@ -100,13 +100,9 @@ const EN_RATINGS = [
 /** Photos and papers the customer sends (PRD 6.1). */
 const EN_MEDIA_WORDS = {
   what: { image: 'photo', document: 'paper', video: 'video', audio: 'voice note' },
-  ask: (what: string) =>
-    `Thank you, we got your ${what}. Is it about a problem with your solar system?`,
-  reportProblem: 'Report a problem',
   talkToPerson: 'Talk to a person',
   paperSaved: (title: string) =>
     `Thank you! We got your ${title}. It is saved with your documents and the team is told.`,
-  stillNeed: (titles: string) => `We still need: ${titles}. Send it here when you have it.`,
   paperRefused: (title: string) =>
     `Sorry, we could not use that file for your ${title}. Please send a clear photo or a PDF.`,
   photoAdded: 'Thank you, the photo is added to your request.',
@@ -119,6 +115,11 @@ const EN_MEDIA_WORDS = {
   savedFor: (kind: string, home: string) => `Saved: *${kind}* for your home at *${home}*.`,
   stillNeeded: (list: string) => `Still needed for this home: ${list}.`,
   homeChosen: (home: string) => `Noted: files you send now are for *${home}*.`,
+  whichPaper: 'Which paper is this?',
+  somethingElse: 'Something else',
+  paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
+  paperAskEnded:
+    'That question has ended. Your files are saved for your home. If one is a paper we asked for, please send it again.',
   problemSavedWithPhotos: (category: string, photos: number) =>
     `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
 } as const;

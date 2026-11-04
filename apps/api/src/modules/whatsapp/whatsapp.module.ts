@@ -11,6 +11,7 @@ import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
 import { FileHomeFlowService } from './assistant/file-home-flow';
+import { FilePaperFlowService } from './assistant/file-paper-flow';
 import { HandOverService } from './assistant/hand-over';
 import { MediaIntakeService } from './assistant/media-intake';
 import { MenuAnswersService } from './assistant/menu-answers';
@@ -59,6 +60,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     DeliveriesService,
     MediaIntakeService,
     FileHomeFlowService,
+    FilePaperFlowService,
     ProblemFlowService,
     FeedbackFlowService,
     HandOverService,

@@ -96,11 +96,20 @@ describe('WhatsApp inbound reliability', () => {
 
   it('a paper photo filed before the reply failed is not filed again on the retry', async () => {
     const customer = await newCustomer(admin, { name: 'Retry Papers (test)' });
-    for (const title of ['Aadhaar card (test)', 'Light bill (test)'])
+    // The home's own paper is the one a photo answers; the ID paper waits (decision 2).
+    for (const [title, category] of [
+      ['Aadhaar card (test)', 'customer_kyc'],
+      ['Light bill (test)', 'electricity_bill'],
+    ])
       await rows(
         `INSERT INTO document_requests (customer_id, category, title, created_at)
-          VALUES ($1, 'customer_kyc', $2, now() - interval '1 hour' + $3::interval)`,
-        [customer.customerId, title, title.startsWith('Aadhaar') ? '0 minutes' : '1 minute'],
+          VALUES ($1, $4, $2, now() - interval '1 hour' + $3::interval)`,
+        [
+          customer.customerId,
+          title,
+          title.startsWith('Aadhaar') ? '0 minutes' : '1 minute',
+          category,
+        ],
       );
     const photo = {
       id: `wamid.acceptance-paper-${customer.phone.slice(1)}`,
@@ -119,9 +128,13 @@ describe('WhatsApp inbound reliability', () => {
       [customer.customerId],
     );
     expect(papers).toEqual([
-      { title: 'Aadhaar card (test)', status: 'received' },
-      { title: 'Light bill (test)', status: 'open' },
+      { title: 'Aadhaar card (test)', status: 'open' },
+      { title: 'Light bill (test)', status: 'received' },
     ]);
-    expect((await replies(customer.phone)).at(-1)?.body).toContain('Aadhaar card (test)');
+    expect((await replies(customer.phone)).at(-1)?.body).toContain('Light bill (test)');
+    const kept = await rows('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
+    expect(kept).toHaveLength(1);
   });
 });

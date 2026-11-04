@@ -36,15 +36,14 @@ describe('assistant words in three languages', () => {
         expect(row.title.length, `${language} ${row.title}`).toBeLessThanOrEqual(24);
         expect(row.description.length, `${language} ${row.description}`).toBeLessThanOrEqual(72);
       }
-      const person = words.MEDIA_WORDS.personRow;
-      expect(person.length, `${language} ${person}`).toBeLessThanOrEqual(24);
+      for (const row of [words.MEDIA_WORDS.personRow, words.MEDIA_WORDS.somethingElse])
+        expect(row.length, `${language} ${row}`).toBeLessThanOrEqual(24);
       for (const button of [
         words.WORDS.payNow,
         words.WORDS.callMeBack,
         words.WORDS.menuButton,
         words.WORDS.quoteYes,
         words.WORDS.quoteNotYet,
-        words.MEDIA_WORDS.reportProblem,
         words.MEDIA_WORDS.talkToPerson,
       ])
         expect(button.length, `${language} ${button}`).toBeLessThanOrEqual(20);
@@ -61,7 +60,7 @@ describe('assistant words in three languages', () => {
   it('is a working list in Marathi for ratings and media', async () => {
     await inLanguage('mr', async () => {
       expect(RATINGS.map((rating) => rating.id)).toEqual(EN.RATINGS.map((rating) => rating.id));
-      expect(MEDIA_WORDS.ask('फोटो')).toContain('फोटो');
+      expect(MEDIA_WORDS.savedFor('फोटो', 'पुणे')).toContain('फोटो');
     });
   });
 });

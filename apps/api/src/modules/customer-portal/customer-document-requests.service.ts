@@ -18,6 +18,7 @@ import { propertyOfProject, storageScope } from '../documents/document-links';
 import { forCustomer, readRequests } from '../documents/document-request-read';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { checkFile, type IncomingFile } from '../documents/upload-file';
+import { tellWaitingOwners } from './tell-waiting-owners';
 
 /** Papers the team asked this customer for, and the upload that answers one (PRD 5.4). */
 @Injectable()
@@ -69,15 +70,17 @@ export class CustomerDocumentRequestsService {
   /**
    * Answers the request with a file already stored for this customer (a WhatsApp file is
    * kept once, the moment it arrives): the same document is filed on the request's home
-   * under its kind and named after it, with no second copy.
+   * under its kind and named after it, with no second copy. Runs in `db` when given (the
+   * WhatsApp chat's locked transaction), so the answer and the chat move together.
    */
   async answerWithDocument(
     customerId: string,
     requestId: string,
     documentId: string,
+    db: DatabaseExecutor = this.db,
   ): Promise<CustomerDocumentRequest> {
-    const { asked, customer } = await this.openRequest(customerId, requestId);
-    const [stored] = await this.db
+    const { asked, customer } = await this.openRequest(customerId, requestId, db);
+    const [stored] = await db
       .select({ name: documents.name, contentType: documents.contentType })
       .from(documents)
       .where(
@@ -91,7 +94,7 @@ export class CustomerDocumentRequestsService {
     if (!(ACCEPTED_FILE_TYPES as readonly string[]).includes(stored.contentType))
       throw invalid('Send a photo or a PDF.', { file: 'This file type is not accepted.' });
     const extension = stored.name.match(/\.[a-z0-9]{1,5}$/i)?.[0] ?? '';
-    await this.db.transaction(async (tx) => {
+    await db.transaction(async (tx) => {
       await tx
         .update(documents)
         .set({
@@ -103,11 +106,11 @@ export class CustomerDocumentRequestsService {
         .where(eq(documents.id, documentId));
       await this.received(tx, asked, customer, documentId);
     });
-    return this.read(requestId);
+    return this.read(requestId, db);
   }
 
-  private async openRequest(customerId: string, id: string) {
-    const [request] = await this.db
+  private async openRequest(customerId: string, id: string, db: DatabaseExecutor = this.db) {
+    const [request] = await db
       .select({ asked: documentRequests, customer: customers.name })
       .from(documentRequests)
       .innerJoin(customers, eq(customers.id, documentRequests.customerId))
@@ -164,13 +167,19 @@ export class CustomerDocumentRequestsService {
         },
       );
     }
+    if (asked.projectId)
+      await tellWaitingOwners(tx, asked.projectId, {
+        title: `${customer} sent ${asked.title}`,
+        dedupeKey: `document_received:${id}`,
+        exceptUserId: asked.requestedByUserId,
+      });
     await recordAudit(tx, null, 'document_request.answered', 'document_request', id, {
       documentId,
     });
   }
 
-  private async read(id: string): Promise<CustomerDocumentRequest> {
-    const [updated] = await readRequests(this.db, eq(documentRequests.id, id));
+  private async read(id: string, db: DatabaseExecutor = this.db): Promise<CustomerDocumentRequest> {
+    const [updated] = await readRequests(db, eq(documentRequests.id, id));
     if (!updated) throw notFound('That request');
     return forCustomer(updated);
   }

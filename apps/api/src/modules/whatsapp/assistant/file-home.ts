@@ -1,9 +1,5 @@
 import { type DatabaseExecutor, documentRequests, projects } from '@oneohm/database';
-import {
-  ACCEPTED_FILE_TYPES,
-  isPersonDocumentCategory,
-  PERSON_DOCUMENT_CATEGORIES,
-} from '@oneohm/domain';
+import { ACCEPTED_FILE_TYPES, PERSON_DOCUMENT_CATEGORIES } from '@oneohm/domain';
 import { and, eq, isNotNull, notInArray } from 'drizzle-orm';
 import { type CustomerHome, customerHomes } from '../../customer-portal/customer-homes';
 import type { PaperPlace } from '../file-paper';
@@ -137,10 +133,6 @@ export function placeOn(
   const home = homes.find((each) => each.propertyId === choice.propertyId);
   return home ? { projectId: home.projectId, propertyId: home.propertyId, category } : null;
 }
-
-/** Whether an open request is answered by a file for this home. */
-export const requestFits = (choice: HomeChoice, category: string): boolean =>
-  choice.propertyId !== 'person' || isPersonDocumentCategory(category);
 
 /** The chat's context without the "Which home?" step and its files. */
 export function withoutStep(context: unknown): Record<string, unknown> {

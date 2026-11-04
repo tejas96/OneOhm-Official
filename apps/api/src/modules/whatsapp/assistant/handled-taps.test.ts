@@ -27,6 +27,13 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('rate:5'))).toBe(false);
   });
 
+  it('answers its own which-paper taps, and only well-formed ones', () => {
+    for (const id of [`f${HOME.replace('home', 'paper')}`, 'fpaper:none', 'fhome:person'])
+      expect(assistantAnswersTap({ customerId: 'c1' }, tap(id)), id).toBe(true);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('fpaper:nonsense'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: null }, tap('fpaper:none'))).toBe(false);
+  });
+
   it('answers a stranger’s own Call me back and Talk to a person buttons (review F5)', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('callback'))).toBe(true);
     expect(assistantAnswersTap({ customerId: null }, tap('human'))).toBe(true);

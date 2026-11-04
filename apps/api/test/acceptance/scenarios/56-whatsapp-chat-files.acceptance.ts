@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { chatOf, say, tap } from '../support/onboarding';
+import { chatOf, lastReply, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
 
@@ -86,6 +86,10 @@ describe('WhatsApp chat files', () => {
       [asked.id],
     );
     expect(request?.status).toBe('received');
+    // The customer hears it was saved for their home, as in a chat the bot holds.
+    expect((await lastReply(customer.phone))?.body).toContain(
+      'Saved: *Aadhaar card (test)* for your home at',
+    );
     const shown = await chatFiles(admin, customer.phone);
     expect(shown.map((message) => message.file?.id)).toEqual([request?.document_id]);
     expect((await projectDocs(project.id)).filter((doc) => doc.category === 'other')).toEqual([]);
