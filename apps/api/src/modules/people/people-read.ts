@@ -61,10 +61,7 @@ export async function readPeople(
     skillsOf(db, ids),
     workOf(db, ids),
     managersOf(db, ids),
-    inviteDeliveries(
-      db,
-      rows.map((row) => ({ id: row.id, phone: row.phoneE164 })),
-    ),
+    inviteDeliveries(db, ids),
     roleKindsByUser(db, ids),
   ]);
   const awayIds = new Set(away.map((row) => row.userId));

@@ -93,13 +93,18 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect(person.inviteText).toContain('Hi Asha, you have been added to the OneOhm team.');
     expect(person.inviteText).toContain(queued[0]?.payload.link);
 
-    // Resellers, and people with no email, get the field-app link instead of the website.
+    // Resellers, crews and people with no email get the field-app link, not the website.
     const partner = await created('Reseller Invited (test)', {
       roleIds: reseller,
       email: `reseller.${Date.now()}@oneohm.local`,
     });
     const [resellerInvite] = await invites(partner.id);
     expect(resellerInvite?.payload.link).not.toBe(queued[0]?.payload.link);
+    const crew = await created('Crew Invited (test)', {
+      roleIds: await roleIds(admin, ['ic_partner']),
+      email: `crew.${Date.now()}@oneohm.local`,
+    });
+    expect((await invites(crew.id))[0]?.payload.link).toBe(resellerInvite?.payload.link);
     const noEmail = await created('No Email Invited (test)');
     expect((await invites(noEmail.id))[0]?.payload.link).toBe(resellerInvite?.payload.link);
   });
@@ -139,6 +144,18 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect((await web.raw('GET', '/auth/me')).status).toBe(401);
     expect(await invites(person.id)).toHaveLength(2);
     expect(await audits(person.id, 'person.updated')).not.toHaveLength(0);
+
+    // They read as not signed in again, so the admin can copy the text or send it again.
+    const after = (await admin.get<Reply[]>('/people')).find((entry) => entry.id === person.id);
+    expect(after?.invite).toBe('not_signed_in');
+    expect(after?.inviteText).toContain('Hi Reset');
+    await acceptanceDb().pool.query(
+      `UPDATE outbox SET created_at = now() - interval '11 minutes' WHERE dedupe_key LIKE $1`,
+      [`staff_welcome:${person.id}:%`],
+    );
+    const resent = await admin.raw('POST', `/people/${person.id}/invite`);
+    expect(resent.status).toBe(202);
+    expect(await invites(person.id)).toHaveLength(3);
   });
 
   it("a past member's number gives phone_of_past_member, release-phone frees it, then create works", async () => {
@@ -183,5 +200,15 @@ describe('add a person without a password; WhatsApp invite', () => {
     await admin.patch(`/people/${person.id}`, { phone: uniquePhone() });
     expect((await phone.raw('GET', '/auth/me')).status).toBe(401);
     expect((await web.raw('GET', '/auth/me')).status).toBe(200);
+  });
+
+  it('the invite status survives a phone change', async () => {
+    const person = await created('Number Changed Early (test)');
+    await acceptanceDb().pool.query(`UPDATE outbox SET status = 'sent' WHERE dedupe_key LIKE $1`, [
+      `staff_welcome:${person.id}:%`,
+    ]);
+    await admin.patch(`/people/${person.id}`, { phone: uniquePhone() });
+    const listed = (await admin.get<Reply[]>('/people')).find((entry) => entry.id === person.id);
+    expect(listed?.inviteDelivery).toBe('sent');
   });
 });

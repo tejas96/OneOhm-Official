@@ -16,7 +16,8 @@ const TEMPLATE = 'staff_welcome';
 const RESEND_AFTER_MS = 10 * 60 * 1000;
 
 /**
- * Resellers and people with no email use the field app; everyone else opens the website.
+ * Resellers, crews (partners) and people with no email use the field app; everyone else
+ * opens the website.
  * An email that is not given at all is treated as "has one": only a known null counts.
  */
 export function inviteLink(
@@ -24,7 +25,8 @@ export function inviteLink(
   env: InviteEnvironment,
   email?: string | null,
 ): string {
-  const fieldOnly = roleKinds.length > 0 && roleKinds.every((kind) => kind === 'reseller');
+  const fieldOnly =
+    roleKinds.length > 0 && roleKinds.every((kind) => kind === 'reseller' || kind === 'partner');
   return fieldOnly || email === null ? env.FIELD_APP_URL : env.WEB_BASE_URL;
 }
 
@@ -94,19 +96,20 @@ export async function kindsOfRoles(
 /** What became of each person's newest invite: sent, failed, queued, or null for none. */
 export async function inviteDeliveries(
   db: DatabaseExecutor,
-  people: readonly { id: string; phone: string | null }[],
+  userIds: readonly string[],
 ): Promise<Map<string, Person['inviteDelivery']>> {
-  const phones = people.flatMap((person) => (person.phone ? [person.phone] : []));
+  const wanted = new Set(userIds);
   const result = new Map<string, Person['inviteDelivery']>();
-  if (phones.length === 0) return result;
+  if (wanted.size === 0) return result;
   const rows = await db
     .select({ key: outbox.dedupeKey, status: outbox.status, delivery: outbox.deliveryStatus })
     .from(outbox)
-    .where(and(eq(outbox.template, TEMPLATE), inArray(outbox.recipient, phones)))
+    // By key, not by phone: the invite is still theirs after a number change.
+    .where(and(eq(outbox.template, TEMPLATE), like(outbox.dedupeKey, `${TEMPLATE}:%`)))
     .orderBy(desc(outbox.createdAt));
   for (const row of rows) {
     const userId = row.key.split(':')[1] ?? '';
-    if (result.has(userId)) continue; // newest first
+    if (!wanted.has(userId) || result.has(userId)) continue; // newest first
     if (row.status === 'failed' || row.delivery === 'failed') result.set(userId, 'failed');
     else if (row.status === 'sent') result.set(userId, 'sent');
     else if (row.status === 'pending') result.set(userId, 'queued');
@@ -129,7 +132,7 @@ export async function requireNewPassword(
   }
   await tx
     .update(users)
-    .set({ passwordHash: null, updatedAt: new Date() })
+    .set({ passwordHash: null, lastActiveAt: null, updatedAt: new Date() })
     .where(eq(users.id, userId));
   await tx.delete(sessions).where(eq(sessions.userId, userId));
   const kinds = (await roleKindsByUser(tx, [userId])).get(userId) ?? [];
