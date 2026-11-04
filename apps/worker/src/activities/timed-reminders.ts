@@ -70,7 +70,7 @@ export async function runTimedReminders(
   }
   // Papers asked for and not sent, and files left to sort (each goes once per ask or file).
   try {
-    ran += await queuePaperReminders(db, new Date());
+    ran += await queuePaperReminders(db, new Date(), timeZone);
   } catch (error) {
     failure ??= error;
   }

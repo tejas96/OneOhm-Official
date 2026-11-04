@@ -15,7 +15,9 @@ import {
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { and, asc, desc, eq, gt, isNull, like, lte, sql } from 'drizzle-orm';
+import { isWorkingTime } from '@oneohm/domain';
+import { and, asc, desc, eq, gt, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
+import { filesNotMatched, unmatchedBody } from './paper-unmatched';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -40,8 +42,39 @@ export function paperReminderDue(askedAt: Date, now: Date): 'customer' | 'team' 
   return age >= TEAM_AFTER ? 'team' : 'customer';
 }
 
-/** Open requests: remind the customer at 2 days, tell the asker at 4. Each once per ask. */
-async function remindOpenRequests(db: Database, now: Date): Promise<number> {
+interface WaitingRequest {
+  readonly id: string;
+  readonly title: string;
+  readonly customer: string;
+  readonly projectId: string | null;
+  readonly requestedByUserId: string | null;
+  readonly managerUserId: string | null;
+  readonly round: number;
+}
+
+/** The asker (else the project's manager) hears once per round; `unmatched` files to match. */
+async function tellAsker(db: Database, request: WaitingRequest, unmatched: number) {
+  const notice = {
+    kind: 'paper_waiting',
+    title: `Still waiting for ${request.title} from ${request.customer}`,
+    body: unmatched
+      ? unmatchedBody(request.customer, unmatched)
+      : 'The customer was asked more than 4 days ago and has not sent it. Please call them.',
+    ...(request.projectId ? { subject: { type: 'project' as const, id: request.projectId } } : {}),
+    dedupeKey: `paper_waiting:${request.id}:${request.round}`,
+  };
+  const person = request.requestedByUserId ?? request.managerUserId;
+  // Nobody to ask: those who manage projects hear, so it is never silent.
+  if (person) await notifyCover(db, person, 'projects.manage', notice);
+  else await notifyHolders(db, 'projects.manage', notice);
+}
+
+/**
+ * Open requests: remind the customer at 2 days, tell the asker at 4. Each once per ask. A
+ * customer who sent files since the ask that answer nothing is not chased: the asker is
+ * told at 2 days to match them instead.
+ */
+async function remindOpenRequests(db: Database, now: Date, timeZone: string): Promise<number> {
   // The team asking again starts a new round: its age and its keys count from there.
   const reasks = sql<number>`(select count(*)::int from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked')`;
   const askedAt = sql<Date>`greatest(${documentRequests.createdAt}, coalesce((select max(a.created_at) from audit_log a where a.entity = 'document_request' and a.entity_id = ${documentRequests.id}::text and a.action = 'document_request.reasked'), ${documentRequests.createdAt}))`;
@@ -52,6 +85,8 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
       title: documentRequests.title,
       projectId: documentRequests.projectId,
       projectCode: projects.code,
+      customerId: documentRequests.customerId,
+      propertyId: projects.propertyId,
       managerUserId: projects.managerUserId,
       requestedByUserId: documentRequests.requestedByUserId,
       askedAt: sql<Date>`${askedAt}`.mapWith((value) => new Date(value as string)),
@@ -65,6 +100,8 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
     .where(
       and(
         eq(documentRequests.status, 'open'),
+        // A cancelled project needs no papers.
+        or(isNull(projects.id), ne(projects.status, 'cancelled')),
         lte(askedAt, at(CUSTOMER_AFTER)),
         gt(askedAt, at(TEAM_UNTIL)),
         // Once the asker has been told for this round, there is nothing left to do.
@@ -78,25 +115,17 @@ async function remindOpenRequests(db: Database, now: Date): Promise<number> {
   for (const request of open) {
     const due = paperReminderDue(request.askedAt, now);
     if (!due) continue;
-    if (now.getTime() - request.askedAt.getTime() < CUSTOMER_UNTIL) {
+    // Files sent but not matched: the team matches them; the customer is not chased.
+    const unmatched = await filesNotMatched(db, request);
+    // The customer hears in working hours only (as onboarding nudges); a later tick sends it.
+    const chase = unmatched === 0 && isWorkingTime(now, timeZone);
+    if (chase && now.getTime() - request.askedAt.getTime() < CUSTOMER_UNTIL) {
       template ??= await paperRequestTemplate(db);
       const key = `paper_reminder:${request.id}:${request.round}`;
       if (await askForPaper(db, request, key, template)) done += 1;
     }
-    if (due !== 'team') continue;
-    const notice = {
-      kind: 'paper_waiting',
-      title: `Still waiting for ${request.title} from ${request.customer}`,
-      body: 'The customer was asked more than 4 days ago and has not sent it. Please call them.',
-      ...(request.projectId
-        ? { subject: { type: 'project' as const, id: request.projectId } }
-        : {}),
-      dedupeKey: `paper_waiting:${request.id}:${request.round}`,
-    };
-    const person = request.requestedByUserId ?? request.managerUserId;
-    // Nobody to ask: those who manage projects hear, so it is never silent.
-    if (person) await notifyCover(db, person, 'projects.manage', notice);
-    else await notifyHolders(db, 'projects.manage', notice);
+    if (due !== 'team' && unmatched === 0) continue;
+    await tellAsker(db, request, unmatched);
     done += 1;
   }
   return done;
@@ -174,11 +203,16 @@ async function alertFilesToSort(db: Database, now: Date): Promise<number> {
 }
 
 /**
- * Chases papers (papers per home): a customer reminder at 2 days and a word to the asker
- * at 4 for requests still open, and the chat's person for files left to sort. Every tick
- * is safe to repeat: each reminder and alert has a key per ask round or per file.
+ * Chases papers (papers per home): a customer reminder at 2 days (in working hours of the
+ * business time zone) and a word to the asker at 4 for requests still open, and the chat's
+ * person for files left to sort. Every tick is safe to repeat: each reminder and alert has
+ * a key per ask round or per file.
  */
-export async function queuePaperReminders(db: Database, now: Date): Promise<number> {
-  const reminded = await remindOpenRequests(db, now);
+export async function queuePaperReminders(
+  db: Database,
+  now: Date,
+  timeZone: string,
+): Promise<number> {
+  const reminded = await remindOpenRequests(db, now, timeZone);
   return reminded + (await alertFilesToSort(db, now));
 }

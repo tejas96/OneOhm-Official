@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { anotherHome } from '../support/homes';
 import { Session } from '../support/http';
-import { runPaperReminders } from '../support/paper-reminders';
+import { runPaperReminders, zoneAt } from '../support/paper-reminders';
 import { sellProject } from '../support/sales';
 import { sendInbound } from '../support/whatsapp';
 
@@ -33,8 +33,8 @@ const outboxFor = (dedupeKey: string) =>
   );
 
 const alertsKeyed = (prefix: string) =>
-  rows<{ user_id: string; title: string }>(
-    'SELECT user_id, title FROM notifications WHERE dedupe_key LIKE $1',
+  rows<{ user_id: string; title: string; body: string }>(
+    'SELECT user_id, title, body FROM notifications WHERE dedupe_key LIKE $1',
     [`${prefix}%`],
   );
 
@@ -66,13 +66,24 @@ describe('Papers per home: reminders', () => {
     expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(0);
   });
 
+  it('the customer is reminded in working hours only', async () => {
+    const { project } = await sellProject(admin, { name: 'Night Ask (test)' });
+    const asked = await ask(admin, project.id, 'Electricity bill (test)');
+    await askedHoursAgo(asked.id, 49);
+    const now = new Date();
+    await runPaperReminders(now, zoneAt(now, 23));
+    expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
+    await runPaperReminders(now, zoneAt(now, 11));
+    expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(1);
+  });
+
   it('a 4-day request alerts the asker once', async () => {
     const { project } = await sellProject(admin, { name: 'Four Days (test)' });
     const asked = await ask(admin, project.id, 'Electricity bill (test)');
     await askedHoursAgo(asked.id, 97);
     await runPaperReminders();
     const told = await alertsKeyed(`paper_waiting:${asked.id}:0`);
-    expect(told).toEqual([
+    expect(told).toMatchObject([
       {
         user_id: admin.userId,
         title: 'Still waiting for Electricity bill (test) from Four Days (test)',
@@ -95,6 +106,41 @@ describe('Papers per home: reminders', () => {
     await runPaperReminders();
     expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
     expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(1);
+  });
+
+  it('files sent but not matched tell the team instead of chasing the customer', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Sent Unsaid (test)' });
+    const bill = await ask(admin, project.id, 'Electricity bill (test)');
+    const deed = await admin.post<{ id: string }>('/document-requests', {
+      projectId: project.id,
+      category: 'property',
+      title: 'Sale deed (test)',
+    });
+    // Two papers open: "Which paper?" is asked and never answered.
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: `un-${randomUUID()}` } });
+    for (const one of [bill, deed]) await askedHoursAgo(one.id, 49);
+    await runPaperReminders();
+    for (const one of [bill, deed]) {
+      expect(await outboxFor(`paper_reminder:${one.id}:0`)).toHaveLength(0);
+      expect(await alertsKeyed(`paper_waiting:${one.id}:0`)).toMatchObject([
+        {
+          user_id: admin.userId,
+          body: 'Sent Unsaid (test) sent 1 file on WhatsApp but did not say which paper. Open the chat and match them.',
+        },
+      ]);
+    }
+    await runPaperReminders();
+    expect(await alertsKeyed(`paper_waiting:${bill.id}`)).toHaveLength(1);
+  });
+
+  it('a cancelled project is not chased', async () => {
+    const { project } = await sellProject(admin, { name: 'Cancelled Ask (test)' });
+    const asked = await ask(admin, project.id, 'Electricity bill (test)');
+    await rows("UPDATE projects SET status = 'cancelled' WHERE id = $1", [project.id]);
+    await askedHoursAgo(asked.id, 97);
+    await runPaperReminders();
+    expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
+    expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(0);
   });
 
   it("files left to sort alert the chat's person after 2 hours", async () => {
