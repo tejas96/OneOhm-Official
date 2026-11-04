@@ -29,6 +29,8 @@ export type SessionMessage =
       readonly token: string;
       readonly screen: string;
       readonly data: Readonly<Record<string, string>>;
+      /** Sent as plain words if the form cannot be delivered; not part of the Meta message. */
+      readonly fallbackText?: string;
     }
   | {
       readonly kind: 'list';

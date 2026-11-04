@@ -1,5 +1,6 @@
 import { type Database, outbox, recordDeliveryFailure, tellChatSendFailed } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
+import { queueFlowFallback } from './flow-fallback';
 
 /**
  * Marks a still-pending message failed so the office sees it and can resend it
@@ -13,7 +14,10 @@ export async function failPendingDelivery(db: Database, id: string, reason: stri
       .set({ status: 'failed', lastError: reason })
       .where(and(eq(outbox.id, id), eq(outbox.status, 'pending')))
       .returning({ id: outbox.id });
-    if (rows.length > 0) await tellChatSendFailed(tx, id);
+    if (rows.length > 0) {
+      await tellChatSendFailed(tx, id);
+      await queueFlowFallback(tx, id, reason);
+    }
     return rows;
   });
   if (failed.length > 0) await recordDeliveryFailure(db, id, reason);

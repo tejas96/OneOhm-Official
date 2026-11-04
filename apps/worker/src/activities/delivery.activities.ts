@@ -29,6 +29,7 @@ import type {
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
+import { queueFlowFallback } from './flow-fallback';
 import { deliverPush } from './push-delivery';
 import { alertTokenExpired, CHAT_WINDOW_CLOSED, smsCanStandIn } from './send-checks';
 
@@ -149,6 +150,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     db.transaction(async (tx) => {
       await finish(id, 'failed', reason, null, tx);
       await tellChatSendFailed(tx, id);
+      await queueFlowFallback(tx, id, reason);
       if (tokenInvalid) await alertTokenExpired(tx);
     });
 
@@ -171,7 +173,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return 'skipped';
       }
       await finish(row.id, 'sent', null, result.providerId);
-      // The history is a nicety: it must never turn a sent message into a retry.
       if (row.channel === 'whatsapp') await logTemplateInChat(db, row).catch(() => undefined);
       return 'sent';
     } catch (error) {
@@ -218,7 +219,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         }
         return send(row, () => sms.send(row.recipient, text));
       }
-      // A chat reply (the customer wrote first), so no template and no opt-in check.
       if (row.template.startsWith('session:')) {
         if (!(await windowOpenFor(row.recipient))) {
           await failWithAlerts(id, CHAT_WINDOW_CLOSED);
