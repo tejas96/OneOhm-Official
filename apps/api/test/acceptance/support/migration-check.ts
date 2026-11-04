@@ -36,14 +36,8 @@ export async function migrateOverOldRows<T>(
       JSON.stringify({ ...journal, entries: journal.entries.slice(0, upTo) }),
     );
     await migrate(scratch.db, { migrationsFolder: before });
-    // Old rows are written without their parents (no customers, projects): foreign keys off.
-    const client = await scratch.pool.connect();
-    try {
-      await client.query('SET session_replication_role = replica');
-      await seedOld((text) => client.query(text));
-    } finally {
-      client.release();
-    }
+    // Foreign keys stay on: old rows are seeded with their parents, and checked again on the copy.
+    await seedOld((text) => scratch.pool.query(text));
     await migrate(scratch.db, { migrationsFolder: MIGRATIONS_FOLDER });
     return await read(async <R>(text: string) => (await scratch.pool.query(text)).rows as R[]);
   } finally {

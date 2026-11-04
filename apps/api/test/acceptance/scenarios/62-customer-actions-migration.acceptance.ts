@@ -28,13 +28,14 @@ describe('Customer actions: the migration', () => {
     const result = await migrateOverOldRows(
       '0073_customer_actions',
       async (query) => {
+        await query(`INSERT INTO customers (id, name, phone_e164) VALUES ('${id(9)}', 'Old (test)', '+919000000009')`);
         await query(`INSERT INTO documents (id, category, source, name, storage_key, content_type, size_bytes, created_at)
           VALUES ('${id(5)}', 'electricity_bill', 'upload', 'bill.pdf', 'k', 'application/pdf', 1, '2026-10-01')`);
         await query(`INSERT INTO document_requests
           (id, customer_id, project_id, category, title, note, status, document_id, received_at, cancelled_at, created_at, updated_at)
           VALUES
-          ('${id(1)}', '${id(9)}', '${id(8)}', 'electricity_bill', 'Bill', 'call me', 'open', null, null, null, '2026-10-02', '2026-10-02'),
-          ('${id(2)}', '${id(9)}', '${id(8)}', 'electricity_bill', 'Bill 2', 'x', 'received', '${id(5)}', '2026-10-03', null, '2026-10-02', '2026-10-03'),
+          ('${id(1)}', '${id(9)}', null, 'electricity_bill', 'Bill', 'call me', 'open', null, null, null, '2026-10-02', '2026-10-02'),
+          ('${id(2)}', '${id(9)}', null, 'electricity_bill', 'Bill 2', 'x', 'received', '${id(5)}', '2026-10-03', null, '2026-10-02', '2026-10-03'),
           ('${id(3)}', '${id(9)}', null, 'customer_kyc', 'Aadhaar', '', 'cancelled', null, null, '2026-10-04', '2026-10-02', '2026-10-04')`);
         await query(`INSERT INTO audit_log (action, entity, entity_id, data)
           VALUES ('document_request.reasked', 'document_request', '${id(2)}', '{"note":"too dark"}')`);
