@@ -146,7 +146,7 @@ describe('The bill photo on the lead', () => {
     await tap(phone, 'ob:site:home');
     await photo(phone, 'sample-too-large');
     const sent = await replies(phone);
-    expect(sent.at(-2)?.body).toContain('too large');
+    expect(sent.at(-2)?.body).toContain('too big');
     expect(choices(sent.at(-1)).some((id) => id.startsWith('ob:bill:'))).toBe(true);
     const [lead] = await leadsOf(phone);
     expect(await docsOf(lead?.id ?? '')).toEqual([]);

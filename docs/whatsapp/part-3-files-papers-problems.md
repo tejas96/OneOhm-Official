@@ -2,6 +2,8 @@
 
 All paths below are under `/Volumes/works-space/oneohm-official/OneOhm-Official/.claude/worktrees/papers-per-home`. The API short path `W/` means `apps/api/src/modules/whatsapp`, and `W/a/` means `W/assistant`. Every customer-facing string also exists in Marathi and Hindi (`words-mr.ts`, `words-hi.ts`, `customer-message-mr.ts`, `customer-message-hi.ts`). The language comes from `customers.preferred_language`. Staff alerts are English only.
 
+> **Phase 2a replaced the file flows described below** ("Which home?", "Which paper?", remembered home and paper, the 30-minute glue, stray files saved as Other). Files now wait for "What is this?"; see `redesign.md` section 22b. The webhook plumbing in section 0 and the problem flow still read as written.
+
 I read the code only; I did not run it. Where I infer behaviour, I say so.
 
 ---
