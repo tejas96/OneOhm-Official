@@ -1,4 +1,5 @@
-import { boolean, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers } from './crm.schema';
 import { users } from './identity.schema';
@@ -20,6 +21,10 @@ export const waConversations = pgTable(
     state: text('state').notNull().default('menu'),
     context: jsonb('context').notNull().default({}),
     lastInboundAt: instant('last_inbound_at'),
+    /** When "What is this?" is due for the files waiting in this chat; null when nothing is scheduled. */
+    filesAskAt: instant('files_ask_at'),
+    /** Failed attempts to ask; after a few we stop and tell staff once. */
+    filesAskTries: integer('files_ask_tries').notNull().default(0),
     /** When the person sent STOP; empty once they send START. Templates and nudges skip them. */
     optedOutAt: instant('opted_out_at'),
     handedOverAt: instant('handed_over_at'),
@@ -38,6 +43,9 @@ export const waConversations = pgTable(
   },
   (table) => [
     index('wa_conversations_customer_idx').on(table.customerId),
+    index('wa_conversations_files_ask_idx')
+      .on(table.filesAskAt)
+      .where(sql`${table.filesAskAt} is not null`),
     index('wa_conversations_assigned_idx').on(table.assignedUserId),
   ],
 );

@@ -1333,6 +1333,7 @@
         "incentive_sweep": "Referral and commission check",
         "payout_sync": "Bank payout check",
         "onboarding_nudges": "WhatsApp onboarding follow-up",
+        "file_questions": "WhatsApp \"What is this?\" questions",
         "sales_checks": "Sales checks",
         "whatsapp_heartbeat": "WhatsApp webhook check"
       },
@@ -1354,6 +1355,7 @@
         "incentive_sweep": "{count, plural, one {1 reward earned} other {# rewards earned}}",
         "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}",
         "onboarding_nudges": "{count, plural, one {1 chat followed up} other {# chats followed up}}",
+        "file_questions": "{count, plural, one {1 chat asked} other {# chats asked}}",
         "sales_checks": "{count, plural, one {1 alert or hand-back} other {# alerts and hand-backs}}",
         "whatsapp_heartbeat": "{count, plural, other {Webhook looks silent: settings team told}}"
       }
