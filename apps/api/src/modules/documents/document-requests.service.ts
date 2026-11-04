@@ -5,13 +5,14 @@ import type {
   NewDocumentRequest,
   ReaskDocumentRequest,
 } from '@oneohm/api-contracts';
-import { customerActions, customers, leads, projects } from '@oneohm/database';
+import { customerActions, customers, leads, projects, quotations } from '@oneohm/database';
 import { nextActionStatus } from '@oneohm/domain';
-import { eq, or } from 'drizzle-orm';
+import { and, eq, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { leadVisibility } from '../crm/lead-read';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
 import { homeOfRequest, openRequestsFor } from './document-request-home';
@@ -55,7 +56,7 @@ export class DocumentRequestsService {
 
   async create(actor: Actor, input: NewDocumentRequest): Promise<DocumentRequest> {
     if (!canUploadDocuments(actor)) throw forbidden();
-    const target = await this.target(input);
+    const target = await this.target(actor, input);
     const title = input.title.trim();
     const requirementKey = input.requirementKey ?? null;
     const [open] = await openRequestsFor(this.db, target.customerId, {
@@ -139,13 +140,17 @@ export class DocumentRequestsService {
     });
     if (open) throw conflict('The customer has already been asked for this.', 'already_asked');
     await this.db.transaction((tx) =>
-      reopenRequest(tx, actor.userId, request, { note: input.note.trim(), removePaper: true }),
+      reopenRequest(tx, actor.userId, request, {
+        note: input.note.trim(),
+        // A paper the team filed is theirs to keep; only the customer's own is taken off.
+        removePaper: request.documentByTeam !== true,
+      }),
     );
     return this.one(id);
   }
 
   /** The project's (or lead's) customer, contact and home for a new ask. */
-  private async target(input: NewDocumentRequest): Promise<Target> {
+  private async target(actor: Actor, input: NewDocumentRequest): Promise<Target> {
     if (input.projectId) {
       const [project] = await this.db
         .select({
@@ -173,12 +178,21 @@ export class DocumentRequestsService {
       })
       .from(leads)
       .innerJoin(customers, eq(customers.id, leads.customerId))
-      .where(eq(leads.id, input.leadId ?? ''))
+      .where(and(eq(leads.id, input.leadId ?? ''), leadVisibility(actor)))
       .limit(1);
     if (!lead) {
       throw invalid('Add the site to this lead first, then ask for its papers.', {
         leadId: 'Add the site first.',
       });
+    }
+    const [started] = await this.db
+      .select({ code: projects.code })
+      .from(projects)
+      .innerJoin(quotations, eq(quotations.id, projects.quotationId))
+      .where(and(eq(quotations.leadId, lead.leadId), ne(projects.status, 'cancelled')))
+      .limit(1);
+    if (started) {
+      throw conflict(`This lead already has project ${started.code}. Ask on the project.`, 'has_project');
     }
     return { ...lead, projectId: null, projectCode: null };
   }

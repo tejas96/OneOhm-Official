@@ -34,6 +34,8 @@ export const documentRequestSchema = z.object({
   documentId: idSchema.nullable(),
   /** Whether the team has checked the paper that answered it; null without a paper. */
   documentChecked: z.boolean().nullable(),
+  /** The paper was filed by the team (a staff upload): asking again keeps it. */
+  documentByTeam: z.boolean().nullable(),
   requestedBy: z.string().nullable(),
   /** Reminders sent to the customer since the latest ask. */
   remindersSent: z.number().int(),
@@ -59,7 +61,7 @@ export const newDocumentRequestSchema = z
     title: z.string().trim().min(2).max(DOCUMENT_REQUEST_TITLE_MAX),
     note: z.string().trim().max(300).default(''),
     /** The checklist row it is asked from; a free ask has none. */
-    requirementKey: z.string().trim().min(1).max(60).optional(),
+    requirementKey: z.string().trim().min(1).max(120).optional(),
   })
   .refine((body) => Boolean(body.projectId) !== Boolean(body.leadId), {
     message: 'Choose a project or a lead.',

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentRecord } from '@oneohm/api-contracts';
-import { customerActions, customers, documents } from '@oneohm/database';
+import { customerActions, customers, documents, type Transaction } from '@oneohm/database';
 import { nextActionStatus } from '@oneohm/domain';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -35,11 +35,7 @@ export class DocumentCheckService {
     return record;
   }
 
-  private async markChecked(
-    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    actor: Actor,
-    id: string,
-  ) {
+  private async markChecked(tx: Transaction, actor: Actor, id: string) {
     const now = new Date();
     const [done] = await tx
       .update(documents)
@@ -81,5 +77,18 @@ export class DocumentCheckService {
         actor.userId,
       );
     }
+    if (answered.length === 0) await this.tellUnasked(tx, actor, id);
+  }
+
+  /** A paper nobody asked for (sent on its own) is checked too: the customer hears it. */
+  private async tellUnasked(tx: Transaction, actor: Actor, id: string) {
+    const [paper] = await tx
+      .select({ name: documents.name, phone: customers.phoneE164 })
+      .from(documents)
+      .innerJoin(customers, eq(customers.id, documents.customerId))
+      .where(eq(documents.id, id));
+    if (!paper) return;
+    const title = paper.name.replace(/\.[a-z0-9]{1,5}$/i, '');
+    await tellChecked(tx, { id, title, phone: paper.phone }, 0, actor.userId);
   }
 }

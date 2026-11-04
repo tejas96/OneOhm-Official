@@ -519,6 +519,13 @@
       "when": 1793821314355,
       "tag": "0073_customer_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793823106887,
+      "tag": "0074_customer_action_lead_set_null",
+      "breakpoints": true
     }
   ]
 }

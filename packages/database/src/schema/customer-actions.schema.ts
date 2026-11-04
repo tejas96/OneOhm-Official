@@ -45,7 +45,7 @@ export const customerActions = pgTable(
     customerId: uuid('customer_id')
       .notNull()
       .references(() => customers.id, { onDelete: 'cascade' }),
-    leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'cascade' }),
+    leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     /** The home it is about. A person's paper keeps the home it was asked on. */
     propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),

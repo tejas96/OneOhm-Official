@@ -55,6 +55,7 @@ export class DocumentChecklistService {
         propertyId: documents.propertyId,
         projectId: documents.projectId,
         checkedAt: documents.checkedAt,
+        serviceRequestId: documents.serviceRequestId,
       })
       .from(documents)
       .where(
@@ -82,7 +83,11 @@ export class DocumentChecklistService {
         )
         .map((file) => file.id);
       const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
-      const unchecked = files.filter((file) => ids.includes(file.id) && !file.checkedAt);
+      // Only a paper the customer holds waits for the team's look; a photo on a problem or a
+      // site photo from a chat is not the customer's answer to this row.
+      const unchecked = requirement.fromCustomer
+        ? files.filter((file) => ids.includes(file.id) && !file.checkedAt && !file.serviceRequestId)
+        : [];
       const waiting = asked.received.find((one) => one.documentId && ids.includes(one.documentId));
       return {
         key: requirement.key,
@@ -97,11 +102,14 @@ export class DocumentChecklistService {
         askCategory,
         requested:
           askCategory !== null &&
-          asked.open.some((one) =>
-            sameAsk(
-              { requirementKey: requirement.key, category: askCategory },
-              { requirementKey: one.requirementKey, category: one.category },
-            ),
+          // Any open ask of this kind on this home (or for this person) covers the row.
+          asked.open.some(
+            (one) =>
+              one.category === askCategory ||
+              sameAsk(
+                { requirementKey: requirement.key, category: askCategory },
+                { requirementKey: one.requirementKey, category: one.category },
+              ),
           ),
       };
     });
