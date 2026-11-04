@@ -24,6 +24,8 @@ export type ChatReply =
       readonly token: string;
       readonly screen: string;
       readonly data: Readonly<Record<string, string>>;
+      /** Said in plain words instead if the form cannot be delivered (the worker queues it). */
+      readonly fallbackText?: string;
     }
   | {
       readonly kind: 'buttons';

@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type DatabaseExecutor, documents, leads, waMessages } from '@oneohm/database';
+import { type DatabaseExecutor, leads, waMessages } from '@oneohm/database';
 import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logLead } from '../crm/lead-history';
@@ -15,6 +15,7 @@ import {
   isFiled,
   keptFile,
   leftToSort,
+  storedBefore,
   whatsappFileScope,
 } from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
@@ -123,17 +124,7 @@ export class ChatFileKeeper {
     customerId: string,
   ): Promise<string | null> {
     const scope = whatsappFileScope(customerId, media.id);
-    const [earlier] = await this.db
-      .select({ id: documents.id })
-      .from(documents)
-      .where(
-        and(
-          eq(documents.customerId, customerId),
-          sql`starts_with(${documents.storageKey}, ${scope})`,
-          isNull(documents.removedAt),
-        ),
-      )
-      .limit(1);
+    const earlier = await storedBefore(this.db, customerId, media.id);
     if (earlier) {
       await linkChatFile(this.db, media.id, earlier.id);
       return earlier.id;

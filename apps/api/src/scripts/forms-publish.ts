@@ -3,10 +3,10 @@ import { FORMS } from '../modules/whatsapp/forms/form-registry';
 /**
  * `pnpm --filter @oneohm/api forms:publish [--yes]`: creates each WhatsApp form (Flow) in the
  * business account, uploads its Flow JSON, publishes it and prints the flow id to paste into
- * Settings → WhatsApp → Forms. It CHANGES THE META ACCOUNT, so without `--yes` it only
+ * Settings → WhatsApp messages → Forms. It CHANGES THE META ACCOUNT, so without `--yes` it only
  * prints what it would do and calls nothing. A published flow cannot be edited, so each form
  * version is its own flow, named "OneOhm <name> v<version>"; running it again for a version
- * that is already published only prints the id.
+ * that is already published gets a new flow with a dated name (only a draft is reused).
  *
  * Needs WHATSAPP_ACCESS_TOKEN and WHATSAPP_BUSINESS_ACCOUNT_ID (WHATSAPP_API_VERSION is v25.0
  * unless set), read from the environment or the repository's .env.
@@ -54,12 +54,13 @@ function checked(reply: GraphReply, what: string): void {
 }
 
 async function publishForm(form: (typeof FORMS)[number], known: NonNullable<GraphReply['data']>) {
-  const name = `OneOhm ${form.name} v${form.version}`;
-  const existing = known.find((flow) => flow.name === name);
-  if (existing?.status === 'PUBLISHED') {
-    console.info(`${form.key}: already published as flow ${existing.id}`);
-    return;
-  }
+  const base = `OneOhm ${form.name} v${form.version}`;
+  // Only a draft is reused. A published flow cannot be edited, and anything else (deprecated,
+  // blocked) is left alone, so a new flow gets its own name.
+  const draft = known.find((flow) => flow.name === base && flow.status === 'DRAFT');
+  const taken = known.some((flow) => flow.name === base);
+  const name = draft || !taken ? base : `${base} (${new Date().toISOString().slice(0, 10)})`;
+  const existing = draft;
   let id = existing?.id;
   if (!id) {
     const made = await graph(`${account}/flows`, json({ name, categories: form.categories }));
@@ -77,7 +78,9 @@ async function publishForm(form: (typeof FORMS)[number], known: NonNullable<Grap
   data.set('asset_type', 'FLOW_JSON');
   checked(await graph(`${id}/assets`, { method: 'POST', body: data }), form.key);
   await graph(`${id}/publish`, { method: 'POST' });
-  console.info(`${form.key}: published. Flow id ${id} — paste it in Settings → WhatsApp → Forms.`);
+  console.info(
+    `${form.key}: published. Flow id ${id} — paste it in Settings → WhatsApp messages → Forms.`,
+  );
 }
 
 async function main() {

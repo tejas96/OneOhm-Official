@@ -26,6 +26,7 @@ import { ChatFileKeeper } from './chat-file-keeper';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
 import { FormFileKeeper } from './forms/form-files';
+import { FormPickService } from './forms/form-pick';
 import { FormReplyService } from './forms/form-reply';
 import { FormSendService } from './forms/form-send';
 import { FormSettingsService } from './forms/form-settings';
@@ -83,6 +84,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     QuoteActionsService,
     WebhookHeartbeatService,
     FormSendService,
+    FormPickService,
     FormSettingsService,
     FormReplyService,
     FormFileKeeper,

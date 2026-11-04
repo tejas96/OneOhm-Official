@@ -1,7 +1,6 @@
 import { MAX_UPLOAD_BYTES } from '@oneohm/domain';
 import type { Environment } from '../../config/environment';
 import type { IncomingFile } from '../documents/upload-file';
-import { SAMPLE_CDN_PREFIX, serveSampleCdn } from './forms/sample-cdn';
 import type { IncomingMedia } from './whatsapp-events';
 
 export const WHATSAPP_MEDIA = Symbol('WHATSAPP_MEDIA');
@@ -20,8 +19,6 @@ export interface ChatFile extends IncomingFile {
 export interface MediaGateway {
   readonly mode: 'log' | 'live';
   download(media: IncomingMedia): Promise<DownloadedMedia>;
-  /** The bytes at a form upload's CDN address (still encrypted); no WhatsApp token is sent. */
-  fetchCdn(url: string): Promise<Buffer>;
 }
 
 /** A file larger than OneOhm accepts; nothing past the cap is read. */
@@ -137,11 +134,6 @@ export function logMediaGateway(log: (line: string) => void): MediaGateway {
       const fileName = mediaFileName(media).replace(/\.[a-z0-9]{1,5}$/i, '');
       return { buffer, fileName: `${fileName}.${extension}` };
     },
-    async fetchCdn(url) {
-      if (!url.startsWith(SAMPLE_CDN_PREFIX)) throw new Error('Not a stand-in form address.');
-      log(`[whatsapp:log] form file ${url} stood in by an encrypted sample`);
-      return serveSampleCdn(url, Buffer.from(SAMPLE_PNG));
-    },
   };
 }
 
@@ -189,14 +181,6 @@ export function liveMediaGateway(
       const file = await fetch(info.url, { headers, signal: AbortSignal.timeout(60_000) });
       if (!file.ok) throw new Error(`WhatsApp media download ${file.status}.`);
       return { buffer: await readCapped(file, cap), fileName: mediaFileName(media) };
-    },
-    async fetchCdn(url) {
-      // The address came from a signed webhook, but it is only ever fetched over https.
-      if (!url.startsWith('https://')) throw new Error('A form file address must be https.');
-      const file = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-      if (!file.ok) throw new Error(`WhatsApp form file download ${file.status}.`);
-      // The encrypted file is a few bytes longer than the photo it holds.
-      return readCapped(file, cap + 64);
     },
   };
 }

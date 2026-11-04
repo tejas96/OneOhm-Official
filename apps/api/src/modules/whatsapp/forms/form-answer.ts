@@ -24,19 +24,19 @@ export async function answerFromForm(
   chat: Conversation,
   customerId: string,
   about: {
-    actionId: string;
+    chosen: Chosen;
     files: readonly (KeptFile & { media: string })[];
     now: number;
     waitSeconds: number;
   },
 ): Promise<boolean> {
-  const { actionId, files, now } = about;
+  const { chosen, files, now } = about;
   const homes = await customerHomes(tx, customerId);
   const asked = await openPapersOf(tx, customerId);
-  const chosen: Chosen = { kind: 'ask', actionId };
   const target = await targetOf(tx, chosen, asked, homes.length, homes[0]?.propertyId ?? null);
-  const request = asked.find((one) => one.id === actionId);
-  if (!target || !request || target.home === null) {
+  const request =
+    chosen.kind === 'ask' ? asked.find((one) => one.id === chosen.actionId) : undefined;
+  if (!target || (chosen.kind === 'ask' && !request) || target.home === null) {
     await waitForQuestion(tx, chat, files, now, about.waitSeconds);
     return false;
   }

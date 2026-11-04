@@ -36,6 +36,11 @@ export class FormSendService {
     return row?.flowId?.trim() || null;
   }
 
+  /** Whether a form can be offered now: it is published. */
+  async available(key: FormKey): Promise<boolean> {
+    return (await this.flowIdOf(key)) !== null;
+  }
+
   async sendForm(
     chat: Conversation,
     customerId: string,
@@ -63,6 +68,7 @@ export class FormSendService {
       token,
       screen: start.screen,
       data: start.data,
+      fallbackText,
     });
     return 'form';
   }

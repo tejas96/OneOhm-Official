@@ -37,7 +37,11 @@ export interface InboundMessage {
     caption?: string;
   };
   /** A reply to a form (Flow) we sent: our token, and the files it carries as Meta posts them. */
-  form?: { token: string; files: Record<string, unknown>[] };
+  form?: {
+    token: string;
+    photos?: Record<string, unknown>[];
+    pdfs?: Record<string, unknown>[];
+  };
   /** A location pin, as Meta posts it. */
   location?: { latitude: number; longitude: number; name?: string; address?: string };
   /** A shared contact card, as Meta posts it. */
@@ -172,26 +176,34 @@ function otherOf(base: Record<string, string>, message: InboundMessage) {
   };
 }
 
+/** A reply to one of our forms as Meta posts it: the token and the files of the screen used. */
+function formMessage(
+  base: Record<string, string>,
+  form: NonNullable<InboundMessage['form']>,
+): Record<string, unknown> {
+  return {
+    ...base,
+    type: 'interactive',
+    interactive: {
+      type: 'nfm_reply',
+      nfm_reply: {
+        name: 'flow',
+        body: 'Sent',
+        response_json: JSON.stringify({
+          flow_token: form.token,
+          ...(form.photos ? { photos: form.photos } : {}),
+          ...(form.pdfs ? { pdfs: form.pdfs } : {}),
+        }),
+      },
+    },
+  };
+}
+
 /** The Meta message object for what the test sends: media, a tap, or typed text. */
 function messageOf(base: Record<string, string>, message: InboundMessage): Record<string, unknown> {
   const other = otherOf(base, message);
   if (other) return other;
-  if (message.form)
-    return {
-      ...base,
-      type: 'interactive',
-      interactive: {
-        type: 'nfm_reply',
-        nfm_reply: {
-          name: 'flow',
-          body: 'Sent',
-          response_json: JSON.stringify({
-            flow_token: message.form.token,
-            files: message.form.files,
-          }),
-        },
-      },
-    };
+  if (message.form) return formMessage(base, message.form);
   return message.media
     ? {
         ...base,

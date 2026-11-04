@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { type IncomingForm, readForm } from './forms/form-reply-data';
+import { formText, type IncomingForm, readForm } from './forms/form-reply-data';
 import { readOther } from './incoming-other';
 
 /** Meta signs each webhook post: `sha256=` and the HMAC of the raw body with the app secret. */
@@ -60,7 +60,7 @@ export interface Incoming {
   readonly kind: 'text' | 'choice' | 'media' | 'form' | 'other';
   readonly text: string;
   readonly choiceId: string | null;
-  /** Set on a `form` message: the token we sent and the files the customer added. */
+  /** Set on a `form` message: our token and the files. */
   readonly form?: IncomingForm | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
@@ -168,9 +168,10 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
   const reply = message.interactive?.button_reply ?? message.interactive?.list_reply;
   if (reply?.id)
     return { ...base, kind: 'choice', text: reply.title ?? reply.id, choiceId: reply.id };
-  const form = message.interactive?.nfm_reply;
-  if (form)
-    return { ...base, kind: 'form', text: '', choiceId: null, form: readForm(form.response_json) };
+  if (message.interactive?.nfm_reply) {
+    const form = readForm(message.interactive.nfm_reply.response_json);
+    return { ...base, kind: 'form', text: formText(form), choiceId: null, form };
+  }
   if (message.button?.payload)
     return {
       ...base,

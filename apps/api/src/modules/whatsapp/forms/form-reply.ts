@@ -1,33 +1,50 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
+import type { Chosen } from '../assistant/files-wait';
 import { HomeService } from '../assistant/home';
 import { MEDIA_WORDS } from '../assistant/words';
+import { tellChatTeam } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
+import type { Incoming } from '../whatsapp-events';
 import { type FlowToken, releaseFlowToken, takeFlowToken } from './flow-token';
 import { answerFromForm } from './form-answer';
-import { FormFileKeeper, type FormRefusal, type KeptFormFile } from './form-files';
-import type { IncomingForm } from './form-reply-data';
+import { FormFileKeeper, type FormRefusal, type KeptFormFile, showFormFiles } from './form-files';
 import { FORM_WORDS } from './form-words';
 
 const REFUSAL_WORDS: Record<FormRefusal, () => string> = {
   too_large: () => MEDIA_WORDS.tooLarge,
   wrong_type: () => MEDIA_WORDS.wrongType,
   empty: () => MEDIA_WORDS.emptyFile,
-  tampered: () => MEDIA_WORDS.failed,
+  changed: () => MEDIA_WORDS.failed,
   failed: () => MEDIA_WORDS.failed,
 };
 
+/** What the form was sent for: an asked paper, or a checklist paper on a home. */
+function chosenBy(payload: Record<string, unknown>): Chosen | null {
+  if (typeof payload.actionId === 'string') return { kind: 'ask', actionId: payload.actionId };
+  if (typeof payload.key === 'string')
+    return {
+      kind: 'item',
+      key: payload.key,
+      propertyId: typeof payload.propertyId === 'string' ? payload.propertyId : null,
+    };
+  return null;
+}
+
 /**
  * A customer's reply to a form we sent (`nfm_reply`). The token says what the form was for;
- * one we do not know, that is used or has expired, gets "That form is old" and Home. Each
- * file is checked and stored once, then filed as the paper the form was sent for. A file
- * that fails tells the customer its true reason once and alerts the team; the other files
- * are still saved.
+ * one we do not know, that is used or has expired, gets "That form is old" (and Home, unless a
+ * person has the chat). A valid token with no readable file is not "old": the team is told and
+ * the customer is asked for the photo here. Each file is checked and stored once, then filed as
+ * the paper the form was sent for. A file that fails tells the customer its true reason once
+ * and alerts the team; the other files are still saved.
  */
 @Injectable()
 export class FormReplyService {
+  private readonly log = new Logger('WhatsApp');
+
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
@@ -36,10 +53,24 @@ export class FormReplyService {
     private readonly home: HomeService,
   ) {}
 
-  async receive(chat: Conversation, customerId: string, form: IncomingForm): Promise<void> {
+  async receive(chat: Conversation, customerId: string, incoming: Incoming): Promise<void> {
+    const form = incoming.form;
+    if (!form) return;
     const token = await takeFlowToken(this.db, form.token, chat.id);
-    if (!token || token.customerId !== customerId || form.files.length === 0)
-      return this.old(chat, customerId, token);
+    if (!token || token.customerId !== customerId) return this.old(chat, customerId);
+    if (form.files.length === 0) {
+      this.log.warn(
+        `Form reply ${incoming.waMessageId} had no readable file (keys: ${form.keys.join(',')}).`,
+      );
+      await releaseFlowToken(this.db, token.token);
+      await tellChatTeam(this.db, chat, {
+        kind: 'whatsapp_file_failed',
+        title: 'WhatsApp form came back empty',
+        body: `${chat.profileName ?? chat.phone} sent a form but no file could be read from it. Ask them to send the photo in the chat.`,
+        key: `wa_form_empty:${incoming.waMessageId}`,
+      }).catch((error) => this.log.error(`Could not alert about an empty form: ${String(error)}`));
+      return void (await queueReply(this.db, chat, { kind: 'text', body: FORM_WORDS.noFile }));
+    }
     try {
       const kept: KeptFormFile[] = [];
       for (const file of form.files) kept.push(await this.files.keep(chat, customerId, file));
@@ -59,13 +90,13 @@ export class FormReplyService {
   ) {
     const saved = kept.flatMap((file) => (file.ok ? [file] : []));
     const reasons = [...new Set(kept.flatMap((file) => (file.ok ? [] : [file.why])))];
-    if (saved.length > 0) {
-      await this.files.showInChat(chat, saved);
-      const actionId = (token.payload as { actionId?: string }).actionId ?? '';
+    const chosen = chosenBy(token.payload);
+    if (saved.length > 0 && chosen) {
       await this.db.transaction(async (tx) => {
         const locked = await lockedChat(tx, chat.id);
+        await showFormFiles(tx, chat.id, saved);
         await answerFromForm(tx, this.requests, locked, customerId, {
-          actionId,
+          chosen,
           files: saved.map((file) => ({
             id: file.id,
             contentType: file.contentType,
@@ -81,9 +112,9 @@ export class FormReplyService {
       await queueReply(this.db, chat, { kind: 'text', body: REFUSAL_WORDS[why]() });
   }
 
-  private async old(chat: Conversation, customerId: string, token: FlowToken | null) {
-    if (token) await releaseFlowToken(this.db, token.token);
+  private async old(chat: Conversation, customerId: string) {
     await queueReply(this.db, chat, { kind: 'text', body: FORM_WORDS.old });
-    await this.home.show(chat, customerId);
+    // A person who has the chat keeps it: no Home from the bot.
+    if (chat.state !== 'human') await this.home.show(chat, customerId);
   }
 }

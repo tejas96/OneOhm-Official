@@ -3,13 +3,13 @@ import { type DatabaseExecutor, waFlowTokens } from '@oneohm/database';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { FormKey } from './form-registry';
 
-/** A form stays usable this long after we sent it (WhatsApp's chat window is 24 hours). */
-export const FORM_TOKEN_HOURS = 24;
+/** A form stays usable this long after we sent it; the daily clean-up then removes the token. */
+export const FORM_TOKEN_DAYS = 7;
 
 /** What a "Send a paper" form is for: the paper request it answers. */
-export interface SendPaperPayload {
-  readonly actionId: string;
-}
+export type SendPaperPayload =
+  | { readonly actionId: string }
+  | { readonly key: string; readonly propertyId: string | null };
 
 export interface FlowToken<P = Record<string, unknown>> {
   readonly token: string;
@@ -36,7 +36,7 @@ export async function issueFlowToken(
     conversationId: about.conversationId,
     customerId: about.customerId,
     payload: about.payload,
-    expiresAt: new Date(now.getTime() + FORM_TOKEN_HOURS * 3_600_000),
+    expiresAt: new Date(now.getTime() + FORM_TOKEN_DAYS * 86_400_000),
   });
   return token;
 }

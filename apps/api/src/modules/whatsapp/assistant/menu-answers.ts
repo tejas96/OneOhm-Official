@@ -7,6 +7,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { paperKindWords } from '../../documents/paper-kind-words';
 import { type Conversation, queueReply } from '../chat-store';
+import { FormPickService } from '../forms/form-pick';
 import { FormSendService } from '../forms/form-send';
 import { sendPaperStart } from '../forms/form-words';
 import { AnswersService } from './answers.service';
@@ -39,6 +40,7 @@ export class MenuAnswersService {
     private readonly people: HandOverService,
     private readonly home: HomeService,
     private readonly forms: FormSendService,
+    private readonly picks: FormPickService,
   ) {}
 
   async choose(chat: Conversation, customerId: string, choice: Choice): Promise<void> {
@@ -161,10 +163,17 @@ export class MenuAnswersService {
       const paper = isPersonDocumentCategory(asked.category)
         ? paperKindWords(languageNow(), asked.category)
         : asked.title;
-      const start = sendPaperStart(paper, asked.home, asked.requestId);
+      const start = sendPaperStart(paper, asked.home, { actionId: asked.requestId });
       const fallback = CHAT_WORDS.paper.ask(asked.title, asked.home);
       return void (await this.forms.sendForm(chat, customerId, 'send_paper', start, fallback));
     }
+    // No single paper asked: choose from the asked and missing papers, then the form opens.
+    if (
+      !category &&
+      (await this.forms.available('send_paper')) &&
+      (await this.picks.offer(chat, customerId))
+    )
+      return;
     const body = category
       ? CHAT_WORDS.paper.ask(CHAT_WORDS.bill.paper, null)
       : open.length > 0

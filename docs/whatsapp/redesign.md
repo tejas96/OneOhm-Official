@@ -537,23 +537,32 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
 ## 22c. Phase 2b — forms (WhatsApp Flows) and "Send a paper"
 
 - **Where:** `apps/api/src/modules/whatsapp/forms/`. The form list is `form-registry.ts`; the
-  Flow JSON of "Send a paper" is `send-paper.flow.ts` (versioned; one DocumentPicker, 1 to 4
-  photos or PDFs, Flow JSON 6.0). All words come from the start data (`form-words.ts`), so one
-  published flow serves English, Marathi and Hindi. No data endpoint: the message opens the
-  screen with `flow_action: navigate` and the files return in the `nfm_reply` webhook.
-- **Sending:** `FormSendService.sendForm(chat, customerId, formKey, start, fallbackText)` queues a
-  new outbox session kind `flow` (the worker builds the interactive flow message). A form with
-  no flow id (Settings → WhatsApp onboarding → Forms) or a chat outside 24 h gets the fallback
-  text instead. The form message ends "Or just send the photo here."
-- **Token:** every form carries a random `flow_token` saved in `wa_flow_tokens` (form, chat,
-  customer, `{actionId}`, 24 h expiry, used once). Unknown, used or expired: "That form is old —
-  please try again." and Home.
-- **Files:** WhatsApp posts form files as media ids (`id`) when there is no endpoint; files with
-  `cdn_url` and `encryption_metadata` (endpoint forms) are decrypted too
-  (`media-decrypt.ts`: SHA-256 of the download, HMAC-SHA256 of iv + ciphertext first 10 bytes,
-  AES-256-CBC, SHA-256 of the plaintext). Each file goes through the same type/size/empty checks
-  and the store-once path; a failure tells the customer the true reason once and alerts the team.
+  Flow JSON of "Send a paper" is `send-paper.flow.ts` (version 2.0, Flow JSON 6.0). Two
+  screens, because a picker's files cannot travel in a navigate action: SEND_PAPER (a
+  PhotoPicker, camera or gallery, 1 to 4 photos, Send, and the link "Have a PDF instead?") and
+  SEND_PDF (a DocumentPicker, PDFs only, 1 to 2). All words come from the start data
+  (`form-words.ts`), so one published flow serves English, Marathi and Hindi. No data
+  endpoint: the message opens the first screen with `flow_action: navigate` and the files come
+  back in the `nfm_reply` webhook under `photos` or `pdfs`.
+- **Sending:** `FormSendService.sendForm(chat, customerId, formKey, start, fallbackText)` queues an
+  outbox session kind `flow`. No flow id (Settings → WhatsApp messages → Forms) or a chat
+  outside 24 h: the fallback text goes. The form message ends "Or just send the photo here."
+  If WhatsApp refuses the form, the worker sends the same fallback text as a plain message
+  (`flow-fallback.ts`) and the team's alert stays.
+- **Which paper:** one paper asked (Send it now, More → Send a paper, "We still need" button) opens
+  its form. Otherwise "What do you want to send?" lists the asked and the missing checklist
+  papers (per home), and a row opens that paper's form (`form-pick.ts`).
+- **Token:** every form carries a random `flow_token` in `wa_flow_tokens` (form, chat, customer,
+  what it is for, 7-day expiry, used once; the daily clean-up removes spent ones). Unknown,
+  used, expired or another chat's: "That form is old — please try again." and Home (not in a
+  chat a person holds). A valid token with no readable file asks for the photo in the chat and
+  alerts the team.
+- **Files:** WhatsApp posts form files as media ids (name, type, SHA-256); each is downloaded
+  like a chat file, its SHA-256 checked, then the same type/size/empty checks and the store-once
+  path. A failure tells the customer the true reason once and alerts the team.
 - **Answer:** the files answer the paper the form was sent for (no "What is this?"), then the
-  normal Saved reply with [Change]. If that paper is gone, nothing is guessed: the files wait.
+  normal Saved reply with [Change]. If that paper is gone or its home unknown, nothing is
+  guessed: the files wait for "What is this?".
 - **Publishing:** `pnpm --filter @oneohm/api forms:publish` prints what it would do; with `--yes`
-  it creates, uploads and publishes the flow in the business account and prints the flow id.
+  it creates (a draft is reused; a published name gets a new dated flow), uploads, publishes and
+  prints the flow id.

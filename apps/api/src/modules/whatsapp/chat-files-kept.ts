@@ -1,5 +1,5 @@
 import { customerActions, type DatabaseExecutor, documents } from '@oneohm/database';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../../config/core.module';
 import type { ObjectStorageService } from '../documents/object-storage.service';
 import type { CheckedFile } from '../documents/upload-file';
@@ -26,6 +26,29 @@ export function leftToSort(
 /** The storage folder of a customer's WhatsApp file; only letters, digits, `_` and `-` of the media id stay (no dots, so no `..`). */
 export function whatsappFileScope(customerId: string, mediaId: string): string {
   return `customers/${customerId}/whatsapp/${mediaId.replace(/[^\w-]/g, '_')}/`;
+}
+
+/**
+ * The document this WhatsApp file was already stored as for the customer (store once), or
+ * undefined. Shared by files sent in the chat and files from a form.
+ */
+export async function storedBefore(
+  db: DatabaseExecutor,
+  customerId: string,
+  mediaId: string,
+): Promise<{ id: string; contentType: string } | undefined> {
+  const [earlier] = await db
+    .select({ id: documents.id, contentType: documents.contentType })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.customerId, customerId),
+        sql`starts_with(${documents.storageKey}, ${whatsappFileScope(customerId, mediaId)})`,
+        isNull(documents.removedAt),
+      ),
+    )
+    .limit(1);
+  return earlier;
 }
 
 /**

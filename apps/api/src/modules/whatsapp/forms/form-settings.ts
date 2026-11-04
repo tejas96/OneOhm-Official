@@ -15,7 +15,7 @@ export interface FormRow {
 }
 
 /**
- * Settings → WhatsApp → Forms: each form we can send, its version, and the flow id it was
+ * Settings → WhatsApp messages → Forms: each form we can send, its version, and the flow id it was
  * published as. A form with no flow id is "not available": the chat asks for the photo
  * instead. The owner pastes the id when a form is published by hand.
  */

@@ -1,55 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { readForm } from './form-reply-data';
-import { encryptFormMedia } from './media-encrypt';
 
 const reply = (data: unknown) => JSON.stringify(data);
+const file = (id: string, name = 'a.jpg', mime = 'image/jpeg') => ({
+  id,
+  file_name: name,
+  mime_type: mime,
+  sha256: `h-${id}`,
+});
 
 describe('reading a form reply (nfm_reply response_json)', () => {
-  it('reads our token and files that came as ordinary media ids', () => {
-    const form = readForm(
-      reply({
-        flow_token: 'tok',
-        files: [
-          { id: 'm1', file_name: 'front.jpg', mime_type: 'image/jpeg', sha256: 'x' },
-          { id: 'm2', file_name: 'back.pdf', mime_type: 'application/pdf', sha256: 'y' },
-        ],
-      }),
-    );
+  it('reads our token and the photos of the first screen', () => {
+    const form = readForm(reply({ flow_token: 'tok', photos: [file('m1'), file('m2', 'b.jpg')] }));
     expect(form.token).toBe('tok');
     expect(form.files).toEqual([
-      { kind: 'media', id: 'm1', fileName: 'front.jpg', mimeType: 'image/jpeg' },
-      { kind: 'media', id: 'm2', fileName: 'back.pdf', mimeType: 'application/pdf' },
+      { id: 'm1', fileName: 'a.jpg', mimeType: 'image/jpeg', sha256: 'h-m1' },
+      { id: 'm2', fileName: 'b.jpg', mimeType: 'image/jpeg', sha256: 'h-m2' },
     ]);
+    expect(form.keys).toEqual(['flow_token', 'photos']);
   });
 
-  it('reads files with a CDN address and their encryption metadata', () => {
-    const { meta } = encryptFormMedia(Buffer.from('x'));
+  it('reads the PDFs of the second screen alone', () => {
     const form = readForm(
-      reply({
-        flow_token: 'tok',
-        files: [
-          {
-            media_id: 'c1',
-            cdn_url: 'https://cdn/x',
-            file_name: 'a.jpg',
-            encryption_metadata: meta,
-          },
-        ],
-      }),
+      reply({ flow_token: 'tok', pdfs: [file('p1', 'bill.pdf', 'application/pdf')] }),
     );
-    expect(form.files).toEqual([
-      { kind: 'cdn', id: 'c1', url: 'https://cdn/x', fileName: 'a.jpg', meta },
-    ]);
+    expect(form.files.map((one) => one.id)).toEqual(['p1']);
   });
 
-  it('skips a CDN file without all its keys, keeps at most four, and survives bad JSON', () => {
-    const files = Array.from({ length: 7 }, (_, n) => ({ id: `m${n}` }));
-    expect(readForm(reply({ flow_token: 't', files })).files).toHaveLength(4);
-    expect(
-      readForm(reply({ files: [{ cdn_url: 'https://x', encryption_metadata: { iv: 'a' } }] }))
-        .files,
-    ).toEqual([]);
-    expect(readForm('not json')).toEqual({ token: null, files: [] });
-    expect(readForm(undefined)).toEqual({ token: null, files: [] });
+  it('still reads `files` (the first version of the flow)', () => {
+    expect(readForm(reply({ flow_token: 't', files: [file('f1')] })).files).toHaveLength(1);
+  });
+
+  it('keeps at most four files, skips entries without an id, and survives bad JSON', () => {
+    const many = Array.from({ length: 7 }, (_, n) => ({ id: `m${n}` }));
+    expect(readForm(reply({ flow_token: 't', photos: many })).files).toHaveLength(4);
+    expect(readForm(reply({ photos: [{ file_name: 'x' }, null, 'x'] })).files).toEqual([]);
+    expect(readForm('not json')).toEqual({ token: null, files: [], keys: [] });
+    expect(readForm(undefined)).toEqual({ token: null, files: [], keys: [] });
   });
 });

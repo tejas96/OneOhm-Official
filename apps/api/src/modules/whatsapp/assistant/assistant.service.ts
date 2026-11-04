@@ -7,6 +7,7 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type Conversation, queueReply, setState } from '../chat-store';
+import { FormPickService, readFormTap } from '../forms/form-pick';
 import { FormReplyService } from '../forms/form-reply';
 import type { Incoming } from '../whatsapp-events';
 import { languageTapped, payTapped, sendTapped } from './chat-choices';
@@ -62,6 +63,7 @@ export class AssistantService {
     private readonly whatAnswers: WhatAnswerService,
     private readonly words: FreeTextService,
     private readonly formReplies: FormReplyService,
+    private readonly formPicks: FormPickService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -109,7 +111,7 @@ export class AssistantService {
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     // A "Send a paper" form came back: its files answer the paper it was sent for.
-    if (incoming.form) return this.formReplies.receive(chat, customerId, incoming.form);
+    if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
     // A location pin, a contact card or a sticker is never answered: their person is told
     // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
     if (incoming.kind === 'other')
@@ -141,6 +143,8 @@ export class AssistantService {
     if (milestone) return this.menus.pay(chat, customerId, milestone);
     const request = sendTapped(id);
     if (request) return this.menus.askPaper(chat, customerId, request);
+    const formTap = readFormTap(id);
+    if (formTap) return this.formPicks.tapped(chat, customerId, formTap);
     const language = languageTapped(id);
     if (language) return this.menus.language(chat, customerId, language);
     if (id && isPaperTap(id)) return this.papers.tapped(chat, customerId, id);
