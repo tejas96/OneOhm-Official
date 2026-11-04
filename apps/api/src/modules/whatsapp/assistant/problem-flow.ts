@@ -11,6 +11,7 @@ import { filePaper } from '../file-paper';
 import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { guessCategory } from './guess-category';
+import { releaseHeldFiles } from './waiting-files';
 import { CATEGORY_WORDS, MEDIA_WORDS, WORDS } from './words';
 
 /** For this long after a request is raised, more photos sent are added to it. */
@@ -65,6 +66,7 @@ export class ProblemFlowService {
     });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
     await setStep(this.db, chat, 'menu', { raised });
+    await releaseHeldFiles(this.db, chat.id);
     let added = 0;
     for (const file of files) if (await this.attach(customerId, request.id, file)) added += 1;
     const lines = [
@@ -82,10 +84,11 @@ export class ProblemFlowService {
     requestId: string,
     files: readonly string[],
   ) {
-    let added = 0;
-    for (const file of files) if (await this.attach(customerId, requestId, file)) added += 1;
-    const body = added === files.length ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
-    return sayWithTaps(db, chat, body, ['problems', 'menu']);
+    const added: string[] = [];
+    for (const file of files) if (await this.attach(customerId, requestId, file)) added.push(file);
+    const body = added.length === files.length ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
+    await sayWithTaps(db, chat, body, ['problems', 'menu']);
+    return added;
   }
 
   /**

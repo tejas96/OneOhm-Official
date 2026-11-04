@@ -33,7 +33,7 @@ export interface AskOptions {
   readonly stage?: 'first' | 'more';
   /** Ask about these files only (one by one after "They're different"). */
   readonly focus?: readonly string[] | null;
-  readonly each?: { readonly of: number } | null;
+  readonly each?: { readonly ids: readonly string[] } | null;
 }
 
 /**
@@ -178,19 +178,24 @@ export class FileQuestionsService implements OnApplicationBootstrap, OnModuleDes
     const homes = await customerHomes(tx, customerId);
     const stage = options.stage ?? 'first';
     const each =
-      options.each === undefined ? (current.each ? { of: current.eachOf } : null) : options.each;
+      options.each === undefined ? (current.each ? { ids: current.eachIds } : null) : options.each;
     const { rows } = await askedRows(tx, customerId, homes);
     const missing =
       rows.length === 0 || stage === 'more' ? await missingRows(this.checklists, homes) : [];
-    const position = each ? Math.min(each.of, Math.max(1, each.of - kept.length + 1)) : 0;
+    // "File 2 of 3" counts only the files of the one-by-one set, not later ones.
+    const of = each?.ids.length ?? 0;
+    const left = each ? kept.filter((file) => each.ids.includes(file.id)).length : 0;
+    const position = Math.min(of, Math.max(1, of - left + 1));
     const { reply, offered } = buildQuestion({
       count: subject.length,
       photos: subject.every((file) => file.type === 'image'),
-      each: each ? { n: position, of: each.of } : null,
+      each: each ? { n: position, of } : null,
       stage,
       asked: rows,
       missing,
-      problem: recentRequest(chat.context, now) !== null,
+      // Only photos can join a problem; a PDF or Word file is never offered to it.
+      problem:
+        recentRequest(chat.context, now) !== null && subject.every((file) => file.type === 'image'),
     });
     await queueReply(tx, chat, reply);
     const next = asked(current, now, { focus: subject.map((file) => file.id), offered, each });

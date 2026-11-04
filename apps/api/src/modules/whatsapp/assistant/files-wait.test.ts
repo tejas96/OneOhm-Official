@@ -48,7 +48,7 @@ describe('files waiting for "What is this?"', () => {
     const before = asked(withFile({}, file('a'), now, 15), now + 15_000, {
       focus: ['a'],
       offered: 'x',
-      each: { of: 1 },
+      each: { ids: ['a'] },
     });
     expect(before.askAt).toBeNull();
     const after = withFile({ filesWait: before }, file('b', now + 20_000), now + 20_000, 15);

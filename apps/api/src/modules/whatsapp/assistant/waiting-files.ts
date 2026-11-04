@@ -40,3 +40,15 @@ export async function holdQuestion(db: Database, chatId: string): Promise<void> 
     if (wait && wait.askAt !== null) await saveWait(tx, chat, { ...wait, askAt: null });
   });
 }
+
+/**
+ * The problem was raised: files that waited behind it are asked about now (the timer picks
+ * them up within seconds), not on a fixed clock that could cut across the problem's steps.
+ */
+export async function releaseHeldFiles(db: Database, chatId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const chat = await lockedChat(tx, chatId);
+    const wait = filesWaitOf(chat.context);
+    if (wait && wait.askAt !== null) await saveWait(tx, chat, { ...wait, askAt: Date.now() });
+  });
+}

@@ -90,22 +90,26 @@ export class WhatAnswerService {
       }));
     if (tap.t === 'diff') {
       const [first] = files;
-      const each = { of: files.length };
+      const each = { ids: files.map((file) => file.id) };
       const focus = first ? [first.id] : null;
       return void (await this.questions.ask(tx, chat, customerId, now, { focus, each }));
     }
     if (tap.t === 'prob')
       return startProblem(tx, chat, customerId, { wait, files, now, delay: this.delay() });
     if (tap.t === 'probadd') {
+      // Only the photos the problem took leave the wait; any it refused are asked about.
       const added = await addToProblem(tx, this.problems, chat, customerId, files, now);
-      return added
-        ? this.settle(tx, chat, customerId, wait, files, now)
-        : this.askAgain(tx, chat, customerId, now);
+      const taken = files.filter((file) => added.includes(file.id));
+      const next = taken.length ? await this.settle(tx, chat, customerId, wait, taken, now) : wait;
+      if (taken.length === files.length) return;
+      const context = { ...(chat.context as object), filesWait: next };
+      return this.askAgain(tx, { ...chat, context }, customerId, now);
     }
     if (tap.t === 'pay') {
       await takePaymentProof(tx, customerId, files, now);
       await sayWithTaps(tx, chat, WHAT_WORDS.payment, ['menu']);
-      return this.settle(tx, chat, customerId, wait, files, now);
+      await this.settle(tx, chat, customerId, wait, files, now);
+      return;
     }
     const chosen = this.chosenBy(tap, wait);
     if (!chosen) return this.askAgain(tx, chat, customerId, now);
@@ -186,7 +190,7 @@ export class WhatAnswerService {
       left: stillAsked(asked, target, homes.length, answered?.id)[0],
     });
     const ids = files.map((file) => file.id);
-    return this.settle(tx, chat, customerId, wait, files, now, withBatch(chat.context, ids, now));
+    await this.settle(tx, chat, customerId, wait, files, now, withBatch(chat.context, ids, now));
   }
 
   /** Files left the wait (filed, or sent on): the rest of the burst is asked next. */
@@ -198,34 +202,35 @@ export class WhatAnswerService {
     files: readonly KeptFile[],
     now: number,
     filedBatches?: unknown,
-  ): Promise<void> {
+  ): Promise<FilesWait | null> {
     const left = withoutFiles(
       wait,
       files.map((file) => file.id),
     );
-    // Files that came meanwhile keep their own time; with none scheduled they are asked soon.
+    // After "They're different", the next file of that set is asked about at once; when the set
+    // is done, files that came meanwhile are asked as a burst (they keep their own time).
+    const following = left?.each ? left.files.find((f) => left.eachIds.includes(f.id)) : undefined;
+    const ended = left?.each && !following ? { each: false, eachIds: [] } : {};
     const next = left
       ? {
           ...left,
+          ...ended,
           pick: null,
           offered: null,
-          askAt: left.each ? null : (left.askAt ?? now + this.delay()),
+          askAt: following ? null : (left.askAt ?? now + this.delay()),
         }
       : null;
     await saveWait(tx, chat, next, filedBatches ? { filedBatches } : {});
-    const context = { ...(chat.context as object), filesWait: next };
-    // After "They're different", the next file is asked about at once.
-    if (next?.each) {
-      const [following] = next.files;
+    if (following) {
+      const context = { ...(chat.context as object), filesWait: next };
       await this.questions.ask(tx, { ...chat, context }, customerId, now, {
-        focus: following ? [following.id] : null,
+        focus: [following.id],
       });
     }
+    return next;
   }
 
-  private delay(): number {
-    return this.env.FILE_WAIT_SECONDS * 1000;
-  }
+  private delay = (): number => this.env.FILE_WAIT_SECONDS * 1000;
 
   private async askAgain(
     tx: DatabaseExecutor,

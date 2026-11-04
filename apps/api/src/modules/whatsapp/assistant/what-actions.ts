@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import type { CustomerHome } from '../../customer-portal/customer-homes';
 import type { DocumentMoveService } from '../../documents/document-move.service';
 import { type Conversation, queueReply } from '../chat-store';
+import { STEP_MINUTES } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { startComplaint } from './complaint-start';
 import {
@@ -56,16 +57,17 @@ export async function startProblem(
     .map((file) => ({ type: file.type, id: file.media, mimeType: null, fileName: null, at: now }));
   const before = keepPending(chat.context, now).pending as PendingMedia[] | undefined;
   const pending = [...(before ?? []), ...photos].slice(-6);
-  // The files still waiting are asked about soon, not after the one-by-one loop that ended here.
+  // The files still waiting are asked about once the problem flow ends (it frees them when the
+  // problem is raised, `releaseHeldFiles`); if it never does, when its step has run out.
   const left = withoutFiles(wait, ids);
   const next = left && {
     ...left,
     each: false,
-    eachOf: 0,
+    eachIds: [],
     focus: null,
     offered: null,
     pick: null,
-    askAt: now + about.delay,
+    askAt: now + STEP_MINUTES * 60_000 + about.delay,
   };
   await saveWait(tx, chat, next, { pending });
   await startComplaint(
@@ -83,17 +85,16 @@ export async function addToProblem(
   customerId: string,
   files: readonly KeptFile[],
   now: number,
-): Promise<boolean> {
+): Promise<string[]> {
   const raised = recentRequest(chat.context, now);
-  if (!raised) return false;
-  await problems.addPhotos(
+  if (!raised) return [];
+  return problems.addPhotos(
     tx,
     chat,
     customerId,
     raised.id,
     files.map((file) => file.id),
   );
-  return true;
 }
 
 /**
@@ -141,7 +142,7 @@ export async function changeSaved(
     askedAt: null,
     focus: null,
     each: false,
-    eachOf: 0,
+    eachIds: [],
     offered: null,
     pick: null,
   };

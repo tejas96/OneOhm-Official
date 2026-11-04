@@ -4,7 +4,7 @@ import { Session } from '../support/http';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { askAboutFiles, docsOf, questions, sendPhoto } from '../support/what-is-this';
-import { refuseRepliesTo } from '../support/whatsapp';
+import { refuseRepliesTo, sendInbound } from '../support/whatsapp';
 
 // A file that arrives while a question is open waits for its own; an answer files only the
 // files it was asked about. More than ten files are asked about ten at a time. A problem told
@@ -155,5 +155,58 @@ describe('Papers: late files, many files and the timer', () => {
     // The file still waits: Home still says so.
     await say(customer.phone, 'menu');
     expect((await lastReply(customer.phone))?.body).toContain('not saved yet');
+  });
+
+  it('a PDF after a problem is not offered to it', async () => {
+    const { customer } = await sellProject(admin, { name: 'Pdf After Problem (test)' });
+    await tap(customer.phone, 'go:problem');
+    await say(customer.phone, 'The inverter shows a red light (test)');
+    await sendInbound(customer.phone, {
+      media: { type: 'document', fileId: 'pdf-after-problem', filename: 'bill.pdf' },
+    });
+    await askAboutFiles(admin);
+    const question = await lastReply(customer.phone);
+    expect(question?.body).toBe('What is this?');
+    expect(choices(question)).not.toContain('what:probadd');
+    // Even tapped by hand, nothing is dropped: the file is asked about again.
+    await tap(customer.phone, 'what:probadd');
+    expect((await lastReply(customer.phone))?.body).toBe('What is this?');
+    await tap(customer.phone, 'what:other');
+    expect((await docsOf(customer.customerId))[0]?.category).toBe('other');
+  });
+
+  it('one by one counts only its own files, not one that came later', async () => {
+    const { customer } = await sellProject(admin, { name: 'Each Count (test)' });
+    for (let n = 0; n < 3; n += 1) await sendPhoto(customer.phone);
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:diff');
+    await tap(customer.phone, 'what:other');
+    await sendPhoto(customer.phone);
+    expect((await lastReply(customer.phone))?.body).toBe('File 2 of 3 — what is it?');
+    await tap(customer.phone, 'what:other');
+    expect((await lastReply(customer.phone))?.body).toBe('File 3 of 3 — what is it?');
+    await tap(customer.phone, 'what:other');
+    // The set is done; the late photo is asked about as its own question.
+    await askAboutFiles(admin, 120);
+    expect((await lastReply(customer.phone))?.body).toBe('What is this?');
+  });
+
+  it('files left behind a Problem photo are asked about after the problem is raised', async () => {
+    const { customer } = await sellProject(admin, { name: 'Held Behind (test)' });
+    await sendPhoto(customer.phone);
+    await sendPhoto(customer.phone);
+    await askAboutFiles(admin);
+    await tap(customer.phone, 'what:diff');
+    await tap(customer.phone, 'what:prob');
+    const before = (await replies(customer.phone)).length;
+    // The problem steps are not cut across, however much time passes.
+    await askAboutFiles(admin, 600);
+    expect((await replies(customer.phone)).length).toBe(before);
+    await say(customer.phone, 'The inverter shows a red light (test)');
+    await askAboutFiles(admin, 600);
+    // Now it is asked about; the problem just told is offered for the photo.
+    expect((await lastReply(customer.phone))?.body).toBe(
+      'Is this a photo for the problem you told us about?',
+    );
   });
 });

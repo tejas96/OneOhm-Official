@@ -33,8 +33,8 @@ export interface FilesWait {
   /** The files the open question was asked about (an answer files only these). */
   readonly focus: readonly string[] | null;
   readonly each: boolean;
-  /** How many files were being asked about one by one (for "File 2 of 3"). */
-  readonly eachOf: number;
+  /** The files being asked about one by one (for "File 2 of 3"); later files are not among them. */
+  readonly eachIds: readonly string[];
   /** The asked paper offered with Yes / Something else. */
   readonly offered: string | null;
   readonly pick: Chosen | null;
@@ -46,7 +46,7 @@ const EMPTY: FilesWait = {
   askedAt: null,
   focus: null,
   each: false,
-  eachOf: 0,
+  eachIds: [],
   offered: null,
   pick: null,
 };
@@ -92,7 +92,7 @@ export function asked(
   about: {
     focus: readonly string[] | null;
     offered: string | null;
-    each?: { of: number } | null;
+    each?: { ids: readonly string[] } | null;
   },
 ): FilesWait {
   return {
@@ -103,7 +103,7 @@ export function asked(
     focus: about.focus,
     offered: about.offered,
     each: about.each === undefined ? wait.each : about.each !== null,
-    eachOf: about.each ? about.each.of : about.each === null ? 0 : wait.eachOf,
+    eachIds: about.each ? about.each.ids : about.each === null ? [] : wait.eachIds,
     pick: null,
   };
 }
