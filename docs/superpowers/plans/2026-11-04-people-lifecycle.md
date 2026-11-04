@@ -37,7 +37,7 @@
 
 ## Part A: First sign-in and invites
 
-### Task A1: Password-reset template and OTP purpose
+### Task 1 (A1): Password-reset template and OTP purpose
 
 **Files:**
 - Modify: `apps/api/src/config/environment.ts:30-33,166`
@@ -62,7 +62,7 @@
 - [ ] **Step 4: Run the tests.** Same command. Expected: PASS. Also run `pnpm --filter @oneohm/api typecheck` and expect no errors.
 - [ ] **Step 5: Commit.** `git commit -m "feat(auth): send password codes with the DLT reset template"`
 
-### Task A2: Set-password API (first time and forgot)
+### Task 2 (A2): Set-password API (first time and forgot)
 
 **Files:**
 - Create: `apps/api/src/modules/auth/session-issuer.ts`. Move `issueSession` out of `auth.service.ts:176-185` into it.
@@ -101,7 +101,7 @@
 - [ ] **Step 4: Run the scenario.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(auth): set or reset a web password with an SMS code"`
 
-### Task A3: Sign in with a mobile number, and a "not set yet" hint
+### Task 3 (A3): Sign in with a mobile number, and a "not set yet" hint
 
 **Files:**
 - Create: `apps/api/src/modules/auth/sign-in-identifier.ts` and `sign-in-identifier.test.ts`
@@ -126,7 +126,7 @@
 - [ ] **Step 4: Run the tests.** Same commands. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(auth): web sign-in by mobile number; tell new people to set a password"`
 
-### Task A4: Add a person with no password, plus WhatsApp invites
+### Task 4 (A4): Add a person with no password, plus WhatsApp invites
 
 **Files:**
 - Modify: `packages/domain/src/messaging/message-templates.ts:140-146`. Add `staff_welcome` with audience `staff`, fields `['name', 'link']` and preview copied from the spec.
@@ -173,7 +173,7 @@
 - [ ] **Step 4: Run the tests.** Same commands, plus `pnpm check:file-size`. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): add people without a password; WhatsApp invite"`
 
-### Task A5: Web screens for sign-in and the team
+### Task 5 (A5): Web screens for sign-in and the team
 
 **Files:**
 - Create: `apps/web/src/features/auth/set-password-form.tsx`, with three steps: phone, code, password.
@@ -210,7 +210,7 @@
 
 ## Part B: Reseller payout details
 
-### Task B1: Payout-details rules and table
+### Task 6 (B1): Payout-details rules and table
 
 **Files:**
 - Create: `packages/domain/src/commissions/payout-details.ts` and `payout-details.test.ts`. Export them from the domain index.
@@ -250,7 +250,7 @@
 - [ ] **Step 4: Run the tests.** Same command. Expected: PASS. Run `pnpm --filter @oneohm/database db:migrate` and expect it to apply cleanly.
 - [ ] **Step 5: Commit.** `git commit -m "feat(commissions): reseller payout details table and rules"`
 
-### Task B2: Payout-details API, plus the block on paying
+### Task 7 (B2): Payout-details API, plus the block on paying
 
 **Files:**
 - Create: `apps/api/src/modules/commissions/payout-details.service.ts`
@@ -282,7 +282,7 @@
 - [ ] **Step 4: Run the scenario.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(commissions): payout details; block paying without them"`
 
-### Task B3: Payout-details screens
+### Task 8 (B3): Payout-details screens
 
 **Files:**
 - Create: `apps/field/src/features/profile/payout-details-card.tsx`
@@ -302,7 +302,7 @@
 
 ## Part C: Removal and handover
 
-### Task C1: The `left_on` column and the pure removal rules
+### Task 9 (C1): The `left_on` column and the pure removal rules
 
 **Files:**
 - Modify: `packages/database/src/schema/identity.schema.ts:15-39`. Add `leftOn: calendarDate('left_on')`. Generate the migration `--name user_left_on`.
@@ -332,7 +332,7 @@
 - [ ] **Step 4: Run the tests.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): left_on and removal rules"`
 
-### Task C2: Removal summary (read)
+### Task 10 (C2): Removal summary (read)
 
 **Files:**
 - Create: `apps/api/src/modules/people/departure/departure-work.ts`. It holds the open work, as IDs and counts.
@@ -385,7 +385,7 @@
 - [ ] **Step 4: Run the scenario.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): removal summary of open work and money owed"`
 
-### Task C3: Remove and hand over (write)
+### Task 11 (C3): Remove and hand over (write)
 
 **Files:**
 - Create: `apps/api/src/modules/people/departure/departure-handover.ts`. It holds the moves and notes.
@@ -441,7 +441,7 @@
 - [ ] **Step 4: Run the tests.** Run the same scenario, plus `pnpm test:acceptance 47-alert-routing 49-customer-clarity` to check nothing that uses `retire` broke. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): remove from team with one-step handover"`
 
-### Task C4: Tell customers their new contact
+### Task 12 (C4): Tell customers their new contact
 
 **Files:**
 - Modify: `packages/domain/src/messaging/message-templates.ts`. Add `contact_changed`: audience `customer`, fields `['customer', 'staff', 'subject', 'phone']`, preview copied from the spec. Add its customer app-inbox words wherever `customerNotice` reads them.
@@ -468,7 +468,7 @@
 - [ ] **Step 4: Run the scenario.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): tell customers who their new contact is"`
 
-### Task C5: Rejoin and past members
+### Task 13 (C5): Rejoin and past members
 
 **Files:**
 - Modify: the people contract, controller and `departure.service.ts`. Add `rejoinPerson: POST /people/:id/rejoin`, which returns `200 Person`.
@@ -487,7 +487,7 @@
 - [ ] **Step 4: Run the scenario.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(people): add a past member back"`
 
-### Task C6: Removal screens
+### Task 14 (C6): Removal screens
 
 **Files:**
 - Create: `apps/web/src/features/team/remove-person-sheet.tsx`
