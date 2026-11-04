@@ -64,7 +64,7 @@ If the WhatsApp send fails, the row shows **Invite not delivered**, with the sam
 - `{{1}}` is the first name.
 - `{{2}}` is the field-app link (`FIELD_APP_URL`) only when every role the person holds is a reseller or partner role. Anyone with a staff role gets the website link (`WEB_BASE_URL`), with or without an email, because the website accepts a mobile number.
 
-This is the only new template.
+This is one of two new WhatsApp templates (the other is `contact_changed`, below). There is no new SMS template.
 
 ## Flow 2: First sign-in and Forgot password (one flow)
 
