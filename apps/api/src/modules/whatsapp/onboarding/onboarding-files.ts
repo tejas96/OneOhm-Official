@@ -5,7 +5,7 @@ import { AppError } from '../../../common/http/errors';
 import { logLead } from '../../crm/lead-history';
 import { storeLeadDocument } from '../../documents/lead-chat-files';
 import { ObjectStorageService } from '../../documents/object-storage.service';
-import { checkFile, type IncomingFile } from '../../documents/upload-file';
+import { checkFile } from '../../documents/upload-file';
 import { MEDIA_WORDS } from '../assistant/words';
 import { linkChatFile } from '../chat-store';
 import {
@@ -23,6 +23,8 @@ export interface PendingFile {
   readonly fileName: string;
   readonly contentType: string;
   readonly size: number;
+  /** WhatsApp's media id, so the chat can show the file once it is filed. */
+  readonly mediaId?: string;
 }
 
 export type Fetched = ChatFile | 'too_large' | 'failed';
@@ -119,22 +121,21 @@ export class ChatFilesService {
   /**
    * Files a bill held before the lead existed onto the lead, in the caller's transaction.
    * Called when the lead is made (the city answer) and by the stalled-chat lead creation.
-   * Returns false, with a note on the lead, when it cannot be filed. The held object stays
+   * Returns the document's id, or null (with a note on the lead) when it cannot be filed. The held object stays
    * until the caller commits and then passes its key to `discard`.
    */
   async filePendingBill(
     tx: DatabaseExecutor,
     leadId: string,
     pending: PendingFile,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     try {
       const buffer = await this.storage.getBuffer(pending.storageKey);
-      await this.fileOnLead(tx, leadId, pending.fileName, buffer);
-      return true;
+      return await this.fileOnLead(tx, leadId, pending.fileName, buffer);
     } catch (error) {
       this.log.warn(`Held bill ${pending.storageKey} not filed: ${String(error)}`);
       await logLead(tx, leadId, null, 'whatsapp', 'A bill photo was sent but could not be filed');
-      return false;
+      return null;
     }
   }
 
@@ -157,7 +158,7 @@ export class ChatFilesService {
     );
   }
 
-  private async hold(chatId: string, file: IncomingFile): Promise<PendingFile> {
+  private async hold(chatId: string, file: ChatFile): Promise<PendingFile> {
     const checked = checkFile(file, undefined, undefined);
     const storageKey = `pending/${chatId}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
@@ -166,6 +167,7 @@ export class ChatFilesService {
       fileName: checked.name,
       contentType: checked.contentType,
       size: checked.buffer.length,
+      ...(file.mediaId ? { mediaId: file.mediaId } : {}),
     };
   }
 }

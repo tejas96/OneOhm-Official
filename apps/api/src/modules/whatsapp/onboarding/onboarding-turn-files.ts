@@ -1,7 +1,7 @@
 import type { OnboardStep } from '@oneohm/domain';
 import type { LeadIntakeService } from '../../crm/lead-intake.service';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
-import { queueReply } from '../chat-store';
+import { linkChatFile, queueReply } from '../chat-store';
 import { ONBOARD_WORDS } from './onboard-words';
 import { type ChatFilesService, type FileOutcome, fileWords } from './onboarding-files';
 import { makeLead, NO_NAME } from './onboarding-lead';
@@ -49,7 +49,9 @@ export async function fileHeldBill(
   const held = turn.pendingFile;
   if (!held) return;
   // If it cannot be filed the object and `ob.pendingFile` stay, so it can be recovered.
-  if (!(await files.filePendingBill(turn.tx, leadId, held))) return;
+  const documentId = await files.filePendingBill(turn.tx, leadId, held);
+  if (!documentId) return;
+  await linkChatFile(turn.tx, held.mediaId, documentId);
   turn.answers = { ...turn.answers, photo: 'sent' };
   turn.discard.push(held.storageKey);
   turn.pendingFile = undefined;

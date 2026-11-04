@@ -12,7 +12,7 @@ import { and, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { storageScope } from '../documents/document-links';
+import { propertyOfProject, storageScope } from '../documents/document-links';
 import { forCustomer, readRequests } from '../documents/document-request-read';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { checkFile, type IncomingFile } from '../documents/upload-file';
@@ -71,6 +71,7 @@ export class CustomerDocumentRequestsService {
         .values({
           customerId,
           projectId: asked.projectId,
+          propertyId: await propertyOfProject(tx, asked.projectId),
           category: asked.category,
           source: 'upload',
           name: checked.name,

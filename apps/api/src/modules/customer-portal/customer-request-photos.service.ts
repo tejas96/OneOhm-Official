@@ -16,6 +16,7 @@ import {
 import { and, eq, isNull } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { propertyOfProject } from '../documents/document-links';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { checkFile, type IncomingFile } from '../documents/upload-file';
 import { CustomerPortalService } from './customer-portal.service';
@@ -107,6 +108,7 @@ export class CustomerRequestPhotosService {
       .values({
         customerId,
         projectId: request.projectId,
+        propertyId: await propertyOfProject(this.db, request.projectId),
         serviceRequestId: requestId,
         category: isAudioType(checked.contentType) ? VOICE_NOTE_CATEGORY : 'site_photo',
         source: 'upload',

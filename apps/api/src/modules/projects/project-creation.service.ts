@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
+  type DatabaseExecutor,
   discoms,
+  documents,
   openManagerTerm,
   products,
   projectActivities,
@@ -12,7 +14,7 @@ import {
 } from '@oneohm/database';
 import { generateTasks, type ProjectType } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -54,6 +56,22 @@ const PROJECT_TYPE = {
   society: 'society',
   commercial: 'commercial',
 } as const satisfies Record<string, ProjectType>;
+
+/** Papers the customer sent while only a lead now belong to the project and its home. */
+async function moveLeadPapers(
+  tx: DatabaseExecutor,
+  leadId: string | null,
+  projectId: string,
+  propertyId: string,
+): Promise<void> {
+  if (!leadId) return;
+  await tx
+    .update(documents)
+    .set({ projectId, propertyId })
+    .where(
+      and(eq(documents.leadId, leadId), isNull(documents.projectId), isNull(documents.removedAt)),
+    );
+}
 
 export interface CreatedProject {
   id: string;
@@ -174,6 +192,7 @@ export class ProjectCreationService {
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
+      await moveLeadPapers(tx, quotation.leadId, project.id, property.id);
       await openManagerTerm(tx, project.id, managerUserId, new Date());
       // The customer's WhatsApp chat goes to the project's manager from now on.
       await moveCustomerChats(tx, customer.id, managerUserId, project.id);

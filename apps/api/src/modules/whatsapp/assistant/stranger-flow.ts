@@ -3,6 +3,7 @@ import { brandName, readBusinessSetting } from '@oneohm/database';
 import { asksForPerson, findReferralCode } from '@oneohm/domain';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { tellLeadOwner } from '../../crm/lead-history';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { ensureChatOwner } from '../chat-owner';
@@ -68,6 +69,15 @@ export class StrangerFlowService {
     const got = await this.db.transaction((tx) =>
       this.files.receive(tx, file, { id: chat.id, leadId: lead.id }),
     );
+    // The lead's owner hears of a filed bill; with no owner, the chat's person does.
+    if (got.outcome === 'filed') {
+      const owner = lead.ownerUserId ?? (await ensureChatOwner(this.db, chat)).assignedUserId;
+      if (owner)
+        await tellLeadOwner(this.db, owner, { ...lead }, 'WhatsApp', {
+          title: 'New bill on WhatsApp',
+          body: `${lead.name}, ${lead.city}. A new bill is filed on the lead.`,
+        });
+    }
     const body = fileWords(got.outcome);
     // The "can't read it" words name the "Talk to a person" tap, so send that tap with them.
     await this.say(

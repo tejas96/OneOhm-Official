@@ -27,14 +27,17 @@ export function tellLeadOwner(
   owner: string,
   lead: { readonly id: string; readonly name: string; readonly city: string },
   by: string,
+  words: { readonly title: string; readonly body: string } = {
+    title: 'A lead is yours to follow up',
+    body: `${lead.name}, ${lead.city}. From ${by}.`,
+  },
 ): Promise<void> {
   return notify(
     db,
     { userId: owner },
     {
       kind: 'lead_assigned',
-      title: 'A lead is yours to follow up',
-      body: `${lead.name}, ${lead.city}. From ${by}.`,
+      ...words,
       subject: { type: 'lead', id: lead.id },
       dedupeKey: `lead_owner:${lead.id}:${owner}:${Date.now()}`,
     },
