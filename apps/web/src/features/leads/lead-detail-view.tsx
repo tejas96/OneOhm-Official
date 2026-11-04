@@ -15,6 +15,7 @@ import { RecordChat } from '@/features/service/whatsapp/record-chat';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
+import { LeadAskedCard } from './lead-asked-card';
 import { LeadCustomerCard } from './lead-customer-card';
 import { LeadEstimateCard } from './lead-estimate-card';
 import { FollowUpCard, LeadFactsCard } from './lead-facts-card';
@@ -108,6 +109,7 @@ export function LeadDetailView({ id }: { readonly id: string }) {
           {canManage && <LogActivityForm lead={lead} />}
           {/* The lead's WhatsApp chat, answered here from the business number. */}
           <RecordChat phone={lead.phone} name={lead.name} />
+          <LeadAskedCard leadId={lead.id} hasSite={lead.customerId !== null} />
           <section aria-label={t('timeline.title')} className="flex flex-col gap-4">
             <SectionHeading index="01" title={t('timeline.title')} />
             <LeadTimeline activities={lead.activities} />

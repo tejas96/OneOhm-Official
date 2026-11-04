@@ -236,15 +236,19 @@
         "present": "On file",
         "missing": "Missing",
         "ready_to_save": "Ready to save",
-        "not_ready": "Not ready"
+        "not_ready": "Not ready",
+        "to_check": "Received – to check",
+        "checked": "Checked"
       },
       "ask": "Ask the customer",
-      "asked": "Asked"
+      "asked": "Asked",
+      "looksGood": "Looks good",
+      "askAgain": "Ask again"
     },
     "requests": {
       "title": "Asked from the customer",
       "intro": "Papers only the customer holds. They get WhatsApp and an app alert, and send a photo or PDF from the OneOhm app.",
-      "ask": "Ask for a paper",
+      "ask": "Ask for papers",
       "loading": "Loading requests",
       "askedBy": "Asked by {name}, {when}",
       "askedWhen": "Asked {when}",
@@ -254,8 +258,9 @@
       "cancelled": "Request cancelled",
       "cancelFailed": "Could not cancel the request",
       "status": {
-        "open": "Waiting",
-        "received": "Received",
+        "waiting": "Waiting on customer",
+        "toCheck": "To check",
+        "done": "Done",
         "cancelled": "Cancelled"
       },
       "sheet": {
@@ -267,20 +272,29 @@
         "note": "Note for the customer (optional)",
         "notePlaceholder": "For example: the bill must show the consumer number.",
         "send": "Send request",
-        "sent": "Request sent to the customer",
+        "sent": "{count, plural, one {Request sent to the customer} other {# requests sent to the customer}}",
         "failed": "Could not send the request",
-        "close": "Cancel"
+        "close": "Cancel",
+        "addAnother": "Add another paper",
+        "removeRow": "Remove this paper"
       },
       "reask": {
-        "action": "Not right, ask again",
+        "action": "Ask again",
         "title": "Ask again for this paper",
-        "description": "The paper is taken off the project and the customer is asked again. They see your note in the OneOhm app.",
-        "note": "What is wrong with it?",
+        "description": "The paper is taken off and the customer is asked again. They see your reason in the OneOhm app and on WhatsApp.",
+        "note": "What is wrong with it? The customer sees this.",
         "notePlaceholder": "For example: the photo is blurred; please send a clear one.",
         "send": "Ask again",
         "sent": "The customer is asked again",
         "failed": "Could not ask again",
         "close": "Cancel"
+      },
+      "reminders": "{count, plural, one {# reminder sent} other {# reminders sent}}",
+      "looksGood": "Looks good",
+      "checked": "Paper checked. The customer is told.",
+      "checkFailed": "Could not mark the paper as checked",
+      "type": {
+        "paper": "Paper"
       }
     },
     "reportVisibility": {

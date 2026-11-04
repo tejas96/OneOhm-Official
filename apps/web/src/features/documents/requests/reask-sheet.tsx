@@ -1,6 +1,5 @@
 'use client';
 
-import type { DocumentRequest } from '@oneohm/api-contracts';
 import { Button, Field, Sheet, Textarea } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -9,46 +8,46 @@ import { useReaskRequest } from './use-document-requests';
 
 const NOTE_MAX = 300;
 
+/** The request to ask again about: its id and the paper's name. */
+export interface ReaskTarget {
+  readonly id: string;
+  readonly title: string;
+}
+
 /**
  * "Not right, ask again" on a received paper: the paper is taken off, the request opens
- * again and the customer is asked again, with this note shown in their app.
+ * again and the customer is asked again, with this reason shown in their app and on WhatsApp.
  */
 export function ReaskSheet({
-  projectId,
-  request,
+  target,
   onClose,
 }: {
-  readonly projectId: string;
   /** The received request; null closes the sheet. */
-  readonly request: DocumentRequest | null;
+  readonly target: ReaskTarget | null;
   readonly onClose: () => void;
 }) {
   const t = useTranslations('documents.requests.reask');
   return (
     <Sheet
-      open={request !== null}
+      open={target !== null}
       onOpenChange={(open) => !open && onClose()}
       title={t('title')}
       description={t('description')}
     >
-      {request && (
-        <ReaskForm key={request.id} projectId={projectId} request={request} onClose={onClose} />
-      )}
+      {target && <ReaskForm key={target.id} target={target} onClose={onClose} />}
     </Sheet>
   );
 }
 
 function ReaskForm({
-  projectId,
-  request,
+  target,
   onClose,
 }: {
-  readonly projectId: string;
-  readonly request: DocumentRequest;
+  readonly target: ReaskTarget;
   readonly onClose: () => void;
 }) {
   const t = useTranslations('documents.requests.reask');
-  const reask = useReaskRequest(projectId, onClose);
+  const reask = useReaskRequest(onClose);
   const [note, setNote] = useState('');
   const short = note.trim().length < 2;
   return (
@@ -56,10 +55,10 @@ function ReaskForm({
       className="flex flex-col gap-6 px-5 py-6 sm:px-6"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!short) reask.mutate({ request, note: note.trim() });
+        if (!short) reask.mutate({ id: target.id, note: note.trim() });
       }}
     >
-      <p className="type-body-sm font-medium text-ink">{request.title}</p>
+      <p className="type-body-sm font-medium text-ink">{target.title}</p>
       <Field
         label={t('note')}
         required

@@ -1,44 +1,50 @@
 'use client';
 
 import type { DocumentRequest } from '@oneohm/api-contracts';
-import { Button, Card, CardHeader, type PillTone, StatusPill } from '@oneohm/design-system/web';
-import { ExternalLink, Send } from 'lucide-react';
-import { useFormatter, useNow, useTranslations } from 'next-intl';
+import { Button, Card, CardHeader } from '@oneohm/design-system/web';
+import { Send } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
-import { documentUrl } from '@/lib/api/upload';
-import { useFolderLabel } from '../gallery/use-labels';
-import { ReaskSheet } from './reask-sheet';
-import { useCancelRequest, useDocumentRequests } from './use-document-requests';
+import { ActionRow } from './action-row';
+import { ReaskSheet, type ReaskTarget } from './reask-sheet';
+import { type ActionScope, useDocumentRequests } from './use-document-requests';
 
-const TONE: Readonly<Record<DocumentRequest['status'], PillTone>> = {
-  open: 'waiting',
-  received: 'done',
-  cancelled: 'neutral',
-};
+/** Done and cancelled asks show only the latest few; the log keeps the rest. */
+const RECENT = 5;
 
-/** Papers asked from the customer for this project, and whether each has arrived. */
-export function CustomerRequestsCard({
-  projectId,
-  canAsk,
+/** Open and waiting asks first, then the latest finished ones. */
+export function shown(requests: readonly DocumentRequest[]): DocumentRequest[] {
+  const live = requests.filter((one) => one.status === 'open' || one.status === 'received');
+  const past = requests.filter((one) => one.status === 'closed' || one.status === 'cancelled');
+  return [...live, ...past.slice(0, RECENT)];
+}
+
+/**
+ * "Asked from the customer": what the team asked the customer to do, on a project, a lead
+ * or the customer's own page, and where each stands (redesign §18). A paper they sent
+ * waits for the check: [Looks good] or [Ask again].
+ */
+export function CustomerActionsCard({
+  scope,
   onAsk,
 }: {
-  readonly projectId: string;
-  readonly canAsk: boolean;
-  readonly onAsk: () => void;
+  readonly scope: ActionScope;
+  /** Opens the ask sheet; null where the team cannot ask from here. */
+  readonly onAsk: (() => void) | null;
 }) {
   const t = useTranslations('documents.requests');
-  const query = useDocumentRequests(projectId);
-  const [reasking, setReasking] = useState<DocumentRequest | null>(null);
-  const requests = query.data ?? [];
-  if (!canAsk && requests.length === 0) return null;
+  const query = useDocumentRequests(scope);
+  const [reasking, setReasking] = useState<ReaskTarget | null>(null);
+  const requests = shown(query.data ?? []);
+  if (!onAsk && requests.length === 0 && !query.isPending) return null;
   return (
     <Card>
       <CardHeader
         title={t('title')}
         description={t('intro')}
         action={
-          canAsk && (
+          onAsk && (
             <Button size="sm" variant="secondary" leadingIcon={<Send />} onClick={onAsk}>
               {t('ask')}
             </Button>
@@ -51,79 +57,16 @@ export function CustomerRequestsCard({
         {requests.length > 0 && (
           <ul className="flex flex-col divide-y divide-hairline">
             {requests.map((request) => (
-              <RequestRow
+              <ActionRow
                 key={request.id}
-                projectId={projectId}
                 request={request}
-                canCancel={canAsk}
-                onReask={() => setReasking(request)}
+                onReask={() => setReasking({ id: request.id, title: request.title })}
               />
             ))}
           </ul>
         )}
       </div>
-      <ReaskSheet projectId={projectId} request={reasking} onClose={() => setReasking(null)} />
+      <ReaskSheet target={reasking} onClose={() => setReasking(null)} />
     </Card>
-  );
-}
-
-function RequestRow({
-  projectId,
-  request,
-  canCancel,
-  onReask,
-}: {
-  readonly projectId: string;
-  readonly request: DocumentRequest;
-  readonly canCancel: boolean;
-  readonly onReask: () => void;
-}) {
-  const t = useTranslations('documents.requests');
-  const format = useFormatter();
-  const now = useNow();
-  const folderLabel = useFolderLabel();
-  const cancel = useCancelRequest(projectId);
-  const when = (iso: string) => format.relativeTime(new Date(iso), now);
-  const asked = request.requestedBy
-    ? t('askedBy', { name: request.requestedBy, when: when(request.createdAt) })
-    : t('askedWhen', { when: when(request.createdAt) });
-  const meta = [
-    folderLabel(request.category),
-    request.receivedAt ? t('receivedWhen', { when: when(request.receivedAt) }) : asked,
-  ];
-  return (
-    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="type-body-sm font-medium text-ink">{request.title}</span>
-        <span className="type-body-sm text-ink-faint">{meta.join(' · ')}</span>
-        {request.note && <span className="type-body-sm text-ink-muted">{request.note}</span>}
-      </span>
-      <span className="flex shrink-0 flex-wrap items-center gap-2">
-        <StatusPill size="sm" tone={TONE[request.status]} label={t(`status.${request.status}`)} />
-        {request.status === 'received' && request.documentId && (
-          <Button asChild size="sm" variant="quiet">
-            <a href={documentUrl(request.documentId)} target="_blank" rel="noopener">
-              <ExternalLink aria-hidden className="size-4" />
-              {t('openFile')}
-            </a>
-          </Button>
-        )}
-        {request.status === 'received' && canCancel && (
-          <Button size="sm" variant="quiet" onClick={onReask}>
-            {t('reask.action')}
-          </Button>
-        )}
-        {request.status === 'open' && canCancel && (
-          <Button
-            size="sm"
-            variant="quiet"
-            pending={cancel.isPending}
-            onClick={() => cancel.mutate(request)}
-          >
-            {t('cancel')}
-          </Button>
-        )}
-      </span>
-    </li>
   );
 }

@@ -18,7 +18,9 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
 import { AskCustomerSheet, type AskDraft } from './requests/ask-customer-sheet';
-import { CustomerRequestsCard } from './requests/customer-requests-card';
+import { CheckButtons } from './requests/checklist-check';
+import { CustomerActionsCard } from './requests/customer-actions-card';
+import { ReaskSheet, type ReaskTarget } from './requests/reask-sheet';
 import { checklistKey } from './requests/use-document-requests';
 import { useDocumentRights } from './use-document-rights';
 
@@ -28,6 +30,12 @@ const TONE: Readonly<Record<ChecklistItem['status'], PillTone>> = {
   ready_to_save: 'review',
   not_ready: 'neutral',
 };
+
+/** A paper is missing, received and waiting for the check, or checked; reports keep their own. */
+const paperState = (item: ChecklistItem) =>
+  item.check === 'to_check' ? 'to_check' : item.check === 'checked' ? 'checked' : item.status;
+const paperTone = (item: ChecklistItem): PillTone =>
+  item.check === 'to_check' ? 'review' : TONE[item.status];
 
 /**
  * The papers and reports this project needs, which are on file and which are not
@@ -39,12 +47,11 @@ export function DocumentChecklistCard({ projectId }: { readonly projectId: strin
   return (
     <>
       <ChecklistCard projectId={projectId} onAsk={canAsk ? setDraft : null} />
-      <CustomerRequestsCard
-        projectId={projectId}
-        canAsk={canAsk}
-        onAsk={() => setDraft({ category: 'other', title: '' })}
+      <CustomerActionsCard
+        scope={{ projectId }}
+        onAsk={canAsk ? () => setDraft({ category: 'other', title: '' }) : null}
       />
-      <AskCustomerSheet projectId={projectId} draft={draft} onClose={() => setDraft(null)} />
+      <AskCustomerSheet scope={{ projectId }} draft={draft} onClose={() => setDraft(null)} />
     </>
   );
 }
@@ -61,6 +68,7 @@ function ChecklistCard({
   const t = useTranslations('documents.checklist');
   const toast = useToast();
   const client = useQueryClient();
+  const [reasking, setReasking] = useState<ReaskTarget | null>(null);
   const canSave = useCan('reports.generate');
   const key = checklistKey(projectId);
   const query = useQuery({
@@ -145,11 +153,14 @@ function ChecklistCard({
                     {onAsk && item.askCategory && !item.requested && (
                       <AskButton item={item} onAsk={onAsk} label={t('ask')} />
                     )}
+                    {onAsk && item.check === 'to_check' && (
+                      <CheckButtons item={item} onReask={setReasking} />
+                    )}
                   </span>
                   <StatusPill
                     size="sm"
-                    tone={item.requested ? 'waiting' : TONE[item.status]}
-                    label={item.requested ? t('asked') : t(`status.${item.status}`)}
+                    tone={item.requested ? 'waiting' : paperTone(item)}
+                    label={item.requested ? t('asked') : t(`status.${paperState(item)}`)}
                   />
                 </li>
               ))}
@@ -157,6 +168,7 @@ function ChecklistCard({
           </>
         )}
       </div>
+      <ReaskSheet target={reasking} onClose={() => setReasking(null)} />
     </Card>
   );
 }
@@ -178,7 +190,7 @@ function AskButton({
       variant="quiet"
       leadingIcon={<Send />}
       className="-ml-2 mt-1"
-      onClick={() => onAsk({ category, title: item.label })}
+      onClick={() => onAsk({ category, title: item.label, requirementKey: item.key })}
     >
       {label}
     </Button>
