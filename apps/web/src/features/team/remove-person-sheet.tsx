@@ -10,7 +10,7 @@ import { FormError } from '@/components/form-error';
 import { LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
-import { handedOverCount, handOverCandidates, presetTarget } from './departure';
+import { finishRemoval, handedOverCount, handOverCandidates, presetTarget } from './departure';
 import { OpenWorkList, SettlementList, SoleHolderWarnings } from './departure-lists';
 import { type HandoverDraft, HandoverFields } from './handover-fields';
 import { useDeparture, useHeldPerson } from './use-departure';
@@ -41,7 +41,8 @@ export function RemovePersonSheet({
   const toast = useToast();
   const queryClient = useQueryClient();
   const form = useApiForm();
-  const departure = useDeparture(shown?.id ?? null);
+  // Only fetched while open: a closing sheet keeps the summary it showed.
+  const departure = useDeparture(shown?.id ?? null, person !== null);
   const [draft, setDraft] = useState(freshDraft);
   const today = todayIn();
   const personId = shown?.id;
@@ -86,17 +87,24 @@ export function RemovePersonSheet({
           }),
           200,
         ),
-      async (removed) => {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
-          queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
-        ]);
-        toast({
-          title: t('removed', { name: removed.fullName, count: moved, target: target.fullName }),
-          tone: 'success',
-        });
-        onClose();
-      },
+      (removed) =>
+        finishRemoval({
+          confirm: () =>
+            toast({
+              title: t('removed', {
+                name: removed.fullName,
+                count: moved,
+                target: target.fullName,
+              }),
+              tone: 'success',
+            }),
+          close: onClose,
+          refresh: () =>
+            Promise.all([
+              queryClient.invalidateQueries({ queryKey: PEOPLE_KEY }),
+              queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
+            ]),
+        }),
     );
   };
 

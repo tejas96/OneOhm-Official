@@ -11,6 +11,7 @@
     "count": "{count, plural, one {# person} other {# people}}",
     "emptyTitle": "No one matches",
     "emptyBody": "Try another name or clear the role filter.",
+    "emptyBodyPast": "Try another name, clear the role filter, or turn on Show past members.",
     "columns": {
       "person": "Person",
       "roles": "Roles",
@@ -118,6 +119,7 @@
       "noOneToHandTo": "There is no other active staff member to hand the work to. Add someone first.",
       "lastDay": "Last working day",
       "lastDayHint": "Today or earlier.",
+      "lastDayLate": "Pick today or an earlier day.",
       "tellCustomers": "Tell customers who their new contact is",
       "tellCustomersHint": "Each customer gets one WhatsApp message with the new name and number.",
       "sole": {

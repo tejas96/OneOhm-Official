@@ -12,11 +12,11 @@ import { PEOPLE_KEY, ROLES_KEY } from './use-team';
  * What someone has open and is still owed (spec Flow 5). Under the people key, so a save
  * that refreshes the people list refreshes this too.
  */
-export function useDeparture(personId: string | null) {
+export function useDeparture(personId: string | null, enabled = true) {
   return useQuery({
     queryKey: [...PEOPLE_KEY, personId, 'departure'],
     queryFn: () => expectStatus(api.people.getDeparture({ params: { id: personId ?? '' } }), 200),
-    enabled: personId !== null,
+    enabled: enabled && personId !== null,
   });
 }
 

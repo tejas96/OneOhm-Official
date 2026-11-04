@@ -1,6 +1,7 @@
 import type { Departure, Person } from '@oneohm/api-contracts';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  finishRemoval,
   handedOverCount,
   handOverCandidates,
   isPastMember,
@@ -135,5 +136,19 @@ describe('isPastMember', () => {
   it('is anyone removed from the team', () => {
     expect(isPastMember(person('a', { status: 'inactive' }))).toBe(true);
     expect(isPastMember(person('b'))).toBe(false);
+  });
+});
+
+describe('finishRemoval', () => {
+  it('confirms and closes before refreshing, so the sheet never shows the emptied summary', async () => {
+    const order: string[] = [];
+    await finishRemoval({
+      confirm: () => order.push('toast'),
+      close: () => order.push('close'),
+      refresh: vi.fn(async () => {
+        order.push('refresh');
+      }),
+    });
+    expect(order).toEqual(['toast', 'close', 'refresh']);
   });
 });

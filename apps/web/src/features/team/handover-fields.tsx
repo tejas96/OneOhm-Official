@@ -55,7 +55,7 @@ export function HandoverFields({
         label={t('lastDay')}
         hint={t('lastDayHint')}
         required
-        error={errors.lastWorkingDay ?? (lateDate ? t('lastDayHint') : undefined)}
+        error={errors.lastWorkingDay ?? (lateDate ? t('lastDayLate') : undefined)}
         className="max-w-xs"
       >
         <Input

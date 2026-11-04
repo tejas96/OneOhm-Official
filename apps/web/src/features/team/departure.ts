@@ -79,3 +79,17 @@ export function presetTarget(
     ? (suggestedId ?? undefined)
     : undefined;
 }
+
+/**
+ * After a removal: confirm and close first, then refresh the team. Refreshing first would
+ * refetch the leaver's summary (now all zeros) while the sheet is still open.
+ */
+export async function finishRemoval(steps: {
+  readonly confirm: () => void;
+  readonly close: () => void;
+  readonly refresh: () => Promise<unknown>;
+}): Promise<void> {
+  steps.confirm();
+  steps.close();
+  await steps.refresh();
+}

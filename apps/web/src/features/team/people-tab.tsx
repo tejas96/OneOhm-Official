@@ -143,7 +143,11 @@ export function PeopleTab() {
       {people.isPending && <ListSkeleton label={t('loading')} />}
       {people.isError && <LoadError error={people.error} onRetry={() => people.refetch()} />}
       {people.data && visible.length === 0 && (
-        <EmptyState icon={<UsersRound />} title={t('emptyTitle')} description={t('emptyBody')} />
+        <EmptyState
+          icon={<UsersRound />}
+          title={t('emptyTitle')}
+          description={showPast ? t('emptyBody') : t('emptyBodyPast')}
+        />
       )}
       {visible.length > 0 && (
         <ResponsiveTable
