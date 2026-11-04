@@ -78,23 +78,25 @@ export class PasswordSetupService {
       'bad_code',
     );
     const attempt = { identifier: phoneE164, method: 'otp' as const, ip, userId: null };
-    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) {
+    if (!challenge) {
       await recordAttempt(this.db, { ...attempt, success: false });
       throw wrong;
     }
-    if (challenge.codeHash !== hashSecret(`${phoneE164}:${code}`)) {
+    // Every guess, right or wrong, spends one of the tries before it is checked, in one
+    // database step, so a burst of parallel guesses cannot check more than the allowed few.
+    const reserved = await this.db
+      .update(otpChallenges)
+      .set({ attempts: sql`${otpChallenges.attempts} + 1` })
+      .where(
+        and(
+          eq(otpChallenges.id, challenge.id),
+          isNull(otpChallenges.consumedAt),
+          lt(otpChallenges.attempts, OTP_MAX_ATTEMPTS),
+        ),
+      )
+      .returning({ attempts: otpChallenges.attempts });
+    if (reserved.length === 0 || challenge.codeHash !== hashSecret(`${phoneE164}:${code}`)) {
       await recordAttempt(this.db, { ...attempt, success: false });
-      // Counted in the database, so parallel wrong guesses cannot get round the cap.
-      await this.db
-        .update(otpChallenges)
-        .set({ attempts: sql`${otpChallenges.attempts} + 1` })
-        .where(
-          and(
-            eq(otpChallenges.id, challenge.id),
-            isNull(otpChallenges.consumedAt),
-            lt(otpChallenges.attempts, OTP_MAX_ATTEMPTS),
-          ),
-        );
       throw wrong;
     }
     const [user] = await this.db
@@ -112,13 +114,7 @@ export class PasswordSetupService {
       const used = await tx
         .update(otpChallenges)
         .set({ consumedAt: new Date() })
-        .where(
-          and(
-            eq(otpChallenges.id, challenge.id),
-            isNull(otpChallenges.consumedAt),
-            lt(otpChallenges.attempts, OTP_MAX_ATTEMPTS),
-          ),
-        )
+        .where(and(eq(otpChallenges.id, challenge.id), isNull(otpChallenges.consumedAt)))
         .returning({ id: otpChallenges.id });
       if (used.length === 0) return false;
       // Any other unused code for this phone dies with it.

@@ -155,6 +155,29 @@ describe('first sign-in and forgotten password', () => {
     expect(await audits(person.id, 'auth.password_set')).toHaveLength(1);
   });
 
+  it('a burst of 5 wrong guesses and the right one spends only 5 tries', async () => {
+    const person = await newPerson('Burst Person (test)');
+    await new Session().post('/auth/password/code', { phone: person.phone });
+    const send = (code: string) =>
+      new Session().raw('POST', '/auth/password', {
+        phone: person.phone,
+        code,
+        password: 'Burst-pass-7',
+      });
+    const burst = await Promise.all([
+      send('000000'),
+      send('000001'),
+      send(OTP_CODE),
+      send('000002'),
+      send('000003'),
+      send('000004'),
+    ]);
+    expect(burst.filter((reply) => reply.status === 200).length).toBeLessThanOrEqual(1);
+    expect((await challenges(person.phone))[0]?.attempts).toBeLessThanOrEqual(5);
+    const after = await send(OTP_CODE);
+    expect(after.status).toBe(401);
+  });
+
   it('password budget is separate from login budget', async () => {
     const person = await newPerson('Separate Budget Person (test)');
     // Use up the login budget (1000 per 10 minutes in the acceptance API).
