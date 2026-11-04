@@ -23,8 +23,14 @@ const NONE: PayoutDetails = {
   pan: null,
 };
 
-/** Trimmed and uppercased; blank becomes null. */
-const tidy = (value: string | null): string | null => value?.trim().toUpperCase() || null;
+/** PAN and IFSC are codes, always uppercase; a name or UPI ID keeps the case typed. */
+const UPPERCASE: ReadonlySet<string> = new Set(['pan', 'bankIfsc']);
+
+/** Trimmed (PAN and IFSC also uppercased); blank becomes null. */
+export const tidy = (field: string, value: string | null): string | null => {
+  const trimmed = value?.trim() || null;
+  return trimmed && UPPERCASE.has(field) ? trimmed.toUpperCase() : trimmed;
+};
 
 /** A reseller's PAN and UPI or bank details: theirs to edit, finance's to read and fix. */
 @Injectable()
@@ -108,7 +114,7 @@ export class PayoutDetailsService {
   private merged(input: PayoutDetailsInput, before: PayoutDetails): PayoutDetails {
     const next = { ...NONE };
     for (const field of FIELDS) {
-      const value = tidy(input[field]);
+      const value = tidy(field, input[field]);
       next[field] = value?.startsWith(MASK) ? before[field] : value;
     }
     return next;

@@ -172,6 +172,6 @@ describe('reseller payout details', () => {
       ...NO_BANK,
       upiId: 'Gone@okaxis',
     });
-    expect(upi).toMatchObject({ upiId: 'GONE@OKAXIS', complete: true });
+    expect(upi).toMatchObject({ upiId: 'Gone@okaxis', complete: true });
   });
 });
