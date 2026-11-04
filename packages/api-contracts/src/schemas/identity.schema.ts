@@ -1,6 +1,6 @@
 import { CAPABILITIES, ROLE_KINDS } from '@oneohm/domain';
 import { z } from 'zod';
-import { idSchema } from '../common/primitives';
+import { calendarDateSchema, idSchema } from '../common/primitives';
 
 export const capabilitySchema = z.enum(CAPABILITIES);
 export const roleKindSchema = z.enum(ROLE_KINDS);
@@ -33,6 +33,10 @@ export const personSchema = z.object({
   designation: z.string().nullable(),
   status: z.enum(['active', 'inactive']),
   onLeave: z.boolean(),
+  /** Approved leave from today on, so a task's due day can be checked against it. */
+  leaveRanges: z
+    .array(z.object({ fromDate: calendarDateSchema, toDate: calendarDateSchema }))
+    .default([]),
   roles: z.array(roleRefSchema),
   /** Skill keys the person holds (PRD 3.7). */
   skills: z.array(z.string()),

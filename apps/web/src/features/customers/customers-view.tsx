@@ -19,16 +19,23 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadMore } from '@/components/load-more';
-import { ListSkeleton, LoadError } from '@/components/query-state';
+import { BlockedPage, ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { usePagedList } from '@/lib/query/use-paged-list';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { useCan } from '@/providers/current-user';
 import { HandoverList } from './contact/handover-list';
 import { useHandovers } from './contact/use-contact';
 
 /** Every customer once, however many sites and projects they have (PRD 3.2). */
 export function CustomersView() {
+  const t = useTranslations('customers');
+  if (!useCan('customers.view')) return <BlockedPage title={t('title')} />;
+  return <CustomersContent />;
+}
+
+function CustomersContent() {
   const t = useTranslations('customers');
   const format = useFormatter();
   const [search, setSearch] = useState('');

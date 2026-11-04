@@ -1,10 +1,11 @@
 'use client';
 
 import type { Person, ProjectTask } from '@oneohm/api-contracts';
-import { Avatar, Badge, Checkbox, cn, Dialog } from '@oneohm/design-system/web';
+import { Avatar, Badge, Button, Checkbox, cn, Dialog } from '@oneohm/design-system/web';
+import { onLeaveOn } from '@oneohm/domain';
 import { useQuery } from '@tanstack/react-query';
-import { Check, CircleAlert, UserX } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Check, CircleAlert, TriangleAlert, UserX } from 'lucide-react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton } from '@/components/query-state';
 import { OverloadBadge } from '@/features/team/capacity/overload-badge';
@@ -35,6 +36,9 @@ export function AssignDialog({
   const t = useTranslations('projects.assign');
   const [everyone, setEveryone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Someone on leave on the due day is allowed, after a warning and a second click.
+  const [warned, setWarned] = useState<Person | null>(null);
+  const format = useFormatter();
   const people = useQuery({
     queryKey: ['people'],
     queryFn: () => expectStatus(api.people.listPeople(), 200),
@@ -44,8 +48,10 @@ export function AssignDialog({
   const inRole = active.filter((person) => person.roles.some((role) => role.key === task.roleKey));
   const shown = [...(everyone ? active : inRole)].sort(byLoad);
 
+  const awayOnDue = (person: Person) => onLeaveOn(person.leaveRanges, task.dueDate);
   const choose = async (userId: string | null) => {
     setError(null);
+    setWarned(null);
     try {
       await mutation.mutateAsync(userId);
       onOpenChange(false);
@@ -73,7 +79,7 @@ export function AssignDialog({
                   <button
                     type="button"
                     disabled={mutation.isPending}
-                    onClick={() => choose(person.id)}
+                    onClick={() => (awayOnDue(person) ? setWarned(person) : choose(person.id))}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sunken',
                       current && 'bg-accent-soft',
@@ -97,6 +103,28 @@ export function AssignDialog({
               );
             })}
           </ul>
+        )}
+        {warned && (
+          <div className="flex flex-col gap-2 rounded-lg bg-at-risk-tint px-3 py-2.5">
+            <p className="flex items-start gap-2 type-body-sm text-ink">
+              <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />
+              {t('leaveWarning', {
+                name: warned.fullName,
+                day: format.dateTime(new Date(`${task.dueDate}T12:00:00`), {
+                  day: 'numeric',
+                  month: 'short',
+                }),
+              })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="primary" onClick={() => choose(warned.id)}>
+                {t('assignAnyway')}
+              </Button>
+              <Button size="sm" variant="quiet" onClick={() => setWarned(null)}>
+                {t('chooseOther')}
+              </Button>
+            </div>
+          </div>
         )}
         {task.assignee && (
           <button

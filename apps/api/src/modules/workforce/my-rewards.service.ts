@@ -51,6 +51,7 @@ export class MyRewardsService {
     return {
       month: {
         month,
+        fairSince: fairSince ? fairSince.toISOString() : null,
         ...monthTotals(monthLines, fairSince),
         missed: monthLines
           .filter((entry) => !earned(entry))

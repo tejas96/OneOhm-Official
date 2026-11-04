@@ -45,3 +45,15 @@ describe('who may decide an approval (PRD 7.1, 7.3)', () => {
     expect(approvalOverdue('2026-11-01', '2026-11-05', policy)).toBe(true);
   });
 });
+
+describe('a proposal that names the approver', () => {
+  it('stays out of their list', () => {
+    const proposal = item({ kind: 'assignee_confirm', requestedByUserId: 'ravi' });
+    expect(mayDecide(proposal, { userId: 'ravi', capabilities: ['tasks.assign'] }, policy)).toBe(
+      false,
+    );
+    expect(mayDecide(proposal, { userId: 'meena', capabilities: ['tasks.assign'] }, policy)).toBe(
+      true,
+    );
+  });
+});

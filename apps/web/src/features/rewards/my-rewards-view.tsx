@@ -30,6 +30,7 @@ export function MyRewardsView() {
   const month = data.month ?? {
     month: '',
     points: data.points.thisMonth,
+    fairSince: null,
     tasksJudged: 0,
     onTimeRate: null,
     firstTimeRate: null,
@@ -58,10 +59,24 @@ export function MyRewardsView() {
           </div>
         ))}
       </section>
+      {month.tasksJudged === 0 && month.points > 0 && month.fairSince && (
+        <p className="-mt-6 max-w-2xl type-body-sm text-ink-muted">
+          {t('ratesNote', {
+            date: format.dateTime(new Date(month.fairSince), {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              timeZone: 'Asia/Kolkata',
+            }),
+          })}
+        </p>
+      )}
       <section className="flex flex-col gap-3">
         <h2 className="type-title-lg text-ink">{t('missedTitle')}</h2>
         {month.missed.length === 0 ? (
-          <p className="type-body-sm text-ink-faint">{t('missedNone')}</p>
+          <p className="type-body-sm text-ink-faint">
+            {t(month.tasksJudged === 0 ? 'missedNoneJudged' : 'missedNone')}
+          </p>
         ) : (
           <ul className="flex flex-col divide-y divide-hairline">
             {month.missed.map((line) => (

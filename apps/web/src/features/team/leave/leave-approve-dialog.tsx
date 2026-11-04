@@ -10,7 +10,7 @@ import {
   Select,
   Textarea,
 } from '@oneohm/design-system/web';
-import { Check, X } from 'lucide-react';
+import { Check, TriangleAlert, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { FormError } from '@/components/form-error';
@@ -18,6 +18,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { usePeople } from '../use-team';
 import { affectedCount, LeaveAffectedWork } from './leave-affected-work';
+import { LeaveClashNotes } from './leave-clash-notes';
 import { useLeaveText } from './leave-facts';
 import { type LeaveDecisionBody, useRequestImpact } from './use-leave';
 
@@ -144,6 +145,15 @@ export function LeaveApproveDialog({
             {impact.isError && <LoadError error={impact.error} onRetry={() => impact.refetch()} />}
             {impact.data && <LeaveAffectedWork impact={impact.data} />}
           </section>
+        )}
+        {approving && impact.data && (
+          <LeaveClashNotes clashes={impact.data.clashes} applicant={leave?.user.fullName} />
+        )}
+        {approving && impact.data && backup === NONE && impact.data.dueInWindow > 0 && (
+          <p className="flex items-start gap-2 rounded-md bg-at-risk-tint px-3 py-2.5 type-body-sm text-ink">
+            <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />
+            {queueT('nobodyCovering', { count: impact.data.dueInWindow })}
+          </p>
         )}
         {approving && impact.data && (
           <Field

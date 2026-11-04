@@ -271,6 +271,8 @@
         "noHandover": "No backup was named, so no tasks move.",
         "approve": "Approve",
         "decline": "Decline",
+        "youCover": "You are covering this leave, so someone else decides it.",
+        "nobodyCovering": "{count, plural, one {# open task falls due in these days and nobody is covering.} other {# open tasks fall due in these days and nobody is covering.}}",
         "approved": "Leave approved",
         "declined": "Leave declined",
         "approvedHandover": "{count, plural, =0 {Nothing open needed handing to {name}.} one {# item handed over to {name}.} other {# items handed over to {name}.}}"
@@ -305,6 +307,13 @@
         "confirmBody": "The days go back to your balance. If tasks were handed over, they stay with your backup until someone reassigns them.",
         "keep": "Keep it",
         "confirm": "Cancel leave"
+      },
+      "clash": {
+        "backupAway": "{name}, named to cover, is on leave {range} ({status}).",
+        "coveringSelf": "You are covering {name} on {range}.",
+        "coveringOther": "{applicant} is covering {name} on {range}.",
+        "pending": "waiting",
+        "approved": "approved"
       },
       "impact": {
         "label": "What this leave covers",
@@ -609,6 +618,7 @@
       "caption": "Workload for the next four weeks",
       "thisWeek": "This week",
       "leaveDays": "{count, plural, one {# day leave} other {# days leave}}",
+      "pendingLeave": "+{count, plural, one {# day} other {# days}} waiting",
       "columns": {
         "person": "Person",
         "open": "Open tasks",

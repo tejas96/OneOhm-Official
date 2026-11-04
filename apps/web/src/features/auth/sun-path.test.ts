@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayProgress, localHours, pointOnArc, skyPhase } from './sun-path';
+import { dayProgress, greetingPart, localHours, pointOnArc, skyPhase } from './sun-path';
 
 describe('sun path', () => {
   it('reads the hour in the business timezone', () => {
@@ -13,6 +13,19 @@ describe('sun path', () => {
     expect(skyPhase(17)).toBe('evening');
     expect(skyPhase(21)).toBe('night');
     expect(skyPhase(5.5)).toBe('night');
+  });
+
+  it('words the greeting to fit the hour', () => {
+    expect(greetingPart(2)).toBe('late');
+    expect(greetingPart(4.99)).toBe('late');
+    expect(greetingPart(5)).toBe('morning');
+    expect(greetingPart(11.99)).toBe('morning');
+    expect(greetingPart(12)).toBe('afternoon');
+    expect(greetingPart(16.99)).toBe('afternoon');
+    expect(greetingPart(17)).toBe('evening');
+    expect(greetingPart(21.99)).toBe('evening');
+    expect(greetingPart(22)).toBe('late');
+    expect(greetingPart(0)).toBe('late');
   });
 
   it('runs from sunrise to sunset and stays on the arc', () => {

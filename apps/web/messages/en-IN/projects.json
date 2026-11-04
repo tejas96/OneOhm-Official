@@ -183,6 +183,7 @@
     },
     "task": {
       "unassigned": "Unassigned",
+      "proposed": "Proposed: {name}",
       "dueOn": "Due {date}",
       "overdueOn": "Overdue · due {date}",
       "doneOn": "Done {date}",
@@ -313,6 +314,9 @@
       "nobody": "Nobody active holds this task's role. Show everyone to pick someone else.",
       "load": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
       "onLeave": "On leave",
+      "leaveWarning": "{name} is on leave on {day}.",
+      "assignAnyway": "Assign anyway",
+      "chooseOther": "Choose someone else",
       "current": "Assigned now",
       "unassign": "Remove the assignee"
     },

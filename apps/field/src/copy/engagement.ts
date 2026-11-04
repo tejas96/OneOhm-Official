@@ -42,6 +42,7 @@ export const REWARDS = {
     firstTime: 'First-time right',
     tasks: 'Tasks judged',
     noneMissed: 'Nothing missed this month. Well done.',
+    noneJudged: 'Nothing judged yet this month.',
   },
   sections: {
     month: 'THIS MONTH',

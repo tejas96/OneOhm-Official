@@ -83,13 +83,14 @@ export function approvalRights(
  * raised it may still be its only approver (often the owner), so it stays in their list.
  */
 const NOT_OWN: ReadonlySet<ApprovalKind> = new Set([
+  'assignee_confirm',
   'leave',
   'attendance_correction',
   'travel_claim',
   'points',
 ]);
 
-/** True when the item is this person's own leave, attendance fix, claim or points. */
+/** True when the item is this person's own leave, attendance fix, claim or points, or names them as the proposed assignee. */
 export function isOwnRequest(item: PendingApproval, userId: string): boolean {
   return NOT_OWN.has(item.kind) && item.requestedByUserId === userId;
 }

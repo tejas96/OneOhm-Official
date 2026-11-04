@@ -52,6 +52,19 @@ describe('four-week load', () => {
       2, 2, 0, 0,
     ]);
   });
+
+  it('counts a half day as half and keeps approved and pending apart', () => {
+    // Asha: 5 Nov sick (approved), 9-10 Nov casual (pending), 11 Nov half day (approved).
+    const week = weekWindows('2026-11-05', 1);
+    const approved = [
+      { from: '2026-11-05', to: '2026-11-05', halfDay: false },
+      { from: '2026-11-11', to: '2026-11-11', halfDay: true },
+    ];
+    const pending = [{ from: '2026-11-09', to: '2026-11-10', halfDay: false }];
+    expect(leaveDaysByWeek(approved, week)).toEqual([1.5]);
+    expect(leaveDaysByWeek(pending, week)).toEqual([2]);
+    expect(leaveDaysByWeek([], week)).toEqual([0]);
+  });
 });
 
 describe('location switch per role and person', () => {

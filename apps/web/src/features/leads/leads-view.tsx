@@ -17,7 +17,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadMore } from '@/components/load-more';
-import { ListSkeleton, LoadError } from '@/components/query-state';
+import { BlockedPage, ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -51,6 +51,13 @@ function useLeadFilter(): readonly [Filter, (next: Filter) => void] {
 
 /** Every lead with its next action; overdue and today's follow-ups stand out (PRD 3.3). */
 export function LeadsView() {
+  const t = useTranslations('leads');
+  if (!useCan('leads.view_all', 'leads.view_own', 'leads.manage'))
+    return <BlockedPage title={t('title')} />;
+  return <LeadsContent />;
+}
+
+function LeadsContent() {
   const t = useTranslations('leads');
   const canManage = useCan('leads.manage');
   const [filter, setFilter] = useLeadFilter();
