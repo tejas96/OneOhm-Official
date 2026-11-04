@@ -119,6 +119,29 @@ describe('handOverCandidates', () => {
   });
 });
 
+describe('handOverCandidates when the leaver manages projects', () => {
+  const people = [
+    person('leaver'),
+    person('ravi'),
+    person('meena'),
+    person('gone', { status: 'inactive' }),
+  ];
+
+  it('offers every active staff member when no project manager list applies', () => {
+    expect(handOverCandidates(people, 'leaver', null).map((entry) => entry.id)).toEqual([
+      'ravi',
+      'meena',
+    ]);
+  });
+
+  it('offers only people on the project manager list', () => {
+    expect(
+      handOverCandidates(people, 'leaver', ['meena', 'gone', 'leaver']).map((entry) => entry.id),
+    ).toEqual(['meena']);
+    expect(handOverCandidates(people, 'leaver', [])).toEqual([]);
+  });
+});
+
 describe('presetTarget', () => {
   const candidates = [person('ravi'), person('meena')];
 

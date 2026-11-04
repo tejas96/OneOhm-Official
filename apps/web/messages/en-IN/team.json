@@ -118,6 +118,7 @@
       "handTo": "Hand everything to",
       "handToHint": "Active staff only. Their manager is picked for you when there is one.",
       "handToPlaceholder": "Pick a person",
+      "managesProjectsHint": "They manage projects, so only people who can manage projects are listed.",
       "noOneToHandTo": "There is no other active staff member to hand the work to. Add someone first.",
       "lastDay": "Last working day",
       "lastDayHint": "Today or earlier.",

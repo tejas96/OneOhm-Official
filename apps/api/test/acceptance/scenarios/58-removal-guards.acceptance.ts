@@ -1,9 +1,16 @@
-import type { CommissionEntry, QuotationDetail } from '@oneohm/api-contracts';
+import type { CommissionEntry, Departure, QuotationDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, removeNow, retire } from '../support/people';
-import { addDays, createQuotation, discomId, newCustomer, today } from '../support/sales';
+import { type OwnPerson, ownPerson, plantManager, removeNow, retire } from '../support/people';
+import {
+  addDays,
+  createQuotation,
+  discomId,
+  newCustomer,
+  sellProject,
+  today,
+} from '../support/sales';
 import { STAFF } from '../support/team';
 
 // Remove from team, the guards around it: bad picks, two admins at once, the last Super
@@ -53,6 +60,42 @@ describe('removal guards', () => {
       'target_not_staff',
       'Pick someone else',
     ]);
+  });
+
+  it('a leaver who manages a project hands over only to someone who can manage projects', async () => {
+    const leaver = await person('Managing Leaver (guard test)');
+    const hrOnly = await person('HR Pick (guard test)');
+    const manager = await person('Manager Pick (guard test)', ['accounts']);
+    const sale = await sellProject(admin, { name: 'Managed Project (guard test)' });
+    await plantManager(sale.created.id, leaver.id);
+    const summary = () => admin.get<Departure>(`/people/${leaver.id}/departure`);
+    const before = await summary();
+    expect(before.counts.managedProjects).toBe(1);
+    expect(before.projectManagerIds).toContain(manager.id);
+    expect(before.projectManagerIds).not.toContain(hrOnly.id);
+    expect(before.projectManagerIds).not.toContain(leaver.id);
+
+    await admin.patch(`/people/${leaver.id}`, { reportsToUserId: hrOnly.id });
+    expect((await summary()).suggestedTargetId).toBeNull();
+    await admin.patch(`/people/${leaver.id}`, { reportsToUserId: manager.id });
+    expect((await summary()).suggestedTargetId).toBe(manager.id);
+
+    const refused = await remove(admin, leaver.id, hrOnly.id);
+    expect([refused.status, refused.body.code, refused.body.message]).toEqual([
+      409,
+      'target_cannot_manage_projects',
+      `Pick someone who can manage projects. ${leaver.name} manages projects.`,
+    ]);
+    const [still] = await rows<{ status: string; manager: string }>(
+      `SELECT u.status, p.manager_user_id AS manager FROM users u, projects p
+        WHERE u.id = $1 AND p.id = $2`,
+      [leaver.id, sale.created.id],
+    );
+    expect(still).toEqual({ status: 'active', manager: leaver.id });
+
+    expect((await remove(admin, leaver.id, manager.id)).status).toBe(200);
+    // Nobody left to manage: the summary of someone with no projects lists no one.
+    expect((await summary()).projectManagerIds).toEqual([]);
   });
 
   it('two removals racing: exactly one succeeds', async () => {

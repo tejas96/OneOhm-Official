@@ -15,8 +15,8 @@ describe('removal summary', () => {
   let admin: Session;
   let sales: Session;
   const people: OwnPerson[] = [];
-  const person = async (name: string) => {
-    const made = await ownPerson(admin, name);
+  const person = async (name: string, roles?: readonly string[]) => {
+    const made = await ownPerson(admin, name, roles);
     people.push(made);
     return made;
   };
@@ -29,7 +29,7 @@ describe('removal summary', () => {
   beforeAll(async () => {
     admin = await Session.admin();
     sales = await Session.code(STAFF.sales.phone);
-    manager = await person('Manager (remove test)');
+    manager = await person('Manager (remove test)', ['accounts']);
     leaver = await person('Leaver (remove test)');
     const first = await person('Report One (remove test)');
     const second = await person('Report Two (remove test)');

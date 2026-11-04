@@ -9,6 +9,7 @@ import type { Actor } from '../../../common/auth/actor';
 import { conflict, notFound } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { canManageProjects } from '../../projects/project-team-rules';
 import { readPeople } from '../people-read';
 import { queueInvite, roleKindsByUser } from '../person-invite';
 import { assertKeepsASuperAdmin } from '../super-admin-guard';
@@ -89,6 +90,12 @@ export class DepartureService {
       if (!target) throw notFound('That person');
       await assertKeepsASuperAdmin(tx, id, undefined, 'inactive');
       const work = await openWork(tx, id);
+      // Whoever takes over their projects must be able to manage projects.
+      if (work.managedProjects.length > 0 && !(await canManageProjects(tx, target.id)))
+        throw conflict(
+          `Pick someone who can manage projects. ${leaver.fullName} manages projects.`,
+          'target_cannot_manage_projects',
+        );
       const now = new Date();
       const reseller = (await kindsOf(tx, id)).includes('reseller');
       await handOver(tx, actor.userId, leaver, target, work, reseller);

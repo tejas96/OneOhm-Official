@@ -60,13 +60,21 @@ export function settlementRows(settlement: Departure['settlement']): {
 /** Removed from the team: kept for history, hidden from lists and pickers by default. */
 export const isPastMember = (person: Pick<Person, 'status'>) => person.status === 'inactive';
 
-/** Who can take over the leaver's work: active staff, never the leaver or a reseller. */
-export function handOverCandidates(people: readonly Person[], leaverId: string): Person[] {
+/**
+ * Who can take over the leaver's work: active staff, never the leaver or a reseller. When the
+ * leaver manages projects (`projectManagerIds` given), only people who can manage projects.
+ */
+export function handOverCandidates(
+  people: readonly Person[],
+  leaverId: string,
+  projectManagerIds: readonly string[] | null = null,
+): Person[] {
   return people.filter(
     (person) =>
       !isPastMember(person) &&
       person.id !== leaverId &&
-      person.roles.some((role) => role.kind === 'staff'),
+      person.roles.some((role) => role.kind === 'staff') &&
+      (projectManagerIds === null || projectManagerIds.includes(person.id)),
   );
 }
 

@@ -15,8 +15,8 @@ const one = async <T>(text: string, values: unknown[]) => (await rows<T>(text, v
 describe('remove and hand over', () => {
   let admin: Session;
   const people: OwnPerson[] = [];
-  const person = async (name: string) => {
-    const made = await ownPerson(admin, name);
+  const person = async (name: string, roles?: readonly string[]) => {
+    const made = await ownPerson(admin, name, roles);
     people.push(made);
     return made;
   };
@@ -33,7 +33,7 @@ describe('remove and hand over', () => {
     admin = await Session.admin();
     manager = await person('Manager (hand over test)');
     leaver = await person('Leaver (hand over test)');
-    target = await person('Target (hand over test)');
+    target = await person('Target (hand over test)', ['accounts']);
     report = await person('Report (hand over test)');
     onLeave = await person('On Leave (hand over test)');
     await admin.patch(`/people/${leaver.id}`, { reportsToUserId: manager.id });

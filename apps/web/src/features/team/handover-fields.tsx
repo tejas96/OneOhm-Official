@@ -15,12 +15,14 @@ export function HandoverFields({
   draft,
   onChange,
   candidates,
+  managesProjects,
   today,
   errors,
 }: {
   readonly draft: HandoverDraft;
   readonly onChange: (draft: HandoverDraft) => void;
   readonly candidates: readonly Person[];
+  readonly managesProjects: boolean;
   readonly today: string;
   readonly errors: Readonly<Record<string, string>>;
 }) {
@@ -51,6 +53,9 @@ export function HandoverFields({
             placeholder={t('handToPlaceholder')}
           />
         </Field>
+      )}
+      {managesProjects && (
+        <p className="-mt-2 type-body-sm text-ink-muted">{t('managesProjectsHint')}</p>
       )}
       <Field
         label={t('lastDay')}
