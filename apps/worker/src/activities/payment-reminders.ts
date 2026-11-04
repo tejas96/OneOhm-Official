@@ -86,6 +86,7 @@ export async function queuePaymentReminders(
         amount: formatInr(outstanding),
         milestone: row.label,
         milestoneId: row.id,
+        paidPayload: `paidother:${row.id}`,
         project: row.projectCode,
         payToken: signPayToken(payLinks.secret, {
           milestoneId: row.id,

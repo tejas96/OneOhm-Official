@@ -88,7 +88,8 @@
         "gps": "From a phone GPS reading",
         "map_pin": "Pinned on map",
         "address": "From the address",
-        "typed": "Typed"
+        "typed": "Typed",
+        "whatsapp_pin": "Sent by the customer on WhatsApp"
       },
       "locationFlag": {
         "moved": "Site pin moved {distance} m from where the worker stood",

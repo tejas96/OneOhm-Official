@@ -79,11 +79,13 @@ export function templateExtraParts(
   const extras = templateExtras(key);
   if (!extras) return {};
   const quickReplies = extras.quickReplies ?? [];
-  const buttons: TemplateButton[] = quickReplies.map((field, index) => ({
-    kind: 'quick_reply',
-    index,
-    payload: required(key, field, values),
-  }));
+  // A quick reply without its payload (a message queued before the button existed) is left
+  // out, not failed; the link button keeps its place after all the quick replies.
+  const buttons: TemplateButton[] = quickReplies.flatMap((field, index) =>
+    String(values[field] ?? '').trim()
+      ? [{ kind: 'quick_reply' as const, index, payload: String(values[field]) }]
+      : [],
+  );
   if (extras.urlButton)
     buttons.push({
       kind: 'url',

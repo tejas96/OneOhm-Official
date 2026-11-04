@@ -9,6 +9,7 @@ import {
   taskTemplates,
   users,
 } from '@oneohm/database';
+import { CUSTOMER_STEP_TITLES } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import type { SendContext } from './send-context';
 
@@ -209,6 +210,7 @@ export async function waitingTask(
       party: projectTasks.waitingParty,
       notify: projectTasks.notifyCustomer,
       customerTitle: taskTemplates.customerTitle,
+      templateKey: projectTasks.templateKey,
     })
     .from(projectTasks)
     .leftJoin(taskTemplates, eq(taskTemplates.key, projectTasks.templateKey))
@@ -217,7 +219,11 @@ export async function waitingTask(
   if (task?.status !== 'waiting') return null;
   return {
     id: task.id,
-    stage: task.customerTitle?.trim() || task.title,
+    // The customer's words for the step, never the internal task title.
+    stage:
+      task.customerTitle?.trim() ||
+      CUSTOMER_STEP_TITLES[task.templateKey] ||
+      'work on your project',
     party: task.party,
     allowed: task.notify,
   };

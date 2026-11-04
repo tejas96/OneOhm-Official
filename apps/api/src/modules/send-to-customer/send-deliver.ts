@@ -5,7 +5,7 @@ import {
   noticeCustomer,
   queueCustomerMessage,
 } from '@oneohm/database';
-import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate } from '@oneohm/domain';
+import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, SEND_TEMPLATE_WORDS } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { chatReplySummary } from '../whatsapp/chat-reply';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
@@ -19,7 +19,8 @@ async function templateOn(db: DatabaseExecutor, key: string): Promise<boolean> {
     .from(messageTemplates)
     .where(eq(messageTemplates.key, key))
     .limit(1);
-  return row?.active ?? true;
+  // No row (a database not migrated yet) means off: an unapproved template is never sent.
+  return row?.active ?? false;
 }
 
 /** What the customer would get now: the chat message, or the template when the chat is closed. */
@@ -48,11 +49,15 @@ export async function previewOf(
   }
   const template = DEFAULT_MESSAGE_TEMPLATES.find((item) => item.key === built.template.key);
   const on = await templateOn(db, built.template.key);
+  // The wording the customer will read, in their language, and the titles of its quick replies.
+  const local = SEND_TEMPLATE_WORDS[built.template.key];
+  const preview =
+    template && ctx.language !== 'en' && local ? local[ctx.language] : template?.preview;
   return {
     body: template
-      ? renderTemplate(template.preview, template.fields, built.template.payload)
+      ? renderTemplate(preview ?? template.preview, template.fields, built.template.payload)
       : built.template.key,
-    buttons: [],
+    buttons: [...(local?.buttons[ctx.language] ?? [])],
     via: 'template',
     language: ctx.language,
     note: on

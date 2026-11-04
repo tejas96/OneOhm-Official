@@ -62,6 +62,23 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
 
+/**
+ * The rights that let a person cancel or check an ask of this type: the same as sending it. A paper
+ * is the documents rights; location, payment and call-back asks follow their send action.
+ */
+export function rightsForAsk(type: string): readonly string[] {
+  switch (type) {
+    case 'location':
+      return RIGHTS.ask_location;
+    case 'pay':
+      return RIGHTS.payment_reminder;
+    case 'callback':
+      return RIGHTS.ask_callback;
+    default:
+      return RIGHTS.ask_paper;
+  }
+}
+
 /** The times of day a customer can pick for a call. */
 export const CALLBACK_SLOTS = ['morning', 'afternoon', 'evening'] as const;
 export type CallbackSlot = (typeof CALLBACK_SLOTS)[number];

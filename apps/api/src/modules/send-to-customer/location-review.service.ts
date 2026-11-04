@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentRequest } from '@oneohm/api-contracts';
 import { customerActions } from '@oneohm/database';
-import { nextActionStatus } from '@oneohm/domain';
+import { type Capability, nextActionStatus, rightsForAsk } from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
@@ -29,7 +29,8 @@ export class LocationReviewService {
   }
 
   private async settle(actor: Actor, id: string, accept: boolean): Promise<DocumentRequest> {
-    if (!can(actor, 'customers.manage') && !can(actor, 'projects.manage')) throw forbidden();
+    if (!rightsForAsk('location').some((right) => can(actor, right as Capability)))
+      throw forbidden();
     await this.db.transaction(async (tx) => {
       const [action] = await tx
         .select()

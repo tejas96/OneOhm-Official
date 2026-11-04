@@ -1,6 +1,7 @@
 'use client';
 
 import type { DocumentRecord } from '@oneohm/api-contracts';
+import { CUSTOMER_DOCUMENT_CATEGORIES } from '@oneohm/domain';
 import { LoaderCircle, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCan } from '@/providers/current-user';
@@ -22,7 +23,11 @@ export function SendDocumentButton({ document }: { readonly document: DocumentRe
       ? { customerId: document.customerId }
       : null;
   const send = useSendAction(scope ?? {});
-  if (!allowed || !scope) return null;
+  // Only papers the customer can see travel (the server checks again).
+  const shared =
+    document.source !== 'report' &&
+    (CUSTOMER_DOCUMENT_CATEGORIES as readonly string[]).includes(document.category);
+  if (!allowed || !scope || !shared) return null;
   return (
     <button
       type="button"

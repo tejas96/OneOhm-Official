@@ -68,6 +68,10 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087
 - Sample for `{{1}}`: any short text, for example `abc123`. The app fills `{{1}}` with the customer's pay token.
 - This is a button field, separate from the body fields.
 
+**Quick reply (button version, first button):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`. The
+app sends the payload `paidother:<instalment id>`, which opens the proof form. Order: this quick reply first,
+then the `Pay now` link button. The payload is optional; a message queued without it still sends.
+
 ### 6. `payment_link` — Changed
 Fields: customer, amount, milestone, project, link
 
@@ -79,6 +83,10 @@ Examples: Ramesh Patil · ₹50,000 · Installation payment · PRJ-0087 · https
 - Same as `payment_reminder`: one dynamic **Visit website** button.
 - Button text: `Pay now`.
 - URL: `<API_PUBLIC_URL>/v1/pay/due/{{1}}`, where `{{1}}` is the pay token. Same rule as above: the base is fixed at approval, so use the production `API_PUBLIC_URL`.
+
+**Quick reply (button version, first button):** en `I paid another way`, mr `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा`. The
+app sends the payload `paidother:<instalment id>`, which opens the proof form. Order: this quick reply first,
+then the `Pay now` link button. The payload is optional; a message queued without it still sends.
 
 ### 7. `service_update` — Changed
 Fields: customer, topic, status
@@ -255,7 +263,7 @@ Examples: Ramesh Patil · ₹45,000 · Sangli
 `pay:<instalment id>`, answered with the pay-link message). 2: en `I paid another way`, mr
 `दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा` (payload `paidother:<instalment id>`, opens the proof
 form). Used for the staff "Payment reminder" and "Ask for payment proof". The automatic
-`payment_reminder` (number 5) is unchanged.
+`payment_reminder` (number 5) and `payment_link` (number 6) carry the same quick reply as their first button.
 
 ### 27. `callback_request` — **New**
 Fields: customer, staff

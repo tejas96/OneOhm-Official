@@ -47,7 +47,7 @@ const EN_SEND = {
   cancelled: {
     location: (home: string) =>
       `You do not need to share the location of your ${home} home any more. Thank you.`,
-    pay: 'You do not need to send a payment proof any more. Thank you.',
+    pay: 'We are not waiting for a payment proof from you any more. Your payment is still due.',
     callback: 'You do not need to pick a time for the call any more. Thank you.',
     what: {
       location: 'sharing your location',
@@ -95,7 +95,7 @@ const MR_SEND: Words<typeof EN_SEND> = {
   document: (name) => `तुमचे ${name}`,
   cancelled: {
     location: (home) => `तुमच्या ${home} घराचे लोकेशन पाठवण्याची आता गरज नाही. धन्यवाद.`,
-    pay: 'पेमेंटचा पुरावा पाठवण्याची आता गरज नाही. धन्यवाद.',
+    pay: 'आम्ही आता तुमच्याकडून पेमेंटच्या पुराव्याची वाट पाहत नाही. तुमचे पेमेंट अजून बाकी आहे.',
     callback: 'फोनसाठी वेळ निवडण्याची आता गरज नाही. धन्यवाद.',
     what: {
       location: 'लोकेशन पाठवणे',
@@ -142,7 +142,7 @@ const HI_SEND: Words<typeof EN_SEND> = {
   document: (name) => `आपका ${name}`,
   cancelled: {
     location: (home) => `अब आपको ${home} घर की लोकेशन भेजने की ज़रूरत नहीं है। धन्यवाद।`,
-    pay: 'अब आपको पेमेंट का सबूत भेजने की ज़रूरत नहीं है। धन्यवाद।',
+    pay: 'अब हम आपसे भुगतान के सबूत का इंतज़ार नहीं कर रहे। आपका भुगतान अभी बाकी है।',
     callback: 'अब आपको फ़ोन के लिए समय चुनने की ज़रूरत नहीं है। धन्यवाद।',
     what: {
       location: 'लोकेशन भेजना',

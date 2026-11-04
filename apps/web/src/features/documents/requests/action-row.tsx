@@ -2,6 +2,8 @@
 
 import type { DocumentRequest } from '@oneohm/api-contracts';
 import { Button, type PillTone, StatusPill } from '@oneohm/design-system/web';
+import type { Capability } from '@oneohm/domain';
+import { rightsForAsk } from '@oneohm/domain';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ExternalLink, FileText, IndianRupee, MapPin, PhoneCall } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
@@ -50,7 +52,8 @@ export function ActionRow({
   const format = useFormatter();
   const now = useNow();
   const folderLabel = useFolderLabel();
-  const canAct = useCan('documents.upload', 'documents.manage');
+  // Papers follow the documents rights; the other asks the rights of sending them (redesign §18).
+  const canAct = useCan(...(rightsForAsk(request.type) as Capability[]));
   const cancel = useCancelRequest();
   const check = useCheckPapers();
   const review = useLocationReview();

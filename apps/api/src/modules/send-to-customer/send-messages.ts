@@ -59,7 +59,8 @@ export function paymentAsk(
         customer: first(given.customer),
         amount,
         home: given.home,
-        payPayload: pay.id,
+        // Without online payments [Pay now] shows the Payments answer, never a pay link.
+        payPayload: given.online ? pay.id : 'go:payments',
         paidPayload: paidOther.id,
       },
     },
@@ -127,7 +128,10 @@ export function crewContact(
 
 export function delayNotice(customer: string, stage: string, reason: string): Built {
   // The reason ends in a full stop in the message; one is never doubled.
-  const said = reason.trim().replace(/[.!?।]+$/u, '');
+  const said = reason
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.!?।]+$/u, '');
   return {
     replies: [{ kind: 'text', body: SEND_WORDS.delay(stage, said) }],
     template: { key: 'delay_notice', payload: { customer: first(customer), stage, reason: said } },

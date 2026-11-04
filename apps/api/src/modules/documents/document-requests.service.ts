@@ -6,10 +6,10 @@ import type {
   ReaskDocumentRequest,
 } from '@oneohm/api-contracts';
 import { customerActions, customers, leads, projects, quotations } from '@oneohm/database';
-import { nextActionStatus } from '@oneohm/domain';
+import { type Capability, nextActionStatus, rightsForAsk } from '@oneohm/domain';
 import { and, eq, ne, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import type { Actor } from '../../common/auth/actor';
+import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { leadVisibility } from '../crm/lead-read';
@@ -101,8 +101,11 @@ export class DocumentRequestsService {
   }
 
   async cancel(actor: Actor, id: string): Promise<DocumentRequest> {
-    if (!canUploadDocuments(actor)) throw forbidden();
     const request = await this.one(id);
+    // A paper needs the documents rights; the other asks the rights of sending them.
+    if (!rightsForAsk(request.type).some((right) => can(actor, right as Capability))) {
+      throw forbidden();
+    }
     if (!nextActionStatus(request.type, request.status, 'cancel')) {
       throw conflict('Only an open request can be cancelled.', 'not_open');
     }

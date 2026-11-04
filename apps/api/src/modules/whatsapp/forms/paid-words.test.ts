@@ -9,8 +9,10 @@ describe('the I paid another way form', () => {
     it(`${language}: every word fits Meta's limits`, () => {
       expect(words.button.length).toBeLessThanOrEqual(FORM_LIMITS.button);
       expect(words.heading('₹45,000', 'Sangli').length).toBeLessThanOrEqual(FORM_LIMITS.heading);
-      expect(words.amountLabel.length).toBeLessThanOrEqual(FORM_LIMITS.label);
-      expect(words.dateLabel.length).toBeLessThanOrEqual(FORM_LIMITS.label);
+      // Per component (Flow JSON): TextInput label 20 and helper 80, DatePicker label 40.
+      expect(words.amountLabel.length).toBeLessThanOrEqual(20);
+      expect(words.amountHint('₹45,00,000').length).toBeLessThanOrEqual(80);
+      expect(words.dateLabel.length).toBeLessThanOrEqual(40);
       expect(words.photosLabel.length).toBeLessThanOrEqual(FORM_LIMITS.label);
       expect(words.amountHint('₹45,000').length).toBeLessThanOrEqual(FORM_LIMITS.hint);
       expect(words.photosHint.length).toBeLessThanOrEqual(FORM_LIMITS.hint);

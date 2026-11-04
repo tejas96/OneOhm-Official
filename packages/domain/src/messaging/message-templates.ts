@@ -69,7 +69,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_reminder',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
-    extras: { urlButton: 'payToken' },
+    // [I paid another way] first (quick reply), then [Pay now] (link); the payload is optional.
+    extras: { quickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience. If you have already paid, please ignore this message.',
   },
@@ -77,7 +78,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_link',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project', 'link'],
-    extras: { urlButton: 'payToken' },
+    // [I paid another way] first (quick reply), then [Pay now] (link); the payload is optional.
+    extras: { quickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.',
   },

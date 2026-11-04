@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_MESSAGE_TEMPLATES } from './message-templates';
+import { SEND_TEMPLATE_WORDS } from './send-template-words';
 import {
   CALLBACK_SLOTS,
   callbackWhen,
   pinDecision,
   rightsFor,
+  rightsForAsk,
   type SendPlace,
   sendActionsFor,
 } from './send-to-customer';
@@ -79,5 +82,27 @@ describe('callbackWhen', () => {
     expect(callbackWhen('afternoon', '11:30')).toEqual({ time: '14:00', nextDay: false });
     expect(callbackWhen('morning', '11:30')).toEqual({ time: '10:00', nextDay: true });
     expect(callbackWhen('evening', '17:30')).toEqual({ time: '17:30', nextDay: true });
+  });
+});
+
+describe('SEND_TEMPLATE_WORDS', () => {
+  it('uses every field of its template and keeps buttons within 25 characters', () => {
+    for (const [key, words] of Object.entries(SEND_TEMPLATE_WORDS)) {
+      const template = DEFAULT_MESSAGE_TEMPLATES.find((one) => one.key === key);
+      expect(template, key).toBeDefined();
+      for (const text of [words.mr, words.hi])
+        expect((text.match(/\{\{\d+\}\}/g) ?? []).length, key).toBe(template?.fields.length);
+      for (const titles of Object.values(words.buttons))
+        for (const title of titles) expect(title.length, `${key} ${title}`).toBeLessThanOrEqual(25);
+    }
+  });
+});
+
+describe('rightsForAsk', () => {
+  it('cancelling or checking an ask needs the rights of sending it', () => {
+    expect(rightsForAsk('paper')).toEqual(['documents.upload', 'documents.manage']);
+    expect(rightsForAsk('location')).toEqual(rightsFor('ask_location'));
+    expect(rightsForAsk('pay')).toEqual(rightsFor('payment_reminder'));
+    expect(rightsForAsk('callback')).toEqual(rightsFor('ask_callback'));
   });
 });
