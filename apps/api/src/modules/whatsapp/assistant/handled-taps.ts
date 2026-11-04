@@ -10,6 +10,8 @@ import { ALL_MENU_ROWS } from './words';
 const MENU_IDS = new Set<string>(ALL_MENU_ROWS.map((row) => row.id));
 
 /** The rating rows, and the which-home rows of a complaint (menu audit H3, M10). */
+/** The stranger buttons (review F5, audit L18). */
+const STRANGER_TAPS = new Set(['callback', 'human']);
 const OWN_TAP = /^(rate:[1-5]|home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 
 /**
@@ -18,7 +20,8 @@ const OWN_TAP = /^(rate:[1-5]|home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * the customer choosing the assistant, so they never alert staff; typed words and files
  * still do. The Menu tap on every closing message, and Start again under the STOP reply,
  * are the bot's own in any chat, since strangers restart too. So are the other taps the
- * bot sends a customer: the ratings and the which-home rows.
+ * bot sends a customer (the ratings and the which-home rows), and a stranger's Call me
+ * back and Talk to a person buttons.
  */
 export function assistantAnswersTap(
   chat: Pick<Conversation, 'customerId'>,
@@ -28,8 +31,8 @@ export function assistantAnswersTap(
   const own = ['menu', 'start'].includes(incoming.choiceId);
   if (own || readQuoteTap(incoming.choiceId)) return true;
   const id = incoming.choiceId;
-  const mine = MENU_IDS.has(id) || isPaperTap(id) || OWN_TAP.test(id);
-  return chat.customerId !== null && mine;
+  if (chat.customerId === null) return STRANGER_TAPS.has(id);
+  return MENU_IDS.has(id) || isPaperTap(id) || OWN_TAP.test(id);
 }
 
 /**
@@ -41,7 +44,10 @@ export function assistantAnswers(
   incoming: Pick<Incoming, 'kind' | 'choiceId'>,
 ): boolean {
   if (assistantAnswersTap(chat, incoming)) return true;
-  return incoming.kind !== 'choice' && chat.customerId !== null && heldStep(chat) !== null;
+  const step = chat.customerId === null ? null : heldStep(chat);
+  // Only the complaint takes a file; a file sent at any other step is for the person.
+  if (incoming.kind === 'media') return step === 'await_problem';
+  return incoming.kind !== 'choice' && step !== null;
 }
 
 /** Marks a logged tap as the assistant's, so it never counts as the customer waiting. */

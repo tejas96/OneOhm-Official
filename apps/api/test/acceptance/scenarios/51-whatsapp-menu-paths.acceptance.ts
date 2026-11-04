@@ -1,14 +1,14 @@
-import type { Property, QuotationDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { alerts, customerInChat, endsWithTaps, requestsOf, secondHome } from '../support/menu-chat';
 import { milestoneOf } from '../support/money';
 import { chatOf, choices, lastReply, replies, say, tap } from '../support/onboarding';
-import { discomId, quoteInput, type Sale, sellProject, today, uniquePhone } from '../support/sales';
+import { today, uniquePhone } from '../support/sales';
 
 // The WhatsApp menu audit (3 Nov 2026), end to end over the webhook: every menu path the
 // customer taps ends with taps; a tap is never taken as the words a step waits for; typed
-// words the bot does not know reach a person; a person's hold survives the bot's own flows.
+// words the bot does not know reach a person. Held chats: 51-whatsapp-menu-holds.
 describe('WhatsApp menu paths', () => {
   let admin: Session;
 
@@ -17,63 +17,8 @@ describe('WhatsApp menu paths', () => {
   });
   afterAll(closeDb);
 
-  /** The bot's last reply offers taps (buttons or list rows): the way forward. */
-  const endsWithTaps = async (phone: string) => {
-    const reply = await lastReply(phone);
-    expect(choices(reply).length, reply?.body).toBeGreaterThan(0);
-    return reply;
-  };
-  const requestsOf = (customerId: string) =>
-    rows<{ project_id: string | null; description: string }>(
-      'SELECT project_id, description FROM service_requests WHERE customer_id = $1',
-      [customerId],
-    );
-  const alerts = (chatId: string, kind: string) =>
-    rows('SELECT 1 FROM notifications WHERE kind = $1 AND subject_id = $2', [kind, chatId]);
-
-  /** A sold customer who said hello: the menu is the last reply. */
-  async function customerInChat(name: string): Promise<Sale> {
-    const sale = await sellProject(admin, { name });
-    await say(sale.customer.phone, 'hi');
-    expect((await lastReply(sale.customer.phone))?.kind).toBe('list');
-    return sale;
-  }
-
-  /** A second home (in Pune) with its own project, for the same customer. */
-  async function secondHome(sale: Sale): Promise<string> {
-    const site = await admin.post<Property>(`/customers/${sale.customer.customerId}/properties`, {
-      label: 'Farm house (test)',
-      addressLine: '9 Baner Road (test)',
-      city: 'Pune',
-      district: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411045',
-      subsidyCategory: 'individual',
-      floors: 1,
-    });
-    const quote = await admin.post<QuotationDetail>('/quotations', {
-      propertyId: site.id,
-      leadId: null,
-      ...(await quoteInput(admin)),
-    });
-    await admin.post(`/quotations/${quote.id}/send`);
-    await admin.post(`/quotations/${quote.id}/accept`);
-    const project = await admin.post<{ id: string }>('/projects', {
-      quotationId: quote.id,
-      discomId: await discomId(admin, 'MSEDCL'),
-      loan: false,
-      lenderName: null,
-      loanPaise: 0,
-      battery: false,
-      groundMount: false,
-      startDate: today(),
-      managerUserId: admin.userId,
-    });
-    return project.id;
-  }
-
   it('Raise a complaint: a tap while waiting is that tap; the words raise it on the home', async () => {
-    const sale = await customerInChat('Menu Complaint Customer (test)');
+    const sale = await customerInChat(admin, 'Menu Complaint Customer (test)');
     const { phone, customerId } = sale.customer;
 
     await tap(phone, 'service');
@@ -101,9 +46,9 @@ describe('WhatsApp menu paths', () => {
   });
 
   it('Raise a complaint with two homes asks which home first, then files on that one', async () => {
-    const sale = await customerInChat('Menu Two Homes Customer (test)');
+    const sale = await customerInChat(admin, 'Menu Two Homes Customer (test)');
     const { phone, customerId } = sale.customer;
-    const pune = await secondHome(sale);
+    const pune = await secondHome(admin, sale);
 
     await tap(phone, 'service');
     const list = await endsWithTaps(phone);
@@ -119,10 +64,18 @@ describe('WhatsApp menu paths', () => {
     await say(phone, 'No power from the panels today (test)');
     const [raised] = await requestsOf(customerId);
     expect(raised?.project_id).toBe(pune);
+
+    // F4: a home cancelled after the list was sent is said so; one home left is asked at once.
+    await rows(`UPDATE projects SET status = 'cancelled' WHERE id = $1`, [pune]);
+    await tap(phone, `home:${pune}`);
+    const said = (await replies(phone)).slice(-2);
+    expect(said[0]?.body).toBe('That home is no longer active.');
+    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
+    expect((await chatOf(phone)).state).toBe('await_problem');
   });
 
   it('Warranty and AMC, My rewards and Payments each end with taps', async () => {
-    const { customer } = await customerInChat('Menu Answers Customer (test)');
+    const { customer } = await customerInChat(admin, 'Menu Answers Customer (test)');
     const phone = customer.phone;
 
     await tap(phone, 'warranty');
@@ -137,7 +90,7 @@ describe('WhatsApp menu paths', () => {
   });
 
   it('Refer a friend: a tap while waiting is that tap; the friend is saved and shown', async () => {
-    const { customer } = await customerInChat('Menu Referral Customer (test)');
+    const { customer } = await customerInChat(admin, 'Menu Referral Customer (test)');
     const phone = customer.phone;
 
     await tap(phone, 'refer');
@@ -156,35 +109,8 @@ describe('WhatsApp menu paths', () => {
     expect((await endsWithTaps(phone))?.body).toContain('Suresh');
   });
 
-  it('a rating while a person has the chat is saved, and the person keeps the chat', async () => {
-    const sale = await customerInChat('Menu Held Rating Customer (test)');
-    const { phone, customerId } = sale.customer;
-    await rows(`UPDATE projects SET status = 'operational' WHERE id = $1`, [sale.project.id]);
-    const chat = await chatOf(phone);
-    await admin.post(`/whatsapp/chats/${chat.id}/reply`, { text: 'Hello from the office (test)' });
-
-    await tap(phone, 'feedback');
-    expect(choices(await endsWithTaps(phone))).toContain('rate:4');
-    await tap(phone, 'rate:4');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
-    await say(phone, 'Great team (test)');
-    expect((await endsWithTaps(phone))?.body).toContain('noted');
-    const saved = await rows<{ rating: number; comment: string | null }>(
-      'SELECT rating, comment FROM customer_feedback WHERE customer_id = $1',
-      [customerId],
-    );
-    expect(saved).toEqual([{ rating: 4, comment: 'Great team (test)' }]);
-
-    // M6: Raise a complaint runs as the bot's flow inside the hold, and the hold stays.
-    await tap(phone, 'service');
-    await say(phone, 'Meter reading looks wrong (test)');
-    expect(await requestsOf(customerId)).toHaveLength(1);
-    expect((await chatOf(phone)).state).toBe('human');
-    expect(await alerts(chat.id, 'whatsapp_message')).toHaveLength(0);
-  });
-
   it('Talk to a person, and a typed question, reach a person with a Menu tap', async () => {
-    const { customer } = await customerInChat('Menu Talk Customer (test)');
+    const { customer } = await customerInChat(admin, 'Menu Talk Customer (test)');
     const phone = customer.phone;
     const chat = await chatOf(phone);
 
@@ -203,7 +129,7 @@ describe('WhatsApp menu paths', () => {
   });
 
   it('a cancelled home offers no Pay now; an old receipt is still sent by View receipt', async () => {
-    const sale = await customerInChat('Menu Receipt Customer (test)');
+    const sale = await customerInChat(admin, 'Menu Receipt Customer (test)');
     const { phone } = sale.customer;
     const advance = milestoneOf(sale.project, 'quotation_accepted');
     for (let round = 0; round < 4; round += 1)
@@ -246,5 +172,10 @@ describe('WhatsApp menu paths', () => {
     expect(reply?.body).toContain('will reply to you here');
     expect(reply?.body).not.toContain('not linked');
     expect((await chatOf(phone)).state).toBe('human');
+
+    // M4 and F5: the held stranger's own Call me back button is answered, with Menu.
+    await tap(phone, 'callback');
+    expect((await endsWithTaps(phone))?.body).toContain('call you soon');
+    expect(choices(await lastReply(phone))).toEqual(['menu']);
   });
 });

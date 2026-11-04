@@ -43,7 +43,10 @@ export async function startComplaint(
   });
 }
 
-/** A home picked from the list: the complaint is filed on it. One no longer active asks again. */
+/**
+ * A home picked from the list: the complaint is filed on it. One no longer active is said
+ * so (review F4), then the list again, or the question at once when one home is left.
+ */
 export async function pickHome(
   db: DatabaseExecutor,
   chat: Conversation,
@@ -51,7 +54,10 @@ export async function pickHome(
   projectId: string,
 ): Promise<void> {
   const homes = await activeHomes(db, customerId);
-  if (!homes.some((home) => home.id === projectId)) return startComplaint(db, chat, customerId);
+  if (!homes.some((home) => home.id === projectId)) {
+    await queueReply(db, chat, { kind: 'text', body: PROJECT_WORDS.homeGone });
+    return startComplaint(db, chat, customerId);
+  }
   return askProblem(db, chat, projectId);
 }
 

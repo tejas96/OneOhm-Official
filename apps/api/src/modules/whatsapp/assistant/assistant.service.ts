@@ -8,7 +8,7 @@ import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
-import { setStep, stepOf, WAITING_STEPS } from './chat-step';
+import { heldStep, setStep, stepOf, WAITING_STEPS } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
@@ -17,7 +17,7 @@ import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
 import { assistantAnswers } from './handled-taps';
-import { menuChoice, restartsChat, wordOf } from './incoming-words';
+import { isThanks, menuChoice, restartsChat, wordOf } from './incoming-words';
 import { assistantLanguage, inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
@@ -60,6 +60,8 @@ export class AssistantService {
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works even while a person has the chat: accepting is the customer's act.
     const tap = readQuoteTap(incoming.choiceId);
+    // A quote tap, like any tap, ends a step left waiting (review F8).
+    if (tap && WAITING_STEPS.includes(stepOf(chat))) await setStep(this.db, chat, 'menu');
     return inLanguage(await this.languageOf(chat), () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
@@ -70,13 +72,15 @@ export class AssistantService {
     if (restartsChat(chat, incoming)) return this.restart(chat);
     // With a person, the assistant answers only its own taps and its own steps' words.
     if (chat.state === 'human' && !assistantAnswers(chat, incoming)) return;
-    if (!chat.customerId) return this.strangers.route(chat, incoming, word);
+    if (!chat.customerId) return this.stranger(chat, incoming, word);
     const customerId = chat.customerId;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
       return this.menus.choose(chat, customerId, 'human');
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
+    // "ok", "thanks", 👍: a warm word back, no alert (review F7); a held chat's go to the person.
+    if (this.thanksOnly(chat, incoming)) return sayWithTaps(this.db, chat, WORDS.welcome, ['menu']);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.
     if (await this.answersOurUpdate(chat, incoming, word)) return this.people.passToOwner(chat);
     // A home picked for a complaint (menu audit M10): the complaint goes on that home.
@@ -100,6 +104,18 @@ export class AssistantService {
     return this.menus.menu(chat);
   }
 
+  /** A held stranger has only its own Call me back / Talk to a person buttons (review F5). */
+  private stranger(chat: Conversation, incoming: Incoming, word: string) {
+    if (chat.state === 'human') return this.strangers.answer(chat, word);
+    return this.strangers.route(chat, incoming, word);
+  }
+
+  /** A typed "ok" or "thanks" while no step waits for words. */
+  private thanksOnly(chat: Conversation, incoming: Incoming) {
+    if (incoming.kind !== 'text' || WAITING_STEPS.includes(stepOf(chat))) return false;
+    return isThanks(incoming.text);
+  }
+
   /** The step the chat waits on takes the message; false when it is not that step's. */
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
@@ -117,8 +133,15 @@ export class AssistantService {
     return this.repliedToUpdate(chat.id);
   }
 
-  /** A hello or "menu": back to the assistant, with the menu. */
+  /**
+   * A hello or "menu": back to the assistant, with the menu. Menu from a step inside a
+   * person's hold ends only the step: the person and the reminders stay (review F2).
+   */
   private async restart(chat: Conversation) {
+    if (heldStep(chat)) {
+      await setStep(this.db, chat, 'menu');
+      return this.menus.menu(chat);
+    }
     if (chat.state === 'human')
       await this.db
         .update(waConversations)

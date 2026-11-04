@@ -29,6 +29,8 @@ const EN_PROJECT = {
     `${amount} received. ${left} is left on this instalment.`,
   /** Over the list of towns when a customer with 2+ homes raises a complaint (M10). */
   whichHome: 'Which home is the problem at?',
+  /** A which-home row tapped after that home was cancelled (review F4). */
+  homeGone: 'That home is no longer active.',
 };
 const EN_NEXT = EN_PROJECT.next;
 
@@ -50,6 +52,7 @@ const MR_PROJECT: Words<typeof EN_PROJECT> = {
   receiptCaption: (number) => `तुमची पेमेंट पावती (${number})`,
   partPaid: (amount, left) => `${amount} मिळाले. या हप्त्याचे ${left} बाकी आहेत.`,
   whichHome: 'समस्या कोणत्या घरी आहे?',
+  homeGone: 'ते घर आता सक्रिय नाही.',
 };
 
 const HI_NEXT: Record<MilestoneTrigger, string> = {
@@ -70,6 +73,7 @@ const HI_PROJECT: Words<typeof EN_PROJECT> = {
   receiptCaption: (number) => `आपकी पेमेंट रसीद (${number})`,
   partPaid: (amount, left) => `${amount} मिल गए. इस किस्त के ${left} बाकी हैं.`,
   whichHome: 'समस्या किस घर में है?',
+  homeGone: 'वह घर अब सक्रिय नहीं है।',
 };
 
 /** Every language, for the checks. */

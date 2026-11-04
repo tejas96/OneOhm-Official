@@ -27,6 +27,12 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('rate:5'))).toBe(false);
   });
 
+  it('answers a stranger’s own Call me back and Talk to a person buttons (review F5)', () => {
+    expect(assistantAnswersTap({ customerId: null }, tap('callback'))).toBe(true);
+    expect(assistantAnswersTap({ customerId: null }, tap('human'))).toBe(true);
+    expect(assistantAnswersTap({ customerId: null }, tap('payments'))).toBe(false);
+  });
+
   it('leaves typed words to the person', () => {
     expect(assistantAnswersTap({ customerId: 'c1' }, typed)).toBe(false);
   });
@@ -34,8 +40,23 @@ describe('taps the assistant answers while a person has the chat', () => {
   it('takes typed words in a held chat only when its own step waits for them (M6)', () => {
     const held = { customerId: 'c1', state: 'human', context: {} };
     expect(assistantAnswers(held, typed)).toBe(false);
-    const waiting = { ...held, context: { step: 'await_problem' } };
+    const waiting = { ...held, context: { step: 'await_problem', stepAt: Date.now() } };
     expect(assistantAnswers(waiting, typed)).toBe(true);
     expect(assistantAnswers(waiting, tap('menu'))).toBe(true);
+    // A stale step is over: the words are for the person (review F1).
+    const stale = { ...held, context: { step: 'await_problem', stepAt: Date.now() - 31 * 60_000 } };
+    expect(assistantAnswers(stale, typed)).toBe(false);
+  });
+
+  it('takes a file in a held chat only for a complaint (review F3)', () => {
+    const file = { kind: 'media' as const, choiceId: null };
+    const at = (step: string) => ({
+      customerId: 'c1',
+      state: 'human',
+      context: { step, stepAt: Date.now() },
+    });
+    expect(assistantAnswers(at('await_problem'), file)).toBe(true);
+    for (const step of ['await_referral', 'await_comment', 'await_home'])
+      expect(assistantAnswers(at(step), file), step).toBe(false);
   });
 });

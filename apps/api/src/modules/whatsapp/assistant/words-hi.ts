@@ -70,6 +70,7 @@ export const HI: Words<AssistantWords> = {
     humanSoon:
       'टीम का कोई सदस्य जल्द ही यहाँ जवाब देगा (सोमवार से शनिवार, सुबह 9:30 से शाम 6:30)। सहायक पर वापस जाने के लिए "मेनू" दबाएँ।',
     notUnderstood: 'माफ़ कीजिए, मैं समझ नहीं पाया। मैं इनमें मदद कर सकता हूँ:',
+    welcome: 'आपका स्वागत है 🙏',
     passedToOwner: (name) =>
       name ? `धन्यवाद। ${name} आपको यहीं जवाब देंगे।` : 'धन्यवाद। हमारी टीम आपको यहीं जवाब देगी।',
     nightReply: (name) =>
@@ -155,7 +156,7 @@ export const HI: Words<AssistantWords> = {
   },
   ANSWER_WORDS: {
     now: (stage, done, steps) => `अभी: ${stage} (${steps} में से ${done} चरण पूरे)`,
-    allDone: (steps) => `सभी ${steps} चरण पूरे. आपका सोलर सिस्टम पूरा हो गया है.`,
+    allDone: (steps) => `सभी ${steps} चरण पूरे। आपका सोलर सिस्टम पूरा हो गया है।`,
     next: (title, when) => `आगे: ${title}, ${when} को तय`,
     waitingSince: (who, when) => `${when} से ${who}`,
     paid: (label, amount) => `✓ ${label}: ${amount} भरा`,

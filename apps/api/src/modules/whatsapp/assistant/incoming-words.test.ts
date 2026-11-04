@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { menuChoice, restartsChat } from './incoming-words';
+import { isThanks, menuChoice, restartsChat } from './incoming-words';
 
 const typed = (text: string) => ({ kind: 'text' as const, text, choiceId: null });
 const tapped = (choiceId: string) => ({ kind: 'choice' as const, text: 'Tap', choiceId });
@@ -28,5 +28,25 @@ describe('what restarts the chat with the menu', () => {
     expect(menuChoice('तक्रार')).toBe('service');
     expect(menuChoice('menu')).toBeUndefined();
     expect(menuChoice('when will you come')).toBeUndefined();
+  });
+
+  it('reads a short thanks or ack, or only emoji (review F7)', () => {
+    for (const text of [
+      'ok',
+      'Okay',
+      'thanks',
+      'Thank you!',
+      'धन्यवाद',
+      'ठीक आहे',
+      'ठीक है',
+      'शुक्रिया',
+      '👍',
+      '🙏',
+      '👍🏽🙏',
+      '😊 😊',
+    ])
+      expect(isThanks(text), text).toBe(true);
+    for (const text of ['ok when will you come', 'thanks, the inverter is off', '5', ''])
+      expect(isThanks(text), text).toBe(false);
   });
 });

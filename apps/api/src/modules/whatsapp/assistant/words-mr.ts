@@ -71,6 +71,7 @@ export const MR: Words<AssistantWords> = {
     humanSoon:
       'टीममधील कोणीतरी लवकरच इथे उत्तर देईल (सोमवार ते शनिवार, सकाळी 9:30 ते संध्याकाळी 6:30). सहाय्यकाकडे परत जाण्यासाठी "मेनू" दाबा.',
     notUnderstood: 'माफ करा, मला समजले नाही. मी यात मदत करू शकतो:',
+    welcome: 'आपले स्वागत आहे 🙏',
     // A person is named with the respectful plural (देतील); the team is singular (C15).
     passedToOwner: (name) =>
       `धन्यवाद. ${name ? `${name} तुम्हाला इथेच उत्तर देतील` : 'आमची टीम तुम्हाला इथेच उत्तर देईल'}.`,

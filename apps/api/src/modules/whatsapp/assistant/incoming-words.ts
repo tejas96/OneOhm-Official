@@ -34,3 +34,25 @@ export function restartsChat(
   if (greets(word) || saysHello(incoming.text)) return true;
   return !chat.customerId && findCampaignCode(incoming.text) !== null;
 }
+
+/** A short thanks or ack in any of the three languages (review F7). */
+const THANKS = new Set([
+  'ok',
+  'okay',
+  'thanks',
+  'thank you',
+  'धन्यवाद',
+  'ठीक आहे',
+  'ठीक है',
+  'शुक्रिया',
+]);
+const ONLY_EMOJI = /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|‍|️|\s)+$/u;
+
+/** True for "ok", "thanks", धन्यवाद… or a message of emoji only: answered, not handed over. */
+export function isThanks(text: string): boolean {
+  const said = text
+    .trim()
+    .toLowerCase()
+    .replace(/[.!]+$/u, '');
+  return THANKS.has(said) || (said !== '' && ONLY_EMOJI.test(said));
+}

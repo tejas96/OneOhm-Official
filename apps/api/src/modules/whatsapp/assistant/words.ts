@@ -74,6 +74,8 @@ const EN_WORDS = {
   humanSoon:
     'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Tap "Menu" to go back to the assistant.',
   notUnderstood: 'Sorry, I did not get that. Here is what I can help with.',
+  /** The answer to a short thanks or ack (review F7). */
+  welcome: 'You’re welcome 🙏',
   /** A reply to one of our updates goes to their person, with this warm note. */
   passedToOwner: (name: string | null) =>
     `Thank you. ${name ?? 'Our team'} will reply to you here.`,
