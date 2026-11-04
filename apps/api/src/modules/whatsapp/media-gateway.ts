@@ -30,6 +30,14 @@ const SAMPLE_PNG = Buffer.from(
   'base64',
 );
 
+/** Stand-ins with the right bytes, so a voice note is kept as audio and a video as video. */
+const SAMPLE_OGG = Buffer.concat([Buffer.from('OggS'), Buffer.alloc(24), Buffer.from('OpusHead')]);
+const SAMPLE_MP4 = Buffer.concat([
+  Buffer.from([0, 0, 0, 16]),
+  Buffer.from('ftypisom'),
+  Buffer.alloc(4),
+]);
+
 /** A one-page blank PDF with a correct cross-reference table: the stand-in paper. */
 export function samplePdf(): Buffer {
   const objects = [
@@ -75,9 +83,14 @@ export function logMediaGateway(log: (line: string) => void): MediaGateway {
     async download(media) {
       if (media.id === SAMPLE_TOO_LARGE_ID) throw new MediaTooLargeError('Stand-in large file.');
       log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
-      const buffer = media.type === 'document' ? samplePdf() : Buffer.from(SAMPLE_PNG);
+      const [buffer, extension] = {
+        image: [Buffer.from(SAMPLE_PNG), 'png'],
+        document: [samplePdf(), 'pdf'],
+        audio: [SAMPLE_OGG, 'ogg'],
+        video: [SAMPLE_MP4, 'mp4'],
+      }[media.type] as [Buffer, string];
       const fileName = mediaFileName(media).replace(/\.[a-z0-9]{1,5}$/i, '');
-      return { buffer, fileName: `${fileName}.${media.type === 'document' ? 'pdf' : 'png'}` };
+      return { buffer, fileName: `${fileName}.${extension}` };
     },
   };
 }

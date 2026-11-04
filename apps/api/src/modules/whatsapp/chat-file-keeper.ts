@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type DatabaseExecutor, documents, leads, waMessages } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  documents,
+  leads,
+  waConversations,
+  waMessages,
+} from '@oneohm/database';
 import { EVIDENCE_FILE_TYPES } from '@oneohm/domain';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
@@ -79,10 +85,17 @@ export class ChatFileKeeper {
         .where(eq(waMessages.waMessageId, message.waMessageId));
       const documentId = row?.documentId;
       if (!documentId || (await isFiled(this.db, documentId))) return;
-      const { homes, choice } = await homeForFile(this.db, chat, chat.customerId);
+      // The chat as it is now: a home picked while this file was answered counts.
+      const [now] = await this.db
+        .select({ context: waConversations.context })
+        .from(waConversations)
+        .where(eq(waConversations.id, chat.id));
+      const { homes, choice } = await homeForFile(this.db, now ?? chat, chat.customerId);
       const place = choice && choice !== 'ask' ? placeOn(homes, choice) : null;
+      // A voice note or video keeps its kind, even on the person row.
+      const sound = media.type === 'audio' || media.type === 'video';
       await this.db.transaction(async (tx) => {
-        if (place) await filePaper(tx, documentId, place);
+        if (place) await filePaper(tx, documentId, sound ? { ...place, category: 'other' } : place);
         await this.tellKept(tx, chat, message, media, !place);
       });
     } catch (error) {

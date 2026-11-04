@@ -31,6 +31,15 @@ describe('WhatsApp media in log mode', () => {
     expect(lines).toHaveLength(2);
   });
 
+  it('stands in a real voice note and a real video', async () => {
+    const gateway = logMediaGateway(() => undefined);
+    const voice = await gateway.download({ ...photo, type: 'audio' });
+    const video = await gateway.download({ ...photo, type: 'video' });
+    expect(detectFileType(voice.buffer)).toBe('audio/ogg');
+    expect(voice.fileName).toBe('WhatsApp audio.ogg');
+    expect(detectFileType(video.buffer)).toBe('video/mp4');
+  });
+
   it('names files after what the customer sent', () => {
     expect(mediaFileName(photo)).toBe('WhatsApp photo.jpg');
     expect(mediaFileName({ ...photo, type: 'audio' })).toBe('WhatsApp audio.ogg');

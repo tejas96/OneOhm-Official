@@ -18,9 +18,13 @@ import { filePaper } from '../file-paper';
 import { setStep, stepOf } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import {
+  answersRequests,
   fileHomeTapped,
   type HomeChoice,
   homeForFile,
+  isSound,
+  type KeptFile,
+  kindOf,
   placeOn,
   requestFits,
   toSortOf,
@@ -35,7 +39,7 @@ const HOME_ROWS = 9;
 
 /** What filing a batch on a home did: the files filed, the request answered or refused, what is left. */
 export interface FiledOnHome {
-  readonly filed: readonly string[];
+  readonly filed: readonly KeptFile[];
   readonly answered: string | null;
   readonly refused: string | null;
   readonly left: readonly string[];
@@ -62,8 +66,9 @@ export class FileHomeFlowService {
 
   /**
    * Files these stored files of the customer on the home, skipping any already filed: the
-   * first answers the oldest open request, as an upload in the app would; the rest (or
-   * all, when none is open) are filed on the home.
+   * first photo or PDF answers the oldest open request, as an upload in the app would; the
+   * rest (or all, when none is open) are filed on the home. A voice note or video never
+   * answers a request and keeps its kind (`other`), even on the person row.
    */
   async fileOnHome(
     customerId: string,
@@ -72,18 +77,18 @@ export class FileHomeFlowService {
     documentIds: readonly string[],
     db: DatabaseExecutor = this.db,
   ): Promise<FiledOnHome> {
-    const ids = await this.unfiled(db, customerId, documentIds);
+    const files = await this.unfiled(db, customerId, documentIds);
     const open = await this.openFor(customerId, choice);
     // The list comes newest first, so the oldest open request is the last one.
     const oldest = open.at(-1);
-    const [first] = ids;
-    let rest = ids;
+    const first = files.find((file) => answersRequests(file.contentType));
+    let rest = files;
     let answered: string | null = null;
     let refused: string | null = null;
     if (oldest && first) {
-      rest = ids.slice(1);
+      rest = files.filter((file) => file !== first);
       try {
-        await this.papers.answerWithDocument(customerId, oldest.id, first);
+        await this.papers.answerWithDocument(customerId, oldest.id, first.id);
         answered = oldest.title;
       } catch (error) {
         if (!(error instanceof AppError)) throw error;
@@ -94,22 +99,34 @@ export class FileHomeFlowService {
     const place = placeOn(homes, choice);
     if (place && rest.length > 0)
       await db.transaction(async (tx) => {
-        for (const id of rest) await filePaper(tx, id, place);
+        for (const file of rest)
+          await filePaper(
+            tx,
+            file.id,
+            isSound(file.contentType) ? { ...place, category: 'other' } : place,
+          );
       });
     const filed = [...(answered && first ? [first] : []), ...(place ? rest : [])];
     const left = open.filter((paper) => !answered || paper !== oldest);
     return { filed, answered, refused, left: left.reverse().map((paper) => paper.title) };
   }
 
-  /** Keeps the file as "To sort" and asks which home, once while the question is open. */
-  ask(chat: Conversation, homes: readonly CustomerHome[], documentId: string): Promise<void> {
+  /**
+   * Keeps the file as "To sort" and asks which home, once while the question is open. The
+   * home is decided again on the locked chat: when a tap just picked it, nothing is asked
+   * and the home is given back to file the paper on.
+   */
+  ask(chat: Conversation, customerId: string, documentId: string) {
     return this.db.transaction(async (tx) => {
       const locked = await lockedChat(tx, chat.id);
+      const known = await homeForFile(tx, locked, customerId);
+      if (known.choice !== 'ask') return { homes: known.homes, choice: known.choice };
       const toSort = withToSort(locked.context, documentId, Date.now());
       const context = { ...(locked.context as object), toSort };
       if (stepOf(locked) === 'await_file_home')
-        return setState(tx, locked.id, locked.state, context);
-      return this.list(tx, locked, homes, context);
+        await setState(tx, locked.id, locked.state, context);
+      else await this.list(tx, locked, known.homes, context);
+      return null;
     });
   }
 
@@ -146,7 +163,7 @@ export class FileHomeFlowService {
       const fileHome = { propertyId: choice.propertyId, at: now };
       await setStep(tx, locked, 'menu', { ...withoutStep(locked.context), fileHome });
       const home = homes.find((each) => each.propertyId === choice.propertyId);
-      await sayWithTaps(tx, locked, await this.savedWords(tx, filed, home), ['menu']);
+      await sayWithTaps(tx, locked, this.savedWords(filed, home), ['menu']);
     });
   }
 
@@ -174,36 +191,21 @@ export class FileHomeFlowService {
   }
 
   /** "Saved: *photo (4)* for your home at *Pune*." and what it still needs; no claim when nothing was filed. */
-  private async savedWords(
-    db: DatabaseExecutor,
-    filed: FiledOnHome,
-    home: CustomerHome | undefined,
-  ): Promise<string> {
+  private savedWords(filed: FiledOnHome, home: CustomerHome | undefined): string {
     const refused = filed.refused ? MEDIA_WORDS.paperRefused(filed.refused) : '';
     if (filed.filed.length === 0)
       return refused || MEDIA_WORDS.homeChosen(home?.title ?? MEDIA_WORDS.personRow);
-    const kind = filed.answered ?? (await this.kindOf(db, filed.filed));
+    const kind = filed.answered ?? kindOf(filed.filed);
     const saved = home ? MEDIA_WORDS.savedFor(kind, home.title) : MEDIA_WORDS.paperSaved(kind);
     const left = filed.left.length > 0 ? MEDIA_WORDS.stillNeeded(filed.left.join(', ')) : '';
     return [saved, refused, left].filter(Boolean).join('\n\n');
-  }
-
-  /** "photo", "paper (3)": how the customer's files are named in the reply. */
-  private async kindOf(db: DatabaseExecutor, documentIds: readonly string[]): Promise<string> {
-    const files = await db
-      .select({ contentType: documents.contentType })
-      .from(documents)
-      .where(inArray(documents.id, [...documentIds]));
-    const photos = files.length > 0 && files.every((file) => file.contentType.startsWith('image/'));
-    const what = photos ? MEDIA_WORDS.what.image : MEDIA_WORDS.what.document;
-    return files.length > 1 ? `${what} (${files.length})` : what;
   }
 
   /** The customer's own kept files among these, not removed and not filed yet, in order. */
   private async unfiled(db: DatabaseExecutor, customerId: string, documentIds: readonly string[]) {
     if (documentIds.length === 0) return [];
     const own = await db
-      .select({ id: documents.id })
+      .select({ id: documents.id, contentType: documents.contentType })
       .from(documents)
       .where(
         and(
@@ -212,9 +214,9 @@ export class FileHomeFlowService {
           isNull(documents.removedAt),
         ),
       );
-    const open = new Set<string>();
-    for (const { id } of own) if (!(await isFiled(db, id))) open.add(id);
-    return documentIds.filter((id) => open.has(id));
+    const open = new Map<string, KeptFile>();
+    for (const file of own) if (!(await isFiled(db, file.id))) open.set(file.id, file);
+    return documentIds.flatMap((id) => open.get(id) ?? []);
   }
 
   /** The "Which home?" list (the homes, newest first, and the person row), then the step. */

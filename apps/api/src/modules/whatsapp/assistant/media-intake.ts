@@ -109,10 +109,13 @@ export class MediaIntakeService {
     held: boolean,
   ): Promise<void> {
     const now = Date.now();
-    const { homes, choice } = await homeForFile(this.db, chat, customerId, now);
+    let { homes, choice } = await homeForFile(this.db, chat, customerId, now);
     if (choice === 'ask') {
       const documentId = await this.storedOrSay(chat, media);
-      return documentId ? this.homes.ask(chat, homes, documentId) : undefined;
+      // Asked (or added to the burst); else a tap picked the home a moment ago.
+      const known = documentId ? await this.homes.ask(chat, customerId, documentId) : null;
+      if (!known) return;
+      ({ homes, choice } = known);
     }
     if (choice && (await this.homes.openFor(customerId, choice)).length > 0)
       return this.fulfil(chat, customerId, homes, choice, media);

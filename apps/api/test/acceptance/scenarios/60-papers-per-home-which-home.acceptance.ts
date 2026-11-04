@@ -136,25 +136,54 @@ describe('Papers per home: which home', () => {
     expect((await lastReply(customer.phone))?.body).toContain('(4)');
   });
 
-  it('a voice note waits with the photos; the person row files ID papers', async () => {
-    const { customer } = await sellProject(admin, { name: 'Voice Waits (test)' });
-    await anotherHome(admin, customer, 'Farm (test)');
+  it('a voice note waits with the photos and never takes a paper request', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Voice Waits (test)' });
+    const farm = await anotherHome(admin, customer, 'Farm (test)');
+    // Both homes wait on a paper, so the customer is asked; the site's request is older.
+    const asked = await admin.post<{ id: string }>('/document-requests', {
+      projectId: project.id,
+      category: 'electricity_bill',
+      title: 'Electricity bill (test)',
+    });
+    await admin.post('/document-requests', {
+      projectId: farm.projectId,
+      category: 'property',
+      title: 'Farm 7/12 extract (test)',
+    });
     await sendInbound(customer.phone, { media: { type: 'audio', fileId: 'waits-voice' } });
     // A voice note alone does not ask.
     expect(await homeLists(customer.phone)).toEqual([]);
     await sendInbound(customer.phone, { media: { type: 'image', fileId: 'waits-photo' } });
     expect(await homeLists(customer.phone)).toHaveLength(1);
     await tap(customer.phone, `fhome:${customer.propertyId}`);
-    const docs = await customerDocs(customer.customerId);
-    expect(docs.map((doc) => doc.property_id)).toEqual([customer.propertyId, customer.propertyId]);
-    // Within the next 30 minutes the pick stands; the person row is kept as an ID paper.
-    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'waits-aadhaar' } });
+    const [voice, photo] = await customerDocs(customer.customerId);
+    expect(voice).toMatchObject({ project_id: project.id, property_id: customer.propertyId });
+    const [request] = await rows<{ status: string; document_id: string }>(
+      'SELECT status::text AS status, document_id FROM document_requests WHERE id = $1',
+      [asked.id],
+    );
+    expect(request).toEqual({ status: 'received', document_id: photo?.id });
+    const reply = (await lastReply(customer.phone))?.body ?? '';
+    expect(reply).toContain('Electricity bill (test)');
+    expect(reply).not.toContain('Sorry');
+  });
+
+  it('the person row files photos as ID papers and keeps a voice note as it is', async () => {
+    const { customer } = await sellProject(admin, { name: 'Person Voice (test)' });
+    await anotherHome(admin, customer, 'Farm (test)');
+    await sendInbound(customer.phone, { media: { type: 'audio', fileId: 'person-voice' } });
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'person-photo' } });
     await tap(customer.phone, 'fhome:person');
     const kinds = await rows<{ category: string; property_id: string | null }>(
-      `SELECT category, property_id FROM documents WHERE customer_id = $1 ORDER BY created_at`,
+      'SELECT category, property_id FROM documents WHERE customer_id = $1 ORDER BY created_at',
       [customer.customerId],
     );
-    expect(kinds[2]?.property_id).toBe(customer.propertyId);
+    expect(kinds).toEqual([
+      { category: 'other', property_id: null },
+      { category: 'customer_kyc', property_id: null },
+    ]);
+    // The reply names the photo only, not the voice note.
+    expect((await lastReply(customer.phone))?.body).not.toContain('(2)');
   });
 
   it('a tap with nothing to sort does not claim a save', async () => {

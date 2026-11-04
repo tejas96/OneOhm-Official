@@ -1,9 +1,14 @@
 import { type DatabaseExecutor, documentRequests, projects } from '@oneohm/database';
-import { isPersonDocumentCategory, PERSON_DOCUMENT_CATEGORIES } from '@oneohm/domain';
+import {
+  ACCEPTED_FILE_TYPES,
+  isPersonDocumentCategory,
+  PERSON_DOCUMENT_CATEGORIES,
+} from '@oneohm/domain';
 import { and, eq, isNotNull, notInArray } from 'drizzle-orm';
 import { type CustomerHome, customerHomes } from '../../customer-portal/customer-homes';
 import type { PaperPlace } from '../file-paper';
 import { STEP_MINUTES } from './chat-step';
+import { MEDIA_WORDS } from './words';
 
 /** The home a burst of files is for: a property of the customer, or their person papers. */
 export type HomeChoice = { readonly propertyId: string | 'person' };
@@ -146,4 +151,33 @@ export function withoutStep(context: unknown): Record<string, unknown> {
     ...rest
   } = (context ?? {}) as Record<string, unknown>;
   return rest;
+}
+
+/** A kept file: its document and its real type. */
+export interface KeptFile {
+  readonly id: string;
+  readonly contentType: string;
+}
+
+/** A voice note or a video: kept and shown, never the answer to a paper request. */
+export const isSound = (contentType: string): boolean =>
+  contentType.startsWith('audio/') || contentType.startsWith('video/');
+
+/** A photo or PDF: the files an asked-for paper accepts. */
+export const answersRequests = (contentType: string): boolean =>
+  (ACCEPTED_FILE_TYPES as readonly string[]).includes(contentType);
+
+/** "photo", "paper (3)": the photos and papers filed, named for the reply (voice notes are not). */
+export function kindOf(files: readonly KeptFile[]): string {
+  const papers = files.filter((file) => !isSound(file.contentType));
+  const named = papers.length > 0 ? papers : files;
+  const [one] = named;
+  const what = !one
+    ? MEDIA_WORDS.what.document
+    : named.every((file) => file.contentType.startsWith('image/'))
+      ? MEDIA_WORDS.what.image
+      : papers.length > 0
+        ? MEDIA_WORDS.what.document
+        : MEDIA_WORDS.what[one.contentType.startsWith('audio/') ? 'audio' : 'video'];
+  return named.length > 1 ? `${what} (${named.length})` : what;
 }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { CustomerHome } from '../../customer-portal/customer-homes';
-import { chooseHome, fileHomeTapped, placeOn, toSortOf, withToSort } from './file-home';
+import {
+  answersRequests,
+  chooseHome,
+  fileHomeTapped,
+  kindOf,
+  placeOn,
+  toSortOf,
+  withToSort,
+} from './file-home';
 
 const home = (propertyId: string): CustomerHome => ({
   propertyId,
@@ -94,5 +102,17 @@ describe('which home a WhatsApp file is for', () => {
       propertyId: A.propertyId,
       category: 'other',
     });
+  });
+
+  it('names the photos and papers filed, not the voice notes; only those answer a request', () => {
+    const photo = { id: 'p', contentType: 'image/jpeg' };
+    const voice = { id: 'v', contentType: 'audio/ogg' };
+    const pdf = { id: 'd', contentType: 'application/pdf' };
+    expect(kindOf([voice, photo])).toBe('photo');
+    expect(kindOf([photo, photo, voice])).toBe('photo (2)');
+    expect(kindOf([photo, pdf])).toBe('paper (2)');
+    expect(kindOf([voice])).toBe('voice note');
+    expect(answersRequests(voice.contentType)).toBe(false);
+    expect(answersRequests(pdf.contentType)).toBe(true);
   });
 });
