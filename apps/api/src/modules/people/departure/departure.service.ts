@@ -89,8 +89,10 @@ export class DepartureService {
       await assertKeepsASuperAdmin(tx, id, undefined, 'inactive');
       const work = await openWork(tx, id);
       const now = new Date();
-      await handOver(tx, actor.userId, leaver, target, work);
-      if (input.tellCustomers) await tellCustomers(tx, id, target, work);
+      const reseller = (await kindsOf(tx, id)).includes('reseller');
+      await handOver(tx, actor.userId, leaver, target, work, reseller);
+      if (input.tellCustomers)
+        await tellCustomers(tx, { leaverId: id, targetId: target.id, on: todayIn() }, target, work);
       await wrapUp(tx, id, now);
       await tx
         .update(users)
@@ -113,6 +115,8 @@ export class DepartureService {
       if (!user) throw notFound('That person');
       if (user.status !== 'inactive')
         throw conflict('This person is still on the team.', 'not_removed');
+      // They sign in and get the invite on their mobile number.
+      if (!user.phoneE164) throw conflict('Add their mobile number first.', 'phone_needed');
       await tx
         .update(users)
         .set({
@@ -123,10 +127,8 @@ export class DepartureService {
           updatedAt: new Date(),
         })
         .where(eq(users.id, id));
-      if (user.phoneE164) {
-        const roleKinds = (await roleKindsByUser(tx, [id])).get(id) ?? [];
-        await queueInvite(tx, this.env, { ...user, phoneE164: user.phoneE164, roleKinds });
-      }
+      const roleKinds = (await roleKindsByUser(tx, [id])).get(id) ?? [];
+      await queueInvite(tx, this.env, { ...user, phoneE164: user.phoneE164, roleKinds });
       await recordAudit(tx, actor.userId, 'person.rejoined', 'user', id);
     });
     const person = (await readPeople(this.db, this.env)).find((entry) => entry.id === id);

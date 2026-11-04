@@ -1,4 +1,4 @@
-import type { CommissionEntry, QuotationDetail } from '@oneohm/api-contracts';
+import type { CommissionEntry, Person, QuotationDetail } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { seedWrapUp, WRAPPED_UP, wrapUpState } from '../support/departure';
@@ -81,11 +81,23 @@ describe('removal guards', () => {
     expect(still?.status).toBe('active');
   });
 
-  it('PATCH status inactive still works and wraps up', async () => {
+  it('PATCH status inactive still works, wraps up and stores left_on', async () => {
     const leaver = await person('Switched Off (guard test)');
     await seedWrapUp(leaver, TAG);
-    await admin.patch(`/people/${leaver.id}`, { status: 'inactive' });
+    const off = await admin.patch<Person>(`/people/${leaver.id}`, { status: 'inactive' });
     expect(await wrapUpState(leaver, TAG)).toEqual(WRAPPED_UP);
+    expect(off.leftOn).toBe(today());
+    // Switching back on is Add back to team, which clears the password and re-invites.
+    const back = await admin.raw<{ code: string; message: string }>(
+      'PATCH',
+      `/people/${leaver.id}`,
+      { status: 'active' },
+    );
+    expect([back.status, back.body.code, back.body.message]).toEqual([
+      409,
+      'use_rejoin',
+      'Use Add back to team.',
+    ]);
   });
 
   it('a lead brought in by a removed reseller still makes a pending commission when it wins', async () => {
@@ -103,6 +115,13 @@ describe('removal guards', () => {
       const lead = await newCustomer(seller, { name });
       return createQuotation(seller, lead, { targetWp: 2000 });
     };
+    // A lead the reseller owns but that never named them as its reseller.
+    const ownedLead = await newCustomer(seller, { name: 'Owned Only (removed reseller test)' });
+    const owned = await createQuotation(seller, ownedLead, { targetWp: 2000 });
+    await rows('UPDATE leads SET reseller_user_id = NULL, owner_user_id = $2 WHERE id = $1', [
+      ownedLead.leadId,
+      partner.id,
+    ]);
     const win = async (quote: QuotationDetail) => {
       await admin.post(`/quotations/${quote.id}/send`);
       await admin.post(`/quotations/${quote.id}/accept`);
@@ -129,8 +148,16 @@ describe('removal guards', () => {
     expect(rule?.active).toBe(true);
 
     const project = await win(later);
+    // The owned lead went to the cover with the reseller's credit, so its win still earns.
+    const [moved] = await rows<{ owner_user_id: string; reseller_user_id: string }>(
+      'SELECT owner_user_id, reseller_user_id FROM leads WHERE id = $1',
+      [ownedLead.leadId],
+    );
+    expect(moved).toEqual({ owner_user_id: cover.id, reseller_user_id: partner.id });
+    const ownedProject = await win(owned);
     const after = await entries();
     expect(after.find((entry) => entry.projectId === earlier.id)?.status).toBe('approved');
     expect(after.find((entry) => entry.projectId === project.id)?.status).toBe('pending');
+    expect(after.find((entry) => entry.projectId === ownedProject.id)?.status).toBe('pending');
   });
 });

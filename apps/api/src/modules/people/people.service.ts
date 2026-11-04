@@ -2,10 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
 import { roleCapabilities, roles, sessions, userRoles, users } from '@oneohm/database';
 import type { Capability } from '@oneohm/domain';
+import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { forbidden, invalid, notFound } from '../../common/http/errors';
+import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { wrapUp } from './departure/departure-wrapup';
@@ -81,11 +82,19 @@ export class PeopleService {
     patch: PersonPatch & WorkPatch & { reportsToUserId?: string | null | undefined },
   ): Promise<Person> {
     const [existing] = await this.db
-      .select({ id: users.id, email: users.email, phone: users.phoneE164 })
+      .select({
+        id: users.id,
+        email: users.email,
+        phone: users.phoneE164,
+        status: users.status,
+      })
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
     if (!existing) throw notFound('That person');
+    // Coming back clears the password and sends a fresh invite: that is rejoin, not a switch.
+    if (patch.status === 'active' && existing.status === 'inactive')
+      throw conflict('Use Add back to team.', 'use_rejoin');
     const email = patch.email === undefined ? existing.email : patch.email;
     const phone = patch.phone === undefined ? existing.phone : patch.phone;
     if (!email && !phone) {
@@ -107,7 +116,8 @@ export class PeopleService {
       await this.assertCanGrant(actor, changed);
     }
     await assertUnique(this.db, patch, id);
-    const fields = personFields(patch);
+    const leaving = patch.status === 'inactive' && existing.status === 'active';
+    const fields = { ...personFields(patch), ...(leaving ? { leftOn: todayIn() } : {}) };
     await this.db.transaction(async (tx) => {
       if (patch.roleIds || patch.status === 'inactive')
         await assertKeepsASuperAdmin(tx, id, patch.roleIds, patch.status);

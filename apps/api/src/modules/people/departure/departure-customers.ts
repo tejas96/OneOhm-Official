@@ -6,8 +6,9 @@ import {
   properties,
   serviceRequests,
   type Transaction,
+  waConversations,
 } from '@oneohm/database';
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { queueWhatsApp } from '../../../common/outbox';
 import { formatPhone } from '../../reports/quotation-document';
 import { firstNameOf } from '../person-invite';
@@ -55,10 +56,18 @@ async function recipientsOf(tx: Transaction, work: OpenWork): Promise<Recipient[
   }
   if (work.leads.length > 0) {
     // A lead still in `new` has not been contacted yet, so does not know anyone to be told about.
+    // A lead has no customer record to carry STOP: the WhatsApp chat's own mark counts.
     const rows = await tx
       .select({ phone: leads.phoneE164, name: leads.name })
       .from(leads)
-      .where(and(inArray(leads.id, [...work.leads]), ne(leads.stage, 'new')))
+      .leftJoin(waConversations, eq(waConversations.phone, leads.phoneE164))
+      .where(
+        and(
+          inArray(leads.id, [...work.leads]),
+          ne(leads.stage, 'new'),
+          isNull(waConversations.optedOutAt),
+        ),
+      )
       .orderBy(asc(leads.createdAt), asc(leads.id));
     for (const row of rows) found.push({ ...row, subject: 'your solar enquiry' });
   }
@@ -73,7 +82,7 @@ async function recipientsOf(tx: Transaction, work: OpenWork): Promise<Recipient[
  */
 export async function tellCustomers(
   tx: Transaction,
-  leaverId: string,
+  removal: { readonly leaverId: string; readonly targetId: string; readonly on: string },
   target: { readonly fullName: string; readonly phoneE164: string | null },
   work: OpenWork,
 ): Promise<number> {
@@ -90,7 +99,8 @@ export async function tellCustomers(
       person.phone,
       'contact_changed',
       { customer: person.name, staff, subject: person.subject, phone },
-      `contact_changed:${leaverId}:${person.phone}`,
+      // Per removal: someone added back and removed again tells their customers again.
+      `contact_changed:${removal.leaverId}:${removal.targetId}:${removal.on}:${person.phone}`,
     );
   }
   return seen.size;

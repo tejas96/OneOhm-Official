@@ -22,13 +22,27 @@ import {
 import { DEPARTURE_NOTICES, handoverNote, type Moved, movedTotal } from './departure-notices';
 import type { OpenWork } from './departure-work';
 
-/** Leads, tasks, requests, DISCOM steps, managed projects and chats get the new owner. */
-async function moveOwnership(tx: Transaction, from: string, to: string, work: OpenWork) {
+/**
+ * Leads, tasks, requests, DISCOM steps, managed projects and chats get the new owner. A
+ * reseller's owned leads are credited to them first, so a later win still earns them.
+ */
+async function moveOwnership(
+  tx: Transaction,
+  from: string,
+  to: string,
+  work: OpenWork,
+  reseller: boolean,
+) {
   const now = new Date();
   if (work.leads.length > 0)
     await tx
       .update(leads)
-      .set({ ownerUserId: to, version: sql`${leads.version} + 1`, updatedAt: now })
+      .set({
+        ownerUserId: to,
+        ...(reseller ? { resellerUserId: sql`coalesce(${leads.resellerUserId}, ${from})` } : {}),
+        version: sql`${leads.version} + 1`,
+        updatedAt: now,
+      })
       .where(inArray(leads.id, [...work.leads]));
   if (work.tasks.length > 0)
     await tx
@@ -160,8 +174,10 @@ export async function handOver(
   leaver: PersonRef,
   target: PersonRef,
   work: OpenWork,
+  /** The leaver holds a reseller role: their leads keep the reseller credit. */
+  reseller = false,
 ): Promise<number> {
-  await moveOwnership(tx, leaver.id, target.id, work);
+  await moveOwnership(tx, leaver.id, target.id, work, reseller);
   await swapTeams(tx, leaver.id, target.id, work.teamProjects);
   const reportMoves = await moveReports(tx, actorId, leaver.id, target.id, work.directReports);
   const reviews = await moveLeaveReviews(tx, target.id, work.leaveApprovals, reportMoves);

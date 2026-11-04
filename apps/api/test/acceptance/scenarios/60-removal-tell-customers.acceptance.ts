@@ -27,6 +27,7 @@ describe('removal tells customers', () => {
   let quietPhone = '';
   let stoppedPhone = '';
   let stoppedCustomerId = '';
+  let stoppedLeadPhone = '';
 
   const lead = async (stage: string, ownerId: string) => {
     const phone = uniquePhone();
@@ -70,6 +71,11 @@ describe('removal tells customers', () => {
     );
     contactedPhone = await lead('contacted', leaver.id);
     newLeadPhone = await lead('new', leaver.id);
+    // A lead who sent STOP: only the WhatsApp chat carries the mark (no customer record).
+    stoppedLeadPhone = await lead('contacted', leaver.id);
+    await rows('INSERT INTO wa_conversations (phone, opted_out_at) VALUES ($1, now())', [
+      stoppedLeadPhone,
+    ]);
 
     // A second leaver, removed with the box off.
     const quietSale = await sellProject(admin, {
@@ -91,6 +97,7 @@ describe('removal tells customers', () => {
 
   afterAll(async () => {
     await rows('DELETE FROM service_requests WHERE description = $1', [TAG]);
+    await rows('DELETE FROM wa_conversations WHERE phone = $1', [stoppedLeadPhone]);
     await retire(admin, people);
     await closeDb();
   });
@@ -102,7 +109,9 @@ describe('removal tells customers', () => {
     const sent = await contactMessages(projectCustomer.phone);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.channel).toBe('whatsapp');
-    expect(sent[0]?.dedupe_key).toBe(`contact_changed:${leaver.id}:${projectCustomer.phone}`);
+    expect(sent[0]?.dedupe_key).toBe(
+      `contact_changed:${leaver.id}:${target.id}:${today()}:${projectCustomer.phone}`,
+    );
     // The project came first, so it is the subject; the contact is the first name and number.
     expect(sent[0]?.payload).toMatchObject({
       staff: 'Target',
@@ -116,6 +125,23 @@ describe('removal tells customers', () => {
     expect(contacted).toHaveLength(1);
     expect(contacted[0]?.payload.subject).toBe('your solar enquiry');
     expect(await contactMessages(newLeadPhone)).toHaveLength(0);
+  });
+
+  it('skips a lead who sent STOP in the WhatsApp chat', async () => {
+    expect(await contactMessages(stoppedLeadPhone)).toHaveLength(0);
+  });
+
+  it('removed again after coming back, their customers are told again', async () => {
+    const second = await person('Second Target Sid (tell test)');
+    const [row] = await rows<{ id: string }>('SELECT id FROM leads WHERE phone_e164 = $1', [
+      contactedPhone,
+    ]);
+    await admin.post(`/people/${leaver.id}/rejoin`);
+    await rows('UPDATE leads SET owner_user_id = $2 WHERE id = $1', [row?.id, leaver.id]);
+    await remove(leaver, second, true);
+    const sent = await contactMessages(contactedPhone);
+    expect(sent).toHaveLength(2);
+    expect(sent[1]?.payload.staff).toBe('Second');
   });
 
   it('queues nothing when tellCustomers is false', async () => {

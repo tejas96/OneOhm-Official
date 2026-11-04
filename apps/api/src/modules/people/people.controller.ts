@@ -46,7 +46,8 @@ export class PeopleController {
         return { status: 200, body: await this.invites.releasePhone(actor, params.id) };
       },
       getDeparture: async ({ params }) => {
-        assertCan(actor, 'people.manage');
+        // Finance settles what a past member is still owed from the same summary.
+        assertCan(actor, 'people.manage', 'finance.record_payments');
         return { status: 200, body: await departureSummary(this.db, params.id) };
       },
       removePerson: async ({ params, body }) => {
