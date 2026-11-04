@@ -79,3 +79,37 @@ export const waMessages = pgTable(
     index('wa_messages_document_idx').on(table.documentId),
   ],
 );
+
+/**
+ * The WhatsApp form (Flow) each form key is published as. A form with no flow id is not
+ * available: the chat asks for the photo here instead. The owner pastes the id after publishing.
+ */
+export const waForms = pgTable('wa_forms', {
+  key: text('key').primaryKey(),
+  flowId: text('flow_id').notNull(),
+  updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: updatedAt(),
+});
+
+/**
+ * What one form we sent is for: the reply carries this token back. It names the chat and
+ * customer it was sent to and the thing asked (`payload`), and stops working at `expiresAt`.
+ */
+export const waFlowTokens = pgTable(
+  'wa_flow_tokens',
+  {
+    token: text('token').primaryKey(),
+    formKey: text('form_key').notNull(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => waConversations.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    payload: jsonb('payload').notNull().default({}),
+    expiresAt: instant('expires_at').notNull(),
+    usedAt: instant('used_at'),
+    createdAt: createdAt(),
+  },
+  (table) => [index('wa_flow_tokens_conversation_idx').on(table.conversationId)],
+);
