@@ -113,7 +113,8 @@ export class AssistantService {
     // A "Send a paper" form came back: its files answer the paper it was sent for.
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
     // A pin answers the location the team asked for (else "which home"); it is never answered otherwise.
-    if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location))) return;
+    if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location)))
+      return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     // A contact card or a sticker is never answered: their person is told
     // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
     if (incoming.kind === 'other')

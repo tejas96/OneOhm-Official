@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 25 templates. Each one:
+The app sends these 31 templates. Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -221,6 +221,97 @@ moves to someone else. The admin can turn it off in the removal sheet.
 > Hi {{1}}, {{2}} is now your OneOhm contact for {{3}}. You can call them on {{4}}, or reply here any time.
 
 Examples: Ramesh Patil · Priya Shah · your solar project PRJ-0087 · +91 98000 00000
+
+### 25. `location_request` — **New** (staff "Send to customer", outside 24 hours)
+Fields: customer, home
+
+The owner switches it on after Meta approves **all three languages**. Until then a location ask
+outside the 24-hour window only reaches the customer's app inbox.
+
+> en: Hello {{1}}, please share the location of your {{2}} home so our team finds it easily. Tap the button below to send it.
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} घराचे लोकेशन पाठवा, म्हणजे आमची टीम सहज पोहोचेल. पाठवण्यासाठी खालील बटण दाबा.
+
+> hi: नमस्ते {{1}}, कृपया अपने {{2}} घर की लोकेशन भेजें, ताकि हमारी टीम आसानी से पहुँच सके। भेजने के लिए नीचे का बटन दबाएँ।
+
+Examples: Ramesh Patil · Sangli
+
+**Buttons:** one quick reply. en `Send location`, mr `लोकेशन पाठवा`, hi `लोकेशन भेजें`. The app sends the payload
+`locreq:<ask id>`. A tap opens the chat window, so the app answers with WhatsApp's own
+"Send location" button message.
+
+### 26. `payment_due` — **New**
+Fields: customer, amount, home
+
+> en: Hello {{1}}, {{2}} is due for your {{3}} home. You can pay online, or tell us if you have already paid another way.
+
+> mr: नमस्कार {{1}}, तुमच्या {{3}} घरासाठी {{2}} बाकी आहे. तुम्ही ऑनलाइन भरू शकता, किंवा दुसऱ्या मार्गाने भरले असल्यास आम्हाला सांगा.
+
+> hi: नमस्ते {{1}}, आपके {{3}} घर के लिए {{2}} बाकी है। आप ऑनलाइन भर सकते हैं, या किसी और तरीके से भरा हो तो हमें बताएँ।
+
+Examples: Ramesh Patil · ₹45,000 · Sangli
+
+**Buttons:** two quick replies, in this order. 1: en `Pay now`, mr `आता भरा`, hi `अभी भरें` (payload
+`pay:<instalment id>`, answered with the pay-link message). 2: en `I paid another way`, mr
+`दुसऱ्या मार्गे भरले`, hi `दूसरे तरीके से भरा` (payload `paidother:<instalment id>`, opens the proof
+form). Used for the staff "Payment reminder" and "Ask for payment proof". The automatic
+`payment_reminder` (number 5) is unchanged.
+
+### 27. `callback_request` — **New**
+Fields: customer, staff
+
+> en: Hello {{1}}, when should {{2}} from OneOhm call you? Pick a time below.
+
+> mr: नमस्कार {{1}}, OneOhm चे {{2}} यांनी तुम्हाला कधी फोन करावा? खाली वेळ निवडा.
+
+> hi: नमस्ते {{1}}, OneOhm से {{2}} आपको कब फ़ोन करें? नीचे समय चुनें।
+
+Examples: Ramesh Patil · Priya
+
+**Buttons:** three quick replies, in this order: en `Morning` `Afternoon` `Evening`, mr `सकाळी` `दुपारी`
+`संध्याकाळी`, hi `सुबह` `दोपहर` `शाम`. Payloads `cb:<ask id>:morning|afternoon|evening`.
+
+### 28. `delay_notice` — **New**
+Fields: customer, stage, reason
+
+> en: Hello {{1}}, your {{2}} is waiting: {{3}}. We will update you here.
+
+> mr: नमस्कार {{1}}, तुमचे {{2}} थांबले आहे: {{3}}. पुढची माहिती आम्ही इथे कळवू.
+
+> hi: नमस्ते {{1}}, आपका {{2}} रुका हुआ है: {{3}}। आगे की जानकारी हम यहीं देंगे।
+
+Examples: Ramesh Patil · net meter · the electricity board has our papers
+
+Only a task whose template allows customer messages can send it (PRD rule: internal tasks never
+message customers).
+
+### 29. `crew_contact` — **New**
+Fields: customer, staff, work, phone
+
+> en: Hello {{1}}, {{2}} from OneOhm will come for your {{3}}. You can call them on {{4}}.
+
+> mr: नमस्कार {{1}}, OneOhm चे {{2}} तुमच्या {{3}} साठी येतील. तुम्ही त्यांना {{4}} वर फोन करू शकता.
+
+> hi: नमस्ते {{1}}, OneOhm से {{2}} आपके {{3}} के लिए आएँगे। आप उन्हें {{4}} पर फ़ोन कर सकते हैं।
+
+Examples: Ramesh Patil · Ravi · installation · +91 98765 43210
+
+### 30. `document_share` — **New**
+Fields: customer, document
+
+> en: Hello {{1}}, here is your {{2}} from OneOhm. Reply here if you have any questions.
+
+> mr: नमस्कार {{1}}, तुमचे {{2}} OneOhm कडून येथे आहे. काही प्रश्न असल्यास इथे कळवा.
+
+> hi: नमस्ते {{1}}, आपका {{2}} OneOhm की ओर से यहाँ है। कोई सवाल हो तो यहीं लिखें।
+
+Examples: Ramesh Patil · warranty card
+
+**Header:** **Document**. The app attaches the file (use any sample PDF when you submit). The
+header only goes out once "extras approved" is switched on for this template in Settings.
+
+All six start **switched off** (migration 0078). Switch each on in **Settings → WhatsApp messages** after
+Meta approves en, mr and hi, and set the Marathi and Hindi names, as for `paper_request`.
 
 ## Staff templates
 

@@ -5,6 +5,7 @@ import { cn, useToast } from '@oneohm/design-system/web';
 import { useMutation } from '@tanstack/react-query';
 import { Download, ExternalLink, FileText, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
+import { SendDocumentButton } from '@/features/send-to-customer/send-document-button';
 import { describeError } from '@/lib/api/api-error';
 import { documentThumbUrl, documentUrl, replaceDocument } from '@/lib/api/upload';
 import { previewable } from './document-thumb';
@@ -83,6 +84,7 @@ export function DocumentRow({
             <span className="sr-only">{t('download', { name: document.name })}</span>
           </a>
         )}
+        <SendDocumentButton document={document} />
         {canReplace && (
           <label
             className={cn(

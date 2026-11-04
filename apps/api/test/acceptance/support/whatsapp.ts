@@ -41,6 +41,9 @@ export interface InboundMessage {
     token: string;
     photos?: Record<string, unknown>[];
     pdfs?: Record<string, unknown>[];
+    /** The "I paid another way" form's typed amount and picked day. */
+    amount?: string | number;
+    date?: string;
   };
   /** A location pin, as Meta posts it. */
   location?: { latitude: number; longitude: number; name?: string; address?: string };
@@ -193,6 +196,8 @@ function formMessage(
           flow_token: form.token,
           ...(form.photos ? { photos: form.photos } : {}),
           ...(form.pdfs ? { pdfs: form.pdfs } : {}),
+          ...(form.amount !== undefined ? { amount: form.amount } : {}),
+          ...(form.date ? { date: form.date } : {}),
         }),
       },
     },

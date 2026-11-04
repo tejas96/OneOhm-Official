@@ -27,6 +27,7 @@
       "hi": "Hindi"
     },
     "send": "Send",
+    "sendDocument": "Send {name} to the customer on WhatsApp",
     "sent": "Sent to the customer",
     "sentTemplate": "Sent as an approved message, the chat is closed",
     "failed": "Could not send",

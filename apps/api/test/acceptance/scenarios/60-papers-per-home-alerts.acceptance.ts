@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { chatOf, replies, say } from '../support/onboarding';
+import { chatOf, lastReply, replies, say } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { sendInbound, sendStatus } from '../support/whatsapp';
 
@@ -96,14 +96,15 @@ describe('Papers per home: alerts that were missing', () => {
     expect((await chatMessages(admin, customer.phone)).map((row) => row.body)).toEqual([
       `📍 Location: Our roof (test) ${link}`,
     ]);
-    // Their person is told once, with what was sent; the chat is not handed over and the
-    // customer is told nothing ("not understood" or "passed to").
+    // Their person is told once, with what was sent; the chat is not handed over. The customer
+    // hears that the pin was saved on their one home (phase 3a), never "not understood".
     const told = await heardOf(id);
     expect(told).toHaveLength(1);
     expect(told[0]?.body).toContain(link);
     expect(await alertsOf('whatsapp_handover', chat.id)).toHaveLength(0);
     expect(chat.state).not.toBe('human');
-    expect(await replies(customer.phone)).toHaveLength(before);
+    expect(await replies(customer.phone)).toHaveLength(before + 1);
+    expect((await lastReply(customer.phone))?.body).toMatch(/Location saved for your/);
   });
 
   it('a contact card shows in the chat', async () => {

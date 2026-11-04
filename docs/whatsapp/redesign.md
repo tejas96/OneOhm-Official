@@ -566,3 +566,42 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
 - **Publishing:** `pnpm --filter @oneohm/api forms:publish` prints what it would do; with `--yes`
   it creates (a draft is reused; a published name gets a new dated flow), uploads, publishes and
   prints the flow id.
+
+
+## 22d. Phase 3a — "Send to customer", location, payment proof, documents
+
+- **One button, one sheet** (`apps/web/src/features/send-to-customer/`): the same
+  `SendToCustomerButton` on the customer header, project header, lead header, chat header and
+  task panel. The sheet lists the actions that fit the place (`sendActionsFor`, domain: papers only
+  on a project or lead; payments, crew and delay notices never on a lead; the delay notice only
+  from a task). Each offer shows the customer's exact message (words, buttons, language, and
+  "approved message" when the chat is closed); the same builder (`send-messages.ts`) makes the preview
+  and the send. Papers: the sheet opens the existing ask sheet (no second paper UI). A document row
+  has its own Send icon.
+- **Rights** (any one): papers and documents `documents.upload`/`documents.manage`; location and
+  call-back `customers.manage` (call-back also `leads.manage`); payment reminder, receipt and proof
+  `finance.record_payments` or `projects.manage`; crew and delay notice `projects.manage`.
+- **Asks are customer actions** (`location`, `pay`, `callback`): status, project/lead log, audit
+  (`customer_action.*`), reminders (a location is asked again at 2 days with its template; the asker is
+  told at 4 days for all three; payments are chased by the payment reminders already), and a cancel that
+  tells the customer in the chat (window open) and the app inbox. Documents, crew contact and delay
+  notices need no action: log line and audit only.
+- **Location (§6):** inside 24 h WhatsApp's own location request message; outside, the
+  `location_request` template whose button (`locreq:<id>`) opens the chat step that sends it. A pin on a
+  home with no point is saved (`location_source = whatsapp_pin`) and closes the ask; on a home that has
+  a point it waits as a suggestion (action `received`, "Check location" on the card with the distance:
+  Use this location / Ignore; the earlier point is kept to put back); with 2+ homes and no ask the
+  customer picks the home from a list. A pin that answers nothing in a chat a person holds is theirs.
+- **I paid another way (§10):** on the Payments answer ([Pay ₹X] [Receipts] [I paid another way]), on
+  the staff payment reminder and the proof ask. It opens the `paid_another_way` form (one screen:
+  amount, day, photo; `forms:publish` publishes it like the paper form); without a published form the chat
+  asks for the photo. The reply files a payment proof on the instalment's project, alerts finance
+  ("Record payment", with the amount and day), pauses the reminders 2 days, moves the `pay` action to "To
+  check" and thanks the customer. Recording the payment closes the action; the receipt goes as built.
+- **Call-back (§14):** Morning / Afternoon / Evening. A pick closes the action and sets the open lead's
+  next action (10:00, 14:00 or 17:30 business time; tomorrow if the slot has started); the chat's
+  person (project manager, else lead owner, else the desk) is told. A customer with no open lead has
+  no follow-up list, so that alert is the follow-up.
+- **Delay notice:** offered from a task that waits, only when the task's customer messages are on.
+- **Phase 2b gap:** an asked paper with no known home and 2+ homes asks "For which home?" first, then
+  opens that home's form (`form:h:` rows; the home rides in the token).

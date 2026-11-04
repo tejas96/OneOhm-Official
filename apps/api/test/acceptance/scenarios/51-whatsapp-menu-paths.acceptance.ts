@@ -81,13 +81,13 @@ describe('WhatsApp menu paths', () => {
     expect((await endsWithTaps(phone))?.body).toContain('switched on');
     await tap(phone, 'rewards');
     expect((await endsWithTaps(phone))?.body).toContain('not referred anyone');
-    // Redesign §10: [Pay ₹X] [Receipts] [Menu]; the Pay tap answers with the pay link.
+    // Redesign §10: [Pay ₹X] [Receipts] [I paid another way]; the Pay tap answers with the pay link.
     await tap(phone, 'payments');
     const money = await endsWithTaps(phone);
     expect(money?.body).toContain('🔴');
     const [pay, ...rest] = choices(money);
     expect(pay).toMatch(/^pay:/);
-    expect(rest).toEqual(['go:receipts', 'menu']);
+    expect(rest).toEqual(['go:receipts', expect.stringMatching(/^paidother:/)]);
     await tap(phone, pay ?? '');
     expect((await lastReply(phone))?.kind).toBe('cta_url');
   });
