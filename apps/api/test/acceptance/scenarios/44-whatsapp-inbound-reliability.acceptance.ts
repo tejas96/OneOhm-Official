@@ -120,7 +120,8 @@ describe('WhatsApp inbound reliability', () => {
       await undo();
     }
     await sendInbound(customer.phone, photo);
-    expect(await askAboutFiles(admin)).toBe(1);
+    // It backed off a little, so it is asked again a few minutes on.
+    expect(await askAboutFiles(admin, 300)).toBe(1);
     expect(await questions(customer.phone)).toHaveLength(1);
     const kept = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
       customer.customerId,
