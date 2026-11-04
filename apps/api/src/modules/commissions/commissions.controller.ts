@@ -5,6 +5,7 @@ import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import { CommissionEntriesService } from './commission-entries.service';
 import { CommissionRulesService } from './commission-rules.service';
+import { PayoutDetailsService } from './payout-details.service';
 import { ResellerPerformanceService } from './reseller-performance.service';
 import { ResellerPortalService } from './reseller-portal.service';
 
@@ -16,6 +17,7 @@ export class CommissionsController {
     private readonly entries: CommissionEntriesService,
     private readonly performance: ResellerPerformanceService,
     private readonly portal: ResellerPortalService,
+    private readonly payouts: PayoutDetailsService,
   ) {}
 
   @TsRestHandler(apiContract.commissions)
@@ -61,6 +63,14 @@ export class CommissionsController {
         assertCan(actor, 'finance.record_payments');
         return { status: 200, body: await this.entries.pay(actor, params.id, body) };
       },
+      payoutDetails: async ({ params }) => ({
+        status: 200,
+        body: await this.payouts.get(actor, params.id),
+      }),
+      savePayoutDetails: async ({ params, body }) => ({
+        status: 200,
+        body: await this.payouts.save(actor, params.id, body),
+      }),
       myEarnings: async () => {
         assertCan(actor, 'commission.view_own');
         return { status: 200, body: await this.portal.earnings(actor) };
