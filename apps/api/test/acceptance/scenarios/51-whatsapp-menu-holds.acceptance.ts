@@ -50,7 +50,7 @@ describe('WhatsApp menu paths in a held chat', () => {
     // F2: Menu on the prompt ends only the step; the chat stays the person's.
     await tap(phone, 'service');
     await tap(phone, 'menu');
-    expect((await lastReply(phone))?.kind).toBe('list');
+    expect(choices(await lastReply(phone))).toContain('go:more');
     expect((await chatOf(phone)).state).toBe('human');
 
     // F1: a step older than 30 minutes is over; the words go to the person, with an alert.
@@ -64,14 +64,14 @@ describe('WhatsApp menu paths in a held chat', () => {
     expect(await alerts(chat.id, 'whatsapp_message')).not.toHaveLength(0);
   });
 
-  it('a thanks after an answer gets a warm word and Menu, and no person (review F7)', async () => {
+  it('a thanks after an answer gets a short word, no buttons and no person (redesign §14)', async () => {
     const { customer } = await customerInChat(admin, 'Menu Thanks Customer (test)');
     const chat = await chatOf(customer.phone);
     await tap(customer.phone, 'warranty');
     await say(customer.phone, 'Thank you');
-    const reply = await endsWithTaps(customer.phone);
+    const reply = await lastReply(customer.phone);
     expect(reply?.body).toBe('You’re welcome 🙏');
-    expect(choices(reply)).toEqual(['menu']);
+    expect(reply?.kind).toBe('text');
     expect((await chatOf(customer.phone)).state).toBe('menu');
     expect(await alerts(chat.id, 'whatsapp_handover')).toHaveLength(0);
   });

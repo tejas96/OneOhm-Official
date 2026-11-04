@@ -184,7 +184,7 @@ describe('The instant estimate after onboarding', () => {
     expect(chat.state).toBe('human');
     expect(await handOverCount(chat.id)).toBe(1);
     const reply = await lastReply(phone);
-    expect(reply?.body).toContain('will reply to you here');
+    expect(reply?.body).toContain('will reply here');
     expect(reply?.body).not.toContain('did not get that');
   });
 

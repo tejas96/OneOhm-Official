@@ -158,12 +158,11 @@ describe('Who the onboarding bot talks to', () => {
   });
   afterAll(() => restore());
 
-  it('a customer saying "hi" gets the customer menu', async () => {
+  it('a customer saying "hi" gets the customer Home', async () => {
     const customer = await newCustomer(admin, { name: 'Onboard Menu Customer (test)' });
     await say(customer.phone, 'hi');
     const menu = await lastReply(customer.phone);
-    expect(menu?.kind).toBe('list');
-    expect(choices(menu)).toContain('progress');
+    expect(choices(menu)).toContain('go:more');
     expect((await chatOf(customer.phone)).ob).toBeNull();
   });
 

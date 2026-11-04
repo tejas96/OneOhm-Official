@@ -104,7 +104,7 @@ describe('The journey side paths in the chat', () => {
     const owner = (await J.leadState(leadId)).owner_user_id;
     expect((await handOverAlerts(chat.id)).map((alert) => alert.user_id)).toContain(owner);
     const reply = await lastReply(phone);
-    expect(reply?.body).toContain('will reply to you here');
+    expect(reply?.body).toContain('will reply here');
     expect(reply?.body).not.toContain('did not get that');
   });
 

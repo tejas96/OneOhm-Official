@@ -117,7 +117,17 @@ export async function expectPaidNews(receiptFile: string, paymentId: string, pro
   // View receipt sends this receipt's PDF (live QA round 2).
   expect(next?.payload.buttons.map((button) => button.id)).toEqual([
     `paper:receipt:${paymentId}`,
-    'progress',
+    'go:update',
     'menu',
   ]);
+}
+
+/** The [Pay ₹X] button's id on the newest buttons message to this phone (redesign §10). */
+export async function payTapOf(phone: string): Promise<string> {
+  const sent = await rows<{ payload: { buttons: { id: string }[] } }>(
+    `SELECT payload FROM outbox WHERE recipient = $1 AND template = 'session:buttons'
+      ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [phone],
+  );
+  return sent[0]?.payload.buttons.find((button) => button.id.startsWith('pay:'))?.id ?? '';
 }

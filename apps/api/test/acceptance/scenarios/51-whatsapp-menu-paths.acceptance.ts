@@ -6,9 +6,10 @@ import { milestoneOf } from '../support/money';
 import { chatOf, choices, lastReply, replies, say, tap } from '../support/onboarding';
 import { today, uniquePhone } from '../support/sales';
 
-// The WhatsApp menu audit (3 Nov 2026), end to end over the webhook: every menu path the
-// customer taps ends with taps; a tap is never taken as the words a step waits for; typed
-// words the bot does not know reach a person. Held chats: 51-whatsapp-menu-holds.
+// The WhatsApp menu audit (3 Nov 2026), end to end over the webhook: every path the
+// customer taps ends with taps; a tap is never taken as the words a step waits for. Taps
+// on the old menu ids still work (redesign decision 8). Held chats: 51-whatsapp-menu-holds;
+// Home, small talk and unknown words: 61-whatsapp-home.
 describe('WhatsApp menu paths', () => {
   let admin: Session;
 
@@ -27,7 +28,7 @@ describe('WhatsApp menu paths', () => {
 
     // H1: a menu row tapped while the bot waits is that row, never the complaint.
     await tap(phone, 'requests');
-    expect((await endsWithTaps(phone))?.body).toBe('You have no service requests.');
+    expect((await endsWithTaps(phone))?.body).toBe('You have not told us about any problem.');
     expect(await requestsOf(customerId)).toHaveLength(0);
     expect((await chatOf(phone)).state).toBe('menu');
 
@@ -36,11 +37,11 @@ describe('WhatsApp menu paths', () => {
     // Too short: asked again, with Menu to leave.
     expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
     await say(phone, 'Inverter shows an error since morning (test)');
-    expect(choices(await endsWithTaps(phone))).toEqual(['requests', 'menu']);
+    expect(choices(await endsWithTaps(phone))).toEqual(['go:problems', 'menu']);
     const [raised] = await requestsOf(customerId);
     expect(raised?.project_id).toBe(sale.project.id);
 
-    // My requests lists it, and ends with taps.
+    // My problems lists it, and ends with taps.
     await tap(phone, 'requests');
     expect((await endsWithTaps(phone))?.body).toContain('Inverter shows an error');
   });
@@ -54,10 +55,8 @@ describe('WhatsApp menu paths', () => {
     const list = await endsWithTaps(phone);
     expect(list?.kind).toBe('list');
     expect(list?.body).toBe('Which home is the problem at?');
-    expect(choices(list).sort()).toEqual(
-      [`home:${pune}`, `home:${sale.project.id}`, 'menu'].sort(),
-    );
-    expect(list?.rows?.map((row) => row.title)).toEqual(['Pune', 'Sangli', 'Back to menu']);
+    expect(choices(list).sort()).toEqual([`home:${pune}`, `home:${sale.project.id}`].sort());
+    expect(list?.rows?.map((row) => row.title)).toEqual(['Pune', 'Sangli']);
 
     await tap(phone, `home:${pune}`);
     expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
@@ -82,11 +81,15 @@ describe('WhatsApp menu paths', () => {
     expect((await endsWithTaps(phone))?.body).toContain('switched on');
     await tap(phone, 'rewards');
     expect((await endsWithTaps(phone))?.body).toContain('not referred anyone');
-    // M3: after the Pay now link buttons, Menu · Talk to us.
+    // Redesign §10: [Pay ₹X] [Receipts] [Menu]; the Pay tap answers with the pay link.
     await tap(phone, 'payments');
-    const sent = await replies(phone);
-    expect(sent.some((reply) => reply.kind === 'cta_url')).toBe(true);
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu', 'human']);
+    const money = await endsWithTaps(phone);
+    expect(money?.body).toContain('🔴');
+    const [pay, ...rest] = choices(money);
+    expect(pay).toMatch(/^pay:/);
+    expect(rest).toEqual(['go:receipts', 'menu']);
+    await tap(phone, pay ?? '');
+    expect((await lastReply(phone))?.kind).toBe('cta_url');
   });
 
   it('Refer a friend: a tap while waiting is that tap; the friend is saved and shown', async () => {
@@ -109,7 +112,7 @@ describe('WhatsApp menu paths', () => {
     expect((await endsWithTaps(phone))?.body).toContain('Suresh');
   });
 
-  it('Talk to a person, and a typed question, reach a person with a Menu tap', async () => {
+  it('Talk to a person reaches a person with a Menu tap; unknown words get choices first', async () => {
     const { customer } = await customerInChat(admin, 'Menu Talk Customer (test)');
     const phone = customer.phone;
     const chat = await chatOf(phone);
@@ -119,16 +122,21 @@ describe('WhatsApp menu paths', () => {
     expect((await chatOf(phone)).state).toBe('human');
     await tap(phone, 'menu');
 
-    // M11: words the bot does not know go to a person, warmly, never "Sorry".
-    await say(phone, 'When will the technician come to clean the panels? (test)');
+    // Redesign §14: words the bot does not know get choices; the second in a row, a person.
+    await say(phone, 'Is the price the same as last week? (test)');
+    const sorry = await endsWithTaps(phone);
+    expect(sorry?.body).toBe('Sorry, we didn’t get that. Pick one below.');
+    expect(choices(sorry)).toEqual(['go:talk', 'go:update', 'go:more']);
+    expect((await chatOf(phone)).state).toBe('menu');
+    await say(phone, 'Can you also fit a water heater? (test)');
     const reply = await endsWithTaps(phone);
-    expect(reply?.body).toContain('will reply to you here');
+    expect(reply?.body).toContain('will reply here');
     expect(choices(reply)).toEqual(['menu']);
     expect((await chatOf(phone)).state).toBe('human');
     expect((await alerts(chat.id, 'whatsapp_handover')).length).toBeGreaterThan(0);
   });
 
-  it('a cancelled home offers no Pay now; an old receipt is still sent by View receipt', async () => {
+  it('a cancelled home offers no Pay; an old receipt is still sent by View receipt', async () => {
     const sale = await customerInChat(admin, 'Menu Receipt Customer (test)');
     const { phone } = sale.customer;
     const advance = milestoneOf(sale.project, 'quotation_accepted');
@@ -148,15 +156,16 @@ describe('WhatsApp menu paths', () => {
     await tap(phone, `paper:receipt:${oldest?.id}`);
     const file = (await replies(phone)).filter((reply) => reply.kind === 'document').at(-1);
     expect(file?.caption).toContain(oldest?.receipt_number);
-    await endsWithTaps(phone);
+    // Redesign §11: the file with its caption, and no "What next?" after it.
+    expect((await lastReply(phone))?.kind).toBe('document');
 
     // M7: with only a cancelled home there is no project to pay or track.
     await rows(`UPDATE projects SET status = 'cancelled' WHERE id = $1`, [sale.project.id]);
     await tap(phone, 'progress');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu', 'human']);
+    expect(choices(await endsWithTaps(phone))).toEqual(['go:talk', 'menu']);
     await tap(phone, 'payments');
     expect((await lastReply(phone))?.kind).not.toBe('cta_url');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu', 'human']);
+    expect(choices(await endsWithTaps(phone))).toEqual(['go:talk', 'menu']);
   });
 
   it('typed words from a lead the team made reach its person (menu audit M13)', async () => {
@@ -169,7 +178,7 @@ describe('WhatsApp menu paths', () => {
     });
     await say(phone, 'Is the price the same as last week? (test)');
     const reply = await endsWithTaps(phone);
-    expect(reply?.body).toContain('will reply to you here');
+    expect(reply?.body).toContain('will reply here');
     expect(reply?.body).not.toContain('not linked');
     expect((await chatOf(phone)).state).toBe('human');
 

@@ -6,7 +6,7 @@ import { API, Session } from '../support/http';
 import * as J from '../support/journey';
 import { JOURNEY, onboardFromAd } from '../support/journey-onboard';
 import { Transcript } from '../support/journey-transcript';
-import { expectPaidNews, milestoneOf, owed } from '../support/money';
+import { expectPaidNews, milestoneOf, owed, payTapOf } from '../support/money';
 import { chatOf, choices, lastReply, promisedCall, replies } from '../support/onboarding';
 import { quoteInput, uniquePhone } from '../support/sales';
 
@@ -146,9 +146,9 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const go = await fetch(`${API}/pay/due/${payToken}?go=1`, { redirect: 'manual' });
     sandboxUrl = go.status === 302 ? (go.headers.get('location') ?? '') : '';
     expect(sandboxUrl).toContain('/v1/pay/sandbox/');
-    await t.send({ text: 'payments' });
-    const [button] = await J.outboxOf(phone, 'session:cta_url');
-    expect(button?.payload.url).toContain('/v1/pay/due/');
+    await t.send({ text: 'payments' }); // Redesign §10: [Pay ₹X] answers with the pay link.
+    await t.tap(await payTapOf(phone));
+    expect((await J.outboxOf(phone, 'session:cta_url'))[0]?.payload.url).toContain('/pay/due/');
     t.ourSide(
       `Project ${project.code} made from the accepted quote; advance "${advance().label}" (₹${owed(advance()) / 100}) due; payment_link queued with a Pay now token that opens the Razorpay sandbox page; the Payments menu answers with a Pay now button.`,
     );

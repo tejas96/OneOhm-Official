@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { chatOf, replies, say, tap } from '../support/onboarding';
+import { chatOf, choices, replies, say, tap } from '../support/onboarding';
 import { addDays, newCustomer, today } from '../support/sales';
 import { ist, runSalesChecks } from '../support/sales-checks';
 
@@ -10,7 +10,10 @@ import { ist, runSalesChecks } from '../support/sales-checks';
 // and files do. A chat nobody on the team has written in for 4 working hours goes back to
 // the assistant by itself, with a line in the chat saying so.
 const HANDED_BACK = 'Handed back to the assistant (no reply for 4 working hours)';
-const TOMORROW = addDays(today(), 1);
+/** The next working day: Sunday is closed (redesign §14), so a Saturday run skips it. */
+const nextWorkingDay = (day: string) =>
+  new Date(`${day}T12:00:00Z`).getUTCDay() === 0 ? addDays(day, 1) : day;
+const TOMORROW = nextWorkingDay(addDays(today(), 1));
 
 /** "Message from the customer" alerts raised about this chat. */
 const messageAlerts = (chatId: string) =>
@@ -73,7 +76,7 @@ describe('Chat hand-back and alert noise', () => {
   it('a hello typed while a person has the chat is for that person (menu audit M5)', async () => {
     const { phone, chatId } = await chatWithPerson('Held Hello Customer (test)');
     const menus = async () =>
-      (await replies(phone)).filter((reply) => reply.kind === 'list').length;
+      (await replies(phone)).filter((reply) => choices(reply).includes('go:more')).length;
     const before = await menus();
     await say(phone, 'नमस्कार');
     expect(await menus()).toBe(before);
