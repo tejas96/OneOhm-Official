@@ -19,6 +19,7 @@ import { ReportStatusService } from './report-status.service';
 import { ReportSubmissionsService } from './report-submissions.service';
 import { ReportSweepService } from './report-sweep.service';
 import { ReportsController } from './reports.controller';
+import { StalePaperAsksService } from './stale-paper-asks.service';
 import { SurveyReportService } from './survey-report.service';
 
 /** Report readiness, the statutory report PDFs and the quotation PDF. */
@@ -39,6 +40,7 @@ import { SurveyReportService } from './survey-report.service';
     PdfRendererService,
     ReportArchiveService,
     DocumentChecklistService,
+    StalePaperAsksService,
     ReportSettingsService,
     DocumentRequirementsService,
     SurveyReportService,
@@ -57,6 +59,7 @@ import { SurveyReportService } from './survey-report.service';
     ReportArchiveService,
     ReportSettingsService,
     SurveyReportService,
+    StalePaperAsksService,
   ],
 })
 export class ReportsModule {}

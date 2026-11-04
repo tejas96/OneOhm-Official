@@ -24,6 +24,8 @@ export const checklistItemSchema = z.object({
   askCategory: z.enum(CUSTOMER_REQUESTABLE_CATEGORIES).nullable(),
   /** An open request to the customer already covers this paper. */
   requested: z.boolean(),
+  /** A paper is on file but older than the item's maximum age, so it shows as missing. */
+  tooOld: z.boolean().default(false),
 });
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 

@@ -4,11 +4,12 @@ import { customerActions, customers, discoms, documents, projects } from '@oneoh
 import {
   countsForSite,
   customerCategoryFor,
+  isCurrentPaper,
   requirementsFor,
   type SiteScope,
   sameAsk,
 } from '@oneohm/domain';
-import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { customerHomes } from '../customer-portal/customer-homes';
@@ -55,6 +56,7 @@ export class DocumentChecklistService {
         propertyId: documents.propertyId,
         projectId: documents.projectId,
         checkedAt: documents.checkedAt,
+        createdAt: documents.createdAt,
         serviceRequestId: documents.serviceRequestId,
       })
       .from(documents)
@@ -68,6 +70,7 @@ export class DocumentChecklistService {
           isNull(documents.removedAt),
         ),
       );
+    const now = new Date();
     const files = filed.filter((file) => countsForSite(file, site));
     const asked = await this.requests(project.project.customerId, site);
     const needed = requirementsFor(await loadRequirements(this.db), {
@@ -75,13 +78,16 @@ export class DocumentChecklistService {
       discomCode: project.discomCode,
     });
     const papers: ChecklistItem[] = needed.map((requirement) => {
-      const ids = files
-        .filter(
-          (file) =>
-            (requirement.categories as readonly string[]).includes(file.category) &&
-            !file.reportKey,
-        )
-        .map((file) => file.id);
+      const onFile = files.filter(
+        (file) =>
+          (requirement.categories as readonly string[]).includes(file.category) && !file.reportKey,
+      );
+      // A paper older than the item's maximum age no longer counts (redesign 5.4).
+      const current = onFile.filter((file) =>
+        isCurrentPaper(file.createdAt, requirement.maxAgeDays, now),
+      );
+      const ids = current.map((file) => file.id);
+      const tooOld = onFile.length > 0 && current.length === 0;
       const askCategory = ids.length > 0 ? null : customerCategoryFor(requirement);
       // Only a paper the customer holds waits for the team's look; a photo on a problem or a
       // site photo from a chat is not the customer's answer to this row.
@@ -95,11 +101,12 @@ export class DocumentChecklistService {
         why: requirement.why,
         kind: 'paper',
         status: ids.length > 0 ? 'present' : 'missing',
-        documentIds: ids,
+        documentIds: tooOld ? onFile.map((file) => file.id) : ids,
         check: ids.length === 0 ? 'missing' : unchecked.length > 0 ? 'to_check' : 'checked',
         actionId: unchecked.length > 0 ? (waiting?.id ?? null) : null,
         missing: [],
         askCategory,
+        tooOld,
         requested:
           askCategory !== null &&
           // Any open ask of this kind on this home (or for this person) covers the row.
@@ -144,6 +151,7 @@ export class DocumentChecklistService {
           actionId: null,
           askCategory: null,
           requested: false,
+          tooOld: false,
         };
       });
     const items = [...papers, ...reports];
@@ -166,9 +174,11 @@ export class DocumentChecklistService {
         status: customerActions.status,
         documentId: customerActions.documentId,
         projectId: customerActions.projectId,
-        propertyId: customerActions.propertyId,
+        // The project's home first, else the one the ask was made on (a lead's site).
+        propertyId: sql<string | null>`coalesce(${projects.propertyId}, ${customerActions.propertyId})`,
       })
       .from(customerActions)
+      .leftJoin(projects, eq(projects.id, customerActions.projectId))
       .where(
         and(
           eq(customerActions.customerId, customerId),

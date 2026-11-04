@@ -38,6 +38,7 @@
       "warranty": "Warranty",
       "product_manual": "Product manuals",
       "statutory_report": "Statutory report",
+      "payment_proof": "Payment proof",
       "other": "Other",
       "customer_signature": "Customer signature",
       "voice_note": "Voice note"
@@ -240,6 +241,7 @@
         "to_check": "Received – to check",
         "checked": "Checked"
       },
+      "tooOld": "Too old — ask again",
       "ask": "Ask the customer",
       "asked": "Asked",
       "looksGood": "Looks good",

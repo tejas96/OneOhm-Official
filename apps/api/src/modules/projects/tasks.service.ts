@@ -11,6 +11,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { ReportArchiveService } from '../reports/report-archive.service';
+import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
@@ -20,6 +21,11 @@ import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
 import { closeOpenWait, nextWaitStart } from './task-waits';
+
+/** The net-metering application of any DISCOM (MSEDCL's, or another's `<code>_application`). */
+const isDiscomApplication = (templateKey: string) =>
+  templateKey === 'discom_application' ||
+  (templateKey.endsWith('_application') && templateKey !== 'subsidy_application');
 
 const WAITING_ON: Readonly<Record<WaitingParty, string>> = {
   discom: 'DISCOM',
@@ -36,6 +42,7 @@ export class TasksService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly budget: BudgetCheckService,
     private readonly archive: ReportArchiveService,
+    private readonly stale: StalePaperAsksService,
   ) {}
 
   /**
@@ -87,8 +94,24 @@ export class TasksService {
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
     // Only the first start counts; resuming after a wait does not message again.
-    if (!task.startedAt) await tellCustomerAbout(this.db, task, 'started');
+    if (!task.startedAt) {
+      await tellCustomerAbout(this.db, task, 'started');
+      await this.askForStalePapers(task);
+    }
     return this.present(id);
+  }
+
+  /**
+   * The DISCOM application needs a current electricity bill: any paper on that home older
+   * than its checklist item allows is asked for again (redesign 5.4). Never undoes the start.
+   */
+  private async askForStalePapers(task: { projectId: string; templateKey: string }) {
+    if (!isDiscomApplication(task.templateKey)) return;
+    try {
+      await this.stale.askForStale(task.projectId);
+    } catch (error) {
+      this.log.error(`Stale papers not asked for ${task.projectId}: ${String(error)}`);
+    }
   }
 
   async markWaiting(

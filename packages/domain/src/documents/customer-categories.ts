@@ -19,6 +19,7 @@ export const CUSTOMER_DOCUMENT_CATEGORIES = [
   'warranty',
   'product_manual',
   'statutory_report',
+  'payment_proof',
   'other',
 ] as const satisfies readonly DocumentCategory[];
 

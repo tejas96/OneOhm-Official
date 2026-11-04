@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DocumentRecord } from '@oneohm/api-contracts';
 import { customerActions, customers, documents, type Transaction } from '@oneohm/database';
-import { nextActionStatus } from '@oneohm/domain';
+import { isCustomerRequestable, nextActionStatus } from '@oneohm/domain';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -11,7 +11,7 @@ import { logAction } from './customer-action-log';
 import { canUploadDocuments } from './document-access';
 import { presentDocuments } from './document-read';
 import { reaskCount } from './document-request-home';
-import { tellChecked } from './document-request-messages';
+import { languageOfPhone, tellChecked } from './document-request-messages';
 import { paperKindWords } from './paper-kind-words';
 
 /**
@@ -88,8 +88,9 @@ export class DocumentCheckService {
       .from(documents)
       .innerJoin(customers, eq(customers.id, documents.customerId))
       .where(eq(documents.id, id));
-    if (!paper) return;
-    const title = await paperKindWords(tx, paper.phone, paper.category);
+    // Only a paper the customer holds is told about; our own files and strays are not.
+    if (!paper || paper.category === 'other' || !isCustomerRequestable(paper.category)) return;
+    const title = paperKindWords(await languageOfPhone(tx, paper.phone), paper.category);
     await tellChecked(tx, { id, title, phone: paper.phone }, 0, actor.userId);
   }
 }

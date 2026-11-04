@@ -10,8 +10,13 @@ import {
 } from '@oneohm/database';
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
+import { chatLanguage } from '../whatsapp/assistant/chat-language';
 import { CHAT_WORDS } from '../whatsapp/assistant/chat-words';
-import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
+import {
+  type AssistantLanguage,
+  assistantLanguage,
+  inLanguage,
+} from '../whatsapp/assistant/language';
 import type { ChatReply } from '../whatsapp/chat-reply';
 import { queueReply } from '../whatsapp/chat-store';
 
@@ -44,13 +49,44 @@ async function openChat(tx: DatabaseExecutor, phone: string) {
       phone: waConversations.phone,
       at: waConversations.lastInboundAt,
       optedOutAt: waConversations.optedOutAt,
-      language: customers.preferredLanguage,
+      customerId: waConversations.customerId,
+      chatLanguage: waConversations.language,
     })
     .from(waConversations)
-    .leftJoin(customers, eq(customers.phoneE164, waConversations.phone))
     .where(eq(waConversations.phone, phone))
     .limit(1);
-  return !chat || chat.optedOutAt || !chatWindowOpen(chat.at) ? null : chat;
+  if (!chat || chat.optedOutAt || !chatWindowOpen(chat.at)) return null;
+  const language = await chatLanguage(tx, {
+    customerId: chat.customerId,
+    language: chat.chatLanguage,
+    phone,
+  });
+  return { id: chat.id, phone, language };
+}
+
+/**
+ * The language to write to this number in: the chat's own (the same helper the assistant
+ * uses), else the customer's saved one. Every word of one message follows it.
+ */
+export async function languageOfPhone(
+  tx: DatabaseExecutor,
+  phone: string,
+): Promise<AssistantLanguage> {
+  const [chat] = await tx
+    .select({
+      customerId: waConversations.customerId,
+      language: waConversations.language,
+    })
+    .from(waConversations)
+    .where(eq(waConversations.phone, phone))
+    .limit(1);
+  if (chat) return chatLanguage(tx, { ...chat, phone });
+  const [owner] = await tx
+    .select({ language: customers.preferredLanguage })
+    .from(customers)
+    .where(eq(customers.phoneE164, phone))
+    .limit(1);
+  return assistantLanguage(owner?.language);
 }
 
 /**
@@ -72,7 +108,7 @@ async function tellInChat(
 ) {
   const chat = await openChat(tx, asked.phone);
   if (!chat) return false;
-  const words = customerNotice(template, payload, key, chat.language ?? '');
+  const words = customerNotice(template, payload, key, `${chat.language}-IN`);
   if (!words) return false;
   const body = options.join === null ? words.title : `${words.title}${options.join}${words.body}`;
   const reply: ChatReply = options.tapPaper
@@ -82,10 +118,7 @@ async function tellInChat(
         buttons: [
           {
             id: `sendit:${options.tapPaper}`,
-            title: await inLanguage(
-              assistantLanguage(chat.language),
-              async () => CHAT_WORDS.buttons.sendItNow,
-            ),
+            title: await inLanguage(chat.language, async () => CHAT_WORDS.buttons.sendItNow),
           },
         ],
       }
@@ -171,4 +204,26 @@ export async function tellReceivedByTeam(
     { document: asked.title, home },
     roundKey(`document_received_by_team:${asked.id}`, reasks),
   );
+}
+
+/**
+ * The paper we hold is too old: "We need your latest electricity bill for {home} — the one
+ * we have is from {month}." In the app inbox and, while the chat is open, in the chat with
+ * [Send it now]; outside the window the plain ask template goes (the inbox has the reason).
+ */
+export async function tellStalePaper(
+  tx: DatabaseExecutor,
+  asked: Asked,
+  old: { readonly document: string; readonly month: string },
+): Promise<void> {
+  const key = `paper_stale:${asked.id}`;
+  const home = await homeNameOf(tx, asked.projectId, asked.propertyId ?? null);
+  const payload = { document: old.document, home, month: old.month };
+  await noticeCustomer(tx, asked.phone, 'paper_stale', payload, key);
+  const told = await tellInChat(tx, asked, 'paper_stale', payload, key, {
+    userId: null,
+    join: '. ',
+    tapPaper: asked.id,
+  });
+  if (!told) await askForPaper(tx, asked, key);
 }

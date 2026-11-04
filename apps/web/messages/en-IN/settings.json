@@ -955,6 +955,8 @@
       "eligibility": {
         "title": "Who qualifies",
         "description": "The kinds of project that earn a reward, and where friends send the code.",
+        "maxAge": "Newest paper may be this old (days)",
+        "maxAgeHint": "Leave empty for no limit. An older paper shows as missing, and the customer is asked for a new one before the DISCOM application.",
         "types": "Project types",
         "allTypes": "None ticked: every project type qualifies.",
         "someTypes": "Only the ticked project types earn a reward.",
@@ -1036,7 +1038,8 @@
         "noSubsidy": "no subsidy",
         "nameChange": "with a name change",
         "noNameChange": "no name change",
-        "fromCustomer": "from the customer"
+        "fromCustomer": "from the customer",
+        "maxAge": "ok for {days} days"
       },
       "dialog": {
         "addTitle": "Add a required paper",

@@ -74,6 +74,11 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Your ${p.document} is checked ✅`,
     body: 'Thank you.',
   }),
+  // The paper we hold is too old (redesign 5.4): the same words in the app and in an open chat.
+  paper_stale: (p) => ({
+    title: `We need your latest ${p.document?.toLowerCase()} for ${p.home}`,
+    body: `The one we have is from ${p.month}.`,
+  }),
   document_request_cancelled: (p) => ({
     title: `${p.document} is no longer needed`,
     body: 'You do not need to send it.',

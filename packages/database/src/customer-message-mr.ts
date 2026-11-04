@@ -80,6 +80,10 @@ export const MARATHI_WORDS: LanguageWords = {
       title: `तुमचे ${p.document} तपासले ✅`,
       body: 'धन्यवाद.',
     }),
+    paper_stale: (p) => ({
+      title: `${p.home} साठी आम्हाला तुमचे ताजे ${p.document} हवे आहे`,
+      body: `आमच्याकडे असलेले ${p.month} चे आहे.`,
+    }),
     document_request_cancelled: (p) => ({
       title: `${p.document} आता लागणार नाही`,
       body: 'तुम्हाला ते पाठवण्याची गरज नाही.',

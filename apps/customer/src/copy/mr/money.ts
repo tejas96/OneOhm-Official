@@ -123,6 +123,7 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
     warranty: 'वॉरंटी',
     product_manual: 'वापरण्याची माहिती पुस्तिका',
     statutory_report: 'रिपोर्ट',
+    payment_proof: 'पेमेंटचा पुरावा',
     site_photo: 'साईटचा फोटो',
     other: 'कागदपत्र',
   },

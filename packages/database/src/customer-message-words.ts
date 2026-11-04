@@ -26,6 +26,7 @@ export const IN_APP_MESSAGES = [
   'paper_request',
   'paper_again',
   'paper_checked',
+  'paper_stale',
   'document_request_cancelled',
   'document_received_by_team',
   'maintenance_visit',

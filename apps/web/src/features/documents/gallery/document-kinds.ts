@@ -53,6 +53,7 @@ export const FOLDER_ICONS: Readonly<Record<FolderChoice, LucideIcon>> = {
   warranty: ShieldCheck,
   product_manual: BookOpen,
   statutory_report: FileCheck,
+  payment_proof: Receipt,
   other: Folder,
 };
 

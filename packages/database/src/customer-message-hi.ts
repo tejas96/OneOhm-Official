@@ -80,6 +80,10 @@ export const HINDI_WORDS: LanguageWords = {
       title: `आपका ${p.document} जाँच लिया गया ✅`,
       body: 'धन्यवाद।',
     }),
+    paper_stale: (p) => ({
+      title: `${p.home} के लिए हमें आपका ताज़ा ${p.document} चाहिए`,
+      body: `हमारे पास जो है वह ${p.month} का है।`,
+    }),
     document_request_cancelled: (p) => ({
       title: `${p.document} की अब ज़रूरत नहीं है`,
       body: 'आपको इसे भेजने की ज़रूरत नहीं है।',

@@ -177,10 +177,12 @@ export class DocumentRequestsService {
         phone: customers.phoneE164,
       })
       .from(leads)
-      .innerJoin(customers, eq(customers.id, leads.customerId))
+      .leftJoin(customers, eq(customers.id, leads.customerId))
       .where(and(eq(leads.id, input.leadId ?? ''), leadVisibility(actor)))
       .limit(1);
-    if (!lead) {
+    // A lead this person cannot see is "not found", never a hint about its site.
+    if (!lead) throw notFound('That lead');
+    if (!lead.customerId || !lead.customer || !lead.phone) {
       throw invalid('Add the site to this lead first, then ask for its papers.', {
         leadId: 'Add the site first.',
       });
@@ -197,7 +199,14 @@ export class DocumentRequestsService {
         'has_project',
       );
     }
-    return { ...lead, projectId: null, projectCode: null };
+    return {
+      ...lead,
+      customerId: lead.customerId,
+      customer: lead.customer,
+      phone: lead.phone,
+      projectId: null,
+      projectCode: null,
+    };
   }
 
   private async one(id: string): Promise<DocumentRequest> {

@@ -22,6 +22,7 @@ const KIND_LABELS: Readonly<Record<DocumentCategory, string>> = {
   warranty: 'Warranty',
   product_manual: 'Product manuals',
   statutory_report: 'Statutory report',
+  payment_proof: 'Payment proof',
   other: 'Other',
 };
 

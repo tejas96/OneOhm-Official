@@ -148,7 +148,9 @@ function ChecklistCard({
                     <span className="type-body-sm text-ink-faint">
                       {item.missing.length > 0
                         ? t('needs', { what: item.missing.join(', ') })
-                        : item.why}
+                        : item.tooOld
+                          ? t('tooOld')
+                          : item.why}
                     </span>
                     {onAsk && item.askCategory && !item.requested && (
                       <AskButton item={item} onAsk={onAsk} label={t('ask')} />

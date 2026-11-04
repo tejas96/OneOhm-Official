@@ -19,9 +19,12 @@ export function LeadAskedCard({
   readonly hasSite: boolean;
 }) {
   const t = useTranslations('leads');
-  const canAsk = useDocumentRights().upload && hasSite;
+  const canAsk = useDocumentRights().upload;
   const [draft, setDraft] = useState<AskDraft | null>(null);
-  if (!hasSite) return <p className="type-body-sm text-ink-muted">{t('askNeedsSite')}</p>;
+  // The hint is for the people who could ask; everyone else sees nothing.
+  if (!hasSite) {
+    return canAsk ? <p className="type-body-sm text-ink-muted">{t('askNeedsSite')}</p> : null;
+  }
   return (
     <>
       <CustomerActionsCard

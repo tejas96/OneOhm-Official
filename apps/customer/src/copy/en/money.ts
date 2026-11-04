@@ -103,6 +103,7 @@ export const DOCUMENTS = {
     warranty: 'Warranty',
     product_manual: 'Product manual',
     statutory_report: 'Report',
+    payment_proof: 'Payment proof',
     site_photo: 'Site photo',
     other: 'Document',
   },
