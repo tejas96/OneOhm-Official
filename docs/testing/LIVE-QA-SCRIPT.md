@@ -113,3 +113,17 @@ Messages the bot sends while you are chatting are free-form replies and need no 
 | S5 | Refer a friend who is already a lead | ⚠️ The reply was in English. Fixed in `6957b21` (Marathi, with a Menu tap) |
 | S6 | Last instalment falls due | ✅ Pay template values in plain words: "Last instalment (10%)", "Sangli · 3.27 kW" |
 | S7 | Pay ₹18,397 by UPI | ✅ Marathi receipt template with the PDF, then the next step (net meter and subsidy papers) with Priya's name and phone. Order correct. Staff history tagged "· sent in Marathi" |
+
+## Round 4 — menus not yet tested live (2026-11-04)
+
+| # | Step | Result |
+|---|---|---|
+| T1 | Project progress | ✅ "Your solar project in Sangli · 6 panels (3.27 kW)", the stage, the next step, the subsidy. ⚠️ It offered Pay now when all was paid, and the next step's name was in English. Fixed in `bc45d97` |
+| T2 | Complaint, cancelled with Menu | Not done: the tester went straight to T3. Covered by acceptance 51 |
+| T3 | Complaint with a photo and caption | ✅ Saved with the photo; taps माझ्या विनंत्या · मेनू |
+| T4 | My requests | ✅ The complaint, "New", with taps |
+| T5 | Warranty and AMC | ✅ "The warranty starts on the day the system starts", with taps |
+| T6 | My rewards | ✅ "No referrals yet", with taps |
+| T7 | Give a rating | ✅ "We will ask for your rating when the system starts", with taps |
+| T8 | A typed question | ✅ "Priya will reply here", with Menu; the chat is held by a person |
+| T9 | `धन्यवाद` in the held chat | ✅ Went to the person, as ruled (no bot reply in a held chat) |
