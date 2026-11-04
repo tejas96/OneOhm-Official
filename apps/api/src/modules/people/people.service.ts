@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
-import { roleCapabilities, roles, sessions, userRoles, users } from '@oneohm/database';
+import { roleCapabilities, roles, userRoles, users } from '@oneohm/database';
 import type { Capability } from '@oneohm/domain';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
@@ -11,6 +11,7 @@ import type { Environment } from '../../config/environment';
 import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 import { kindsOfRoles, queueInvite, requireNewPassword } from './person-invite';
+import { afterPhoneChange } from './person-phone-change';
 import { setSkills } from './person-skills';
 import { assertUnique } from './person-unique';
 import { saveWork, type WorkPatch } from './person-work';
@@ -131,11 +132,11 @@ export class PeopleService {
           .update(users)
           .set({ ...fields, updatedAt: new Date() })
           .where(eq(users.id, id));
-      // A new number signs out the phone, because the old number may belong to someone else.
+      // The old number may belong to someone else now.
       if (patch.phone !== undefined && patch.phone !== existing.phone)
-        await tx
-          .delete(sessions)
-          .where(and(eq(sessions.userId, id), eq(sessions.client, 'mobile')));
+        await afterPhoneChange(tx, this.env, id, existing.phone, {
+          reinvite: !patch.requireNewPassword,
+        });
       if (patch.requireNewPassword) await requireNewPassword(tx, this.env, id);
       await recordAudit(tx, actor.userId, 'person.updated', 'user', id, auditablePatch(patch));
     });
