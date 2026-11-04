@@ -53,6 +53,10 @@ export class PeopleController {
         assertCan(actor, 'people.manage');
         return { status: 200, body: await this.departures.remove(actor, params.id, body) };
       },
+      rejoinPerson: async ({ params }) => {
+        assertCan(actor, 'people.manage');
+        return { status: 200, body: await this.departures.rejoin(actor, params.id) };
+      },
       listRoles: async () => {
         assertCan(actor, 'people.view', 'people.manage', 'roles.manage');
         return { status: 200, body: await this.roles.list() };

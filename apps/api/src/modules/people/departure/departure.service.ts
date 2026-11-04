@@ -10,6 +10,7 @@ import { conflict, notFound } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { readPeople } from '../people-read';
+import { queueInvite, roleKindsByUser } from '../person-invite';
 import { assertKeepsASuperAdmin } from '../super-admin-guard';
 import { tellCustomers } from './departure-customers';
 import { handOver } from './departure-handover';
@@ -99,6 +100,34 @@ export class DepartureService {
         handTo: target.id,
         counts: countsOf(work),
       });
+    });
+    const person = (await readPeople(this.db, this.env)).find((entry) => entry.id === id);
+    if (!person) throw notFound('That person');
+    return person;
+  }
+
+  /** Bring back (spec Flow 5): active again, no password, a fresh invite. Work stays where it went. */
+  async rejoin(actor: Actor, id: string): Promise<Person> {
+    await this.db.transaction(async (tx) => {
+      const [user] = await tx.select().from(users).where(eq(users.id, id)).for('update');
+      if (!user) throw notFound('That person');
+      if (user.status !== 'inactive')
+        throw conflict('This person is still on the team.', 'not_removed');
+      await tx
+        .update(users)
+        .set({
+          status: 'active',
+          leftOn: null,
+          passwordHash: null,
+          lastActiveAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, id));
+      if (user.phoneE164) {
+        const roleKinds = (await roleKindsByUser(tx, [id])).get(id) ?? [];
+        await queueInvite(tx, this.env, { ...user, phoneE164: user.phoneE164, roleKinds });
+      }
+      await recordAudit(tx, actor.userId, 'person.rejoined', 'user', id);
     });
     const person = (await readPeople(this.db, this.env)).find((entry) => entry.id === id);
     if (!person) throw notFound('That person');

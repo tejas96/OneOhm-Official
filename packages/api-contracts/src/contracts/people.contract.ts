@@ -90,6 +90,14 @@ export const peopleContract = c.router({
     }),
     responses: { 200: personSchema },
   },
+  /** Add a past member back: active, no password, a new invite; their work stays put. */
+  rejoinPerson: {
+    method: 'POST',
+    path: '/people/:id/rejoin',
+    pathParams: idParams,
+    body: c.noBody(),
+    responses: { 200: personSchema },
+  },
   listRoles: { method: 'GET', path: '/roles', responses: { 200: z.array(roleSchema) } },
   createRole: {
     method: 'POST',

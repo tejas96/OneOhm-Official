@@ -12,7 +12,7 @@ import {
   users,
 } from '@oneohm/database';
 import { isMissedLine } from '@oneohm/domain';
-import { monthRange, previousMonth } from '@oneohm/shared';
+import { monthOf, monthRange, previousMonth } from '@oneohm/shared';
 import { and, asc, eq, inArray, type SQL, sql } from 'drizzle-orm';
 
 /** A point line's India day falls in the month. */
@@ -115,7 +115,14 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
     ? await db
         .select({ id: users.id, fullName: users.fullName })
         .from(users)
-        .where(inArray(users.id, ids))
+        // The current month is the live ranking: people who left drop out of it. Past
+        // months stay as they were.
+        .where(
+          and(
+            inArray(users.id, ids),
+            month === monthOf(new Date()) ? eq(users.status, 'active') : undefined,
+          ),
+        )
     : [];
   const rows: MonthlyRow[] = people.map((user) => {
     const review = reviews.find((entry) => entry.userId === user.id);

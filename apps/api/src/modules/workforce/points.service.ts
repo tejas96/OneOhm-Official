@@ -33,7 +33,8 @@ export class PointsService {
       })
       .from(pointsEntries)
       .innerJoin(users, eq(users.id, pointsEntries.userId))
-      .where(eq(pointsEntries.status, 'approved'))
+      // People who have left drop off the live board; their rows stay in history.
+      .where(and(eq(pointsEntries.status, 'approved'), eq(users.status, 'active')))
       .groupBy(users.id, users.fullName)
       .orderBy(sql`3 desc`, users.fullName);
     return rows.map(({ id, fullName, total, thisMonth }) => ({
