@@ -1,15 +1,15 @@
 import {
+  askForPaper,
   customerNotice,
   customers,
   type DatabaseExecutor,
   noticeCustomer,
-  queueCustomerMessage,
   waConversations,
 } from '@oneohm/database';
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { queueReply } from '../whatsapp/chat-store';
-import { homeNameOf, paperRequestTemplate, roundKey } from './document-request-home';
+import { homeNameOf, roundKey } from './document-request-home';
 
 // What the customer hears about a paper the team asked for (papers per home, review A).
 
@@ -23,25 +23,11 @@ interface Asked {
 }
 
 /**
- * Asks the customer for the paper: `paper_request` naming the home once it is switched
- * on, else `document_requested`; app inbox and SMS say the same. Each "ask again" is a
- * new round with its own key, so it is sent again.
+ * Asks the customer for the paper (see askForPaper). Each "ask again" is a new round with
+ * its own key, so it is sent again.
  */
 export async function askCustomer(tx: DatabaseExecutor, asked: Asked, reasks: number) {
-  const template = await paperRequestTemplate(tx);
-  const home = await homeNameOf(tx, asked.projectId);
-  await queueCustomerMessage(
-    tx,
-    asked.phone,
-    template,
-    {
-      customer: asked.customer,
-      document: asked.title,
-      ...(asked.projectCode ? { project: asked.projectCode } : {}),
-      home,
-    },
-    roundKey(`document_requested:${asked.id}`, reasks),
-  );
+  await askForPaper(tx, asked, roundKey(`document_requested:${asked.id}`, reasks));
 }
 
 /**
