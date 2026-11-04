@@ -59,4 +59,6 @@ export const SAMPLE = {
   stage: 'installation',
   staff: 'Priya',
   message: 'We will reach your site at 11 am tomorrow.',
+  subject: 'your solar project (OH-2026-014)',
+  phone: '+91 98765 43210',
 } as const;
