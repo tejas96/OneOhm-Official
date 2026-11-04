@@ -9,7 +9,7 @@ import {
   stageRatings,
   userRoles,
 } from '@oneohm/database';
-import { judgeTask, splitRatingPoints, type PartResult } from '@oneohm/domain';
+import { judgeTask, type PartResult, splitRatingPoints } from '@oneohm/domain';
 import { and, eq, gte, inArray, isNull, max, notInArray } from 'drizzle-orm';
 import { loadPolicy } from './policy';
 import { taskPointFacts } from './task-point-facts';
