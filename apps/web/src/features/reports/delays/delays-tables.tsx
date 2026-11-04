@@ -5,6 +5,7 @@ import { Card, CardHeader, ResponsiveTable, type TableColumn } from '@oneohm/des
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
 import { NUM } from '../parts/report-body';
 import { decimal } from '../parts/report-format';
 import { PartyTag } from './delay-party';
@@ -186,7 +187,7 @@ export function WaitingNow({ rows }: { readonly rows: readonly WaitingRow[] }) {
       cell: (row) => (
         <span className="flex min-w-0 flex-col gap-0.5">
           <Link
-            href={`/projects/${row.projectId}?tab=tasks`}
+            href={hrefWithTask(`/projects/${row.projectId}?tab=tasks`, row.taskId)}
             className="oh-stretched-link truncate rounded-sm font-medium text-ink"
           >
             {row.title}

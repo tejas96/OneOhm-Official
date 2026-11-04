@@ -11,3 +11,17 @@ export function minutesAndSeconds(ms: number): { minutes: number; seconds: numbe
   const total = Math.round(ms / 1000);
   return { minutes: Math.floor(total / 60), seconds: total % 60 };
 }
+
+/** A failure nothing has put right since: these are counted and shown as "Failed only". */
+export function needsAttention(run: Pick<JobRunRecord, 'status' | 'recovered'>): boolean {
+  return run.status === 'failed' && !run.recovered;
+}
+
+/**
+ * Running a timed job again does today's work, not the day it failed (message sending
+ * resends that one message), so an older run says so before anyone clicks.
+ */
+export function runsTodaysJob(run: Pick<JobRunRecord, 'name' | 'createdAt'>, now: Date): boolean {
+  if (run.name === 'message_delivery') return false;
+  return new Date(run.createdAt).toDateString() !== now.toDateString();
+}

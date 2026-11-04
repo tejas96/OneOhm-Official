@@ -7,6 +7,7 @@ import { and, eq, ne } from 'drizzle-orm';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { DATABASE, type Database } from '../../config/core.module';
 import { startProjectActions } from './accepted-without-project';
+import { businessZone } from './business-days';
 import { buildActions } from './command-center-actions';
 import { decisionsWaiting } from './command-center-decisions';
 import { installed, pipeline, waitingDays } from './command-center-flows';
@@ -38,7 +39,11 @@ export class CommandCenterService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async get(query: CommandCenterQuery = {}): Promise<CommandCenter> {
-    const scope = centerScope(query, todayIn(), await readBusinessSetting(this.db, 'dashboard'));
+    const scope = centerScope(
+      query,
+      todayIn(businessZone()),
+      await readBusinessSetting(this.db, 'dashboard'),
+    );
     const [live, completed] = await Promise.all([
       projectSummaries(this.db, scope.projects),
       projectSummaries(this.db, scope.completed),
@@ -120,6 +125,7 @@ export class CommandCenterService {
         advancesPaise: money.advancesPaise,
       },
       liveProjects: live.length,
+      dueSoonDays: scope.settings.dueSoonDays,
     };
   }
 

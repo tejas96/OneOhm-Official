@@ -9,6 +9,7 @@ import {
   STRUCTURE_TYPES,
 } from '@oneohm/domain';
 import { z } from 'zod';
+import { gstRateSchema } from '../common/gst-rate';
 import { idSchema, paiseSchema, unitSchema } from '../common/primitives';
 
 const amountSchema = z.number().int().nonnegative('Use zero or more.').max(10_00_00_000);
@@ -108,8 +109,8 @@ export const costingCardSchema = z
     wastageBp: z.number().int().min(0).max(5_000, 'Use at most 50%.'),
     overheadBp: z.number().int().min(0).max(5_000, 'Use at most 50%.'),
     pricing: z.object({ mode: z.enum(PRICING_MODES), marginBp: basisPointsSchema }),
-    goodsTaxBp: basisPointsSchema,
-    serviceTaxBp: basisPointsSchema,
+    goodsTaxBp: gstRateSchema,
+    serviceTaxBp: gstRateSchema,
     contingencyBp: basisPointsSchema,
     toleranceBp: basisPointsSchema,
     discountApprovalBp: basisPointsSchema.optional(),

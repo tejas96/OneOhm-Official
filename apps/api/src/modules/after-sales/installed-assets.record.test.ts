@@ -77,4 +77,31 @@ describe('installed assets from the quotation', () => {
     expect(rows.find((row) => row.kind === 'battery')?.serialNumbers).toEqual(['BAT-9']);
     expect(rows.find((row) => row.kind === 'panel')?.quantity).toBe(7);
   });
+
+  it('records the warranty years the quotation printed for a product, else the Settings years', () => {
+    const rows = assetsFrom({
+      ...base,
+      panel: { ...product('p', 'Mono PERC module', 545), warrantyYears: 12 },
+      inverters: [{ product: { ...product('i', 'Inverter'), warrantyYears: 10 }, quantity: 1 }],
+      battery: { ...product('b', 'Battery'), warrantyYears: null },
+    });
+    const ends = Object.fromEntries(rows.map((row) => [row.kind, row.warrantyEndsOn]));
+    expect(ends.panel).toBe('2038-10-31');
+    expect(ends.inverter).toBe('2036-10-31');
+    // No years on the product: the Settings years (5 for a battery).
+    expect(ends.battery).toBe('2031-10-31');
+    // Panels keep the Settings performance cover.
+    expect(rows[0]?.performanceEndsOn).toBe('2051-10-31');
+  });
+
+  it('records the shortest years when inverter models differ', () => {
+    const rows = assetsFrom({
+      ...base,
+      inverters: [
+        { product: { ...product('a', 'A'), warrantyYears: 10 }, quantity: 1 },
+        { product: { ...product('b', 'B'), warrantyYears: 7 }, quantity: 1 },
+      ],
+    });
+    expect(rows.find((row) => row.kind === 'inverter')?.warrantyEndsOn).toBe('2033-10-31');
+  });
 });

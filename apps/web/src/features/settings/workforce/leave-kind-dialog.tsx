@@ -21,6 +21,7 @@ export function LeaveKindDialog({
   open,
   kind,
   takenKeys,
+  keyLocked,
   onSave,
   onClose,
 }: {
@@ -28,6 +29,8 @@ export function LeaveKindDialog({
   /** null adds a new kind. */
   readonly kind: Kind | null;
   readonly takenKeys: readonly string[];
+  /** True once the kind is saved: requests may already be stored with its short name. */
+  readonly keyLocked: boolean;
   readonly onSave: (kind: Kind) => void;
   readonly onClose: () => void;
 }) {
@@ -89,12 +92,12 @@ export function LeaveKindDialog({
         </Field>
         <Field
           label={t('key')}
-          hint={kind ? t('keyFixed') : t('keyHint')}
+          hint={keyLocked ? t('keyFixed') : t('keyHint')}
           error={checked ? errors.key : null}
         >
           <Input
             value={shownKey}
-            readOnly={kind !== null}
+            readOnly={keyLocked}
             className="font-mono"
             onChange={(event) => {
               setKeyTouched(true);

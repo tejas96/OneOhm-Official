@@ -103,7 +103,7 @@ export function TicketsTable({
       cell: (ticket) => (
         <span className="flex flex-col gap-0.5">
           <Link
-            href={`/customers/${ticket.customer.id}`}
+            href={`/customers/${ticket.customer.id}?tab=service`}
             className="relative z-10 whitespace-nowrap font-medium text-ink hover:text-accent"
           >
             {ticket.customer.name}

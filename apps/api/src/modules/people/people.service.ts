@@ -1,17 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Person } from '@oneohm/api-contracts';
-import { hashPassword, roles, sessions, userRoles, users } from '@oneohm/database';
-import { SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
+import {
+  hashPassword,
+  roleCapabilities,
+  roles,
+  sessions,
+  userRoles,
+  users,
+} from '@oneohm/database';
+import { type Capability, SUPER_ADMIN_ROLE_KEY } from '@oneohm/domain';
 import { and, eq, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { conflict, invalid, notFound } from '../../common/http/errors';
+import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { readPeople } from './people-read';
 import { auditablePatch, type PersonPatch, personFields } from './person-fields';
 import { setSkills } from './person-skills';
 import { saveWork, type WorkPatch } from './person-work';
 import { saveReportingLine } from './reporting-line';
+import { archivedRolesNewlyGiven, rolesOutOfReach } from './role-grant';
 
 export interface NewPerson {
   readonly fullName: string;
@@ -44,6 +52,7 @@ export class PeopleService {
     }
     await this.assertUnique(input);
     await this.assertRolesExist(input.roleIds);
+    await this.assertCanGrant(actor, input.roleIds);
     const id = await this.db.transaction(async (tx) => {
       const [created] = await tx
         .insert(users)
@@ -87,7 +96,19 @@ export class PeopleService {
         email: 'Email or mobile number is required.',
       });
     }
-    if (patch.roleIds) await this.assertRolesExist(patch.roleIds);
+    if (patch.roleIds) {
+      const current = await this.db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, id));
+      const before = new Set(current.map((row) => row.roleId));
+      await this.assertRolesExist(patch.roleIds, before);
+      const after = new Set(patch.roleIds);
+      const changed = [...before, ...after].filter(
+        (roleId) => before.has(roleId) !== after.has(roleId),
+      );
+      await this.assertCanGrant(actor, changed);
+    }
     await this.assertUnique(patch, id);
     const fields = await personFields(patch);
     await this.db.transaction(async (tx) => {
@@ -151,13 +172,45 @@ export class PeopleService {
     }
   }
 
-  private async assertRolesExist(roleIds: readonly string[]): Promise<void> {
+  /** Without permission to manage roles, only roles within your own permissions can change. */
+  private async assertCanGrant(actor: Actor, roleIds: readonly string[]): Promise<void> {
+    if (roleIds.length === 0 || actor.capabilities.has('roles.manage')) return;
+    const rows = await this.db
+      .select({ id: roles.id, name: roles.name, capability: roleCapabilities.capability })
+      .from(roles)
+      .leftJoin(roleCapabilities, eq(roleCapabilities.roleId, roles.id))
+      .where(inArray(roles.id, [...roleIds]));
+    const byRole = new Map<string, { id: string; name: string; capabilities: Capability[] }>();
+    for (const row of rows) {
+      const role = byRole.get(row.id) ?? { id: row.id, name: row.name, capabilities: [] };
+      if (row.capability) role.capabilities.push(row.capability as Capability);
+      byRole.set(row.id, role);
+    }
+    const blocked = rolesOutOfReach(actor.capabilities, [...byRole.values()]);
+    if (blocked.length > 0)
+      throw forbidden(
+        `Only someone who manages roles can give or remove ${blocked.join(', ')}: it has permissions you do not have.`,
+      );
+  }
+
+  private async assertRolesExist(
+    roleIds: readonly string[],
+    alreadyHeld: ReadonlySet<string> = new Set(),
+  ): Promise<void> {
     const found = await this.db
-      .select({ id: roles.id })
+      .select({ id: roles.id, name: roles.name, archivedAt: roles.archivedAt })
       .from(roles)
       .where(inArray(roles.id, [...roleIds]));
     if (found.length !== new Set(roleIds).size)
       throw invalid('One of the roles does not exist.', { roleIds: 'Unknown role.' });
+    const archived = archivedRolesNewlyGiven(
+      found.map((role) => ({ ...role, archived: role.archivedAt !== null })),
+      alreadyHeld,
+    );
+    if (archived.length > 0)
+      throw invalid(`${archived.join(', ')} is archived, so it cannot be given to anyone.`, {
+        roleIds: 'Archived role.',
+      });
   }
 
   /** There must always be at least one active Super Admin. */

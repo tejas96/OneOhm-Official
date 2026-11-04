@@ -9,6 +9,12 @@ export function withTask(search: string, taskId: string | null): string {
   return text ? `?${text}` : '';
 }
 
+/** A link (path plus query) that also opens a task's panel, e.g. `/projects/p1?tab=tasks&task=t1`. */
+export function hrefWithTask(href: string, taskId: string): string {
+  const [path = '', search = ''] = href.split('?');
+  return `${path}${withTask(search, taskId)}`;
+}
+
 /** Opening a panel adds a history entry, so Back closes it; other changes replace it. */
 export function panelNavigation(
   currentId: string | null,

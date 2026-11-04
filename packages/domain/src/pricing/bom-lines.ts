@@ -88,6 +88,17 @@ export function priced(rates: CostingCard, entry: QuoteLineInput): QuoteLineInpu
   return { ...entry, unitPricePaise };
 }
 
+/**
+ * With a target margin, a line with no cost would be quoted at ₹0. These lines need a
+ * cost first (lines added by hand keep their own price, so they are left out).
+ */
+export function zeroCostLines(rates: CostingCard, lines: readonly QuoteLineInput[]): string[] {
+  if (rates.pricing.mode !== 'margin') return [];
+  return lines
+    .filter((entry) => entry.extra === undefined && entry.quantity > 0 && entry.unitCostPaise <= 0)
+    .map((entry) => entry.description);
+}
+
 export function line(
   key: string,
   description: string,

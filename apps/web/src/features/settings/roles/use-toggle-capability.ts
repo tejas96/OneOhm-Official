@@ -9,6 +9,7 @@ import { ROLES_KEY } from '@/features/team/use-team';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { asPredicate, withCapability } from './grid-model';
+import { undoOf } from './role-changes';
 
 export interface CapabilityChange {
   readonly role: Role;
@@ -39,7 +40,8 @@ export function usePendingCells(): ReadonlySet<string> {
 /**
  * Flips one role × permission cell. The grid changes at once; saves run one at a
  * time, each sending the role's latest full list, and a failed save flips only its
- * own cell back. Once the last save settles the roles are fetched again.
+ * own cell back. Once the last save settles the roles are fetched again. Taking a
+ * permission away changes live access, so its toast offers Undo.
  */
 export function useToggleCapability() {
   const queryClient = useQueryClient();
@@ -56,7 +58,7 @@ export function useToggleCapability() {
     capability: asPredicate(settingsT(`capabilities.${change.capability}`)),
   });
 
-  return useMutation({
+  const mutation = useMutation({
     mutationKey: TOGGLE_KEY,
     scope: { id: TOGGLE_KEY.join('.') },
     onMutate: async (change: CapabilityChange) => {
@@ -76,11 +78,14 @@ export function useToggleCapability() {
         200,
       );
     },
-    onSuccess: (_saved, change) =>
+    onSuccess: (_saved, change) => {
+      const undo = undoOf(change);
       toast({
         title: change.grant ? t('granted', sentence(change)) : t('revoked', sentence(change)),
         tone: 'success',
-      }),
+        ...(undo ? { action: { label: t('undo'), onSelect: () => mutation.mutate(undo) } } : {}),
+      });
+    },
     onError: (error, change) => {
       setCell(change, !change.grant);
       toast({
@@ -94,4 +99,5 @@ export function useToggleCapability() {
       await queryClient.invalidateQueries({ queryKey: ROLES_KEY });
     },
   });
+  return mutation;
 }

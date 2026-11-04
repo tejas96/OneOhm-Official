@@ -74,7 +74,7 @@ export function CommandCenterView() {
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
         >
           {[0, 1, 2, 3, 4, 5, 6, 7].map((tile) => (
-            <Skeleton key={tile} className="h-32 rounded-xl" />
+            <Skeleton key={tile} className="h-24 rounded-xl" />
           ))}
         </SkeletonGroup>
       )}
@@ -104,11 +104,15 @@ export function CommandCenterView() {
             <div className="flex min-w-0 flex-col gap-6">
               <DecisionsWaiting decisions={data.decisions} />
               <OutlookTile outlook={data.outlook} query={query} />
-              <DeadlinesAhead deadlines={data.deadlines} today={todayIn()} />
+              <DeadlinesAhead
+                deadlines={data.deadlines}
+                today={todayIn()}
+                days={data.dueSoonDays}
+              />
             </div>
           </div>
           <ProjectLedger projects={data.projects} total={data.liveProjects} query={query} />
-          <MoneyLedger money={data.money} />
+          <MoneyLedger money={data.money} dueSoonDays={data.dueSoonDays} />
           <TeamLoadSection query={query} />
         </div>
       )}

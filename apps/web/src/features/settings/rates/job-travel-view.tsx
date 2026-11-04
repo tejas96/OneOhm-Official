@@ -9,6 +9,7 @@ import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
 import { useCompany } from '../use-settings';
 import { BaseLocation, useBaseSaver } from './base-location';
+import { hasUnsaved } from './card-draft';
 import { DecimalInput } from './decimal-input';
 import { ListEditor, RateSelect, SmallNumber } from './list-editor';
 import { SaveBar } from './save-bar';
@@ -19,7 +20,13 @@ type Item = Card['jobItems'][number];
 const NONE = 'none';
 
 /** What every job carries, extra floors, travel from the base, and site access. */
-export function JobTravelView({ card }: { readonly card: Card }) {
+export function JobTravelView({
+  card,
+  onUnsaved,
+}: {
+  readonly card: Card;
+  readonly onUnsaved?: (unsaved: boolean) => void;
+}) {
   const t = useTranslations('costing.labour');
   const editorT = useTranslations('costing.editors');
   const { save, form } = useCardSaver();
@@ -27,6 +34,14 @@ export function JobTravelView({ card }: { readonly card: Card }) {
   const base = useBaseSaver(company.data);
   const [draft, setDraft] = useState(card);
   useEffect(() => setDraft(card), [card]);
+  const baseMoved = hasUnsaved(base.point, {
+    latitude: company.data?.baseLatitude ?? null,
+    longitude: company.data?.baseLongitude ?? null,
+  });
+  useEffect(
+    () => onUnsaved?.(baseMoved || hasUnsaved(draft, card)),
+    [baseMoved, draft, card, onUnsaved],
+  );
   const set = <K extends keyof Card>(key: K, value: Card[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const travel = (patch: Partial<Card['travel']>) => set('travel', { ...draft.travel, ...patch });

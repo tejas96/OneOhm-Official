@@ -1,5 +1,6 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+import { pageOf, pageQuerySchema } from '../common/paging';
 import { instantSchema } from '../common/primitives';
 import { auditPageSchema, signInAttemptSchema } from '../schemas/audit.schema';
 
@@ -22,7 +23,11 @@ export const auditContract = c.router({
   signIns: {
     method: 'GET',
     path: '/audit/sign-ins',
-    query: z.object({ failedOnly: z.enum(['true', 'false']).optional() }),
-    responses: { 200: z.array(signInAttemptSchema) },
+    query: pageQuerySchema.extend({
+      failedOnly: z.enum(['true', 'false']).optional(),
+      /** Matches the account typed, the person's name or the address. */
+      search: z.string().trim().max(120).optional(),
+    }),
+    responses: { 200: pageOf(signInAttemptSchema) },
   },
 });

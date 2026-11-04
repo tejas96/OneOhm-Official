@@ -4,18 +4,19 @@ import type {
   ReferralProgram,
   ReferralProgramInput,
 } from '@oneohm/api-contracts';
-import { companyProfile, referralPrograms, referralRewards } from '@oneohm/database';
+import { companyProfile, leads, referralPrograms, referralRewards } from '@oneohm/database';
 import { incentiveTotals } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { eq, gte } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { notFound } from '../../common/http/errors';
+import { invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { businessWhatsAppNumber } from '../whatsapp/business-number';
 import { ensureReferralCode, resolveReferralCode } from './referral-codes';
 import { evaluateReferralRewards } from './referral-evaluation';
-import { loadProgram, toE164, whatsappDigits } from './referral-program';
+import { loadProgram, programProblems, toE164, whatsappDigits } from './referral-program';
+import { campaignStart } from './referral-usage';
 
 /** The refer-and-earn programme the owner sets, and each customer's view of it. */
 @Injectable()
@@ -27,9 +28,12 @@ export class ReferralProgramService {
 
   async get(): Promise<ReferralProgram> {
     const program = await loadProgram(this.db);
+    // The budget shown is this campaign's: rewards for referrals since its start day.
     const rewards = await this.db
       .select({ status: referralRewards.status, amountPaise: referralRewards.amountPaise })
-      .from(referralRewards);
+      .from(referralRewards)
+      .innerJoin(leads, eq(leads.id, referralRewards.leadId))
+      .where(gte(leads.createdAt, campaignStart(program.startsOn)));
     const totals = incentiveTotals(rewards);
     return {
       active: program.active,
@@ -50,6 +54,8 @@ export class ReferralProgramService {
   }
 
   async save(actor: Actor, input: ReferralProgramInput): Promise<ReferralProgram> {
+    const problems = programProblems(input);
+    if (problems) throw invalid('Check the reward.', problems);
     const current = await loadProgram(this.db);
     const values = {
       active: input.active,

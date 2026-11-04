@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
-import { planSteps } from '../../payment-plans/payment-plans.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
+import { quotedSteps } from '../../quotations/quoted-terms';
 import { type Conversation, queueReply } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
@@ -68,7 +68,7 @@ export class QuoteActionsService {
     if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
     if (quotation.status === 'accepted') return this.already(chat, messageId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
-    const steps = await planSteps(this.db);
+    const steps = await quotedSteps(this.db, quotationId);
     const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
     await queueReply(this.db, chat, {
       kind: 'buttons',

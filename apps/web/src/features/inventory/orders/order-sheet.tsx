@@ -63,7 +63,7 @@ export function OrderSheet({
               <dd>
                 {data.projectId ? (
                   <Link
-                    href={`/projects/${data.projectId}`}
+                    href={`/projects/${data.projectId}?tab=material`}
                     className="text-accent hover:underline"
                   >
                     {t('forProject', { project: `${data.projectCode} · ${data.projectName}` })}

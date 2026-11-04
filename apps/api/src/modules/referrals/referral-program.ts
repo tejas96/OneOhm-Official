@@ -49,3 +49,17 @@ export function toE164(phone: string | null): string | null {
   const digits = whatsappDigits(phone);
   return digits ? `+${digits}` : null;
 }
+
+/**
+ * A programme that is on must pay something: switched on with ₹0 it would look live to
+ * customers while earning nothing. Field messages, or null when it can be saved.
+ */
+export function programProblems(input: {
+  readonly active: boolean;
+  readonly amountPaise: number;
+}): Record<string, string> | null {
+  if (input.active && input.amountPaise <= 0) {
+    return { amountPaise: 'Enter a reward above ₹0, or switch the programme off.' };
+  }
+  return null;
+}

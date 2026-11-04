@@ -83,7 +83,7 @@ export function initialFacts(
 }
 
 /** One generated task as a row: a critical task's pick is only a proposal (PRD 3.8). */
-function taskValues(
+export function taskValues(
   projectId: string,
   task: GeneratedTask,
   position: number,
@@ -94,6 +94,7 @@ function taskValues(
     projectId,
     templateKey: task.key,
     title: task.title,
+    description: task.description ?? null,
     stage: task.stage,
     roleKey: task.roleKey,
     assigneeUserId: proposed ? null : picked.userId,
@@ -106,6 +107,7 @@ function taskValues(
     customerVisible: task.customerVisible,
     notifyCustomer: task.notifyCustomer,
     approval: task.approval,
+    reviewer: task.reviewer ?? 'approvers',
     evidence: [...task.evidence],
     captures: [...task.captures],
     checklist: task.checklist ? [...task.checklist] : null,

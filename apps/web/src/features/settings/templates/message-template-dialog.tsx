@@ -10,7 +10,7 @@ import {
   Textarea,
   useToast,
 } from '@oneohm/design-system/web';
-import { renderTemplate, templateExtras } from '@oneohm/domain';
+import { messageFieldsFor, renderTemplate, templateExtras } from '@oneohm/domain';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
@@ -153,7 +153,9 @@ export function MessageTemplateDialog({
         </Field>
         <Field
           label={t('fields')}
-          hint={t('fieldsHint', { available: Object.keys(SAMPLE).join(', ') })}
+          hint={t('fieldsHint', {
+            available: (messageFieldsFor(template.key) ?? Object.keys(SAMPLE)).join(', '),
+          })}
           error={errors.fields}
           required
         >
@@ -167,11 +169,14 @@ export function MessageTemplateDialog({
           <p className="type-label text-ink-faint">{t('sample')}</p>
           <p className="type-body-sm text-ink">{renderTemplate(draft.preview, fields, SAMPLE)}</p>
         </div>
-        <Switch
-          checked={draft.active}
-          onCheckedChange={(value) => set('active', value)}
-          label={t('active')}
-        />
+        <div className="flex flex-col gap-1">
+          <Switch
+            checked={draft.active}
+            onCheckedChange={(value) => set('active', value)}
+            label={t('active')}
+          />
+          <p className="type-body-sm text-ink-muted">{t('activeHint')}</p>
+        </div>
         {templateExtras(template.key) && (
           <div className="flex flex-col gap-1">
             <Switch

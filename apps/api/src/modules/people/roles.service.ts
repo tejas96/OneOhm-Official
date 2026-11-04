@@ -7,6 +7,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { archivedAtAfter, roleNameTaken } from './role-rules';
 
 const slug = (name: string) =>
   name
@@ -90,6 +91,8 @@ export class RolesService {
     if (role.system && (patch.capabilities || patch.archived)) {
       throw conflict('The Super Admin role always keeps every permission.', 'system_role');
     }
+    if (patch.name && roleNameTaken(id, patch.name, await this.list()))
+      throw conflict('A role with this name already exists.', 'duplicate_role');
     await this.db.transaction(async (tx) => {
       await tx
         .update(roles)
@@ -97,7 +100,7 @@ export class RolesService {
           ...(patch.name ? { name: patch.name } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
           ...(patch.archived !== undefined
-            ? { archivedAt: patch.archived ? new Date() : null }
+            ? { archivedAt: archivedAtAfter(role.archivedAt, patch.archived, new Date()) }
             : {}),
           updatedAt: new Date(),
         })

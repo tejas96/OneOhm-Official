@@ -54,4 +54,9 @@ export const SAMPLE = {
   overdue: '2',
   today: '3',
   followUps: '1',
+  visit: 'Half-yearly service',
+  document: 'Latest electricity bill',
+  stage: 'installation',
+  staff: 'Priya',
+  message: 'We will reach your site at 11 am tomorrow.',
 } as const;

@@ -1,9 +1,10 @@
-import { routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
+import { handsOverInPerson, routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
 import { customers } from './schema/crm.schema';
 import { customerHandovers } from './schema/customer-handovers.schema';
+import { messageTemplates } from './schema/message-templates.schema';
 import { projects } from './schema/projects.schema';
 import { outbox } from './schema/records.schema';
 
@@ -50,7 +51,17 @@ export async function routeCustomerMessage(
         whatsappOptIn: customer.optIn,
       })
     : 'whatsapp';
-  if (route === 'in_person' && customer) return handOver(db, customer.id, message);
+  if (route === 'in_person') {
+    if (!customer) return false;
+    const [config] = await db
+      .select({ active: messageTemplates.active })
+      .from(messageTemplates)
+      .where(eq(messageTemplates.key, message.template))
+      .limit(1);
+    // No row means a built-in message nobody has switched off.
+    if (!handsOverInPerson(route, config?.active ?? true)) return false;
+    return handOver(db, customer.id, message);
+  }
   const sms = route === 'sms';
   const inserted = await db
     .insert(outbox)

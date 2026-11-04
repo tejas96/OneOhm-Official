@@ -5,7 +5,9 @@ export function approvalHref(item: PendingApprovalRow): string {
   switch (item.kind) {
     case 'task_review':
     case 'assignee_confirm':
-      return item.projectId ? `/projects/${item.projectId}?tab=tasks` : '/command-center/tasks';
+      return item.projectId
+        ? `/projects/${item.projectId}?tab=tasks&task=${item.id}`
+        : `/command-center/tasks?task=${item.id}`;
     case 'discount':
       return `/quotations/${item.id}`;
     case 'leave':

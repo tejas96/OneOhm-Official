@@ -39,7 +39,7 @@ export function OverviewTab() {
     return (
       <SkeletonGroup label={t('loading')} className="grid gap-4 lg:grid-cols-4">
         {[1, 2, 3, 4].map((key) => (
-          <Skeleton key={key} className="h-36 rounded-[28px]" />
+          <Skeleton key={key} className="h-28 rounded-2xl" />
         ))}
       </SkeletonGroup>
     );

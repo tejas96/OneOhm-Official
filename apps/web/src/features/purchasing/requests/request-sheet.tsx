@@ -55,7 +55,10 @@ function Facts({ request }: { readonly request: PurchaseRequest }) {
     <dl className="grid gap-x-8 gap-y-2 type-body-sm text-ink-muted sm:grid-cols-2">
       <dd>
         {request.project ? (
-          <Link href={`/projects/${request.project.id}`} className="text-accent hover:underline">
+          <Link
+            href={`/projects/${request.project.id}?tab=material`}
+            className="text-accent hover:underline"
+          >
             {t('forProject', { project: `${request.project.code} · ${request.project.name}` })}
           </Link>
         ) : (

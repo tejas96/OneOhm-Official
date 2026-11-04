@@ -47,9 +47,7 @@ export function CampaignSection({
           <NumberInput
             unit="whole"
             value={draft.perCustomerCount}
-            onValueChange={(value) =>
-              onChange({ perCustomerCount: value && value > 0 ? value : null })
-            }
+            onValueChange={(perCustomerCount) => onChange({ perCustomerCount })}
           />
         </Field>
         <Field label={t('perCustomerPaise')} hint={t('noLimit')} error={errors.perCustomerPaise}>

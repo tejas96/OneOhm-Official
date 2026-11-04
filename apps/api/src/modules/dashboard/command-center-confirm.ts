@@ -8,7 +8,12 @@ import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
  */
 export async function assignmentConfirmations(db: Database): Promise<ActionItem[]> {
   const rows = await db
-    .select({ projectId: projects.id, name: projects.name, code: projects.code })
+    .select({
+      taskId: projectTasks.id,
+      projectId: projects.id,
+      name: projects.name,
+      code: projects.code,
+    })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
     .where(
@@ -34,9 +39,12 @@ export async function assignmentConfirmations(db: Database): Promise<ActionItem[
       detail: one ? `${first.code} · ${first.name}` : `Across ${projectIds.size} projects`,
       action: 'Confirm',
       party: 'internal',
-      href: one
-        ? `/command-center/tasks?show=confirm&project=${first.projectId}`
-        : '/command-center/tasks?show=confirm',
+      href:
+        rows.length === 1 && first
+          ? `/projects/${first.projectId}?tab=tasks&task=${first.taskId}`
+          : one
+            ? `/command-center/tasks?show=confirm&project=${first.projectId}`
+            : '/command-center/tasks?show=confirm',
     },
   ];
 }

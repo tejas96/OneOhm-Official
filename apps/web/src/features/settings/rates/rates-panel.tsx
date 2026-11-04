@@ -1,8 +1,9 @@
 'use client';
 
-import { TabPanel, Tabs } from '@oneohm/design-system/web';
+import { Button, Dialog, TabPanel, Tabs } from '@oneohm/design-system/web';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { StarterNotice } from '../starter-notice';
 import { useRateCard } from '../use-settings';
@@ -29,8 +30,21 @@ export function RatesPanel() {
   const params = useSearchParams();
   const requested = params.get('view');
   const view: View = VIEWS.find((value) => value === requested) ?? 'lines';
+  // Only the open part is mounted: unsaved edits there are confirmed before switching.
+  const [unsaved, setUnsaved] = useState(false);
+  const [leavingTo, setLeavingTo] = useState<View | null>(null);
 
   const select = (next: View) => {
+    if (next === view) return;
+    if (unsaved) {
+      setLeavingTo(next);
+      return;
+    }
+    go(next);
+  };
+  const go = (next: View) => {
+    setUnsaved(false);
+    setLeavingTo(null);
     const query = new URLSearchParams(params);
     query.set('view', next);
     router.replace(`${pathname}?${query.toString()}`, { scroll: false });
@@ -65,12 +79,30 @@ export function RatesPanel() {
           <SiteTypesView card={settings.rates} />
         </TabPanel>
         <TabPanel value="labour" className="pt-6">
-          <JobTravelView card={settings.rates} />
+          <JobTravelView card={settings.rates} onUnsaved={setUnsaved} />
         </TabPanel>
         <TabPanel value="rules" className="pt-6">
-          <PricingRulesView card={settings.rates} />
+          <PricingRulesView card={settings.rates} onUnsaved={setUnsaved} />
         </TabPanel>
       </Tabs>
+      <Dialog
+        open={leavingTo !== null}
+        onOpenChange={(next) => !next && setLeavingTo(null)}
+        title={t('leaveTitle')}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setLeavingTo(null)}>
+              {t('stay')}
+            </Button>
+            <Button variant="danger" onClick={() => leavingTo && go(leavingTo)}>
+              {t('leave')}
+            </Button>
+          </>
+        }
+      >
+        <p className="type-body-sm text-ink-muted">{t('leaveBody')}</p>
+      </Dialog>
     </div>
   );
 }

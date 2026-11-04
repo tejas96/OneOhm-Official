@@ -1,3 +1,4 @@
+import { isReservedCampaignWord } from '@oneohm/domain';
 import { z } from 'zod';
 
 /** An ad or campaign code the owner uses to tell where leads come from. */
@@ -18,9 +19,14 @@ export const leadCampaignCodeSchema = z
   .regex(/^[A-Z0-9_-]{2,20}$/, 'Use 2 to 20 letters, digits, dashes or underscores.');
 
 export const leadCampaignInputSchema = z.object({
-  code: leadCampaignCodeSchema.refine((code) => code !== 'NONE', {
-    message: 'NONE is kept for leads without a campaign. Pick another code.',
-  }),
+  code: leadCampaignCodeSchema
+    .refine((code) => code !== 'NONE', {
+      message: 'NONE is kept for leads without a campaign. Pick another code.',
+    })
+    .refine((code) => !isReservedCampaignWord(code), {
+      message:
+        'WhatsApp reads this word as a greeting or a menu request, never as a code. Pick another code.',
+    }),
   name: z.string().trim().min(2, 'Name the campaign.').max(60),
 });
 

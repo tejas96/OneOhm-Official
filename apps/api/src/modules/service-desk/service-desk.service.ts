@@ -6,6 +6,7 @@ import type {
   serviceTicketQuerySchema,
 } from '@oneohm/api-contracts';
 import {
+  categoryHours,
   customerFeedback,
   customers,
   holdersOf,
@@ -23,16 +24,10 @@ import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
+import { changesFor, type Patch } from './service-ticket-changes';
 
 type Ticket = ServiceTicket;
 type Query = z.infer<typeof serviceTicketQuerySchema>;
-type Patch = {
-  status?: Ticket['status'] | undefined;
-  assigneeUserId?: string | null | undefined;
-  category?: string | undefined;
-  resolutionNote?: string | null | undefined;
-};
-
 const STATUS_LABEL: Readonly<Record<Ticket['status'], string>> = {
   open: 'received',
   in_progress: 'being worked on',
@@ -46,21 +41,6 @@ export function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
 }
 
 type Row = Awaited<ReturnType<typeof serviceRequestRows>>[number];
-
-/** The columns a patch changes. Leaving "open" for the first time answers the request. */
-function changesFor(patch: Patch, before: Row['request'], now: Date) {
-  const moving = patch.status !== undefined && patch.status !== before.status;
-  const answered = moving && patch.status !== 'open' && !before.respondedAt;
-  return {
-    ...(patch.status ? { status: patch.status } : {}),
-    ...(patch.assigneeUserId !== undefined ? { assigneeUserId: patch.assigneeUserId } : {}),
-    ...(patch.category ? { category: patch.category } : {}),
-    ...(patch.resolutionNote !== undefined ? { resolutionNote: patch.resolutionNote } : {}),
-    ...(patch.status ? { resolvedAt: patch.status === 'resolved' ? now : null } : {}),
-    ...(answered ? { respondedAt: now } : {}),
-    updatedAt: now,
-  };
-}
 
 function assignedNotice(current: Row, owner: string, now: Date) {
   const { request } = current;
@@ -127,13 +107,17 @@ export class ServiceDeskService {
   async update(actorId: string, id: string, patch: Patch): Promise<Ticket> {
     const current = await this.one(id);
     const before = current.request;
-    if (patch.category && patch.category !== before.category)
-      await this.assertCategory(patch.category);
+    const moved = patch.category && patch.category !== before.category ? patch.category : null;
+    if (moved) await this.assertCategory(moved);
+    // The new category's reply-by and fix-by times replace the old ones.
+    const recategory = moved
+      ? { hours: await categoryHours(this.db, moved), scheduledFor: current.visitDueOn ?? null }
+      : undefined;
     const now = new Date();
     await this.db.transaction(async (tx) => {
       await tx
         .update(serviceRequests)
-        .set(changesFor(patch, before, now))
+        .set(changesFor(patch, before, now, recategory))
         .where(eq(serviceRequests.id, id));
       if (patch.status && patch.status !== before.status) {
         await queueWhatsApp(

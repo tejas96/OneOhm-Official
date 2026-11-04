@@ -54,7 +54,9 @@ function send<T>(
         return;
       }
       if (request.status === 401) {
-        window.location.assign(`/sign-in?next=${encodeURIComponent(window.location.pathname)}`);
+        window.location.assign(
+          `/sign-in?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+        );
       }
       reject(toApiError(request.status, body));
     };

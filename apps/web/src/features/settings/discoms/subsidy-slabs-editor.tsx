@@ -6,16 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NumberInput } from '../number-input';
 import { KwInput } from './kw-input';
-
-/** One slab as typed: where it ends (null: no limit) and what it pays per kW. */
-export interface SlabDraft {
-  readonly toWp: number | null;
-  readonly paisePerKw: number | null;
-}
-
-/** Each slab starts where the one before ends, so people only type the end and the rate. */
-export const slabStart = (slabs: readonly SlabDraft[], index: number) =>
-  index === 0 ? 0 : (slabs[index - 1]?.toWp ?? 0);
+import { type SlabDraft, slabStart } from './subsidy-rule-draft';
 
 /** Slab rows with the server's field errors (`slabs.1.toWp`) under the right input. */
 export function SubsidySlabsEditor({

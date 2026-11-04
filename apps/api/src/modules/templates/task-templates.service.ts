@@ -17,6 +17,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { checkTaskTemplate } from './template-checks';
+import { assertInOrder } from './template-order';
 
 type Row = typeof taskTemplates.$inferSelect;
 
@@ -96,6 +97,10 @@ export class TaskTemplatesService {
     const [current] = await this.db.select().from(taskTemplates).where(eq(taskTemplates.id, id));
     if (!current) throw notFound('That task template');
     checkTaskTemplate({ ...input, key: current.key }, await this.known());
+    const all = await this.list();
+    assertInOrder(
+      all.map((template) => (template.id === id ? { ...template, ...input } : template)),
+    );
     const [row] = await this.db
       .update(taskTemplates)
       .set({ ...input, updatedAt: new Date() })
@@ -117,6 +122,10 @@ export class TaskTemplatesService {
     const other = all[direction === 'up' ? index - 1 : index + 1];
     const self = all[index];
     if (!other || !self) return all;
+    const swapped = all.map((template) =>
+      template.id === self.id ? other : template.id === other.id ? self : template,
+    );
+    assertInOrder(swapped);
     await this.db.transaction(async (tx) => {
       await tx.update(taskTemplates).set({ position: -1 }).where(eq(taskTemplates.id, self.id));
       await tx

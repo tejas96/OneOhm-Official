@@ -152,6 +152,25 @@ export function templateExtras(key: string): MessageTemplateDefault['extras'] {
   )?.extras;
 }
 
+/**
+ * The details a message's senders fill, so the only names its fields may use: a field the
+ * sender does not fill makes every send of that message fail. Null for a message OneOhm
+ * does not ship, whose sender this list cannot know.
+ */
+export function messageFieldsFor(key: string): readonly string[] | null {
+  return (
+    (DEFAULT_MESSAGE_TEMPLATES as readonly MessageTemplateDefault[]).find(
+      (template) => template.key === key,
+    )?.fields ?? null
+  );
+}
+
+/** The field names a message cannot fill, in the order given. */
+export function unknownMessageFields(key: string, fields: readonly string[]): string[] {
+  const known = messageFieldsFor(key);
+  return known ? fields.filter((field) => !known.includes(field)) : [];
+}
+
 /** Fields a task's customer message can fill; templates needing others cannot be picked. */
 export const TASK_MESSAGE_FIELDS = [
   'customer',

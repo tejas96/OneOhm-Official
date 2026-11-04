@@ -35,13 +35,14 @@ interface SkeletonGroupProps {
 export function SkeletonGroup({ label, children, className }: SkeletonGroupProps) {
   const visible = useDelayedVisibility();
   return (
-    <div role="status" aria-live="polite" aria-busy="true" className={className}>
+    <div role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">{label}</span>
       <div
         aria-hidden
         className={cn(
           'transition-opacity duration-(--duration-slow)',
           visible ? 'opacity-100' : 'opacity-0',
+          className,
         )}
       >
         {children}

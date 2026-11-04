@@ -211,6 +211,7 @@ export class ProjectCreationService {
         {
           totalPaise: quotation.totalPaise,
           paymentPlanId: input.paymentPlanId,
+          quotationId: quotation.id,
           loanPaise: input.loan ? input.loanPaise : 0,
         },
         actor.userId,

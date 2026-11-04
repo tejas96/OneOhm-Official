@@ -5,6 +5,7 @@ import { type PillTone, StatusPill } from '@oneohm/design-system/web';
 import { ArrowRight, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
 
 const TONE: Readonly<Record<RiskItem['kind'], PillTone>> = {
   overdue: 'overdue',
@@ -88,7 +89,7 @@ function RiskCard({ risk }: { readonly risk: RiskItem }) {
         })}
       </p>
       <Link
-        href={`/projects/${risk.projectId}?tab=tasks`}
+        href={hrefWithTask(`/projects/${risk.projectId}?tab=tasks`, risk.taskId)}
         className="group flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 hover:border-accent/60"
       >
         <span className="flex flex-col">

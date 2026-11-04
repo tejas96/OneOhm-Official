@@ -17,6 +17,7 @@ import { applyAcceptedChange } from '../project-changes/change-accept';
 import { changeAwaiting, closeStaleChanges } from '../project-changes/change-close';
 import { projectAwaiting } from './project-revision';
 import { quoteHasProject, startProjectNote } from './quotation-project';
+import { freezeQuotedTerms } from './quoted-terms';
 import { applyAcceptedRevision } from './revision-accept';
 
 /** What the customer's own "Yes, accept" came to. */
@@ -43,6 +44,8 @@ export async function acceptInTx(
     .where(and(eq(quotations.id, id), inArray(quotations.status, ['draft', 'sent'])))
     .returning({ id: quotations.id });
   if (!accepted) return false;
+  // Accepted without being sent: the terms agreed are today's.
+  await freezeQuotedTerms(tx, id);
   await tx
     .update(quotations)
     .set({ status: 'superseded', updatedAt: new Date() })

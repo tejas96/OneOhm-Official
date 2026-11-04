@@ -10,13 +10,21 @@ interface LedgerRow {
   readonly key: string;
   readonly value: number;
   readonly href: string;
+  /** Shown instead of the key's own label (one that takes values). */
+  readonly label?: string;
 }
 
 /**
  * Money set as a ledger with leader dots: what was earned and comes in (customers and
  * banks) beside everything still owed to vendors and crews. Each line opens its records.
  */
-export function MoneyLedger({ money }: { readonly money: CommandCenter['money'] }) {
+export function MoneyLedger({
+  money,
+  dueSoonDays,
+}: {
+  readonly money: CommandCenter['money'];
+  readonly dueSoonDays: number;
+}) {
   const t = useTranslations('commandCenter.money');
   const comingIn: readonly LedgerRow[] = [
     { key: 'revenue', value: money.revenuePaise, href: '/finance?tab=ledger' },
@@ -27,7 +35,12 @@ export function MoneyLedger({ money }: { readonly money: CommandCenter['money'] 
   const goingOut: readonly LedgerRow[] = [
     { key: 'toVendors', value: money.toVendorsPaise, href: '/finance?tab=payables' },
     { key: 'toContractors', value: money.toContractorsPaise, href: '/finance?tab=payables' },
-    { key: 'dueThisWeek', value: money.dueThisWeekPaise, href: '/finance?tab=payables' },
+    {
+      key: 'dueThisWeek',
+      value: money.dueThisWeekPaise,
+      href: '/finance?tab=payables',
+      label: t('dueThisWeek', { days: dueSoonDays }),
+    },
     { key: 'advances', value: money.advancesPaise, href: '/finance?tab=advances' },
   ];
   return (
@@ -60,7 +73,9 @@ function Ledger({
               href={row.href}
               className="group -mx-2 flex items-baseline gap-3 rounded-md px-2 py-2.5 hover:bg-surface"
             >
-              <span className="type-body text-ink-muted group-hover:text-ink">{t(row.key)}</span>
+              <span className="type-body text-ink-muted group-hover:text-ink">
+                {row.label ?? t(row.key)}
+              </span>
               <span aria-hidden className="flex-1 border-b border-dotted border-rule" />
               <span className="type-display-md text-ink tabular-nums">
                 {formatInrCompact(row.value)}

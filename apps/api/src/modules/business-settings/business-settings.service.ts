@@ -15,9 +15,11 @@ import {
   checkApprovalPolicy,
   checkDashboardSettings,
   checkReminderTiming,
+  cleanCityOwners,
   isAssignmentRules,
   isLeadAssignmentRules,
   type LeadAssignmentRules,
+  onboardingFieldErrors,
   onboardingProblem,
   type SettingErrors,
 } from '@oneohm/domain';
@@ -28,7 +30,7 @@ import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
-import { assertCanOwnLeads } from '../crm/lead-owner';
+import { cityOwnerStanding } from '../crm/lead-owner';
 
 const CHECKS: {
   readonly [K in BusinessSettingKey]: (value: BusinessSettingsMap[K]) => SettingErrors;
@@ -41,7 +43,8 @@ const CHECKS: {
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
   onboarding: (value) => {
     const problem = onboardingProblem(value);
-    return problem ? { onboarding: problem } : {};
+    // Field paths (`billBands.2.maxRupees`) mark the inputs; `onboarding` is the summary.
+    return problem ? { ...onboardingFieldErrors(value), onboarding: problem } : {};
   },
 };
 
@@ -98,29 +101,49 @@ export class BusinessSettingsService {
     return this.get(key);
   }
 
-  /** The lead rule as the screen shows it (plain lists, so it can be edited). */
+  /**
+   * The lead rule as the screen shows it (plain lists, so it can be edited), with each
+   * city owner's name and whether they still work on leads.
+   */
   async leadAssignment(): Promise<LeadAssignmentRulesRecord> {
-    return copyLeadRules(await this.get('lead_assignment'));
+    const rules = copyLeadRules(await this.get('lead_assignment'));
+    const ids = rules.cityOwners.map((owner) => owner.userId);
+    const { canOwn, names } = await cityOwnerStanding(this.db, ids);
+    return {
+      ...rules,
+      cityOwners: rules.cityOwners.map((owner) => ({
+        ...owner,
+        ...(names.has(owner.userId) ? { name: names.get(owner.userId) } : {}),
+        inactive: !canOwn.has(owner.userId),
+      })),
+    };
   }
 
   /**
-   * Saves the lead rule. City names are trimmed and blanks dropped (a person with no
-   * city left is dropped too), and every city owner must be someone who can own leads.
+   * Saves the lead rule (`cleanCityOwners`). A saved owner who no longer works on leads
+   * is dropped (the screen marks them inactive); a new one who cannot, or anyone left
+   * with no city, is refused with a message by that person.
    */
   async saveLeadAssignment(
     actor: Actor,
     rules: LeadAssignmentRulesRecord,
   ): Promise<LeadAssignmentRulesRecord> {
-    const cityOwners = rules.cityOwners
-      .map((owner) => ({
-        userId: owner.userId,
-        cities: [...new Set(owner.cities.map((city) => city.trim()).filter(Boolean))],
-      }))
-      .filter((owner) => owner.cities.length > 0);
-    for (const owner of cityOwners) await assertCanOwnLeads(this.db, owner.userId);
-    return copyLeadRules(
-      await this.save(actor, 'lead_assignment', { strategy: rules.strategy, cityOwners }),
-    );
+    const saved = new Set((await this.get('lead_assignment')).cityOwners.map((o) => o.userId));
+    const ids = rules.cityOwners.map((owner) => owner.userId);
+    const { canOwn } = await cityOwnerStanding(this.db, ids);
+    const cleaned = cleanCityOwners(rules.cityOwners, canOwn, saved);
+    const errors: SettingErrors = {};
+    for (const id of cleaned.blank) errors[`cities_${id}`] = 'Add at least one city, or remove.';
+    for (const id of cleaned.refused)
+      errors[`cities_${id}`] = 'This person cannot work on leads. Pick someone in Sales.';
+    if (cleaned.refused.length > 0) throw invalid('Pick someone who works on leads.', errors);
+    if (cleaned.blank.length > 0)
+      throw invalid('Add a city for each person, or remove them.', errors);
+    await this.save(actor, 'lead_assignment', {
+      strategy: rules.strategy,
+      cityOwners: cleaned.kept,
+    });
+    return this.leadAssignment();
   }
 
   /** The WhatsApp onboarding settings as the screen shows them. */

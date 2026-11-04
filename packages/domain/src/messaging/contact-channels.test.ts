@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isNotOnWhatsApp, routeFor, SMS_MAX, skippedAfterStop, smsText } from './contact-channels';
+import {
+  handsOverInPerson,
+  isNotOnWhatsApp,
+  routeFor,
+  SMS_MAX,
+  skippedAfterStop,
+  smsText,
+} from './contact-channels';
 
 describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
   const base = { channel: 'whatsapp', whatsappUnreachable: false, whatsappOptIn: true } as const;
@@ -51,5 +58,19 @@ describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
     expect(smsText('How did we do?', 'Please rate it.', 'OneOhm')).toBe(
       'How did we do? Please rate it. - OneOhm',
     );
+  });
+});
+
+describe('handsOverInPerson', () => {
+  it('asks the team to tell an in-person customer when the message is on', () => {
+    expect(handsOverInPerson('in_person', true)).toBe(true);
+  });
+
+  it('asks nothing of the team when the owner turned the message off', () => {
+    expect(handsOverInPerson('in_person', false)).toBe(false);
+  });
+
+  it('never hands over a message going by WhatsApp or SMS', () => {
+    expect(handsOverInPerson('whatsapp', true)).toBe(false);
   });
 });

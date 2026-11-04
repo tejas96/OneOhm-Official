@@ -11,9 +11,9 @@
       "whatsappOnboarding": "WhatsApp onboarding",
       "products": "Products",
       "rates": "Rate card",
-      "discoms": "DISCOMs & subsidy",
-      "workforce": "Workforce",
-      "rewards": "Rewards",
+      "discoms": "DISCOMs and subsidy",
+      "workforce": "Leave and attendance",
+      "rewards": "Points and rewards",
       "tasks": "Task templates",
       "documents": "Required documents",
       "messages": "WhatsApp messages",
@@ -25,9 +25,10 @@
       "amcPlans": "AMC plans",
       "projectTypes": "Project types",
       "approvals": "Approvals",
-      "assignment": "Assignment rules",
+      "assignment": "Task assignment",
+      "leadAssignment": "Lead assignment",
       "reminders": "Reminders",
-      "dashboard": "Dashboard",
+      "dashboard": "Late and due-soon",
       "automation": "Automation runs"
     },
     "noAccess": "You do not have permission to change settings.",
@@ -62,7 +63,11 @@
         "clear": "Clear",
         "protectedNote": "Super Admin always holds every permission and cannot be changed or archived, so there is always someone who can fix access.",
         "archive": "Archive role",
-        "archiveHint": "Archived roles cannot be given to anyone new. People who hold it keep it until you change their roles.",
+        "archiveHint": "Archived roles cannot be given to anyone new. People who have it lose its permissions straight away.",
+        "archiveConfirmTitle": "Archive {name}?",
+        "archiveConfirmBody": "{count, plural, one {# person has} other {# people have}} this role. They lose its permissions straight away, though their other roles still work. Restore the role to give the permissions back.",
+        "archiveConfirm": "Archive role",
+        "cancel": "Cancel",
         "restore": "Restore role",
         "create": "Create role",
         "created": "Role {name} created",
@@ -88,6 +93,7 @@
         "granted": "{role} can now {capability}",
         "revoked": "{role} can no longer {capability}",
         "failed": "Could not change {role}",
+        "undo": "Undo",
         "stale": "This role has changed. Reload and try again."
       }
     },
@@ -216,7 +222,7 @@
       "shortAddressHint": "Used where space is tight, like report footers.",
       "email": "Email",
       "phones": "Phone numbers",
-      "phonesHint": "One per line. The first is shown on documents.",
+      "phonesHint": "One per line. Documents print them all. The first is the number customers are given to call, for payments and referrals.",
       "signatory": "Authorised signatory",
       "signatoryHint": "Printed under the signature and stamp on quotations and reports.",
       "signatoryMissing": "The signatory's name is still blank, so documents will print without it.",
@@ -225,7 +231,8 @@
       "signatoryPhone": "Phone",
       "signatoryEmail": "Email",
       "documents": "Documents",
-      "quotationValidityDays": "Quotations valid for (days)"
+      "quotationValidityDays": "Quotations valid for (days)",
+      "quotationValidityHint": "Applies to quotations made from now on. Quotations already made keep their date."
     },
     "starter": {
       "title": "Starter values: review and replace",
@@ -301,7 +308,7 @@
     "discoms": {
       "loading": "Loading DISCOMs",
       "title": "DISCOMs",
-      "intro": "Each DISCOM has its own task set and report formats. Expected days drive the waiting alerts on projects.",
+      "intro": "Each DISCOM has its own task set and report formats. Expected days mark a project as late on the DISCOM desk. The dashboard alert for long DISCOM waits uses its own day limit in Settings → Dashboard.",
       "add": "Add DISCOM",
       "columns": {
         "discom": "DISCOM",
@@ -345,6 +352,7 @@
       "inForceSince": "In force since {date}",
       "startsOn": "Starts {date}",
       "noneInForce": "No rule in force yet.",
+      "commercialNote": "Commercial customers get no PM Surya Ghar subsidy. Quotations always show ₹0 for them, whatever this rule says.",
       "earlier": "{count, plural, one {# earlier version} other {# earlier versions}}",
       "edit": "Edit",
       "withdraw": "Withdraw",
@@ -373,7 +381,10 @@
         "maxEligibleHint": "Leave empty for no limit.",
         "cancel": "Cancel",
         "save": "Save version",
-        "saved": "{category} rule saved. It applies from {date}."
+        "saved": "{category} rule saved. It applies from {date}.",
+        "switchWarning": "Switching to {category} replaces the slabs you typed with its rule in force.",
+        "switchConfirm": "Switch and replace",
+        "switchKeep": "Keep my slabs"
       },
       "withdrawDialog": {
         "title": "Withdraw this version?",
@@ -387,7 +398,7 @@
         "asOf": "Under the rules in force on {date}",
         "loading": "Pricing open quotations",
         "summary": "{checked, plural, =0 {There are no draft or sent quotations to check.} one {Checked # draft or sent quotation:} other {Checked # draft or sent quotations:}} {changed, plural, =0 {none would change.} one {# would change.} other {# would change.}}",
-        "note": "Each one is priced afresh and compared with the subsidy it saved. Nothing is changed here: revise a quotation to update it. Accepted quotations always keep their subsidy.",
+        "note": "Each one is priced afresh and compared with the support it saved: the central subsidy plus any state top-up. Nothing is changed here: revise a quotation to update it. Accepted quotations always keep their subsidy.",
         "noneTitle": "No open quotation changes",
         "noneBody": "Every draft and sent quotation keeps the same expected subsidy under these rules.",
         "columns": {
@@ -418,6 +429,9 @@
         "remove": "Remove {name}",
         "add": "Add a kind of leave",
         "removeHint": "Requests already made keep their kind. Changes apply when you save.",
+        "removeTitle": "Remove {name}?",
+        "removeBody": "Once you save the page, people can no longer ask for this kind of leave. Requests already made keep it.",
+        "removeConfirm": "Remove",
         "dialog": {
           "addTitle": "New kind of leave",
           "editTitle": "Edit {name}",
@@ -545,7 +559,7 @@
     },
     "taskTemplates": {
       "title": "Task templates",
-      "intro": "Every new project gets these tasks, in this order, when its conditions match. Changes apply to projects created from now on; tasks already on projects stay as they are.",
+      "intro": "Every new project gets these tasks, in this order, when its conditions match. Most changes apply to projects created from now on. What the customer is told (the message, when it goes, its words, who hears it and its link), telling the manager and the escalation days are read when they happen, so those reach tasks already on projects too.",
       "add": "Add task",
       "loading": "Loading task templates",
       "search": "Search tasks",
@@ -648,6 +662,8 @@
         "notifyCustomer": "Send the customer a WhatsApp message",
         "notifyEvent": "Send it on",
         "message": "Message",
+        "messageOff": "{name} (off)",
+        "messageLiveHint": "The message, when it goes, the customer's words, who hears it and the link are read when it is sent, so changes here reach tasks already on projects too.",
         "customerTitle": "Words the customer sees",
         "customerTitleHint": "Required when the customer is told. For example “Net meter fitted”.",
         "preview": "Preview",
@@ -728,11 +744,12 @@
         "language": "Language code",
         "languageHint": "For example en, hi or mr.",
         "fields": "Fills '{{'1'}}', '{{'2'}}'… in this order",
-        "fieldsHint": "Comma separated. Available: {available}.",
+        "fieldsHint": "Comma separated, in order. This message can use: {available}.",
         "preview": "Approved wording",
-        "previewHint": "Copy it from WhatsApp Manager, with '{{'1'}}', '{{'2'}}' where details go.",
+        "previewHint": "Copy it from WhatsApp Manager, with '{{'1'}}', '{{'2'}}' where details go. WhatsApp sends the wording Meta approved; this copy is what OneOhm shows in the chat history. SMS and app alerts keep their own fixed wording.",
         "sample": "With sample details",
         "active": "Send this message",
+        "activeHint": "When off, nothing goes out on WhatsApp and the team is not asked to tell customers in person. The customer still sees the news in their app.",
         "saved": "{name} saved.",
         "metaNameMr": "Marathi template name (optional)",
         "metaNameHi": "Hindi template name (optional)",
@@ -748,6 +765,7 @@
       "changes": "Changes",
       "signIns": "Sign-ins",
       "search": "Search action, person or record",
+      "searchSignIns": "Search account, person or address",
       "loading": "Loading the activity log",
       "empty": "Nothing recorded yet.",
       "more": "Show older",
@@ -810,12 +828,13 @@
     },
     "sectionLabel": "Settings section",
     "groups": {
-      "organisation": "Organisation",
-      "selling": "Selling and pricing",
-      "operations": "Projects and messages",
-      "security": "Security",
+      "company": "Your business",
+      "leads": "Leads and marketing",
+      "pricing": "Pricing and quotes",
+      "projects": "Projects",
+      "messages": "Messages and alerts",
       "afterSales": "After-sales",
-      "rules": "Rules and automation"
+      "system": "Logs"
     },
     "rewards": {
       "intro": "Everything OneOhm gives for good work, in one place. Points are a thank-you to staff; referral rewards, reseller commission and project bonuses are money, and each is approved before anyone is paid.",
@@ -841,7 +860,7 @@
           "stageRating": "Named on a 4 or 5 star stage rating",
           "stageRatingDetail": "Suggested for each staff member the customer names on a survey, installation or switch-on rating.",
           "recognitionMax": "Recognition from a manager",
-          "recognitionMaxDetail": "Given with a reason, never for the manager's own work. This is the most one recognition can give."
+          "recognitionMaxDetail": "Given with a reason, never for the manager's own work. This is the most one recognition can give, at least 1."
         },
         "upTo": "Up to",
         "pointsLabel": "Points for: {event}",
@@ -885,6 +904,7 @@
       "loading": "Loading the referral programme",
       "intro": "Customers share their own code on WhatsApp. When a referred friend's project reaches the event you choose, the reward is earned and waits for finance to approve and pay it. Changes apply to rewards earned from now on.",
       "unsaved": "You have unsaved changes.",
+      "earnsNow": "Saving with the programme on earns rewards straight away for referrals that already qualify, and tells those customers on WhatsApp.",
       "discard": "Discard",
       "events": {
         "project_created": "Project created",
@@ -900,7 +920,7 @@
         "title": "Reward",
         "description": "What a customer earns for each friend who goes solar.",
         "active": "Programme is on",
-        "activeHint": "When off, codes still work and referrals are recorded, but nothing is earned.",
+        "activeHint": "When off, codes still work and referrals are recorded, but nothing is earned. A step a friend's project reaches while it is off earns nothing later either.",
         "basis": "Reward is",
         "bases": {
           "per_referral": "A fixed amount",
@@ -915,7 +935,7 @@
       },
       "campaign": {
         "title": "Campaign and limits",
-        "description": "Referrals registered from the start day count. Rewards never go over the budget or a customer's limit.",
+        "description": "Referrals registered from the start day count. Only their rewards use up this campaign's budget and each customer's limit, which are never exceeded.",
         "startsOn": "Campaign starts on",
         "startsOnHint": "Older referrals earn nothing.",
         "budget": "Campaign budget",
@@ -943,7 +963,7 @@
     },
     "leadCampaigns": {
       "loading": "Loading ad and campaign codes",
-      "intro": "Short codes that say which ad or campaign a lead came from, for example DIWALI-26 on an ad link or at the start of a WhatsApp message. Turn a code off when the campaign ends to hide it from the active list; leads already tagged keep it, and new messages with the code are still recorded.",
+      "intro": "Short codes that say which ad or campaign a lead came from, for example DIWALI-26 on an ad link. On WhatsApp the whole first message must be the opener: \"Hi OneOhm DIWALI-26\" or \"OneOhm DIWALI-26\" (Hello or Hey also work). A code that is only letters counts only once it is in this list. Turning a code off only marks the campaign as ended here: leads already tagged keep it, and new leads with the code are still tagged.",
       "empty": "No codes yet.",
       "leads": "{count, plural, =0 {No leads yet} one {# lead} other {# leads}}",
       "edit": "Rename {code}",
@@ -954,7 +974,7 @@
         "editTitle": "Rename {code}",
         "description": "A code is typed in capitals and never changes once saved.",
         "code": "Code",
-        "codeHint": "2 to 20 letters, digits, dashes or underscores.",
+        "codeHint": "2 to 20 letters, digits, dashes or underscores. Not MENU, HELP, START, CODE or a greeting such as HI.",
         "name": "Campaign name",
         "nameHint": "For example: Diwali Facebook ads.",
         "cancel": "Cancel",
@@ -983,6 +1003,10 @@
       "edit": "Rename {name}",
       "add": "Add a step",
       "failed": "Could not change the step",
+      "offTitle": "Switch off {name}?",
+      "offBody": "{count, plural, one {# open lead is} other {# open leads are}} on this step. {count, plural, one {It moves} other {They move}} to {next}. If you switch it on again, leads not moved in the meantime come back.",
+      "offKeep": "Keep it on",
+      "offConfirm": "Switch off",
       "dialog": {
         "addTitle": "Add a step",
         "editTitle": "Rename {name}",
@@ -996,7 +1020,7 @@
     },
     "requirements": {
       "loading": "Loading required documents",
-      "intro": "The papers every project checklist asks for, and which projects need each one. Switching a paper off takes it off every checklist; files already uploaded stay.",
+      "intro": "The papers every project checklist asks for, and which projects need each one. Changes reach every project's checklist straight away, including projects already running. Switching a paper off takes it off every checklist; files already uploaded stay.",
       "up": "Move {name} up",
       "down": "Move {name} down",
       "edit": "Edit {name}",
@@ -1015,13 +1039,14 @@
       "dialog": {
         "addTitle": "Add a required paper",
         "editTitle": "Edit {name}",
-        "description": "Any file in the chosen folder counts as this paper.",
+        "description": "Any file in one of the chosen folders counts as this paper.",
         "label": "Paper",
         "why": "Why it is needed",
-        "folder": "Folder",
-        "folderHint": "Files in this folder count as this paper.",
+        "folder": "Folders",
+        "folderHint": "A file in any ticked folder counts as this paper.",
         "fromCustomer": "The customer provides it",
         "fromCustomerHint": "The team can ask the customer for it from the checklist.",
+        "fromCustomerNotHere": "Only for papers the customer holds. Tick a customer folder such as ID proof or Electricity bill; Other and OneOhm's own folders cannot be asked for.",
         "types": "Project types",
         "typesHint": "None ticked means every type.",
         "flags": {
@@ -1050,7 +1075,7 @@
         "intro": "When customers are reminded to pay, when the team gets its morning list, and how early lead follow-ups are flagged. Changes apply from the next run.",
         "payments": {
           "title": "Payment reminders",
-          "description": "Sent to the customer on WhatsApp while a payment stays unpaid.",
+          "description": "Sent to the customer on WhatsApp each morning around 8:45 am while a payment stays unpaid.",
           "grace": "First reminder after (days)",
           "graceHint": "Days after the payment falls due. 0 sends it on the due day.",
           "repeat": "Then every (days)",
@@ -1097,12 +1122,14 @@
         "addPerson": "Add a person",
         "add": "Add",
         "remove": "Remove",
-        "someone": "Someone"
+        "someone": "Someone",
+        "inactive": "{name} (inactive)",
+        "inactiveNote": "No longer works on leads. Removed when you save."
       },
       "assignment": {
         "title": "Assignment rules",
         "loading": "Loading assignment rules",
-        "intro": "How a new project's tasks find a person. Crew work always goes to the project's contractor, and tasks marked critical still wait for a manager to confirm the person.",
+        "intro": "How a new project's tasks, service requests and DISCOM change-request tasks find a person. Crew work always goes to the project's contractor, and tasks marked critical still wait for a manager to confirm the person.",
         "who": {
           "title": "Who gets the next task",
           "description": "Among the people in the task's role.",
@@ -1129,6 +1156,7 @@
         "loading": "Loading approval rules",
         "intro": "Who must say yes before money moves or a price changes, and when a waiting approval goes up to the owner. Everything waiting for someone shows in their Today → Waiting for my approval.",
         "limitHint": "₹0 means each one needs someone who approves payments.",
+        "limitBlank": "Enter an amount. Use 0 if each one needs someone who approves payments.",
         "discount": {
           "title": "Discounts",
           "description": "Set with the rate card, shown here so every approval rule is in one place.",
@@ -1158,9 +1186,10 @@
         },
         "waiting": {
           "title": "Waiting too long",
-          "description": "Approvals that wait are raised to the owner once.",
+          "description": "Checked each morning around 8:45 am. An approval that has waited this long is raised to the owner once.",
           "days": "Tell the owner after (days)",
           "daysHint": "Counted from the day it was asked for.",
+          "daysBlank": "Enter a number of days from 1 to 30.",
           "open": "Open Waiting for my approval"
         }
       },
@@ -1202,7 +1231,7 @@
       "projectTypes": {
         "title": "Project types",
         "loading": "Loading project types",
-        "intro": "The kinds of project OneOhm builds. Rename them, describe them for the team, or switch one off so no new project of that kind can start. Projects already running carry on.",
+        "intro": "The kinds of project OneOhm builds. Rename them, add a note, or switch one off so no new quote or project of that kind can start. Projects already running carry on.",
         "columns": {
           "name": "Type",
           "projects": "Projects",
@@ -1215,11 +1244,11 @@
         "newKind": "A brand-new kind of project needs its own task list and rules, so ask for it to be added; task templates already know every kind listed here.",
         "dialog": {
           "title": "Edit {name}",
-          "description": "The name and note show to the team when they create projects.",
+          "description": "The name and note are for this list. The name also shows in the message when someone tries to quote or start a project of a type that is switched off.",
           "name": "Name",
           "about": "What it is",
           "aboutHint": "One or two plain sentences.",
-          "offered": "Offered for new projects",
+          "offered": "Offered for new quotes and projects",
           "offeredHint": "{count, plural, =0 {No projects of this kind yet.} one {1 project of this kind keeps running either way.} other {# projects of this kind keep running either way.}}"
         }
       }
@@ -1229,16 +1258,21 @@
       "loading": "Loading recent runs",
       "intro": "Every automatic job OneOhm runs: reminders, escalations, summaries, messages and payment checks. Failures come first; the ones that are safe to run again have a retry.",
       "allWell": "Everything ran as planned in the last 7 days.",
-      "failedWeek": "{count, plural, one {1 run failed in the last 7 days.} other {# runs failed in the last 7 days.}}",
+      "failedWeek": "{count, plural, one {1 run failed in the last 7 days and its job has not worked since.} other {# runs failed in the last 7 days and their jobs have not worked since.}}",
+      "missingDaily": "{count, plural, one {A daily job has not run in the last day: {jobs}.} other {# daily jobs have not run in the last day: {jobs}.}} The background worker may be stopped. Ask your developer to check it.",
       "show": "Show",
       "showAll": "All runs",
       "showFailed": "Failed only",
       "empty": "No runs yet. Jobs record here from their next run.",
       "noFailures": "Nothing failed. Good.",
-      "kept": "Runs are kept for 30 days. Payment and payout checks that run every few minutes are listed only when they did something or failed.",
+      "kept": "Runs are kept for 30 days. Payment and payout checks that run every few minutes are listed only when they did something, failed, or worked again after a failure.",
       "retry": "Run again",
       "retryQueued": "Queued to run again within a minute",
       "retried": "Run again since.",
+      "recovered": "Failed, worked later",
+      "recoveredNote": "The same job worked on a later run, so nothing needs doing.",
+      "retryToday": "Runs today's job, not the missed day's.",
+      "errorHint": "This is the technical message. Ask your developer to look at it, and send them the run ID below.",
       "took": "Took {seconds} s",
       "tookUnderSecond": "Took under a second",
       "sheet": {
@@ -1329,7 +1363,7 @@
       "citiesHint": "Shown as a list in the chat, up to 7, each up to 24 letters, exactly as typed here (type them in Marathi, such as पुणे, if you want the Marathi chat to show them so). Leave empty to ask for the city in words.",
       "citiesPlaceholder": "Pune, Satara, Sangli",
       "bands": "Monthly bill choices",
-      "bandsHint": "What people pick in the chat, up to 8. The Marathi and Hindi chats show the translation when you give one. Leave the size empty when our expert should price it. A typed bill amount goes to the first choice it fits under; only the last choice can have no upper limit.",
+      "bandsHint": "What people pick in the chat, 2 to 8 choices. The Marathi and Hindi chats show the translation when you give one. Leave the size empty when our expert should price it. A typed bill amount goes to the first choice it fits under; only the last choice can have no upper limit.",
       "bandLabel": "Choice shown",
       "bandLabelMr": "In Marathi (optional)",
       "bandLabelHi": "In Hindi (optional)",
@@ -1338,10 +1372,12 @@
       "bandMax": "Up to ₹",
       "bandNoLimit": "No limit",
       "bandMaxNeeded": "Give every choice but the last an upper amount, rising down the list.",
+      "bandAdd": "Add a choice",
+      "bandRemove": "Remove {label}",
       "tariff": "Electricity price per unit (₹)",
       "unitsPerKw": "Units per kW per month",
       "nudge": "Nudge after (hours, 0 = off)",
-      "nudgeHint": "One reminder to a person who stops answering. At most 22 hours.",
+      "nudgeHint": "One reminder to a person who stops answering, sent only in working hours. At most 22 hours; 0 sends none. This wait also sets when a chat that stops early is passed to sales as a lead: never sooner than 3 hours, even with reminders off.",
       "panels": "Panel to price with (optional)",
       "panelsHint": "Leave empty to use the panel we suggest for the site.",
       "home": "Home",

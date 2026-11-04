@@ -6,6 +6,7 @@ import { DEFAULT_SQM_PER_KWP, PRICING_MODES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { SettingsSection } from '../settings-section';
+import { hasUnsaved } from './card-draft';
 import { RowGroup, ValueRow } from './rate-rows';
 import { SaveBar } from './save-bar';
 import { useCardSaver } from './use-card-saver';
@@ -29,11 +30,18 @@ const RULES: readonly ShareKey[] = [
 const TAXES: readonly ShareKey[] = ['goodsTaxBp', 'serviceTaxBp'];
 
 /** How cost becomes price, and the allowances and approvals around it (PRD 3.9 D). */
-export function PricingRulesView({ card }: { readonly card: Card }) {
+export function PricingRulesView({
+  card,
+  onUnsaved,
+}: {
+  readonly card: Card;
+  readonly onUnsaved?: (unsaved: boolean) => void;
+}) {
   const t = useTranslations('costing.rules');
   const { save, form } = useCardSaver();
   const [draft, setDraft] = useState(card);
   useEffect(() => setDraft(card), [card]);
+  useEffect(() => onUnsaved?.(hasUnsaved(draft, card)), [draft, card, onUnsaved]);
   const errors = form.fieldErrors;
   const share = (key: ShareKey) => (
     <ValueRow

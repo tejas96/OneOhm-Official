@@ -3,6 +3,7 @@ import { type Database, projects, projectTasks, users } from '@oneohm/database';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, asc, eq, gte, lte, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { daysSince } from './business-days';
 import type { CenterScope } from './command-center-scope';
 
 const manager = alias(users, 'manager');
@@ -48,7 +49,7 @@ export async function risksIn(db: Database, scope: CenterScope): Promise<RiskIte
       managerName,
     };
     if (task.status === 'waiting' && task.waitingSince) {
-      const days = daysBetween(task.waitingSince.toISOString().slice(0, 10), scope.today);
+      const days = daysSince(task.waitingSince, scope.today);
       return [{ ...base, kind: 'waiting', days, party: task.waitingParty }];
     }
     if (task.dueDate < scope.today) {

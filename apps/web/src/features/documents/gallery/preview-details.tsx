@@ -84,7 +84,7 @@ export function PreviewDetails({
         {showProject && document.projectId && document.projectCode && (
           <Detail label={t('preview.project')}>
             <Link
-              href={`/projects/${document.projectId}`}
+              href={`/projects/${document.projectId}?tab=documents`}
               className="font-mono text-[0.8125rem] text-accent hover:underline"
             >
               {document.projectCode}

@@ -3,7 +3,7 @@
 import { Input } from '@oneohm/design-system/web';
 import { type ComponentPropsWithRef, useEffect, useState } from 'react';
 
-type Unit = 'paise' | 'basisPoints' | 'watts' | 'whole';
+type Unit = 'paise' | 'basisPoints' | 'watts' | 'whole' | 'decimal';
 
 /** Stored value → what the person types: paise as rupees, basis points as percent. */
 const SCALE: Readonly<Record<Unit, number>> = {
@@ -11,6 +11,7 @@ const SCALE: Readonly<Record<Unit, number>> = {
   basisPoints: 100,
   watts: 1000,
   whole: 1,
+  decimal: 1,
 };
 
 function toText(value: number | null, unit: Unit): string {
@@ -24,14 +25,15 @@ function fromText(text: string, unit: Unit): number | null | undefined {
   if (cleaned === '') return null;
   const parsed = Number(cleaned);
   if (!Number.isFinite(parsed)) return undefined;
-  return Math.round(parsed * SCALE[unit]);
+  // `decimal` keeps what was typed (115.5); every other unit stores whole numbers.
+  return unit === 'decimal' ? parsed : Math.round(parsed * SCALE[unit]);
 }
 
 interface NumberInputProps
   extends Omit<ComponentPropsWithRef<'input'>, 'value' | 'onChange' | 'type'> {
   readonly value: number | null;
   readonly onValueChange: (value: number | null) => void;
-  /** paise (shown as ₹), basisPoints (shown as %), watts (shown as kW), or whole numbers. */
+  /** paise (shown as ₹), basisPoints (shown as %), watts (shown as kW), whole or decimal numbers. */
   readonly unit: Unit;
 }
 

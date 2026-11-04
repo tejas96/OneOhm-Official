@@ -26,8 +26,8 @@ export class PeopleController {
         return { status: 201, body: await this.people.create(actor, body) };
       },
       updatePerson: async ({ params, body }) => {
+        // Which roles may change is checked in the service: rolesOutOfReach.
         assertCan(actor, 'people.manage');
-        if (body.roleIds) assertCan(actor, 'roles.manage', 'people.manage');
         return { status: 200, body: await this.people.update(actor, params.id, body) };
       },
       listRoles: async () => {

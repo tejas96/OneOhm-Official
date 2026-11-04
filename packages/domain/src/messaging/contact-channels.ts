@@ -51,3 +51,10 @@ export function smsText(title: string, body: string, brand: string): string {
   const cut = text.slice(0, room - 1);
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 1))}…${sign}`;
 }
+
+/**
+ * Whether the team is asked to tell a customer in person. Not when the owner turned the
+ * message off in Settings: the team would be chasing news nobody wants sent.
+ */
+export const handsOverInPerson = (route: ContactChannel, messageOn: boolean): boolean =>
+  route === 'in_person' && messageOn;

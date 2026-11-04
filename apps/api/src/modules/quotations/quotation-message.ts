@@ -11,12 +11,12 @@ import { chatWindowOpen } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { desc, eq, like } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
-import { planSteps } from '../payment-plans/payment-plans.service';
 import { customerPdfName } from '../reports/pdf-file-name';
 import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import { QUOTE_MONEY_WORDS, quoteMoney } from './quote-money-words';
+import { quotedSteps } from './quoted-terms';
 
 /** The quote's PDF as a link the customer's phone can open, named for the customer. */
 function pdfOf(env: Environment, quotation: QuotationDetail) {
@@ -91,7 +91,7 @@ export async function queueQuotePdf(
     .from(customers)
     .where(eq(customers.id, quotation.customer.id))
     .limit(1);
-  const steps = await planSteps(tx, null);
+  const steps = await quotedSteps(tx, quotation.id);
   await inLanguage(assistantLanguage(customer?.language), async () => {
     const W = QUOTE_MONEY_WORDS;
     if (!earlier || failed) {

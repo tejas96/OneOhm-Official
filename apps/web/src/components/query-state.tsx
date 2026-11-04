@@ -52,7 +52,7 @@ export function ListSkeleton({
   return (
     <SkeletonGroup label={label} className="flex flex-col gap-3">
       {Array.from({ length: rows }, (_, index) => (
-        <Skeleton key={`row-${index + 1}`} className="h-16 w-full rounded-xl" />
+        <Skeleton key={`row-${index + 1}`} className="h-14 w-full rounded-xl" />
       ))}
     </SkeletonGroup>
   );

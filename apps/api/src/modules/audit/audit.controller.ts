@@ -18,7 +18,10 @@ export class AuditController {
       },
       signIns: async ({ query }) => {
         assertCan(actor, 'audit.view');
-        return { status: 200, body: await this.audit.signIns(query.failedOnly === 'true') };
+        return {
+          status: 200,
+          body: await this.audit.signIns({ ...query, failedOnly: query.failedOnly === 'true' }),
+        };
       },
     });
   }

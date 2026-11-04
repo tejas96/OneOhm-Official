@@ -117,7 +117,7 @@ export function SiteTypeSheet({
                   onValueChange={(value) => set('heightM', value ?? 0)}
                 />
               </Field>
-              <Field label={t('tilt')}>
+              <Field label={t('tilt')} hint={t('tiltHint')}>
                 <DecimalInput
                   suffix="°"
                   value={draft.tiltDeg}

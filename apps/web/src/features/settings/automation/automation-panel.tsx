@@ -11,6 +11,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { RULE_KEYS } from '../rules/use-rule-settings';
 import { useRunColumns } from './run-columns';
+import { needsAttention } from './run-format';
 import { RunSheet } from './run-sheet';
 
 type Show = 'all' | 'failed';
@@ -48,9 +49,11 @@ export function AutomationPanel() {
     }
   };
   const columns = useRunColumns(retry, retrying, (run) => setOpenId(run.id));
-  const runs = (query.data?.runs ?? []).filter((run) => show === 'all' || run.status === 'failed');
+  const runs = (query.data?.runs ?? []).filter((run) => show === 'all' || needsAttention(run));
   const opened = query.data?.runs.find((run) => run.id === openId) ?? null;
   const failed = query.data?.failedLastWeek ?? 0;
+  const missing = query.data?.missingDaily ?? [];
+  const missingJobs = missing.map((name) => t(`jobs.${name}`)).join(', ');
 
   return (
     <section className="flex max-w-6xl flex-col gap-5">
@@ -58,7 +61,13 @@ export function AutomationPanel() {
         <h2 className="type-display-md text-ink">{t('title')}</h2>
         <p className="type-body text-ink-muted">{t('intro')}</p>
       </div>
-      {query.data && (
+      {missing.length > 0 && (
+        <p className="flex items-center gap-2 type-body text-overdue">
+          <CircleAlert aria-hidden className="size-4 shrink-0" />
+          {t('missingDaily', { count: missing.length, jobs: missingJobs })}
+        </p>
+      )}
+      {query.data && (failed > 0 || missing.length === 0) && (
         <p
           className={`flex items-center gap-2 type-body ${failed > 0 ? 'text-overdue' : 'text-ink-muted'}`}
         >

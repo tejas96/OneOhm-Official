@@ -25,6 +25,20 @@ export function visitDay(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+/** The visit's service request text, with what the plan says each visit includes. */
+export function visitDescription(visit: {
+  readonly visitName: string;
+  readonly position: number;
+  readonly visits: number;
+  readonly planName: string;
+  readonly dueOn: string;
+  readonly includes: readonly string[];
+}): string {
+  const planned = `Planned ${visit.visitName} visit ${visit.position} of ${visit.visits} under the ${visit.planName} AMC, on ${visitDay(visit.dueOn)}.`;
+  const includes = visit.includes.map((item) => item.trim()).filter(Boolean);
+  return includes.length ? `${planned} Includes: ${includes.join('; ')}.` : planned;
+}
+
 /** The service team, and the person the work went to when they are not on it already. */
 export async function tellServiceTeam(
   db: DatabaseExecutor,
@@ -54,6 +68,7 @@ async function dueVisits(db: Database, today: string) {
       contractId: amcContracts.id,
       planName: amcContracts.planName,
       visitName: amcContracts.visitName,
+      includes: amcContracts.includes,
       visits: sql<number>`(select count(*) from amc_visits v where v.contract_id = ${amcContracts.id})::int`,
       projectId: projects.id,
       code: projects.code,
@@ -84,7 +99,7 @@ async function openVisit(db: Database, visit: DueVisit): Promise<boolean> {
       customerId: visit.customerId,
       projectId: visit.projectId,
       category: MAINTENANCE_VISIT_CATEGORY,
-      description: `Planned ${visit.visitName} visit ${visit.position} of ${visit.visits} under the ${visit.planName} AMC, on ${day}.`,
+      description: visitDescription(visit),
       scheduledFor: visit.dueOn,
     });
     const linked = await tx

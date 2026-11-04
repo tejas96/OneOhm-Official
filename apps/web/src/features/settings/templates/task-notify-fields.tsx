@@ -5,12 +5,12 @@ import { Field, Input, Select, Switch } from '@oneohm/design-system/web';
 import {
   COMPLETION_ACTIONS,
   renderTemplate,
-  TASK_MESSAGE_FIELDS,
   TASK_NOTIFY_EVENTS,
   TASK_REVIEWERS,
 } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import type { SetDraft, TaskDraft } from './task-draft';
+import { taskMessageChoices } from './task-message-choices';
 import { TaskMessageReach } from './task-message-reach';
 import { SAMPLE } from './use-templates';
 
@@ -30,11 +30,7 @@ export function TaskNotifyFields({
 }) {
   const t = useTranslations('settings.taskTemplates.sheet');
   const nameT = useTranslations('settings.messageTemplates.names');
-  const fillable = messages.filter(
-    (message) =>
-      message.audience === 'customer' &&
-      message.fields.every((field) => (TASK_MESSAGE_FIELDS as readonly string[]).includes(field)),
-  );
+  const choices = taskMessageChoices(messages, draft.messageKey);
   const chosen = messages.find((message) => message.key === draft.messageKey);
   const preview = chosen
     ? renderTemplate(chosen.preview, chosen.fields, {
@@ -85,6 +81,7 @@ export function TaskNotifyFields({
       />
       {draft.notifyCustomer && (
         <div className="flex flex-col gap-5 rounded-xl border border-hairline p-4">
+          <p className="type-body-sm text-ink-muted">{t('messageLiveHint')}</p>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label={t('notifyEvent')} error={errors.notifyEvent}>
               <Select
@@ -100,10 +97,10 @@ export function TaskNotifyFields({
               <Select
                 value={draft.messageKey}
                 onValueChange={(value) => set('messageKey', value)}
-                options={fillable.map((message) => ({
-                  value: message.key,
-                  label: nameT.has(message.key) ? nameT(message.key) : message.key,
-                }))}
+                options={choices.map(({ key, off }) => {
+                  const name = nameT.has(key) ? nameT(key) : key;
+                  return { value: key, label: off ? t('messageOff', { name }) : name };
+                })}
               />
             </Field>
           </div>

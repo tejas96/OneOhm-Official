@@ -28,6 +28,8 @@ import { queueQuotePdf, quoteMessage } from './quotation-message';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { lineRows, quotationRow } from './quotation-rows';
+import { assertQuoteTypeOffered } from './quote-project-type';
+import { freezeQuotedTerms } from './quoted-terms';
 
 /** A sent quote is followed up this many days later (the lead owner's next action). */
 const QUOTE_FOLLOW_UP_DAYS = 2;
@@ -57,6 +59,8 @@ export class QuotationsService {
     const today = todayIn();
     // A project whose survey revision was turned down takes this quote as its next one.
     const redraft = revisionOf ? null : await redraftFor(this.db, input.propertyId);
+    // A brand-new quote must be for a project type the owner still offers.
+    if (!revisionOf && !redraft) await assertQuoteTypeOffered(this.db, input);
     const id = await this.db.transaction(async (tx) => {
       const slot = await numberFor(tx, input.propertyId, today, revisionOf ?? redraft?.revisionOf);
       const totals = priced.preview.totals;
@@ -123,11 +127,13 @@ export class QuotationsService {
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be sent.', 'not_open');
     await this.assertManagerFor(actor, id);
+    await assertQuoteTypeOffered(this.db, quotation.input, id);
     await this.db.transaction(async (tx) => {
       await tx
         .update(quotations)
         .set({ status: 'sent', sentAt: new Date(), updatedAt: new Date() })
         .where(eq(quotations.id, id));
+      await freezeQuotedTerms(tx, id);
       // In an open chat the PDF and buttons are the message; the app inbox is told either way.
       const chatted = await queueQuotePdf(tx, this.env, quotation);
       const message = quoteMessage(this.env, quotation);
@@ -157,6 +163,7 @@ export class QuotationsService {
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be accepted.', 'not_open');
     await this.assertManagerFor(actor, id);
+    await assertQuoteTypeOffered(this.db, quotation.input, id);
     await this.db.transaction(async (tx) => {
       const data = { totalPaise: quotation.totalPaise };
       // Accepted a moment ago (by the customer on WhatsApp, say): the same answer as before.

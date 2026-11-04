@@ -1,47 +1,29 @@
-import { type Database, leads, referralRewards, type Transaction } from '@oneohm/database';
+import { type Database, leads, referralRewards } from '@oneohm/database';
 import {
   checkReferralLimits,
   eventReachedAt,
   projectTypeEligible,
   referralRewardPaise,
 } from '@oneohm/domain';
-import { and, asc, gte, isNotNull, ne, sql } from 'drizzle-orm';
+import { and, asc, gte, isNotNull, sql } from 'drizzle-orm';
 import { type ProjectFacts, projectFacts, projectsOfLeads } from './project-events';
 import { announceReward } from './referral-messages';
 import { loadProgram, type ProgramRow } from './referral-program';
-
-interface Usage {
-  campaignPaise: number;
-  byCustomer: Map<string, { count: number; paise: number }>;
-  projects: Set<string>;
-}
-
-/** What the campaign has committed so far: every reward not turned down. */
-async function usageOf(tx: Transaction): Promise<Usage> {
-  const rows = await tx
-    .select({
-      customerId: referralRewards.referrerCustomerId,
-      projectId: referralRewards.projectId,
-      amountPaise: referralRewards.amountPaise,
-    })
-    .from(referralRewards)
-    .where(ne(referralRewards.status, 'rejected'));
-  const usage: Usage = { campaignPaise: 0, byCustomer: new Map(), projects: new Set() };
-  for (const row of rows) record(usage, row.customerId, row.projectId, row.amountPaise);
-  return usage;
-}
-
-function record(usage: Usage, customerId: string, projectId: string, amountPaise: number) {
-  usage.campaignPaise += amountPaise;
-  const mine = usage.byCustomer.get(customerId) ?? { count: 0, paise: 0 };
-  usage.byCustomer.set(customerId, { count: mine.count + 1, paise: mine.paise + amountPaise });
-  usage.projects.add(projectId);
-}
+import {
+  campaignStart,
+  type OnPeriod,
+  programOnPeriods,
+  record,
+  type Usage,
+  usageOf,
+  wasOnAt,
+} from './referral-usage';
 
 /** The reward this referral earns now, or null when it earns none (yet). */
 function rewardFor(
   program: ProgramRow,
   usage: Usage,
+  onPeriods: readonly OnPeriod[],
   referrerId: string,
   project: ProjectFacts | undefined,
 ): { amountPaise: number; earnedAt: Date } | null {
@@ -51,6 +33,8 @@ function rewardFor(
   if (!projectTypeEligible(program.eligibleTypes, project.type)) return null;
   const earnedAt = eventReachedAt(program.qualifyingEvent, project);
   if (!earnedAt) return null;
+  // While the programme is off nothing is earned, even once it is switched back on.
+  if (!wasOnAt(onPeriods, earnedAt)) return null;
   const amountPaise = referralRewardPaise(program, project.capacityWp);
   if (amountPaise <= 0) return null;
   const mine = usage.byCustomer.get(referrerId) ?? { count: 0, paise: 0 };
@@ -68,7 +52,8 @@ function rewardFor(
 
 /**
  * Earns a reward, pending approval, for each referral whose project reached the
- * programme's qualifying event (PRD 5.6). Budget and per-customer limits hold; the
+ * programme's qualifying event (PRD 5.6) while the programme was on. This campaign's
+ * budget and per-customer limits hold; the
  * oldest referral goes first. Runs under a lock, so two runs never overspend.
  */
 export async function evaluateReferralRewards(db: Database): Promise<number> {
@@ -76,7 +61,7 @@ export async function evaluateReferralRewards(db: Database): Promise<number> {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:referral_rewards'))`);
     const program = await loadProgram(tx);
     if (!program.saved || !program.active || program.amountPaise <= 0) return 0;
-    const since = new Date(`${program.startsOn}T00:00:00+05:30`);
+    const since = campaignStart(program.startsOn);
     const referred = await tx
       .select({ id: leads.id, referrerId: leads.referredByCustomerId })
       .from(leads)
@@ -94,13 +79,14 @@ export async function evaluateReferralRewards(db: Database): Promise<number> {
       referred.map((lead) => lead.id),
     );
     const facts = await projectFacts(tx, [...projectOf.values()]);
-    const usage = await usageOf(tx);
+    const usage = await usageOf(tx, program.startsOn);
+    const onPeriods = await programOnPeriods(tx, program.active);
     let created = 0;
     for (const lead of referred) {
       const projectId = projectOf.get(lead.id);
       if (!lead.referrerId || !projectId) continue;
       const project = facts.get(projectId);
-      const reward = rewardFor(program, usage, lead.referrerId, project);
+      const reward = rewardFor(program, usage, onPeriods, lead.referrerId, project);
       if (!reward || !project) continue;
       const [row] = await tx
         .insert(referralRewards)

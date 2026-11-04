@@ -1,20 +1,21 @@
 'use client';
 
 import type { Company } from '@oneohm/api-contracts';
-import { Button, Field, Input, Textarea, useToast } from '@oneohm/design-system/web';
+import { Field, Input, Textarea, useToast } from '@oneohm/design-system/web';
 import { useQueryClient } from '@tanstack/react-query';
 import { TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
-import { FormError } from '@/components/form-error';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { CompanyAssetsSection } from '@/features/documents/company-assets-section';
 import { ReportVisibilitySection } from '@/features/documents/report-visibility-section';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
+import { SaveBar } from '../rules/save-bar';
 import { SettingsSection } from '../settings-section';
 import { SETTINGS_KEYS, useCompany } from '../use-settings';
+import { listFieldError, phonesText, splitPhones } from './company-form';
 
 /** The base location is set with the travel rates (Settings → Rates), not here. */
 type TextKey = Exclude<
@@ -36,12 +37,20 @@ export function CompanyPanel() {
   useEffect(() => {
     if (!company.data) return;
     setDraft(company.data);
-    setPhones(company.data.phones.join('\n'));
+    setPhones(phonesText(company.data.phones));
   }, [company.data]);
 
   if (company.isPending) return <ListSkeleton label={t('loading')} rows={4} />;
   if (company.isError) return <LoadError error={company.error} onRetry={() => company.refetch()} />;
   if (!draft) return null;
+
+  const saved = company.data;
+  const dirty = JSON.stringify({ ...draft, phones: splitPhones(phones) }) !== JSON.stringify(saved);
+  const discard = () => {
+    setDraft(saved);
+    setPhones(phonesText(saved.phones));
+    form.reset();
+  };
 
   const errors = form.fieldErrors;
   const text = (key: TextKey, label: string, options: { hint?: string; mono?: boolean } = {}) => (
@@ -56,13 +65,7 @@ export function CompanyPanel() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const body = {
-      ...draft,
-      phones: phones
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean),
-    };
+    const body = { ...draft, phones: splitPhones(phones) };
     await form.run(
       () => expectStatus(api.catalog.updateCompany({ body }), 200),
       (saved) => {
@@ -93,7 +96,11 @@ export function CompanyPanel() {
         {text('shortAddress', t('shortAddress'), { hint: t('shortAddressHint') })}
         <div className="grid gap-5 sm:grid-cols-2">
           {text('email', t('email'))}
-          <Field label={t('phones')} hint={t('phonesHint')} error={errors.phones}>
+          <Field
+            label={t('phones')}
+            hint={t('phonesHint')}
+            error={listFieldError(errors, 'phones')}
+          >
             <Textarea rows={3} value={phones} onChange={(event) => setPhones(event.target.value)} />
           </Field>
         </div>
@@ -117,6 +124,7 @@ export function CompanyPanel() {
       <SettingsSection title={t('documents')}>
         <Field
           label={t('quotationValidityDays')}
+          hint={t('quotationValidityHint')}
           error={errors.quotationValidityDays}
           className="max-w-xs"
         >
@@ -127,12 +135,7 @@ export function CompanyPanel() {
           />
         </Field>
       </SettingsSection>
-      <div className="flex flex-col gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-end">
-        <FormError message={form.error} />
-        <Button type="submit" variant="primary" pending={form.pending}>
-          {settingsT('save')}
-        </Button>
-      </div>
+      <SaveBar dirty={dirty} pending={form.pending} error={form.error} onDiscard={discard} />
     </form>
   );
 }

@@ -46,3 +46,39 @@ export function isLeadAssignmentRules(value: unknown): value is LeadAssignmentRu
     rules.cityOwners.every(isCityOwner)
   );
 }
+
+export interface CleanedCityOwners {
+  readonly kept: { readonly userId: string; readonly cities: readonly string[] }[];
+  /** People left with no city: the save is refused so nobody vanishes unnoticed. */
+  readonly blank: readonly string[];
+  /** Already saved but no longer work on leads (deactivated, role changed): dropped. */
+  readonly dropped: readonly string[];
+  /** Newly added people who cannot work on leads: the save is refused. */
+  readonly refused: readonly string[];
+}
+
+/**
+ * City owners as they are saved: city names trimmed with blanks and repeats dropped.
+ * Someone already saved who can no longer own leads is dropped (the screen says so);
+ * someone new who cannot is refused, and so is anyone left with no city.
+ */
+export function cleanCityOwners(
+  owners: LeadAssignmentRules['cityOwners'],
+  canOwnLeads: ReadonlySet<string>,
+  saved: ReadonlySet<string>,
+): CleanedCityOwners {
+  const kept: { userId: string; cities: string[] }[] = [];
+  const blank: string[] = [];
+  const dropped: string[] = [];
+  const refused: string[] = [];
+  for (const owner of owners) {
+    if (!canOwnLeads.has(owner.userId)) {
+      (saved.has(owner.userId) ? dropped : refused).push(owner.userId);
+      continue;
+    }
+    const cities = [...new Set(owner.cities.map((city) => city.trim()).filter(Boolean))];
+    if (cities.length === 0) blank.push(owner.userId);
+    else kept.push({ userId: owner.userId, cities });
+  }
+  return { kept, blank, dropped, refused };
+}

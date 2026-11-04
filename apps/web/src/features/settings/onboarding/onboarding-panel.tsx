@@ -51,7 +51,11 @@ export function OnboardingPanel() {
         </Field>
       </SettingsSection>
       <SettingsSection title={t('bands')} description={t('bandsHint')}>
-        <BillBandsTable bands={draft.billBands} onChange={(billBands) => patch({ billBands })} />
+        <BillBandsTable
+          bands={draft.billBands}
+          errors={errors}
+          onChange={(billBands) => patch({ billBands })}
+        />
         {errors.billBands && <p className="type-body-sm text-overdue">{errors.billBands}</p>}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('tariff')} error={errors.tariffPaisePerUnit}>
@@ -66,7 +70,7 @@ export function OnboardingPanel() {
           <Field label={t('unitsPerKw')} error={errors.unitsPerKwMonth}>
             <div className={narrow}>
               <NumberInput
-                unit="whole"
+                unit="decimal"
                 value={draft.unitsPerKwMonth}
                 onValueChange={(value) => patch({ unitsPerKwMonth: value ?? 0 })}
               />

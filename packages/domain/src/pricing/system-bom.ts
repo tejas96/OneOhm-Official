@@ -8,6 +8,8 @@ import type { QuoteLineInput } from './quote-pricing';
 import type { PanelProduct, PricedProduct, SiteFacts } from './rate-card';
 import { structureEstimate } from './structure-bom';
 
+export { zeroCostLines } from './bom-lines';
+
 export interface SystemDesignInput {
   readonly targetWp: number;
   readonly panel: PanelProduct;

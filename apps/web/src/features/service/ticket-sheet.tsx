@@ -146,7 +146,7 @@ export function TicketSheet({
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Fact label={t('sheet.customer')}>
                 <Link
-                  href={`/customers/${ticket.customer.id}`}
+                  href={`/customers/${ticket.customer.id}?tab=service`}
                   className="font-medium hover:text-accent"
                 >
                   {ticket.customer.name}

@@ -150,11 +150,13 @@ export const commandCenterSchema = z.object({
     /** Everything still owed on vendor and contractor bills, whenever it falls due. */
     toVendorsPaise: paiseSchema,
     toContractorsPaise: paiseSchema,
-    /** Of those, what falls due in the coming seven days (or is already late). */
+    /** Of those, what falls due within `dueSoonDays` (or is already late). */
     dueThisWeekPaise: paiseSchema,
     /** Crew advances on work orders not yet paid out. */
     advancesPaise: paiseSchema,
   }),
   liveProjects: z.number().int(),
+  /** Settings → Dashboard "Coming up means within (days)", for the labels. */
+  dueSoonDays: z.number().int(),
 });
 export type CommandCenter = z.infer<typeof commandCenterSchema>;

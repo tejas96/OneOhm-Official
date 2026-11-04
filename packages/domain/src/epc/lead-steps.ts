@@ -56,3 +56,20 @@ export function effectiveStep(
   if (saved && saved.stage === stage && saved.active) return saved;
   return orderSteps(steps).find((step) => step.stage === stage && step.active) ?? null;
 }
+
+/**
+ * A key for a new step that no step has: from a Latin name ("Loan check" → loan_check),
+ * else "step"; a number is added when taken. The key never changes when it is renamed.
+ */
+export function newStepKey(name: string, taken: readonly string[]): string {
+  const base =
+    name
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 44) || 'step';
+  let key = base;
+  for (let n = 2; taken.includes(key); n += 1) key = `${base}_${n}`;
+  return key;
+}

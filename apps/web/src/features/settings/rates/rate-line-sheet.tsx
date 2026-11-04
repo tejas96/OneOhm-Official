@@ -1,7 +1,15 @@
 'use client';
 
 import type { RateCardValues } from '@oneohm/api-contracts';
-import { Button, Field, Input, SegmentedControl, Select, Sheet } from '@oneohm/design-system/web';
+import {
+  Button,
+  Dialog,
+  Field,
+  Input,
+  SegmentedControl,
+  Select,
+  Sheet,
+} from '@oneohm/design-system/web';
 import { type CostingCard, MATERIAL_KINDS, RATE_KINDS, rateUses } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
@@ -45,11 +53,13 @@ export function RateLineSheet({
   const products = useAllProducts();
   const { save, form } = useCardSaver();
   const [draft, setDraft] = useState<RateLine>(BLANK);
+  const [deleting, setDeleting] = useState(false);
   const { reset } = form;
 
   useEffect(() => {
     if (!open) return;
     setDraft(line ?? BLANK);
+    setDeleting(false);
     reset();
   }, [open, line, reset]);
 
@@ -95,7 +105,7 @@ export function RateLineSheet({
               variant="danger"
               disabled={uses > 0}
               pending={form.pending}
-              onClick={() => persist(card.rateLines.filter((entry) => entry.key !== line.key))}
+              onClick={() => setDeleting(true)}
             >
               {t('delete')}
             </Button>
@@ -191,6 +201,31 @@ export function RateLineSheet({
         )}
         {uses > 0 && <p className="type-body-sm text-ink-faint">{t('inUse', { count: uses })}</p>}
       </form>
+      <Dialog
+        open={deleting && line !== null}
+        onOpenChange={setDeleting}
+        title={t('deleteTitle', { label: line?.label ?? '' })}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setDeleting(false)}>
+              {t('keep')}
+            </Button>
+            <Button
+              variant="danger"
+              pending={form.pending}
+              onClick={async () => {
+                setDeleting(false);
+                if (line) await persist(card.rateLines.filter((entry) => entry.key !== line.key));
+              }}
+            >
+              {t('delete')}
+            </Button>
+          </>
+        }
+      >
+        <p className="type-body-sm text-ink-muted">{t('deleteBody')}</p>
+      </Dialog>
     </Sheet>
   );
 }

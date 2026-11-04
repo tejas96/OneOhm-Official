@@ -8,6 +8,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CompanyAssetsService } from '../documents/company-assets.service';
 import { planSteps } from '../payment-plans/payment-plans.service';
 import { QuotationsService } from '../quotations/quotations.service';
+import { readQuotedTerms } from '../quotations/quoted-terms';
 import { pdfFileName } from './pdf-file-name';
 import { PdfRendererService } from './pdf-renderer.service';
 import { type ProductLabel, quotationView } from './quotation-document';
@@ -91,7 +92,8 @@ export class QuotationPdfService {
       inverters,
       battery: label(detail.input.batteryProductId),
       comparison: (row.snapshot as Snapshot | null)?.comparison ?? null,
-      paymentSteps: await planSteps(this.db, null),
+      // The terms saved when it was sent; a draft shows today's default.
+      paymentSteps: readQuotedTerms(row.snapshot)?.steps ?? (await planSteps(this.db, null)),
       logo: images.logo ?? logoDataUri(),
       stamp: images.signature ?? images.stamp ?? stampDataUri(),
     });

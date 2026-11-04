@@ -59,7 +59,7 @@ export function CategoryDialog({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const body = { ...draft, customerLabel: category?.system ? draft.label : draft.customerLabel };
+    const body = draft;
     await form.run(
       () =>
         category
@@ -99,14 +99,16 @@ export function CategoryDialog({
         <Field label={t('label')} error={errors.label} required>
           <Input value={draft.label} onChange={(event) => set('label', event.target.value)} />
         </Field>
-        {!category?.system && (
-          <Field label={t('customerLabel')} error={errors.customerLabel} required>
-            <Input
-              value={draft.customerLabel}
-              onChange={(event) => set('customerLabel', event.target.value)}
-            />
-          </Field>
-        )}
+        <Field
+          label={category?.system ? t('customerLabelSystem') : t('customerLabel')}
+          error={errors.customerLabel}
+          required
+        >
+          <Input
+            value={draft.customerLabel}
+            onChange={(event) => set('customerLabel', event.target.value)}
+          />
+        </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={t('responseHours')} hint={t('hoursHint')} error={errors.responseHours}>
             <NumberInput

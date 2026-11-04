@@ -7,9 +7,9 @@ import type {
   RateCardSettings,
   RateCardValues,
 } from '@oneohm/api-contracts';
-import { discoms, products, rateCards, STARTER_RATE_CARD_NAME } from '@oneohm/database';
-import { toCostingCard } from '@oneohm/domain';
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { discoms, products, quotations, rateCards, STARTER_RATE_CARD_NAME } from '@oneohm/database';
+import { type CostingCard, toCostingCard } from '@oneohm/domain';
+import { and, asc, desc, eq, inArray, isNotNull, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -17,6 +17,8 @@ import { definedOnly, type Patch } from '../../common/patch';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { productViews } from './product-view';
+import { quotesBrokenBy } from './rate-card-use';
+import { rateLinesUsing, rateProductProblem } from './rate-products';
 
 const OWN_RATE_CARD_NAME = 'OneOhm rate card';
 
@@ -61,6 +63,7 @@ export class CatalogAdminService {
     if (patch.sku && patch.sku !== existing.sku) await this.assertSkuFree(patch.sku, id);
     const changes = definedOnly(patch);
     assertProductShape({ ...existing, ...changes });
+    if (existing.active && changes.active === false) await this.assertNotOnRateCard(id);
     const [row] = await this.db
       .update(products)
       .set({ ...changes, updatedAt: new Date() })
@@ -137,6 +140,7 @@ export class CatalogAdminService {
       .limit(1);
     if (!row) throw notFound('The rate card');
     await this.assertRateProducts(rates);
+    await this.assertOpenQuotesKept(rates);
     // A linked product's GST is read from the catalog when pricing, never stored here.
     const saved = {
       ...rates,
@@ -152,23 +156,53 @@ export class CatalogAdminService {
     return this.rateCard();
   }
 
-  /** Every product a rate line names must be in the catalog. */
+  /** Every product a rate line names must be in the catalog and in use. */
   private async assertRateProducts(rates: RateCardValues): Promise<void> {
     const ids = [...new Set(rates.rateLines.flatMap((line) => line.productId ?? []))];
     if (ids.length === 0) return;
     const found = await this.db
-      .select({ id: products.id })
+      .select({ id: products.id, active: products.active })
       .from(products)
       .where(inArray(products.id, ids));
-    const known = new Set(found.map((product) => product.id));
-    const index = rates.rateLines.findIndex(
-      (line) => line.productId !== null && !known.has(line.productId),
+    const problem = rateProductProblem(rates.rateLines, found);
+    if (!problem) return;
+    throw invalid(
+      problem.archived
+        ? 'A rate is linked to an archived product.'
+        : 'A rate names a product that is not in the catalog.',
+      {
+        [`rateLines.${problem.index}.productId`]: problem.archived
+          ? 'Pick a product that is in use, or unlink it.'
+          : 'Pick the product again.',
+      },
     );
-    if (index >= 0) {
-      throw invalid('A rate names a product that is not in the catalog.', {
-        [`rateLines.${index}.productId`]: 'Pick the product again.',
-      });
-    }
+  }
+
+  /** Draft and sent quotes must still price: a rate their detail names cannot go. */
+  private async assertOpenQuotesKept(rates: RateCardValues): Promise<void> {
+    const open = await this.db
+      .select({ number: quotations.number, costing: quotations.costing })
+      .from(quotations)
+      .where(and(inArray(quotations.status, ['draft', 'sent']), isNotNull(quotations.costing)));
+    if (open.length === 0) return;
+    const current = toCostingCard((await this.rateCard()).rates);
+    const broken = quotesBrokenBy(current, rates as CostingCard, open);
+    if (broken.length === 0) return;
+    throw conflict(
+      `${broken.length === 1 ? '1 open quote uses' : `${broken.length} open quotes use`} a rate you removed or changed (${broken.slice(0, 5).join(', ')}). Edit those quotes first, or keep the rate.`,
+      'rate_in_use',
+    );
+  }
+
+  /** A product a rate line sells cannot be archived: the rate would sell it on. */
+  private async assertNotOnRateCard(id: string): Promise<void> {
+    const card = await this.rateCard();
+    const using = rateLinesUsing(card.rates.rateLines, id);
+    if (using.length === 0) return;
+    throw conflict(
+      `This product is linked to the rate card (${using.join(', ')}). Unlink it there before archiving it.`,
+      'product_on_rate_card',
+    );
   }
 
   private async assertSkuFree(sku: string, exceptId?: string): Promise<void> {

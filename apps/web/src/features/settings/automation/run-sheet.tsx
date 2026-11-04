@@ -1,12 +1,12 @@
 'use client';
 
 import type { JobRunRecord } from '@oneohm/api-contracts';
-import { Button, Sheet, StatusPill } from '@oneohm/design-system/web';
+import { Button, Sheet } from '@oneohm/design-system/web';
 import { RotateCcw } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { RUN_TONE } from './run-columns';
-import { minutesAndSeconds, took } from './run-format';
+import { RunPill } from './run-columns';
+import { minutesAndSeconds, runsTodaysJob, took } from './run-format';
 
 function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
   return (
@@ -40,6 +40,7 @@ export function RunSheet({
 }) {
   const t = useTranslations('settings.automation');
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const when = (at: string | null) =>
     at ? format.dateTime(new Date(at), { dateStyle: 'medium', timeStyle: 'medium' }) : '—';
   const duration = (item: JobRunRecord) => {
@@ -60,7 +61,7 @@ export function RunSheet({
       header={
         run ? (
           <div className="flex">
-            <StatusPill size="sm" tone={RUN_TONE[run.status]} label={t(`status.${run.status}`)} />
+            <RunPill run={run} />
           </div>
         ) : undefined
       }
@@ -74,9 +75,13 @@ export function RunSheet({
                   ? t(`results.${run.name}`, { count: Number(run.result) || 0 })
                   : t(`status.${run.status}`)}
               </Row>
+              {run.recovered && <Row label={t('recovered')}>{t('recoveredNote')}</Row>}
               {run.retried && <Row label={t('sheet.retry')}>{t('retried')}</Row>}
               {run.requestedBy && <Row label={t('sheet.requestedBy')}>{run.requestedBy.name}</Row>}
             </dl>
+            {run.retryable && runsTodaysJob(run, now) && (
+              <p className="type-body-sm text-ink-muted">{t('retryToday')}</p>
+            )}
             {run.retryable && (
               <Button
                 variant="secondary"
@@ -92,6 +97,9 @@ export function RunSheet({
           </Section>
           {run.error && (
             <Section title={t('sheet.error')}>
+              {run.status === 'failed' && !run.recovered && (
+                <p className="type-body-sm text-ink-muted">{t('errorHint')}</p>
+              )}
               <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md bg-sunken p-3 font-mono text-[0.75rem] text-overdue">
                 {run.error}
               </pre>

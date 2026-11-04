@@ -1,6 +1,11 @@
 /** Words that follow "oneohm" in an ordinary greeting or menu request, never a campaign code. */
 const NOT_CODES = new Set(['menu', 'hi', 'hii', 'hello', 'hey', 'start', 'help', 'code']);
 
+/** True for a word that can never be a campaign code: saved, it would never match. */
+export function isReservedCampaignWord(code: string): boolean {
+  return NOT_CODES.has(code.trim().toLowerCase());
+}
+
 /**
  * The campaign code in an ad's pre-filled opener: "Hi OneOhm DIWALI26", "hello oneohm poster-1"
  * or "oneohm DIWALI26". The whole message must be that opener, so "my code AB12CD" and "hi" are
