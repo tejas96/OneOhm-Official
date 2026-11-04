@@ -9,9 +9,15 @@ import { conflict, forbidden, invalid, notFound } from '../../common/http/errors
 import { DATABASE, type Database } from '../../config/core.module';
 import { customerHomes } from '../customer-portal/customer-homes';
 import { canUploadDocuments } from './document-access';
-import { settleAnsweredRequests } from './document-move-requests';
+import { logOnHomeLead, settleAnsweredRequests } from './document-move-requests';
 import { presentDocuments } from './document-read';
 import { closeRequestWithUpload } from './request-received';
+
+interface Target {
+  readonly projectId: string | null;
+  readonly propertyId: string | null;
+  readonly name: string | null;
+}
 
 /**
  * Staff file a customer's paper on another of their homes or as another kind (papers per
@@ -37,7 +43,7 @@ export class DocumentMoveService {
       throw invalid('Choose a kind the customer keeps.', { category: 'Not a customer paper.' });
     }
     const target = await this.targetOf(paper.customerId, input);
-    const { projectId, propertyId, code } = target;
+    const { projectId, propertyId, name } = target;
     const { category } = input;
     const same = paper.projectId === projectId && paper.propertyId === propertyId;
     if (same && paper.category === category) return this.one(id);
@@ -50,7 +56,7 @@ export class DocumentMoveService {
         .returning({ id: documents.id });
       if (!changed)
         throw conflict('This file was replaced or removed. Refresh and try again.', 'changed');
-      const message = `Paper moved: ${paper.name} → ${code ?? 'no home (ID / income papers)'}`;
+      const message = `Paper moved: ${paper.name} → ${name ?? 'no home (ID / income papers)'}`;
       const onProjects = new Set([paper.projectId, projectId].filter((one) => one !== null));
       for (const onProject of onProjects)
         await tx.insert(projectActivities).values({
@@ -60,6 +66,8 @@ export class DocumentMoveService {
           userId: actor.userId,
           data: { documentId: id, from: paper.category, to: category },
         });
+      // A lead-only home has no project to log on: its open lead keeps the line instead.
+      if (!projectId && propertyId) await logOnHomeLead(tx, propertyId, actor.userId, message);
       await recordAudit(tx, actor.userId, 'document.moved', 'document', id, {
         from: {
           projectId: paper.projectId,
@@ -71,21 +79,34 @@ export class DocumentMoveService {
       await settleAnsweredRequests(tx, actor.userId, id, { propertyId, category });
       await closeRequestWithUpload(tx, actor, id, {
         customerId: paper.customerId,
-        ...target,
+        propertyId,
         category,
       });
     });
     return this.one(id);
   }
 
-  /** The project must be the same customer's; no project only for a person's paper. */
-  private async targetOf(customerId: string | null, input: MoveDocument) {
-    if (!input.projectId) {
-      if (!isPersonDocumentCategory(input.category)) {
-        throw invalid('Choose the home this paper belongs to.', { projectId: 'Required.' });
-      }
-      return { projectId: null, propertyId: null, code: null };
+  /**
+   * The project must be the same customer's; a lead-only home must be one of their homes;
+   * no home only for a person's paper. `name` is how the logs name the new place.
+   */
+  private async targetOf(customerId: string, input: MoveDocument): Promise<Target> {
+    if (input.projectId) return this.projectTarget(customerId, input.projectId);
+    if (input.propertyId) {
+      const home = (await customerHomes(this.db, customerId)).find(
+        (one) => one.propertyId === input.propertyId,
+      );
+      if (!home) throw conflict("That home is not one of this customer's.", 'other_customer');
+      if (home.projectId) return this.projectTarget(customerId, home.projectId);
+      return { projectId: null, propertyId: home.propertyId, name: home.title };
     }
+    if (!isPersonDocumentCategory(input.category)) {
+      throw invalid('Choose the home this paper belongs to.', { projectId: 'Required.' });
+    }
+    return { projectId: null, propertyId: null, name: null };
+  }
+
+  private async projectTarget(customerId: string, projectId: string): Promise<Target> {
     const [project] = await this.db
       .select({
         customerId: projects.customerId,
@@ -93,13 +114,13 @@ export class DocumentMoveService {
         code: projects.code,
       })
       .from(projects)
-      .where(eq(projects.id, input.projectId))
+      .where(eq(projects.id, projectId))
       .limit(1);
     if (!project) throw notFound('That project');
     if (project.customerId !== customerId) {
       throw conflict("That project is another customer's.", 'other_customer');
     }
-    return { projectId: input.projectId, propertyId: project.propertyId, code: project.code };
+    return { projectId, propertyId: project.propertyId, name: project.code };
   }
 
   /** A current paper of a customer, not a task's file. */

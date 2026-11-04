@@ -113,10 +113,20 @@ export type UploadFields = z.infer<typeof uploadFieldsSchema>;
  * Staff move a paper to another home (a project of the same customer) or kind. No home
  * (`projectId` null) only for an ID or income paper, which is the person's.
  */
-export const moveDocumentSchema = z.object({
-  projectId: idSchema.nullable(),
-  category: documentCategorySchema,
-});
+/**
+ * Where a paper goes: a project, or (no project) the property of a home that is only a lead,
+ * or neither for a person's paper (ID, income proof). Never both.
+ */
+export const moveDocumentSchema = z
+  .object({
+    projectId: idSchema.nullable(),
+    propertyId: idSchema.nullable().optional(),
+    category: documentCategorySchema,
+  })
+  .refine((move) => !(move.projectId && move.propertyId), {
+    message: 'Give a project or a lead-only home, not both.',
+    path: ['propertyId'],
+  });
 export type MoveDocument = z.infer<typeof moveDocumentSchema>;
 
 /** One home of the paper's customer; `projectId` is null while the home is only a lead. */

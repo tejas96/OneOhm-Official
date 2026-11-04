@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { FOLDER_ICONS } from './document-kinds';
+import { moveTarget } from './move-target';
 import { useMoveDocument } from './use-document-actions';
 import { useFolderLabel } from './use-labels';
 
@@ -26,7 +27,7 @@ const NO_HOME = 'none';
 
 /**
  * Move / change kind: file a customer's paper on another of their homes (one choice per
- * project, from the paper's own homes list) or as a kind the customer keeps. The server keeps it on the same
+ * home, from the paper's own homes list) or as a kind the customer keeps. The server keeps it on the same
  * customer and asks the customer again for a request the paper no longer answers.
  */
 export function MoveSheet({
@@ -73,18 +74,20 @@ function MoveForm({
     onMoved(moved);
     onClose();
   });
-  // A home that is only a lead has no project to file on, so it is not offered.
-  const homes = (homesQuery.data ?? []).flatMap((one) =>
-    one.projectId ? [{ value: one.projectId, label: one.title, description: one.description }] : [],
-  );
-  const current =
-    homesQuery.data?.find((one) => one.propertyId === document.propertyId)?.projectId ?? null;
+  // One choice per home, by its property: a home that is only a lead is filed with no project.
+  const homeList = homesQuery.data ?? [];
+  const homes = homeList.map((one) => ({
+    value: one.propertyId,
+    label: one.title,
+    description: one.description,
+  }));
   const [picked, setHome] = useState<string | null>(null);
-  const home = picked ?? (document.propertyId ? (current ?? '') : NO_HOME);
+  const home = picked ?? document.propertyId ?? NO_HOME;
   const [kind, setKind] = useState<CustomerDocumentCategory>(kindOfPaper(document));
   const person = isPersonDocumentCategory(kind);
   const options = person ? [...homes, { value: NO_HOME, label: t('noHome') }] : homes;
-  const needsHome = (home === NO_HOME && !person) || home === '';
+  // A home no longer in the list (its project cancelled) must be picked again.
+  const needsHome = home === NO_HOME ? !person : !homeList.some((one) => one.propertyId === home);
   const failure = homesQuery.isError
     ? `${t('loadFailed')}: ${describeError(homesQuery.error)}`
     : move.isError
@@ -96,8 +99,8 @@ function MoveForm({
       onSubmit={(event) => {
         event.preventDefault();
         if (needsHome) return;
-        const projectId = home === NO_HOME ? null : home;
-        move.mutate({ id: document.id, body: { projectId, category: kind } });
+        const body = { ...moveTarget(homeList, home), category: kind };
+        move.mutate({ id: document.id, body });
       }}
     >
       <Field label={t('kind')}>

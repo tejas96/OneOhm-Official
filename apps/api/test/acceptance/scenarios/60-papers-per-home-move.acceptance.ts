@@ -4,7 +4,7 @@ import { closeDb, rows } from '../support/db';
 import { fileForm, upload } from '../support/files';
 import { anotherHome, sellOn } from '../support/homes';
 import { Session } from '../support/http';
-import { sellProject } from '../support/sales';
+import { newCustomer, sellProject } from '../support/sales';
 
 // Staff move a paper to another home or kind (papers per home, flow 4). Nothing is said
 // to the customer unless the move reopens a request; then it is "ask again".
@@ -47,7 +47,10 @@ describe('Papers per home: move / change kind', () => {
   });
   afterAll(closeDb);
 
-  const move = (id: string, body: { projectId: string | null; category: string }) =>
+  const move = (
+    id: string,
+    body: { projectId: string | null; propertyId?: string | null; category: string },
+  ) =>
     admin.raw<{ id: string; projectId: string | null; propertyId: string | null }>(
       'PATCH',
       `/documents/${id}`,
@@ -161,6 +164,38 @@ describe('Papers per home: move / change kind', () => {
     const doc = await upload(admin, 'document', { projectId: project.id, category: 'other' });
     await move(doc.id, { projectId: farm.projectId, category: 'electricity_bill' });
     expect(await requestOf(farmBill.id)).toMatchObject({ status: 'received', document_id: doc.id });
+  });
+
+  it('a paper moves to a lead-only home, changes kind there, and joins its project', async () => {
+    const customer = await newCustomer(admin, { name: 'Move Lead Home (test)' });
+    const stranger = await newCustomer(admin, { name: 'Move Stranger (test)' });
+    const doc = await upload(admin, 'document', {
+      customerId: customer.customerId,
+      category: 'customer_kyc',
+    });
+    const home = { projectId: null, propertyId: customer.propertyId };
+    expect((await move(doc.id, { ...home, category: 'electricity_bill' })).status).toBe(200);
+    expect(await paperOf(doc.id)).toMatchObject({
+      project_id: null,
+      property_id: customer.propertyId,
+      category: 'electricity_bill',
+    });
+    const leadLog = await rows<{ note: string }>(
+      'SELECT note FROM lead_activities WHERE lead_id = $1',
+      [customer.leadId],
+    );
+    expect(leadLog.map((row) => row.note)).toContainEqual(expect.stringMatching(/^Paper moved: /));
+    // A kind-only change keeps it on the same lead-only home.
+    expect((await move(doc.id, { ...home, category: 'other' })).status).toBe(200);
+    expect(await paperOf(doc.id)).toMatchObject({
+      property_id: customer.propertyId,
+      category: 'other',
+    });
+    const elsewhere = { projectId: null, propertyId: stranger.propertyId, category: 'other' };
+    expect((await move(doc.id, elsewhere)).status).toBe(409);
+    // The home's project is made: the paper filed there goes onto it.
+    const project = await sellOn(admin, customer, customer.propertyId);
+    expect((await paperOf(doc.id))?.project_id).toBe(project.id);
   });
 
   it('the sheet lists one row per home', async () => {

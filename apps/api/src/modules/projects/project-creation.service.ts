@@ -175,7 +175,7 @@ export class ProjectCreationService {
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
-      await moveLeadPapers(tx, quotation.leadId, project.id, property.id);
+      await moveLeadPapers(tx, quotation.leadId, project.id, property.id, customer.id);
       await openManagerTerm(tx, project.id, managerUserId, new Date());
       // The customer's WhatsApp chat goes to the project's manager from now on.
       await moveCustomerChats(tx, customer.id, managerUserId, project.id);

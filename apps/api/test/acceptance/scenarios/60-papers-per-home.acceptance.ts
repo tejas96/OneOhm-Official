@@ -43,6 +43,13 @@ const documentOf = (id: string) =>
     [id],
   );
 
+const ownerOf = async (id: string) =>
+  (
+    await rows<{ customer_id: string | null }>('SELECT customer_id FROM documents WHERE id = $1', [
+      id,
+    ])
+  )[0]?.customer_id;
+
 describe('Papers per home', () => {
   let admin: Session;
   let restore: () => Promise<void>;
@@ -129,6 +136,8 @@ describe('Papers per home', () => {
     expect(await documentOf(before?.id ?? '')).toEqual([
       { project_id: project.id, property_id: customer.propertyId },
     ]);
+    // The customer's now: it shows in their app's Documents and staff can move it.
+    expect(await ownerOf(before?.id ?? '')).toBe(customer.customerId);
   });
 
   it('a bill held before the lead shows in the chat once filed', async () => {

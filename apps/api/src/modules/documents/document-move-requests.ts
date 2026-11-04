@@ -1,8 +1,14 @@
 import type { DocumentRequest } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, documentRequests, projectActivities } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  documentRequests,
+  leads,
+  projectActivities,
+} from '@oneohm/database';
 import { isPersonDocumentCategory } from '@oneohm/domain';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { logLead } from '../crm/lead-history';
 import { propertyOfProject } from './document-links';
 import { openRequestsFor } from './document-request-home';
 import { readRequests } from './document-request-read';
@@ -10,6 +16,21 @@ import { reopenRequest } from './document-request-reopen';
 
 /** What the customer reads on a request reopened because its paper went elsewhere. */
 export const FILED_ELSEWHERE = 'Filed on another home';
+
+/** A note on the open lead of a home that has no project yet (staff only, internal). */
+export async function logOnHomeLead(
+  tx: DatabaseExecutor,
+  propertyId: string,
+  userId: string,
+  note: string,
+): Promise<void> {
+  const [lead] = await tx
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.propertyId, propertyId), notInArray(leads.stage, ['won', 'lost'])))
+    .limit(1);
+  if (lead) await logLead(tx, lead.id, userId, 'note', note, true);
+}
 
 /**
  * Requests this paper answered for another home or kind: asked again ("ask again"), or,
