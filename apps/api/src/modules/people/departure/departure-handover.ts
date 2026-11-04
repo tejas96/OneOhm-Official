@@ -4,6 +4,7 @@ import {
   leadActivities,
   leads,
   notify,
+  openManagerTerm,
   projectActivities,
   projects,
   projectTasks,
@@ -65,11 +66,14 @@ async function moveOwnership(
       .update(changeRequestSteps)
       .set({ assigneeUserId: to, updatedAt: now })
       .where(inArray(changeRequestSteps.id, [...work.discomSteps]));
-  if (work.managedProjects.length > 0)
+  if (work.managedProjects.length > 0) {
     await tx
       .update(projects)
       .set({ managerUserId: to, version: sql`${projects.version} + 1`, updatedAt: now })
       .where(inArray(projects.id, [...work.managedProjects]));
+    // The manager history follows, so rating points and reports split at the handover.
+    for (const projectId of work.managedProjects) await openManagerTerm(tx, projectId, to, now);
+  }
   if (work.chats.length > 0) {
     // The assistant answers with `assigned ?? handled by`, so both move (spec "WhatsApp chats").
     const chats = inArray(waConversations.id, [...work.chats]);

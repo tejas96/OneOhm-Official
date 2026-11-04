@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { seedWrapUp, WRAPPED_UP, wrapUpState } from '../support/departure';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, plantManager, retire } from '../support/people';
 import { addDays, sellProject, today, uniquePhone } from '../support/sales';
 
 // Remove from team (spec Flow 5): in one step all open work goes to one person, and the
@@ -52,7 +52,7 @@ describe('remove and hand over', () => {
     await rows('UPDATE leads SET owner_user_id = $2 WHERE id = $1', [leadId, leaver.id]);
     const sale = await sellProject(admin, { name: 'Hand Over Project (test)' });
     projectId = sale.created.id;
-    await rows('UPDATE projects SET manager_user_id = $2 WHERE id = $1', [projectId, leaver.id]);
+    await plantManager(projectId, leaver.id);
     const tasks = await rows<{ id: string }>(
       `SELECT id FROM project_tasks WHERE project_id = $1 AND status <> 'completed'
          ORDER BY position LIMIT 2`,
@@ -174,6 +174,16 @@ describe('remove and hand over', () => {
       reviews: 1,
       backups: 1,
     });
+    // The manager history moves too: the leaver's term ends, the target's is the open one.
+    const terms = await rows<{ user_id: string; open: boolean }>(
+      `SELECT user_id, ended_at IS NULL AS open FROM project_manager_terms
+         WHERE project_id = $1 ORDER BY started_at, created_at`,
+      [projectId],
+    );
+    expect(terms.slice(-2)).toEqual([
+      { user_id: leaver.id, open: false },
+      { user_id: target.id, open: true },
+    ]);
     const note = `Handed over from ${leaver.name} (left the team)`;
     const notes = await one<{ project: number; lead: number }>(
       `SELECT

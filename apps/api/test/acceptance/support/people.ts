@@ -52,3 +52,19 @@ export async function retire(admin: Session, people: readonly OwnPerson[]): Prom
       tellCustomers: false,
     });
 }
+
+/**
+ * Makes `userId` the project's manager straight in the database, with its manager term,
+ * for a scenario's own person whose role may not manage projects through the API.
+ */
+export async function plantManager(projectId: string, userId: string): Promise<void> {
+  await rows('UPDATE projects SET manager_user_id = $2 WHERE id = $1', [projectId, userId]);
+  await rows(
+    'UPDATE project_manager_terms SET ended_at = now() WHERE project_id = $1 AND ended_at IS NULL',
+    [projectId],
+  );
+  await rows(
+    'INSERT INTO project_manager_terms (project_id, user_id, started_at) VALUES ($1, $2, now())',
+    [projectId, userId],
+  );
+}

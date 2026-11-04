@@ -2,7 +2,7 @@ import type { CustomerHome } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, outboxFor, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, plantManager, retire } from '../support/people';
 import { sellProject, today, uniquePhone } from '../support/sales';
 
 // Removing someone can tell each customer who their new contact is (spec, Customer
@@ -59,10 +59,12 @@ describe('removal tells customers', () => {
     quiet = await person('Quiet Quinn (tell test)');
 
     // One customer holds both a project and a service request with the leaver.
+    // An HR-only person may not manage through the API (project team rules), so the
+    // project is planted on them, as the leads are.
     const sale = await sellProject(admin, {
       name: 'Tell Project (test)',
-      managerUserId: leaver.id,
     });
+    await plantManager(sale.created.id, leaver.id);
     projectCustomer = sale.customer;
     await rows(
       `INSERT INTO service_requests (customer_id, project_id, category, description, assignee_user_id)
@@ -80,14 +82,14 @@ describe('removal tells customers', () => {
     // A second leaver, removed with the box off.
     const quietSale = await sellProject(admin, {
       name: 'Quiet Project (test)',
-      managerUserId: quiet.id,
     });
+    await plantManager(quietSale.created.id, quiet.id);
     quietPhone = quietSale.customer.phone;
     // A customer who sent STOP is not messaged by WhatsApp or SMS, but still sees the news in the app.
     const stopped = await sellProject(admin, {
       name: 'Stopped Project (test)',
-      managerUserId: leaver.id,
     });
+    await plantManager(stopped.created.id, leaver.id);
     stoppedPhone = stopped.customer.phone;
     stoppedCustomerId = stopped.customer.customerId;
     await rows('UPDATE customers SET whatsapp_opt_in = false WHERE id = $1', [stoppedCustomerId]);

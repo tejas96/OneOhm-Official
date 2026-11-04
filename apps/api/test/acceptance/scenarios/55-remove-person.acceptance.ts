@@ -2,7 +2,7 @@ import type { Departure } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { type OwnPerson, ownPerson, retire } from '../support/people';
+import { type OwnPerson, ownPerson, plantManager, retire } from '../support/people';
 import { addDays, sellProject, today, uniquePhone } from '../support/sales';
 import { roleIds, STAFF } from '../support/team';
 
@@ -47,10 +47,12 @@ describe('removal summary', () => {
     // The API only lets sales own a lead; the leaver here is not in sales.
     await rows('UPDATE leads SET owner_user_id = $2 WHERE id = $1', [lead.id, leaver.id]);
 
+    // An HR-only person may not manage through the API (project team rules), so the
+    // project is planted on them, as the leads are.
     const sale = await sellProject(admin, {
       name: 'Leaver Project (test)',
-      managerUserId: leaver.id,
     });
+    await plantManager(sale.created.id, leaver.id);
     const projectId = sale.created.id;
     const tasks = await rows<{ id: string }>(
       'SELECT id FROM project_tasks WHERE project_id = $1 ORDER BY position LIMIT 2',
