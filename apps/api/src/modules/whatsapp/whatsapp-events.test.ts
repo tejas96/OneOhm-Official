@@ -151,6 +151,15 @@ describe('WhatsApp webhook', () => {
       text: '👤 Contact: Ravi Patil +91 90000 00102\n👤 Contact: No Number',
     });
     expect(incoming[3]).toMatchObject({ kind: 'other', text: 'Sticker' });
+    const { incoming: odd } = readWebhook(
+      post({
+        messages: [
+          { from, id: 'm5', type: 'order' },
+          { from, id: 'm6', type: 'contacts' },
+        ],
+      }),
+    );
+    expect(odd.map((message) => message.text)).toEqual(['Message', 'Message']);
   });
 
   it('reads delivery receipts and failures', () => {

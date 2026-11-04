@@ -2,7 +2,7 @@ import type { DatabaseExecutor } from '@oneohm/database';
 import { type Conversation, setState } from '../chat-store';
 import { filePaper, type PaperPlace } from '../file-paper';
 import { setStep } from './chat-step';
-import { type HomeChoice, isSound, type KeptFile } from './file-home';
+import { answersRequests, type HomeChoice, type KeptFile } from './file-home';
 import type { OpenPaper } from './paper-match';
 
 type Chat = Conversation;
@@ -41,7 +41,7 @@ export async function remember(
   await setState(tx, chat.id, chat.state, { ...context, ...filedMedia });
 }
 
-/** Photos and papers go to `papers`; a voice note or video stays `other` on the home. */
+/** Photos and PDFs go to `papers`; a voice note, video, Word or Excel file stays `other` on the home. */
 export async function fileAll(
   tx: DatabaseExecutor,
   files: readonly KeptFile[],
@@ -49,7 +49,7 @@ export async function fileAll(
   home: PaperPlace | null,
 ): Promise<void> {
   for (const file of files) {
-    const sound = isSound(file.contentType);
+    const sound = !answersRequests(file.contentType);
     const to = sound ? (home ? { ...home, category: 'other' } : null) : papers;
     if (to) await filePaper(tx, file.id, to);
   }

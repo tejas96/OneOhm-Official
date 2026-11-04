@@ -7,14 +7,14 @@ import {
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { EVIDENCE_FILE_TYPES } from '@oneohm/domain';
+import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logLead } from '../crm/lead-history';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
-import { homeForFile, placeOn } from './assistant/file-home';
+import { answersRequests, homeForFile, placeOn } from './assistant/file-home';
 import { answersSomething, isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
@@ -97,8 +97,12 @@ export class ChatFileKeeper {
         .where(eq(waConversations.id, chat.id));
       const { homes, choice } = await homeForFile(this.db, now ?? chat, chat.customerId);
       const place = choice && choice !== 'ask' ? placeOn(homes, choice) : null;
-      // A voice note or video keeps its kind, even on the person row.
-      const sound = media.type === 'audio' || media.type === 'video';
+      // A voice note, video, Word or Excel file is kept as `other`, even on the person row.
+      const [kept] = await this.db
+        .select({ contentType: documents.contentType })
+        .from(documents)
+        .where(eq(documents.id, documentId));
+      const sound = !kept || !answersRequests(kept.contentType);
       await this.db.transaction(async (tx) => {
         if (place) await filePaper(tx, documentId, sound ? { ...place, category: 'other' } : place);
         await this.tellKept(tx, chat, message, media, !place);
@@ -189,7 +193,7 @@ export class ChatFileKeeper {
     try {
       return checkFile(
         { originalname: download.fileName, size: download.buffer.length, buffer: download.buffer },
-        EVIDENCE_FILE_TYPES,
+        WHATSAPP_FILE_TYPES,
       );
     } catch (error) {
       if (!(error instanceof AppError)) throw error;

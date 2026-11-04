@@ -25,18 +25,25 @@ describe('detectFileType', () => {
   });
 });
 
-/** A stored ZIP with one empty entry per name: the front of a Word or Excel file. */
-const zipOf = (...names: string[]) =>
+const le = (value: number, size: number) =>
+  Array.from({ length: size }, (_, index) => Math.floor(value / 256 ** index) % 256);
+
+/** A stored ZIP: one local entry per name, each with its data (empty when none is given). */
+const zipOf = (...entries: (string | [string, Uint8Array])[]) =>
   Uint8Array.from(
-    names.flatMap((name) => [
-      ...[0x50, 0x4b, 0x03, 0x04, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      ...Array<number>(12).fill(0),
-      name.length,
-      0,
-      0,
-      0,
-      ...[...name].map((char) => char.charCodeAt(0)),
-    ]),
+    entries.flatMap((entry) => {
+      const [name, data] = typeof entry === 'string' ? [entry, new Uint8Array()] : entry;
+      return [
+        ...[0x50, 0x4b, 0x03, 0x04, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ...le(0, 4),
+        ...le(data.length, 4),
+        ...le(data.length, 4),
+        ...le(name.length, 2),
+        ...le(0, 2),
+        ...[...name].map((char) => char.charCodeAt(0)),
+        ...data,
+      ];
+    }),
   );
 
 describe('detectFileType Word and Excel', () => {
@@ -44,15 +51,25 @@ describe('detectFileType Word and Excel', () => {
     expect(detectFileType(zipOf('[Content_Types].xml', '_rels/.rels', 'word/document.xml'))).toBe(
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
-    expect(detectFileType(zipOf('[Content_Types].xml', 'xl/workbook.xml'))).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
+    expect(
+      detectFileType(zipOf(['[Content_Types].xml', bytes('<Types/>')], 'xl/workbook.xml')),
+    ).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   });
 
   it('refuses any other ZIP, whatever the name says', () => {
     expect(detectFileType(zipOf('readme.txt'))).toBeNull();
     expect(detectFileType(zipOf('docs/word/notes.txt'))).toBeNull();
     expect(detectFileType(bytes('word/document.xml'))).toBeNull();
+  });
+
+  it('refuses a presentation that carries a Word file inside it', () => {
+    const inner = zipOf('[Content_Types].xml', 'word/document.xml');
+    expect(
+      detectFileType(
+        zipOf('[Content_Types].xml', 'ppt/presentation.xml', ['ppt/embeddings/a.docx', inner]),
+      ),
+    ).toBeNull();
+    expect(detectFileType(zipOf(['ppt/embeddings/a.docx', inner]))).toBeNull();
   });
 });
 

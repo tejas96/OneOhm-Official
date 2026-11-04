@@ -156,13 +156,14 @@ function readOther(message: RawMessage): string {
     const place = [name, address].filter(Boolean).join(', ');
     return `📍 Location: ${place ? `${place} ` : ''}https://maps.google.com/?q=${latitude},${longitude}`;
   }
-  if (message.type === 'contacts')
-    return (message.contacts ?? [])
+  const cards = (message.type === 'contacts' ? message.contacts : null) ?? [];
+  if (cards.length > 0)
+    return cards
       .map((card) =>
         `👤 Contact: ${card.name?.formatted_name ?? ''} ${card.phones?.[0]?.phone ?? ''}`.trim(),
       )
       .join('\n');
-  return '';
+  return 'Message';
 }
 
 function readMessage(message: RawMessage, names: Map<string, string>): Incoming | null {

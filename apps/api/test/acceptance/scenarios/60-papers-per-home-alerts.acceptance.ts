@@ -105,17 +105,43 @@ describe('Papers per home: alerts that were missing', () => {
     expect(await alertsOf('whatsapp_file_failed', chat.id)).toHaveLength(0);
   });
 
-  it('a Word file is kept', async () => {
-    const { customer } = await sellProject(admin, { name: 'Word Sender (test)' });
+  it('a Word file is kept as another file and answers no paper request', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Word Sender (test)' });
+    const asked = await admin.post<{ id: string }>('/document-requests', {
+      projectId: project.id,
+      category: 'property',
+      title: 'Farm 7/12 extract (test)',
+    });
     await sendInbound(customer.phone, {
       media: { type: 'document', fileId: 'word-1', filename: 'Roof plan (test).docx' },
     });
     const [shown] = (await chatMessages(admin, customer.phone)).filter((row) => row.file);
     expect(shown?.file).toMatchObject({ contentType: WORD });
-    const kept = await rows<{ content_type: string }>(
-      `SELECT content_type FROM documents WHERE customer_id = $1`,
+    const kept = await rows<{ content_type: string; category: string }>(
+      `SELECT content_type, category FROM documents WHERE customer_id = $1`,
       [customer.customerId],
     );
-    expect(kept.map((doc) => doc.content_type)).toEqual([WORD]);
+    expect(kept).toEqual([{ content_type: WORD, category: 'other' }]);
+    const [request] = await rows<{ status: string }>(
+      'SELECT status::text AS status FROM document_requests WHERE id = $1',
+      [asked.id],
+    );
+    expect(request?.status).toBe('open');
+  });
+
+  it('a Word file through the normal upload is refused', async () => {
+    const { project } = await sellProject(admin, { name: 'Word Upload (test)' });
+    const zip = Buffer.alloc(30 + 17);
+    zip.write('PK\x03\x04', 0, 'latin1');
+    zip.writeUInt16LE(17, 26);
+    zip.write('word/document.xml', 30, 'latin1');
+    const form = new FormData();
+    form.set('category', 'other');
+    form.set('name', 'Plan (test)');
+    form.set('projectId', project.id);
+    form.set('file', new Blob([new Uint8Array(zip)], { type: WORD }), 'plan.docx');
+    const reply = await admin.raw('POST', '/documents', form);
+    expect(reply.status).toBe(400);
+    expect(reply.text).toMatch(/photo.*PDF/i);
   });
 });
