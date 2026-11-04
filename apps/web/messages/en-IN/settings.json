@@ -1368,7 +1368,7 @@
       "published": "Published",
       "notPublished": "Not published",
       "flowId": "Flow ID",
-      "flowIdHint": "Printed by the publish script, or copied from WhatsApp Manager if you published it by hand. Clear it to stop using the form.",
+      "flowIdHint": "Printed by the publish script, or copied from WhatsApp Manager if you published it by hand. Clear it to stop using the form. If the ID is wrong, customers get a plain message asking for the photo in the chat instead.",
       "flowIdPlaceholder": "Numbers only",
       "save": "Save",
       "saved": "Form saved"

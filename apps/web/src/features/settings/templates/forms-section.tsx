@@ -60,7 +60,7 @@ function FormRow({ form }: { readonly form: WhatsappForm }) {
 }
 
 /**
- * Settings → WhatsApp → Forms: the forms we send in chats (Send a paper), each with its
+ * Settings → WhatsApp messages → Forms: the forms we send in chats (Send a paper), each with its
  * version and whether it is published. A form with no flow id is "not available" and the
  * chat asks for the photo instead. Publishing is done with the `forms:publish` script; an
  * owner who publishes by hand pastes the flow id here.
