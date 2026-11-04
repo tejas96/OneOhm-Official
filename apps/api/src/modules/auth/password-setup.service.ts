@@ -77,7 +77,7 @@ export class PasswordSetupService {
       'That code is not right or has expired. Ask for a new one.',
       'bad_code',
     );
-    const attempt = { identifier: phoneE164, method: 'otp' as const, ip, userId: null };
+    const attempt = { identifier: phoneE164, method: 'password_reset' as const, ip, userId: null };
     if (!challenge) {
       await recordAttempt(this.db, { ...attempt, success: false });
       throw wrong;

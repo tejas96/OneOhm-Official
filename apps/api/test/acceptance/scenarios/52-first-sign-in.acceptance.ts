@@ -116,11 +116,14 @@ describe('first sign-in and forgotten password', () => {
     });
     expect(right.status).toBe(401);
     expect(right.body.code).toBe('bad_code');
-    const failed = await rows<{ n: number }>(
-      `SELECT count(*)::int AS n FROM sign_in_attempts WHERE identifier = $1 AND success = false`,
+    const failed = await rows<{ n: number; methods: string[] }>(
+      `SELECT count(*)::int AS n, array_agg(DISTINCT method) AS methods
+         FROM sign_in_attempts WHERE identifier = $1 AND success = false`,
       [person.phone],
     );
     expect(failed[0]?.n).toBeGreaterThanOrEqual(5);
+    // Password-setup codes are logged as their own kind, not as field-app sign-ins.
+    expect(failed[0]?.methods).toEqual(['password_reset']);
   });
 
   it('using one code cancels the other codes and the same code cannot be used twice', async () => {
