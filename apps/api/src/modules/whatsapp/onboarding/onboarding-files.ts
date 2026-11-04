@@ -7,7 +7,13 @@ import { storeLeadDocument } from '../../documents/lead-chat-files';
 import { ObjectStorageService } from '../../documents/object-storage.service';
 import { checkFile, type IncomingFile } from '../../documents/upload-file';
 import { MEDIA_WORDS } from '../assistant/words';
-import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
+import { linkChatFile } from '../chat-store';
+import {
+  type ChatFile,
+  type MediaGateway,
+  MediaTooLargeError,
+  WHATSAPP_MEDIA,
+} from '../media-gateway';
 import type { IncomingMedia } from '../whatsapp-events';
 import { ONBOARD_WORDS } from './onboard-words';
 
@@ -19,7 +25,7 @@ export interface PendingFile {
   readonly size: number;
 }
 
-export type Fetched = IncomingFile | 'too_large' | 'failed';
+export type Fetched = ChatFile | 'too_large' | 'failed';
 
 /** What became of a file the customer sent. A file is never an unclear answer. */
 export type FileOutcome = 'filed' | 'held' | 'unreadable' | 'too_large' | 'failed' | 'bad';
@@ -68,7 +74,12 @@ export class ChatFilesService {
     if (!media || media.type === 'audio' || media.type === 'video') return null;
     try {
       const file = await this.gateway.download(media);
-      return { originalname: file.fileName, size: file.buffer.length, buffer: file.buffer };
+      return {
+        originalname: file.fileName,
+        size: file.buffer.length,
+        buffer: file.buffer,
+        mediaId: media.id,
+      };
     } catch (error) {
       this.log.warn(`WhatsApp media ${media.id} not downloaded: ${String(error)}`);
       return error instanceof MediaTooLargeError ? 'too_large' : 'failed';
@@ -93,7 +104,8 @@ export class ChatFilesService {
     if (typeof file === 'string') return { outcome: file, discard: [] };
     try {
       if (chat.leadId) {
-        await this.fileOnLead(tx, chat.leadId, file.originalname, file.buffer);
+        const documentId = await this.fileOnLead(tx, chat.leadId, file.originalname, file.buffer);
+        await linkChatFile(tx, file.mediaId, documentId);
         return { outcome: 'filed', discard: [] };
       }
       const pending = await this.hold(chat.id, file);

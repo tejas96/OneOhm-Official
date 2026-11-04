@@ -167,7 +167,7 @@
       "waitingOn": "Waiting on {party}",
       "followUpOn": "Follow up {date}",
       "start": "Start",
-      "wait": "Waiting on DISCOM",
+      "wait": "Mark as waiting",
       "complete": "Complete",
       "completeLast": "Complete and update the site",
       "failed": "That did not go through"

@@ -106,7 +106,7 @@ export function WaitStepDialog({
             params: { id: request.id, stepId: step.id },
             body: {
               party,
-              referenceNumber: reference.trim() || null,
+              ...(party === 'discom' ? { referenceNumber: reference.trim() || null } : {}),
               nextFollowUpOn: next || null,
               note: note.trim() || null,
             },
@@ -129,20 +129,24 @@ export function WaitStepDialog({
         <Select
           value={party}
           onValueChange={setParty}
-          options={WAITING_PARTIES.filter((value) => value !== 'internal').map((value) => ({
+          options={WAITING_PARTIES.filter(
+            (value) => value === 'customer' || value === 'discom',
+          ).map((value) => ({
             value,
             label: partyT(value),
           }))}
         />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('reference')} error={form.fieldErrors.referenceNumber}>
-          <Input
-            value={reference}
-            onChange={(event) => setReference(event.target.value)}
-            className="font-mono"
-          />
-        </Field>
+        {party === 'discom' && (
+          <Field label={t('reference')} error={form.fieldErrors.referenceNumber}>
+            <Input
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+              className="font-mono"
+            />
+          </Field>
+        )}
         <Field label={t('next')} error={form.fieldErrors.nextFollowUpOn}>
           <Input type="date" value={next} onChange={(event) => setNext(event.target.value)} />
         </Field>

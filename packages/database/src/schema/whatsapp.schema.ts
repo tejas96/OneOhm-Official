@@ -2,7 +2,7 @@ import { boolean, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers } from './crm.schema';
 import { users } from './identity.schema';
-import { outbox } from './records.schema';
+import { documents, outbox } from './records.schema';
 
 /**
  * One WhatsApp chat per phone number (PRD 6.1). `state` is where the assistant is in
@@ -59,7 +59,14 @@ export const waMessages = pgTable(
     assistantTap: boolean('assistant_tap').notNull().default(false),
     outboxId: uuid('outbox_id').references(() => outbox.id, { onDelete: 'set null' }),
     sentByUserId: uuid('sent_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** WhatsApp's id for the photo, paper, video or voice note in an incoming message. */
+    mediaId: text('media_id'),
+    /** Where that file is kept in OneOhm, so the chat can show it. */
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
   },
-  (table) => [index('wa_messages_conversation_idx').on(table.conversationId, table.createdAt)],
+  (table) => [
+    index('wa_messages_conversation_idx').on(table.conversationId, table.createdAt),
+    index('wa_messages_media_idx').on(table.mediaId),
+  ],
 );

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ChatDetail, ChatSummary } from '@oneohm/api-contracts';
 import {
   coveredBy,
+  documents,
   notify,
   outbox,
   roles,
@@ -64,16 +65,21 @@ export class ChatsService {
         status: outbox.status,
         deliveryStatus: outbox.deliveryStatus,
         sentBy: users.fullName,
+        file: { id: documents.id, name: documents.name, contentType: documents.contentType },
       })
       .from(waMessages)
       .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
       .leftJoin(users, eq(users.id, waMessages.sentByUserId))
+      .leftJoin(
+        documents,
+        and(eq(documents.id, waMessages.documentId), isNull(documents.removedAt)),
+      )
       .where(eq(waMessages.conversationId, id))
       .orderBy(desc(waMessages.createdAt))
       .limit(200); // the newest 200, shown oldest first
     return {
       chat,
-      messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy }) => ({
+      messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy, file }) => ({
         id: message.id,
         direction: message.direction as 'in' | 'out',
         kind: message.kind,
@@ -81,6 +87,7 @@ export class ChatsService {
         at: message.createdAt.toISOString(),
         delivery: status ? deliveryState({ status, deliveryStatus }) : null,
         sentBy,
+        file: file?.id ? file : null,
       })),
     };
   }

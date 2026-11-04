@@ -1,10 +1,19 @@
 'use client';
 
-import type { ChatMessage } from '@oneohm/api-contracts';
+import type { ChatFile, ChatMessage } from '@oneohm/api-contracts';
 import { cn } from '@oneohm/design-system/web';
-import { Check, CheckCheck, CircleAlert, CircleSlash, Clock3, type LucideIcon } from 'lucide-react';
+import {
+  Check,
+  CheckCheck,
+  CircleAlert,
+  CircleSlash,
+  Clock3,
+  FileText,
+  type LucideIcon,
+} from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
 
 type DeliveryState = NonNullable<ChatMessage['delivery']>;
 
@@ -61,6 +70,47 @@ function RichText({ body, links }: { readonly body: string; readonly links: bool
   return <>{parts}</>;
 }
 
+/** The photo, paper, video or voice note itself; it is also kept under Documents. */
+function MessageFile({ file }: { readonly file: ChatFile }) {
+  const url = documentUrl(file.id);
+  if (file.contentType.startsWith('image/'))
+    return (
+      <a href={url} target="_blank" rel="noopener" className="block">
+        {/* biome-ignore lint/performance/noImgElement: a stored file streamed by the API */}
+        <img
+          src={documentThumbUrl(file.id)}
+          alt={file.name}
+          className="max-h-56 rounded-lg object-cover"
+        />
+      </a>
+    );
+  if (file.contentType.startsWith('audio/'))
+    // biome-ignore lint/a11y/useMediaCaption: a customer's voice note has no captions
+    return <audio controls preload="none" src={url} className="w-64 max-w-full" />;
+  if (file.contentType.startsWith('video/'))
+    return (
+      // biome-ignore lint/a11y/useMediaCaption: a customer's video has no captions
+      <video controls preload="metadata" src={url} className="max-h-72 max-w-full rounded-lg" />
+    );
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener"
+      className="inline-flex items-center gap-2 text-accent underline underline-offset-2"
+    >
+      <FileText aria-hidden className="size-4 shrink-0" />
+      {file.name}
+    </a>
+  );
+}
+
+/** Words worth showing beside a file: not the "(media)" stand-in or the file's own name. */
+const caption = (message: ChatMessage) =>
+  message.file && (message.body === `(${message.kind})` || message.body === message.file.name)
+    ? ''
+    : message.body;
+
 /** Customer on the left, OneOhm on the right; ours say who sent them and how far they got. */
 export function MessageBubble({ message }: { readonly message: ChatMessage }) {
   const t = useTranslations('service.whatsapp');
@@ -84,7 +134,12 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
         {message.kind === 'choice' && (
           <span className="block type-label text-ink-faint">{t('picked')}</span>
         )}
-        <RichText body={message.body} links={outgoing} />
+        {message.file && <MessageFile file={message.file} />}
+        {caption(message) && (
+          <span className={cn('block', message.file && 'mt-1.5')}>
+            <RichText body={caption(message)} links={outgoing} />
+          </span>
+        )}
       </div>
       <p className="flex flex-wrap items-center gap-x-2 px-1 type-label text-ink-faint">
         {outgoing && (

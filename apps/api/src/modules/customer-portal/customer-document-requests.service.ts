@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
-import { customers, documentRequests, documents, notify } from '@oneohm/database';
+import {
+  customers,
+  documentRequests,
+  documents,
+  notify,
+  projectActivities,
+} from '@oneohm/database';
 import { and, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { conflict, notFound } from '../../common/http/errors';
@@ -79,6 +85,13 @@ export class CustomerDocumentRequestsService {
         .update(documentRequests)
         .set({ status: 'received', documentId: document.id, receivedAt: now, updatedAt: now })
         .where(eq(documentRequests.id, id));
+      if (asked.projectId)
+        await tx.insert(projectActivities).values({
+          projectId: asked.projectId,
+          kind: 'document_received',
+          message: `${request.customer} sent ${asked.title}`,
+          data: { documentRequestId: id, documentId: document.id },
+        });
       if (asked.requestedByUserId) {
         await notify(
           tx,

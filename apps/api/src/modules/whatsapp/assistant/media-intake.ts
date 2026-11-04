@@ -1,11 +1,17 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
+import { documentRequests } from '@oneohm/database';
+import { eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
-import type { IncomingFile } from '../../documents/upload-file';
-import { type Conversation, queueReply, setState } from '../chat-store';
-import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
+import { type Conversation, linkChatFile, queueReply, setState } from '../chat-store';
+import {
+  type ChatFile,
+  type MediaGateway,
+  MediaTooLargeError,
+  WHATSAPP_MEDIA,
+} from '../media-gateway';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
@@ -38,7 +44,14 @@ export function keepPending(context: unknown, now = Date.now()): Record<string, 
   return pending.length > 0 ? { pending } : {};
 }
 
-type Fetched = IncomingFile | 'too_large' | 'failed';
+type Fetched = ChatFile | 'too_large' | 'failed';
+
+/** The paper just filed, so Meta's retry of the same file is not filed again. */
+interface FiledMedia {
+  readonly id: string;
+  readonly title: string;
+  readonly documentId: string | null;
+}
 
 /**
  * Photos and papers a customer sends on WhatsApp (PRD 6.1), stored only against the
@@ -86,12 +99,21 @@ export class MediaIntakeService {
       return file ? this.problems.addPhoto(chat, customerId, raised.id, file) : undefined;
     }
     // Meta's retry of a file already filed (the reply after it failed): not filed again.
-    const filed = (chat.context as { filedMedia?: { id: string; title: string } }).filedMedia;
-    if (filed?.id === media.id)
+    const filed = (chat.context as { filedMedia?: FiledMedia }).filedMedia;
+    if (filed?.id === media.id) {
+      if (filed.documentId) await linkChatFile(this.db, media.id, filed.documentId);
       return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(filed.title), ['menu']);
+    }
     const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
     if (open.length > 0) return this.fulfil(chat, customerId, open, media);
     return this.ask(chat, media, now);
+  }
+
+  /** A person has the chat: a photo or paper still answers the oldest open paper request. */
+  async answerOpenRequest(chat: Conversation, customerId: string, media: IncomingMedia) {
+    if (media.type === 'audio' || media.type === 'video') return;
+    const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
+    if (open.length > 0) await this.fulfil(chat, customerId, open, media);
   }
 
   /** The words of "Report a problem": they raise it, with any photos sent just before. */
@@ -118,7 +140,13 @@ export class MediaIntakeService {
       if (error instanceof AppError) return this.text(chat, MEDIA_WORDS.paperRefused(oldest.title));
       throw error;
     }
-    const filedMedia = { id: media.id, title: oldest.title };
+    const [answered] = await this.db
+      .select({ documentId: documentRequests.documentId })
+      .from(documentRequests)
+      .where(eq(documentRequests.id, oldest.id));
+    const documentId = answered?.documentId ?? null;
+    if (documentId) await linkChatFile(this.db, media.id, documentId);
+    const filedMedia: FiledMedia = { id: media.id, title: oldest.title, documentId };
     await setState(this.db, chat.id, chat.state, { ...(chat.context as object), filedMedia });
     const left = open
       .slice(0, -1)
@@ -150,7 +178,12 @@ export class MediaIntakeService {
   private async fetch(media: IncomingMedia): Promise<Fetched> {
     try {
       const file = await this.gateway.download(media);
-      return { originalname: file.fileName, size: file.buffer.length, buffer: file.buffer };
+      return {
+        originalname: file.fileName,
+        size: file.buffer.length,
+        buffer: file.buffer,
+        mediaId: media.id,
+      };
     } catch (error) {
       this.log.warn(`WhatsApp media ${media.id} not downloaded: ${String(error)}`);
       return error instanceof MediaTooLargeError ? 'too_large' : 'failed';
@@ -158,7 +191,7 @@ export class MediaIntakeService {
   }
 
   /** The file just sent, or null after telling the customer why it could not be read. */
-  private async fetchOrSay(chat: Conversation, media: IncomingMedia): Promise<IncomingFile | null> {
+  private async fetchOrSay(chat: Conversation, media: IncomingMedia): Promise<ChatFile | null> {
     const file = await this.fetch(media);
     if (typeof file !== 'string') return file;
     await this.text(chat, file === 'too_large' ? MEDIA_WORDS.tooLarge : MEDIA_WORDS.failed);
@@ -166,8 +199,8 @@ export class MediaIntakeService {
   }
 
   /** Files sent earlier; any WhatsApp no longer gives are quietly left out. */
-  private async fetchPending(pending: readonly PendingMedia[]): Promise<IncomingFile[]> {
-    const files: IncomingFile[] = [];
+  private async fetchPending(pending: readonly PendingMedia[]): Promise<ChatFile[]> {
+    const files: ChatFile[] = [];
     for (const media of pending) {
       const file = await this.fetch(media);
       if (typeof file !== 'string') files.push(file);

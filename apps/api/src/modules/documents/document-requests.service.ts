@@ -4,7 +4,13 @@ import type {
   DocumentRequestQuery,
   NewDocumentRequest,
 } from '@oneohm/api-contracts';
-import { customers, documentRequests, projects, queueCustomerMessage } from '@oneohm/database';
+import {
+  customers,
+  documentRequests,
+  projectActivities,
+  projects,
+  queueCustomerMessage,
+} from '@oneohm/database';
 import { and, eq, or } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -80,6 +86,13 @@ export class DocumentRequestsService {
         { customer: project.customer, document: input.title.trim(), project: project.code },
         `document_requested:${row.id}`,
       );
+      await tx.insert(projectActivities).values({
+        projectId: project.id,
+        kind: 'document_request',
+        message: `Asked the customer for ${input.title.trim()} (WhatsApp and app)`,
+        userId: actor.userId,
+        data: { documentRequestId: row.id },
+      });
       await recordAudit(tx, actor.userId, 'document_request.created', 'document_request', row.id, {
         project: project.code,
         category: input.category,
@@ -100,6 +113,14 @@ export class DocumentRequestsService {
         .update(documentRequests)
         .set({ status: 'cancelled', cancelledAt: new Date(), updatedAt: new Date() })
         .where(eq(documentRequests.id, id));
+      if (request.projectId)
+        await tx.insert(projectActivities).values({
+          projectId: request.projectId,
+          kind: 'document_request',
+          message: `Request for ${request.title} cancelled`,
+          userId: actor.userId,
+          data: { documentRequestId: id },
+        });
       await recordAudit(tx, actor.userId, 'document_request.cancelled', 'document_request', id);
     });
     return this.one(id);

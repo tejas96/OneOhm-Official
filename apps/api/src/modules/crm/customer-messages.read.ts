@@ -1,13 +1,14 @@
 import type { CustomerAlert, CustomerChat, CustomerOutbound } from '@oneohm/api-contracts';
 import {
   type Database,
+  documents,
   notifications,
   outbox,
   users,
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { and, desc, eq, inArray, notLike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, notLike, or, sql } from 'drizzle-orm';
 import { deliveryState } from '../whatsapp/delivery-state';
 
 /** Enough to read the thread; the inbox has the rest. */
@@ -32,10 +33,12 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
       status: outbox.status,
       deliveryStatus: outbox.deliveryStatus,
       sentBy: users.fullName,
+      file: { id: documents.id, name: documents.name, contentType: documents.contentType },
     })
     .from(waMessages)
     .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
     .leftJoin(users, eq(users.id, waMessages.sentByUserId))
+    .leftJoin(documents, and(eq(documents.id, waMessages.documentId), isNull(documents.removedAt)))
     .where(eq(waMessages.conversationId, chat.id))
     .orderBy(desc(waMessages.createdAt))
     .limit(CHAT_MESSAGES);
@@ -44,7 +47,7 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
     state: chat.state,
     lastInboundAt: chat.lastInboundAt?.toISOString() ?? null,
     messageCount: count?.total ?? rows.length,
-    messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy }) => ({
+    messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy, file }) => ({
       id: message.id,
       direction: message.direction === 'in' ? 'in' : 'out',
       kind: message.kind,
@@ -52,6 +55,7 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
       at: message.createdAt.toISOString(),
       delivery: status ? deliveryState({ status, deliveryStatus }) : null,
       sentBy,
+      file: file?.id ? file : null,
     })),
   };
 }

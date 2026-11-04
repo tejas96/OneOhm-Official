@@ -470,6 +470,13 @@
       "when": 1793774733412,
       "tag": "0066_user_left_on",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793775210271,
+      "tag": "0067_whatsapp_message_files",
+      "breakpoints": true
     }
   ]
 }

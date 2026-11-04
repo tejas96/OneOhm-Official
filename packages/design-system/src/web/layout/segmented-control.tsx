@@ -12,6 +12,8 @@ export interface SegmentOption<TValue extends string> {
   readonly icon?: ReactNode;
   /** Hide the text on narrow screens (the icon stays, the label stays for screen readers). */
   readonly compactLabel?: boolean;
+  /** Show only the icon; the label stays for screen readers. */
+  readonly iconOnly?: boolean;
 }
 
 interface SegmentedControlProps<TValue extends string> {
@@ -83,7 +85,13 @@ export function SegmentedControl<TValue extends string>({
               />
             )}
             {option.icon && <span className="relative [&_svg]:size-4">{option.icon}</span>}
-            <span className={cn('relative', option.compactLabel && 'max-sm:sr-only')}>
+            <span
+              className={cn(
+                'relative',
+                option.compactLabel && 'max-sm:sr-only',
+                option.iconOnly && 'sr-only',
+              )}
+            >
               {option.label}
             </span>
           </RadioGroup.Item>
