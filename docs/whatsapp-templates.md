@@ -111,7 +111,8 @@ Examples: Ramesh Patil · latest electricity bill · PRJ-0087
 ### 10a. `paper_request` — **New** (replaces `document_requested`)
 Fields: customer, document, home
 
-Names the home the paper is for (papers per home): the site label, else its town. Submit it in
+Names the home the paper is for (papers per home): the site label, else its town, plus
+` (consumer no. ending NNNN)` when two of the customer's homes share a name. Submit it in
 English, Marathi and Hindi.
 
 > en: Hello {{1}}, please send your {{2}} for your solar at {{3}}. Reply here with a clear photo or PDF. You can also send it from the OneOhm app.
@@ -120,7 +121,8 @@ English, Marathi and Hindi.
 
 > hi: नमस्ते {{1}}, कृपया {{3}} पर अपने सोलर के लिए अपना {{2}} भेजें। यहाँ साफ़ फ़ोटो या PDF भेजें। आप इसे OneOhm ऐप से भी भेज सकते हैं।
 
-Examples: Ramesh Patil · latest electricity bill · Pune · (a second home) Sangli farm
+Examples: Ramesh Patil · latest electricity bill · Farm
+Two homes with one name: Ramesh Patil · latest electricity bill · Sangli (consumer no. ending 4821)
 
 The app keeps sending `document_requested` until `paper_request` is switched on. Switch over in
 this order:

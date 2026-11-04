@@ -43,6 +43,8 @@ export const chatFileSchema = z.object({
   id: idSchema,
   name: z.string(),
   contentType: z.string(),
+  /** Where it was filed ("Electricity bill · Pune"); null while it is still to sort. */
+  filedAs: z.string().nullable(),
 });
 export type ChatFile = z.infer<typeof chatFileSchema>;
 
