@@ -46,9 +46,14 @@ export function RemovePersonSheet({
   const [draft, setDraft] = useState(freshDraft);
   const today = todayIn();
   const personId = shown?.id;
+  const managesProjects = (departure.data?.counts.managedProjects ?? 0) > 0;
+  const projectManagerIds = departure.data?.projectManagerIds;
   const candidates = useMemo(
-    () => (personId ? handOverCandidates(people, personId) : []),
-    [people, personId],
+    () =>
+      personId
+        ? handOverCandidates(people, personId, managesProjects ? (projectManagerIds ?? []) : null)
+        : [],
+    [people, personId, managesProjects, projectManagerIds],
   );
   const suggestedId = departure.data?.suggestedTargetId ?? null;
   const { reset } = form;
@@ -156,6 +161,7 @@ export function RemovePersonSheet({
                 draft={{ ...draft, targetId }}
                 onChange={setDraft}
                 candidates={candidates}
+                managesProjects={managesProjects}
                 today={today}
                 errors={form.fieldErrors}
               />

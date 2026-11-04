@@ -13,8 +13,8 @@ const TAG = 'tell customers (test)';
 describe('removal tells customers', () => {
   let admin: Session;
   const people: OwnPerson[] = [];
-  const person = async (name: string) => {
-    const made = await ownPerson(admin, name);
+  const person = async (name: string, roles?: readonly string[]) => {
+    const made = await ownPerson(admin, name, roles);
     people.push(made);
     return made;
   };
@@ -55,7 +55,7 @@ describe('removal tells customers', () => {
   beforeAll(async () => {
     admin = await Session.admin();
     leaver = await person('Leaver Lata (tell test)');
-    target = await person('Target Tara (tell test)');
+    target = await person('Target Tara (tell test)', ['accounts']);
     quiet = await person('Quiet Quinn (tell test)');
 
     // One customer holds both a project and a service request with the leaver.
@@ -138,7 +138,7 @@ describe('removal tells customers', () => {
   });
 
   it('removed again after coming back, their customers are told again', async () => {
-    const second = await person('Second Target Sid (tell test)');
+    const second = await person('Second Target Sid (tell test)', ['accounts']);
     const [row] = await rows<{ id: string }>('SELECT id FROM leads WHERE phone_e164 = $1', [
       contactedPhone,
     ]);

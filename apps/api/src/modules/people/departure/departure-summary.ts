@@ -1,7 +1,15 @@
 import type { Departure } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, reportingLines, roles, userRoles, users } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  holdersOf,
+  reportingLines,
+  roles,
+  userRoles,
+  users,
+} from '@oneohm/database';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { notFound } from '../../../common/http/errors';
+import { canManageProjects } from '../../projects/project-team-rules';
 import { settlement, soleHolders } from './departure-settlement';
 import { type OpenWork, openWork } from './departure-work';
 
@@ -38,15 +46,32 @@ async function suggestedTarget(db: DatabaseExecutor, userId: string): Promise<st
   return staffRole ? manager.id : null;
 }
 
+/** Every active person who can manage projects, the leaver left out: who may take their projects. */
+async function projectManagers(db: DatabaseExecutor, leaverId: string): Promise<string[]> {
+  const holders = (await holdersOf(db, 'projects.view_all')).filter((id) => id !== leaverId);
+  const passes = await Promise.all(holders.map((id) => canManageProjects(db, id)));
+  return holders.filter((_, index) => passes[index]);
+}
+
 /** The removal sheet's summary (spec Flow 5). Read only. */
 export async function departureSummary(db: DatabaseExecutor, userId: string): Promise<Departure> {
   const [person] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId));
   if (!person) throw notFound('Person');
-  const [work, owing, sole, suggestedTargetId] = await Promise.all([
+  const [work, owing, sole, suggested] = await Promise.all([
     openWork(db, userId),
     settlement(db, userId),
     soleHolders(db, userId),
     suggestedTarget(db, userId),
   ]);
-  return { counts: countsOf(work), settlement: owing, soleHolderOf: sole, suggestedTargetId };
+  const managesProjects = work.managedProjects.length > 0;
+  const projectManagerIds = managesProjects ? await projectManagers(db, userId) : [];
+  const suggestedTargetId =
+    managesProjects && suggested && !projectManagerIds.includes(suggested) ? null : suggested;
+  return {
+    counts: countsOf(work),
+    settlement: owing,
+    soleHolderOf: sole,
+    suggestedTargetId,
+    projectManagerIds,
+  };
 }

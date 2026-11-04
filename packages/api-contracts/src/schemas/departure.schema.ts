@@ -8,7 +8,8 @@ const owedSchema = z.object({ count: z.number().int(), paise: z.number().int() }
 /**
  * What an admin sees before removing someone (spec Flow 5): counts of what they still
  * hold open, what the company still owes them, key permissions only they hold, and the
- * person their work would go to by default.
+ * person their work would go to by default. When they manage projects, only people who can
+ * manage projects may take over (`projectManagerIds`).
  */
 export const departureSchema = z.object({
   counts: z.object({
@@ -35,5 +36,7 @@ export const departureSchema = z.object({
   }),
   soleHolderOf: z.array(capabilitySchema),
   suggestedTargetId: idSchema.nullable(),
+  /** Everyone who can manage projects; filled only when the person manages projects. */
+  projectManagerIds: z.array(idSchema),
 });
 export type Departure = z.infer<typeof departureSchema>;

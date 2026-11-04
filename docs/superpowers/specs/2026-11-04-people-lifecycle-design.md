@@ -107,7 +107,7 @@ In the person's edit sheet, the admin's password box becomes one button: **Make 
 
 The removal sheet shows:
 - **What they have open**, as counts: leads they own, tasks, service requests, DISCOM requests, projects they manage, project teams they're on, and people who report to them. For a reseller, it also shows pending and approved commission entries.
-- **Hand everything to:** one person picker. It defaults to their manager and offers active staff only.
+- **Hand everything to:** one person picker. It defaults to their manager and offers active staff only. When the leaver manages an open project, it offers only people who can manage projects (active staff, not crew, holding `projects.view_all`).
 - **Last working day:** a date that defaults to today.
 - One button: **Remove and hand over**.
 
@@ -150,7 +150,7 @@ The last Super Admin still can't be removed. The existing guard stays.
 - **They are someone's leave backup.** For approved upcoming leave where they are the backup, the backup becomes the new owner, and the person on leave is told.
 - **Their own pending leave requests** are cancelled.
 - **Reporting loop.** If the new owner is one of the leaver's direct reports, that one person moves to the leaver's own manager, or to no manager. They can't report to themselves.
-- **Bad picks are blocked.** You can't hand work to the leaver, to an inactive person or to a reseller. You can't remove yourself. The last Super Admin can't be removed. If the target is removed at the same moment, the save fails with "Pick someone else", because the target row is locked in the transaction.
+- **Bad picks are blocked.** You can't hand work to the leaver, to an inactive person or to a reseller. If the leaver manages an open project, the target must be allowed to manage projects (the project manager rule), otherwise 409 `target_cannot_manage_projects` ("Pick someone who can manage projects. {name} manages projects."). You can't remove yourself. The last Super Admin can't be removed. If the target is removed at the same moment, the save fails with "Pick someone else", because the target row is locked in the transaction.
 - **Sole holder of a key permission.** If they are the only active person with `finance.approve_payments`, `people.manage` or `roles.manage`, the sheet warns "Nobody else can approve payments after this" before the confirm. It warns but doesn't block.
 - **Last working day.** Only today or an earlier date is allowed. Scheduling a future removal is out of scope. The admin removes them on the day.
 - **Money owed to them.** Salary and bonus payables (`payables.party_user_id`) and approved commissions stay payable. Nothing is cancelled.
