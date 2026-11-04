@@ -6,6 +6,7 @@ import { CUSTOMER_TRIGGERS } from '@oneohm/domain';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NumberInput } from '../number-input';
+import { stepErrors } from './plan-step-errors';
 
 type Step = PaymentPlanInput['steps'][number];
 
@@ -43,6 +44,7 @@ export function PlanStepsEditor({
               value={step.shareBp}
               onValueChange={(value) => change(index, { shareBp: value ?? 0 })}
               aria-label={t('stepShare')}
+              aria-invalid={Boolean(errors[`steps.${index}.shareBp`]) || undefined}
               className="sm:order-none"
             />
             <Select
@@ -59,6 +61,11 @@ export function PlanStepsEditor({
             >
               <Trash2 />
             </IconButton>
+            {stepErrors(errors, index).length > 0 && (
+              <p className="col-span-full type-body-sm text-overdue">
+                {stepErrors(errors, index).join(' ')}
+              </p>
+            )}
           </li>
         ))}
       </ol>

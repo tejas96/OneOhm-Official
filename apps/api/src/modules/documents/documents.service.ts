@@ -213,7 +213,6 @@ export class DocumentsService {
     category?: string,
   ): Promise<DocumentRecord[]> {
     const scope = await leadFilesScope(this.db, actor, leadId);
-    if (!scope) return [];
     const conditions: SQL[] = [currentProjectFiles, scope];
     if (category) conditions.push(eq(documents.category, category));
     return presentDocuments(this.db, and(...conditions) as SQL);

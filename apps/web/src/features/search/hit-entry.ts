@@ -13,6 +13,7 @@ import {
   Target,
   Users,
 } from 'lucide-react';
+import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
 import { formatPhone } from '@/lib/format/contact';
 import type { SearchEntry } from './search-index';
 
@@ -42,7 +43,9 @@ export function hrefOf(hit: SearchHit): string {
   const parent = hit.parent;
   switch (hit.type) {
     case 'tasks':
-      return parent ? `/projects/${parent.id}?tab=tasks` : '/command-center/tasks';
+      return parent
+        ? hrefWithTask(`/projects/${parent.id}?tab=tasks`, hit.id)
+        : `/command-center/tasks?task=${hit.id}`;
     case 'payments':
       return parent ? `/projects/${parent.id}?tab=payments` : '/finance?tab=receivables';
     case 'service':
@@ -61,7 +64,7 @@ function documentHref(hit: SearchHit): string {
   if (!parent) return '/projects';
   if (parent.type === 'projects' || parent.type === 'customers')
     return `/${parent.type}/${parent.id}?tab=documents`;
-  if (parent.type === 'vendors') return `/inventory/vendors/${parent.id}`;
+  if (parent.type === 'vendors') return `/inventory/vendors/${parent.id}?tab=papers`;
   return `/${parent.type}/${parent.id}`;
 }
 

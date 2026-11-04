@@ -1,8 +1,8 @@
 'use client';
 
-import type { SubsidyRuleInput, SubsidyRuleVersion } from '@oneohm/api-contracts';
+import type { SubsidyRuleVersion } from '@oneohm/api-contracts';
 import { Button, Field, Input, Select, Sheet } from '@oneohm/design-system/web';
-import { SUBSIDY_CATEGORIES, type SubsidyCategory } from '@oneohm/domain';
+import type { SubsidyCategory } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { CircleCheck } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -12,49 +12,15 @@ import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
 import { KwInput } from './kw-input';
 import { SubsidyImpactList } from './subsidy-impact';
-import { type SlabDraft, SubsidySlabsEditor, slabStart } from './subsidy-slabs-editor';
+import {
+  checkDraft,
+  type Draft,
+  draftFrom,
+  editorCategories,
+  slabsWouldBeLost,
+} from './subsidy-rule-draft';
+import { SubsidySlabsEditor } from './subsidy-slabs-editor';
 import { useSubsidyRuleActions } from './use-subsidy-rules';
-
-interface Draft {
-  readonly category: SubsidyCategory;
-  readonly validFrom: string;
-  readonly slabs: readonly SlabDraft[];
-  readonly capPaise: number | null;
-  readonly perHouseholdWp: number | null;
-  readonly maxEligibleWp: number | null;
-}
-
-/** A form copied from a rule: an edit starts from itself, a new version from the one in force. */
-function draftFrom(
-  rule: SubsidyRuleVersion | undefined,
-  category: SubsidyCategory,
-  validFrom: string,
-): Draft {
-  return {
-    category,
-    validFrom,
-    slabs: rule?.slabs.map(({ toWp, paisePerKw }) => ({ toWp, paisePerKw })) ?? [],
-    capPaise: rule?.capPaise ?? null,
-    perHouseholdWp: rule?.perHouseholdWp ?? null,
-    maxEligibleWp: rule?.maxEligibleWp ?? null,
-  };
-}
-
-function toBody(draft: Draft): SubsidyRuleInput {
-  const society = draft.category === 'society';
-  return {
-    category: draft.category,
-    validFrom: draft.validFrom,
-    slabs: draft.slabs.map((slab, index) => ({
-      fromWp: slabStart(draft.slabs, index),
-      toWp: slab.toWp,
-      paisePerKw: slab.paisePerKw ?? 0,
-    })),
-    capPaise: draft.capPaise ?? 0,
-    perHouseholdWp: society ? draft.perHouseholdWp : null,
-    maxEligibleWp: society ? draft.maxEligibleWp : null,
-  };
-}
 
 const inForce = (rules: readonly SubsidyRuleVersion[], category: SubsidyCategory) =>
   rules.find((rule) => rule.category === category && rule.state === 'in_force');
@@ -75,6 +41,7 @@ export function SubsidyRuleSheet({
   readonly onClose: () => void;
 }) {
   const t = useTranslations('settings.subsidy');
+  const checkT = useTranslations('checks');
   const format = useFormatter();
   const formId = useId();
   const form = useApiForm();
@@ -89,18 +56,32 @@ export function SubsidyRuleSheet({
   const impactOn = saved ? (saved.validFrom > today ? saved.validFrom : today) : null;
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
-  const errors = form.fieldErrors;
+  const [missing, setMissing] = useState<readonly string[]>([]);
+  const [switchTo, setSwitchTo] = useState<SubsidyCategory | null>(null);
+  const required = Object.fromEntries(missing.map((field) => [field, checkT('required')]));
+  const errors = { ...form.fieldErrors, ...required };
 
-  const pickCategory = (category: SubsidyCategory) =>
+  const switchCategory = (category: SubsidyCategory) => {
+    setSwitchTo(null);
     setDraft((current) =>
       editing
         ? { ...current, category }
         : draftFrom(inForce(rules, category), category, current.validFrom),
     );
+  };
+  // A new version copies the chosen category's rule in force; slabs typed so far would go.
+  const pickCategory = (category: SubsidyCategory) => {
+    const template = draftFrom(inForce(rules, draft.category), draft.category, '').slabs;
+    if (!editing && slabsWouldBeLost(draft.slabs, template)) setSwitchTo(category);
+    else switchCategory(category);
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await form.run(() => save(editing?.id ?? null, toBody(draft)), setSaved);
+    const { body, missing: empty } = checkDraft(draft);
+    setMissing(empty);
+    if (!body) return;
+    await form.run(() => save(editing?.id ?? null, body), setSaved);
   };
 
   const day = (date: string) => format.dateTime(new Date(date), { dateStyle: 'medium' });
@@ -152,7 +133,7 @@ export function SubsidyRuleSheet({
               <Select
                 value={draft.category}
                 onValueChange={pickCategory}
-                options={SUBSIDY_CATEGORIES.map((value) => ({
+                options={editorCategories(editing?.category ?? null).map((value) => ({
                   value,
                   label: t(`categories.${value}`),
                 }))}
@@ -171,6 +152,27 @@ export function SubsidyRuleSheet({
               />
             </Field>
           </div>
+          {switchTo && (
+            <div
+              role="alert"
+              className="flex flex-col gap-3 rounded-xl border border-hairline bg-sunken/50 p-4"
+            >
+              <p className="type-body-sm text-ink">
+                {t('form.switchWarning', { category: t(`categories.${switchTo}`) })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={() => switchCategory(switchTo)}>
+                  {t('form.switchConfirm')}
+                </Button>
+                <Button size="sm" variant="quiet" onClick={() => setSwitchTo(null)}>
+                  {t('form.switchKeep')}
+                </Button>
+              </div>
+            </div>
+          )}
+          {draft.category === 'commercial' && (
+            <p className="type-body-sm text-ink-muted">{t('commercialNote')}</p>
+          )}
           <SubsidySlabsEditor
             slabs={draft.slabs}
             onChange={(slabs) => set('slabs', slabs)}

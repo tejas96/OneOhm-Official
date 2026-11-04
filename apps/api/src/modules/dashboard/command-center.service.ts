@@ -6,6 +6,8 @@ import { todayIn } from '@oneohm/shared';
 import { and, eq, ne } from 'drizzle-orm';
 import { projectSummaries } from '../../common/read-models/project-summary';
 import { DATABASE, type Database } from '../../config/core.module';
+import { startProjectActions } from './accepted-without-project';
+import { businessZone } from './business-days';
 import { buildActions } from './command-center-actions';
 import { decisionsWaiting } from './command-center-decisions';
 import { installed, pipeline, waitingDays } from './command-center-flows';
@@ -13,6 +15,7 @@ import { deadlinesIn, risksIn } from './command-center-lists';
 import { materialRisks } from './command-center-materials';
 import { moneyFigures } from './command-center-money';
 import { type CenterScope, centerScope } from './command-center-scope';
+import { ownerAwayActions } from './owner-away-leads';
 
 const SEVERITY: Readonly<Record<ProjectSummary['tone'], number>> = {
   overdue: 0,
@@ -36,7 +39,11 @@ export class CommandCenterService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async get(query: CommandCenterQuery = {}): Promise<CommandCenter> {
-    const scope = centerScope(query, todayIn(), await readBusinessSetting(this.db, 'dashboard'));
+    const scope = centerScope(
+      query,
+      todayIn(businessZone()),
+      await readBusinessSetting(this.db, 'dashboard'),
+    );
     const [live, completed] = await Promise.all([
       projectSummaries(this.db, scope.projects),
       projectSummaries(this.db, scope.completed),
@@ -56,10 +63,16 @@ export class CommandCenterService {
         decisionsWaiting(this.db),
         buildActions(this.db, scope.today, scope.settings),
         materialRisks(this.db, scope),
+        startProjectActions(this.db),
+        ownerAwayActions(this.db, scope.today),
       ]),
     ]);
     const [installedFigures, waiting, sales] = flows;
-    const [risks, deadlines, decisions, actions, materials] = lists;
+    const [risks, deadlines, decisions, others, materials, startProjects, ownersAway] = lists;
+    const actions = [...startProjects, ...ownersAway, ...others].slice(
+      0,
+      scope.settings.actionsShown,
+    );
     const overdue = open.filter((task) => task.dueDate < scope.today).length;
     const unassigned = open.filter((task) => task.assignee === null).length;
     const delivery = open.length ? Math.round(100 * (1 - overdue / open.length)) : 100;
@@ -112,6 +125,7 @@ export class CommandCenterService {
         advancesPaise: money.advancesPaise,
       },
       liveProjects: live.length,
+      dueSoonDays: scope.settings.dueSoonDays,
     };
   }
 

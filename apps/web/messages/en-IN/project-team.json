@@ -60,7 +60,7 @@
     },
     "escalation": {
       "title": "When late work is raised",
-      "intro": "Each morning, late and stuck tasks go to the project manager first, then to the owner.",
+      "intro": "Each morning around 8:45 am, late and stuck tasks go to the project manager first, then to the owner.",
       "managerAfterDays": "Tell the manager after",
       "ownersAfterDays": "Tell the owner after",
       "stuckInternalDays": "Stuck with our team",

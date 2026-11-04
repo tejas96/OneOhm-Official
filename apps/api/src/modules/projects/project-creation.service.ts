@@ -21,7 +21,9 @@ import { assertVariantOffered } from '../business-settings/project-variant-check
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { raiseProjectNameChange } from '../discom/change-request-raise';
 import { inverterProducts, invertersOf } from '../quotations/quotation-inverters';
+import { projectStarted } from '../quotations/quotation-project';
 import { moveCustomerChats } from '../whatsapp/chat-owner';
+import { checkProjectInput } from './project-input';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
@@ -118,12 +120,7 @@ export class ProjectCreationService {
       .where(eq(discoms.id, input.discomId))
       .limit(1);
     if (!discom) throw invalid('Choose the DISCOM.', { discomId: 'Unknown DISCOM.' });
-    if (input.loan && input.loanPaise <= 0)
-      throw invalid('Enter the loan amount.', { loanPaise: 'Required for a loan project.' });
-    if (input.targetFinishDate && input.targetFinishDate < input.startDate)
-      throw invalid('The target finish comes after the start.', {
-        targetFinishDate: 'Pick a date on or after the start date.',
-      });
+    const managerUserId = checkProjectInput(input);
     const partner = await loadLoanPartner(this.db, input);
     const { property, customer, panel, inverters } = await this.parts(quotation);
 
@@ -150,7 +147,6 @@ export class ProjectCreationService {
       property.city,
     ]);
 
-    const managerUserId = input.managerUserId ?? actor.userId;
     return this.db.transaction(async (tx) => {
       const code = await nextCode(tx, input.startDate.slice(0, 4));
       const name =
@@ -201,12 +197,21 @@ export class ProjectCreationService {
           candidates,
         );
       }
+      // Before the milestones, which queue the advance notice: "started" arrives first.
+      await queueWhatsApp(
+        tx,
+        customer.phoneE164,
+        'project_started',
+        { customer: customer.name, project: code, capacity: formatKwp(quotation.capacityWp) },
+        `project_started:${project.id}`,
+      );
       await activateMilestones(
         tx,
         project.id,
         {
           totalPaise: quotation.totalPaise,
           paymentPlanId: input.paymentPlanId,
+          quotationId: quotation.id,
           loanPaise: input.loan ? input.loanPaise : 0,
         },
         actor.userId,
@@ -225,14 +230,8 @@ export class ProjectCreationService {
         message: createdMessage(quotation.number, generated.length, unassigned, toConfirm),
         userId: actor.userId,
       });
-      await queueWhatsApp(
-        tx,
-        customer.phoneE164,
-        'project_started',
-        { customer: customer.name, project: code, capacity: formatKwp(quotation.capacityWp) },
-        `project_started:${project.id}`,
-      );
       await tellTeam(tx, project.id, code, perPerson, actor.userId);
+      await projectStarted(tx, quotation, actor.userId);
       await recordAudit(tx, actor.userId, 'project.created', 'project', project.id, {
         code,
         tasks: generated.length,

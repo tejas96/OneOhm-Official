@@ -158,3 +158,19 @@ export async function assertCanOwnLeads(db: DatabaseExecutor, userId: string): P
     });
   }
 }
+
+/** Who can own leads now, and these people's names (deactivated people too). */
+export async function cityOwnerStanding(
+  db: DatabaseExecutor,
+  ids: readonly string[],
+): Promise<{ readonly canOwn: ReadonlySet<string>; readonly names: ReadonlyMap<string, string> }> {
+  const canOwn = new Set((await holders(db)).map((row) => row.userId));
+  const named =
+    ids.length === 0
+      ? []
+      : await db
+          .select({ id: users.id, name: users.fullName })
+          .from(users)
+          .where(inArray(users.id, [...ids]));
+  return { canOwn, names: new Map(named.map((row) => [row.id, row.name])) };
+}

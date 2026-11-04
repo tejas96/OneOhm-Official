@@ -28,12 +28,59 @@ describe('WhatsApp quote chat file', () => {
     await admin.post(`/quotations/${quotation.id}/send`);
     await admin.post(`/quotations/${quotation.id}/send`);
 
-    const files = await rows<{ payload: { kind: string; filename: string } }>(
+    const files = await rows<{ payload: { kind: string; filename: string; caption: string } }>(
       "select payload from outbox where recipient = $1 and template = 'session:document'",
       [customer.phone],
     );
     expect(files).toHaveLength(1);
-    expect(files[0]?.payload.filename).toBe(`${quotation.number}.pdf`);
+    // Named for the customer, with a caption that still carries the number (C16, C9).
+    expect(files[0]?.payload.filename).toBe('OneOhm-Quote-Open-Window-Customer-test-quote.pdf');
+    expect(files[0]?.payload.caption).toBe(`Your solar quotation (${quotation.number})`);
+    // The buttons say the money plainly: full price, the 3 parts, the subsidy (C1).
+    const [buttons] = await newestOutbox(customer.phone, 'session:buttons');
+    const body = buttons?.payload.body ?? '';
+    expect(body).toMatch(
+      /^Your solar quotation is above\.\nFull price ₹[\d,]+, paid in 3 parts: ₹[\d,]+ on acceptance, ₹[\d,]+ before dispatch, ₹[\d,]+ after installation\./,
+    );
+    expect(body).not.toContain(quotation.number);
+  });
+
+  it('"Send again" sends the buttons again, the PDF only when the first one failed', async () => {
+    const customer = await newCustomer(admin, { name: 'Quote Resend Customer (test)' });
+    await rows(
+      `insert into wa_conversations (phone, customer_id, last_inbound_at) values ($1, $2, now())`,
+      [customer.phone, customer.customerId],
+    );
+    const quotation = await createQuotation(admin, customer);
+    const count = async (template: string) =>
+      (
+        await rows('select 1 from outbox where recipient = $1 and template = $2', [
+          customer.phone,
+          template,
+        ])
+      ).length;
+    await admin.post(`/quotations/${quotation.id}/send`);
+    // Still queued: sending again does not queue a second PDF.
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(1);
+    await rows(
+      `update outbox set status = 'sent', delivery_status = 'delivered'
+        where recipient = $1 and template = 'session:document'`,
+      [customer.phone],
+    );
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(1);
+    expect(await count('session:buttons')).toBe(3);
+
+    await rows(
+      `update outbox set status = 'failed' where recipient = $1 and template = 'session:document'`,
+      [customer.phone],
+    );
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(2);
+    expect(await count('session:buttons')).toBe(4);
+    await admin.post(`/quotations/${quotation.id}/send`);
+    expect(await count('session:document')).toBe(2);
   });
 
   it('sends no extra chat file when the template already carries the file', async () => {

@@ -9,6 +9,22 @@ export const WORK_END_MIN = 18 * 60 + 30;
 /** After this long the person answering is nudged; after LATE_MIN the desk is told. */
 export const FIRST_NUDGE_MIN = 30;
 export const LATE_MIN = 120;
+/** A chat nobody on the team has written in for this long goes back to the assistant. */
+export const HAND_BACK_MIN = 240;
+
+/**
+ * Meta accepts chat messages (not templates) for 24 hours after the customer last wrote.
+ * OneOhm stops an hour early, so a message queued or retried late never reaches a closed
+ * chat. The API (choosing chat or template) and the worker (at send time) share this.
+ */
+export const CHAT_WINDOW_HOURS = 23;
+
+/** Whether a chat message can still go to this customer now. */
+export function chatWindowOpen(lastInboundAt: Date | null | undefined, now = new Date()): boolean {
+  return (
+    lastInboundAt != null && now.getTime() - lastInboundAt.getTime() < CHAT_WINDOW_HOURS * 3_600_000
+  );
+}
 
 /** The business clock now: the minute of the day there and when today began there. */
 function clockAt(now: Date, timeZone: string) {
@@ -40,16 +56,24 @@ export function lastWorkEnd(now: Date, timeZone: string): Date {
 }
 
 /**
+ * Working minutes since `from`, on the working clock: it starts when `from` happened, or
+ * at 9:30 in the morning for anything earlier; 0 outside working hours.
+ */
+export function workingMinutesSince(from: Date, now: Date, timeZone: string): number {
+  if (!isWorkingTime(now, timeZone)) return 0;
+  const { midnight } = clockAt(now, timeZone);
+  const dayStart = new Date(midnight.getTime() + WORK_START_MIN * 60_000);
+  const start = from > dayStart ? from : dayStart;
+  return Math.max(0, (now.getTime() - start.getTime()) / 60_000);
+}
+
+/**
  * How late an answer is, in working minutes: the clock starts when the customer wrote,
  * or at 9:30 in the morning for a message sent overnight. 1 nudges the person answering,
  * 2 is late (the desk is told); null is not yet, or outside working hours.
  */
 export function chatWaitStage(lastInAt: Date, now: Date, timeZone: string): 1 | 2 | null {
-  if (!isWorkingTime(now, timeZone)) return null;
-  const { midnight } = clockAt(now, timeZone);
-  const dayStart = new Date(midnight.getTime() + WORK_START_MIN * 60_000);
-  const from = lastInAt > dayStart ? lastInAt : dayStart;
-  const minutes = (now.getTime() - from.getTime()) / 60_000;
+  const minutes = workingMinutesSince(lastInAt, now, timeZone);
   if (minutes >= LATE_MIN) return 2;
   if (minutes >= FIRST_NUDGE_MIN) return 1;
   return null;

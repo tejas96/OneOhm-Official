@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AuditEntry, SignInAttempt } from '@oneohm/api-contracts';
+import type { AuditEntry, Page, SignInAttempt } from '@oneohm/api-contracts';
 import { auditLog, signInAttempts, users } from '@oneohm/database';
-import { and, desc, eq, ilike, lt, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, lt, or, type SQL, sql } from 'drizzle-orm';
+import { likeTerm, offsetOf, pageFrom } from '../../common/paging';
 import { DATABASE, type Database } from '../../config/core.module';
+import { actionPattern } from './audit-search';
 
 const PAGE = 50;
 
@@ -33,9 +35,9 @@ export class AuditService {
       afterCursor(query.cursor),
       query.search
         ? or(
-            ilike(auditLog.action, `%${query.search}%`),
-            ilike(auditLog.entityId, `%${query.search}%`),
-            ilike(users.fullName, `%${query.search}%`),
+            ilike(auditLog.action, actionPattern(query.search)),
+            ilike(auditLog.entityId, likeTerm(query.search)),
+            ilike(users.fullName, likeTerm(query.search)),
           )
         : undefined,
     ];
@@ -68,15 +70,40 @@ export class AuditService {
     };
   }
 
-  async signIns(failedOnly: boolean): Promise<SignInAttempt[]> {
-    const rows = await this.db
-      .select({ attempt: signInAttempts, name: users.fullName })
-      .from(signInAttempts)
-      .leftJoin(users, eq(users.id, signInAttempts.userId))
-      .where(failedOnly ? eq(signInAttempts.success, false) : undefined)
-      .orderBy(desc(signInAttempts.createdAt))
-      .limit(100);
-    return rows.map(({ attempt, name }) => ({
+  /** Sign-in tries, newest first, a page at a time; search matches account, name or address. */
+  async signIns(query: {
+    failedOnly: boolean;
+    search?: string | undefined;
+    limit: number;
+    cursor?: string | undefined;
+  }): Promise<Page<SignInAttempt>> {
+    const where = and(
+      query.failedOnly ? eq(signInAttempts.success, false) : undefined,
+      query.search
+        ? or(
+            ilike(signInAttempts.identifier, likeTerm(query.search)),
+            ilike(users.fullName, likeTerm(query.search)),
+            ilike(signInAttempts.ip, likeTerm(query.search)),
+          )
+        : undefined,
+    );
+    const offset = offsetOf(query);
+    const [rows, [total]] = await Promise.all([
+      this.db
+        .select({ attempt: signInAttempts, name: users.fullName })
+        .from(signInAttempts)
+        .leftJoin(users, eq(users.id, signInAttempts.userId))
+        .where(where)
+        .orderBy(desc(signInAttempts.createdAt), desc(signInAttempts.id))
+        .limit(query.limit)
+        .offset(offset),
+      this.db
+        .select({ value: count() })
+        .from(signInAttempts)
+        .leftJoin(users, eq(users.id, signInAttempts.userId))
+        .where(where),
+    ]);
+    const items = rows.map(({ attempt, name }) => ({
       id: attempt.id,
       at: attempt.createdAt.toISOString(),
       identifier: attempt.identifier,
@@ -85,5 +112,6 @@ export class AuditService {
       user: attempt.userId && name ? { id: attempt.userId, name } : null,
       success: attempt.success,
     }));
+    return pageFrom(items, total?.value ?? 0, offset, query.limit);
   }
 }

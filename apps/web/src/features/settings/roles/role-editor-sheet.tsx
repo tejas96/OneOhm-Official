@@ -3,6 +3,7 @@
 import type { Role } from '@oneohm/api-contracts';
 import {
   Button,
+  Dialog,
   Field,
   Input,
   SegmentedControl,
@@ -21,6 +22,7 @@ import { ROLES_KEY } from '@/features/team/use-team';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { CapabilityChecklist } from './capability-checklist';
+import { archiveNeedsConfirm } from './role-changes';
 
 /** `role` null with `open` true creates a new role. */
 export function RoleEditorSheet({
@@ -44,6 +46,7 @@ export function RoleEditorSheet({
   const [kind, setKind] = useState<RoleKind>('staff');
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [archived, setArchived] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const { reset } = form;
   const locked = role?.system ?? false;
 
@@ -54,11 +57,18 @@ export function RoleEditorSheet({
     setKind(role?.kind ?? 'staff');
     setCapabilities(role ? [...role.capabilities] : []);
     setArchived(role?.archived ?? false);
+    setConfirming(false);
     reset();
   }, [open, role, reset]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (archiveNeedsConfirm(role, archived)) setConfirming(true);
+    else await save();
+  };
+
+  const save = async () => {
+    setConfirming(false);
     await form.run(
       () =>
         role
@@ -152,6 +162,26 @@ export function RoleEditorSheet({
         )}
         <FormError message={form.error} />
       </form>
+      <Dialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={editorT('archiveConfirmTitle', { name: role?.name ?? '' })}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setConfirming(false)}>
+              {editorT('cancel')}
+            </Button>
+            <Button variant="danger" onClick={save}>
+              {editorT('archiveConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p className="type-body text-ink-muted">
+          {editorT('archiveConfirmBody', { count: role?.memberCount ?? 0 })}
+        </p>
+      </Dialog>
     </Sheet>
   );
 }

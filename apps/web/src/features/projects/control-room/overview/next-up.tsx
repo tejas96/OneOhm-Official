@@ -4,6 +4,7 @@ import type { ProjectTask } from '@oneohm/api-contracts';
 import { Card, CardHeader, cn, StatusPill } from '@oneohm/design-system/web';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { hrefWithTask } from '../../task-panel/task-panel-url';
 import { PriorityIcon } from '../../tasks/priority-icon';
 import { taskStatusKey, taskTone } from '../../tasks/task-status';
 import type { ProjectSignals } from '../room-signals';
@@ -24,7 +25,6 @@ function NextTask({ task, href }: { readonly task: ProjectTask; readonly href: s
           <Link
             href={href}
             scroll={false}
-            replace
             className="oh-stretched-link type-body-sm font-medium text-ink"
           >
             {task.title}
@@ -64,7 +64,7 @@ function NextTask({ task, href }: { readonly task: ProjectTask; readonly href: s
   );
 }
 
-/** The next few open tasks, soonest due first; each one opens the Tasks tab. */
+/** The next few open tasks, soonest due first; each one opens the Tasks tab with that task's panel. */
 export function NextUp({
   signals,
   tasksHref,
@@ -88,7 +88,7 @@ export function NextUp({
       {next.length > 0 && (
         <ol className="flex flex-col divide-y divide-hairline border-t border-hairline">
           {next.map((task) => (
-            <NextTask key={task.id} task={task} href={tasksHref} />
+            <NextTask key={task.id} task={task} href={hrefWithTask(tasksHref, task.id)} />
           ))}
         </ol>
       )}

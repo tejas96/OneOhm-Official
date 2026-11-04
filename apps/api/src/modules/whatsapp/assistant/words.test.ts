@@ -1,4 +1,14 @@
+import {
+  DEFAULT_ONBOARDING,
+  MAX_BILL_BANDS,
+  MAX_ROW_TITLE,
+  MAX_SERVICE_CITIES,
+  STEP_ORDER,
+} from '@oneohm/domain';
 import { describe, expect, it } from 'vitest';
+import type { ChatReply } from '../chat-store';
+import { ONBOARD_LISTS } from '../onboarding/onboard-words';
+import { laterQuestion, question } from '../onboarding/onboarding-replies';
 import { assistantLanguage, inLanguage } from './language';
 import { EN, MEDIA_WORDS, MENU_ROWS, RATINGS, WORDS } from './words';
 import { HI } from './words-hi';
@@ -62,5 +72,111 @@ describe('hand-over and night words', () => {
       expect(words.WORDS.passedToOwner(null)).not.toContain('null');
       expect(words.WORDS.nightReply(null)).not.toContain('null');
     }
+    // A named person takes the respectful plural in Marathi (live review C15).
+    expect(MR.WORDS.passedToOwner('Bharat')).toBe('धन्यवाद. Bharat तुम्हाला इथेच उत्तर देतील.');
+    expect(MR.WORDS.passedToOwner(null)).toBe('धन्यवाद. आमची टीम तुम्हाला इथेच उत्तर देईल.');
+  });
+});
+
+describe('onboarding questions', () => {
+  // The longest lists an owner can set: 7 cities (+ Other, Back, a person) and 8 bill bands.
+  const settings = {
+    ...DEFAULT_ONBOARDING,
+    serviceCities: Array.from({ length: MAX_SERVICE_CITIES }, (_, i) =>
+      `City ${i}`.padEnd(MAX_ROW_TITLE, 'x'),
+    ),
+    billBands: Array.from({ length: MAX_BILL_BANDS }, (_, i) => ({
+      id: `band_${i}`,
+      label: `Band ${i}`.padEnd(MAX_ROW_TITLE, 'x'),
+      targetWp: 1000,
+    })),
+  };
+
+  function fits(reply: ChatReply, label: string) {
+    if (reply.kind === 'buttons') {
+      expect(reply.buttons.length, label).toBeLessThanOrEqual(3);
+      for (const button of reply.buttons)
+        expect(button.title.length, `${label} ${button.title}`).toBeLessThanOrEqual(20);
+    }
+    if (reply.kind === 'list') {
+      expect(reply.rows.length, label).toBeLessThanOrEqual(10);
+      expect(reply.button.length, label).toBeLessThanOrEqual(20);
+      for (const row of reply.rows)
+        expect(row.title.length, `${label} ${row.title}`).toBeLessThanOrEqual(24);
+    }
+  }
+
+  const choicesOf = (reply: ChatReply) =>
+    reply.kind === 'buttons' ? reply.buttons : reply.kind === 'list' ? reply.rows : [];
+
+  /** Every question, in every way it can be asked, in one language. */
+  const allQuestions = (language: 'en' | 'mr' | 'hi') =>
+    inLanguage(language, async () =>
+      STEP_ORDER.flatMap((step) =>
+        ([undefined, 'name', 'city'] as const).map((awaiting) => ({
+          step,
+          reply: question(step, { settings, profileName: 'Asha', awaiting, retry: true }),
+        })),
+      ),
+    );
+
+  it('fits WhatsApp’s limits and offers a person on every question, in every language', async () => {
+    for (const language of ['en', 'mr', 'hi'] as const)
+      for (const { step, reply } of await allQuestions(language)) {
+        fits(reply, `${language} ${step}`);
+        if (step === 'language') continue;
+        // The estimate's buttons keep "Talk to a person" in the middle.
+        const offered = choicesOf(reply).map((choice) => choice.id);
+        if (step === 'done') expect(offered, `${language} done`).toContain('ob:person');
+        else expect(offered.at(-1), `${language} ${step}`).toBe('ob:person');
+      }
+  });
+
+  it('fits the "Not now" list and the estimate words in every language', async () => {
+    for (const language of ['en', 'mr', 'hi'] as const) {
+      const later = await inLanguage(language, async () => laterQuestion());
+      fits(later, `${language} later`);
+      expect(choicesOf(later).at(-1)?.id).toBe('ob:person');
+      const words = ONBOARD_LISTS[language];
+      // A document caption holds 1024 characters.
+      const size = '1000 panels (545.45 kW)';
+      const caption = words.estimateCaption(size, '₹10,00,00,000', '₹10,00,00,000', '₹10,00,000');
+      expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
+      expect(words.willCall('Asha', false)).toContain('Asha');
+      expect(words.willCall(null, true)).not.toBe(words.willCall(null, false));
+    }
+    expect(ONBOARD_LISTS.en.willCall('Asha', false)).toBe('Thank you. Asha will call you today.');
+    expect(ONBOARD_LISTS.en.willCall('Asha', true)).toBe(
+      'Thank you. Asha will call you tomorrow morning.',
+    );
+    expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1', '₹1')).toContain(
+      'Estimate — final price in your quotation after a free call or visit',
+    );
+  });
+
+  it('has file replies in every language that fit a WhatsApp text', () => {
+    for (const [language, words] of Object.entries(ONBOARD_LISTS))
+      for (const text of [words.firstDetails, words.billThanks, words.badFile]) {
+        expect(text.length, `${language} file reply`).toBeGreaterThan(0);
+        expect(text.length, `${language} file reply`).toBeLessThanOrEqual(1024);
+      }
+    expect(ONBOARD_LISTS.mr.billThanks).not.toBe(ONBOARD_LISTS.en.billThanks);
+    expect(ONBOARD_LISTS.hi.firstDetails).not.toBe(ONBOARD_LISTS.en.firstDetails);
+  });
+
+  // The nudge is a buttons message: a body of up to 1024 characters and 20-character buttons.
+  it('fits the nudge and its buttons in every language', () => {
+    for (const [language, words] of Object.entries(ONBOARD_LISTS)) {
+      expect(words.nudge.length, `${language} nudge`).toBeGreaterThan(0);
+      expect(words.nudge.length, `${language} nudge`).toBeLessThanOrEqual(1024);
+      for (const button of [words.continue, words.talkToPerson, words.back])
+        expect(button.length, `${language} ${button}`).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it('has the same words in every language', () => {
+    for (const words of [ONBOARD_LISTS.mr, ONBOARD_LISTS.hi])
+      expect(Object.keys(words).sort()).toEqual(Object.keys(ONBOARD_LISTS.en).sort());
+    expect(ONBOARD_LISTS.mr.askName('Asha')).toContain('Asha');
   });
 });

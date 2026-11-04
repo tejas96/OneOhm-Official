@@ -20,6 +20,8 @@ export function apiEnvironment(databaseUrl) {
     OTP_PROVIDER: 'local',
     OTP_DEVELOPMENT_CODE: '123456',
     OTP_REQUESTS_PER_10_MIN: '1000',
+    // Every scenario posts the website form from this one machine.
+    WEBSITE_ENQUIRIES_PER_10_MIN: '1000',
     RAZORPAY_MODE: 'sandbox',
     RAZORPAYX_MODE: 'sandbox',
     // Known secrets so the suite can sign gateway webhooks like Razorpay does.
@@ -31,6 +33,10 @@ export function apiEnvironment(databaseUrl) {
     RAZORPAY_KEY_SECRET: '',
     WHATSAPP_ACCESS_TOKEN: '',
     MSG91_AUTH_KEY: '',
+    // The nudge job runs only when a scenario asks for it, at a clock the scenario sets.
+    ONBOARDING_NUDGE_TIMER: 'false',
+    // The same for the sales checks (quote validity, promised calls, start project).
+    SALES_CHECKS_TIMER: 'false',
     // Uploaded test files go to their own bucket, created on start-up.
     STORAGE_BUCKET: 'oneohm-acceptance',
   };

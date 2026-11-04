@@ -1,6 +1,6 @@
 import type { UploadFields } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, documents, leads } from '@oneohm/database';
-import { and, eq, isNull, type SQL } from 'drizzle-orm';
+import { and, eq, isNull, or, type SQL } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, invalid, notFound } from '../../common/http/errors';
 import { leadVisibility } from '../crm/lead-read';
@@ -60,22 +60,20 @@ export async function leadUploadLinks(
 }
 
 /**
- * Which files a lead screen lists: the papers on the lead's customer outside any
- * project or task. Without `documents.view` (resellers), only the ones the person
- * added. Null when the lead has no customer yet (nothing to list).
+ * Which files a lead screen lists: papers filed on the lead itself (for example a bill
+ * sent on WhatsApp before the lead has a site), plus the papers on the lead's customer
+ * outside any project or task. Without `documents.view` (resellers), only the ones the
+ * person added.
  */
 export async function leadFilesScope(
   db: DatabaseExecutor,
   actor: Actor,
   leadId: string,
-): Promise<SQL | null> {
+): Promise<SQL> {
   const lead = await visibleLead(db, actor, leadId);
-  if (!lead.customerId) return null;
-  const conditions: SQL[] = [
-    eq(documents.customerId, lead.customerId),
-    isNull(documents.projectId),
-    isNull(documents.taskId),
-  ];
+  const onLead = eq(documents.leadId, leadId);
+  const mine = lead.customerId ? or(onLead, eq(documents.customerId, lead.customerId)) : onLead;
+  const conditions: SQL[] = [mine as SQL, isNull(documents.projectId), isNull(documents.taskId)];
   if (!canViewAllDocuments(actor)) conditions.push(eq(documents.uploadedByUserId, actor.userId));
-  return and(...conditions) ?? null;
+  return and(...conditions) as SQL;
 }

@@ -47,6 +47,7 @@ describe('Sales by campaign', () => {
       leads: 2,
       quoted: 1,
       won: 1,
+      advancePaid: 1,
       collectedPaise: owed(advance),
     });
     expect(row?.wonValuePaise).toBeGreaterThan(0);

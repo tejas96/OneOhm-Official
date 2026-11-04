@@ -25,6 +25,7 @@
         "editTitle": "Edit service category",
         "label": "Name the team reads",
         "customerLabel": "What the customer picks in the app",
+        "customerLabelSystem": "What the customer sees in the app and messages",
         "responseHours": "First response within",
         "resolutionHours": "Resolved within",
         "hoursHint": "In hours, counted around the clock. 48 hours is 2 days.",
@@ -38,7 +39,7 @@
     },
     "warranty": {
       "title": "Warranty",
-      "intro": "Years of cover for each part of a system. Cover starts on the commissioning day and is recorded on the project when testing and commissioning is completed.",
+      "intro": "Years of cover for each part of a system. Cover starts on the commissioning day and is recorded on the project when testing and commissioning is completed. A panel, inverter or battery with its own warranty years in Products keeps those years, as printed on the quotation; these years are used when the product has none.",
       "loading": "Loading warranty years",
       "kinds": {
         "panel": "Solar panels",
@@ -91,9 +92,9 @@
         "visitsPerYear": "Visits a year",
         "durationMonths": "Length (months)",
         "visitName": "What the customer calls a visit",
-        "visitNameHint": "Used in the WhatsApp: “Your free {example} visit is on 7 Nov.”",
+        "visitNameHint": "Used in the visit WhatsApp: “your {example} visit is on 7 Nov”. The approved WhatsApp wording calls every AMC visit free, even on a paid plan, until a new template is approved in WhatsApp Manager.",
         "includes": "What each visit includes",
-        "includesHint": "One item per line, for example Panel cleaning.",
+        "includesHint": "One item per line, for example Panel cleaning. Written on each visit’s service request so the technician sees it.",
         "active": "On sale",
         "applies": "Contracts already sold keep the terms they were sold on.",
         "create": "Add plan",

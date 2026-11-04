@@ -44,7 +44,7 @@ export function DispatchCard({ dispatch }: { readonly dispatch: Dispatch }) {
         <div className="flex min-w-0 flex-col gap-1">
           <p className="font-mono type-body-sm font-medium text-ink">{dispatch.number}</p>
           <Link
-            href={`/projects/${dispatch.projectId}`}
+            href={`/projects/${dispatch.projectId}?tab=material`}
             className="truncate type-title-lg font-normal text-ink [font-family:var(--font-display)] hover:text-accent"
           >
             {dispatch.projectName}

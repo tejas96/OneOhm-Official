@@ -17,6 +17,7 @@ import { useTaskSteps } from '../tasks/use-task-steps';
 import { PanelChecklist } from './panel-checklist';
 import { PriorityControl } from './priority-control';
 import { BlockersSection, FactsSection, PanelSection } from './task-panel-sections';
+import { hrefWithTask } from './task-panel-url';
 import { TaskTimeline } from './task-timeline';
 
 /**
@@ -94,7 +95,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           {canOpenProject ? (
             <Link
-              href={`/projects/${task.projectId}?tab=tasks`}
+              href={hrefWithTask(`/projects/${task.projectId}?tab=tasks`, task.id)}
               className="type-body-sm text-accent hover:underline"
             >
               {t('openProject')}

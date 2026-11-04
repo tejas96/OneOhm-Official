@@ -1,7 +1,7 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
 import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { STAGE_LABEL } from './lead-labels';
 import { loadLeadSteps, movedNote } from './lead-steps-read';
@@ -97,16 +97,18 @@ function followUpNote(current: LeadDetail, patch: LeadPatch): string | null {
 }
 
 /**
- * A move the system makes on its own (a quotation sent or accepted), written to the
- * timeline with why. `note` says what happened; the move is added when the stage changes.
- * Sending never pulls a lead back from won, and never reopens a lost lead.
+ * A move the system makes on its own (a person's first contact, a quotation sent, a
+ * quotation accepted), written to the timeline with why. `note` says what happened; the
+ * move is added when the stage changes. Only a new lead becomes contacted, and a lead past
+ * new is left alone without a line; sending never pulls a lead back from won, and never
+ * reopens a lost lead.
  */
 export async function autoMoveLead(
   db: DatabaseExecutor,
   leadId: string,
   /** Null when the customer did it themselves (accepting on WhatsApp). */
   userId: string | null,
-  stage: 'quoted' | 'won',
+  stage: 'contacted' | 'quoted' | 'won',
   note: string,
 ): Promise<void> {
   const [lead] = await db
@@ -116,6 +118,7 @@ export async function autoMoveLead(
     .limit(1);
   if (!lead) return;
   const blocked = stage === 'quoted' ? ['quoted', 'won', 'lost'] : ['won'];
+  if (stage === 'contacted' && lead.stage !== 'new') return;
   if (blocked.includes(lead.stage)) {
     await logLead(db, leadId, userId, 'note', note);
     return;
@@ -136,4 +139,66 @@ export async function autoMoveLead(
     .where(eq(leads.id, leadId));
   const moved = `Moved from ${from?.name ?? STAGE_LABEL[lead.stage]} to ${to?.name ?? STAGE_LABEL[stage]}.`;
   await logLead(db, leadId, userId, 'stage_change', `${note} ${moved}`);
+}
+
+/** A person answered this number on WhatsApp: its new leads are contacted. */
+export async function contactLeadsByPhone(
+  db: DatabaseExecutor,
+  phone: string,
+  userId: string,
+): Promise<void> {
+  const fresh = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.phoneE164, phone), eq(leads.stage, 'new')));
+  for (const lead of fresh) {
+    await autoMoveLead(db, lead.id, userId, 'contacted', 'First WhatsApp reply by the team.');
+  }
+}
+
+/**
+ * A next action the system sets for the lead's owner (follow up a sent quote, start the
+ * project of an accepted one), with its timeline line. `openOnly` leaves a won or lost
+ * lead alone, and a lead already on this very step keeps its day; false when nothing was set.
+ */
+export async function setLeadNextAction(
+  db: DatabaseExecutor,
+  leadId: string,
+  userId: string | null,
+  next: { readonly on: string; readonly note: string; readonly openOnly?: boolean },
+): Promise<boolean> {
+  const [set] = await db
+    .update(leads)
+    .set({
+      nextActionOn: next.on,
+      nextActionTime: null,
+      nextActionNote: next.note,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(leads.id, leadId),
+        sql`${leads.nextActionNote} is distinct from ${next.note}`,
+        next.openOnly ? notInArray(leads.stage, ['won', 'lost']) : undefined,
+      ),
+    )
+    .returning({ id: leads.id });
+  if (!set) return false;
+  await logLead(db, leadId, userId, 'follow_up', `Next action on ${next.on}: ${next.note}.`);
+  return true;
+}
+
+/** The system's next action is done (the project of an accepted quote exists): cleared. */
+export async function clearLeadNextAction(
+  db: DatabaseExecutor,
+  leadId: string,
+  userId: string | null,
+  note: string,
+): Promise<void> {
+  const [cleared] = await db
+    .update(leads)
+    .set({ nextActionOn: null, nextActionTime: null, nextActionNote: null, updatedAt: new Date() })
+    .where(and(eq(leads.id, leadId), eq(leads.nextActionNote, note)))
+    .returning({ id: leads.id });
+  if (cleared) await logLead(db, leadId, userId, 'follow_up', `Done: ${note}.`);
 }

@@ -3,7 +3,7 @@
 import type { ChatSummary } from '@oneohm/api-contracts';
 import { Button, Textarea, useToast } from '@oneohm/design-system/web';
 import { FOLLOW_UP_MAX } from '@oneohm/domain';
-import { Clock3, SendHorizontal } from 'lucide-react';
+import { BellOff, Clock3, SendHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, type KeyboardEvent, useState } from 'react';
 import { describeError } from '@/lib/api/api-error';
@@ -35,6 +35,13 @@ export function ReplyBox({ chat }: { readonly chat: ChatSummary }) {
       onSubmit={submit}
       className="flex flex-col gap-2 border-t border-hairline bg-raised px-3 py-3 sm:px-4"
     >
+      {/* They sent STOP: our messages (templates, nudges) wait until they send START. */}
+      {chat.optedOut && (
+        <p className="flex items-start gap-2 px-1 type-body-sm text-ink-muted">
+          <BellOff aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-faint" />
+          {t('reply.optedOut')}
+        </p>
+      )}
       {/* After 24 hours WhatsApp needs a template: the app wraps the words in one. */}
       {!chat.windowOpen && (
         <p className="flex items-start gap-2 px-1 type-body-sm text-ink-muted">

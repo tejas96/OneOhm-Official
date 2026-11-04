@@ -6,10 +6,12 @@ import { formatInr } from '@oneohm/shared';
 import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { type FormEvent, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
+import { markBlank, withBlankErrors } from './blank-fields';
 import { SaveBar } from './save-bar';
 import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 
@@ -43,14 +45,37 @@ export function ApprovalsPanel() {
     t('title'),
   );
   const { draft, patch, form } = rule;
+  // An emptied box keeps its last value and must be filled before saving.
+  const [blank, setBlank] = useState<ReadonlySet<string>>(new Set());
+  const [boxes, setBoxes] = useState(0);
+  const typed = (field: keyof ApprovalPolicyRecord, value: number | null) => {
+    setBlank((current) => markBlank(current, field, value));
+    if (value !== null) patch({ [field]: value });
+  };
   if (rule.query.isPending) return <ListSkeleton label={t('loading')} rows={4} />;
   if (rule.query.isError)
     return <LoadError error={rule.query.error} onRetry={() => rule.query.refetch()} />;
   if (!draft) return null;
-  const errors = form.fieldErrors;
+  const errors = withBlankErrors(form.fieldErrors, blank, {
+    billLimitPaise: t('limitBlank'),
+    bonusLimitPaise: t('limitBlank'),
+    escalateAfterDays: t('waiting.daysBlank'),
+  });
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    if (blank.size > 0) {
+      event.preventDefault();
+      return;
+    }
+    void rule.submit(event);
+  };
+  const discard = () => {
+    rule.discard();
+    setBlank(new Set());
+    setBoxes((count) => count + 1);
+  };
 
   return (
-    <form onSubmit={rule.submit} noValidate className="flex max-w-5xl flex-col gap-8">
+    <form onSubmit={submit} noValidate className="flex max-w-5xl flex-col gap-8">
       <p className="max-w-2xl type-body text-ink-muted">{t('intro')}</p>
       <SettingsSection title={t('discount.title')} description={t('discount.description')}>
         <p className="type-body text-ink">
@@ -70,9 +95,10 @@ export function ApprovalsPanel() {
             <Field label={t(`${kind}.limit`)} hint={t('limitHint')} error={errors[field]}>
               <div className="sm:max-w-56">
                 <NumberInput
+                  key={boxes}
                   unit="paise"
                   value={limit}
-                  onValueChange={(value) => patch({ [field]: value ?? 0 })}
+                  onValueChange={(value) => typed(field, value)}
                 />
               </div>
             </Field>
@@ -97,19 +123,20 @@ export function ApprovalsPanel() {
         >
           <div className="sm:max-w-40">
             <NumberInput
+              key={boxes}
               unit="whole"
               value={draft.escalateAfterDays}
-              onValueChange={(value) => patch({ escalateAfterDays: value ?? 0 })}
+              onValueChange={(value) => typed('escalateAfterDays', value)}
             />
           </div>
         </Field>
         <GoTo href="/today?tab=approvals" label={t('waiting.open')} />
       </SettingsSection>
       <SaveBar
-        dirty={rule.dirty}
+        dirty={rule.dirty || blank.size > 0}
         pending={form.pending}
         error={form.error}
-        onDiscard={rule.discard}
+        onDiscard={discard}
       />
     </form>
   );

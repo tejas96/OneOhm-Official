@@ -1,12 +1,10 @@
 import type { ChatSummary } from '@oneohm/api-contracts';
 import { chatsWaitingSince, customers, users, waConversations, waMessages } from '@oneohm/database';
-import { chatWaitStage } from '@oneohm/domain';
+import { chatWaitStage, chatWindowOpen } from '@oneohm/domain';
 import { desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Database } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
-
-const WINDOW_MS = 24 * 3600 * 1000;
 
 const assignee = alias(users, 'assignee');
 
@@ -81,9 +79,8 @@ export async function chatSummaries(
           }
         : null,
       lastInboundAt: chat.lastInboundAt?.toISOString() ?? null,
-      windowOpen: chat.lastInboundAt
-        ? Date.now() - chat.lastInboundAt.getTime() < WINDOW_MS
-        : false,
+      windowOpen: chatWindowOpen(chat.lastInboundAt),
+      optedOut: chat.optedOutAt !== null,
     };
   });
 }

@@ -20,7 +20,10 @@ describe('WhatsApp after payment', () => {
       "select payload from outbox where recipient = $1 and template = 'payment_link' order by created_at desc limit 1",
       [customer.phone],
     );
-    const opened = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, { redirect: 'manual' });
+    const opened = await fetch(`${API}/pay/due/${sent?.payload.payToken}?go=1`, {
+      redirect: 'manual',
+    });
+    expect(opened.status).toBe(302);
     const sandboxId = (opened.headers.get('location') ?? '').split('/').pop() ?? '';
     return { customer, project, milestone, sandboxId };
   };
@@ -55,12 +58,9 @@ describe('WhatsApp after payment', () => {
     const file = await fetch(received?.payload.documentUrl ?? '');
     expect(file.status).toBe(200);
     expect(file.headers.get('content-type')).toContain('application/pdf');
-    const [receipt] = await rows<{ receipt_number: string }>(
-      'select receipt_number from payments where milestone_id = $1',
-      [milestone.id],
-    );
+    // Named for the customer, easy to find again in their WhatsApp media (live review C16).
     expect(received?.payload.documentName).toBe(
-      `${receipt?.receipt_number.replaceAll('/', '-')}.pdf`,
+      'OneOhm-After-Pay-Receipt-Customer-test-receipt.pdf',
     );
 
     const alerts = await rows<{ user_id: string; body: string }>(

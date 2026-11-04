@@ -1,7 +1,7 @@
 'use client';
 
 import type { Discom, ReportFormat } from '@oneohm/api-contracts';
-import { Button, Switch, useToast } from '@oneohm/design-system/web';
+import { Button, Dialog, Switch, useToast } from '@oneohm/design-system/web';
 import { FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -19,6 +19,11 @@ export function ReportFormatsSection({ discom }: { readonly discom: Discom }) {
   const save = useSaveReportFormat(discom.id);
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Turning a format off is asked first; turning it on saves straight away.
+  const [turningOff, setTurningOff] = useState<{
+    readonly format: ReportFormat;
+    readonly field: 'active' | 'customerVisible';
+  } | null>(null);
 
   const change = async (
     format: ReportFormat,
@@ -75,13 +80,21 @@ export function ReportFormatsSection({ discom }: { readonly discom: Discom }) {
                 <Switch
                   checked={format.active}
                   disabled={busy === format.id}
-                  onCheckedChange={(active) => void change(format, { active })}
+                  onCheckedChange={(active) =>
+                    active
+                      ? void change(format, { active })
+                      : setTurningOff({ format, field: 'active' })
+                  }
                   label={t('formats.sheet.active', { discom: discom.code })}
                 />
                 <Switch
                   checked={format.customerVisible}
                   disabled={busy === format.id}
-                  onCheckedChange={(customerVisible) => void change(format, { customerVisible })}
+                  onCheckedChange={(customerVisible) =>
+                    customerVisible
+                      ? void change(format, { customerVisible })
+                      : setTurningOff({ format, field: 'customerVisible' })
+                  }
                   label={t('formats.sheet.customerVisible')}
                 />
               </div>
@@ -116,6 +129,41 @@ export function ReportFormatsSection({ discom }: { readonly discom: Discom }) {
           ))}
         </ul>
       )}
+      <Dialog
+        open={turningOff !== null}
+        onOpenChange={(next) => !next && setTurningOff(null)}
+        title={t('formats.sheet.offTitle')}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setTurningOff(null)}>
+              {t('formats.sheet.offCancel')}
+            </Button>
+            <Button
+              variant="danger"
+              pending={busy !== null}
+              onClick={async () => {
+                if (!turningOff) return;
+                await change(turningOff.format, { [turningOff.field]: false });
+                setTurningOff(null);
+              }}
+            >
+              {t('formats.sheet.offConfirm')}
+            </Button>
+          </>
+        }
+      >
+        {turningOff && (
+          <p className="type-body text-ink-muted">
+            {turningOff.field === 'active'
+              ? t('formats.sheet.offActive', {
+                  name: turningOff.format.name,
+                  discom: discom.code,
+                })
+              : t('formats.sheet.offCustomer', { name: turningOff.format.name })}
+          </p>
+        )}
+      </Dialog>
     </section>
   );
 }

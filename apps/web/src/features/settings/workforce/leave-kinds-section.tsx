@@ -1,12 +1,13 @@
 'use client';
 
 import type { WorkforcePolicyInput } from '@oneohm/api-contracts';
-import { Badge, Button, IconButton } from '@oneohm/design-system/web';
+import { Badge, Button, Dialog, IconButton } from '@oneohm/design-system/web';
 import { CircleAlert, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { SettingsSection } from '../settings-section';
 import { LeaveKindDialog } from './leave-kind-dialog';
+import { keyEditable } from './leave-kinds';
 
 type Kind = WorkforcePolicyInput['leaveTypes'][number];
 
@@ -18,16 +19,22 @@ const rowErrors = (errors: Readonly<Record<string, string>>, index: number) =>
 /** The kinds of leave people can ask for, each with its days a year. */
 export function LeaveKindsSection({
   kinds,
+  savedKeys,
   onChange,
   errors,
 }: {
   readonly kinds: readonly Kind[];
+  /** Short names of the kinds as last saved; those can no longer change. */
+  readonly savedKeys: readonly string[];
   readonly onChange: (kinds: Kind[]) => void;
   readonly errors: Readonly<Record<string, string>>;
 }) {
   const t = useTranslations('settings.workforce.leaveKinds');
   // null: closed; -1: a new kind; otherwise the index being edited.
   const [editing, setEditing] = useState<number | null>(null);
+  const [removing, setRemoving] = useState<number | null>(null);
+  const editedKind = editing !== null && editing >= 0 ? (kinds[editing] ?? null) : null;
+  const removedKind = removing !== null ? kinds[removing] : undefined;
 
   const save = (kind: Kind) => {
     onChange(
@@ -64,7 +71,7 @@ export function LeaveKindsSection({
                   size="sm"
                   label={t('remove', { name: kind.label })}
                   disabled={kinds.length === 1}
-                  onClick={() => onChange(kinds.filter((_, other) => other !== index))}
+                  onClick={() => setRemoving(index)}
                 >
                   <Trash2 aria-hidden />
                 </IconButton>
@@ -97,11 +104,36 @@ export function LeaveKindsSection({
       </div>
       <LeaveKindDialog
         open={editing !== null}
-        kind={editing !== null && editing >= 0 ? (kinds[editing] ?? null) : null}
+        kind={editedKind}
         takenKeys={kinds.filter((_, index) => index !== editing).map((kind) => kind.key)}
+        keyLocked={!keyEditable(editedKind, savedKeys)}
         onSave={save}
         onClose={() => setEditing(null)}
       />
+      <Dialog
+        open={removedKind !== undefined}
+        onOpenChange={(next) => !next && setRemoving(null)}
+        title={t('removeTitle', { name: removedKind?.label ?? '' })}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setRemoving(null)}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                onChange(kinds.filter((_, other) => other !== removing));
+                setRemoving(null);
+              }}
+            >
+              {t('removeConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p className="type-body text-ink-muted">{t('removeBody')}</p>
+      </Dialog>
     </SettingsSection>
   );
 }

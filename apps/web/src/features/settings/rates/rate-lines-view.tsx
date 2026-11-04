@@ -9,17 +9,24 @@ import {
   Select,
   type TableColumn,
 } from '@oneohm/design-system/web';
-import { type CostingCard, RATE_KINDS, type RateKind, rateUses } from '@oneohm/domain';
+import {
+  type CostingCard,
+  RATE_KINDS,
+  type RateKind,
+  rateUses,
+  withCatalogPrices,
+} from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { Plus, Ruler } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { useAllProducts } from '../use-settings';
 import { RateLineSheet } from './rate-line-sheet';
 
 type RateLine = RateCardValues['rateLines'][number];
 const ALL = 'all';
 
-const margin = (line: RateLine) =>
+const margin = (line: { readonly pricePaise: number; readonly costPaise: number }) =>
   line.pricePaise > 0
     ? `${(((line.pricePaise - line.costPaise) / line.pricePaise) * 100).toFixed(0)}%`
     : '—';
@@ -31,7 +38,11 @@ export function RateLinesView({ card }: { readonly card: RateCardValues }) {
   const [kind, setKind] = useState<RateKind | typeof ALL>(ALL);
   const [editing, setEditing] = useState<RateLine | null>(null);
   const [adding, setAdding] = useState(false);
+  const products = useAllProducts();
   const visible = card.rateLines.filter((line) => kind === ALL || line.kind === kind);
+  // A line linked to a product sells at the product's catalog price today, not the stored one.
+  const live = withCatalogPrices(card as CostingCard, products.data ?? []).rateLines;
+  const priceOf = (line: RateLine) => live.find((entry) => entry.key === line.key) ?? line;
 
   const usedIn = (line: RateLine) => {
     const uses = rateUses(card as CostingCard, line.key);
@@ -68,7 +79,7 @@ export function RateLinesView({ card }: { readonly card: RateCardValues }) {
       align: 'end',
       cell: (line) => (
         <span className="whitespace-nowrap tabular-nums">
-          {formatInr(line.pricePaise)}
+          {formatInr(priceOf(line).pricePaise)}
           <span className="text-ink-faint"> / {line.unit}</span>
         </span>
       ),
@@ -79,7 +90,7 @@ export function RateLinesView({ card }: { readonly card: RateCardValues }) {
       align: 'end',
       hideOnPhone: true,
       cell: (line) => (
-        <span className="text-ink-muted tabular-nums">{formatInr(line.costPaise)}</span>
+        <span className="text-ink-muted tabular-nums">{formatInr(priceOf(line).costPaise)}</span>
       ),
     },
     {
@@ -87,7 +98,7 @@ export function RateLinesView({ card }: { readonly card: RateCardValues }) {
       header: t('columns.margin'),
       align: 'end',
       hideOnPhone: true,
-      cell: (line) => <span className="font-mono text-ink-muted">{margin(line)}</span>,
+      cell: (line) => <span className="font-mono text-ink-muted">{margin(priceOf(line))}</span>,
     },
     { key: 'used', header: t('columns.used'), cell: usedIn },
   ];

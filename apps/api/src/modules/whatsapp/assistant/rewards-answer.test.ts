@@ -38,7 +38,8 @@ describe('my rewards answer', () => {
     const many = Array.from({ length: 11 }, (_, index) => person(`Friend ${index}`, 'in_progress'));
     const text = rewardsText(many);
     expect(text.match(/^• /gm)).toHaveLength(8);
-    expect(text).toContain('And 3 more in the OneOhm app.');
+    expect(text).toContain('And 3 more.');
+    expect(text).not.toContain('OneOhm app');
     expect(text).not.toContain('Paid to you');
   });
 });

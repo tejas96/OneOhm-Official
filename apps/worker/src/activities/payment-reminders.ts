@@ -80,6 +80,7 @@ export async function queuePaymentReminders(
         customer: row.customer,
         amount: formatInr(outstanding),
         milestone: row.label,
+        milestoneId: row.id,
         project: row.projectCode,
         payToken: signPayToken(payLinks.secret, {
           milestoneId: row.id,

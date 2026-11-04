@@ -1,5 +1,5 @@
 import { JOB_RUN_KEEP_DAYS, type JobName, jobErrorText } from '@oneohm/domain';
-import { and, eq, gte, inArray, lt } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { jobRuns } from './schema/automation.schema';
 
@@ -77,7 +77,28 @@ export async function jobSucceededSince(
   return Boolean(row);
 }
 
-/** Clears runs older than the keep period and runs stuck as running after a restart. */
+/** A retry nobody picked up within this long is given up on, so another can be asked for. */
+export const STALE_RETRY_MS = 3_600_000;
+export const STALE_RETRY_ERROR =
+  'Never picked up: the background worker may be stopped. Ask your developer to check it.';
+
+/** Gives up on queued retries older than an hour (the worker was not running). */
+export async function expireStaleRetries(db: DatabaseExecutor, now = new Date()): Promise<void> {
+  await db
+    .update(jobRuns)
+    .set({ status: 'failed', finishedAt: now, error: STALE_RETRY_ERROR })
+    .where(
+      and(
+        eq(jobRuns.status, 'queued'),
+        lt(jobRuns.createdAt, new Date(now.getTime() - STALE_RETRY_MS)),
+      ),
+    );
+}
+
+/**
+ * Clears runs older than the keep period, runs stuck as running after a restart and
+ * retries nobody picked up.
+ */
 export async function clearOldJobRuns(db: DatabaseExecutor, now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - JOB_RUN_KEEP_DAYS * 86_400_000);
   const old = await db
@@ -89,6 +110,7 @@ export async function clearOldJobRuns(db: DatabaseExecutor, now = new Date()): P
     .update(jobRuns)
     .set({ status: 'failed', finishedAt: now, error: 'Stopped before it finished.' })
     .where(and(inArray(jobRuns.status, ['running']), lt(jobRuns.startedAt, stale)));
+  await expireStaleRetries(db, now);
   return old.length;
 }
 
@@ -120,19 +142,30 @@ export async function noteBackgroundRun(
   outcome: { readonly count?: number; readonly error?: unknown },
 ): Promise<void> {
   const failed = outcome.error !== undefined;
-  if (!failed && !outcome.count) return;
   const now = new Date();
   try {
+    // A quiet tick after a failure is kept too, so the list shows the job worked again.
+    if (!failed && !outcome.count && !(await lastRunFailed(db, name))) return;
     await db.insert(jobRuns).values({
       name,
       trigger: 'background',
       status: failed ? 'failed' : 'succeeded',
       startedAt: now,
       finishedAt: now,
-      result: failed ? null : String(outcome.count),
+      result: failed || !outcome.count ? null : String(outcome.count),
       error: failed ? jobErrorText(outcome.error) : null,
     });
   } catch {
     // The run record is a convenience; the loop's own work and logs carry on.
   }
+}
+
+async function lastRunFailed(db: DatabaseExecutor, name: JobName): Promise<boolean> {
+  const [last] = await db
+    .select({ status: jobRuns.status })
+    .from(jobRuns)
+    .where(eq(jobRuns.name, name))
+    .orderBy(desc(jobRuns.createdAt))
+    .limit(1);
+  return last?.status === 'failed';
 }

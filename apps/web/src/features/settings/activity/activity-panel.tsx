@@ -33,20 +33,22 @@ export function ActivityPanel() {
           ]}
           className="self-start"
         />
-        {view === 'changes' && (
-          <div className="sm:w-80">
-            <Input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('search')}
-              aria-label={t('search')}
-              leading={<Search aria-hidden className="size-4" />}
-            />
-          </div>
-        )}
+        <div className="sm:w-80">
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={view === 'changes' ? t('search') : t('searchSignIns')}
+            aria-label={view === 'changes' ? t('search') : t('searchSignIns')}
+            leading={<Search aria-hidden className="size-4" />}
+          />
+        </div>
       </div>
-      {view === 'changes' ? <ChangesTable search={debounced} /> : <SignInsTable />}
+      {view === 'changes' ? (
+        <ChangesTable search={debounced} />
+      ) : (
+        <SignInsTable search={debounced} />
+      )}
     </section>
   );
 }

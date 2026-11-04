@@ -76,6 +76,7 @@ export function CenterKpis({
         detail={t('installedDetail', {
           count: installed.commissioned,
           next: installed.dueThisWeek,
+          days: data.dueSoonDays,
         })}
         href={centerHref('/reports/delivery', query)}
         hrefLabel={open(t('installed'))}

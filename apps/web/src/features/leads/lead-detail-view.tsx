@@ -16,6 +16,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 import { LeadCustomerCard } from './lead-customer-card';
+import { LeadEstimateCard } from './lead-estimate-card';
 import { FollowUpCard, LeadFactsCard } from './lead-facts-card';
 import { leadKeys, STAGE_TONE } from './lead-labels';
 import { LeadStageCard } from './lead-stage-card';
@@ -117,10 +118,16 @@ export function LeadDetailView({ id }: { readonly id: string }) {
           <LeadCustomerCard lead={lead} />
           <LeadStageCard lead={lead} canManage={canManage} />
           <LeadFactsCard lead={lead} />
+          {lead.latestEstimate && <LeadEstimateCard estimate={lead.latestEstimate} />}
         </aside>
       </div>
-      {/* Papers collected at the lead stage (PRD 3.14), once the lead has its site. */}
-      {lead.customerId && <PapersSection scope={{ leadId: lead.id }} name={lead.name} />}
+      {/* Papers collected at the lead stage (PRD 3.14), such as the bill sent on WhatsApp. */}
+      <PapersSection
+        scope={{ leadId: lead.id }}
+        name={lead.name}
+        allowUpload={lead.customerId !== null}
+        uploadHint={t('papersNeedSite')}
+      />
     </motion.div>
   );
 }

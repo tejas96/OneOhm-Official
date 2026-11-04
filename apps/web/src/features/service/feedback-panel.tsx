@@ -54,7 +54,7 @@ export function FeedbackPanel() {
             <div className="flex flex-wrap items-center gap-3">
               <Stars rating={entry.rating} />
               <Link
-                href={`/customers/${entry.customer.id}`}
+                href={`/customers/${entry.customer.id}?tab=service`}
                 className="type-body-sm font-medium text-ink hover:text-accent"
               >
                 {entry.customer.name}

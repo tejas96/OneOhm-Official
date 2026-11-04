@@ -4,7 +4,11 @@ import {
   JOB_NAMES,
   JOB_RUN_STATUSES,
   LEAD_ASSIGNMENT_STRATEGIES,
+  MAX_BILL_BANDS,
   MAX_CITIES_PER_OWNER,
+  MAX_NUDGE_AFTER_HOURS,
+  MAX_ROW_TITLE,
+  MAX_SERVICE_CITIES,
   PROJECT_VARIANTS,
 } from '@oneohm/domain';
 import { z } from 'zod';
@@ -40,10 +44,40 @@ export const leadAssignmentRulesSchema = z.object({
     z.object({
       userId: idSchema,
       cities: z.array(z.string().max(80)).max(MAX_CITIES_PER_OWNER),
+      /** Read only: the person's name, shown even after they stop working on leads. */
+      name: z.string().optional(),
+      /** Read only: deactivated or no longer working on leads; dropped on the next save. */
+      inactive: z.boolean().optional(),
     }),
   ),
 });
 export type LeadAssignmentRulesRecord = z.infer<typeof leadAssignmentRulesSchema>;
+
+/** How the WhatsApp onboarding bot greets a stranger and prices an instant estimate. */
+export const onboardingSettingsSchema = z.object({
+  enabled: z.boolean(),
+  serviceCities: z.array(z.string().max(80)).max(MAX_SERVICE_CITIES + 8),
+  billBands: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        label: z.string().max(MAX_ROW_TITLE),
+        labelMr: z.string().max(MAX_ROW_TITLE).optional(),
+        labelHi: z.string().max(MAX_ROW_TITLE).optional(),
+        targetWp: z.number().int().positive().nullable(),
+        maxRupees: z.number().positive().nullable().optional(),
+      }),
+    )
+    .max(MAX_BILL_BANDS),
+  tariffPaisePerUnit: z.number().positive(),
+  unitsPerKwMonth: z.number().positive(),
+  nudgeAfterHours: z.number().min(0).max(MAX_NUDGE_AFTER_HOURS),
+  panelProductIds: z.object({
+    individual: idSchema.optional(),
+    commercial: idSchema.optional(),
+  }),
+});
+export type OnboardingSettingsRecord = z.infer<typeof onboardingSettingsSchema>;
 
 /** Money approval limits (PRD 7.2, 7.3). Amounts in paise. */
 export const approvalPolicySchema = z.object({
@@ -102,6 +136,8 @@ export const jobRunSchema = z.object({
   retryable: z.boolean(),
   /** A retry is already waiting or ran after this failure. */
   retried: z.boolean(),
+  /** A failure the same job put right on a later run; it needs nobody's attention. */
+  recovered: z.boolean(),
   /** For a retry: the failed run it repeats. */
   retryOfId: idSchema.nullable(),
   /** What the run was about, when it has one (for message delivery, the message's ID). */
@@ -115,6 +151,8 @@ export type JobRunRecord = z.infer<typeof jobRunSchema>;
 export const jobRunsSchema = z.object({
   runs: z.array(jobRunSchema),
   failedLastWeek: whole,
+  /** Daily jobs with no run in the last 26 hours: the worker is likely stopped. */
+  missingDaily: z.array(z.enum(JOB_NAMES)),
 });
 export type JobRunsView = z.infer<typeof jobRunsSchema>;
 

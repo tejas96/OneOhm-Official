@@ -61,6 +61,13 @@ Fill in `/opt/oneohm/.env`:
 - Strong passwords. Generate them with `openssl rand -base64 32`.
 - `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` for the first Super Admin.
 - The MSG91 and WhatsApp keys.
+- `FILE_LINK_SECRET` and `PAY_LINK_SECRET`: two different random values (`openssl rand -base64 32`).
+  The API and the worker both refuse to start in production with the default file secret or
+  without a pay-link secret of its own. Pay links already sent (signed with the file secret)
+  keep opening until they expire.
+- `API_PUBLIC_URL`: the stable `https://` domain. The API refuses to start in production
+  with `http`, `localhost`, `trycloudflare.com` or `loca.lt`, because every link sent to a
+  customer carries this address for good.
 
 Use fresh keys for production. Do not reuse the test keys that were shared during development.
 
@@ -85,6 +92,14 @@ To update after new commits:
 cd /opt/oneohm/app && git pull
 docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/oneohm/.env up -d --build
 ```
+
+### Upgrade notes
+
+- **Live review fixes (November 2026):** before this update, add `PAY_LINK_SECRET` (its own
+  random value, not `FILE_LINK_SECRET`) to the production `.env`, or the API and the worker
+  will not start. The same release also refuses to start in production with the default
+  `FILE_LINK_SECRET`, with a temporary or `http` `API_PUBLIC_URL`, and (API) with
+  `WHATSAPP_DELIVERY=live` but no `WHATSAPP_APP_SECRET`.
 
 ## 5. WhatsApp
 
@@ -115,8 +130,11 @@ messages, and the worker refuses to start in production with it set.
 1. In Meta's app settings, set the webhook to `https://<domain>/api/v1/webhooks/whatsapp`,
    use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` as the verify token, and subscribe to `messages`.
 2. Put the app secret in `WHATSAPP_APP_SECRET`: every post is then checked against Meta's
-   signature.
-3. Without the app secret (no Meta console access), set a long random
+   signature, and unsigned posts are refused with 401 even on the key path. The API will
+   not start in production with `WHATSAPP_DELIVERY=live` and no app secret.
+3. **Testing only.** In production with `WHATSAPP_DELIVERY=live` the API needs
+   `WHATSAPP_APP_SECRET` (step 2) and will not start without it. For a test setup without
+   the app secret (no Meta console access), set a long random
    `WHATSAPP_WEBHOOK_PATH_KEY` and point the webhook at
    `https://<domain>/api/v1/webhooks/whatsapp/<key>`. It can be set with the access token:
    `POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/subscribed_apps` with `override_callback_uri` and
@@ -210,7 +228,8 @@ curl -X POST https://<domain>/api/v1/public/leads \
   - `message` (up to 1000 characters) and `sourcePage`: optional. `sourcePage` becomes the lead's landing page.
   - `utmSource`, `utmMedium`, `utmCampaign` and `campaignCode` (up to 100 characters each): optional. Send what the website read from the address (for example `?utm_source=google&utm_campaign=summer`, or an ad code such as `DIWALI26`). They are kept on the lead as its first-touch source; `campaignCode` is stored uppercase and shows in the "By campaign" report.
   - `website`: put this in a hidden field that people cannot see. Bots fill it in, and a filled one is quietly ignored.
-- Rate limit: 5 enquiries per address every 10 minutes, and 3 per phone number a day. Over
+- Rate limit: 5 enquiries per address every 10 minutes (`WEBSITE_ENQUIRIES_PER_10_MIN`; keep 5
+  in production), and 3 per phone number a day. Over
   the limit, the answer is `429` with a polite message. The production compose file already
   sets `TRUST_PROXY=true`, so the limit counts each visitor's own address.
 - Mistakes come back as `400` with `fieldErrors` per field.

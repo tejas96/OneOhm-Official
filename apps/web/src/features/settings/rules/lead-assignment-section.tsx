@@ -15,7 +15,8 @@ import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 /**
  * Who gets a new lead nobody picked (website, WhatsApp, referral, reseller, reopen):
  * the way to choose, and optional city owners who take their cities first. The API
- * trims the city names and drops blanks on save.
+ * trims the city names, refuses a person with no city, and drops an owner who no longer
+ * works on leads (shown here by name, marked inactive).
  */
 export function LeadAssignmentSection() {
   const t = useTranslations('settings.rules.leadAssignment');
@@ -33,8 +34,11 @@ export function LeadAssignmentSection() {
     return <LoadError error={rule.query.error} onRetry={() => rule.query.refetch()} />;
   if (!draft) return null;
 
-  const nameOf = (userId: string) =>
-    people.find((person) => person.value === userId)?.label ?? t('someone');
+  const nameOf = (owner: (typeof draft.cityOwners)[number]) => {
+    const name =
+      owner.name ?? people.find((person) => person.value === owner.userId)?.label ?? t('someone');
+    return owner.inactive ? t('inactive', { name }) : name;
+  };
   // System-role holders are never picked as sellers, so they are not offered here.
   const free = people.filter(
     (p) => !p.system && !draft.cityOwners.some((o) => o.userId === p.value),
@@ -72,8 +76,13 @@ export function LeadAssignmentSection() {
           <p className="type-body-sm text-ink-faint">{t('cityOwnersHint')}</p>
           {draft.cityOwners.map((owner) => (
             <div key={owner.userId} className="grid items-end gap-3 sm:grid-cols-[12rem_1fr_auto]">
-              <p className="type-body text-ink">{nameOf(owner.userId)}</p>
-              <Field label={t('cities')}>
+              <div className="flex flex-col gap-0.5">
+                <p className="type-body text-ink">{nameOf(owner)}</p>
+                {owner.inactive && (
+                  <p className="type-body-sm text-ink-faint">{t('inactiveNote')}</p>
+                )}
+              </div>
+              <Field label={t('cities')} error={form.fieldErrors[`cities_${owner.userId}`]}>
                 <Input
                   value={owner.cities.join(',')}
                   onChange={(event) => setCities(owner.userId, event.target.value)}

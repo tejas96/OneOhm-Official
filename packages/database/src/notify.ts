@@ -1,5 +1,7 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { answererFor } from './chat-answerer';
 import type { DatabaseExecutor } from './client';
+import { dutyAlertTargets } from './duty-alerts';
 import { roleCapabilities, roles, userRoles, users } from './schema/identity.schema';
 import { notifications } from './schema/notifications.schema';
 import { outbox } from './schema/records.schema';
@@ -85,18 +87,38 @@ export async function holdersOf(db: DatabaseExecutor, capability: string): Promi
   return rows.map((row) => row.id);
 }
 
-/** Alerts everyone who holds the capability, except the person who caused it. */
+/**
+ * Alerts the people who hold the capability (the Super Admin only when nobody else does;
+ * a backup for anyone on leave, see `dutyAlertTargets`), except the person who caused it.
+ */
 export async function notifyHolders(
   db: DatabaseExecutor,
   capability: string,
   notice: Notice,
   exceptUserId?: string | null,
 ): Promise<number> {
-  const people = (await holdersOf(db, capability)).filter((id) => id !== exceptUserId);
+  const people = await dutyAlertTargets(db, capability, { exceptUserId });
   for (const userId of people) {
     await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
   }
   return people.length;
+}
+
+/**
+ * Alerts one person, or whoever covers for them today. When nobody covers (they are away
+ * with no backup at work, or have left), the holders of `capability` hear instead, so the
+ * alert never goes to an empty desk. Keys are per person, as in `notifyHolders`.
+ */
+export async function notifyCover(
+  db: DatabaseExecutor,
+  userId: string,
+  capability: string,
+  notice: Notice,
+): Promise<number> {
+  const cover = await answererFor(db, userId);
+  if (!cover) return notifyHolders(db, capability, notice);
+  await notify(db, { userId: cover }, { ...notice, dedupeKey: `${notice.dedupeKey}:${cover}` });
+  return 1;
 }
 
 /** Marks a person's alerts as read: the listed ones, or all of them. */
@@ -122,28 +144,17 @@ export async function markRead(
 }
 
 /**
- * Alerts the staff (not partners or resellers) who hold the capability: for things only
- * the business itself should see, such as customer WhatsApp chats.
+ * Alerts the staff (not partners or resellers) who hold the capability, chosen as in
+ * `notifyHolders`: for things only the business itself should see, such as customer
+ * WhatsApp chats.
  */
 export async function notifyStaffHolders(
   db: DatabaseExecutor,
   capability: string,
   notice: Notice,
 ): Promise<number> {
-  const rows = await db
-    .selectDistinct({ id: users.id })
-    .from(users)
-    .innerJoin(userRoles, eq(userRoles.userId, users.id))
-    .innerJoin(roles, and(eq(roles.id, userRoles.roleId), isNull(roles.archivedAt)))
-    .innerJoin(roleCapabilities, eq(roleCapabilities.roleId, roles.id))
-    .where(
-      and(
-        eq(users.status, 'active'),
-        eq(roleCapabilities.capability, capability),
-        eq(roles.kind, 'staff'),
-      ),
-    );
-  for (const { id: userId } of rows)
+  const people = await dutyAlertTargets(db, capability, { staffOnly: true });
+  for (const userId of people)
     await notify(db, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
-  return rows.length;
+  return people.length;
 }

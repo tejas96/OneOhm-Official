@@ -260,8 +260,7 @@
       "choose": "Choose…",
       "start": "Start date",
       "manager": "Project manager",
-      "managerHint": "Optional. Tasks are assigned to the team either way.",
-      "managerLater": "Decide later",
+      "managerHint": "Required. They start the project and send the advance link.",
       "loan": "Loan",
       "loanHint": "Adds the loan tasks and a bank share in the payment schedule.",
       "lender": "Lending bank",
@@ -283,8 +282,7 @@
       "createdDetail": "{tasks, plural, one {# task} other {# tasks}} set up, {unassigned} without an owner yet.",
       "paymentPlan": "Payment terms",
       "paymentPlanHint": "How the customer pays across the project. The bank's share of a loan is always its own payment.",
-      "paymentPlanDefault": "Default: {name}",
-      "paymentPlanStandard": "Standard 25 / 65 / 10"
+      "paymentPlanQuoted": "As in the quotation"
     },
     "extras": {
       "none": "No extras. Add an optional item the customer may choose, a gift, a charge for this site, or an adjustment.",

@@ -12,10 +12,11 @@ import {
   users,
 } from '@oneohm/database';
 import { EPC_STAGES } from '@oneohm/domain';
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { environmentOnce } from '../../config/environment-once';
 import { openLinksFor } from '../online-payments/open-links';
 import { pendingChangesFor } from '../project-changes/customer-pending';
+import { activeProjectsOf } from './active-projects';
 
 const day = (value: Date) => value.toISOString().slice(0, 10);
 
@@ -93,7 +94,7 @@ export async function customerProjects(
     .innerJoin(properties, eq(properties.id, projects.propertyId))
     .innerJoin(quotations, eq(quotations.id, projects.quotationId))
     .leftJoin(users, eq(users.id, projects.managerUserId))
-    .where(and(eq(projects.customerId, customerId), ne(projects.status, 'cancelled')))
+    .where(activeProjectsOf(customerId))
     .orderBy(asc(projects.createdAt));
   if (rows.length === 0) return [];
   // Projects on two or more sites say which site, not only the town.

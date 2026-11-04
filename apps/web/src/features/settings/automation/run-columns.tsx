@@ -4,7 +4,7 @@ import type { JobRunRecord } from '@oneohm/api-contracts';
 import { Button, StatusPill, type TableColumn } from '@oneohm/design-system/web';
 import { RotateCcw } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
-import { took } from './run-format';
+import { runsTodaysJob, took } from './run-format';
 
 export const RUN_TONE = {
   succeeded: 'done',
@@ -12,6 +12,16 @@ export const RUN_TONE = {
   running: 'review',
   queued: 'waiting',
 } as const;
+
+/** How a run went; a failure the job later put right reads as such, not as a red failure. */
+export function RunPill({ run }: { readonly run: JobRunRecord }) {
+  const t = useTranslations('settings.automation');
+  return run.recovered ? (
+    <StatusPill size="sm" tone="waiting" label={t('recovered')} />
+  ) : (
+    <StatusPill size="sm" tone={RUN_TONE[run.status]} label={t(`status.${run.status}`)} />
+  );
+}
 
 /** Columns for the runs table: the job, when, and how it went, with a retry when it is safe. */
 export function useRunColumns(
@@ -68,7 +78,7 @@ export function useRunColumns(
       header: t('columns.result'),
       cell: (run) => (
         <span className="flex min-w-0 flex-col items-start gap-1">
-          <StatusPill size="sm" tone={RUN_TONE[run.status]} label={t(`status.${run.status}`)} />
+          <RunPill run={run} />
           {run.status === 'succeeded' && run.result !== null && (
             <span className="type-body-sm text-ink-muted">
               {t(`results.${run.name}`, { count: Number(run.result) || 0 })}
@@ -80,6 +90,9 @@ export function useRunColumns(
             </span>
           )}
           {run.retried && <span className="type-body-sm text-ink-faint">{t('retried')}</span>}
+          {run.retryable && runsTodaysJob(run, now) && (
+            <span className="type-body-sm text-ink-faint">{t('retryToday')}</span>
+          )}
           {run.retryable && (
             <Button
               variant="secondary"

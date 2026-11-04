@@ -8,14 +8,13 @@ import {
   Field,
   Input,
   SegmentedControl,
-  Select,
   Textarea,
 } from '@oneohm/design-system/web';
-import { DOCUMENT_CATEGORIES, type DocumentCategory, PROJECT_TYPES } from '@oneohm/domain';
+import { canAskCustomerFor, type DocumentCategory, PROJECT_TYPES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useState } from 'react';
-import { useFolderLabel } from '@/features/documents/gallery/use-labels';
 import { DiscomPick } from '../templates/discom-pick';
+import { RequirementFoldersPick } from './requirement-folders-pick';
 import { useChangeRequirements } from './use-requirements';
 
 type Rule = DocumentRequirementInput['conditions'] & {};
@@ -28,7 +27,8 @@ const boolOf = (value: Tri): boolean | undefined => (value === 'any' ? undefined
 interface Draft {
   label: string;
   why: string;
-  category: DocumentCategory;
+  /** Every folder that counts; the built-in survey paper uses two. */
+  categories: DocumentCategory[];
   fromCustomer: boolean;
   rule: NonNullable<Rule>;
   discomCodes: string[];
@@ -37,7 +37,7 @@ interface Draft {
 const draftOf = (item: DocumentRequirementRecord | null): Draft => ({
   label: item?.label ?? '',
   why: item?.why ?? '',
-  category: item?.categories[0] ?? 'other',
+  categories: item ? [...item.categories] : ['other'],
   fromCustomer: item?.fromCustomer ?? false,
   rule: item?.conditions ?? {},
   discomCodes: [...(item?.conditions.discomCodes ?? [])],
@@ -56,7 +56,6 @@ export function RequirementDialog({
 }) {
   const t = useTranslations('settings.requirements.dialog');
   const typeT = useTranslations('commandCenter.filters.types');
-  const folderLabel = useFolderLabel();
   const formId = useId();
   const change = useChangeRequirements(onClose);
   const [draft, setDraft] = useState<Draft>(draftOf(null));
@@ -66,15 +65,17 @@ export function RequirementDialog({
   const set = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
   const setRule = (patch: Partial<NonNullable<Rule>>) =>
     setDraft((current) => ({ ...current, rule: { ...current.rule, ...patch } }));
+  const askable = canAskCustomerFor(draft.categories);
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!draft.categories.length) return;
     const codes = draft.discomCodes;
     const { discomCodes: _old, ...rule } = draft.rule;
     const body = {
       label: draft.label.trim(),
       why: draft.why.trim(),
-      categories: [draft.category],
-      fromCustomer: draft.fromCustomer,
+      categories: draft.categories,
+      fromCustomer: draft.fromCustomer && askable,
       conditions: { ...rule, ...(codes.length ? { discomCodes: codes } : {}) },
     };
     if (requirement) change.mutate({ kind: 'update', key: requirement.key, body });
@@ -98,7 +99,7 @@ export function RequirementDialog({
             form={formId}
             variant="primary"
             pending={change.isPending}
-            disabled={draft.label.trim().length < 3}
+            disabled={draft.label.trim().length < 3 || !draft.categories.length}
           >
             {requirement ? t('save') : t('add')}
           </Button>
@@ -121,18 +122,16 @@ export function RequirementDialog({
             onChange={(e) => set({ why: e.target.value })}
           />
         </Field>
-        <Field label={t('folder')} hint={t('folderHint')}>
-          <Select
-            value={draft.category}
-            onValueChange={(category) => set({ category })}
-            options={DOCUMENT_CATEGORIES.map((value) => ({ value, label: folderLabel(value) }))}
-          />
-        </Field>
+        <RequirementFoldersPick
+          value={draft.categories}
+          onChange={(categories) => set({ categories })}
+        />
         <Checkbox
-          checked={draft.fromCustomer}
+          checked={draft.fromCustomer && askable}
           onCheckedChange={(fromCustomer) => set({ fromCustomer })}
           label={t('fromCustomer')}
-          description={t('fromCustomerHint')}
+          description={askable ? t('fromCustomerHint') : t('fromCustomerNotHere')}
+          disabled={!askable}
         />
         <Field label={t('types')} hint={t('typesHint')}>
           <div className="flex flex-wrap gap-x-5">

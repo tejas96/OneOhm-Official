@@ -14,6 +14,7 @@ import { recordAudit } from '../../common/audit';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { assetsOf, contractsOf, toAsset } from './after-sales.read';
+import { amcSaleRefusal } from './amc-sale-check';
 import { commissionedOn, recordInstalledAssets } from './installed-assets.record';
 
 /** A project's installed system, its warranties and its AMCs (PRD 3.17). */
@@ -80,7 +81,8 @@ export class ProjectAfterSalesService {
 
   async sellAmc(actorId: string, projectId: string, input: AmcSaleInput): Promise<AmcContract> {
     const project = await this.project(projectId);
-    if (project.status === 'cancelled') throw invalid('This project was cancelled.');
+    const refusal = amcSaleRefusal(project.status, await commissionedOn(this.db, projectId));
+    if (refusal) throw invalid(refusal);
     const [plan] = await this.db.select().from(amcPlans).where(eq(amcPlans.id, input.planId));
     if (!plan?.active) throw invalid('Pick a plan that is on sale.', { planId: 'Not on sale.' });
     const endsOn = amcEndsOn(input.startsOn, plan.durationMonths);

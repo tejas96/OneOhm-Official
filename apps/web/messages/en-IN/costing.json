@@ -29,7 +29,11 @@
         "sites": "Site types",
         "labour": "Labour and travel",
         "rules": "Pricing rules"
-      }
+      },
+      "leaveTitle": "Leave without saving?",
+      "leaveBody": "You changed this part of the rate card but did not save. If you leave now, the changes are lost.",
+      "stay": "Stay and save",
+      "leave": "Leave without saving"
     },
     "lines": {
       "intro": "One line for everything you price: each cable size, conduit or tray, structure part, kit, crew day, equipment hire and service. Add a line here and it can be used on any site type or quotation.",
@@ -70,6 +74,9 @@
         "price": "Price per unit",
         "cost": "Cost per unit",
         "delete": "Delete",
+        "deleteTitle": "Delete {label}?",
+        "deleteBody": "It comes off the rate card for new quotes. If a draft or sent quote uses it, the delete is refused and those quotes are named.",
+        "keep": "Keep it",
         "inUse": "Used in {count, plural, one {# place} other {# places}}; remove it there before deleting it."
       }
     },
@@ -138,6 +145,7 @@
         "labelHint": "Used when the structure is priced per kW.",
         "height": "Height",
         "tilt": "Tilt",
+        "tiltHint": "Kept with the design for the team. It does not change the price.",
         "panelsPerRow": "Panels in a row",
         "benchmarkPrice": "Benchmark price per kW",
         "benchmarkHint": "Used only when the structure has no parts.",
@@ -212,11 +220,11 @@
         "marginBp": "Share of the price before GST left after all cost and overhead.",
         "overheadBp": "Office and running costs, added on top of the direct cost of each job.",
         "contingencyBp": "Added to quantities from site-type defaults, to cover what the survey may find.",
-        "toleranceBp": "Cost changes within this band after the survey are absorbed; beyond it, a revision needs approval.",
-        "discountApprovalBp": "Discounts larger than this share of the price need a manager's approval.",
+        "toleranceBp": "If the survey moves the quoted total (with GST) by less than this, the price stays; beyond it, a revision needs approval.",
+        "discountApprovalBp": "Discounts larger than this share of the price before GST need a manager's approval.",
         "wastageBp": "Added to every metre of cable and routing for cuts and loops.",
         "sqmPerKwp": "After the survey, a roof with less shadow-free area than this per kWp gets a revision sized to fit. 0 switches the check off.",
-        "goodsTaxBp": "On panels, structure, cable and kits.",
+        "goodsTaxBp": "On structure, cable and kits. Panels, inverters, batteries and anything linked to a catalog product use that product's own GST.",
         "serviceTaxBp": "On labour, travel and services."
       }
     },

@@ -2,10 +2,16 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Environment } from '../../config/environment';
 
 export interface SharedFile {
-  /** `report` links point at a project (`id`) and name the report in `key`. */
-  readonly kind: 'quotation' | 'receipt' | 'document' | 'invoice' | 'report';
+  /**
+   * `report` links point at a project (`id`) and name the report in `key`. `estimate`
+   * links point at a lead's instant estimate: no customer yet (`customerId` is empty),
+   * so the link carries the lead instead.
+   */
+  readonly kind: 'quotation' | 'receipt' | 'document' | 'invoice' | 'report' | 'estimate';
   readonly id: string;
   readonly customerId: string;
+  /** The lead the estimate was made for, for `estimate` links only. */
+  readonly leadId?: string;
   /** Seconds since 1970 when the link stops working. */
   readonly exp: number;
   /** Which statutory report, for `report` links only. */

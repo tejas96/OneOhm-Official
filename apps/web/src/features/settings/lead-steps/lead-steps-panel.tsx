@@ -1,7 +1,7 @@
 'use client';
 
 import type { LeadStepRecord } from '@oneohm/api-contracts';
-import { Button, IconButton, Switch } from '@oneohm/design-system/web';
+import { Button, Dialog, IconButton, Switch } from '@oneohm/design-system/web';
 import { OPEN_LEAD_STAGES } from '@oneohm/domain';
 import { ArrowDown, ArrowUp, Pencil, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -21,6 +21,12 @@ export function LeadStepsPanel() {
   const query = useLeadSteps();
   const change = useChangeLeadSteps();
   const [draft, setDraft] = useState<StepDraft | null>(null);
+  // Switching off a step with open leads moves them to the stage's next step: confirm it.
+  const [switchingOff, setSwitchingOff] = useState<LeadStepRecord | null>(null);
+  const toggle = (step: LeadStepRecord, active: boolean) => {
+    if (!active && step.leads > 0) setSwitchingOff(step);
+    else change.mutate({ kind: 'update', key: step.key, body: { active } });
+  };
   if (query.isPending) return <ListSkeleton label={t('loading')} rows={4} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
   return (
@@ -42,9 +48,7 @@ export function LeadStepsPanel() {
                   first={index === 0}
                   last={index === steps.length - 1}
                   busy={change.isPending}
-                  onToggle={(active) =>
-                    change.mutate({ kind: 'update', key: step.key, body: { active } })
-                  }
+                  onToggle={(active) => toggle(step, active)}
                   onMove={(move) =>
                     change.mutate({ kind: 'update', key: step.key, body: { move } })
                   }
@@ -64,6 +68,45 @@ export function LeadStepsPanel() {
         );
       })}
       <StepDialog draft={draft} onClose={() => setDraft(null)} />
+      <Dialog
+        open={switchingOff !== null}
+        onOpenChange={(next) => !next && setSwitchingOff(null)}
+        title={t('offTitle', { name: switchingOff?.name ?? '' })}
+        size="sm"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setSwitchingOff(null)}>
+              {t('offKeep')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (switchingOff) {
+                  change.mutate({ kind: 'update', key: switchingOff.key, body: { active: false } });
+                }
+                setSwitchingOff(null);
+              }}
+            >
+              {t('offConfirm')}
+            </Button>
+          </>
+        }
+      >
+        {switchingOff && (
+          <p className="type-body-sm text-ink-muted">
+            {t('offBody', {
+              count: switchingOff.leads,
+              next:
+                query.data.find(
+                  (step) =>
+                    step.stage === switchingOff.stage &&
+                    step.active &&
+                    step.key !== switchingOff.key,
+                )?.name ?? t(`stage.${switchingOff.stage}`),
+            })}
+          </p>
+        )}
+      </Dialog>
     </div>
   );
 }

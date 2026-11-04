@@ -166,12 +166,3 @@ export function suggestInverter(
 ): InverterRow[] {
   return suggestInverters(inverters, (positive(targetKw) ?? 0) * 1000, systemType);
 }
-
-/** DCR panels where a subsidy is possible (it needs them); otherwise the cheapest panel. */
-export function suggestPanel(panels: readonly Product[], category: SubsidyCategory): string | null {
-  const active = panels.filter((product) => product.active);
-  const wantDcr = category !== 'commercial';
-  const preferred = active.filter((product) => product.dcr === wantDcr);
-  const pool = preferred.length > 0 ? preferred : active;
-  return [...pool].sort((left, right) => left.pricePaise - right.pricePaise)[0]?.id ?? null;
-}

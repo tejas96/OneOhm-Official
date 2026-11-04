@@ -5,54 +5,25 @@ import {
   products,
   projectFacts,
   projects,
-  projectTasks,
   quotationLines,
   quotations,
-  warrantyPolicy,
 } from '@oneohm/database';
-import {
-  type AssetKind,
-  DEFAULT_WARRANTY_POLICY,
-  parseSerials,
-  type WarrantyPolicy,
-  warrantyFor,
-} from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { type AssetKind, parseSerials, type WarrantyPolicy, warrantyFor } from '@oneohm/domain';
+import { eq, inArray } from 'drizzle-orm';
 import { invertersOf } from '../quotations/quotation-inverters';
+import { warrantyPolicyOf } from './commissioned-on';
 
-type Product = { id: string; name: string; brand: string; wattageWp: number | null };
+export { commissionedOn, warrantyPolicyOf } from './commissioned-on';
+
+type Product = {
+  id: string;
+  name: string;
+  brand: string;
+  wattageWp: number | null;
+  /** The maker's years the quotation printed; null leaves the Settings years. */
+  warrantyYears?: number | null;
+};
 type NewAsset = typeof installedAssets.$inferInsert;
-
-export async function warrantyPolicyOf(db: DatabaseExecutor): Promise<WarrantyPolicy> {
-  const [row] = await db.select().from(warrantyPolicy).where(eq(warrantyPolicy.id, 'default'));
-  return row?.policy ?? DEFAULT_WARRANTY_POLICY;
-}
-
-/** The day testing and commissioning finished, in India; null before it has. */
-export async function commissionedOn(
-  db: DatabaseExecutor,
-  projectId: string,
-): Promise<string | null> {
-  const [task] = await db
-    .select({ at: projectTasks.completedAt })
-    .from(projectTasks)
-    .where(
-      and(
-        eq(projectTasks.projectId, projectId),
-        eq(projectTasks.onComplete, 'commissioning_completed'),
-        isNotNull(projectTasks.completedAt),
-      ),
-    )
-    .orderBy(asc(projectTasks.completedAt))
-    .limit(1);
-  const [project] = await db
-    .select({ at: projects.operationalAt })
-    .from(projects)
-    .where(eq(projects.id, projectId));
-  const at = task?.at ?? project?.at ?? null;
-  return at ? todayIn('Asia/Kolkata', at) : null;
-}
 
 interface Sources {
   readonly projectId: string;
@@ -68,8 +39,20 @@ interface Sources {
   readonly installer: string;
 }
 
-function asset(sources: Sources, kind: AssetKind, fields: Partial<NewAsset>): NewAsset {
-  const cover = warrantyFor(kind, sources.startsOn, sources.policy);
+/**
+ * The cover for one kind: the product's own warranty years when it has them, as the
+ * quotation printed them, else the years set in Settings → Warranty.
+ */
+function asset(
+  sources: Sources,
+  kind: AssetKind,
+  fields: Partial<NewAsset>,
+  productYears?: number | null,
+): NewAsset {
+  const policy = productYears
+    ? { ...sources.policy, [kind]: { ...sources.policy[kind], years: productYears } }
+    : sources.policy;
+  const cover = warrantyFor(kind, sources.startsOn, policy);
   return {
     projectId: sources.projectId,
     kind,
@@ -91,6 +74,13 @@ const productFields = (product: Product, serials: string | undefined) => ({
   serialNumbers: parseSerials(serials ?? ''),
 });
 
+/** Mixed inverter models share one asset: it carries the shortest years any of them has. */
+function inverterYears(inverters: Sources['inverters']): number | null {
+  const years = inverters.map(({ product }) => product.warrantyYears ?? null);
+  if (years.some((value) => !value)) return null;
+  return Math.min(...(years as number[]));
+}
+
 /** The system as sold on the accepted quotation, with the serials the crew recorded. */
 export function assetsFrom(sources: Sources): NewAsset[] {
   const { facts, lines } = sources;
@@ -98,36 +88,53 @@ export function assetsFrom(sources: Sources): NewAsset[] {
   if (sources.panel) {
     const counted = Number(facts.get('module_count'));
     rows.push(
-      asset(sources, 'panel', {
-        ...productFields(sources.panel, facts.get('module_serial_numbers')),
-        quantity: Number.isInteger(counted) && counted > 0 ? counted : sources.moduleCount,
-      }),
+      asset(
+        sources,
+        'panel',
+        {
+          ...productFields(sources.panel, facts.get('module_serial_numbers')),
+          quantity: Number.isInteger(counted) && counted > 0 ? counted : sources.moduleCount,
+        },
+        sources.panel.warrantyYears,
+      ),
     );
   }
   const [mainInverter] = sources.inverters;
   if (mainInverter) {
     const mixed = sources.inverters.length > 1;
     rows.push(
-      asset(sources, 'inverter', {
-        ...productFields(mainInverter.product, facts.get('inverter_serial_number')),
-        // Several models share the one inverter asset: name them all, count them all.
-        ...(mixed
-          ? {
-              make: [...new Set(sources.inverters.map(({ product }) => product.brand))].join(', '),
-              model: sources.inverters
-                .map(({ product, quantity }) =>
-                  quantity > 1 ? `${product.name} × ${quantity}` : product.name,
-                )
-                .join(', '),
-            }
-          : {}),
-        quantity: sources.inverters.reduce((sum, { quantity }) => sum + quantity, 0),
-      }),
+      asset(
+        sources,
+        'inverter',
+        {
+          ...productFields(mainInverter.product, facts.get('inverter_serial_number')),
+          // Several models share the one inverter asset: name them all, count them all.
+          ...(mixed
+            ? {
+                make: [...new Set(sources.inverters.map(({ product }) => product.brand))].join(
+                  ', ',
+                ),
+                model: sources.inverters
+                  .map(({ product, quantity }) =>
+                    quantity > 1 ? `${product.name} × ${quantity}` : product.name,
+                  )
+                  .join(', '),
+              }
+            : {}),
+          quantity: sources.inverters.reduce((sum, { quantity }) => sum + quantity, 0),
+        },
+        inverterYears(sources.inverters),
+      ),
     );
   }
   if (sources.battery)
     rows.push(
-      asset(sources, 'battery', productFields(sources.battery, facts.get('battery_serial_number'))),
+      asset(
+        sources,
+        'battery',
+        productFields(sources.battery, facts.get('battery_serial_number')),
+        sources.battery.warrantyYears,
+      ),
     );
   const structure = lines.get('structure');
   if (structure) rows.push(asset(sources, 'structure', { model: structure }));
@@ -168,6 +175,7 @@ export async function recordInstalledAssets(
       name: products.name,
       brand: products.brand,
       wattageWp: products.wattageWp,
+      warrantyYears: products.warrantyYears,
     })
     .from(products)
     .where(

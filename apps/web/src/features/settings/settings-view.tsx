@@ -18,6 +18,7 @@ import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
 import { LeadCampaignsPanel } from './lead-campaigns/lead-campaigns-panel';
 import { LeadStepsPanel } from './lead-steps/lead-steps-panel';
+import { OnboardingPanel } from './onboarding/onboarding-panel';
 import { PaymentPlansPanel } from './payment-plans/payment-plans-panel';
 import { ProductsPanel } from './products/products-panel';
 import { RatesPanel } from './rates/rates-panel';
@@ -28,9 +29,11 @@ import { RolesPanel } from './roles/roles-panel';
 import { ApprovalsPanel } from './rules/approvals-panel';
 import { AssignmentPanel } from './rules/assignment-panel';
 import { DashboardPanel } from './rules/dashboard-panel';
+import { LeadAssignmentSection } from './rules/lead-assignment-section';
 import { ProjectTypesPanel } from './rules/project-types-panel';
 import { RemindersPanel } from './rules/reminders-panel';
-import { type NavGroup, SettingsNav } from './settings-nav';
+import { openSection, type Section, visibleMenu } from './settings-menu';
+import { SettingsNav } from './settings-nav';
 import { MessageTemplatesPanel } from './templates/message-templates-panel';
 import { TaskTemplatesPanel } from './templates/task-templates-panel';
 import { WorkforcePanel } from './workforce/workforce-panel';
@@ -44,7 +47,9 @@ const TABS = [
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
   { value: 'referrals', requires: 'settings.manage', Panel: ReferralsPanel },
   { value: 'leadCampaigns', requires: 'settings.manage', Panel: LeadCampaignsPanel },
+  { value: 'whatsappOnboarding', requires: 'settings.manage', Panel: OnboardingPanel },
   { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
+  { value: 'leadAssignment', requires: 'settings.manage', Panel: LeadAssignmentSection },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
   { value: 'rewards', requires: 'settings.manage', Panel: RewardsPanel },
   { value: 'tasks', requires: 'settings.manage', Panel: TaskTemplatesPanel },
@@ -61,35 +66,10 @@ const TABS = [
   { value: 'automation', requires: 'settings.manage', Panel: AutomationPanel },
   { value: 'activity', requires: 'audit.view', Panel: ActivityPanel },
 ] as const satisfies readonly {
-  value: string;
+  value: Section;
   requires: Capability;
   Panel: ComponentType;
 }[];
-type TabValue = (typeof TABS)[number]['value'];
-
-const GROUPS: readonly NavGroup<TabValue>[] = [
-  { key: 'organisation', items: ['company', 'roles', 'workforce', 'rewards'] },
-  {
-    key: 'selling',
-    items: [
-      'leadSteps',
-      'projectTypes',
-      'products',
-      'rates',
-      'payments',
-      'discoms',
-      'referrals',
-      'leadCampaigns',
-    ],
-  },
-  { key: 'operations', items: ['tasks', 'documents', 'messages'] },
-  { key: 'afterSales', items: ['serviceSla', 'warranty', 'amcPlans'] },
-  {
-    key: 'rules',
-    items: ['approvals', 'assignment', 'reminders', 'dashboard', 'automation'],
-  },
-  { key: 'security', items: ['activity'] },
-];
 
 const subscribeNothing = () => () => undefined;
 
@@ -106,7 +86,7 @@ function useHydrated(): boolean {
   );
 }
 
-/** Every setting, grouped down the side like Lintel; the open section lives in `?tab=`. */
+/** Every setting, grouped down the side (see settings-menu); the open section lives in `?tab=`. */
 export function SettingsView() {
   const t = useTranslations('settings');
   const user = useCurrentUser();
@@ -115,14 +95,11 @@ export function SettingsView() {
   const params = useSearchParams();
   const hydrated = useHydrated();
   const allowed = TABS.filter((tab) => user.capabilities.includes(tab.requires));
-  const requested = params.get('tab');
-  const current = allowed.find((tab) => tab.value === requested) ?? allowed[0];
-  const groups = GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((value) => allowed.some((tab) => tab.value === value)),
-  })).filter((group) => group.items.length > 0);
+  const groups = visibleMenu(allowed.map((tab) => tab.value));
+  const opened = openSection(groups, params.get('tab'));
+  const current = allowed.find((tab) => tab.value === opened);
 
-  const select = (value: TabValue) => {
+  const select = (value: Section) => {
     const next = new URLSearchParams(params);
     next.set('tab', value);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });

@@ -11,6 +11,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { CampaignSection } from './campaign-section';
 import { EligibilitySection } from './eligibility-section';
+import { programChecks } from './referral-draft';
 import { RewardSection } from './reward-section';
 import { REFERRAL_PROGRAM_KEY, useReferralProgram } from './use-referral-program';
 
@@ -37,6 +38,8 @@ export function ReferralsPanel() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const form = useApiForm();
+  const checkT = useTranslations('checks');
+  const [checks, setChecks] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<ReferralProgramInput | null>(null);
 
   useEffect(() => {
@@ -49,9 +52,13 @@ export function ReferralsPanel() {
 
   const saved = query.data;
   const dirty = JSON.stringify(draft) !== JSON.stringify(inputOf(saved));
+  const errors = { ...form.fieldErrors, ...checks };
   const patch = (next: Partial<ReferralProgramInput>) => setDraft({ ...draft, ...next });
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const problems = Object.entries(programChecks(draft));
+    setChecks(Object.fromEntries(problems.map(([field, key]) => [field, checkT(key)])));
+    if (problems.length > 0) return;
     await form.run(
       () => expectStatus(api.referrals.saveProgram({ body: draft }), 200),
       async (result) => {
@@ -64,18 +71,24 @@ export function ReferralsPanel() {
   };
   const discard = () => {
     setDraft(inputOf(saved));
+    setChecks({});
     form.reset();
   };
 
   return (
     <form onSubmit={submit} noValidate className="flex max-w-5xl flex-col gap-8">
       <p className="max-w-2xl type-body text-ink-muted">{t('intro')}</p>
-      <RewardSection draft={draft} onChange={patch} errors={form.fieldErrors} />
-      <CampaignSection draft={draft} saved={saved} onChange={patch} errors={form.fieldErrors} />
-      <EligibilitySection draft={draft} saved={saved} onChange={patch} errors={form.fieldErrors} />
+      <RewardSection draft={draft} onChange={patch} errors={errors} />
+      <CampaignSection draft={draft} saved={saved} onChange={patch} errors={errors} />
+      <EligibilitySection draft={draft} saved={saved} onChange={patch} errors={errors} />
       <div className="flex flex-col gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-end">
         <FormError message={form.error} />
-        {dirty && <p className="type-body-sm text-ink-faint sm:mr-auto">{t('unsaved')}</p>}
+        {dirty && (
+          <p className="type-body-sm text-ink-faint sm:mr-auto">
+            {t('unsaved')}
+            {draft.active && ` ${t('earnsNow')}`}
+          </p>
+        )}
         {dirty && (
           <Button variant="quiet" onClick={discard}>
             {t('discard')}

@@ -1,5 +1,6 @@
 import { LINE_CATEGORIES, SUBSIDY_CATEGORIES } from '@oneohm/domain';
 import { z } from 'zod';
+import { gstRateSchema } from '../common/gst-rate';
 import {
   calendarDateSchema,
   idSchema,
@@ -10,8 +11,6 @@ import {
 import { costingCardSchema } from './costing.schema';
 
 const amountSchema = z.number().int().nonnegative('Use zero or more.');
-/** Basis points: 100 = 1%. */
-const basisPointsSchema = z.number().int().min(0).max(10_000, 'Use at most 100%.');
 /** The price engine's configurable rates (PRD 3.9): the costing card. Amounts are paise. */
 export const rateCardSchema = costingCardSchema;
 export type RateCardValues = z.infer<typeof rateCardSchema>;
@@ -36,7 +35,7 @@ export const productInputSchema = z.object({
   dcr: z.boolean(),
   pricePaise: amountSchema,
   costPaise: amountSchema,
-  taxRateBp: basisPointsSchema,
+  taxRateBp: gstRateSchema,
   efficiencyBp: z
     .number()
     .int()

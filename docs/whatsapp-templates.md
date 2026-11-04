@@ -225,7 +225,24 @@ header and buttons approved before the switch goes on, or leave their names empt
 
 To test all of this with real (test) keys, follow `docs/LIVE-TEST-WHATSAPP-RAZORPAY.md`.
 
-## Not included yet
+## Approved by Meta on 2026-11-03
 
-- Hindi (`hi`) and Marathi (`mr`) versions. The app supports them, but they are optional.
-  Without them, every customer gets English.
+All are category **Utility**. Fields and their order are the same as the English template.
+
+| Meta name | Languages | Header | Buttons | Use in Settings |
+|---|---|---|---|---|
+| `quotation_sent_file` | en, mr, hi | Document (quote PDF) | Quick replies: Accept quote / I have a question (mr: कोटेशन स्वीकारा / मला प्रश्न आहे; hi: कोटेशन स्वीकारें / मेरा एक सवाल है) | `quotation_sent`: Meta name, Marathi name and Hindi name = `quotation_sent_file`, switch on |
+| `payment_received_file` | en, mr, hi | Document (receipt PDF) | none | `payment_received`: all three names = `payment_received_file`, switch on |
+| `project_started` | mr, hi | none | none | Marathi and Hindi names = `project_started` |
+| `payment_reminder` | mr, hi | none | none | Marathi and Hindi names = `payment_reminder` (switch stays off) |
+| `payment_link` | mr, hi | none | none | Marathi and Hindi names = `payment_link` (switch stays off) |
+
+Wording changes in the new versions:
+- `quotation_sent_file` ends with "Tap a button below, or reply here with any question."
+- `payment_received_file` ends with "Thank you. Your receipt is attached." (no "OneOhm app" line).
+
+Set the names for one template only when **every** language of it is approved. A file version
+sent without its file is refused by Meta.
+
+Not submitted yet: the **Pay now** URL button versions of `payment_link` and `payment_reminder`.
+They need the production `API_PUBLIC_URL`, because Meta fixes the URL base at approval.

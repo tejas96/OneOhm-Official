@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findCampaignCode } from './campaign-code';
+import { findCampaignCode, isReservedCampaignWord } from './campaign-code';
 
 describe('findCampaignCode', () => {
   it('reads the code from the ad opener, uppercased', () => {
@@ -34,5 +34,17 @@ describe('findCampaignCode', () => {
     expect(findCampaignCode('Hi OneOhm, my referral code is RAME7K2Q')).toBeNull();
     expect(findCampaignCode('menu')).toBeNull();
     expect(findCampaignCode('oneohm menu')).toBeNull();
+  });
+});
+
+describe('isReservedCampaignWord', () => {
+  it('refuses words the opener never reads as a code, in any case', () => {
+    for (const word of ['MENU', 'help', 'Start', 'CODE', 'HI', 'HII', 'HELLO', 'HEY']) {
+      expect(isReservedCampaignWord(word)).toBe(true);
+    }
+  });
+
+  it('allows an ordinary code', () => {
+    expect(isReservedCampaignWord('DIWALI-26')).toBe(false);
   });
 });

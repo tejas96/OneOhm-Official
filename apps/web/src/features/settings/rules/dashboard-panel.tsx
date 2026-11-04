@@ -7,6 +7,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
+import { EscalationCard } from './escalation-card';
 import { SaveBar } from './save-bar';
 import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 
@@ -18,8 +19,18 @@ const GROUPS: readonly { readonly key: string; readonly fields: readonly Key[] }
   { key: 'lists', fields: ['actionsShown', 'risksShown', 'deadlinesShown'] },
 ];
 
-/** What the command centre counts as late or soon, and how long its lists are (PRD 7.2). */
+/** Everything about late work: what counts as late or soon, and who is told (PRD 3.7, 7.2). */
 export function DashboardPanel() {
+  return (
+    <div className="flex flex-col gap-12">
+      <DashboardForm />
+      <EscalationCard />
+    </div>
+  );
+}
+
+/** What the command centre counts as late or soon, and how long its lists are. */
+function DashboardForm() {
   const t = useTranslations('settings.rules.dashboard');
   const rule = useRuleSettings<DashboardSettingsRecord>(
     RULE_KEYS.dashboard,

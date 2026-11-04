@@ -1,5 +1,5 @@
+import { isRetryableStatus, PermanentSendError } from './send-errors';
 import type { SendResult } from './whatsapp-cloud';
-import { isRetryableStatus, PermanentSendError } from './whatsapp-cloud';
 
 /** Customer SMS for people not on WhatsApp. "log" (the default) never texts anyone. */
 export interface SmsSender {

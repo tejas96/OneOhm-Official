@@ -2,13 +2,15 @@ import {
   customerNotice,
   customers,
   type Database,
+  type DatabaseExecutor,
   fallBackToSms,
   GENERIC_WORDS,
   messageTemplates,
   outbox,
-  recordDeliveryFailure,
+  tellChatFileFailed,
+  waConversations,
 } from '@oneohm/database';
-import { isNotOnWhatsApp } from '@oneohm/domain';
+import { chatWindowOpen, isNotOnWhatsApp } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
@@ -16,17 +18,24 @@ import {
   MESSAGE_TEMPLATES,
   MissingFieldError,
 } from '../channels/message-templates';
+import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
-import {
-  PermanentSendError,
-  type SendResult,
-  type SessionMessage,
-  type TemplateButton,
-  type TemplateHeader,
-  type WhatsAppSender,
+import type {
+  SendResult,
+  SessionMessage,
+  TemplateButton,
+  TemplateHeader,
+  WhatsAppSender,
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
+import { failPendingDelivery } from './fail-delivery';
 import { deliverPush } from './push-delivery';
+import { alertTokenExpired, CHAT_WINDOW_CLOSED } from './send-checks';
+
+/** Written just before the provider call; found on entry, the last attempt died mid-send. */
+export const SENDING = 'sending';
+
+const OPTED_OUT_NOTE = 'The person asked not to get WhatsApp messages';
 
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
@@ -56,8 +65,9 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     status: 'sent' | 'skipped' | 'failed',
     note: string | null,
     providerMessageId: string | null = null,
+    executor: DatabaseExecutor = db,
   ) => {
-    await db
+    await executor
       .update(outbox)
       .set({
         status,
@@ -67,6 +77,23 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           : {}),
       })
       .where(eq(outbox.id, id));
+  };
+
+  /** Why this number gets no template: the customer opted out, or the person sent STOP. */
+  const optOutNote = async (phone: string) => {
+    const [chat] = await db
+      .select({ optedOutAt: waConversations.optedOutAt })
+      .from(waConversations)
+      .where(eq(waConversations.phone, phone))
+      .limit(1);
+    if (chat?.optedOutAt) return OPTED_OUT_NOTE;
+    const [customer] = await db
+      .select({ optIn: customers.whatsappOptIn })
+      .from(customers)
+      .where(eq(customers.phoneE164, phone))
+      .limit(1);
+    if (customer && !customer.optIn) return 'The customer has opted out of WhatsApp messages.';
+    return null;
   };
 
   /** Why a message cannot go out as is, or the approved template and values it needs. */
@@ -98,14 +125,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     if (config && !config.active) {
       return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
     }
-    const [customer] = await db
-      .select({ optIn: customers.whatsappOptIn })
-      .from(customers)
-      .where(eq(customers.phoneE164, row.recipient))
-      .limit(1);
-    if (customer && !customer.optIn) {
-      return { verdict: 'skipped', note: 'The customer has opted out of WhatsApp messages.' };
-    }
+    const unwanted = await optOutNote(row.recipient);
+    if (unwanted) return { verdict: 'skipped', note: unwanted };
     try {
       const names = { metaName: row.template, language, ...config };
       return {
@@ -124,7 +145,26 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     }
   };
 
+  /** A file in a chat that never arrived tells the chat's people; a bad token tells admins. */
+  const failWithAlerts = (id: string, reason: string, tokenInvalid = false) =>
+    db.transaction(async (tx) => {
+      await finish(id, 'failed', reason, null, tx);
+      await tellChatFileFailed(tx, id);
+      if (tokenInvalid) await alertTokenExpired(tx);
+    });
+
+  /** Meta refuses a chat message once the window closes, so retries check it again. */
+  const windowOpenFor = async (phone: string) => {
+    const [chat] = await db
+      .select({ lastInboundAt: waConversations.lastInboundAt })
+      .from(waConversations)
+      .where(eq(waConversations.phone, phone))
+      .limit(1);
+    return chatWindowOpen(chat?.lastInboundAt);
+  };
+
   const send = async (row: typeof outbox.$inferSelect, call: () => Promise<SendResult>) => {
+    await db.update(outbox).set({ lastError: SENDING }).where(eq(outbox.id, row.id));
     try {
       const result = await call();
       if (result.outcome === 'logged') {
@@ -144,7 +184,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
           return 'skipped';
         }
-        await finish(row.id, 'failed', reason);
+        await failWithAlerts(row.id, reason, error.tokenInvalid);
         return 'failed';
       }
       await db.update(outbox).set({ lastError: reason }).where(eq(outbox.id, row.id));
@@ -156,9 +196,14 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     async deliverOutboxMessage(id: string): Promise<DeliveryOutcome> {
       const [row] = await db.select().from(outbox).where(eq(outbox.id, id));
       if (row?.status !== 'pending') return 'not_pending';
+      // The provider may have the message already: never send it a second time.
+      if (row.lastError === SENDING) {
+        await failWithAlerts(id, MAYBE_SENT);
+        return 'failed';
+      }
       await db
         .update(outbox)
-        .set({ attempts: sql`${outbox.attempts} + 1` })
+        .set({ attempts: sql`${outbox.attempts} + 1`, startedAt: new Date() })
         .where(eq(outbox.id, id));
       if (row.channel === 'push') {
         const outcome = await deliverPush(db, push, row.recipient);
@@ -174,8 +219,13 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return send(row, () => sms.send(row.recipient, text));
       }
       // A chat reply (the customer wrote first), so no template and no opt-in check.
-      if (row.template.startsWith('session:'))
+      if (row.template.startsWith('session:')) {
+        if (!(await windowOpenFor(row.recipient))) {
+          await failWithAlerts(id, CHAT_WINDOW_CLOSED);
+          return 'failed';
+        }
         return send(row, () => sender.sendSession(row.recipient, row.payload as SessionMessage));
+      }
       const prepared = await prepare(row);
       if (prepared.verdict !== 'send') {
         await finish(id, prepared.verdict, prepared.note);
@@ -195,14 +245,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     },
 
     /** Called once retries run out, so the failure is visible to the office. */
-    async markOutboxFailed(id: string, reason: string): Promise<void> {
-      const failed = await db
-        .update(outbox)
-        .set({ status: 'failed', lastError: reason })
-        .where(sql`${outbox.id} = ${id} and ${outbox.status} = 'pending'`)
-        .returning({ id: outbox.id });
-      // Kept in Settings → Automation runs with a retry (PRD 7.1 failure visibility).
-      if (failed.length > 0) await recordDeliveryFailure(db, id, reason);
-    },
+    markOutboxFailed: (id: string, reason: string) => failPendingDelivery(db, id, reason),
   };
 }

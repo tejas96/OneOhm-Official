@@ -26,7 +26,10 @@ async function main(): Promise<void> {
 
   const database = createDatabaseConnection(config.DATABASE_URL, { max: 5 });
   const sender = createWhatsAppSender(config, log);
-  const payLinks = { secret: config.FILE_LINK_SECRET, days: config.PAYMENT_LINK_DAYS };
+  const payLinks = {
+    secret: config.PAY_LINK_SECRET ?? config.FILE_LINK_SECRET,
+    days: config.PAYMENT_LINK_DAYS,
+  };
   const nativeConnection = await NativeConnection.connect({ address: config.TEMPORAL_ADDRESS });
   const worker = await Worker.create({
     connection: nativeConnection,

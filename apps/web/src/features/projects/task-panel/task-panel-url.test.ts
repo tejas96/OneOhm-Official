@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelNavigation, panelShown, panelView, withTask } from './task-panel-url';
+import { hrefWithTask, panelNavigation, panelShown, panelView, withTask } from './task-panel-url';
 
 describe('withTask', () => {
   it('adds the task and keeps other params', () => {
@@ -16,6 +16,16 @@ describe('withTask', () => {
 
   it('removes it and keeps the rest', () => {
     expect(withTask('?tab=tasks&task=t1', null)).toBe('?tab=tasks');
+  });
+});
+
+describe('hrefWithTask', () => {
+  it('adds the task to a link that has a query', () => {
+    expect(hrefWithTask('/projects/p1?tab=tasks', 't1')).toBe('/projects/p1?tab=tasks&task=t1');
+  });
+
+  it('adds the task to a bare path', () => {
+    expect(hrefWithTask('/today', 't1')).toBe('/today?task=t1');
   });
 });
 

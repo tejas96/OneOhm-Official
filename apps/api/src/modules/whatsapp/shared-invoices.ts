@@ -1,5 +1,6 @@
 import { customerInvoices, type DatabaseExecutor, projects } from '@oneohm/database';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
+import { activeProjectsOf } from '../customer-portal/active-projects';
 
 /** The customer's newest tax invoices. Cancelled ones are never shared (PRD 6.1). */
 export function issuedInvoices(db: DatabaseExecutor, customerId: string, limit: number) {
@@ -11,13 +12,7 @@ export function issuedInvoices(db: DatabaseExecutor, customerId: string, limit: 
     })
     .from(customerInvoices)
     .innerJoin(projects, eq(projects.id, customerInvoices.projectId))
-    .where(
-      and(
-        eq(projects.customerId, customerId),
-        ne(projects.status, 'cancelled'),
-        eq(customerInvoices.status, 'issued'),
-      ),
-    )
+    .where(and(activeProjectsOf(customerId), eq(customerInvoices.status, 'issued')))
     .orderBy(desc(customerInvoices.invoiceDate), desc(customerInvoices.createdAt))
     .limit(limit);
 }

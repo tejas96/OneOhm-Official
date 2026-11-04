@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { customerCategoryFor, isCustomerRequestable } from './document-requests';
+import { canAskCustomerFor, customerCategoryFor, isCustomerRequestable } from './document-requests';
 import { requiredDocuments } from './required-documents';
 
 describe('isCustomerRequestable', () => {
@@ -43,5 +43,16 @@ describe('customerCategoryFor', () => {
     expect(customerCategoryFor(byKey('survey'))).toBeNull();
     expect(customerCategoryFor(byKey('net_metering'))).toBeNull();
     expect(customerCategoryFor(byKey('handover'))).toBeNull();
+  });
+});
+
+describe('canAskCustomerFor', () => {
+  it('is true when one folder is a paper the customer holds', () => {
+    expect(canAskCustomerFor(['site_photo', 'electricity_bill'])).toBe(true);
+  });
+
+  it('is false for the Other folder and folders OneOhm fills itself', () => {
+    expect(canAskCustomerFor(['other'])).toBe(false);
+    expect(canAskCustomerFor(['site_survey', 'statutory_report'])).toBe(false);
   });
 });

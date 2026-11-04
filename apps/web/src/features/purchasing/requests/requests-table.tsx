@@ -117,7 +117,7 @@ export function RequestsTable({
       cell: (request) =>
         request.project ? (
           <Link
-            href={`/projects/${request.project.id}`}
+            href={`/projects/${request.project.id}?tab=material`}
             className="relative z-10 whitespace-nowrap font-mono text-[0.8125rem] text-ink-muted hover:text-accent"
           >
             {request.project.code}

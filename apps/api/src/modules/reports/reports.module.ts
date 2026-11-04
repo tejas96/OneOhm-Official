@@ -4,6 +4,7 @@ import { DocumentChecklistController } from './document-checklist.controller';
 import { DocumentChecklistService } from './document-checklist.service';
 import { DocumentRequirementsController } from './document-requirements.controller';
 import { DocumentRequirementsService } from './document-requirements.service';
+import { EstimatePdfService } from './estimate-pdf.service';
 import { PdfRendererService } from './pdf-renderer.service';
 import { QuotationPdfService } from './quotation-pdf.service';
 import { ReportArchiveService } from './report-archive.service';
@@ -34,6 +35,7 @@ import { SurveyReportService } from './survey-report.service';
     ReportStatusService,
     ReportPdfService,
     QuotationPdfService,
+    EstimatePdfService,
     PdfRendererService,
     ReportArchiveService,
     DocumentChecklistService,
@@ -49,6 +51,7 @@ import { SurveyReportService } from './survey-report.service';
   exports: [
     ReportStatusService,
     QuotationPdfService,
+    EstimatePdfService,
     PdfRendererService,
     ReportPdfService,
     ReportArchiveService,

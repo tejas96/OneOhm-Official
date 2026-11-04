@@ -10,8 +10,10 @@ import type { DatabaseExecutor } from '../client';
 export async function nextReceiptNumber(db: DatabaseExecutor, receivedOn: string): Promise<string> {
   await db.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:receipt'))`);
   const base = `OH/RCPT/${financialYear(receivedOn)}/`;
+  // Numeric order, so 10000 sorts after 9999 (as text it would not, and repeat).
   const result = await db.execute<{ receipt_number: string }>(
-    sql`select receipt_number from payments where receipt_number like ${`${base}%`} order by receipt_number desc limit 1`,
+    sql`select receipt_number from payments where receipt_number like ${`${base}%`}
+        order by length(receipt_number) desc, receipt_number desc limit 1`,
   );
   const last = result.rows[0]?.receipt_number;
   const next = last ? Number(last.slice(base.length)) + 1 : 1;

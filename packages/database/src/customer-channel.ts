@@ -1,9 +1,10 @@
-import { routeFor, smsText } from '@oneohm/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { handsOverInPerson, routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
 import { customers } from './schema/crm.schema';
 import { customerHandovers } from './schema/customer-handovers.schema';
+import { messageTemplates } from './schema/message-templates.schema';
 import { projects } from './schema/projects.schema';
 import { outbox } from './schema/records.schema';
 
@@ -24,6 +25,7 @@ interface Message {
 /**
  * Sends one customer message the way that reaches them (owner's rule): WhatsApp first,
  * SMS when they are not on WhatsApp, and a "share in person" item when neither works.
+ * A nice-to-have message to a customer who said STOP is not sent at all (`skippedAfterStop`).
  * Returns whether something new was queued.
  */
 export async function routeCustomerMessage(
@@ -40,6 +42,8 @@ export async function routeCustomerMessage(
     .from(customers)
     .where(eq(customers.phoneE164, message.recipient))
     .limit(1);
+  // After STOP the nice-to-have messages are skipped, not moved to SMS.
+  if (customer && skippedAfterStop(message.template, customer.optIn)) return false;
   const route = customer
     ? routeFor({
         channel: customer.channel,
@@ -47,7 +51,17 @@ export async function routeCustomerMessage(
         whatsappOptIn: customer.optIn,
       })
     : 'whatsapp';
-  if (route === 'in_person' && customer) return handOver(db, customer.id, message);
+  if (route === 'in_person') {
+    if (!customer) return false;
+    const [config] = await db
+      .select({ active: messageTemplates.active })
+      .from(messageTemplates)
+      .where(eq(messageTemplates.key, message.template))
+      .limit(1);
+    // No row means a built-in message nobody has switched off.
+    if (!handsOverInPerson(route, config?.active ?? true)) return false;
+    return handOver(db, customer.id, message);
+  }
   const sms = route === 'sms';
   const inserted = await db
     .insert(outbox)
@@ -62,6 +76,8 @@ export async function routeCustomerMessage(
           }
         : message.payload,
       dedupeKey: sms ? `${message.dedupeKey}:sms` : message.dedupeKey,
+      // The clock, not the transaction's start: messages queued together go out in order.
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });
@@ -73,7 +89,8 @@ async function handOver(
   customerId: string,
   message: Message,
 ): Promise<boolean> {
-  const code = message.payload.project;
+  // `project` holds the town and size by now (plainNames); the code rides as `projectCode`.
+  const code = message.payload.projectCode ?? message.payload.project;
   const [project] = code
     ? await db.select({ id: projects.id }).from(projects).where(eq(projects.code, code)).limit(1)
     : [];
@@ -117,6 +134,7 @@ export async function fallBackToSms(
       template: row.template,
       payload: { ...payload, text: smsText(said.title, said.body, await brandName(db)) },
       dedupeKey: `${row.dedupeKey ?? row.id}:sms`,
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });

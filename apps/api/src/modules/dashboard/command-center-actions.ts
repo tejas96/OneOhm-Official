@@ -8,15 +8,13 @@ import {
   quotations,
 } from '@oneohm/database';
 import { type DashboardSettings } from '@oneohm/domain';
-import { daysBetween, formatInrCompact } from '@oneohm/shared';
+import { formatInrCompact } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm';
 import { waitsForApproval } from '../lists/quotation-page';
+import { daysSince } from './business-days';
 import { assignmentConfirmations } from './command-center-confirm';
 import { lateChats, leadFollowUps, unownedLeads } from './command-center-people-actions';
 import { plural } from './command-center-plural';
-
-const daysSince = (date: Date | null, today: string) =>
-  date ? daysBetween(date.toISOString().slice(0, 10), today) : 0;
 
 /** What needs the owner, most urgent first; each item has one next action (PRD 3.1). */
 export async function buildActions(
@@ -105,7 +103,7 @@ async function longDiscomWaits(
       detail: `${row.name} · ${row.discom}`,
       action: `Call ${row.discom}`,
       party: 'discom' as const,
-      href: `/command-center/tasks?show=waiting&party=discom&project=${row.projectId}`,
+      href: `/projects/${row.projectId}?tab=tasks&task=${row.id}`,
     }));
 }
 
@@ -155,7 +153,7 @@ async function bankClaims(db: Database): Promise<ActionItem[]> {
     detail: `${row.name} · ${row.lender ?? 'Bank'} · ${formatInrCompact(row.loan)}`,
     action: 'Claim',
     party: 'bank' as const,
-    href: '/finance?tab=loans',
+    href: `/projects/${row.projectId}?tab=tasks&task=${row.id}`,
   }));
 }
 

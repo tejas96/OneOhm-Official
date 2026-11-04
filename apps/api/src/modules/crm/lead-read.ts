@@ -1,13 +1,26 @@
-import type { LeadDetail, LeadQuotation } from '@oneohm/api-contracts';
+import type { LeadDetail, LeadEstimate, LeadQuotation } from '@oneohm/api-contracts';
 import {
   type DatabaseExecutor,
   leadActivities,
   leadCampaigns,
+  leadEstimates,
   leads,
   quotations,
   users,
 } from '@oneohm/database';
-import { and, desc, eq, inArray, isNull, lte, ne, notInArray, or, type SQL } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  type SQL,
+} from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { quotationScope } from '../quotations/quotation-access';
@@ -46,6 +59,20 @@ export function unownedLeads(db: DatabaseExecutor): SQL {
   return and(open, or(isNull(leads.ownerUserId), inArray(leads.ownerUserId, gone))) ?? open;
 }
 
+/** Throws 403 for people with no lead access, and 404 for a lead they may not see. */
+export async function assertLeadVisible(
+  db: DatabaseExecutor,
+  actor: Actor,
+  id: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.id, id), leadVisibility(actor)))
+    .limit(1);
+  if (!row) throw notFound('That lead');
+}
+
 /** One lead with its history and the quotations made for it, as the actor may see them. */
 export async function readLeadDetail(
   db: DatabaseExecutor,
@@ -69,6 +96,7 @@ export async function readLeadDetail(
   return {
     ...lead,
     attribution: await attributionOf(db, row),
+    latestEstimate: await latestEstimateOf(db, id),
     activities: activityRows.map(({ activity, userName }) => ({
       id: activity.id,
       kind: activity.kind,
@@ -79,6 +107,31 @@ export async function readLeadDetail(
     })),
     quotations: await leadQuotations(db, actor, id),
     fromReseller: row.resellerUserId !== null,
+  };
+}
+
+/** The newest estimate the bot sent the lead, with the staff route to its PDF. */
+async function latestEstimateOf(
+  db: DatabaseExecutor,
+  leadId: string,
+): Promise<LeadEstimate | null> {
+  const [row] = await db
+    .select()
+    .from(leadEstimates)
+    // The bot only stores priced rows, but a row without a size is never shown as an estimate.
+    .where(and(eq(leadEstimates.leadId, leadId), isNotNull(leadEstimates.capacityWp)))
+    .orderBy(desc(leadEstimates.createdAt))
+    .limit(1);
+  if (!row) return null;
+  return {
+    id: row.id,
+    capacityWp: row.capacityWp as number,
+    totalPaise: Number(row.totalPaise),
+    effectivePaise: Number(row.effectivePaise),
+    monthlySavingPaise: Number(row.monthlySavingPaise),
+    paybackYears: Number(row.paybackYears),
+    createdAt: row.createdAt.toISOString(),
+    pdfUrl: `/leads/${leadId}/estimates/${row.id}/pdf`,
   };
 }
 

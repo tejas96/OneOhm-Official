@@ -52,7 +52,7 @@
       "fromBanks": "Bank disbursements pending",
       "toVendors": "Owed to vendors",
       "toContractors": "Owed to contractors",
-      "dueThisWeek": "Of which due within 7 days",
+      "dueThisWeek": "{days, plural, one {Of which due within 1 day} other {Of which due within # days}}",
       "advances": "Crew advances not yet paid",
       "note": "Revenue is what the ledger booked as project revenue when milestones fell due in the period. Bills owed count everything not yet paid, whenever it falls due."
     },
@@ -113,7 +113,7 @@
       "ofOpen": "of {open} open",
       "unassigned": "Tasks with no one assigned",
       "installed": "Installed",
-      "installedDetail": "{count, plural, one {# system} other {# systems}} switched on, {next} due this week",
+      "installedDetail": "{count, plural, one {# system} other {# systems}} switched on, {next} due within {days, plural, one {1 day} other {# days}}",
       "collected": "Collected",
       "collectedDetail": "of {due} due",
       "stillDue": "Still due from customers",
@@ -176,9 +176,9 @@
       }
     },
     "deadlines": {
-      "title": "Deadlines in the next 7 days",
+      "title": "{days, plural, one {Deadlines in the next day} other {Deadlines in the next # days}}",
       "range": "{start} to {end}",
-      "empty": "Nothing falls due in the next seven days.",
+      "empty": "{days, plural, one {Nothing falls due in the next day.} other {Nothing falls due in the next # days.}}",
       "customer": "Customer sees this",
       "unassigned": "Unassigned"
     },

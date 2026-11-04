@@ -1,13 +1,20 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { QuotationPreviewInput, SubsidyImpact, SubsidyImpactRow } from '@oneohm/api-contracts';
-import { customers, properties, quotations, subsidyRules } from '@oneohm/database';
-import { calculateSubsidy, ruleInForce, type SubsidyRule } from '@oneohm/domain';
+import {
+  customers,
+  properties,
+  quotations,
+  stateSubsidyRules,
+  subsidyRules,
+} from '@oneohm/database';
+import type { StateTopUpRule, SubsidyRule } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { costingOf } from '../quotations/quotation-detail';
 import { invertersOf } from '../quotations/quotation-inverters';
 import { QuotationPricingService } from '../quotations/quotation-pricing.service';
+import { supportOn } from './subsidy-on-date';
 
 type QuotationRow = typeof quotations.$inferSelect;
 
@@ -16,6 +23,13 @@ interface OpenQuotation {
   readonly customerName: string;
   readonly propertyLabel: string;
   readonly propertyHouseholds: number | null;
+  readonly siteState: string;
+  readonly lowIncomeHousehold: boolean;
+}
+
+interface Rules {
+  readonly central: readonly SubsidyRule[];
+  readonly state: readonly StateTopUpRule[];
 }
 
 const householdsOf = (row: QuotationRow) =>
@@ -48,7 +62,8 @@ function pricingInput(
 
 /**
  * Which open quotations a subsidy rule change touches (PRD 3.5): each draft or sent one is
- * priced afresh and its expected subsidy compared with the one it saved. Nothing is
+ * priced afresh and its expected support (central subsidy plus any state top-up) compared
+ * with what it saved. Nothing is
  * stored or changed; accepted quotations keep their snapshot and are never looked at.
  */
 @Injectable()
@@ -69,51 +84,54 @@ export class SubsidyImpactService {
         customerName: customers.name,
         propertyLabel: properties.label,
         propertyHouseholds: properties.households,
+        siteState: properties.state,
+        lowIncomeHousehold: properties.lowIncomeHousehold,
       })
       .from(quotations)
       .innerJoin(customers, eq(customers.id, quotations.customerId))
       .innerJoin(properties, eq(properties.id, quotations.propertyId))
       .where(inArray(quotations.status, ['draft', 'sent']))
       .orderBy(desc(quotations.createdAt));
-    const rules = (await this.db.select().from(subsidyRules)) as unknown as SubsidyRule[];
+    const rules: Rules = {
+      central: (await this.db.select().from(subsidyRules)) as unknown as SubsidyRule[],
+      state: await this.db.select().from(stateSubsidyRules),
+    };
     const changed: SubsidyImpactRow[] = [];
     for (const row of open) {
-      const subsidy = await this.subsidyOn(row, rules, date);
-      if (subsidy !== null && subsidy !== row.quotation.subsidyPaise) {
-        changed.push(present(row, subsidy));
-      }
+      // Central subsidy and the state top-up together: both come off what the customer pays.
+      const support = await this.supportOn(row, rules, date);
+      const saved = row.quotation.subsidyPaise + row.quotation.stateSupportPaise;
+      if (support !== null && support !== saved) changed.push(present(row, saved, support));
     }
     return { asOf: date, checked: open.length, quotations: changed };
   }
 
-  /**
-   * The expected subsidy under the rules in force on `date`. The engine prices with
-   * today's rule (eligibility, capacity, site facts); for a later rule, an eligible
-   * quotation's amount is worked out again with that rule. Null when it cannot be priced.
-   */
-  private async subsidyOn(
-    row: OpenQuotation,
-    rules: readonly SubsidyRule[],
-    date: string,
-  ): Promise<number | null> {
+  /** Expected central plus state support under the rules on `date`; null if unpriceable. */
+  private async supportOn(row: OpenQuotation, rules: Rules, date: string): Promise<number | null> {
     const { quotation } = row;
     try {
       const inverters = await invertersOf(this.db, quotation.id);
       const priced = await this.pricing.price(pricingInput(quotation, inverters));
       const { totals } = priced.preview;
-      const rule = ruleInForce(rules, quotation.subsidyCategory, date);
-      if (rule?.validFrom === priced.rule?.validFrom) return totals.subsidyPaise;
-      if (totals.subsidyIneligible && totals.subsidyIneligible !== 'no_rule') return 0;
-      return calculateSubsidy(
-        {
-          category: quotation.subsidyCategory,
-          capacityWp: totals.capacityWp,
-          panelsDcr: true,
-          systemType: quotation.systemType,
-          households: householdsOf(quotation) ?? row.propertyHouseholds ?? undefined,
+      const support = supportOn({
+        category: quotation.subsidyCategory,
+        systemType: quotation.systemType,
+        households: householdsOf(quotation) ?? row.propertyHouseholds,
+        capacityWp: totals.capacityWp,
+        siteState: row.siteState,
+        lowIncomeHousehold: row.lowIncomeHousehold,
+        priced: {
+          subsidyPaise: totals.subsidyPaise,
+          subsidyIneligible: totals.subsidyIneligible,
+          stateSupportPaise: totals.stateSupportPaise ?? 0,
+          ruleFrom: priced.rule?.validFrom ?? null,
+          stateRuleFrom: priced.stateRule?.validFrom ?? null,
         },
-        rule,
-      ).amountPaise;
+        rules: rules.central,
+        stateRules: rules.state,
+        date,
+      });
+      return support.subsidyPaise + support.stateSupportPaise;
     } catch (error) {
       this.logger.warn(
         `Could not price ${quotation.number} R${quotation.revision}: ${(error as Error).message}`,
@@ -123,7 +141,11 @@ export class SubsidyImpactService {
   }
 }
 
-function present(row: OpenQuotation, newSubsidyPaise: number): SubsidyImpactRow {
+function present(
+  row: OpenQuotation,
+  savedSubsidyPaise: number,
+  newSubsidyPaise: number,
+): SubsidyImpactRow {
   const { quotation } = row;
   return {
     id: quotation.id,
@@ -136,7 +158,7 @@ function present(row: OpenQuotation, newSubsidyPaise: number): SubsidyImpactRow 
     capacityWp: quotation.capacityWp,
     validUntil: quotation.validUntil,
     totalPaise: quotation.totalPaise,
-    savedSubsidyPaise: quotation.subsidyPaise,
+    savedSubsidyPaise,
     newSubsidyPaise,
     savedEffectivePaise: quotation.effectivePaise,
     newEffectivePaise: Math.max(0, quotation.totalPaise - newSubsidyPaise),

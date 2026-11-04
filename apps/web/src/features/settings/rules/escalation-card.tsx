@@ -1,14 +1,15 @@
 'use client';
 
 import type { EscalationPolicyRecord } from '@oneohm/api-contracts';
-import { Button, Card, Field, useToast } from '@oneohm/design-system/web';
+import { Field, useToast } from '@oneohm/design-system/web';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
-import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { NumberInput } from '../number-input';
+import { SettingsSection } from '../settings-section';
+import { SaveBar } from './save-bar';
 
 const KEY = ['escalation-policy'] as const;
 
@@ -47,14 +48,11 @@ export function EscalationCard() {
   };
 
   if (!draft) return null;
+  const dirty = JSON.stringify(draft) !== JSON.stringify(query.data);
   return (
-    <Card>
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4 px-5 py-5">
-        <div className="flex flex-col gap-0.5">
-          <h3 className="type-title-md text-ink">{t('title')}</h3>
-          <p className="type-body-sm text-ink-faint">{t('intro')}</p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <form onSubmit={submit} noValidate className="flex max-w-5xl flex-col gap-8">
+      <SettingsSection title={t('title')} description={t('intro')}>
+        <div className="grid gap-4 sm:grid-cols-2">
           {FIELDS.map(([key, unit]) => (
             <Field key={key} label={t(key)} hint={t(unit)} error={form.fieldErrors[key]}>
               <NumberInput
@@ -65,11 +63,13 @@ export function EscalationCard() {
             </Field>
           ))}
         </div>
-        <FormError message={form.error} />
-        <Button type="submit" variant="secondary" pending={form.pending} className="self-start">
-          {t('save')}
-        </Button>
-      </form>
-    </Card>
+      </SettingsSection>
+      <SaveBar
+        dirty={dirty}
+        pending={form.pending}
+        error={form.error}
+        onDiscard={() => setDraft(query.data ?? null)}
+      />
+    </form>
   );
 }

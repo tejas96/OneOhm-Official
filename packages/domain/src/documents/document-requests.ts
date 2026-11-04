@@ -36,8 +36,17 @@ export function customerCategoryFor(
   requirement: Pick<DocumentRequirement, 'categories' | 'fromCustomer'>,
 ): CustomerRequestableCategory | null {
   if (!requirement.fromCustomer) return null;
-  for (const category of requirement.categories) {
-    if (category !== 'other' && isCustomerRequestable(category)) return category;
-  }
-  return null;
+  return requirement.categories.find(askableFolder) ?? null;
+}
+
+const askableFolder = (category: string): category is CustomerRequestableCategory =>
+  category !== 'other' && isCustomerRequestable(category);
+
+/**
+ * Whether "the customer provides it" can do anything for a paper filed in these folders:
+ * the team can only ask the customer for a paper in a folder the customer holds, and never
+ * for the catch-all Other folder.
+ */
+export function canAskCustomerFor(categories: readonly string[]): boolean {
+  return categories.some(askableFolder);
 }

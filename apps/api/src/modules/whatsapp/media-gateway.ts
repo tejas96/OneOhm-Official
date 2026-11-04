@@ -59,11 +59,15 @@ export function mediaFileName(media: IncomingMedia): string {
   return `WhatsApp ${label}.${EXTENSION[media.type]}`;
 }
 
+/** In log mode this media id stands in for a file over the size cap (used by the tests). */
+export const SAMPLE_TOO_LARGE_ID = 'sample-too-large';
+
 /** Local and test mode: nothing leaves the machine, and the flow still runs end to end. */
 export function logMediaGateway(log: (line: string) => void): MediaGateway {
   return {
     mode: 'log',
     async download(media) {
+      if (media.id === SAMPLE_TOO_LARGE_ID) throw new MediaTooLargeError('Stand-in large file.');
       log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
       const buffer = media.type === 'document' ? samplePdf() : Buffer.from(SAMPLE_PNG);
       const fileName = mediaFileName(media).replace(/\.[a-z0-9]{1,5}$/i, '');

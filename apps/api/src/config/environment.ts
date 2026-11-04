@@ -25,6 +25,8 @@ const environmentSchema = z
       .optional(),
     /** Sign-in codes one phone may ask for in 10 minutes. */
     OTP_REQUESTS_PER_10_MIN: z.coerce.number().int().min(1).max(1000).default(3),
+    /** Website enquiry form posts one address may send in 10 minutes. */
+    WEBSITE_ENQUIRIES_PER_10_MIN: z.coerce.number().int().min(1).max(1000).default(5),
     MSG91_AUTH_KEY: z.string().optional(),
     MSG91_SENDER_ID: z.string().optional(),
     MSG91_LOGIN_TEMPLATE_ID: z.string().optional(),
@@ -45,6 +47,8 @@ const environmentSchema = z
       .optional(),
     /** Signs the short-lived links the WhatsApp assistant sends for quotations and receipts. */
     FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
+    /** Signs the Pay now links. Falls back to FILE_LINK_SECRET outside production. */
+    PAY_LINK_SECRET: z.string().min(16).optional(),
     FILE_LINK_HOURS: z.coerce.number().int().min(1).max(168).default(72),
     CHROMIUM_PATH: z.string().optional(),
     /** S3-compatible object storage (RustFS) for photos, documents and company assets. */
@@ -74,6 +78,10 @@ const environmentSchema = z
     GOOGLE_MAPS_BROWSER_KEY: z.string().optional(),
     /** Where customers reach this API from outside; sandbox payment pages live here. */
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
+    /** Runs the WhatsApp onboarding nudge every 5 minutes; the acceptance suite turns it off. */
+    ONBOARDING_NUDGE_TIMER: flag,
+    /** Runs the sales checks (quote validity, promised calls, start project) every 15 minutes. */
+    SALES_CHECKS_TIMER: flag,
   })
   .superRefine((env, context) => {
     const issues = [
@@ -123,6 +131,22 @@ function productionIssues(env: Raw): Issue[] {
       'RAZORPAY_KEY_ID',
       'Use live Razorpay keys (rzp_live_) in production.',
     ],
+    // Without the app secret anyone holding the webhook link could pose as a customer.
+    [
+      env.WHATSAPP_DELIVERY === 'live' && !env.WHATSAPP_APP_SECRET,
+      'WHATSAPP_APP_SECRET',
+      'Needed in production: unsigned WhatsApp posts must be refused.',
+    ],
+    [
+      !env.PAY_LINK_SECRET || env.PAY_LINK_SECRET === env.FILE_LINK_SECRET,
+      'PAY_LINK_SECRET',
+      'Set a pay-link secret of its own, different from FILE_LINK_SECRET.',
+    ],
+    [
+      isTemporaryAddress(String(env.API_PUBLIC_URL ?? '')),
+      'API_PUBLIC_URL',
+      'Use the stable https domain: links sent to customers carry it for good.',
+    ],
     [Boolean(env.OTP_DEVELOPMENT_CODE), 'OTP_DEVELOPMENT_CODE', 'Not allowed in production.'],
     [
       String(env.FILE_LINK_SECRET ?? '').startsWith('oneohm-local'),
@@ -142,6 +166,23 @@ function productionIssues(env: Raw): Issue[] {
     [env.OTP_PROVIDER !== 'msg91', 'OTP_PROVIDER', 'Use msg91 in production.'],
   ];
   return rules.filter(([broken]) => broken).map(([, key, message]): Issue => [key, message]);
+}
+
+/** True for anything but a stable https address: http, localhost or a throwaway tunnel. */
+export function isTemporaryAddress(address: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(address);
+    return (
+      protocol !== 'https:' ||
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === '127.0.0.1' ||
+      hostname.endsWith('.trycloudflare.com') ||
+      hostname.endsWith('.loca.lt')
+    );
+  } catch {
+    return true;
+  }
 }
 
 /** Blank lines in an env file (`KEY=`) mean "not set", not an empty value. */

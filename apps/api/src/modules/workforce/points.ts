@@ -8,7 +8,7 @@ import {
   stageRatings,
   userRoles,
 } from '@oneohm/database';
-import { judgeTask } from '@oneohm/domain';
+import { judgeTask, type PartResult } from '@oneohm/domain';
 import { and, eq, gte, isNull } from 'drizzle-orm';
 import { loadPolicy } from './policy';
 import { taskPointFacts } from './task-point-facts';
@@ -25,21 +25,14 @@ async function isStaff(db: DatabaseExecutor, userId: string): Promise<boolean> {
 }
 
 /**
- * A finished task's points (spec 3.7), for whoever handed it in: on time and, with an
- * approval step, first-time right. Each part leaves one line: its points when earned,
- * 0 with the reason when missed, so nobody ever loses points. Staff only; a task is
- * judged once (the unique key keeps a second run from adding anything).
+ * The lines a judged task leaves: its points when earned, 0 with the reason when missed.
+ * A kind of points set to 0 in the policy is switched off and leaves no line at all.
  */
-export async function awardTaskPoints(
-  db: DatabaseExecutor,
-  task: typeof projectTasks.$inferSelect,
-  finishedBy: string,
-): Promise<void> {
-  const { userId, facts } = await taskPointFacts(db, task, finishedBy);
-  if (!(await isStaff(db, userId))) return;
-  const { points } = await loadPolicy(db);
-  const verdict = judgeTask(facts);
-  const lines = [
+export function taskPointLines(
+  verdict: { readonly onTime: PartResult; readonly firstTimeRight: PartResult | null },
+  points: { readonly onTimeTask: number; readonly firstTimeRight: number },
+) {
+  const parts = [
     { sourceType: 'task_on_time' as const, part: verdict.onTime, value: points.onTimeTask },
     ...(verdict.firstTimeRight
       ? [
@@ -51,13 +44,37 @@ export async function awardTaskPoints(
         ]
       : []),
   ];
-  for (const line of lines)
+  return parts
+    .filter((line) => line.value > 0)
+    .map((line) => ({
+      sourceType: line.sourceType,
+      reason: line.part.reason,
+      points: line.part.earned ? line.value : 0,
+    }));
+}
+
+/**
+ * A finished task's points (spec 3.7), for whoever handed it in: on time and, with an
+ * approval step, first-time right. Each part leaves one line: its points when earned,
+ * 0 with the reason when missed, so nobody ever loses points; a part set to 0 is off and
+ * leaves nothing. Staff only; a task is
+ * judged once (the unique key keeps a second run from adding anything).
+ */
+export async function awardTaskPoints(
+  db: DatabaseExecutor,
+  task: typeof projectTasks.$inferSelect,
+  finishedBy: string,
+): Promise<void> {
+  const { userId, facts } = await taskPointFacts(db, task, finishedBy);
+  if (!(await isStaff(db, userId))) return;
+  const { points } = await loadPolicy(db);
+  for (const line of taskPointLines(judgeTask(facts), points))
     await db
       .insert(pointsEntries)
       .values({
         userId,
-        points: line.part.earned ? line.value : 0,
-        reason: `${line.part.reason}: ${task.title}`,
+        points: line.points,
+        reason: `${line.reason}: ${task.title}`,
         sourceType: line.sourceType,
         sourceId: task.id,
         status: 'approved',

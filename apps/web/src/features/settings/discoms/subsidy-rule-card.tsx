@@ -96,6 +96,9 @@ export function SubsidyRuleCard({
           {current ? t('inForceSince', { date: day(current.validFrom) }) : t('noneInForce')}
         </p>
       </header>
+      {category === 'commercial' && (
+        <p className="type-body-sm text-ink-muted">{t('commercialNote')}</p>
+      )}
       {current && <SubsidyRuleLines rule={current} />}
       {scheduled.map((rule) => (
         <ScheduledVersion key={rule.id} rule={rule} actions={actions} />

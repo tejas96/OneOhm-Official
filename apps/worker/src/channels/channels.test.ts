@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../config';
 import { MESSAGE_TEMPLATES, MissingFieldError, templateParameters } from './message-templates';
-import {
-  createWhatsAppSender,
-  isRetryableStatus,
-  sessionRequestBody,
-  templateRequestBody,
-} from './whatsapp-cloud';
+import { isRetryableStatus } from './send-errors';
+import { createWhatsAppSender, sessionRequestBody, templateRequestBody } from './whatsapp-cloud';
 
 describe('templateParameters', () => {
   it('orders values as the template expects', () => {
@@ -189,7 +185,35 @@ describe('test numbers while testing live', () => {
         NODE_ENV: 'production',
         WHATSAPP_TEST_NUMBERS: '+919800000000',
         DATABASE_URL: 'postgres://x',
+        FILE_LINK_SECRET: 'a-real-secret-for-files-0123456789',
+        PAY_LINK_SECRET: 'a-real-secret-for-pay-links-0123456789',
       }),
     ).toThrow(/testing only/);
+  });
+});
+
+describe('log-mode sender', () => {
+  it('never logs a full phone number, a link or a token', async () => {
+    const lines: string[] = [];
+    const sender = createWhatsAppSender(
+      loadConfig({ DATABASE_URL: 'postgres://x', WHATSAPP_DELIVERY: 'log' }),
+      (line) => lines.push(line),
+    );
+    await sender.send({
+      toE164: '+919800001234',
+      template: 'payment_link',
+      language: 'en',
+      parameters: ['A', 'https://x.example/pay/secret-token'],
+      buttons: [{ kind: 'url', index: 0, suffix: 'secret-token.mac' }],
+    });
+    await sender.sendSession('+919800001234', {
+      kind: 'text',
+      body: 'Pay at https://x.example/v1/pay/secret-token.mac',
+    });
+    const text = lines.join('\n');
+    expect(text).toContain('1234');
+    expect(text).not.toContain('919800001234');
+    expect(text).not.toContain('secret-token');
+    expect(text).not.toContain('https://');
   });
 });

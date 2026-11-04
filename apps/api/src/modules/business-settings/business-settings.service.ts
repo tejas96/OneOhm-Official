@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ApprovalPolicyView, LeadAssignmentRulesRecord } from '@oneohm/api-contracts';
+import type {
+  ApprovalPolicyView,
+  LeadAssignmentRulesRecord,
+  OnboardingSettingsRecord,
+} from '@oneohm/api-contracts';
 import {
   type BusinessSettingKey,
   type BusinessSettingsMap,
@@ -11,9 +15,12 @@ import {
   checkApprovalPolicy,
   checkDashboardSettings,
   checkReminderTiming,
+  cleanCityOwners,
   isAssignmentRules,
   isLeadAssignmentRules,
   type LeadAssignmentRules,
+  onboardingFieldErrors,
+  onboardingProblem,
   type SettingErrors,
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
@@ -22,7 +29,8 @@ import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
-import { assertCanOwnLeads } from '../crm/lead-owner';
+import { CatalogService } from '../catalog/catalog.service';
+import { cityOwnerStanding } from '../crm/lead-owner';
 
 const CHECKS: {
   readonly [K in BusinessSettingKey]: (value: BusinessSettingsMap[K]) => SettingErrors;
@@ -33,6 +41,11 @@ const CHECKS: {
   dashboard: checkDashboardSettings,
   lead_assignment: (value) =>
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
+  onboarding: (value) => {
+    const problem = onboardingProblem(value);
+    // Field paths (`billBands.2.maxRupees`) mark the inputs; `onboarding` is the summary.
+    return problem ? { ...onboardingFieldErrors(value), onboarding: problem } : {};
+  },
 };
 
 const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
@@ -41,6 +54,7 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   approvals: 'Check the approval limits.',
   dashboard: 'Check the dashboard numbers.',
   lead_assignment: 'Check the lead rule.',
+  onboarding: 'Check the onboarding settings.',
 };
 
 const copyLeadRules = (rules: LeadAssignmentRules): LeadAssignmentRulesRecord => ({
@@ -61,6 +75,7 @@ export class BusinessSettingsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
+    private readonly catalog: CatalogService,
   ) {}
 
   get<K extends BusinessSettingKey>(key: K): Promise<BusinessSettingsMap[K]> {
@@ -73,7 +88,8 @@ export class BusinessSettingsService {
     value: BusinessSettingsMap[K],
   ): Promise<BusinessSettingsMap[K]> {
     const errors = CHECKS[key](value);
-    if (Object.keys(errors).length > 0) throw invalid(PROBLEM[key], errors);
+    // Onboarding names the limit it breaks (say "At most 8 bill bands."), not just the area.
+    if (Object.keys(errors).length > 0) throw invalid(errors.onboarding ?? PROBLEM[key], errors);
     const before = await this.get(key);
     await this.db.transaction(async (tx) => {
       await writeBusinessSetting(tx, key, value, actor.userId);
@@ -85,29 +101,96 @@ export class BusinessSettingsService {
     return this.get(key);
   }
 
-  /** The lead rule as the screen shows it (plain lists, so it can be edited). */
+  /**
+   * The lead rule as the screen shows it (plain lists, so it can be edited), with each
+   * city owner's name and whether they still work on leads.
+   */
   async leadAssignment(): Promise<LeadAssignmentRulesRecord> {
-    return copyLeadRules(await this.get('lead_assignment'));
+    const rules = copyLeadRules(await this.get('lead_assignment'));
+    const ids = rules.cityOwners.map((owner) => owner.userId);
+    const { canOwn, names } = await cityOwnerStanding(this.db, ids);
+    return {
+      ...rules,
+      cityOwners: rules.cityOwners.map((owner) => ({
+        ...owner,
+        ...(names.has(owner.userId) ? { name: names.get(owner.userId) } : {}),
+        inactive: !canOwn.has(owner.userId),
+      })),
+    };
   }
 
   /**
-   * Saves the lead rule. City names are trimmed and blanks dropped (a person with no
-   * city left is dropped too), and every city owner must be someone who can own leads.
+   * Saves the lead rule (`cleanCityOwners`). A saved owner who no longer works on leads
+   * is dropped (the screen marks them inactive); a new one who cannot, or anyone left
+   * with no city, is refused with a message by that person.
    */
   async saveLeadAssignment(
     actor: Actor,
     rules: LeadAssignmentRulesRecord,
   ): Promise<LeadAssignmentRulesRecord> {
-    const cityOwners = rules.cityOwners
-      .map((owner) => ({
-        userId: owner.userId,
-        cities: [...new Set(owner.cities.map((city) => city.trim()).filter(Boolean))],
-      }))
-      .filter((owner) => owner.cities.length > 0);
-    for (const owner of cityOwners) await assertCanOwnLeads(this.db, owner.userId);
-    return copyLeadRules(
-      await this.save(actor, 'lead_assignment', { strategy: rules.strategy, cityOwners }),
-    );
+    const saved = new Set((await this.get('lead_assignment')).cityOwners.map((o) => o.userId));
+    const ids = rules.cityOwners.map((owner) => owner.userId);
+    const { canOwn } = await cityOwnerStanding(this.db, ids);
+    const cleaned = cleanCityOwners(rules.cityOwners, canOwn, saved);
+    const errors: SettingErrors = {};
+    for (const id of cleaned.blank) errors[`cities_${id}`] = 'Add at least one city, or remove.';
+    for (const id of cleaned.refused)
+      errors[`cities_${id}`] = 'This person cannot work on leads. Pick someone in Sales.';
+    if (cleaned.refused.length > 0) throw invalid('Pick someone who works on leads.', errors);
+    if (cleaned.blank.length > 0)
+      throw invalid('Add a city for each person, or remove them.', errors);
+    await this.save(actor, 'lead_assignment', {
+      strategy: rules.strategy,
+      cityOwners: cleaned.kept,
+    });
+    return this.leadAssignment();
+  }
+
+  /** The WhatsApp onboarding settings as the screen shows them. */
+  async onboarding(): Promise<OnboardingSettingsRecord> {
+    const saved = await this.get('onboarding');
+    return {
+      ...saved,
+      serviceCities: [...saved.serviceCities],
+      billBands: saved.billBands.map((band) => ({ ...band })),
+      panelProductIds: { ...saved.panelProductIds },
+    };
+  }
+
+  /**
+   * Saves the onboarding settings. City names are trimmed with blanks and repeats
+   * dropped, blank band translations are left out, and a panel override must be an
+   * active panel from the catalog.
+   */
+  async saveOnboarding(
+    actor: Actor,
+    settings: OnboardingSettingsRecord,
+  ): Promise<OnboardingSettingsRecord> {
+    const serviceCities = [...new Set(settings.serviceCities.map((c) => c.trim()).filter(Boolean))];
+    const panels = new Set((await this.catalog.products('panel')).map((panel) => panel.id));
+    const errors: SettingErrors = {};
+    const panelProductIds: { individual?: string; commercial?: string } = {};
+    for (const type of ['individual', 'commercial'] as const) {
+      const id = settings.panelProductIds[type];
+      if (id === undefined) continue;
+      if (!panels.has(id)) errors[`panel_${type}`] = 'Pick an active panel from the catalog.';
+      panelProductIds[type] = id;
+    }
+    if (Object.keys(errors).length > 0) throw invalid('Check the panels you picked.', errors);
+    // A blank Marathi or Hindi label means "use the label".
+    const billBands = settings.billBands.map(({ maxRupees, labelMr, labelHi, ...band }) => ({
+      ...band,
+      ...(maxRupees === undefined ? {} : { maxRupees }),
+      ...(labelMr?.trim() ? { labelMr: labelMr.trim() } : {}),
+      ...(labelHi?.trim() ? { labelHi: labelHi.trim() } : {}),
+    }));
+    await this.save(actor, 'onboarding', {
+      ...settings,
+      serviceCities,
+      billBands,
+      panelProductIds,
+    });
+    return this.onboarding();
   }
 
   /** The approval limits with the discount limit from the rate card, on one screen. */

@@ -3,7 +3,7 @@ import type { AssistantWords } from './words';
 
 /**
  * What the WhatsApp assistant says in Marathi: the same shape as the English words.
- * "menu", "requests" and "skip" stay as typed keywords, so they work in every language.
+ * Taps carry the customer around; typed words in any language work too.
  */
 export const MR: Words<AssistantWords> = {
   MENU_ROWS: [
@@ -20,13 +20,13 @@ export const MR: Words<AssistantWords> = {
   ],
   WORDS: {
     menu: (name, company) =>
-      `नमस्कार ${name}! मी ${company ? `${company} चा ` : ''}सहाय्यक आहे. तुम्हाला काय पाहायचे आहे? कधीही "menu" लिहा.`,
+      `नमस्कार ${name}! मी ${company ? `${company} चा ` : ''}सहाय्यक आहे. तुम्हाला काय पाहायचे आहे?`,
     menuButton: 'निवडा',
     unknownNumber:
       'नमस्कार! हा नंबर अजून आमच्या कोणत्याही ग्राहकाशी जोडलेला नाही. तुम्हाला सोलरमध्ये रस असेल तर "मला कॉल करा" दाबा. तुम्ही दुसऱ्या नंबरवरून ग्राहक असाल तर कृपया त्या नंबरवरून लिहा.',
     callMeBack: 'मला कॉल करा',
     callbackNoted: 'धन्यवाद! आमच्या टीममधील कोणीतरी लवकरच तुम्हाला कॉल करेल.',
-    noProject: 'तुमचा प्रकल्प अजून सुरू झालेला नाही. आमच्याशी बोलण्यासाठी मेनूमध्ये "व्यक्तीशी बोला" दाबा.',
+    noProject: 'तुमचा प्रकल्प अजून सुरू झालेला नाही. आमच्याशी बोलण्यासाठी "आमच्याशी बोला" दाबा.',
     stage: {
       survey: 'साइट भेट',
       design: 'सिस्टम डिझाइन',
@@ -40,6 +40,7 @@ export const MR: Words<AssistantWords> = {
       not_applicable: 'या प्रकल्पावर अनुदान नाही.',
       pending: 'अनुदान: अजून अर्ज केलेला नाही',
       applied: 'अनुदान: अर्ज केला, सरकारची वाट पाहत आहोत',
+      inspected: 'अनुदान: तपासणी झाली, रक्कम जमा होण्याची वाट पाहत आहोत',
       released: 'अनुदान: जमा झाले',
     },
     waitingOn: {
@@ -51,34 +52,35 @@ export const MR: Words<AssistantWords> = {
     payHere: 'इथे भरा',
     payNow: 'आता भरा',
     noDocuments: 'अजून कागदपत्रे नाहीत. प्रकल्प पुढे जाईल तशी ती इथे दिसतील.',
-    linksExpire: (hours) => `लिंक ${hours} तास चालतील.`,
     askProblem:
       'कृपया समस्या एका मेसेजमध्ये सांगा (उदा. "सकाळपासून इन्व्हर्टरवर एरर दिसतो"). फोटोसोबत कॅप्शनही पाठवू शकता.',
     problemSaved: (category) =>
-      `धन्यवाद. तुमची ${category} विनंती नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "requests" लिहा.`,
+      `धन्यवाद. तुमची ${category} विनंती नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "माझ्या विनंत्या" दाबा.`,
     tooShort: 'कृपया आणखी काही शब्द लिहा, म्हणजे आम्ही मदत करू शकू.',
     noRequests: 'तुमच्या कोणत्याही सेवा विनंत्या नाहीत.',
     askReferral:
       'तुमच्या मित्राचे नाव आणि 10 अंकी मोबाईल नंबर एकाच मेसेजमध्ये पाठवा, उदा. "सुरेश पाटील 9876543210".',
     referralSaved: (name) =>
       `धन्यवाद! आम्ही ${name} यांना कॉल करू. त्यांचे सोलर बसल्यावर तुम्हाला बक्षीस मिळेल.`,
+    referralKnown: 'या नंबरशी आम्ही आधीच संपर्कात आहोत. आमची आठवण ठेवल्याबद्दल धन्यवाद!',
     referralUnclear: 'नाव आणि 10 अंकी मोबाईल नंबर सापडला नाही. कृपया पुन्हा प्रयत्न करा.',
     referredWelcome: (referrer, company) =>
       `${company ? `${company} मध्ये ` : ''}स्वागत आहे! ${referrer} यांनी तुमचे नाव सुचवले आहे. तुमच्या सोलरचे नियोजन करण्यासाठी आमची टीम लवकरच याच नंबरवर कॉल करेल.`,
     askRating: 'आतापर्यंत तुम्ही आमच्यावर किती खूश आहात?',
     ratingSaved: 'रेटिंगसाठी धन्यवाद! त्यामुळे टीमला मदत होते.',
     humanSoon:
-      'टीममधील कोणीतरी लवकरच इथे उत्तर देईल (सोमवार ते शनिवार, सकाळी 9:30 ते संध्याकाळी 6:30). सहाय्यकाकडे परत जाण्यासाठी "menu" लिहा.',
+      'टीममधील कोणीतरी लवकरच इथे उत्तर देईल (सोमवार ते शनिवार, सकाळी 9:30 ते संध्याकाळी 6:30). सहाय्यकाकडे परत जाण्यासाठी "मेनू" दाबा.',
     notUnderstood: 'माफ करा, मला समजले नाही. मी यात मदत करू शकतो:',
-    passedToOwner: (name) => `धन्यवाद. ${name ?? 'आमची टीम'} तुम्हाला इथेच उत्तर देईल.`,
+    welcome: 'आपले स्वागत आहे 🙏',
+    // A person is named with the respectful plural (देतील); the team is singular (C15).
+    passedToOwner: (name) =>
+      `धन्यवाद. ${name ? `${name} तुम्हाला इथेच उत्तर देतील` : 'आमची टीम तुम्हाला इथेच उत्तर देईल'}.`,
     nightReply: (name) =>
       `धन्यवाद. आम्ही सकाळी 9:30 ते संध्याकाळी 6:30 उत्तर देतो. तुमचा मेसेज ${name ? `${name} यांच्याकडे` : 'आमच्या टीमकडे'} आहे.`,
-    quoteConfirm: (number, total) => `कोटेशन ${number} (${total}) स्वीकारायचे?`,
     quoteYes: 'हो, स्वीकारतो',
     quoteNotYet: 'आत्ता नाही',
     quoteChanged: 'हे कोटेशन बदलले आहे किंवा आता खुले नाही.',
     quoteOwnerOnly: 'कोटेशन फक्त ग्राहकाच्या स्वतःच्या नंबरवरून स्वीकारता येते.',
-    quoteThanks: 'धन्यवाद. आमची टीम तुमचा प्रकल्प सुरू करेल आणि आगाऊ रकमेची पेमेंट लिंक पाठवेल.',
   },
   RATINGS: [
     { id: 'rate:5', title: 'खूप खूश', description: '5 पैकी 5' },
@@ -87,14 +89,6 @@ export const MR: Words<AssistantWords> = {
     { id: 'rate:2', title: 'खूश नाही', description: '5 पैकी 2' },
     { id: 'rate:1', title: 'अजिबात खूश नाही', description: '5 पैकी 1' },
   ],
-  FILE_WORDS: {
-    quotation: (number, url) => `कोटेशन ${number}: ${url}`,
-    invoice: (number, amount, url) => `टॅक्स इनव्हॉइस ${number} (${amount}): ${url}`,
-    receipt: (number, amount, url) => `पावती ${number} (${amount}): ${url}`,
-    report: (name, code, url) => `${name} (${code}): ${url}`,
-    paper: (name, url) => `${name}: ${url}`,
-    more: 'आणखी कागदपत्रे OneOhm ॲपमध्ये आहेत.',
-  },
   MEDIA_WORDS: {
     what: { image: 'फोटो', document: 'कागद', video: 'व्हिडिओ', audio: 'व्हॉइस नोट' },
     ask: (what) => `धन्यवाद, तुमचा ${what} मिळाला. हा तुमच्या सोलर सिस्टममधील समस्येबद्दल आहे का?`,
@@ -109,12 +103,10 @@ export const MR: Words<AssistantWords> = {
     photoNotAdded: 'फाइल विनंतीला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
     // Saved as the request's description, which the team reads: kept in English.
     photoOnly: 'Photo or paper sent on WhatsApp.',
-    notRead:
-      'माफ करा, इथे फक्त फोटो आणि PDF कागद घेता येतात. कृपया थोडक्यात लिहा, किंवा "menu" लिहून "व्यक्तीशी बोला" दाबा.',
     tooLarge: 'ही फाइल खूप मोठी आहे. कृपया लहान फोटो किंवा PDF पाठवा.',
     failed: 'माफ करा, ती फाइल उघडता आली नाही. कृपया थोड्या वेळाने पुन्हा पाठवा.',
     problemSavedWithPhotos: (category, photos) =>
-      `धन्यवाद. तुमची ${category} विनंती ${photos === 1 ? 'फोटोसह' : `${photos} फोटोंसह`} नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "requests" लिहा.`,
+      `धन्यवाद. तुमची ${category} विनंती ${photos === 1 ? 'फोटोसह' : `${photos} फोटोंसह`} नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "माझ्या विनंत्या" दाबा.`,
   },
   COVER_WORDS: {
     notYet: 'तुमची सिस्टम सुरू झाल्याच्या दिवसापासून वॉरंटी सुरू होते. तेव्हा ती इथे दिसेल.',
@@ -135,7 +127,7 @@ export const MR: Words<AssistantWords> = {
     amcState: { upcoming: 'लवकरच सुरू', active: 'चालू', ended: 'संपले', cancelled: 'रद्द' },
     amcVisits: (done, total) => `${total} पैकी ${done} भेटी झाल्या`,
     nextVisit: (name, date) => `पुढील ${name} भेट: ${date}`,
-    noAmc: 'AMC: अजून नाही. वार्षिक स्वच्छता आणि तपासणी भेटींसाठी "menu" लिहून "व्यक्तीशी बोला" दाबा.',
+    noAmc: 'AMC: अजून नाही. वार्षिक स्वच्छता आणि तपासणी भेटींसाठी "आमच्याशी बोला" दाबा.',
     help: 'यापैकी कशातही समस्या असल्यास मेनूमध्ये "तक्रार नोंदवा" दाबा.',
   },
   REWARD_WORDS: {
@@ -156,17 +148,17 @@ export const MR: Words<AssistantWords> = {
     },
     paidTotal: (amount) => `तुम्हाला दिले: ${amount}`,
     comingTotal: (amount) => `येणारे: ${amount}`,
-    more: (count) => `आणखी ${count} OneOhm ॲपमध्ये.`,
+    more: (count) => `आणखी ${count}.`,
   },
   FEEDBACK_WORDS: {
-    later:
-      'धन्यवाद! तुमची सोलर सिस्टम सुरू झाल्यावर आम्ही तुमचे रेटिंग विचारू. इतर पर्याय पाहण्यासाठी "menu" लिहा.',
-    askComment: 'रेटिंगसाठी धन्यवाद! आणखी काही सांगायचे आहे? इथे लिहा, किंवा "skip" लिहा.',
+    later: 'धन्यवाद! तुमची सोलर सिस्टम सुरू झाल्यावर आम्ही तुमचे रेटिंग विचारू.',
+    askComment: 'रेटिंगसाठी धन्यवाद! आणखी काही सांगायचे आहे? इथे लिहा, किंवा "मेनू" दाबा.',
     commentSaved: 'धन्यवाद, आम्ही नोंद घेतली. त्यामुळे टीमला अधिक चांगले काम करता येते.',
     skipWords: ['skip', 'no', 'nahi', 'nako', 'नाही', 'नको', 'काही नाही'],
   },
   ANSWER_WORDS: {
     now: (stage, done, steps) => `आता: ${stage} (${steps} पैकी ${done} टप्पे पूर्ण)`,
+    allDone: (steps) => `सर्व ${steps} टप्पे पूर्ण. तुमची सोलर सिस्टम पूर्ण झाली आहे.`,
     next: (title, when) => `पुढे: ${title}, ${when} रोजी नियोजित`,
     waitingSince: (who, when) => `${when} पासून ${who}`,
     paid: (label, amount) => `✓ ${label}: ${amount} भरले`,

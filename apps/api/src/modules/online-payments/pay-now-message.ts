@@ -1,6 +1,6 @@
 import { formatInr } from '@oneohm/shared';
 import type { Environment } from '../../config/environment';
-import { signPayToken } from './pay-token';
+import { paySigningSecret, signPayToken } from './pay-token';
 
 export interface PayNowDetails {
   readonly customerName: string;
@@ -16,7 +16,7 @@ export interface PayNowDetails {
  * makes the Razorpay page only when opened (so it never goes stale while unread).
  */
 export function payNowPayload(env: Environment, details: PayNowDetails): Record<string, string> {
-  const token = signPayToken(env.FILE_LINK_SECRET, {
+  const token = signPayToken(paySigningSecret(env), {
     milestoneId: details.milestoneId,
     customerId: details.customerId,
     exp: Math.floor(Date.now() / 1000) + env.PAYMENT_LINK_DAYS * 86_400,
@@ -25,6 +25,8 @@ export function payNowPayload(env: Environment, details: PayNowDetails): Record<
     customer: details.customerName,
     amount: formatInr(details.owedPaise),
     milestone: details.milestoneLabel,
+    // Said as "2nd instalment (65%)" when queued (plainNames).
+    milestoneId: details.milestoneId,
     project: details.projectCode,
     link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`,
     payToken: token,

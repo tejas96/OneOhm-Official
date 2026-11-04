@@ -25,6 +25,18 @@ describe('shared file links', () => {
     expect(readFileLink(secret, signFileLink(secret, report), 0)).toEqual(report);
   });
 
+  it('carries a lead’s estimate with the lead and no customer', () => {
+    const estimate = {
+      kind: 'estimate',
+      id: 'e1',
+      customerId: '',
+      leadId: 'lead-1',
+      exp: 2_000_000_000,
+    } as const;
+    const secret = 'a-long-secret-value';
+    expect(readFileLink(secret, signFileLink(secret, estimate), 0)).toEqual(estimate);
+  });
+
   it('still opens links made before reports had a key', () => {
     // Exactly how older links were made: the JSON of kind, id, customerId and exp.
     const data = Buffer.from(JSON.stringify(file)).toString('base64url');

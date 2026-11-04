@@ -34,7 +34,7 @@ function ProjectsSkeleton({ label }: { readonly label: string }) {
   return (
     <SkeletonGroup label={label} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {[0, 1, 2, 3, 4, 5].map((card) => (
-        <Skeleton key={card} className="h-72 rounded-lg" />
+        <Skeleton key={card} className="h-56 rounded-lg" />
       ))}
     </SkeletonGroup>
   );

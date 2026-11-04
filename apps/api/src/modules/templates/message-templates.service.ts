@@ -4,8 +4,9 @@ import { messageTemplates, taskTemplates } from '@oneohm/database';
 import { asc, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { invalid, notFound } from '../../common/http/errors';
+import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { checkMessageTemplate } from './message-template-checks';
 
 interface MessageTemplateChange {
   metaName: string;
@@ -47,11 +48,7 @@ export class MessageTemplatesService {
   }
 
   async update(actor: Actor, key: string, change: MessageTemplateChange): Promise<MessageTemplate> {
-    const slots = new Set(change.preview.match(/\{\{\d+\}\}/g) ?? []).size;
-    if (slots !== change.fields.length)
-      throw invalid('The wording and the fields do not match.', {
-        fields: `The wording has ${slots} placeholders; give ${slots} fields in order.`,
-      });
+    checkMessageTemplate(key, change);
     const [row] = await this.db
       .update(messageTemplates)
       .set({ ...change, updatedAt: new Date() })

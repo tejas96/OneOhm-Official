@@ -1,5 +1,5 @@
 import type { WorkerConfig } from '../config';
-import { isRetryableStatus } from './whatsapp-cloud';
+import { isRetryableStatus } from './send-errors';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 

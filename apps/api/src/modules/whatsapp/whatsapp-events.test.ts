@@ -156,3 +156,17 @@ describe('who may post to the webhook', () => {
     expect(webhookAccess({}, { key, rawBody: body })).toBe('not_found');
   });
 });
+
+describe('webhook with the app secret set', () => {
+  const unsigned = Buffer.from('{"entry":[]}');
+  it('refuses an unsigned or wrongly signed post on every path', () => {
+    const settings = { appSecret: 's3cret', pathKey: 'k'.repeat(40) };
+    const key = 'k'.repeat(40);
+    expect(webhookAccess(settings, { rawBody: unsigned })).toBe('bad_signature');
+    expect(webhookAccess(settings, { key, rawBody: unsigned })).toBe('bad_signature');
+    expect(webhookAccess(settings, { key, rawBody: unsigned, signature: '' })).toBe(
+      'bad_signature',
+    );
+    expect(webhookAccess(settings, { key, signature: 'sha256=00' })).toBe('bad_signature');
+  });
+});

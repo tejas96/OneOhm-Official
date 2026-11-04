@@ -28,7 +28,7 @@ export function ReportBody<T>({
       <SkeletonGroup label={label} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[0, 1, 2, 3].map((tile) => (
-            <Skeleton key={tile} className="h-32 rounded-xl" />
+            <Skeleton key={tile} className="h-24 rounded-xl" />
           ))}
         </div>
         <Skeleton className="h-64 rounded-xl" />

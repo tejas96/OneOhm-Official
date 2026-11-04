@@ -7,6 +7,7 @@ import {
   type Transaction,
   taskDependencies,
 } from '@oneohm/database';
+import { startsWarranties } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { conflict } from '../../common/http/errors';
@@ -87,8 +88,9 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     );
   }
 
-  // Commissioning records the installed system and starts its warranties (PRD 3.17).
-  if (task.onComplete === 'commissioning_completed' || task.onComplete === 'project_operational') {
+  // Commissioning records the installed system and starts its warranties (PRD 3.17), even
+  // when the commissioning task's "When done" was changed. Recording twice keeps the first.
+  if (startsWarranties(task)) {
     await recordInstalledAssets(tx, task.projectId, todayIn('Asia/Kolkata', now));
   }
 

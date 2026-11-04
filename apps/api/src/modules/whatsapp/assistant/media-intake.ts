@@ -6,7 +6,11 @@ import { CustomerDocumentRequestsService } from '../../customer-portal/customer-
 import type { IncomingFile } from '../../documents/upload-file';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
+import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
+import { stepOf } from './chat-step';
+import { sayWithTaps } from './closing-taps';
+import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
 
@@ -49,6 +53,7 @@ export class MediaIntakeService {
     @Inject(WHATSAPP_MEDIA) private readonly gateway: MediaGateway,
     private readonly papers: CustomerDocumentRequestsService,
     private readonly problems: ProblemFlowService,
+    private readonly people: HandOverService,
   ) {}
 
   /**
@@ -61,10 +66,13 @@ export class MediaIntakeService {
     media: IncomingMedia,
     said: string,
   ): Promise<void> {
-    if (media.type === 'audio' || media.type === 'video')
-      return this.text(chat, MEDIA_WORDS.notRead);
+    // A voice note or a video goes warmly to their person, as for leads (C12).
+    if (media.type === 'audio' || media.type === 'video') {
+      const reply = heardReply(media.type, await this.people.answererName(chat));
+      return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
+    }
     const now = Date.now();
-    if (chat.state === 'await_problem') {
+    if (stepOf(chat) === 'await_problem') {
       const file = await this.fetchOrSay(chat, media);
       if (!file) return;
       const earlier = await this.fetchPending(pendingMedia(chat.context, now));
@@ -77,6 +85,10 @@ export class MediaIntakeService {
       const file = await this.fetchOrSay(chat, media);
       return file ? this.problems.addPhoto(chat, customerId, raised.id, file) : undefined;
     }
+    // Meta's retry of a file already filed (the reply after it failed): not filed again.
+    const filed = (chat.context as { filedMedia?: { id: string; title: string } }).filedMedia;
+    if (filed?.id === media.id)
+      return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(filed.title), ['menu']);
     const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
     if (open.length > 0) return this.fulfil(chat, customerId, open, media);
     return this.ask(chat, media, now);
@@ -106,6 +118,8 @@ export class MediaIntakeService {
       if (error instanceof AppError) return this.text(chat, MEDIA_WORDS.paperRefused(oldest.title));
       throw error;
     }
+    const filedMedia = { id: media.id, title: oldest.title };
+    await setState(this.db, chat.id, chat.state, { ...(chat.context as object), filedMedia });
     const left = open
       .slice(0, -1)
       .reverse()
@@ -114,7 +128,7 @@ export class MediaIntakeService {
       MEDIA_WORDS.paperSaved(oldest.title),
       left.length > 0 ? MEDIA_WORDS.stillNeed(left.join(', ')) : '',
     ];
-    return this.text(chat, lines.filter(Boolean).join('\n\n'));
+    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['menu']);
   }
 
   /** Nothing waits for this file: keep only its reference and ask once what it is about. */

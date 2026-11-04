@@ -63,7 +63,9 @@ export async function expectStatus<
     typeof window !== 'undefined' &&
     !window.location.pathname.startsWith('/sign-in')
   ) {
-    window.location.assign(`/sign-in?next=${encodeURIComponent(window.location.pathname)}`);
+    window.location.assign(
+      `/sign-in?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+    );
   }
   throw toApiError(response.status, response.body);
 }

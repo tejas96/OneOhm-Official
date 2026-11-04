@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { QuotationDetail, QuotationInput } from '@oneohm/api-contracts';
-import { quotationInverters, quotationLines, quotations } from '@oneohm/database';
+import { noticeCustomer, quotationInverters, quotationLines, quotations } from '@oneohm/database';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -12,7 +12,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
-import { autoMoveLead } from '../crm/lead-history';
+import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { changeAwaiting, changeTurnedDown } from '../project-changes/change-close';
 import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import {
@@ -28,6 +28,11 @@ import { queueQuotePdf, quoteMessage } from './quotation-message';
 import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { lineRows, quotationRow } from './quotation-rows';
+import { assertQuoteTypeOffered } from './quote-project-type';
+import { freezeQuotedTerms } from './quoted-terms';
+
+/** A sent quote is followed up this many days later (the lead owner's next action). */
+const QUOTE_FOLLOW_UP_DAYS = 2;
 
 @Injectable()
 export class QuotationsService {
@@ -54,6 +59,8 @@ export class QuotationsService {
     const today = todayIn();
     // A project whose survey revision was turned down takes this quote as its next one.
     const redraft = revisionOf ? null : await redraftFor(this.db, input.propertyId);
+    // A brand-new quote must be for a project type the owner still offers.
+    if (!revisionOf && !redraft) await assertQuoteTypeOffered(this.db, input);
     const id = await this.db.transaction(async (tx) => {
       const slot = await numberFor(tx, input.propertyId, today, revisionOf ?? redraft?.revisionOf);
       const totals = priced.preview.totals;
@@ -120,23 +127,28 @@ export class QuotationsService {
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be sent.', 'not_open');
     await this.assertManagerFor(actor, id);
+    await assertQuoteTypeOffered(this.db, quotation.input, id);
     await this.db.transaction(async (tx) => {
       await tx
         .update(quotations)
         .set({ status: 'sent', sentAt: new Date(), updatedAt: new Date() })
         .where(eq(quotations.id, id));
-      await queueWhatsApp(
-        tx,
-        quotation.customerPhone,
-        'quotation_sent',
-        quoteMessage(this.env, quotation),
-        `quotation_sent:${id}`,
-      );
-      await queueQuotePdf(tx, this.env, quotation);
+      await freezeQuotedTerms(tx, id);
+      // In an open chat the PDF and buttons are the message; the app inbox is told either way.
+      const chatted = await queueQuotePdf(tx, this.env, quotation);
+      const message = quoteMessage(this.env, quotation);
+      const key = `quotation_sent:${id}`;
+      if (chatted)
+        await noticeCustomer(tx, quotation.customerPhone, 'quotation_sent', message, key);
+      else await queueWhatsApp(tx, quotation.customerPhone, 'quotation_sent', message, key);
       if (quotation.input.leadId) {
         const again = quotation.status === 'sent' ? ' again' : '';
         const note = `Quotation ${quotation.number} sent${again}.`;
         await autoMoveLead(tx, quotation.input.leadId, actor.userId, 'quoted', note);
+        // "Send again" keeps whatever the owner set since; so does a revision (same note).
+        const on = addDays(todayIn(this.env.BUSINESS_TIMEZONE), QUOTE_FOLLOW_UP_DAYS);
+        const next = { on, note: `Follow up quote ${quotation.number}`, openOnly: true };
+        if (!again) await setLeadNextAction(tx, quotation.input.leadId, actor.userId, next);
       }
       await recordAudit(tx, actor.userId, 'quotation.sent', 'quotation', id);
     });
@@ -151,6 +163,7 @@ export class QuotationsService {
     if (!['draft', 'sent'].includes(quotation.status))
       throw conflict('Only open quotations can be accepted.', 'not_open');
     await this.assertManagerFor(actor, id);
+    await assertQuoteTypeOffered(this.db, quotation.input, id);
     await this.db.transaction(async (tx) => {
       const data = { totalPaise: quotation.totalPaise };
       // Accepted a moment ago (by the customer on WhatsApp, say): the same answer as before.

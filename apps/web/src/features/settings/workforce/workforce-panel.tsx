@@ -63,6 +63,7 @@ export function WorkforcePanel() {
         <p className="max-w-2xl type-body text-ink-muted">{t('intro')}</p>
         <LeaveKindsSection
           kinds={draft.leaveTypes}
+          savedKeys={saved.leaveTypes.map((kind) => kind.key)}
           onChange={(leaveTypes) => setDraft({ ...draft, leaveTypes })}
           errors={form.fieldErrors}
         />

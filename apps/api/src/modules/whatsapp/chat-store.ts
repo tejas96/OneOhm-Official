@@ -76,16 +76,16 @@ export async function conversationFor(
   incoming: Incoming,
 ): Promise<Conversation> {
   const owner = await customerForPhone(db, incoming.from);
-  const values = {
-    customerId: owner?.id ?? null,
-    profileName: incoming.profileName,
-    lastInboundAt: incoming.at,
-    updatedAt: new Date(),
-  };
+  const values = { customerId: owner?.id ?? null, profileName: incoming.profileName };
+  // Meta can deliver an older message late: the chat keeps its newest time.
+  const lastInboundAt = sql`greatest(${waConversations.lastInboundAt}, excluded.last_inbound_at)`;
   const [row] = await db
     .insert(waConversations)
-    .values({ phone: incoming.from, ...values })
-    .onConflictDoUpdate({ target: waConversations.phone, set: values })
+    .values({ phone: incoming.from, ...values, lastInboundAt: incoming.at })
+    .onConflictDoUpdate({
+      target: waConversations.phone,
+      set: { ...values, lastInboundAt, updatedAt: new Date() },
+    })
     .returning();
   if (!row) throw new Error('Conversation upsert returned nothing.');
   return row;
@@ -142,6 +142,8 @@ export async function queueReply(
       template: `session:${reply.kind}`,
       payload: reply,
       dedupeKey: dedupeKey ?? `chat:${randomUUID()}`,
+      // The clock, not the transaction's start: replies queued together go out in order.
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });
@@ -216,13 +218,23 @@ export async function conversationForPhone(
   return again;
 }
 
-/** The new context, still carrying where the chat's lead came from (see entry-capture). */
-export const keepEntry = (context: Record<string, unknown>) =>
-  context.entry === undefined
-    ? sql`CASE WHEN ${waConversations.context} ? 'entry'
-        THEN ${JSON.stringify(context)}::jsonb || jsonb_build_object('entry', ${waConversations.context}->'entry')
-        ELSE ${JSON.stringify(context)}::jsonb END`
-    : context;
+/** The new context, still carrying the lead `entry` and onboarding `ob` unless it sets them. */
+export const keepEntry = (context: Record<string, unknown>) => {
+  const kept = ['entry', 'ob'].filter((key) => context[key] === undefined);
+  if (kept.length === 0) return context;
+  return sql`${JSON.stringify(context)}::jsonb || coalesce((SELECT jsonb_object_agg(key, value) FROM jsonb_each(${waConversations.context}) WHERE key = ANY(${`{${kept.join(',')}}`}::text[])), '{}'::jsonb)`;
+};
+
+/** The chat row, locked until the transaction ends, so two messages take turns. */
+export async function lockedChat(tx: DatabaseExecutor, id: string): Promise<Conversation> {
+  const [chat] = await tx
+    .select()
+    .from(waConversations)
+    .where(eq(waConversations.id, id))
+    .for('update');
+  if (!chat) throw new Error('Conversation not found.');
+  return chat;
+}
 
 /** Moves the chat to the next step of the assistant, with what that step needs. */
 export async function setState(

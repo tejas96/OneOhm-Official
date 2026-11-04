@@ -34,19 +34,21 @@ describe('WhatsApp quote and pay', () => {
     expect(file.headers.get('content-type')).toContain('application/pdf');
   });
 
-  it('lists a sent, not yet accepted quote in the Documents answer', async () => {
+  it('sends a sent, not yet accepted quote as the file from Documents', async () => {
     const customer = await newCustomer(admin, { name: 'Quote Documents Customer (test)' });
     const quotation = await createQuotation(admin, customer);
     await admin.post(`/quotations/${quotation.id}/send`);
 
     await sendInbound(customer.phone, { text: 'documents' });
 
-    const [reply] = await rows<{ text: string }>(
-      "select payload::text as text from outbox where recipient = $1 and template like 'session:%' order by created_at desc limit 1",
+    // The only paper goes at once, as the PDF itself (live QA round 2).
+    const [file] = await rows<{ payload: Record<string, string> }>(
+      "select payload from outbox where recipient = $1 and template = 'session:document' order by created_at desc limit 1",
       [customer.phone],
     );
-    expect(reply?.text).toContain(quotation.number);
-    expect(reply?.text).toContain('/v1/files/shared/');
+    expect(file?.payload.caption).toContain(quotation.number);
+    expect(file?.payload.filename).toBe('OneOhm-Quote-Documents-Customer-test-quote.pdf');
+    expect(file?.payload.link).toContain('/v1/files/shared/');
   });
 
   const sentQuote = async (name: string) => {
@@ -69,6 +71,12 @@ describe('WhatsApp quote and pay', () => {
     );
   const thanks = (id: string) =>
     rows('select 1 from outbox where dedupe_key = $1', [`quote_thanks:${id}`]);
+  /** "This quote is already accepted", one per tap after acceptance (menu audit H4). */
+  const alreadySaid = (phone: string) =>
+    rows<{ payload: { body: string; buttons: { id: string }[] } }>(
+      "select payload from outbox where recipient = $1 and dedupe_key like 'quote_already:%'",
+      [phone],
+    );
 
   it('asks to confirm, then accepts on yes', async () => {
     const { customer, quotation } = await sentQuote('Quote Accept Customer (test)');
@@ -110,7 +118,7 @@ describe('WhatsApp quote and pay', () => {
     expect(await thanks(quotation.id)).toHaveLength(1);
   });
 
-  it('accepts once when the yes arrives twice', async () => {
+  it('accepts once when the yes arrives twice, and the second tap hears it is accepted', async () => {
     const { customer, quotation } = await sentQuote('Quote Twice Customer (test)');
     const yes = { buttonPayload: `quote_yes:${quotation.id}`, id: `wamid.twice-${quotation.id}` };
 
@@ -124,6 +132,16 @@ describe('WhatsApp quote and pay', () => {
     expect(await statusOf(quotation.id)).toBe('accepted');
     expect(await acceptances(quotation.id)).toHaveLength(1);
     expect(await thanks(quotation.id)).toHaveLength(1);
+    // The second tap is told, with Menu; Meta's retry of the first tap hears nothing more.
+    const already = await alreadySaid(customer.phone);
+    expect(already).toHaveLength(1);
+    expect(already[0]?.payload.body).toBe('This quote is already accepted. Thank you!');
+    expect(already[0]?.payload.buttons.map((button) => button.id)).toEqual(['menu']);
+
+    // "Accept quote" on the accepted quote is answered the same way, not silent.
+    await sendInbound(customer.phone, { buttonPayload: `quote_accept:${quotation.id}` });
+    expect(await alreadySaid(customer.phone)).toHaveLength(2);
+    expect(await acceptances(quotation.id)).toHaveLength(1);
   });
 
   it('accepts once when the customer and staff accept at the same moment', async () => {
@@ -140,9 +158,11 @@ describe('WhatsApp quote and pay', () => {
 
       expect(await statusOf(quotation.id)).toBe('accepted');
       expect(await acceptances(quotation.id)).toHaveLength(1);
-      // Whoever lost the race was told: staff get a 409, the customer only a thank-you.
+      // Whoever lost the race was told: staff get a 409, the customer one thank-you (or,
+      // when staff were first, "already accepted. Thank you!").
       expect([200, 409]).toContain(staff.status);
-      expect(await thanks(quotation.id)).toHaveLength(1);
+      const told = (await thanks(quotation.id)).length + (await alreadySaid(customer.phone)).length;
+      expect(told).toBe(1);
     }
   });
 
@@ -186,8 +206,13 @@ describe('WhatsApp quote and pay', () => {
     const page = await fetch(`${API}/pay/due/${sent?.payload.payToken}`, {
       redirect: 'manual',
     });
-    expect(page.status).toBe(302);
-    expect(page.headers.get('location')).toContain('/v1/pay/sandbox/');
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain('href="?go=1" rel="nofollow">Continue to pay</a>');
+    const go = await fetch(`${API}/pay/due/${sent?.payload.payToken}?go=1`, {
+      redirect: 'manual',
+    });
+    expect(go.status).toBe(302);
+    expect(go.headers.get('location')).toContain('/v1/pay/sandbox/');
   });
 
   it('the Payments menu sends a Pay now button for each due amount', async () => {
@@ -207,5 +232,12 @@ describe('WhatsApp quote and pay', () => {
     expect(buttons.length).toBeGreaterThan(0);
     expect(buttons[0]?.payload.label).toBe('Pay now');
     expect(buttons[0]?.payload.url).toContain('/v1/pay/due/');
+    // The summary before the buttons keeps the amounts but no raw gateway link.
+    const [summary] = await rows<{ payload: { body: string } }>(
+      "select payload from outbox where recipient = $1 and template = 'session:text' order by created_at desc limit 1",
+      [customer.phone],
+    );
+    expect(summary?.payload.body).toContain('₹');
+    expect(summary?.payload.body).not.toMatch(/https?:\/\//);
   });
 });

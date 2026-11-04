@@ -8,7 +8,6 @@ import type {
 import { products, subsidyRules } from '@oneohm/database';
 import {
   atAcceptedPrice,
-  detailProblems,
   type InverterPick,
   type PanelProduct,
   type PricedProduct,
@@ -16,6 +15,7 @@ import {
   ruleInForce,
   type StateTopUpRule,
   type SubsidyRule,
+  zeroCostLines,
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -25,9 +25,11 @@ import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { type AcceptedPricing, acceptedPricing, savedFor } from './accepted-pricing';
+import { discountLimitPaise } from './discount-limit';
 import { resolveExtras } from './quotation-extras';
 import { requiredInverterPicks } from './quotation-inverters';
 import { costingView, type QuotedLine, quoteTotals } from './quotation-totals';
+import { assertCostsKnown, assertDetailPriceable, assertQuotable } from './quote-checks';
 import { type SiteFacts, siteFactsWithoutProperty } from './site-facts';
 import { stateRuleToday } from './state-support-line';
 import { type SurveyRepricing, surveyRepricing } from './survey-repricing';
@@ -64,16 +66,6 @@ const asPanel = (row: ProductRow): PanelProduct => ({
   dcr: row.dcr,
 });
 
-/** A quotation's own detail may only name rates the card still has. */
-function assertDetailPriceable(rates: RateCard, input: QuotationPreviewInput): void {
-  const problems = input.costing ? detailProblems(rates, input.costing) : [];
-  if (problems.length === 0) return;
-  throw invalid(
-    'Some of this quotation’s detail names rates that are no longer on the rate card.',
-    Object.fromEntries(problems.map((problem) => [problem.path.join('.'), problem.message])),
-  );
-}
-
 /** The one place quotation money is calculated (PRD 3.9: no duplicate pricing logic). */
 @Injectable()
 export class QuotationPricingService {
@@ -87,15 +79,15 @@ export class QuotationPricingService {
   async price(input: QuotationPreviewInput, options: PriceOptions = {}): Promise<PricedQuotation> {
     const against = options.against;
     const site = await this.siteFacts(input);
-    const panel = await this.product(input.panelProductId, 'panel', 'panelProductId');
+    const panel = await this.product(input.panelProductId, 'panel', 'panelProductId', !against);
     const picks = requiredInverterPicks(input);
     const inverterProducts = await Promise.all(
       picks.map((pick, index) =>
-        this.product(pick.productId, 'inverter', `inverters.${index}.productId`),
+        this.product(pick.productId, 'inverter', `inverters.${index}.productId`, !against),
       ),
     );
     const battery = input.batteryProductId
-      ? await this.product(input.batteryProductId, 'battery', 'batteryProductId')
+      ? await this.product(input.batteryProductId, 'battery', 'batteryProductId', !against)
       : undefined;
     const rates = against?.rates ?? (await this.catalog.pricedRateCard());
     assertDetailPriceable(rates, input);
@@ -103,7 +95,7 @@ export class QuotationPricingService {
     const stateRule = against ? against.stateRule : await stateRuleToday(this.db, site);
     const extras = resolveExtras(input.extras ?? [], {
       rates,
-      products: await this.extraProducts(input),
+      products: await this.extraProducts(input, !against),
       saved: against?.lines,
     });
     const parts = {
@@ -135,18 +127,20 @@ export class QuotationPricingService {
       );
 
     const chosen = totalsFor(panel, input.discountPaise);
+    if (!against) assertCostsKnown(rates, chosen.lines);
     const undiscounted = totalsFor(panel, 0);
     const alternative = against ? null : await this.alternativePanel(panel);
-    const other = alternative ? totalsFor(alternative, input.discountPaise) : null;
+    const priced = alternative ? totalsFor(alternative, input.discountPaise) : null;
+    // A panel with no cost has no fair price to compare under cost plus margin.
+    const other = priced && zeroCostLines(rates, priced.lines).length === 0 ? priced : null;
     const comparison = other
       ? panel.dcr
         ? { dcr: chosen.totals, nonDcr: other.totals }
         : { dcr: other.totals, nonDcr: chosen.totals }
       : null;
-    const limit = Math.round(
-      (undiscounted.totals.totalPaise *
-        (rates.discountApprovalBp ?? this.env.DISCOUNT_APPROVAL_BP)) /
-        10_000,
+    const limit = discountLimitPaise(
+      undiscounted.totals,
+      rates.discountApprovalBp ?? this.env.DISCOUNT_APPROVAL_BP,
     );
     return {
       preview: {
@@ -198,7 +192,10 @@ export class QuotationPricingService {
   }
 
   /** Catalog products picked for optional items and gifts. */
-  private async extraProducts(input: QuotationPreviewInput): Promise<Map<string, ProductRow>> {
+  private async extraProducts(
+    input: QuotationPreviewInput,
+    fresh: boolean,
+  ): Promise<Map<string, ProductRow>> {
     const ids = [...new Set((input.extras ?? []).flatMap((extra) => extra.productId ?? []))];
     if (ids.length === 0) return new Map();
     const rows = await this.db.select().from(products).where(inArray(products.id, ids));
@@ -207,6 +204,7 @@ export class QuotationPricingService {
         extras: 'Pick the product again.',
       });
     }
+    if (fresh) for (const row of rows) assertQuotable(row, 'extras');
     return new Map(rows.map((row) => [row.id, row]));
   }
 
@@ -235,8 +233,11 @@ export class QuotationPricingService {
     id: string,
     category: ProductRow['category'],
     field: string,
+    fresh: boolean,
   ): Promise<ProductRow> {
     const row = await this.catalog.product(id);
+    // A survey revision keeps the accepted quote's products, even if archived since.
+    if (fresh) assertQuotable(row, field);
     if (row.category !== category || (category === 'panel' && !row.wattageWp)) {
       throw invalid(`Choose a ${category} for this line.`, {
         [field]: `This is not a ${category}.`,

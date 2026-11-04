@@ -33,6 +33,8 @@ export const chatSummarySchema = z.object({
   lastInboundAt: instantSchema.nullable(),
   /** WhatsApp allows free replies for 24 hours after the customer's last message. */
   windowOpen: z.boolean(),
+  /** The person sent STOP: no templates or nudges until they send START. */
+  optedOut: z.boolean(),
 });
 export type ChatSummary = z.infer<typeof chatSummarySchema>;
 

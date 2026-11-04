@@ -6,8 +6,6 @@ import { useTranslations } from 'next-intl';
 import { ContractorField } from '@/features/projects/team/contractor-field';
 import { TeamMembersField } from '@/features/projects/team/team-members-field';
 
-export const MANAGER_LATER = 'later';
-
 /** Manager, contractor and named team for a new project (PRD 3.8, Flow H). */
 export function CreateTeamSection({
   options,
@@ -20,7 +18,7 @@ export function CreateTeamSection({
   errors,
 }: {
   readonly options: TeamOptions | undefined;
-  readonly manager: string;
+  readonly manager: string | undefined;
   readonly onManager: (value: string) => void;
   readonly contractor: string;
   readonly onContractor: (value: string) => void;
@@ -38,14 +36,12 @@ export function CreateTeamSection({
         <p className="type-body-sm text-ink-faint">{teamT('teamHint')}</p>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label={t('manager')} hint={t('managerHint')} error={errors.managerUserId}>
+        <Field label={t('manager')} hint={t('managerHint')} error={errors.managerUserId} required>
           <Select
             value={manager}
             onValueChange={onManager}
-            options={[
-              { value: MANAGER_LATER, label: t('managerLater') },
-              ...people.map((person) => ({ value: person.id, label: person.fullName })),
-            ]}
+            placeholder={t('choose')}
+            options={people.map((person) => ({ value: person.id, label: person.fullName }))}
           />
         </Field>
         <ContractorField

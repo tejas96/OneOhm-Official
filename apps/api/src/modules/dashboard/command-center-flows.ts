@@ -2,6 +2,7 @@ import type { CommandCenter } from '@oneohm/api-contracts';
 import { type Database, leads, projects, projectTasks, quotations } from '@oneohm/database';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, eq, gte, isNotNull, ne, sql } from 'drizzle-orm';
+import { businessDate } from './business-days';
 import { type CenterScope, indiaStart } from './command-center-scope';
 
 /** Systems switched on in the period, and those due to be in the coming week. */
@@ -64,10 +65,8 @@ export async function waitingDays(
   for (const row of rows) {
     if (!row.since) continue;
     const end =
-      row.status === 'completed' && row.completedAt
-        ? row.completedAt.toISOString().slice(0, 10)
-        : scope.today;
-    days[row.party] += Math.max(0, daysBetween(row.since.toISOString().slice(0, 10), end));
+      row.status === 'completed' && row.completedAt ? businessDate(row.completedAt) : scope.today;
+    days[row.party] += Math.max(0, daysBetween(businessDate(row.since), end));
   }
   return days;
 }

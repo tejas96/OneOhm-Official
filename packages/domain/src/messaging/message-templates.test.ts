@@ -3,8 +3,10 @@ import {
   DEFAULT_MESSAGE_TEMPLATES,
   FOLLOW_UP_MAX,
   followUpText,
+  messageFieldsFor,
   renderTemplate,
   templateExtras,
+  unknownMessageFields,
 } from './message-templates';
 
 describe('message templates', () => {
@@ -54,5 +56,23 @@ describe('follow-up text', () => {
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');
     expect(templateExtras('project_started')).toBeUndefined();
+  });
+});
+
+describe('message fields', () => {
+  it('lets a message use only the details its senders fill', () => {
+    expect(messageFieldsFor('maintenance_visit')).toEqual(['customer', 'visit', 'date', 'project']);
+  });
+
+  it('names the fields a message cannot fill', () => {
+    expect(unknownMessageFields('project_milestone', ['customer', 'project', 'amount'])).toEqual([
+      'amount',
+    ]);
+    expect(unknownMessageFields('project_milestone', ['project', 'customer'])).toEqual([]);
+  });
+
+  it('leaves a message OneOhm does not ship unchecked, as its sender is unknown', () => {
+    expect(messageFieldsFor('made_up')).toBeNull();
+    expect(unknownMessageFields('made_up', ['customer', 'manager'])).toEqual([]);
   });
 });

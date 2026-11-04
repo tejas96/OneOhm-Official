@@ -428,6 +428,34 @@
       "when": 1793675284391,
       "tag": "0060_lead_attribution_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1793685155993,
+      "tag": "0061_whatsapp_onboarding_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793705559059,
+      "tag": "0062_outbox_started_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1793706145137,
+      "tag": "0063_whatsapp_opt_out",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1793710749070,
+      "tag": "0064_whatsapp_assistant_tap",
+      "breakpoints": true
     }
   ]
 }

@@ -50,7 +50,7 @@ export function DeliveryByProject({ rows }: { readonly rows: readonly ProjectRow
       cell: (row) => (
         <span className="flex min-w-0 flex-col gap-0.5">
           <Link
-            href={`/projects/${row.projectId}`}
+            href={`/projects/${row.projectId}?tab=tasks`}
             className="oh-stretched-link truncate rounded-sm font-medium text-ink"
           >
             {row.name}

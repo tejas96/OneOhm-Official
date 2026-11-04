@@ -16,6 +16,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { contactLeadsByPhone } from '../crm/lead-history';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
 import {
   conversationForPhone,
@@ -68,11 +69,11 @@ export class ChatsService {
       .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
       .leftJoin(users, eq(users.id, waMessages.sentByUserId))
       .where(eq(waMessages.conversationId, id))
-      .orderBy(waMessages.createdAt)
-      .limit(500);
+      .orderBy(desc(waMessages.createdAt))
+      .limit(200); // the newest 200, shown oldest first
     return {
       chat,
-      messages: rows.map(({ message, status, deliveryStatus, sentBy }) => ({
+      messages: rows.reverse().map(({ message, status, deliveryStatus, sentBy }) => ({
         id: message.id,
         direction: message.direction as 'in' | 'out',
         kind: message.kind,
@@ -85,9 +86,8 @@ export class ChatsService {
   }
 
   /**
-   * A team member answers; the assistant stays quiet until released or "menu". Inside
-   * WhatsApp's 24-hour window the words go as they are; after it, inside the approved
-   * follow-up template, so the team never has to switch to a personal phone.
+   * A team member answers: the assistant stays quiet until released or "menu", and a bot
+   * step left waiting ends (menu audit M6). Past the 24 hours, in the follow-up template.
    */
   async reply(actor: Actor, id: string, text: string): Promise<ChatDetail> {
     const { chat } = await this.get(actor, id);
@@ -96,6 +96,7 @@ export class ChatsService {
         .update(waConversations)
         .set({
           state: 'human',
+          context: sql`${waConversations.context} - 'step'`,
           handedOverAt: sql`coalesce(${waConversations.handedOverAt}, now())`,
           handledByUserId: actor.userId,
           assignedUserId: sql`coalesce(${waConversations.assignedUserId}, ${actor.userId}::uuid)`,
@@ -115,6 +116,7 @@ export class ChatsService {
           },
           actor.userId,
         );
+      if (actor.kind !== 'reseller') await contactLeadsByPhone(tx, chat.phone, actor.userId);
     });
     return this.get(actor, id);
   }

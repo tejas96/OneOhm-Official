@@ -1,6 +1,7 @@
 'use client';
 
 import type { DocumentRequirementRecord } from '@oneohm/api-contracts';
+import { canAskCustomerFor } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import { useFolderLabel } from '@/features/documents/gallery/use-labels';
 
@@ -29,7 +30,7 @@ export function useRuleSummary() {
     return [
       item.categories.map((category) => folderLabel(category)).join(', '),
       ...(when.length > 0 ? when : [t('always')]),
-      ...(item.fromCustomer ? [t('fromCustomer')] : []),
+      ...(item.fromCustomer && canAskCustomerFor(item.categories) ? [t('fromCustomer')] : []),
     ].join(' · ');
   };
 }

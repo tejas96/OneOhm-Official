@@ -5,6 +5,7 @@ import { Card, CardHeader } from '@oneohm/design-system/web';
 import { ChevronRight, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
 
 /** Decisions waiting on someone at OneOhm, each a count and a way in. */
 export function DecisionsWaiting({
@@ -40,24 +41,26 @@ export function DecisionsWaiting({
   );
 }
 
-/** Open tasks falling due in the coming week on the projects in view. */
+/** Open tasks falling due within the Settings "coming up" days on the projects in view. */
 export function DeadlinesAhead({
   deadlines,
   today,
+  days,
 }: {
   readonly deadlines: CommandCenter['deadlines'];
   readonly today: string;
+  readonly days: number;
 }) {
   const t = useTranslations('commandCenter.deadlines');
   const format = useFormatter();
   const short = (date: string) =>
     format.dateTime(new Date(date), { day: 'numeric', month: 'short' });
-  const end = new Date(new Date(today).getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const end = new Date(new Date(today).getTime() + days * 86_400_000).toISOString().slice(0, 10);
   return (
     <Card className="flex flex-col">
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <div className="flex flex-col gap-0.5">
-          <h2 className="type-title-md text-ink">{t('title')}</h2>
+          <h2 className="type-title-md text-ink">{t('title', { days })}</h2>
           <p className="type-body-sm text-ink-muted">
             {t('range', { start: short(today), end: short(end) })}
           </p>
@@ -67,13 +70,13 @@ export function DeadlinesAhead({
         </span>
       </div>
       {deadlines.length === 0 ? (
-        <p className="px-5 py-5 type-body-sm text-ink-muted">{t('empty')}</p>
+        <p className="px-5 py-5 type-body-sm text-ink-muted">{t('empty', { days })}</p>
       ) : (
         <ul className="flex flex-col py-2">
           {deadlines.map((deadline) => (
             <li key={deadline.taskId}>
               <Link
-                href={`/projects/${deadline.projectId}?tab=tasks`}
+                href={hrefWithTask(`/projects/${deadline.projectId}?tab=tasks`, deadline.taskId)}
                 className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-3 px-5 py-2.5 hover:bg-sunken/60"
               >
                 <span className="pt-0.5 font-mono text-[0.75rem] text-ink-muted">

@@ -3,7 +3,7 @@ import {
   customers,
   leads,
   type Notice,
-  notify,
+  notifyCover,
   notifyHolders,
   quotations,
   type Transaction,
@@ -11,10 +11,13 @@ import {
 import { formatInr, todayIn } from '@oneohm/shared';
 import { and, eq, gt, inArray, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { autoMoveLead } from '../crm/lead-history';
+import { environmentOnce } from '../../config/environment-once';
+import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { applyAcceptedChange } from '../project-changes/change-accept';
 import { changeAwaiting, closeStaleChanges } from '../project-changes/change-close';
 import { projectAwaiting } from './project-revision';
+import { quoteHasProject, startProjectNote } from './quotation-project';
+import { freezeQuotedTerms } from './quoted-terms';
 import { applyAcceptedRevision } from './revision-accept';
 
 /** What the customer's own "Yes, accept" came to. */
@@ -22,9 +25,10 @@ export type CustomerAcceptance = 'accepted' | 'already' | 'not_open' | 'not_owne
 
 /**
  * Marks the quotation accepted in the caller's transaction: other revisions of its number
- * are replaced, the lead moves to won, and the audit row says who and how. `actorUserId`
- * is null when the customer accepted it themselves. False, with nothing changed, when the
- * quotation was no longer open: someone else accepted (or closed) it a moment before.
+ * are replaced, the lead moves to won with "Start project" as its next action today, and
+ * the audit row says who and how. `actorUserId` is null when the customer accepted it
+ * themselves. False, with nothing changed, when the quotation was no longer open: someone
+ * else accepted (or closed) it a moment before.
  */
 export async function acceptInTx(
   tx: Transaction,
@@ -40,6 +44,8 @@ export async function acceptInTx(
     .where(and(eq(quotations.id, id), inArray(quotations.status, ['draft', 'sent'])))
     .returning({ id: quotations.id });
   if (!accepted) return false;
+  // Accepted without being sent: the terms agreed are today's.
+  await freezeQuotedTerms(tx, id);
   await tx
     .update(quotations)
     .set({ status: 'superseded', updatedAt: new Date() })
@@ -61,6 +67,12 @@ export async function acceptInTx(
     // A revision carrying a project change applies it (PRD 3.15); other open changes lapse.
     await applyAcceptedChange(tx, id, actorUserId);
     await closeStaleChanges(tx, id, quotation.number, actorUserId);
+  }
+  // A new sale: starting its project is the lead owner's job today (a revision has one).
+  if (quotation.input.leadId && !(await quoteHasProject(tx, id))) {
+    const on = todayIn(environmentOnce().BUSINESS_TIMEZONE);
+    const note = startProjectNote(quotation.number);
+    await setLeadNextAction(tx, quotation.input.leadId, actorUserId, { on, note });
   }
   await recordAudit(tx, actorUserId, 'quotation.accepted', 'quotation', id, auditData);
   return true;
@@ -116,12 +128,8 @@ export async function tellStartProject(tx: Transaction, quotation: QuotationDeta
         .from(leads)
         .where(eq(leads.id, quotation.input.leadId))
     : [];
-  // The same per-person key as notifyHolders, so an owner who also sets up projects hears once.
-  if (lead?.owner)
-    await notify(
-      tx,
-      { userId: lead.owner },
-      { ...notice, dedupeKey: `${notice.dedupeKey}:${lead.owner}` },
-    );
+  // The same per-person key as notifyHolders, so an owner who also sets up projects hears
+  // once; an owner on leave today is covered by their backup, or else by the project setters.
+  if (lead?.owner) await notifyCover(tx, lead.owner, 'projects.create', notice);
   await notifyHolders(tx, 'projects.create', notice);
 }

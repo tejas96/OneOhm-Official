@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHAT_WINDOW_HOURS,
   chatWaitStage,
+  chatWindowOpen,
   isWorkingTime,
   lastWorkEnd,
   pickAnswerer,
   soleCustomer,
+  workingMinutesSince,
 } from './chat-rules';
 
 const TZ = 'Asia/Kolkata';
@@ -30,6 +33,14 @@ describe('chat wait stage', () => {
     expect(chatWaitStage(night, ist('09:40'), TZ)).toBeNull();
     expect(chatWaitStage(night, ist('10:05'), TZ)).toBe(1);
     expect(chatWaitStage(night, ist('11:35'), TZ)).toBe(2);
+  });
+});
+
+describe('working minutes since', () => {
+  it('counts from the time, or from 9:30 for anything before today began, never at night', () => {
+    expect(workingMinutesSince(ist('10:00'), ist('14:00'), TZ)).toBe(240);
+    expect(workingMinutesSince(new Date('2026-11-01T17:00:00+05:30'), ist('13:30'), TZ)).toBe(240);
+    expect(workingMinutesSince(ist('10:00'), ist('19:00'), TZ)).toBe(0);
   });
 });
 
@@ -77,5 +88,22 @@ describe('the customer behind a family number', () => {
       ]),
     ).toBeNull();
     expect(soleCustomer([])).toBeNull();
+  });
+});
+
+describe('chat window', () => {
+  const now = new Date('2026-11-03T12:00:00Z');
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3600_000);
+
+  it('is open within 23 hours of the customer writing, an hour before Meta closes it', () => {
+    expect(CHAT_WINDOW_HOURS).toBe(23);
+    expect(chatWindowOpen(hoursAgo(1), now)).toBe(true);
+    expect(chatWindowOpen(hoursAgo(22.9), now)).toBe(true);
+    expect(chatWindowOpen(hoursAgo(23.1), now)).toBe(false);
+  });
+
+  it('is closed when the customer never wrote', () => {
+    expect(chatWindowOpen(null, now)).toBe(false);
+    expect(chatWindowOpen(undefined, now)).toBe(false);
   });
 });

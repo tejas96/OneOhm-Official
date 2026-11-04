@@ -2,7 +2,8 @@ import {
   customers,
   type DatabaseExecutor,
   leads,
-  notify,
+  type Notice,
+  notifyCover,
   notifyHolders,
   paymentLinks,
   paymentMilestones,
@@ -16,8 +17,8 @@ import { queueWhatsApp } from '../../common/outbox';
 import { environmentOnce } from '../../config/environment-once';
 import { payNowPayload } from './pay-now-message';
 
-/** Who looks after a project's money: its manager, else the owner of the lead it came from. */
-async function ownerOf(db: DatabaseExecutor, projectId: string): Promise<string | null> {
+/** The project's manager and the owner of the lead it came from (either may be empty). */
+async function peopleOf(db: DatabaseExecutor, projectId: string) {
   const [row] = await db
     .select({ manager: projects.managerUserId, lead: leads.ownerUserId })
     .from(projects)
@@ -25,33 +26,41 @@ async function ownerOf(db: DatabaseExecutor, projectId: string): Promise<string 
     .leftJoin(leads, eq(leads.id, quotations.leadId))
     .where(eq(projects.id, projectId))
     .limit(1);
-  return row?.manager ?? row?.lead ?? null;
+  return { manager: row?.manager ?? null, leadOwner: row?.lead ?? null };
 }
 
-/** Tells the project's owner (when it has one), once per key. */
-async function tellOwner(
-  db: DatabaseExecutor,
-  projectId: string,
-  notice: Parameters<typeof notifyHolders>[2],
-): Promise<void> {
-  const owner = await ownerOf(db, projectId);
-  if (owner)
-    await notify(db, { userId: owner }, { ...notice, dedupeKey: `${notice.dedupeKey}:${owner}` });
+/**
+ * Tells each person (or whoever covers for them today) once per key; with nobody covering,
+ * the people who run projects hear instead.
+ */
+async function tellEach(db: DatabaseExecutor, ids: readonly (string | null)[], notice: Notice) {
+  for (const id of ids) if (id) await notifyCover(db, id, 'projects.manage', notice);
 }
 
-/** Tells the project's owner and the accounts team, once per key. */
-async function tellOwnerAndAccounts(
+/** Tells the project's owner: its manager, else the lead's owner (or their cover today). */
+async function tellOwner(db: DatabaseExecutor, projectId: string, notice: Notice): Promise<void> {
+  const { manager, leadOwner } = await peopleOf(db, projectId);
+  await tellEach(db, [manager ?? leadOwner], notice);
+}
+
+/**
+ * Tells the project manager, the lead's owner and the accounts team, once each (the
+ * per-person key makes someone in two of them hear once).
+ */
+async function tellTeamAndAccounts(
   db: DatabaseExecutor,
   projectId: string,
-  notice: Parameters<typeof notifyHolders>[2],
+  notice: Notice,
 ): Promise<void> {
-  const owner = await ownerOf(db, projectId);
-  if (owner)
-    await notify(db, { userId: owner }, { ...notice, dedupeKey: `${notice.dedupeKey}:${owner}` });
+  const { manager, leadOwner } = await peopleOf(db, projectId);
+  await tellEach(db, [manager, leadOwner], notice);
   await notifyHolders(db, 'finance.record_payments', notice);
 }
 
-/** An online payment just landed: the owner and accounts hear of it, in the same transaction. */
+/**
+ * An online payment just landed: the project manager, the sales owner and accounts hear
+ * of it, in the same transaction (live review B7: the job is real now).
+ */
 export async function tellStaffPaidOnline(
   db: DatabaseExecutor,
   paid: {
@@ -62,7 +71,7 @@ export async function tellStaffPaidOnline(
     milestoneLabel: string;
   },
 ): Promise<void> {
-  await tellOwnerAndAccounts(db, paid.projectId, {
+  await tellTeamAndAccounts(db, paid.projectId, {
     kind: 'payment_online',
     title: 'Online payment received',
     body: `${formatInr(paid.amountPaise)} paid online by ${paid.customerName} for ${paid.milestoneLabel}`,

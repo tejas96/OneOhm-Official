@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import type { ProjectDetail, TrialBalance } from '@oneohm/api-contracts';
+import { expect } from 'vitest';
 import { rows } from './db';
 import { API, type Session } from './http';
 import { today } from './sales';
@@ -88,4 +89,35 @@ export async function providerId(table: 'payment_links' | 'bank_payouts', id: st
     id,
   ]);
   return row?.ref ?? '';
+}
+
+/**
+ * After a payment (live review C6, C16): the receipt is named for the customer, and the
+ * chat says in Marathi what happens next and who to call (the project manager, else the
+ * lead owner, whoever has a phone), ending with taps.
+ */
+export async function expectPaidNews(receiptFile: string, paymentId: string, projectId: string) {
+  expect(receiptFile).toBe('OneOhm-Ravi-Patil-test-receipt.pdf');
+  const [next] = await rows<{ payload: { body: string; buttons: { id: string }[] } }>(
+    'SELECT payload FROM outbox WHERE dedupe_key = $1',
+    [`paid_next:${paymentId}`],
+  );
+  const [contact] = await rows<{ name: string; phone: string }>(
+    `SELECT u.full_name AS name, u.phone_e164 AS phone FROM projects p
+       JOIN quotations q ON q.id = p.quotation_id LEFT JOIN leads l ON l.id = q.lead_id
+       JOIN users u ON u.id IN (p.manager_user_id, l.owner_user_id)
+      WHERE p.id = $1 AND u.phone_e164 IS NOT NULL
+      ORDER BY (u.id = p.manager_user_id) DESC LIMIT 1`,
+    [projectId],
+  );
+  expect(contact?.phone).toBeTruthy();
+  expect(next?.payload.body).toBe(
+    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: ${contact?.name}, ${contact?.phone}.`,
+  );
+  // View receipt sends this receipt's PDF (live QA round 2).
+  expect(next?.payload.buttons.map((button) => button.id)).toEqual([
+    `paper:receipt:${paymentId}`,
+    'progress',
+    'menu',
+  ]);
 }

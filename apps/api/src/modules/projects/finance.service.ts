@@ -10,22 +10,19 @@ import {
   projects,
   type Transaction,
 } from '@oneohm/database';
-import { customerTdsProblem } from '@oneohm/domain';
+import { customerTdsProblem, type MilestoneTrigger } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { assertNotFuture } from '../../common/dates';
 import { invalid, notFound } from '../../common/http/errors';
-import { queueWhatsApp } from '../../common/outbox';
 import { DATABASE, type Database } from '../../config/core.module';
-import { environmentOnce } from '../../config/environment-once';
 import { closeOpenLinks } from '../online-payments/close-links';
 import { PAYMENT_GATEWAY, type PaymentGateway } from '../online-payments/gateway';
 import { tellStaffPaidOnline } from '../online-payments/payment-follow-ups';
-import { pdfFileName } from '../reports/pdf-file-name';
-import { sharedFileUrl } from '../whatsapp/file-links';
 import { closeIfSettled } from './financial-closure';
 import { checkCollected, recordHandling } from './payment-handling';
+import { tellCustomerPaid } from './receipt-message';
 
 export interface NewPayment {
   milestoneId: string;
@@ -63,16 +60,19 @@ export class FinanceService {
 
   /**
    * Records the payment, its ledger entry and its side effects in one transaction.
-   * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes.
+   * `alsoInTransaction` lets a caller (such as a loan disbursement) add its own writes;
+   * `within` runs it all in the caller's transaction (a gateway payment and its link).
    */
   async recordPayment(
     actor: PaymentRecorder,
     projectId: string,
     input: NewPayment,
     alsoInTransaction?: (tx: Transaction, paymentId: string) => Promise<void>,
+    within?: Transaction,
   ): Promise<string> {
     assertNotFuture(input.receivedOn, 'receivedOn');
-    const [milestone] = await this.db
+    const db = within ?? this.db;
+    const [milestone] = await db
       .select()
       .from(paymentMilestones)
       .where(
@@ -83,7 +83,7 @@ export class FinanceService {
       )
       .limit(1);
     if (!milestone) throw notFound('That payment milestone');
-    const [paid] = await this.db
+    const [paid] = await db
       .select({ total: sql<number>`coalesce(sum(${payments.amountPaise}), 0)::bigint` })
       .from(payments)
       .where(eq(payments.milestoneId, milestone.id));
@@ -103,7 +103,7 @@ export class FinanceService {
       });
     }
     checkCollected(input);
-    const id = await this.db.transaction(async (tx) => {
+    const record = async (tx: Transaction) => {
       // Lock the milestone and count again: a webhook and a person recording at the
       // same moment must not overpay it.
       await tx
@@ -172,24 +172,21 @@ export class FinanceService {
         userId: actor.userId,
       });
       if (project && milestone.payer === 'customer') {
-        await queueWhatsApp(
-          tx,
-          project.phone,
-          'payment_received',
-          {
-            customer: project.name,
-            project: project.code,
-            amount: formatInr(input.amountPaise),
-            milestone: milestone.label,
-            documentUrl: sharedFileUrl(environmentOnce(), {
-              kind: 'receipt',
-              id: payment.id,
-              customerId: project.customerId,
-            }),
-            documentName: pdfFileName(receiptNumber),
-          },
-          `payment:${milestone.id}:${total}`,
-        );
+        await tellCustomerPaid(tx, {
+          paymentId: payment.id,
+          receiptNumber,
+          phone: project.phone,
+          customerName: project.name,
+          customerId: project.customerId,
+          projectId,
+          projectCode: project.code,
+          amountPaise: input.amountPaise,
+          milestoneId: milestone.id,
+          milestoneLabel: milestone.label,
+          leftPaise: milestone.amountPaise - total,
+          trigger: milestone.trigger as MilestoneTrigger,
+          dedupeKey: `payment:${milestone.id}:${total}`,
+        });
       }
       if (project && input.gatewayPaymentId)
         await tellStaffPaidOnline(tx, {
@@ -210,7 +207,8 @@ export class FinanceService {
       await postGatewayFee(tx, payment.id, actor.userId);
       if (alsoInTransaction) await alsoInTransaction(tx, payment.id);
       return payment.id;
-    });
+    };
+    const id = within ? await record(within) : await this.db.transaction(record);
     if (!input.gatewayPaymentId) await closeOpenLinks(this.db, this.gateway, milestone.id);
     return id;
   }

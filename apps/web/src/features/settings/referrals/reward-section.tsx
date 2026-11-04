@@ -6,6 +6,7 @@ import { QUALIFYING_EVENTS, REFERRAL_REWARD_BASES } from '@oneohm/domain';
 import { useTranslations } from 'next-intl';
 import { NumberInput } from '../number-input';
 import { SettingsSection } from '../settings-section';
+import { switchBasis } from './referral-draft';
 
 type Patch = (patch: Partial<ReferralProgramInput>) => void;
 
@@ -35,7 +36,7 @@ export function RewardSection({
           label={t('basis')}
           size="sm"
           value={draft.basis}
-          onValueChange={(basis) => onChange({ basis })}
+          onValueChange={(basis) => onChange(switchBasis(draft, basis))}
           options={REFERRAL_REWARD_BASES.map((value) => ({ value, label: t(`bases.${value}`) }))}
           className="self-start"
         />
@@ -49,7 +50,8 @@ export function RewardSection({
         >
           <NumberInput
             unit="paise"
-            value={draft.amountPaise}
+            // ₹0 shows as empty: it is what a cleared amount (after a basis switch) holds.
+            value={draft.amountPaise || null}
             onValueChange={(value) => onChange({ amountPaise: value ?? 0 })}
           />
         </Field>

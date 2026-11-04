@@ -21,7 +21,18 @@ export type GatewayNews =
       readonly status: 'expired' | 'cancelled';
     }
   | { readonly kind: 'payout'; readonly payout: GatewayPayout }
+  | { readonly kind: 'refund'; readonly refund: GatewayRefund }
   | { readonly kind: 'ignored' };
+
+/** Money going back to the customer (a refund) or held by their bank (a dispute). */
+export interface GatewayRefund {
+  /** 'refund', or 'dispute (created)', 'dispute (lost)' and so on. */
+  readonly what: string;
+  readonly gatewayPaymentId: string;
+  readonly amountPaise: number;
+  /** One alert per refunded payment, and one per dispute and step. */
+  readonly key: string;
+}
 
 interface Entity {
   id?: string;
@@ -31,6 +42,8 @@ interface Entity {
   fees?: number;
   utr?: string | null;
   created_at?: number;
+  payment_id?: string;
+  amount_refunded?: number;
 }
 
 interface RazorpayEvent {
@@ -84,7 +97,43 @@ export function readEvent(body: unknown): GatewayNews {
         },
       };
     }
+    case 'refund.processed':
+    case 'payment.refunded':
+      return readRefund(event);
     default:
-      return { kind: 'ignored' };
+      return event.event?.startsWith('payment.dispute.') ? readDispute(event) : { kind: 'ignored' };
   }
+}
+
+function readRefund(event: RazorpayEvent): GatewayNews {
+  const refund = event.payload?.refund?.entity;
+  const payment = event.payload?.payment?.entity;
+  const paymentId = refund?.payment_id ?? payment?.id;
+  if (!paymentId) return { kind: 'ignored' };
+  const amountPaise = refund?.amount ?? payment?.amount_refunded ?? 0;
+  return {
+    kind: 'refund',
+    // Keyed by the refund itself, so a second partial refund alerts too (one only if absent).
+    refund: {
+      what: 'refund',
+      gatewayPaymentId: paymentId,
+      amountPaise,
+      key: refund?.id ?? 'refund',
+    },
+  };
+}
+
+function readDispute(event: RazorpayEvent): GatewayNews {
+  const dispute = event.payload?.dispute?.entity;
+  if (!dispute?.id || !dispute.payment_id) return { kind: 'ignored' };
+  const step = event.event?.slice('payment.dispute.'.length) ?? '';
+  return {
+    kind: 'refund',
+    refund: {
+      what: `dispute (${step.replace('_', ' ')})`,
+      gatewayPaymentId: dispute.payment_id,
+      amountPaise: dispute.amount ?? 0,
+      key: `${dispute.id}:${event.event}`,
+    },
+  };
 }

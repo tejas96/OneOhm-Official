@@ -2,6 +2,7 @@ import { paymentMilestones, postMilestoneDue, type Transaction } from '@oneohm/d
 import { planMilestones } from '@oneohm/domain';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { planSteps } from '../payment-plans/payment-plans.service';
+import { quotedSteps } from '../quotations/quoted-terms';
 
 /**
  * The project's payment schedule from its plan (PRD 3.11, Flow A step 9). Milestones due
@@ -12,14 +13,18 @@ export async function activateMilestones(
   projectId: string,
   plan: {
     readonly totalPaise: number;
+    /** Another plan someone picked; none means the terms in the quotation. */
     readonly paymentPlanId: string | null | undefined;
+    readonly quotationId: string;
     readonly loanPaise: number;
   },
   userId: string,
 ): Promise<void> {
   const milestones = planMilestones(
     plan.totalPaise,
-    await planSteps(tx, plan.paymentPlanId),
+    plan.paymentPlanId
+      ? await planSteps(tx, plan.paymentPlanId)
+      : await quotedSteps(tx, plan.quotationId),
     plan.loanPaise,
   );
   const created = await tx

@@ -1,8 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { JobRunRecord, JobRunsView } from '@oneohm/api-contracts';
-import { jobRuns, users } from '@oneohm/database';
-import { compareRuns, isRetryableJob, JOB_NAMES, type JobName } from '@oneohm/domain';
-import { and, desc, eq, gte, inArray, isNotNull } from 'drizzle-orm';
+import { expireStaleRetries, jobRuns, users } from '@oneohm/database';
+import {
+  compareRuns,
+  isRetryableJob,
+  JOB_NAMES,
+  type JobName,
+  missingDailyJobs,
+  recoveredFailures,
+} from '@oneohm/domain';
+import { and, desc, eq, gte, inArray, isNotNull, max } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
@@ -40,19 +47,37 @@ export class JobRunsService {
       rows.flatMap((row) => (row.retryOfId && row.trigger === 'retry' ? [row.retryOfId] : [])),
     );
     const weekAgo = Date.now() - 7 * 86_400_000;
+    // A failure the same job put right later (its own retry, the next tick, a retry by
+    // hand) no longer needs anyone's attention.
+    const recovered = recoveredFailures(rows);
     const runs = rows
       .filter((row) => isJob(row.name))
-      .map((row) => present(row, retriedIds.has(row.id), requesters.get(row.id) ?? null))
+      .map((row) =>
+        present(row, {
+          retried: retriedIds.has(row.id),
+          recovered: recovered.has(row.id),
+          requesterName: requesters.get(row.id) ?? null,
+        }),
+      )
       .sort(compareRuns)
       .slice(0, SHOWN);
-    // A failure put right by a retry no longer needs anyone's attention.
-    const fixed = new Set(
-      rows.flatMap((row) => (row.status === 'succeeded' && row.retryOfId ? [row.retryOfId] : [])),
-    );
     const failedLastWeek = rows.filter(
-      (row) => row.status === 'failed' && row.createdAt.getTime() >= weekAgo && !fixed.has(row.id),
+      (row) =>
+        row.status === 'failed' && row.createdAt.getTime() >= weekAgo && !recovered.has(row.id),
     ).length;
-    return { runs, failedLastWeek };
+    return { runs, failedLastWeek, missingDaily: [...(await this.missingDaily())] };
+  }
+
+  /** Daily jobs with no run for over a day: nothing records when the worker is stopped. */
+  private async missingDaily(): Promise<readonly JobName[]> {
+    const latest = await this.db
+      .select({ name: jobRuns.name, at: max(jobRuns.createdAt) })
+      .from(jobRuns)
+      .where(gte(jobRuns.createdAt, new Date(Date.now() - 2 * 86_400_000)))
+      .groupBy(jobRuns.name);
+    return missingDailyJobs(
+      new Map(latest.flatMap((row) => (row.at ? [[row.name, row.at] as const] : []))),
+    );
   }
 
   /** Queues a failed job to run again; the worker picks it up within a minute. */
@@ -62,6 +87,8 @@ export class JobRunsService {
     if (failed.status !== 'failed') throw conflict('Only a failed run can be tried again.');
     if (!isRetryableJob(failed.name))
       throw conflict('This job runs again on its own within minutes.', 'not_retryable');
+    // A retry still waiting after an hour was never picked up; it no longer blocks one.
+    await expireStaleRetries(this.db);
     const [waiting] = await this.db
       .select({ id: jobRuns.id })
       .from(jobRuns)
@@ -92,11 +119,15 @@ export class JobRunsService {
       });
       return queued;
     });
-    return present(row, false, actor.fullName);
+    return present(row, { retried: false, recovered: false, requesterName: actor.fullName });
   }
 }
 
-function present(row: Row, retried: boolean, requesterName: string | null): JobRunRecord {
+function present(
+  row: Row,
+  facts: { readonly retried: boolean; readonly recovered: boolean; requesterName: string | null },
+): JobRunRecord {
+  const { retried, recovered, requesterName } = facts;
   return {
     id: row.id,
     name: row.name as JobName,
@@ -106,8 +137,9 @@ function present(row: Row, retried: boolean, requesterName: string | null): JobR
     finishedAt: iso(row.finishedAt),
     result: row.result,
     error: row.error,
-    retryable: row.status === 'failed' && isRetryableJob(row.name) && !retried,
+    retryable: row.status === 'failed' && isRetryableJob(row.name) && !retried && !recovered,
     retried,
+    recovered,
     retryOfId: row.retryOfId,
     subjectId: row.subjectId,
     requestedBy:
