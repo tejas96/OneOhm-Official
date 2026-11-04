@@ -19,6 +19,8 @@ export function apiEnvironment(databaseUrl) {
     WHATSAPP_DELIVERY: 'log',
     OTP_PROVIDER: 'local',
     OTP_DEVELOPMENT_CODE: '123456',
+    // New people are queued a WhatsApp invite, so the outbox rows can be checked.
+    STAFF_INVITES: 'on',
     OTP_REQUESTS_PER_10_MIN: '1000',
     // Every scenario posts the website form from this one machine.
     WEBSITE_ENQUIRIES_PER_10_MIN: '1000',

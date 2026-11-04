@@ -1,11 +1,11 @@
 'use client';
 
 import type { IncentiveStatusValue } from '@oneohm/api-contracts';
-import { Button, type PillTone, StatusPill } from '@oneohm/design-system/web';
+import { Button, type PillTone, StatusPill, Tooltip } from '@oneohm/design-system/web';
 import { Check, Wallet, X } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useCan } from '@/providers/current-user';
-import type { PayoutTarget } from './use-payouts';
+import type { PayoutParty, PayoutTarget } from './use-payouts';
 
 const TONE: Readonly<Record<IncentiveStatusValue, PillTone>> = {
   pending: 'review',
@@ -21,6 +21,8 @@ export interface PayoutRow {
   readonly paidReference: string | null;
   readonly rejectReason: string | null;
   readonly approvedBy: { readonly fullName: string } | null;
+  /** Commission only: false until the reseller's payout details are complete. */
+  readonly payoutReady?: boolean;
 }
 
 /** What the tables can do with a row; the tab owns the dialogs and the approve call. */
@@ -29,6 +31,7 @@ export interface PayoutActions {
   readonly onApprove: (target: PayoutTarget) => void;
   readonly onReject: (target: PayoutTarget) => void;
   readonly onPay: (target: PayoutTarget) => void;
+  readonly onPayoutDetails: (party: PayoutParty) => void;
 }
 
 /** Status, how it was paid or why it was turned down, and the next action for finance. */
@@ -36,12 +39,15 @@ export function PayoutStatus({
   row,
   target,
   actions,
+  party,
 }: {
   readonly row: PayoutRow;
   readonly target: PayoutTarget;
   readonly actions: PayoutActions;
+  /** The reseller, so a blocked payment can open their payout details. */
+  readonly party?: PayoutParty;
 }) {
-  const { onApprove, onReject, onPay } = actions;
+  const { onApprove, onReject, onPay, onPayoutDetails } = actions;
   const approving = actions.approvingId === target.id;
   const t = useTranslations('finance.payouts');
   const methodT = useTranslations('finance.methods');
@@ -84,7 +90,7 @@ export function PayoutStatus({
             </Button>
           </>
         )}
-        {row.status === 'approved' && canPay && (
+        {row.status === 'approved' && canPay && row.payoutReady !== false && (
           <Button
             size="sm"
             variant="primary"
@@ -93,6 +99,27 @@ export function PayoutStatus({
           >
             {t('pay')}
           </Button>
+        )}
+        {row.status === 'approved' && canPay && row.payoutReady === false && (
+          <>
+            <Tooltip content={t('payoutMissing')}>
+              {/* aria-disabled, not disabled: it keeps hover and focus, so the reason shows. */}
+              <Button
+                size="sm"
+                variant="primary"
+                leadingIcon={<Wallet />}
+                aria-disabled
+                className="aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed aria-disabled:active:scale-100"
+              >
+                {t('pay')}
+              </Button>
+            </Tooltip>
+            {party && (
+              <Button size="sm" variant="secondary" onClick={() => onPayoutDetails(party)}>
+                {t('addDetails')}
+              </Button>
+            )}
+          </>
         )}
       </span>
       {detail && <span className="type-body-sm text-ink-faint">{detail}</span>}

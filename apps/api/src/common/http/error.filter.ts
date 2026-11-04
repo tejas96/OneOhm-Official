@@ -34,6 +34,7 @@ export class ErrorFilter implements ExceptionFilter {
         message: exception.message,
         code: exception.code,
         ...(exception.fieldErrors ? { fieldErrors: exception.fieldErrors } : {}),
+        ...(exception.details ? { details: exception.details } : {}),
       });
       return;
     }

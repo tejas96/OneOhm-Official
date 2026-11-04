@@ -66,7 +66,7 @@ export function AlertsScreen() {
               time={shortMoment(item.createdAt)}
               onPress={() => {
                 if (!item.read) markRead.mutate([item.id]);
-                openAlert(item.subject ?? {});
+                openAlert(item.subject ?? {}, item.kind);
               }}
             />
           ))}

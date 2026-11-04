@@ -5,6 +5,7 @@ import { Button, Select } from '@oneohm/design-system/web';
 import { PROJECT_TYPES } from '@oneohm/domain';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { isPastMember } from '@/features/team/departure';
 import { usePeople } from '@/features/team/use-team';
 import { type Period, type ProjectType, useCenterFilters } from './use-center-filters';
 
@@ -18,8 +19,9 @@ export function CenterFilterBar({ hideManager = false }: { readonly hideManager?
   const t = useTranslations('commandCenter.filters');
   const { query, active, setPeriod, setManager, setType, clear } = useCenterFilters();
   const people = usePeople();
-  const managers = (people.data ?? []).filter((person) =>
-    person.roles.some((role) => role.kind === 'staff'),
+  // Removed people are hidden from every person picker (spec Flow 5).
+  const managers = (people.data ?? []).filter(
+    (person) => !isPastMember(person) && person.roles.some((role) => role.kind === 'staff'),
   );
   return (
     <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0">

@@ -61,4 +61,35 @@ export const EARNINGS = {
   methods: { cash: 'Cash', cheque: 'Cheque', bank_transfer: 'Bank transfer', upi: 'UPI' },
   basisPercent: (percent: string, value: string) => `${percent}% of ${value}`,
   basisPerKw: (amount: string, kw: string) => `${amount}/kW × ${kw} kW`,
+  payoutBanner: 'Add payout details to get paid',
+  payoutBannerHint: 'Opens your payout details',
+} as const;
+
+/** Where a reseller's commission is paid: UPI or a bank account, plus PAN. */
+export const PAYOUT = {
+  title: 'Payout details',
+  empty: 'Tell us where to send your commission. It takes a minute.',
+  add: 'Add payout details',
+  change: 'Change',
+  sheetDescription: 'We pay your commission here. Only our finance team sees the full details.',
+  methodLabel: 'How you get paid',
+  methods: { upi: 'UPI', bank: 'Bank account' },
+  upiId: 'UPI ID',
+  upiHint: 'For example name@okaxis',
+  bankAccountName: 'Name on account',
+  bankAccountNumber: 'Account number',
+  bankIfsc: 'IFSC',
+  ifscHint: 'On your cheque book or passbook',
+  pan: 'PAN',
+  panHint: 'Needed for tax on your commission',
+  keepHint: 'Leave blank to keep the saved one',
+  save: 'Save',
+  saved: 'Payout details saved',
+  missing: {
+    upiId: 'Enter your UPI ID',
+    bankAccountName: 'Enter the name on the account',
+    bankAccountNumber: 'Enter the account number',
+    bankIfsc: 'Enter the IFSC',
+    pan: 'Enter your PAN',
+  },
 } as const;

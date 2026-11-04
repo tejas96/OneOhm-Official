@@ -477,6 +477,20 @@
       "when": 1793714886962,
       "tag": "0067_project_manager_changed_template",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793773306075,
+      "tag": "0068_reseller_payout_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793774733412,
+      "tag": "0069_user_left_on",
+      "breakpoints": true
     }
   ]
 }

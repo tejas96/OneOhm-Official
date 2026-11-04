@@ -6,8 +6,10 @@ import {
   postIncentiveApproved,
   postIncentivePaid,
   projects,
+  resellerPayoutDetails,
   users,
 } from '@oneohm/database';
+import { payoutDetailsComplete } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -43,9 +45,11 @@ export class CommissionEntriesService {
         approver: approvers.fullName,
         projectCode: projects.code,
         customerName: customers.name,
+        payout: resellerPayoutDetails,
       })
       .from(commissionEntries)
       .innerJoin(users, eq(users.id, commissionEntries.resellerUserId))
+      .leftJoin(resellerPayoutDetails, eq(resellerPayoutDetails.userId, users.id))
       .leftJoin(approvers, eq(approvers.id, commissionEntries.approvedByUserId))
       .innerJoin(projects, eq(projects.id, commissionEntries.projectId))
       .innerJoin(customers, eq(customers.id, projects.customerId))
@@ -57,7 +61,7 @@ export class CommissionEntriesService {
         ),
       )
       .orderBy(desc(commissionEntries.earnedAt));
-    return rows.map(({ entry, reseller, approver, projectCode, customerName }) => ({
+    return rows.map(({ entry, reseller, approver, projectCode, customerName, payout }) => ({
       id: entry.id,
       status: entry.status,
       amountPaise: entry.amountPaise,
@@ -81,6 +85,7 @@ export class CommissionEntriesService {
       basis: entry.basis,
       rateBp: entry.rateBp,
       perKwPaise: entry.perKwPaise,
+      payoutReady: payoutDetailsComplete(payout),
     }));
   }
 
@@ -111,6 +116,7 @@ export class CommissionEntriesService {
 
   async pay(actor: Actor, id: string, input: PayoutInput): Promise<CommissionEntry> {
     assertNotFuture(input.paidOn, 'paidOn');
+    await this.requirePayoutDetails(id);
     await this.step(actor, id, 'approved', {
       status: 'paid',
       paidAt: new Date(),
@@ -120,6 +126,27 @@ export class CommissionEntriesService {
       paidByUserId: actor.userId,
     });
     return this.get(id);
+  }
+
+  /** An approved entry is only paid once the reseller's PAN and UPI or bank details are in. */
+  private async requirePayoutDetails(id: string): Promise<void> {
+    const [row] = await this.db
+      .select({
+        status: commissionEntries.status,
+        name: users.fullName,
+        payout: resellerPayoutDetails,
+      })
+      .from(commissionEntries)
+      .innerJoin(users, eq(users.id, commissionEntries.resellerUserId))
+      .leftJoin(resellerPayoutDetails, eq(resellerPayoutDetails.userId, users.id))
+      .where(eq(commissionEntries.id, id))
+      .limit(1);
+    // Not approved (or missing): `step` explains that better than we could here.
+    if (row?.status !== 'approved' || payoutDetailsComplete(row.payout)) return;
+    throw conflict(
+      `Add ${row.name}'s payout details before marking this paid.`,
+      'payout_details_missing',
+    );
   }
 
   /** Moves an entry on from `from`, books the ledger, audits and tells the reseller. */

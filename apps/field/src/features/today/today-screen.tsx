@@ -24,6 +24,7 @@ import { AnnouncementsCard } from '@/features/announcements/announcements-card';
 import { AttendanceCard } from '@/features/attendance/attendance-card';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { ChatsSection } from '@/features/chats/chats-section';
+import { PayoutBanner } from '@/features/reseller/payout-banner';
 import { LeaveAndPoints } from '@/features/rewards/leave-and-points';
 import { SearchButton } from '@/features/search/search-button';
 import { ServiceVisitsSection } from '@/features/service/service-visits-section';
@@ -83,6 +84,7 @@ export function TodayScreen() {
         ) : null}
       </View>
 
+      {user.kind === 'reseller' ? <PayoutBanner /> : null}
       <AnnouncementsCard />
       {workday.data ? <AttendanceCard workday={workday.data} /> : null}
       {workday.data ? <LeaveAndPoints workday={workday.data} /> : null}

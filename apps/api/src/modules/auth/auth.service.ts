@@ -1,27 +1,21 @@
-import { createHash, randomBytes, randomInt } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CurrentUser } from '@oneohm/api-contracts';
 import { otpChallenges, sessions, users, verifyPassword } from '@oneohm/database';
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { assertNotLocked, assertOtpBudget, recordAttempt } from '../../common/auth/sign-in-guard';
-import { AppError, unauthenticated } from '../../common/http/errors';
+import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { loadCurrentUser } from './current-user.loader';
 import { createOtpSender, type OtpSender } from './otp-sender';
+import { hashSecret, type IssuedSession, issueSession } from './session-issuer';
+import { parseIdentifier } from './sign-in-identifier';
 
-const DAY_MS = 86_400_000;
 const OTP_TTL_SECONDS = 300;
 const OTP_MAX_ATTEMPTS = 5;
-const hash = (value: string) => createHash('sha256').update(value).digest('base64url');
-
-export interface IssuedSession {
-  readonly token: string;
-  readonly expiresAt: Date;
-  readonly user: CurrentUser;
-}
+const hash = hashSecret;
 
 @Injectable()
 export class AuthService {
@@ -35,7 +29,7 @@ export class AuthService {
   }
 
   /**
-   * Web: email or employee ID with a password. One answer for every failure; too many
+   * Web: email, employee ID or mobile number with a password. One answer for every failure; too many
    * wrong tries lock the name (and a noisy address) for a while. Every try is recorded.
    */
   async signInWithPassword(
@@ -43,12 +37,18 @@ export class AuthService {
     password: string,
     ip: string | null = null,
   ): Promise<IssuedSession> {
-    const value = identifier.trim().toLowerCase();
+    const { kind, value } = parseIdentifier(identifier);
     await assertNotLocked(this.db, value, ip);
     const [user] = await this.db
       .select({ id: users.id, passwordHash: users.passwordHash, status: users.status })
       .from(users)
-      .where(or(eq(users.email, value), eq(sql`lower(${users.employeeCode})`, value)))
+      .where(
+        kind === 'phone'
+          ? eq(users.phoneE164, value)
+          : kind === 'email'
+            ? eq(users.email, value)
+            : eq(sql`lower(${users.employeeCode})`, value),
+      )
       .limit(1);
     const valid =
       user?.passwordHash &&
@@ -62,14 +62,25 @@ export class AuthService {
     };
     if (!user || !valid) {
       await recordAttempt(this.db, { ...attempt, success: false });
-      throw new AppError(401, 'That email or ID and password do not match.', 'bad_credentials');
+      if (user && user.status === 'active' && !user.passwordHash) {
+        throw new AppError(
+          401,
+          'You haven\'t set a password yet. Tap "First time here?" below.',
+          'password_not_set',
+        );
+      }
+      throw new AppError(
+        401,
+        'That email, ID or mobile number and password do not match.',
+        'bad_credentials',
+      );
     }
     await recordAttempt(this.db, { ...attempt, success: true });
     await recordAudit(this.db, user.id, 'auth.signed_in', 'user', user.id, {
       method: 'password',
       ip,
     });
-    return this.issueSession(user.id, 'web');
+    return issueSession(this.db, this.env, user.id, 'web');
   }
 
   /** Mobile: text a code. Unknown numbers get the same answer and no message. */
@@ -88,7 +99,7 @@ export class AuthService {
         codeHash: hash(`${phoneE164}:${code}`),
         expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
       });
-      await this.otp.send(phoneE164, code);
+      await this.otp.send(phoneE164, code, 'login');
     }
     return { expiresInSeconds: OTP_TTL_SECONDS };
   }
@@ -137,7 +148,7 @@ export class AuthService {
     if (!user) throw wrong;
     await recordAttempt(this.db, { ...attempt, userId: user.id, success: true });
     await recordAudit(this.db, user.id, 'auth.signed_in', 'user', user.id, { method: 'otp' });
-    return this.issueSession(user.id, 'mobile');
+    return issueSession(this.db, this.env, user.id, 'mobile');
   }
 
   async authenticate(token: string, via: Actor['via']): Promise<Actor | null> {
@@ -171,16 +182,5 @@ export class AuthService {
 
   async signOut(sessionId: string): Promise<void> {
     await this.db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId));
-  }
-
-  private async issueSession(userId: string, client: 'web' | 'mobile'): Promise<IssuedSession> {
-    const user = await loadCurrentUser(this.db, userId);
-    if (!user) throw unauthenticated('This account is not active.');
-    const token = randomBytes(32).toString('base64url');
-    const days = client === 'web' ? this.env.SESSION_DAYS_WEB : this.env.SESSION_DAYS_MOBILE;
-    const expiresAt = new Date(Date.now() + days * DAY_MS);
-    await this.db.insert(sessions).values({ userId, tokenHash: hash(token), client, expiresAt });
-    await this.db.update(users).set({ lastActiveAt: new Date() }).where(eq(users.id, userId));
-    return { token, expiresAt, user };
   }
 }

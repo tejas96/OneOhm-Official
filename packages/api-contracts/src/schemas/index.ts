@@ -16,6 +16,7 @@ export * from './customer-family.schema';
 export * from './customer-language.schema';
 export * from './customer-portal.schema';
 export * from './dashboard.schema';
+export * from './departure.schema';
 export * from './discom.schema';
 export * from './discom-setup.schema';
 export * from './document.schema';

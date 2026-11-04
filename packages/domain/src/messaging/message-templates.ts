@@ -88,6 +88,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, your service request "{{2}}" is now {{3}}. We will keep you posted here.',
   },
   {
+    key: 'contact_changed',
+    audience: 'customer',
+    fields: ['customer', 'staff', 'subject', 'phone'],
+    preview:
+      'Hi {{1}}, {{2}} is now your OneOhm contact for {{3}}. You can call them on {{4}}, or reply here any time.',
+  },
+  {
     key: 'change_request_raised',
     audience: 'customer',
     fields: ['customer', 'request', 'number'],
@@ -149,6 +156,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     fields: ['name', 'overdue', 'today', 'followUps'],
     preview:
       'Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.',
+  },
+  {
+    key: 'staff_welcome',
+    audience: 'staff',
+    fields: ['name', 'link'],
+    preview:
+      'Hi {{1}}, you have been added to the OneOhm team. Open the app here: {{2}}. Sign in with this mobile number. For the website, choose "First time here?" to set your password.',
   },
 ] as const satisfies readonly MessageTemplateDefault[];
 

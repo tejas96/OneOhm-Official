@@ -3,6 +3,9 @@
 import type { Person } from '@oneohm/api-contracts';
 import { Avatar, Badge, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import { awaitsSignIn } from './invite-actions';
+import { InviteBadge, InviteMenu } from './invite-status';
+import { LeftTag } from './left-tag';
 import { useSkills } from './skills/use-skills';
 
 /** +919876543210 → +91 98765 43210 */
@@ -84,10 +87,32 @@ export function PersonContact({ person }: { readonly person: Person }) {
   );
 }
 
-export function PersonStatus({ person }: { readonly person: Person }) {
+/** Active, on leave or left (with the day); then, until their first sign-in, the invite. */
+export function PersonStatus({
+  person,
+  manage = false,
+}: {
+  readonly person: Person;
+  /** Offer "Send invite again" and "Copy invite text" (needs `people.manage`). */
+  readonly manage?: boolean;
+}) {
   const t = useTranslations('team.status');
-  if (person.status === 'inactive')
-    return <StatusPill tone="neutral" label={t('inactive')} size="sm" />;
-  if (person.onLeave) return <StatusPill tone="waiting" label={t('onLeave')} size="sm" />;
-  return <StatusPill tone="onTrack" label={t('active')} size="sm" />;
+  const status =
+    person.status === 'inactive' ? (
+      <LeftTag leftOn={person.leftOn} />
+    ) : person.onLeave ? (
+      <StatusPill tone="waiting" label={t('onLeave')} size="sm" />
+    ) : (
+      <StatusPill tone="onTrack" label={t('active')} size="sm" />
+    );
+  if (!awaitsSignIn(person)) return status;
+  return (
+    <span className="flex flex-col items-end gap-1.5 md:items-start">
+      {status}
+      <span className="flex items-center gap-0.5">
+        <InviteBadge person={person} />
+        {manage && <InviteMenu person={person} />}
+      </span>
+    </span>
+  );
 }

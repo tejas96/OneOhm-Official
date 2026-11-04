@@ -68,6 +68,13 @@ Fill in `/opt/oneohm/.env`:
 - `API_PUBLIC_URL`: the stable `https://` domain. The API refuses to start in production
   with `http`, `localhost`, `trycloudflare.com` or `loca.lt`, because every link sent to a
   customer carries this address for good.
+- `MSG91_PASSWORD_RESET_TEMPLATE_ID`: the MSG91 (DLT) template for the code people get
+  when they set or reset their website password. Required with `OTP_PROVIDER=msg91`.
+- `STAFF_INVITES`: `off` (default) or `on`. `on` sends new team members the `staff_welcome`
+  WhatsApp invite. Keep it `off` until Meta approves that template.
+- `FIELD_APP_URL`: the field-app address resellers and partners get in their invite (staff
+  get the website). With `STAFF_INVITES=on` the API refuses to start in production unless it
+  is a stable `https://` address.
 
 Use fresh keys for production. Do not reuse the test keys that were shared during development.
 
@@ -95,6 +102,11 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 
 ### Upgrade notes
 
+- **People lifecycle (November 2026):** migrations `0065_reseller_payout_details` (a new
+  table for reseller bank and UPI details) and `0066_user_left_on` (a nullable `left_on`
+  date on users) run on their own at start. Before the update, add
+  `MSG91_PASSWORD_RESET_TEMPLATE_ID`, `STAFF_INVITES=off` and `FIELD_APP_URL` to the `.env`.
+
 - **Live review fixes (November 2026):** before this update, add `PAY_LINK_SECRET` (its own
   random value, not `FILE_LINK_SECRET`) to the production `.env`, or the API and the worker
   will not start. The same release also refuses to start in production with the default
@@ -106,7 +118,7 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 ### Templates
 
 Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
-full list (21 templates, category *Utility*, language *English*), with each body, field
+full list (23 templates, category *Utility*, language *English*), with each body, field
 order and sample values, is in [whatsapp-templates.md](whatsapp-templates.md). The names
 match the app's keys, so no change in **Settings → WhatsApp messages** is needed.
 
@@ -114,6 +126,10 @@ match the app's keys, so no change in **Settings → WhatsApp messages** is need
   (`POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates`, `parameter_format: POSITIONAL`).
 - Migration `0057` updates the app's wording to the approved text (rows an owner already
   changed are kept) and adds `chat_follow_up`.
+- **People lifecycle (November 2026):** submit the 2 new templates, `staff_welcome` (staff)
+  and `contact_changed` (customer). Turn `STAFF_INVITES=on` only after Meta approves
+  `staff_welcome`; until then admins use **Copy invite text** on the person's row and paste
+  it themselves. `contact_changed` goes out like any other customer message once approved.
 
 Until `WHATSAPP_DELIVERY=live`, messages are recorded in the outbox as "not sent (log mode)",
 so nothing reaches customers by accident. Once the templates are approved:

@@ -115,6 +115,21 @@ export const commissionRuleSchema = commissionRuleInputSchema.extend({
 });
 export type CommissionRule = z.infer<typeof commissionRuleSchema>;
 
+const payoutText = z.string().max(60).nullable();
+
+/** Where a reseller's commission is paid. Values come back masked unless finance asks. */
+export const payoutDetailsInputSchema = z.object({
+  bankAccountName: z.string().max(120).nullable(),
+  bankAccountNumber: payoutText,
+  bankIfsc: payoutText,
+  upiId: payoutText,
+  pan: payoutText,
+});
+export type PayoutDetailsInput = z.infer<typeof payoutDetailsInputSchema>;
+
+export const payoutDetailsSchema = payoutDetailsInputSchema.extend({ complete: z.boolean() });
+export type PayoutDetailsView = z.infer<typeof payoutDetailsSchema>;
+
 /** Commission on one project a reseller sold. */
 export const commissionEntrySchema = z.object({
   id: idSchema,
@@ -128,6 +143,8 @@ export const commissionEntrySchema = z.object({
   basis: commissionBasisSchema,
   rateBp: z.number().int(),
   perKwPaise: paiseSchema,
+  /** False until the reseller has PAN plus UPI or bank details; finance cannot pay before. */
+  payoutReady: z.boolean(),
 });
 export type CommissionEntry = z.infer<typeof commissionEntrySchema>;
 

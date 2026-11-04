@@ -1,5 +1,6 @@
+import { rows } from './db';
 import type { Session } from './http';
-import { uniquePhone } from './sales';
+import { today, uniquePhone } from './sales';
 import { ensurePerson } from './team';
 
 /**
@@ -23,7 +24,31 @@ export async function ownPerson(
   return { id: person.id, phone, name };
 }
 
-/** Switches the scenario's own people off so later projects never assign them. */
+/** Remove from team, work handed to the admin, today; fails the test when refused. */
+export async function removeNow(admin: Session, userId: string): Promise<void> {
+  await admin.post(`/people/${userId}/remove`, {
+    handToUserId: admin.userId,
+    lastWorkingDay: today(),
+    tellCustomers: false,
+  });
+}
+
+/** A past member from before Remove from team: switched off, nothing handed over. */
+export async function pastMemberAsBefore(userId: string): Promise<void> {
+  await rows("UPDATE users SET status = 'inactive', left_on = current_date WHERE id = $1", [
+    userId,
+  ]);
+}
+
+/**
+ * Removes the scenario's own people (work handed to the admin) so later projects never
+ * assign them. Someone who cannot be removed (already gone, the last Super Admin) is skipped.
+ */
 export async function retire(admin: Session, people: readonly OwnPerson[]): Promise<void> {
-  for (const person of people) await admin.patch(`/people/${person.id}`, { status: 'inactive' });
+  for (const person of people)
+    await admin.raw('POST', `/people/${person.id}/remove`, {
+      handToUserId: admin.userId,
+      lastWorkingDay: today(),
+      tellCustomers: false,
+    });
 }

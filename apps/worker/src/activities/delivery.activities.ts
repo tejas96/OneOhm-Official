@@ -30,13 +30,12 @@ import type {
 import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
 import { deliverPush } from './push-delivery';
-import { alertTokenExpired, CHAT_WINDOW_CLOSED } from './send-checks';
+import { alertTokenExpired, CHAT_WINDOW_CLOSED, smsCanStandIn } from './send-checks';
 
 /** Written just before the provider call; found on entry, the last attempt died mid-send. */
 export const SENDING = 'sending';
 
 const OPTED_OUT_NOTE = 'The person asked not to get WhatsApp messages';
-
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
 interface DeliveryDeps {
@@ -178,8 +177,9 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       if (error instanceof PermanentSendError) {
-        // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
-        if (row.channel === 'whatsapp' && isNotOnWhatsApp(error.code)) {
+        // Not on WhatsApp: customer news goes by SMS (later ones SMS first); staff ones fail.
+        const viaSms = row.channel === 'whatsapp' && smsCanStandIn(row.template);
+        if (viaSms && isNotOnWhatsApp(error.code)) {
           await fallBackToSms(db, row.id, wordsFor);
           await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
           return 'skipped';

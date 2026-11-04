@@ -1,4 +1,12 @@
 import { type DatabaseExecutor, type Notice, notifyStaffHolders } from '@oneohm/database';
+import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
+
+const STAFF_TEMPLATES: ReadonlySet<string> = new Set(
+  DEFAULT_MESSAGE_TEMPLATES.filter((item) => item.audience === 'staff').map((item) => item.key),
+);
+
+/** A customer SMS can stand in for a failed WhatsApp; staff messages fail visibly instead. */
+export const smsCanStandIn = (template: string): boolean => !STAFF_TEMPLATES.has(template);
 
 export const CHAT_WINDOW_CLOSED =
   'Not sent: the chat window closed (the customer last wrote over 23 hours ago).';

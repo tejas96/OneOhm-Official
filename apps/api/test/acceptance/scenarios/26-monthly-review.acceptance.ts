@@ -1,6 +1,6 @@
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeDb, movePointsToMonth, setFairPointsSince, setTaskDates } from '../support/db';
+import { closeDb, movePointsToMonth, rows, setFairPointsSince, setTaskDates } from '../support/db';
 import { Session } from '../support/http';
 import { type OwnPerson, ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
@@ -158,5 +158,19 @@ describe('Monthly review', () => {
     expect(rewards.month.tasksJudged).toBe(1);
     expect(rewards.month.onTimeRate).toBe(0);
     expect(rewards.month.missed[0]?.reason).toContain('Late by 2 days');
+  });
+
+  it('someone who left during the month is still reviewed for it, not for later ones', async () => {
+    const leave = (on: string | null) =>
+      rows('UPDATE users SET status = $2, left_on = $3 WHERE id = $1', [
+        doer.id,
+        on ? 'inactive' : 'active',
+        on,
+      ]);
+    await leave(`${lastMonth()}-15`);
+    expect(await rowFor(lastMonth())).toBeTruthy();
+    await leave(addDays(`${lastMonth()}-01`, -1));
+    expect(await rowFor(lastMonth())).toBeUndefined();
+    await leave(null);
   });
 });

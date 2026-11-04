@@ -17,7 +17,7 @@ import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
-import { SAMPLE, TEMPLATE_KEYS } from './use-templates';
+import { SAMPLE, sampleFor, TEMPLATE_KEYS } from './use-templates';
 
 interface Draft {
   metaName: string;
@@ -167,7 +167,9 @@ export function MessageTemplateDialog({
         </Field>
         <div className="flex flex-col gap-1.5 rounded-lg bg-sunken px-4 py-3">
           <p className="type-label text-ink-faint">{t('sample')}</p>
-          <p className="type-body-sm text-ink">{renderTemplate(draft.preview, fields, SAMPLE)}</p>
+          <p className="type-body-sm text-ink">
+            {renderTemplate(draft.preview, fields, sampleFor(template.key))}
+          </p>
         </div>
         <div className="flex flex-col gap-1">
           <Switch

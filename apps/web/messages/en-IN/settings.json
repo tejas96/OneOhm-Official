@@ -795,7 +795,8 @@
       "methods": {
         "password": "Password (web)",
         "otp": "Code (field app)",
-        "customer_otp": "Code (customer app)"
+        "customer_otp": "Code (customer app)",
+        "password_reset": "Code (website password)"
       }
     },
     "paymentPlans": {

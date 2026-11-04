@@ -8,6 +8,7 @@ import { LocationSharingCard } from '@/features/attendance/location-sharing-card
 import { ChatsLink } from '@/features/chats/chats-link';
 import { useCurrentUser, useSession } from '@/session/session-provider';
 import { ContactCard } from './contact-card';
+import { PayoutDetailsCard } from './payout-details-card';
 
 /** Who is signed in, their roles, and sign out. */
 export function ProfileScreen() {
@@ -37,6 +38,7 @@ export function ProfileScreen() {
           {PROFILE.kind[user.kind]}
         </Text>
       </View>
+      {user.kind === 'reseller' ? <PayoutDetailsCard /> : null}
       <ChatsLink />
       <LocationSharingCard />
       <AppearanceCard words={PROFILE.appearance} />

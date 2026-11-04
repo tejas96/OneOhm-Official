@@ -2,18 +2,22 @@ import { Card, describeError, ErrorState, LoadingState, Screen, Text } from '@on
 import { StyleSheet, View } from 'react-native';
 import { COMMON } from '@/copy/common';
 import { EARNINGS } from '@/copy/reseller';
+import { useCurrentUser } from '@/session/session-provider';
 import { EarningsTiles, ruleWords, StatementRow } from './earnings-parts';
+import { PayoutBanner } from './payout-banner';
 import { useMyEarnings } from './use-reseller';
 
 /** The reseller's commission: the rule, the totals and a statement of every entry. */
 export function EarningsScreen() {
   const query = useMyEarnings();
   const earnings = query.data;
+  const isReseller = useCurrentUser().kind === 'reseller';
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.header}>
         <Text variant="displayLg">{EARNINGS.title}</Text>
       </View>
+      {isReseller ? <PayoutBanner /> : null}
       {query.isPending ? <LoadingState label={EARNINGS.loading} /> : null}
       {query.isError ? (
         <ErrorState

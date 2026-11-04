@@ -5,6 +5,8 @@ export class ApiError extends Error {
     message: string,
     readonly code: string | undefined,
     readonly fieldErrors: Readonly<Record<string, string>>,
+    /** Facts for a next step, like who already holds a mobile number. */
+    readonly details: Readonly<Record<string, unknown>> = {},
   ) {
     super(message);
   }
@@ -18,11 +20,16 @@ export function toApiError(status: number, body: unknown): ApiError {
     typeof data.fieldErrors === 'object' && data.fieldErrors !== null
       ? (data.fieldErrors as Record<string, string>)
       : {};
+  const details =
+    typeof data.details === 'object' && data.details !== null
+      ? (data.details as Record<string, unknown>)
+      : {};
   return new ApiError(
     status,
     message,
     typeof data.code === 'string' ? data.code : undefined,
     fieldErrors,
+    details,
   );
 }
 

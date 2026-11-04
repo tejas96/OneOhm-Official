@@ -52,6 +52,10 @@ export const HINDI_WORDS: LanguageWords = {
       title: 'आपकी सर्विस रिक्वेस्ट की जानकारी',
       body: `${p.topic}: ${p.status}।`,
     }),
+    contact_changed: (p) => ({
+      title: 'आपका OneOhm संपर्क बदल गया है',
+      body: `${p.staff} अब ${p.subject} के लिए आपके संपर्क हैं। ${p.phone} पर कॉल करें।`,
+    }),
     change_request_raised: (p) => ({
       title: 'बदलाव की रिक्वेस्ट शुरू हुई',
       body: `${p.request}, नंबर ${p.number}।`,
@@ -144,6 +148,11 @@ export const HINDI_WORDS: LanguageWords = {
     approved: 'मंज़ूर हो गया, जल्द मिलेगा',
     paid: 'आपको दे दिया गया',
     rejected: 'मंज़ूर नहीं हुआ',
+  },
+  contactSubjects: {
+    project: 'आपके सोलर प्रोजेक्ट',
+    service: 'आपकी सर्विस रिक्वेस्ट',
+    enquiry: 'आपकी सोलर पूछताछ',
   },
   alerts: { stage_rating_reply: 'हमने आपकी राय का जवाब दिया' },
 };

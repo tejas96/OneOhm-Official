@@ -3,6 +3,7 @@
 import type { Person } from '@oneohm/api-contracts';
 import {
   Button,
+  Checkbox,
   EmptyState,
   Input,
   ResponsiveTable,
@@ -16,8 +17,11 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { AddPersonDialog } from './add-person-dialog';
 import { LoadCell } from './capacity/overload-badge';
+import { isPastMember } from './departure';
 import { EditPersonSheet } from './edit-person-sheet';
+import { PastMemberSheet } from './past-member-sheet';
 import { PersonContact, PersonIdentity, PersonRoles, PersonStatus } from './person-row';
+import { RemovePersonSheet } from './remove-person-sheet';
 import { usePeople, useRoles } from './use-team';
 
 const ALL = 'all';
@@ -31,22 +35,36 @@ function matches(person: Person, search: string, roleId: string): boolean {
     .some((value) => value.toLowerCase().includes(needle));
 }
 
-/** Everyone on the team with their roles, contact and current load. */
+/** Everyone on the team with their roles, contact and current load; past members on request. */
 export function PeopleTab() {
   const t = useTranslations('team');
   const canManage = useCan('people.manage');
+  // Finance settles what a past member is still owed from their page.
+  const canSettle = useCan('finance.record_payments');
   const people = usePeople();
   const roles = useRoles();
   const [search, setSearch] = useState('');
   const [roleId, setRoleId] = useState<string>(ALL);
   const [adding, setAdding] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [pastId, setPastId] = useState<string | null>(null);
 
   const visible = useMemo(
-    () => (people.data ?? []).filter((person) => matches(person, search, roleId)),
-    [people.data, search, roleId],
+    () =>
+      (people.data ?? [])
+        .filter((person) => (showPast || !isPastMember(person)) && matches(person, search, roleId))
+        // Past members after everyone still on the team.
+        .sort((left, right) => Number(isPastMember(left)) - Number(isPastMember(right))),
+    [people.data, search, roleId, showPast],
   );
-  const editing = people.data?.find((person) => person.id === editingId) ?? null;
+  const find = (id: string | null) => people.data?.find((person) => person.id === id) ?? null;
+  const opener = (person: Person) => {
+    if (isPastMember(person))
+      return canManage || canSettle ? () => setPastId(person.id) : undefined;
+    return canManage ? () => setEditingId(person.id) : undefined;
+  };
   const roleOptions = [
     { value: ALL, label: t('allRoles') },
     ...(roles.data ?? [])
@@ -59,12 +77,7 @@ export function PeopleTab() {
       key: 'person',
       header: t('columns.person'),
       primary: true,
-      cell: (person) => (
-        <PersonIdentity
-          person={person}
-          onOpen={canManage ? () => setEditingId(person.id) : undefined}
-        />
-      ),
+      cell: (person) => <PersonIdentity person={person} onOpen={opener(person)} />,
     },
     { key: 'roles', header: t('columns.roles'), cell: (person) => <PersonRoles person={person} /> },
     {
@@ -75,7 +88,7 @@ export function PeopleTab() {
     {
       key: 'status',
       header: t('columns.status'),
-      cell: (person) => <PersonStatus person={person} />,
+      cell: (person) => <PersonStatus person={person} manage={canManage} />,
     },
     {
       key: 'load',
@@ -107,6 +120,12 @@ export function PeopleTab() {
           label={t('roleFilter')}
           className="sm:w-56"
         />
+        <Checkbox
+          checked={showPast}
+          onCheckedChange={setShowPast}
+          label={t('showPast')}
+          className="sm:shrink-0"
+        />
         {people.data && (
           <p className="type-body-sm text-ink-faint sm:ml-auto">
             {t('count', { count: visible.length })}
@@ -127,7 +146,11 @@ export function PeopleTab() {
       {people.isPending && <ListSkeleton label={t('loading')} />}
       {people.isError && <LoadError error={people.error} onRetry={() => people.refetch()} />}
       {people.data && visible.length === 0 && (
-        <EmptyState icon={<UsersRound />} title={t('emptyTitle')} description={t('emptyBody')} />
+        <EmptyState
+          icon={<UsersRound />}
+          title={t('emptyTitle')}
+          description={showPast ? t('emptyBody') : t('emptyBodyPast')}
+        />
       )}
       {visible.length > 0 && (
         <ResponsiveTable
@@ -137,10 +160,29 @@ export function PeopleTab() {
           rowKey={(person) => person.id}
         />
       )}
+      <RemovePersonSheet
+        person={find(removingId)}
+        people={people.data ?? []}
+        onClose={() => setRemovingId(null)}
+      />
+      <PastMemberSheet person={find(pastId)} onClose={() => setPastId(null)} />
       {roles.data && (
         <>
-          <AddPersonDialog open={adding} onOpenChange={setAdding} roles={roles.data} />
-          <EditPersonSheet person={editing} roles={roles.data} onClose={() => setEditingId(null)} />
+          <AddPersonDialog
+            open={adding}
+            onOpenChange={setAdding}
+            roles={roles.data}
+            invitesOn={people.data?.[0]?.invitesOn ?? true}
+          />
+          <EditPersonSheet
+            person={find(editingId)}
+            roles={roles.data}
+            onClose={() => setEditingId(null)}
+            onRemove={(person) => {
+              setEditingId(null);
+              setRemovingId(person.id);
+            }}
+          />
         </>
       )}
     </div>

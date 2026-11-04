@@ -1,8 +1,9 @@
 'use client';
 
-import { Button, Field, IconButton, Input } from '@oneohm/design-system/web';
-import { ArrowRight, CircleAlert, Eye, EyeOff, Mail } from 'lucide-react';
+import { Button, cn, Field, IconButton, Input } from '@oneohm/design-system/web';
+import { ArrowRight, CircleAlert, Eye, EyeOff, UserRound } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
@@ -10,8 +11,9 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { ApiError, describeError } from '@/lib/api/api-error';
 
 /**
- * Web sign-in: email or employee ID and a password (the requirements' rule for the
- * web; mobile apps use a one-time code). Returns the person to where they were going.
+ * Web sign-in: email, employee ID or mobile number, and a password (mobile apps use a
+ * one-time code instead). Someone with no password yet is pointed to "First time here?".
+ * Returns the person to where they were going.
  */
 export function SignInForm() {
   const t = useTranslations('signIn.form');
@@ -20,6 +22,7 @@ export function SignInForm() {
   const params = useSearchParams();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noPasswordYet, setNoPasswordYet] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -27,6 +30,7 @@ export function SignInForm() {
     const data = new FormData(event.currentTarget);
     setPending(true);
     setError(null);
+    setNoPasswordYet(false);
     setFieldErrors({});
     try {
       await expectStatus(
@@ -43,7 +47,10 @@ export function SignInForm() {
       router.refresh();
     } catch (caught) {
       setError(describeError(caught));
-      if (caught instanceof ApiError) setFieldErrors({ ...caught.fieldErrors });
+      if (caught instanceof ApiError) {
+        setFieldErrors({ ...caught.fieldErrors });
+        setNoPasswordYet(caught.code === 'password_not_set');
+      }
       setPending(false);
     }
   };
@@ -61,7 +68,7 @@ export function SignInForm() {
             name="identifier"
             autoComplete="username"
             placeholder={t('identifierPlaceholder')}
-            leading={<Mail />}
+            leading={<UserRound />}
           />
         </Field>
         <Field label={t('password')} error={fieldErrors.password}>
@@ -102,6 +109,15 @@ export function SignInForm() {
             </motion.p>
           )}
         </AnimatePresence>
+        <Link
+          href="/sign-in/set-password"
+          className={cn(
+            'self-center rounded-md px-1 py-1 text-center type-body-sm underline-offset-4 hover:underline',
+            noPasswordYet ? 'font-medium text-accent' : 'text-ink-muted',
+          )}
+        >
+          {t('firstTime')}
+        </Link>
       </form>
 
       <p className="border-t border-hairline pt-5 type-body-sm text-ink-faint">{t('mobileNote')}</p>

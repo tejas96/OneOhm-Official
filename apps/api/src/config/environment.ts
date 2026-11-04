@@ -12,6 +12,10 @@ const environmentSchema = z
     API_PORT: z.coerce.number().int().default(4200),
     DATABASE_URL: z.string().min(1),
     WEB_BASE_URL: z.string().url().default('http://localhost:3200'),
+    /** The field-app link new resellers and field staff get in their WhatsApp invite. */
+    FIELD_APP_URL: z.string().url().default('http://localhost:8081'),
+    /** `on` sends the staff_welcome WhatsApp invite; off until Meta approves the template. */
+    STAFF_INVITES: z.enum(['on', 'off']).default('off'),
     CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3200,http://localhost:8081'),
     BUSINESS_TIMEZONE: z.string().default('Asia/Kolkata'),
     TRUST_PROXY: flag,
@@ -30,6 +34,7 @@ const environmentSchema = z
     MSG91_AUTH_KEY: z.string().optional(),
     MSG91_SENDER_ID: z.string().optional(),
     MSG91_LOGIN_TEMPLATE_ID: z.string().optional(),
+    MSG91_PASSWORD_RESET_TEMPLATE_ID: z.string().optional(),
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
@@ -102,6 +107,9 @@ function missingKeys(env: Raw): Issue[] {
   const needs = (keys: readonly string[], message: string) =>
     keys.filter((key) => !env[key]).map((key): Issue => [key, message]);
   return [
+    ...(env.OTP_PROVIDER === 'msg91'
+      ? needs(['MSG91_PASSWORD_RESET_TEMPLATE_ID'], 'Needed to text password-reset codes.')
+      : []),
     ...(env.RAZORPAY_MODE === 'live'
       ? needs(
           ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'],
@@ -146,6 +154,12 @@ function productionIssues(env: Raw): Issue[] {
       isTemporaryAddress(String(env.API_PUBLIC_URL ?? '')),
       'API_PUBLIC_URL',
       'Use the stable https domain: links sent to customers carry it for good.',
+    ],
+    // Invites carry this link; a laptop address would reach nobody.
+    [
+      env.STAFF_INVITES === 'on' && isTemporaryAddress(String(env.FIELD_APP_URL ?? '')),
+      'FIELD_APP_URL',
+      'Set the stable https field-app address before turning STAFF_INVITES on.',
     ],
     [Boolean(env.OTP_DEVELOPMENT_CODE), 'OTP_DEVELOPMENT_CODE', 'Not allowed in production.'],
     [

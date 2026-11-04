@@ -5,6 +5,7 @@ import { ResponsiveTable, type TableColumn } from '@oneohm/design-system/web';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { percent } from '@/features/team/resellers/rule-summary';
+import { useCan } from '@/providers/current-user';
 import { type PayoutActions, PayoutStatus } from './payout-status';
 import type { PayoutTarget } from './use-payouts';
 
@@ -25,6 +26,7 @@ export function CommissionsTable({
 }) {
   const t = useTranslations('finance.payouts');
   const format = useFormatter();
+  const canPay = useCan('finance.record_payments');
   const columns: TableColumn<CommissionEntry>[] = [
     {
       key: 'reseller',
@@ -39,6 +41,16 @@ export function CommissionsTable({
               event: t(`events.${entry.qualifyingEvent}`),
             })}
           </span>
+          {canPay && (
+            <button
+              type="button"
+              onClick={() => actions.onPayoutDetails(entry.reseller)}
+              aria-label={`${t('viewDetails')}: ${entry.reseller.fullName}`}
+              className="mt-1 self-start rounded-sm type-label text-accent hover:underline focus-visible:outline-2 focus-visible:outline-focus"
+            >
+              {t('viewDetails')}
+            </button>
+          )}
         </span>
       ),
     },
@@ -82,7 +94,14 @@ export function CommissionsTable({
     {
       key: 'status',
       header: t('columns.status'),
-      cell: (entry) => <PayoutStatus row={entry} target={targetOf(entry)} actions={actions} />,
+      cell: (entry) => (
+        <PayoutStatus
+          row={entry}
+          target={targetOf(entry)}
+          actions={actions}
+          party={entry.reseller}
+        />
+      ),
     },
   ];
   return (

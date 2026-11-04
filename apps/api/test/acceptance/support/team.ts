@@ -1,4 +1,5 @@
 import type { Session } from './http';
+import { setWebPassword } from './password';
 
 /**
  * The standing OneOhm team in the acceptance database: one person for every in-house
@@ -80,13 +81,15 @@ export async function ensurePerson(
 ): Promise<Person> {
   const existing = await personByPhone(admin, input.phone);
   if (existing) return existing;
-  return admin.post<Person>('/people', {
+  const created = await admin.post<Person>('/people', {
     fullName: input.name,
     phone: input.phone,
     email: input.email ?? null,
-    password: input.email ? TEAM_PASSWORD : null,
     roleIds: await roleIds(admin, input.roles),
   });
+  // Web sign-in is by password, which a person sets themselves with a text code.
+  if (input.email) await setWebPassword(input.phone, TEAM_PASSWORD);
+  return created;
 }
 
 async function ensureCrew(admin: Session, key: CrewKey): Promise<void> {

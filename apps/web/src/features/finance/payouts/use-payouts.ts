@@ -3,6 +3,7 @@
 import type {
   CommissionEntry,
   IncentiveFilter,
+  PayoutDetailsInput,
   PayoutInput,
   ReferralReward,
 } from '@oneohm/api-contracts';
@@ -24,7 +25,26 @@ export const payoutKeys = {
   all: ['finance', 'payouts'] as const,
   list: (kind: PayoutKind, status: IncentiveFilter) =>
     ['finance', 'payouts', kind, status] as const,
+  details: (resellerId: string) => ['finance', 'payout-details', resellerId] as const,
 };
+
+/** A reseller whose payout details finance opens from the commission list. */
+export interface PayoutParty {
+  readonly id: string;
+  readonly fullName: string;
+}
+
+/** Full values: only people who record payments may open these. */
+export const usePayoutDetails = (resellerId: string | null) =>
+  useQuery({
+    queryKey: payoutKeys.details(resellerId ?? ''),
+    queryFn: () =>
+      expectStatus(api.commissions.payoutDetails({ params: { id: resellerId ?? '' } }), 200),
+    enabled: resellerId !== null,
+  });
+
+export const savePayoutDetails = (resellerId: string, body: PayoutDetailsInput) =>
+  expectStatus(api.commissions.savePayoutDetails({ params: { id: resellerId }, body }), 200);
 
 export const useCommissionEntries = (status: IncentiveFilter, enabled: boolean) =>
   useQuery({

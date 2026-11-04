@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 22 templates. Each one:
+The app sends these 24 templates. Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -182,18 +182,39 @@ Sent when a live project gets a new project manager.
 
 Examples: Ramesh Patil · PRJ-0087 · Vikram Jadhav · +91 98765 43210
 
-## Staff template
+### 21. `contact_changed` — New
+Fields: customer, staff, subject, phone
 
-### 21. `staff_daily_digest` — Changed
+Sent once per customer when a team member leaves and their project, service request or lead
+moves to someone else. The admin can turn it off in the removal sheet.
+
+> Hi {{1}}, {{2}} is now your OneOhm contact for {{3}}. You can call them on {{4}}, or reply here any time.
+
+Examples: Ramesh Patil · Priya Shah · your solar project PRJ-0087 · +91 98000 00000
+
+## Staff templates
+
+### 22. `staff_daily_digest` — Changed
 Fields: name, overdue, today, followUps
 
 > Good morning {{1}}, here is your OneOhm work summary for today. Overdue tasks: {{2}}. Tasks due today: {{3}}. Lead follow-ups: {{4}}. Open the OneOhm app to see them.
 
 Examples: Priya · 2 · 5 · 3
 
+### 23. `staff_welcome` — New
+Fields: name, link
+
+Sent when an admin adds a person, sends the invite again, asks for a new password or adds a
+past member back. `{{2}}` is the website for staff, and the field app for resellers and
+partners. Turn on with `STAFF_INVITES=on` only after Meta approves it.
+
+> Hi {{1}}, you have been added to the OneOhm team. Open the app here: {{2}}. Sign in with this mobile number. For the website, choose "First time here?" to set your password.
+
+Examples: Priya · https://app.oneohm.in
+
 ## Chat template
 
-### 22. `chat_follow_up`
+### 24. `chat_follow_up`
 Fields: customer, staff, message
 
 Used when a team member writes to a customer more than 24 hours after the customer's last

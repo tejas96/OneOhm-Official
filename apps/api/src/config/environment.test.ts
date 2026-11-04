@@ -28,6 +28,7 @@ describe('payment settings safety', () => {
       MSG91_AUTH_KEY: 'k',
       MSG91_SENDER_ID: 'ONEOHM',
       MSG91_LOGIN_TEMPLATE_ID: 't',
+      MSG91_PASSWORD_RESET_TEMPLATE_ID: 'r',
       RAZORPAY_MODE: 'live',
       RAZORPAY_KEY_ID: 'rzp_test_abc',
       RAZORPAY_KEY_SECRET: 's',
@@ -43,6 +44,19 @@ describe('payment settings safety', () => {
   });
 });
 
+describe('msg91 settings', () => {
+  it('msg91 needs the reset template', () => {
+    expect(() =>
+      loadEnvironment({
+        ...base,
+        OTP_PROVIDER: 'msg91',
+        MSG91_AUTH_KEY: 'k',
+        MSG91_LOGIN_TEMPLATE_ID: 't',
+      }),
+    ).toThrow(/MSG91_PASSWORD_RESET_TEMPLATE_ID/);
+  });
+});
+
 describe('production start-up checks', () => {
   const production = {
     ...base,
@@ -51,6 +65,7 @@ describe('production start-up checks', () => {
     MSG91_AUTH_KEY: 'k',
     MSG91_SENDER_ID: 'ONEOHM',
     MSG91_LOGIN_TEMPLATE_ID: 't',
+    MSG91_PASSWORD_RESET_TEMPLATE_ID: 'r',
     PAY_LINK_SECRET: 'a-real-secret-for-pay-links-0123456789',
     API_PUBLIC_URL: 'https://app.oneohm.in',
   };
@@ -92,6 +107,20 @@ describe('production start-up checks', () => {
     'https://oneohm.loca.lt',
   ])('refuses the public address %s', (url) => {
     expect(() => loadEnvironment({ ...production, API_PUBLIC_URL: url })).toThrow(/API_PUBLIC_URL/);
+  });
+
+  it('needs a real field-app address once staff invites are on', () => {
+    expect(() => loadEnvironment({ ...production, STAFF_INVITES: 'on' })).toThrow(/FIELD_APP_URL/);
+    expect(() =>
+      loadEnvironment({
+        ...production,
+        STAFF_INVITES: 'on',
+        FIELD_APP_URL: 'http://10.0.0.5:8081',
+      }),
+    ).toThrow(/FIELD_APP_URL/);
+    const on = { ...production, STAFF_INVITES: 'on', FIELD_APP_URL: 'https://field.oneohm.in' };
+    expect(loadEnvironment(on).STAFF_INVITES).toBe('on');
+    expect(loadEnvironment(production).STAFF_INVITES).toBe('off');
   });
 
   it('leaves a laptop alone', () => {

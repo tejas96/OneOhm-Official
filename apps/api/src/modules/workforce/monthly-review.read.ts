@@ -12,8 +12,8 @@ import {
   users,
 } from '@oneohm/database';
 import { isMissedLine } from '@oneohm/domain';
-import { monthRange, previousMonth } from '@oneohm/shared';
-import { and, asc, eq, inArray, type SQL, sql } from 'drizzle-orm';
+import { monthOf, monthRange, previousMonth } from '@oneohm/shared';
+import { and, asc, eq, gte, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 
 /** A point line's India day falls in the month. */
 export function inMonth(column: typeof pointsEntries.createdAt, month: string): SQL {
@@ -115,7 +115,18 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
     ? await db
         .select({ id: users.id, fullName: users.fullName })
         .from(users)
-        .where(inArray(users.id, ids))
+        // Someone who left during the month is still reviewed for it; someone who left
+        // before it is not. An old past member with no leaving day keeps past months only.
+        .where(
+          and(
+            inArray(users.id, ids),
+            or(
+              eq(users.status, 'active'),
+              gte(users.leftOn, start),
+              month === monthOf(new Date()) ? undefined : isNull(users.leftOn),
+            ),
+          ),
+        )
     : [];
   const rows: MonthlyRow[] = people.map((user) => {
     const review = reviews.find((entry) => entry.userId === user.id);

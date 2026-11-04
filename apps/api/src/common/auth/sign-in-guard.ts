@@ -39,7 +39,8 @@ export async function recordAttempt(
   db: DatabaseExecutor,
   attempt: {
     identifier: string;
-    method: 'password' | 'otp' | 'customer_otp';
+    /** password_reset: a code typed to set or reset the web password. */
+    method: 'password' | 'otp' | 'customer_otp' | 'password_reset';
     ip: string | null;
     userId: string | null;
     success: boolean;

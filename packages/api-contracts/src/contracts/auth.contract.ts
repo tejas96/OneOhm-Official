@@ -10,11 +10,12 @@ export const authContract = c.router({
     method: 'POST',
     path: '/auth/sign-in',
     body: z.object({
-      identifier: z.string().trim().min(1, 'Enter your email or employee ID.'),
+      identifier: z.string().trim().min(1, 'Enter your email, employee ID or mobile number.'),
       password: z.string().min(1, 'Enter your password.'),
     }),
     responses: { 200: z.object({ user: currentUserSchema }) },
-    summary: 'Web sign-in with email or employee ID and password. Sets the session cookie.',
+    summary:
+      'Web sign-in with email, employee ID or mobile number and password. Sets the session cookie.',
   },
   requestOtp: {
     method: 'POST',
@@ -31,6 +32,25 @@ export const authContract = c.router({
       code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code.'),
     }),
     responses: { 200: z.object({ token: z.string(), user: currentUserSchema }) },
+  },
+  requestPasswordCode: {
+    method: 'POST',
+    path: '/auth/password/code',
+    body: z.object({ phone: phoneSchema }),
+    responses: { 202: z.object({ expiresInSeconds: z.number().int() }) },
+    summary: 'First sign-in or forgot password: text a code to the registered phone.',
+  },
+  setPassword: {
+    method: 'POST',
+    path: '/auth/password',
+    body: z.object({
+      phone: phoneSchema,
+      code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code.'),
+      password: z.string().min(8, 'Use at least 8 characters.'),
+    }),
+    responses: { 200: z.object({ user: currentUserSchema }) },
+    summary:
+      'Choose a web password after proving the phone with the code. Sets the session cookie.',
   },
   signOut: {
     method: 'POST',

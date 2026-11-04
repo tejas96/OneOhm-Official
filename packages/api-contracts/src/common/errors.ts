@@ -5,6 +5,8 @@ export const errorSchema = z.object({
   message: z.string(),
   code: z.string().optional(),
   fieldErrors: z.record(z.string(), z.string()).optional(),
+  /** Facts for a next step, like `{ userId, fullName, leftOn }` for a number a past member held. */
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 export type ApiErrorBody = z.infer<typeof errorSchema>;
 

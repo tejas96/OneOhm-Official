@@ -117,6 +117,14 @@ describe('Reseller app', () => {
     expect(entry?.rateBp).toBe(200);
     expect(entry?.amountPaise).toBe(Math.round(((entry?.projectValuePaise ?? 0) * 200) / 10_000));
     await admin.post(`/commissions/${entry?.id}/approve`);
+    // Finance cannot pay until the reseller's payout details are in.
+    await admin.put(`/resellers/${first.userId}/payout-details`, {
+      bankAccountName: null,
+      bankAccountNumber: null,
+      bankIfsc: null,
+      upiId: 'sai.solar@okaxis',
+      pan: 'ABCDE1234F',
+    });
     await admin.post(`/commissions/${entry?.id}/pay`, {
       method: 'bank_transfer',
       paidOn: today(),

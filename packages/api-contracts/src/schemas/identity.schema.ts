@@ -46,6 +46,16 @@ export const personSchema = z.object({
   tracking: z.enum(['on', 'off']).nullable(),
   /** Who the person reports to (PRD 3.12); null for no one. */
   reportsTo: z.object({ id: idSchema, fullName: z.string() }).nullable(),
+  /** Whether they have signed in yet (last_active_at is set on the first sign-in). */
+  invite: z.enum(['not_signed_in', 'signed_in']),
+  /** What happened to the newest WhatsApp invite; null when none was queued. */
+  inviteDelivery: z.enum(['sent', 'failed', 'queued']).nullable(),
+  /** The invite sentence to copy, only while they have not signed in. */
+  inviteText: z.string().nullable(),
+  /** Whether WhatsApp invites are on (STAFF_INVITES); off, the admin copies the invite text. */
+  invitesOn: z.boolean(),
+  /** The day they left the team; null for current members. */
+  leftOn: z.string().nullable(),
 });
 export type Person = z.infer<typeof personSchema>;
 

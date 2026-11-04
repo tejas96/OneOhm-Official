@@ -40,6 +40,10 @@ const WORDS: Readonly<Record<string, Words>> = {
     body: `${p.amount} for ${p.milestone} on ${p.project}.`,
   }),
   service_update: (p) => ({ title: 'Service request update', body: `${p.topic}: ${p.status}.` }),
+  contact_changed: (p) => ({
+    title: 'Your OneOhm contact has changed',
+    body: `${p.staff} is now your contact for ${p.subject}. Call ${p.phone}.`,
+  }),
   change_request_raised: (p) => ({
     title: 'Change request started',
     body: `${p.request}, number ${p.number}.`,

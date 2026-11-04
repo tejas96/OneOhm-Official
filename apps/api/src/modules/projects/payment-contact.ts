@@ -8,7 +8,7 @@ import {
   quotations,
   users,
 } from '@oneohm/database';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { assistantLanguage } from '../whatsapp/assistant/language';
 
 export interface Contact {
@@ -32,6 +32,10 @@ export function pickContact(
   return { name: project[0]?.name ?? null, phone: businessPhone };
 }
 
+/** Current members among `ids`: a past member is never the number a customer is given. */
+export const currentMembers = (ids: readonly string[]) =>
+  and(inArray(users.id, [...ids]), eq(users.status, 'active'));
+
 /** The customer's language and their contact for this project. */
 export async function contactFor(tx: DatabaseExecutor, projectId: string) {
   const [row] = await tx
@@ -53,7 +57,7 @@ export async function contactFor(tx: DatabaseExecutor, projectId: string) {
     ? await tx
         .select({ id: users.id, name: users.fullName, phone: users.phoneE164 })
         .from(users)
-        .where(inArray(users.id, ids))
+        .where(currentMembers(ids))
     : [];
   const as = (id: string): Contact[] =>
     people.filter((person) => person.id === id).map(({ name, phone }) => ({ name, phone }));

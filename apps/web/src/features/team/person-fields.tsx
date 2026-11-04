@@ -11,7 +11,6 @@ export interface PersonDraft {
   readonly phone: string;
   readonly employeeCode: string;
   readonly designation: string;
-  readonly password: string;
   readonly roleIds: readonly string[];
 }
 
@@ -21,7 +20,6 @@ export const EMPTY_PERSON: PersonDraft = {
   phone: '',
   employeeCode: '',
   designation: '',
-  password: '',
   roleIds: [],
 };
 
@@ -32,7 +30,6 @@ export function draftFrom(person: Person): PersonDraft {
     phone: person.phone ?? '',
     employeeCode: person.employeeCode ?? '',
     designation: person.designation ?? '',
-    password: '',
     roleIds: person.roles.map((role) => role.id),
   };
 }
@@ -48,7 +45,6 @@ export function bodyFrom(draft: PersonDraft) {
     employeeCode: orNull(draft.employeeCode),
     designation: orNull(draft.designation),
     roleIds: [...draft.roleIds],
-    ...(draft.password ? { password: draft.password } : {}),
   };
 }
 
@@ -58,13 +54,14 @@ export function PersonFields({
   onChange,
   roles,
   errors,
-  mode,
+  phoneRequired = false,
 }: {
   readonly draft: PersonDraft;
   readonly onChange: (next: PersonDraft) => void;
   readonly roles: readonly Role[];
   readonly errors: Readonly<Record<string, string>>;
-  readonly mode: 'create' | 'edit';
+  /** New people need a mobile number: it is how they sign in and set a password. */
+  readonly phoneRequired?: boolean;
 }) {
   const t = useTranslations('team.form');
   const set = (key: keyof Omit<PersonDraft, 'roleIds'>) => (value: string) =>
@@ -87,7 +84,12 @@ export function PersonFields({
             autoComplete="off"
           />
         </Field>
-        <Field label={t('phone')} hint={t('phoneHint')} error={errors.phone}>
+        <Field
+          label={t('phone')}
+          hint={t('phoneHint')}
+          error={errors.phone}
+          required={phoneRequired}
+        >
           <Input
             type="tel"
             inputMode="tel"
@@ -110,18 +112,6 @@ export function PersonFields({
           />
         </Field>
       </div>
-      <Field
-        label={mode === 'create' ? t('password') : t('newPassword')}
-        hint={mode === 'create' ? t('passwordHint') : t('newPasswordHint')}
-        error={errors.password}
-      >
-        <Input
-          type="password"
-          value={draft.password}
-          onChange={(event) => set('password')(event.target.value)}
-          autoComplete="new-password"
-        />
-      </Field>
       <RolePicker
         roles={roles}
         value={draft.roleIds}

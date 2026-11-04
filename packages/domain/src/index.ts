@@ -1,5 +1,6 @@
 export * from './after-sales';
 export * from './approvals';
+export * from './commissions';
 export * from './contractors';
 export * from './discom';
 export * from './documents';

@@ -1,6 +1,13 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { emailSchema, idSchema, nameSchema, phoneSchema } from '../common/primitives';
+import {
+  calendarDateSchema,
+  emailSchema,
+  idSchema,
+  nameSchema,
+  phoneSchema,
+} from '../common/primitives';
+import { departureSchema } from '../schemas/departure.schema';
 import {
   capabilitySchema,
   personSchema,
@@ -19,10 +26,9 @@ export const peopleContract = c.router({
     body: z.object({
       fullName: nameSchema,
       email: emailSchema.nullable().optional(),
-      phone: phoneSchema.nullable().optional(),
+      phone: phoneSchema,
       employeeCode: z.string().trim().max(40).nullable().optional(),
       designation: z.string().trim().max(120).nullable().optional(),
-      password: z.string().min(8, 'Use at least 8 characters.').nullable().optional(),
       roleIds: z.array(idSchema).min(1, 'Choose at least one role.'),
     }),
     responses: { 201: personSchema },
@@ -36,8 +42,8 @@ export const peopleContract = c.router({
       email: emailSchema.nullable().optional(),
       phone: phoneSchema.nullable().optional(),
       employeeCode: z.string().trim().max(40).nullable().optional(),
-      /** Sets a new web password; never returned or logged. */
-      password: z.string().min(8, 'Use at least 8 characters.').optional(),
+      /** Clears the web password, signs them out everywhere and sends the invite again. */
+      requireNewPassword: z.literal(true).optional(),
       roleIds: z.array(idSchema).min(1, 'Choose at least one role.').optional(),
       status: z.enum(['active', 'inactive']).optional(),
       onLeave: z.boolean().optional(),
@@ -50,6 +56,46 @@ export const peopleContract = c.router({
       /** Who the person reports to; null for no one. */
       reportsToUserId: idSchema.nullable().optional(),
     }),
+    responses: { 200: personSchema },
+  },
+  invitePerson: {
+    method: 'POST',
+    path: '/people/:id/invite',
+    pathParams: idParams,
+    body: c.noBody(),
+    responses: { 202: personSchema },
+  },
+  releasePhone: {
+    method: 'POST',
+    path: '/people/:id/release-phone',
+    pathParams: idParams,
+    body: c.noBody(),
+    responses: { 200: personSchema },
+  },
+  getDeparture: {
+    method: 'GET',
+    path: '/people/:id/departure',
+    pathParams: idParams,
+    responses: { 200: departureSchema },
+  },
+  /** Remove from team: all open work goes to one person in the same step (spec Flow 5). */
+  removePerson: {
+    method: 'POST',
+    path: '/people/:id/remove',
+    pathParams: idParams,
+    body: z.object({
+      handToUserId: idSchema,
+      lastWorkingDay: calendarDateSchema,
+      tellCustomers: z.boolean(),
+    }),
+    responses: { 200: personSchema },
+  },
+  /** Add a past member back: active, no password, a new invite; their work stays put. */
+  rejoinPerson: {
+    method: 'POST',
+    path: '/people/:id/rejoin',
+    pathParams: idParams,
+    body: c.noBody(),
     responses: { 200: personSchema },
   },
   listRoles: { method: 'GET', path: '/roles', responses: { 200: z.array(roleSchema) } },
