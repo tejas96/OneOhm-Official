@@ -32,6 +32,25 @@ export const authContract = c.router({
     }),
     responses: { 200: z.object({ token: z.string(), user: currentUserSchema }) },
   },
+  requestPasswordCode: {
+    method: 'POST',
+    path: '/auth/password/code',
+    body: z.object({ phone: phoneSchema }),
+    responses: { 202: z.object({ expiresInSeconds: z.number().int() }) },
+    summary: 'First sign-in or forgot password: text a code to the registered phone.',
+  },
+  setPassword: {
+    method: 'POST',
+    path: '/auth/password',
+    body: z.object({
+      phone: phoneSchema,
+      code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code.'),
+      password: z.string().min(8, 'Use at least 8 characters.'),
+    }),
+    responses: { 200: z.object({ user: currentUserSchema }) },
+    summary:
+      'Choose a web password after proving the phone with the code. Sets the session cookie.',
+  },
   signOut: {
     method: 'POST',
     path: '/auth/sign-out',

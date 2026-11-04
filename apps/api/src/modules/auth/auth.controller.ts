@@ -8,13 +8,16 @@ import { ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { apiContract } from '../../contract';
 import { AuthService } from './auth.service';
+import { PasswordSetupService } from './password-setup.service';
 
-const { signIn, signOut, requestOtp, verifyOtp, me } = apiContract.auth;
+const { signIn, signOut, requestOtp, verifyOtp, requestPasswordCode, setPassword, me } =
+  apiContract.auth;
 
 @Controller()
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly passwords: PasswordSetupService,
     @Inject(ENVIRONMENT) private readonly env: Environment,
   ) {}
 
@@ -51,6 +54,30 @@ export class AuthController {
     return tsRestHandler(verifyOtp, async ({ body }) => {
       const session = await this.auth.verifyOtp(body.phone, body.code);
       return { status: 200, body: { token: session.token, user: session.user } };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(requestPasswordCode)
+  requestPasswordCode() {
+    return tsRestHandler(requestPasswordCode, async ({ body }) => ({
+      status: 202,
+      body: await this.passwords.requestCode(body.phone),
+    }));
+  }
+
+  @Public()
+  @TsRestHandler(setPassword)
+  setPassword(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    return tsRestHandler(setPassword, async ({ body }) => {
+      const session = await this.passwords.setPassword(
+        body.phone,
+        body.code,
+        body.password,
+        request.ip ?? null,
+      );
+      setSessionCookies(response, session.token, session.expiresAt, this.secureCookies);
+      return { status: 200, body: { user: session.user } };
     });
   }
 
