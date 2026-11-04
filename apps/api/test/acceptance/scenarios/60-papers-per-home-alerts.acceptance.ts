@@ -38,6 +38,37 @@ async function sentAs(phone: string, wamid: string) {
   );
 }
 
+/** A real (empty) Word file's ZIP: two entries, their central directory and its end record. */
+function wordFile(): Buffer {
+  const names = ['[Content_Types].xml', 'word/document.xml'];
+  const parts = (sig: string, size: number, at: number, name: string, offset: number) => {
+    const head = Buffer.alloc(size);
+    head.write(sig, 0, 'latin1');
+    head.writeUInt16LE(name.length, at);
+    if (size === 46) head.writeUInt32LE(offset, 42);
+    return Buffer.concat([head, Buffer.from(name)]);
+  };
+  let offset = 0;
+  const local = names.map((name) => {
+    const part = parts('PK\x03\x04', 30, 26, name, 0);
+    offset += part.length;
+    return part;
+  });
+  let at = 0;
+  const central = names.map((name, index) => {
+    const part = parts('PK\x01\x02', 46, 28, name, at);
+    at += local[index]?.length ?? 0;
+    return part;
+  });
+  const end = Buffer.alloc(22);
+  end.write('PK\x05\x06', 0, 'latin1');
+  end.writeUInt16LE(names.length, 8);
+  end.writeUInt16LE(names.length, 10);
+  end.writeUInt32LE(Buffer.concat(central).length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...local, ...central, end]);
+}
+
 describe('Papers per home: alerts that were missing', () => {
   let admin: Session;
 
@@ -131,10 +162,7 @@ describe('Papers per home: alerts that were missing', () => {
 
   it('a Word file through the normal upload is refused', async () => {
     const { project } = await sellProject(admin, { name: 'Word Upload (test)' });
-    const zip = Buffer.alloc(30 + 17);
-    zip.write('PK\x03\x04', 0, 'latin1');
-    zip.writeUInt16LE(17, 26);
-    zip.write('word/document.xml', 30, 'latin1');
+    const zip = wordFile();
     const form = new FormData();
     form.set('category', 'other');
     form.set('name', 'Plan (test)');

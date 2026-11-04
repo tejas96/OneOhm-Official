@@ -58,12 +58,33 @@ export function samplePdf(): Buffer {
   return Buffer.from(body, 'latin1');
 }
 
-/** The front of a Word or Excel file: a ZIP whose first entry is `word/` or `xl/`. */
+/** A Word or Excel file stand-in: a ZIP of `[Content_Types].xml` and one `word/` or `xl/` entry. */
 function sampleOffice(entry: string): Buffer {
-  const header = Buffer.alloc(30);
-  header.write('PK\x03\x04', 0, 'latin1');
-  header.writeUInt16LE(entry.length, 26);
-  return Buffer.concat([header, Buffer.from(entry, 'latin1')]);
+  const names = ['[Content_Types].xml', entry];
+  const local: Buffer[] = [];
+  const central: Buffer[] = [];
+  let offset = 0;
+  for (const name of names) {
+    const label = Buffer.from(name, 'latin1');
+    const head = Buffer.alloc(30);
+    head.write('PK\x03\x04', 0, 'latin1');
+    head.writeUInt16LE(label.length, 26);
+    const index = Buffer.alloc(46);
+    index.write('PK\x01\x02', 0, 'latin1');
+    index.writeUInt16LE(label.length, 28);
+    index.writeUInt32LE(offset, 42);
+    local.push(head, label);
+    central.push(index, label);
+    offset += head.length + label.length;
+  }
+  const size = central.reduce((total, part) => total + part.length, 0);
+  const end = Buffer.alloc(22);
+  end.write('PK\x05\x06', 0, 'latin1');
+  end.writeUInt16LE(names.length, 8);
+  end.writeUInt16LE(names.length, 10);
+  end.writeUInt32LE(size, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...local, ...central, end]);
 }
 
 const EXTENSION: Readonly<Record<IncomingMedia['type'], string>> = {

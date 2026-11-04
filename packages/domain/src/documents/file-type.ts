@@ -73,31 +73,47 @@ function ascii(bytes: Uint8Array, start: number, length: number): string {
   return String.fromCharCode(...bytes.subarray(start, start + length));
 }
 
-/** How many entries are read before deciding: Word and Excel put their folder first. */
-const ZIP_ENTRIES_READ = 8;
+/** The most central-directory entries read before deciding. */
+const ZIP_ENTRIES_READ = 2000;
+/** The end-of-directory record is 22 bytes, then a comment of up to 65535 bytes. */
+const EOCD_SEARCH_BYTES = 22 + 0xffff;
 
 const u16 = (bytes: Uint8Array, at: number) => (bytes[at] ?? 0) | ((bytes[at + 1] ?? 0) << 8);
 const u32 = (bytes: Uint8Array, at: number) => u16(bytes, at) + u16(bytes, at + 2) * 0x10000;
 
+/** Where the ZIP's end-of-directory record starts, searching back from the end; else -1. */
+function findEndRecord(bytes: Uint8Array): number {
+  const lowest = Math.max(0, bytes.length - EOCD_SEARCH_BYTES);
+  for (let at = bytes.length - 22; at >= lowest; at -= 1)
+    if (bytes[at] === 0x50 && ascii(bytes, at, 4) === 'PK\x05\x06') return at;
+  return -1;
+}
+
 /**
- * Word and Excel files are ZIPs: `PK\x03\x04`, then entries whose names start `word/` or
- * `xl/`. The entries' local headers are walked in order (30 bytes, name, extra, data), so a
- * name inside another file's stored data is never read. An entry whose size is only given
- * after its data cannot be skipped, so the walk stops there.
+ * Word and Excel files are ZIPs: `PK\x03\x04` first, then a central directory (found from the
+ * end of the file) that lists `[Content_Types].xml` and entries under `word/` or `xl/`.
+ * The directory lists only top-level entries, so a file stored inside another one never
+ * shows; it also names entries whose local headers hold no size (streaming writers).
  */
 function detectOffice(bytes: Uint8Array): DetectedFileType | null {
-  let at = 0;
-  for (let entry = 0; entry < ZIP_ENTRIES_READ; entry += 1) {
-    if (at + 30 > bytes.length || ascii(bytes, at, 4) !== 'PK\x03\x04') return null;
-    const nameLength = u16(bytes, at + 26);
-    const name = ascii(bytes, at + 30, Math.min(nameLength, 64));
-    if (name.startsWith('word/')) return DOCX_TYPE;
-    if (name.startsWith('xl/')) return XLSX_TYPE;
-    const sized = (u16(bytes, at + 6) & 0x08) === 0 || u32(bytes, at + 18) > 0;
-    if (!sized) return null;
-    at += 30 + nameLength + u16(bytes, at + 28) + u32(bytes, at + 18);
+  if (bytes.length < 30 || ascii(bytes, 0, 4) !== 'PK\x03\x04') return null;
+  const end = findEndRecord(bytes);
+  if (end < 0) return null;
+  let at = u32(bytes, end + 16);
+  const stop = Math.min(at + u32(bytes, end + 12), bytes.length);
+  let types = false;
+  let kind: DetectedFileType | null = null;
+  for (let entry = 0; entry < ZIP_ENTRIES_READ && at + 46 <= stop; entry += 1) {
+    if (ascii(bytes, at, 4) !== 'PK\x01\x02') break;
+    const nameLength = u16(bytes, at + 28);
+    if (at + 46 + nameLength > stop) break;
+    const name = ascii(bytes, at + 46, Math.min(nameLength, 64));
+    if (name === '[Content_Types].xml') types = true;
+    else if (name.startsWith('word/')) kind ??= DOCX_TYPE;
+    else if (name.startsWith('xl/')) kind ??= XLSX_TYPE;
+    at += 46 + nameLength + u16(bytes, at + 30) + u16(bytes, at + 32);
   }
-  return null;
+  return types ? kind : null;
 }
 
 /**
