@@ -1,7 +1,7 @@
 import type { Database, outbox } from '@oneohm/database';
 import { describe, expect, it } from 'vitest';
 import type { PushSender } from '../channels/expo-push';
-import { MAYBE_SENT } from '../channels/send-errors';
+import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
 import type { WhatsAppSender } from '../channels/whatsapp-cloud';
 import { deliveryActivities, SENDING } from './delivery.activities';
@@ -55,11 +55,11 @@ function fakeDb(row: Row) {
   return { writes, db: db as unknown as Database };
 }
 
-function activitiesFor(row: Row, send: SmsSender['send']) {
+function activitiesFor(row: Row, send: SmsSender['send'], sender = {} as WhatsAppSender) {
   const fake = fakeDb(row);
   const activities = deliveryActivities({
     db: fake.db,
-    sender: {} as WhatsAppSender,
+    sender,
     push: {} as PushSender,
     sms: { send },
     language: 'en',
@@ -97,5 +97,40 @@ describe('deliverOutboxMessage crash guard', () => {
     });
     await expect(activities.deliverOutboxMessage('r1')).rejects.toThrow('SMS 503: busy');
     expect(writes.at(-1)).toEqual({ lastError: 'SMS 503: busy' });
+  });
+});
+
+describe('a staff message the number cannot get on WhatsApp', () => {
+  const notOnWhatsApp = {
+    send: async () => {
+      throw new PermanentSendError('WhatsApp 400: not a WhatsApp user', 131026);
+    },
+  } as unknown as WhatsAppSender;
+  const staffRow = (template: string, payload: Record<string, string>): Row => ({
+    ...smsRow(),
+    channel: 'whatsapp',
+    template,
+    payload,
+  });
+
+  it.each([
+    ['staff_welcome', { name: 'Asha', link: 'https://app.oneohm.in' }],
+    ['staff_daily_digest', { name: 'Asha', overdue: '1', today: '2', followUps: '0' }],
+  ])('%s fails visibly instead of texting a customer SMS', async (template, payload) => {
+    const smsSends: string[] = [];
+    const { writes, activities } = activitiesFor(
+      staffRow(template, payload),
+      async (to) => {
+        smsSends.push(to);
+        return { outcome: 'sent', providerId: 'p' };
+      },
+      notOnWhatsApp,
+    );
+    expect(await activities.deliverOutboxMessage('r1')).toBe('failed');
+    expect(smsSends).toEqual([]);
+    expect(writes.at(-1)).toEqual({
+      status: 'failed',
+      lastError: 'WhatsApp 400: not a WhatsApp user',
+    });
   });
 });

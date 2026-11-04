@@ -155,6 +155,12 @@ function productionIssues(env: Raw): Issue[] {
       'API_PUBLIC_URL',
       'Use the stable https domain: links sent to customers carry it for good.',
     ],
+    // Invites carry this link; a laptop address would reach nobody.
+    [
+      env.STAFF_INVITES === 'on' && isTemporaryAddress(String(env.FIELD_APP_URL ?? '')),
+      'FIELD_APP_URL',
+      'Set the stable https field-app address before turning STAFF_INVITES on.',
+    ],
     [Boolean(env.OTP_DEVELOPMENT_CODE), 'OTP_DEVELOPMENT_CODE', 'Not allowed in production.'],
     [
       String(env.FILE_LINK_SECRET ?? '').startsWith('oneohm-local'),

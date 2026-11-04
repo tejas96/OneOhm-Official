@@ -109,6 +109,20 @@ describe('production start-up checks', () => {
     expect(() => loadEnvironment({ ...production, API_PUBLIC_URL: url })).toThrow(/API_PUBLIC_URL/);
   });
 
+  it('needs a real field-app address once staff invites are on', () => {
+    expect(() => loadEnvironment({ ...production, STAFF_INVITES: 'on' })).toThrow(/FIELD_APP_URL/);
+    expect(() =>
+      loadEnvironment({
+        ...production,
+        STAFF_INVITES: 'on',
+        FIELD_APP_URL: 'http://10.0.0.5:8081',
+      }),
+    ).toThrow(/FIELD_APP_URL/);
+    const on = { ...production, STAFF_INVITES: 'on', FIELD_APP_URL: 'https://field.oneohm.in' };
+    expect(loadEnvironment(on).STAFF_INVITES).toBe('on');
+    expect(loadEnvironment(production).STAFF_INVITES).toBe('off');
+  });
+
   it('leaves a laptop alone', () => {
     const laptop = {
       DATABASE_URL: base.DATABASE_URL,

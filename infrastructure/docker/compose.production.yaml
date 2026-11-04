@@ -21,6 +21,9 @@ x-app: &app
     COOKIE_SECURE: "true"
     WEB_BASE_URL: https://${ONEOHM_DOMAIN}
     CORS_ALLOWED_ORIGINS: https://${ONEOHM_DOMAIN}
+    # Resellers and partners get this link in their invite; must be https once invites are on.
+    FIELD_APP_URL: ${FIELD_APP_URL:-}
+    STAFF_INVITES: ${STAFF_INVITES:-off}
 
 services:
   postgres:
