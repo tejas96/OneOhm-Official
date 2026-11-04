@@ -82,8 +82,13 @@ export function ProjectsFilterBar({
         value={filters.view}
         onValueChange={(view) => onChange({ view })}
         options={[
-          { value: 'cards', label: t('layout.cards'), icon: <LayoutGrid aria-hidden /> },
-          { value: 'table', label: t('layout.table'), icon: <Rows3 aria-hidden /> },
+          {
+            value: 'cards',
+            label: t('layout.cards'),
+            icon: <LayoutGrid aria-hidden />,
+            iconOnly: true,
+          },
+          { value: 'table', label: t('layout.table'), icon: <Rows3 aria-hidden />, iconOnly: true },
         ]}
         className="self-start xl:ml-auto"
       />

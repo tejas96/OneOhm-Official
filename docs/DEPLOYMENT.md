@@ -102,8 +102,8 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 
 ### Upgrade notes
 
-- **People lifecycle (November 2026):** migrations `0065_reseller_payout_details` (a new
-  table for reseller bank and UPI details) and `0066_user_left_on` (a nullable `left_on`
+- **People lifecycle (November 2026):** migrations `0068_reseller_payout_details` (a new
+  table for reseller bank and UPI details) and `0069_user_left_on` (a nullable `left_on`
   date on users) run on their own at start. Before the update, add
   `MSG91_PASSWORD_RESET_TEMPLATE_ID`, `STAFF_INVITES=off` and `FIELD_APP_URL` to the `.env`.
 
@@ -118,7 +118,7 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 ### Templates
 
 Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
-full list (23 templates, category *Utility*, language *English*), with each body, field
+full list (24 templates, category *Utility*, language *English*), with each body, field
 order and sample values, is in [whatsapp-templates.md](whatsapp-templates.md). The names
 match the app's keys, so no change in **Settings → WhatsApp messages** is needed.
 

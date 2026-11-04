@@ -3,6 +3,7 @@ import {
   customerContacts,
   customers,
   type DatabaseExecutor,
+  documents,
   outbox,
   waConversations,
   waMessages,
@@ -105,10 +106,34 @@ export async function logIncoming(
       waMessageId: incoming.waMessageId,
       kind: incoming.kind,
       body: incoming.text || `(${incoming.kind})`,
+      mediaId: incoming.media?.id ?? null,
     })
     .onConflictDoNothing()
     .returning({ id: waMessages.id });
   return saved.length > 0;
+}
+
+/**
+ * The chat message that carried this WhatsApp file now shows the stored document. A copy
+ * kept earlier only for the chat (see `ChatFileKeeper`) is taken off, so the file is filed once.
+ */
+export async function linkChatFile(
+  db: DatabaseExecutor,
+  mediaId: string | undefined,
+  documentId: string,
+): Promise<void> {
+  if (!mediaId) return;
+  const [before] = await db
+    .select({ documentId: waMessages.documentId })
+    .from(waMessages)
+    .where(eq(waMessages.mediaId, mediaId))
+    .limit(1);
+  await db.update(waMessages).set({ documentId }).where(eq(waMessages.mediaId, mediaId));
+  if (before?.documentId && before.documentId !== documentId)
+    await db
+      .update(documents)
+      .set({ removedAt: new Date() })
+      .where(and(eq(documents.id, before.documentId), isNull(documents.removedAt)));
 }
 
 function summary(reply: ChatReply): string {

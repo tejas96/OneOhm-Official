@@ -71,7 +71,7 @@ export class AssistantService {
     const word = wordOf(incoming);
     if (restartsChat(chat, incoming)) return this.restart(chat);
     // With a person, the assistant answers only its own taps and its own steps' words.
-    if (chat.state === 'human' && !assistantAnswers(chat, incoming)) return;
+    if (await this.heldByPerson(chat, incoming)) return;
     if (!chat.customerId) return this.stranger(chat, incoming, word);
     const customerId = chat.customerId;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
@@ -102,6 +102,17 @@ export class AssistantService {
     if (incoming.kind === 'text') return this.people.passToOwner(chat);
     await this.say(chat, { kind: 'text', body: WORDS.notUnderstood });
     return this.menus.menu(chat);
+  }
+
+  /**
+   * A person has the chat, so the assistant stays quiet. A paper the team asked for is
+   * still filed on its request.
+   */
+  private async heldByPerson(chat: Conversation, incoming: Incoming): Promise<boolean> {
+    if (chat.state !== 'human' || assistantAnswers(chat, incoming)) return false;
+    if (chat.customerId && incoming.media)
+      await this.media.answerOpenRequest(chat, chat.customerId, incoming.media);
+    return true;
   }
 
   /** A held stranger has only its own Call me back / Talk to a person buttons (review F5). */

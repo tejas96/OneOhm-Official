@@ -17,6 +17,7 @@ import { PaperRepliesService } from './assistant/paper-replies';
 import { ProblemFlowService } from './assistant/problem-flow';
 import { QuoteActionsService } from './assistant/quote-actions';
 import { StrangerFlowService } from './assistant/stranger-flow';
+import { ChatFileKeeper } from './chat-file-keeper';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
 import { createMediaGateway, WHATSAPP_MEDIA } from './media-gateway';
@@ -53,6 +54,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     MenuAnswersService,
     PaperRepliesService,
     ChatsService,
+    ChatFileKeeper,
     DeliveriesService,
     MediaIntakeService,
     ProblemFlowService,

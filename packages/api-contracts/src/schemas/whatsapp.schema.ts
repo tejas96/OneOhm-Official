@@ -38,6 +38,14 @@ export const chatSummarySchema = z.object({
 });
 export type ChatSummary = z.infer<typeof chatSummarySchema>;
 
+/** A photo, paper, video or voice note in a chat message, kept under Documents. */
+export const chatFileSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  contentType: z.string(),
+});
+export type ChatFile = z.infer<typeof chatFileSchema>;
+
 export const chatMessageSchema = z.object({
   id: idSchema,
   direction: z.enum(['in', 'out']),
@@ -46,6 +54,7 @@ export const chatMessageSchema = z.object({
   at: instantSchema,
   delivery: z.enum(DELIVERY_STATES).nullable(),
   sentBy: z.string().nullable(),
+  file: chatFileSchema.nullable(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 

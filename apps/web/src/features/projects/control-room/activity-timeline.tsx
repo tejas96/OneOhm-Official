@@ -5,6 +5,7 @@ import { Card, CardHeader } from '@oneohm/design-system/web';
 import {
   CalendarClock,
   CircleCheck,
+  FileText,
   Hourglass,
   IndianRupee,
   type LucideIcon,
@@ -32,6 +33,9 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   returned: RotateCcw,
   rescheduled: CalendarClock,
   schedule: CalendarClock,
+  whatsapp_file: FileText,
+  document_request: FileText,
+  document_received: FileText,
 };
 
 /** What happened on the project, newest first, with who did it and when. */

@@ -22,6 +22,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AssistantService } from './assistant/assistant.service';
 import { assistantAnswers, markAssistantTap } from './assistant/handled-taps';
+import { ChatFileKeeper, FILE_WORDS } from './chat-file-keeper';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
 import { DeliveriesService } from './deliveries.service';
@@ -44,6 +45,7 @@ export class WhatsAppWebhookController implements OnModuleInit {
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly assistant: AssistantService,
     private readonly deliveries: DeliveriesService,
+    private readonly files: ChatFileKeeper,
   ) {}
 
   onModuleInit(): void {
@@ -98,7 +100,10 @@ export class WhatsAppWebhookController implements OnModuleInit {
         failed += 1;
         this.log.error(`Assistant failed on ${message.waMessageId}: ${String(error)}`);
         await this.recover(chat, message);
+        continue;
       }
+      // Any file the assistant did not file goes under Documents (never throws).
+      await this.files.keep(chat, message);
     }
     const receipts = await this.deliveries.applyUpdates(updates);
     if (failed > 0) throw new InternalServerErrorException(`${failed} message(s) not handled.`);
@@ -129,7 +134,9 @@ export class WhatsAppWebhookController implements OnModuleInit {
     await tellChatTeam(this.db, chat, {
       kind: 'whatsapp_message',
       title: `WhatsApp from ${name}`,
-      body: message.text ? message.text.slice(0, 140) : 'Sent a file',
+      body: message.text
+        ? message.text.slice(0, 140)
+        : `Sent ${message.media ? FILE_WORDS[message.media.type] : 'a message'}`,
       key: `wa_in:${message.waMessageId}`,
     });
   }

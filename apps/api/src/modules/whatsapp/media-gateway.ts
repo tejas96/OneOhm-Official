@@ -1,5 +1,6 @@
 import { MAX_UPLOAD_BYTES } from '@oneohm/domain';
 import type { Environment } from '../../config/environment';
+import type { IncomingFile } from '../documents/upload-file';
 import type { IncomingMedia } from './whatsapp-events';
 
 export const WHATSAPP_MEDIA = Symbol('WHATSAPP_MEDIA');
@@ -8,6 +9,11 @@ export const WHATSAPP_MEDIA = Symbol('WHATSAPP_MEDIA');
 export interface DownloadedMedia {
   readonly buffer: Buffer;
   readonly fileName: string;
+}
+
+/** A downloaded WhatsApp file, still knowing which chat message brought it. */
+export interface ChatFile extends IncomingFile {
+  readonly mediaId?: string;
 }
 
 export interface MediaGateway {

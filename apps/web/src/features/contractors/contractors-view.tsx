@@ -30,10 +30,10 @@ export function ContractorsView() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const view = params.get('view') === 'table' ? 'table' : 'cards';
+  const view = params.get('view') === 'cards' ? 'cards' : 'table';
   const setView = (next: 'cards' | 'table') => {
     const query = new URLSearchParams(params);
-    if (next === 'table') query.set('view', 'table');
+    if (next === 'cards') query.set('view', 'cards');
     else query.delete('view');
     router.replace(`${pathname}${query.size ? `?${query.toString()}` : ''}`, { scroll: false });
   };
@@ -66,8 +66,18 @@ export function ContractorsView() {
           value={view}
           onValueChange={setView}
           options={[
-            { value: 'cards', label: t('layout.cards'), icon: <LayoutGrid aria-hidden /> },
-            { value: 'table', label: t('layout.table'), icon: <Rows3 aria-hidden /> },
+            {
+              value: 'cards',
+              label: t('layout.cards'),
+              icon: <LayoutGrid aria-hidden />,
+              iconOnly: true,
+            },
+            {
+              value: 'table',
+              label: t('layout.table'),
+              icon: <Rows3 aria-hidden />,
+              iconOnly: true,
+            },
           ]}
           className="self-start"
         />

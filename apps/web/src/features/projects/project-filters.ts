@@ -38,7 +38,7 @@ export const DEFAULT_FILTERS: ProjectFilters = {
   health: 'any',
   type: 'all',
   sort: 'due',
-  view: 'cards',
+  view: 'table',
   manager: '',
   finish: 'any',
   since: '',

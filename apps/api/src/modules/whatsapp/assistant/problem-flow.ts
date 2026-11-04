@@ -4,8 +4,8 @@ import { DATABASE, type Database } from '../../../config/core.module';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
-import type { IncomingFile } from '../../documents/upload-file';
-import type { Conversation } from '../chat-store';
+import { type Conversation, linkChatFile } from '../chat-store';
+import type { ChatFile } from '../media-gateway';
 import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { guessCategory } from './guess-category';
@@ -45,7 +45,7 @@ export class ProblemFlowService {
     chat: Conversation,
     customerId: string,
     said: string,
-    files: readonly IncomingFile[] = [],
+    files: readonly ChatFile[] = [],
   ): Promise<void> {
     const typed = said.trim();
     // A photo with no words (or one word) still raises a request; the photo says the rest.
@@ -73,16 +73,17 @@ export class ProblemFlowService {
   }
 
   /** Another photo for the request just raised. */
-  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: IncomingFile) {
+  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: ChatFile) {
     const added = await this.attach(customerId, requestId, file);
     const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
     return sayWithTaps(this.db, chat, body, ['requests', 'menu']);
   }
 
   /** The app's own photo rule (photos only, six at most); a refusal is not an error. */
-  private async attach(customerId: string, requestId: string, file: IncomingFile) {
+  private async attach(customerId: string, requestId: string, file: ChatFile) {
     try {
-      await this.photos.add(customerId, requestId, file);
+      const documentId = await this.photos.addPhotoFile(customerId, requestId, file);
+      await linkChatFile(this.db, file.mediaId, documentId);
       return true;
     } catch (error) {
       if (!(error instanceof AppError)) throw error;

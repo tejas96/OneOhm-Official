@@ -39,9 +39,14 @@ export class CustomerRequestPhotosService {
     private readonly portal: CustomerPortalService,
   ) {}
 
-  /** One photo (the app's photo strip and the WhatsApp assistant). */
+  /** One photo (the app's photo strip). */
   add(customerId: string, requestId: string, file: IncomingFile | undefined) {
     return this.attach(customerId, requestId, file, PHOTO_FILE_TYPES);
+  }
+
+  /** One photo from the WhatsApp assistant; returns the stored document's id. */
+  addPhotoFile(customerId: string, requestId: string, file: IncomingFile): Promise<string> {
+    return this.store(customerId, requestId, file, PHOTO_FILE_TYPES);
   }
 
   /** A photo, a short video or a voice note. */
@@ -55,6 +60,20 @@ export class CustomerRequestPhotosService {
     file: IncomingFile | undefined,
     allowed: readonly DetectedFileType[],
   ): Promise<ServiceRequest> {
+    await this.store(customerId, requestId, file, allowed);
+    const updated = (await this.portal.serviceRequests(customerId)).find(
+      (item) => item.id === requestId,
+    );
+    if (!updated) throw notFound('That request');
+    return updated;
+  }
+
+  private async store(
+    customerId: string,
+    requestId: string,
+    file: IncomingFile | undefined,
+    allowed: readonly DetectedFileType[],
+  ): Promise<string> {
     const [request] = await this.db
       .select({
         id: serviceRequests.id,
@@ -83,21 +102,21 @@ export class CustomerRequestPhotosService {
       throw conflict(FULL[requestFileKind(checked.contentType)], 'too_many');
     const storageKey = `customers/${customerId}/service/${requestId}/${randomUUID()}/${checked.keyName}`;
     await this.storage.put(storageKey, checked.buffer, checked.contentType);
-    await this.db.insert(documents).values({
-      customerId,
-      projectId: request.projectId,
-      serviceRequestId: requestId,
-      category: isAudioType(checked.contentType) ? VOICE_NOTE_CATEGORY : 'site_photo',
-      source: 'upload',
-      name: checked.name,
-      storageKey,
-      contentType: checked.contentType,
-      sizeBytes: checked.buffer.length,
-    });
-    const updated = (await this.portal.serviceRequests(customerId)).find(
-      (item) => item.id === requestId,
-    );
-    if (!updated) throw notFound('That request');
-    return updated;
+    const [row] = await this.db
+      .insert(documents)
+      .values({
+        customerId,
+        projectId: request.projectId,
+        serviceRequestId: requestId,
+        category: isAudioType(checked.contentType) ? VOICE_NOTE_CATEGORY : 'site_photo',
+        source: 'upload',
+        name: checked.name,
+        storageKey,
+        contentType: checked.contentType,
+        sizeBytes: checked.buffer.length,
+      })
+      .returning({ id: documents.id });
+    if (!row) throw new Error('Document insert returned nothing');
+    return row.id;
   }
 }
