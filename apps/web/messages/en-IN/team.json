@@ -111,7 +111,7 @@
         "leaveApprovals": "{count, plural, one {# leave request waiting for their approval} other {# leave requests waiting for their approval}}",
         "backupFor": "{count, plural, one {Backup for # upcoming leave} other {Backup for # upcoming leaves}}",
         "ownPendingLeave": "{count, plural, one {# leave request of their own, which will be cancelled} other {# leave requests of their own, which will be cancelled}}",
-        "commissionRules": "{count, plural, one {# commission rule, which will be archived} other {# commission rules, which will be archived}}"
+        "commissionRules": "{count, plural, one {# commission rule. Kept on, so leads they brought in still earn.} other {# commission rules. Kept on, so leads they brought in still earn.}}"
       },
       "handTo": "Hand everything to",
       "handToHint": "Active staff only. Their manager is picked for you when there is one.",
@@ -122,6 +122,7 @@
       "lastDayLate": "Pick today or an earlier day.",
       "tellCustomers": "Tell customers who their new contact is",
       "tellCustomersHint": "Each customer gets one WhatsApp message with the new name and number.",
+      "targetNoPhone": "{name} has no mobile number, so customers won't be messaged.",
       "sole": {
         "approvePayments": "Nobody else can approve payments after this.",
         "managePeople": "Nobody else can manage the team after this.",

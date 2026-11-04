@@ -20,7 +20,7 @@ const OPEN_WORK_ORDER: readonly OpenWorkKey[] = [
   'commissionRules',
 ];
 
-/** Their own leave is cancelled and reseller rules archived; nothing of that moves. */
+/** Their own leave is cancelled and reseller rules stay on with them; nothing of that moves. */
 const NOT_HANDED_OVER: ReadonlySet<OpenWorkKey> = new Set(['ownPendingLeave', 'commissionRules']);
 
 const MONEY_ORDER = ['travelClaims', 'bonusShares', 'payables', 'commissions'] as const;

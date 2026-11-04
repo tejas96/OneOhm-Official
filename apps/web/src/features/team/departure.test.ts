@@ -66,7 +66,7 @@ describe('openWorkRows', () => {
 });
 
 describe('handedOverCount', () => {
-  it('counts what moves to the new person, not leave cancelled or rules archived', () => {
+  it('counts what moves to the new person, not leave cancelled or rules kept on', () => {
     expect(
       handedOverCount({
         ...NO_WORK,

@@ -34,6 +34,7 @@ export function HandoverFields({
       .join(' · '),
   }));
   const lateDate = draft.lastWorkingDay > today;
+  const target = candidates.find((person) => person.id === draft.targetId);
 
   return (
     <div className="flex flex-col gap-5">
@@ -71,6 +72,11 @@ export function HandoverFields({
         label={t('tellCustomers')}
         description={t('tellCustomersHint')}
       />
+      {draft.tellCustomers && target && !target.phone && (
+        <p className="-mt-2 type-body-sm text-ink-muted">
+          {t('targetNoPhone', { name: target.fullName })}
+        </p>
+      )}
     </div>
   );
 }

@@ -115,7 +115,7 @@ In one transaction:
 1. Open leads, tasks, service requests and DISCOM requests get the new owner. Each project and lead gets a note: "Handed over from Asha (left the team)". Project manager slots and project team memberships move to the new person. Their direct reports now report to the new person.
 2. The status is set to `inactive`, and the `left_on` date is stored. `left_on` is a new nullable column.
 3. Sessions are deleted, push devices are removed and open OTP challenges are cancelled.
-4. For a reseller, their per-reseller commission rules are archived. Approved entries stay payable, because we still owe them. Pending entries stay for finance to decide. Leads they brought in keep the reseller attribution, for history.
+4. For a reseller, their per-reseller commission rules stay on, so leads they brought in still earn. Approved entries stay payable, because we still owe them. Pending entries stay for finance to decide. Leads they brought in keep the reseller attribution, including leads they owned that move to the new owner.
 5. The new owner gets one notice: "You are now covering Asha's work: 12 leads, 4 tasks…". This reuses the leave-cover notice pattern.
 6. An audit entry is written: `person.removed`.
 
@@ -204,7 +204,7 @@ The last Super Admin still can't be removed. The existing guard stays.
 4. Mobile keeps OTP-only sign-in. Passwords are for the website only.
 5. One new WhatsApp template, `staff_welcome`. No new SMS templates.
 6. Web sign-in also accepts the mobile number.
-7. A removed reseller's lead that wins later still makes a pending commission.
+7. A removed reseller's lead that wins later still makes a pending commission. Their commission rules stay on, not archived, so this works.
 8. Removal happens today only. There is no scheduled future removal.
 9. Points stay with the person who earned them, and nothing owed to them is cancelled automatically.
 10. A second WhatsApp template, `contact_changed`, tells customers about their new contact. It is on by default, and the admin can turn it off.

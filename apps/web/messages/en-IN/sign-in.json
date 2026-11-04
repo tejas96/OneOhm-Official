@@ -1,7 +1,7 @@
 {
   "signIn": {
     "pageTitle": "Sign in",
-    "help": "Trouble signing in? Your administrator can reset your password from Team settings.",
+    "help": "Forgot your password? Use 'First time here, or forgot your password?' above.",
     "panel": {
       "label": "About OneOhm",
       "logoAlt": "OneOhm — Energy for everyone",
