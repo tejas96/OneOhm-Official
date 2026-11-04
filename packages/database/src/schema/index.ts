@@ -41,6 +41,7 @@ export * from './records.schema';
 export * from './referrals.schema';
 export * from './report-submissions.schema';
 export * from './reporting.schema';
+export * from './reseller-payouts.schema';
 export * from './service-visits.schema';
 export * from './site-activity.schema';
 export * from './skills.schema';

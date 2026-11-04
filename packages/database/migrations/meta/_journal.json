@@ -456,6 +456,13 @@
       "when": 1793710749070,
       "tag": "0064_whatsapp_assistant_tap",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1793773306075,
+      "tag": "0065_reseller_payout_details",
+      "breakpoints": true
     }
   ]
 }
