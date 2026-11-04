@@ -1,22 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChecklistItem, DocumentChecklist } from '@oneohm/api-contracts';
-import {
-  customers,
-  discoms,
-  documentRequests,
-  documents,
-  projects,
-  properties,
-} from '@oneohm/database';
+import { customers, discoms, documentRequests, documents, projects } from '@oneohm/database';
 import {
   countsForSite,
   customerCategoryFor,
   requirementsFor,
   type SiteScope,
 } from '@oneohm/domain';
-import { and, count, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { customerHomes } from '../customer-portal/customer-homes';
 import { fileSystemPapers } from '../documents/system-papers-hook';
 import { loadRequirements } from './document-requirements.service';
 import { ReportStatusService } from './report-status.service';
@@ -46,14 +40,11 @@ export class DocumentChecklistService {
       .where(eq(projects.id, projectId))
       .limit(1);
     if (!project) throw notFound('That project');
-    const [sites] = await this.db
-      .select({ count: count() })
-      .from(properties)
-      .where(eq(properties.customerId, project.project.customerId));
+    const homes = await customerHomes(this.db, project.project.customerId);
     const site: SiteScope = {
       propertyId: project.project.propertyId,
       projectId,
-      customerSites: sites?.count ?? 1,
+      customerSites: homes.length || 1,
     };
     const filed = await this.db
       .select({
