@@ -26,10 +26,13 @@ export function chatWindowOpen(lastInboundAt: Date | null | undefined, now = new
   );
 }
 
-/** The business clock now: the minute of the day there and when today began there. */
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** The business clock now: the minute and weekday there (0 Sunday) and when today began. */
 function clockAt(now: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone,
+    weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -39,13 +42,28 @@ function clockAt(now: Date, timeZone: string) {
   const elapsed = ((part('hour') * 60 + part('minute')) * 60 + part('second')) * 1000;
   return {
     minute: part('hour') * 60 + part('minute'),
+    weekday: WEEKDAYS.indexOf(parts.find((entry) => entry.type === 'weekday')?.value ?? ''),
     midnight: new Date(now.getTime() - elapsed - now.getMilliseconds()),
   };
 }
 
+/** Monday to Saturday, 9:30 am up to 6:30 pm; Sunday is closed (redesign §14). */
 export function isWorkingTime(now: Date, timeZone: string): boolean {
-  const { minute } = clockAt(now, timeZone);
-  return minute >= WORK_START_MIN && minute < WORK_END_MIN;
+  const { minute, weekday } = clockAt(now, timeZone);
+  return weekday !== 0 && minute >= WORK_START_MIN && minute < WORK_END_MIN;
+}
+
+/**
+ * When a person can reply, as the customer is told: `now` in working hours, else the
+ * morning it opens again (9:30 today, tomorrow, or Monday after Saturday evening).
+ */
+export type ReplyTime = 'now' | 'today' | 'tomorrow' | 'monday';
+
+export function replyTime(now: Date, timeZone: string): ReplyTime {
+  if (isWorkingTime(now, timeZone)) return 'now';
+  const { minute, weekday } = clockAt(now, timeZone);
+  if (weekday !== 0 && minute < WORK_START_MIN) return 'today';
+  return weekday === 6 ? 'monday' : 'tomorrow';
 }
 
 /** When working hours last ended: 6:30 pm today once it is past, else 6:30 pm yesterday. */

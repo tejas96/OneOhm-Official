@@ -6,6 +6,7 @@ import {
   isWorkingTime,
   lastWorkEnd,
   pickAnswerer,
+  replyTime,
   soleCustomer,
   workingMinutesSince,
 } from './chat-rules';
@@ -50,6 +51,38 @@ describe('working time', () => {
     expect(isWorkingTime(ist('09:30'), TZ)).toBe(true);
     expect(isWorkingTime(ist('18:29'), TZ)).toBe(true);
     expect(isWorkingTime(ist('18:30'), TZ)).toBe(false);
+  });
+
+  it('is closed all Sunday (1 Nov 2026), open on Saturday (7 Nov)', () => {
+    expect(isWorkingTime(new Date('2026-11-01T11:00:00+05:30'), TZ)).toBe(false);
+    expect(isWorkingTime(new Date('2026-11-07T11:00:00+05:30'), TZ)).toBe(true);
+    // No working minutes on a Sunday, so nothing is late and no chat is handed back.
+    expect(
+      workingMinutesSince(
+        new Date('2026-11-01T09:00:00+05:30'),
+        new Date('2026-11-01T15:00:00+05:30'),
+        TZ,
+      ),
+    ).toBe(0);
+    expect(
+      chatWaitStage(
+        new Date('2026-11-01T10:00:00+05:30'),
+        new Date('2026-11-01T16:00:00+05:30'),
+        TZ,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('when a person can reply', () => {
+  const at = (iso: string) => replyTime(new Date(`${iso}:00+05:30`), TZ);
+  it('is now in working hours, else the next 9:30 (Saturday evening → Monday)', () => {
+    expect(at('2026-11-02T11:00')).toBe('now');
+    expect(at('2026-11-02T08:00')).toBe('today');
+    expect(at('2026-11-02T19:00')).toBe('tomorrow');
+    expect(at('2026-11-07T19:00')).toBe('monday');
+    expect(at('2026-11-01T08:00')).toBe('tomorrow');
+    expect(at('2026-11-01T20:00')).toBe('tomorrow');
   });
 });
 
