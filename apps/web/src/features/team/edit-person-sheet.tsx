@@ -16,6 +16,7 @@ import {
   workDraftFrom,
 } from './capacity/person-work-fields';
 import { bodyFrom, draftFrom, EMPTY_PERSON, PersonFields } from './person-fields';
+import { RequireNewPassword } from './require-new-password';
 import { SkillsPicker } from './skills/skills-picker';
 import { PEOPLE_KEY, ROLES_KEY } from './use-team';
 
@@ -102,13 +103,7 @@ export function EditPersonSheet({
       >
         <section className="flex flex-col gap-4">
           <h3 className="type-overline text-ink-faint uppercase">{t('details')}</h3>
-          <PersonFields
-            draft={draft}
-            onChange={setDraft}
-            roles={roles}
-            errors={form.fieldErrors}
-            mode="edit"
-          />
+          <PersonFields draft={draft} onChange={setDraft} roles={roles} errors={form.fieldErrors} />
         </section>
         <section className="flex flex-col gap-2 border-t border-hairline pt-6">
           <h3 className="type-overline text-ink-faint uppercase">{t('skills')}</h3>
@@ -138,6 +133,11 @@ export function EditPersonSheet({
             label={t('active')}
             description={t('activeHint')}
           />
+          {person?.status === 'active' && (
+            <div className="mt-3 flex flex-col">
+              <RequireNewPassword person={person} />
+            </div>
+          )}
         </section>
         <FormError message={form.error} />
       </form>

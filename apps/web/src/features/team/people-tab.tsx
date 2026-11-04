@@ -75,7 +75,7 @@ export function PeopleTab() {
     {
       key: 'status',
       header: t('columns.status'),
-      cell: (person) => <PersonStatus person={person} />,
+      cell: (person) => <PersonStatus person={person} manage={canManage} />,
     },
     {
       key: 'load',

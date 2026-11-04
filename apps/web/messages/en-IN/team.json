@@ -28,28 +28,31 @@
     "form": {
       "fullName": "Full name",
       "email": "Email",
-      "emailHint": "For signing in to the web app.",
+      "emailHint": "Optional. Another way to sign in on the web.",
       "phone": "Mobile number",
-      "phoneHint": "For signing in to the mobile app with a one-time code.",
+      "phoneHint": "They sign in and set their password with this number.",
       "employeeCode": "Employee ID",
       "designation": "Designation",
-      "password": "First password",
-      "passwordHint": "At least 8 characters. They can change it after signing in.",
-      "newPassword": "New password",
-      "newPasswordHint": "Leave blank to keep the current password. Setting one signs them out everywhere.",
       "roles": "Roles",
       "rolesHint": "Choose at least one. A person can hold several roles.",
       "kinds": {
         "staff": "Staff",
         "partner": "I&C partners",
         "reseller": "Resellers"
-      }
+      },
+      "phoneRequired": "Enter their mobile number."
     },
     "addDialog": {
       "title": "Add a person",
-      "description": "They can sign in as soon as you save. Give an email and password for the web, a mobile number for the app, or both.",
+      "description": "We send them a WhatsApp invite. They sign in with their mobile number.",
       "submit": "Add person",
-      "added": "{name} added"
+      "added": "{name} added",
+      "pastMember": {
+        "left": "This number belongs to {name} (left on {date}).",
+        "leftNoDate": "This number belongs to {name}, who left the team.",
+        "addBack": "Add {name} back",
+        "giveNumber": "Give the number to the new person"
+      }
     },
     "editSheet": {
       "title": "Edit person",
@@ -75,6 +78,14 @@
         "follow": "Follow role and company",
         "on": "Always ask",
         "off": "Never ask"
+      },
+      "requireNewPassword": {
+        "button": "Make them set a new password",
+        "title": "Make {name} set a new password?",
+        "body": "They will be signed out and get a new invite.",
+        "confirm": "Sign out and invite",
+        "cancel": "Cancel",
+        "done": "New invite sent"
       }
     },
     "tabsLabel": "Team sections",
@@ -622,6 +633,16 @@
         "everyone": "Everyone on the staff. Pick roles to narrow it.",
         "onlyRoles": "{count, plural, one {Only people with this role.} other {Only people with one of these # roles.}}"
       }
+    },
+    "invite": {
+      "notSignedIn": "Invited, not signed in yet",
+      "notDelivered": "Invite not delivered",
+      "menu": "Invite options for {name}",
+      "sendAgain": "Send invite again",
+      "sent": "Invite sent",
+      "copyText": "Copy invite text",
+      "copied": "Invite text copied",
+      "copyFailed": "Could not copy. Try again."
     }
   }
 }

@@ -30,15 +30,16 @@
     },
     "form": {
       "title": "Sign in",
-      "description": "Use your OneOhm email or employee ID and your password.",
-      "identifier": "Email or employee ID",
+      "description": "Use your email, employee ID or mobile number, and your password.",
+      "identifier": "Email, employee ID or mobile number",
       "identifierHint": "The one your administrator registered for you.",
-      "identifierPlaceholder": "name@oneohm.in or OH-0012",
+      "identifierPlaceholder": "name@oneohm.in or 98765 43210",
       "password": "Password",
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "submit": "Sign in",
-      "mobileNote": "Site teams, contractors, resellers and customers sign in on the OneOhm mobile apps with a one-time code."
+      "mobileNote": "Site teams, contractors, resellers and customers sign in on the OneOhm mobile apps with a one-time code.",
+      "firstTime": "First time here, or forgot your password?"
     },
     "sky": {
       "label": "OneOhm",
@@ -54,6 +55,42 @@
         "midday": "Peak sun over Sangli.",
         "evening": "Last light on the panels.",
         "night": "The grid has the night shift."
+      }
+    },
+    "setPassword": {
+      "pageTitle": "Set your password",
+      "back": "Back to sign in",
+      "step": "Step {step} of 3",
+      "phone": {
+        "title": "Your mobile number",
+        "description": "The number your administrator added for you.",
+        "label": "Mobile number",
+        "placeholder": "98765 43210",
+        "invalid": "Enter a 10-digit Indian mobile number.",
+        "submit": "Send code"
+      },
+      "code": {
+        "title": "Enter the 6-digit code",
+        "sent": "We sent a code to set your password",
+        "change": "Change",
+        "label": "6-digit code",
+        "invalid": "Enter the 6-digit code.",
+        "submit": "Continue",
+        "resendIn": "Send a new code in {seconds}s",
+        "resend": "Send a new code",
+        "resent": "New code sent",
+        "noCode": "No code?",
+        "noPhone": "Ask your admin to add your mobile number."
+      },
+      "password": {
+        "title": "Choose a password",
+        "description": "You will use it with your mobile number to sign in on the web.",
+        "label": "New password",
+        "hint": "At least 8 characters",
+        "tooShort": "Use at least 8 characters.",
+        "show": "Show password",
+        "hide": "Hide password",
+        "submit": "Save and sign in"
       }
     }
   }

@@ -54,12 +54,14 @@ export function PersonFields({
   onChange,
   roles,
   errors,
+  phoneRequired = false,
 }: {
   readonly draft: PersonDraft;
   readonly onChange: (next: PersonDraft) => void;
   readonly roles: readonly Role[];
   readonly errors: Readonly<Record<string, string>>;
-  readonly mode: 'create' | 'edit';
+  /** New people need a mobile number: it is how they sign in and set a password. */
+  readonly phoneRequired?: boolean;
 }) {
   const t = useTranslations('team.form');
   const set = (key: keyof Omit<PersonDraft, 'roleIds'>) => (value: string) =>
@@ -82,7 +84,12 @@ export function PersonFields({
             autoComplete="off"
           />
         </Field>
-        <Field label={t('phone')} hint={t('phoneHint')} error={errors.phone}>
+        <Field
+          label={t('phone')}
+          hint={t('phoneHint')}
+          error={errors.phone}
+          required={phoneRequired}
+        >
           <Input
             type="tel"
             inputMode="tel"
