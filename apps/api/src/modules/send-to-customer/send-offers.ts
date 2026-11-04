@@ -133,7 +133,7 @@ async function delayOffers(db: Deps['db'], ctx: SendContext): Promise<SendOffer[
       key: `delay:${task.id}`,
       action: 'delay_notice',
       label: 'Tell the customer why it is waiting',
-      detail: task.stage,
+      detail: task.stage ?? 'Step on this project',
       request: null,
       input: 'reason',
       preview: null,

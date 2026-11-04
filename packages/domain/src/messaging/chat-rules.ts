@@ -144,3 +144,27 @@ export function soleCustomer<T extends { readonly id: string }>(rows: readonly T
   const ids = new Set(rows.map((row) => row.id));
   return ids.size === 1 ? (rows[0] ?? null) : null;
 }
+
+/**
+ * Working minutes between two moments on the working clock: Monday to Saturday, 9:30 to 18:30,
+ * Sunday closed. A staff check "after 1 working day" is 540 of these, "after 2" is 1080, so a
+ * Friday-evening answer is not overdue on Saturday morning and Sunday never counts.
+ */
+export function workingMinutesBetween(from: Date, to: Date, timeZone: string): number {
+  if (to <= from) return 0;
+  let total = 0;
+  let { midnight } = clockAt(from, timeZone);
+  // Walk day by day (a day is never longer than 25 hours; the clock gives each midnight).
+  for (let guard = 0; midnight < to && guard < 400; guard += 1) {
+    const day = clockAt(new Date(midnight.getTime() + 12 * 3_600_000), timeZone);
+    if (day.weekday !== 0) {
+      const opens = midnight.getTime() + WORK_START_MIN * 60_000;
+      const closes = midnight.getTime() + WORK_END_MIN * 60_000;
+      const start = Math.max(opens, from.getTime());
+      const end = Math.min(closes, to.getTime());
+      if (end > start) total += (end - start) / 60_000;
+    }
+    midnight = new Date(midnight.getTime() + 24 * 3_600_000);
+  }
+  return total;
+}

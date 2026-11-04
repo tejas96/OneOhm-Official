@@ -14,6 +14,8 @@ import { sendInbound } from '../support/whatsapp';
 // Review round 1 (continued): a pin adopts its ask, a held chat, proof answers one ask, Home asks.
 
 const db = () => acceptanceDb().db;
+// Thursday 18:30 IST; a pin that waited since Wednesday 18:30 has waited a working day.
+const CHECK_NOW = new Date('2026-11-05T13:00:00Z');
 
 describe('Send to customer: review fixes, pins and proof', () => {
   let admin: Session;
@@ -51,10 +53,10 @@ describe('Send to customer: review fixes, pins and proof', () => {
     );
     expect(replaced).toBeDefined();
     await rows(
-      "UPDATE customer_actions SET created_at = now() - interval '25 hours', updated_at = now() - interval '25 hours' WHERE customer_id = $1 AND status = 'open' AND property_id IS NULL",
-      [sale.customer.customerId],
+      "UPDATE customer_actions SET created_at = $2, updated_at = $2 WHERE customer_id = $1 AND status = 'open' AND property_id IS NULL",
+      [sale.customer.customerId, new Date(CHECK_NOW.getTime() - 86_400_000)],
     );
-    await queueActionChecks(db(), new Date());
+    await queueActionChecks(db(), CHECK_NOW);
     const [waiting] = await rows(
       "SELECT 1 FROM notifications WHERE kind = 'location_home_waiting' AND body LIKE '%which home%' LIMIT 1",
     );

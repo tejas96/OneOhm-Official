@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { stageForCustomer } from './send-messages';
 import { SEND_LISTS } from './send-words';
 
 describe('send-to-customer words', () => {
@@ -30,5 +31,21 @@ describe('send-to-customer words', () => {
   it('Marathi and Hindi differ from English', () => {
     expect(SEND_LISTS.mr.location.which).not.toBe(SEND_LISTS.en.location.which);
     expect(SEND_LISTS.hi.buttons.paidOther).not.toBe(SEND_LISTS.en.buttons.paidOther);
+  });
+});
+
+describe('the step named in a delay notice', () => {
+  const none = { stage: null, templateKey: 'made_up_step' };
+  it('with no words of its own it is said in the customer language, never English inside Marathi or Hindi', () => {
+    expect(stageForCustomer(none, 'en')).toBe('work on your project');
+    expect(stageForCustomer(none, 'mr')).toBe('तुमच्या प्रकल्पाचे काम');
+    expect(stageForCustomer(none, 'hi')).toBe('आपके प्रोजेक्ट का काम');
+  });
+
+  it('a standard step is said in the customer language', () => {
+    const net = { stage: 'Net meter fitted', templateKey: 'net_meter_installation' };
+    expect(stageForCustomer(net, 'en')).toBe('Net meter fitted');
+    expect(stageForCustomer(net, 'mr')).toBe('नेट मीटर बसवला');
+    expect(stageForCustomer(net, 'hi')).not.toBe('Net meter fitted');
   });
 });

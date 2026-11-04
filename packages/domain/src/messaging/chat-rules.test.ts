@@ -10,6 +10,7 @@ import {
   pickAnswerer,
   replyTime,
   soleCustomer,
+  workingMinutesBetween,
   workingMinutesSince,
 } from './chat-rules';
 
@@ -161,5 +162,21 @@ describe('chat window', () => {
   it('is closed when the customer never wrote', () => {
     expect(chatWindowOpen(null, now)).toBe(false);
     expect(chatWindowOpen(undefined, now)).toBe(false);
+  });
+});
+
+describe('workingMinutesBetween', () => {
+  const at = (day: string, utc: string) => new Date(`${day}T${utc}:00Z`);
+  it('counts only Monday to Saturday 9:30 to 18:30 (IST)', () => {
+    // Friday 17:30 to Monday 09:30: one hour on Friday, a whole Saturday, no Sunday.
+    expect(
+      workingMinutesBetween(at('2026-11-06', '12:00'), at('2026-11-09', '04:00'), 'Asia/Kolkata'),
+    ).toBe(600);
+    expect(
+      workingMinutesBetween(at('2026-11-08', '04:00'), at('2026-11-08', '12:00'), 'Asia/Kolkata'),
+    ).toBe(0);
+    expect(
+      workingMinutesBetween(at('2026-11-05', '06:00'), at('2026-11-05', '05:00'), 'Asia/Kolkata'),
+    ).toBe(0);
   });
 });

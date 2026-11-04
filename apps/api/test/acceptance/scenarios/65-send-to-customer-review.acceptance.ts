@@ -14,6 +14,8 @@ import { ensureTeam, STAFF, staffEmail, TEAM_PASSWORD } from '../support/team';
 // proof that answers one ask, and the asks on Home.
 
 const DAY = 86_400_000;
+// Thursday 18:30 IST: a working day after Wednesday 18:30, two after Tuesday 18:30 (Mon-Sat 9:30-18:30).
+const CHECK_NOW = new Date('2026-11-05T13:00:00Z');
 const db = () => acceptanceDb().db;
 
 describe('Send to customer: review fixes', () => {
@@ -117,15 +119,15 @@ describe('Send to customer: review fixes', () => {
     // Staff check escalation: 1 day the person who asked, 2 days the project manager.
     await rows('UPDATE customer_actions SET done_at = $2, updated_at = $2 WHERE id = $1', [
       ask?.id,
-      new Date(Date.now() - 1.2 * DAY),
+      new Date(CHECK_NOW.getTime() - DAY),
     ]);
-    await queueActionChecks(db(), new Date());
+    await queueActionChecks(db(), CHECK_NOW);
     await rows('UPDATE customer_actions SET done_at = $2, updated_at = $2 WHERE id = $1', [
       ask?.id,
-      new Date(Date.now() - 2.2 * DAY),
+      new Date(CHECK_NOW.getTime() - 2 * DAY),
     ]);
-    await queueActionChecks(db(), new Date());
-    await queueActionChecks(db(), new Date());
+    await queueActionChecks(db(), CHECK_NOW);
+    await queueActionChecks(db(), CHECK_NOW);
     const alerts = await rows<{ dedupe_key: string }>(
       'SELECT dedupe_key FROM notifications WHERE dedupe_key LIKE $1',
       [`action_check:${ask?.id}:%`],

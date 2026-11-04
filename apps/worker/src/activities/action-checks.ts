@@ -7,6 +7,7 @@ import {
   notifyHolders,
   projects,
 } from '@oneohm/database';
+import { workingMinutesBetween } from '@oneohm/domain';
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm';
 
 const DAY = 86_400_000;
@@ -20,11 +21,22 @@ const WHAT: Readonly<Record<string, (customer: string, slot: unknown) => string>
     `Call ${customer} back${typeof slot === 'string' ? ` (they picked ${slot})` : ''}`,
 };
 
-/** What a staff check is due for, counted from when the customer answered. */
-export function checkDue(answeredAt: Date, now: Date): 'owner' | 'manager' | null {
-  const age = now.getTime() - answeredAt.getTime();
-  if (age < DAY || age >= UNTIL) return null;
-  return age >= 2 * DAY ? 'manager' : 'owner';
+/** One working day on the working clock (9:30 to 18:30), in minutes. */
+const WORKING_DAY_MIN = 9 * 60;
+
+/**
+ * What a staff check is due for, counted in working time (Monday to Saturday 9:30 to 18:30, Sunday
+ * closed): the person who asked after 1 working day, the manager after 2. Nothing after 14 days.
+ */
+export function checkDue(
+  answeredAt: Date,
+  now: Date,
+  timeZone = 'Asia/Kolkata',
+): 'owner' | 'manager' | null {
+  if (now.getTime() - answeredAt.getTime() >= UNTIL) return null;
+  const worked = workingMinutesBetween(answeredAt, now, timeZone);
+  if (worked >= 2 * WORKING_DAY_MIN) return 'manager';
+  return worked >= WORKING_DAY_MIN ? 'owner' : null;
 }
 
 /**
@@ -33,7 +45,11 @@ export function checkDue(answeredAt: Date, now: Date): 'owner' | 'manager' | nul
  * project manager (else those who manage projects). Also a pin that waited for the customer to pick
  * a home for a day: the chat's person is told. Each alert has its own key, so a repeat says nothing.
  */
-export async function queueActionChecks(db: Database, now: Date): Promise<number> {
+export async function queueActionChecks(
+  db: Database,
+  now: Date,
+  timeZone = 'Asia/Kolkata',
+): Promise<number> {
   const waiting = await db
     .select({
       action: customerActions,
@@ -56,14 +72,15 @@ export async function queueActionChecks(db: Database, now: Date): Promise<number
           ),
         ),
         gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),
-        lte(customerActions.updatedAt, new Date(now.getTime() - DAY)),
+        // A working day can pass in 9 hours; the working clock decides below.
+        lte(customerActions.updatedAt, new Date(now.getTime() - 9 * 3_600_000)),
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
       ),
     )
     .orderBy(asc(customerActions.updatedAt))
     .limit(PER_TICK);
   let done = 0;
-  for (const row of waiting) if (await tellOnce(db, row, now)) done += 1;
+  for (const row of waiting) if (await tellOnce(db, row, now, timeZone)) done += 1;
   return done;
 }
 
@@ -75,10 +92,14 @@ interface Waiting {
 }
 
 /** The alert this answer is due for (owner at 1 day, manager at 2), or false when none is. */
-async function tellOnce(db: Database, row: Waiting, now: Date): Promise<boolean> {
+async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string): Promise<boolean> {
   const { action, customer, phone, manager } = row;
   const parked = action.status === 'open';
-  const due = checkDue(parked ? action.createdAt : (action.doneAt ?? action.updatedAt), now);
+  const due = checkDue(
+    parked ? action.createdAt : (action.doneAt ?? action.updatedAt),
+    now,
+    timeZone,
+  );
   if (!due) return false;
   const notice = {
     kind: parked ? 'location_home_waiting' : 'customer_action_check',

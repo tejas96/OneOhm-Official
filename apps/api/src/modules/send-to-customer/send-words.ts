@@ -46,6 +46,8 @@ const EN_SEND = {
     `${name} from OneOhm will come for your *${work}*. You can call them on ${phone}.`,
   delay: (stage: string, reason: string) =>
     `Your *${stage}* is waiting: ${reason}. We'll update you.`,
+  /** What a step is called when it has no words of its own in the customer's language. */
+  stageFallback: 'work on your project',
   document: (name: string) => `Your ${name}`,
   /** The customer is told when the team cancels what they asked. */
   cancelled: {
@@ -100,6 +102,7 @@ const MR_SEND: Words<typeof EN_SEND> = {
   crew: (name, work, phone) =>
     `OneOhm चे ${name} तुमच्या *${work}* साठी येतील. तुम्ही त्यांना ${phone} वर फोन करू शकता.`,
   delay: (stage, reason) => `तुमचे *${stage}* थांबले आहे: ${reason}. पुढची माहिती आम्ही कळवू.`,
+  stageFallback: 'तुमच्या प्रकल्पाचे काम',
   document: (name) => `तुमचे ${name}`,
   cancelled: {
     location: (home) => `तुमच्या ${home} घराचे लोकेशन पाठवण्याची आता गरज नाही. धन्यवाद.`,
@@ -151,6 +154,7 @@ const HI_SEND: Words<typeof EN_SEND> = {
   crew: (name, work, phone) =>
     `OneOhm से ${name} आपके *${work}* के लिए आएँगे। आप उन्हें ${phone} पर फ़ोन कर सकते हैं।`,
   delay: (stage, reason) => `आपका *${stage}* रुका हुआ है: ${reason}। आगे की जानकारी हम देंगे।`,
+  stageFallback: 'आपके प्रोजेक्ट का काम',
   document: (name) => `आपका ${name}`,
   cancelled: {
     location: (home) => `अब आपको ${home} घर की लोकेशन भेजने की ज़रूरत नहीं है। धन्यवाद।`,

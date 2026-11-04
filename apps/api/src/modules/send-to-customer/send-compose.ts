@@ -14,6 +14,7 @@ import {
   locationAsk,
   paymentAsk,
   receiptMessage,
+  stageForCustomer,
 } from './send-messages';
 import { callerName, type Deps, resolvePaper } from './send-papers';
 import { crewOf, dueInstalments, homesOf, receiptsOf, waitingTask } from './send-reads';
@@ -179,12 +180,12 @@ const tellDelay: Compose<'delay_notice'> = async ({ db }, ctx, request) => {
     throw invalid('This step is not set to message customers (Settings → Task templates).');
   }
   return {
-    built: delayNotice(ctx.customerName, task.stage, request.reason),
+    built: delayNotice(ctx.customerName, stageForCustomer(task, ctx.language), request.reason),
     record: logOnly(
       'customer.delay_notice',
       'project_task',
       task.id,
-      `Told the customer why ${task.stage} is waiting: ${request.reason}`,
+      `Told the customer why ${task.stage ?? 'a step'} is waiting: ${request.reason}`,
       { reason: request.reason },
     ),
   };

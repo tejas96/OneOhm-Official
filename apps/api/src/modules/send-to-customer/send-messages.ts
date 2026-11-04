@@ -1,9 +1,10 @@
+import { localValues } from '@oneohm/database';
 import type { CallbackSlot } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { CHAT_WORDS } from '../whatsapp/assistant/chat-words';
 import type { Paper } from '../whatsapp/assistant/customer-papers';
 import type { ChatReply } from '../whatsapp/chat-reply';
-import { SEND_WORDS } from './send-words';
+import { SEND_LISTS, SEND_WORDS } from './send-words';
 
 /**
  * One message the team sends, as the customer reads it: the chat messages for inside the
@@ -166,4 +167,22 @@ export function callbackAsk(customer: string, name: string, actionId: string): B
       },
     },
   };
+}
+
+/**
+ * The step as the customer reads it: the owner's customer title or the standard step name, said in
+ * Marathi or Hindi where we have those words; with none, "work on your project" in their language
+ * (never English inside a Marathi or Hindi message). Call it inside the customer's language.
+ */
+export function stageForCustomer(
+  task: { readonly stage: string | null; readonly templateKey: string },
+  language: 'en' | 'mr' | 'hi',
+): string {
+  if (!task.stage) return SEND_LISTS[language].stageFallback;
+  if (language === 'en') return task.stage;
+  const said = localValues(`${language}-IN`, 'project_milestone', {
+    milestone: task.stage,
+    step: task.templateKey,
+  });
+  return said.milestone ?? task.stage;
 }

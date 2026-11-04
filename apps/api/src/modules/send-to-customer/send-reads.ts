@@ -192,7 +192,9 @@ export async function crewOf(db: DatabaseExecutor, ctx: SendContext): Promise<Cr
 /** A task that waits, as the delay notice names it. */
 export interface WaitingTask {
   readonly id: string;
-  readonly stage: string;
+  /** The customer's English words for the step; null when there are none (the caller says it in their language). */
+  readonly stage: string | null;
+  readonly templateKey: string;
   readonly party: string;
   /** The task's template lets the customer hear about it (PRD 6.2: only configured tasks message). */
   readonly allowed: boolean;
@@ -220,10 +222,8 @@ export async function waitingTask(
   return {
     id: task.id,
     // The customer's words for the step, never the internal task title.
-    stage:
-      task.customerTitle?.trim() ||
-      CUSTOMER_STEP_TITLES[task.templateKey] ||
-      'work on your project',
+    stage: task.customerTitle?.trim() || CUSTOMER_STEP_TITLES[task.templateKey] || null,
+    templateKey: task.templateKey,
     party: task.party,
     allowed: task.notify,
   };

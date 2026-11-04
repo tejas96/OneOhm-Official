@@ -222,6 +222,6 @@ export async function queuePaperReminders(
 ): Promise<number> {
   const reminded = await remindOpenRequests(db, now, timeZone);
   const asked =
-    (await queueActionReminders(db, now, timeZone)) + (await queueActionChecks(db, now));
+    (await queueActionReminders(db, now, timeZone)) + (await queueActionChecks(db, now, timeZone));
   return reminded + asked + (await alertFilesToSort(db, now));
 }
