@@ -56,6 +56,7 @@ export const SAMPLE = {
   followUps: '1',
   visit: 'Half-yearly service',
   document: 'Latest electricity bill',
+  home: 'Pune',
   stage: 'installation',
   staff: 'Priya',
   manager: 'Vikram Jadhav',

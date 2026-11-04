@@ -255,6 +255,17 @@
         "sent": "Request sent to the customer",
         "failed": "Could not send the request",
         "close": "Cancel"
+      },
+      "reask": {
+        "action": "Not right, ask again",
+        "title": "Ask again for this paper",
+        "description": "The paper is taken off the project and the customer is asked again. They see your note in the OneOhm app.",
+        "note": "What is wrong with it?",
+        "notePlaceholder": "For example: the photo is blurred; please send a clear one.",
+        "send": "Ask again",
+        "sent": "The customer is asked again",
+        "failed": "Could not ask again",
+        "close": "Cancel"
       }
     },
     "reportVisibility": {

@@ -22,6 +22,7 @@ import { currentProjectFiles, presentDocuments } from './document-read';
 import { leadFilesScope, leadUploadLinks } from './lead-files';
 import { ObjectStorageService, type StoredObject } from './object-storage.service';
 import { partyFilesScope, partyScope, partyUploadLinks } from './party-files';
+import { closeRequestWithUpload } from './request-received';
 import { checkFile, type IncomingFile } from './upload-file';
 
 export interface DocumentFilter {
@@ -130,6 +131,7 @@ export class DocumentsService {
         taskId: links.taskId,
         ...(fields.leadId ? { leadId: fields.leadId } : {}),
       });
+      await closeRequestWithUpload(tx, actor, row.id, { ...links, category: fields.category });
       return row.id;
     });
     return this.one(id);
@@ -212,8 +214,7 @@ export class DocumentsService {
     leadId: string,
     category?: string,
   ): Promise<DocumentRecord[]> {
-    const scope = await leadFilesScope(this.db, actor, leadId);
-    const conditions: SQL[] = [currentProjectFiles, scope];
+    const conditions: SQL[] = [currentProjectFiles, await leadFilesScope(this.db, actor, leadId)];
     if (category) conditions.push(eq(documents.category, category));
     return presentDocuments(this.db, and(...conditions) as SQL);
   }

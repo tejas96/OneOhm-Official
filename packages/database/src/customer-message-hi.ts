@@ -68,6 +68,18 @@ export const HINDI_WORDS: LanguageWords = {
       title: `कृपया ${p.document} भेजें`,
       body: `${p.project}: ‘दस्तावेज़’ खोलें और फ़ोटो या PDF भेजें।`,
     }),
+    paper_request: (p) => ({
+      title: `कृपया ${p.document} भेजें`,
+      body: `${p.home} पर आपके सोलर के लिए। इसे OneOhm ऐप से भेजें, या हमारी टीम को दे दें।`,
+    }),
+    document_request_cancelled: (p) => ({
+      title: `${p.document} की अब ज़रूरत नहीं है`,
+      body: 'आपको इसे भेजने की ज़रूरत नहीं है।',
+    }),
+    document_received_by_team: (p) => ({
+      title: `आपका ${p.document} हमें मिल गया`,
+      body: `${p.home} पर आपके सोलर के लिए। धन्यवाद।`,
+    }),
     maintenance_visit: (p) => ({
       title: `मुफ़्त ${p.visit} विज़िट: ${p.date}`,
       body: `${p.project}: आने से पहले हमारी सर्विस टीम आपको फ़ोन करेगी।`,

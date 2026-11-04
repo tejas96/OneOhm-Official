@@ -6,6 +6,7 @@ import {
   documentRequestQuerySchema,
   documentRequestSchema,
   newDocumentRequestSchema,
+  reaskDocumentRequestSchema,
 } from '../schemas/document-request.schema';
 import { reportKeySchema } from './reports.contract';
 
@@ -34,6 +35,14 @@ export const documentRequestsContract = c.router({
     pathParams: idParams,
     body: z.object({}).optional(),
     responses: { 200: documentRequestSchema },
+  },
+  reaskDocumentRequest: {
+    method: 'POST',
+    path: '/document-requests/:id/reask',
+    pathParams: idParams,
+    body: reaskDocumentRequestSchema,
+    responses: { 200: documentRequestSchema },
+    summary: 'Not right, ask again: reopens a received request; the paper is taken off.',
   },
 });
 

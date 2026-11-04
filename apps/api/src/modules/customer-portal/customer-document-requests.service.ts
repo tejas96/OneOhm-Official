@@ -1,24 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
-import {
-  customers,
-  type DatabaseExecutor,
-  documentRequests,
-  documents,
-  notify,
-  projectActivities,
-} from '@oneohm/database';
+import { customers, type DatabaseExecutor, documentRequests, documents } from '@oneohm/database';
 import { ACCEPTED_FILE_TYPES } from '@oneohm/domain';
 import { and, eq, isNull, ne } from 'drizzle-orm';
-import { recordAudit } from '../../common/audit';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { propertyOfProject, storageScope } from '../documents/document-links';
 import { forCustomer, readRequests } from '../documents/document-request-read';
 import { ObjectStorageService } from '../documents/object-storage.service';
+import { markRequestReceived } from '../documents/request-received';
 import { checkFile, type IncomingFile } from '../documents/upload-file';
-import { tellWaitingOwners } from './tell-waiting-owners';
+
+const sent = (customer: string, asked: { title: string }) => `${customer} sent ${asked.title}`;
 
 /** Papers the team asked this customer for, and the upload that answers one (PRD 5.4). */
 @Injectable()
@@ -62,7 +56,10 @@ export class CustomerDocumentRequestsService {
         })
         .returning({ id: documents.id });
       if (!document) throw new Error('Document insert returned nothing');
-      await this.received(tx, asked, customer, document.id);
+      await markRequestReceived(tx, asked, document.id, {
+        userId: null,
+        said: sent(customer, asked),
+      });
     });
     return this.read(id);
   }
@@ -104,7 +101,10 @@ export class CustomerDocumentRequestsService {
           name: `${asked.title.trim().slice(0, 150)}${extension}`,
         })
         .where(eq(documents.id, documentId));
-      await this.received(tx, asked, customer, documentId);
+      await markRequestReceived(tx, asked, documentId, {
+        userId: null,
+        said: sent(customer, asked),
+      });
     });
     return this.read(requestId, db);
   }
@@ -127,55 +127,6 @@ export class CustomerDocumentRequestsService {
       );
     }
     return request;
-  }
-
-  /** The request is received with this document: logged, its asker told, audited. */
-  private async received(
-    tx: DatabaseExecutor,
-    asked: typeof documentRequests.$inferSelect,
-    customer: string,
-    documentId: string,
-  ): Promise<void> {
-    const id = asked.id;
-    const now = new Date();
-    // Of two answers at once, only one is filed; the other rolls back.
-    const [claimed] = await tx
-      .update(documentRequests)
-      .set({ status: 'received', documentId, receivedAt: now, updatedAt: now })
-      .where(and(eq(documentRequests.id, id), eq(documentRequests.status, 'open')))
-      .returning({ id: documentRequests.id });
-    if (!claimed) throw conflict('You have already sent this. Thank you.', 'received');
-    if (asked.projectId)
-      await tx.insert(projectActivities).values({
-        projectId: asked.projectId,
-        kind: 'document_received',
-        message: `${customer} sent ${asked.title}`,
-        data: { documentRequestId: id, documentId },
-      });
-    if (asked.requestedByUserId) {
-      await notify(
-        tx,
-        { userId: asked.requestedByUserId },
-        {
-          kind: 'document_received',
-          title: `${customer} sent ${asked.title}`,
-          body: 'It is filed in the project documents.',
-          ...(asked.projectId
-            ? { subject: { type: 'project', id: asked.projectId, projectId: asked.projectId } }
-            : {}),
-          dedupeKey: `document_received:${id}`,
-        },
-      );
-    }
-    if (asked.projectId)
-      await tellWaitingOwners(tx, asked.projectId, {
-        title: `${customer} sent ${asked.title}`,
-        dedupeKey: `document_received:${id}`,
-        exceptUserId: asked.requestedByUserId,
-      });
-    await recordAudit(tx, null, 'document_request.answered', 'document_request', id, {
-      documentId,
-    });
   }
 
   private async read(id: string, db: DatabaseExecutor = this.db): Promise<CustomerDocumentRequest> {

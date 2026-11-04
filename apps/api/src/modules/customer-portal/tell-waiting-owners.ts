@@ -3,12 +3,13 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 
 /**
  * Tells the owners of the project's tasks that wait on the customer that a paper came
- * (papers per home, flow 3): one alert per request and person; the asker hears already.
+ * (papers per home, flow 3): one alert per request and person; those `except` hear already
+ * (the asker) or filed it themselves.
  */
 export async function tellWaitingOwners(
   tx: DatabaseExecutor,
   projectId: string,
-  paper: { title: string; dedupeKey: string; exceptUserId: string | null },
+  paper: { title: string; dedupeKey: string; except: readonly (string | null)[] },
 ): Promise<void> {
   const owners = await tx
     .selectDistinct({ userId: projectTasks.assigneeUserId })
@@ -23,7 +24,7 @@ export async function tellWaitingOwners(
       ),
     );
   for (const { userId } of owners) {
-    if (!userId || userId === paper.exceptUserId) continue;
+    if (!userId || paper.except.includes(userId)) continue;
     await notify(
       tx,
       { userId },

@@ -29,6 +29,7 @@ const project = (milestones: Line[], status: CustomerProject['status'] = 'active
 const request = (overrides: Partial<CustomerDocumentRequest>): CustomerDocumentRequest => ({
   id: 'r1',
   projectCode: 'OH-2026-001',
+  homeName: 'Pune',
   category: 'electricity_bill',
   title: 'Light bill (test)',
   note: '',

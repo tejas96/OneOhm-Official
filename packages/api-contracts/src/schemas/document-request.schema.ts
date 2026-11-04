@@ -14,6 +14,8 @@ export const documentRequestSchema = z.object({
   customerId: idSchema,
   projectId: idSchema.nullable(),
   projectCode: z.string().nullable(),
+  /** The home the project is on: its site label, else its town. */
+  homeName: z.string().nullable(),
   category: z.enum(CUSTOMER_REQUESTABLE_CATEGORIES),
   title: z.string(),
   note: z.string(),
@@ -39,10 +41,17 @@ export const newDocumentRequestSchema = z.object({
 });
 export type NewDocumentRequest = z.input<typeof newDocumentRequestSchema>;
 
-/** What the customer sees: what to send, for which project, and whether it arrived. */
+/** "Not right, ask again": the staff note the customer sees on the reopened request. */
+export const reaskDocumentRequestSchema = z.object({
+  note: z.string().trim().min(2).max(300),
+});
+export type ReaskDocumentRequest = z.input<typeof reaskDocumentRequestSchema>;
+
+/** What the customer sees: what to send, for which home, and whether it arrived. */
 export const customerDocumentRequestSchema = z.object({
   id: idSchema,
   projectCode: z.string().nullable(),
+  homeName: z.string().nullable(),
   category: z.enum(CUSTOMER_REQUESTABLE_CATEGORIES),
   title: z.string(),
   note: z.string(),

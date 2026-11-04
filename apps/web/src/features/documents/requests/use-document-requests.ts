@@ -64,3 +64,24 @@ export function useCancelRequest(projectId: string) {
       toast({ tone: 'error', title: t('cancelFailed'), description: describeError(error) }),
   });
 }
+
+/** "Not right, ask again": the request opens again with a note the customer sees. */
+export function useReaskRequest(projectId: string, onDone: () => void) {
+  const t = useTranslations('documents.requests.reask');
+  const toast = useToast();
+  const client = useQueryClient();
+  const refresh = useRefresh(projectId);
+  return useMutation({
+    mutationFn: ({ request, note }: { request: DocumentRequest; note: string }) =>
+      expectStatus(
+        api.documentRequests.reaskDocumentRequest({ params: { id: request.id }, body: { note } }),
+        200,
+      ),
+    onSuccess: async (request) => {
+      // The paper is taken off, so the project's files change too.
+      await Promise.all([refresh(), client.invalidateQueries({ queryKey: ['documents'] })]);
+      onDone();
+      toast({ tone: 'success', title: t('sent'), description: request.title });
+    },
+  });
+}

@@ -97,7 +97,7 @@ export const DOCUMENTS: Copy<typeof en.DOCUMENTS> = {
   openFailed: 'यह फ़ाइल नहीं खुली। कृपया फिर से कोशिश करें।',
   requestsTitle: 'हमें आपसे चाहिए',
   requestsIntro: 'साफ़ फ़ोटो या PDF भेजें। यह सीधे आपके प्रोजेक्ट की फ़ाइल में जाता है।',
-  requestMeta: (project, kind) => [kind, project].filter(Boolean).join(' · '),
+  requestMeta: (home, kind) => [kind, home].filter(Boolean).join(' · '),
   takePhoto: 'कैमरा',
   choosePhoto: 'फ़ोटो',
   chooseFile: 'PDF',

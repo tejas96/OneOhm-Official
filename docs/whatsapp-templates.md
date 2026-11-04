@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 24 templates. Each one:
+The app sends these 25 templates. Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -107,6 +107,34 @@ Fields: customer, document, project
 > Hello {{1}}, please send your {{2}} for project {{3}}. Open the OneOhm app, go to Documents and tap Send.
 
 Examples: Ramesh Patil · latest electricity bill · PRJ-0087
+
+### 10a. `paper_request` — **New** (replaces `document_requested`)
+Fields: customer, document, home
+
+Names the home the paper is for (papers per home): the site label, else its town. Submit it in
+English, Marathi and Hindi.
+
+> en: Hello {{1}}, please send your {{2}} for your solar at {{3}}. Reply here with a clear photo or PDF. You can also send it from the OneOhm app.
+
+> mr: नमस्कार {{1}}, {{3}} येथील तुमच्या सोलरसाठी कृपया तुमचे {{2}} पाठवा. येथे स्पष्ट फोटो किंवा PDF पाठवा. तुम्ही OneOhm ॲपमधूनही पाठवू शकता.
+
+> hi: नमस्ते {{1}}, कृपया {{3}} पर अपने सोलर के लिए अपना {{2}} भेजें। यहाँ साफ़ फ़ोटो या PDF भेजें। आप इसे OneOhm ऐप से भी भेज सकते हैं।
+
+Examples: Ramesh Patil · latest electricity bill · Pune · (a second home) Sangli farm
+
+The app keeps sending `document_requested` until `paper_request` is switched on. Switch over in
+this order:
+
+1. Submit `paper_request` to Meta in en, mr and hi (category **Utility**).
+2. Wait until Meta approves **all three** languages.
+3. In **Settings → WhatsApp messages**, open `paper_request`, set the Marathi and Hindi names to
+   `paper_request`, and switch it on. New requests (and "ask again") now send it.
+4. Switch `document_requested` off in the same screen, then delete it in Meta Business Manager
+   (the app cannot delete a Meta template).
+
+To roll back before step 4, switch `paper_request` off: the app sends `document_requested` again.
+SMS and the app inbox use the same words either way: "Please send your … For your solar at …
+Send it from the OneOhm app, or give it to our team."
 
 ### 11. `referral_reward`
 Fields: customer, friend, amount, status

@@ -56,6 +56,19 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Please send your ${p.document}`,
     body: `${p.project}: open Documents and tap Send to add a photo or PDF.`,
   }),
+  // The request naming the home (papers per home); app inbox and SMS say the same.
+  paper_request: (p) => ({
+    title: `Please send your ${p.document}`,
+    body: `For your solar at ${p.home}. Send it from the OneOhm app, or give it to our team.`,
+  }),
+  document_request_cancelled: (p) => ({
+    title: `${p.document} is no longer needed`,
+    body: 'You do not need to send it.',
+  }),
+  document_received_by_team: (p) => ({
+    title: `We have your ${p.document}`,
+    body: `For your solar at ${p.home}. Thank you.`,
+  }),
   maintenance_visit: (p) => ({
     title: `Your free ${p.visit} visit is on ${p.date}`,
     body: `${p.project}: our service team will call before they come.`,

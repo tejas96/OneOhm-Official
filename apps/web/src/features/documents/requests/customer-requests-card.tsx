@@ -4,9 +4,11 @@ import type { DocumentRequest } from '@oneohm/api-contracts';
 import { Button, Card, CardHeader, type PillTone, StatusPill } from '@oneohm/design-system/web';
 import { ExternalLink, Send } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { documentUrl } from '@/lib/api/upload';
 import { useFolderLabel } from '../gallery/use-labels';
+import { ReaskSheet } from './reask-sheet';
 import { useCancelRequest, useDocumentRequests } from './use-document-requests';
 
 const TONE: Readonly<Record<DocumentRequest['status'], PillTone>> = {
@@ -27,6 +29,7 @@ export function CustomerRequestsCard({
 }) {
   const t = useTranslations('documents.requests');
   const query = useDocumentRequests(projectId);
+  const [reasking, setReasking] = useState<DocumentRequest | null>(null);
   const requests = query.data ?? [];
   if (!canAsk && requests.length === 0) return null;
   return (
@@ -53,11 +56,13 @@ export function CustomerRequestsCard({
                 projectId={projectId}
                 request={request}
                 canCancel={canAsk}
+                onReask={() => setReasking(request)}
               />
             ))}
           </ul>
         )}
       </div>
+      <ReaskSheet projectId={projectId} request={reasking} onClose={() => setReasking(null)} />
     </Card>
   );
 }
@@ -66,10 +71,12 @@ function RequestRow({
   projectId,
   request,
   canCancel,
+  onReask,
 }: {
   readonly projectId: string;
   readonly request: DocumentRequest;
   readonly canCancel: boolean;
+  readonly onReask: () => void;
 }) {
   const t = useTranslations('documents.requests');
   const format = useFormatter();
@@ -99,6 +106,11 @@ function RequestRow({
               <ExternalLink aria-hidden className="size-4" />
               {t('openFile')}
             </a>
+          </Button>
+        )}
+        {request.status === 'received' && canCancel && (
+          <Button size="sm" variant="quiet" onClick={onReask}>
+            {t('reask.action')}
           </Button>
         )}
         {request.status === 'open' && canCancel && (
