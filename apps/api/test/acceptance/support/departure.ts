@@ -5,8 +5,9 @@ import { addDays, today, uniquePhone } from './sales';
 
 /**
  * What wrap-up shuts down when someone leaves: a signed-in phone, a push device, location
- * consent, an open site visit, today's open attendance, a pending leave request, an unused
- * sign-in code and a queued WhatsApp message to them. Rows are tagged for clean-up.
+ * consent, an open site visit, today's open attendance, a pending leave request, approved
+ * leave after the last day (approved leave before it stays), an unused sign-in code and a
+ * queued WhatsApp message to them. Rows are tagged for clean-up.
  */
 export async function seedWrapUp(person: OwnPerson, tag: string): Promise<void> {
   await Session.code(person.phone);
@@ -31,6 +32,15 @@ export async function seedWrapUp(person: OwnPerson, tag: string): Promise<void> 
      VALUES ($1, 'casual', $2, $2, 2, 'pending', $3)`,
     [person.id, addDays(today(), 9), tag],
   );
+  for (const [days, label] of [
+    [5, 'ahead'],
+    [-3, 'taken'],
+  ] as const)
+    await rows(
+      `INSERT INTO leave_requests (user_id, leave_type, from_date, to_date, half_days, status, reason)
+       VALUES ($1, 'casual', $2, $2, 2, 'approved', $3)`,
+      [person.id, addDays(today(), days), `${tag} ${label}`],
+    );
   await rows(
     `INSERT INTO otp_challenges (phone_e164, code_hash, expires_at)
      VALUES ($1, 'unused', now() + interval '10 minutes')`,
@@ -53,6 +63,8 @@ export async function wrapUpState(person: OwnPerson, tag: string) {
        (SELECT count(*)::int FROM site_visits WHERE user_id = $1 AND check_out_at IS NULL) AS visits,
        (SELECT count(*)::int FROM attendance_days WHERE user_id = $1 AND check_out_at IS NULL) AS days,
        (SELECT status::text FROM leave_requests WHERE user_id = $1 AND reason = $4) AS leave,
+       (SELECT status::text FROM leave_requests WHERE user_id = $1 AND reason = $4 || ' ahead') AS ahead,
+       (SELECT status::text FROM leave_requests WHERE user_id = $1 AND reason = $4 || ' taken') AS taken,
        (SELECT count(*)::int FROM otp_challenges WHERE phone_e164 = $2 AND consumed_at IS NULL) AS codes,
        (SELECT status::text FROM outbox WHERE dedupe_key = $3) AS outbox`,
     [person.id, person.phone, `${tag}:${person.id}`, tag],
@@ -67,6 +79,8 @@ export const WRAPPED_UP = {
   visits: 0,
   days: 0,
   leave: 'cancelled',
+  ahead: 'cancelled',
+  taken: 'approved',
   codes: 0,
   outbox: 'skipped',
 } as const;

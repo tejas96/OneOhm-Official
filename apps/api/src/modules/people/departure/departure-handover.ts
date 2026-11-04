@@ -13,6 +13,7 @@ import {
   waConversations,
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { syncWorkOrders } from '../../contractors/work-order-sync';
 import {
   moveBackups,
   moveLeaveReviews,
@@ -139,6 +140,16 @@ async function touchedProjects(tx: Transaction, work: OpenWork): Promise<string[
   return [...found];
 }
 
+/** A crew member's tasks moved to staff leave the crew's work order (as tasks.assign does). */
+async function syncMovedTasks(tx: Transaction, actorId: string, work: OpenWork) {
+  if (work.tasks.length === 0) return;
+  const rows = await tx
+    .selectDistinct({ projectId: projectTasks.projectId })
+    .from(projectTasks)
+    .where(inArray(projectTasks.id, [...work.tasks]));
+  for (const { projectId } of rows) await syncWorkOrders(tx, projectId, actorId);
+}
+
 /** A note on each project and lead that changed hands. */
 async function writeNotes(tx: Transaction, actorId: string, leaver: PersonRef, work: OpenWork) {
   const note = handoverNote(leaver.fullName);
@@ -178,6 +189,7 @@ export async function handOver(
   reseller = false,
 ): Promise<number> {
   await moveOwnership(tx, leaver.id, target.id, work, reseller);
+  await syncMovedTasks(tx, actorId, work);
   await swapTeams(tx, leaver.id, target.id, work.teamProjects);
   const reportMoves = await moveReports(tx, actorId, leaver.id, target.id, work.directReports);
   const reviews = await moveLeaveReviews(tx, target.id, work.leaveApprovals, reportMoves);

@@ -134,7 +134,7 @@ describe('remove and hand over', () => {
   afterAll(async () => {
     await rows('DELETE FROM travel_claims WHERE note = $1', [TAG]);
     await rows('DELETE FROM payables WHERE description = $1', [TAG]);
-    await rows('DELETE FROM leave_requests WHERE reason = $1', [TAG]);
+    await rows("DELETE FROM leave_requests WHERE reason LIKE $1 || '%'", [TAG]);
     await rows('DELETE FROM service_requests WHERE description = $1', [TAG]);
     await retire(admin, people);
     await closeDb();

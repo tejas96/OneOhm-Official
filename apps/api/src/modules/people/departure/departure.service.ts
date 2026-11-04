@@ -94,7 +94,7 @@ export class DepartureService {
       await handOver(tx, actor.userId, leaver, target, work, reseller);
       if (input.tellCustomers)
         await tellCustomers(tx, { leaverId: id, targetId: target.id, on: todayIn() }, target, work);
-      await wrapUp(tx, id, now);
+      await wrapUp(tx, id, now, input.lastWorkingDay);
       await tx
         .update(users)
         .set({ status: 'inactive', leftOn: input.lastWorkingDay, updatedAt: now })
