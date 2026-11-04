@@ -47,7 +47,8 @@ export function PayoutDetailsSheet({
     // The commission list's "ready to pay" flags change with these details.
     await invalidate();
     toast({ title: t('saved'), description: party.fullName, tone: 'success' });
-    setChanging(false);
+    // Closed like the other sheets: left open, the toast would take the next Esc.
+    close();
   };
 
   return (
@@ -59,11 +60,17 @@ export function PayoutDetailsSheet({
       footer={
         details &&
         (editing ? (
-          <Button type="submit" form={formId} variant="primary" pending={form.pending}>
+          // Keyed apart: reused in place, the clicked Change would turn into Save and submit.
+          <Button key="save" type="submit" form={formId} variant="primary" pending={form.pending}>
             {t('save')}
           </Button>
         ) : (
-          <Button variant="secondary" leadingIcon={<Pencil />} onClick={() => setChanging(true)}>
+          <Button
+            key="change"
+            variant="secondary"
+            leadingIcon={<Pencil />}
+            onClick={() => setChanging(true)}
+          >
             {t('change')}
           </Button>
         ))
