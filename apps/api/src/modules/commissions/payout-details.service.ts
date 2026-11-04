@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { PayoutDetailsInput, PayoutDetailsView } from '@oneohm/api-contracts';
-import { notifyHolders, resellerPayoutDetails, users } from '@oneohm/database';
+import { holdersOf, notify, resellerPayoutDetails, users } from '@oneohm/database';
 import {
   maskPayoutAccount,
   type PayoutDetails,
@@ -62,12 +62,20 @@ export class PayoutDetailsService {
         fields: changed,
       });
       if (actor.userId === resellerId && changed.length > 0) {
-        await notifyHolders(tx, 'finance.record_payments', {
-          kind: 'payout_details_changed',
-          title: `${person.fullName} changed their payout details`,
-          body: 'Check the new details before the next payout.',
-          dedupeKey: `payout_details_changed:${resellerId}:${Date.now()}`,
-        });
+        // Every active holder, Super Admin and people on leave included: this is the guard
+        // against payouts being redirected, so nobody who can pay may miss it.
+        for (const userId of await holdersOf(tx, 'finance.record_payments')) {
+          await notify(
+            tx,
+            { userId },
+            {
+              kind: 'payout_details_changed',
+              title: `${person.fullName} changed their payout details`,
+              body: 'Check the new details before the next payout.',
+              dedupeKey: `payout_details_changed:${resellerId}:${Date.now()}:${userId}`,
+            },
+          );
+        }
       }
     });
     return this.view(actor, next);

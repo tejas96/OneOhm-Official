@@ -123,8 +123,15 @@ describe('reseller payout details', () => {
       [finance.userId, `${mine.name}%`],
     );
     expect(note?.title).toBe(`${mine.name} changed their payout details`);
+    // The Super Admin holds the duty through a system role and hears too.
+    const [boss] = await rows(
+      `SELECT 1 FROM notifications WHERE user_id = $1 AND kind = 'payout_details_changed'
+        AND title LIKE $2`,
+      [admin.userId, `${mine.name}%`],
+    );
+    expect(boss).toBeDefined();
     const before = await rows(`SELECT 1 FROM notifications WHERE kind = 'payout_details_changed'`);
-    await finance.put(path(mine.id), FULL);
+    await finance.put(path(mine.id), { ...FULL, upiId: 'meera@okaxis' });
     const after = await rows(`SELECT 1 FROM notifications WHERE kind = 'payout_details_changed'`);
     expect(after.length).toBe(before.length);
   });
