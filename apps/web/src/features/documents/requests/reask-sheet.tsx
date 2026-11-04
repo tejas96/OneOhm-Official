@@ -12,6 +12,8 @@ const NOTE_MAX = 300;
 export interface ReaskTarget {
   readonly id: string;
   readonly title: string;
+  /** The team filed the paper: it stays on file and the customer is asked to send it again. */
+  readonly byTeam?: boolean;
 }
 
 /**
@@ -32,7 +34,7 @@ export function ReaskSheet({
       open={target !== null}
       onOpenChange={(open) => !open && onClose()}
       title={t('title')}
-      description={t('description')}
+      description={target?.byTeam ? t('descriptionTeam') : t('description')}
     >
       {target && <ReaskForm key={target.id} target={target} onClose={onClose} />}
     </Sheet>

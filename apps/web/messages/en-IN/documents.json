@@ -287,7 +287,8 @@
         "send": "Ask again",
         "sent": "The customer is asked again",
         "failed": "Could not ask again",
-        "close": "Cancel"
+        "close": "Cancel",
+        "descriptionTeam": "The paper our team filed stays on file. The customer will be asked to send it again, and sees your reason in the OneOhm app and on WhatsApp."
       },
       "reminders": "{count, plural, one {# reminder sent} other {# reminders sent}}",
       "looksGood": "Looks good",
