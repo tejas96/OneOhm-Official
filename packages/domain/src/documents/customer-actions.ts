@@ -1,7 +1,7 @@
 import type { DocumentCategory } from './document-categories';
 import type { DocumentRequirement } from './required-documents';
 
-/** What the team can ask a customer to do (redesign §2). Only `paper` has a flow so far. */
+/** What the team can ask a customer to do (redesign §2). `paper`, `location`, `pay` and `callback` have flows so far. */
 export const CUSTOMER_ACTION_TYPES = [
   'paper',
   'location',
@@ -24,12 +24,20 @@ export type CustomerActionType = (typeof CUSTOMER_ACTION_TYPES)[number];
 export const CUSTOMER_ACTION_STATUSES = ['open', 'received', 'closed', 'cancelled'] as const;
 export type CustomerActionStatus = (typeof CUSTOMER_ACTION_STATUSES)[number];
 
-/** The types whose answer the team looks at before it is done. */
+/** The types whose answer the team always looks at before it is done. */
 const CHECKED_TYPES: readonly CustomerActionType[] = ['paper'];
+
+/**
+ * The types the team may check: a paper always; a location only when it conflicts with a point
+ * the home already has (`needs_check`); a payment proof waits for finance to record it.
+ */
+const CHECKABLE_TYPES: readonly CustomerActionType[] = ['paper', 'location', 'pay'];
 
 /** What happens to an action: the customer does it, staff file it, check it, ask again or cancel. */
 export type CustomerActionEvent =
   | 'customer_did_it'
+  /** The customer did it, but the answer needs the team's eyes (a pin on a located home, a proof). */
+  | 'needs_check'
   | 'staff_did_it'
   | 'looks_good'
   | 'ask_again'
@@ -44,19 +52,19 @@ export function nextActionStatus(
   status: CustomerActionStatus,
   event: CustomerActionEvent,
 ): CustomerActionStatus | null {
+  const isOpen = status === 'open';
+  const isReceived = status === 'received';
   const checked = CHECKED_TYPES.includes(type);
-  switch (event) {
-    case 'customer_did_it':
-      return status === 'open' ? (checked ? 'received' : 'closed') : null;
-    case 'staff_did_it':
-      return status === 'open' ? 'closed' : null;
-    case 'looks_good':
-      return checked && status === 'received' ? 'closed' : null;
-    case 'ask_again':
-      return checked && (status === 'received' || status === 'closed') ? 'open' : null;
-    case 'cancel':
-      return status === 'open' ? 'cancelled' : null;
-  }
+  const checkable = CHECKABLE_TYPES.includes(type);
+  const next: Record<CustomerActionEvent, CustomerActionStatus | null> = {
+    customer_did_it: isOpen ? (checked ? 'received' : 'closed') : null,
+    needs_check: isOpen && checkable ? 'received' : null,
+    staff_did_it: isOpen ? 'closed' : null,
+    looks_good: isReceived && checkable ? 'closed' : null,
+    ask_again: checked && (isReceived || status === 'closed') ? 'open' : null,
+    cancel: isOpen ? 'cancelled' : null,
+  };
+  return next[event];
 }
 
 /** What identifies an ask of a paper: its checklist item, else the kind (older rows). */

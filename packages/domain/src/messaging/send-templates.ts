@@ -1,0 +1,53 @@
+import type { MessageTemplateDefault } from './message-templates';
+
+/**
+ * The customer templates behind the staff "Send to customer" menu (redesign §18): each goes
+ * out only when the chat's 24-hour window is closed (inside it the same news is a chat message),
+ * and starts off until Meta has approved it in English, Marathi and Hindi.
+ */
+export const SEND_MESSAGE_TEMPLATES = [
+  {
+    key: 'location_request',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    // The button opens the chat step that sends the 📍 Send location message (inside 24 hours).
+    extras: { quickReplies: ['locationPayload'] },
+    preview:
+      'Hello {{1}}, please share the location of your {{2}} home so our team finds it easily. Tap the button below to send it.',
+  },
+  {
+    key: 'payment_due',
+    audience: 'customer',
+    fields: ['customer', 'amount', 'home'],
+    // [Pay now] answers with the pay-link message; [I paid another way] opens the proof form.
+    extras: { quickReplies: ['payPayload', 'paidPayload'] },
+    preview:
+      'Hello {{1}}, {{2}} is due for your {{3}} home. You can pay online, or tell us if you have already paid another way.',
+  },
+  {
+    key: 'callback_request',
+    audience: 'customer',
+    fields: ['customer', 'staff'],
+    extras: { quickReplies: ['morningPayload', 'afternoonPayload', 'eveningPayload'] },
+    preview: 'Hello {{1}}, when should {{2}} from OneOhm call you? Pick a time below.',
+  },
+  {
+    key: 'delay_notice',
+    audience: 'customer',
+    fields: ['customer', 'stage', 'reason'],
+    preview: 'Hello {{1}}, your {{2}} is waiting: {{3}}. We will update you here.',
+  },
+  {
+    key: 'crew_contact',
+    audience: 'customer',
+    fields: ['customer', 'staff', 'work', 'phone'],
+    preview: 'Hello {{1}}, {{2}} from OneOhm will come for your {{3}}. You can call them on {{4}}.',
+  },
+  {
+    key: 'document_share',
+    audience: 'customer',
+    fields: ['customer', 'document'],
+    extras: { document: { urlField: 'documentUrl', nameField: 'documentName' } },
+    preview: 'Hello {{1}}, here is your {{2}} from OneOhm. Reply here if you have any questions.',
+  },
+] as const satisfies readonly MessageTemplateDefault[];

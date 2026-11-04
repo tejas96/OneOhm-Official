@@ -88,6 +88,10 @@ export const HINDI_WORDS: LanguageWords = {
       title: `${p.document} की अब ज़रूरत नहीं है`,
       body: 'आपको इसे भेजने की ज़रूरत नहीं है।',
     }),
+    action_cancelled: (p) => ({
+      title: `${p.what} अब ज़रूरी नहीं है`,
+      body: 'आपको कुछ करने की ज़रूरत नहीं है।',
+    }),
     document_received_by_team: (p) => ({
       title: `आपका ${p.document} हमें मिल गया`,
       body: `${p.home} पर आपके सोलर के लिए। धन्यवाद।`,
@@ -123,6 +127,30 @@ export const HINDI_WORDS: LanguageWords = {
     project_waiting: (p) => ({
       title: HI_WAITING[p.party ?? ''] ?? 'थोड़ी देर हो रही है',
       body: `${p.project}: ${p.milestone}। आगे की जानकारी हम देंगे।`,
+    }),
+    location_request: (p) => ({
+      title: `अपने ${p.home} घर की लोकेशन भेजें`,
+      body: 'हमारी WhatsApp चैट में ‘लोकेशन भेजें’ दबाएँ, ताकि हमारी टीम आसानी से पहुँच सके।',
+    }),
+    payment_due: (p) => ({
+      title: `${p.amount} बाकी है`,
+      body: `आपके ${p.home} घर के लिए। ‘पेमेंट’ खोलकर भरें, या किसी और तरीके से भरा हो तो हमें बताएँ।`,
+    }),
+    callback_request: (p) => ({
+      title: `${p.staff} आपको कब फ़ोन करें?`,
+      body: 'हमारी WhatsApp चैट में बताएँ: सुबह, दोपहर या शाम।',
+    }),
+    delay_notice: (p) => ({
+      title: `आपका ${p.stage} रुका हुआ है`,
+      body: `${p.reason}। आगे की जानकारी हम देंगे।`,
+    }),
+    crew_contact: (p) => ({
+      title: `${p.staff} आपके ${p.work} के लिए आएँगे`,
+      body: `आप उन्हें ${p.phone} पर फ़ोन कर सकते हैं।`,
+    }),
+    document_share: (p) => ({
+      title: `आपका ${p.document}`,
+      body: 'हमने इसे WhatsApp पर भेजा है। यह ‘दस्तावेज़’ में भी है।',
     }),
     referral_reward: (p) => ({
       title: 'रेफ़रल इनाम की जानकारी',

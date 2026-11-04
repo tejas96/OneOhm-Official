@@ -93,6 +93,29 @@ describe('nextActionStatus', () => {
   });
 });
 
+describe('a location and a payment proof', () => {
+  it('a pin that fits closes the action; one that conflicts waits for the team', () => {
+    expect(nextActionStatus('location', 'open', 'customer_did_it')).toBe('closed');
+    expect(nextActionStatus('location', 'open', 'needs_check')).toBe('received');
+    expect(nextActionStatus('location', 'received', 'looks_good')).toBe('closed');
+  });
+
+  it('a payment proof waits for finance; paying online closes the action', () => {
+    expect(nextActionStatus('pay', 'open', 'needs_check')).toBe('received');
+    expect(nextActionStatus('pay', 'received', 'looks_good')).toBe('closed');
+    expect(nextActionStatus('pay', 'open', 'customer_did_it')).toBe('closed');
+  });
+
+  it('a callback needs no check', () => {
+    expect(nextActionStatus('callback', 'open', 'needs_check')).toBeNull();
+    expect(nextActionStatus('callback', 'open', 'customer_did_it')).toBe('closed');
+  });
+
+  it('a location is not asked again like a paper', () => {
+    expect(nextActionStatus('location', 'received', 'ask_again')).toBeNull();
+  });
+});
+
 describe('asking the same paper twice', () => {
   const free = (title: string) => ({ category: 'customer_kyc', title });
 

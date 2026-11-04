@@ -83,6 +83,11 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `${p.document} is no longer needed`,
     body: 'You do not need to send it.',
   }),
+  // The team cancelled something other than a paper (a location, a payment proof, a call time).
+  action_cancelled: (p) => ({
+    title: `${p.what} is no longer needed`,
+    body: 'You do not need to do anything.',
+  }),
   document_received_by_team: (p) => ({
     title: `We have your ${p.document}`,
     body: `For your solar at ${p.home}. Thank you.`,
@@ -118,6 +123,31 @@ const WORDS: Readonly<Record<string, Words>> = {
   project_waiting: (p) => ({
     title: `Waiting for ${p.reason}`,
     body: `${p.project}: ${p.milestone}. We will keep you posted.`,
+  }),
+  // Sent from the team's "Send to customer" menu (redesign §18); app inbox and SMS say the same.
+  location_request: (p) => ({
+    title: `Please share the location of your ${p.home} home`,
+    body: 'Open our WhatsApp chat and tap Send location, so our team finds it easily.',
+  }),
+  payment_due: (p) => ({
+    title: `${p.amount} is due`,
+    body: `For your ${p.home} home. Open Payments to pay, or tell us if you paid another way.`,
+  }),
+  callback_request: (p) => ({
+    title: `When should ${p.staff} call you?`,
+    body: 'Reply in our WhatsApp chat: morning, afternoon or evening.',
+  }),
+  delay_notice: (p) => ({
+    title: `Your ${p.stage} is waiting`,
+    body: `${p.reason}. We will update you.`,
+  }),
+  crew_contact: (p) => ({
+    title: `${p.staff} will come for your ${p.work}`,
+    body: `You can call them on ${p.phone}.`,
+  }),
+  document_share: (p) => ({
+    title: `Your ${p.document}`,
+    body: 'We sent it on WhatsApp. It is also in Documents.',
   }),
   referral_reward: (p) => ({
     title: 'Referral reward update',

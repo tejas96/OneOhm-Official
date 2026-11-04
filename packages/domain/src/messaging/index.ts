@@ -3,3 +3,4 @@ export * from './chat-rules';
 export * from './contact-channels';
 export * from './customer-steps';
 export * from './message-templates';
+export * from './send-to-customer';

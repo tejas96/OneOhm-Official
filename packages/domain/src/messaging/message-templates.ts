@@ -1,4 +1,5 @@
 import { STEP_MESSAGE_TEMPLATES } from './customer-steps';
+import { SEND_MESSAGE_TEMPLATES } from './send-templates';
 
 /**
  * Business-initiated WhatsApp messages use templates approved in Meta's WhatsApp
@@ -149,6 +150,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Please rate it in the OneOhm app.',
   },
   ...STEP_MESSAGE_TEMPLATES,
+  ...SEND_MESSAGE_TEMPLATES,
   {
     // A team member writes after WhatsApp's 24-hour window closed; their words go in {{3}}.
     key: 'chat_follow_up',

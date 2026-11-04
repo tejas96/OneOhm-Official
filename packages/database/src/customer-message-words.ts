@@ -28,6 +28,7 @@ export const IN_APP_MESSAGES = [
   'paper_checked',
   'paper_stale',
   'document_request_cancelled',
+  'action_cancelled',
   'document_received_by_team',
   'maintenance_visit',
   'survey_scheduled',
@@ -38,6 +39,12 @@ export const IN_APP_MESSAGES = [
   'project_update_link',
   'service_visit_booked',
   'project_waiting',
+  'location_request',
+  'payment_due',
+  'callback_request',
+  'delay_notice',
+  'crew_contact',
+  'document_share',
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 

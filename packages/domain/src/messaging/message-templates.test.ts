@@ -45,13 +45,17 @@ describe('follow-up text', () => {
     expect(text.endsWith('…')).toBe(true);
   });
 
-  it('names the file and buttons only for the four messages that have them', () => {
+  it('names the file and buttons only for the messages that have them', () => {
     const withExtras = DEFAULT_MESSAGE_TEMPLATES.filter((t) => 'extras' in t).map((t) => t.key);
     expect(withExtras).toEqual([
       'quotation_sent',
       'payment_received',
       'payment_reminder',
       'payment_link',
+      'location_request',
+      'payment_due',
+      'callback_request',
+      'document_share',
     ]);
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');

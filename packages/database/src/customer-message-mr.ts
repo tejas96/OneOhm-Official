@@ -88,6 +88,10 @@ export const MARATHI_WORDS: LanguageWords = {
       title: `${p.document} आता लागणार नाही`,
       body: 'तुम्हाला ते पाठवण्याची गरज नाही.',
     }),
+    action_cancelled: (p) => ({
+      title: `${p.what} आता नको आहे`,
+      body: 'तुम्हाला काही करण्याची गरज नाही.',
+    }),
     document_received_by_team: (p) => ({
       title: `तुमचे ${p.document} आम्हाला मिळाले`,
       body: `${p.home} येथील तुमच्या सोलरसाठी. धन्यवाद.`,
@@ -123,6 +127,30 @@ export const MARATHI_WORDS: LanguageWords = {
     project_waiting: (p) => ({
       title: MR_WAITING[p.party ?? ''] ?? 'थोडा उशीर होत आहे',
       body: `${p.project}: ${p.milestone}. पुढची माहिती आम्ही कळवू.`,
+    }),
+    location_request: (p) => ({
+      title: `तुमच्या ${p.home} घराचे लोकेशन पाठवा`,
+      body: 'आमच्या WhatsApp चॅटमध्ये ‘लोकेशन पाठवा’ दाबा, म्हणजे आमची टीम सहज पोहोचेल.',
+    }),
+    payment_due: (p) => ({
+      title: `${p.amount} बाकी आहे`,
+      body: `तुमच्या ${p.home} घरासाठी. ‘पेमेंट’ उघडून भरा, किंवा दुसऱ्या मार्गाने भरले असल्यास आम्हाला सांगा.`,
+    }),
+    callback_request: (p) => ({
+      title: `${p.staff} यांनी कधी फोन करावा?`,
+      body: 'आमच्या WhatsApp चॅटमध्ये सांगा: सकाळी, दुपारी किंवा संध्याकाळी.',
+    }),
+    delay_notice: (p) => ({
+      title: `तुमचे ${p.stage} थांबले आहे`,
+      body: `${p.reason}. पुढची माहिती आम्ही कळवू.`,
+    }),
+    crew_contact: (p) => ({
+      title: `${p.staff} तुमच्या ${p.work} साठी येतील`,
+      body: `तुम्ही त्यांना ${p.phone} वर फोन करू शकता.`,
+    }),
+    document_share: (p) => ({
+      title: `तुमचे ${p.document}`,
+      body: 'आम्ही ते WhatsApp वर पाठवले आहे. ते ‘कागदपत्रे’ मध्येही आहे.',
     }),
     referral_reward: (p) => ({
       title: 'रेफरल बक्षिसाची माहिती',
