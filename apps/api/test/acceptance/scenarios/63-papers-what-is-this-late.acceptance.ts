@@ -97,7 +97,7 @@ describe('Papers: late files, many files and the timer', () => {
     await say(customer.phone, 'menu');
     expect((await lastReply(customer.phone))?.body).toContain('You have 1 file not saved yet.');
     const before = (await replies(customer.phone)).length;
-    expect(await askAboutFiles(admin)).toBe(0);
+    await askAboutFiles(admin);
     expect((await replies(customer.phone)).length).toBe(before);
     await tap(customer.phone, 'what:ask');
     expect((await lastReply(customer.phone))?.body).toBe('What is this?');

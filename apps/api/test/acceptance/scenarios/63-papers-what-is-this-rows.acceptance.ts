@@ -7,7 +7,13 @@ import { milestoneOf, recordPayment } from '../support/money';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { advanceTo, project as projectOf } from '../support/tasks';
-import { askAboutFiles, docsOf, photoAndQuestion, sendPhoto } from '../support/what-is-this';
+import {
+  askAboutFiles,
+  docsOf,
+  photoAndQuestion,
+  questions,
+  sendPhoto,
+} from '../support/what-is-this';
 import { sendInbound } from '../support/whatsapp';
 
 // The fixed rows of "What is this?": Payment proof (finance is asked to record it, reminders
@@ -122,7 +128,8 @@ describe('Papers: Payment proof, Problem photo, errors and old papers', () => {
       'That file is empty. Please send it again.',
     );
     // None is waiting for a question.
-    expect(await askAboutFiles(admin)).toBe(0);
+    await askAboutFiles(admin);
+    expect(await questions(customer.phone)).toHaveLength(0);
     expect((await replies(customer.phone)).filter((r) => r.body.includes('try'))).toHaveLength(0);
   });
 

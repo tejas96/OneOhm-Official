@@ -37,9 +37,9 @@ describe('Papers: a burst, Change, and files that wait', () => {
     for (let n = 0; n < 3; n += 1) await sendPhoto(customer.phone);
     expect(await questions(customer.phone)).toHaveLength(0);
     // 10 seconds on: the last photo is too recent, nothing goes out.
-    expect(await askAboutFiles(admin, 10)).toBe(0);
+    await askAboutFiles(admin, 10);
     expect(await questions(customer.phone)).toHaveLength(0);
-    expect(await askAboutFiles(admin, 30)).toBeGreaterThanOrEqual(1);
+    await askAboutFiles(admin, 30);
     const asked = await questions(customer.phone);
     expect(asked).toHaveLength(1);
     expect(asked[0]?.body).toBe('Got your 3 photos ✅ What are they?');

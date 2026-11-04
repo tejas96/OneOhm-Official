@@ -115,13 +115,14 @@ describe('WhatsApp inbound reliability', () => {
     const undo = await refuseRepliesTo(customer.phone);
     try {
       // The question cannot be queued: it stays due and nothing is half done.
-      expect(await askAboutFiles(admin)).toBe(0);
+      await askAboutFiles(admin);
+      expect(await questions(customer.phone)).toHaveLength(0);
     } finally {
       await undo();
     }
     await sendInbound(customer.phone, photo);
     // It backed off a little, so it is asked again a few minutes on.
-    expect(await askAboutFiles(admin, 300)).toBe(1);
+    await askAboutFiles(admin, 300);
     expect(await questions(customer.phone)).toHaveLength(1);
     const kept = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
       customer.customerId,
