@@ -11,54 +11,18 @@ import {
 import {
   countsForSite,
   customerCategoryFor,
-  isCurrentPaper,
   isDiscomApplication,
   requirementsFor,
   type SiteScope,
-  sameAsk,
 } from '@oneohm/domain';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { customerHomes } from '../customer-portal/customer-homes';
 import { fileSystemPapers } from '../documents/system-papers-hook';
+import { checkOf, currentFiles, isAsked } from './checklist-rules';
 import { loadRequirements } from './document-requirements.service';
 import { ReportStatusService } from './report-status.service';
-
-/**
- * The files that still count for an item: a checked paper older than the item's maximum age
- * no longer does (redesign 5.4, until the DISCOM application is done); one still waiting
- * for its check does.
- */
-const currentFiles = <T extends { checkedAt: Date | null; createdAt: Date }>(
-  files: readonly T[],
-  maxAgeDays: number | null | undefined,
-  now: Date,
-): T[] =>
-  files.filter((file) => !file.checkedAt || isCurrentPaper(file.createdAt, maxAgeDays, now));
-
-/** missing, received and waiting for the team's look, or checked. */
-const checkOf = (onFile: number, unchecked: number) =>
-  onFile === 0
-    ? ('missing' as const)
-    : unchecked > 0
-      ? ('to_check' as const)
-      : ('checked' as const);
-
-/** Any open ask of this kind on this home (or for this person), or of this item, covers the row. */
-const isAsked = (
-  open: readonly { category: string; requirementKey: string | null }[],
-  key: string,
-  category: string,
-): boolean =>
-  open.some(
-    (one) =>
-      one.category === category ||
-      sameAsk(
-        { requirementKey: key, category },
-        { requirementKey: one.requirementKey, category: one.category },
-      ),
-  );
 
 /**
  * Which papers and reports a project needs and which it has (PRD 3.14, 3.18). ID papers
