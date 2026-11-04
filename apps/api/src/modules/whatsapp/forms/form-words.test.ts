@@ -86,6 +86,8 @@ describe('the Send a paper Flow JSON', () => {
       'max-uploaded-documents': 2,
       'allowed-mime-types': [...SEND_PDF_MIME_TYPES],
     });
+    // Both screens end the flow: each has its own complete Footer.
+    expect(entry?.terminal).toBe(true);
     expect(pdf?.terminal).toBe(true);
   });
 

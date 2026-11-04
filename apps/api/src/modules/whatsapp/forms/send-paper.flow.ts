@@ -28,6 +28,7 @@ export const SEND_PAPER_FLOW = {
     {
       id: SEND_PAPER_SCREEN,
       title: 'OneOhm',
+      terminal: true,
       data: {
         heading: text('Electricity bill — Sangli'),
         photos_label: text('Photos'),

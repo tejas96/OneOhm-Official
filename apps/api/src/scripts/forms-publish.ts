@@ -1,17 +1,19 @@
 import { FORMS } from '../modules/whatsapp/forms/form-registry';
 
 /**
- * `pnpm --filter @oneohm/api forms:publish [--yes]`: creates each WhatsApp form (Flow) in the
+ * `pnpm --filter @oneohm/api forms:publish [--yes] [--new]`: creates each WhatsApp form (Flow) in the
  * business account, uploads its Flow JSON, publishes it and prints the flow id to paste into
  * Settings → WhatsApp messages → Forms. It CHANGES THE META ACCOUNT, so without `--yes` it only
  * prints what it would do and calls nothing. A published flow cannot be edited, so each form
  * version is its own flow, named "OneOhm <name> v<version>"; running it again for a version
- * that is already published gets a new flow with a dated name (only a draft is reused).
+ * that is already published prints its id and does nothing; a new JSON version is a new flow,
+ * and `--new` makes another flow with a dated name (only a draft is ever reused).
  *
  * Needs WHATSAPP_ACCESS_TOKEN and WHATSAPP_BUSINESS_ACCOUNT_ID (WHATSAPP_API_VERSION is v25.0
  * unless set), read from the environment or the repository's .env.
  */
 const live = process.argv.includes('--yes');
+const renew = process.argv.includes('--new');
 const token = process.env.WHATSAPP_ACCESS_TOKEN;
 const account = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 const version = process.env.WHATSAPP_API_VERSION ?? 'v25.0';
@@ -57,6 +59,13 @@ async function publishForm(form: (typeof FORMS)[number], known: NonNullable<Grap
   const base = `OneOhm ${form.name} v${form.version}`;
   // Only a draft is reused. A published flow cannot be edited, and anything else (deprecated,
   // blocked) is left alone, so a new flow gets its own name.
+  const published = known.find((flow) => flow.name === base && flow.status === 'PUBLISHED');
+  if (published && !renew) {
+    console.info(
+      `${form.key}: version ${form.version} is already published as flow ${published.id}. Nothing done (--new makes another).`,
+    );
+    return;
+  }
   const draft = known.find((flow) => flow.name === base && flow.status === 'DRAFT');
   const taken = known.some((flow) => flow.name === base);
   const name = draft || !taken ? base : `${base} (${new Date().toISOString().slice(0, 10)})`;
