@@ -60,11 +60,13 @@ export function CustomerActionsCard({
               <ActionRow
                 key={request.id}
                 request={request}
-                onReask={() => setReasking({
+                onReask={() =>
+                  setReasking({
                     id: request.id,
                     title: request.title,
                     byTeam: request.documentByTeam === true,
-                  })}
+                  })
+                }
               />
             ))}
           </ul>

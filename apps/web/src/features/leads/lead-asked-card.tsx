@@ -21,10 +21,7 @@ export function LeadAskedCard({
   const t = useTranslations('leads');
   const canAsk = useDocumentRights().upload && hasSite;
   const [draft, setDraft] = useState<AskDraft | null>(null);
-  if (!hasSite)
-    return (
-      <p className="type-body-sm text-ink-muted">{t('askNeedsSite')}</p>
-    );
+  if (!hasSite) return <p className="type-body-sm text-ink-muted">{t('askNeedsSite')}</p>;
   return (
     <>
       <CustomerActionsCard
