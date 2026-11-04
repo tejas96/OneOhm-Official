@@ -157,14 +157,14 @@ describe('Forms: Send a paper', () => {
   it('a valid form with no readable file is not "old": the customer is asked for the photo', async () => {
     const { customer, ask } = await asked('Form Empty (test)');
     const flow = await opened(customer.phone, ask.id);
-    await sendInbound(customer.phone, { form: { token: flow.token, photos: [] } });
+    const id = `wamid.form-empty-${Date.now()}`;
+    await sendInbound(customer.phone, { id, form: { token: flow.token, photos: [] } });
     const said = await bodies(customer.phone);
     expect(said.at(-1)).toBe("We didn't get the file — please send the photo here.");
     expect(said).not.toContain(OLD);
-    const alerts = await rows(
-      "SELECT 1 FROM notifications WHERE dedupe_key LIKE '%wa_form_empty:%' AND body LIKE $1",
-      [`%${customer.phone.slice(-4)}%`],
-    );
+    const alerts = await rows('SELECT 1 FROM notifications WHERE dedupe_key LIKE $1', [
+      `%wa_form_empty:${id}:%`,
+    ]);
     expect(alerts.length).toBeGreaterThan(0);
   });
 });
