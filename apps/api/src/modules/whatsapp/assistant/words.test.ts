@@ -36,6 +36,8 @@ describe('assistant words in three languages', () => {
         expect(row.title.length, `${language} ${row.title}`).toBeLessThanOrEqual(24);
         expect(row.description.length, `${language} ${row.description}`).toBeLessThanOrEqual(72);
       }
+      const person = words.MEDIA_WORDS.personRow;
+      expect(person.length, `${language} ${person}`).toBeLessThanOrEqual(24);
       for (const button of [
         words.WORDS.payNow,
         words.WORDS.callMeBack,

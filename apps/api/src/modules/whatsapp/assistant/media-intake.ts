@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CustomerDocumentRequest } from '@oneohm/api-contracts';
-import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
-import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
+import type { CustomerHome } from '../../customer-portal/customer-homes';
 import { ChatFileKeeper } from '../chat-file-keeper';
 import { type Conversation, chatDocumentFor, queueReply, setState } from '../chat-store';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
 import { sayWithTaps } from './closing-taps';
+import { type HomeChoice, homeForFile } from './file-home';
+import { FileHomeFlowService } from './file-home-flow';
 import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
@@ -53,14 +53,16 @@ export class MediaIntakeService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly files: ChatFileKeeper,
-    private readonly papers: CustomerDocumentRequestsService,
+    private readonly homes: FileHomeFlowService,
     private readonly problems: ProblemFlowService,
     private readonly people: HandOverService,
   ) {}
 
   /**
-   * In order: the problem being reported, the request raised a moment ago, the oldest
-   * paper OneOhm asked for. Anything else is not stored: we ask what it is about.
+   * In order: the problem being reported, the request raised a moment ago, then the home
+   * it is for: asked once when the customer has two or more ("Which home?"), else the
+   * oldest paper OneOhm asked for on it. Anything else: we ask what it is about. In a
+   * chat a person holds, only the home question and the paper go out.
    */
   async receive(
     chat: Conversation,
@@ -68,8 +70,11 @@ export class MediaIntakeService {
     media: IncomingMedia,
     said: string,
   ): Promise<void> {
-    // A voice note or a video goes warmly to their person, as for leads (C12).
+    const held = chat.state === 'human' && stepOf(chat) !== 'await_problem';
+    // A voice note or a video goes warmly to their person, as for leads (C12); it is put
+    // on a home only when that needs no question (`ChatFileKeeper.settle`).
     if (media.type === 'audio' || media.type === 'video') {
+      if (held) return;
       const reply = heardReply(media.type, await this.people.answererName(chat));
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
     }
@@ -91,16 +96,26 @@ export class MediaIntakeService {
     const filed = (chat.context as { filedMedia?: FiledMedia }).filedMedia;
     if (filed?.id === media.id)
       return sayWithTaps(this.db, chat, MEDIA_WORDS.paperSaved(filed.title), ['menu']);
-    const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
-    if (open.length > 0) return this.fulfil(chat, customerId, open, media);
-    return this.ask(chat, media, now);
+    return this.forHome(chat, customerId, media, held);
   }
 
-  /** A person has the chat: a photo or paper still answers the oldest open paper request. */
-  async answerOpenRequest(chat: Conversation, customerId: string, media: IncomingMedia) {
-    if (media.type === 'audio' || media.type === 'video') return;
-    const open = (await this.papers.list(customerId)).filter((paper) => paper.status === 'open');
-    if (open.length > 0) await this.fulfil(chat, customerId, open, media);
+  /** "Which home?" once for two or more homes; else the paper asked for on the home. */
+  private async forHome(
+    chat: Conversation,
+    customerId: string,
+    media: IncomingMedia,
+    held: boolean,
+  ): Promise<void> {
+    const now = Date.now();
+    const { homes, choice } = await homeForFile(this.db, chat, customerId, now);
+    if (choice === 'ask') {
+      const documentId = await this.storedOrSay(chat, media);
+      return documentId ? this.homes.ask(chat, homes, documentId) : undefined;
+    }
+    if (choice && (await this.homes.openFor(customerId, choice)).length > 0)
+      return this.fulfil(chat, customerId, homes, choice, media);
+    // Filed on its home after the answer (`ChatFileKeeper.settle`).
+    return held ? undefined : this.ask(chat, media, now);
   }
 
   /** The words of "Report a problem": they raise it, with any photos sent just before. */
@@ -109,32 +124,24 @@ export class MediaIntakeService {
     return this.problems.raise(chat, customerId, said, await this.storedPending(pending));
   }
 
-  /** Answers the oldest open paper request, exactly as an upload in the app would. */
+  /** Answers the oldest open paper request of the home, as an upload in the app would. */
   private async fulfil(
     chat: Conversation,
     customerId: string,
-    open: readonly CustomerDocumentRequest[],
+    homes: readonly CustomerHome[],
+    choice: HomeChoice,
     media: IncomingMedia,
   ): Promise<void> {
-    // The list comes newest first, so the oldest open request is the last one.
-    const oldest = open[open.length - 1];
-    if (!oldest) return;
     const documentId = await this.storedOrSay(chat, media);
     if (!documentId) return;
-    try {
-      await this.papers.answerWithDocument(customerId, oldest.id, documentId);
-    } catch (error) {
-      if (error instanceof AppError) return this.text(chat, MEDIA_WORDS.paperRefused(oldest.title));
-      throw error;
-    }
-    const filedMedia: FiledMedia = { id: media.id, title: oldest.title };
+    const filed = await this.homes.fileOnHome(customerId, homes, choice, [documentId]);
+    if (filed.refused) return this.text(chat, MEDIA_WORDS.paperRefused(filed.refused));
+    if (!filed.answered) return this.ask(chat, media, Date.now());
+    const filedMedia: FiledMedia = { id: media.id, title: filed.answered };
     await setState(this.db, chat.id, chat.state, { ...(chat.context as object), filedMedia });
-    const left = open
-      .slice(0, -1)
-      .reverse()
-      .map((paper) => paper.title);
+    const left = filed.left;
     const lines = [
-      MEDIA_WORDS.paperSaved(oldest.title),
+      MEDIA_WORDS.paperSaved(filed.answered),
       left.length > 0 ? MEDIA_WORDS.stillNeed(left.join(', ')) : '',
     ];
     return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['menu']);

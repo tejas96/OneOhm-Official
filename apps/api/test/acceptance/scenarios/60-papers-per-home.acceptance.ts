@@ -2,6 +2,7 @@ import type { DocumentChecklist } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { fileForm, upload } from '../support/files';
+import { anotherHome, sellOn } from '../support/homes';
 import { Session } from '../support/http';
 import { chatOf, leadsOf, say, tap, withOnboarding } from '../support/onboarding';
 import {
@@ -172,33 +173,9 @@ describe('Papers per home', () => {
   it('two projects on one property are one home, and a cancelled project is none', async () => {
     const first = await sellProject(admin, { name: 'Home Rule (test)' });
     const { customer } = first;
-    const sell = async (propertyId: string) => {
-      const quotation = await createQuotation(admin, { ...customer, propertyId });
-      await admin.post(`/quotations/${quotation.id}/send`);
-      await admin.post(`/quotations/${quotation.id}/accept`);
-      return admin.post<{ id: string }>('/projects', {
-        quotationId: quotation.id,
-        discomId: await discomId(admin, 'MSEDCL'),
-        loan: false,
-        loanPaise: 0,
-        battery: false,
-        groundMount: false,
-        startDate: today(),
-        managerUserId: admin.userId,
-      });
-    };
-    await sell(customer.propertyId);
-    const farm = await admin.post<{ id: string }>(`/customers/${customer.customerId}/properties`, {
-      label: 'Farm (test)',
-      addressLine: '3 Canal Road (test)',
-      city: 'Sangli',
-      district: 'Sangli',
-      state: 'Maharashtra',
-      pincode: '416416',
-      subsidyCategory: 'individual',
-      floors: 1,
-    });
-    const onFarm = await sell(farm.id);
+    await sellOn(admin, customer, customer.propertyId);
+    const { projectId } = await anotherHome(admin, customer, 'Farm (test)');
+    const onFarm = { id: projectId };
     await rows("UPDATE projects SET status = 'cancelled' WHERE id = $1", [onFarm.id]);
     // A bill filed for the customer with no home named counts only while there is one home.
     await upload(admin, 'document', {

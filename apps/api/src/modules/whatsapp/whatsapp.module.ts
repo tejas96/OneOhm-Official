@@ -10,6 +10,7 @@ import { ReportsModule } from '../reports/reports.module';
 import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
+import { FileHomeFlowService } from './assistant/file-home-flow';
 import { HandOverService } from './assistant/hand-over';
 import { MediaIntakeService } from './assistant/media-intake';
 import { MenuAnswersService } from './assistant/menu-answers';
@@ -57,6 +58,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     ChatFileKeeper,
     DeliveriesService,
     MediaIntakeService,
+    FileHomeFlowService,
     ProblemFlowService,
     FeedbackFlowService,
     HandOverService,

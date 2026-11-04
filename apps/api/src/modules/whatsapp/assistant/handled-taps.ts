@@ -9,10 +9,11 @@ import { ALL_MENU_ROWS } from './words';
 
 const MENU_IDS = new Set<string>(ALL_MENU_ROWS.map((row) => row.id));
 
-/** The rating rows, and the which-home rows of a complaint (menu audit H3, M10). */
+/** The rating rows, and the which-home rows of a complaint and of a file (menu audit H3, M10). */
 /** The stranger buttons (review F5, audit L18). */
 const STRANGER_TAPS = new Set(['callback', 'human']);
-const OWN_TAP = /^(rate:[1-5]|home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+const OWN_TAP =
+  /^(rate:[1-5]|f?home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|fhome:person)$/;
 
 /**
  * Taps the assistant answers even while a person has the chat (live review B4, B5): the

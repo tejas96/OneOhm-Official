@@ -103,6 +103,10 @@ export const HI: Words<AssistantWords> = {
     photoOnly: 'Photo or paper sent on WhatsApp.',
     tooLarge: 'यह फ़ाइल बहुत बड़ी है। कृपया छोटी फ़ोटो या PDF भेजें।',
     failed: 'माफ़ कीजिए, वह फ़ाइल खुल नहीं सकी। कृपया थोड़ी देर बाद फिर से भेजें।',
+    whichHome: 'यह किस घर के लिए है?',
+    personRow: 'आधार/पैन (सभी घर)',
+    savedFor: (kind, home) => `सहेजा गया: *${kind}*, आपके *${home}* वाले घर के लिए।`,
+    stillNeeded: (list) => `इस घर के लिए अभी चाहिए: ${list}।`,
     problemSavedWithPhotos: (category, photos) =>
       `धन्यवाद। आपका ${category} अनुरोध ${photos === 1 ? 'फ़ोटो के साथ' : `${photos} फ़ोटो के साथ`} दर्ज हो गया है। हमारी टीम आपको कॉल करेगी। स्थिति देखने के लिए "मेरे अनुरोध" दबाएँ।`,
   },

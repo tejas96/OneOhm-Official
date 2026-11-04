@@ -114,6 +114,10 @@ const EN_MEDIA_WORDS = {
   photoOnly: 'Photo or paper sent on WhatsApp.',
   tooLarge: 'This file is too large. Please send a smaller photo or PDF.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
+  whichHome: 'Which home is this for?',
+  personRow: 'Aadhaar/PAN (all homes)',
+  savedFor: (kind: string, home: string) => `Saved: *${kind}* for your home at *${home}*.`,
+  stillNeeded: (list: string) => `Still needed for this home: ${list}.`,
   problemSavedWithPhotos: (category: string, photos: number) =>
     `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
 } as const;

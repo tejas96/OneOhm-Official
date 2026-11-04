@@ -107,7 +107,7 @@ export class WhatsAppWebhookController implements OnModuleInit {
         await this.recover(chat, message);
         continue;
       }
-      // Any file the assistant did not file goes on the newest project or the lead
+      // Any file the assistant did not file goes on its home (or waits to be sorted) or the lead
       // (never throws).
       if (early) await this.files.settle(chat, message);
       else await this.files.keep(chat, message);

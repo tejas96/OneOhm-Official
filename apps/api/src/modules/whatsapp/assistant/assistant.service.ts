@@ -14,6 +14,8 @@ import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
 import { captureEntry } from './entry-capture';
 import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
+import { fileHomeTapped } from './file-home';
+import { FileHomeFlowService } from './file-home-flow';
 import { readReferral } from './guess-category';
 import { HandOverService } from './hand-over';
 import { assistantAnswers } from './handled-taps';
@@ -48,6 +50,7 @@ export class AssistantService {
     private readonly quotes: QuoteActionsService,
     private readonly intake: LeadIntakeService,
     private readonly papers: PaperRepliesService,
+    private readonly fileHomes: FileHomeFlowService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -83,9 +86,8 @@ export class AssistantService {
     if (this.thanksOnly(chat, incoming)) return sayWithTaps(this.db, chat, WORDS.welcome, ['menu']);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.
     if (await this.answersOurUpdate(chat, incoming, word)) return this.people.passToOwner(chat);
-    // A home picked for a complaint (menu audit M10): the complaint goes on that home.
-    const home = homeTapped(incoming.choiceId);
-    if (home) return pickHome(this.db, chat, customerId, home);
+    const home = this.homeTap(chat, customerId, incoming.choiceId);
+    if (home) return home;
     if (WAITING_STEPS.includes(stepOf(chat))) {
       if (await this.step(chat, customerId, incoming)) return;
       // A tap is never the words a step waits for (menu audit H1, H2): the step ends and
@@ -105,14 +107,26 @@ export class AssistantService {
   }
 
   /**
-   * A person has the chat, so the assistant stays quiet. A paper the team asked for is
-   * still filed on its request.
+   * A person has the chat, so the assistant stays quiet. A photo or paper is still filed:
+   * on the request it answers, or after "Which home?", which the person sees go out.
    */
   private async heldByPerson(chat: Conversation, incoming: Incoming): Promise<boolean> {
     if (chat.state !== 'human' || assistantAnswers(chat, incoming)) return false;
     if (chat.customerId && incoming.media)
-      await this.media.answerOpenRequest(chat, chat.customerId, incoming.media);
+      await this.media.receive(chat, chat.customerId, incoming.media, incoming.text);
     return true;
+  }
+
+  /**
+   * A home picked for a complaint (menu audit M10): the complaint goes on that home. One
+   * picked for the files just sent ("Which home?"): they are filed on it. Else null.
+   */
+  private homeTap(chat: Conversation, customerId: string, choiceId: string | null) {
+    const home = homeTapped(choiceId);
+    if (home) return pickHome(this.db, chat, customerId, home);
+    if (choiceId && fileHomeTapped(choiceId))
+      return this.fileHomes.tapped(chat, customerId, choiceId);
+    return null;
   }
 
   /** A held stranger has only its own Call me back / Talk to a person buttons (review F5). */
@@ -130,8 +144,9 @@ export class AssistantService {
   /** The step the chat waits on takes the message; false when it is not that step's. */
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
-    // The which-home list waits for a tap; typed words there are read as usual.
-    if (incoming.kind === 'choice' || step === 'await_home') return false;
+    // The which-home lists wait for a tap; typed words there are read as usual.
+    if (incoming.kind === 'choice' || step === 'await_home' || step === 'await_file_home')
+      return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
     else if (step === 'await_referral') await this.referral(chat, customerId, incoming);
     else if (step === AWAIT_COMMENT) await this.feedback.comment(chat, customerId, incoming.text);

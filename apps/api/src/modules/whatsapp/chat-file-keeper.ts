@@ -6,10 +6,9 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logLead } from '../crm/lead-history';
-import { activeHomes } from '../customer-portal/active-projects';
-import { propertyOfProject } from '../documents/document-links';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
+import { homeForFile, placeOn } from './assistant/file-home';
 import { isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
@@ -21,7 +20,7 @@ import type { Incoming, IncomingMedia } from './whatsapp-events';
  * Every file a customer sends on WhatsApp is stored once, here. A customer's file is kept
  * the moment it arrives, before the assistant answers, under the customer with no home
  * yet; the assistant then only files that same document (an asked-for paper, a problem
- * photo). Whatever no flow filed is put on their newest project after the answer
+ * photo). Whatever no flow filed is put on its home after the answer, or left to sort
  * (`settle`). A lead's file is kept after the answer on their lead, unless onboarding
  * filed it. It never throws: a failure is logged and the team is told, so no file goes silent.
  */
@@ -66,8 +65,9 @@ export class ChatFileKeeper {
   }
 
   /**
-   * After the assistant answered: a customer's file no flow filed goes on their newest
-   * project, and the chat's person hears once. Never throws.
+   * After the assistant answered: a customer's file no flow filed goes on its home when
+   * that needs no question (`homeForFile`); else it stays "To sort" under the customer.
+   * Either way the chat's person hears once. Never throws.
    */
   async settle(chat: Conversation, message: Incoming): Promise<void> {
     const media = message.media;
@@ -79,22 +79,19 @@ export class ChatFileKeeper {
         .where(eq(waMessages.waMessageId, message.waMessageId));
       const documentId = row?.documentId;
       if (!documentId || (await isFiled(this.db, documentId))) return;
-      const [newest] = await activeHomes(this.db, chat.customerId);
+      const { homes, choice } = await homeForFile(this.db, chat, chat.customerId);
+      const place = choice && choice !== 'ask' ? placeOn(homes, choice) : null;
       await this.db.transaction(async (tx) => {
-        if (newest)
-          await filePaper(tx, documentId, {
-            projectId: newest.id,
-            propertyId: await propertyOfProject(tx, newest.id),
-            category: 'other',
-          });
-        await this.tellKept(tx, chat, message, media);
+        if (place) await filePaper(tx, documentId, place);
+        // The person row keeps a paper off every home on purpose: it is not "to sort".
+        await this.tellKept(tx, chat, message, media, !place && !(choice && choice !== 'ask'));
       });
     } catch (error) {
       this.log.error(`WhatsApp file ${media.id} not filed: ${String(error)}`);
       await tellChatTeam(this.db, chat, {
         kind: 'whatsapp_file_failed',
         title: 'WhatsApp file not filed',
-        body: `${chat.profileName ?? chat.phone} sent ${FILE_WORDS[media.type]}. It is in their Documents, but could not be put on their project.`,
+        body: `${chat.profileName ?? chat.phone} sent ${FILE_WORDS[media.type]}. It is in their Documents, but could not be put on their home.`,
         key: `wa_file_unfiled:${message.waMessageId}`,
       }).catch((alert) => this.log.error(`Could not alert about ${media.id}: ${String(alert)}`));
     }
@@ -190,13 +187,14 @@ export class ChatFileKeeper {
     chat: Conversation,
     message: Incoming,
     media: IncomingMedia,
+    toSort = false,
   ) {
     // A voice note or video already reached a person through the hand-over alert.
     if (chat.state !== 'human' && (media.type === 'audio' || media.type === 'video')) return;
     return tellChatTeam(tx, chat, {
       kind: 'whatsapp_message',
       title: `WhatsApp from ${chat.profileName ?? chat.phone}`,
-      body: `Sent ${FILE_WORDS[media.type]}. Saved in Documents.`,
+      body: `Sent ${FILE_WORDS[media.type]}. Saved in Documents${toSort ? ', to sort: no home yet' : ''}.`,
       // The same key as the "customer wrote" alert, so the person hears once.
       key: `wa_in:${message.waMessageId}`,
     });
