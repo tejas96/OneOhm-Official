@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeHome, homeLabel } from './customer-homes';
+import { describeHome, homeLabel, homeName } from './customer-homes';
 
 describe('Customer homes', () => {
   it('names a home by its label and ends the consumer number', () => {
@@ -30,5 +30,15 @@ describe('Customer homes', () => {
 
   it('words a home for a reply', () => {
     expect(homeLabel({ title: 'Pune' })).toBe('your home at Pune');
+  });
+
+  it('tells two homes with the same name apart by the consumer number', () => {
+    const pune = { propertyId: 'a', label: null, city: 'Pune', consumerNumber: '1700-1234' };
+    const other = { propertyId: 'b', label: null, city: 'Pune', consumerNumber: '9999' };
+    const farm = { propertyId: 'c', label: 'Farm', city: 'Pune', consumerNumber: '5678' };
+    expect(homeName(pune, [pune, other, farm])).toBe('Pune (consumer no. ending 1234)');
+    expect(homeName(farm, [pune, other, farm])).toBe('Farm');
+    expect(homeName({ ...pune, consumerNumber: null }, [pune, other])).toBe('Pune');
+    expect(homeName(pune, [pune])).toBe('Pune');
   });
 });

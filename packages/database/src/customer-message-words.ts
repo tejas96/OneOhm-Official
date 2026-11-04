@@ -38,6 +38,9 @@ export const IN_APP_MESSAGES = [
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
+/** A paper's home when its request has no project; said in the customer's language. */
+export const SOME_HOME = 'your home';
+
 /** contact_changed says what the new contact looks after as one of these, never in English. */
 export type ContactSubject = 'project' | 'service' | 'enquiry';
 
@@ -89,6 +92,8 @@ export interface LanguageWords {
   readonly reward: Readonly<Record<'pending' | 'approved' | 'paid' | 'rejected', string>>;
   /** What a new contact looks after (contact_changed), by the payload's `subjectKind`. */
   readonly contactSubjects: Readonly<Record<ContactSubject, string>>;
+  /** SOME_HOME in the language. */
+  readonly someHome: string;
   /** Titles of alerts written straight into the app, with no WhatsApp message behind them. */
   readonly alerts: Readonly<Record<'stage_rating_reply', string>>;
 }
@@ -162,6 +167,7 @@ function localPayload(
   const subject = contactSubject(template, p, words);
   return {
     ...p,
+    ...(p.home === SOME_HOME ? { home: words.someHome } : {}),
     ...(subject ? { subject } : {}),
     ...(milestone ? { milestone } : {}),
     ...(topic ? { topic } : {}),

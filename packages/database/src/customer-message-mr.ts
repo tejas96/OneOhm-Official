@@ -166,5 +166,6 @@ export const MARATHI_WORDS: LanguageWords = {
     service: 'तुमच्या सर्व्हिस विनंती',
     enquiry: 'तुमच्या सोलर चौकशी',
   },
+  someHome: 'तुमच्या घरी',
   alerts: { stage_rating_reply: 'आम्ही तुमच्या अभिप्रायाला उत्तर दिले' },
 };

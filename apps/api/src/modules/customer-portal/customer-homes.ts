@@ -20,6 +20,10 @@ const fit = (text: string, max: number): string => {
   return letters.length <= max ? text : `${letters.slice(0, max - 1).join('')}…`;
 };
 
+/** The last 4 letters or digits of a consumer number; null for none. */
+const ending = (consumerNumber: string | null) =>
+  consumerNumber?.replace(/[^A-Za-z0-9]/g, '').slice(-4) || null;
+
 /** How a home reads in a list: its name (or town) and the end of its consumer number. */
 export function describeHome(property: {
   label: string | null;
@@ -28,10 +32,25 @@ export function describeHome(property: {
 }): Pick<CustomerHome, 'title' | 'description'> {
   const city = property.city.trim();
   const title = fit(property.label?.trim() || city, TITLE_MAX);
-  const ending = property.consumerNumber?.replace(/[^A-Za-z0-9]/g, '').slice(-4);
-  if (!ending) return { title, description: fit(city, DESCRIPTION_MAX) };
-  const tail = ` · consumer no. ending ${ending}`;
+  const end = ending(property.consumerNumber);
+  if (!end) return { title, description: fit(city, DESCRIPTION_MAX) };
+  const tail = ` · consumer no. ending ${end}`;
   return { title, description: fit(city, DESCRIPTION_MAX - tail.length) + tail };
+}
+
+type NamedHome = Parameters<typeof describeHome>[0] & { readonly propertyId: string };
+
+/**
+ * How a message names a home: its title, plus the end of its consumer number when another
+ * of the customer's homes has the same title ("Pune (consumer no. ending 1234)").
+ */
+export function homeName(home: NamedHome, homes: readonly NamedHome[]): string {
+  const { title } = describeHome(home);
+  const twin = homes.some(
+    (other) => other.propertyId !== home.propertyId && describeHome(other).title === title,
+  );
+  const end = twin ? ending(home.consumerNumber) : null;
+  return end ? `${title} (consumer no. ending ${end})` : title;
 }
 
 /** How a reply names a home: "your home at Pune". */

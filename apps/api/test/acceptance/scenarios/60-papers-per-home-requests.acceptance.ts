@@ -142,6 +142,31 @@ describe('Papers per home: requests', () => {
     expect(log).toHaveLength(1);
   });
 
+  it('staff upload closes the open ID request', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Staff KYC (test)' });
+    await anotherHome(admin, customer, 'Farm (test)');
+    const kyc = await ask(project.id, 'customer_kyc', 'Aadhaar card (test)');
+    const doc = await upload(admin, 'photo', {
+      projectId: project.id,
+      category: 'customer_kyc',
+      name: 'Aadhaar given on site (test)',
+    });
+    expect(await requestOf(kyc.id)).toMatchObject({ status: 'received', document_id: doc.id });
+    expect(await customerAlerts(customer.customerId, 'document_received_by_team')).toHaveLength(1);
+  });
+
+  it('staff upload of another paper closes nothing', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Staff Other (test)' });
+    const noc = await ask(project.id, 'other', 'Society NOC (test)');
+    await upload(admin, 'document', {
+      projectId: project.id,
+      category: 'other',
+      name: 'Some other paper (test)',
+    });
+    expect(await requestOf(noc.id)).toMatchObject({ status: 'open', document_id: null });
+    expect(await customerAlerts(customer.customerId, 'document_received_by_team')).toEqual([]);
+  });
+
   it('uses paper_request once it is active', async () => {
     const { project } = await sellProject(admin, { name: 'New Template (test)' });
     await rows("UPDATE message_templates SET active = true WHERE key = 'paper_request'");

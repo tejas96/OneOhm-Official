@@ -166,5 +166,6 @@ export const HINDI_WORDS: LanguageWords = {
     service: 'आपकी सर्विस रिक्वेस्ट',
     enquiry: 'आपकी सोलर पूछताछ',
   },
+  someHome: 'आपके घर',
   alerts: { stage_rating_reply: 'हमने आपकी राय का जवाब दिया' },
 };

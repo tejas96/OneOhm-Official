@@ -4,10 +4,11 @@ import {
   messageTemplates,
   projects,
   properties,
+  SOME_HOME,
 } from '@oneohm/database';
 import { isPersonDocumentCategory } from '@oneohm/domain';
 import { and, count, eq } from 'drizzle-orm';
-import { customerHomes, describeHome } from '../customer-portal/customer-homes';
+import { customerHomes, homeName } from '../customer-portal/customer-homes';
 import { papersForHome } from '../whatsapp/assistant/paper-match';
 import { openPapersOf } from '../whatsapp/assistant/paper-reads';
 
@@ -44,20 +45,31 @@ export async function paperRequestTemplate(
   return row?.active ? 'paper_request' : 'document_requested';
 }
 
-/** How the customer names the project's home: its site label, else its town. */
+/**
+ * How a message names the project's home: its site label, else its town, with the end of
+ * its consumer number when another home of the customer has the same name. SOME_HOME
+ * (said in the customer's language) when there is no project.
+ */
 export async function homeNameOf(db: DatabaseExecutor, projectId: string | null) {
-  if (!projectId) return null;
-  const [home] = await db
+  const [project] = projectId
+    ? await db
+        .select({ propertyId: projects.propertyId, customerId: projects.customerId })
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1)
+    : [];
+  if (!project) return SOME_HOME;
+  const homes = await db
     .select({
+      propertyId: properties.id,
       label: properties.label,
       city: properties.city,
       consumerNumber: properties.consumerNumber,
     })
-    .from(projects)
-    .innerJoin(properties, eq(properties.id, projects.propertyId))
-    .where(eq(projects.id, projectId))
-    .limit(1);
-  return home ? describeHome(home).title : null;
+    .from(properties)
+    .where(eq(properties.customerId, project.customerId));
+  const home = homes.find((one) => one.propertyId === project.propertyId);
+  return home ? homeName(home, homes) : SOME_HOME;
 }
 
 /**

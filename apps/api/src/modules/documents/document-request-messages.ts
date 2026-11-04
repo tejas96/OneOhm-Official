@@ -38,7 +38,7 @@ export async function askCustomer(tx: DatabaseExecutor, asked: Asked, reasks: nu
       customer: asked.customer,
       document: asked.title,
       ...(asked.projectCode ? { project: asked.projectCode } : {}),
-      ...(home ? { home } : {}),
+      home,
     },
     roundKey(`document_requested:${asked.id}`, reasks),
   );
@@ -85,7 +85,7 @@ export async function tellReceivedByTeam(
     tx,
     asked.phone,
     'document_received_by_team',
-    { document: asked.title, home: home ?? 'your home' },
+    { document: asked.title, home },
     roundKey(`document_received_by_team:${asked.id}`, reasks),
   );
 }

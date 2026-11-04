@@ -7,7 +7,7 @@ import {
 } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { conflict } from '../../common/http/errors';
+import { AppError, conflict } from '../../common/http/errors';
 import { tellWaitingOwners } from '../customer-portal/tell-waiting-owners';
 import { openRequestsFor, reaskCount, roundKey } from './document-request-home';
 import { tellReceivedByTeam } from './document-request-messages';
@@ -74,7 +74,8 @@ export async function markRequestReceived(
  * A staff upload of a paper the customer was asked for (given by hand, by email, on a
  * site visit) closes that home's oldest open request for it, or the person's for an ID or
  * income paper, and the customer is told in the app (papers per home, flow 4 and D). A
- * contractor's or vendor's own paper has no customer and closes nothing.
+ * contractor's or vendor's own paper has no customer and closes nothing; a paper of kind
+ * "other" closes nothing either (its request title is free text, so the kind proves nothing).
  */
 export async function closeRequestWithUpload(
   tx: DatabaseExecutor,
@@ -86,7 +87,7 @@ export async function closeRequestWithUpload(
     readonly category: string;
   },
 ): Promise<void> {
-  if (!paper.customerId) return;
+  if (!paper.customerId || paper.category === 'other') return;
   const [open] = await openRequestsFor(tx, paper.customerId, paper);
   if (!open) return;
   const [row] = await tx
@@ -98,6 +99,14 @@ export async function closeRequestWithUpload(
   if (!row) return;
   const { asked, phone } = row;
   const said = `${asked.title} received: ${by.fullName} added it`;
-  const reasks = await markRequestReceived(tx, asked, documentId, { userId: by.userId, said });
-  await tellReceivedByTeam(tx, { ...asked, phone }, reasks);
+  try {
+    // A savepoint: if the customer answered it a moment ago, the staff file still saves.
+    await tx.transaction(async (savepoint) => {
+      const filer = { userId: by.userId, said };
+      const reasks = await markRequestReceived(savepoint, asked, documentId, filer);
+      await tellReceivedByTeam(savepoint, { ...asked, phone }, reasks);
+    });
+  } catch (error) {
+    if (!(error instanceof AppError && error.code === 'received')) throw error;
+  }
 }

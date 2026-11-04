@@ -1,7 +1,7 @@
 import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
 import { describe, expect, it } from 'vitest';
 import { customerNotice } from './customer-message';
-import { localAlertTitle, localValues, localWords } from './customer-message-words';
+import { localAlertTitle, localValues, localWords, SOME_HOME } from './customer-message-words';
 
 const payload = {
   customer: 'Ramesh',
@@ -122,5 +122,13 @@ describe('contact_changed in Marathi and Hindi', () => {
     expect(localValues('en-IN', 'contact_changed', told('project')).subject).toBe(
       'your solar project (Pune · 3 kW)',
     );
+  });
+
+  it('says a paper with no home as “your home” in the language', () => {
+    const paper = { customer: 'Ramesh', document: 'Electricity bill', home: SOME_HOME };
+    expect(localValues('mr-IN', 'paper_request', paper).home).toBe('तुमच्या घरी');
+    expect(localValues('hi-IN', 'paper_request', paper).home).toBe('आपके घर');
+    expect(localValues('en-IN', 'paper_request', paper).home).toBe('your home');
+    expect(customerNotice('paper_request', paper, 'k', 'hi-IN')?.body).toContain('आपके घर पर');
   });
 });
