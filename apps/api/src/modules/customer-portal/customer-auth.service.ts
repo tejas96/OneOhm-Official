@@ -45,7 +45,7 @@ export class CustomerAuthService {
         codeHash: hash(`${PURPOSE}:${phoneE164}:${code}`),
         expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000),
       });
-      await this.otp.send(phoneE164, code);
+      await this.otp.send(phoneE164, code, 'login');
     }
     return { expiresInSeconds: OTP_TTL_SECONDS };
   }

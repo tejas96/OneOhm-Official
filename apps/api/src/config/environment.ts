@@ -30,6 +30,7 @@ const environmentSchema = z
     MSG91_AUTH_KEY: z.string().optional(),
     MSG91_SENDER_ID: z.string().optional(),
     MSG91_LOGIN_TEMPLATE_ID: z.string().optional(),
+    MSG91_PASSWORD_RESET_TEMPLATE_ID: z.string().optional(),
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_API_VERSION: z.string().default('v25.0'),
@@ -102,6 +103,9 @@ function missingKeys(env: Raw): Issue[] {
   const needs = (keys: readonly string[], message: string) =>
     keys.filter((key) => !env[key]).map((key): Issue => [key, message]);
   return [
+    ...(env.OTP_PROVIDER === 'msg91'
+      ? needs(['MSG91_PASSWORD_RESET_TEMPLATE_ID'], 'Needed to text password-reset codes.')
+      : []),
     ...(env.RAZORPAY_MODE === 'live'
       ? needs(
           ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'],
