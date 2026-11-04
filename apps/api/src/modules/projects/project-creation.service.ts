@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
   discoms,
+  openManagerTerm,
   products,
   projectActivities,
   projectFacts,
@@ -28,6 +29,7 @@ import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
 import { resolveProjectTeam, saveProjectTeam, type TeamChoice } from './project-team';
+import { checkManagerCandidate } from './project-team-rules';
 import { loadAssigneeCandidates, loadTaskLibrary } from './task-library.loader';
 import { tellTeam } from './task-notices';
 
@@ -114,11 +116,7 @@ export class ProjectCreationService {
 
   async create(actor: Actor, input: NewProject): Promise<CreatedProject> {
     const quotation = await this.acceptedQuotation(input.quotationId);
-    const [discom] = await this.db
-      .select()
-      .from(discoms)
-      .where(eq(discoms.id, input.discomId))
-      .limit(1);
+    const [discom] = await this.db.select().from(discoms).where(eq(discoms.id, input.discomId));
     if (!discom) throw invalid('Choose the DISCOM.', { discomId: 'Unknown DISCOM.' });
     const managerUserId = checkProjectInput(input);
     const partner = await loadLoanPartner(this.db, input);
@@ -147,6 +145,7 @@ export class ProjectCreationService {
       property.city,
     ]);
 
+    await checkManagerCandidate(this.db, managerUserId);
     return this.db.transaction(async (tx) => {
       const code = await nextCode(tx, input.startDate.slice(0, 4));
       const name =
@@ -175,8 +174,9 @@ export class ProjectCreationService {
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
+      await openManagerTerm(tx, project.id, managerUserId, new Date());
       // The customer's WhatsApp chat goes to the project's manager from now on.
-      await moveCustomerChats(tx, customer.id, managerUserId);
+      await moveCustomerChats(tx, customer.id, managerUserId, project.id);
 
       await saveProjectTeam(tx, project.id, team, actor.userId);
       const { unassigned, toConfirm, perPerson } = await writeGeneratedTasks(

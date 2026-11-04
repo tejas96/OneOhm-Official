@@ -480,6 +480,8 @@
         "description": "{count, plural, one {# person} other {# people}} on this project",
         "open": "{count} open",
         "manager": "Project manager",
+        "notOnTeam": "Not on the team",
+        "inactive": "(inactive)",
         "done": "{count, plural, =0 {Nothing done yet} other {# done}}",
         "unowned": "{count, plural, one {# open task has no owner yet} other {# open tasks have no owner yet}}"
       },

@@ -1,6 +1,7 @@
 import { type PendingApproval, reviewersOf } from '@oneohm/domain';
 import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { activeUserIds, liveOnly } from './manager-terms';
 import { holdersOf } from './notify';
 import { moneyApprovals } from './pending-approvals-money';
 import { readableDay } from './readable-day';
@@ -54,10 +55,18 @@ async function taskReviewRows(db: DatabaseExecutor): Promise<PendingApprovalRow[
       ),
     );
   const approvers = await holdersOf(db, 'tasks.approve');
+  const live = await activeUserIds(
+    db,
+    rows.map((row) => row.managerUserId),
+  );
   return rows.map((row) => {
     const review = reviews.find((entry) => entry.taskId === row.id);
     const reviewer = row.reviewer === 'project_manager' ? 'project_manager' : 'approvers';
-    const people = { reviewer, managerUserId: row.managerUserId, approvers } as const;
+    const people = {
+      reviewer,
+      managerUserId: liveOnly(row.managerUserId, live),
+      approvers,
+    } as const;
     return {
       kind: 'task_review',
       id: row.id,

@@ -1,15 +1,42 @@
 'use client';
 
-import type { ProjectDetail } from '@oneohm/api-contracts';
+import type { ProjectDetail, TeamOptions } from '@oneohm/api-contracts';
 import { Button, Field, Input, Select, Sheet, useToast } from '@oneohm/design-system/web';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useId, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { ApiError } from '@/lib/api/api-error';
 import { useApiForm } from '@/lib/forms/use-api-form';
+import { HandOverField } from './handover-field';
+import { handOverBody, handOverNeeds, livePicks } from './handover-needs';
+import { seedTeamForm } from './seed-team-form';
 import { TeamMembersField } from './team-members-field';
 import { useTeamOptions } from './use-team-options';
+
+/**
+ * People who can manage, plus today's manager when they no longer qualify, marked so the
+ * select still shows who holds the project.
+ */
+function managerChoices(
+  people: TeamOptions['people'],
+  current: ProjectDetail['manager'],
+  marked: (key: 'inactiveName' | 'cannotManageName', name: string) => string,
+) {
+  const choices = people
+    .filter((person) => person.canManage)
+    .map((person) => ({ value: person.id, label: person.fullName }));
+  if (!current || choices.some((choice) => choice.value === current.id)) return choices;
+  const listed = people.some((person) => person.id === current.id);
+  return [
+    {
+      value: current.id,
+      label: marked(listed ? 'cannotManageName' : 'inactiveName', current.fullName),
+    },
+    ...choices,
+  ];
+}
 
 /** Change the manager (who is told), the named team or the target finish (PRD 3.6, 3.8). */
 export function TeamSheet({
@@ -29,33 +56,74 @@ export function TeamSheet({
   const options = useTeamOptions(open);
   const form = useApiForm();
   const { reset } = form;
+  const [version, setVersion] = useState(project.version);
   const [manager, setManager] = useState<string | undefined>(undefined);
   const [team, setTeam] = useState<string[]>([]);
+  const [initialTeam, setInitialTeam] = useState<string[]>([]);
   const [target, setTarget] = useState('');
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  const seed = useCallback((from: ProjectDetail) => {
+    const seeded = seedTeamForm(from);
+    setVersion(seeded.version);
+    setManager(seeded.manager);
+    setTeam(seeded.team);
+    setInitialTeam(seeded.team);
+    setTarget(seeded.target);
+    setPicks({});
+  }, []);
 
+  // The form starts from the project as it is when the sheet opens; a refetch while the
+  // person edits must not wipe what they typed.
+  const latest = useRef(project);
+  latest.current = project;
   useEffect(() => {
     if (!open) return;
-    setManager(project.manager?.id);
-    setTeam(project.setup.team.map((member) => member.id));
-    setTarget(project.setup.targetFinishDate ?? '');
+    seed(latest.current);
     reset();
-  }, [open, project, reset]);
+  }, [open, reset, seed]);
+
+  const managerOptions = managerChoices(options.data?.people ?? [], project.manager, (key, name) =>
+    t(key, { name }),
+  );
+
+  const needs = handOverNeeds(project, initialTeam, team, manager);
+  const picked = livePicks(needs, picks);
+  const missing = needs.some((need) => !picked[need.id]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await form.run(
-      () =>
-        expectStatus(
-          api.projectTeam.updateProject({
-            params: { id: project.id },
-            body: {
-              ...(manager ? { managerUserId: manager } : {}),
-              teamUserIds: team,
-              targetFinishDate: target || null,
-            },
-          }),
-          200,
-        ),
+      async () => {
+        try {
+          return await expectStatus(
+            api.projectTeam.updateProject({
+              params: { id: project.id },
+              body: {
+                // The version the form was seeded from, not the live one: a refetch on
+                // focus may already hold a colleague's save this form has not seen.
+                version,
+                ...(manager ? { managerUserId: manager } : {}),
+                teamUserIds: team,
+                targetFinishDate: target || null,
+                handOver: handOverBody(needs, picked),
+              },
+            }),
+            200,
+          );
+        } catch (caught) {
+          // Someone saved first: load what they saved into the form, and make the person
+          // look it over before saving again.
+          if (caught instanceof ApiError && caught.code === 'stale') {
+            await client.invalidateQueries({ queryKey: ['project', project.id] });
+            const fresh = client.getQueryData<ProjectDetail>(['project', project.id]);
+            // Could not load their changes: say only that it is stale.
+            if (!fresh || fresh.version === version) throw caught;
+            seed(fresh);
+            throw new ApiError(409, t('reloaded'), 'stale', {});
+          }
+          throw caught;
+        }
+      },
       async (saved) => {
         client.setQueryData(['project', project.id], saved);
         await client.invalidateQueries({ queryKey: ['projects'] });
@@ -73,7 +141,13 @@ export function TeamSheet({
       title={t('title')}
       description={t('description')}
       footer={
-        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          pending={form.pending}
+          disabled={missing}
+        >
           {t('save')}
         </Button>
       }
@@ -85,14 +159,7 @@ export function TeamSheet({
         className="flex flex-col gap-5 px-5 py-6 sm:px-6"
       >
         <Field label={t('manager')} hint={t('managerHint')} error={errors.managerUserId}>
-          <Select
-            value={manager}
-            onValueChange={setManager}
-            options={(options.data?.people ?? []).map((person) => ({
-              value: person.id,
-              label: person.fullName,
-            }))}
-          />
+          <Select value={manager} onValueChange={setManager} options={managerOptions} />
         </Field>
         <Field
           label={createT('targetFinish')}
@@ -108,9 +175,18 @@ export function TeamSheet({
         </Field>
         <TeamMembersField
           people={options.data?.people ?? []}
+          current={project.setup.team}
           value={team}
           onChange={setTeam}
           error={errors.teamUserIds}
+        />
+        <HandOverField
+          needs={needs}
+          people={options.data?.people ?? []}
+          team={team}
+          picks={picked}
+          onPick={(from, value) => setPicks((now) => ({ ...now, [from]: value }))}
+          error={errors.handOver}
         />
         <FormError message={form.error} />
       </form>

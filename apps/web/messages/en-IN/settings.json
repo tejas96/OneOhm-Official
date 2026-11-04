@@ -720,6 +720,7 @@
         "quotation_sent": "Quotation sent",
         "project_started": "Project started",
         "project_milestone": "Project update",
+        "project_manager_changed": "New project manager",
         "payment_received": "Payment received",
         "payment_reminder": "Payment reminder",
         "payment_link": "Payment link",

@@ -3,6 +3,7 @@ import type { AssigneeCandidate } from './generate-tasks';
 import {
   type ContractorOption,
   chooseContractor,
+  outsideTeamFor,
   type ProjectPool,
   pickProjectAssignee,
   servesArea,
@@ -116,5 +117,16 @@ describe('servesArea', () => {
     expect(servesArea({ serviceAreas: [' Sangli ', 'Kolhapur'] }, ['Miraj', 'sangli'])).toBe(true);
     expect(servesArea({ serviceAreas: ['Kolhapur'] }, ['Miraj', 'Sangli'])).toBe(false);
     expect(servesArea({ serviceAreas: [] }, ['Anywhere'])).toBe(true);
+  });
+});
+
+describe('outsideTeamFor', () => {
+  const crew = new Set(['crew-1']);
+  it('flags only staff outside a named team', () => {
+    expect(outsideTeamFor('a', [], crew)).toBe(false);
+    expect(outsideTeamFor('a', ['a', 'b'], crew)).toBe(false);
+    expect(outsideTeamFor('crew-1', ['a'], crew)).toBe(false);
+    expect(outsideTeamFor('z', ['a'], crew)).toBe(true);
+    expect(outsideTeamFor(null, ['a'], crew)).toBe(false);
   });
 });

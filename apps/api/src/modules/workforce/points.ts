@@ -1,5 +1,6 @@
 import {
   type DatabaseExecutor,
+  managerTermsOf,
   pointsEntries,
   projects,
   projectTasks,
@@ -8,8 +9,8 @@ import {
   stageRatings,
   userRoles,
 } from '@oneohm/database';
-import { judgeTask, type PartResult } from '@oneohm/domain';
-import { and, eq, gte, isNull } from 'drizzle-orm';
+import { judgeTask, splitRatingPoints, type PartResult } from '@oneohm/domain';
+import { and, eq, gte, inArray, isNull, max, notInArray } from 'drizzle-orm';
 import { loadPolicy } from './policy';
 import { taskPointFacts } from './task-point-facts';
 
@@ -83,33 +84,92 @@ export async function awardTaskPoints(
 }
 
 /**
- * A 4 or 5 star customer rating suggests points for the project manager; a manager
- * approves it, so ratings cannot be gamed into automatic rewards (PRD 5.7, Flow G).
+ * Terms are counted up to when the work ended, not to the rating: a late rating must not
+ * hand the last manager time they never worked. A completed project ended when its last
+ * task was finished (project row's updatedAt if no task records a finish); an open one runs
+ * to now.
+ */
+async function ratingCutoff(
+  db: DatabaseExecutor,
+  projectId: string,
+  project: { readonly status: string; readonly updatedAt: Date },
+  now: Date,
+): Promise<Date> {
+  if (project.status !== 'completed') return now;
+  const [row] = await db
+    .select({ at: max(projectTasks.completedAt) })
+    .from(projectTasks)
+    .where(eq(projectTasks.projectId, projectId));
+  const ended = row?.at ?? project.updatedAt;
+  return ended < now ? ended : now;
+}
+
+/**
+ * A 4 or 5 star customer rating suggests points for the project's managers, shared by how
+ * long each held the project; a manager approves them, so ratings cannot be gamed into
+ * automatic rewards (PRD 5.7, Flow G). Rating again moves only what is still pending: a
+ * lower rating withdraws it, a new share replaces it, and approved or rejected lines stay.
  */
 export async function suggestRatingPoints(
   db: DatabaseExecutor,
   input: { readonly projectId: string; readonly rating: number },
 ): Promise<void> {
-  if (input.rating < 4) return;
+  const now = new Date();
+  const mine = and(
+    eq(pointsEntries.sourceType, 'customer_rating'),
+    eq(pointsEntries.sourceId, input.projectId),
+  );
+  const withdraw = (keep: readonly string[]) =>
+    db
+      .update(pointsEntries)
+      .set({ status: 'cancelled', decidedAt: now })
+      .where(
+        and(
+          mine,
+          eq(pointsEntries.status, 'pending'),
+          keep.length > 0 ? notInArray(pointsEntries.userId, [...keep]) : undefined,
+        ),
+      );
+  if (input.rating < 4) {
+    await withdraw([]);
+    return;
+  }
   const [project] = await db
-    .select({ managerUserId: projects.managerUserId, code: projects.code })
+    .select({ code: projects.code, status: projects.status, updatedAt: projects.updatedAt })
     .from(projects)
     .where(eq(projects.id, input.projectId))
     .limit(1);
-  if (!project?.managerUserId) return;
+  if (!project) return;
   const { points } = await loadPolicy(db);
   if (points.goodRating <= 0) return;
-  await db
-    .insert(pointsEntries)
-    .values({
-      userId: project.managerUserId,
-      points: points.goodRating,
-      reason: `${input.rating}-star customer rating on ${project.code}`,
-      sourceType: 'customer_rating',
-      sourceId: input.projectId,
-      status: 'pending',
-    })
-    .onConflictDoNothing();
+  const terms = await managerTermsOf(db, input.projectId);
+  const shares = splitRatingPoints(
+    terms.map((term) => ({ userId: term.userId, from: term.startedAt, to: term.endedAt })),
+    points.goodRating,
+    await ratingCutoff(db, input.projectId, project, now),
+  );
+  for (const share of shares)
+    await db
+      .insert(pointsEntries)
+      .values({
+        userId: share.userId,
+        points: share.points,
+        reason: `${input.rating}-star customer rating on ${project.code}`,
+        sourceType: 'customer_rating',
+        sourceId: input.projectId,
+        status: 'pending',
+      })
+      .onConflictDoUpdate({
+        target: [pointsEntries.sourceType, pointsEntries.sourceId, pointsEntries.userId],
+        set: {
+          points: share.points,
+          reason: `${input.rating}-star customer rating on ${project.code}`,
+          status: 'pending',
+          decidedAt: null,
+        },
+        setWhere: inArray(pointsEntries.status, ['pending', 'cancelled']),
+      });
+  await withdraw(shares.map((share) => share.userId));
 }
 
 /**

@@ -11,7 +11,7 @@ import {
 } from '@oneohm/database';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import type { MilestoneFact, MoneyMove } from './collections-report.math';
-import type { ReportScope } from './report-scope';
+import { managedInRange, type ReportScope } from './report-scope';
 
 export interface ProjectFact {
   readonly id: string;
@@ -104,7 +104,7 @@ export async function readMoneyMoves(
 ): Promise<MoneyMove[]> {
   const { start, end } = scope.meta.range;
   const filters = and(
-    scope.managerUserId ? eq(projects.managerUserId, scope.managerUserId) : undefined,
+    scope.managerUserId ? managedInRange(scope.managerUserId, scope.from, scope.until) : undefined,
     scope.projectType ? eq(projects.type, scope.projectType) : undefined,
   );
   const paid = await db

@@ -68,7 +68,8 @@ describe('Alert routing: by duty, by owner, around leave', () => {
     await closeDb();
   });
 
-  /** A sold project whose advance the customer pays online in the sandbox. */
+  /** A sold project whose advance the customer pays online in the sandbox. The manager must
+   * hold projects.view_all, hence the execution role for managers below. */
   async function paidOnline(name: string, managerUserId: string, leadOwnerId: string) {
     const sale = await sellProject(admin, { name, managerUserId });
     await admin.patch(`/leads/${sale.customer.leadId}`, { ownerUserId: leadOwnerId });
@@ -101,7 +102,7 @@ describe('Alert routing: by duty, by owner, around leave', () => {
   });
 
   it('an online payment tells the project manager and the lead owner once each', async () => {
-    const manager = await person('Payment Manager (test)');
+    const manager = await person('Payment Manager (test)', ['execution']);
     const seller = await person('Payment Seller (test)', ['sales']);
     const sale = await paidOnline('Paid Online Routing (test)', manager.id, seller.id);
     const alerted = await told('payment_online', sale.project.id);
@@ -114,7 +115,7 @@ describe('Alert routing: by duty, by owner, around leave', () => {
   });
 
   it('an owner on leave today: their backup gets the alert instead', async () => {
-    const manager = await person('Away Manager (test)');
+    const manager = await person('Away Manager (test)', ['execution']);
     const backup = await person('Backup Manager (test)');
     const seller = await person('Away Seller Routing (test)', ['sales']);
     await onLeaveToday(manager.id, backup.id);

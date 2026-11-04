@@ -1,5 +1,7 @@
 import {
   type Database,
+  liveManagerId,
+  managerUser,
   type Notice,
   projects,
   projectTasks,
@@ -7,6 +9,7 @@ import {
   taskFreshness,
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm';
+import { escalationKey } from './escalation-keys';
 import { onLiveProject } from './live-projects';
 
 interface ManagedTask {
@@ -32,10 +35,11 @@ function openTasks(db: Database, where = open) {
       assigneeUserId: projectTasks.assigneeUserId,
       updatedAt: projectTasks.updatedAt,
       code: projects.code,
-      managerUserId: projects.managerUserId,
+      managerUserId: liveManagerId,
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
+    .leftJoin(managerUser, eq(managerUser.id, projects.managerUserId))
     .where(and(where, isNotNull(projectTasks.assigneeUserId), onLiveProject(db)));
 }
 
@@ -78,7 +82,12 @@ export async function queueBlockerOnLeave(
         title: `Held up by leave on ${row.code}`,
         body: `${row.title} holds up other work, and the person doing it is on leave. Hand it over if it cannot wait.`,
         subject: { type: 'task', id: row.id, projectId: row.projectId },
-        dedupeKey: `leave-block:${row.id}:${state.assigneeLeaveFrom}`,
+        dedupeKey: escalationKey({
+          kind: 'leave-block',
+          taskId: row.id,
+          from: state.assigneeLeaveFrom,
+          managerUserId: row.managerUserId,
+        }),
       },
     );
     sent += 1;

@@ -32,6 +32,10 @@ export const MARATHI_WORDS: LanguageWords = {
       title: p.milestone ?? 'प्रकल्पाची नवी माहिती',
       body: p.project ?? '',
     }),
+    project_manager_changed: (p) => ({
+      title: 'तुमचे नवीन प्रोजेक्ट मॅनेजर',
+      body: `${p.project}: आता ${p.manager} तुमचा प्रोजेक्ट पाहतील. फोन: ${p.phone}.`,
+    }),
     payment_received: (p) => ({
       title: 'पेमेंट मिळाले',
       body: `${p.amount} मिळाले — ${p.milestone}. धन्यवाद!`,

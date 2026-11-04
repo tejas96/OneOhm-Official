@@ -1,0 +1,2 @@
+-- New customer template: a live project's new manager, with their number. Kept if already there.
+INSERT INTO "message_templates" ("key", "audience", "meta_name", "fields", "preview") VALUES ('project_manager_changed', 'customer', 'project_manager_changed', ARRAY['customer','project','manager','phone'], 'Hello {{1}}, your solar project {{2}} now has a new project manager: {{3}}. You can reach them on {{4}}. Reply here if you have any questions.') ON CONFLICT ("key") DO NOTHING;

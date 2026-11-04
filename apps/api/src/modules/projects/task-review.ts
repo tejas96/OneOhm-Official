@@ -1,8 +1,8 @@
 import {
+  activeManagerOf,
   type DatabaseExecutor,
   holdersOf,
   projectActivities,
-  projects,
   projectTasks,
   type Transaction,
   taskReviews,
@@ -18,16 +18,11 @@ import { askReviewers } from './task-notices';
 type TaskRow = typeof projectTasks.$inferSelect;
 
 async function reviewPeople(db: DatabaseExecutor, task: TaskRow): Promise<ReviewPeople> {
-  const [project] = await db
-    .select({ managerUserId: projects.managerUserId })
-    .from(projects)
-    .where(eq(projects.id, task.projectId))
-    .limit(1);
   return {
     reviewer: (task.reviewer === 'project_manager'
       ? 'project_manager'
       : 'approvers') as TaskReviewer,
-    managerUserId: project?.managerUserId ?? null,
+    managerUserId: await activeManagerOf(db, task.projectId),
     approvers: await holdersOf(db, 'tasks.approve'),
   };
 }

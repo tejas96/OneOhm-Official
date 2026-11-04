@@ -1,6 +1,8 @@
 import {
   type Database,
   escalationPolicy,
+  liveManagerId,
+  managerUser,
   type Notice,
   notify,
   notifyHolders,
@@ -17,6 +19,7 @@ import {
 } from '@oneohm/domain';
 import { addDays, daysBetween } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
+import { escalationKey } from './escalation-keys';
 import { lateDays, leaveByPerson } from './late-days';
 import { queueBlockerOnLeave } from './stale-reminders';
 
@@ -38,7 +41,7 @@ async function loadPolicy(db: Database): Promise<EscalationPolicy> {
   return row ?? DEFAULT_ESCALATION;
 }
 
-/** The manager, or failing that everyone who can assign work. */
+/** The active manager, or failing that everyone who can assign work (an inactive one counts as none). */
 async function tellManager(db: Database, task: LateTask, notice: Notice): Promise<void> {
   if (task.managerUserId) await notify(db, { userId: task.managerUserId }, notice);
   else await notifyHolders(db, 'tasks.assign', notice);
@@ -55,13 +58,14 @@ async function lateTasks(db: Database, today: string, earliest: number) {
       waitingParty: projectTasks.waitingParty,
       waitingSince: projectTasks.waitingSince,
       code: projects.code,
-      managerUserId: projects.managerUserId,
+      managerUserId: liveManagerId,
       assignee: users.fullName,
       assigneeUserId: projectTasks.assigneeUserId,
       templateDays: taskTemplates.escalateAfterDays,
     })
     .from(projectTasks)
     .innerJoin(projects, eq(projects.id, projectTasks.projectId))
+    .leftJoin(managerUser, eq(managerUser.id, projects.managerUserId))
     .leftJoin(users, eq(users.id, projectTasks.assigneeUserId))
     .leftJoin(taskTemplates, eq(taskTemplates.key, projectTasks.templateKey))
     .where(
@@ -123,7 +127,11 @@ export async function queueEscalations(db: Database, today: string): Promise<num
         title: `Late on ${row.code}`,
         body: `${row.title} is ${late} days late (with ${who}).`,
         subject: subject(task),
-        dedupeKey: `escalate:${row.id}:manager`,
+        dedupeKey: escalationKey({
+          kind: 'late',
+          taskId: row.id,
+          managerUserId: task.managerUserId,
+        }),
       });
       sent += 1;
     }
@@ -138,7 +146,12 @@ export async function queueEscalations(db: Database, today: string): Promise<num
       title: `Stuck on ${row.code}`,
       body: `${row.title} has waited ${waited} days on ${internal ? 'the team' : row.waitingParty}.`,
       subject: subject(task),
-      dedupeKey: `stuck:${row.id}:${since}`,
+      dedupeKey: escalationKey({
+        kind: 'stuck',
+        taskId: row.id,
+        since,
+        managerUserId: task.managerUserId,
+      }),
     });
     sent += 1;
   }

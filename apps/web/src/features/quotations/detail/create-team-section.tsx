@@ -41,7 +41,9 @@ export function CreateTeamSection({
             value={manager}
             onValueChange={onManager}
             placeholder={t('choose')}
-            options={people.map((person) => ({ value: person.id, label: person.fullName }))}
+            options={people
+              .filter((person) => person.canManage)
+              .map((person) => ({ value: person.id, label: person.fullName }))}
           />
         </Field>
         <ContractorField

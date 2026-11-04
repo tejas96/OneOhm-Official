@@ -5,7 +5,7 @@ import { bucketIndexOf, share } from '@oneohm/domain';
 import { and, eq, gte, lt, ne, or, type SQL } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import type { CsvTable } from './csv';
-import { average, indiaDate, type ReportScope, reportScope } from './report-scope';
+import { average, indiaDate, managedInRange, type ReportScope, reportScope } from './report-scope';
 
 const HOUR_MS = 3_600_000;
 
@@ -136,7 +136,9 @@ export class ServiceReportService {
   /** A request without a project counts only when no manager or type is chosen. */
   private projectFilter(scope: ReportScope): SQL | undefined {
     return and(
-      scope.managerUserId ? eq(projects.managerUserId, scope.managerUserId) : undefined,
+      scope.managerUserId
+        ? managedInRange(scope.managerUserId, scope.from, scope.until)
+        : undefined,
       scope.projectType ? eq(projects.type, scope.projectType) : undefined,
     );
   }

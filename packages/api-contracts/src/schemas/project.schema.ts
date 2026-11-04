@@ -191,6 +191,8 @@ export const reportStatusSchema = z.object({
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
 
 export const projectDetailSchema = projectSummarySchema.extend({
+  /** Goes up by one on each team change; a save must send the one it read. */
+  version: z.number().int(),
   customer: z.object({ id: idSchema, name: z.string(), phone: z.string() }),
   address: z.string(),
   manager: userRefSchema.nullable(),

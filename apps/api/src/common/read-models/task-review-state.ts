@@ -1,5 +1,12 @@
 import type { TaskReturn } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, holdersOf, taskReviews, users } from '@oneohm/database';
+import {
+  activeUserIds,
+  type DatabaseExecutor,
+  holdersOf,
+  liveOnly,
+  taskReviews,
+  users,
+} from '@oneohm/database';
 import { reviewersOf, type TaskReviewer } from '@oneohm/domain';
 import { asc, eq, inArray } from 'drizzle-orm';
 
@@ -50,6 +57,10 @@ export async function reviewStates(
   const approvers = tasks.some((task) => task.status === 'in_review')
     ? await holdersOf(db, 'tasks.approve')
     : [];
+  const live = await activeUserIds(
+    db,
+    tasks.map((task) => task.managerUserId),
+  );
   for (const task of tasks) {
     const history = rows.filter((row) => row.taskId === task.id);
     const latest = history.at(-1);
@@ -63,7 +74,7 @@ export async function reviewStates(
             ...reviewersOf(
               {
                 reviewer: task.reviewer as TaskReviewer,
-                managerUserId: task.managerUserId,
+                managerUserId: liveOnly(task.managerUserId, live),
                 approvers,
               },
               latest?.outcome === 'pending' ? latest.submittedBy : null,

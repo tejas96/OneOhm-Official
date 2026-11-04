@@ -32,6 +32,10 @@ export const HINDI_WORDS: LanguageWords = {
       title: p.milestone ?? 'प्रोजेक्ट की नई जानकारी',
       body: p.project ?? '',
     }),
+    project_manager_changed: (p) => ({
+      title: 'आपके नए प्रोजेक्ट मैनेजर',
+      body: `${p.project}: अब ${p.manager} आपका प्रोजेक्ट देखेंगे। फ़ोन: ${p.phone}।`,
+    }),
     payment_received: (p) => ({
       title: 'पेमेंट मिल गया',
       body: `${p.amount} मिल गए — ${p.milestone}। धन्यवाद!`,

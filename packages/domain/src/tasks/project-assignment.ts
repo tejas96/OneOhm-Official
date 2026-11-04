@@ -119,3 +119,15 @@ export function pickProjectAssignee(
   const outside = anyone !== null && pool.team.length > 0 && !pool.team.includes(anyone.userId);
   return { userId: anyone?.userId ?? null, outsideTeam: outside };
 }
+
+/**
+ * Whether a task's person sits outside the project's named team: only staff count (crew
+ * work belongs to the contractor), and with no named team nobody is outside.
+ */
+export function outsideTeamFor(
+  userId: string | null,
+  team: readonly string[],
+  crew: ReadonlySet<string>,
+): boolean {
+  return team.length > 0 && userId !== null && !crew.has(userId) && !team.includes(userId);
+}

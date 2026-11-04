@@ -1,4 +1,4 @@
-import { type DatabaseExecutor, holdersOf, users } from '@oneohm/database';
+import { activeUserIds, type DatabaseExecutor, holdersOf, liveOnly, users } from '@oneohm/database';
 import { inArray } from 'drizzle-orm';
 
 interface ApprovalTask {
@@ -17,6 +17,7 @@ export async function approverNamer(
   managerIds: readonly (string | null)[],
 ): Promise<(task: ApprovalTask, managerUserId: string | null) => string[]> {
   const approvers = await holdersOf(db, 'tasks.approve');
+  const live = await activeUserIds(db, managerIds);
   const ids = [...new Set([...approvers, ...managerIds.filter((id) => id !== null)])];
   const named = ids.length
     ? await db
@@ -27,8 +28,8 @@ export async function approverNamer(
   const nameOf = new Map(named.map((user) => [user.id, user.fullName]));
   return (task, managerUserId) => {
     if (!task.approval) return [];
-    const designated =
-      task.reviewer === 'project_manager' && managerUserId ? [managerUserId] : approvers;
+    const manager = liveOnly(managerUserId, live);
+    const designated = task.reviewer === 'project_manager' && manager ? [manager] : approvers;
     const others = designated.filter((id) => id !== task.assigneeUserId);
     const people =
       others.length > 0 ? others : approvers.filter((id) => id !== task.assigneeUserId);

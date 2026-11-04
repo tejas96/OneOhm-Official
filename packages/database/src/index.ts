@@ -13,6 +13,7 @@ export * from './duty-alerts';
 export * from './job-runs';
 export * from './ledger';
 export * from './location-retention';
+export * from './manager-terms';
 export * from './migrate';
 export * from './notify';
 export * from './pending-approvals';
