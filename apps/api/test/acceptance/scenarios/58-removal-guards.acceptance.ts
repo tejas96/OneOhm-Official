@@ -121,11 +121,12 @@ describe('removal guards', () => {
     await admin.post(`/commissions/${approved?.id}/approve`);
 
     expect((await remove(admin, partner.id, cover.id)).status).toBe(200);
+    // Their rule stays on, so the lead they brought in still earns.
     const [rule] = await rows<{ active: boolean }>(
       'SELECT active FROM commission_rules WHERE reseller_user_id = $1',
       [partner.id],
     );
-    expect(rule?.active).toBe(false);
+    expect(rule?.active).toBe(true);
 
     const project = await win(later);
     const after = await entries();

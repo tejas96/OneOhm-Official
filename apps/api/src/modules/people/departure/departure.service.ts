@@ -67,6 +67,9 @@ export class DepartureService {
     await this.db.transaction(async (tx) => {
       const { leaver, target } = await lockBoth(tx, id, input.handToUserId);
       if (!leaver) throw notFound('That person');
+      // A second submit must not write another audit entry or move the leaving date.
+      if (leaver.status !== 'active')
+        throw conflict('This person has already left the team.', 'already_removed');
       const problem = checkRemoval({
         actorId: actor.userId,
         leaverId: id,

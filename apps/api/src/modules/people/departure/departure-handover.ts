@@ -169,7 +169,8 @@ export async function handOver(
   await writeNotes(tx, actorId, leaver, work);
   const moved: Moved = {
     leads: work.leads.length,
-    tasks: work.tasks.length + work.proposedTasks.length,
+    // A task both assigned and proposed to the leaver counts once.
+    tasks: new Set([...work.tasks, ...work.proposedTasks]).size,
     serviceRequests: work.serviceRequests.length,
     discomSteps: work.discomSteps.length,
     managedProjects: work.managedProjects.length,

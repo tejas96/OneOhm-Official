@@ -4,8 +4,11 @@ import {
   notify,
   reportingLines,
   type Transaction,
+  users,
 } from '@oneohm/database';
-import { eq, inArray } from 'drizzle-orm';
+import { reportingLineProblem } from '@oneohm/domain';
+import { and, eq, inArray } from 'drizzle-orm';
+import { conflict } from '../../../common/http/errors';
 import { DEPARTURE_NOTICES } from './departure-notices';
 import { newManagers } from './departure-rules';
 
@@ -17,7 +20,29 @@ export interface PersonRef {
 
 // The people side of a handover: reporting lines, leave reviews and leave backups.
 
-/** Direct reports move under the target; the target itself moves up (`newManagers`). */
+/** Each person's manager, from every reporting line. */
+async function allManagers(tx: Transaction): Promise<Map<string, string>> {
+  const lines = await tx
+    .select({ userId: reportingLines.userId, managerUserId: reportingLines.managerUserId })
+    .from(reportingLines);
+  return new Map(lines.map((line) => [line.userId, line.managerUserId]));
+}
+
+/** True when `userId` reports to `managerId`, directly or through others. */
+function isBelow(managers: ReadonlyMap<string, string>, userId: string, managerId: string) {
+  const seen = new Set<string>();
+  for (let next = managers.get(userId); next && !seen.has(next); next = managers.get(next)) {
+    if (next === managerId) return true;
+    seen.add(next);
+  }
+  return false;
+}
+
+/**
+ * Direct reports move under the target. A target anywhere below the leaver takes the
+ * leaver's place: it reports to the leaver's manager while that manager is active, else to
+ * no one. Every planned line is checked for a loop before anything is written.
+ */
 export async function moveReports(
   tx: Transaction,
   actorId: string,
@@ -25,16 +50,29 @@ export async function moveReports(
   to: string,
   reportIds: readonly string[],
 ): Promise<Map<string, string | null>> {
-  const [line] = await tx
-    .select({ managerUserId: reportingLines.managerUserId })
-    .from(reportingLines)
-    .where(eq(reportingLines.userId, from));
-  const moves = newManagers({
-    leaverId: from,
-    leaverManagerId: line?.managerUserId ?? null,
-    targetId: to,
-    reportIds,
-  });
+  const managers = await allManagers(tx);
+  const leaverManager = managers.get(from);
+  const [active] = leaverManager
+    ? await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.id, leaverManager), eq(users.status, 'active')))
+    : [];
+  const leaverManagerId = active?.id ?? null;
+  const moves = newManagers({ leaverId: from, leaverManagerId, targetId: to, reportIds });
+  if (!moves.has(to) && isBelow(managers, to, from))
+    moves.set(to, leaverManagerId === to ? null : leaverManagerId);
+  const planned = new Map(managers);
+  for (const [userId, managerUserId] of moves) {
+    if (managerUserId === null) planned.delete(userId);
+    else planned.set(userId, managerUserId);
+  }
+  for (const [userId, managerUserId] of moves)
+    if (reportingLineProblem({ userId, managerUserId, managers: planned }))
+      throw conflict(
+        'Handing over would make the reporting lines go round in a circle. Fix who reports to whom first.',
+        'reporting_loop',
+      );
   for (const [userId, managerUserId] of moves) {
     if (managerUserId === null) {
       await tx.delete(reportingLines).where(eq(reportingLines.userId, userId));
