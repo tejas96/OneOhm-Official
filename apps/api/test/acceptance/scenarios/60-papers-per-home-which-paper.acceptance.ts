@@ -25,6 +25,10 @@ const customerDocs = (customerId: string) =>
     [customerId],
   );
 
+/** The alerts the chat's person got for one inbound message. */
+const alertsFor = (waMessageId: string) =>
+  rows('SELECT id FROM notifications WHERE dedupe_key LIKE $1', [`wa_in:${waMessageId}:%`]);
+
 /** The "Which paper?" lists the bot sent this number. */
 const paperLists = async (phone: string) =>
   (await replies(phone)).filter((reply) => choices(reply).some((id) => id.startsWith('fpaper:')));
@@ -61,9 +65,12 @@ describe('Papers per home: which paper', () => {
     const { customer, project } = await sellProject(admin, { name: 'Which Paper (test)' });
     const bill = await ask(project.id, 'electricity_bill', 'Electricity bill (test)');
     const deed = await ask(project.id, 'property', 'Sale deed (test)');
-    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'which-1' } });
+    const id = `wamid.acceptance-which-${customer.phone.slice(1)}`;
+    await sendInbound(customer.phone, { id, media: { type: 'image', fileId: 'which-1' } });
     const [list] = await paperLists(customer.phone);
     expect(list?.body).toBe('Which paper is this?');
+    // The file waiting on the answer reaches the chat's person once.
+    expect(await alertsFor(id)).toHaveLength(1);
     expect(choices(list)).toEqual([`fpaper:${bill.id}`, `fpaper:${deed.id}`, 'fpaper:none']);
     expect((await requestOf(bill.id))?.status).toBe('open');
     expect((await requestOf(deed.id))?.status).toBe('open');
@@ -108,6 +115,40 @@ describe('Papers per home: which paper', () => {
     expect(docs.map((doc) => doc.category)).toEqual(['customer_kyc', 'customer_kyc']);
     expect(await requestOf(kyc.id)).toEqual({ status: 'received', document_id: docs[0]?.id });
     expect(await paperLists(customer.phone)).toEqual([]);
+    // One reply for the pair: the back is filed quietly with the front.
+    const saved = (await replies(customer.phone)).filter((each) => each.body?.includes('Saved'));
+    expect(saved).toHaveLength(1);
+  });
+
+  it('a late paper tap uses the stored file', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'Late Paper (test)' });
+    await ask(project.id, 'electricity_bill', 'Electricity bill (test)');
+    const deed = await ask(project.id, 'property', 'Sale deed (test)');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'late-1' } });
+    // The customer opens the menu, and answers the list an hour later.
+    await tap(customer.phone, 'menu');
+    await rows(
+      `UPDATE wa_conversations
+          SET context = jsonb_set(context, '{paperWait,at}', '0'::jsonb) WHERE phone = $1`,
+      [customer.phone],
+    );
+    await tap(customer.phone, `fpaper:${deed.id}`);
+    const [doc] = await customerDocs(customer.customerId);
+    expect(await requestOf(deed.id)).toEqual({ status: 'received', document_id: doc?.id });
+    const reply = (await lastReply(customer.phone))?.body ?? '';
+    expect(reply).toContain('Sale deed (test)');
+    expect(reply).not.toContain('send it again');
+  });
+
+  it('one home still names its ID paper after its own paper', async () => {
+    const { customer, project } = await sellProject(admin, { name: 'One Home Left (test)' });
+    await ask(project.id, 'customer_kyc', 'Aadhaar card (test)');
+    const bill = await ask(project.id, 'electricity_bill', 'Electricity bill (test)');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'one-left-1' } });
+    expect((await requestOf(bill.id))?.status).toBe('received');
+    expect((await lastReply(customer.phone))?.body).toContain(
+      'Still needed for this home: Aadhaar card (test)',
+    );
   });
 
   it('waiting task owner is told', async () => {
@@ -138,7 +179,10 @@ describe('Papers per home: which paper', () => {
 
   it('a stray file is saved on the home without the problem question', async () => {
     const { customer, project } = await sellProject(admin, { name: 'Stray File (test)' });
-    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'stray-1' } });
+    const id = `wamid.acceptance-stray-${customer.phone.slice(1)}`;
+    await sendInbound(customer.phone, { id, media: { type: 'image', fileId: 'stray-1' } });
+    // The chat's person hears once, as before.
+    expect(await alertsFor(id)).toHaveLength(1);
     const reply = await lastReply(customer.phone);
     expect(reply?.body).toContain('Saved: *photo* for your home at');
     expect(

@@ -118,8 +118,7 @@ const EN_MEDIA_WORDS = {
   whichPaper: 'Which paper is this?',
   somethingElse: 'Something else',
   paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
-  paperAskEnded:
-    'That question has ended. Your files are saved for your home. If one is a paper we asked for, please send it again.',
+  paperAskEnded: 'Your files are already saved. Nothing else was changed.',
   problemSavedWithPhotos: (category: string, photos: number) =>
     `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
 } as const;

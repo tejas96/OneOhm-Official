@@ -82,3 +82,18 @@ export async function isFiled(db: DatabaseExecutor, documentId: string): Promise
     .limit(1);
   return Boolean(answer);
 }
+
+/** True for a file that answered a request or shows a problem: those flows tell their own people. */
+export async function answersSomething(db: DatabaseExecutor, documentId: string): Promise<boolean> {
+  const [document] = await db
+    .select({ serviceRequestId: documents.serviceRequestId })
+    .from(documents)
+    .where(eq(documents.id, documentId));
+  if (!document || document.serviceRequestId) return true;
+  const [answer] = await db
+    .select({ id: documentRequests.id })
+    .from(documentRequests)
+    .where(eq(documentRequests.documentId, documentId))
+    .limit(1);
+  return Boolean(answer);
+}

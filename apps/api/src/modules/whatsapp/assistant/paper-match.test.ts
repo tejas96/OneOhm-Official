@@ -3,12 +3,15 @@ import {
   type EarlierPaper,
   matchPaper,
   type OpenPaper,
+  onHomeOf,
   paperRows,
   papersForHome,
   paperTapped,
   paperWaitOf,
   rememberedPaper,
   savedWords,
+  stillNeededFor,
+  withoutPaperStep,
 } from './paper-match';
 
 const HOME = '11111111-1111-4111-8111-111111111111';
@@ -102,6 +105,15 @@ describe('the chat memory', () => {
     expect(paperWaitOf(context, 10 * MIN)?.ids).toEqual(['a']);
     expect(paperWaitOf(context, 31 * MIN)).toBeNull();
     expect(paperWaitOf({}, 0)).toBeNull();
+    // A late tap still finds the stored files.
+    expect(paperWaitOf(context)?.ids).toEqual(['a']);
+  });
+
+  it("clears the waiting files, ending only the question's own step", () => {
+    const asked = { step: 'await_file_paper', stepAt: 1, paperWait: { ids: ['a'] }, fileHome: 1 };
+    expect(withoutPaperStep(asked, true)).toEqual({ fileHome: 1, paperWait: null });
+    const other = { step: 'await_problem', stepAt: 1, paperWait: { ids: ['a'] } };
+    expect(withoutPaperStep(other, false)).toEqual({ ...other, paperWait: null });
   });
 });
 
@@ -132,5 +144,21 @@ describe('the which-paper list', () => {
       'Saved Bill at Pune.\n\nStill: deed title.',
     );
     expect(savedWords(words, null, 'photo', 'Bill', [])).toBe('Got photo.\n\nNot Bill.');
+  });
+});
+
+describe('what a home still needs', () => {
+  it("names a one-home customer's ID papers too, not those of a customer with two homes", () => {
+    expect(stillNeededFor([kyc, bill], [bill], { propertyId: HOME }, 1)).toEqual([kyc, bill]);
+    expect(stillNeededFor([kyc, bill], [bill], { propertyId: HOME }, 2)).toEqual([bill]);
+    expect(stillNeededFor([kyc, bill], [kyc], { propertyId: 'person' }, 1)).toEqual([kyc]);
+  });
+
+  it('puts a home paper answered with no home on the home it was sent for', () => {
+    const place = { projectId: 'p1', propertyId: HOME, category: 'other' };
+    const loose = { projectId: null, propertyId: null, category: 'electricity_bill' };
+    expect(onHomeOf(loose, place)).toEqual({ ...place, category: 'electricity_bill' });
+    expect(onHomeOf({ ...loose, category: 'customer_kyc' }, place)).toBeNull();
+    expect(onHomeOf({ ...loose, propertyId: FARM }, place)).toBeNull();
   });
 });

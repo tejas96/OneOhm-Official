@@ -8,17 +8,11 @@ import { type Conversation, lockedChat, queueReply, setState } from '../chat-sto
 import { filePaper, type PaperPlace } from '../file-paper';
 import { setStep, stepOf } from './chat-step';
 import { sayWithTaps } from './closing-taps';
-import {
-  answersRequests,
-  type HomeChoice,
-  isSound,
-  type KeptFile,
-  kindOf,
-  placeOn,
-} from './file-home';
+import { answersRequests, type HomeChoice, type KeptFile, kindOf, placeOn } from './file-home';
 import {
   matchPaper,
   type OpenPaper,
+  onHomeOf,
   type PaperMatch,
   type PaperWait,
   paperRows,
@@ -27,9 +21,11 @@ import {
   paperWaitOf,
   rememberedPaper,
   savedWords,
+  stillNeededFor,
   withoutPaperStep,
 } from './paper-match';
 import { earlierPaper, freeFiles, openPapersOf, placeOf, unfiledFiles } from './paper-reads';
+import { endWait, fileAll, remember } from './paper-steps';
 import { PAPER_WORDS } from './paper-words';
 import { PROJECT_WORDS } from './project-words';
 import { MEDIA_WORDS } from './words';
@@ -81,44 +77,55 @@ export class FilePaperFlowService {
     options: { held?: boolean; mediaId?: string; match?: PaperMatch } = {},
   ): Promise<boolean> {
     const now = Date.now();
-    const open = papersForHome(await openPapersOf(tx, customerId), choice, homes.length);
+    const all = await openPapersOf(tx, customerId);
+    const open = papersForHome(all, choice, homes.length);
     const place = placeOn(homes, choice);
     const wait = paperWaitOf(chat.context, now);
     const asking = stepOf(chat) === 'await_file_paper' && wait?.propertyId === choice.propertyId;
     const match = options.match ?? (await this.decide(tx, chat, customerId, choice, asking, open));
     const first = files.find((file) => answersRequests(file.contentType));
     if (match.kind === 'ask' && first) {
-      await this.fileAll(tx, files, place, place);
+      await fileAll(tx, files, place, place);
       await this.waitFor(tx, chat, choice, files, open, asking ? wait : null);
       return false;
     }
     const { answered, refused, target } = await this.answer(tx, customerId, match, first, place);
     const rest = answered ? files.filter((file) => file !== first) : files;
-    await this.fileAll(tx, rest, target, place);
-    if (answered) await this.remember(tx, chat, answered, choice, options.mediaId);
+    await fileAll(tx, rest, target, place);
+    if (answered) await remember(tx, chat, answered, choice, options.mediaId);
     const named = answered?.title ?? (match.kind === 'same' ? match.title : null);
-    // In a chat a person holds, only a paper answered (or refused) is said.
-    const left = open.filter((paper) => paper.id !== answered?.id);
+    const left = stillNeededFor(all, open, choice, homes.length).filter(
+      (paper) => paper.id !== answered?.id,
+    );
     const home = homes.find((each) => each.propertyId === choice.propertyId)?.title ?? null;
     const words = savedWords(MEDIA_WORDS, home, named ?? kindOf(files), refused, left);
-    if (!options.held || answered || refused) await sayWithTaps(tx, chat, words, ['menu']);
+    // The rest of a batch is filed quietly (the first reply said it); in a chat a person
+    // holds, only a paper answered (or refused) is said.
+    const quiet = match.kind === 'same' || (options.held && !answered && !refused);
+    if (!quiet) await sayWithTaps(tx, chat, words, ['menu']);
     return !named && choice.propertyId !== 'person';
   }
 
-  /** A row of "Which paper?" tapped: the waiting files answer that request, or none. */
+  /**
+   * A row of "Which paper?" tapped, even late: the stored files still free answer that
+   * request while it is open for their home, or are left saved on it ("Something else").
+   */
   async tapped(chat: Chat, customerId: string, choiceId: string): Promise<void> {
     const picked = paperTapped(choiceId);
     if (!picked) return;
     await this.db.transaction(async (tx) => {
       const locked = await lockedChat(tx, chat.id);
-      const { wait, files } = await this.waiting(tx, locked, customerId);
+      const wait = paperWaitOf(locked.context);
+      const files = wait ? await freeFiles(tx, customerId, wait.ids) : [];
+      // Nothing left to file: the files were used already, or none waited.
       if (!wait || files.length === 0)
         return queueReply(tx, locked, { kind: 'text', body: MEDIA_WORDS.paperAskEnded });
       const homes = await customerHomes(tx, customerId);
       const choice = { propertyId: wait.propertyId };
-      const ended = withoutPaperStep(locked.context);
+      const asking = stepOf(locked) === 'await_file_paper';
+      const ended = withoutPaperStep(locked.context, asking);
       if (!placeOn(homes, choice)) {
-        await setStep(tx, locked, 'menu', ended);
+        await endWait(tx, locked, asking, ended);
         return queueReply(tx, locked, { kind: 'text', body: PROJECT_WORDS.homeGone });
       }
       const open = papersForHome(await openPapersOf(tx, customerId), choice, homes.length);
@@ -126,38 +133,16 @@ export class FilePaperFlowService {
       // Not open now, or not theirs: nothing is answered; asked again while any is open.
       if (picked !== 'none' && !request) {
         await queueReply(tx, locked, { kind: 'text', body: MEDIA_WORDS.paperGone });
-        if (open.length > 0) return this.list(tx, locked, open, { ...(locked.context as object) });
+        const paperWait = { ...wait, at: Date.now() };
+        if (open.length > 0)
+          return this.list(tx, locked, open, { ...(locked.context as object), paperWait });
       }
       const none = { requestId: 'none', propertyId: choice.propertyId, at: Date.now() };
       const context = picked === 'none' ? { ...ended, filePaper: none } : ended;
-      await setStep(tx, locked, 'menu', context);
-      const after = { ...locked, state: locked.state === 'human' ? 'human' : 'menu', context };
+      const after = await endWait(tx, locked, asking, context);
       const match: PaperMatch = request ? { kind: 'answer', request } : { kind: 'file' };
       await this.file(tx, after, customerId, homes, choice, files, { match });
     });
-  }
-
-  /**
-   * The paper answered covers the next 30 minutes of files (front and back); Meta's retry
-   * of the same file is told it was saved.
-   */
-  private async remember(
-    tx: DatabaseExecutor,
-    chat: Chat,
-    answered: OpenPaper,
-    choice: HomeChoice,
-    mediaId: string | undefined,
-  ): Promise<void> {
-    const filePaper = { requestId: answered.id, propertyId: choice.propertyId, at: Date.now() };
-    const context = { ...(chat.context as object), filePaper };
-    const filedMedia = mediaId ? { filedMedia: { id: mediaId, title: answered.title } } : {};
-    await setState(tx, chat.id, chat.state, { ...context, ...filedMedia });
-  }
-
-  /** The files the open "Which paper?" waits on; none once it ended or went stale. */
-  private async waiting(tx: DatabaseExecutor, chat: Chat, customerId: string) {
-    const wait = stepOf(chat) === 'await_file_paper' ? paperWaitOf(chat.context, Date.now()) : null;
-    return { wait, files: wait ? await freeFiles(tx, customerId, wait.ids) : [] };
   }
 
   /** The photos and papers wait for "Which paper?", asked once while it is open. */
@@ -208,25 +193,15 @@ export class FilePaperFlowService {
     if (match.kind !== 'answer' || !first) return { answered: null, refused: null, target: place };
     try {
       await this.papers.answerWithDocument(customerId, match.request.id, first.id, tx);
-      return { answered: match.request, refused: null, target: await placeOf(tx, first.id) };
+      const filed = await placeOf(tx, first.id);
+      // A home paper asked for with no project lands on the home it was sent for.
+      const moved = onHomeOf(filed, place);
+      if (moved) await filePaper(tx, first.id, moved);
+      return { answered: match.request, refused: null, target: moved ?? filed };
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
       // Not usable for the request (answered a moment ago): it stays on the home.
       return { answered: null, refused: match.request.title, target: place };
-    }
-  }
-
-  /** Photos and papers go to `papers`; a voice note or video stays `other` on the home. */
-  private async fileAll(
-    tx: DatabaseExecutor,
-    files: readonly KeptFile[],
-    papers: PaperPlace | null,
-    home: PaperPlace | null,
-  ): Promise<void> {
-    for (const file of files) {
-      const sound = isSound(file.contentType);
-      const to = sound ? (home ? { ...home, category: 'other' } : null) : papers;
-      if (to) await filePaper(tx, file.id, to);
     }
   }
 

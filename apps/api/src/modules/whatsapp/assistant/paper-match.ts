@@ -1,4 +1,5 @@
 import { isPersonDocumentCategory } from '@oneohm/domain';
+import type { PaperPlace } from '../file-paper';
 import { STEP_MINUTES } from './chat-step';
 import type { HomeChoice } from './file-home';
 
@@ -62,11 +63,14 @@ export function rememberedPaper(context: unknown, choice: HomeChoice, now: numbe
   return fresh(kept.at, now) ? (kept as FilePaper) : null;
 }
 
-/** The files waiting for "Which paper?" on this home, while the question is fresh. */
-export function paperWaitOf(context: unknown, now: number): PaperWait | null {
+/**
+ * The files waiting for "Which paper?": kept until a tap or a new list replaces them, so a
+ * late tap still uses the stored file. With `now`, only while the question is fresh.
+ */
+export function paperWaitOf(context: unknown, now?: number): PaperWait | null {
   const wait = (context as { paperWait?: Partial<PaperWait> } | null)?.paperWait;
   if (typeof wait?.propertyId !== 'string' || !Array.isArray(wait.ids)) return null;
-  return fresh(wait.at, now) ? (wait as PaperWait) : null;
+  return now === undefined || fresh(wait.at, now) ? (wait as PaperWait) : null;
 }
 
 /** What a file for a home does with its open requests. */
@@ -121,15 +125,11 @@ export function paperRows(
   ];
 }
 
-/** The chat's context without the "Which paper?" step and its files. */
-export function withoutPaperStep(context: unknown): Record<string, unknown> {
-  const {
-    paperWait: _wait,
-    step: _step,
-    stepAt: _stepAt,
-    ...rest
-  } = (context ?? {}) as Record<string, unknown>;
-  return rest;
+/** The chat's context without the "Which paper?" step and its files (cleared, not kept). */
+export function withoutPaperStep(context: unknown, ended: boolean): Record<string, unknown> {
+  const { step: _step, stepAt: _stepAt, ...rest } = (context ?? {}) as Record<string, unknown>;
+  const kept = ended ? rest : { ...(context as object) };
+  return { ...kept, paperWait: null };
 }
 
 /** "Saved: *Aadhaar card* for your home at *Pune*.", any refusal, and what that home still needs. */
@@ -152,4 +152,24 @@ export function savedWords(
   ]
     .filter(Boolean)
     .join('\n\n');
+}
+
+/**
+ * What a home still needs, for the reply: its open papers, and for a customer with one
+ * home their person papers too (that home is the only one they serve).
+ */
+export function stillNeededFor(
+  all: readonly OpenPaper[],
+  open: readonly OpenPaper[],
+  choice: HomeChoice,
+  homeCount: number,
+): readonly OpenPaper[] {
+  return homeCount === 1 && choice.propertyId !== 'person' ? all : open;
+}
+
+/** A home paper answered with no home (its request had no project): the home it was sent for. */
+export function onHomeOf(filed: PaperPlace | null, place: PaperPlace | null): PaperPlace | null {
+  if (!filed || filed.propertyId || !place?.propertyId) return null;
+  if (isPersonDocumentCategory(filed.category)) return null;
+  return { projectId: place.projectId, propertyId: place.propertyId, category: filed.category };
 }

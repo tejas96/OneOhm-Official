@@ -132,9 +132,11 @@ describe('WhatsApp inbound reliability', () => {
       { title: 'Light bill (test)', status: 'received' },
     ]);
     expect((await replies(customer.phone)).at(-1)?.body).toContain('Light bill (test)');
-    const kept = await rows('SELECT id FROM documents WHERE customer_id = $1', [
-      customer.customerId,
-    ]);
-    expect(kept).toHaveLength(1);
+    // A home paper asked for with no project still lands on the customer's one home.
+    const kept = await rows<{ property_id: string | null }>(
+      'SELECT property_id FROM documents WHERE customer_id = $1',
+      [customer.customerId],
+    );
+    expect(kept).toEqual([{ property_id: customer.propertyId }]);
   });
 });

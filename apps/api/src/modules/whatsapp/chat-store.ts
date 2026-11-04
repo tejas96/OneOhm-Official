@@ -199,9 +199,12 @@ export async function conversationForPhone(
   return again;
 }
 
-/** The new context, still carrying the lead `entry` and onboarding `ob` unless it sets them. */
+/**
+ * The new context, still carrying the lead `entry`, onboarding `ob` and the files waiting
+ * on "Which paper?" (`paperWait`, until a tap or a new list replaces it) unless it sets them.
+ */
 export const keepEntry = (context: Record<string, unknown>) => {
-  const kept = ['entry', 'ob'].filter((key) => context[key] === undefined);
+  const kept = ['entry', 'ob', 'paperWait'].filter((key) => context[key] === undefined);
   if (kept.length === 0) return context;
   return sql`${JSON.stringify(context)}::jsonb || coalesce((SELECT jsonb_object_agg(key, value) FROM jsonb_each(${waConversations.context}) WHERE key = ANY(${`{${kept.join(',')}}`}::text[])), '{}'::jsonb)`;
 };

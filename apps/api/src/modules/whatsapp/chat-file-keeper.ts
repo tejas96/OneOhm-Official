@@ -15,7 +15,7 @@ import { logLead } from '../crm/lead-history';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
 import { homeForFile, placeOn } from './assistant/file-home';
-import { isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
+import { answersSomething, isFiled, keptFile, whatsappFileScope } from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
 import { FILE_WORDS, filePaper } from './file-paper';
@@ -73,7 +73,8 @@ export class ChatFileKeeper {
   /**
    * After the assistant answered: a customer's file no flow filed goes on its home when
    * that needs no question (`homeForFile`); else it stays "To sort" under the customer.
-   * Either way the chat's person hears once. Never throws.
+   * Either way, and for a file the assistant filed without answering a request, the
+   * chat's person hears once. Never throws.
    */
   async settle(chat: Conversation, message: Incoming): Promise<void> {
     const media = message.media;
@@ -84,7 +85,11 @@ export class ChatFileKeeper {
         .from(waMessages)
         .where(eq(waMessages.waMessageId, message.waMessageId));
       const documentId = row?.documentId;
-      if (!documentId || (await isFiled(this.db, documentId))) return;
+      // An answered paper or a problem photo: the asker or the complaint's people hear.
+      if (!documentId || (await answersSomething(this.db, documentId))) return;
+      // Filed by the assistant already (saved on its home, or waiting on "Which paper?").
+      if (await isFiled(this.db, documentId))
+        return await this.tellKept(this.db, chat, message, media);
       // The chat as it is now: a home picked while this file was answered counts.
       const [now] = await this.db
         .select({ context: waConversations.context })
