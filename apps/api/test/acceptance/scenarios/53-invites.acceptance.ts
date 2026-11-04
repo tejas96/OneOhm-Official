@@ -93,7 +93,7 @@ describe('add a person without a password; WhatsApp invite', () => {
     expect(person.inviteText).toContain('Hi Asha, you have been added to the OneOhm team.');
     expect(person.inviteText).toContain(queued[0]?.payload.link);
 
-    // Resellers, crews and people with no email get the field-app link, not the website.
+    // Resellers and crews get the field-app link; staff get the website, email or not.
     const partner = await created('Reseller Invited (test)', {
       roleIds: reseller,
       email: `reseller.${Date.now()}@oneohm.local`,
@@ -106,7 +106,7 @@ describe('add a person without a password; WhatsApp invite', () => {
     });
     expect((await invites(crew.id))[0]?.payload.link).toBe(resellerInvite?.payload.link);
     const noEmail = await created('No Email Invited (test)');
-    expect((await invites(noEmail.id))[0]?.payload.link).toBe(resellerInvite?.payload.link);
+    expect((await invites(noEmail.id))[0]?.payload.link).toBe(queued[0]?.payload.link);
   });
 
   it('resend inside 10 minutes is refused, later it works, after sign-in it is refused', async () => {

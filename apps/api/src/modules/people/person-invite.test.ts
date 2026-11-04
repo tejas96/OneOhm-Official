@@ -3,7 +3,7 @@ import type { Actor } from '../../common/auth/actor';
 import { AppError } from '../../common/http/errors';
 import type { Database } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
-import { deliveryOf, PersonInvites } from './person-invite';
+import { deliveryOf, inviteLink, PersonInvites } from './person-invite';
 
 // The acceptance API always runs with STAFF_INVITES=on (it checks the queued invites), so
 // the off path is checked here, against a database that must not be touched at all.
@@ -48,5 +48,19 @@ describe('deliveryOf', () => {
 
   it('a skipped newest row is no invite, not an older row state', () => {
     expect(deliveryOf({ status: 'skipped', delivery: null })).toBeNull();
+  });
+});
+
+describe('inviteLink', () => {
+  const links = env('on');
+  it('gives the field app only when every role is reseller or partner', () => {
+    expect(inviteLink(['reseller'], links)).toBe('https://field.test');
+    expect(inviteLink(['partner', 'reseller'], links)).toBe('https://field.test');
+  });
+
+  it('gives staff the website, with or without an email', () => {
+    expect(inviteLink(['staff'], links)).toBe('https://web.test');
+    expect(inviteLink(['staff', 'reseller'], links)).toBe('https://web.test');
+    expect(inviteLink([], links)).toBe('https://web.test');
   });
 });

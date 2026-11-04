@@ -16,27 +16,22 @@ const TEMPLATE = 'staff_welcome';
 const RESEND_AFTER_MS = 10 * 60 * 1000;
 
 /**
- * Resellers, crews (partners) and people with no email use the field app; everyone else
- * opens the website.
- * An email that is not given at all is treated as "has one": only a known null counts.
+ * Only resellers and crews (partners) with no staff role get the field app; staff open the
+ * website, which takes their mobile number even when they have no email.
  */
-export function inviteLink(
-  roleKinds: readonly RoleKind[],
-  env: InviteEnvironment,
-  email?: string | null,
-): string {
+export function inviteLink(roleKinds: readonly RoleKind[], env: InviteEnvironment): string {
   const fieldOnly =
     roleKinds.length > 0 && roleKinds.every((kind) => kind === 'reseller' || kind === 'partner');
-  return fieldOnly || email === null ? env.FIELD_APP_URL : env.WEB_BASE_URL;
+  return fieldOnly ? env.FIELD_APP_URL : env.WEB_BASE_URL;
 }
 
 export const firstNameOf = (fullName: string) => fullName.trim().split(/\s+/)[0] ?? fullName;
 
 /** The text an admin can paste when the WhatsApp message did not arrive. */
 export const inviteTextFor = (
-  user: { fullName: string; email: string | null; roleKinds: readonly RoleKind[] },
+  user: { fullName: string; roleKinds: readonly RoleKind[] },
   env: InviteEnvironment,
-) => inviteText(firstNameOf(user.fullName), inviteLink(user.roleKinds, env, user.email));
+) => inviteText(firstNameOf(user.fullName), inviteLink(user.roleKinds, env));
 
 /** Queues the staff_welcome WhatsApp message; does nothing while invites are off. */
 export async function queueInvite(
@@ -46,7 +41,6 @@ export async function queueInvite(
     id: string;
     fullName: string;
     phoneE164: string;
-    email?: string | null | undefined;
     roleKinds: readonly RoleKind[];
   },
 ): Promise<void> {
@@ -59,7 +53,7 @@ export async function queueInvite(
       template: TEMPLATE,
       payload: {
         name: firstNameOf(user.fullName),
-        link: inviteLink(user.roleKinds, env, user.email),
+        link: inviteLink(user.roleKinds, env),
       },
       dedupeKey: `${TEMPLATE}:${user.id}:${Date.now()}`,
     })

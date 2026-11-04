@@ -65,7 +65,6 @@ export class PeopleService {
       await queueInvite(tx, this.env, {
         id: created.id,
         fullName: input.fullName,
-        email: input.email ?? null,
         phoneE164: input.phone,
         roleKinds,
       });

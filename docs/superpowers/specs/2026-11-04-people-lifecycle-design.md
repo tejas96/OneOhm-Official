@@ -62,7 +62,7 @@ If the WhatsApp send fails, the row shows **Invite not delivered**, with the sam
 > Hi {{1}}, you have been added to the OneOhm team. Open the app here: {{2}}. Sign in with this mobile number. For the website, choose "First time here?" to set your password.
 
 - `{{1}}` is the first name.
-- `{{2}}` is a web link for staff and the field-app link for resellers and field roles. My call: the role kind picks the link.
+- `{{2}}` is the field-app link (`FIELD_APP_URL`) only when every role the person holds is a reseller or partner role. Anyone with a staff role gets the website link (`WEB_BASE_URL`), with or without an email, because the website accepts a mobile number.
 
 This is the only new template.
 
