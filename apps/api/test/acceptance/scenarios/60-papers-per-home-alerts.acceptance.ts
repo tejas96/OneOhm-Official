@@ -129,6 +129,20 @@ describe('Papers per home: alerts that were missing', () => {
     expect(await replies(customer.phone)).toHaveLength(before);
   });
 
+  it('a reaction is shown in the chat, with no alert and no reply', async () => {
+    const { customer } = await sellProject(admin, { name: 'Reaction Sender (test)' });
+    const id = `wamid.acceptance-reaction-${customer.phone.slice(1)}`;
+    const before = (await replies(customer.phone)).length;
+    await sendInbound(customer.phone, { id, reaction: '👍' });
+    expect(await heardOf(id)).toHaveLength(0);
+    expect(await replies(customer.phone)).toHaveLength(before);
+    const [row] = await rows<{ body: string }>(
+      'SELECT body FROM wa_messages WHERE wa_message_id = $1',
+      [id],
+    );
+    expect(row?.body).toBe('Reaction 👍');
+  });
+
   it('a failed reply alerts the person', async () => {
     const { customer } = await sellProject(admin, { name: 'Failed Reply (test)' });
     await say(customer.phone, 'hello');

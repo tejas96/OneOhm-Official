@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { readOther } from './incoming-other';
 
 /** Meta signs each webhook post: `sha256=` and the HMAC of the raw body with the app secret. */
 export function verifyMetaSignature(
@@ -60,6 +61,8 @@ export interface Incoming {
   readonly choiceId: string | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
+  /** Set on a message the chat shows but nobody is alerted to (a reaction). */
+  readonly quiet?: boolean;
   /** Set when the chat was opened from a Meta click-to-WhatsApp ad. */
   readonly referral?: IncomingReferral | null;
 }
@@ -97,6 +100,7 @@ interface RawMessage {
   audio?: RawMedia;
   location?: { latitude?: number; longitude?: number; name?: string; address?: string };
   contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string }[] }[];
+  reaction?: { emoji?: string };
   referral?: { source_id?: string; source_url?: string; headline?: string };
 }
 
@@ -148,24 +152,6 @@ function readReferral(message: RawMessage): IncomingReferral | null {
   };
 }
 
-/** What a location pin, a contact card or a sticker says in the chat. */
-function readOther(message: RawMessage): string {
-  if (message.type === 'sticker') return 'Sticker';
-  if (message.type === 'location' && message.location) {
-    const { latitude, longitude, name, address } = message.location;
-    const place = [name, address].filter(Boolean).join(', ');
-    return `📍 Location: ${place ? `${place} ` : ''}https://maps.google.com/?q=${latitude},${longitude}`;
-  }
-  const cards = (message.type === 'contacts' ? message.contacts : null) ?? [];
-  if (cards.length > 0)
-    return cards
-      .map((card) =>
-        `👤 Contact: ${card.name?.formatted_name ?? ''} ${card.phones?.[0]?.phone ?? ''}`.trim(),
-      )
-      .join('\n');
-  return 'Message';
-}
-
 function readMessage(message: RawMessage, names: Map<string, string>): Incoming | null {
   if (!message.from || !message.id) return null;
   const base = {
@@ -202,7 +188,13 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
       choiceId: null,
       media,
     };
-  return { ...base, kind: 'other', text: readOther(message), choiceId: null };
+  return {
+    ...base,
+    kind: 'other',
+    text: readOther(message),
+    choiceId: null,
+    ...(message.type === 'reaction' ? { quiet: true } : {}),
+  };
 }
 
 const STATUSES = new Set(['sent', 'delivered', 'read', 'failed']);

@@ -159,7 +159,28 @@ describe('WhatsApp webhook', () => {
         ],
       }),
     );
-    expect(odd.map((message) => message.text)).toEqual(['Message', 'Message']);
+    expect(odd.map((message) => message.text)).toEqual(['Message (order)', 'Message (contacts)']);
+  });
+
+  it('names a reaction and an unsupported message; a reaction is quiet', () => {
+    const from = '919000000101';
+    const { incoming } = readWebhook(
+      post({
+        messages: [
+          { from, id: 'r1', type: 'reaction', reaction: { message_id: 'w', emoji: '👍' } },
+          { from, id: 'r2', type: 'reaction', reaction: { message_id: 'w' } },
+          { from, id: 'r3', type: 'unsupported' },
+          { from, id: 'r4', type: 'sticker', sticker: { id: 's' } },
+        ],
+      }),
+    );
+    expect(incoming.map((message) => message.text)).toEqual([
+      'Reaction 👍',
+      'Reaction',
+      'Unsupported message',
+      'Sticker',
+    ]);
+    expect(incoming.map((message) => message.quiet === true)).toEqual([true, true, false, false]);
   });
 
   it('reads delivery receipts and failures', () => {

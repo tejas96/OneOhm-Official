@@ -200,11 +200,14 @@ export async function conversationForPhone(
 }
 
 /**
- * The new context, still carrying the lead `entry`, onboarding `ob` and the files waiting
- * on "Which paper?" (`paperWait`, until a tap or a new list replaces it) unless it sets them.
+ * The new context, still carrying the lead `entry`, onboarding `ob`, the files waiting on
+ * "Which paper?" (`paperWait`) and the 30-minute home and paper answers (`fileHome`,
+ * `filePaper`; each checks its own time) unless it sets them. A Menu tap keeps them all.
  */
 export const keepEntry = (context: Record<string, unknown>) => {
-  const kept = ['entry', 'ob', 'paperWait'].filter((key) => context[key] === undefined);
+  const kept = ['entry', 'ob', 'paperWait', 'fileHome', 'filePaper'].filter(
+    (key) => context[key] === undefined,
+  );
   if (kept.length === 0) return context;
   return sql`${JSON.stringify(context)}::jsonb || coalesce((SELECT jsonb_object_agg(key, value) FROM jsonb_each(${waConversations.context}) WHERE key = ANY(${`{${kept.join(',')}}`}::text[])), '{}'::jsonb)`;
 };

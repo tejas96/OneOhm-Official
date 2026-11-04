@@ -186,6 +186,20 @@ describe('Papers per home: which home', () => {
     expect((await lastReply(customer.phone))?.body).not.toContain('(2)');
   });
 
+  it('the home chosen survives a Menu tap', async () => {
+    const { customer } = await sellProject(admin, { name: 'Menu Keeps (test)' });
+    const farm = await anotherHome(admin, customer, 'Farm (test)');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'menu-keeps-1' } });
+    await tap(customer.phone, `fhome:${farm.propertyId}`);
+    await tap(customer.phone, 'menu');
+    await sendInbound(customer.phone, { media: { type: 'image', fileId: 'menu-keeps-2' } });
+    expect(await homeLists(customer.phone)).toHaveLength(1);
+    const docs = await customerDocs(customer.customerId);
+    expect(docs.map(({ project_id, property_id }) => ({ project_id, property_id }))).toEqual(
+      Array(2).fill({ project_id: farm.projectId, property_id: farm.propertyId }),
+    );
+  });
+
   it('a tap with nothing to sort does not claim a save', async () => {
     const { customer } = await sellProject(admin, { name: 'Nothing To Sort (test)' });
     const farm = await anotherHome(admin, customer, 'Farm (test)');

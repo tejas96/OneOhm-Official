@@ -88,9 +88,11 @@ export class HandOverService {
 
   /**
    * A location pin, a contact card or a sticker: the chat shows it and its person (or the
-   * desk) is told once. The chat stays with the assistant and nothing is said back.
+   * desk) is told once. The chat stays with the assistant and nothing is said back. A
+   * `quiet` one (a reaction) is only shown in the chat.
    */
-  async tellSent(chat: Conversation, waMessageId: string, sent: string) {
+  async tellSent(chat: Conversation, waMessageId: string, sent: string, quiet = false) {
+    if (quiet) return;
     const owned = await ensureChatOwner(this.db, chat);
     await tellChatTeam(this.db, owned, {
       kind: 'whatsapp_message',

@@ -87,8 +87,9 @@ export class AssistantService {
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     // A location pin, a contact card or a sticker is never answered: their person is told
     // what it was (the chat shows it) and the assistant stays on.
+    // A reaction (a 👍 on our message) is shown in the chat and nobody is alerted.
     if (incoming.kind === 'other')
-      return this.people.tellSent(chat, incoming.waMessageId, incoming.text);
+      return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     // "ok", "thanks", 👍: a warm word back, no alert (review F7); a held chat's go to the person.
     if (this.thanksOnly(chat, incoming)) return sayWithTaps(this.db, chat, WORDS.welcome, ['menu']);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.

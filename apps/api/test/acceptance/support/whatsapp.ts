@@ -42,6 +42,8 @@ export interface InboundMessage {
   contact?: { name: string; phone: string };
   /** A sticker, as Meta posts it. */
   sticker?: boolean;
+  /** A reaction (emoji) to one of our messages, as Meta posts it. */
+  reaction?: string;
   /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
   referral?: Record<string, string>;
   /** The sender's WhatsApp name; null sends none (a number without a profile name). */
@@ -152,6 +154,12 @@ function interactive(
 /** A location pin, a contact card or a sticker as Meta posts it; null for anything else. */
 function otherOf(base: Record<string, string>, message: InboundMessage) {
   if (message.location) return { ...base, type: 'location', location: message.location };
+  if (message.reaction)
+    return {
+      ...base,
+      type: 'reaction',
+      reaction: { message_id: 'wamid.x', emoji: message.reaction },
+    };
   if (message.sticker) return { ...base, type: 'sticker', sticker: { id: 'sticker-1' } };
   if (!message.contact) return null;
   const { name, phone } = message.contact;
