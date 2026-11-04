@@ -24,6 +24,7 @@ export async function payNowReplies(
   db: Database,
   env: Environment,
   customerId: string,
+  milestoneId?: string,
 ): Promise<ChatReply[]> {
   if (env.RAZORPAY_MODE === 'off') return [];
   const rows = await db
@@ -44,6 +45,7 @@ export async function payNowReplies(
         activeProjectsOf(customerId),
         eq(paymentMilestones.payer, 'customer'),
         inArray(paymentMilestones.status, ['due', 'partly_paid']),
+        milestoneId ? eq(paymentMilestones.id, milestoneId) : undefined,
       ),
     )
     .orderBy(paymentMilestones.position);
@@ -53,7 +55,7 @@ export async function payNowReplies(
     return [
       {
         kind: 'cta_url' as const,
-        body: `*${PROJECT_WORDS.projectIn(row.city)}*\n${ANSWER_WORDS.due(PROJECT_WORDS.instalment(Number(row.index), Number(row.count)), formatInr(left))}`,
+        body: `*${PROJECT_WORDS.projectIn(row.city)}*\n${PROJECT_WORDS.instalment(Number(row.index), Number(row.count))}: ${ANSWER_WORDS.due(formatInr(left))}`,
         label: WORDS.payNow,
         url: payPageUrl(env, customerId, row.id),
       },

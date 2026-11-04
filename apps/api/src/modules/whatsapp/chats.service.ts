@@ -8,6 +8,7 @@ import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { contactLeadsByPhone } from '../crm/lead-history';
+import { tellHandedBack } from './assistant/hand-back';
 import { chatMessages } from './chat-history';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
 import {
@@ -178,8 +179,10 @@ export class ChatsService {
     return summary;
   }
 
+  /** Back to the assistant; a customer who wrote since the hand-over is told (redesign §14). */
   async release(actor: Actor, id: string): Promise<ChatDetail> {
     await this.get(actor, id);
+    const [held] = await this.db.select().from(waConversations).where(eq(waConversations.id, id));
     await this.db
       .update(waConversations)
       .set({
@@ -190,6 +193,7 @@ export class ChatsService {
         updatedAt: new Date(),
       })
       .where(eq(waConversations.id, id));
+    if (held?.state === 'human') await tellHandedBack(this.db, held, held.handedOverAt);
     return this.get(actor, id);
   }
 

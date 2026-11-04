@@ -2,12 +2,10 @@ import { type DatabaseExecutor, waMessages } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
 import type { Conversation } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
+import { isChoiceTap } from './chat-choices';
 import { heldStep } from './chat-step';
 import { isPaperTap } from './customer-papers';
 import { readQuoteTap } from './quote-actions';
-import { ALL_MENU_ROWS } from './words';
-
-const MENU_IDS = new Set<string>(ALL_MENU_ROWS.map((row) => row.id));
 
 /** The rating rows, the which-home rows of a complaint and of a file, and the which-paper rows. */
 /** The stranger buttons (review F5, audit L18). */
@@ -17,7 +15,8 @@ const OWN_TAP =
 
 /**
  * Taps the assistant answers even while a person has the chat (live review B4, B5): the
- * quote buttons, and a customer's menu rows (payments among them) and paper rows. They are
+ * quote buttons, and a customer's own buttons and rows (Home, More, Pay ₹X, a language,
+ * the old menu ids among them) and paper rows. They are
  * the customer choosing the assistant, so they never alert staff; typed words and files
  * still do. The Menu tap on every closing message, and Start again under the STOP reply,
  * are the bot's own in any chat, since strangers restart too. So are the other taps the
@@ -33,7 +32,7 @@ export function assistantAnswersTap(
   if (own || readQuoteTap(incoming.choiceId)) return true;
   const id = incoming.choiceId;
   if (chat.customerId === null) return STRANGER_TAPS.has(id);
-  return MENU_IDS.has(id) || isPaperTap(id) || OWN_TAP.test(id);
+  return isChoiceTap(id) || isPaperTap(id) || OWN_TAP.test(id);
 }
 
 /**

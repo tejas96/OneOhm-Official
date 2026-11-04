@@ -12,7 +12,9 @@ import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
 import { FileHomeFlowService } from './assistant/file-home-flow';
 import { FilePaperFlowService } from './assistant/file-paper-flow';
+import { FreeTextService } from './assistant/free-text';
 import { HandOverService } from './assistant/hand-over';
+import { HomeService } from './assistant/home';
 import { MediaIntakeService } from './assistant/media-intake';
 import { MenuAnswersService } from './assistant/menu-answers';
 import { PaperRepliesService } from './assistant/paper-replies';
@@ -54,6 +56,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     AssistantService,
     AnswersService,
     MenuAnswersService,
+    HomeService,
+    FreeTextService,
     PaperRepliesService,
     ChatsService,
     ChatFileKeeper,

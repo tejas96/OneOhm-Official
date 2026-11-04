@@ -2,34 +2,14 @@ import { localized } from './language';
 import { HI } from './words-hi';
 import { MR } from './words-mr';
 
-/**
- * What the WhatsApp assistant says (PRD 6.1), in plain words. Row titles stay within
- * WhatsApp's limits: 24 characters for list rows and 20 for buttons.
- */
-const EN_MENU_ROWS = [
-  { id: 'progress', title: 'Project progress', description: 'Where your solar work stands' },
-  { id: 'payments', title: 'Payments', description: 'Paid, due and a link to pay' },
-  { id: 'documents', title: 'Documents', description: 'Quotation, invoices, receipts, papers' },
-  { id: 'service', title: 'Report a problem', description: 'Raise a service request' },
-  { id: 'requests', title: 'My requests', description: 'Status of service requests' },
-  { id: 'warranty', title: 'Warranty and AMC', description: 'Your equipment and cover' },
-  { id: 'refer', title: 'Refer a friend', description: 'Tell friends, earn rewards' },
-  { id: 'rewards', title: 'My rewards', description: 'Your referrals and rewards' },
-  { id: 'feedback', title: 'Rate us', description: 'Tell us how we did' },
-  { id: 'human', title: 'Talk to a person', description: 'A team member replies here' },
-] as const;
-
-export type MenuChoice = (typeof EN_MENU_ROWS)[number]['id'];
-
+/** What the WhatsApp assistant says (PRD 6.1), in plain words and the "we" voice. */
 const EN_WORDS = {
-  menu: (name: string, company: string) =>
-    `Hello ${name}! I am the ${company ? `${company} ` : ''}assistant. What would you like to see?`,
   menuButton: 'Choose',
   unknownNumber:
     'Hello! This number is not linked to any of our customers yet. If you are interested in solar, tap "Call me back". If you are a customer with another number, please write from that number.',
   callMeBack: 'Call me back',
   callbackNoted: 'Thank you! Someone from our team will call you soon.',
-  noProject: 'We do not have a project for you yet. Tap "Talk to us" to speak to us.',
+  noProject: 'We do not have a project for you yet.',
   stage: {
     survey: 'Site visit',
     design: 'System design',
@@ -51,34 +31,27 @@ const EN_WORDS = {
     bank: 'Waiting for the bank',
     discom: 'Waiting for the electricity board (DISCOM)',
   } as Record<string, string>,
-  allPaid: 'Everything is paid. Thank you!',
-  payHere: 'Pay here',
   payNow: 'Pay now',
   noDocuments: 'No documents yet. They will appear here as your project moves.',
   askProblem:
     'Please tell us the problem in one message (for example "inverter shows an error since morning"). You can send a photo with a caption.',
   problemSaved: (category: string) =>
-    `Thank you. Your ${category} request is raised. Our team will call you. Tap "My requests" to see its status.`,
+    `Thank you ✅ We noted your problem (${category}). Our team will call you.`,
   tooShort: 'Please write a few more words so we can help.',
-  noRequests: 'You have no service requests.',
+  noRequests: 'You have not told us about any problem.',
   askReferral:
     'Send your friend\'s name and 10-digit mobile number in one message, for example "Suresh Patil 9876543210".',
   referralSaved: (name: string) =>
     `Thank you! We will call ${name}. You earn a reward when their solar is installed.`,
   referralKnown: 'We are already in touch with this number. Thank you for thinking of us!',
-  referralUnclear: 'I could not find a name and a 10-digit mobile number. Please try again.',
+  referralUnclear: 'We could not find a name and a 10-digit mobile number. Please try again.',
   referredWelcome: (referrer: string, company: string) =>
     `Welcome${company ? ` to ${company}` : ''}! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,
   askRating: 'How happy are you with us so far?',
   ratingSaved: 'Thank you for rating us! It helps the team.',
-  humanSoon:
-    'A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Tap "Menu" to go back to the assistant.',
-  notUnderstood: 'Sorry, I did not get that. Here is what I can help with.',
+  notUnderstood: 'Sorry, we didn’t get that.',
   /** The answer to a short thanks or ack (review F7). */
-  welcome: 'You’re welcome 🙏',
   /** A reply to one of our updates goes to their person, with this warm note. */
-  passedToOwner: (name: string | null) =>
-    `Thank you. ${name ?? 'Our team'} will reply to you here.`,
   /** Once a night, when a person has the chat and it is outside working hours. */
   nightReply: (name: string | null) =>
     `Thank you. We reply from 9:30 am to 6:30 pm. Your message is with ${name ?? 'our team'}.`,
@@ -105,8 +78,8 @@ const EN_MEDIA_WORDS = {
     `Thank you! We got your ${title}. It is saved with your documents and the team is told.`,
   paperRefused: (title: string) =>
     `Sorry, we could not use that file for your ${title}. Please send a clear photo or a PDF.`,
-  photoAdded: 'Thank you, the photo is added to your request.',
-  photoNotAdded: 'We could not add the file to the request. Please send a photo of the problem.',
+  photoAdded: 'Thank you, the photo is added to your problem.',
+  photoNotAdded: 'We could not add the file to your problem. Please send a photo of it.',
   photoOnly: 'Photo or paper sent on WhatsApp.',
   tooLarge: 'This file is too large. Please send a smaller photo or PDF.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
@@ -120,7 +93,7 @@ const EN_MEDIA_WORDS = {
   paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
   paperAskEnded: 'Your files are already saved. Nothing else was changed.',
   problemSavedWithPhotos: (category: string, photos: number) =>
-    `Thank you. Your ${category} request is raised with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you. Tap "My requests" to see its status.`,
+    `Thank you ✅ We noted your problem (${category}) with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you.`,
 } as const;
 
 /** The "Warranty and AMC" answer, the same cover the app shows (PRD 5.5). */
@@ -144,13 +117,13 @@ const EN_COVER_WORDS = {
   amcState: { upcoming: 'starts soon', active: 'active', ended: 'ended', cancelled: 'cancelled' },
   amcVisits: (done: number, total: number) => `${done} of ${total} visits done`,
   nextVisit: (name: string, date: string) => `Next ${name} visit: ${date}`,
-  noAmc: 'AMC: none yet. For yearly cleaning and check-up visits, tap "Talk to us".',
-  help: 'For a problem with any of these, tap "Report a problem" in the menu.',
+  noAmc: 'AMC: none yet. Ask us here for yearly cleaning and check-up visits.',
+  help: 'For a problem with any of these, tap Report a problem below.',
 } as const;
 
 /** "My rewards": the people the customer referred and what they earned (PRD 5.6). */
 const EN_REWARD_WORDS = {
-  none: 'You have not referred anyone yet. Tap "Refer a friend" to tell your friends about us. You earn a reward when their solar is installed.',
+  none: 'You have not referred anyone yet. You earn a reward when a friend you refer gets solar installed.',
   title: '*Your referrals*',
   status: {
     received: 'we will call them soon',
@@ -181,20 +154,20 @@ const EN_FEEDBACK_WORDS = {
 
 /** Lines in the progress, payments and requests answers. */
 const EN_ANSWER_WORDS = {
-  now: (stage: string, done: number, steps: number) =>
-    `Now: ${stage} (${done} of ${steps} steps done)`,
   allDone: (steps: number) => `All ${steps} steps done. Your solar system is complete.`,
   next: (title: string, when: string) => `Next: ${title}, planned ${when}`,
   waitingSince: (who: string, when: string) => `${who} since ${when}`,
-  paid: (label: string, amount: string) => `✓ ${label}: ${amount} paid`,
-  bank: (label: string, amount: string) => `• ${label}: ${amount} (bank loan)`,
-  later: (label: string, amount: string) => `• ${label}: ${amount} later`,
-  due: (label: string, amount: string) => `• ${label}: ${amount} due`,
-  requestStatus: { open: 'Open', in_progress: 'Being worked on', resolved: 'Resolved' },
+  home: (home: string, size: string) => `*Your ${home} solar* · ${size}`,
+  total: (home: string, total: string) => `*${home} solar* — ${total} total`,
+  paid: (amount: string) => `✅ ${amount} paid`,
+  bank: (amount: string) => `⚪ ${amount} by bank loan`,
+  later: (amount: string, when: string) => `⚪ ${amount} ${when}`,
+  due: (amount: string) => `🔴 *${amount} due now*`,
+  requestStatus: { open: 'Received', in_progress: 'We are working on it', resolved: 'Fixed' },
   technicianVisit: (when: string) => `Technician visit: ${when}`,
 } as const;
 
-/** The kind of problem, in the customer's words, for "Your … request is raised". */
+/** The kind of problem, in the customer's words, for "We noted your problem (…)". */
 const EN_CATEGORY_WORDS = {
   inverter_error: 'inverter',
   no_generation: 'no generation',
@@ -207,7 +180,6 @@ const EN_CATEGORY_WORDS = {
 } as Record<string, string>;
 
 export const EN = {
-  MENU_ROWS: EN_MENU_ROWS,
   WORDS: EN_WORDS,
   RATINGS: EN_RATINGS,
   MEDIA_WORDS: EN_MEDIA_WORDS,
@@ -222,7 +194,6 @@ export type AssistantWords = typeof EN;
 const pick = <K extends keyof AssistantWords>(key: K) =>
   localized(EN[key], { mr: MR[key], hi: HI[key] });
 
-export const MENU_ROWS = pick('MENU_ROWS');
 export const WORDS = pick('WORDS');
 export const RATINGS = pick('RATINGS');
 export const MEDIA_WORDS = pick('MEDIA_WORDS');
@@ -231,9 +202,3 @@ export const REWARD_WORDS = pick('REWARD_WORDS');
 export const FEEDBACK_WORDS = pick('FEEDBACK_WORDS');
 export const ANSWER_WORDS = pick('ANSWER_WORDS');
 export const CATEGORY_WORDS = pick('CATEGORY_WORDS');
-
-/** Menu rows in every language, so a typed title works whatever language is set. */
-export const ALL_MENU_ROWS = [...EN_MENU_ROWS, ...MR.MENU_ROWS, ...HI.MENU_ROWS] as readonly {
-  readonly id: MenuChoice;
-  readonly title: string;
-}[];

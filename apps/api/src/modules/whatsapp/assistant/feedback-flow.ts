@@ -4,7 +4,6 @@ import { CustomerPortalService } from '../../customer-portal/customer-portal.ser
 import { type Conversation, queueReply } from '../chat-store';
 import { setStep } from './chat-step';
 import { sayWithTaps, type Tap } from './closing-taps';
-import { PAPER_WORDS } from './paper-words';
 import { projectToRate } from './rating-rule';
 import { FEEDBACK_WORDS, RATINGS, WORDS } from './words';
 
@@ -31,8 +30,7 @@ export class FeedbackFlowService {
       kind: 'list',
       body: WORDS.askRating,
       button: WORDS.menuButton,
-      // Back to menu under the ratings (menu audit L5).
-      rows: [...RATINGS, { id: 'menu', title: PAPER_WORDS.back }],
+      rows: RATINGS,
     });
   }
 

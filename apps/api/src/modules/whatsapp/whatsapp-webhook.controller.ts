@@ -34,7 +34,8 @@ import { type Incoming, readWebhook, webhookAccess } from './whatsapp-events';
  * Meta's WhatsApp webhook: customer messages go to the assistant, and delivery receipts
  * update the outbox. Signed with the app secret; until that is known, a secret key at the
  * end of the URL stands in (see `webhookAccess`). A repeat delivery is ignored. A message
- * that fails is forgotten and answered 500, so Meta sends it again; a late tap is ignored.
+ * that fails is forgotten and answered 500, so Meta sends it again; a late tap is told it
+ * was an earlier message, and the customer gets Home (redesign §14).
  */
 @Public()
 @Controller('v1/webhooks/whatsapp')
@@ -89,7 +90,8 @@ export class WhatsAppWebhookController implements OnModuleInit {
       const chat = await ensureChatOwner(this.db, await conversationFor(this.db, message));
       if (!(await logIncoming(this.db, chat.id, message))) continue;
       if (assistantAnswers(chat, message)) await markAssistantTap(this.db, message.waMessageId);
-      if (isLateTap(chat, message)) {
+      // A tap Meta delivered after a newer message is not acted on; a stranger's is dropped.
+      if (isLateTap(chat, message) && !chat.customerId) {
         this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
         continue;
       }
@@ -126,6 +128,8 @@ export class WhatsAppWebhookController implements OnModuleInit {
   }
 
   private async handle(chat: Conversation, message: Incoming) {
+    // A customer's late tap: "That was an earlier message", then Home (redesign §14).
+    if (isLateTap(chat, message)) return this.assistant.earlier(chat);
     // A person has this chat, so the assistant stays quiet: tell them the customer wrote.
     // Menu and quote taps (and the words a bot step waits for) are the assistant's, and
     // alert nobody.

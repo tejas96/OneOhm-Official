@@ -1,6 +1,7 @@
 import { chatsWaitingSince, type Database, waConversations, waMessages } from '@oneohm/database';
 import { HAND_BACK_MIN, workingMinutesSince } from '@oneohm/domain';
 import { and, eq, sql } from 'drizzle-orm';
+import { tellHandedBack } from './assistant/hand-back';
 import { keepEntry } from './chat-store';
 
 /** The line the chat's history gets when the assistant takes it back by itself. */
@@ -10,11 +11,13 @@ export const HANDED_BACK_NOTE = 'Handed back to the assistant (no reply for 4 wo
  * Chats a person took and then left (live review B4): no team message for 4 working
  * hours since the hand-over or their last reply, and no customer waiting for an answer
  * (those stay with the person; the reminders chase them). They go back to the assistant,
- * with a line in the chat's history in the same transaction. Returns how many.
+ * with a line in the chat's history in the same transaction, and a customer who wrote
+ * since the hand-over is told. Returns how many.
  */
 export async function handBackQuietChats(db: Database, now: Date, zone: string): Promise<number> {
   const open = await db
     .select({
+      chat: waConversations,
       id: waConversations.id,
       handedOverAt: waConversations.handedOverAt,
       lastReply: sql<string | null>`(select max(o.created_at) from wa_messages o
@@ -55,7 +58,10 @@ export async function handBackQuietChats(db: Database, now: Date, zone: string):
       });
       return true;
     });
-    if (moved) handed += 1;
+    if (!moved) continue;
+    handed += 1;
+    // A customer who wrote since the hand-over hears their person is away (redesign §14).
+    await tellHandedBack(db, chat.chat, chat.handedOverAt);
   }
   return handed;
 }

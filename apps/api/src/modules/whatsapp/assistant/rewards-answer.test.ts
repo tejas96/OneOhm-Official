@@ -30,8 +30,9 @@ describe('my rewards answer', () => {
     expect(text).toContain('On the way: ₹3,500');
   });
 
-  it('invites a first referral when there is none', () => {
-    expect(rewardsText([])).toMatch(/Refer a friend/);
+  it('says how a first referral earns, without naming a button (the button follows)', () => {
+    expect(rewardsText([])).toMatch(/not referred anyone yet/);
+    expect(rewardsText([])).not.toMatch(/Tap/);
   });
 
   it('keeps the answer short', () => {

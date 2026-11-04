@@ -9,10 +9,11 @@ import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { coverText } from './cover-answer';
+import { shownProblem } from './home-lines';
 import { languageNow } from './language';
 import { payNowReplies } from './pay-buttons';
 import { paymentsText } from './payments-answer';
-import { stageLine } from './progress-line';
+import { stepTicks } from './progress-line';
 import { PROJECT_WORDS } from './project-words';
 import { rewardsText } from './rewards-answer';
 import { ANSWER_WORDS, WORDS } from './words';
@@ -30,57 +31,60 @@ export class AnswersService {
     private readonly after: CustomerAfterSalesService,
   ) {}
 
-  async progress(customerId: string): Promise<string> {
+  /**
+   * Project update (redesign §3): one message per home with its steps ticked, the next
+   * step, and what it waits for. `waitingOnYou` adds [Send it now]. None: no project.
+   */
+  async progress(customerId: string): Promise<{ body: string; waitingOnYou: boolean }[]> {
     const { projects: own } = await this.portal.home(customerId);
-    if (own.length === 0) return WORDS.noProject;
     // The size in panels (C9): the panel count is on each project's quotation.
-    const counts = await this.db
-      .select({ id: quotations.id, panels: quotations.moduleCount })
-      .from(quotations)
-      .where(
-        inArray(
-          quotations.id,
-          own.map((project) => project.quotation.id),
-        ),
-      );
-    return own
-      .map((project) => {
-        const panels = counts.find((row) => row.id === project.quotation.id)?.panels ?? 0;
-        return list([
-          `*${PROJECT_WORDS.projectIn(project.place)}* · ${PROJECT_WORDS.size(panels, project.capacityWp)}`,
-          stageLine(project),
-          project.nextStep
-            ? ANSWER_WORDS.next(
-                stepTitle(project.nextStep.key, project.nextStep.title),
-                daySpan(project.nextStep.date, project.nextStep.date),
-              )
-            : '',
-          project.waiting
-            ? ANSWER_WORDS.waitingSince(
-                WORDS.waitingOn[project.waiting.party] ?? '',
-                daySpan(project.waiting.since, project.waiting.since),
-              )
-            : '',
-          WORDS.subsidy[project.subsidy.status] ?? '',
-        ]);
-      })
-      .join('\n\n');
+    const counts = own.length
+      ? await this.db
+          .select({ id: quotations.id, panels: quotations.moduleCount })
+          .from(quotations)
+          .where(
+            inArray(
+              quotations.id,
+              own.map((project) => project.quotation.id),
+            ),
+          )
+      : [];
+    return own.map((project) => {
+      const panels = counts.find((row) => row.id === project.quotation.id)?.panels ?? 0;
+      const body = list([
+        ANSWER_WORDS.home(project.place, PROJECT_WORDS.size(panels, project.capacityWp)),
+        stepTicks(project),
+        project.nextStep
+          ? ANSWER_WORDS.next(
+              stepTitle(project.nextStep.key, project.nextStep.title),
+              daySpan(project.nextStep.date, project.nextStep.date),
+            )
+          : '',
+        project.waiting
+          ? ANSWER_WORDS.waitingSince(
+              WORDS.waitingOn[project.waiting.party] ?? '',
+              daySpan(project.waiting.since, project.waiting.since),
+            )
+          : '',
+        WORDS.subsidy[project.subsidy.status] ?? '',
+      ]);
+      return { body, waitingOnYou: project.waiting?.party === 'customer' };
+    });
   }
 
-  /** What is paid and due (see paymentsText); our pay page links only with no buttons. */
-  async payments(customerId: string, withLinks: boolean): Promise<string> {
-    const online = withLinks && this.links.setup().mode !== 'off';
-    return paymentsText(this.db, this.env, customerId, online);
+  /** What is paid and due, one block per home (see paymentsText). */
+  payments(customerId: string) {
+    return paymentsText(this.db, customerId);
   }
 
-  /** True when the customer has an active project, so "Pay now" or "Track" leads somewhere. */
-  async hasProject(customerId: string): Promise<boolean> {
-    return (await activeHomes(this.db, customerId)).length > 0;
+  /** True when online payment is on, so a due amount gets its Pay ₹X button. */
+  paysOnline(): boolean {
+    return this.links.setup().mode !== 'off' && this.env.RAZORPAY_MODE !== 'off';
   }
 
-  /** A "Pay now" message for each due amount; the text answer is sent first. */
-  payNow(customerId: string) {
-    return payNowReplies(this.db, this.env, customerId);
+  /** The pay-link message for each due amount (or only `milestoneId`'s). */
+  payNow(customerId: string, milestoneId?: string) {
+    return payNowReplies(this.db, this.env, customerId, milestoneId);
   }
 
   async requests(customerId: string): Promise<string> {
@@ -90,7 +94,7 @@ export class AnswersService {
     return rows
       .map(
         (row) =>
-          `• ${row.description.slice(0, 60)} — *${status[row.status]}*${row.visitOn && row.status !== 'resolved' ? `\n  ${ANSWER_WORDS.technicianVisit(daySpan(row.visitOn, row.visitOn))}` : ''}${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
+          `• ${shownProblem(row.description).slice(0, 60)} — *${status[row.status]}*${row.visitOn && row.status !== 'resolved' ? `\n  ${ANSWER_WORDS.technicianVisit(daySpan(row.visitOn, row.visitOn))}` : ''}${row.resolutionNote ? `\n  ${row.resolutionNote}` : ''}`,
       )
       .join('\n');
   }

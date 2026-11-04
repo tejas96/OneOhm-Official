@@ -1,104 +1,155 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { brandName, customers } from '@oneohm/database';
-import { titleCaseName } from '@oneohm/shared';
-import { eq } from 'drizzle-orm';
-import { DATABASE, type Database } from '../../../config/core.module';
+import { formatInr, todayIn } from '@oneohm/shared';
+import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
 import { type Conversation, queueReply } from '../chat-store';
 import { AnswersService } from './answers.service';
+import type { Choice } from './chat-choices';
+import { saveLanguage } from './chat-language';
 import { setStep } from './chat-step';
-import { sayWithTaps, TAP_WORDS, type Tap } from './closing-taps';
+import { CHAT_WORDS, LANGUAGE_BUTTONS, talkTitle } from './chat-words';
+import { sayWithTaps, type TapChoice } from './closing-taps';
 import { startComplaint } from './complaint-start';
 import { FeedbackFlowService } from './feedback-flow';
 import { HandOverService } from './hand-over';
+import { HomeService } from './home';
+import { type AssistantLanguage, inLanguage } from './language';
 import { PaperRepliesService } from './paper-replies';
-import { StrangerFlowService } from './stranger-flow';
-import { MENU_ROWS, type MenuChoice, WORDS } from './words';
+import { pendingForCustomer } from './pending-items';
+import { WORDS } from './words';
 
-/** The customer menu and the answer to each of its rows, each ending with taps (C5). */
+/**
+ * The answer to each More row and button (redesign §3, §10, §11), each ending with the
+ * next step as buttons (at most 3) and Menu as the way out. Home itself: HomeService.
+ */
 @Injectable()
 export class MenuAnswersService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly answers: AnswersService,
     private readonly papers: PaperRepliesService,
     private readonly feedback: FeedbackFlowService,
     private readonly people: HandOverService,
-    private readonly strangers: StrangerFlowService,
+    private readonly home: HomeService,
   ) {}
 
-  async choose(chat: Conversation, customerId: string, choice: MenuChoice): Promise<void> {
-    // With no active project, only Menu and Talk to us: the rest lead back to "no project".
-    const answer = async (body: string, taps: readonly Tap[]) =>
-      sayWithTaps(
-        this.db,
-        chat,
-        body,
-        (await this.answers.hasProject(customerId)) ? taps : ['menu', 'talk'],
-      );
+  async choose(chat: Conversation, customerId: string, choice: Choice): Promise<void> {
+    const say = (body: string, taps: readonly TapChoice[]) =>
+      sayWithTaps(this.db, chat, body, taps);
     switch (choice) {
-      case 'progress': {
-        // Pay now only while something is due; all paid, it would lead to "nothing to pay".
-        const due = (await this.answers.payNow(customerId)).length > 0;
-        const taps: Tap[] = due ? ['menu', 'pay', 'talk'] : ['menu', 'talk'];
-        return answer(await this.answers.progress(customerId), taps);
-      }
+      case 'more':
+        return this.home.more(chat);
+      case 'see':
+        return this.home.seeThem(chat, customerId);
+      case 'update':
+        return this.progress(chat, customerId);
       case 'payments':
-        return this.payments(chat, customerId, answer);
+        return this.payments(chat, customerId);
       case 'documents':
         return this.papers.show(chat, customerId);
-      case 'requests':
-        return answer(await this.answers.requests(customerId), ['menu', 'talk']);
-      case 'warranty':
-        return answer(await this.answers.warranty(customerId), ['menu', 'talk']);
-      case 'service':
+      case 'receipts':
+        return this.papers.receipts(chat, customerId);
+      case 'paper':
+        return this.askPaper(chat, customerId, null);
+      case 'problem':
         return startComplaint(this.db, chat, customerId);
+      case 'problems':
+      case 'visit':
+        return say(await this.answers.requests(customerId), ['problem', 'menu']);
+      case 'warranty':
+        return say(await this.answers.warranty(customerId), ['problem', 'menu']);
       case 'refer':
         await setStep(this.db, chat, 'await_referral');
-        return sayWithTaps(this.db, chat, WORDS.askReferral, ['menu']);
+        return say(WORDS.askReferral, ['menu']);
       case 'rewards':
-        return answer(await this.answers.rewards(customerId), ['menu', 'talk']);
+        return say(await this.answers.rewards(customerId), ['refer', 'menu']);
+      case 'talk':
+        return this.people.handOver(chat, 'service.manage');
+      case 'language':
+        return queueReply(this.db, chat, {
+          kind: 'buttons',
+          body: CHAT_WORDS.language.ask,
+          buttons: LANGUAGE_BUTTONS,
+        });
       case 'feedback':
         return this.feedback.offer(chat, customerId);
-      case 'human':
-        return this.people.handOver(chat, 'service.manage');
     }
   }
 
-  /** The customer's first name over the menu list; a stranger gets the stranger buttons. */
-  async menu(chat: Conversation): Promise<void> {
-    const [customer] = chat.customerId
-      ? await this.db
-          .select({ name: customers.name })
-          .from(customers)
-          .where(eq(customers.id, chat.customerId))
-      : [];
-    if (!customer) return this.strangers.answer(chat, '');
-    const first = titleCaseName(customer.name.split(/\s+/)[0] ?? customer.name);
-    const brand = await brandName(this.db);
-    await queueReply(this.db, chat, {
-      kind: 'list',
-      body: WORDS.menu(first, brand),
-      button: WORDS.menuButton,
-      ...(brand ? { section: brand } : {}),
-      rows: MENU_ROWS,
-    });
+  /** Project update: one message per home; waiting on the customer adds [Send it now]. */
+  private async progress(chat: Conversation, customerId: string) {
+    const homes = await this.answers.progress(customerId);
+    if (homes.length === 0) return this.noProject(chat);
+    const sendIt = { id: 'go:paper', title: CHAT_WORDS.buttons.sendItNow };
+    for (const { body, waitingOnYou } of homes)
+      await sayWithTaps(
+        this.db,
+        chat,
+        body,
+        waitingOnYou ? [sendIt, 'payments', 'menu'] : ['payments', 'menu'],
+      );
+  }
+
+  /** Payments (redesign §10): one message per home, [Pay ₹X] when something is due now. */
+  private async payments(chat: Conversation, customerId: string) {
+    const homes = await this.answers.payments(customerId);
+    if (homes.length === 0) return this.noProject(chat);
+    const online = this.home.paysOnline();
+    for (const { body, due } of homes) {
+      const pay =
+        due && online
+          ? { id: `pay:${due.milestoneId}`, title: CHAT_WORDS.pay(formatInr(due.leftPaise)) }
+          : null;
+      await sayWithTaps(
+        this.db,
+        chat,
+        body,
+        pay ? [pay, 'receipts', 'menu'] : ['receipts', 'update', 'menu'],
+      );
+    }
+  }
+
+  /** [Pay ₹X]: the pay-link message for that amount; paid already, the Payments answer. */
+  async pay(chat: Conversation, customerId: string, milestoneId: string): Promise<void> {
+    const [link] = this.home.paysOnline() ? await this.answers.payNow(customerId, milestoneId) : [];
+    if (!link) return this.payments(chat, customerId);
+    await queueReply(this.db, chat, link);
   }
 
   /**
-   * What is paid and due. Pay now buttons open our pay page; a link button has no reply
-   * taps, so Menu · Talk to us follow them (menu audit M3). Without them the text carries
-   * the link.
+   * Send a paper / [Send it now]: the paper we still need, named with its home, to send
+   * here as a photo or PDF (today's paper path files it); else what we still need, else
+   * "send it and tell us what it is".
    */
-  private async payments(
-    chat: Conversation,
-    customerId: string,
-    answer: (body: string, taps: readonly Tap[]) => Promise<void>,
-  ) {
-    const buttons = await this.answers.payNow(customerId);
-    const body = await this.answers.payments(customerId, buttons.length === 0);
-    if (buttons.length === 0) return answer(body, ['menu', 'track', 'talk']);
-    await queueReply(this.db, chat, { kind: 'text', body });
-    for (const button of buttons) await queueReply(this.db, chat, button);
-    return sayWithTaps(this.db, chat, TAP_WORDS.whatNext, ['menu', 'talk']);
+  async askPaper(chat: Conversation, customerId: string, requestId: string | null) {
+    const today = todayIn(this.env.BUSINESS_TIMEZONE, new Date());
+    const open = (await pendingForCustomer(this.db, customerId, today)).flatMap((item) =>
+      item.kind === 'paper' ? [item] : [],
+    );
+    const asked =
+      open.find((item) => item.requestId === requestId) ??
+      (open.length === 1 ? open[0] : undefined);
+    const body = asked
+      ? CHAT_WORDS.paper.ask(asked.title, asked.home)
+      : open.length > 0
+        ? CHAT_WORDS.paper.list(open.map((item) => item.title).join(', '))
+        : CHAT_WORDS.paper.any;
+    return sayWithTaps(this.db, chat, body, ['menu']);
+  }
+
+  /** A language button: saved on the customer and the chat, then Home in that language. */
+  async language(chat: Conversation, customerId: string, language: AssistantLanguage) {
+    await saveLanguage(this.db, chat, language);
+    await inLanguage(language, async () => {
+      await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.language.saved });
+      await this.home.show(chat, customerId);
+    });
+  }
+
+  /** No active project: said so, with Talk to {name} and Menu. */
+  private async noProject(chat: Conversation) {
+    const talk = { id: 'go:talk', title: talkTitle(await this.people.answererName(chat)) };
+    return sayWithTaps(this.db, chat, WORDS.noProject, [talk, 'menu']);
   }
 }

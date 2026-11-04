@@ -1,14 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { customers, waConversations, waMessages } from '@oneohm/database';
+import { waConversations } from '@oneohm/database';
 import { asksForPerson } from '@oneohm/domain';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { type ChatReply, type Conversation, queueReply, setState } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
+import { languageTapped, payTapped, sendTapped } from './chat-choices';
+import { chatLanguage, languageForMessage } from './chat-language';
 import { heldStep, setStep, stepOf, WAITING_STEPS } from './chat-step';
+import { CHAT_WORDS, LANGUAGE_BUTTONS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
@@ -17,11 +20,15 @@ import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { fileHomeTapped } from './file-home';
 import { FileHomeFlowService } from './file-home-flow';
 import { FilePaperFlowService } from './file-paper-flow';
+import { FreeTextService } from './free-text';
 import { readReferral } from './guess-category';
+import { tellHandedBack } from './hand-back';
 import { HandOverService } from './hand-over';
 import { assistantAnswers } from './handled-taps';
-import { isThanks, menuChoice, restartsChat, wordOf } from './incoming-words';
-import { assistantLanguage, inLanguage } from './language';
+import { HomeService } from './home';
+import { choiceOf, restartsChat, wordOf } from './incoming-words';
+import { exactChoice, smallTalkOf } from './known-words';
+import { inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
 import { answerOptOut, optOutAsked } from './opt-out';
@@ -31,19 +38,17 @@ import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
 import { WORDS } from './words';
 
-const DAY_MS = 24 * 3600 * 1000;
-
 /**
- * The customer WhatsApp assistant (PRD 6.1): a menu over the customer's own records,
- * a few two-step requests, and a hand-over to a person. The number is the identity:
- * only a number saved on a customer sees that customer's data.
+ * The customer WhatsApp assistant (PRD 6.1, redesign §3, §14): Home over the customer's
+ * own records, a few two-step requests, and a hand-over to a named person. The number is
+ * the identity: only a number saved on a customer sees that customer's data.
  */
-
 @Injectable()
 export class AssistantService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly menus: MenuAnswersService,
+    private readonly home: HomeService,
     private readonly portal: CustomerPortalService,
     private readonly media: MediaIntakeService,
     private readonly feedback: FeedbackFlowService,
@@ -54,12 +59,13 @@ export class AssistantService {
     private readonly papers: PaperRepliesService,
     private readonly fileHomes: FileHomeFlowService,
     private readonly filePapers: FilePaperFlowService,
+    private readonly words: FreeTextService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
   async handle(seen: Conversation, incoming: Incoming): Promise<void> {
     // STOP and START come first, before onboarding, a person's hold on the chat or a quote tap.
-    const asked = await inLanguage(await this.languageOf(seen), () =>
+    const asked = await inLanguage(await chatLanguage(this.db, seen), () =>
       answerOptOut(this.db, seen, optOutAsked(incoming)),
     );
     if (asked) return;
@@ -68,50 +74,71 @@ export class AssistantService {
     const tap = readQuoteTap(incoming.choiceId);
     // A quote tap, like any tap, ends a step left waiting (review F8).
     if (tap && WAITING_STEPS.includes(stepOf(chat))) await setStep(this.db, chat, 'menu');
-    return inLanguage(await this.languageOf(chat), () =>
+    const typed = incoming.kind === 'text' ? incoming.text : null;
+    const waits = WAITING_STEPS.includes(stepOf(chat));
+    const language = await languageForMessage(this.db, chat, typed, waits);
+    if (language === 'ask') return this.askLanguage(chat);
+    return inLanguage(language, () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
   }
 
+  /** A tap Meta delivered after a newer message: said so, then Home (redesign §14). */
+  async earlier(chat: Conversation): Promise<void> {
+    if (!chat.customerId) return;
+    const customerId = chat.customerId;
+    await inLanguage(await chatLanguage(this.db, chat), async () => {
+      await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.earlier });
+      await this.home.show(chat, customerId);
+    });
+  }
+
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
-    const word = wordOf(incoming);
     if (restartsChat(chat, incoming)) return this.restart(chat);
     // With a person, the assistant answers only its own taps and its own steps' words.
     if (await this.heldByPerson(chat, incoming)) return;
-    if (!chat.customerId) return this.stranger(chat, incoming, word);
+    if (!chat.customerId) return this.stranger(chat, incoming, wordOf(incoming));
     const customerId = chat.customerId;
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
-      return this.menus.choose(chat, customerId, 'human');
+      return this.menus.choose(chat, customerId, 'talk');
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     // A location pin, a contact card or a sticker is never answered: their person is told
-    // what it was (the chat shows it) and the assistant stays on.
-    // A reaction (a 👍 on our message) is shown in the chat and nobody is alerted.
+    // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
     if (incoming.kind === 'other')
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
-    // "ok", "thanks", 👍: a warm word back, no alert (review F7); a held chat's go to the person.
-    if (this.thanksOnly(chat, incoming)) return sayWithTaps(this.db, chat, WORDS.welcome, ['menu']);
+    const waits = WAITING_STEPS.includes(stepOf(chat));
+    // "ok", "thanks", 👍: a short word back (redesign §14); a waiting step gets its words first.
+    const small = incoming.kind === 'text' && !waits ? smallTalkOf(incoming.text) : null;
+    if (small) return this.words.smallTalk(chat, small);
     // A reply to our update ("I paid yesterday") goes to their person, even mid-step.
-    if (await this.answersOurUpdate(chat, incoming, word)) return this.people.passToOwner(chat);
+    if (await this.answersOurUpdate(chat, incoming)) return this.people.passToOwner(chat);
     const home = this.homeTap(chat, customerId, incoming.choiceId);
     if (home) return home;
-    if (WAITING_STEPS.includes(stepOf(chat))) {
+    if (waits) {
       if (await this.step(chat, customerId, incoming)) return;
       // A tap is never the words a step waits for (menu audit H1, H2): the step ends and
       // the tap is answered as itself.
       await setStep(this.db, chat, 'menu');
     }
-    if (word.startsWith('rate:'))
-      return this.feedback.rate(chat, customerId, Number(word.slice(5)));
-    const choice = menuChoice(word);
+    return this.picked(chat, customerId, incoming);
+  }
+
+  /** A tap or typed words that pick an answer; else "Sorry, we didn't get that". */
+  private picked(chat: Conversation, customerId: string, incoming: Incoming) {
+    const id = incoming.choiceId;
+    if (id?.startsWith('rate:')) return this.feedback.rate(chat, customerId, Number(id.slice(5)));
+    const milestone = payTapped(id);
+    if (milestone) return this.menus.pay(chat, customerId, milestone);
+    const request = sendTapped(id);
+    if (request) return this.menus.askPaper(chat, customerId, request);
+    const language = languageTapped(id);
+    if (language) return this.menus.language(chat, customerId, language);
+    if (id && isPaperTap(id)) return this.papers.tapped(chat, customerId, id);
+    const choice = choiceOf(incoming);
     if (choice) return this.menus.choose(chat, customerId, choice);
-    if (incoming.choiceId && isPaperTap(incoming.choiceId))
-      return this.papers.tapped(chat, customerId, incoming.choiceId);
-    // Typed words the bot does not know reach a person, warmly (menu audit M11).
-    if (incoming.kind === 'text') return this.people.passToOwner(chat);
-    await this.say(chat, { kind: 'text', body: WORDS.notUnderstood });
-    return this.menus.menu(chat);
+    return this.words.unknown(chat, incoming);
   }
 
   /**
@@ -146,12 +173,6 @@ export class AssistantService {
     return this.strangers.route(chat, incoming, word);
   }
 
-  /** A typed "ok" or "thanks" while no step waits for words. */
-  private thanksOnly(chat: Conversation, incoming: Incoming) {
-    if (incoming.kind !== 'text' || WAITING_STEPS.includes(stepOf(chat))) return false;
-    return isThanks(incoming.text);
-  }
-
   /** The step the chat waits on takes the message; false when it is not that step's. */
   private async step(chat: Conversation, customerId: string, incoming: Incoming) {
     const step = stepOf(chat);
@@ -167,29 +188,33 @@ export class AssistantService {
     return true;
   }
 
-  /** Free words (not a menu pick) sent within a day of one of our business updates. */
-  private async answersOurUpdate(chat: Conversation, incoming: Incoming, word: string) {
-    if (incoming.kind !== 'text' || menuChoice(word)) return false;
-    return this.repliedToUpdate(chat.id);
+  /** Free words (not one known word on its own) sent within a day of one of our updates. */
+  private async answersOurUpdate(chat: Conversation, incoming: Incoming) {
+    if (incoming.kind !== 'text' || exactChoice(incoming.text)) return false;
+    return this.words.repliedToUpdate(chat.id);
   }
 
   /**
-   * A hello or "menu": back to the assistant, with the menu. Menu from a step inside a
-   * person's hold ends only the step: the person and the reminders stay (review F2).
+   * A hello or "menu": back to the assistant, with Home. Menu from a step inside a person's
+   * hold ends only the step: the person and the reminders stay (review F2). Menu out of a
+   * hold tells a customer who wrote meanwhile that their person is away (redesign §14).
    */
   private async restart(chat: Conversation) {
+    const customerId = chat.customerId;
     if (heldStep(chat)) {
       await setStep(this.db, chat, 'menu');
-      return this.menus.menu(chat);
+      return customerId ? this.home.show(chat, customerId) : this.strangers.greet(chat);
     }
-    if (chat.state === 'human')
+    if (chat.state === 'human') {
       await this.db
         .update(waConversations)
         .set({ handedOverAt: null, handledByUserId: null })
         .where(eq(waConversations.id, chat.id));
-    if (!chat.customerId) return this.strangers.greet(chat);
+      await tellHandedBack(this.db, chat, chat.handedOverAt, false);
+    }
+    if (!customerId) return this.strangers.greet(chat);
     await setState(this.db, chat.id, 'menu');
-    return this.menus.menu(chat);
+    return this.home.show(chat, customerId);
   }
 
   private async referral(chat: Conversation, customerId: string, incoming: Incoming) {
@@ -201,45 +226,24 @@ export class AssistantService {
     } catch (error) {
       if (error instanceof AppError && error.code === 'duplicate')
         return sayWithTaps(this.db, chat, WORDS.referralKnown, ['menu']);
-      if (error instanceof AppError) return this.say(chat, { kind: 'text', body: error.message });
+      if (error instanceof AppError) return sayWithTaps(this.db, chat, error.message, ['menu']);
       throw error;
     }
-    return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['menu']);
+    return sayWithTaps(this.db, chat, WORDS.referralSaved(friend.name), ['rewards', 'menu']);
+  }
+
+  /** Devanagari we cannot place as Marathi or Hindi: asked once, with the three buttons. */
+  private askLanguage(chat: Conversation) {
+    const ask: ChatReply = {
+      kind: 'buttons',
+      body: CHAT_WORDS.language.ask,
+      buttons: LANGUAGE_BUTTONS,
+    };
+    return queueReply(this.db, chat, ask);
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */
   async nightReply(chat: Conversation): Promise<void> {
-    await inLanguage(await this.languageOf(chat), () => this.people.nightReply(chat));
-  }
-
-  /** True when our last message in the chat was a business update sent in the last day. */
-  private async repliedToUpdate(chatId: string): Promise<boolean> {
-    const [last] = await this.db
-      .select({ kind: waMessages.kind, at: waMessages.createdAt })
-      .from(waMessages)
-      .where(
-        and(
-          eq(waMessages.conversationId, chatId),
-          eq(waMessages.direction, 'out'),
-          ne(waMessages.kind, 'note'),
-        ),
-      )
-      .orderBy(desc(waMessages.createdAt))
-      .limit(1);
-    return last?.kind === 'template' && Date.now() - last.at.getTime() < DAY_MS;
-  }
-
-  /** A customer's saved language; a stranger's is the one picked while onboarding. */
-  private async languageOf(chat: Conversation) {
-    if (!chat.customerId) return assistantLanguage(chat.language);
-    const [customer] = await this.db
-      .select({ language: customers.preferredLanguage })
-      .from(customers)
-      .where(eq(customers.id, chat.customerId));
-    return assistantLanguage(customer?.language);
-  }
-
-  private say(chat: Conversation, reply: ChatReply) {
-    return queueReply(this.db, chat, reply);
+    await inLanguage(await chatLanguage(this.db, chat), () => this.people.nightReply(chat));
   }
 }

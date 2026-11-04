@@ -70,14 +70,14 @@ export class ProblemFlowService {
       added > 0 ? MEDIA_WORDS.problemSavedWithPhotos(label, added) : WORDS.problemSaved(label),
       added < files.length ? MEDIA_WORDS.photoNotAdded : '',
     ];
-    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['requests', 'menu']);
+    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['problems', 'menu']);
   }
 
   /** Another photo for the request just raised (the document it was stored as). */
   async addPhoto(chat: Conversation, customerId: string, requestId: string, file: string) {
     const added = await this.attach(customerId, requestId, file);
     const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
-    return sayWithTaps(this.db, chat, body, ['requests', 'menu']);
+    return sayWithTaps(this.db, chat, body, ['problems', 'menu']);
   }
 
   /**

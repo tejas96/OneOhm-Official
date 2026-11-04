@@ -4,12 +4,11 @@ import { type Conversation, queueReply } from '../chat-store';
 import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
 import { keepPending } from './media-intake';
-import { PAPER_WORDS } from './paper-words';
 import { PROJECT_WORDS } from './project-words';
 import { WORDS } from './words';
 
-/** A list keeps 10 rows: the homes and the Back row. */
-const HOME_ROWS = 9;
+/** A list keeps 10 rows. */
+const HOME_ROWS = 10;
 const HOME_TAP = /^home:([0-9a-f-]{36})$/;
 
 /** The project a which-home row was tapped for, or null for any other tap. */
@@ -32,14 +31,11 @@ export async function startComplaint(
     kind: 'list',
     body: PROJECT_WORDS.whichHome,
     button: WORDS.menuButton,
-    rows: [
-      ...homes.slice(0, HOME_ROWS).map((home) => ({
-        id: `home:${home.id}`,
-        title: home.city.slice(0, 24),
-        description: home.site.slice(0, 72),
-      })),
-      { id: 'menu', title: PAPER_WORDS.back },
-    ],
+    rows: homes.slice(0, HOME_ROWS).map((home) => ({
+      id: `home:${home.id}`,
+      title: home.city.slice(0, 24),
+      description: home.site.slice(0, 72),
+    })),
   });
 }
 

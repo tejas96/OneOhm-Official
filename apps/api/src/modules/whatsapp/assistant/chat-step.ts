@@ -1,4 +1,5 @@
-import type { DatabaseExecutor } from '@oneohm/database';
+import { type DatabaseExecutor, waConversations } from '@oneohm/database';
+import { eq, sql } from 'drizzle-orm';
 import { type Conversation, setState } from '../chat-store';
 
 /** The bot's own steps that wait for the customer's next words or tap. */
@@ -55,4 +56,16 @@ export function setStep(
   const timed = step === 'menu' ? context : { ...context, stepAt: Date.now() };
   if (chat.state !== 'human') return setState(db, chat.id, step, timed);
   return setState(db, chat.id, 'human', step === 'menu' ? context : { ...timed, step });
+}
+
+/** Adds keys to the chat's context without touching the rest (no step change). */
+export async function markContext(
+  db: DatabaseExecutor,
+  chatId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await db
+    .update(waConversations)
+    .set({ context: sql`${waConversations.context} || ${JSON.stringify(patch)}::jsonb` })
+    .where(eq(waConversations.id, chatId));
 }
