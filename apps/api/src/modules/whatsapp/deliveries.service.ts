@@ -7,7 +7,7 @@ import {
   outbox,
   tellChatSendFailed,
 } from '@oneohm/database';
-import { isNotOnWhatsApp } from '@oneohm/domain';
+import { isNotOnWhatsApp, smsCanStandIn } from '@oneohm/domain';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
@@ -61,7 +61,7 @@ export class DeliveriesService {
     let applied = 0;
     for (const update of updates) {
       const [row] = await this.db
-        .select({ id: outbox.id, deliveryStatus: outbox.deliveryStatus })
+        .select({ id: outbox.id, deliveryStatus: outbox.deliveryStatus, template: outbox.template })
         .from(outbox)
         .where(eq(outbox.providerMessageId, update.providerMessageId))
         .limit(1);
@@ -99,6 +99,8 @@ export class DeliveriesService {
           row.id,
           (template, payload) => customerNotice(template, payload, 'sms') ?? GENERIC_WORDS,
         );
+        // A staff message has no SMS to stand in: its people hear it failed, like any other failure.
+        if (!smsCanStandIn(row.template)) await tellChatSendFailed(this.db, row.id);
       }
       applied += 1;
     }
