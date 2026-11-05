@@ -4,6 +4,7 @@ import { Session } from '../support/http';
 import { endsWithTaps } from '../support/menu-chat';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
 import { createQuotation, newCustomer, type Sale, sellProject } from '../support/sales';
+import { setOffer } from '../support/self-survey';
 
 // Redesign phase 1a (4 Nov 2026), end to end over the webhook: "hi" shows Home (what
 // matters now and three buttons), More lists the ten rows, a paper ask is one tap, and
@@ -12,10 +13,16 @@ import { createQuotation, newCustomer, type Sale, sellProject } from '../support
 describe('WhatsApp Home (redesign §3)', () => {
   let admin: Session;
 
+  let putBack: () => Promise<unknown> = async () => undefined;
   beforeAll(async () => {
     admin = await Session.admin();
+    // Home's lines here are about money and papers; the self survey offer has its own tests (69-*).
+    putBack = await setOffer(admin, { selfSurveyOffer: false });
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await putBack();
+    await closeDb();
+  });
 
   /** A sold customer (the advance is due) with no paper asked of them yet. */
   async function soldCustomer(name: string): Promise<Sale> {

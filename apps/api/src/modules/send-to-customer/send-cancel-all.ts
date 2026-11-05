@@ -59,8 +59,10 @@ export async function cancelAllAsks(
         and(eq(customerActions.id, ask.id), inArray(customerActions.status, ['open', 'received'])),
       )
       .returning({ id: customerActions.id });
-    if (!changed) continue;
-    cancelled.push(ask);
+    if (changed) cancelled.push(ask);
+  }
+  // What each took with it is settled after all are closed, so a signed copy is closed (and audited) once.
+  for (const ask of cancelled) {
     await settleCancelledAsk(tx, ask, userId);
     await recordAudit(tx, userId, 'customer_action.cancelled', 'customer_action', ask.id, {
       reason,
