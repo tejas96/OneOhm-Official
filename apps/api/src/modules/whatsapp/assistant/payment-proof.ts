@@ -1,4 +1,5 @@
 import {
+  customerActions,
   customers,
   type DatabaseExecutor,
   notifyHolders,
@@ -71,24 +72,41 @@ export async function takePaymentProof(
       ...place,
       category: answersRequests(file.contentType) ? 'payment_proof' : 'other',
     });
-  if (due.length > 0)
+  // The instalment the customer named waits; with none named, every due one does.
+  const paused = named ? [named] : due;
+  if (paused.length > 0)
     await tx
       .update(paymentMilestones)
       .set({ remindersPausedUntil: new Date(now + PAUSE_DAYS * DAY), updatedAt: new Date(now) })
       .where(
         inArray(
           paymentMilestones.id,
-          due.map((row) => row.id),
+          paused.map((row) => row.id),
         ),
       );
   const [first] = files;
   const name = customer?.name ?? 'A customer';
   // The customer actions that asked for the proof now wait for finance to record it.
-  await proofReceived(tx, customerId, detail.milestoneId ?? null, {
+  const proof = {
     documentId: first?.id ?? null,
     amountPaise: detail.amountPaise ?? null,
     paidOn: detail.paidOn ?? null,
-  });
+  };
+  const answered = await proofReceived(tx, customerId, detail.milestoneId ?? null, proof);
+  // Proof nobody asked for still becomes a tracked item ("Done by customer, to check"), so finance's
+  // check is chased like any other; recording the payment closes it.
+  if (answered === 0 && only)
+    await tx.insert(customerActions).values({
+      type: 'pay',
+      customerId,
+      projectId: only.projectId,
+      propertyId: only.propertyId,
+      title: 'Payment proof',
+      status: 'received',
+      doneAt: new Date(now),
+      documentId: proof.documentId,
+      payload: { milestoneId: only.id, proof, channel: 'whatsapp' },
+    });
   if (only)
     await tx.insert(projectActivities).values({
       projectId: only.projectId,

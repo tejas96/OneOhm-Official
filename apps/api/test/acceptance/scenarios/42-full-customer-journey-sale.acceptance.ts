@@ -134,12 +134,17 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const created = await J.startProject(admin, quote.id);
     project = await admin.get<ProjectDetail>(`/projects/${created.id}`);
     expect(advance().status).toBe('due');
-    // The worker sends one person's messages in queued order: "started" before "please pay".
-    const order = await J.sendOrder(phone, ['project_started', 'payment_link']);
-    expect(order).toEqual(['project_started', 'payment_link']);
+    // Her chat is open, so "please pay" is a chat message with [Pay ₹X] [I paid another way]
+    // (redesign §19), not the payment_link template; [Pay ₹X] answers with the pay link.
     await t.collect();
-    const [link] = await J.outboxOf(phone, 'payment_link');
-    payToken = link?.payload.payToken ?? '';
+    expect(await J.outboxOf(phone, 'payment_link')).toHaveLength(0);
+    const due = (await J.outboxOf(phone, 'session:buttons')).find((one) =>
+      JSON.stringify(one.payload).includes(`paidother:${advance().id}`),
+    );
+    expect(due?.dedupe_key).toBe(`milestone_due:${advance().id}`);
+    await t.tap(`pay:${advance().id}`);
+    const [cta] = await J.outboxOf(phone, 'session:cta_url');
+    payToken = String(cta?.payload.url ?? '').split('/pay/due/')[1] ?? '';
     expect(payToken).toBeTruthy();
     // Opening the link shows the amount in Marathi (her language); Continue opens the gateway.
     expect(await (await fetch(`${API}/pay/due/${payToken}`)).text()).toContain('पेमेंट करा');
