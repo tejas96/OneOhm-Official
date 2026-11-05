@@ -751,7 +751,14 @@
         "site_ready_reminder": "Reminder: the roof is not ready yet",
         "site_ready_check": "Is the roof ready? (before dispatch)",
         "installation_check": "Is the installation finished?",
-        "handover_pack": "Handover pack"
+        "handover_pack": "Handover pack",
+        "subsidy_register_help": "Help to register on the PM Surya Ghar portal",
+        "subsidy_credit_check": "Did the subsidy reach your bank?",
+        "bank_sign_visit": "Sign the loan papers at the bank",
+        "layout_approval": "Roof layout to look at and approve",
+        "loan_sanctioned": "Loan sanctioned",
+        "loan_disbursed": "Loan money sent",
+        "loan_rejected": "Loan not approved"
       },
       "dialog": {
         "title": "Edit {name}",
@@ -1117,6 +1124,12 @@
           "lead": "Remind this many days before",
           "leadHint": "0 reminds on the day itself.",
           "preview": "{days, plural, =0 {A follow-up planned for {date} is reminded that morning at {time}.} one {A follow-up planned for {date} is reminded on {remind} at {time}, a day before.} other {A follow-up planned for {date} is reminded on {remind} at {time}, # days before.}}"
+        },
+        "subsidy": {
+          "title": "Subsidy not received",
+          "description": "When a customer says the subsidy has not reached their bank, the project owner is told after this many days.",
+          "chase": "Tell the owner after (days)",
+          "chaseHint": "Counted from the day the customer said it had not arrived."
         },
         "whatsapp": {
           "title": "WhatsApp at night",

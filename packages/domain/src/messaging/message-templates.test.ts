@@ -70,6 +70,10 @@ describe('follow-up text', () => {
       'signature_reminder',
       'signed_page_reminder',
       'site_ready_reminder',
+      'subsidy_register_help',
+      'subsidy_credit_check',
+      'bank_sign_visit',
+      'layout_approval',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.
     expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([

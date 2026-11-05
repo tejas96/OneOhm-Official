@@ -507,6 +507,98 @@ Fields: customer, document, home
 
 All three reminders are off until Meta approves all three languages.
 
+### 42. `subsidy_register_help` — **New** (subsidy: help to register on the PM Surya Ghar portal; also the 2-day reminder)
+Fields: customer, home
+
+> en: Hello {{1}}, please register on the PM Surya Ghar portal (pmsuryaghar.gov.in) for your {{2}} solar. It takes about 5 minutes. Tell us when it is done, or ask for help.
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरसाठी कृपया पीएम सूर्य घर पोर्टलवर (pmsuryaghar.gov.in) नोंदणी करा. यास सुमारे ५ मिनिटे लागतात. झाल्यावर आम्हाला सांगा, किंवा मदत मागा.
+
+> hi: नमस्ते {{1}}, कृपया अपने {{2}} सोलर के लिए पीएम सूर्य घर पोर्टल (pmsuryaghar.gov.in) पर रजिस्टर करें। इसमें लगभग 5 मिनट लगते हैं। हो जाए तो हमें बताएँ, या मदद माँगें।
+
+Examples: Ramesh Patil · Sangli
+
+**Buttons:** two quick replies. en `Done`, `Need help`; mr `झाले`, `मदत हवी`; hi `हो गया`, `मदद चाहिए`. Payloads `stp:ok:<id>`, `stp:alt:<id>`.
+
+### 43. `subsidy_credit_check` — **New** (subsidy: did the money reach the bank; sent by itself when the release step is done; also the 2-day reminder)
+Fields: customer, amount, home
+
+> en: Hello {{1}}, did the {{2}} subsidy for your {{3}} solar reach your bank account?
+
+> mr: नमस्कार {{1}}, तुमच्या {{3}} सोलरची {{2}} सबसिडी तुमच्या बँक खात्यात जमा झाली का?
+
+> hi: नमस्ते {{1}}, क्या आपके {{3}} सोलर की {{2}} सब्सिडी आपके बैंक खाते में आ गई?
+
+Examples: Ramesh Patil · ₹78,000 · Sangli
+
+**Buttons:** two quick replies. en `Yes, received`, `Not yet`; mr `हो, मिळाले`, `अजून नाही`; hi `हाँ, मिल गई`, `अभी नहीं`. Payloads `stp:ok:<id>`, `stp:alt:<id>`.
+
+### 44. `bank_sign_visit` — **New** (loan: sign the loan papers at the bank; also the 2-day reminder)
+Fields: customer, bank, branch, day
+
+> en: Hello {{1}}, please visit {{2}}, {{3}} on {{4}} to sign the loan papers for your solar.
+
+> mr: नमस्कार {{1}}, कृपया {{4}} रोजी {{2}}, {{3}} येथे जाऊन कर्जाच्या कागदपत्रांवर सही करा.
+
+> hi: नमस्ते {{1}}, कृपया {{4}} को {{2}}, {{3}} जाकर लोन के कागज़ों पर हस्ताक्षर करें।
+
+Examples: Ramesh Patil · HDFC Bank · Sangli main branch · Thu 6 Nov
+
+**Buttons:** two quick replies. en `I'll go`, `Change day`; mr `मी जाईन`, `दिवस बदला`; hi `मैं जाऊँगा`, `दिन बदलें`. Payloads `stp:ok:<id>`, `stp:alt:<id>`.
+
+### 45. `layout_approval` — **New** (design: the roof layout to look at and approve)
+Fields: customer, home
+
+The layout (a report or an uploaded document) is the document header.
+
+> en: Hello {{1}}, here is how the panels will sit on your {{2}} roof. Tap Looks good if you are happy, or ask us if you have a question.
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} छतावर पॅनेल कसे बसतील ते हे आहे. आवडले तर छान आहे दाबा, किंवा प्रश्न असल्यास आम्हाला विचारा.
+
+> hi: नमस्ते {{1}}, आपके {{2}} की छत पर पैनल ऐसे लगेंगे। पसंद हो तो ठीक है दबाएँ, या कोई सवाल हो तो हमसे पूछें।
+
+Examples: Ramesh Patil · Sangli
+
+**Buttons:** two quick replies. en `Looks good`, `I have a question`; mr `छान आहे`, `मला प्रश्न आहे`; hi `ठीक है`, `मेरा सवाल है`.
+Payloads `stp:ok:<id>`, `stp:alt:<id>`. The 2-day reminder reuses `signature_reminder` (its button shows the layout again).
+
+### 46. `loan_sanctioned` — **New** (loan: sent by itself when the loan is marked sanctioned; no buttons)
+Fields: customer, amount, bank
+
+> en: Hello {{1}}, good news: your loan of {{2}} is sanctioned by {{3}}. We will guide you on the next steps.
+
+> mr: नमस्कार {{1}}, खुशखबर: तुमचे {{2}} चे कर्ज {{3}} ने मंजूर केले आहे. पुढच्या पायऱ्यांसाठी आम्ही मदत करू.
+
+> hi: नमस्ते {{1}}, खुशखबरी: आपका {{2}} का लोन {{3}} ने स्वीकृत कर दिया है। अगले कदम में हम आपकी मदद करेंगे।
+
+Examples: Ramesh Patil · ₹2,00,000 · HDFC Bank
+
+### 47. `loan_disbursed` — **New** (loan: sent by itself for each disbursement recorded; no buttons)
+Fields: customer, amount, bank
+
+> en: Hello {{1}}, {{2}} was sent by {{3}} for your solar. Thank you.
+
+> mr: नमस्कार {{1}}, तुमच्या सोलरसाठी {{3}} कडून {{2}} पाठवले गेले. धन्यवाद.
+
+> hi: नमस्ते {{1}}, आपके सोलर के लिए {{3}} की ओर से {{2}} भेजे गए हैं। धन्यवाद।
+
+Examples: Ramesh Patil · ₹1,00,000 · HDFC Bank
+
+### 48. `loan_rejected` — **New** (loan: sent by itself when the loan is marked rejected; a person is also asked to call; no buttons)
+Fields: customer, bank, staff
+
+> en: Hello {{1}}, {{2}} did not approve the loan. {{3}} will call you to plan the next steps.
+
+> mr: नमस्कार {{1}}, {{2}} ने कर्ज मंजूर केले नाही. पुढच्या योजनेसाठी {{3}} तुम्हाला फोन करतील.
+
+> hi: नमस्ते {{1}}, {{2}} ने लोन स्वीकृत नहीं किया। आगे की योजना के लिए {{3}} आपको फ़ोन करेंगे।
+
+Examples: Ramesh Patil · HDFC Bank · Priya
+
+All seven are off until Meta approves **all three languages**; then switch each on (and, for 42-45, "Meta approved the version
+with file and buttons"), in Settings → WhatsApp messages. The loan messages only go for a project whose loan step ("Bank
+loan sanction") has customer messages on.
+
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text
 bodies do not change. Submit the new version under a **new** Meta name (en, mr, hi), then in Settings → WhatsApp messages

@@ -1,4 +1,5 @@
 import type { MessageTemplateDefault } from './message-templates';
+import { STEP_ASK_TEMPLATES } from './send-templates-steps';
 
 /**
  * The customer templates behind the staff "Send to customer" menu (redesign §18): each goes
@@ -143,6 +144,7 @@ export const SEND_MESSAGE_TEMPLATES = [
     preview:
       'Hello {{1}}, we are waiting for the roof at {{2}} to be ready for installation. Tap the button when it is ready.',
   },
+  ...STEP_ASK_TEMPLATES,
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

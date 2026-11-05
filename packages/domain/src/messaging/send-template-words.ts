@@ -1,3 +1,5 @@
+import { STEP_TEMPLATE_WORDS } from './send-template-words-steps';
+
 /**
  * The Marathi and Hindi wording of the "Send to customer" templates and the titles of their
  * quick-reply buttons, as submitted to Meta (docs/whatsapp-templates.md 25-34). The staff preview
@@ -15,6 +17,7 @@ export interface SendTemplateWords {
 }
 
 export const SEND_TEMPLATE_WORDS: Readonly<Record<string, SendTemplateWords>> = {
+  ...STEP_TEMPLATE_WORDS,
   location_request: {
     mr: 'नमस्कार {{1}}, तुमच्या {{2}} घराचे लोकेशन पाठवा, म्हणजे आमची टीम सहज पोहोचेल. पाठवण्यासाठी खालील बटण दाबा.',
     hi: 'नमस्ते {{1}}, कृपया अपने {{2}} घर की लोकेशन भेजें, ताकि हमारी टीम आसानी से पहुँच सके। भेजने के लिए नीचे का बटन दबाएँ।',

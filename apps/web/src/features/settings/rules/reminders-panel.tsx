@@ -11,7 +11,7 @@ import { SettingsSection } from '../settings-section';
 import { SaveBar } from './save-bar';
 import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 
-type DayField = 'paymentGraceDays' | 'paymentRepeatDays' | 'followUpLeadDays';
+type DayField = 'paymentGraceDays' | 'paymentRepeatDays' | 'followUpLeadDays' | 'subsidyChaseDays';
 type TimeField = 'staffDigestTime' | 'ownerSummaryTime';
 
 /** When reminders and summaries go out (PRD 7.2); the worker reads these on each run. */
@@ -95,6 +95,9 @@ export function RemindersPanel() {
             time: draft.staffDigestTime,
           })}
         </p>
+      </SettingsSection>
+      <SettingsSection title={t('subsidy.title')} description={t('subsidy.description')}>
+        {days('subsidyChaseDays', 'subsidy.chase', 'subsidy.chaseHint')}
       </SettingsSection>
       <SettingsSection title={t('whatsapp.title')} description={t('whatsapp.description')}>
         <Switch

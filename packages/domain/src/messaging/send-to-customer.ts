@@ -16,6 +16,10 @@ export const SEND_ACTIONS = [
   'ask_site_ready',
   'ask_installation_check',
   'send_handover_pack',
+  'ask_subsidy_register',
+  'ask_subsidy_credit',
+  'ask_bank_sign',
+  'send_layout',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -58,6 +62,11 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     ask_site_ready: withProject,
     ask_installation_check: withProject,
     send_handover_pack: withProject,
+    // Subsidy, bank and layout steps (redesign §18 11, 15): each belongs to one task of the project.
+    ask_subsidy_register: withProject,
+    ask_subsidy_credit: withProject,
+    ask_bank_sign: withProject,
+    send_layout: withProject,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -78,6 +87,10 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   ask_site_ready: ['projects.manage'],
   ask_installation_check: ['projects.manage'],
   send_handover_pack: ['projects.manage', 'documents.manage'],
+  ask_subsidy_register: ['projects.manage'],
+  ask_subsidy_credit: ['projects.manage'],
+  ask_bank_sign: ['projects.manage'],
+  send_layout: ['projects.manage', 'documents.manage'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];

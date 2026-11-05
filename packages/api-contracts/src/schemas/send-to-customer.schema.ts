@@ -52,6 +52,23 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('ask_installation_check'), taskId: idSchema }),
   /** Every handover paper in one go. */
   z.object({ action: z.literal('send_handover_pack'), projectId: idSchema }),
+  /** "Please register on the PM Surya Ghar portal" for a subsidy task. */
+  z.object({ action: z.literal('ask_subsidy_register'), taskId: idSchema }),
+  /** "Did the subsidy reach your bank account?" for the subsidy release task. */
+  z.object({ action: z.literal('ask_subsidy_credit'), taskId: idSchema }),
+  /** "Please visit {bank}, {branch} on {day} to sign the loan papers"; `day` is YYYY-MM-DD. */
+  z.object({
+    action: z.literal('ask_bank_sign'),
+    projectId: idSchema,
+    branch: z.string().trim().min(2).max(80),
+    day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }),
+  /** The roof layout (a report or an uploaded document) to look at and approve; `taskId` is the design task. */
+  z.object({
+    action: z.literal('send_layout'),
+    paperId: z.string().min(3).max(200),
+    taskId: idSchema,
+  }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 
@@ -84,8 +101,8 @@ export const sendOfferSchema = z.object({
   detail: z.string(),
   /** What to post to send it; free-text inputs are filled in by the person first. */
   request: sendRequestSchema.nullable(),
-  /** `reason` when the person must write the reason for a delay notice. */
-  input: z.enum(['reason']).nullable(),
+  /** `reason` for a delay notice; `bank_visit` when the person gives the branch and the day. */
+  input: z.enum(['reason', 'bank_visit']).nullable(),
   preview: sendPreviewSchema.nullable(),
 });
 export type SendOffer = z.infer<typeof sendOfferSchema>;

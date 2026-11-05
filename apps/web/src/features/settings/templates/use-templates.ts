@@ -67,6 +67,8 @@ export const SAMPLE = {
   when: 'Thu 6 Nov, morning',
   day: 'Thu 6 Nov',
   count: '4',
+  bank: 'HDFC Bank',
+  branch: 'Sangli main branch',
 } as const;
 
 /** Samples that differ by message: the invite carries the app link, not a pay link. */

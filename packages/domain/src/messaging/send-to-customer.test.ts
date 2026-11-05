@@ -114,6 +114,19 @@ describe('rights of the journey steps', () => {
   });
 });
 
+describe('the subsidy, bank and layout steps', () => {
+  it('fit a project or a task, never a lead alone, and follow the project rights', () => {
+    const steps = ['ask_subsidy_register', 'ask_subsidy_credit', 'ask_bank_sign', 'send_layout'];
+    for (const action of steps) {
+      expect(sendActionsFor(place({ project: true }))).toContain(action);
+      expect(sendActionsFor(place({ task: true }))).toContain(action);
+      expect(sendActionsFor(place({ lead: true }))).not.toContain(action);
+    }
+    expect(rightsFor('ask_subsidy_credit')).toEqual(['projects.manage']);
+    expect(rightsFor('send_layout')).toContain('documents.manage');
+  });
+});
+
 describe('pinDecision', () => {
   const here = { latitude: 17.32, longitude: 74.62 };
   it('saves a pin on a home with no location', () => {

@@ -4,6 +4,7 @@
  * Drafted by the OneOhm team. Have a native Hindi speaker read it once before go-live.
  */
 import { JOURNEY_HI } from './customer-message-journey';
+import { STEP_HI } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
 
 const HI_STAGES: Readonly<Record<string, string>> = {
@@ -22,6 +23,7 @@ const HI_WAITING: Readonly<Record<string, string>> = {
 export const HINDI_WORDS: LanguageWords = {
   messages: {
     ...JOURNEY_HI,
+    ...STEP_HI,
     quotation_sent: (p) => ({
       title: 'आपका कोटेशन तैयार है',
       body: `${p.number}: ${p.total}। सब्सिडी के बाद आपको ${p.effective} देने हैं।`,

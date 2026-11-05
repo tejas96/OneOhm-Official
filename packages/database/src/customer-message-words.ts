@@ -2,9 +2,10 @@ import { customerLanguage, DEFAULT_MILESTONES, DEFAULT_SERVICE_CATEGORIES } from
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { HINDI_WORDS } from './customer-message-hi';
-import { JOURNEY_EN, JOURNEY_MESSAGES } from './customer-message-journey';
+import { JOURNEY_MESSAGES, JOURNEY_EN as JOURNEY_ONLY_EN } from './customer-message-journey';
 import { MARATHI_WORDS } from './customer-message-mr';
 import { instalmentWords } from './customer-message-names';
+import { STEP_EN, STEP_MESSAGES } from './customer-message-steps';
 import { customers } from './schema/crm.schema';
 
 type Payload = Readonly<Record<string, string>>;
@@ -53,10 +54,12 @@ export const IN_APP_MESSAGES = [
   'visit_cancelled',
   'visit_crew_changed',
   ...JOURNEY_MESSAGES,
+  ...STEP_MESSAGES,
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
-export { JOURNEY_EN };
+/** The journey messages and the subsidy, loan and layout ones, as the app inbox says them in English. */
+export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN };
 
 /** A paper's home when its request has no project; said in the customer's language. */
 export const SOME_HOME = 'your home';
