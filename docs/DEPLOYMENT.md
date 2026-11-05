@@ -148,9 +148,12 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 ### Templates
 
 Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
-full list (25 templates, category *Utility*, language *English*), with each body, field
-order and sample values, is in [whatsapp-templates.md](whatsapp-templates.md). The names
-match the app's keys, so no change in **Settings → WhatsApp messages** is needed.
+full list (56 templates: 53 *Utility*, including `referral_reward`, which Meta may rule
+*Marketing*, and 3 *Marketing*: `self_survey_offer`, `self_survey_reminder`,
+`amc_renewal_offer`), each submitted in English, Marathi and Hindi, with each body, field order and
+sample values, is in [whatsapp-templates.md](whatsapp-templates.md) (summary table first). The names
+match the app's keys, so no change in **Settings → WhatsApp messages** is needed. Marketing ones
+cost more per message and are never sent to a customer who said STOP or is not on WhatsApp.
 
 - With the access token in place, the templates can be registered through the Graph API
   (`POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates`, `parameter_format: POSITIONAL`).
