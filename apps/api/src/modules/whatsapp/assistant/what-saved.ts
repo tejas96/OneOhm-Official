@@ -43,8 +43,13 @@ export async function saySaved(
   },
 ): Promise<void> {
   const home = saved.home?.title ?? null;
-  const body =
-    saved.count > 1
+  // A file with no kind is "Your file", not bold and never "Other file".
+  const other = saved.title === WHAT_WORDS.otherFile;
+  const body = other
+    ? saved.count > 1
+      ? WHAT_WORDS.savedOtherMany(saved.count, home)
+      : WHAT_WORDS.savedOther(home)
+    : saved.count > 1
       ? WHAT_WORDS.savedMany(saved.count, saved.title, home)
       : WHAT_WORDS.saved(saved.title, home);
   await sayWithTaps(tx, chat, body, [

@@ -18,10 +18,10 @@ const EN_WHAT = {
   askMany: (count: number, photos: boolean) =>
     `Got your ${count} ${photos ? 'photos' : 'files'} ✅ What are they?`,
   askEach: (n: number, of: number) => `File ${n} of ${of} — what is it?`,
-  confirmProblem: (count: number) =>
+  confirmProblem: (count: number, photos = true) =>
     count === 1
-      ? 'Is this a photo for the problem you told us about?'
-      : 'Are these photos for the problem you told us about?',
+      ? `Is this ${photos ? 'a photo ' : ''}for the problem you told us about?`
+      : `Are these ${photos ? 'photos ' : ''}for the problem you told us about?`,
   confirmOne: (paper: string, home: string | null) =>
     `Is this your *${paper}*${home ? ` for ${home}` : ''}?`,
   confirmMany: (count: number, photos: boolean, paper: string, home: string | null) =>
@@ -43,7 +43,12 @@ const EN_WHAT = {
   savedMany: (count: number, paper: string, home: string | null) =>
     `Saved ✅ ${count} files as *${paper}*${home ? ` · ${home}` : ''}. We'll check them.`,
   stillNeed: (paper: string) => `We still need your *${paper}*.`,
-  otherFile: 'Other file',
+  /** A file with no kind (category other): named "Your file", never "Other file". */
+  otherFile: 'Your file',
+  savedOther: (home: string | null) =>
+    `Saved ✅ Your file${home ? ` · ${home}` : ''}. We'll check it.`,
+  savedOtherMany: (count: number, home: string | null) =>
+    `Saved ✅ Your ${count} files${home ? ` · ${home}` : ''}. We'll check them.`,
   payment: "Thanks — we'll confirm your payment within 1 working day.",
   old: 'That question is old — what are these files?',
   changeLate: "We can't change that one here any more. Tell us and we'll fix it.",
@@ -63,8 +68,10 @@ const MR_WHAT: Words<typeof EN_WHAT> = {
   ask: 'हे काय आहे?',
   askMany: (count, photos) => `तुमचे ${count} ${photos ? 'फोटो' : 'फाइल'} मिळाले ✅ ते काय आहेत?`,
   askEach: (n, of) => `${of} पैकी फाइल ${n} — ही काय आहे?`,
-  confirmProblem: (count) =>
-    count === 1 ? 'हा तुम्ही सांगितलेल्या समस्येचा फोटो आहे का?' : 'हे तुम्ही सांगितलेल्या समस्येचे फोटो आहेत का?',
+  confirmProblem: (count, photos = true) =>
+    count === 1
+      ? `हा तुम्ही सांगितलेल्या समस्येचा ${photos ? 'फोटो ' : ''}आहे का?`
+      : `हे तुम्ही सांगितलेल्या समस्येचे ${photos ? 'फोटो ' : ''}आहेत का?`,
   confirmOne: (paper, home) => `हे ${home ? `${home} साठीचे ` : ''}तुमचे *${paper}* आहे का?`,
   confirmMany: (count, photos, paper, home) =>
     `तुमचे ${count} ${photos ? 'फोटो' : 'फाइल'} मिळाले ✅ ते ${home ? `${home} साठीचे ` : ''}तुमचे *${paper}* आहेत का?`,
@@ -81,7 +88,10 @@ const MR_WHAT: Words<typeof EN_WHAT> = {
   savedMany: (count, paper, home) =>
     `जतन केले ✅ ${count} फाइल *${paper}* म्हणून${home ? ` · ${home}` : ''}. आम्ही त्या तपासू.`,
   stillNeed: (paper) => `आम्हाला अजून तुमचे *${paper}* हवे आहे.`,
-  otherFile: 'इतर फाइल',
+  otherFile: 'तुमची फाइल',
+  savedOther: (home) => `जतन केले ✅ तुमची फाइल${home ? ` · ${home}` : ''}. आम्ही ती तपासू.`,
+  savedOtherMany: (count, home) =>
+    `जतन केले ✅ तुमच्या ${count} फाइल${home ? ` · ${home}` : ''}. आम्ही त्या तपासू.`,
   payment: 'धन्यवाद — तुमचे पेमेंट आम्ही 1 कामाच्या दिवसात पक्के करू.',
   old: 'तो प्रश्न जुना झाला आहे — या फाइल काय आहेत?',
   changeLate: 'ते इथून आता बदलता येत नाही. आम्हाला सांगा, आम्ही ते दुरुस्त करू.',
@@ -100,8 +110,10 @@ const HI_WHAT: Words<typeof EN_WHAT> = {
   ask: 'यह क्या है?',
   askMany: (count, photos) => `आपकी ${count} ${photos ? 'फ़ोटो' : 'फ़ाइलें'} मिल गईं ✅ ये क्या हैं?`,
   askEach: (n, of) => `${of} में से फ़ाइल ${n} — यह क्या है?`,
-  confirmProblem: (count) =>
-    count === 1 ? 'क्या यह आपकी बताई समस्या की फ़ोटो है?' : 'क्या ये आपकी बताई समस्या की फ़ोटो हैं?',
+  confirmProblem: (count, photos = true) =>
+    count === 1
+      ? `क्या यह आपकी बताई समस्या ${photos ? 'की फ़ोटो ' : 'का '}है?`
+      : `क्या ये आपकी बताई समस्या ${photos ? 'की फ़ोटो ' : 'के '}हैं?`,
   confirmOne: (paper, home) => `क्या यह ${home ? `${home} के लिए ` : ''}आपका *${paper}* है?`,
   confirmMany: (count, photos, paper, home) =>
     `आपकी ${count} ${photos ? 'फ़ोटो' : 'फ़ाइलें'} मिल गईं ✅ क्या ये ${home ? `${home} के लिए ` : ''}आपका *${paper}* हैं?`,
@@ -118,7 +130,10 @@ const HI_WHAT: Words<typeof EN_WHAT> = {
   savedMany: (count, paper, home) =>
     `सेव हो गया ✅ ${count} फ़ाइलें *${paper}* के रूप में${home ? ` · ${home}` : ''}। हम इन्हें जाँचेंगे।`,
   stillNeed: (paper) => `हमें अभी भी आपका *${paper}* चाहिए।`,
-  otherFile: 'दूसरी फ़ाइल',
+  otherFile: 'आपकी फ़ाइल',
+  savedOther: (home) => `सेव हो गया ✅ आपकी फ़ाइल${home ? ` · ${home}` : ''}। हम इसे जाँचेंगे।`,
+  savedOtherMany: (count, home) =>
+    `सेव हो गया ✅ आपकी ${count} फ़ाइलें${home ? ` · ${home}` : ''}। हम इन्हें जाँचेंगे।`,
   payment: 'धन्यवाद — हम 1 कार्य-दिवस में आपके भुगतान की पुष्टि करेंगे।',
   old: 'वह सवाल पुराना हो गया है — ये फ़ाइलें क्या हैं?',
   changeLate: 'इसे अब यहाँ बदला नहीं जा सकता। हमें बताइए, हम ठीक कर देंगे।',
