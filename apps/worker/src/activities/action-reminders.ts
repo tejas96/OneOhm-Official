@@ -35,6 +35,8 @@ const WHAT: Readonly<Record<string, string>> = {
   pay: 'a payment (or its proof)',
   callback: 'a time for a call back',
   visit_pick: 'a day for our visit',
+  confirm: 'an answer about their site',
+  signature: 'a paper to agree to',
 };
 
 /**
@@ -60,7 +62,14 @@ export async function queueActionReminders(
     .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        inArray(customerActions.type, ['location', 'pay', 'callback', 'visit_pick']),
+        inArray(customerActions.type, [
+          'location',
+          'pay',
+          'callback',
+          'visit_pick',
+          'confirm',
+          'signature',
+        ]),
         eq(customerActions.status, 'open'),
         gt(customerActions.createdAt, new Date(now.getTime() - TEAM_UNTIL)),
         lte(customerActions.createdAt, new Date(now.getTime() - CUSTOMER_AFTER)),
@@ -71,8 +80,12 @@ export async function queueActionReminders(
     .limit(PER_TICK);
   let done = 0;
   for (const row of open) {
-    // A pin waiting for its home is the customer's own move; nobody asked.
-    if (!row.action.requestedByUserId && row.action.type !== 'visit_pick') continue;
+    // A pin waiting for its home is the customer's own move; nobody asked. The system asks the visit
+    // day and the roof and installation questions itself. Once a paper is agreed to, its signed copy
+    // is a paper of its own and is chased as one.
+    const bySystem = ['visit_pick', 'confirm'].includes(row.action.type);
+    if (!row.action.requestedByUserId && !bySystem) continue;
+    if (row.action.type === 'signature' && row.action.payload.signedActionId) continue;
     const due = actionReminderDue(row.action.createdAt, now);
     if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
     if (due === 'team') {
@@ -97,6 +110,7 @@ async function remindCustomer(db: Database, row: Row, now: Date, timeZone: strin
   if (now.getTime() - action.createdAt.getTime() >= CUSTOMER_UNTIL) return false;
   if (action.type === 'callback') return remindCallback(db, row, `action_reminder:${action.id}`);
   if (action.type === 'visit_pick') return remindVisitPick(db, row, `action_reminder:${action.id}`);
+  if (action.type === 'confirm') return remindConfirm(db, row, `action_reminder:${action.id}`);
   if (action.type !== 'location') return false;
   const home = await homeNameOf(db, action.projectId, action.propertyId);
   return queueCustomerMessage(
@@ -171,6 +185,22 @@ async function remindCallback(db: Database, { action, customer, phone }: Row, ke
       afternoonPayload: tap('afternoon'),
       eveningPayload: tap('evening'),
     },
+    key,
+  );
+}
+
+/** The roof or installation question again, by its approved template (the same buttons). */
+async function remindConfirm(db: Database, { action, customer, phone }: Row, key: string) {
+  const roof = action.payload.kind === 'site_ready';
+  const home = await homeNameOf(db, action.projectId, action.propertyId);
+  const given = { customer: titleCaseName(customer), home };
+  return queueCustomerMessage(
+    db,
+    phone,
+    roof ? 'site_ready_check' : 'installation_check',
+    roof
+      ? { ...given, yesPayload: `rdy:y:${action.id}`, notYetPayload: `rdy:n:${action.id}` }
+      : { ...given, yesPayload: `ins:y:${action.id}`, wrongPayload: `ins:bad:${action.id}` },
     key,
   );
 }

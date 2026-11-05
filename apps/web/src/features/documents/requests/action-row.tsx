@@ -9,10 +9,12 @@ import {
   CalendarCheck,
   CalendarClock,
   Check,
+  CircleHelp,
   ExternalLink,
   FileText,
   IndianRupee,
   MapPin,
+  PenLine,
   PhoneCall,
 } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
@@ -45,6 +47,8 @@ const ICON: Readonly<Record<string, LucideIcon>> = {
   callback: PhoneCall,
   visit_pick: CalendarClock,
   presence: CalendarCheck,
+  signature: PenLine,
+  confirm: CircleHelp,
 };
 
 /** A call-back that waits is "To call", a picked visit day "To confirm"; the rest by status. */
