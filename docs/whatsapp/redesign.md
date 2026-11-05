@@ -699,3 +699,36 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   or the step); the handover pack offer says "Sent on …/Not sent yet" and the fact is set only when the papers really went;
   reminders for "Not yet" count from the answer (`site_ready_reminder`), a paper not agreed gets `signature_reminder` at 2 days;
   cancelling only the signed copy reopens the signature; the signed copy is filed in the paper's own folder (else DISCOM papers).
+
+## 22g. Phase 4b — subsidy, loan and layout steps
+
+- **Four more Send to customer actions** (project and task places; `apps/api/src/modules/journey/step-*.ts`): `ask_subsidy_register`,
+  `ask_subsidy_credit`, `ask_bank_sign`, `send_layout` (rights: projects; the layout also documents). Each asks about one task
+  of the project (subsidy application, subsidy release, loan sanction, system design) and needs that task's customer messages on
+  (§21a). Each is a `confirm` customer action whose payload names its kind (`subsidy_register`, `subsidy_credit`, `bank_sign`,
+  `layout`), with status, project log (on the step's own history), audit, reminders, a cancel that tells the customer, a row in
+  "Asked from the customer" and a Home line. Taps `stp:ok|alt|now:<id>`.
+- **PM Surya Ghar registration:** "Please register on the PM Surya Ghar portal for your *home* solar. It takes 5 minutes:" with three
+  short steps and pmsuryaghar.gov.in; [Done] [Need help]. Done: logged on the subsidy step, closes, the step's owner is told. Need
+  help: closes and the chat goes to its person (hand-over alert "Needs help to register…").
+- **Bank passbook:** the existing paper ask on the `subsidy_bank` checklist row, one tap in the Send to customer sheet of a subsidy
+  step (web "Ask for these papers" row; no new API).
+- **Did the subsidy reach your bank?** "Did the *₹78,000* subsidy for *home* reach your bank account?" [Yes, received] [Not yet].
+  Goes by itself when the subsidy release step is done (if its template allows) and from the step once it is done. Yes: closes,
+  project fact `subsidy_received`, owner told. Not yet: stays open with [It has arrived] (also on Home); after the days in
+  Settings → Reminders (default 15, counted from the answer) the owner of the step is told once ("says the subsidy has not
+  reached them"). The project update line still reads the subsidy status from the tasks, so it is the same status.
+- **Loan papers:** the loan card's Send to customer sheet lists the lender's papers still to come (else the checklist item
+  "Bank loan papers"), each asked with one tap or all at once: one paper action each (existing flow). When the last loan paper is
+  checked (Looks good, or a staff upload) the "Collect loan documents" step stops waiting on the customer and its owner is told.
+- **Loan news:** sanctioned, money sent (each disbursement) and not approved go to the customer by themselves when the loan step
+  ("Bank loan sanction") allows messages: chat inside 24 h if the template is on, else the approved template (off by default).
+  Not approved also alerts the chat's person to call. Once per status or payment; the project log says what really went.
+- **Sign at the bank:** staff give the branch and the day in the sheet; "Please visit *bank, branch* on *day* to sign the loan
+  papers." [I'll go] [Change day]. Change day tells the loan step's owner and closes the ask.
+- **Layout approval:** a report or uploaded document (layout/design files first) + "Here is how the panels will sit on your *home*
+  roof." [Looks good] [I have a question]. Looks good: logged on the design task, owner told. A question goes to the chat's person
+  and the ask stays open, so the customer can still approve.
+- **Templates (inactive by default, migration 0083, docs 42-48):** `subsidy_register_help`, `subsidy_credit_check`, `bank_sign_visit`,
+  `layout_approval` (quick replies), `loan_sanctioned`, `loan_disbursed`, `loan_rejected`. The 2-day reminders reuse the ask's own
+  template (the layout reminder uses `signature_reminder`, whose button shows the layout again).
