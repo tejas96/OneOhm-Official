@@ -1,7 +1,6 @@
 import {
   customerActions,
   customers,
-  type Database,
   type DatabaseExecutor,
   homeNameOf,
   projects,
@@ -36,12 +35,15 @@ export type ConfirmAnswer = 'yes' | 'not_yet' | 'now' | 'bad';
  * Tapping twice changes nothing more.
  */
 export function answerConfirm(
-  db: Database,
+  db: DatabaseExecutor,
   customerId: string,
   actionId: string,
   kind: 'site_ready' | 'installation',
   answer: ConfirmAnswer,
+  /** Set when the team answered in person for a customer who is not on WhatsApp. */
+  by?: { readonly userId: string },
 ): Promise<Confirmed> {
+  const via = by ? 'in person' : 'WhatsApp';
   return db.transaction(async (tx): Promise<Confirmed> => {
     const [action] = await tx
       .select()
@@ -78,16 +80,21 @@ export function answerConfirm(
       await logAction(tx, action, {
         kind: 'customer_action',
         message: line,
-        userId: null,
+        userId: by?.userId ?? null,
         data: { customerActionId: action.id, answer: answered },
       });
-      await recordAudit(tx, null, 'customer_action.answered', 'customer_action', action.id, {
-        answer: answered,
-      });
+      await recordAudit(
+        tx,
+        by?.userId ?? null,
+        'customer_action.answered',
+        'customer_action',
+        action.id,
+        { answer: answered, via },
+      );
     };
     if (answer === 'not_yet') {
       if (asked) return { kind: 'notYet' };
-      await record('not_yet', `${who} said the roof at ${home} is not ready yet (WhatsApp)`, false);
+      await record('not_yet', `${who} said the roof at ${home} is not ready yet (${via})`, false);
       if (task) {
         const since = await waitOnCustomer(tx, task, 'roof not ready');
         if (since)
@@ -109,7 +116,7 @@ export function answerConfirm(
     if (answer === 'bad') {
       await record(
         'problem',
-        `${who} says the installation at ${home} is not right (WhatsApp)`,
+        `${who} says the installation at ${home} is not right (${via})`,
         true,
       );
       if (action.projectId)
@@ -123,8 +130,8 @@ export function answerConfirm(
     }
     const line =
       kind === 'site_ready'
-        ? `${who} confirmed the roof at ${home} is ready (WhatsApp)`
-        : `${who} confirmed the installation at ${home} is finished (WhatsApp)`;
+        ? `${who} confirmed the roof at ${home} is ready (${via})`
+        : `${who} confirmed the installation at ${home} is finished (${via})`;
     await record(answer === 'now' ? 'ready_now' : 'yes', line, true);
     if (task && asked) {
       await resumeAfterWait(tx, task, String(action.payload.waitSince ?? '') || null);

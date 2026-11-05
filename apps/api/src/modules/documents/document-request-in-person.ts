@@ -42,10 +42,33 @@ export async function closeInPerson(
   if (how.how === 'confirm') {
     if (!answer)
       throw invalid('Say whether the answer is Yes or Not yet.', { answer: 'Required.' });
-    const done = await answerConfirm(db, request.customerId, request.id, how.kind, answer);
+    // "Not yet" is the roof question's answer (the step waits on the customer); an installation that
+    // is not finished is a problem to report, not a pause.
+    if (answer === 'not_yet' && how.kind === 'installation')
+      throw invalid('Not yet does not apply to the installation question.', {
+        answer:
+          'Answer Yes when the installation is finished; otherwise report the problem on the project.',
+      });
+    // The answer and the tick of the team's task stand or fall together.
+    const done = await db.transaction(async (tx) => {
+      const result = await answerConfirm(tx, request.customerId, request.id, how.kind, answer, {
+        userId: actor.userId,
+      });
+      // The answer wrote its own log line and audit row ("in person", by this user); "Not yet"
+      // keeps the ask and its task open, and asking again adds nothing.
+      if (result.kind === 'yes' || result.kind === 'now') {
+        await tickTask(tx, actor.userId, request);
+        await recordAudit(
+          tx,
+          actor.userId,
+          'customer_action.done_in_person',
+          'customer_action',
+          request.id,
+        );
+      }
+      return result;
+    });
     if (done.kind === 'old') throw conflict('That question was already answered.', 'answered');
-    // "Not yet" keeps the ask open, as the customer's own tap does.
-    await db.transaction((tx) => note(tx, actor.userId, request, answer === 'yes'));
     return;
   }
   await db.transaction((tx) => closePlain(tx, actor.userId, request));
@@ -62,35 +85,32 @@ export async function closePlain(
     .update(customerActions)
     .set({ status: 'closed', doneAt: now, closedAt: now, updatedAt: now })
     .where(and(eq(customerActions.id, request.id), eq(customerActions.status, 'open')));
-  await note(tx, userId, request, true);
+  await note(tx, userId, request);
+}
+
+/** Ticks the team's task made with the ask. */
+async function tickTask(tx: DatabaseExecutor, userId: string, request: DocumentRequest) {
+  await tx
+    .update(customerHandovers)
+    .set({ doneAt: new Date(), doneByUserId: userId, note: 'Done in person' })
+    .where(
+      and(
+        // The task points at its ask; a staff-sent one's key is `send:<action>:<ask id>:<press id>`.
+        or(
+          eq(customerHandovers.actionId, request.id),
+          like(customerHandovers.dedupeKey, `send:%:${request.id}:%`),
+        ),
+        isNull(customerHandovers.doneAt),
+      ),
+    );
 }
 
 /** Ticks the task made with the ask, then the log line and the audit row. */
-async function note(
-  tx: DatabaseExecutor,
-  userId: string,
-  request: DocumentRequest,
-  tick: boolean,
-): Promise<void> {
-  if (tick)
-    await tx
-      .update(customerHandovers)
-      .set({ doneAt: new Date(), doneByUserId: userId, note: 'Done in person' })
-      .where(
-        and(
-          // The task points at its ask; a staff-sent one's key is `send:<action>:<ask id>:<press id>`.
-          or(
-            eq(customerHandovers.actionId, request.id),
-            like(customerHandovers.dedupeKey, `send:%:${request.id}:%`),
-          ),
-          isNull(customerHandovers.doneAt),
-        ),
-      );
+async function note(tx: DatabaseExecutor, userId: string, request: DocumentRequest): Promise<void> {
+  await tickTask(tx, userId, request);
   await logAction(tx, request, {
     kind: 'document_request',
-    message: tick
-      ? `${request.title} done in person`
-      : `${request.title}: answered Not yet in person`,
+    message: `${request.title} done in person`,
     userId,
     data: { customerActionId: request.id },
   });

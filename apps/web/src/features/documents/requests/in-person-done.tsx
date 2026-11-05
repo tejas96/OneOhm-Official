@@ -25,14 +25,17 @@ export function InPersonDone({ request }: { readonly request: DocumentRequest })
         >
           {t('yes')}
         </Button>
-        <Button
-          size="sm"
-          variant="quiet"
-          pending={done.isPending}
-          onClick={() => done.mutate({ request, answer: 'not_yet' })}
-        >
-          {t('notYet')}
-        </Button>
+        {/* "Not yet" pauses the roof question only; an installation is Yes, or a problem to report. */}
+        {how.kind === 'site_ready' ? (
+          <Button
+            size="sm"
+            variant="quiet"
+            pending={done.isPending}
+            onClick={() => done.mutate({ request, answer: 'not_yet' })}
+          >
+            {t('notYet')}
+          </Button>
+        ) : null}
       </>
     );
   return (
