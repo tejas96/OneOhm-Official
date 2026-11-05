@@ -736,7 +736,7 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
 ## 22h. Phase 5 — self site survey with a discount
 
 - **Setting** (Settings → Reminders → "Self survey offer"): on/off (default on) and the amount (default ₹1,000, whole rupees, 1 to
-  1,00,000), stored with the reminder timing (`selfSurveyOffer`, `selfSurveyPaise`). Off: the Send to customer sheet, the
+  10,000), stored with the reminder timing (`selfSurveyOffer`, `selfSurveyPaise`). Off: the Send to customer sheet, the
   API (409) and Home offer nothing. The amount is written in the ask when offered (`offerPaise`); a later change in Settings does
   not change a survey already offered.
 - **Offer** (`self_survey`, project and task places, rights projects.manage): "Do your own site survey in 5 minutes and get *₹1,000
@@ -763,13 +763,30 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   unchanged. Ask again asks only the picked items (chat, or the reminder template when the window is closed; a new photo replaces
   the old one on the step, the old file is kept and taken off). Book a visit cancels the survey (no discount) and sends the days.
   Deadline: owner after 1 working day, manager after 2 (the staff-check pattern).
-- **Discount:** when the survey step is submitted for approval (or completed with no reviewer), `milestone_credits` takes the offered
-  amount off the next customer instalment that has not fallen due (status upcoming, no due date): the instalment's amount drops,
-  so the ledger books the reduced amount when it falls due. One live credit per approval (unique index); audit
-  `milestone_credit.applied`; project log line; the customer hears "Survey approved ✅ ₹1,000 off your next payment." If the
-  reviewer sends the step back the amount is put back (`milestone_credit.reversed`) and the survey waits for its check again;
-  if that instalment already fell due the send-back is refused until finance adjusts it. No upcoming instalment: the log says
-  so, the customer is not promised, and finance gives the discount by hand.
-- **Unfinished:** a started survey shows on Home as "Finish your site survey" for 7 days; the 2-day reminder is
-  `self_survey_reminder` (docs 51). The customer app subsidy line reads the same note as the WhatsApp Project update.
+- **Discount:** the project earns it once, at the survey step's final approval (the step completes). `milestone_credits`
+  (GST inclusive; status pending / applied / reversed / paid_out; one live row per project, enforced by a unique index and a
+  per-project lock) takes the amount off the next customer instalment that has not fallen due (upcoming, no due date; the
+  instalment keeps at least one rupee), so the ledger books the reduced amount when it falls due. Audit
+  `milestone_credit.applied`, project log line, and the customer hears "Survey approved ✅ ₹1,000 off your payment: {payment}."
+  A second survey on the same project, or a second completion, never earns a second. While the step waits for review the
+  survey is not offered again (menu, API, Home); a project that already had its survey is not offered it.
+- **No payment left to take it:** the credit is `pending`, the finance desk is alerted (`credit_pending`, like a price
+  difference the final payment cannot absorb), the project log says so, and the customer is told "₹1,000 will come off your
+  final payment." It is applied by itself when a payment becomes upcoming with room (a revision or change accepted) or just
+  before an instalment falls due (task completion). Finance sees it on the project's Payments tab and can mark it given another
+  way with a reason (`paid_out`, audited). Not done: recording it as customer credit (2110) needs a ledger source for a
+  non-cash credit (a new journal source and the accountant's say).
+- **GST:** the discount is GST inclusive and shown on the tax invoice as "Self-survey discount" lines (one per GST rate, negative
+  taxable value and tax); the milestones carry the GST left over, so the invoice, the payment schedule and the ledger agree.
+  **CA to confirm: discount on the invoice vs a credit note.**
+- **Undo:** a reviewer's send-back before the final approval has taken nothing off. `undoApproval` (ready for a future "reopen
+  step") puts an applied credit back unless its instalment fell due (then it is refused until finance adjusts) and tells the
+  customer. Completing the step while an ask-again is open cancels that ask and tells the customer there is no need.
+- **Only the residential rooftop survey** (`site_survey`) takes a self survey, not societies, commercial or ground-mount.
+  Home shows the offer only when nothing else needs the customer (it is not counted in "N things need you") and never to
+  a customer who said STOP.
+- **Known limit:** a loan paper ask made before the "Collect loan documents" step waits on the customer ends that wait when
+  checked, whatever the wait was about (asks made during a wait on someone else never do).
+- **Unfinished:** a started survey shows on Home as "Finish your site survey"; the 2-day reminder (`self_survey_reminder`, docs 51)
+  counts from the start or the last ask-again; after 7 days it is cancelled as abandoned (log) and nobody is told to call. The customer app subsidy line reads the same note as the WhatsApp Project update.
 

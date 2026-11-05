@@ -128,10 +128,13 @@ describe('Self survey: ask again, a visit instead, unfinished, deadlines', () =>
     expect((await lastReply(phone))?.body).toBe('What is your roof made of?');
 
     const db = acceptanceDb().db;
-    await rows('UPDATE customer_actions SET created_at = $2 WHERE id = $1', [
-      ask.id,
-      new Date(NOON.getTime() - 3 * 86_400_000),
-    ]);
+    // The reminder counts from the start of the survey, 3 days ago.
+    const started = new Date(NOON.getTime() - 3 * 86_400_000);
+    await rows(
+      `UPDATE customer_actions SET created_at = $2,
+         payload = jsonb_set(payload, '{startedAt}', to_jsonb($3::text)) WHERE id = $1`,
+      [ask.id, started, started.toISOString()],
+    );
     await queueActionReminders(db, NOON, 'Asia/Kolkata');
     await queueActionReminders(db, NOON, 'Asia/Kolkata');
     const reminders = (await outboxFor(phone)).filter(

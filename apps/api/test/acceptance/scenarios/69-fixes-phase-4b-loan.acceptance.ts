@@ -103,7 +103,7 @@ describe('Phase 4b fixes: loan', () => {
     expect(logs).toHaveLength(1);
   });
 
-  it('loan news says it was not sent to a customer who said STOP', async () => {
+  it('loan news after STOP is logged as an SMS, not as WhatsApp', async () => {
     const sale = await sellProject(admin, { name: 'Loan News Stop (test)', loan: true });
     const { customer, project } = sale;
     await saveLoan(admin, sale);
@@ -114,11 +114,11 @@ describe('Phase 4b fixes: loan', () => {
       "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE 'Told the customer%did not approve%'",
       [project.id],
     );
-    expect(line?.message).toContain('(not sent: the message is switched off)');
-    expect(
-      (await outboxFor(customer.phone)).filter(
-        (row) => row.template === 'loan_rejected' && row.status === 'sent',
-      ),
-    ).toHaveLength(0);
+    expect(line?.message).toContain('by SMS (they said STOP on WhatsApp)');
+    // Money and loan news still go by SMS after STOP (owner's rule); never as a WhatsApp template.
+    const queued = (await outboxFor(customer.phone)).filter(
+      (row) => row.template === 'loan_rejected',
+    );
+    expect(queued.map((row) => row.channel)).toEqual(['sms']);
   });
 });

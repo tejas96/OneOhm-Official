@@ -57,7 +57,7 @@ describe('Self survey: the engineer approves', () => {
       status: 'closed',
     });
     expect((await lastReply(sale.customer.phone))?.body).toBe(
-      'Survey approved ✅ ₹1,000 off your next payment.',
+      `Survey approved ✅ ₹1,000 off your payment: ${next?.label}.`,
     );
     const [line] = await rows<{ message: string }>(
       "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE 'Self survey approved%'",
@@ -78,41 +78,39 @@ describe('Self survey: the engineer approves', () => {
     expect(taskId).toBe(done.id);
   });
 
-  it('is never applied twice: a second live credit for the approval is refused by the database', async () => {
-    const { sale, ask } = await received('Survey Twice (test)');
+  it('is never applied twice: a second live credit for the project is refused by the database', async () => {
+    const { sale } = await received('Survey Twice (test)');
     await finish(sale, true);
     const [credit] = await credits(sale.project.id);
     await expect(
       rows(
-        `INSERT INTO milestone_credits (project_id, milestone_id, amount_paise, source, source_id)
-         VALUES ($1, $2, 100000, 'self_survey', $3)`,
-        [sale.project.id, credit?.milestone_id, ask.id],
+        `INSERT INTO milestone_credits (project_id, milestone_id, amount_paise, source, source_id, status)
+         VALUES ($1, $2, 100000, 'self_survey', gen_random_uuid(), 'applied')`,
+        [sale.project.id, credit?.milestone_id],
       ),
     ).rejects.toThrow(/milestone_credits_live_unique/);
     expect(await credits(sale.project.id)).toHaveLength(1);
   });
 
-  it('a review that sends the survey back puts the credit back; approving again applies it once', async () => {
-    const { sale, ask } = await received('Survey Undo (test)');
+  it('a review that sends the survey back has taken nothing off yet; approving later takes it off once', async () => {
+    const { sale, ask } = await received('Survey Back (test)');
     const before = await instalments(sale.project.id);
     const sent = await finish(sale, false);
-    // Another person reviews: the survey step is an approval step.
     expect(sent.status).toBe('in_review');
-    const mid = await instalments(sale.project.id);
-    expect(mid.reduce((sum, one) => sum + one.amount, 0)).toBe(
-      before.reduce((sum, one) => sum + one.amount, 0) - 100_000,
-    );
-    await admin.post(`/tasks/${sent.id}/return`, { reason: 'Meter photo is blurry (test)' });
+    // Nothing is applied or promised before the final approval.
     expect(await instalments(sale.project.id)).toEqual(before);
-    expect(await credits(sale.project.id)).toMatchObject([{ reversed_at: expect.any(Date) }]);
+    expect(await credits(sale.project.id)).toEqual([]);
     expect((await surveysOf(sale.customer.customerId))[0]).toMatchObject({
       id: ask.id,
       status: 'received',
     });
+    await admin.post(`/tasks/${sent.id}/return`, { reason: 'Meter photo is blurry (test)' });
+    expect(await credits(sale.project.id)).toEqual([]);
     const again = await finish(sale, true);
     expect(again.status).toBe('completed');
-    const live = (await credits(sale.project.id)).filter((one) => one.reversed_at === null);
-    expect(live).toHaveLength(1);
+    expect((await credits(sale.project.id)).filter((one) => one.status === 'applied')).toHaveLength(
+      1,
+    );
     expect((await instalments(sale.project.id)).reduce((s, o) => s + o.amount, 0)).toBe(
       before.reduce((s, o) => s + o.amount, 0) - 100_000,
     );

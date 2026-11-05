@@ -639,7 +639,7 @@ Examples: Ramesh Patil · Sangli
 **Button:** one quick reply: en `Continue survey`; mr `सर्वे पुढे करा`; hi `सर्वे आगे बढ़ाएँ`. Payload `ss:go:<id>`. Also sent when the engineer asks for an item again and the 24-hour window is closed. Off until approved.
 
 ### 52. `self_survey_approved` — **New** (the survey was approved; **Utility**)
-Fields: customer, home, amount (the sentence that follows: the discount, or a short thanks)
+Fields: customer, home, amount (only the clause after "approved": the discount and the payment, or a short thanks)
 
 > en: Hello {{1}}, your site survey for your {{2}} solar is approved. {{3}}
 
@@ -647,7 +647,7 @@ Fields: customer, home, amount (the sentence that follows: the discount, or a sh
 
 > hi: नमस्ते {{1}}, आपके {{2}} सोलर का साइट सर्वे मंज़ूर हो गया। {{3}}
 
-Examples: Ramesh Patil · Sangli · Survey approved ✅ ₹1,000 off your next payment.
+Examples: Ramesh Patil · Sangli · ₹1,000 off your payment: Before dispatch.
 
 No buttons. The app fills {{3}} in the customer's language. Off until approved. Meta may reject a body ending with a field: if so, add a closing line such as "Thank you." and change the app's wording to match.
 

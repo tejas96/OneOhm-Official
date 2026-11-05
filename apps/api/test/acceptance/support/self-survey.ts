@@ -90,15 +90,25 @@ export const instalments = (projectId: string) =>
   );
 
 export const credits = (projectId: string) =>
-  rows<{ amount_paise: number; reversed_at: Date | null; milestone_id: string }>(
-    'SELECT amount_paise::bigint::int AS amount_paise, reversed_at, milestone_id FROM milestone_credits WHERE project_id = $1 ORDER BY created_at',
+  rows<{
+    amount_paise: number;
+    status: string;
+    reversed_at: Date | null;
+    milestone_id: string | null;
+  }>(
+    'SELECT amount_paise::bigint::int AS amount_paise, status, reversed_at, milestone_id FROM milestone_credits WHERE project_id = $1 ORDER BY created_at',
     [projectId],
   );
 
 /** The customer sends the whole survey in the chat way (no form): all answers and four photos. */
-export async function sendWholeSurvey(phone: string, sale: Sale, askId: string): Promise<void> {
+export async function sendWholeSurvey(
+  phone: string,
+  sale: Sale,
+  askId: string,
+  roof = 'rcc',
+): Promise<void> {
   const { tap } = await import('./onboarding');
-  await tap(phone, `ss:ans:${askId}:roof:rcc`);
+  await tap(phone, `ss:ans:${askId}:roof:${roof}`);
   await tap(phone, `ss:ans:${askId}:floors:2`);
   for (const item of ['a', 'b', 'meter', 'board'])
     await sendInbound(phone, {
