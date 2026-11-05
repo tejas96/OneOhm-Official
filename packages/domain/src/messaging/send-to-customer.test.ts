@@ -36,7 +36,18 @@ describe('sendActionsFor', () => {
 
   it('project-only actions are hidden on a lead', () => {
     const actions = sendActionsFor(place({ lead: true }));
-    expect(actions).toEqual(['ask_paper', 'ask_location', 'send_document', 'ask_callback']);
+    expect(actions).toEqual([
+      'ask_paper',
+      'ask_location',
+      'send_document',
+      'ask_callback',
+      'ask_visit',
+    ]);
+  });
+
+  it('a service request offers only a visit ask and a call back', () => {
+    expect(sendActionsFor(place({ service: true }))).toEqual(['ask_visit', 'ask_callback']);
+    expect(sendActionsFor(place({ customer: true }))).not.toContain('ask_visit');
   });
 
   it('a project adds papers and the crew; a task adds the delay notice', () => {

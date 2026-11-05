@@ -117,7 +117,10 @@ describe('Visits: AMC, lead survey, Marathi', () => {
       leadId: customer.leadId,
     });
     expect((await lastReply(customer.phone))?.body).toMatch(/^Booked ✅/);
-    // Home: a visit in the next 3 days reads the visit record.
+    // Home: a visit in the next 3 days reads the visit record (the day is moved close for the check).
+    const soon = addDays(today(), 1);
+    const near = new Date(`${soon}T00:00:00Z`).getUTCDay() === 0 ? addDays(soon, 1) : soon;
+    await rows('UPDATE visits SET day = $2 WHERE lead_id = $1', [customer.leadId, near]);
     await say(customer.phone, 'hi');
     const home = await lastReply(customer.phone);
     expect(home?.body).toMatch(/Our team visits your .+home on \*.+\*\./);
