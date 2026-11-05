@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { customerActions, customers, type Database, homeNameOf, projects } from '@oneohm/database';
+import { isStepKind } from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { DATABASE, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
@@ -29,6 +30,7 @@ import { handoverPapers } from './journey-papers';
 import { agree } from './journey-signature';
 import { agreeTap, type JourneyTap, questionTap } from './journey-taps';
 import { JOURNEY_WORDS } from './journey-words';
+import { StepAnswersService } from './step-answers.service';
 
 /**
  * What the customer's taps on the journey messages do (redesign §4, §18): [I agree] and
@@ -43,6 +45,7 @@ export class JourneyAnswersService {
     private readonly people: HandOverService,
     private readonly portal: CustomerPortalService,
     private readonly documents: CustomerDocumentsService,
+    private readonly steps: StepAnswersService,
   ) {}
 
   async tapped(chat: Conversation, customerId: string, tap: JourneyTap): Promise<void> {
@@ -65,6 +68,12 @@ export class JourneyAnswersService {
         return this.pack(chat, customerId, tap.id);
       case 'show':
         return this.show(chat, customerId, tap.id);
+      case 'stepOk':
+        return this.steps.tapped(chat, customerId, tap.id, 'ok');
+      case 'stepAlt':
+        return this.steps.tapped(chat, customerId, tap.id, 'alt');
+      case 'stepNow':
+        return this.steps.tapped(chat, customerId, tap.id, 'now');
     }
   }
 
@@ -184,6 +193,7 @@ export class JourneyAnswersService {
       return this.askToSign(chat, customerId, action, home);
     }
     if (action.type !== 'confirm') return this.old(chat);
+    if (isStepKind(action.payload.kind)) return this.steps.show(chat, action);
     if (action.payload.answer === 'not_yet')
       return void (await queueReply(this.db, chat, notYetReply(action.id)));
     const ask = action.payload.kind === 'site_ready' ? readinessAsk : installationAsk;

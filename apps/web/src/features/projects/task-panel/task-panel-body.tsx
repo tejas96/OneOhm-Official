@@ -31,6 +31,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
   const taskT = useTranslations('projects.task');
   const partyT = useTranslations('commandCenter.party');
   const stagesT = useTranslations('stages');
+  const sendT = useTranslations('sendToCustomer');
   const format = useFormatter();
   const canOpenProject = useCan('projects.view_all');
   const steps = useTaskSteps(task);
@@ -109,6 +110,17 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
             <SendToCustomerButton
               variant="quiet"
               scope={{ taskId: task.id, projectId: task.projectId }}
+              {...(task.templateKey.startsWith('subsidy_')
+                ? {
+                    quickPapers: [
+                      {
+                        category: 'subsidy',
+                        title: sendT('quickPapers.passbook'),
+                        requirementKey: 'subsidy_bank',
+                      },
+                    ],
+                  }
+                : {})}
             />
             <TaskStepButtons steps={steps} />
           </span>

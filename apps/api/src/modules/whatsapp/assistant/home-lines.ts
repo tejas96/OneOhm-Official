@@ -1,6 +1,9 @@
 import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
+import { stepNowTap } from '../../journey/journey-taps';
 import { JOURNEY_WORDS } from '../../journey/journey-words';
+import { stepLine } from '../../journey/step-lines';
+import { STEP_WORDS } from '../../journey/step-words';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { VISIT_WORDS } from '../../visits/visit-words';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
@@ -59,6 +62,8 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
     case 'visit_ask':
       return { id: `vask:${item.requestId}`, title: VISIT_WORDS.buttons.pick };
     case 'journey':
+      if (item.ask === 'step_now')
+        return { id: stepNowTap(item.requestId), title: STEP_WORDS.buttons.arrived };
       return item.ask === 'roof_now'
         ? { id: `rdy:now:${item.requestId}`, title: JOURNEY_WORDS.buttons.readyNow }
         : { id: `jr:${item.requestId}`, title: JOURNEY_WORDS.buttons.answerNow };
@@ -113,6 +118,7 @@ function journeyLine(item: Extract<PendingItem, { kind: 'journey' }>): string {
   const home = item.home ?? SEND_WORDS.location.anyHome;
   const words = JOURNEY_WORDS;
   if (item.ask === 'sign') return words.sign.ask(item.paper ?? '', home);
+  if (item.step) return stepLine(item.step, home, item.ask === 'step_now');
   if (item.ask === 'install') return words.install.ask(home);
   return item.ask === 'roof_now' ? words.ready.notYet : words.ready.ask(home);
 }

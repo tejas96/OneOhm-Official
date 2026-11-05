@@ -18,6 +18,7 @@ import { inLanguage } from '../whatsapp/assistant/language';
 import { plainDate } from '../whatsapp/assistant/plain-date';
 import type { ChatReply } from '../whatsapp/chat-reply';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
+import { confirmNoun } from './confirm-words';
 import { showTap } from './journey-taps';
 import { JOURNEY_WORDS } from './journey-words';
 
@@ -55,7 +56,7 @@ async function mayChat(tx: DatabaseExecutor, phone: string, template: string): P
  * (and the same news in the app inbox); outside it the approved template as before, whose newer
  * version may carry the same buttons as quick replies (behind its own switch in Settings).
  */
-async function send(
+export async function send(
   tx: DatabaseExecutor,
   person: Person,
   message: {
@@ -64,16 +65,17 @@ async function send(
     readonly key: string;
     readonly reply: () => Promise<ChatReply>;
   },
-): Promise<void> {
+): Promise<'chat' | 'template'> {
   if (!(await mayChat(tx, person.phone, message.template))) {
     await queueCustomerMessage(tx, person.phone, message.template, message.payload, message.key);
-    return;
+    return 'template';
   }
   const chat = await conversationForPhone(tx, person.phone);
   const language = await languageOfPhone(tx, person.phone);
   const reply = await inLanguage(language, message.reply);
   await queueReply(tx, chat, reply, null, message.key);
   await noticeCustomer(tx, person.phone, message.template, message.payload, message.key);
+  return 'chat';
 }
 
 /**
@@ -211,8 +213,7 @@ export async function tellWaitingWithButtons(
 /** What an ask is called in "We need … to continue": a friendly noun for a question or a paper to sign. */
 function askNoun(ask: { type: string; title: string; payload: Record<string, unknown> }): string {
   const nouns = JOURNEY_WORDS.nouns;
-  if (ask.type === 'confirm')
-    return ask.payload.kind === 'installation' ? nouns.install : nouns.roof;
+  if (ask.type === 'confirm') return confirmNoun(String(ask.payload.kind ?? ''));
   if (ask.type === 'signature') return nouns.sign(String(ask.payload.paperTitle ?? ask.title));
   return ask.title;
 }

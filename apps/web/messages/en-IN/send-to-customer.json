@@ -21,7 +21,25 @@
       "send_signature": "Send for signature",
       "ask_site_ready": "Ask if the roof is ready",
       "ask_installation_check": "Ask if the installation is finished",
-      "send_handover_pack": "Send the handover pack"
+      "send_handover_pack": "Send the handover pack",
+      "ask_subsidy_register": "Help to register for the subsidy",
+      "ask_subsidy_credit": "Ask if the subsidy reached their bank",
+      "ask_bank_sign": "Ask them to sign the loan papers at the bank",
+      "send_layout": "Send the roof layout for approval"
+    },
+    "quickPapers": {
+      "title": "Ask for these papers",
+      "ask": "Ask",
+      "all": "Ask for all {count}",
+      "failed": "Could not ask for the paper",
+      "passbook": "Bank passbook or cancelled cheque",
+      "loanFallback": "Bank loan papers (sanction letter, agreement)"
+    },
+    "bank": {
+      "branch": "Which branch?",
+      "branchHint": "The customer reads this exactly as you write it.",
+      "branchPlaceholder": "For example: Sangli main branch",
+      "day": "Which day?"
     },
     "customerGets": "The customer gets",
     "viaTemplate": "As an approved message",

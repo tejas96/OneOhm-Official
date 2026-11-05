@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import { customerActions, type DatabaseExecutor, projectFacts, projects } from '@oneohm/database';
-import { and, eq, sql } from 'drizzle-orm';
+import { type DatabaseExecutor, projectFacts } from '@oneohm/database';
+import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { AppError } from '../../common/http/errors';
 import { environmentOnce } from '../../config/environment-once';
 import { logAction } from '../documents/customer-action-log';
 import { openAction } from '../send-to-customer/send-actions';
-import { contextFor, type SendContext } from '../send-to-customer/send-context';
 import { deliver, templateOn } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { confirmCompose, packFor } from './journey-compose';
 import { closeStaleAsks } from './journey-confirm';
+import { askedBefore, contextOfTask } from './journey-context';
 import {
   alertTaskOwner,
   DISPATCH_KEY,
@@ -18,38 +18,7 @@ import {
   INSTALLATION_KEY,
   type JourneyTask,
 } from './journey-store';
-
-/** The customer's context for a project task, as the system acting on its own (no staff member). */
-async function contextOfTask(db: DatabaseExecutor, task: JourneyTask): Promise<SendContext | null> {
-  const [project] = await db
-    .select({ customerId: projects.customerId, code: projects.code })
-    .from(projects)
-    .where(eq(projects.id, task.projectId));
-  if (!project) return null;
-  return contextFor(db, {
-    customerId: project.customerId,
-    projectId: task.projectId,
-    projectCode: project.code,
-    leadId: null,
-    taskId: task.id,
-    serviceRequestId: null,
-  });
-}
-
-/** Whether this question was asked before (answered or not): each is asked once per step. */
-async function askedBefore(db: DatabaseExecutor, target: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: customerActions.id })
-    .from(customerActions)
-    .where(
-      and(
-        eq(customerActions.type, 'confirm'),
-        sql`${customerActions.payload}->>'target' = ${target}`,
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
-}
+import { stepOnComplete } from './step-auto';
 
 async function ask(tx: DatabaseExecutor, task: JourneyTask, kind: 'site_ready' | 'installation') {
   // PRD rule (§21a): only a step whose template lets the customer hear about it messages by itself.
@@ -127,4 +96,5 @@ export async function journeyOnComplete(tx: DatabaseExecutor, task: JourneyTask)
   await closeStaleAsks(tx, task);
   if (task.templateKey === INSTALLATION_KEY) await ask(tx, task, 'installation');
   if (task.templateKey === HANDOVER_KEY) await pack(tx, task);
+  await stepOnComplete(tx, task);
 }

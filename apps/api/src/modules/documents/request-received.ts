@@ -10,6 +10,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { AppError, conflict } from '../../common/http/errors';
 import { tellWaitingOwners } from '../customer-portal/tell-waiting-owners';
+import { loanPapersChecked } from '../journey/loan-papers';
 import { logAction } from './customer-action-log';
 import { openRequestsFor, reaskCount, roundKey } from './document-request-home';
 import { tellReceivedByTeam } from './document-request-messages';
@@ -84,6 +85,8 @@ export async function markRequestReceived(
   await recordAudit(tx, by.userId, 'customer_action.answered', 'customer_action', id, {
     documentId,
   });
+  // A staff upload is checked already: the last loan paper in ends the loan step's wait.
+  if (status === 'closed') await loanPapersChecked(tx, asked);
   return reasks;
 }
 

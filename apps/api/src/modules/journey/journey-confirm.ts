@@ -143,7 +143,8 @@ export async function cancelConfirm(
   tx: DatabaseExecutor,
   ask: { readonly id: string; readonly payload: Record<string, unknown> },
 ): Promise<void> {
-  if (ask.payload.answer !== 'not_yet') return;
+  // Only a roof question kept a step waiting; the subsidy question's "Not yet" kept nothing.
+  if (ask.payload.answer !== 'not_yet' || ask.payload.kind !== 'site_ready') return;
   const [action] = await tx.select().from(customerActions).where(eq(customerActions.id, ask.id));
   const task = action?.taskId ? await taskFor(tx, action.taskId) : null;
   if (task) await resumeAfterWait(tx, task, String(ask.payload.waitSince ?? '') || null);
@@ -170,8 +171,11 @@ export async function closeStaleAsks(
     );
   const now = new Date();
   for (const action of open) {
+    // Only the roof and installation questions end with their step; the subsidy, bank and layout
+    // questions wait for the customer's own answer.
     const stale =
-      action.taskId === task.id ||
+      (action.taskId === task.id &&
+        ['site_ready', 'installation'].includes(String(action.payload.kind))) ||
       (task.templateKey === 'testing_commissioning' && action.payload.kind === 'installation');
     if (!stale) continue;
     await tx

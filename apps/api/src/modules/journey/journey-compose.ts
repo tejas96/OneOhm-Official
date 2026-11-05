@@ -15,7 +15,7 @@ type Of<A extends SendRequest['action']> = Extract<SendRequest, { action: A }>;
 const NOT_ALLOWED = 'This step is not set to message customers (Settings → Task templates).';
 
 /** A task of this project whose template lets the customer hear about it (PRD 6.2), of the kind asked. */
-async function allowedTask(
+export async function allowedTask(
   deps: Deps,
   ctx: SendContext,
   taskId: string,

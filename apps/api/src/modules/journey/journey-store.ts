@@ -42,6 +42,20 @@ export async function openTaskByKey(
   return task ?? null;
 }
 
+/** The project's task of this kind, done or not (the bank visit and the subsidy question come after the step). */
+export async function taskByKey(
+  db: DatabaseExecutor,
+  projectId: string,
+  key: string,
+): Promise<JourneyTask | null> {
+  const [task] = await db
+    .select()
+    .from(projectTasks)
+    .where(and(eq(projectTasks.projectId, projectId), eq(projectTasks.templateKey, key)))
+    .limit(1);
+  return task ?? null;
+}
+
 /** Who a task's news goes to: its assignee (their cover when away), else the project manager, else the desk. */
 export async function alertTaskOwner(
   tx: DatabaseExecutor,

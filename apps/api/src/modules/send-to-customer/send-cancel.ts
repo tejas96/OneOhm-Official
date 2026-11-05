@@ -7,6 +7,7 @@ import {
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
+import { confirmWords } from '../journey/confirm-words';
 import { cancelConfirm } from '../journey/journey-confirm';
 import { cancelSignedCopy } from '../journey/journey-signature';
 import { JOURNEY_WORDS } from '../journey/journey-words';
@@ -60,9 +61,7 @@ export async function tellActionCancelled(
         : action.type === 'signature'
           ? JOURNEY_WORDS.sign.cancelled(action.paper ?? JOURNEY_WORDS.sign.what)
           : action.type === 'confirm'
-            ? action.kind === 'installation'
-              ? JOURNEY_WORDS.install.cancelled
-              : JOURNEY_WORDS.ready.cancelled
+            ? confirmWords(action.kind ?? '').cancelled
             : words[action.type];
     await queueReply(tx, chat, { kind: 'text', body }, userId, key);
   });
@@ -75,8 +74,7 @@ function whatOf(action: {
   readonly kind?: string;
 }): string {
   if (action.type === 'signature') return action.paper ?? JOURNEY_WORDS.sign.what;
-  if (action.type === 'confirm')
-    return action.kind === 'installation' ? JOURNEY_WORDS.install.what : JOURNEY_WORDS.ready.what;
+  if (action.type === 'confirm') return confirmWords(action.kind ?? '').what;
   return SEND_WORDS.cancelled.what[action.type as keyof typeof SEND_WORDS.cancelled.what];
 }
 

@@ -5,6 +5,8 @@ import { Button, Sheet } from '@oneohm/design-system/web';
 import { FilePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { BankVisitOffer } from './bank-visit-offer';
+import { type QuickPaper, QuickPapers } from './quick-papers';
 import { OfferCard } from './send-offer-card';
 import { useSendOptions } from './use-send-to-customer';
 
@@ -26,6 +28,7 @@ export function SendToCustomerSheet({
   open,
   onClose,
   onAskPaper,
+  quickPapers,
 }: {
   readonly scope: SendScope;
   readonly taskId: string | null;
@@ -33,6 +36,8 @@ export function SendToCustomerSheet({
   readonly onClose: () => void;
   /** Present where papers can be asked (a project or a lead): the ask sheet opens. */
   readonly onAskPaper: (() => void) | null;
+  /** Papers asked with one tap, such as the lender's list on a loan or the passbook on a subsidy step. */
+  readonly quickPapers?: readonly QuickPaper[];
 }) {
   const t = useTranslations('sendToCustomer');
   const options = useSendOptions(scope, open);
@@ -67,20 +72,31 @@ export function SendToCustomerSheet({
             </Button>
           </div>
         )}
+        {data && quickPapers && scope.projectId && (
+          <QuickPapers
+            scope={{ projectId: scope.projectId }}
+            papers={quickPapers}
+            onDone={onClose}
+          />
+        )}
         {data &&
           groupsOf(data.offers).map(([action, offers]) => (
             <section key={action} aria-label={t(`groups.${action}`)} className="flex flex-col">
               <h3 className="pt-3 type-label text-ink-faint uppercase">{t(`groups.${action}`)}</h3>
               <ul className="flex flex-col divide-y divide-hairline">
-                {offers.map((offer) => (
-                  <OfferCard
-                    key={offer.key}
-                    offer={offer}
-                    scope={scope}
-                    taskId={taskId}
-                    onSent={onClose}
-                  />
-                ))}
+                {offers.map((offer) =>
+                  offer.input === 'bank_visit' ? (
+                    <BankVisitOffer key={offer.key} offer={offer} scope={scope} onSent={onClose} />
+                  ) : (
+                    <OfferCard
+                      key={offer.key}
+                      offer={offer}
+                      scope={scope}
+                      taskId={taskId}
+                      onSent={onClose}
+                    />
+                  ),
+                )}
               </ul>
             </section>
           ))}

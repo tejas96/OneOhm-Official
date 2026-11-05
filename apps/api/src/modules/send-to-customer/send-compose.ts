@@ -7,6 +7,12 @@ import {
   signatureCompose,
   siteReadyCompose,
 } from '../journey/journey-compose';
+import {
+  bankSignCompose,
+  creditFromRequest,
+  layoutCompose,
+  registerCompose,
+} from '../journey/step-compose';
 import { askVisitCompose } from '../visits/visit-ask';
 import { receiptById } from '../whatsapp/assistant/customer-papers';
 import { inLanguage } from '../whatsapp/assistant/language';
@@ -224,6 +230,14 @@ export function compose(
         return installCheckCompose(deps, ctx, request, id);
       case 'send_handover_pack':
         return packCompose(deps, ctx, request);
+      case 'ask_subsidy_register':
+        return registerCompose(deps, ctx, request, id);
+      case 'ask_subsidy_credit':
+        return creditFromRequest(deps, ctx, request, id);
+      case 'ask_bank_sign':
+        return bankSignCompose(deps, ctx, request, id);
+      case 'send_layout':
+        return layoutCompose(deps, ctx, request, id);
     }
   });
 }

@@ -3,6 +3,7 @@ import { actionReminderDue } from './action-reminders';
 import {
   askedSince,
   confirmReminder,
+  isSubsidyWait,
   signatureReminder,
   waitingBody,
   waitingFor,
@@ -80,5 +81,55 @@ describe('signature reminder', () => {
     );
     expect(signatureReminder(agreed, given).template).toBe('signed_page_reminder');
     expect(signatureReminder(agreed, given).payload.showPayload).toBe('jr:a1');
+  });
+});
+
+describe('subsidy, bank and layout reminders', () => {
+  it('ask again with the same buttons, by the approved template of each', () => {
+    expect(confirmReminder(ask({ kind: 'subsidy_register' }), given)).toEqual({
+      template: 'subsidy_register_help',
+      payload: { ...given, donePayload: 'stp:ok:a1', helpPayload: 'stp:alt:a1' },
+    });
+    expect(confirmReminder(ask({ kind: 'subsidy_credit', amountPaise: 7800000 }), given)).toEqual({
+      template: 'subsidy_credit_check',
+      payload: {
+        ...given,
+        amount: '₹78,000',
+        yesPayload: 'stp:ok:a1',
+        notYetPayload: 'stp:alt:a1',
+      },
+    });
+    expect(
+      confirmReminder(
+        ask({ kind: 'bank_sign', bank: 'HDFC Bank', branch: 'Sangli', dayText: 'Thu 6 Nov' }),
+        given,
+      ),
+    ).toEqual({
+      template: 'bank_sign_visit',
+      payload: {
+        customer: 'Tejas',
+        bank: 'HDFC Bank',
+        branch: 'Sangli',
+        day: 'Thu 6 Nov',
+        goPayload: 'stp:ok:a1',
+        changePayload: 'stp:alt:a1',
+      },
+    });
+    expect(confirmReminder(ask({ kind: 'layout', paperTitle: 'Roof layout' }), given)).toEqual({
+      template: 'signature_reminder',
+      payload: { ...given, document: 'Roof layout', showPayload: 'jr:a1' },
+    });
+  });
+
+  it('a subsidy that has not arrived waits for the money, not for another reminder', () => {
+    expect(isSubsidyWait(ask({ kind: 'subsidy_credit', answer: 'not_yet' }))).toBe(true);
+    expect(isSubsidyWait(ask({ kind: 'subsidy_credit' }))).toBe(false);
+    expect(isSubsidyWait(ask({ kind: 'site_ready', answer: 'not_yet' }))).toBe(false);
+  });
+
+  it('tells the asker what they have not done', () => {
+    expect(waitingFor(ask({ kind: 'subsidy_register' }))).toBe('the PM Surya Ghar registration');
+    expect(waitingFor(ask({ kind: 'bank_sign' }))).toBe('an answer about the visit to the bank');
+    expect(waitingFor(ask({ kind: 'layout' }))).toBe('an answer about the panel layout');
   });
 });

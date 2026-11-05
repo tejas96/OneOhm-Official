@@ -6,6 +6,7 @@ import { CustomerPortalModule } from '../customer-portal/customer-portal.module'
 import { DocumentsModule } from '../documents/documents.module';
 import { FinanceModule } from '../finance/finance.module';
 import { JourneyAnswersService } from '../journey/journey-answers.service';
+import { StepAnswersService } from '../journey/step-answers.service';
 import { OnlinePaymentsModule } from '../online-payments/online-payments.module';
 import { ReportsModule } from '../reports/reports.module';
 import { LocationPinService } from '../send-to-customer/location-pin.service';
@@ -98,6 +99,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     VisitAnswersService,
     VisitPickService,
     JourneyAnswersService,
+    StepAnswersService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

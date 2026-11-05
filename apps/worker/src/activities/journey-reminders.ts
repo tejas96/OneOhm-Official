@@ -1,4 +1,6 @@
 import type { customerActions } from '@oneohm/database';
+import { isStepKind } from '@oneohm/domain';
+import { formatInr } from '@oneohm/shared';
 
 type Ask = Pick<typeof customerActions.$inferSelect, 'id' | 'type' | 'payload' | 'createdAt'>;
 
@@ -14,14 +16,25 @@ export function askedSince(ask: Ask): Date {
   return Number.isNaN(answered) ? ask.createdAt : new Date(answered);
 }
 
+/** The subsidy question answered "Not yet" waits for the money; the owner hears after the days set in Settings. */
+export const isSubsidyWait = (ask: Pick<Ask, 'payload'>) =>
+  ask.payload.kind === 'subsidy_credit' && ask.payload.answer === 'not_yet';
+
+const CONFIRM_WAITS: Readonly<Record<string, string>> = {
+  installation: 'an answer about the installation',
+  subsidy_register: 'the PM Surya Ghar registration',
+  subsidy_credit: 'an answer about the subsidy',
+  bank_sign: 'an answer about the visit to the bank',
+  layout: 'an answer about the panel layout',
+};
+
 /** What the person who asked is told the customer has not done, per kind of ask. */
 export function waitingFor(ask: Ask): string {
   if (ask.type === 'confirm')
-    return ask.payload.kind === 'installation'
-      ? 'an answer about the installation'
-      : isRoofWait(ask)
-        ? 'the roof to be ready'
-        : 'an answer about the roof';
+    return (
+      CONFIRM_WAITS[String(ask.payload.kind)] ??
+      (isRoofWait(ask) ? 'the roof to be ready' : 'an answer about the roof')
+    );
   if (ask.type === 'signature') return 'a paper to agree to';
   return (
     {
@@ -42,6 +55,7 @@ export function waitingBody(ask: Ask): string {
 
 /** The template and values of the customer reminder for a roof or installation question. */
 export function confirmReminder(ask: Ask, given: { customer: string; home: string }) {
+  if (isStepKind(ask.payload.kind)) return stepReminder(ask, given);
   if (ask.payload.kind === 'installation')
     return {
       template: 'installation_check',
@@ -75,4 +89,47 @@ export function signatureReminder(ask: Ask, given: { customer: string; home: str
       showPayload: `jr:${ask.id}`,
     },
   };
+}
+
+/** The reminder for a subsidy, bank or layout question: the same buttons again, by its approved template. */
+export function stepReminder(ask: Ask, given: { customer: string; home: string }) {
+  const id = ask.id;
+  const ok = `stp:ok:${id}`;
+  const alt = `stp:alt:${id}`;
+  const text = (key: string) => String(ask.payload[key] ?? '');
+  switch (ask.payload.kind) {
+    case 'subsidy_register':
+      return {
+        template: 'subsidy_register_help',
+        payload: { ...given, donePayload: ok, helpPayload: alt },
+      };
+    case 'subsidy_credit':
+      return {
+        template: 'subsidy_credit_check',
+        payload: {
+          ...given,
+          amount: formatInr(Number(ask.payload.amountPaise ?? 0)),
+          yesPayload: ok,
+          notYetPayload: alt,
+        },
+      };
+    case 'bank_sign':
+      return {
+        template: 'bank_sign_visit',
+        payload: {
+          customer: given.customer,
+          bank: text('bank'),
+          branch: text('branch'),
+          day: text('dayText'),
+          goPayload: ok,
+          changePayload: alt,
+        },
+      };
+    default:
+      // The layout again: the paper-to-agree-to reminder whose button shows the layout with its two buttons.
+      return {
+        template: 'signature_reminder',
+        payload: { ...given, document: text('paperTitle'), showPayload: `jr:${id}` },
+      };
+  }
 }

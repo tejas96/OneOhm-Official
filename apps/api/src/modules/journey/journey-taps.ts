@@ -1,5 +1,7 @@
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const TAP = new RegExp(`^(sgn:ok|sgn:q|rdy:y|rdy:n|rdy:now|ins:y|ins:bad|hpack|jr):(${UUID})$`);
+const TAP = new RegExp(
+  `^(sgn:ok|sgn:q|rdy:y|rdy:n|rdy:now|ins:y|ins:bad|hpack|jr|stp:ok|stp:alt|stp:now):(${UUID})$`,
+);
 
 /** A tap on a button the journey messages carry (redesign §4, §18). */
 export type JourneyTap = {
@@ -12,7 +14,10 @@ export type JourneyTap = {
     | 'installOk'
     | 'installBad'
     | 'pack'
-    | 'show';
+    | 'show'
+    | 'stepOk'
+    | 'stepAlt'
+    | 'stepNow';
   /** The customer action, or for the handover pack the project. */
   readonly id: string;
 };
@@ -27,6 +32,9 @@ const KIND = {
   'ins:bad': 'installBad',
   hpack: 'pack',
   jr: 'show',
+  'stp:ok': 'stepOk',
+  'stp:alt': 'stepAlt',
+  'stp:now': 'stepNow',
 } as const;
 
 /** The tap an id stands for, or null. */
@@ -47,3 +55,8 @@ export const installOkTap = (actionId: string) => `ins:y:${actionId}`;
 export const installBadTap = (actionId: string) => `ins:bad:${actionId}`;
 export const packTap = (projectId: string) => `hpack:${projectId}`;
 export const showTap = (actionId: string) => `jr:${actionId}`;
+
+/** The subsidy, bank and layout questions: the first button, the second, and "it has arrived" after Not yet. */
+export const stepOkTap = (actionId: string) => `stp:ok:${actionId}`;
+export const stepAltTap = (actionId: string) => `stp:alt:${actionId}`;
+export const stepNowTap = (actionId: string) => `stp:now:${actionId}`;

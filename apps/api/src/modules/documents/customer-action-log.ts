@@ -13,6 +13,8 @@ export async function logAction(
     readonly message: string;
     readonly userId: string | null;
     readonly data: Record<string, unknown>;
+    /** The step it belongs to, so the task's own history shows it. */
+    readonly taskId?: string | null;
   },
 ): Promise<void> {
   if (action.projectId)
