@@ -1,11 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerContact, Handover } from '@oneohm/api-contracts';
 import { customerActions, customerHandovers, customers, projects, users } from '@oneohm/database';
-import { type ContactChannel, inPersonClose, routeFor } from '@oneohm/domain';
+import {
+  type Capability,
+  type ContactChannel,
+  inPersonClose,
+  rightsForAsk,
+  routeFor,
+} from '@oneohm/domain';
 import { and, desc, eq, isNotNull, isNull, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { type Actor, assertCan } from '../../common/auth/actor';
-import { notFound } from '../../common/http/errors';
+import { type Actor, assertCan, can } from '../../common/auth/actor';
+import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { closePlain } from '../documents/document-request-in-person';
 import { readRequests } from '../documents/document-request-read';
@@ -98,8 +104,12 @@ export class CustomerContactService {
         const [ask] = done[0]?.actionId
           ? await readRequests(tx, eq(customerActions.id, done[0].actionId), true)
           : [];
-        if (ask?.status === 'open' && inPersonClose(ask.type, ask.kind).how === 'plain')
+        if (ask?.status === 'open' && inPersonClose(ask.type, ask.kind).how === 'plain') {
+          // The same right as closing the ask itself in person; without it nothing changes (rolled back).
+          if (!rightsForAsk(ask.type).some((right) => can(actor, right as Capability)))
+            throw forbidden();
           await closePlain(tx, actor.userId, ask);
+        }
       }
     });
     const [row] = await this.read(eq(customerHandovers.id, id));
