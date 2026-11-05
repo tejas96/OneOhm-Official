@@ -57,6 +57,9 @@ const EN_SEND = {
     callback: 'You do not need to pick a time for the call any more. Thank you.',
     visit_pick: 'You do not need to pick a day for our visit any more. Thank you.',
     stillDue: 'Your payment is still due.',
+    allWhat: 'What we asked from you',
+    all: (home: string) =>
+      `We have closed everything we asked from you for ${home}. You do not need to do anything more. If this is a mistake, please tell us.`,
     what: {
       location: 'sharing your location',
       pay: 'your payment proof',
@@ -113,6 +116,9 @@ const MR_SEND: Words<typeof EN_SEND> = {
     callback: 'फोनसाठी वेळ निवडण्याची आता गरज नाही. धन्यवाद.',
     visit_pick: 'आमच्या भेटीसाठी दिवस निवडण्याची आता गरज नाही. धन्यवाद.',
     stillDue: 'तुमचे पेमेंट अजून बाकी आहे.',
+    allWhat: 'आम्ही तुमच्याकडून मागितलेले',
+    all: (home) =>
+      `${home} साठी आम्ही तुमच्याकडून जे मागितले होते ते सर्व बंद केले आहे. तुम्हाला आता काही करण्याची गरज नाही. काही चूक झाली असेल तर कृपया आम्हाला सांगा.`,
     what: {
       location: 'लोकेशन पाठवणे',
       pay: 'पेमेंटचा पुरावा',
@@ -168,6 +174,9 @@ const HI_SEND: Words<typeof EN_SEND> = {
     callback: 'अब आपको फ़ोन के लिए समय चुनने की ज़रूरत नहीं है। धन्यवाद।',
     visit_pick: 'अब आपको हमारी विज़िट के लिए दिन चुनने की ज़रूरत नहीं है। धन्यवाद।',
     stillDue: 'आपका भुगतान अभी बाकी है।',
+    allWhat: 'जो हमने आपसे माँगा था',
+    all: (home) =>
+      `${home} के लिए हमने आपसे जो कुछ माँगा था, वह सब बंद कर दिया है। आपको अब कुछ करने की ज़रूरत नहीं है। कोई गलती हुई हो तो कृपया हमें बताएँ।`,
     what: {
       location: 'लोकेशन भेजना',
       pay: 'पेमेंट का सबूत',

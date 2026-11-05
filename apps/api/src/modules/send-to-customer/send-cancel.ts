@@ -80,24 +80,35 @@ function whatOf(action: {
 
 const TOLD = ['location', 'pay', 'callback', 'visit_pick', 'signature', 'confirm'] as const;
 
-/** The team cancelled an ask that is not a paper: a signed copy still waiting goes with it, the customer is told. */
+type CancelledAsk = {
+  readonly id: string;
+  readonly type: string;
+  readonly title: string;
+  readonly projectId: string | null;
+  readonly propertyId: string | null;
+  readonly payload: Record<string, unknown>;
+};
+
+/** What a cancelled ask takes with it: a signed copy still waiting goes, a roof wait ends. Tells nobody. */
+export async function settleCancelledAsk(
+  tx: DatabaseExecutor,
+  ask: CancelledAsk,
+  userId: string,
+): Promise<void> {
+  if (ask.type === 'signature') await cancelSignedCopy(tx, ask, userId);
+  if (ask.type === 'confirm') await cancelConfirm(tx, ask);
+}
+
+/** The team cancelled an ask that is not a paper: what it took with it is settled, the customer is told. */
 export async function tellAskCancelled(
   tx: DatabaseExecutor,
-  ask: {
-    readonly id: string;
-    readonly type: string;
-    readonly title: string;
-    readonly projectId: string | null;
-    readonly propertyId: string | null;
-    readonly payload: Record<string, unknown>;
-  },
+  ask: CancelledAsk,
   phone: string,
   userId: string,
 ): Promise<void> {
   const type = TOLD.find((one) => one === ask.type);
   if (!type) return;
-  if (type === 'signature') await cancelSignedCopy(tx, ask, userId);
-  if (type === 'confirm') await cancelConfirm(tx, ask);
+  await settleCancelledAsk(tx, ask, userId);
   const paper = String(ask.payload.paperTitle ?? ask.title);
   await tellActionCancelled(
     tx,
