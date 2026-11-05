@@ -152,16 +152,17 @@ describe('The bill photo on the lead', () => {
     expect(await docsOf(lead?.id ?? '')).toEqual([]);
   });
 
-  it('files nothing for a stranger outside onboarding who has no lead', async () => {
+  it("with onboarding off a stranger's bill makes a lead, is kept on it, and the reply says so", async () => {
     const off = await withOnboarding(admin, { enabled: false });
     try {
       const phone = uniquePhone();
       await photo(phone);
-      expect(await leadsOf(phone)).toEqual([]);
-      expect(await rows('SELECT 1 FROM wa_conversations WHERE phone = $1', [phone])).toHaveLength(
-        1,
+      const [lead] = await leadsOf(phone);
+      expect(lead).toMatchObject({ source: 'whatsapp', city: 'Not given' });
+      expect(await docsOf(lead?.id ?? '')).toHaveLength(1);
+      expect((await lastReply(phone))?.body).toBe(
+        'Thank you. We have your file and our team will check it and call you.',
       );
-      expect(choices(await lastReply(phone))).toEqual(['callback', 'human']);
     } finally {
       await off();
     }

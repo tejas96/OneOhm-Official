@@ -87,7 +87,7 @@ describe('The instant estimate after onboarding', () => {
     const file = await fetch(document?.link ?? '');
     expect(file.status).toBe(200);
     expect(file.headers.get('content-type')).toContain('application/pdf');
-    expect(choices(sent.at(-1))).toEqual(['ob:done:call', 'ob:person', 'ob:done:notnow']);
+    expect(choices(sent.at(-1))).toEqual(['ob:done:visit', 'ob:done:call', 'ob:done:notnow']);
 
     const kw = `${(estimate?.capacity_wp ?? 0) / 1000} kW`;
     const price = formatInr(estimate?.total_paise ?? 0);

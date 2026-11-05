@@ -86,7 +86,7 @@ describe('Onboarding hand-overs', () => {
     await tap(phone, 'ob:language:mr');
     await say(phone, 'बदला');
     expect((await chatOf(phone)).state).toBe('onboard:name');
-    expect(choices(await lastReply(phone))).toEqual(['ob:person']);
+    expect(choices(await lastReply(phone))).toEqual(['ob:name:back', 'ob:person']);
     await say(phone, 'Ravi Patil');
     expect((await chatOf(phone)).state).toBe('onboard:city');
     await tap(phone, 'ob:city:Pune');

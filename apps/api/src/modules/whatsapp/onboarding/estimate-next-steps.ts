@@ -14,7 +14,9 @@ import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
+import { askVisitDay, pickVisitDay, pickVisitSlot } from './estimate-visit';
 import { ONBOARD_WORDS } from './onboard-words';
+import { MORE_WORDS } from './onboard-words-more';
 import {
   ESTIMATE_CHOICES,
   LATER_PERIODS,
@@ -64,11 +66,31 @@ export class EstimateNextStepsService {
     private readonly people: HandOverService,
   ) {}
 
+  /** [Book a visit] and the day and slot taps that follow it; false for any other tap. */
+  private async visitTap(
+    tx: Transaction,
+    chat: Conversation,
+    lead: { readonly id: string; readonly ownerUserId?: string | null },
+    choiceId: string,
+    now: Date,
+  ): Promise<boolean> {
+    const zone = this.env.BUSINESS_TIMEZONE;
+    const given = { id: lead.id, ownerUserId: lead.ownerUserId ?? null };
+    if (choiceId === ESTIMATE_CHOICES.visit) await askVisitDay(tx, chat, given, zone);
+    else if (choiceId.startsWith(ESTIMATE_CHOICES.pickDay))
+      await pickVisitDay(tx, chat, given, choiceId.slice(ESTIMATE_CHOICES.pickDay.length), zone);
+    else if (choiceId.startsWith(ESTIMATE_CHOICES.pickSlot)) {
+      const [day = '', slot = ''] = choiceId.slice(ESTIMATE_CHOICES.pickSlot.length).split(':');
+      await pickVisitSlot(tx, chat, given, { day, slot }, { now, zone });
+    } else return false;
+    return true;
+  }
+
   /** True when the tap was one of the estimate's; false (typed words too) leaves it to the caller. */
   async answer(
     tx: Transaction,
     chat: Conversation,
-    lead: { readonly id: string } | null,
+    lead: { readonly id: string; readonly ownerUserId?: string | null } | null,
     incoming: Incoming | null,
   ): Promise<boolean> {
     const choiceId = incoming?.choiceId;
@@ -106,6 +128,8 @@ export class EstimateNextStepsService {
       });
       return true;
     }
+    const visit = await this.visitTap(tx, chat, lead, choiceId, now);
+    if (visit) return true;
     if (choiceId === ESTIMATE_CHOICES.notNow) {
       await queueReply(tx, chat, laterQuestion());
       return true;
@@ -123,7 +147,7 @@ export class EstimateNextStepsService {
       kind: 'buttons',
       body: W.laterThanks,
       buttons: [
-        { id: ESTIMATE_CHOICES.call, title: W.callMeBack },
+        { id: ESTIMATE_CHOICES.call, title: MORE_WORDS.callMe },
         { id: PERSON_CHOICE, title: W.talkToPerson },
       ],
     });

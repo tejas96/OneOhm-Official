@@ -31,6 +31,8 @@ export interface Turn {
   awaiting: 'name' | 'city' | undefined;
   /** A bill sent before the lead existed, waiting in object storage. */
   pendingFile: PendingFile | undefined;
+  /** A pin that named no known city, kept for the lead the city answer makes. */
+  pin: { readonly latitude: number; readonly longitude: number } | undefined;
   /** The lead was made from the saved ad entry, so the chat forgets it. */
   dropEntry: boolean;
 }
@@ -67,6 +69,7 @@ export async function saveTurn(turn: Turn, step: OnboardStep): Promise<void> {
     misses: turn.misses,
     ...(turn.awaiting ? { awaiting: turn.awaiting } : {}),
     ...(turn.pendingFile ? { pendingFile: turn.pendingFile } : {}),
+    ...(turn.pin ? { pin: turn.pin } : {}),
   };
   const context = { ...rest, ...(turn.dropEntry || entry === undefined ? {} : { entry }), ob };
   await turn.tx

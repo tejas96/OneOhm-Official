@@ -3,16 +3,26 @@ import { readBusinessSetting, waConversations } from '@oneohm/database';
 import { nextStep, type OnboardAnswers, type OnboardStep } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { updateLeadFromChat } from '../../crm/lead-from-chat';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
+import { CHAT_WORDS } from '../assistant/chat-words';
 import { HandOverService } from '../assistant/hand-over';
+import { smallTalkOf } from '../assistant/known-words';
 import { assistantLanguage } from '../assistant/language';
 import { ensureChatOwner } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
-import type { Incoming } from '../whatsapp-events';
+import type { Incoming, IncomingLocation } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
 import { EstimateNextStepsService } from './estimate-next-steps';
-import { readAnswer } from './onboarding-answer';
-import { firstMissing, isOnboardingChat, readOnboard, stepOfState } from './onboarding-context';
+import { MORE_WORDS } from './onboard-words-more';
+import { cityFromPin, readAnswer } from './onboarding-answer';
+import {
+  CONTINUE_CHOICE,
+  firstMissing,
+  isOnboardingChat,
+  readOnboard,
+  stepOfState,
+} from './onboarding-context';
 import { ChatFilesService, type Fetched } from './onboarding-files';
 import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
 import { type QuestionView, question } from './onboarding-replies';
@@ -96,12 +106,13 @@ export class OnboardingFlowService {
         misses: kept?.misses ?? 0,
         awaiting: kept?.awaiting,
         pendingFile: kept?.pendingFile,
+        pin: kept?.pin,
         file,
         discard: [],
         dropEntry: false,
       };
-      // After a referral the first open question after the name is asked straight away.
-      if (referral) await this.ask(turn, nextStep('name', turn.answers, turn.known));
+      // A referral lead keeps its name and city, but the language (and a name we cannot use) is asked first.
+      if (referral) await this.ask(turn, firstMissing(turn.answers, turn.known));
       else await this.take(turn, incoming);
       return turn.discard;
     });
@@ -121,12 +132,18 @@ export class OnboardingFlowService {
     if (current === 'done') return this.afterEstimate(turn, incoming);
     if (!incoming) return this.ask(turn, current);
     if (wantsPerson(incoming)) return this.toPerson(turn, current);
+    // A reaction, sticker, card or pin is not an answer: never an unclear one (§16 fixes).
+    if (incoming.kind === 'other') return this.other(turn, current, incoming);
     const choice = incoming.choiceId;
     const text = incoming.text.trim();
     const word = text.toLowerCase();
-    // Nothing to read: a tap on another question (an older list, the nudge's "Continue"),
-    // or words in the first message after a person handed the chat back: ask the question.
-    if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) return this.ask(turn, current);
+    if (current === 'city' && choice === 'ob:city:pin') return this.askPin(turn);
+    // Nothing to read: a tap on another question (an older list), the nudge's "Continue", or words
+    // in the first message after a person handed the chat back. An old tap is told so.
+    if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) {
+      if (choice && choice !== CONTINUE_CHOICE) await this.say(turn, CHAT_WORDS.earlier);
+      return this.ask(turn, current);
+    }
     if (goesBack(current, choice, word)) return this.ask(turn, backTo(turn, current));
     const read = readAnswer(
       current,
@@ -152,7 +169,46 @@ export class OnboardingFlowService {
   private async takeFile(turn: Turn, step: OnboardStep): Promise<null> {
     const outcome = await takeChatFile(turn, this.files, step);
     if (outcome === 'filed' && step === 'photo') return this.apply(turn, 'photo', 'sent');
+    // After the estimate nobody waits on a question: the next-step buttons are not sent again.
+    if (step === 'done') {
+      await saveTurn(turn, 'done');
+      return null;
+    }
     return this.ask(turn, step);
+  }
+
+  /** A reaction needs no reply; a pin at the city question is the city; the rest asks the question again. */
+  private async other(turn: Turn, step: OnboardStep, incoming: Incoming): Promise<null> {
+    if (incoming.quiet) return null;
+    if (step === 'city' && incoming.location) return this.pinned(turn, incoming.location);
+    return this.ask(turn, step);
+  }
+
+  /** [📍 Send location]: WhatsApp's own button (a single-button message). */
+  private async askPin(turn: Turn): Promise<null> {
+    await saveTurn(turn, 'city');
+    await this.say(turn, MORE_WORDS.locationAsk, true);
+    return null;
+  }
+
+  /** A pin: its place names a city we serve, else it waits on the lead and the city is asked. */
+  private async pinned(turn: Turn, pin: IncomingLocation): Promise<null> {
+    turn.pin = { latitude: pin.latitude, longitude: pin.longitude };
+    const city = cityFromPin(pin, turn.settings.serviceCities);
+    if (city) return this.apply(turn, 'city', city);
+    turn.awaiting = turn.settings.serviceCities.length === 0 ? 'city' : undefined;
+    await this.say(turn, MORE_WORDS.pinNoCity);
+    return this.ask(turn, 'city');
+  }
+
+  private say(turn: Turn, body: string, location = false) {
+    return speak(turn, () =>
+      queueReply(
+        turn.tx,
+        turn.chat,
+        location ? { kind: 'location_request', body } : { kind: 'text', body },
+      ),
+    );
   }
 
   /** A clear answer: kept in the chat, written on the lead, then the next question. */
@@ -175,11 +231,22 @@ export class OnboardingFlowService {
     });
     turn.dropEntry ||= written.created;
     if (written.leadId) await fileHeldBill(turn, this.files, written.leadId);
+    const leadId = written.leadId ?? turn.lead?.id;
+    if (step === 'city' && turn.pin && leadId) {
+      const { latitude, longitude } = turn.pin;
+      await updateLeadFromChat(
+        tx,
+        leadId,
+        {},
+        `Location pin: https://maps.google.com/?q=${latitude},${longitude}`,
+      );
+      turn.pin = undefined;
+    }
     const next = nextStep(step, turn.answers, turn.known);
     if (next !== 'done') return this.ask(turn, next);
     // Its lead was closed on the way: a new one, so the estimate or the expert has a lead.
-    const leadId =
-      written.leadId ??
+    const made =
+      leadId ??
       (await ensureLead(
         turn,
         { intake: this.intake, files: this.files },
@@ -187,15 +254,30 @@ export class OnboardingFlowService {
       ));
     await saveTurn(turn, 'done');
     const after = { view: this.view(turn), summary: summaryOf(turn.answers, turn.settings) };
-    await speak(turn, () => this.estimates.finish(tx, chat, leadId, turn.answers, after));
+    await speak(turn, () => this.estimates.finish(tx, chat, made, turn.answers, after));
     return null;
   }
 
-  /** After the estimate its own taps are answered; anything else, typed too, goes to the owner. */
+  /**
+   * After the estimate its own taps are answered. "hi" or Menu shows the options again; "ok", "thanks", a
+   * 👍, a reaction or a sticker gets a short word; an old tap is told so. Only real words go to the owner,
+   * so there is no hand-over loop (§16).
+   */
   private async afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
     const { tx, chat, lead } = turn;
-    const answered = await speak(turn, () => this.nextSteps.answer(tx, chat, lead, incoming));
-    return answered ? null : this.toPerson(turn, 'done');
+    if (incoming && wantsPerson(incoming)) return this.toPerson(turn, 'done');
+    if (await speak(turn, () => this.nextSteps.answer(tx, chat, lead, incoming))) return null;
+    if (!incoming) return this.ask(turn, 'done');
+    if (incoming.choiceId) {
+      await this.say(turn, CHAT_WORDS.earlier);
+      return this.ask(turn, 'done');
+    }
+    const small = incoming.kind === 'text' && smallTalkOf(incoming.text) !== null;
+    if (incoming.kind === 'other' || small) {
+      if (!incoming.quiet) await this.say(turn, MORE_WORDS.afterEstimate);
+      return null;
+    }
+    return this.toPerson(turn, 'done');
   }
 
   /**

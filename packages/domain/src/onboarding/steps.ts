@@ -1,3 +1,4 @@
+import { usableName } from './name-check';
 import type { BillBand, OnboardingSettings } from './settings';
 
 export const STEP_ORDER = [
@@ -185,8 +186,8 @@ export function parseAnswer(
     case 'city':
       return parseCityText(text, settings);
     case 'name': {
-      const name = clean(text);
-      return name.length >= 2 && name.length <= 60 ? yes(name) : NO;
+      const name = usableName(clean(text));
+      return name ? yes(name) : NO;
     }
     default:
       return NO;

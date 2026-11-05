@@ -72,7 +72,7 @@ describe('WhatsApp inbound reliability', () => {
     expect(await replies(phone)).toHaveLength(answered.length);
   });
 
-  it('a tap from an older message, arriving after a newer one, changes nothing', async () => {
+  it('a tap from an older message, arriving after a newer one, changes nothing but is told so', async () => {
     const phone = uniquePhone();
     const now = Date.now();
     await sendInbound(phone, { text: 'hi', at: new Date(now - 2 * MINUTE) });
@@ -83,7 +83,11 @@ describe('WhatsApp inbound reliability', () => {
     // Meta delivers a late tap on the language question, sent a minute before "English".
     await sendInbound(phone, { buttonReply: 'ob:language:mr', at: new Date(now - MINUTE) });
     expect(await chatOf(phone)).toEqual(before);
-    expect(await replies(phone)).toHaveLength(said);
+    // Not silent (redesign §14): "earlier message", then the question the chat is on.
+    const after = await replies(phone);
+    expect(after).toHaveLength(said + 2);
+    expect(after.at(-2)?.body).toBe('That was an earlier message — here is the latest.');
+    expect(after.at(-1)?.buttons?.map((b) => b.id)).toContain('ob:name:yes');
     expect(await lastInboundOf(phone)).toBe(newest);
   });
 

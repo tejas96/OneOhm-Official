@@ -104,9 +104,14 @@ describe('onboarding questions', () => {
       for (const { step, reply } of await allQuestions(language)) {
         fits(reply, `${language} ${step}`);
         if (step === 'language') continue;
-        // The estimate's buttons keep "Talk to a person" in the middle.
+        // The estimate's three buttons are Book a visit, Call me and Not now (a person follows each).
         const offered = choicesOf(reply).map((choice) => choice.id);
-        if (step === 'done') expect(offered, `${language} done`).toContain('ob:person');
+        if (step === 'done')
+          expect(offered, `${language} done`).toEqual([
+            'ob:done:visit',
+            'ob:done:call',
+            'ob:done:notnow',
+          ]);
         else expect(offered.at(-1), `${language} ${step}`).toBe('ob:person');
       }
   });

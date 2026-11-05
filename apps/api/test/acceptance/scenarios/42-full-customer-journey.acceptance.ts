@@ -77,6 +77,7 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     expect(choices(await lastReply(phone))).toEqual([
       'ob:city:Pune',
       'ob:city:Satara',
+      'ob:city:pin',
       'ob:city:other',
       'ob:city:back',
       'ob:person',
@@ -170,8 +171,8 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     expect(pdf?.caption).toMatch(/दर महिन्याला ₹[\d,]+ पर्यंत बचत/);
     expect(await J.fetchFile(pdf?.link ?? '')).toMatchObject(pdfType);
     expect(choices(await lastReply(phone))).toEqual([
+      'ob:done:visit',
       'ob:done:call',
-      'ob:person',
       'ob:done:notnow',
     ]);
     const now = await lead();

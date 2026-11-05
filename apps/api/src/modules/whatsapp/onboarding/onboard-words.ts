@@ -33,13 +33,12 @@ const EN_ONBOARD = {
   sendLater: 'Send later',
   talkToPerson: 'Talk to a person',
   /** Before the question again, after one unclear answer. */
-  notClear: 'Sorry, I did not get that. Please tap one option below.',
-  notClearTyped: 'Sorry, I did not get that. Please type it again.',
+  notClear: 'Sorry, we did not get that. Please tap one option below.',
+  notClearTyped: 'Sorry, we did not get that. Please type it again.',
   /** With the estimate PDF; the last line is the same as on the PDF. */
   estimateCaption: (size: string, price: string, after: string, saving: string) =>
     `Your solar estimate: ${size}, ${price} (${after} after subsidy). You could save up to ${saving} a month.\nEstimate — final price in your quotation after a free call or visit.`,
   estimateNext: 'What would you like to do next?',
-  callMeBack: 'Call me back',
   notNow: 'Not now',
   askWhenLater: 'When should we check back with you?',
   later: { '1w': 'In 1 week', '1m': 'In 1 month', '3m': 'In 3 months' },
@@ -61,7 +60,7 @@ const EN_ONBOARD = {
     `Thank you for the video. ${name ?? 'Our team'} will watch it and reply to you here.`,
   /** A file we cannot read; the question that follows shows "Talk to a person". */
   notRead:
-    'Sorry, I can only take photos and PDF papers here. Please write it in a few words, or tap "Talk to a person".',
+    'Sorry, we can only take photos and PDF papers here. Please write it in a few words, or tap "Talk to a person".',
   /** The one nudge after a customer goes quiet halfway. */
   nudge: 'Shall we continue? It takes a minute.',
   continue: 'Continue',
@@ -96,7 +95,6 @@ const MR_ONBOARD: Words<OnboardWords> = {
   estimateCaption: (size, price, after, saving) =>
     `तुमचा सोलर अंदाज: ${size}, ${price} (सबसिडीनंतर ${after}). दर महिन्याला ${saving} पर्यंत बचत होऊ शकते.\nहा अंदाज आहे — मोफत कॉल किंवा भेटीनंतर कोटेशनमध्ये अंतिम किंमत.`,
   estimateNext: 'पुढे काय करायचे?',
-  callMeBack: 'मला कॉल करा',
   notNow: 'आत्ता नको',
   askWhenLater: 'आम्ही तुम्हाला पुन्हा केव्हा संपर्क करू?',
   later: { '1w': '1 आठवड्यात', '1m': '1 महिन्यात', '3m': '3 महिन्यांत' },
@@ -144,7 +142,6 @@ const HI_ONBOARD: Words<OnboardWords> = {
   estimateCaption: (size, price, after, saving) =>
     `आपका सोलर अनुमान: ${size}, ${price} (सब्सिडी के बाद ${after}). हर महीने ${saving} तक की बचत हो सकती है.\nयह अनुमान है — मुफ़्त कॉल या विज़िट के बाद कोटेशन में अंतिम कीमत.`,
   estimateNext: 'आगे क्या करना चाहेंगे?',
-  callMeBack: 'मुझे कॉल करें',
   notNow: 'अभी नहीं',
   askWhenLater: 'हम आपसे फिर कब संपर्क करें?',
   later: { '1w': '1 हफ़्ते में', '1m': '1 महीने में', '3m': '3 महीने में' },

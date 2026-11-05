@@ -22,6 +22,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AssistantService } from './assistant/assistant.service';
 import { assistantAnswers, markAssistantTap } from './assistant/handled-taps';
+import { optOutAsked, optOutWord } from './assistant/opt-out';
 import { ChatFileKeeper } from './chat-file-keeper';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
@@ -90,11 +91,6 @@ export class WhatsAppWebhookController implements OnModuleInit {
       const chat = await ensureChatOwner(this.db, await conversationFor(this.db, message));
       if (!(await logIncoming(this.db, chat.id, message))) continue;
       if (assistantAnswers(chat, message)) await markAssistantTap(this.db, message.waMessageId);
-      // A tap Meta delivered after a newer message is not acted on; a stranger's is dropped.
-      if (isLateTap(chat, message) && !chat.customerId) {
-        this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
-        continue;
-      }
       // A customer's file is stored before the assistant answers, so every flow files
       // that one document (never throws).
       const early = chat.customerId !== null;
@@ -134,10 +130,11 @@ export class WhatsAppWebhookController implements OnModuleInit {
     const held = chat.state === 'human';
     if (held && !assistantAnswers(chat, message)) {
       await this.tellAnswerer(chat, message);
-      await this.assistant.nightReply(chat);
+      // STOP is answered at once: no "we reply from 9:30" before it.
+      if (!optOutWord(optOutAsked(message))) await this.assistant.nightReply(chat);
       if (isLateTap(chat, message)) return;
     }
-    // A customer's late tap: "That was an earlier message", then Home; in a held chat
+    // A late tap (a customer's or a new contact's): "That was an earlier message", then Home; in a held chat
     // (one of the bot's own taps) without Home, so the person keeps the chat (§14).
     if (isLateTap(chat, message)) return this.assistant.earlier(chat, !held);
     await this.assistant.handle(chat, message);

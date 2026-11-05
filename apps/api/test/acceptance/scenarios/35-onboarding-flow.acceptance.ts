@@ -53,6 +53,7 @@ describe('WhatsApp onboarding flow', () => {
     expect(choices(await lastReply(phone))).toEqual([
       'ob:city:Pune',
       'ob:city:Satara',
+      'ob:city:pin',
       'ob:city:other',
       'ob:city:back',
       'ob:person',

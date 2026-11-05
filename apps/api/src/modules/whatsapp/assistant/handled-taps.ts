@@ -15,7 +15,7 @@ import { isWhatTap } from './files-wait';
 import { readQuoteTap } from './quote-actions';
 
 /** The stranger buttons (review F5, audit L18). */
-const STRANGER_TAPS = new Set(['callback', 'human']);
+const STRANGER_TAPS = new Set(['callback', 'human', 'ob:person']);
 /** The rating rows and the which-home rows of a complaint. */
 const OWN_TAP = /^(rate:[1-5]|home:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 

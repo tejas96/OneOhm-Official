@@ -38,7 +38,7 @@ import { exactChoice, smallTalkOf } from './known-words';
 import { inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
-import { answerOptOut, optOutAsked } from './opt-out';
+import { answerOptOut, optOutAsked, tellOptedOut } from './opt-out';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
@@ -85,6 +85,8 @@ export class AssistantService {
       answerOptOut(this.db, seen, optOutAsked(incoming)),
     );
     if (asked) return;
+    // A stranger who stopped our messages and writes again hears once how to start them again.
+    await inLanguage(await chatLanguage(this.db, seen), () => tellOptedOut(this.db, seen));
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works while a person has the chat (accepting is the customer's act) and ends a waiting step (F8).
     const tap = readQuoteTap(incoming.choiceId);
@@ -101,11 +103,13 @@ export class AssistantService {
 
   /** A tap Meta delivered after a newer message: said so, then Home (redesign §14). */
   async earlier(chat: Conversation, withHome = true): Promise<void> {
-    if (!chat.customerId) return;
     const customerId = chat.customerId;
     await inLanguage(await chatLanguage(this.db, chat), async () => {
       await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.earlier });
-      if (withHome) await this.home.show(chat, customerId);
+      if (!withHome) return;
+      // A new contact gets the question the chat is on (or the hello), not Home.
+      if (customerId) await this.home.show(chat, customerId);
+      else await this.strangers.greet(chat);
     });
   }
 
