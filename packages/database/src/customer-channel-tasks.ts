@@ -33,7 +33,7 @@ export async function handOver(
       projectId: project?.id ?? null,
       actionId,
       template: message.template,
-      ...(chatAsk ? await chatAskTask(db, customerId, message) : message.words),
+      ...(await taskWords(db, customerId, message, chatAsk)),
       dedupeKey: message.dedupeKey,
     })
     .onConflictDoNothing()
@@ -41,17 +41,26 @@ export async function handOver(
   return inserted.length > 0;
 }
 
-/** The team's task for an ask that only the WhatsApp chat can take, in staff words. */
-async function chatAskTask(db: DatabaseExecutor, customerId: string, message: Message) {
+/**
+ * The team's task in staff words ("Tell Asha in person that our team visits Baner tomorrow"), never the
+ * sentence the customer would have read. A chat-only ask with no staff line of its own still gets a plain
+ * "Do in person" task; any other message with none keeps the customer's words.
+ */
+async function taskWords(
+  db: DatabaseExecutor,
+  customerId: string,
+  message: Message,
+  chatAsk: boolean,
+) {
   const [one] = await db
     .select({ name: customers.name })
     .from(customers)
     .where(eq(customers.id, customerId))
     .limit(1);
   const name = one?.name ?? 'The customer';
-  return (
-    inPersonLine(message.template, name, message.payload) ?? inPersonTask(name, message.words.title)
-  );
+  const staff = inPersonLine(message.template, name, message.payload);
+  if (staff) return staff;
+  return chatAsk ? inPersonTask(name, message.words.title) : message.words;
 }
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;

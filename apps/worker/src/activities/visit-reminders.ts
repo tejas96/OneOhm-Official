@@ -1,12 +1,13 @@
 import {
   alertVisitOwner,
+  customerHandovers,
   customers,
   type Database,
   homeNameOf,
   languageOf,
   messageTemplates,
   projectTasks,
-  queueCustomerMessage,
+  queueCustomerMessageAs,
   serviceRequests,
   visits,
 } from '@oneohm/database';
@@ -114,6 +115,19 @@ async function templateOn(db: Database, key: string) {
   return templateIsOn(key, row);
 }
 
+/** The dedupe key of a visit's reminder (its message, SMS or task). */
+const reminderKey = (row: Row) => `visit_reminder:${row.id}:${row.day}:${row.slot}`;
+
+/** The customer is on neither channel: the reminder became a task for the team. */
+async function reminderWasTask(db: Database, row: Row): Promise<boolean> {
+  const [task] = await db
+    .select({ id: customerHandovers.id })
+    .from(customerHandovers)
+    .where(eq(customerHandovers.dedupeKey, reminderKey(row)))
+    .limit(1);
+  return task !== undefined;
+}
+
 /** "Our team visits Sangli tomorrow morning for the installation." [Confirm] [Change day]. */
 async function remind(db: Database, row: Row, now: Date, timeZone: string): Promise<boolean> {
   if (row.reminderSentAt || isPresenceKind(row.kind) || !mayMessage(row)) return false;
@@ -127,7 +141,7 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
   // With the message off nothing is sent and nothing is marked: the visit morning alert says so.
   if (!due || !(await templateOn(db, 'visit_reminder'))) return false;
   const lang = await language(db, row.phone);
-  const queued = await queueCustomerMessage(
+  const routed = await queueCustomerMessageAs(
     db,
     row.phone,
     'visit_reminder',
@@ -139,11 +153,12 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
       confirmPayload: `vcf:${row.id}:${row.day}`,
       changePayload: `vchg:${row.id}:${row.day}`,
     },
-    `visit_reminder:${row.id}:${row.day}:${row.slot}`,
+    reminderKey(row),
   );
-  // Marked only when something went out (a chat message, an SMS or the team's task); the key above makes a
-  // repeat harmless. Nothing sent leaves it open, and the visit morning alert says no reminder reached them.
-  if (!queued) return false;
+  // Marked once the reminder went out (a chat message, an SMS or the team's task) or was queued already (the
+  // key makes a repeat harmless, so it is never queued again every tick). Nothing sent for a real reason
+  // leaves it open, and the visit morning alert says no reminder reached them.
+  if (routed === 'none') return false;
   await db
     .update(visits)
     .set({ reminderSentAt: now, updatedAt: now })
@@ -191,7 +206,9 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
     body: presence
       ? 'They were told the DISCOM date and have not answered. Please call them.'
       : row.reminderSentAt
-        ? 'They did not answer the reminder. Please call them before the team goes.'
+        ? (await reminderWasTask(db, row))
+          ? 'No reminder reached them — a task was made. Please call them before the team goes.'
+          : 'They did not answer the reminder. Please call them before the team goes.'
         : `${(await templateOn(db, 'visit_reminder')) ? 'No reminder reached them' : 'No reminder reached them (the message is off)'}. Please call them before the team goes.`,
     key: `visit_unconfirmed:${row.id}`,
   });

@@ -19,6 +19,8 @@ const LINES: Readonly<Record<string, (customer: string, p: Given) => string>> = 
   bank_sign_visit: (c, p) =>
     `Remind ${c} in person of the bank visit${p.day ? ` on ${p.day}` : ''}`,
   layout_approval: (c) => `Show ${c} the panel layout in person and ask if it looks good`,
+  visit_reminder: (c, p) =>
+    `Tell ${c} in person that our team visits ${p.home ?? 'their home'}${p.when ? ` ${p.when}` : ''}${p.work ? ` for the ${p.work}` : ''}`,
   inspection_presence: (c, p) =>
     `Tell ${c} in person that ${p.work ?? 'the DISCOM visit'} is on ${p.day ?? 'the set day'} and ask them to be at home`,
 };

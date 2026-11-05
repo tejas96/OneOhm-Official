@@ -2,9 +2,10 @@ import { SMS_WORDS_OF } from '@oneohm/domain';
 import { homeEn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
-import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
+import { GENERIC_WORDS, type Routed, routeMessage, wasQueued } from './customer-channel';
 import { plainNames } from './customer-message-names';
 import { JOURNEY_EN, languageOf, localWords } from './customer-message-words';
+import { appWords, offWhatsApp } from './customer-notice-app';
 import { type Notice, notify } from './notify';
 import { customers } from './schema/crm.schema';
 
@@ -209,9 +210,20 @@ export async function queueCustomerMessage(
   given: Record<string, string>,
   dedupeKey: string,
 ): Promise<boolean> {
+  return wasQueued(await queueCustomerMessageAs(db, recipientE164, template, given, dedupeKey));
+}
+
+/** `queueCustomerMessage`, saying what was done (a message, a task, already queued, or nothing). */
+export async function queueCustomerMessageAs(
+  db: DatabaseExecutor,
+  recipientE164: string,
+  template: string,
+  given: Record<string, string>,
+  dedupeKey: string,
+): Promise<Routed> {
   const payload = await plainNames(db, given);
   // WhatsApp first; SMS or in person when the customer is not on WhatsApp (SMS words: see SMS_WORDS_OF).
-  const queued = await routeCustomerMessage(db, {
+  const queued = await routeMessage(db, {
     recipient: recipientE164,
     template,
     // The customer's language rides along for the worker (WhatsApp stays in its approved one).
@@ -237,11 +249,19 @@ export async function noticeCustomer(
   const notice = customerNotice(template, payload, dedupeKey);
   if (!notice) return;
   const owners = await db
-    .select({ id: customers.id, language: customers.preferredLanguage })
+    .select({
+      id: customers.id,
+      language: customers.preferredLanguage,
+      contactChannel: customers.contactChannel,
+      whatsappUnreachableAt: customers.whatsappUnreachableAt,
+      whatsappOptIn: customers.whatsappOptIn,
+    })
     .from(customers)
     .where(eq(customers.phoneE164, recipientE164));
   for (const owner of owners) {
-    const said = customerNotice(template, payload, dedupeKey, owner.language) ?? notice;
+    const own = customerNotice(template, payload, dedupeKey, owner.language) ?? notice;
+    // Off WhatsApp the inbox must not point to a chat they do not have.
+    const said = offWhatsApp(owner) ? appWords(template, own, owner.language) : own;
     await notify(
       db,
       { customerId: owner.id },
