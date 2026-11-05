@@ -118,6 +118,18 @@ describe('Customer clarity on WhatsApp', () => {
     }
   });
 
+  it('a customer with no project who says hi gets a call task, once a day (redesign §3)', async () => {
+    const customer = await newCustomer(admin, { name: 'No Project Call (test)' });
+    await sendInbound(customer.phone, { text: 'hi' });
+    await sendInbound(customer.phone, { text: 'hello' });
+    const calls = await rows<{ status: string }>(
+      `SELECT status::text AS status FROM customer_actions
+        WHERE customer_id = $1 AND type = 'callback' AND payload->>'reason' = 'no_project'`,
+      [customer.customerId],
+    );
+    expect(calls).toEqual([{ status: 'received' }]);
+  });
+
   it('C12: a voice note or a video from a team-made lead goes warmly to their person', async () => {
     const phone = uniquePhone();
     await admin.post('/leads', {

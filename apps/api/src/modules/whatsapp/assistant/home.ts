@@ -4,6 +4,8 @@ import { titleCaseName, todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { callPromise } from '../../care/call-promise';
+import { openCallTask } from '../../care/call-task';
 import { careTaps } from '../../care/care-taps';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
@@ -130,7 +132,8 @@ export class HomeService {
 
   /**
    * No project yet (redesign §3): we are preparing their plan and their person calls. The
-   * chat's person (or the desk) gets a follow-up alert, once a day per chat.
+   * chat's person (or the desk) gets a follow-up alert and a call task (chased when late), once a
+   * day per chat.
    */
   private async noProject(chat: Conversation, first: string, name: string | null) {
     const when = this.people.when();
@@ -142,6 +145,16 @@ export class HomeService {
       body: `${first} wrote on WhatsApp and has no project yet. We told them you will call (${when === 'now' ? 'today' : when}).`,
       key: `wa_no_project:${chat.id}:${today}`,
     });
+    if (chat.customerId)
+      await openCallTask(this.db, {
+        customerId: chat.customerId,
+        projectId: null,
+        owner: owned.assignedUserId ?? null,
+        title: `Call ${chat.profileName ?? first}: no project yet`,
+        reason: 'no_project',
+        once: `call:no_project:${chat.id}:${today}`,
+        promise: callPromise(new Date(), this.env.BUSINESS_TIMEZONE),
+      });
     const body = `${CHAT_WORDS.home.hello(first)}\n${CHAT_WORDS.home.noProject(name, when)}`;
     return sayWithTaps(this.db, chat, body, [{ id: 'go:talk', title: talkTitle(name) }, 'more']);
   }
