@@ -794,3 +794,61 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   counts from the start or the last ask-again; after 7 days it is cancelled as abandoned (log), it is not offered on Home again for
   14 days, and nobody is told to call. The customer app subsidy line reads the same note as the WhatsApp Project update.
 
+
+## 22i. Phase 6 — quote questions, problems, one rating system, referral and UPI payout, AMC
+
+- **Quote (§9):** [I have a question] opens a list: Subsidy · Payment plan · Panels & brand · Warranty · Timeline · Call me ·
+  Something else. Each answer is fixed text built from the quote itself (its subsidy and totals, its panel and inverter products,
+  the payment plan it was sent with, the owner's warranty policy, its validity) and ends with [Accept quote] [I have a question].
+  Call me promises a call by a named person with a time and makes a call task; Something else goes to the chat's person. [Not yet] on
+  the accept check asks "When should we check back?" [1 week] [1 month] [Talk to {name}]; the lead's next action becomes that day
+  (replaced if they change their mind); a customer with no lead tells the chat's person. **Revision:** sending a quote takes an
+  optional "What changed" (≤ 200 characters; the web shows the field for revision 2 and up). The customer reads it first
+  ("*What changed:* …") in the chat message and on [See quotation]; the approved `quotation_sent` template keeps its two buttons and
+  cannot carry the line.
+- **Problems (§12):** Report a problem opens the `report_problem` form (home when 2+ homes · what is wrong · since when · up to 3
+  photos · optional note); without a published flow the chat asks one tap at a time (home, what, since, then photos or words and
+  [Done]). The category is the tap (`pb:what:inverter|nopower|lowpower|damage|cleaning|bill|other` map to the service categories);
+  typed words before the questions are answered re-ask the question. The old text flow and category guessing are gone. The reply is
+  "Thank you ✅ Noted: *Inverter error · Sangli*. *{name}* will call you {when}." — the name is the request's assignee, else the project
+  manager (or their cover), else the chat's person, else the first service-desk person at work. `{when}` is time-aware: in working hours
+  "by 4:30 pm today" (two hours on, never after 6:30), out of hours "today/tomorrow/on Monday from 9:30". Behind it a **call task**
+  (`callback` ask already answered, `payload.kind = call_task`, `callBy`); the worker alerts the person when `callBy` passes and the
+  service desk 4 hours later unless staff mark it Called. A voice note during the questions or within 30 minutes of the report joins
+  the problem (no hand-over). **Fixed:** resolving (desk or technician) sends "Fixed ✅ Is it working now?" [Yes, working] [Still a
+  problem] (template `problem_fixed_check`; inside 24 hours the chat message goes even while the template is off, outside it the
+  older "resolved" update still goes until the template is on). Still a problem **reopens**: status open, response/resolution clocks
+  restart, `reopen_count` +1, the person on it and the service desk are alerted, a call task is made and the customer is told who calls
+  and when. Yes opens the problem rating.
+- **One rating system (§13):** rating asks are customer actions of type `rating` (once per stage or problem, unique). Finished
+  stage -> the five taps in the chat (template `stage_rating_request` with [Rate now] outside 24 hours); resolved problem confirmed by
+  Yes -> the same five taps. One store per kind: `stage_ratings`, `service_ratings`; the old WhatsApp feedback rating (and its comment
+  step) is retired, its data in `customer_feedback` stays and "Rate us" in More opens the pending ask or says there is none. The app
+  still rates stages and problems and closes the ask. 1–2 stars: "Sorry to hear that. *{name}* will call you {when}.", the project
+  manager (stage) or service desk (problem) is alerted and a call task is made. Staff **Ask for the pending rating again** (Send to
+  customer, customer place) re-sends only the pending ask.
+- **Referral (§15):** Refer a friend opens the `refer_friend` form (name, mobile, city from the service cities) or, without it, takes
+  "name + number" typed and the city as a tap ("Other city" -> "Not given"). The lead is the existing referral lead. Thank-you: "Thank
+  you! We'll call Suresh. You get ₹2,000 when their solar is installed." with the amount from the referral programme (per kW: "₹X for
+  every kW"; none while the programme is off) and [My rewards] [Share my link] (the code and a wa.me link).
+- **UPI payout (§15, owner answer 2):** when a reward is approved the customer gets "Share your UPI ID to receive ₹2,000." [Share UPI
+  ID] (a `payout` ask, unique per reward; the form `share_upi` or typed in the chat; the name@bank shape is checked; a refused form
+  answer leaves the button to open a fresh form). The ID is saved on the customer (`customers.upi_id`, UPI only) and the ask becomes To
+  check; finance is alerted. On the reward row staff say **Looks good** (customer's `upi_checked_at`) or **Ask again** (with a reason
+  the customer reads; the ID is cleared). A customer whose ID was checked is not asked again. Paying **by UPI** needs a checked ID
+  (409 otherwise) and keeps it on the reward (`paid_upi_id`); the paid message is "₹2,000 sent to your UPI ✅". Never twice: the pay
+  is a guarded status change (approved -> paid) inside one transaction, the payout ask has a unique key, and the chat line has a key
+  per reward. Other payment methods need no UPI ID. pending -> approved -> paid tracking is unchanged.
+- **AMC (§4):** an AMC visit due already becomes a visit pick (3b): [Confirm] [Change day] the day before and Booked on the AMC
+  record. New: **renewal offer** 30 days before an AMC ends (worker, daily with the maintenance job): a `confirm` ask (`amc_renewal`,
+  one per contract) and the **marketing** template `amc_renewal_offer` [Renew AMC] [Talk to us]; a customer who said STOP gets nothing
+  (no ask, no message). Renew -> "Thank you! *{name}* will call you {when} to renew your AMC.", a call task and an alert; Talk -> the
+  chat's person. Staff action **AMC renewal offer** (Send to customer on a project) sends the same thing in the chat (inside 24 hours)
+  or by the template; the morning job makes no second offer for a contract the team offered.
+- **Customer actions used:** `rating`, `payout`, `callback` (call task), `confirm` (`problem_fixed`, `amc_renewal`). Rows with
+  `payload.once` are unique while not cancelled (database index) — that is the never-twice rule for payouts, ratings and renewals.
+- **Templates (all inactive until Meta approves en/mr/hi; docs 53–55):** `problem_fixed_check`, `reward_upi_ask`,
+  `amc_renewal_offer` (marketing); `stage_rating_request` has a newer version with [Rate now]. New forms to publish:
+  `report_problem`, `refer_friend`, `share_upi`.
+- **Migration 0085** (drizzle-kit): customers.upi_id / upi_checked_at / upi_checked_by_user_id, service_requests.reopen_count /
+  reopened_at, referral_rewards.paid_upi_id, the unique `payload.once` index on customer_actions, the three template rows.

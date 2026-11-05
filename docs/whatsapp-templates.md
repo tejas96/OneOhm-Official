@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 40 templates (and newer versions of three). Each one:
+The app sends these 43 templates (and newer versions of four). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -650,6 +650,48 @@ Fields: customer, home, amount (only the clause after "approved": the discount a
 Examples: Ramesh Patil · Sangli · ₹1,000 off your payment: Before dispatch.
 
 No buttons. The app fills {{3}} in the customer's language. Off until approved. Meta may reject a body ending with a field: if so, add a closing line such as "Thank you." and change the app's wording to match.
+
+### 53. `problem_fixed_check` — **New** (a problem was resolved: "Is it working now?"; **Utility**)
+Fields: customer, topic
+
+> en: Hello {{1}}, we have fixed "{{2}}". Is it working now? Tap a button to tell us.
+
+> mr: नमस्कार {{1}}, "{{2}}" आम्ही दुरुस्त केले आहे. आता ते नीट चालते का? सांगण्यासाठी बटण दाबा.
+
+> hi: नमस्ते {{1}}, "{{2}}" हमने ठीक कर दिया है। क्या अब यह ठीक चल रहा है? बताने के लिए बटन दबाएँ।
+
+Examples: Ramesh Patil · inverter
+
+**Buttons:** two quick replies: en `Yes, working`, `Still a problem`; mr `हो, चालू आहे`, `अजून अडचण आहे`; hi `हाँ, चालू है`, `अभी भी समस्या है`. Payloads `fx:y:<id>`, `fx:n:<id>`. Inside 24 hours the chat message goes without this template. While it is off and the window is closed, the older `service_update` ("resolved") still goes.
+
+### 54. `reward_upi_ask` — **New** (a referral reward was approved: share a UPI ID; **Utility**)
+Fields: customer, amount
+
+> en: Hello {{1}}, your OneOhm referral reward of {{2}} is approved. Share your UPI ID to receive it.
+
+> mr: नमस्कार {{1}}, तुमचे OneOhm रेफरल बक्षीस {{2}} मंजूर झाले आहे. ते मिळवण्यासाठी तुमचा UPI आयडी द्या.
+
+> hi: नमस्ते {{1}}, आपका OneOhm रेफरल इनाम {{2}} मंज़ूर हो गया है। इसे पाने के लिए अपना UPI आईडी दें।
+
+Examples: Ramesh Patil · ₹2,000
+
+**Button:** one quick reply: en `Share UPI ID`; mr `UPI आयडी द्या`; hi `UPI आईडी दें`. Payload `up:go:<id>` (opens the "Share your UPI ID" form, or asks for it in the chat). Also used when staff say Ask again. While it is off and the window is closed, the plain "referral reward approved" message goes as before.
+
+### 55. `amc_renewal_offer` — **New** (the AMC ends within 30 days; **Marketing** category)
+Fields: customer, home, date
+
+> en: Hello {{1}}, the annual maintenance plan for your {{2}} solar ends on {{3}}. Renew it to keep your free visits and cleaning.
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरची वार्षिक देखभाल योजना {{3}} रोजी संपते. मोफत भेटी आणि सफाई चालू ठेवण्यासाठी ती नूतनीकरण करा.
+
+> hi: नमस्ते {{1}}, आपके {{2}} सोलर की सालाना देखरेख योजना {{3}} को खत्म होती है। मुफ़्त विज़िट और सफ़ाई जारी रखने के लिए इसे रिन्यू करें।
+
+Examples: Ramesh Patil · Sangli · 12 Dec
+
+**Buttons:** two quick replies: en `Renew AMC`, `Talk to us`; mr `AMC नूतनीकरण`, `आमच्याशी बोला`; hi `AMC रिन्यू करें`, `हमसे बात करें`. Payloads `amc:renew:<id>`, `amc:talk:<id>`. **Marketing:** cost per message; never sent to a customer who said STOP. Off until Meta approves all three languages.
+
+### Changed: `stage_rating_request` (one rating system, redesign §13)
+The text now ends "Tap the button to rate it." (en: `Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Tap the button to rate it.`). A newer version carries one quick reply: en `Rate now`; mr `आता रेटिंग द्या`; hi `अभी रेटिंग दें`; payload `rt:go:<id>` (opens the five rating taps in the chat). It sends only behind the template's own **quick replies** switch; until then the older text sends and the customer rates by typing "Rate us".
 
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text
