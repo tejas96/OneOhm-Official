@@ -119,13 +119,13 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
   those tables' write locks until it ends. Deploy off-peak (evening or Sunday), when few
   people upload papers or send WhatsApp messages.
 
-- **WhatsApp redesign release (migrations 0073 to 0085):** thirteen migrations run on their own at start, in file order, in one go; deploy
+- **WhatsApp redesign release (migrations 0073 to 0086):** fourteen migrations run on their own at start, in file order, in one go; deploy
   **off-peak** (evening or Sunday). Most only add tables, columns, indexes and inactive template rows (fast, no long locks). Watch these:
   `0073_customer_actions` creates the customer-actions table, copies every paper request into it and sets `documents.checked_at` on all existing
   papers (one `UPDATE` on the documents table, which holds its write lock until it ends); `0076_files_ask_at` fills
   `wa_conversations.files_ask_at` from each chat's memory; `0080_visits` creates the visits table and turns every booked service day ahead
   into a confirmed visit; `0084_self_survey` adds the milestone credits; `0085_care_upi_reopen` adds a unique index on
-  `customer_actions.payload->>'once'` (it fails if two live rows share a key, which only the redesign code writes). `0075` adds
+  `customer_actions.payload->>'once'` (it fails if two live rows share a key, which only the redesign code writes); `0086_handover_ask_link` adds `customer_handovers.action_id` (nullable, so ticking a task closes its ask). `0075` adds
   the bill paper's age limit (90 days) and a reminders-paused column on instalments; `0079` adds the templates' "quick replies approved" flag (off). Take a database backup first (section 6);
   the migrations cannot be rolled back, so restore the backup to go back.
 
@@ -148,8 +148,8 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
 ### Templates
 
 Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
-full list (56 templates: 53 *Utility*, including `referral_reward`, which Meta may rule
-*Marketing*, and 3 *Marketing*: `self_survey_offer`, `self_survey_reminder`,
+full list (56 templates: 53 *Utility* (`referral_reward` is a transactional reward notice, so
+Utility) and 3 *Marketing*: `self_survey_offer`, `self_survey_reminder`,
 `amc_renewal_offer`), each submitted in English, Marathi and Hindi, with each body, field order and
 sample values, is in [whatsapp-templates.md](whatsapp-templates.md) (summary table first). The names
 match the app's keys, so no change in **Settings → WhatsApp messages** is needed. Marketing ones

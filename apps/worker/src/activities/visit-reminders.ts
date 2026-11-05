@@ -127,7 +127,7 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
   // With the message off nothing is sent and nothing is marked: the visit morning alert says so.
   if (!due || !(await templateOn(db, 'visit_reminder'))) return false;
   const lang = await language(db, row.phone);
-  await queueCustomerMessage(
+  const queued = await queueCustomerMessage(
     db,
     row.phone,
     'visit_reminder',
@@ -141,7 +141,9 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
     },
     `visit_reminder:${row.id}:${row.day}:${row.slot}`,
   );
-  // Marked only once it is queued; the key above makes a repeat harmless.
+  // Marked only when something went out (a chat message, an SMS or the team's task); the key above makes a
+  // repeat harmless. Nothing sent leaves it open, and the visit morning alert says no reminder reached them.
+  if (!queued) return false;
   await db
     .update(visits)
     .set({ reminderSentAt: now, updatedAt: now })

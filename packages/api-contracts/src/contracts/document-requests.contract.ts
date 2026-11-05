@@ -43,7 +43,7 @@ export const documentRequestsContract = c.router({
     method: 'POST',
     path: '/document-requests/:id/done-in-person',
     pathParams: idParams,
-    body: z.object({}).optional(),
+    body: z.object({ answer: z.enum(['yes', 'not_yet']).optional() }).optional(),
     responses: { 200: documentRequestSchema },
     summary: 'The team did an ask in person with a customer who is not on WhatsApp: it closes.',
   },

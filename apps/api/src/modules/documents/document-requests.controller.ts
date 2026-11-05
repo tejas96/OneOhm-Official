@@ -24,9 +24,9 @@ export class DocumentRequestsController {
         status: 200,
         body: await this.requests.cancel(actor, params.id),
       }),
-      doneInPersonDocumentRequest: async ({ params }) => ({
+      doneInPersonDocumentRequest: async ({ params, body }) => ({
         status: 200,
-        body: await this.requests.doneInPerson(actor, params.id),
+        body: await this.requests.doneInPerson(actor, params.id, body?.answer),
       }),
       reaskDocumentRequest: async ({ params, body }) => ({
         status: 200,

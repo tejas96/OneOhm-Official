@@ -43,7 +43,7 @@ rating system, payment proof, referral payout.
 | List: ≤ 10 rows, row ≤ 24, description ≤ 72 | Long lists → "More" |
 | **Pay link, Form and 📍 Location are single-button messages** | They can't sit with other buttons. Pattern: short text with reply buttons, and a tap on e.g. **[Pay ₹45,000]** answers with the pay-link message |
 | Outside 24 h only templates (Meta-approved, 3 languages) | Every staff action has a template with quick-reply / link / form button. Location and lists only inside 24 h → the template's button opens the chat step that sends them |
-| Template category | Survey discount offer, referral, AMC renewal = **marketing** (cost, skipped after STOP). Everything else = utility |
+| Template category | Survey discount offer and reminder, AMC renewal = **marketing** (cost, skipped after STOP, never an SMS). Everything else, the referral reward notice included, = utility |
 | Forms (WhatsApp Flows) | Published in WhatsApp Manager; uploads arrive encrypted → we decrypt and store through the **store-once** document path with the same type/size checks |
 | Forms / location may not show on WhatsApp Web/Desktop/old apps | Every form step has a fallback: "Or just send the photo here" (inbound file path) |
 | Read receipts optional | "Opened" is info only; never drives reminders |

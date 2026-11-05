@@ -42,7 +42,7 @@ describe('Customers not on WhatsApp: automatic messages', () => {
     await queue(customer.phone, 'location_request', given, 'auto_ask:a1');
     const [task] = await tasks(customer.customerId);
     expect(await tasks(customer.customerId)).toHaveLength(1);
-    expect(task?.title).toMatch(/^Do in person: /);
+    expect(task?.title).toBe('Ask Auto Off Chat (test) in person for the location of Baner');
     expect(task?.body).toContain('is not on WhatsApp');
     await queue(customer.phone, 'signature_reminder', { customer: 'A', home: 'Baner' }, 'r1');
     await queue(customer.phone, 'self_survey_offer', { customer: 'A', home: 'Baner' }, 'm1');

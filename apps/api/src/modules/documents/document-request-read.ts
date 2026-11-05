@@ -105,6 +105,7 @@ export async function readRequests(
     documentByTeam: request.documentId ? uploadedBy !== null : null,
     requestedBy: by,
     channel: channelOf(request.payload.channel),
+    kind: typeof request.payload.kind === 'string' ? request.payload.kind : null,
     suggestion: suggestionOf(request, point),
     remindersSent: reminders,
     createdAt: request.createdAt.toISOString(),

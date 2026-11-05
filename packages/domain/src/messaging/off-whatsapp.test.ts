@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { channelOf, inPersonTask, offWhatsAppPathForTemplate, sendPath } from './off-whatsapp';
+import {
+  channelOf,
+  inPersonTask,
+  offWhatsAppPathForTemplate,
+  sendPath,
+  smsCanStandIn,
+} from './off-whatsapp';
+import { inPersonClose } from './off-whatsapp-close';
+import { inPersonLine } from './off-whatsapp-tasks';
 import { SEND_ACTIONS } from './send-to-customer';
 
 describe('the path of a send for a customer not on WhatsApp', () => {
@@ -46,7 +54,7 @@ describe('what an automatic message becomes for a customer not on WhatsApp', () 
   it('marketing is never sent, a chat reminder is skipped, a first chat ask is a task', () => {
     for (const key of ['self_survey_offer', 'self_survey_reminder', 'amc_renewal_offer'])
       expect(offWhatsAppPathForTemplate(key)).toBe('never');
-    for (const key of ['visit_reminder', 'signature_reminder', 'site_ready_reminder'])
+    for (const key of ['signature_reminder', 'signed_page_reminder', 'site_ready_reminder'])
       expect(offWhatsAppPathForTemplate(key)).toBe('skip');
     for (const key of ['location_request', 'visit_pick', 'callback_request', 'reward_upi_ask'])
       expect(offWhatsAppPathForTemplate(key)).toBe('in_person');
@@ -67,5 +75,31 @@ describe('what an automatic message becomes for a customer not on WhatsApp', () 
       title: 'Do in person: Share your location',
       body: 'Asha is not on WhatsApp: Share your location with them in person.',
     });
+  });
+});
+
+describe('presence, reminders and staff words', () => {
+  it('a DISCOM presence date is a task; the visit reminder is an SMS', () => {
+    expect(offWhatsAppPathForTemplate('inspection_presence')).toBe('in_person');
+    expect(offWhatsAppPathForTemplate('visit_reminder')).toBe('sms');
+  });
+
+  it('the task is in staff words', () => {
+    expect(inPersonLine('location_request', 'Asha', { home: 'Baner' })?.title).toBe(
+      'Ask Asha in person for the location of Baner',
+    );
+    expect(inPersonLine('payment_due', 'Asha', {})).toBeNull();
+  });
+
+  it('only plain asks close with one tap; a payment says what to do instead', () => {
+    expect(inPersonClose('location', null)).toEqual({ how: 'plain' });
+    expect(inPersonClose('confirm', 'site_ready')).toEqual({ how: 'confirm', kind: 'site_ready' });
+    expect(inPersonClose('pay', null).how).toBe('hint');
+    expect(inPersonClose('signature', null).how).toBe('hint');
+  });
+
+  it('a staff message never stands in by SMS', () => {
+    expect(smsCanStandIn('payment_reminder')).toBe(true);
+    expect(smsCanStandIn('staff_daily_digest')).toBe(false);
   });
 });

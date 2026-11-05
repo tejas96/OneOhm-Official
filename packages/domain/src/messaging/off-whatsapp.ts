@@ -1,4 +1,5 @@
 import type { ContactChannel } from './contact-channels';
+import { DEFAULT_MESSAGE_TEMPLATES } from './message-templates';
 import type { SendAction } from './send-to-customer';
 
 /**
@@ -55,7 +56,6 @@ const MARKETING: readonly string[] = [
 ];
 /** Reminders whose words send the customer to the WhatsApp chat. */
 const CHAT_REMINDERS: readonly string[] = [
-  'visit_reminder',
   'signature_reminder',
   'signed_page_reminder',
   'site_ready_reminder',
@@ -74,6 +74,7 @@ const CHAT_ASKS: readonly string[] = [
   'subsidy_credit_check',
   'bank_sign_visit',
   'layout_approval',
+  'inspection_presence',
 ];
 
 export function offWhatsAppPathForTemplate(template: string): TemplatePath {
@@ -88,7 +89,15 @@ export const inPersonTask = (customer: string, what: string) => ({
   body: `${customer} is not on WhatsApp: ${what} with them in person.`,
 });
 
-/** Messages whose SMS words differ from the app inbox (the app words point to the WhatsApp chat). */
+/** Messages whose SMS words differ from the app inbox (those point to the WhatsApp chat or its buttons). */
 export const SMS_WORDS_OF: Readonly<Record<string, string>> = {
   problem_fixed_check: 'problem_fixed_sms',
+  document_share: 'document_share_sms',
+  visit_reminder: 'visit_reminder_sms',
 };
+
+/** A customer SMS can stand in for a failed WhatsApp; staff messages fail visibly instead. */
+const STAFF_TEMPLATES: ReadonlySet<string> = new Set(
+  DEFAULT_MESSAGE_TEMPLATES.filter((item) => item.audience === 'staff').map((item) => item.key),
+);
+export const smsCanStandIn = (template: string): boolean => !STAFF_TEMPLATES.has(template);

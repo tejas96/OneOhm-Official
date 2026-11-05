@@ -24,6 +24,7 @@ import { askCustomer, tellCancelled } from './document-request-messages';
 import { readRequests } from './document-request-read';
 import { contactOf, reopenRequest } from './document-request-reopen';
 
+type Answer = 'yes' | 'not_yet';
 /** Where a paper is asked: a project, or a lead's site before any project exists. */
 interface Target {
   readonly customerId: string;
@@ -150,8 +151,8 @@ export class DocumentRequestsService {
   }
 
   /** An ask for a customer who is not on WhatsApp was done in person: it closes (log and audit). */
-  async doneInPerson(actor: Actor, id: string): Promise<DocumentRequest> {
-    await closeInPerson(this.db, actor, await this.one(id));
+  async doneInPerson(actor: Actor, id: string, answer?: Answer): Promise<DocumentRequest> {
+    await closeInPerson(this.db, actor, await this.one(id), answer);
     return this.one(id);
   }
 

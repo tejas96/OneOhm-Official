@@ -127,10 +127,13 @@ export async function queueActionReminders(
   return done + (await chaseSubsidy(db, now));
 }
 
-/** Whether this ask travelled by the WhatsApp chat (its recorded channel, else the customer's route). */
+/**
+ * Whether the customer is reminded in the chat or by SMS: an ask done in person was handed to the team, so
+ * it is not chased with a message. An ask with no recorded channel follows the customer's route.
+ */
 async function inChat(db: Database, action: typeof customerActions.$inferSelect) {
   const channel = action.payload.channel;
-  if (typeof channel === 'string') return channel === 'whatsapp';
+  if (typeof channel === 'string') return channel !== 'in_person';
   return (await routeOfCustomer(db, action.customerId)) === 'whatsapp';
 }
 

@@ -40,6 +40,8 @@ export const documentRequestSchema = z.object({
   requestedBy: z.string().nullable(),
   /** How the ask travels (WhatsApp, SMS or in person); null for asks made before this was recorded. */
   channel: z.enum(CONTACT_CHANNELS).nullable().default(null),
+  /** What a system ask is about (the roof, the installation...); null for the rest. */
+  kind: z.string().nullable().default(null),
   /** A pin the customer sent for a home that already has a point, waiting for the team to check. */
   suggestion: z
     .object({

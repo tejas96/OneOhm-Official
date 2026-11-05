@@ -24,7 +24,8 @@ import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { documentUrl } from '@/lib/api/upload';
 import { useCan } from '@/providers/current-user';
 import { useFolderLabel } from '../gallery/use-labels';
-import { useCancelRequest, useCheckPapers, useDoneInPerson } from './use-document-requests';
+import { InPersonDone } from './in-person-done';
+import { useCancelRequest, useCheckPapers } from './use-document-requests';
 import { useLocationReview } from './use-location-review';
 
 const TONE: Readonly<Record<DocumentRequest['status'], PillTone>> = {
@@ -83,7 +84,6 @@ export function ActionRow({
   // Papers follow the documents rights; the other asks the rights of sending them (redesign §18).
   const canAct = useCan(...(rightsForAsk(request.type) as Capability[]));
   const cancel = useCancelRequest();
-  const doneInPerson = useDoneInPerson();
   const check = useCheckPapers();
   const review = useLocationReview();
   const isPaper = request.type === 'paper';
@@ -192,15 +192,7 @@ export function ActionRow({
           </Button>
         )}
         {canAct && request.status === 'open' && request.channel === 'in_person' && (
-          <Button
-            size="sm"
-            variant="secondary"
-            leadingIcon={<Check />}
-            pending={doneInPerson.isPending}
-            onClick={() => doneInPerson.mutate(request)}
-          >
-            {t('doneInPerson.action')}
-          </Button>
+          <InPersonDone request={request} />
         )}
         {canAct && request.status === 'open' && (
           <Button

@@ -36,7 +36,7 @@ news still goes inside 24 hours while it is off (money and answer flows never go
 | `change_request_completed` | A change to the project is done | Utility | none | — | To submit |
 | `document_requested` | Older paper request (replaced by `paper_request`) | Utility | none | — | To submit |
 | `paper_request` | The team asks for a paper | Utility | none | — | To submit |
-| `referral_reward` | A referral reward changed status | Utility (Meta may say Marketing) | none | — | To submit |
+| `referral_reward` | A referral reward changed status | Utility | none | — | To submit |
 | `maintenance_visit` | A free AMC visit is booked | Utility | none | — | To submit |
 | `survey_scheduled` | The site survey visit is scheduled | Utility | none | — | To submit |
 | `stage_rating_request` | Rate a finished stage | Utility | 1 quick reply | quick replies approved | To submit |
@@ -87,8 +87,8 @@ until then). Marketing templates cost more per message and are never sent to a c
 ## Meta submission checklist (for the owner)
 
 1. In WhatsApp Manager submit every row marked **To submit** in **English, Marathi and Hindi**, with the category in the table. The three **Marketing**
-   ones are `self_survey_offer`, `self_survey_reminder` and `amc_renewal_offer`; `referral_reward` may be re-classified by Meta as Marketing (it
-   still works, each message costs more).
+   ones are `self_survey_offer`, `self_survey_reminder` and `amc_renewal_offer`; `referral_reward` is a transactional notice of a reward
+   the customer earned, so it is **Utility** (if Meta re-classifies it, it still works and costs more).
 2. For templates that have a newer version (the "Newer version" sections: `stage_rating_request` with [Rate now], and the buttons on
    `installation_started`, `commissioning_completed`, `project_waiting`, `payment_link`, `payment_reminder`) submit the new version under a **new**
    Meta name. Never edit an approved template.

@@ -4,6 +4,8 @@ export * from './contact-channels';
 export * from './customer-steps';
 export * from './message-templates';
 export * from './off-whatsapp';
+export * from './off-whatsapp-close';
+export * from './off-whatsapp-tasks';
 export * from './send-template-words';
 export * from './send-templates';
 export * from './send-to-customer';

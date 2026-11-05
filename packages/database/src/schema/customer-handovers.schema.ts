@@ -1,6 +1,7 @@
 import { index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId } from './columns';
 import { customers } from './crm.schema';
+import { customerActions } from './customer-actions.schema';
 import { users } from './identity.schema';
 import { projects } from './projects.schema';
 
@@ -16,6 +17,8 @@ export const customerHandovers = pgTable(
       .notNull()
       .references(() => customers.id, { onDelete: 'cascade' }),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    /** The ask this task is about; ticking the task closes the ask. */
+    actionId: uuid('action_id').references(() => customerActions.id, { onDelete: 'set null' }),
     template: text('template').notNull(),
     title: text('title').notNull(),
     body: text('body').notNull(),

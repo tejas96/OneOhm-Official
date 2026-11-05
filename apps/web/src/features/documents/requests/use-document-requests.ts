@@ -89,11 +89,11 @@ export function useDoneInPerson() {
   const toast = useToast();
   const refresh = useRefresh();
   return useMutation({
-    mutationFn: (request: DocumentRequest) =>
+    mutationFn: ({ request, answer }: { request: DocumentRequest; answer?: 'yes' | 'not_yet' }) =>
       expectStatus(
         api.documentRequests.doneInPersonDocumentRequest({
           params: { id: request.id },
-          body: {},
+          body: answer ? { answer } : {},
         }),
         200,
       ),

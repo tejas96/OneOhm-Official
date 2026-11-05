@@ -261,6 +261,8 @@
       "cancelFailed": "Could not cancel the request",
       "doneInPerson": {
         "action": "Done in person",
+        "yes": "Yes, done",
+        "notYet": "Not yet",
         "done": "Marked as done in person",
         "failed": "Could not close the ask"
       },
