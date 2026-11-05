@@ -119,4 +119,25 @@ describe('Journey: loan papers', () => {
     expect((await asked(customer.customerId))[0]?.status).toBe('closed');
     expect((await taskRow(stepId))?.status).not.toBe('waiting');
   });
+
+  it('a wait on the customer for another reason stays open when a loan paper is checked', async () => {
+    const sale = await sellProject(admin, { name: 'Loan Other Wait (test)', loan: true });
+    const { customer } = sale;
+    const stepId = await taskIdOf(sale, 'loan_documents');
+    await askAll(sale.project.id);
+    // The step starts waiting on the customer only now, for something else.
+    await admin.post(`/tasks/${stepId}/waiting`, { party: 'customer', note: 'Site key (test)' });
+    for (const name of ITEMS)
+      await upload(admin, 'document', { projectId: sale.project.id, category: 'bank_loan', name });
+    expect((await asked(customer.customerId)).map((one) => one.status)).toEqual([
+      'closed',
+      'closed',
+    ]);
+    expect((await taskRow(stepId))?.status).toBe('waiting');
+    const [alert] = await rows(
+      "SELECT 1 FROM notifications WHERE kind = 'loan_papers_checked' AND subject_id = $1",
+      [stepId],
+    );
+    expect(alert).toBeUndefined();
+  });
 });

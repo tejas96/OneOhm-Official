@@ -78,7 +78,9 @@ export async function tellLoanNews(
     await tellChatTeam(tx, owned, {
       kind: 'loan_rejected',
       title: `Call ${row.name}: ${bank} did not approve the loan`,
-      body: `${row.name} was told ${staff} will call to plan the next steps.`,
+      body: sent
+        ? `${row.name} was told ${staff} will call to plan the next steps.`
+        : `${row.name} was NOT told (the loan_rejected message is switched off). Please call them to plan the next steps.`,
       key: `${given.key}:call`,
     });
 }

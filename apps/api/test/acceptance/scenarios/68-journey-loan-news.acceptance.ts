@@ -117,6 +117,18 @@ describe('Journey: loan news', () => {
     }
   });
 
+  it('not approved with the message switched off: the alert does not claim the customer was told', async () => {
+    const sale = await loanSale('Loan Rejected Off (test)');
+    await openChat(sale.customer.phone, sale.customer.customerId);
+    await save(sale, 'rejected');
+    expect(await replies(sale.customer.phone)).toHaveLength(0);
+    const [alert] = await rows<{ body: string }>(
+      "SELECT body FROM notifications WHERE kind = 'loan_rejected' AND title LIKE $1",
+      ['%Loan Rejected Off (test)%'],
+    );
+    expect(alert?.body).toMatch(/was NOT told/);
+  });
+
   it('a loan step that may not message customers says nothing (PRD rule)', async () => {
     const restore = await setTemplate('loan_sanctioned', true);
     try {

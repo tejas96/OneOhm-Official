@@ -14,6 +14,7 @@ import { conflict, forbidden, invalid, notFound } from '../../common/http/errors
 import { DATABASE, type Database } from '../../config/core.module';
 import { leadVisibility } from '../crm/lead-read';
 import { reopenSignature } from '../journey/journey-signature';
+import { loanPaperAsked } from '../journey/loan-papers';
 import { tellAskCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
@@ -84,6 +85,11 @@ export class DocumentRequestsService {
         })
         .returning({ id: customerActions.id });
       if (!row) throw new Error('Customer action insert returned nothing');
+      await loanPaperAsked(tx, {
+        id: row.id,
+        projectId: target.projectId,
+        category: input.category,
+      });
       await askCustomer(tx, { ...target, id: row.id, title }, 0);
       await logAction(tx, target, {
         kind: 'document_request',
