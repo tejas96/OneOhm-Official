@@ -50,7 +50,8 @@ describe('Unsupported messages', () => {
     );
   });
 
-  it('a chat a person holds stays quiet', async () => {
+  // Nobody can open it, not even the person who holds the chat, so we ask for it again.
+  it('a chat a person holds still hears sorry, and stays with the person', async () => {
     const sale = await sellProject(admin, { name: 'Unsupported Held (test)' });
     const phone = sale.customer.phone;
     await openChat(phone, sale.customer.customerId);
@@ -58,7 +59,10 @@ describe('Unsupported messages', () => {
     expect((await chatOf(phone)).state).toBe('human');
     const count = (await replies(phone)).length;
     await sendInbound(phone, { unsupported: true });
-    expect((await replies(phone)).length).toBe(count);
+    const after = await replies(phone);
+    expect(after.slice(count)).toHaveLength(1);
+    expect(after.at(-1)?.body).toBe(SORRY);
+    expect((await chatOf(phone)).state).toBe('human');
   });
 
   it('a stranger in onboarding hears sorry, then the question they were on', async () => {
