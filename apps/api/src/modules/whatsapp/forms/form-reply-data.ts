@@ -66,7 +66,8 @@ function readFile(raw: unknown): FormFile | null {
     return { id: raw, fileName: null, mimeType: null, sha256: null };
   if (!raw || typeof raw !== 'object') return null;
   const entry = raw as Record<string, unknown>;
-  const id = text(entry.id) ?? text(entry.media_id);
+  // Media ids may come as numbers or as text.
+  const id = scalar(entry.id) ?? scalar(entry.media_id);
   if (!id) return null;
   return {
     id,

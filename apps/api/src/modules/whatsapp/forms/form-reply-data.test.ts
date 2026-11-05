@@ -34,6 +34,13 @@ describe('reading a form reply (nfm_reply response_json)', () => {
     expect(form.keys).toEqual(['flow_token:string', 'photos:string']);
   });
 
+  it('reads a media id sent as a number', () => {
+    const form = readForm(
+      reply({ flow_token: 'tok', photos: [{ id: 1234567890123456, file_name: 'd.jpg' }] }),
+    );
+    expect(form.files.map((one) => one.id)).toEqual(['1234567890123456']);
+  });
+
   it('reads a list of plain media ids', () => {
     const form = readForm(reply({ flow_token: 'tok', photos: ['m7', 'm8'] }));
     expect(form.files.map((one) => one.id)).toEqual(['m7', 'm8']);
