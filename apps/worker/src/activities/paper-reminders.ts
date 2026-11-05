@@ -20,6 +20,7 @@ import { queueCallTasks } from './call-tasks';
 import { queueCareReminders } from './care-reminders';
 import { filesNotMatched } from './paper-unmatched';
 import { tellAsker } from './paper-waiting';
+import { endWaitsOnAnsweredAsks } from './task-wait-asks';
 import { queueVisitReminders } from './visit-reminders';
 
 const HOUR = 3_600_000;
@@ -207,6 +208,7 @@ export async function queuePaperReminders(
     (await queueActionChecks(db, now, timeZone)) +
     (await queueCallTasks(db, now, timeZone)) +
     (await queueCareReminders(db, now, timeZone)) +
-    (await queueVisitReminders(db, now, timeZone));
+    (await queueVisitReminders(db, now, timeZone)) +
+    (await endWaitsOnAnsweredAsks(db, now));
   return reminded + asked + (await alertFilesToSort(db, now));
 }
