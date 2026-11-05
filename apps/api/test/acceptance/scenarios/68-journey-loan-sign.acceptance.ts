@@ -138,6 +138,37 @@ describe('Journey: sign the loan papers at the bank', () => {
     );
   });
 
+  it('the day after the bank day the unconfirmed ask closes itself, with a log line and a note for the owner', async () => {
+    const made = await sale('Bank Expired (test)');
+    const { customer, project } = made;
+    await openChat(customer.phone, customer.customerId);
+    await sendTo(admin, { projectId: project.id }, request(project.id));
+    const [ask] = await stepAsks(customer.customerId, 'bank_sign');
+    // The day itself still counts; a day later it is over, and nothing is chased.
+    const db = acceptanceDb().db;
+    await queueActionReminders(db, new Date(`${day}T06:30:00Z`), 'Asia/Kolkata');
+    expect((await stepAsks(customer.customerId, 'bank_sign'))[0]?.status).toBe('open');
+    const dayAfter = new Date(`${addDays(day, 1)}T06:30:00Z`);
+    const before = (await replies(customer.phone)).length;
+    await queueActionReminders(db, dayAfter, 'Asia/Kolkata');
+    await queueActionReminders(db, dayAfter, 'Asia/Kolkata');
+    expect((await stepAsks(customer.customerId, 'bank_sign'))[0]).toMatchObject({
+      status: 'cancelled',
+      payload: expect.objectContaining({ answer: 'expired' }),
+    });
+    expect((await replies(customer.phone)).length).toBe(before);
+    const [line] = await rows(
+      "SELECT 1 FROM project_activities WHERE project_id = $1 AND message LIKE '%was not confirmed, so the ask closed%'",
+      [project.id],
+    );
+    expect(line).toBeDefined();
+    const notes = await rows(
+      "SELECT 1 FROM notifications WHERE kind = 'bank_sign_expired' AND dedupe_key LIKE $1",
+      [`bank_sign_expired:${ask?.id}%`],
+    );
+    expect(notes).toHaveLength(1);
+  });
+
   it('a loan step that may not message customers offers nothing (PRD rule)', async () => {
     const made = await sale('Bank Quiet (test)');
     await setNotify(made, 'loan_approval', false);

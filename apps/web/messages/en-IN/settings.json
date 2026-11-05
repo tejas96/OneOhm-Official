@@ -756,6 +756,7 @@
         "subsidy_credit_check": "Did the subsidy reach your bank?",
         "bank_sign_visit": "Sign the loan papers at the bank",
         "layout_approval": "Roof layout to look at and approve",
+        "layout_reminder": "Reminder: look at the roof layout",
         "loan_sanctioned": "Loan sanctioned",
         "loan_disbursed": "Loan money sent",
         "loan_rejected": "Loan not approved"

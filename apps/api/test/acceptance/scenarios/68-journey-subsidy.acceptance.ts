@@ -42,6 +42,9 @@ describe('Journey: PM Surya Ghar registration', () => {
     expect(question?.body).toMatch(
       /^Please register on the PM Surya Ghar portal for your \*.+\* solar\./,
     );
+    expect(question?.body).toContain(
+      'Keep your latest electricity bill ready (consumer number, electricity company) and an email ID',
+    );
     expect(question?.buttons?.map((button) => button.title)).toEqual(['Done', 'Need help']);
     // Asked again while it waits: refused.
     expect(

@@ -28,6 +28,8 @@ export const HI: Words<AssistantWords> = {
       applied: 'सब्सिडी: आवेदन हो गया, सरकार का इंतज़ार',
       inspected: 'सब्सिडी: जाँच हो गई, राशि जारी होने का इंतज़ार',
       released: 'सब्सिडी: जारी हो गई',
+      received: 'सब्सिडी आपके बैंक में आ गई ✅',
+      checking: 'सब्सिडी: हम सरकार से पता कर रहे हैं',
     },
     waitingOn: {
       customer: 'आपसे कुछ चाहिए',

@@ -3,6 +3,7 @@ import { actionReminderDue } from './action-reminders';
 import {
   askedSince,
   confirmReminder,
+  isLayoutHandled,
   isSubsidyWait,
   signatureReminder,
   waitingBody,
@@ -116,8 +117,8 @@ describe('subsidy, bank and layout reminders', () => {
       },
     });
     expect(confirmReminder(ask({ kind: 'layout', paperTitle: 'Roof layout' }), given)).toEqual({
-      template: 'signature_reminder',
-      payload: { ...given, document: 'Roof layout', showPayload: 'jr:a1' },
+      template: 'layout_reminder',
+      payload: { ...given, showPayload: 'jr:a1' },
     });
   });
 
@@ -125,6 +126,12 @@ describe('subsidy, bank and layout reminders', () => {
     expect(isSubsidyWait(ask({ kind: 'subsidy_credit', answer: 'not_yet' }))).toBe(true);
     expect(isSubsidyWait(ask({ kind: 'subsidy_credit' }))).toBe(false);
     expect(isSubsidyWait(ask({ kind: 'site_ready', answer: 'not_yet' }))).toBe(false);
+  });
+
+  it('a layout the customer has a question about is left to the person handling it', () => {
+    expect(isLayoutHandled(ask({ kind: 'layout', answer: 'question' }))).toBe(true);
+    expect(isLayoutHandled(ask({ kind: 'layout' }))).toBe(false);
+    expect(isLayoutHandled(ask({ kind: 'subsidy_credit', answer: 'question' }))).toBe(false);
   });
 
   it('tells the asker what they have not done', () => {

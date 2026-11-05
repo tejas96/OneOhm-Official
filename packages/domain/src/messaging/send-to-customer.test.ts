@@ -104,6 +104,14 @@ describe('rights of the journey steps', () => {
       'signature_reminder',
       'signed_page_reminder',
       'site_ready_reminder',
+      'subsidy_register_help',
+      'subsidy_credit_check',
+      'bank_sign_visit',
+      'layout_approval',
+      'layout_reminder',
+      'loan_sanctioned',
+      'loan_disbursed',
+      'loan_rejected',
     ]) {
       const words = SEND_TEMPLATE_WORDS[key];
       expect(words, key).toBeDefined();

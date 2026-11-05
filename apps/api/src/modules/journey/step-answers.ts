@@ -11,6 +11,7 @@ import { formatInr } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
+import { plainDate } from '../whatsapp/assistant/plain-date';
 import { alertTaskOwner, type JourneyTask, taskFor } from './journey-store';
 
 /** What an answer to one of the subsidy, bank or layout questions came to. */
@@ -86,6 +87,13 @@ const HANDLERS: Readonly<
         `${who} says the ${money} subsidy for ${home} has not reached their bank yet (WhatsApp)`,
         false,
       );
+      // Staff see it on the project's card until the money arrives.
+      await tx
+        .update(customerActions)
+        .set({
+          note: `Customer says not received yet (since ${plainDate(new Date().toISOString().slice(0, 10))})`,
+        })
+        .where(eq(customerActions.id, action.id));
       return { kind: 'notYet', again: false };
     }
     await record(
@@ -94,6 +102,7 @@ const HANDLERS: Readonly<
       true,
     );
     if (action.projectId) await markReceived(tx, action.projectId);
+    await tx.update(customerActions).set({ note: '' }).where(eq(customerActions.id, action.id));
     await alert(
       'subsidy_received',
       `${who} received the subsidy`,

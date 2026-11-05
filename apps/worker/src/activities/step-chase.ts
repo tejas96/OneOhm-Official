@@ -4,13 +4,14 @@ import {
   type Database,
   notifyCover,
   notifyHolders,
+  projectActivities,
   projects,
   projectTasks,
   readBusinessSetting,
 } from '@oneohm/database';
 import { subsidyChaseDue } from '@oneohm/domain';
-import { formatInr } from '@oneohm/shared';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { formatInr, todayIn } from '@oneohm/shared';
+import { and, asc, eq, isNull, ne, or, sql } from 'drizzle-orm';
 
 const PER_TICK = 200;
 
@@ -39,6 +40,8 @@ export async function chaseSubsidy(db: Database, now: Date): Promise<number> {
         eq(customerActions.status, 'open'),
         sql`${customerActions.payload}->>'kind' = 'subsidy_credit'`,
         sql`${customerActions.payload}->>'answer' = 'not_yet'`,
+        // A cancelled project has nothing more to chase.
+        or(isNull(projects.id), ne(projects.status, 'cancelled')),
       ),
     )
     .orderBy(asc(customerActions.createdAt))
@@ -60,4 +63,64 @@ export async function chaseSubsidy(db: Database, now: Date): Promise<number> {
     told += 1;
   }
   return told;
+}
+
+/**
+ * The day to sign the loan papers at the bank passed and the customer never confirmed: the ask closes
+ * itself the day after (cancelled, answer "expired"), the project log says so and the step's owner is
+ * told, so nothing is chased for a day that is gone. No message goes to the customer.
+ */
+export async function expireBankSigns(db: Database, now: Date, timeZone: string): Promise<number> {
+  const today = todayIn(timeZone, now);
+  const late = await db
+    .select({
+      action: customerActions,
+      assignee: projectTasks.assigneeUserId,
+      manager: projects.managerUserId,
+    })
+    .from(customerActions)
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
+    .leftJoin(projectTasks, eq(projectTasks.id, customerActions.taskId))
+    .where(
+      and(
+        eq(customerActions.type, 'confirm'),
+        eq(customerActions.status, 'open'),
+        sql`${customerActions.payload}->>'kind' = 'bank_sign'`,
+        sql`${customerActions.payload}->>'day' < ${today}`,
+      ),
+    )
+    .limit(PER_TICK);
+  for (const { action, assignee, manager } of late) {
+    const closed = await db
+      .update(customerActions)
+      .set({
+        status: 'cancelled',
+        cancelledAt: now,
+        updatedAt: now,
+        payload: { ...action.payload, answer: 'expired' },
+      })
+      .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')))
+      .returning({ id: customerActions.id });
+    if (closed.length === 0 || !action.projectId) continue;
+    const bank = String(action.payload.bank ?? 'the bank');
+    const day = String(action.payload.dayText ?? action.payload.day ?? '');
+    await db.insert(projectActivities).values({
+      projectId: action.projectId,
+      taskId: action.taskId,
+      kind: 'customer_action',
+      message: `The visit to ${bank} on ${day} was not confirmed, so the ask closed. Please plan a new day.`,
+      data: { customerActionId: action.id },
+    });
+    const notice = {
+      kind: 'bank_sign_expired',
+      title: `Bank visit on ${day} was never confirmed`,
+      body: `The customer did not answer for ${bank}. Please call them and plan a new day.`,
+      subject: { type: 'project' as const, id: action.projectId },
+      dedupeKey: `bank_sign_expired:${action.id}`,
+    };
+    const person = assignee ?? manager;
+    if (person) await notifyCover(db, person, 'projects.manage', notice);
+    else await notifyHolders(db, 'projects.manage', notice);
+  }
+  return late.length;
 }

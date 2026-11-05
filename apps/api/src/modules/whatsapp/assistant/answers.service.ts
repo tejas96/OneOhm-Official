@@ -7,6 +7,7 @@ import type { Environment } from '../../../config/environment';
 import { CustomerAfterSalesService } from '../../after-sales/customer-after-sales.service';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
+import { subsidyNote } from '../../journey/subsidy-note';
 import { coverText } from './cover-answer';
 import { shownProblem } from './home-lines';
 import { languageNow } from './language';
@@ -47,7 +48,12 @@ export class AnswersService {
             ),
           )
       : [];
-    return own.map((project) => {
+    const subsidies = await Promise.all(
+      own.map((project) =>
+        project.subsidy.status === 'released' ? subsidyNote(this.db, project.id) : null,
+      ),
+    );
+    return own.map((project, index) => {
       const panels = counts.find((row) => row.id === project.quotation.id)?.panels ?? 0;
       const body = list([
         ANSWER_WORDS.home(project.place, PROJECT_WORDS.size(panels, project.capacityWp)),
@@ -64,7 +70,7 @@ export class AnswersService {
               daySpan(project.waiting.since, project.waiting.since),
             )
           : '',
-        WORDS.subsidy[project.subsidy.status] ?? '',
+        WORDS.subsidy[subsidies[index] ?? project.subsidy.status] ?? '',
       ]);
       return { body, waitingOnYou: project.waiting?.party === 'customer' };
     });

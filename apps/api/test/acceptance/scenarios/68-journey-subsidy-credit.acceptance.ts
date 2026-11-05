@@ -62,6 +62,15 @@ describe('Journey: did the subsidy reach your bank?', () => {
     expect((await lastReply(customer.phone))?.buttons?.map((button) => button.title)).toEqual([
       'It has arrived',
     ]);
+    // Staff see it on the card; the Project update says we are checking.
+    const [card] = await rows<{ note: string }>('SELECT note FROM customer_actions WHERE id = $1', [
+      ask?.id,
+    ]);
+    expect(card?.note).toMatch(/^Customer says not received yet \(since /);
+    await tap(customer.phone, 'go:update');
+    expect((await lastReply(customer.phone))?.body).toContain(
+      'Subsidy: we are checking with the government',
+    );
     await say(customer.phone, 'hi');
     let home = await lastReply(customer.phone);
     if (choices(home).includes('go:see')) {
@@ -104,6 +113,8 @@ describe('Journey: did the subsidy reach your bank?', () => {
     expect((await lastReply(customer.phone))?.body).toMatch(
       /^Thank you ✅ We are glad the subsidy reached you\./,
     );
+    await tap(customer.phone, 'go:update');
+    expect((await lastReply(customer.phone))?.body).toContain('Subsidy reached your bank ✅');
     const [fact] = await rows(
       "SELECT 1 FROM project_facts WHERE project_id = $1 AND key = 'subsidy_received'",
       [sale.project.id],

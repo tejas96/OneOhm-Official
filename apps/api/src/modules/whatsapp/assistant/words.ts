@@ -25,6 +25,8 @@ const EN_WORDS = {
     applied: 'Subsidy: applied, waiting for the government',
     inspected: 'Subsidy: inspection done, waiting for the release',
     released: 'Subsidy: released',
+    received: 'Subsidy reached your bank ✅',
+    checking: 'Subsidy: we are checking with the government',
   } as Record<string, string>,
   waitingOn: {
     customer: 'Waiting for something from you',

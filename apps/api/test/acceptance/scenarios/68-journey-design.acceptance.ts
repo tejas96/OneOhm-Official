@@ -81,6 +81,23 @@ describe('Journey: layout approval', () => {
     );
     expect(alert).toBeDefined();
     expect((await stepAsks(customer.customerId, 'layout'))[0]?.status).toBe('open');
+    // A person is handling it: no reminder and no alert, however old the ask gets.
+    const [open] = await stepAsks(customer.customerId, 'layout');
+    await rows('UPDATE customer_actions SET created_at = $2 WHERE id = $1', [
+      open?.id,
+      new Date(NOON.getTime() - 5 * 86_400_000),
+    ]);
+    await queueActionReminders(acceptanceDb().db, NOON, 'Asia/Kolkata');
+    expect(
+      (await outboxFor(customer.phone)).filter((row) =>
+        row.dedupe_key.startsWith('action_reminder:'),
+      ),
+    ).toHaveLength(0);
+    expect(
+      await rows('SELECT 1 FROM notifications WHERE dedupe_key LIKE $1', [
+        `action_waiting:${open?.id}%`,
+      ]),
+    ).toHaveLength(0);
     // After the answer they can still approve it.
     const [ask] = await stepAsks(customer.customerId, 'layout');
     await tap(customer.phone, `stp:ok:${ask?.id}`);
@@ -111,11 +128,9 @@ describe('Journey: layout approval', () => {
     ]);
     await queueActionReminders(acceptanceDb().db, NOON, 'Asia/Kolkata');
     const [reminder] = (await outboxFor(sale.customer.phone)).filter(
-      (one) =>
-        one.template === 'signature_reminder' && one.dedupe_key.startsWith('action_reminder:'),
+      (one) => one.template === 'layout_reminder' && one.dedupe_key.startsWith('action_reminder:'),
     );
     expect(reminder?.payload).toMatchObject({
-      document: 'Panel layout (test).pdf',
       showPayload: `jr:${ask?.id}`,
     });
     // The reminder's button opens the chat and shows the layout again with its two buttons.

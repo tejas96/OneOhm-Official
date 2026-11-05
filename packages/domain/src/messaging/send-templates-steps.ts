@@ -12,7 +12,7 @@ export const STEP_ASK_TEMPLATES = [
     fields: ['customer', 'home'],
     extras: { quickReplies: ['donePayload', 'helpPayload'] },
     preview:
-      'Hello {{1}}, please register on the PM Surya Ghar portal (pmsuryaghar.gov.in) for your {{2}} solar. It takes about 5 minutes. Tell us when it is done, or ask for help.',
+      'Hello {{1}}, please register on the PM Surya Ghar portal (pmsuryaghar.gov.in) for your {{2}} solar. It takes about 5 minutes. Keep your latest electricity bill (consumer number, electricity company) and an email ID ready. Tell us when it is done, or ask for help.',
   },
   {
     key: 'subsidy_credit_check',
@@ -40,6 +40,15 @@ export const STEP_ASK_TEMPLATES = [
     },
     preview:
       'Hello {{1}}, here is how the panels will sit on your {{2}} roof. Tap Looks good if you are happy, or ask us if you have a question.',
+  },
+  {
+    key: 'layout_reminder',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    // The button shows the layout again with its two buttons (the same step as the tap in a waiting message).
+    extras: { quickReplies: ['showPayload'] },
+    preview:
+      'Hello {{1}}, a reminder: please look at how the panels will sit on your {{2}} roof and tell us if it looks good. Tap the button to see it again.',
   },
   {
     key: 'loan_sanctioned',

@@ -18,12 +18,13 @@ import { capabilityOf } from './action-capability';
 import {
   askedSince,
   confirmReminder,
+  isLayoutHandled,
   isSubsidyWait,
   signatureReminder,
   waitingBody,
   waitingFor,
 } from './journey-reminders';
-import { chaseSubsidy } from './step-chase';
+import { chaseSubsidy, expireBankSigns } from './step-chase';
 
 const DAY = 24 * 3_600_000;
 const CUSTOMER_AFTER = 2 * DAY;
@@ -50,6 +51,8 @@ export async function queueActionReminders(
   now: Date,
   timeZone: string,
 ): Promise<number> {
+  // The day to sign at the bank has passed: that ask closes itself before anything is chased.
+  await expireBankSigns(db, now, timeZone);
   const open = await db
     .select({
       action: customerActions,
@@ -95,7 +98,7 @@ export async function queueActionReminders(
     if (!row.action.requestedByUserId && !bySystem) continue;
     if (row.action.type === 'signature' && row.action.payload.signedActionId) continue;
     // A subsidy that has not arrived waits for the money, not for an answer: the owner hears after the set days.
-    if (isSubsidyWait(row.action)) continue;
+    if (isSubsidyWait(row.action) || isLayoutHandled(row.action)) continue;
     const due = actionReminderDue(askedSince(row.action), now);
     if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
     if (due === 'team') {

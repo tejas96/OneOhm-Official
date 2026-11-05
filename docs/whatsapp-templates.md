@@ -510,11 +510,11 @@ All three reminders are off until Meta approves all three languages.
 ### 42. `subsidy_register_help` — **New** (subsidy: help to register on the PM Surya Ghar portal; also the 2-day reminder)
 Fields: customer, home
 
-> en: Hello {{1}}, please register on the PM Surya Ghar portal (pmsuryaghar.gov.in) for your {{2}} solar. It takes about 5 minutes. Tell us when it is done, or ask for help.
+> en: Hello {{1}}, please register on the PM Surya Ghar portal (pmsuryaghar.gov.in) for your {{2}} solar. It takes about 5 minutes. Keep your latest electricity bill (consumer number, electricity company) and an email ID ready. Tell us when it is done, or ask for help.
 
-> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरसाठी कृपया पीएम सूर्य घर पोर्टलवर (pmsuryaghar.gov.in) नोंदणी करा. यास सुमारे ५ मिनिटे लागतात. झाल्यावर आम्हाला सांगा, किंवा मदत मागा.
+> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरसाठी कृपया पीएम सूर्य घर पोर्टलवर (pmsuryaghar.gov.in) नोंदणी करा. यास सुमारे ५ मिनिटे लागतात. तुमचे ताजे वीज बिल (ग्राहक क्रमांक, वीज कंपनी) आणि ईमेल आयडी जवळ ठेवा. झाल्यावर आम्हाला सांगा, किंवा मदत मागा.
 
-> hi: नमस्ते {{1}}, कृपया अपने {{2}} सोलर के लिए पीएम सूर्य घर पोर्टल (pmsuryaghar.gov.in) पर रजिस्टर करें। इसमें लगभग 5 मिनट लगते हैं। हो जाए तो हमें बताएँ, या मदद माँगें।
+> hi: नमस्ते {{1}}, कृपया अपने {{2}} सोलर के लिए पीएम सूर्य घर पोर्टल (pmsuryaghar.gov.in) पर रजिस्टर करें। इसमें लगभग 5 मिनट लगते हैं। अपना ताज़ा बिजली बिल (उपभोक्ता नंबर, बिजली कंपनी) और ईमेल आईडी पास रखें। हो जाए तो हमें बताएँ, या मदद माँगें।
 
 Examples: Ramesh Patil · Sangli
 
@@ -560,7 +560,7 @@ The layout (a report or an uploaded document) is the document header.
 Examples: Ramesh Patil · Sangli
 
 **Buttons:** two quick replies. en `Looks good`, `I have a question`; mr `छान आहे`, `मला प्रश्न आहे`; hi `ठीक है`, `मेरा सवाल है`.
-Payloads `stp:ok:<id>`, `stp:alt:<id>`. The 2-day reminder reuses `signature_reminder` (its button shows the layout again).
+Payloads `stp:ok:<id>`, `stp:alt:<id>`. The 2-day reminder is `layout_reminder` (49); it stops once the customer has a question (a person is handling it).
 
 ### 46. `loan_sanctioned` — **New** (loan: sent by itself when the loan is marked sanctioned; no buttons)
 Fields: customer, amount, bank
@@ -598,6 +598,19 @@ Examples: Ramesh Patil · HDFC Bank · Priya
 All seven are off until Meta approves **all three languages**; then switch each on (and, for 42-45, "Meta approved the version
 with file and buttons"), in Settings → WhatsApp messages. The loan messages only go for a project whose loan step ("Bank
 loan sanction") has customer messages on.
+
+### 49. `layout_reminder` — **New** (design: the layout was not answered; 2 days after)
+Fields: customer, home
+
+> en: Hello {{1}}, a reminder: please look at how the panels will sit on your {{2}} roof and tell us if it looks good. Tap the button to see it again.
+
+> mr: नमस्कार {{1}}, आठवण: तुमच्या {{2}} छतावर पॅनेल कसे बसतील ते कृपया पाहा आणि आवडले का ते सांगा. पुन्हा पाहण्यासाठी बटण दाबा.
+
+> hi: नमस्ते {{1}}, याद दिलाना: आपके {{2}} की छत पर पैनल कैसे लगेंगे, कृपया देखें और बताएँ कि पसंद आया या नहीं। फिर से देखने के लिए बटन दबाएँ।
+
+Examples: Ramesh Patil · Sangli
+
+**Button:** one quick reply: en `See the layout`; mr `आराखडा पाहा`; hi `लेआउट देखें`. Payload `jr:<id>` (the layout again with its two buttons). Off until Meta approves all three languages.
 
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text

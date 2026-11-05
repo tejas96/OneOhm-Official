@@ -20,6 +20,10 @@ export function askedSince(ask: Ask): Date {
 export const isSubsidyWait = (ask: Pick<Ask, 'payload'>) =>
   ask.payload.kind === 'subsidy_credit' && ask.payload.answer === 'not_yet';
 
+/** A layout the customer has a question about is with a person: no more reminders, no alert. */
+export const isLayoutHandled = (ask: Pick<Ask, 'payload'>) =>
+  ask.payload.kind === 'layout' && ask.payload.answer === 'question';
+
 const CONFIRM_WAITS: Readonly<Record<string, string>> = {
   installation: 'an answer about the installation',
   subsidy_register: 'the PM Surya Ghar registration',
@@ -126,10 +130,7 @@ export function stepReminder(ask: Ask, given: { customer: string; home: string }
         },
       };
     default:
-      // The layout again: the paper-to-agree-to reminder whose button shows the layout with its two buttons.
-      return {
-        template: 'signature_reminder',
-        payload: { ...given, document: text('paperTitle'), showPayload: `jr:${id}` },
-      };
+      // The layout again: the button shows it with its two buttons.
+      return { template: 'layout_reminder', payload: { ...given, showPayload: `jr:${id}` } };
   }
 }

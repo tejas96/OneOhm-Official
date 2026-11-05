@@ -18,7 +18,7 @@ const EN_STEPS = {
   },
   register: {
     ask: (home: string) =>
-      `Please register on the PM Surya Ghar portal for your *${home}* solar. It takes 5 minutes:\n1. Open pmsuryaghar.gov.in\n2. Register with your mobile number and electricity consumer number\n3. Tap Done here when you finish`,
+      `Please register on the PM Surya Ghar portal for your *${home}* solar. It takes 5 minutes. Keep your latest electricity bill ready (consumer number, electricity company) and an email ID:\n1. Open pmsuryaghar.gov.in\n2. Register with your mobile number and electricity consumer number\n3. Tap Done here when you finish`,
     line: (home: string) => `Please register on the PM Surya Ghar portal for your *${home}* solar.`,
     done: 'Thank you ✅ We have noted that you registered. We will take the next step.',
     help: 'We will help you with the registration.',
@@ -77,7 +77,7 @@ const MR_STEPS: Words<typeof EN_STEPS> = {
   },
   register: {
     ask: (home) =>
-      `कृपया तुमच्या *${home}* सोलरसाठी पीएम सूर्य घर पोर्टलवर नोंदणी करा. यास ५ मिनिटे लागतात:\n1. pmsuryaghar.gov.in उघडा\n2. तुमचा मोबाइल नंबर आणि वीज ग्राहक क्रमांक वापरून नोंदणी करा\n3. झाल्यावर इथे झाले दाबा`,
+      `कृपया तुमच्या *${home}* सोलरसाठी पीएम सूर्य घर पोर्टलवर नोंदणी करा. यास ५ मिनिटे लागतात. तुमचे ताजे वीज बिल (ग्राहक क्रमांक, वीज कंपनी) आणि ईमेल आयडी जवळ ठेवा:\n1. pmsuryaghar.gov.in उघडा\n2. तुमचा मोबाइल नंबर आणि वीज ग्राहक क्रमांक वापरून नोंदणी करा\n3. झाल्यावर इथे झाले दाबा`,
     line: (home) => `कृपया तुमच्या *${home}* सोलरसाठी पीएम सूर्य घर पोर्टलवर नोंदणी करा.`,
     done: 'धन्यवाद ✅ तुम्ही नोंदणी केल्याची आम्ही नोंद केली. आम्ही पुढचे पाऊल उचलू.',
     help: 'नोंदणीसाठी आम्ही तुम्हाला मदत करू.',
@@ -132,7 +132,7 @@ const HI_STEPS: Words<typeof EN_STEPS> = {
   },
   register: {
     ask: (home) =>
-      `कृपया अपने *${home}* सोलर के लिए पीएम सूर्य घर पोर्टल पर रजिस्टर करें। इसमें 5 मिनट लगते हैं:\n1. pmsuryaghar.gov.in खोलें\n2. अपने मोबाइल नंबर और बिजली उपभोक्ता नंबर से रजिस्टर करें\n3. पूरा होने पर यहाँ हो गया दबाएँ`,
+      `कृपया अपने *${home}* सोलर के लिए पीएम सूर्य घर पोर्टल पर रजिस्टर करें। इसमें 5 मिनट लगते हैं। अपना ताज़ा बिजली बिल (उपभोक्ता नंबर, बिजली कंपनी) और ईमेल आईडी पास रखें:\n1. pmsuryaghar.gov.in खोलें\n2. अपने मोबाइल नंबर और बिजली उपभोक्ता नंबर से रजिस्टर करें\n3. पूरा होने पर यहाँ हो गया दबाएँ`,
     line: (home) => `कृपया अपने *${home}* सोलर के लिए पीएम सूर्य घर पोर्टल पर रजिस्टर करें।`,
     done: 'धन्यवाद ✅ आपका रजिस्ट्रेशन हमने दर्ज कर लिया। हम अगला कदम उठाएँगे।',
     help: 'रजिस्ट्रेशन में हम आपकी मदद करेंगे।',
