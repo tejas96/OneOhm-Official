@@ -9,8 +9,10 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
 import { useCan } from '@/providers/current-user';
 import { useCustomerMoney } from '../billing/use-billing';
+import { FinanceSearch, withBareCodes } from '../finance-search';
 import { usePaymentsReceived } from '../use-finance';
 import { MoneyEntryItem } from './money-entry-item';
 import { ReversePaymentDialog } from './reverse-payment-dialog';
@@ -38,31 +40,57 @@ function merge(
   ].sort((left, right) => right.at.localeCompare(left.at));
 }
 
-/** The latest money received, each with its receipt; a mistake can be reversed, never edited. */
+/**
+ * The latest money received, each with its receipt; a mistake can be reversed, never edited.
+ * Its search (`?pq=`, apart from the owed list's `?q=`) runs on the server over every payment;
+ * refunds and credit shown beside them are matched here.
+ */
 export function PaymentsReceived() {
   const t = useTranslations('finance.payments');
   const methodT = useTranslations('finance.methods');
   const format = useFormatter();
   const canReverse = useCan('finance.approve_payments');
-  const list = usePaymentsReceived();
-  const { query, items: paid } = list;
+  const { draft, setDraft, search } = useSearchParam('pq');
+  const list = usePaymentsReceived(search);
+  const { query } = list;
+  // Checked here too, so an API that ignores `q` still shows only matching payments.
+  const paid = list.items.filter((payment) =>
+    matchesSearch(search, [
+      payment.customerName,
+      payment.milestoneLabel,
+      payment.reference,
+      ...withBareCodes([payment.receiptNumber, payment.projectCode]),
+    ]),
+  );
   const money = useCustomerMoney();
+  const moneyShown = (money.data ?? []).filter((entry) =>
+    matchesSearch(search, [
+      entry.customerName,
+      entry.projectCode,
+      entry.milestoneLabel,
+      entry.reference,
+      entry.reason,
+    ]),
+  );
   const [reversing, setReversing] = useState<ReceivedPayment | null>(null);
 
   return (
     <Card className="overflow-hidden">
       <CardHeader title={t('title')} description={t('description')} />
+      <div className="px-5 pb-4">
+        <FinanceSearch value={draft} onChange={setDraft} label={t('search')} />
+      </div>
       {query.isPending ? (
         <div className="px-5 pb-5">
           <ListSkeleton label={t('loading')} rows={4} />
         </div>
       ) : query.isError && paid.length === 0 ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} className="m-5" />
-      ) : paid.length === 0 && !money.data?.length ? (
-        <EmptyState icon={<Receipt />} title={t('empty')} className="m-5" />
+      ) : paid.length === 0 && moneyShown.length === 0 ? (
+        <EmptyState icon={<Receipt />} title={search ? t('noMatch') : t('empty')} className="m-5" />
       ) : (
         <ul className="flex flex-col divide-y divide-hairline border-t border-hairline">
-          {merge(paid, money.data ?? [], list.hasMore).map((item) => {
+          {merge(paid, moneyShown, list.hasMore).map((item) => {
             if ('entry' in item) return <MoneyEntryItem key={item.key} entry={item.entry} />;
             const { payment } = item;
             const reversal = payment.reversesPaymentId !== null;

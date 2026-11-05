@@ -10,10 +10,10 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { type ChequeAction, ChequeDialog } from './cheque-dialog';
 import { DepositSheet } from './deposit-sheet';
-import { DepositsTable } from './deposits-table';
+import { DepositsCard } from './deposits-table';
 import { OpenMoneyTable } from './open-money-table';
 import { SettlementsCard } from './settlements-card';
-import { useCashPosition, useDeposits } from './use-cash';
+import { useCashPosition } from './use-cash';
 
 /**
  * Cash, cheques and online payments from collection to the bank (PRD 3.11): who holds
@@ -25,7 +25,6 @@ export function CashTab() {
   const canBounce = useCan('finance.approve_payments');
   const canSeeBooks = useCan('finance.view');
   const position = useCashPosition();
-  const deposits = useDeposits();
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [depositing, setDepositing] = useState(false);
   const [cheque, setCheque] = useState<ChequeAction | null>(null);
@@ -92,16 +91,7 @@ export function CashTab() {
           </Button>
         </div>
       )}
-      <Card>
-        <CardHeader title={t('deposits.title')} description={t('deposits.intro')} />
-        <div className="px-2 pb-3">
-          {deposits.isPending && <ListSkeleton label={t('loading')} rows={2} />}
-          {deposits.data && deposits.data.length === 0 && (
-            <p className="px-3 pb-3 type-body-sm text-ink-faint">{t('deposits.empty')}</p>
-          )}
-          {deposits.data && deposits.data.length > 0 && <DepositsTable deposits={deposits.data} />}
-        </div>
-      </Card>
+      <DepositsCard />
       {canSeeBooks && <SettlementsCard />}
       <DepositSheet
         items={chosen}

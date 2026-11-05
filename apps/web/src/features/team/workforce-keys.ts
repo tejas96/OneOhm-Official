@@ -10,4 +10,5 @@ export const WORKFORCE_KEYS = {
   points: ['points'],
   standings: ['points', 'standings'],
   pointsList: ['points', 'list'],
+  pendingPoints: ['points', 'pending'],
 } as const;

@@ -165,6 +165,7 @@
         "reference": "Reference",
         "referenceHint": "UTR, cheque number or UPI reference."
       },
+      "payAction": "Pay",
       "cancel": "Cancel",
       "failed": "That did not work",
       "done": {

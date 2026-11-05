@@ -10,7 +10,7 @@ import {
   type TableColumn,
 } from '@oneohm/design-system/web';
 import { formatInrCompact } from '@oneohm/shared';
-import { Package, PackagePlus, TriangleAlert } from 'lucide-react';
+import { Package, PackagePlus, Search, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
@@ -18,6 +18,8 @@ import { useCan } from '@/providers/current-user';
 import { formatQuantity, useStock } from '../use-inventory';
 import { AdjustDialog } from './adjust-dialog';
 import { MovementsCard } from './movements-card';
+import { filterStock } from './stock-filters';
+import { StockToolbar, useStockFilters } from './stock-toolbar';
 import { ThresholdDialog } from './threshold-dialog';
 
 /** Every catalog product's stock across locations, with shortage alerts and the ledger. */
@@ -28,6 +30,7 @@ export function StockPanel() {
   const canManage = useCan('inventory.manage');
   const [adjusting, setAdjusting] = useState<{ productId: string | null } | null>(null);
   const [threshold, setThreshold] = useState<StockRow | null>(null);
+  const toolbar = useStockFilters();
 
   if (stock.isPending) return <ListSkeleton label={t('loading')} />;
   if (stock.isError) return <LoadError error={stock.error} onRetry={() => stock.refetch()} />;
@@ -37,6 +40,7 @@ export function StockPanel() {
   }
   const low = rows.filter((row) => row.low);
   const value = rows.reduce((sum, row) => sum + row.valuePaise, 0);
+  const shown = filterStock(rows, toolbar.filters, (category) => categoryT(category));
 
   const quantity = (amount: number, unit: string, muted = false) => (
     <span className={muted ? 'text-ink-muted tabular-nums' : 'text-ink tabular-nums'}>
@@ -152,13 +156,24 @@ export function StockPanel() {
           </div>
         </div>
       )}
-      <ResponsiveTable
-        caption={t('caption')}
-        columns={columns}
-        rows={rows}
-        rowKey={(row) => row.productId}
-      />
-      <MovementsCard />
+      <div className="flex flex-col gap-4">
+        <StockToolbar {...toolbar} />
+        {shown.length === 0 ? (
+          <EmptyState
+            icon={<Search />}
+            title={t('filters.noMatchTitle')}
+            description={t('filters.noMatchBody')}
+          />
+        ) : (
+          <ResponsiveTable
+            caption={t('caption')}
+            columns={columns}
+            rows={shown}
+            rowKey={(row) => row.productId}
+          />
+        )}
+      </div>
+      <MovementsCard products={rows} />
       <AdjustDialog
         open={adjusting !== null}
         productId={adjusting?.productId ?? null}

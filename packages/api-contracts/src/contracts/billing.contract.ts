@@ -49,8 +49,14 @@ export const billingContract = c.router({
   listInvoices: {
     method: 'GET',
     path: '/finance/invoices',
-    query: z.object({ limit: z.coerce.number().int().min(1).max(500).default(100) }),
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(500).default(100),
+      /** Invoice number, customer, GSTIN or project code; every word must match. */
+      q: z.string().trim().max(80).optional(),
+      status: z.enum(['issued', 'cancelled']).optional(),
+    }),
     responses: { 200: z.array(taxInvoiceSchema) },
+    summary: 'Newest first; `q` and `status` filter every invoice, not only the newest.',
   },
   invoicePdf: {
     method: 'GET',

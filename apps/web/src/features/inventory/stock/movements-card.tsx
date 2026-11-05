@@ -1,42 +1,68 @@
 'use client';
 
-import type { StockMovement } from '@oneohm/api-contracts';
-import { Card, CardHeader, cn } from '@oneohm/design-system/web';
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  HardHat,
-  Lock,
-  type LucideIcon,
-  SlidersHorizontal,
-  Undo2,
-  Unlock,
-} from 'lucide-react';
-import { useFormatter, useNow, useTranslations } from 'next-intl';
+import type { StockRow } from '@oneohm/api-contracts';
+import { Card, CardHeader, Input, Select } from '@oneohm/design-system/web';
+import { Search } from 'lucide-react';
+import { useNow, useTranslations } from 'next-intl';
+import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
-import { formatQuantity, useMovements } from '../use-inventory';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { useProgressiveList } from '@/lib/use-progressive-list';
+import { useSearchParam } from '@/lib/use-search-param';
+import { useMovements } from '../use-inventory';
+import { MovementRow } from './movement-row';
+import { MOVEMENTS_LIMIT, matchesMovement } from './stock-filters';
 
-const ICON: Readonly<Record<StockMovement['kind'], LucideIcon>> = {
-  receipt: ArrowDownToLine,
-  reservation: Lock,
-  release: Unlock,
-  dispatch: ArrowUpFromLine,
-  adjustment: SlidersHorizontal,
-  issue: HardHat,
-  return: Undo2,
-};
+const ALL = 'all';
 
-const signed = (value: number) => `${value > 0 ? '+' : ''}${formatQuantity(value)}`;
-
-/** The stock ledger: what changed, by how much, why and who. */
-export function MovementsCard() {
+/**
+ * The stock ledger, newest first. `?item=` asks the server for one product's movements
+ * (so its older ones show too); `?mq=` searches what is loaded. Draws 40 at a time.
+ */
+export function MovementsCard({ products }: { readonly products: readonly StockRow[] }) {
   const t = useTranslations('inventory.stock');
-  const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
-  const movements = useMovements();
+  const [item, setItem] = useChoiceParam<string>(
+    'item',
+    products.map((product) => product.productId),
+    ALL,
+  );
+  const { draft, setDraft, search } = useSearchParam('mq');
+  const movements = useMovements(item === ALL ? undefined : item);
+  const matched = (movements.data ?? []).filter((movement) =>
+    matchesMovement(search, movement, t(`kinds.${movement.kind}`)),
+  );
+  const list = useProgressiveList(matched, 40, `${item}|${search}`);
+  const capped = (movements.data?.length ?? 0) >= MOVEMENTS_LIMIT;
+
   return (
     <Card className="flex flex-col overflow-hidden">
       <CardHeader title={t('movementsTitle')} description={t('movementsDescription')} />
+      <div className="flex flex-col gap-2 px-5 pb-4 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1 lg:max-w-sm">
+          <Input
+            type="search"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={t('movementsSearch')}
+            aria-label={t('movementsSearch')}
+            leading={<Search aria-hidden />}
+          />
+        </div>
+        <Select
+          label={t('movementsItem')}
+          value={item}
+          onValueChange={setItem}
+          options={[
+            { value: ALL, label: t('movementsAllItems') },
+            ...products.map((product) => ({
+              value: product.productId,
+              label: `${product.name} · ${product.sku}`,
+            })),
+          ]}
+          className="sm:w-64"
+        />
+      </div>
       <div className="border-t border-hairline">
         {movements.isPending && (
           <div className="p-5">
@@ -46,49 +72,31 @@ export function MovementsCard() {
         {movements.isError && (
           <LoadError error={movements.error} onRetry={() => movements.refetch()} className="m-5" />
         )}
-        {movements.data?.length === 0 && (
-          <p className="px-5 py-6 type-body-sm text-ink-muted">{t('movementsEmpty')}</p>
+        {movements.data && list.total === 0 && (
+          <p className="px-5 py-6 type-body-sm text-ink-muted">
+            {movements.data.length === 0 ? t('movementsEmpty') : t('movementsNoMatch')}
+          </p>
         )}
         <ul className="flex flex-col divide-y divide-hairline">
-          {movements.data?.slice(0, 40).map((movement) => {
-            const Icon = ICON[movement.kind];
-            const delta =
-              movement.onHandDelta !== 0 ? movement.onHandDelta : movement.reservedDelta;
-            return (
-              <li key={movement.id} className="flex items-center gap-4 px-5 py-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted">
-                  <Icon aria-hidden className="size-4" />
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <p className="truncate type-body-sm text-ink">
-                    <span className="font-medium">{t(`kinds.${movement.kind}`)}</span> ·{' '}
-                    {movement.productName}
-                    {movement.projectCode && (
-                      <span className="font-mono text-ink-faint"> · {movement.projectCode}</span>
-                    )}
-                  </p>
-                  <p className="truncate type-label text-ink-faint">
-                    {[movement.locationName, movement.note, movement.by]
-                      .filter(Boolean)
-                      .join(' · ')}{' '}
-                    · {format.relativeTime(new Date(movement.at), now)}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    'shrink-0 font-mono type-body-sm tabular-nums',
-                    movement.onHandDelta > 0 && 'text-on-track',
-                    movement.onHandDelta < 0 && 'text-ink',
-                    movement.onHandDelta === 0 && 'text-ink-muted',
-                  )}
-                >
-                  {signed(delta)} {movement.unit}
-                  {movement.onHandDelta === 0 && ` ${t('held')}`}
-                </span>
-              </li>
-            );
-          })}
+          {list.items.map((movement) => (
+            <MovementRow key={movement.id} movement={movement} now={now} />
+          ))}
         </ul>
+        <LoadMore
+          shown={list.items.length}
+          total={list.total}
+          hasMore={list.hasMore}
+          loading={false}
+          onMore={list.loadMore}
+          className="border-t border-hairline pt-4"
+        />
+        {capped && !list.hasMore && (
+          <p className="border-t border-hairline px-5 py-4 type-body-sm text-ink-muted">
+            {item === ALL
+              ? t('movementsCapped', { count: MOVEMENTS_LIMIT })
+              : t('movementsCappedItem', { count: MOVEMENTS_LIMIT })}
+          </p>
+        )}
       </div>
     </Card>
   );

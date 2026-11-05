@@ -4,6 +4,7 @@ import { journalEntries, journalLines, ledgerAccounts, projects, users } from '@
 import { debitNormal, type LedgerAccountCode } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, lt, type SQL, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
+import { journalMatch } from './finance-search';
 
 /** Account balance in its normal direction, from the ledger. */
 export async function accountBalances(
@@ -31,8 +32,11 @@ export class LedgerReadService {
     before?: number | undefined;
     limit: number;
     projectId?: string | undefined;
+    q?: string | undefined;
   }): Promise<JournalEntry[]> {
     const filters: SQL[] = [];
+    const match = journalMatch(query.q);
+    if (match) filters.push(match);
     if (query.before) filters.push(lt(journalEntries.number, query.before));
     if (query.projectId) filters.push(eq(journalEntries.projectId, query.projectId));
     const entries = await this.db

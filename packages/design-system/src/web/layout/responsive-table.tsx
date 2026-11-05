@@ -22,7 +22,12 @@ interface ResponsiveTableProps<TRow> {
   readonly rows: readonly TRow[];
   readonly rowKey: (row: TRow) => string;
   readonly className?: string | undefined;
+  /** The row a link pointed at: marked so the page can scroll to it, and shown highlighted. */
+  readonly focusedKey?: string | null | undefined;
 }
+
+/** The attribute every row carries, so a page can find a row by its key. */
+export const ROW_KEY_ATTRIBUTE = 'data-row-key';
 
 /**
  * A table on wide screens and a stack of cards on phones, from one definition.
@@ -34,6 +39,7 @@ export function ResponsiveTable<TRow>({
   rows,
   rowKey,
   className,
+  focusedKey,
 }: ResponsiveTableProps<TRow>) {
   const primary = columns.find((column) => column.primary) ?? columns[0];
   const secondary = columns.filter((column) => column !== primary && !column.hideOnPhone);
@@ -60,12 +66,19 @@ export function ResponsiveTable<TRow>({
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <motion.tr key={rowKey(row)} {...listItemEnter(index)} className="group relative">
+            <motion.tr
+              key={rowKey(row)}
+              {...listItemEnter(index)}
+              {...{ [ROW_KEY_ATTRIBUTE]: rowKey(row) }}
+              aria-current={rowKey(row) === focusedKey ? 'true' : undefined}
+              className="group relative"
+            >
               {columns.map((column) => (
                 <td
                   key={column.key}
                   className={cn(
                     'border-b border-hairline px-4 py-3 align-middle type-body text-ink transition-colors group-hover:bg-sunken/50',
+                    rowKey(row) === focusedKey && 'bg-accent-soft/60',
                     column.align === 'end' && 'text-right',
                     column.className,
                   )}
@@ -82,7 +95,12 @@ export function ResponsiveTable<TRow>({
           <motion.li
             key={rowKey(row)}
             {...listItemEnter(index)}
-            className="relative rounded-lg border border-hairline bg-raised p-4"
+            {...{ [ROW_KEY_ATTRIBUTE]: rowKey(row) }}
+            aria-current={rowKey(row) === focusedKey ? 'true' : undefined}
+            className={cn(
+              'relative rounded-lg border border-hairline bg-raised p-4',
+              rowKey(row) === focusedKey && 'border-accent/50 bg-accent-soft/60',
+            )}
           >
             {primary && <div className="mb-3 type-title-md text-ink">{primary.cell(row)}</div>}
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">

@@ -43,7 +43,7 @@ export class BillingController {
       },
       listInvoices: async ({ query }) => {
         view();
-        return { status: 200, body: await this.invoices.list(query.limit) };
+        return { status: 200, body: await this.invoices.list(query) };
       },
       invoicePdf: async ({ params, query }) => {
         view();

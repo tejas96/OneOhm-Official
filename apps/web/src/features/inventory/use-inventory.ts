@@ -9,7 +9,7 @@ export const INVENTORY_KEYS = {
   all: ['inventory'] as const,
   stock: ['inventory', 'stock'] as const,
   locations: ['inventory', 'locations'] as const,
-  movements: ['inventory', 'movements'] as const,
+  movements: (productId?: string) => ['inventory', 'movements', productId ?? 'all'] as const,
   vendors: ['inventory', 'vendors'] as const,
   orders: (status?: PurchaseOrderStatus) => ['inventory', 'orders', status ?? 'all'] as const,
   order: (id: string) => ['inventory', 'order', id] as const,
@@ -32,10 +32,12 @@ export function useLocations() {
   });
 }
 
-export function useMovements() {
+/** The stock ledger, newest first; one product's only when `productId` is given. */
+export function useMovements(productId?: string) {
   return useQuery({
-    queryKey: INVENTORY_KEYS.movements,
-    queryFn: () => expectStatus(api.inventory.stock.movements({ query: {} }), 200),
+    queryKey: INVENTORY_KEYS.movements(productId),
+    queryFn: () =>
+      expectStatus(api.inventory.stock.movements({ query: productId ? { productId } : {} }), 200),
   });
 }
 

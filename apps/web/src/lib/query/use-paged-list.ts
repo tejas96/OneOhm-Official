@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 export function usePagedList<TItem, TPage extends Page<TItem>>(
   queryKey: QueryKey,
   fetchPage: (cursor: string | undefined) => Promise<TPage>,
-  options: { readonly enabled?: boolean } = {},
+  options: { readonly enabled?: boolean; readonly refetchInterval?: number | false } = {},
 ) {
   const query = useInfiniteQuery({
     queryKey,
@@ -21,6 +21,7 @@ export function usePagedList<TItem, TPage extends Page<TItem>>(
     getNextPageParam: (last: TPage) => last.nextCursor ?? undefined,
     placeholderData: (previous) => previous,
     enabled: options.enabled ?? true,
+    refetchInterval: options.refetchInterval ?? false,
   });
   const pages = query.data?.pages;
   const items = useMemo(() => pages?.flatMap((page) => page.items) ?? [], [pages]);

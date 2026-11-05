@@ -90,12 +90,15 @@ export const servicePageQuerySchema = pageQuerySchema.extend({
   status: z.enum(SERVICE_STATUSES).optional(),
   sla: z.enum(SLA_FILTERS).optional(),
   kind: z.enum(SERVICE_KINDS).optional(),
+  /** Customer name or phone, what went wrong, category or project code. */
+  q: searchSchema,
   /** One request by id (a link from an alert), whatever page it sits on. */
   id: idSchema.optional(),
 });
 export const servicePageSchema = pageOf(serviceTicketSchema);
 export type ServicePage = z.infer<typeof servicePageSchema>;
 
-export const paymentPageQuerySchema = pageQuerySchema;
+/** `q`: receipt number, customer, project code, milestone or the payer's reference. */
+export const paymentPageQuerySchema = pageQuerySchema.extend({ q: searchSchema });
 export const paymentPageSchema = pageOf(receivedPaymentSchema);
 export type PaymentPage = z.infer<typeof paymentPageSchema>;

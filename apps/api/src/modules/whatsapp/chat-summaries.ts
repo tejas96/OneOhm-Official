@@ -3,6 +3,8 @@ import { chatsWaitingSince, customers, users, waConversations, waMessages } from
 import { chatWaitStage, chatWindowOpen } from '@oneohm/domain';
 import { desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { searchWords } from '../../common/paging';
+import { matchWords } from '../../common/search-match';
 import type { Database } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 
@@ -11,6 +13,14 @@ const assignee = alias(users, 'assignee');
 /** Waiting over 2 working hours for a person's answer. */
 function isLate(since: Date | undefined, now: Date, env: Environment): boolean {
   return since !== undefined && chatWaitStage(since, now, env.BUSINESS_TIMEZONE) === 2;
+}
+
+/** A chat by the customer's name, WhatsApp profile name or either phone (customer joined). */
+export function chatSearch(q: string | undefined): SQL | undefined {
+  return matchWords(searchWords(q), {
+    text: [customers.name, waConversations.profileName],
+    phones: [waConversations.phone, customers.phoneE164],
+  });
 }
 
 /** The inbox rows for the chats matching `where`, newest first, with last message and wait state. */

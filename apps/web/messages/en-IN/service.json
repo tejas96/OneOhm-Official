@@ -54,6 +54,10 @@
       "loading": "Loading chats",
       "listLabel": "WhatsApp chats",
       "filterLabel": "Show chats",
+      "searchLabel": "Search chats",
+      "searchPlaceholder": "Name or phone",
+      "emptySearch": "No chat matches “{term}”.",
+      "capped": "Showing the newest {count}. Search to find older chats.",
       "filter": {
         "reply": "To reply · {count}",
         "late": "Late · {count}",
@@ -125,6 +129,8 @@
       "loading": "Loading messages",
       "caption": "Business messages and how far they got",
       "filterLabel": "Show messages",
+      "searchLabel": "Search messages",
+      "searchPlaceholder": "Phone, name or template",
       "all": "All states",
       "count": "{count, plural, one {# message} other {# messages}}",
       "columns": {
@@ -160,7 +166,8 @@
       "retryFailed": "Could not queue it again",
       "empty": {
         "all": "No business messages yet. WhatsApp replies and app alerts appear here as they go out.",
-        "filtered": "No messages in this state."
+        "filtered": "No messages in this state.",
+        "search": "No message matches “{term}”."
       }
     },
     "filters": {
@@ -180,6 +187,9 @@
     "count": "{count, plural, one {# request} other {# requests}}",
     "caption": "Service requests with their promised times",
     "emptyFiltered": "Nothing matches these filters.",
+    "searchLabel": "Search requests",
+    "searchPlaceholder": "Customer, phone, problem or project",
+    "emptySearch": "Nothing matches “{term}”. Try a phone number or another spelling.",
     "columns": {
       "request": "Request",
       "customer": "Customer",

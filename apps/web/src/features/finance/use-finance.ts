@@ -1,7 +1,12 @@
 'use client';
 
 import type { PaymentPage, ReceivedPayment } from '@oneohm/api-contracts';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
@@ -22,9 +27,14 @@ export const useReceivables = () =>
   });
 
 /** Money received, newest first, 30 at a time (more as the person scrolls; PRD 9.3). */
-export const usePaymentsReceived = () =>
-  usePagedList<ReceivedPayment, PaymentPage>([...FINANCE_KEY, 'payments', 'page'], (cursor) =>
-    expectStatus(api.lists.payments({ query: { limit: 30, ...(cursor ? { cursor } : {}) } }), 200),
+export const usePaymentsReceived = (q = '') =>
+  usePagedList<ReceivedPayment, PaymentPage>([...FINANCE_KEY, 'payments', 'page', q], (cursor) =>
+    expectStatus(
+      api.lists.payments({
+        query: { limit: 30, ...(cursor ? { cursor } : {}), ...(q ? { q } : {}) },
+      }),
+      200,
+    ),
   );
 
 export const usePayables = (status: PayableFilter) =>
@@ -53,18 +63,19 @@ export const useTrialBalance = () =>
 
 const PAGE = 30;
 
-/** The journal, newest first, a page at a time. */
-export const useJournal = () =>
+/** The journal, newest first, a page at a time; `q` searches every entry on the server. */
+export const useJournal = (q = '') =>
   useInfiniteQuery({
-    queryKey: [...FINANCE_KEY, 'journal'],
+    queryKey: [...FINANCE_KEY, 'journal', q],
     initialPageParam: undefined as number | undefined,
     queryFn: ({ pageParam }) =>
       expectStatus(
         api.finance.listJournal({
-          query: { limit: PAGE, ...(pageParam ? { before: pageParam } : {}) },
+          query: { limit: PAGE, ...(pageParam ? { before: pageParam } : {}), ...(q ? { q } : {}) },
         }),
         200,
       ),
+    placeholderData: keepPreviousData,
     getNextPageParam: (last) => (last.length === PAGE ? last.at(-1)?.number : undefined),
   });
 

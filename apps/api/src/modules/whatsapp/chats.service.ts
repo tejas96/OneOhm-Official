@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ChatDetail, ChatSummary } from '@oneohm/api-contracts';
+import { CHAT_LIST_LIMIT, type ChatDetail, type ChatSummary } from '@oneohm/api-contracts';
 import { coveredBy, notify, roles, userRoles, users, waConversations } from '@oneohm/database';
 import { followUpText } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
@@ -17,7 +17,7 @@ import {
   queueReply,
   queueTemplate,
 } from './chat-store';
-import { chatSummaries } from './chat-summaries';
+import { chatSearch, chatSummaries } from './chat-summaries';
 
 /** "Sunita Jadhav (test)" → "Sunita"; a chat without a name is greeted as "there". */
 export function firstName(name: string): string {
@@ -40,9 +40,12 @@ export class ChatsService {
     @Inject(ENVIRONMENT) private readonly env: Environment,
   ) {}
 
-  async list(actor: Actor): Promise<ChatSummary[]> {
-    if (seesAllChats(actor)) return this.summaries(undefined, 200);
-    return this.summaries(this.mine(actor, await coveredBy(this.db, actor.userId)), 200);
+  /** The newest chats this person sees, or with `q` the ones whose name or number match. */
+  async list(actor: Actor, q?: string): Promise<ChatSummary[]> {
+    const seen = seesAllChats(actor)
+      ? undefined
+      : this.mine(actor, await coveredBy(this.db, actor.userId));
+    return this.summaries(and(seen, chatSearch(q)), CHAT_LIST_LIMIT);
   }
 
   async get(actor: Actor, id: string): Promise<ChatDetail> {

@@ -20,9 +20,12 @@ const targetOf = (entry: CommissionEntry): PayoutTarget => ({
 export function CommissionsTable({
   rows,
   actions,
+  focused = null,
 }: {
   readonly rows: readonly CommissionEntry[];
   readonly actions: PayoutActions;
+  /** The row a link pointed at, highlighted. */
+  readonly focused?: string | null;
 }) {
   const t = useTranslations('finance.payouts');
   const format = useFormatter();
@@ -110,6 +113,7 @@ export function CommissionsTable({
       columns={columns}
       rows={rows}
       rowKey={(entry) => entry.id}
+      focusedKey={focused}
     />
   );
 }

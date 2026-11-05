@@ -21,6 +21,17 @@ export function usePointsEntries() {
   });
 }
 
+/**
+ * Every entry still waiting for a yes. Asked for on its own: the full list holds only the
+ * newest few hundred, so an old suggestion could drop out of it.
+ */
+export function usePendingPoints() {
+  return useQuery({
+    queryKey: WORKFORCE_KEYS.pendingPoints,
+    queryFn: () => expectStatus(api.rewards.listPoints({ query: { status: 'pending' } }), 200),
+  });
+}
+
 function useRefreshPoints() {
   const queryClient = useQueryClient();
   return useCallback(

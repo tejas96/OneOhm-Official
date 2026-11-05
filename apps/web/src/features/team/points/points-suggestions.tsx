@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardHeader,
+  cn,
   listItemEnter,
   useToast,
 } from '@oneohm/design-system/web';
@@ -14,13 +15,21 @@ import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { describeError } from '@/lib/api/api-error';
+import { FOCUSED_ROW, focusRowProps } from '@/lib/use-focus-row';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
 import { useDecidePoints } from './use-points';
 
 /** Points suggested by the system (ratings, on-time work) that wait for a person to agree. */
-export function PointsSuggestions({ entries }: { readonly entries: readonly PointsEntry[] }) {
+export function PointsSuggestions({
+  entries,
+  focused = null,
+}: {
+  readonly entries: readonly PointsEntry[];
+  /** The suggestion a link pointed at, highlighted. */
+  readonly focused?: string | null;
+}) {
   const t = useTranslations('team.points.suggestions');
   const sourceT = useTranslations('team.points.source');
   const me = useCurrentUser();
@@ -64,7 +73,8 @@ export function PointsSuggestions({ entries }: { readonly entries: readonly Poin
             <motion.li
               key={entry.id}
               {...listItemEnter(index)}
-              className="flex flex-col gap-2.5 px-5 py-4"
+              {...focusRowProps(entry.id, focused)}
+              className={cn('flex flex-col gap-2.5 px-5 py-4', entry.id === focused && FOCUSED_ROW)}
             >
               <div className="flex items-start justify-between gap-3">
                 <PersonChip person={entry.user} detail={format.ago(entry.createdAt)} />

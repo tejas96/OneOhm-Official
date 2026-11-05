@@ -1,26 +1,31 @@
 'use client';
 
 import type { ChatDetail, Delivery } from '@oneohm/api-contracts';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { type ListPaging, type PagingMode, useListPaging } from '@/lib/query/use-list-paging';
 import { useCurrentUser } from '@/providers/current-user';
 
 /** The inbox refreshes on its own while it is open, so new customer messages show up. */
 export const POLL_MS = 15_000;
 
 export const whatsappKeys = {
-  chats: ['whatsapp', 'chats'] as const,
+  chats: (q: string) => ['whatsapp', 'chats', q] as const,
   chat: (id: string) => ['whatsapp', 'chat', id] as const,
-  deliveries: (state: Delivery['state'] | undefined) =>
-    ['whatsapp', 'deliveries', state ?? 'all'] as const,
+  deliveries: (state: Delivery['state'] | undefined, q: string) =>
+    ['whatsapp', 'deliveries', state ?? 'all', q] as const,
 };
 
-/** The chats this person answers (all of them for the desk); only staff have chats. */
-export function useChats() {
+/**
+ * The chats this person answers (all of them for the desk), newest first and at most
+ * CHAT_LIST_LIMIT; with a search, the matching ones however old. Only staff have chats.
+ */
+export function useChats(q = '') {
   const user = useCurrentUser();
   return useQuery({
-    queryKey: whatsappKeys.chats,
-    queryFn: () => expectStatus(api.whatsapp.chats(), 200),
+    queryKey: whatsappKeys.chats(q),
+    queryFn: () => expectStatus(api.whatsapp.chats({ query: q ? { q } : {} }), 200),
+    placeholderData: keepPreviousData,
     enabled: user.kind === 'staff',
     refetchInterval: POLL_MS,
   });
@@ -98,12 +103,31 @@ export function useRelease(id: string) {
   });
 }
 
-export function useDeliveries(state: Delivery['state'] | undefined) {
-  return useQuery({
-    queryKey: whatsappKeys.deliveries(state),
-    queryFn: () => expectStatus(api.whatsapp.deliveries({ query: state ? { state } : {} }), 200),
-    refetchInterval: POLL_MS,
-  });
+/**
+ * The message log a page at a time, filtered by state and search on the server. It keeps
+ * refreshing while open, so new sends and receipts show up.
+ */
+export function useDeliveryLog(
+  state: Delivery['state'] | undefined,
+  q: string,
+  mode: PagingMode,
+): ListPaging<Delivery> {
+  return useListPaging<Delivery>(
+    whatsappKeys.deliveries(state, q),
+    (cursor, limit) =>
+      expectStatus(
+        api.whatsapp.deliveryPage({
+          query: {
+            limit,
+            ...(cursor ? { cursor } : {}),
+            ...(state ? { state } : {}),
+            ...(q ? { q } : {}),
+          },
+        }),
+        200,
+      ),
+    { mode, refetchInterval: POLL_MS },
+  );
 }
 
 export function useRetryDelivery() {

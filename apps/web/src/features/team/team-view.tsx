@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
+import { BlockedTab } from '@/components/blocked-tab';
 import { TravelTab } from '@/features/site-activity/travel/travel-tab';
 import { useCurrentUser } from '@/providers/current-user';
 import { AnnouncementsTab } from './announcements/announcements-tab';
@@ -61,11 +62,14 @@ export function TeamView() {
     tab.requires.some((capability) => user.capabilities.includes(capability)),
   );
   const current = allowed.find((tab) => tab.value === params.get('tab')) ?? allowed[0];
+  // A link to a tab this role cannot open says so, rather than landing on another tab.
+  const blocked = TABS.find((tab) => tab.value === params.get('tab') && !allowed.includes(tab));
 
+  // Filters, searches and open items belong to one tab, so a new tab starts clean.
   const select = (value: TabValue) => {
-    const next = new URLSearchParams(params);
-    next.set('tab', value);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${new URLSearchParams({ tab: value }).toString()}`, {
+      scroll: false,
+    });
   };
 
   return (
@@ -74,7 +78,13 @@ export function TeamView() {
       className="mx-auto flex w-full min-w-0 max-w-[90rem] flex-col gap-8 py-2"
     >
       <PageHeader title={t('title')} description={t('description')} />
-      {current ? (
+      {blocked ? (
+        <BlockedTab
+          tab={t(`tabs.${blocked.value}`)}
+          fallback={current ? t(`tabs.${current.value}`) : null}
+          onFallback={() => current && select(current.value)}
+        />
+      ) : current ? (
         <Tabs
           value={current.value}
           onValueChange={select}

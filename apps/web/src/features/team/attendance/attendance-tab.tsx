@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import {
   AttendanceKpis,
@@ -33,13 +34,15 @@ export function AttendanceTab() {
   const corrections = usePendingCorrections(canDecide);
   // Nobody decides their own correction; those wait for someone else.
   const waiting = (corrections.data ?? []).filter((item) => item.user.id !== me.id);
+  // `?correction=<id>` (an approval's or alert's "Open") marks one waiting correction.
+  const focused = useFocusRow('correction', corrections.data && waiting);
 
   return (
     <div className="flex flex-col gap-8">
       {corrections.isError && (
         <LoadError error={corrections.error} onRetry={() => corrections.refetch()} />
       )}
-      {waiting.length > 0 && <CorrectionsQueue items={waiting} />}
+      {waiting.length > 0 && <CorrectionsQueue items={waiting} focused={focused} />}
       <DayPicker date={date} today={today} onChange={setDate} />
       {rows.isPending && <ListSkeleton label={t('loading')} rows={4} />}
       {rows.isError && <LoadError error={rows.error} onRetry={() => rows.refetch()} />}

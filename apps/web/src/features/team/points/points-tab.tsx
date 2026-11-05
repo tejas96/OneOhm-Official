@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useWorkforceSettings } from '@/features/settings/workforce/use-workforce-settings';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useCan } from '@/providers/current-user';
 import { GivePointsDialog } from './give-points-dialog';
 import { MonthlyReview } from './monthly-review';
@@ -13,14 +14,19 @@ import { PointsRules } from './points-rules';
 import { PointsSuggestions } from './points-suggestions';
 import { RecentPoints } from './recent-points';
 import { StandingsTable } from './standings-table';
-import { usePointsEntries, useStandings } from './use-points';
+import { usePendingPoints, usePointsEntries, useStandings } from './use-points';
 
-/** Who has earned what, suggestions waiting for a person, and recognition from a manager. */
+/**
+ * Who has earned what, suggestions waiting for a person, and recognition from a manager.
+ * `?points=<id>` marks one waiting suggestion (an approval's "Open").
+ */
 export function PointsTab() {
   const t = useTranslations('team.points');
   const canManage = useCan('people.manage');
   const standings = useStandings();
   const entries = usePointsEntries();
+  const pending = usePendingPoints();
+  const focused = useFocusRow('points', pending.data);
   const settings = useWorkforceSettings(canManage);
   const [giving, setGiving] = useState(false);
   const policy = settings.data?.policy.points;
@@ -50,12 +56,13 @@ export function PointsTab() {
           {standings.data && <StandingsTable standings={standings.data} />}
         </div>
         <aside aria-label={t('suggestions.title')} className="flex min-w-0 flex-col gap-5">
-          {entries.isError && <LoadError error={entries.error} onRetry={() => entries.refetch()} />}
-          {entries.data && <PointsSuggestions entries={entries.data} />}
+          {pending.isError && <LoadError error={pending.error} onRetry={() => pending.refetch()} />}
+          {pending.data && <PointsSuggestions entries={pending.data} focused={focused} />}
           {policy && <PointsRules points={policy} />}
         </aside>
       </div>
       <MonthlyReview />
+      {entries.isError && <LoadError error={entries.error} onRetry={() => entries.refetch()} />}
       {entries.data && <RecentPoints entries={entries.data} />}
       {policy && (
         <GivePointsDialog open={giving} onOpenChange={setGiving} max={policy.recognitionMax} />

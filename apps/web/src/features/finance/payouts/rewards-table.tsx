@@ -18,9 +18,12 @@ const targetOf = (reward: ReferralReward): PayoutTarget => ({
 export function RewardsTable({
   rows,
   actions,
+  focused = null,
 }: {
   readonly rows: readonly ReferralReward[];
   readonly actions: PayoutActions;
+  /** The row a link pointed at, highlighted. */
+  readonly focused?: string | null;
 }) {
   const t = useTranslations('finance.payouts');
   const format = useFormatter();
@@ -87,6 +90,7 @@ export function RewardsTable({
       columns={columns}
       rows={rows}
       rowKey={(reward) => reward.id}
+      focusedKey={focused}
     />
   );
 }

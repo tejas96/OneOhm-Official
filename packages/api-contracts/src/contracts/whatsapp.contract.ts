@@ -5,17 +5,23 @@ import {
   chatDetailSchema,
   chatSummarySchema,
   DELIVERY_STATES,
+  deliveryPageQuerySchema,
+  deliveryPageSchema,
   deliverySchema,
 } from '../schemas/whatsapp.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
+/** Words to find; short enough to stay a search, not a document. */
+const searchSchema = z.string().trim().max(80).optional();
 
 /** The WhatsApp inbox for staff and the log of every business message sent. */
 export const whatsappContract = c.router({
   chats: {
     method: 'GET',
     path: '/whatsapp/chats',
+    // Name or phone; without it, the newest CHAT_LIST_LIMIT chats.
+    query: z.object({ q: searchSchema }),
     responses: { 200: z.array(chatSummarySchema) },
   },
   chat: {
@@ -73,8 +79,16 @@ export const whatsappContract = c.router({
   deliveries: {
     method: 'GET',
     path: '/messages/deliveries',
-    query: z.object({ state: z.enum(DELIVERY_STATES).optional() }),
+    // Recipient (phone, customer or staff name) or template; at most DELIVERY_LIST_LIMIT rows.
+    query: z.object({ state: z.enum(DELIVERY_STATES).optional(), q: searchSchema }),
     responses: { 200: z.array(deliverySchema) },
+  },
+  deliveryPage: {
+    method: 'GET',
+    path: '/messages/deliveries/page',
+    query: deliveryPageQuerySchema,
+    responses: { 200: deliveryPageSchema },
+    summary: 'The message log a page at a time, newest first, with the total that match.',
   },
   retryDelivery: {
     method: 'POST',

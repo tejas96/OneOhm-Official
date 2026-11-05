@@ -1,6 +1,15 @@
 {
   "lists": {
     "showing": "Showing {shown} of {total}",
-    "more": "Show more"
+    "more": "Show more",
+    "range": "Showing {from}–{to} of {total}",
+    "pages": "Pages",
+    "page": "Page {page}",
+    "previous": "Previous",
+    "next": "Next",
+    "focus": {
+      "gone": "That item is no longer waiting",
+      "goneBody": "Someone may have decided it already, or it was removed."
+    }
   }
 }

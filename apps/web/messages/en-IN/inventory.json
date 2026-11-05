@@ -51,6 +51,25 @@
       "movementsTitle": "Stock ledger",
       "movementsDescription": "Every change to stock, newest first.",
       "movementsEmpty": "No stock has moved yet.",
+      "movementsSearch": "Search the ledger by product, project, note or person",
+      "movementsItem": "Product",
+      "movementsAllItems": "All products",
+      "movementsNoMatch": "No stock changes match. Try another word or product.",
+      "movementsCapped": "Only the latest {count} changes are loaded. Pick a product to see its older ones.",
+      "movementsCappedItem": "Only this product's latest {count} changes are loaded.",
+      "filters": {
+        "search": "Search by product, SKU, brand or category",
+        "show": "Show",
+        "shows": {
+          "all": "All products",
+          "low": "Below minimum",
+          "inStock": "In stock"
+        },
+        "category": "Category",
+        "allCategories": "All categories",
+        "noMatchTitle": "No products match",
+        "noMatchBody": "Try another word, or clear the filters."
+      },
       "kinds": {
         "receipt": "Received",
         "reservation": "Reserved",
@@ -110,7 +129,10 @@
       },
       "forStock": "Stock",
       "emptyTitle": "No purchase orders yet",
-      "emptyBody": "Raise one for a project's panels and inverter, or to refill the store."
+      "emptyBody": "Raise one for a project's panels and inverter, or to refill the store.",
+      "search": "Search by order number, vendor or project",
+      "noMatchTitle": "No purchase orders match",
+      "noMatchBody": "Try another word, or pick another status."
     },
     "orderForm": {
       "title": "New purchase order",
@@ -257,7 +279,10 @@
       "from": "From {location} · {date}",
       "vehicle": "Vehicle {vehicle}",
       "driver": "Driver {name}",
-      "serials": "{count, plural, one {# serial} other {# serials}}"
+      "serials": "{count, plural, one {# serial} other {# serials}}",
+      "search": "Search by challan, project, vehicle, item or serial",
+      "noMatchTitle": "No dispatches match",
+      "noMatchBody": "Try another word, or clear the search."
     },
     "material": {
       "title": "Material",

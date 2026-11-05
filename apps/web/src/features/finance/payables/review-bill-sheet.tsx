@@ -9,7 +9,6 @@ import { type FormEvent, useEffect, useId, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
-import { useCan } from '@/providers/current-user';
 import { NumberInput } from '../../settings/number-input';
 import { useInvalidateFinance } from '../use-finance';
 import { InvoiceFlag } from './bill-amount';
@@ -20,9 +19,12 @@ import { InvoiceFlag } from './bill-amount';
  */
 export function ReviewBillSheet({
   bill,
+  mayApprove: canApprove,
   onClose,
 }: {
   readonly bill: Payable | null;
+  /** This person may approve this bill: approves payments, or records them within the limit. */
+  readonly mayApprove: boolean;
   readonly onClose: () => void;
 }) {
   const t = useTranslations('finance.payables.review');
@@ -30,7 +32,6 @@ export function ReviewBillSheet({
   const formId = useId();
   const toast = useToast();
   const invalidate = useInvalidateFinance();
-  const canApprove = useCan('finance.approve_payments');
   const form = useApiForm();
   const [invoicePaise, setInvoicePaise] = useState<number | null>(null);
   const [tdsBp, setTdsBp] = useState<number | null>(null);

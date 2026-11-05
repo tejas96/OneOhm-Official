@@ -15,14 +15,16 @@ import { formatInr } from '@oneohm/shared';
 import { CircleCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
+import { FinanceSearch } from '../finance-search';
 import { PaymentLinkAction } from '../payment-link-action';
 import { useReceivables } from '../use-finance';
 import { GatewayCheckButton } from './gateway-check-button';
 import { PaymentsReceived } from './payments-received';
 
-type Filter = 'due' | 'not_due' | 'all';
+const FILTERS = ['due', 'not_due', 'all'] as const;
 
 const NEXT_TONE: Readonly<Record<Receivable['nextAction'], PillTone>> = {
   collect_from_customer: 'review',
@@ -30,11 +32,15 @@ const NEXT_TONE: Readonly<Record<Receivable['nextAction'], PillTone>> = {
   not_due_yet: 'neutral',
 };
 
-/** Every milestone still owed, oldest first, with the one thing to do about it. */
+/**
+ * Every milestone still owed, oldest first, with the one thing to do about it. The list is
+ * whole, so its search (`?q=`) and filter (`?status=`) run here; payments search `?pq=`.
+ */
 export function ReceivablesTab() {
   const t = useTranslations('finance.receivables');
   const format = useFormatter();
-  const [filter, setFilter] = useState<Filter>('due');
+  const [filter, setFilter] = useChoiceParam('status', FILTERS, 'due');
+  const { draft, setDraft, search } = useSearchParam();
   const query = useReceivables();
 
   const columns: TableColumn<Receivable>[] = [
@@ -125,8 +131,10 @@ export function ReceivablesTab() {
     },
   ];
 
-  const rows = (query.data ?? []).filter((row) =>
-    filter === 'all' ? true : filter === 'due' ? row.dueOn !== null : row.dueOn === null,
+  const rows = (query.data ?? []).filter(
+    (row) =>
+      (filter === 'all' ? true : filter === 'due' ? row.dueOn !== null : row.dueOn === null) &&
+      matchesSearch(search, [row.customerName, row.projectCode, row.label]),
   );
 
   return (
@@ -134,26 +142,28 @@ export function ReceivablesTab() {
       <section className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">{t('title')}</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <GatewayCheckButton />
-            <SegmentedControl
-              value={filter}
-              onValueChange={setFilter}
-              label={t('filterLabel')}
-              size="sm"
-              options={(['due', 'not_due', 'all'] as const).map((value) => ({
-                value,
-                label: t(`filters.${value}`),
-              }))}
-            />
-          </div>
+          <GatewayCheckButton />
+        </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <FinanceSearch value={draft} onChange={setDraft} label={t('search')} />
+          <SegmentedControl
+            value={filter}
+            onValueChange={setFilter}
+            label={t('filterLabel')}
+            size="sm"
+            options={FILTERS.map((value) => ({ value, label: t(`filters.${value}`) }))}
+          />
         </div>
         {query.isPending ? (
           <ListSkeleton label={t('loading')} />
         ) : query.isError ? (
           <LoadError error={query.error} onRetry={() => query.refetch()} />
         ) : rows.length === 0 ? (
-          <EmptyState icon={<CircleCheck />} title={t('emptyTitle')} description={t('emptyBody')} />
+          <EmptyState
+            icon={<CircleCheck />}
+            title={search ? t('noMatchTitle') : t('emptyTitle')}
+            description={search ? t('noMatchBody') : t('emptyBody')}
+          />
         ) : (
           <ResponsiveTable
             caption={t('title')}

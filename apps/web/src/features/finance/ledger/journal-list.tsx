@@ -5,19 +5,36 @@ import { formatInr } from '@oneohm/shared';
 import { BookOpen } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
+import { FinanceSearch, withBareCodes } from '../finance-search';
 import { useJournal } from '../use-finance';
 
-/** Every journal entry, newest first: what happened, and each debit and credit. */
+/**
+ * Every journal entry, newest first: what happened, and each debit and credit. The search
+ * (`?q=`: JV number, memo or project code) runs on the server over the whole journal.
+ */
 export function JournalList() {
   const t = useTranslations('finance.ledger');
   const sourceT = useTranslations('finance.ledger.sources');
   const format = useFormatter();
-  const query = useJournal();
-  const entries = query.data?.pages.flat() ?? [];
+  const { draft, setDraft, search } = useSearchParam();
+  const query = useJournal(search);
+  // Checked here too, so an API that ignores `q` still shows only matching entries.
+  const entries = (query.data?.pages.flat() ?? []).filter((entry) =>
+    matchesSearch(search, [
+      entry.memo,
+      `jv-${entry.number}`,
+      `jv${entry.number}`,
+      ...withBareCodes([entry.projectCode]),
+    ]),
+  );
 
   return (
     <Card className="overflow-hidden">
       <CardHeader title={t('journal')} description={t('journalHint')} />
+      <div className="px-5 pb-4">
+        <FinanceSearch value={draft} onChange={setDraft} label={t('search')} />
+      </div>
       {query.isPending ? (
         <div className="px-5 pb-5">
           <ListSkeleton label={t('loading')} rows={5} />
@@ -25,7 +42,11 @@ export function JournalList() {
       ) : query.isError ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} className="m-5" />
       ) : entries.length === 0 ? (
-        <EmptyState icon={<BookOpen />} title={t('emptyJournal')} className="m-5" />
+        <EmptyState
+          icon={<BookOpen />}
+          title={search ? t('noMatch') : t('emptyJournal')}
+          className="m-5"
+        />
       ) : (
         <ol className="flex flex-col divide-y divide-hairline border-t border-hairline">
           {entries.map((entry) => (

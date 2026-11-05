@@ -4,17 +4,21 @@ import type { Payable } from '@oneohm/api-contracts';
 import {
   Button,
   EmptyState,
+  Input,
   type PillTone,
   ResponsiveTable,
   SegmentedControl,
   StatusPill,
   type TableColumn,
 } from '@oneohm/design-system/web';
-import { ClipboardCheck, Plus, ReceiptIndianRupee, Wallet } from 'lucide-react';
+import { ClipboardCheck, Plus, ReceiptIndianRupee, Search, Wallet } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useMayDecide } from '@/features/today/approvals/use-my-approvals';
+import { useFocusRow } from '@/lib/use-focus-row';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
 import { useCan } from '@/providers/current-user';
 import { type PayableFilter, usePayables } from '../use-finance';
 import { AddBillDialog } from './add-bill-dialog';
@@ -49,7 +53,8 @@ function useBillFilter(): readonly [PayableFilter, (next: PayableFilter) => void
 
 /**
  * Bills from vendors and crews: review (vendor invoice, TDS), approve, then pay.
- * Approval books the cost and the TDS held.
+ * Approval books the cost and the TDS held. `?bill=<id>` opens one bill (an approval's
+ * "Open"); `?q=` searches by vendor, bill number, project or what it is for.
  */
 export function PayablesTab() {
   const t = useTranslations('finance.payables');
@@ -63,6 +68,16 @@ export function PayablesTab() {
   const [reviewing, setReviewing] = useState<Payable | null>(null);
   const query = usePayables(filter);
   const payouts = latestByBill(useRecentPayouts().data ?? []);
+  const { draft, setDraft, search } = useSearchParam();
+  // Within the limit in Settings, accounts may approve a bill too; the inbox knows which.
+  const mayDecide = useMayDecide('bill');
+  const mayApprove = (bill: Payable) => canApprove || mayDecide.has(bill.id);
+  const focused = useFocusRow('bill', query.data, (bill) => {
+    if (bill.status === 'pending' && (canAdd || mayApprove(bill))) setReviewing(bill);
+  });
+  const rows = (query.data ?? []).filter((bill) =>
+    matchesSearch(search, [bill.partyName, bill.description, bill.billNumber, bill.projectCode]),
+  );
 
   const date = (value: string) =>
     format.dateTime(new Date(`${value}T12:00:00`), { day: 'numeric', month: 'short' });
@@ -123,14 +138,14 @@ export function PayablesTab() {
         <span className="flex flex-wrap items-center gap-2">
           <StatusPill size="sm" tone={TONE[bill.status]} label={t(`status.${bill.status}`)} />
           <PayoutBadge bill={bill} latest={payouts.get(bill.id)} />
-          {bill.status === 'pending' && (canApprove || canAdd) && (
+          {bill.status === 'pending' && (mayApprove(bill) || canAdd) && (
             <Button
               size="sm"
               variant="secondary"
               leadingIcon={<ClipboardCheck />}
               onClick={() => setReviewing(bill)}
             >
-              {canApprove ? t('approve') : t('review.title')}
+              {mayApprove(bill) ? t('approve') : t('review.title')}
             </Button>
           )}
           {bill.status === 'approved' && canAdd && (
@@ -151,13 +166,25 @@ export function PayablesTab() {
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <SegmentedControl
-          value={filter}
-          onValueChange={setFilter}
-          label={t('filterLabel')}
-          size="sm"
-          options={FILTERS.map((value) => ({ value, label: t(`filters.${value}`) }))}
-        />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <SegmentedControl
+            value={filter}
+            onValueChange={setFilter}
+            label={t('filterLabel')}
+            size="sm"
+            options={FILTERS.map((value) => ({ value, label: t(`filters.${value}`) }))}
+          />
+          <div className="w-full min-w-0 sm:w-72">
+            <Input
+              type="search"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={t('search')}
+              aria-label={t('search')}
+              leading={<Search aria-hidden />}
+            />
+          </div>
+        </div>
         {canAdd && (
           <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
             {t('add')}
@@ -174,17 +201,24 @@ export function PayablesTab() {
           title={t('emptyTitle')}
           description={t('emptyBody')}
         />
+      ) : rows.length === 0 ? (
+        <EmptyState icon={<Search />} title={t('noMatchTitle')} description={t('noMatchBody')} />
       ) : (
         <ResponsiveTable
           caption={t('caption')}
           columns={columns}
-          rows={query.data}
+          rows={rows}
           rowKey={(bill) => bill.id}
+          focusedKey={focused}
         />
       )}
       <AddBillDialog open={adding} onOpenChange={setAdding} />
       <PayBillDialog bill={paying} onClose={() => setPaying(null)} />
-      <ReviewBillSheet bill={reviewing} onClose={() => setReviewing(null)} />
+      <ReviewBillSheet
+        bill={reviewing}
+        mayApprove={reviewing !== null && mayApprove(reviewing)}
+        onClose={() => setReviewing(null)}
+      />
     </section>
   );
 }

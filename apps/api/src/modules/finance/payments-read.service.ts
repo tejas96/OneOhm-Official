@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReceivedPayment } from '@oneohm/api-contracts';
 import { customers, paymentMilestones, payments, projects } from '@oneohm/database';
-import { desc, eq, gt, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNotNull, or, sql } from 'drizzle-orm';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { paymentMatch } from './finance-search';
 
 /** Money in and reversals; a refund's release row shows as its refund instead. */
 const SHOWN = or(gt(payments.amountPaise, 0), isNotNull(payments.reversesPaymentId));
@@ -14,21 +15,27 @@ export class PaymentsReadService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /** A refund's release row (negative, reversing nothing) shows as its refund instead. */
-  async list(limit: number, offset = 0): Promise<ReceivedPayment[]> {
+  async list(limit: number, offset = 0, q?: string): Promise<ReceivedPayment[]> {
     const rows = await this.query()
-      .where(SHOWN)
+      .where(and(SHOWN, paymentMatch(q)))
       .orderBy(desc(payments.createdAt), desc(payments.id))
       .limit(limit)
       .offset(offset);
     return this.present(rows);
   }
 
-  /** How many rows `list` can show in all, for a paged list. */
-  async count(): Promise<number> {
-    const [row] = await this.db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(payments)
-      .where(SHOWN);
+  /** How many rows `list` can show in all (for the same search), for a paged list. */
+  async count(q?: string): Promise<number> {
+    const match = paymentMatch(q);
+    const counted = this.db.select({ total: sql<number>`count(*)::int` }).from(payments).$dynamic();
+    // The search reads the project, customer and milestone, so it counts through the same joins.
+    const [row] = await (match
+      ? counted
+          .innerJoin(projects, eq(projects.id, payments.projectId))
+          .innerJoin(customers, eq(customers.id, projects.customerId))
+          .leftJoin(paymentMilestones, eq(paymentMilestones.id, payments.milestoneId))
+          .where(and(SHOWN, match))
+      : counted.where(SHOWN));
     return row?.total ?? 0;
   }
 

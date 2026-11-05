@@ -155,5 +155,10 @@
     "label": "Satellite map with the site pin",
     "hint": "Click the map to drop the pin, or drag the pin onto the roof.",
     "typeCoordinates": "Type coordinates"
+  },
+  "tabAccess": {
+    "title": "You can't open {tab}",
+    "body": "Your role does not include it. Ask an admin if you need it.",
+    "action": "Go to {tab}"
   }
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { pageOf, pageQuerySchema } from '../common/paging';
 import { idSchema, instantSchema } from '../common/primitives';
 
 export const DELIVERY_STATES = [
@@ -9,6 +10,10 @@ export const DELIVERY_STATES = [
   'read',
   'failed',
 ] as const;
+
+/** The inbox and the message log show at most this many rows, newest first; search finds older. */
+export const CHAT_LIST_LIMIT = 200;
+export const DELIVERY_LIST_LIMIT = 200;
 
 /** One WhatsApp chat in the staff inbox (PRD 6.1). */
 export const chatSummarySchema = z.object({
@@ -79,3 +84,13 @@ export const deliverySchema = z.object({
   readAt: instantSchema.nullable(),
 });
 export type Delivery = z.infer<typeof deliverySchema>;
+
+/** The message log a page at a time, filtered by state and search on the server. */
+export const deliveryPageQuerySchema = pageQuerySchema.extend({
+  state: z.enum(DELIVERY_STATES).optional(),
+  /** Recipient (phone, customer or staff name) or template. */
+  q: z.string().trim().max(80).optional(),
+});
+export type DeliveryPageQuery = z.infer<typeof deliveryPageQuerySchema>;
+export const deliveryPageSchema = pageOf(deliverySchema);
+export type DeliveryPage = z.infer<typeof deliveryPageSchema>;

@@ -6,6 +6,7 @@ import { Route } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useCan } from '@/providers/current-user';
 import { ClaimSheet } from './claim-sheet';
 import { ClaimsTable } from './claims-table';
@@ -14,7 +15,10 @@ import { type ClaimState, claimState, useTravelClaims } from './use-travel';
 const STATES = ['all', 'pending', 'approved', 'paid', 'rejected', 'cancelled'] as const;
 type StateFilter = (typeof STATES)[number];
 
-/** Travel claims for approvers and finance: filter by status, person and month (PRD 4.3). */
+/**
+ * Travel claims for approvers and finance: filter by status, person and month (PRD 4.3).
+ * `?claim=<id>` opens one claim's sheet (an approval's or alert's "Open").
+ */
 export function TravelTab() {
   const t = useTranslations('siteActivity.claims');
   const format = useFormatter();
@@ -25,6 +29,7 @@ export function TravelTab() {
   const [month, setMonth] = useState('all');
   const [openId, setOpenId] = useState<string | null>(null);
   const claims = query.data ?? [];
+  const focused = useFocusRow('claim', query.data, (claim) => setOpenId(claim.id));
 
   const people = useMemo(
     () => [...new Map(claims.map((claim) => [claim.user.id, claim.user.fullName])).entries()],
@@ -86,7 +91,9 @@ export function TravelTab() {
       {query.data && shown.length === 0 && (
         <EmptyState icon={<Route />} title={t('emptyTitle')} description={t('emptyBody')} />
       )}
-      {shown.length > 0 && <ClaimsTable claims={shown} onOpen={(claim) => setOpenId(claim.id)} />}
+      {shown.length > 0 && (
+        <ClaimsTable claims={shown} onOpen={(claim) => setOpenId(claim.id)} focused={focused} />
+      )}
       <ClaimSheet claim={open} onClose={() => setOpenId(null)} />
     </section>
   );

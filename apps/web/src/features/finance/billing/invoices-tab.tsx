@@ -14,22 +14,29 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
 import { useCan } from '@/providers/current-user';
+import { FinanceSearch, withBareCodes } from '../finance-search';
 import { CancelInvoiceDialog } from './cancel-invoice-dialog';
-import { invoicePdfHref, useInvoices } from './use-billing';
+import { INVOICE_LIMIT, invoicePdfHref, useInvoices } from './use-billing';
 
-type Filter = 'issued' | 'cancelled' | 'all';
+const FILTERS = ['issued', 'cancelled', 'all'] as const;
 const ICON =
   'relative z-[2] flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-sunken';
 
-/** Every GST tax invoice, newest first. Invoices are made from the project's Payments tab. */
+/**
+ * Every GST tax invoice, newest first. Invoices are made from the project's Payments tab.
+ * The search (`?q=`) and status (`?status=`) run on the server, so older invoices are found too.
+ */
 export function InvoicesTab() {
   const t = useTranslations('finance.billing.invoices');
   const invoiceT = useTranslations('finance.billing.invoice');
   const format = useFormatter();
   const canCancel = useCan('finance.approve_payments');
-  const query = useInvoices();
-  const [filter, setFilter] = useState<Filter>('issued');
+  const { draft, setDraft, search } = useSearchParam();
+  const [filter, setFilter] = useChoiceParam('status', FILTERS, 'issued');
+  const query = useInvoices(search, filter === 'all' ? undefined : filter);
   const [cancelling, setCancelling] = useState<TaxInvoice | null>(null);
 
   const columns: TableColumn<TaxInvoice>[] = [
@@ -127,7 +134,18 @@ export function InvoicesTab() {
     },
   ];
 
-  const rows = (query.data ?? []).filter((row) => filter === 'all' || row.status === filter);
+  const loaded = query.data ?? [];
+  const capped = !search && loaded.length >= INVOICE_LIMIT;
+  // Checked here too, so an API that ignores `q` or `status` still shows the right rows.
+  const rows = loaded.filter(
+    (row) =>
+      (filter === 'all' || row.status === filter) &&
+      matchesSearch(search, [
+        row.customerName,
+        row.customerGstin,
+        ...withBareCodes([row.number, row.projectCode]),
+      ]),
+  );
 
   return (
     <section className="flex flex-col gap-5">
@@ -136,15 +154,15 @@ export function InvoicesTab() {
           <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">{t('title')}</h2>
           <p className="type-body-sm text-ink-faint">{t('description')}</p>
         </div>
+      </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <FinanceSearch value={draft} onChange={setDraft} label={t('search')} />
         <SegmentedControl
           value={filter}
           onValueChange={setFilter}
           label={t('filterLabel')}
           size="sm"
-          options={(['issued', 'cancelled', 'all'] as const).map((value) => ({
-            value,
-            label: t(`filters.${value}`),
-          }))}
+          options={FILTERS.map((value) => ({ value, label: t(`filters.${value}`) }))}
         />
       </div>
       {query.isPending ? (
@@ -152,14 +170,27 @@ export function InvoicesTab() {
       ) : query.isError ? (
         <LoadError error={query.error} onRetry={() => query.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState icon={<FileText />} title={t('emptyTitle')} description={t('emptyBody')} />
+        search ? (
+          <EmptyState
+            icon={<FileText />}
+            title={t('noMatchTitle')}
+            description={t('noMatchBody')}
+          />
+        ) : (
+          <EmptyState icon={<FileText />} title={t('emptyTitle')} description={t('emptyBody')} />
+        )
       ) : (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.id}
-        />
+        <>
+          <ResponsiveTable
+            caption={t('title')}
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => row.id}
+          />
+          {capped && (
+            <p className="type-body-sm text-ink-faint">{t('capped', { count: INVOICE_LIMIT })}</p>
+          )}
+        </>
       )}
       <CancelInvoiceDialog invoice={cancelling} onClose={() => setCancelling(null)} />
     </section>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { FINANCE_KEY } from '../use-finance';
 
@@ -18,10 +18,20 @@ export const useProjectBilling = (projectId: string, enabled = true) =>
     enabled,
   });
 
-export const useInvoices = () =>
+/** How many invoices one look shows; a search reaches older ones on the server. */
+export const INVOICE_LIMIT = 200;
+
+export const useInvoices = (q: string, status: 'issued' | 'cancelled' | undefined) =>
   useQuery({
-    queryKey: [...FINANCE_KEY, 'invoices'],
-    queryFn: () => expectStatus(api.billing.listInvoices({ query: { limit: 200 } }), 200),
+    queryKey: [...FINANCE_KEY, 'invoices', { q, status }],
+    queryFn: () =>
+      expectStatus(
+        api.billing.listInvoices({
+          query: { limit: INVOICE_LIMIT, ...(q ? { q } : {}), ...(status ? { status } : {}) },
+        }),
+        200,
+      ),
+    placeholderData: keepPreviousData,
   });
 
 export const useCustomerMoney = () =>

@@ -12,9 +12,12 @@ import { ClaimStatus } from './claim-status';
 export function ClaimsTable({
   claims,
   onOpen,
+  focused = null,
 }: {
   readonly claims: readonly TravelClaim[];
   readonly onOpen: (claim: TravelClaim) => void;
+  /** The claim a link pointed at, highlighted. */
+  readonly focused?: string | null;
 }) {
   const t = useTranslations('siteActivity.claims');
   const format = useSiteFormat();
@@ -101,6 +104,7 @@ export function ClaimsTable({
       columns={columns}
       rows={claims}
       rowKey={(claim) => claim.id}
+      focusedKey={focused}
     />
   );
 }

@@ -45,8 +45,8 @@ export class ListsController {
         assertCan(actor, 'finance.view', 'finance.record_payments');
         const offset = offsetOf(query);
         const [items, total] = await Promise.all([
-          this.payments.list(query.limit, offset),
-          this.payments.count(),
+          this.payments.list(query.limit, offset, query.q),
+          this.payments.count(query.q),
         ]);
         return { status: 200, body: pageFrom(items, total, offset, query.limit) };
       },

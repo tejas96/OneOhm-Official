@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Delivery } from '@oneohm/api-contracts';
+import {
+  DELIVERY_LIST_LIMIT,
+  type Delivery,
+  type DeliveryPage,
+  type DeliveryPageQuery,
+} from '@oneohm/api-contracts';
 import {
   customerNotice,
   fallBackToSms,
@@ -8,9 +13,11 @@ import {
   tellChatFileFailed,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, type SQL, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
+import { offsetOf, pageFrom } from '../../common/paging';
 import { DATABASE, type Database } from '../../config/core.module';
+import { deliverySearch, deliveryStateWhere } from './delivery-filter';
 import { deliveryState, laterStatus } from './delivery-state';
 import type { DeliveryUpdate } from './whatsapp-events';
 
@@ -19,28 +26,43 @@ import type { DeliveryUpdate } from './whatsapp-events';
 export class DeliveriesService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async list(state?: Delivery['state']): Promise<Delivery[]> {
+  /** The newest messages, filtered by state and search in the database. */
+  list(state?: Delivery['state'], q?: string): Promise<Delivery[]> {
+    return this.read(and(deliveryStateWhere(state), deliverySearch(q)), DELIVERY_LIST_LIMIT);
+  }
+
+  /** One page of the log, newest first, with how many match in all. */
+  async page(query: DeliveryPageQuery): Promise<DeliveryPage> {
+    const where = and(deliveryStateWhere(query.state), deliverySearch(query.q));
+    const offset = offsetOf(query);
+    const [items, [counted]] = await Promise.all([
+      this.read(where, query.limit, offset),
+      this.db.select({ total: count() }).from(outbox).where(where),
+    ]);
+    return pageFrom(items, counted?.total ?? 0, offset, query.limit);
+  }
+
+  private async read(where: SQL | undefined, limit: number, offset = 0): Promise<Delivery[]> {
     const rows = await this.db
       .select()
       .from(outbox)
-      .orderBy(desc(outbox.createdAt))
-      .limit(state ? 1000 : 200);
-    return rows
-      .map((row) => ({
-        id: row.id,
-        channel: row.channel,
-        recipient: row.recipient,
-        template: row.template,
-        state: deliveryState(row),
-        attempts: row.attempts,
-        lastError: row.lastError,
-        createdAt: row.createdAt.toISOString(),
-        sentAt: row.sentAt?.toISOString() ?? null,
-        deliveredAt: row.deliveredAt?.toISOString() ?? null,
-        readAt: row.readAt?.toISOString() ?? null,
-      }))
-      .filter((row) => !state || row.state === state)
-      .slice(0, 200);
+      .where(where)
+      .orderBy(desc(outbox.createdAt), desc(outbox.id))
+      .limit(limit)
+      .offset(offset);
+    return rows.map((row) => ({
+      id: row.id,
+      channel: row.channel,
+      recipient: row.recipient,
+      template: row.template,
+      state: deliveryState(row),
+      attempts: row.attempts,
+      lastError: row.lastError,
+      createdAt: row.createdAt.toISOString(),
+      sentAt: row.sentAt?.toISOString() ?? null,
+      deliveredAt: row.deliveredAt?.toISOString() ?? null,
+      readAt: row.readAt?.toISOString() ?? null,
+    }));
   }
 
   /** Puts a failed or skipped message back in the queue; the worker picks it up. */
@@ -51,7 +73,8 @@ export class DeliveriesService {
       .where(and(eq(outbox.id, id), inArray(outbox.status, ['failed', 'skipped'])))
       .returning({ id: outbox.id });
     if (!row) throw conflict('Only failed or skipped messages can be sent again.', 'not_failed');
-    const [delivery] = (await this.list()).filter((item) => item.id === id);
+    // Read by id: a retried message can be older than the newest page.
+    const [delivery] = await this.read(eq(outbox.id, id), 1);
     if (!delivery) throw notFound('That message');
     return delivery;
   }

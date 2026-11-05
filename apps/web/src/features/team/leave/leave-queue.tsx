@@ -1,11 +1,12 @@
 'use client';
 
 import type { LeaveRequestRecord } from '@oneohm/api-contracts';
-import { Button, Card, CardHeader, listItemEnter, useToast } from '@oneohm/design-system/web';
+import { Button, Card, CardHeader, cn, listItemEnter, useToast } from '@oneohm/design-system/web';
 import { Check, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { FOCUSED_ROW, focusRowProps, useFocusRow } from '@/lib/use-focus-row';
 import { useCurrentUser } from '@/providers/current-user';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
@@ -13,7 +14,10 @@ import { LeaveApproveDialog } from './leave-approve-dialog';
 import { LeaveCover, LeaveKind, useLeaveText } from './leave-facts';
 import { useDecideLeave } from './use-leave';
 
-/** Requests waiting for a decision, oldest first; approving hands the work to the backup. */
+/**
+ * Requests waiting for a decision, oldest first; approving hands the work to the backup.
+ * `?leave=<id>` marks one request (an approval's or alert's "Open").
+ */
 export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequestRecord[] }) {
   const t = useTranslations('team.leave.queue');
   const me = useCurrentUser();
@@ -27,6 +31,7 @@ export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequ
     .filter((item) => item.status === 'pending' && item.user.id !== me.id)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
+  const focused = useFocusRow('leave', pending);
   const start = (item: LeaveRequestRecord, approve: boolean) => setOpen({ item, approve });
 
   return (
@@ -46,7 +51,8 @@ export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequ
             <motion.li
               key={item.id}
               {...listItemEnter(index)}
-              className="flex flex-col gap-3 px-5 py-4"
+              {...focusRowProps(item.id, focused)}
+              className={cn('flex flex-col gap-3 px-5 py-4', item.id === focused && FOCUSED_ROW)}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <PersonChip

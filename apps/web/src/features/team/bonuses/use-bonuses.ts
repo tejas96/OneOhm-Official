@@ -1,17 +1,21 @@
 'use client';
 
-import type { BonusInput } from '@oneohm/api-contracts';
+import type { Bonus, BonusInput } from '@oneohm/api-contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 
 export const BONUSES_KEY = ['bonuses'] as const;
 
-/** Every bonus, newest first; the tab filters by status. */
-export function useBonuses() {
+/**
+ * Bonuses in one status (or all), newest first. The server holds back all but the newest
+ * few hundred, so asking by status keeps an old pending bonus in the list.
+ */
+export function useBonuses(status: 'all' | Bonus['status']) {
   return useQuery({
-    queryKey: BONUSES_KEY,
-    queryFn: () => expectStatus(api.engagement.listBonuses({ query: {} }), 200),
+    queryKey: [...BONUSES_KEY, status],
+    queryFn: () =>
+      expectStatus(api.engagement.listBonuses({ query: status === 'all' ? {} : { status } }), 200),
   });
 }
 

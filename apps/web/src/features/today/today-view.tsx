@@ -12,6 +12,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import { useGreeting } from '../command-center/use-greeting';
 import { ApprovalsInbox } from './approvals/approvals-inbox';
+import { useMyApprovals } from './approvals/use-my-approvals';
 import { groupTasks, TODAY_GROUPS } from './group-tasks';
 import { ACCENT, MyWork } from './my-work';
 
@@ -62,11 +63,7 @@ export function TodayView() {
     queryFn: () => expectStatus(api.tasks.myTasks(), 200),
     refetchInterval: 60_000,
   });
-  const approvals = useQuery({
-    queryKey: ['approvals', 'mine'],
-    queryFn: () => expectStatus(api.businessSettings.myApprovals(), 200),
-    refetchInterval: 60_000,
-  });
+  const approvals = useMyApprovals();
   const { showChats, chatsWaiting } = useTodayChats();
   const groups = groupTasks(query.data ?? [], todayIn());
   const firstName = user.fullName.split(/\s+/)[0] ?? user.fullName;

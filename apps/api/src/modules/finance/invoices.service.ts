@@ -15,6 +15,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { invoiceMatch } from './finance-search';
 import { partiesOf, presentInvoices } from './invoice-parties';
 import { invoiceBlocker, invoiceBody, loadInvoiceSource } from './invoice-source';
 
@@ -37,8 +38,21 @@ const BLOCKED = {
 export class InvoicesService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async list(limit: number): Promise<TaxInvoice[]> {
-    const rows = await this.query().orderBy(desc(customerInvoices.createdAt)).limit(limit);
+  /** Newest first; `q` and `status` narrow on the server, so older invoices are found too. */
+  async list(query: {
+    limit: number;
+    q?: string | undefined;
+    status?: TaxInvoice['status'] | undefined;
+  }): Promise<TaxInvoice[]> {
+    const rows = await this.query()
+      .where(
+        and(
+          invoiceMatch(query.q),
+          query.status ? eq(customerInvoices.status, query.status) : undefined,
+        ),
+      )
+      .orderBy(desc(customerInvoices.createdAt))
+      .limit(query.limit);
     return this.present(rows);
   }
 

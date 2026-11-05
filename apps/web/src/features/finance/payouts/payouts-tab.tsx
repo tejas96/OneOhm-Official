@@ -10,6 +10,8 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { describeError } from '@/lib/api/api-error';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useInvalidateFinance } from '../use-finance';
 import { CommissionsTable } from './commissions-table';
 import { PayPayoutDialog } from './pay-payout-dialog';
@@ -31,7 +33,8 @@ const FILTERS = ['open', 'pending', 'approved', 'paid', 'rejected', 'all'] as co
 
 /**
  * Reseller commission and customer referral rewards (PRD 4.8, 5.6): approve to book the
- * expense, then pay. The open view lives in `?view=`.
+ * expense, then pay. The open view lives in `?view=`, the status in `?filter=`, and
+ * `?payout=<id>` marks one row (an approval's "Open").
  */
 export function PayoutsTab() {
   const t = useTranslations('finance.payouts');
@@ -41,7 +44,7 @@ export function PayoutsTab() {
   const toast = useToast();
   const invalidate = useInvalidateFinance();
   const view: PayoutKind = params.get('view') === 'referrals' ? 'referrals' : 'commissions';
-  const [filter, setFilter] = useState<IncentiveFilter>('open');
+  const [filter, setFilter] = useChoiceParam<IncentiveFilter>('filter', FILTERS, 'open');
   const [paying, setPaying] = useState<PayoutTarget | null>(null);
   const [rejecting, setRejecting] = useState<PayoutTarget | null>(null);
   const [detailsOf, setDetailsOf] = useState<PayoutParty | null>(null);
@@ -49,6 +52,7 @@ export function PayoutsTab() {
   const rewards = useReferralRewards(filter, view === 'referrals');
   const query = view === 'commissions' ? commissions : rewards;
   const rows = query.data ?? [];
+  const focused = useFocusRow<{ readonly id: string }>('payout', query.data);
 
   const approve = useMutation({
     mutationFn: approvePayout,
@@ -104,7 +108,13 @@ export function PayoutsTab() {
           })}
         </p>
       )}
-      <PayoutsBody view={view} commissions={commissions} rewards={rewards} actions={actions} />
+      <PayoutsBody
+        view={view}
+        commissions={commissions}
+        rewards={rewards}
+        actions={actions}
+        focused={focused}
+      />
       <PayPayoutDialog target={paying} onClose={() => setPaying(null)} />
       <RejectPayoutDialog target={rejecting} onClose={() => setRejecting(null)} />
       <PayoutDetailsSheet party={detailsOf} onClose={() => setDetailsOf(null)} />
@@ -118,11 +128,13 @@ function PayoutsBody({
   commissions,
   rewards,
   actions,
+  focused,
 }: {
   readonly view: PayoutKind;
   readonly commissions: ReturnType<typeof useCommissionEntries>;
   readonly rewards: ReturnType<typeof useReferralRewards>;
   readonly actions: PayoutActions;
+  readonly focused: string | null;
 }) {
   const t = useTranslations('finance.payouts');
   const query = view === 'commissions' ? commissions : rewards;
@@ -138,8 +150,8 @@ function PayoutsBody({
     );
   }
   return view === 'commissions' ? (
-    <CommissionsTable rows={commissions.data ?? []} actions={actions} />
+    <CommissionsTable rows={commissions.data ?? []} actions={actions} focused={focused} />
   ) : (
-    <RewardsTable rows={rewards.data ?? []} actions={actions} />
+    <RewardsTable rows={rewards.data ?? []} actions={actions} focused={focused} />
   );
 }

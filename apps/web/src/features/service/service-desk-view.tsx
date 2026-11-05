@@ -15,7 +15,9 @@ import { LoadMore } from '@/components/load-more';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
+import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
 import { FeedbackPanel } from './feedback-panel';
+import { ServiceSearch } from './service-search';
 import { TicketSheet } from './ticket-sheet';
 import { TicketsTable } from './tickets-table';
 import { SERVICE_KEY } from './use-service-desk';
@@ -28,7 +30,7 @@ type Kind = (typeof SERVICE_KINDS)[number] | 'all';
 const pick = <T extends string>(value: string | null, allowed: readonly T[], fallback: T): T =>
   allowed.find((item) => item === value) ?? fallback;
 
-/** The desk's filters live in the URL (`view`, `sla`, `kind`, and the open `request`). */
+/** The desk's filters live in the URL (`view`, `sla`, `kind`, `q`, and the open `request`). */
 function useDeskParams() {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,11 +56,13 @@ function useDeskParams() {
 export function ServiceRequestsPanel() {
   const t = useTranslations('service');
   const desk = useDeskParams();
+  const { draft, setDraft, search } = useSearchParam();
   const status = desk.view === 'all' || desk.view === 'feedback' ? undefined : desk.view;
   const asked = {
     ...(status ? { status } : {}),
     ...(desk.sla === 'all' ? {} : { sla: desk.sla }),
     ...(desk.kind === 'all' ? {} : { kind: desk.kind }),
+    ...(search ? { q: search } : {}),
   };
   // Newest first, a page at a time (PRD 9.3).
   const list = usePagedList<ServiceTicket, ServicePage>(
@@ -73,21 +77,44 @@ export function ServiceRequestsPanel() {
     { enabled: desk.view !== 'feedback' },
   );
   const filtered = desk.sla !== 'all' || desk.kind !== 'all';
+  const empty = search
+    ? t('emptySearch', { term: search })
+    : filtered
+      ? t('emptyFiltered')
+      : t(`empty.${desk.view}`);
+  // Searched again here, so an older API that ignores `q` still shows only matches.
+  const items = list.items.filter((ticket) =>
+    matchesSearch(search, [
+      ticket.customer.name,
+      ticket.customer.phone,
+      ticket.description,
+      ticket.category,
+      ticket.categoryLabel,
+      ticket.project?.code,
+      ticket.project?.code.replace(/[-/]/g, ''),
+    ]),
+  );
   const open = useOpenTicket(list.items, desk.request);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <SegmentedControl
-            label={t('viewLabel')}
-            size="sm"
-            value={desk.view}
-            onValueChange={(view) => desk.set({ view })}
-            options={VIEWS.map((value) => ({ value, label: t(`views.${value}`) }))}
+      <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <SegmentedControl
+          label={t('viewLabel')}
+          size="sm"
+          value={desk.view}
+          onValueChange={(view) => desk.set({ view })}
+          options={VIEWS.map((value) => ({ value, label: t(`views.${value}`) }))}
+        />
+      </div>
+      {desk.view !== 'feedback' && (
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <ServiceSearch
+            value={draft}
+            onChange={setDraft}
+            label={t('searchLabel')}
+            placeholder={t('searchPlaceholder')}
           />
-        </div>
-        {desk.view !== 'feedback' && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[30rem]">
             <Select<Sla>
               label={t('filters.slaLabel')}
@@ -108,14 +135,15 @@ export function ServiceRequestsPanel() {
               }))}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {desk.view === 'feedback' ? (
         <FeedbackPanel />
       ) : (
         <Tickets
           list={list}
-          empty={filtered ? t('emptyFiltered') : t(`empty.${desk.view}`)}
+          items={items}
+          empty={empty}
           onOpen={(request) => desk.set({ request })}
         />
       )}
@@ -141,15 +169,17 @@ function useOpenTicket(loaded: readonly ServiceTicket[], id: string | null) {
 
 function Tickets({
   list,
+  items,
   empty,
   onOpen,
 }: {
   readonly list: ReturnType<typeof usePagedList<ServiceTicket, ServicePage>>;
+  readonly items: readonly ServiceTicket[];
   readonly empty: string;
   readonly onOpen: (id: string) => void;
 }) {
   const t = useTranslations('service');
-  const { query, items } = list;
+  const { query } = list;
   if (query.isPending) return <ListSkeleton label={t('loading')} />;
   if (query.isError && items.length === 0)
     return <LoadError error={query.error} onRetry={() => query.refetch()} />;
@@ -159,7 +189,7 @@ function Tickets({
       <p className="type-body-sm text-ink-faint">{t('count', { count: list.total })}</p>
       <TicketsTable tickets={items} onOpen={onOpen} />
       <LoadMore
-        shown={items.length}
+        shown={list.items.length}
         total={list.total}
         hasMore={list.hasMore}
         loading={list.loadingMore}

@@ -1,18 +1,26 @@
 'use client';
 
 import type { AttendanceCorrection } from '@oneohm/api-contracts';
-import { Button, Card, CardHeader, listItemEnter, useToast } from '@oneohm/design-system/web';
+import { Button, Card, CardHeader, cn, listItemEnter, useToast } from '@oneohm/design-system/web';
 import { Check, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { FOCUSED_ROW, focusRowProps } from '@/lib/use-focus-row';
 import { DecideDialog, type DecisionTarget } from '../decide-dialog';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
 import { useDecideCorrection } from './use-attendance';
 
 /** Fixes people asked for to a check-in or check-out; approving changes their day. */
-export function CorrectionsQueue({ items }: { readonly items: readonly AttendanceCorrection[] }) {
+export function CorrectionsQueue({
+  items,
+  focused = null,
+}: {
+  readonly items: readonly AttendanceCorrection[];
+  /** The correction a link pointed at, highlighted. */
+  readonly focused?: string | null;
+}) {
   const t = useTranslations('team.attendance.corrections');
   const toast = useToast();
   const format = useWorkforceFormat();
@@ -43,7 +51,11 @@ export function CorrectionsQueue({ items }: { readonly items: readonly Attendanc
           <motion.li
             key={item.id}
             {...listItemEnter(index)}
-            className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between"
+            {...focusRowProps(item.id, focused)}
+            className={cn(
+              'flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between',
+              item.id === focused && FOCUSED_ROW,
+            )}
           >
             <div className="flex min-w-0 flex-col gap-1.5">
               <PersonChip person={item.user} detail={format.longDay(item.workDate)} />

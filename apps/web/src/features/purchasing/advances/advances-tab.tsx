@@ -18,6 +18,8 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useCan } from '@/providers/current-user';
 import { type AdvanceFilter, useAdvances, useRefreshPurchasing } from '../use-purchasing';
 import { AdvanceStatusPill } from './advance-status';
@@ -27,7 +29,10 @@ import { RecordAdvanceDialog } from './record-advance-dialog';
 const FILTERS = ['open', 'pending', 'approved', 'paid', 'cancelled', 'all'] as const;
 type Step = 'approve' | 'cancel';
 
-/** Advances to vendors against purchase orders: record, approve, pay, then used by bills. */
+/**
+ * Advances to vendors against purchase orders: record, approve, pay, then used by bills.
+ * The status filter lives in `?filter=`; `?advance=<id>` marks one advance (an approval's "Open").
+ */
 export function AdvancesTab() {
   const t = useTranslations('purchasing.advances');
   const methodT = useTranslations('finance.methods');
@@ -36,10 +41,11 @@ export function AdvancesTab() {
   const refresh = useRefreshPurchasing();
   const canRecord = useCan('finance.record_payments');
   const canApprove = useCan('finance.approve_payments');
-  const [filter, setFilter] = useState<AdvanceFilter>('open');
+  const [filter, setFilter] = useChoiceParam<AdvanceFilter>('filter', FILTERS, 'open');
   const [recording, setRecording] = useState(false);
   const [paying, setPaying] = useState<VendorAdvance | null>(null);
   const query = useAdvances(filter);
+  const focused = useFocusRow('advance', query.data);
 
   const step = useMutation({
     mutationFn: ({ id, which }: { id: string; which: Step }) =>
@@ -156,7 +162,7 @@ export function AdvancesTab() {
               leadingIcon={<Wallet />}
               onClick={() => setPaying(advance)}
             >
-              {t('pay')}
+              {t('payAction')}
             </Button>
           )}
           {(advance.status === 'pending' || advance.status === 'approved') &&
@@ -206,6 +212,7 @@ export function AdvancesTab() {
           columns={columns}
           rows={query.data}
           rowKey={(advance) => advance.id}
+          focusedKey={focused}
         />
       )}
       <RecordAdvanceDialog open={recording} onClose={() => setRecording(false)} />

@@ -1,19 +1,27 @@
 'use client';
 
 import type { Dispatch } from '@oneohm/api-contracts';
-import { EmptyState, listItemEnter } from '@oneohm/design-system/web';
-import { Truck } from 'lucide-react';
+import { cn, EmptyState, Input, listItemEnter } from '@oneohm/design-system/web';
+import { Search, Truck } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { formatPhone } from '@/lib/format/contact';
+import { focusRowProps, useFocusRow } from '@/lib/use-focus-row';
+import { useSearchParam } from '@/lib/use-search-param';
 import { formatQuantity, useDispatches } from '../use-inventory';
+import { matchesDispatch } from './dispatch-filters';
 
-/** Delivery challans: what left the store for which site, with serials. */
+/**
+ * Delivery challans: what left the store for which site, with serials. `?q=` searches
+ * them; `?dispatch=<id>` scrolls to one challan and marks it.
+ */
 export function DispatchesPanel() {
   const t = useTranslations('inventory.dispatches');
   const dispatches = useDispatches();
+  const { draft, setDraft, search } = useSearchParam('q');
+  const focused = useFocusRow('dispatch', dispatches.data);
   if (dispatches.isPending) return <ListSkeleton label={t('loading')} />;
   if (dispatches.isError) {
     return <LoadError error={dispatches.error} onRetry={() => dispatches.refetch()} />;
@@ -21,25 +29,60 @@ export function DispatchesPanel() {
   if (dispatches.data.length === 0) {
     return <EmptyState icon={<Truck />} title={t('emptyTitle')} description={t('emptyBody')} />;
   }
+  // A linked challan stays on screen even when the search would hide it.
+  const rows = dispatches.data.filter(
+    (dispatch) => dispatch.id === focused || matchesDispatch(search, dispatch),
+  );
   return (
-    <ol className="grid gap-4 lg:grid-cols-2">
-      {dispatches.data.map((dispatch, index) => (
-        <motion.li key={dispatch.id} {...listItemEnter(index)}>
-          <DispatchCard dispatch={dispatch} />
-        </motion.li>
-      ))}
-    </ol>
+    <div className="flex flex-col gap-6">
+      <div className="min-w-0 flex-1 lg:max-w-sm">
+        <Input
+          type="search"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={t('search')}
+          aria-label={t('search')}
+          leading={<Search aria-hidden />}
+        />
+      </div>
+      {rows.length === 0 ? (
+        <EmptyState icon={<Search />} title={t('noMatchTitle')} description={t('noMatchBody')} />
+      ) : (
+        <ol className="grid gap-4 lg:grid-cols-2">
+          {rows.map((dispatch, index) => (
+            <motion.li
+              key={dispatch.id}
+              {...listItemEnter(index)}
+              {...focusRowProps(dispatch.id, focused)}
+            >
+              <DispatchCard dispatch={dispatch} focused={dispatch.id === focused} />
+            </motion.li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 
-export function DispatchCard({ dispatch }: { readonly dispatch: Dispatch }) {
+export function DispatchCard({
+  dispatch,
+  focused = false,
+}: {
+  readonly dispatch: Dispatch;
+  readonly focused?: boolean;
+}) {
   const t = useTranslations('inventory.dispatches');
   const format = useFormatter();
   const driver = [dispatch.driverName, dispatch.driverPhone && formatPhone(dispatch.driverPhone)]
     .filter(Boolean)
     .join(' · ');
   return (
-    <article className="flex h-full flex-col gap-4 rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70">
+    <article
+      className={cn(
+        'flex h-full flex-col gap-4 rounded-[28px] bg-raised p-6 shadow-e1 ring-1 ring-hairline/70',
+        focused && 'ring-2 ring-accent',
+      )}
+    >
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <p className="font-mono type-body-sm font-medium text-ink">{dispatch.number}</p>

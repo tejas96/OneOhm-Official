@@ -22,9 +22,9 @@ export class WhatsAppController {
       if (actor.kind !== 'staff') throw forbidden();
     };
     return tsRestHandler(apiContract.whatsapp, {
-      chats: async () => {
+      chats: async ({ query }) => {
         staff();
-        return { status: 200, body: await this.chats.list(actor) };
+        return { status: 200, body: await this.chats.list(actor, query.q) };
       },
       chat: async ({ params }) => {
         staff();
@@ -59,7 +59,11 @@ export class WhatsAppController {
       },
       deliveries: async ({ query }) => {
         allowed();
-        return { status: 200, body: await this.deliveries.list(query.state) };
+        return { status: 200, body: await this.deliveries.list(query.state, query.q) };
+      },
+      deliveryPage: async ({ query }) => {
+        allowed();
+        return { status: 200, body: await this.deliveries.page(query) };
       },
       retryDelivery: async ({ params }) => {
         allowed();

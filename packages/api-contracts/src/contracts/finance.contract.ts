@@ -191,6 +191,8 @@ export const financeContract = c.router({
       before: z.coerce.number().int().positive().optional(),
       limit: z.coerce.number().int().min(1).max(200).default(50),
       projectId: idSchema.optional(),
+      /** A JV number ("JV-12"), words of the memo, or a project code. */
+      q: z.string().trim().max(80).optional(),
     }),
     responses: { 200: z.array(journalEntrySchema) },
   },

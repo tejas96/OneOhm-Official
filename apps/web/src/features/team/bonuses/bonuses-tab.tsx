@@ -15,7 +15,10 @@ import { Check, Gift, Plus, Undo2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { useMayDecide } from '@/features/today/approvals/use-my-approvals';
 import { describeError } from '@/lib/api/api-error';
+import { useChoiceParam } from '@/lib/use-choice-param';
+import { useFocusRow } from '@/lib/use-focus-row';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import { DecideDialog, type DecisionTarget } from '../decide-dialog';
 import { DECISION_TONE, useWorkforceFormat } from '../workforce-format';
@@ -28,7 +31,9 @@ const STATUSES = ['all', 'pending', 'approved', 'rejected', 'cancelled'] as cons
 
 /**
  * Project bonuses and incentives (PRD 3.12, 4.7): proposed by people or project
- * managers, decided by whoever approves payments, then paid by finance.
+ * managers, decided by whoever approves payments (or a people manager within the limit in
+ * Settings), then paid by finance. The status lives in `?status=`; `?bonus=<id>` marks one
+ * bonus (an approval's or alert's "Open").
  */
 export function BonusesTab() {
   const t = useTranslations('team.bonuses');
@@ -38,9 +43,12 @@ export function BonusesTab() {
   const canApprove = useCan('finance.approve_payments');
   const toast = useToast();
   const format = useWorkforceFormat();
-  const query = useBonuses();
+  const [status, setStatus] = useChoiceParam<Status>('status', STATUSES, 'pending');
+  const query = useBonuses(status);
   const actions = useBonusActions();
-  const [status, setStatus] = useState<Status>('pending');
+  // The inbox knows who may decide each bonus: the money limit, and never its own sharers.
+  const mayDecide = useMayDecide('bonus');
+  const focused = useFocusRow('bonus', query.data);
   const [proposing, setProposing] = useState(false);
   const [deciding, setDeciding] = useState<{ bonus: Bonus; target: DecisionTarget } | null>(null);
 
@@ -123,7 +131,7 @@ export function BonusesTab() {
                 {t('withdraw')}
               </Button>
             )}
-            {canApprove && (
+            {mayDecide.has(bonus.id) && (
               <>
                 <Button size="sm" leadingIcon={<X />} onClick={() => startDecide(bonus, false)}>
                   {t('decline')}
@@ -177,6 +185,7 @@ export function BonusesTab() {
           columns={columns}
           rows={rows}
           rowKey={(bonus) => bonus.id}
+          focusedKey={focused}
         />
       )}
       {canPropose && <ProposeBonusSheet open={proposing} onOpenChange={setProposing} />}

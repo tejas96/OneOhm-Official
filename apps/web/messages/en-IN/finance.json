@@ -66,6 +66,9 @@
       "loading": "Loading what is owed",
       "emptyTitle": "Nothing is owed here",
       "emptyBody": "Milestones appear when a project is created and fall due as its work completes.",
+      "search": "Search customer, project or milestone",
+      "noMatchTitle": "Nothing owed matches",
+      "noMatchBody": "Try other words, or show all milestones.",
       "columns": {
         "project": "Customer",
         "milestone": "Milestone",
@@ -91,6 +94,8 @@
       "description": "The latest 50, newest first, with refunds and overpayments held as credit. Each payment has a receipt.",
       "loading": "Loading payments",
       "empty": "No payments or refunds yet",
+      "search": "Search receipt, customer, project or reference",
+      "noMatch": "No payments match this search",
       "reversed": "Reversed",
       "reversal": "Reversal",
       "receipt": "Open receipt {number}",
@@ -236,7 +241,10 @@
         },
         "onItsWay": "Bank transfer on its way",
         "failedShort": "Bank transfer failed"
-      }
+      },
+      "search": "Search by vendor, bill number or project",
+      "noMatchTitle": "No bills match",
+      "noMatchBody": "Try fewer words, or another filter."
     },
     "loans": {
       "description": "Bank-financed projects. The bank's share is its own receivable; every disbursement is recorded against it.",
@@ -244,6 +252,9 @@
       "loading": "Loading loans",
       "emptyTitle": "No bank-financed projects yet",
       "emptyBody": "When a project is created with a loan, it appears here to track documents, sanction and disbursement.",
+      "search": "Search customer, project, lender or application",
+      "noMatchTitle": "No loans match",
+      "noMatchBody": "Try a customer name, project code or lender.",
       "noLender": "Lender not set",
       "ofShare": "of {share} from the bank",
       "sanctioned": "Sanctioned {amount} on {date}",
@@ -365,6 +376,8 @@
       "journal": "Journal",
       "journalHint": "Posted automatically as money moves. Entries are never edited; mistakes are reversed.",
       "emptyJournal": "No entries yet",
+      "search": "Search JV number, memo or project",
+      "noMatch": "No entries match this search",
       "reversedBy": "Reversed by JV-{number}",
       "linesOf": "Lines of JV-{number}",
       "older": "Show older entries",
@@ -476,6 +489,10 @@
         "loading": "Loading invoices",
         "emptyTitle": "No invoices here",
         "emptyBody": "Open a project’s Payments tab to issue its tax invoice.",
+        "search": "Search invoice number, customer, GSTIN or project",
+        "noMatchTitle": "No invoices match",
+        "noMatchBody": "Try other words, or show all invoices.",
+        "capped": "Showing the newest {count} invoices. Search to find older ones.",
         "columns": {
           "invoice": "Customer",
           "date": "Date",
@@ -733,6 +750,8 @@
         "title": "Deposit slips",
         "intro": "Every bank deposit of cash and cheques, newest first.",
         "empty": "No deposits yet.",
+        "search": "Search slip, bank reference or depositor",
+        "noMatch": "No deposit slips match this search.",
         "caption": "Deposit slips",
         "items": "{count, plural, one {# payment} other {# payments}}",
         "columns": {
