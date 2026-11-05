@@ -15,6 +15,13 @@ import { isWorkingTime, VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import { capabilityOf } from './action-capability';
+import {
+  askedSince,
+  confirmReminder,
+  signatureReminder,
+  waitingBody,
+  waitingFor,
+} from './journey-reminders';
 
 const DAY = 24 * 3_600_000;
 const CUSTOMER_AFTER = 2 * DAY;
@@ -29,15 +36,6 @@ export function actionReminderDue(askedAt: Date, now: Date): 'customer' | 'team'
   if (age < CUSTOMER_AFTER || age >= TEAM_UNTIL) return null;
   return age >= TEAM_AFTER ? 'team' : 'customer';
 }
-
-const WHAT: Readonly<Record<string, string>> = {
-  location: 'the location of their home',
-  pay: 'a payment (or its proof)',
-  callback: 'a time for a call back',
-  visit_pick: 'a day for our visit',
-  confirm: 'an answer about their site',
-  signature: 'a paper to agree to',
-};
 
 /**
  * Open location, payment and call-back asks (redesign §2.3): a location (or a call time) is asked again at 2 days
@@ -71,7 +69,8 @@ export async function queueActionReminders(
           'signature',
         ]),
         eq(customerActions.status, 'open'),
-        gt(customerActions.createdAt, new Date(now.getTime() - TEAM_UNTIL)),
+        // A roof answered "Not yet" counts from the answer, so an older ask can still be due.
+        gt(customerActions.createdAt, new Date(now.getTime() - 4 * TEAM_UNTIL)),
         lte(customerActions.createdAt, new Date(now.getTime() - CUSTOMER_AFTER)),
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
       ),
@@ -86,7 +85,7 @@ export async function queueActionReminders(
     const bySystem = ['visit_pick', 'confirm'].includes(row.action.type);
     if (!row.action.requestedByUserId && !bySystem) continue;
     if (row.action.type === 'signature' && row.action.payload.signedActionId) continue;
-    const due = actionReminderDue(row.action.createdAt, now);
+    const due = actionReminderDue(askedSince(row.action), now);
     if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
     if (due === 'team') {
       await alertAsker(db, row);
@@ -107,10 +106,11 @@ interface Row {
 async function remindCustomer(db: Database, row: Row, now: Date, timeZone: string) {
   const { action } = row;
   if (!isWorkingTime(now, timeZone)) return false;
-  if (now.getTime() - action.createdAt.getTime() >= CUSTOMER_UNTIL) return false;
+  if (now.getTime() - askedSince(action).getTime() >= CUSTOMER_UNTIL) return false;
   if (action.type === 'callback') return remindCallback(db, row, `action_reminder:${action.id}`);
   if (action.type === 'visit_pick') return remindVisitPick(db, row, `action_reminder:${action.id}`);
-  if (action.type === 'confirm') return remindConfirm(db, row, `action_reminder:${action.id}`);
+  if (action.type === 'confirm' || action.type === 'signature')
+    return remindJourney(db, row, `action_reminder:${action.id}`);
   if (action.type !== 'location') return false;
   const home = await homeNameOf(db, action.projectId, action.propertyId);
   return queueCustomerMessage(
@@ -127,11 +127,11 @@ async function alertAsker(db: Database, { action, customer, manager }: Row) {
   const left = action.payload.leftPaise;
   const notice = {
     kind: 'customer_action_waiting',
-    title: `Still waiting for ${WHAT[action.type]} from ${customer}`,
+    title: `Still waiting for ${waitingFor(action)} from ${customer}`,
     body:
       action.type === 'pay' && typeof left === 'number'
         ? `They were asked about ${formatInr(left)} more than 4 days ago. Please call them.`
-        : 'The customer was asked more than 4 days ago and has not answered. Please call them.',
+        : waitingBody(action),
     ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
     dedupeKey: `action_waiting:${action.id}`,
   };
@@ -189,18 +189,13 @@ async function remindCallback(db: Database, { action, customer, phone }: Row, ke
   );
 }
 
-/** The roof or installation question again, by its approved template (the same buttons). */
-async function remindConfirm(db: Database, { action, customer, phone }: Row, key: string) {
-  const roof = action.payload.kind === 'site_ready';
-  const home = await homeNameOf(db, action.projectId, action.propertyId);
-  const given = { customer: titleCaseName(customer), home };
-  return queueCustomerMessage(
-    db,
-    phone,
-    roof ? 'site_ready_check' : 'installation_check',
-    roof
-      ? { ...given, yesPayload: `rdy:y:${action.id}`, notYetPayload: `rdy:n:${action.id}` }
-      : { ...given, yesPayload: `ins:y:${action.id}`, wrongPayload: `ins:bad:${action.id}` },
-    key,
-  );
+/** The roof or installation question, or the paper to agree to, again by its approved template. */
+async function remindJourney(db: Database, { action, customer, phone }: Row, key: string) {
+  const given = {
+    customer: titleCaseName(customer),
+    home: await homeNameOf(db, action.projectId, action.propertyId),
+  };
+  const { template, payload } =
+    action.type === 'signature' ? signatureReminder(action, given) : confirmReminder(action, given);
+  return queueCustomerMessage(db, phone, template, payload, key);
 }
