@@ -1,5 +1,5 @@
 {
-  "id": "7e246258-d702-4b2f-bdf3-dbbb4a9ee423",
+  "id": "daf90dde-0cd3-41c5-9e38-2fadc22cfbe8",
   "prevId": "193bb944-24ca-4cb8-a0aa-3a24f9b7dc83",
   "version": "7",
   "dialect": "postgresql",
@@ -11228,7 +11228,14 @@
           "name": "milestone_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'applied'"
         },
         "amount_paise": {
           "name": "amount_paise",
@@ -11272,6 +11279,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "settled_by_user_id": {
+          "name": "settled_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "settle_note": {
+          "name": "settle_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -11306,14 +11331,14 @@
               "nulls": "last"
             },
             {
-              "expression": "source_id",
+              "expression": "project_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "where": "\"milestone_credits\".\"reversed_at\" is null",
+          "where": "\"milestone_credits\".\"status\" <> 'reversed'",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -11365,6 +11390,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "reversed_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "milestone_credits_settled_by_user_id_users_id_fk": {
+          "name": "milestone_credits_settled_by_user_id_users_id_fk",
+          "tableFrom": "milestone_credits",
+          "tableTo": "users",
+          "columnsFrom": [
+            "settled_by_user_id"
           ],
           "columnsTo": [
             "id"

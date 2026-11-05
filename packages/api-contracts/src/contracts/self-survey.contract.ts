@@ -5,6 +5,8 @@ import {
   askSurveyAgainSchema,
   selfSurveyQuerySchema,
   selfSurveyViewSchema,
+  settleSurveyCreditSchema,
+  surveyCreditSchema,
 } from '../schemas/self-survey.schema';
 
 const c = initContract();
@@ -35,5 +37,20 @@ export const selfSurveyContract = c.router({
     body: empty,
     responses: { 200: selfSurveyViewSchema },
     summary: 'Turns the survey into a visit pick (no discount).',
+  },
+  surveyCredits: {
+    method: 'GET',
+    path: '/self-surveys/credits',
+    query: z.object({ projectId: idSchema }),
+    responses: { 200: z.array(surveyCreditSchema) },
+    summary: 'The self-survey discount of a project and where it stands.',
+  },
+  settleSurveyCredit: {
+    method: 'POST',
+    path: '/self-surveys/credits/:id/settle',
+    pathParams: idParams,
+    body: settleSurveyCreditSchema,
+    responses: { 200: surveyCreditSchema },
+    summary: 'Finance gave a pending discount another way; the reason is kept.',
   },
 });

@@ -6,11 +6,12 @@ import { users } from './identity.schema';
 import { projects } from './projects.schema';
 
 /**
- * A credit taken off a customer instalment that has not fallen due yet (the self-survey discount).
- * The instalment's amount is reduced by `amountPaise` in the same transaction, so the ledger books the
- * reduced amount when it falls due. One live credit per source (`source` + `source_id`): applying the
- * same approval twice is refused by the index. Reversing keeps the row (`reversed_at`) and gives the
- * amount back while the instalment is still upcoming. Audit rows: entity `milestone_credit`.
+ * A discount the customer earned (the self-survey discount), GST inclusive. `applied`: taken off a customer
+ * instalment that had not fallen due, in the same transaction, so the ledger books the reduced amount when it
+ * falls due. `pending`: no instalment could take it; finance is told and it is applied later or settled by
+ * hand (`paid_out`, with a reason). `reversed` keeps the row and gives the amount back. One live (not
+ * reversed) credit per source and project: a project earns it once, however many surveys are sent.
+ * Audit rows: entity `milestone_credit`.
  */
 export const milestoneCredits = pgTable(
   'milestone_credits',
@@ -19,9 +20,13 @@ export const milestoneCredits = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    milestoneId: uuid('milestone_id')
+    /** The instalment it was taken off; empty while pending or when paid out by hand. */
+    milestoneId: uuid('milestone_id').references(() => paymentMilestones.id, {
+      onDelete: 'cascade',
+    }),
+    status: text('status', { enum: ['pending', 'applied', 'reversed', 'paid_out'] })
       .notNull()
-      .references(() => paymentMilestones.id, { onDelete: 'cascade' }),
+      .default('applied'),
     amountPaise: money('amount_paise').notNull(),
     /** What earned it, e.g. `self_survey`, and that record's id (the customer action). */
     source: text('source').notNull(),
@@ -34,12 +39,18 @@ export const milestoneCredits = pgTable(
       onDelete: 'set null',
     }),
     reverseReason: text('reverse_reason'),
+    /** When finance settled a pending credit by hand: when, by whom and why. */
+    settledAt: instant('settled_at'),
+    settledByUserId: uuid('settled_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    settleNote: text('settle_note'),
     createdAt: createdAt(),
   },
   (table) => [
     index('milestone_credits_milestone_idx').on(table.milestoneId),
     uniqueIndex('milestone_credits_live_unique')
-      .on(table.source, table.sourceId)
-      .where(sql`${table.reversedAt} is null`),
+      .on(table.source, table.projectId)
+      .where(sql`${table.status} <> 'reversed'`),
   ],
 );

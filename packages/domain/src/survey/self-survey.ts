@@ -68,7 +68,8 @@ export function missingItems(
   });
 }
 
-const STRUCTURE_TEXT: Readonly<Record<string, string>> = {
+/** The roof as the customer named it. */
+export const ROOF_TEXT: Readonly<Record<string, string>> = {
   rcc: 'RCC roof',
   tin: 'Tin shed',
   tile: 'Tiled roof',
@@ -92,7 +93,10 @@ const SIZE_TEXT: Readonly<Record<string, string>> = {
 export function surveyFacts(answers: SurveyAnswers): Record<string, string> {
   const facts: Record<string, string> = {};
   if (answers.floors) facts.site_floors = answers.floors === '4' ? '4' : answers.floors;
-  if (answers.roof) facts.structure_type = STRUCTURE_TEXT[answers.roof] ?? answers.roof;
+  if (answers.roof) facts.self_survey_roof = ROOF_TEXT[answers.roof] ?? answers.roof;
+  // Only a roof the price engine knows is a structure; a tiled or other roof is for the engineer to set at Approve.
+  if (answers.roof === 'rcc' || answers.roof === 'tin')
+    facts.structure_type = ROOF_TEXT[answers.roof] as string;
   if (answers.shade) facts.self_survey_shade = SHADE_TEXT[answers.shade] ?? answers.shade;
   if (answers.size) facts.self_survey_roof_size = SIZE_TEXT[answers.size] ?? answers.size;
   return facts;
@@ -118,8 +122,18 @@ export function offerPaise(setting: { selfSurveyOffer: boolean; selfSurveyPaise:
   return setting.selfSurveyOffer ? setting.selfSurveyPaise : 0;
 }
 
-/** The checks for the setting: the credit is a whole number of rupees from 1 to 1,00,000. */
+/** The most the offer may take off (in paise). */
+export const SURVEY_CREDIT_MAX_PAISE = 1_000_000;
+
+/** The checks for the setting: the credit is a whole number of rupees from 1 to 10,000. */
 export function checkSurveyCredit(paise: number): string | null {
-  const ok = Number.isInteger(paise) && paise % 100 === 0 && paise >= 100 && paise <= 10_000_000;
-  return ok ? null : 'Use a whole number of rupees from 1 to 1,00,000.';
+  const ok =
+    Number.isInteger(paise) &&
+    paise % 100 === 0 &&
+    paise >= 100 &&
+    paise <= SURVEY_CREDIT_MAX_PAISE;
+  return ok ? null : 'Use a whole number of rupees from 1 to 10,000.';
 }
+
+/** The one survey step a self survey is offered for: the residential rooftop survey. */
+export const SELF_SURVEY_TASK_KEY = 'site_survey';

@@ -35,3 +35,17 @@ export const askSurveyAgainSchema = z.object({
 export type AskSurveyAgain = z.infer<typeof askSurveyAgainSchema>;
 
 export const selfSurveyQuerySchema = z.object({ taskId: idSchema });
+
+/** A self-survey discount of a project: where it is, in paise (GST inclusive). */
+export const surveyCreditSchema = z.object({
+  id: idSchema,
+  amountPaise: z.number().int(),
+  status: z.enum(['pending', 'applied', 'reversed', 'paid_out']),
+  /** The payment it was taken off, when applied. */
+  milestoneLabel: z.string().nullable(),
+  settleNote: z.string().nullable(),
+  createdAt: instantSchema,
+});
+export type SurveyCredit = z.infer<typeof surveyCreditSchema>;
+
+export const settleSurveyCreditSchema = z.object({ reason: z.string().trim().min(3).max(300) });

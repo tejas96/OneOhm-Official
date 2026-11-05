@@ -20,6 +20,7 @@ import {
   quotations,
 } from '../schema';
 import { handlingRemap } from './cash-handling-postings';
+import { creditTaxOf } from './credit-tax';
 import { postJournal } from './post-journal';
 
 /** Calendar date in India for an instant. */
@@ -39,6 +40,7 @@ export async function postMilestoneDue(
       milestone: paymentMilestones,
       code: projects.code,
       taxPaise: quotations.taxPaise,
+      quotationId: quotations.id,
     })
     .from(paymentMilestones)
     .innerJoin(projects, eq(projects.id, paymentMilestones.projectId))
@@ -53,9 +55,10 @@ export async function postMilestoneDue(
     .from(paymentMilestones)
     .where(eq(paymentMilestones.projectId, milestone.projectId))
     .orderBy(asc(paymentMilestones.position));
+  // The self-survey discount is GST inclusive and on the tax invoice: the milestones carry the GST left over.
   const taxes = allocateTax(
     siblings.map((sibling) => sibling.amountPaise),
-    row.taxPaise,
+    row.taxPaise - (await creditTaxOf(db, milestone.projectId, row.quotationId)),
   );
   const gstPaise = taxes[siblings.findIndex((sibling) => sibling.id === milestone.id)] ?? 0;
   const base = { projectId: milestone.projectId, postedByUserId: userId };

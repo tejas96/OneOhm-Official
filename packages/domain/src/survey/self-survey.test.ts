@@ -30,10 +30,16 @@ describe('the self survey (redesign §7)', () => {
     expect(isOption('size', 'unknown')).toBe(true);
     expect(surveyFacts({ roof: 'tin', floors: '2', shade: 'lot', size: 's3' })).toEqual({
       site_floors: '2',
+      self_survey_roof: 'Tin shed',
       structure_type: 'Tin shed',
       self_survey_shade: 'A lot of shade',
       self_survey_roof_size: '600 to 1000 sq ft',
     });
+  });
+
+  it('does not guess a structure for a tiled or other roof: the engineer sets it at Approve', () => {
+    expect(surveyFacts({ roof: 'tile' })).toEqual({ self_survey_roof: 'Tiled roof' });
+    expect(surveyFacts({ roof: 'other' })).toEqual({ self_survey_roof: 'Other roof' });
   });
 
   it('offers nothing when the offer is off and refuses odd credits', () => {
@@ -42,6 +48,8 @@ describe('the self survey (redesign §7)', () => {
     expect(checkSurveyCredit(100_000)).toBeNull();
     expect(checkSurveyCredit(0)).not.toBeNull();
     expect(checkSurveyCredit(150)).not.toBeNull();
+    expect(checkSurveyCredit(1_000_000)).toBeNull();
+    expect(checkSurveyCredit(1_000_100)).not.toBeNull();
     expect(checkReminderTiming({ ...DEFAULT_REMINDER_TIMING, selfSurveyPaise: 50 })).toHaveProperty(
       'selfSurveyPaise',
     );
