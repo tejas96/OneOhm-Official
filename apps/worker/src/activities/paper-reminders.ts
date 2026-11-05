@@ -6,8 +6,6 @@ import {
   type Database,
   documents,
   notifications,
-  notifyCover,
-  notifyHolders,
   paperRequestTemplate,
   projects,
   tellChatTeam,
@@ -20,7 +18,8 @@ import { queueActionChecks } from './action-checks';
 import { queueActionReminders } from './action-reminders';
 import { queueCallTasks } from './call-tasks';
 import { queueCareReminders } from './care-reminders';
-import { filesNotMatched, unmatchedBody } from './paper-unmatched';
+import { filesNotMatched } from './paper-unmatched';
+import { tellAsker } from './paper-waiting';
 import { queueVisitReminders } from './visit-reminders';
 
 const HOUR = 3_600_000;
@@ -34,6 +33,8 @@ const CUSTOMER_AFTER = 2 * DAY;
 const CUSTOMER_UNTIL = 7 * DAY;
 const TEAM_AFTER = 4 * DAY;
 const TEAM_UNTIL = 14 * DAY;
+/** From this age the asker's alert also reaches the manager (see paper-waiting). */
+const MANAGER_AFTER = 7 * DAY;
 const SORT_AFTER = 2 * HOUR;
 const SORT_UNTIL = 7 * DAY;
 /** At most this many are looked at in one tick; the rest wait for the next. */
@@ -44,33 +45,6 @@ export function paperReminderDue(askedAt: Date, now: Date): 'customer' | 'team' 
   const age = now.getTime() - askedAt.getTime();
   if (age < CUSTOMER_AFTER || age >= TEAM_UNTIL) return null;
   return age >= TEAM_AFTER ? 'team' : 'customer';
-}
-
-interface WaitingRequest {
-  readonly id: string;
-  readonly title: string;
-  readonly customer: string;
-  readonly projectId: string | null;
-  readonly requestedByUserId: string | null;
-  readonly managerUserId: string | null;
-  readonly round: number;
-}
-
-/** The asker (else the project's manager) hears once per round; `unmatched` files to match. */
-async function tellAsker(db: Database, request: WaitingRequest, unmatched: number) {
-  const notice = {
-    kind: 'paper_waiting',
-    title: `Still waiting for ${request.title} from ${request.customer}`,
-    body: unmatched
-      ? unmatchedBody(request.customer, unmatched)
-      : 'The customer was asked more than 4 days ago and has not sent it. Please call them.',
-    ...(request.projectId ? { subject: { type: 'project' as const, id: request.projectId } } : {}),
-    dedupeKey: `paper_waiting:${request.id}:${request.round}`,
-  };
-  const person = request.requestedByUserId ?? request.managerUserId;
-  // Nobody to ask: those who manage projects hear, so it is never silent.
-  if (person) await notifyCover(db, person, 'projects.manage', notice);
-  else await notifyHolders(db, 'projects.manage', notice);
 }
 
 /**
@@ -113,8 +87,10 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
         lte(askedAt, at(CUSTOMER_AFTER)),
         gt(askedAt, at(TEAM_UNTIL)),
-        // Once the asker has been told for this round, there is nothing left to do.
-        sql`not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${customerActions.id}::text || ':' || ${reasks}::text || ':%')`,
+        // Once the asker (and, from 7 days, the manager) has been told for this round, nothing is left to do.
+        sql`case when ${askedAt} <= ${at(MANAGER_AFTER).toISOString()}::timestamptz
+          then not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${customerActions.id}::text || ':' || ${reasks}::text || ':manager:%')
+          else not exists (select 1 from notifications n where n.dedupe_key like 'paper_waiting:' || ${customerActions.id}::text || ':' || ${reasks}::text || ':%') end`,
       ),
     )
     .orderBy(asc(askedAt))
@@ -134,7 +110,9 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
       if (await askForPaper(db, request, key, template)) done += 1;
     }
     if (due !== 'team' && unmatched === 0) continue;
-    await tellAsker(db, request, unmatched);
+    // The team hears in working hours only; a later tick tells them.
+    if (!isWorkingTime(now, timeZone)) continue;
+    await tellAsker(db, request, unmatched, now.getTime() - request.askedAt.getTime());
     done += 1;
   }
   return done;

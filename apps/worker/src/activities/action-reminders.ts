@@ -1,26 +1,29 @@
 import {
-  chatOwnerFor,
   customerActions,
   customers,
   type Database,
   homeNameOf,
-  languageOf,
   notifyCover,
   notifyHolders,
   projects,
   queueCustomerMessage,
-  users,
+  routeOfCustomer,
 } from '@oneohm/database';
-import { isWorkingTime, VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
+import { isWorkingTime } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { capabilityOf } from './action-capability';
 import {
+  type Row,
+  remindCallback,
+  remindJourney,
+  remindSurvey,
+  remindVisitPick,
+} from './action-reminder-asks';
+import {
   askedSince,
-  confirmReminder,
   isLayoutHandled,
   isSubsidyWait,
-  signatureReminder,
   waitingBody,
   waitingFor,
 } from './journey-reminders';
@@ -32,6 +35,8 @@ const CUSTOMER_AFTER = 2 * DAY;
 const CUSTOMER_UNTIL = 7 * DAY;
 const TEAM_AFTER = 4 * DAY;
 const TEAM_UNTIL = 14 * DAY;
+/** An ask still open after this long is also told to the project manager (the desk), not only the asker. */
+const MANAGER_AFTER = 7 * DAY;
 const PER_TICK = 200;
 
 /** What an open "Send to customer" ask is due for, counted from when it was asked. */
@@ -105,21 +110,28 @@ export async function queueActionReminders(
     // A subsidy that has not arrived waits for the money, not for an answer: the owner hears after the set days.
     if (isSubsidyWait(row.action) || isLayoutHandled(row.action)) continue;
     const due = actionReminderDue(askedSince(row.action), now);
-    if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
-    // The self survey is optional: nobody on the team is told to "call them" about it.
-    if (due === 'team' && row.action.type !== 'self_survey') {
-      await alertAsker(db, row);
+    // The ask of a customer off WhatsApp was handed to the team; there is no chat to remind them in.
+    if (
+      due === 'customer' &&
+      (await inChat(db, row.action)) &&
+      (await remindCustomer(db, row, now, timeZone))
+    )
+      done += 1;
+    // The self survey is optional: nobody on the team is told to "call them" about it. The team hears in
+    // working hours only (a later tick tells them); the manager joins at 7 days.
+    if (due === 'team' && row.action.type !== 'self_survey' && isWorkingTime(now, timeZone)) {
+      await alertAsker(db, row, now);
       done += 1;
     }
   }
   return done + (await chaseSubsidy(db, now));
 }
 
-interface Row {
-  readonly action: typeof customerActions.$inferSelect;
-  readonly customer: string;
-  readonly phone: string;
-  readonly manager: string | null;
+/** Whether this ask travelled by the WhatsApp chat (its recorded channel, else the customer's route). */
+async function inChat(db: Database, action: typeof customerActions.$inferSelect) {
+  const channel = action.payload.channel;
+  if (typeof channel === 'string') return channel === 'whatsapp';
+  return (await routeOfCustomer(db, action.customerId)) === 'whatsapp';
 }
 
 /** A location is asked again with the approved template, in working hours. */
@@ -143,8 +155,11 @@ async function remindCustomer(db: Database, row: Row, now: Date, timeZone: strin
   );
 }
 
-/** The person who asked (else the project's manager, else those who manage projects) is told once. */
-async function alertAsker(db: Database, { action, customer, manager }: Row) {
+/**
+ * The person who asked (else the project's manager, else those who manage that kind of work) is told once; at
+ * 7 days the project manager (else the desk) is told too, once.
+ */
+async function alertAsker(db: Database, { action, customer, manager }: Row, now: Date) {
   const left = action.payload.leftPaise;
   const notice = {
     kind: 'customer_action_waiting',
@@ -160,78 +175,12 @@ async function alertAsker(db: Database, { action, customer, manager }: Row) {
   const capability = capabilityOf(action);
   if (person) await notifyCover(db, person, capability, notice);
   else await notifyHolders(db, capability, notice);
-}
-
-/** The customer never picked a day for a visit: the same ask again, by the approved template. */
-async function remindVisitPick(db: Database, { action, customer, phone }: Row, key: string) {
-  const code = (await languageOf(db, phone)).slice(0, 2);
-  const kind = (action.payload.visitKind as VisitKind | undefined) ?? 'service';
-  const words = VISIT_PHRASES[code === 'mr' || code === 'hi' ? code : 'en'];
-  return queueCustomerMessage(
-    db,
-    phone,
-    'visit_pick',
-    {
-      customer: titleCaseName(customer),
-      home: await homeNameOf(db, action.projectId, action.propertyId),
-      work: words.work[kind],
-      pickPayload: `vask:${action.id}`,
-    },
-    key,
-  );
-}
-
-/** The customer never picked a time: the three buttons again, by the approved template. */
-async function remindCallback(db: Database, { action, customer, phone }: Row, key: string) {
-  const [owner] = await db
-    .select({ name: users.fullName })
-    .from(users)
-    .where(
-      eq(
-        users.id,
-        (await chatOwnerFor(db, { customerId: action.customerId, phone })) ??
-          action.requestedByUserId ??
-          '',
-      ),
-    );
-  const tap = (slot: string) => `cb:${action.id}:${slot}`;
-  return queueCustomerMessage(
-    db,
-    phone,
-    'callback_request',
-    {
-      customer: titleCaseName(customer),
-      staff: owner?.name.split(/\s+/)[0] ?? 'our team',
-      morningPayload: tap('morning'),
-      afternoonPayload: tap('afternoon'),
-      eveningPayload: tap('evening'),
-    },
-    key,
-  );
-}
-
-/** The roof or installation question, or the paper to agree to, again by its approved template. */
-async function remindJourney(db: Database, { action, customer, phone }: Row, key: string) {
-  const given = {
-    customer: titleCaseName(customer),
-    home: await homeNameOf(db, action.projectId, action.propertyId),
+  if (now.getTime() - askedSince(action).getTime() < MANAGER_AFTER) return;
+  const escalation = {
+    ...notice,
+    body: `${customer} has not answered for more than 7 days. Please follow it up.`,
+    dedupeKey: `action_waiting:${action.id}:manager`,
   };
-  const { template, payload } =
-    action.type === 'signature' ? signatureReminder(action, given) : confirmReminder(action, given);
-  return queueCustomerMessage(db, phone, template, payload, key);
-}
-
-/** The self survey offered or started and not sent: the same way in again, by the (marketing) template. */
-async function remindSurvey(db: Database, { action, customer, phone }: Row, key: string) {
-  return queueCustomerMessage(
-    db,
-    phone,
-    'self_survey_reminder',
-    {
-      customer: titleCaseName(customer),
-      home: await homeNameOf(db, action.projectId, action.propertyId),
-      continuePayload: `ss:go:${action.id}`,
-    },
-    key,
-  );
+  if (manager && manager !== person) await notifyCover(db, manager, capability, escalation);
+  else await notifyHolders(db, capability, escalation, person);
 }

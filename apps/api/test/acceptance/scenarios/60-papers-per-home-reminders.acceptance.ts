@@ -33,8 +33,8 @@ const outboxFor = (dedupeKey: string) =>
   );
 
 const alertsKeyed = (prefix: string) =>
-  rows<{ user_id: string; title: string; body: string }>(
-    'SELECT user_id, title, body FROM notifications WHERE dedupe_key LIKE $1',
+  rows<{ user_id: string; title: string; body: string; dedupe_key: string }>(
+    'SELECT user_id, title, body, dedupe_key FROM notifications WHERE dedupe_key LIKE $1',
     [`${prefix}%`],
   );
 
@@ -105,7 +105,10 @@ describe('Papers per home: reminders', () => {
     await askedHoursAgo(asked.id, 8 * 24);
     await runPaperReminders();
     expect(await outboxFor(`paper_reminder:${asked.id}:0`)).toHaveLength(0);
-    expect(await alertsKeyed(`paper_waiting:${asked.id}`)).toHaveLength(1);
+    // The asker is told once; from 7 days the manager is told too (own key).
+    const told = await alertsKeyed(`paper_waiting:${asked.id}`);
+    expect(told.filter((one) => !one.dedupe_key.includes(':manager'))).toHaveLength(1);
+    expect(told.some((one) => one.dedupe_key.includes(':manager'))).toBe(true);
   });
 
   it('files sent but not matched tell the team instead of chasing the customer', async () => {
