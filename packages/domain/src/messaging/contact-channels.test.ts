@@ -23,6 +23,11 @@ describe('contact channels (WhatsApp first, then SMS, then in person)', () => {
   it('after STOP skips only the nice-to-have messages; money, visits and steps still go', () => {
     expect(skippedAfterStop('stage_rating_request', false)).toBe(true);
     expect(skippedAfterStop('referral_reward', false)).toBe(true);
+    expect(skippedAfterStop('self_survey_offer', false)).toBe(true);
+    expect(skippedAfterStop('self_survey_reminder', false)).toBe(true);
+    expect(skippedAfterStop('amc_renewal_offer', false)).toBe(true);
+    expect(skippedAfterStop('reward_upi_ask', false)).toBe(false);
+    expect(skippedAfterStop('self_survey_approved', false)).toBe(false);
     expect(skippedAfterStop('payment_reminder', false)).toBe(false);
     expect(skippedAfterStop('service_visit_booked', false)).toBe(false);
     expect(skippedAfterStop('stage_rating_request', true)).toBe(false);

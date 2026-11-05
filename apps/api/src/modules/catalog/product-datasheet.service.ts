@@ -46,6 +46,7 @@ export class ProductDatasheetService {
         .values({
           category: DATASHEET_CATEGORY,
           source: 'upload',
+          checkedAt: new Date(),
           name: checked.name,
           storageKey,
           contentType: checked.contentType,

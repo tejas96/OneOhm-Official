@@ -6,8 +6,12 @@ import {
   documentRequestQuerySchema,
   documentRequestSchema,
   newDocumentRequestSchema,
+  reaskDocumentRequestSchema,
 } from '../schemas/document-request.schema';
 import { reportKeySchema } from './reports.contract';
+import { selfSurveyContract } from './self-survey.contract';
+import { sendToCustomerContract } from './send-to-customer.contract';
+import { visitsContract } from './visits.contract';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -34,6 +38,22 @@ export const documentRequestsContract = c.router({
     pathParams: idParams,
     body: z.object({}).optional(),
     responses: { 200: documentRequestSchema },
+  },
+  doneInPersonDocumentRequest: {
+    method: 'POST',
+    path: '/document-requests/:id/done-in-person',
+    pathParams: idParams,
+    body: z.object({ answer: z.enum(['yes', 'not_yet']).optional() }).optional(),
+    responses: { 200: documentRequestSchema },
+    summary: 'The team did an ask in person with a customer who is not on WhatsApp: it closes.',
+  },
+  reaskDocumentRequest: {
+    method: 'POST',
+    path: '/document-requests/:id/reask',
+    pathParams: idParams,
+    body: reaskDocumentRequestSchema,
+    responses: { 200: documentRequestSchema },
+    summary: 'Not right, ask again: reopens a received request; the paper is taken off.',
   },
 });
 
@@ -86,3 +106,13 @@ export const reportSettingsContract = c.router({
     responses: { 200: reportSettingSchema },
   },
 });
+
+/** The contracts about what the team asks of a customer: papers, reports, "Send to customer". */
+export const customerActionContracts = {
+  documentRequests: documentRequestsContract,
+  customerDocumentRequests: customerDocumentRequestsContract,
+  reportSettings: reportSettingsContract,
+  sendToCustomer: sendToCustomerContract,
+  visits: visitsContract,
+  selfSurvey: selfSurveyContract,
+};

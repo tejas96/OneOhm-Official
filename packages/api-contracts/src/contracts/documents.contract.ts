@@ -5,7 +5,9 @@ import {
   companyAssetKindSchema,
   companyAssetsSchema,
   documentFilterSchema,
+  documentHomeSchema,
   documentSchema,
+  moveDocumentSchema,
 } from '../schemas/document.schema';
 
 const c = initContract();
@@ -63,6 +65,31 @@ export const documentsContract = c.router({
     body: c.type<FormData>(),
     responses: { 201: documentSchema },
     summary: 'Replace the file; the old one is kept in the audit trail with who replaced it.',
+  },
+  moveDocument: {
+    method: 'PATCH',
+    path: '/documents/:id',
+    pathParams: z.object({ id: idSchema }),
+    body: moveDocumentSchema,
+    responses: { 200: documentSchema },
+    summary:
+      "File a customer's paper on another of their homes or as another kind. A request it answered that no longer matches is asked again.",
+  },
+  checkDocument: {
+    method: 'POST',
+    path: '/documents/:id/check',
+    pathParams: z.object({ id: idSchema }),
+    body: z.object({}).optional(),
+    responses: { 200: documentSchema },
+    summary:
+      'Looks good: the paper the customer sent is checked, the request it answers closes and the customer is told (needs documents.upload).',
+  },
+  documentHomes: {
+    method: 'GET',
+    path: '/documents/:id/homes',
+    pathParams: z.object({ id: idSchema }),
+    responses: { 200: z.array(documentHomeSchema) },
+    summary: "The homes of the paper's customer, one row per home, for moving it.",
   },
   removeDocument: {
     method: 'DELETE',

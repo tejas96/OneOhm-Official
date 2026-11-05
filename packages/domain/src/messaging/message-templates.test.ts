@@ -45,13 +45,47 @@ describe('follow-up text', () => {
     expect(text.endsWith('…')).toBe(true);
   });
 
-  it('names the file and buttons only for the four messages that have them', () => {
+  it('names the file and buttons only for the messages that have them', () => {
     const withExtras = DEFAULT_MESSAGE_TEMPLATES.filter((t) => 'extras' in t).map((t) => t.key);
     expect(withExtras).toEqual([
       'quotation_sent',
       'payment_received',
       'payment_reminder',
       'payment_link',
+      'stage_rating_request',
+      'installation_started',
+      'commissioning_completed',
+      'project_waiting',
+      'location_request',
+      'payment_due',
+      'callback_request',
+      'document_share',
+      'visit_pick',
+      'visit_booked',
+      'visit_reminder',
+      'inspection_presence',
+      'signature_request',
+      'site_ready_check',
+      'installation_check',
+      'handover_pack',
+      'signature_reminder',
+      'signed_page_reminder',
+      'site_ready_reminder',
+      'subsidy_register_help',
+      'subsidy_credit_check',
+      'bank_sign_visit',
+      'layout_approval',
+      'layout_reminder',
+      'self_survey_offer',
+      'self_survey_reminder',
+      'problem_fixed_check',
+      'reward_upi_ask',
+      'amc_renewal_offer',
+    ]);
+    // The newer buttons of the older step messages are optional: they send only behind their own switch.
+    expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([
+      'payPayload',
+      'warrantyPayload',
     ]);
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');

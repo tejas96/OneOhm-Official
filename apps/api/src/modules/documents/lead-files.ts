@@ -1,10 +1,11 @@
-import type { UploadFields } from '@oneohm/api-contracts';
+import type { DocumentRecord, UploadFields } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, documents, leads } from '@oneohm/database';
 import { and, eq, isNull, or, type SQL } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { forbidden, invalid, notFound } from '../../common/http/errors';
 import { leadVisibility } from '../crm/lead-read';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
+import { currentProjectFiles, presentDocuments } from './document-read';
 
 interface LeadSite {
   readonly customerId: string | null;
@@ -76,4 +77,16 @@ export async function leadFilesScope(
   const conditions: SQL[] = [mine as SQL, isNull(documents.projectId), isNull(documents.taskId)];
   if (!canViewAllDocuments(actor)) conditions.push(eq(documents.uploadedByUserId, actor.userId));
   return and(...conditions) as SQL;
+}
+
+/** The files a lead screen lists, optionally of one kind. */
+export async function leadFileRecords(
+  db: DatabaseExecutor,
+  actor: Actor,
+  leadId: string,
+  category?: string,
+): Promise<DocumentRecord[]> {
+  const conditions: SQL[] = [currentProjectFiles, await leadFilesScope(db, actor, leadId)];
+  if (category) conditions.push(eq(documents.category, category));
+  return presentDocuments(db, and(...conditions) as SQL);
 }

@@ -14,7 +14,6 @@ describe('the Documents list (live QA round 2)', () => {
         words.quote,
         words.invoice,
         words.plainReceipt,
-        words.back,
         words.receipt(instalments.instalment(0, 3)),
         words.receipt(instalments.instalment(2, 3)),
         words.receipt(instalments.bankShare),

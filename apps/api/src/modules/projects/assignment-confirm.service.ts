@@ -6,6 +6,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { tellAssignee } from './task-notices';
 
 /**
@@ -30,12 +31,14 @@ export class AssignmentConfirmService {
     if (!person) throw invalid('Pick an active person.', { userId: 'Unknown or inactive.' });
     const changed = task.proposedUserId !== null && task.proposedUserId !== userId;
     await this.db.transaction(async (tx) => {
+      await lockVisitTarget(tx, { taskId });
       await tx
         .update(projectTasks)
         .set({ assigneeUserId: userId, proposedUserId: null, updatedAt: new Date() })
         .where(eq(projectTasks.id, taskId));
       // A crew member's task joins their contractor's work order.
       await syncWorkOrders(tx, task.projectId, actor.userId);
+      await followAssignee(tx, { taskId }, userId, actor.userId);
       await tx.insert(projectActivities).values({
         projectId: task.projectId,
         taskId,

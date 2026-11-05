@@ -27,6 +27,23 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('rate:5'))).toBe(false);
   });
 
+  it('answers its own What is this? taps and home taps, and only well-formed ones', () => {
+    const uuid = '0b6f2f9e-6c1a-4f43-9d55-3f3c2a1b7e10';
+    for (const id of [
+      'what:yes',
+      'what:diff',
+      'what:ask',
+      `what:a:${uuid}`,
+      `what:i:${uuid}:bill`,
+      `what:change:${uuid}`,
+      `where:${uuid}`,
+    ])
+      expect(assistantAnswersTap({ customerId: 'c1' }, tap(id)), id).toBe(true);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('what:nonsense'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: 'c1' }, tap('fpaper:none'))).toBe(false);
+    expect(assistantAnswersTap({ customerId: null }, tap('what:yes'))).toBe(false);
+  });
+
   it('answers a stranger’s own Call me back and Talk to a person buttons (review F5)', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('callback'))).toBe(true);
     expect(assistantAnswersTap({ customerId: null }, tap('human'))).toBe(true);
@@ -58,5 +75,12 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswers(at('await_problem'), file)).toBe(true);
     for (const step of ['await_referral', 'await_comment', 'await_home'])
       expect(assistantAnswers(at(step), file), step).toBe(false);
+  });
+
+  it('answers a message WhatsApp could not pass on, even in a held chat', () => {
+    const held = { customerId: 'c1', state: 'human', context: {} };
+    const unsupported = { kind: 'other' as const, choiceId: null, unsupported: true };
+    expect(assistantAnswers(held, unsupported)).toBe(true);
+    expect(assistantAnswers(held, { kind: 'other' as const, choiceId: null })).toBe(false);
   });
 });

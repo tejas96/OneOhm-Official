@@ -20,6 +20,8 @@ export const documentRequirementSchema = z.object({
   active: z.boolean(),
   position: z.number().int(),
   builtIn: z.boolean(),
+  /** A paper older than this many days stops counting; null means never. */
+  maxAgeDays: z.number().int().nullable(),
 });
 export type DocumentRequirementRecord = z.infer<typeof documentRequirementSchema>;
 
@@ -29,6 +31,7 @@ export const documentRequirementInputSchema = z.object({
   categories: z.array(z.enum(DOCUMENT_CATEGORIES)).min(1, 'Pick the folder it is filed in.'),
   fromCustomer: z.boolean().default(false),
   conditions: requirementConditionsSchema.default({}),
+  maxAgeDays: z.number().int().min(1).max(3650).nullable().optional(),
 });
 export type DocumentRequirementInput = z.input<typeof documentRequirementInputSchema>;
 

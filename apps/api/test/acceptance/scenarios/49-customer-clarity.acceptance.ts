@@ -90,30 +90,44 @@ describe('Customer clarity on WhatsApp', () => {
 
   it('C5: a customer types Marathi words and every answer ends with taps', async () => {
     const { customer } = await sellProject(admin, { name: 'tejas clarity (test)' });
+    // "मेनू" is Marathi and Hindi alike: answered (Home), then asked once which (§14).
     await sendInbound(customer.phone, { text: 'मेनू' });
-    const menu = await lastReply(customer.phone);
-    expect(menu?.kind).toBe('list');
-    expect(menu?.body).toContain('Tejas');
-    expect(menu?.body).not.toContain('"menu"');
+    const [first, ask] = (await replies(customer.phone)).slice(-2);
+    expect(choices(first)).toContain('go:more');
+    expect(choices(ask)).toEqual(['lang:en', 'lang:mr', 'lang:hi']);
+    await sendInbound(customer.phone, { buttonReply: 'lang:mr' });
+    const home = await lastReply(customer.phone);
+    expect(home?.body).toContain('Tejas');
+    expect(home?.body).toContain('नमस्कार');
+    expect(choices(home)).toContain('go:more');
     await sendInbound(customer.phone, { text: 'कागद' });
-    // The only paper (the quote) goes as the file, then Menu · Talk to us (live QA round 2).
-    const [file, papers] = (await replies(customer.phone)).slice(-2);
-    expect(file?.kind).toBe('document');
-    expect(papers?.kind).toBe('buttons');
-    expect(choices(papers)).toEqual(['menu', 'human']);
+    // The only paper (the quote) goes as the file with its caption (redesign §11).
+    expect((await lastReply(customer.phone))?.kind).toBe('document');
     await sendInbound(customer.phone, { buttonReply: 'progress' });
-    expect(choices(await lastReply(customer.phone))).toEqual(['menu', 'payments', 'human']);
+    expect(choices(await lastReply(customer.phone))).toEqual(['go:payments', 'menu']);
     await sendInbound(customer.phone, { buttonReply: 'menu' });
-    expect((await lastReply(customer.phone))?.kind).toBe('list');
+    expect(choices(await lastReply(customer.phone))).toContain('go:more');
   });
 
-  // Fix round 1: with no project yet, Pay now and Track my project would lead nowhere.
-  it('C5: a customer with no project gets only Menu and Talk to us', async () => {
+  // Fix round 1: with no project yet, Pay and Project update would lead nowhere.
+  it('C5: a customer with no project gets only Talk to and Menu', async () => {
     const customer = await newCustomer(admin, { name: 'No Project Clarity (test)' });
     for (const text of ['progress', 'payments']) {
       await sendInbound(customer.phone, { text });
-      expect(choices(await lastReply(customer.phone)), text).toEqual(['menu', 'human']);
+      expect(choices(await lastReply(customer.phone)), text).toEqual(['go:talk', 'menu']);
     }
+  });
+
+  it('a customer with no project who says hi gets a call task, once a day (redesign §3)', async () => {
+    const customer = await newCustomer(admin, { name: 'No Project Call (test)' });
+    await sendInbound(customer.phone, { text: 'hi' });
+    await sendInbound(customer.phone, { text: 'hello' });
+    const calls = await rows<{ status: string }>(
+      `SELECT status::text AS status FROM customer_actions
+        WHERE customer_id = $1 AND type = 'callback' AND payload->>'reason' = 'no_project'`,
+      [customer.customerId],
+    );
+    expect(calls).toEqual([{ status: 'received' }]);
   });
 
   it('C12: a voice note or a video from a team-made lead goes warmly to their person', async () => {
@@ -140,7 +154,8 @@ describe('Customer clarity on WhatsApp', () => {
     await tap(phone, 'ob:language:en');
     await tap(phone, 'ob:name:yes');
     await tap(phone, 'ob:city:other');
-    expect(choices(await lastReply(phone))).toEqual(['ob:city:back', 'ob:person']);
+    // The typed-city question also offers the 📍 pin (redesign §16).
+    expect(choices(await lastReply(phone))).toEqual(['ob:city:pin', 'ob:city:back', 'ob:person']);
     await sendInbound(phone, { buttonReply: 'ob:city:back' });
     expect(choices(await lastReply(phone))).toContain('ob:city:Pune');
     expect((await chatOf(phone)).state).toBe('onboard:city');

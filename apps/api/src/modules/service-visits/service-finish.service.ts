@@ -7,7 +7,8 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { noteHandedBack, tellCustomer } from './service-visit-events';
+import { tellFixed } from '../care/fixed-check';
+import { noteHandedBack } from './service-visit-events';
 import { ServiceVisitsService } from './service-visits.service';
 
 const clean = (value: string | null | undefined) => {
@@ -50,7 +51,7 @@ export class ServiceFinishService {
         reason: input.outcome === 'handed_back' ? reason : null,
       });
       if (input.outcome === 'done') {
-        await tellCustomer(tx, job, 'resolved', now);
+        await tellFixed(tx, { id, topicWords: job.topic }, now);
         await recordAudit(tx, actor.userId, 'service.resolved', 'service_request', id, {
           from: 'field',
           visitId,

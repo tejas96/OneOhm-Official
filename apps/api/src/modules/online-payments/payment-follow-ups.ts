@@ -118,24 +118,28 @@ export async function sendFreshLinkAfterExpiry(
   const { milestone, project, customer } = row;
   const owed = milestone.amountPaise - Number(row.paidPaise);
   if ((milestone.status !== 'due' && milestone.status !== 'partly_paid') || owed <= 0) return;
-  await queueWhatsApp(
-    db,
-    customer.phone,
-    'payment_link',
-    payNowPayload(environmentOnce(), {
-      customerName: customer.name,
-      customerId: project.customerId,
-      projectCode: project.code,
-      milestoneId: milestone.id,
-      milestoneLabel: milestone.label,
-      owedPaise: owed,
-    }),
-    `link_expired:${linkId}`,
-  );
+  // The customer sent proof of payment: no fresh Pay now while finance records it (2 days).
+  const waiting = (milestone.remindersPausedUntil?.getTime() ?? 0) > Date.now();
+  if (!waiting) {
+    await queueWhatsApp(
+      db,
+      customer.phone,
+      'payment_link',
+      payNowPayload(environmentOnce(), {
+        customerName: customer.name,
+        customerId: project.customerId,
+        projectCode: project.code,
+        milestoneId: milestone.id,
+        milestoneLabel: milestone.label,
+        owedPaise: owed,
+      }),
+      `link_expired:${linkId}`,
+    );
+  }
   await tellOwner(db, project.id, {
     kind: 'payment_link_expired',
     title: 'Payment link expired',
-    body: `${customer.name}'s link for ${milestone.label} (${project.code}) expired unpaid. A fresh Pay now was sent.`,
+    body: `${customer.name}'s link for ${milestone.label} (${project.code}) expired unpaid. ${waiting ? 'The customer sent proof of payment, so no new link was sent.' : 'A fresh Pay now was sent.'}`,
     subject: { type: 'project', id: project.id, projectId: project.id },
     dedupeKey: `link_expired:${linkId}`,
   });

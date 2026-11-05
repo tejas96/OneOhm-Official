@@ -29,7 +29,7 @@ import { numberFor, type RevisionOf } from './quotation-numbering';
 import { QuotationPricingService } from './quotation-pricing.service';
 import { lineRows, quotationRow } from './quotation-rows';
 import { assertQuoteTypeOffered } from './quote-project-type';
-import { freezeQuotedTerms } from './quoted-terms';
+import { freezeQuotedTerms, saveChangeNote } from './quoted-terms';
 
 /** A sent quote is followed up this many days later (the lead owner's next action). */
 const QUOTE_FOLLOW_UP_DAYS = 2;
@@ -120,7 +120,7 @@ export class QuotationsService {
     return this.get(id);
   }
 
-  async send(actor: Actor, id: string): Promise<QuotationDetail> {
+  async send(actor: Actor, id: string, whatChanged?: string): Promise<QuotationDetail> {
     const quotation = await this.get(id);
     if (quotation.discountPendingApproval)
       throw conflict('The discount needs approval before sending.', 'discount_pending');
@@ -134,6 +134,8 @@ export class QuotationsService {
         .set({ status: 'sent', sentAt: new Date(), updatedAt: new Date() })
         .where(eq(quotations.id, id));
       await freezeQuotedTerms(tx, id);
+      // A revision says what changed; the customer reads that line first (redesign §9).
+      if (whatChanged !== undefined) await saveChangeNote(tx, id, whatChanged);
       // In an open chat the PDF and buttons are the message; the app inbox is told either way.
       const chatted = await queueQuotePdf(tx, this.env, quotation);
       const message = quoteMessage(this.env, quotation);

@@ -1,8 +1,23 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { rows } from './db';
 import { API } from './http';
 
 /** The app secret the runner gives the acceptance API, so the suite can sign like Meta. */
 export const WHATSAPP_SECRET = 'oneohm-acceptance-whatsapp-secret';
+
+/** Until the returned undo runs, the database refuses every reply to this number. */
+export async function refuseRepliesTo(phone: string): Promise<() => Promise<void>> {
+  const name = `refuse_reply_${phone.slice(1)}`;
+  await rows(`CREATE OR REPLACE FUNCTION ${name}() RETURNS trigger AS $$
+    BEGIN IF NEW.recipient = '${phone}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END;
+    $$ LANGUAGE plpgsql`);
+  await rows(`CREATE TRIGGER ${name} BEFORE INSERT ON outbox
+    FOR EACH ROW EXECUTE FUNCTION ${name}()`);
+  return async () => {
+    await rows(`DROP TRIGGER ${name} ON outbox`);
+    await rows(`DROP FUNCTION ${name}()`);
+  };
+}
 
 /** What a test can send as a customer's WhatsApp message. */
 export interface InboundMessage {
@@ -21,6 +36,27 @@ export interface InboundMessage {
     filename?: string;
     caption?: string;
   };
+  /** A reply to a form (Flow) we sent: our token, and the files it carries as Meta posts them. */
+  form?: {
+    token: string;
+    photos?: Record<string, unknown>[];
+    pdfs?: Record<string, unknown>[];
+    /** The "I paid another way" form's typed amount and picked day. */
+    amount?: string | number;
+    date?: string;
+    /** The self-survey form's answers and its one photo per screen, by name. */
+    fields?: Record<string, unknown>;
+  };
+  /** A location pin, as Meta posts it. */
+  location?: { latitude: number; longitude: number; name?: string; address?: string };
+  /** A shared contact card, as Meta posts it. */
+  contact?: { name: string; phone: string };
+  /** A sticker, as Meta posts it. */
+  sticker?: boolean;
+  /** A message type WhatsApp cannot pass on (Meta's `unsupported`). */
+  unsupported?: boolean;
+  /** A reaction (emoji) to one of our messages, as Meta posts it. */
+  reaction?: string;
   /** Meta's click-to-WhatsApp `referral` object, as it arrives on the first message. */
   referral?: Record<string, string>;
   /** The sender's WhatsApp name; null sends none (a number without a profile name). */
@@ -80,8 +116,9 @@ export async function postInbound(from: string, message: InboundMessage): Promis
 export async function sendStatus(
   providerMessageId: string,
   status: 'sent' | 'delivered' | 'read' | 'failed',
+  errorCode = 131053,
 ): Promise<void> {
-  const error = { code: 131053, title: 'Media upload error' };
+  const error = { code: errorCode, title: 'Media upload error' };
   const receipt = {
     id: providerMessageId,
     status,
@@ -127,8 +164,57 @@ function interactive(
   };
 }
 
+/** A location pin, a contact card or a sticker as Meta posts it; null for anything else. */
+function otherOf(base: Record<string, string>, message: InboundMessage) {
+  if (message.location) return { ...base, type: 'location', location: message.location };
+  if (message.reaction)
+    return {
+      ...base,
+      type: 'reaction',
+      reaction: { message_id: 'wamid.x', emoji: message.reaction },
+    };
+  if (message.sticker) return { ...base, type: 'sticker', sticker: { id: 'sticker-1' } };
+  if (message.unsupported) return { ...base, type: 'unsupported' };
+  if (!message.contact) return null;
+  const { name, phone } = message.contact;
+  return {
+    ...base,
+    type: 'contacts',
+    contacts: [{ name: { formatted_name: name }, phones: [{ phone }] }],
+  };
+}
+
+/** A reply to one of our forms as Meta posts it: the token and the files of the screen used. */
+function formMessage(
+  base: Record<string, string>,
+  form: NonNullable<InboundMessage['form']>,
+): Record<string, unknown> {
+  return {
+    ...base,
+    type: 'interactive',
+    interactive: {
+      type: 'nfm_reply',
+      nfm_reply: {
+        name: 'flow',
+        body: 'Sent',
+        response_json: JSON.stringify({
+          flow_token: form.token,
+          ...(form.photos ? { photos: form.photos } : {}),
+          ...(form.pdfs ? { pdfs: form.pdfs } : {}),
+          ...(form.amount !== undefined ? { amount: form.amount } : {}),
+          ...(form.date ? { date: form.date } : {}),
+          ...(form.fields ?? {}),
+        }),
+      },
+    },
+  };
+}
+
 /** The Meta message object for what the test sends: media, a tap, or typed text. */
 function messageOf(base: Record<string, string>, message: InboundMessage): Record<string, unknown> {
+  const other = otherOf(base, message);
+  if (other) return other;
+  if (message.form) return formMessage(base, message.form);
   return message.media
     ? {
         ...base,

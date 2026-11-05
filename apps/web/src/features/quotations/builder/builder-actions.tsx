@@ -42,7 +42,7 @@ export function BuilderActions({
       }
       try {
         const sent = await expectStatus(
-          api.quotations.sendQuotation({ params: { id: created.id } }),
+          api.quotations.sendQuotation({ params: { id: created.id }, body: undefined }),
           200,
         );
         return { created: sent, sent: true, sendError: null };

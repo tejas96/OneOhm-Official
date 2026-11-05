@@ -6,6 +6,8 @@ import { Phone, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
+import { VisitCard } from '@/features/visits/visit-card';
 import { formatPhone } from '@/lib/format/contact';
 import { SlaCell } from './sla-pill';
 import { TicketCustomerFiles } from './ticket-customer-files';
@@ -182,6 +184,14 @@ export function TicketSheet({
           </Section>
           <TicketCustomerFiles ticket={ticket} />
           <TicketVisitDay key={`visit-${ticket.id}`} ticket={ticket} />
+          {ticket.kind === 'request' && (
+            <>
+              <VisitCard scope={{ serviceRequestId: ticket.id }} compact />
+              <span>
+                <SendToCustomerButton variant="quiet" scope={{ serviceRequestId: ticket.id }} />
+              </span>
+            </>
+          )}
           <Levels ticket={ticket} />
           {ticket.resolutionNote && (
             <p className="type-body-sm text-on-track">

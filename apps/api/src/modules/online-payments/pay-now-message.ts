@@ -30,5 +30,7 @@ export function payNowPayload(env: Environment, details: PayNowDetails): Record<
     project: details.projectCode,
     link: `${env.API_PUBLIC_URL}/v1/pay/due/${token}`,
     payToken: token,
+    // The quick reply of the approved template: opens the "I paid another way" form.
+    paidPayload: `paidother:${details.milestoneId}`,
   };
 }

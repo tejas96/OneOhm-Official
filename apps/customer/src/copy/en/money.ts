@@ -78,8 +78,7 @@ export const DOCUMENTS = {
   openFailed: 'This file could not open. Please try again.',
   requestsTitle: 'Needed from you',
   requestsIntro: 'Send a clear photo or a PDF. It goes straight to your project file.',
-  requestMeta: (project: string | null, kind: string) =>
-    [kind, project].filter(Boolean).join(' · '),
+  requestMeta: (home: string | null, kind: string) => [kind, home].filter(Boolean).join(' · '),
   takePhoto: 'Camera',
   choosePhoto: 'Photos',
   chooseFile: 'PDF',
@@ -104,6 +103,7 @@ export const DOCUMENTS = {
     warranty: 'Warranty',
     product_manual: 'Product manual',
     statutory_report: 'Report',
+    payment_proof: 'Payment proof',
     site_photo: 'Site photo',
     other: 'Document',
   },

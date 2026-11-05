@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   customers,
+  milestoneCredits,
   paymentMilestones,
   payments,
   projects,
@@ -9,7 +10,7 @@ import {
 } from '@oneohm/database';
 import { receivedMoney } from '@oneohm/domain';
 import { amountInWords, formatInr } from '@oneohm/shared';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { CatalogService } from '../catalog/catalog.service';
@@ -18,6 +19,7 @@ import { PdfRendererService } from '../reports/pdf-renderer.service';
 import { assetText, brandFontCss, logoDataUri, stampDataUri } from '../reports/report-assets';
 import { engine } from '../reports/report-handlebars';
 import type { PdfFile } from '../reports/report-pdf.service';
+import { receiptTotals } from './receipt-totals';
 
 const METHOD_LABEL = {
   cash: 'Cash',
@@ -81,6 +83,16 @@ export class ReceiptPdfService {
         ),
       );
     const received = Number(toDate?.total ?? 0);
+    // The self-survey discount given (off a payment, or paid out by hand) is not owed any more.
+    const [discount] = await this.db
+      .select({ total: sql<string>`coalesce(sum(${milestoneCredits.amountPaise}), 0)` })
+      .from(milestoneCredits)
+      .where(
+        and(
+          eq(milestoneCredits.projectId, project.id),
+          inArray(milestoneCredits.status, ['applied', 'paid_out']),
+        ),
+      );
     const [reversal] = await this.db
       .select({ on: payments.receivedOn, reason: payments.reversalReason })
       .from(payments)
@@ -119,11 +131,7 @@ export class ReceiptPdfService {
         payment.tdsPaise > 0
           ? { money: formatInr(receivedMoney(payment)), amount: formatInr(payment.tdsPaise) }
           : null,
-      totals: {
-        price: formatInr(row.totalPaise),
-        received: formatInr(received),
-        balance: formatInr(Math.max(0, row.totalPaise - received)),
-      },
+      totals: receiptTotals(row.totalPaise, Number(discount?.total ?? 0), received),
       subsidyNote:
         row.subsidyPaise > 0
           ? `For information: the expected government subsidy of ${formatInr(row.subsidyPaise)} is paid by the government directly to the customer and is not part of this receipt.`

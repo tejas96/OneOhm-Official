@@ -6,6 +6,7 @@ import { formatInr } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { CreditCard } from '@/features/finance/billing/credit-card';
 import { InvoiceCard } from '@/features/finance/billing/invoice-card';
+import { SurveyCreditCard } from '@/features/self-survey/credit-card';
 import { PaymentPanel } from './payment-panel';
 
 type Milestone = ProjectDetail['milestones'][number];
@@ -52,7 +53,10 @@ export function PaymentsTab({ project }: { readonly project: ProjectDetail }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <PaymentPanel project={project} />
+        <div className="flex flex-col gap-6">
+          <PaymentPanel project={project} />
+          <SurveyCreditCard projectId={project.id} />
+        </div>
         <Card>
           <CardHeader title={t('positionTitle')} description={t('positionBody')} />
           <dl className="flex flex-col divide-y divide-hairline border-t border-hairline">

@@ -6,6 +6,8 @@ import { formatInr } from '@oneohm/shared';
 import { BellRing, Circle, CircleCheck, PencilLine, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { useDocumentRequests } from '@/features/documents/requests/use-document-requests';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 
 const TONE: Readonly<Record<ProjectLoan['status'], PillTone>> = {
   collecting_documents: 'review',
@@ -38,6 +40,25 @@ export function LoanCard({
       year: 'numeric',
     });
   const owed = loan.receivedPaise < loan.bankSharePaise;
+  // The lender's papers still to come, each asked with one tap (redesign §18 11).
+  const asked = useTranslations('sendToCustomer.quickPapers');
+  // A paper already asked and not closed is not offered again.
+  const requests = useDocumentRequests({ projectId: loan.projectId });
+  const isAsked = (name: string) =>
+    (requests.data ?? []).some(
+      (one) =>
+        one.category === 'bank_loan' &&
+        ['open', 'received'].includes(one.status) &&
+        one.title.trim().toLowerCase() === name.trim().toLowerCase(),
+    );
+  const missing =
+    loan.documents.length === 0
+      ? isAsked(asked('loanFallback'))
+        ? []
+        : [{ category: 'bank_loan' as const, title: asked('loanFallback'), requirementKey: 'loan' }]
+      : loan.documents
+          .filter((document) => !document.received && !isAsked(document.name))
+          .map((document) => ({ category: 'bank_loan' as const, title: document.name }));
 
   return (
     <Card className="flex h-full flex-col gap-5 rounded-[28px] p-6">
@@ -146,6 +167,13 @@ export function LoanCard({
 
       {(onEdit || onReceive) && (
         <footer className="mt-auto flex flex-wrap justify-end gap-2">
+          {onEdit && loan.started && (
+            <SendToCustomerButton
+              variant="quiet"
+              scope={{ projectId: loan.projectId }}
+              quickPapers={missing}
+            />
+          )}
           {onEdit && (
             <Button variant="quiet" leadingIcon={<PencilLine />} onClick={onEdit}>
               {loan.started ? t('edit') : t('start')}

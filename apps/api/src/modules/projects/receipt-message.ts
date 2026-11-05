@@ -5,11 +5,13 @@ import { eq } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
 import { environmentOnce } from '../../config/environment-once';
 import { customerPdfName } from '../reports/pdf-file-name';
-import { sayWithTaps, TAP_WORDS } from '../whatsapp/assistant/closing-taps';
+import { CHAT_WORDS } from '../whatsapp/assistant/chat-words';
+import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { paperTap } from '../whatsapp/assistant/customer-papers';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { payPageUrl } from '../whatsapp/assistant/pay-buttons';
 import { PROJECT_WORDS } from '../whatsapp/assistant/project-words';
+import { WORDS } from '../whatsapp/assistant/words';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import { contactFor } from './payment-contact';
@@ -94,7 +96,7 @@ export async function tellCustomerPaid(tx: DatabaseExecutor, news: PaidNews): Pr
     const next = PROJECT_WORDS.paidNext(news.trigger, contact.name, contact.phone);
     // View receipt sends this receipt's PDF again (live QA round 2).
     const receiptTap = { tap: 'receipt', id: paperTap('receipt', news.paymentId) } as const;
-    const taps = [receiptTap, 'track', 'menu'] as const;
+    const taps = [receiptTap, 'update', 'menu'] as const;
     await sayWithTaps(tx, chat, next, taps, `paid_next:${news.paymentId}`);
   });
 }
@@ -114,8 +116,8 @@ async function tellLeft(
   const key = `paid_left:${news.paymentId}`;
   if (env.RAZORPAY_MODE === 'off') return sayWithTaps(tx, chat, body, ['menu', 'talk'], key);
   const url = payPageUrl(env, news.customerId, news.milestoneId);
-  const payNow = { kind: 'cta_url', body, label: TAP_WORDS.pay, url } as const;
+  const payNow = { kind: 'cta_url', body, label: WORDS.payNow, url } as const;
   await queueReply(tx, chat, payNow, null, key);
   // A link button has no reply taps, so the way on follows it (menu audit M3).
-  await sayWithTaps(tx, chat, TAP_WORDS.whatNext, ['menu', 'talk'], `${key}:taps`);
+  await sayWithTaps(tx, chat, CHAT_WORDS.whatNext, ['menu', 'talk'], `${key}:taps`);
 }

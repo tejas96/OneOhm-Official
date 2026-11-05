@@ -16,6 +16,7 @@ export async function seedDocumentRequirements(db: Database): Promise<void> {
         conditions: requirement.conditions,
         position: requirement.position,
         builtIn: true,
+        maxAgeDays: requirement.maxAgeDays ?? null,
       })),
     )
     .onConflictDoNothing();

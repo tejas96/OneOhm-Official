@@ -11,7 +11,7 @@ describe('the money line on the quote and the accept check (live review C1)', ()
   it('gives the full price, the 3 instalments in whole rupees and the subsidy', () => {
     const money = quoteMoney(TOTAL, SUBSIDY, DEFAULT_MILESTONES);
     expect(money.line).toBe(
-      'Full price ₹1,83,969, paid in 3 parts: ₹45,992 on acceptance, ₹1,19,579 before dispatch, ₹18,398 after installation. Subsidy ₹78,000 comes back to your bank after commissioning.',
+      'Full price ₹1,83,969, paid in 3 parts: ₹45,992 on acceptance, ₹1,19,579 before dispatch, ₹18,398 after installation. Subsidy ₹78,000 comes back to your bank after switch-on, so your cost is ₹1,05,969.',
     );
     expect(money.first).toBe('₹45,992');
     expect(money.firstWhen).toBe('on acceptance');

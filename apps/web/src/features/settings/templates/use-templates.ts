@@ -56,12 +56,19 @@ export const SAMPLE = {
   followUps: '1',
   visit: 'Half-yearly service',
   document: 'Latest electricity bill',
+  home: 'Pune',
   stage: 'installation',
+  work: 'the panel installation',
   staff: 'Priya',
   manager: 'Vikram Jadhav',
   message: 'We will reach your site at 11 am tomorrow.',
   subject: 'your solar project (OH-2026-014)',
   phone: '+91 98765 43210',
+  when: 'Thu 6 Nov, morning',
+  day: 'Thu 6 Nov',
+  count: '4',
+  bank: 'HDFC Bank',
+  branch: 'Sangli main branch',
 } as const;
 
 /** Samples that differ by message: the invite carries the app link, not a pay link. */

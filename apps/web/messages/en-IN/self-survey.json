@@ -1,0 +1,48 @@
+{
+  "selfSurvey": {
+    "title": "Self site survey",
+    "failed": "Could not do that",
+    "withCustomer": "Sent to the customer. They have not finished it yet.",
+    "started": "Started {date}",
+    "received": "Self survey received - check it",
+    "receivedHint": "The answers are saved as the survey's report fields and the photos are on this step. Approve opens the same form as a field survey; fill in the cable lengths and shade-free area from the photos.",
+    "closed": "Approved. {credit}",
+    "creditDone": "{amount} taken off the next payment.",
+    "creditNone": "No discount was taken off a payment.",
+    "answers": "Their answers",
+    "photos": "Photos are listed under the evidence of this step.",
+    "approve": "Approve",
+    "askAgain": "Ask again",
+    "askAgainTitle": "Ask the customer again",
+    "askAgainHint": "Pick only what is wrong or missing. Only those items are asked.",
+    "askAgainSend": "Ask again",
+    "visit": "Book a visit",
+    "visitHint": "Cancels the self survey (no discount) and sends the customer the days to pick.",
+    "asked": "Asked again. The customer has been told.",
+    "visited": "The customer is sent the days to pick. No discount.",
+    "items": {
+      "roof": "Roof type",
+      "floors": "Floors",
+      "corner_a": "Photo: roof corner A",
+      "corner_b": "Photo: roof corner B",
+      "meter": "Photo: meter",
+      "board": "Photo: main switch board",
+      "shade": "Shade",
+      "size": "Roof size",
+      "consumer": "Consumer number"
+    },
+    "missing": "Still missing: {items}",
+    "credit": {
+      "title": "Self-survey discount",
+      "pending": "{amount} is waiting: no payment that has not fallen due could take it. It is applied by itself if one can later. Finance was told. If you mark it as given another way, book that payout by hand: no ledger entry is made.",
+      "applied": "{amount} taken off {payment}.",
+      "paid_out": "{amount} settled by hand: {note}. The payout must be booked by hand; no ledger entry was made.",
+      "reversed": "{amount} was taken back.",
+      "settle": "Settle by hand",
+      "reason": "How was it given? (a cheque, cash, a lower final bill)",
+      "save": "Mark as given",
+      "settled": "Marked as given. It is in the log.",
+      "failed": "Could not save"
+    }
+  }
+}

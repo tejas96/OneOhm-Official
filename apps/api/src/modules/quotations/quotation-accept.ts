@@ -1,6 +1,7 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
 import {
   customers,
+  type DatabaseExecutor,
   leads,
   type Notice,
   notifyCover,
@@ -19,6 +20,32 @@ import { projectAwaiting } from './project-revision';
 import { quoteHasProject, startProjectNote } from './quotation-project';
 import { freezeQuotedTerms } from './quoted-terms';
 import { applyAcceptedRevision } from './revision-accept';
+
+/** Past its last day, or its discount still waits for approval. */
+const lapsed = (quotation: QuotationDetail) =>
+  quotation.validUntil < todayIn() || quotation.discountPendingApproval;
+
+async function hasNewerRevision(
+  db: DatabaseExecutor,
+  row: { readonly number: string; readonly revision: number },
+): Promise<boolean> {
+  const [newer] = await db
+    .select({ id: quotations.id })
+    .from(quotations)
+    .where(and(eq(quotations.number, row.number), gt(quotations.revision, row.revision)))
+    .limit(1);
+  return Boolean(newer);
+}
+
+/**
+ * Whether the customer may still act on this quote: sent, not past its last day, no
+ * discount waiting for approval, no newer revision. The accept path and [See quotation]
+ * read it the same way.
+ */
+export async function quoteIsOpen(db: DatabaseExecutor, quotation: QuotationDetail) {
+  if (quotation.status !== 'sent' || lapsed(quotation)) return false;
+  return !(await hasNewerRevision(db, quotation));
+}
 
 /** What the customer's own "Yes, accept" came to. */
 export type CustomerAcceptance = 'accepted' | 'already' | 'not_open' | 'not_owner';
@@ -101,13 +128,7 @@ export async function customerVerdict(
     .for('update');
   if (row?.status === 'accepted') return 'already';
   if (row?.status !== 'sent') return 'not_open';
-  if (quotation.validUntil < todayIn() || quotation.discountPendingApproval) return 'not_open';
-  const [newer] = await tx
-    .select({ id: quotations.id })
-    .from(quotations)
-    .where(and(eq(quotations.number, row.number), gt(quotations.revision, row.revision)))
-    .limit(1);
-  if (newer) return 'not_open';
+  if (lapsed(quotation) || (await hasNewerRevision(tx, row))) return 'not_open';
   if ((await projectAwaiting(tx, quotation.id)) || (await changeAwaiting(tx, quotation.id)))
     return 'not_open';
   return 'open';

@@ -6,27 +6,13 @@ import type { AssistantWords } from './words';
  * Taps carry the customer around; typed words in any language work too.
  */
 export const MR: Words<AssistantWords> = {
-  MENU_ROWS: [
-    { id: 'progress', title: 'प्रकल्पाची प्रगती', description: 'तुमचे सोलर काम कुठपर्यंत आले' },
-    { id: 'payments', title: 'पेमेंट', description: 'भरलेले, बाकी आणि पेमेंट लिंक' },
-    { id: 'documents', title: 'कागदपत्रे', description: 'कोटेशन, बिले, पावत्या, कागद' },
-    { id: 'service', title: 'तक्रार नोंदवा', description: 'सेवा विनंती नोंदवा' },
-    { id: 'requests', title: 'माझ्या विनंत्या', description: 'सेवा विनंत्यांची स्थिती' },
-    { id: 'warranty', title: 'वॉरंटी आणि AMC', description: 'तुमची उपकरणे आणि कव्हर' },
-    { id: 'refer', title: 'मित्राला सुचवा', description: 'मित्रांना सांगा, बक्षीस मिळवा' },
-    { id: 'rewards', title: 'माझी बक्षिसे', description: 'तुमचे रेफरल आणि बक्षिसे' },
-    { id: 'feedback', title: 'रेटिंग द्या', description: 'आमचे काम कसे वाटले ते सांगा' },
-    { id: 'human', title: 'व्यक्तीशी बोला', description: 'टीममधील कोणीतरी इथे उत्तर देईल' },
-  ],
   WORDS: {
-    menu: (name, company) =>
-      `नमस्कार ${name}! मी ${company ? `${company} चा ` : ''}सहाय्यक आहे. तुम्हाला काय पाहायचे आहे?`,
     menuButton: 'निवडा',
     unknownNumber:
       'नमस्कार! हा नंबर अजून आमच्या कोणत्याही ग्राहकाशी जोडलेला नाही. तुम्हाला सोलरमध्ये रस असेल तर "मला कॉल करा" दाबा. तुम्ही दुसऱ्या नंबरवरून ग्राहक असाल तर कृपया त्या नंबरवरून लिहा.',
     callMeBack: 'मला कॉल करा',
     callbackNoted: 'धन्यवाद! आमच्या टीममधील कोणीतरी लवकरच तुम्हाला कॉल करेल.',
-    noProject: 'तुमचा प्रकल्प अजून सुरू झालेला नाही. आमच्याशी बोलण्यासाठी "आमच्याशी बोला" दाबा.',
+    noProject: 'तुमचा प्रकल्प अजून सुरू झालेला नाही.',
     stage: {
       survey: 'साइट भेट',
       design: 'सिस्टम डिझाइन',
@@ -42,41 +28,25 @@ export const MR: Words<AssistantWords> = {
       applied: 'अनुदान: अर्ज केला, सरकारची वाट पाहत आहोत',
       inspected: 'अनुदान: तपासणी झाली, रक्कम जमा होण्याची वाट पाहत आहोत',
       released: 'अनुदान: जमा झाले',
+      received: 'अनुदान तुमच्या बँकेत जमा झाले ✅',
+      checking: 'अनुदान: आम्ही सरकारकडे चौकशी करत आहोत',
     },
     waitingOn: {
       customer: 'तुमच्याकडून काहीतरी हवे आहे',
       bank: 'बँकेची वाट पाहत आहोत',
       discom: 'वीज मंडळाची (DISCOM) वाट पाहत आहोत',
     },
-    allPaid: 'सर्व पेमेंट झाले आहे. धन्यवाद!',
-    payHere: 'इथे भरा',
     payNow: 'आता भरा',
     noDocuments: 'अजून कागदपत्रे नाहीत. प्रकल्प पुढे जाईल तशी ती इथे दिसतील.',
     askProblem:
       'कृपया समस्या एका मेसेजमध्ये सांगा (उदा. "सकाळपासून इन्व्हर्टरवर एरर दिसतो"). फोटोसोबत कॅप्शनही पाठवू शकता.',
-    problemSaved: (category) =>
-      `धन्यवाद. तुमची ${category} विनंती नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "माझ्या विनंत्या" दाबा.`,
-    tooShort: 'कृपया आणखी काही शब्द लिहा, म्हणजे आम्ही मदत करू शकू.',
-    noRequests: 'तुमच्या कोणत्याही सेवा विनंत्या नाहीत.',
+    noRequests: 'तुम्ही अजून कोणतीही समस्या सांगितलेली नाही.',
     askReferral:
       'तुमच्या मित्राचे नाव आणि 10 अंकी मोबाईल नंबर एकाच मेसेजमध्ये पाठवा, उदा. "सुरेश पाटील 9876543210".',
-    referralSaved: (name) =>
-      `धन्यवाद! आम्ही ${name} यांना कॉल करू. त्यांचे सोलर बसल्यावर तुम्हाला बक्षीस मिळेल.`,
     referralKnown: 'या नंबरशी आम्ही आधीच संपर्कात आहोत. आमची आठवण ठेवल्याबद्दल धन्यवाद!',
-    referralUnclear: 'नाव आणि 10 अंकी मोबाईल नंबर सापडला नाही. कृपया पुन्हा प्रयत्न करा.',
+    referralUnclear: 'आम्हाला नाव आणि 10 अंकी मोबाईल नंबर सापडला नाही. कृपया पुन्हा प्रयत्न करा.',
     referredWelcome: (referrer, company) =>
       `${company ? `${company} मध्ये ` : ''}स्वागत आहे! ${referrer} यांनी तुमचे नाव सुचवले आहे. तुमच्या सोलरचे नियोजन करण्यासाठी आमची टीम लवकरच याच नंबरवर कॉल करेल.`,
-    askRating: 'आतापर्यंत तुम्ही आमच्यावर किती खूश आहात?',
-    ratingSaved: 'रेटिंगसाठी धन्यवाद! त्यामुळे टीमला मदत होते.',
-    humanSoon:
-      'टीममधील कोणीतरी लवकरच इथे उत्तर देईल (सोमवार ते शनिवार, सकाळी 9:30 ते संध्याकाळी 6:30). सहाय्यकाकडे परत जाण्यासाठी "मेनू" दाबा.',
-    notUnderstood: 'माफ करा, मला समजले नाही. मी यात मदत करू शकतो:',
-    welcome: 'आपले स्वागत आहे 🙏',
-    // A person is named with the respectful plural (देतील); the team is singular (C15).
-    passedToOwner: (name) =>
-      `धन्यवाद. ${name ? `${name} तुम्हाला इथेच उत्तर देतील` : 'आमची टीम तुम्हाला इथेच उत्तर देईल'}.`,
-    nightReply: (name) =>
-      `धन्यवाद. आम्ही सकाळी 9:30 ते संध्याकाळी 6:30 उत्तर देतो. तुमचा मेसेज ${name ? `${name} यांच्याकडे` : 'आमच्या टीमकडे'} आहे.`,
     quoteYes: 'हो, स्वीकारतो',
     quoteNotYet: 'आत्ता नाही',
     quoteChanged: 'हे कोटेशन बदलले आहे किंवा आता खुले नाही.',
@@ -90,23 +60,25 @@ export const MR: Words<AssistantWords> = {
     { id: 'rate:1', title: 'अजिबात खूश नाही', description: '5 पैकी 1' },
   ],
   MEDIA_WORDS: {
-    what: { image: 'फोटो', document: 'कागद', video: 'व्हिडिओ', audio: 'व्हॉइस नोट' },
-    ask: (what) => `धन्यवाद, तुमचा ${what} मिळाला. हा तुमच्या सोलर सिस्टममधील समस्येबद्दल आहे का?`,
-    reportProblem: 'तक्रार नोंदवा',
     talkToPerson: 'व्यक्तीशी बोला',
-    paperSaved: (title) =>
-      `धन्यवाद! तुमचे ${title} मिळाले. ते तुमच्या कागदपत्रांसोबत ठेवले आहे आणि टीमला कळवले आहे.`,
-    stillNeed: (titles) => `अजून हवे आहे: ${titles}. मिळाल्यावर इथे पाठवा.`,
-    paperRefused: (title) =>
-      `माफ करा, ही फाइल तुमच्या ${title} साठी वापरता आली नाही. कृपया स्पष्ट फोटो किंवा PDF पाठवा.`,
-    photoAdded: 'धन्यवाद, फोटो तुमच्या विनंतीला जोडला आहे.',
-    photoNotAdded: 'फाइल विनंतीला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
+    photoAdded: 'धन्यवाद, फोटो तुमच्या समस्येला जोडला आहे.',
+    photoNotAdded: 'फाइल तुमच्या समस्येला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
+    joined: (photos, videos, voices) => {
+      const parts = [
+        photos > 0 ? `${photos} फोटो` : '',
+        videos > 0 ? `${videos} व्हिडिओ` : '',
+        voices > 0 ? `${voices} व्हॉइस नोट` : '',
+      ].filter(Boolean);
+      const last = parts.pop();
+      return `तुमच्या समस्येला ${parts.length > 0 ? `${parts.join(', ')} आणि ${last}` : last} जोडले ✅`;
+    },
     // Saved as the request's description, which the team reads: kept in English.
-    photoOnly: 'Photo or paper sent on WhatsApp.',
-    tooLarge: 'ही फाइल खूप मोठी आहे. कृपया लहान फोटो किंवा PDF पाठवा.',
+    tooLarge: 'ती फाइल खूप मोठी आहे (जास्तीत जास्त 25 MB). कृपया फोटो किंवा PDF पाठवा.',
+    wrongType: 'या प्रकारची फाइल आम्ही उघडू शकत नाही. कृपया फोटो किंवा PDF पाठवा.',
+    emptyFile: 'ती फाइल रिकामी आहे. कृपया ती पुन्हा पाठवा.',
     failed: 'माफ करा, ती फाइल उघडता आली नाही. कृपया थोड्या वेळाने पुन्हा पाठवा.',
-    problemSavedWithPhotos: (category, photos) =>
-      `धन्यवाद. तुमची ${category} विनंती ${photos === 1 ? 'फोटोसह' : `${photos} फोटोंसह`} नोंदवली आहे. आमची टीम तुम्हाला कॉल करेल. स्थिती पाहण्यासाठी "माझ्या विनंत्या" दाबा.`,
+    paperGone: 'तो कागद आता लागत नाही, किंवा आमच्याकडे आधीच आहे. काहीही बदलले नाही.',
+    paperAskEnded: 'तुमच्या फाइल आधीच जतन केल्या आहेत. दुसरे काहीही बदलले नाही.',
   },
   COVER_WORDS: {
     notYet: 'तुमची सिस्टम सुरू झाल्याच्या दिवसापासून वॉरंटी सुरू होते. तेव्हा ती इथे दिसेल.',
@@ -127,11 +99,11 @@ export const MR: Words<AssistantWords> = {
     amcState: { upcoming: 'लवकरच सुरू', active: 'चालू', ended: 'संपले', cancelled: 'रद्द' },
     amcVisits: (done, total) => `${total} पैकी ${done} भेटी झाल्या`,
     nextVisit: (name, date) => `पुढील ${name} भेट: ${date}`,
-    noAmc: 'AMC: अजून नाही. वार्षिक स्वच्छता आणि तपासणी भेटींसाठी "आमच्याशी बोला" दाबा.',
-    help: 'यापैकी कशातही समस्या असल्यास मेनूमध्ये "तक्रार नोंदवा" दाबा.',
+    noAmc: 'AMC: अजून नाही. वार्षिक स्वच्छता आणि तपासणी भेटींसाठी आम्हाला इथे विचारा.',
+    help: 'यापैकी कशातही समस्या असल्यास खाली "समस्या सांगा" दाबा.',
   },
   REWARD_WORDS: {
-    none: 'तुम्ही अजून कोणाला सुचवलेले नाही. मित्रांना आमच्याबद्दल सांगण्यासाठी "मित्राला सुचवा" दाबा. त्यांचे सोलर बसल्यावर तुम्हाला बक्षीस मिळेल.',
+    none: 'तुम्ही अजून कोणाला सुचवलेले नाही. तुम्ही सुचवलेल्या मित्राचे सोलर बसल्यावर तुम्हाला बक्षीस मिळेल.',
     title: '*तुमचे रेफरल*',
     status: {
       received: 'आम्ही लवकरच त्यांना कॉल करू',
@@ -152,20 +124,18 @@ export const MR: Words<AssistantWords> = {
   },
   FEEDBACK_WORDS: {
     later: 'धन्यवाद! तुमची सोलर सिस्टम सुरू झाल्यावर आम्ही तुमचे रेटिंग विचारू.',
-    askComment: 'रेटिंगसाठी धन्यवाद! आणखी काही सांगायचे आहे? इथे लिहा, किंवा "मेनू" दाबा.',
-    commentSaved: 'धन्यवाद, आम्ही नोंद घेतली. त्यामुळे टीमला अधिक चांगले काम करता येते.',
-    skipWords: ['skip', 'no', 'nahi', 'nako', 'नाही', 'नको', 'काही नाही'],
   },
   ANSWER_WORDS: {
-    now: (stage, done, steps) => `आता: ${stage} (${steps} पैकी ${done} टप्पे पूर्ण)`,
     allDone: (steps) => `सर्व ${steps} टप्पे पूर्ण. तुमची सोलर सिस्टम पूर्ण झाली आहे.`,
     next: (title, when) => `पुढे: ${title}, ${when} रोजी नियोजित`,
     waitingSince: (who, when) => `${when} पासून ${who}`,
-    paid: (label, amount) => `✓ ${label}: ${amount} भरले`,
-    bank: (label, amount) => `• ${label}: ${amount} (बँक कर्ज)`,
-    later: (label, amount) => `• ${label}: ${amount} नंतर`,
-    due: (label, amount) => `• ${label}: ${amount} बाकी`,
-    requestStatus: { open: 'नवीन', in_progress: 'काम चालू आहे', resolved: 'सोडवली' },
+    home: (home, size) => `*तुमचे ${home} येथील सोलर* · ${size}`,
+    total: (home, total) => `*${home} सोलर* — एकूण ${total}`,
+    paid: (amount) => `✅ ${amount} भरले`,
+    bank: (amount) => `⚪ ${amount} बँक कर्जातून`,
+    later: (amount, when) => `⚪ ${when} ${amount}`,
+    due: (amount) => `🔴 *${amount} आता भरायचे*`,
+    requestStatus: { open: 'मिळाली', in_progress: 'काम चालू आहे', resolved: 'सोडवली' },
     technicianVisit: (when) => `तंत्रज्ञ भेट: ${when}`,
   },
   CATEGORY_WORDS: {

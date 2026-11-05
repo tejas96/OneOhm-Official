@@ -1,7 +1,8 @@
 import { JOB_RUN_KEEP_DAYS, type JobName, jobErrorText } from '@oneohm/domain';
-import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, or } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { jobRuns } from './schema/automation.schema';
+import { waFlowTokens } from './schema/whatsapp.schema';
 
 export interface JobRunOptions {
   readonly trigger?: 'schedule' | 'background' | 'retry';
@@ -97,7 +98,7 @@ export async function expireStaleRetries(db: DatabaseExecutor, now = new Date())
 
 /**
  * Clears runs older than the keep period, runs stuck as running after a restart and
- * retries nobody picked up.
+ * retries nobody picked up, and the tokens of forms that were answered or have expired.
  */
 export async function clearOldJobRuns(db: DatabaseExecutor, now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - JOB_RUN_KEEP_DAYS * 86_400_000);
@@ -111,6 +112,10 @@ export async function clearOldJobRuns(db: DatabaseExecutor, now = new Date()): P
     .set({ status: 'failed', finishedAt: now, error: 'Stopped before it finished.' })
     .where(and(inArray(jobRuns.status, ['running']), lt(jobRuns.startedAt, stale)));
   await expireStaleRetries(db, now);
+  const spent = new Date(now.getTime() - 86_400_000);
+  await db
+    .delete(waFlowTokens)
+    .where(or(lt(waFlowTokens.expiresAt, spent), lt(waFlowTokens.usedAt, spent)));
   return old.length;
 }
 

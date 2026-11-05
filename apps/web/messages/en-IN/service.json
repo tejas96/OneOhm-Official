@@ -87,6 +87,8 @@
       "yesterday": "Yesterday",
       "assistant": "Assistant",
       "picked": "Picked from the menu",
+      "filedAs": "Filed: {where}",
+      "toSort": "To sort",
       "delivery": {
         "pending": "Sending",
         "skipped": "Not sent",

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
+import { FormsSection } from './forms-section';
 import { MessageTemplateDialog } from './message-template-dialog';
 import { useMessageTemplates } from './use-templates';
 
@@ -69,35 +70,38 @@ export function MessageTemplatesPanel() {
   ];
 
   return (
-    <section className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex max-w-2xl flex-col gap-1">
-          <h2 className="type-display-md text-ink">{t('title')}</h2>
-          <p className="type-body text-ink-muted">{t('intro')}</p>
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex max-w-2xl flex-col gap-1">
+            <h2 className="type-display-md text-ink">{t('title')}</h2>
+            <p className="type-body text-ink-muted">{t('intro')}</p>
+          </div>
+          <Link
+            href="/service?tab=log"
+            className="inline-flex items-center gap-1 type-body-sm text-accent hover:underline"
+          >
+            {t('log')}
+            <ArrowRight aria-hidden className="size-4" />
+          </Link>
         </div>
-        <Link
-          href="/service?tab=log"
-          className="inline-flex items-center gap-1 type-body-sm text-accent hover:underline"
-        >
-          {t('log')}
-          <ArrowRight aria-hidden className="size-4" />
-        </Link>
-      </div>
-      {query.isPending && <ListSkeleton label={t('loading')} rows={6} />}
-      {query.isError && <LoadError error={query.error} onRetry={() => query.refetch()} />}
-      {query.data && (
-        <ResponsiveTable
-          caption={t('title')}
-          columns={columns}
-          rows={query.data}
-          rowKey={(row) => row.key}
+        {query.isPending && <ListSkeleton label={t('loading')} rows={6} />}
+        {query.isError && <LoadError error={query.error} onRetry={() => query.refetch()} />}
+        {query.data && (
+          <ResponsiveTable
+            caption={t('title')}
+            columns={columns}
+            rows={query.data}
+            rowKey={(row) => row.key}
+          />
+        )}
+        <MessageTemplateDialog
+          template={editing}
+          name={editing ? name(editing.key) : ''}
+          onClose={() => setEditing(null)}
         />
-      )}
-      <MessageTemplateDialog
-        template={editing}
-        name={editing ? name(editing.key) : ''}
-        onClose={() => setEditing(null)}
-      />
-    </section>
+      </section>
+      <FormsSection />
+    </div>
   );
 }

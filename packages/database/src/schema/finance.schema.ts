@@ -37,6 +37,8 @@ export const paymentMilestones = pgTable(
     trigger: text('trigger').notNull(),
     status: milestoneStatusEnum('status').notNull().default('upcoming'),
     dueAt: instant('due_at'),
+    /** The customer sent proof of payment: no reminders until then; recording a payment ends it. */
+    remindersPausedUntil: instant('reminders_paused_until'),
     position: integer('position').notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

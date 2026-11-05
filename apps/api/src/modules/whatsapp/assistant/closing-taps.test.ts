@@ -1,38 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { TAP_LISTS, TAP_WORDS, withTaps } from './closing-taps';
+import { CHAT_WORDS } from './chat-words';
+import { withTaps } from './closing-taps';
 import { inLanguage } from './language';
-import { menuWordChoice } from './menu-words';
 
 describe('the taps that end every bot message (live review C5)', () => {
-  it('fits WhatsApp’s 20-character buttons in every language', () => {
-    for (const [language, words] of Object.entries(TAP_LISTS))
-      for (const [key, title] of Object.entries(words))
-        if (key !== 'whatNext')
-          expect(title.length, `${language} ${title}`).toBeLessThanOrEqual(20);
-    for (const words of [TAP_LISTS.mr, TAP_LISTS.hi])
-      expect(Object.keys(words).sort()).toEqual(Object.keys(TAP_LISTS.en).sort());
-  });
-
   it('puts a short answer and up to three taps in one buttons message', async () => {
-    const replies = withTaps('All paid.', ['menu', 'track', 'talk']);
+    const replies = withTaps('All paid.', ['receipts', 'update', 'menu']);
     expect(replies).toEqual([
       {
         kind: 'buttons',
         body: 'All paid.',
         buttons: [
+          { id: 'go:receipts', title: 'Receipts' },
+          { id: 'go:update', title: 'Project update' },
           { id: 'menu', title: 'Menu' },
-          { id: 'progress', title: 'Track my project' },
-          { id: 'human', title: 'Talk to us' },
         ],
       },
     ]);
-    const mr = await inLanguage('mr', async () => withTaps('ठीक', ['menu', 'pay', 'receipt']));
+    const mr = await inLanguage('mr', async () => withTaps('ठीक', ['menu', 'more']));
     expect(mr[0]).toMatchObject({
       buttons: [
         { id: 'menu', title: 'मेनू' },
-        { id: 'payments', title: TAP_LISTS.mr.pay },
-        { id: 'documents', title: TAP_LISTS.mr.receipt },
+        { id: 'go:more', title: 'आणखी' },
       ],
+    });
+  });
+
+  it('takes our own buttons too, such as Pay ₹45,000', () => {
+    const [reply] = withTaps('Due.', [{ id: 'pay:m1', title: 'Pay ₹45,000' }, 'menu']);
+    expect(reply).toMatchObject({
+      buttons: [{ id: 'pay:m1', title: 'Pay ₹45,000' }, { id: 'menu' }],
     });
   });
 
@@ -42,7 +39,7 @@ describe('the taps that end every bot message (live review C5)', () => {
     expect(text).toEqual({ kind: 'text', body: long });
     expect(taps).toEqual({
       kind: 'buttons',
-      body: TAP_WORDS.whatNext,
+      body: CHAT_WORDS.whatNext,
       buttons: [{ id: 'menu', title: 'Menu' }],
     });
   });
@@ -63,21 +60,6 @@ describe('the taps that end every bot message (live review C5)', () => {
   });
 
   it('never offers more than three taps', () => {
-    expect(() => withTaps('x', ['menu', 'pay', 'track', 'talk'])).toThrow();
-  });
-});
-
-describe('menu words a customer may type (live review C5)', () => {
-  it('knows Marathi, Hindi and English words for the menu and its main answers', () => {
-    for (const word of ['menu', 'मेनू', 'मेन्यू', 'मेनु']) expect(menuWordChoice(word)).toBe('menu');
-    for (const word of ['कागद', 'कागदपत्र', 'दस्तावेज़', 'documents', 'papers'])
-      expect(menuWordChoice(word), word).toBe('documents');
-    for (const word of ['पेमेंट', 'भुगतान', 'payment', 'pay'])
-      expect(menuWordChoice(word), word).toBe('payments');
-    for (const word of ['प्रगती', 'प्रगति', 'progress', 'प्रकल्प', 'project'])
-      expect(menuWordChoice(word), word).toBe('progress');
-    for (const word of ['वॉरंटी', 'warranty']) expect(menuWordChoice(word), word).toBe('warranty');
-    expect(menuWordChoice('पावती')).toBe('documents');
-    expect(menuWordChoice('inverter बंद आहे')).toBeUndefined();
+    expect(() => withTaps('x', ['menu', 'more', 'update', 'talk'])).toThrow();
   });
 });

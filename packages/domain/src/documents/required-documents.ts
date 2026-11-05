@@ -17,6 +17,8 @@ export interface DocumentRequirement {
   readonly why: string;
   /** Only the customer holds it, so the team may ask them for it (PRD 5.4). */
   readonly fromCustomer?: boolean;
+  /** A paper older than this many days stops counting (redesign 5.4); none means it never does. */
+  readonly maxAgeDays?: number | null;
 }
 
 const ALWAYS: readonly DocumentRequirement[] = [
@@ -33,6 +35,7 @@ const ALWAYS: readonly DocumentRequirement[] = [
     categories: ['electricity_bill'],
     why: 'Consumer number and sanctioned load.',
     fromCustomer: true,
+    maxAgeDays: 90,
   },
   {
     key: 'property',

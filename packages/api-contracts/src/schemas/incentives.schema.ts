@@ -66,6 +66,13 @@ const payoutFields = {
 export const referralRewardSchema = z.object({
   id: idSchema,
   ...payoutFields,
+  /** The UPI ID shared, whether staff checked it, the ask's state, and where it was paid. */
+  upi: z.object({
+    id: z.string().nullable(),
+    checked: z.boolean(),
+    ask: z.enum(['none', 'open', 'received', 'closed']),
+    paidTo: z.string().nullable(),
+  }),
   referrer: z.object({ id: idSchema, name: z.string(), phone: z.string() }),
   friendName: z.string(),
   leadId: idSchema,
@@ -91,8 +98,21 @@ export const payoutInputSchema = z.object({
   method: moneyOutMethodSchema,
   paidOn: calendarDateSchema,
   reference: z.string().trim().max(120).nullable().optional(),
+  upiId: z.string().trim().max(100).optional(), // by UPI: the ID the payer saw
 });
 export type PayoutInput = z.infer<typeof payoutInputSchema>;
+
+/** Looks good, or Ask again (with a reason), on the UPI ID seen. */
+const seenUpi = z.string().trim().min(3).max(100);
+export const upiCheckInputSchema = z.discriminatedUnion('result', [
+  z.object({ result: z.literal('good'), upiId: seenUpi }),
+  z.object({
+    result: z.literal('again'),
+    upiId: seenUpi,
+    reason: z.string().trim().max(200).default(''),
+  }),
+]);
+export type UpiCheckInput = z.infer<typeof upiCheckInputSchema>;
 
 export const rejectInputSchema = z.object({
   reason: z.string().trim().min(3, 'Say why it is not approved.').max(300),

@@ -110,6 +110,79 @@ describe('WhatsApp webhook', () => {
     expect(incoming[3]).toMatchObject({ kind: 'other' });
   });
 
+  it('reads a location, a contact card and a sticker as words the chat can show', () => {
+    const from = '919000000101';
+    const { incoming } = readWebhook(
+      post({
+        messages: [
+          {
+            from,
+            id: 'm1',
+            type: 'location',
+            location: { latitude: 18.52, longitude: 73.85, name: 'Our roof', address: 'Pune' },
+          },
+          { from, id: 'm2', type: 'location', location: { latitude: 1.5, longitude: -2 } },
+          {
+            from,
+            id: 'm3',
+            type: 'contacts',
+            contacts: [
+              {
+                name: { formatted_name: 'Ravi Patil' },
+                phones: [{ phone: '+91 90000 00102' }],
+              },
+              { name: { formatted_name: 'No Number' } },
+            ],
+          },
+          { from, id: 'm4', type: 'sticker', sticker: { id: 'st-1' } },
+        ],
+      }),
+    );
+    expect(incoming[0]).toMatchObject({
+      kind: 'other',
+      text: '📍 Location: Our roof, Pune https://maps.google.com/?q=18.52,73.85',
+    });
+    expect(incoming[1]).toMatchObject({
+      kind: 'other',
+      text: '📍 Location: https://maps.google.com/?q=1.5,-2',
+    });
+    expect(incoming[2]).toMatchObject({
+      kind: 'other',
+      text: '👤 Contact: Ravi Patil +91 90000 00102\n👤 Contact: No Number',
+    });
+    expect(incoming[3]).toMatchObject({ kind: 'other', text: 'Sticker' });
+    const { incoming: odd } = readWebhook(
+      post({
+        messages: [
+          { from, id: 'm5', type: 'order' },
+          { from, id: 'm6', type: 'contacts' },
+        ],
+      }),
+    );
+    expect(odd.map((message) => message.text)).toEqual(['Message (order)', 'Message (contacts)']);
+  });
+
+  it('names a reaction and an unsupported message; a reaction is quiet', () => {
+    const from = '919000000101';
+    const { incoming } = readWebhook(
+      post({
+        messages: [
+          { from, id: 'r1', type: 'reaction', reaction: { message_id: 'w', emoji: '👍' } },
+          { from, id: 'r2', type: 'reaction', reaction: { message_id: 'w' } },
+          { from, id: 'r3', type: 'unsupported' },
+          { from, id: 'r4', type: 'sticker', sticker: { id: 's' } },
+        ],
+      }),
+    );
+    expect(incoming.map((message) => message.text)).toEqual([
+      'Reaction 👍',
+      'Reaction',
+      'Unsupported message',
+      'Sticker',
+    ]);
+    expect(incoming.map((message) => message.quiet === true)).toEqual([true, true, false, false]);
+  });
+
   it('reads delivery receipts and failures', () => {
     const { updates } = readWebhook(
       post({

@@ -158,12 +158,11 @@ describe('Who the onboarding bot talks to', () => {
   });
   afterAll(() => restore());
 
-  it('a customer saying "hi" gets the customer menu', async () => {
+  it('a customer saying "hi" gets the customer Home', async () => {
     const customer = await newCustomer(admin, { name: 'Onboard Menu Customer (test)' });
     await say(customer.phone, 'hi');
     const menu = await lastReply(customer.phone);
-    expect(menu?.kind).toBe('list');
-    expect(choices(menu)).toContain('progress');
+    expect(choices(menu)).toContain('go:more');
     expect((await chatOf(customer.phone)).ob).toBeNull();
   });
 
@@ -176,7 +175,11 @@ describe('Who the onboarding bot talks to', () => {
       nextActionOn: today(),
     });
     await say(phone, 'hi');
-    expect(choices(await lastReply(phone))).toEqual(OLD_BUTTONS);
+    // Their person is named; never "not linked to any customer" (redesign §16).
+    const hello = await lastReply(phone);
+    expect(hello?.body).toMatch(/^Hi Staff 👋 .+ from OneOhm is helping you\.$/);
+    expect(choices(hello)).toEqual(['human', 'ob:quick']);
+    expect(hello?.buttons?.[0]?.title).toMatch(/^Talk to /);
     await tap(phone, 'callback');
     expect(await leadsOf(phone)).toHaveLength(1);
     expect((await chatOf(phone)).ob).toBeNull();
@@ -214,6 +217,9 @@ describe('Who the onboarding bot talks to', () => {
     await say(phone, `Hi OneOhm, my referral code is ${code}`);
     const [lead] = await leadsOf(phone);
     expect(lead).toMatchObject({ source: 'referral', city: 'Not given' });
+    // A referral asks the language first (never English only) and the city it lacks.
+    expect((await chatOf(phone)).state).toBe('onboard:language');
+    await tap(phone, 'ob:language:en');
     expect((await chatOf(phone)).state).toBe('onboard:city');
     await tap(phone, 'ob:city:Pune');
     const [updated] = await leadsOf(phone);

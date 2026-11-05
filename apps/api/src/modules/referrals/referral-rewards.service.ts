@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { IncentiveFilter, PayoutInput, ReferralReward } from '@oneohm/api-contracts';
+import type {
+  IncentiveFilter,
+  PayoutInput,
+  ReferralReward,
+  UpiCheckInput,
+} from '@oneohm/api-contracts';
 import {
   customers,
   leads,
@@ -19,6 +24,9 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from './incentive-shared';
 import { evaluateReferralRewards } from './referral-evaluation';
 import { announceReward } from './referral-messages';
+import { checkedUpi, checkUpi } from './reward-upi';
+import { closePayoutAsks } from './reward-upi-ask';
+import { upiRows } from './reward-upi-rows';
 
 type Status = ReferralReward['status'];
 
@@ -49,8 +57,17 @@ export class ReferralRewardsService {
         ),
       )
       .orderBy(desc(referralRewards.earnedAt));
+    const upi = await upiRows(
+      this.db,
+      rows.map(({ reward }) => ({
+        id: reward.id,
+        paidUpiId: reward.paidUpiId,
+        customerId: reward.referrerCustomerId,
+      })),
+    );
     return rows.map(({ reward, referrer, friendName, projectCode, approver }) => ({
       id: reward.id,
+      upi: upi.get(reward.id) ?? { id: null, checked: false, ask: 'none' as const, paidTo: null },
       status: reward.status,
       amountPaise: reward.amountPaise,
       qualifyingEvent: reward.qualifyingEvent,
@@ -100,16 +117,27 @@ export class ReferralRewardsService {
     return this.get(id);
   }
 
+  async checkUpi(actor: Actor, id: string, input: UpiCheckInput): Promise<ReferralReward> {
+    await this.db.transaction((tx) => checkUpi(tx, actor, id, input));
+    return this.get(id);
+  }
+
   async pay(actor: Actor, id: string, input: PayoutInput): Promise<ReferralReward> {
     assertNotFuture(input.paidOn, 'paidOn');
-    await this.step(actor, id, 'approved', {
-      status: 'paid',
-      paidAt: new Date(),
-      paidOn: input.paidOn,
-      paidMethod: input.method,
-      paidReference: input.reference ?? null,
-      paidByUserId: actor.userId,
-    });
+    await this.step(
+      actor,
+      id,
+      'approved',
+      {
+        status: 'paid',
+        paidAt: new Date(),
+        paidOn: input.paidOn,
+        paidMethod: input.method,
+        paidReference: input.reference ?? null,
+        paidByUserId: actor.userId,
+      },
+      input.upiId,
+    );
     return this.get(id);
   }
 
@@ -119,14 +147,24 @@ export class ReferralRewardsService {
     id: string,
     from: Status,
     change: Partial<typeof referralRewards.$inferInsert> & { status: Status },
+    upiSeen?: string | null,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
+      // Paid by UPI: only to a UPI ID staff checked, and the ID the money went to is kept on the reward.
+      const paidUpi =
+        change.status === 'paid' && change.paidMethod === 'upi'
+          ? { paidUpiId: await checkedUpi(tx, id, upiSeen) }
+          : {};
       const [updated] = await tx
         .update(referralRewards)
-        .set({ ...change, updatedAt: new Date() })
+        .set({ ...change, ...paidUpi, updatedAt: new Date() })
         .where(and(eq(referralRewards.id, id), eq(referralRewards.status, from)))
-        .returning({ amountPaise: referralRewards.amountPaise });
+        .returning({
+          amountPaise: referralRewards.amountPaise,
+          customerId: referralRewards.referrerCustomerId,
+        });
       if (!updated) throw await this.notReady(id, from);
+      if (change.status !== 'approved') await closePayoutAsks(tx, updated.customerId, actor.userId);
       if (change.status === 'approved') {
         await postIncentiveApproved(tx, 'referral_reward', id, actor.userId);
       }

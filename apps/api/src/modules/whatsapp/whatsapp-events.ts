@@ -1,45 +1,8 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { formText, type IncomingForm, readForm } from './forms/form-reply-data';
+import { type IncomingLocation, readLocation, readOther } from './incoming-other';
 
-/** Meta signs each webhook post: `sha256=` and the HMAC of the raw body with the app secret. */
-export function verifyMetaSignature(
-  rawBody: Buffer,
-  header: string | undefined,
-  secret: string,
-): boolean {
-  if (!header?.startsWith('sha256=')) return false;
-  const expected = Buffer.from(createHmac('sha256', secret).update(rawBody).digest('hex'));
-  const given = Buffer.from(header.slice('sha256='.length));
-  return expected.length === given.length && timingSafeEqual(expected, given);
-}
-
-/**
- * Who may post to the webhook. With the app secret, every post must carry Meta's
- * signature. Until the secret is known, a long random key in the URL stands in: it is
- * weaker (anyone holding the link could post), so the secret always wins once set.
- */
-export function webhookAccess(
-  settings: { readonly appSecret?: string | undefined; readonly pathKey?: string | undefined },
-  request: {
-    readonly key?: string | undefined;
-    readonly rawBody?: Buffer | undefined;
-    readonly signature?: string | undefined;
-  },
-): 'ok' | 'not_found' | 'bad_signature' {
-  if (settings.appSecret) {
-    if (!request.rawBody) return 'bad_signature';
-    return verifyMetaSignature(request.rawBody, request.signature, settings.appSecret)
-      ? 'ok'
-      : 'bad_signature';
-  }
-  if (settings.pathKey && request.key && sameText(settings.pathKey, request.key)) return 'ok';
-  return 'not_found';
-}
-
-function sameText(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  return left.length === right.length && timingSafeEqual(left, right);
-}
+export type { IncomingLocation } from './incoming-other';
+export { verifyMetaSignature, webhookAccess } from './webhook-access';
 
 /** A photo, paper, video or voice note the customer sent; WhatsApp keeps it under `id`. */
 export interface IncomingMedia {
@@ -55,11 +18,19 @@ export interface Incoming {
   readonly at: Date;
   readonly profileName: string | null;
   /** `choice` is a tap on a button or list row; its id is in `choiceId`. */
-  readonly kind: 'text' | 'choice' | 'media' | 'other';
+  readonly kind: 'text' | 'choice' | 'media' | 'form' | 'other';
   readonly text: string;
   readonly choiceId: string | null;
+  /** Set on a `form` message: our token and the files. */
+  readonly form?: IncomingForm | null;
   /** Set on `media` messages that carry a downloadable file. */
   readonly media?: IncomingMedia | null;
+  /** Set on a location pin: the point (and the place's name or address, when WhatsApp gives them). */
+  readonly location?: IncomingLocation | null;
+  /** Set on a message the chat shows but nobody is alerted to (a reaction). */
+  readonly quiet?: boolean;
+  /** Set on a message WhatsApp could not pass on (type `unsupported`): answered once per burst. */
+  readonly unsupported?: boolean;
   /** Set when the chat was opened from a Meta click-to-WhatsApp ad. */
   readonly referral?: IncomingReferral | null;
 }
@@ -89,12 +60,16 @@ interface RawMessage {
   interactive?: {
     button_reply?: { id?: string; title?: string };
     list_reply?: { id?: string; title?: string };
+    nfm_reply?: { name?: string; body?: string; response_json?: string };
   };
   button?: { payload?: string; text?: string };
   image?: RawMedia;
   document?: RawMedia & { filename?: string };
   video?: RawMedia;
   audio?: RawMedia;
+  location?: { latitude?: number; longitude?: number; name?: string; address?: string };
+  contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string }[] }[];
+  reaction?: { emoji?: string };
   referral?: { source_id?: string; source_url?: string; headline?: string };
 }
 
@@ -158,6 +133,10 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
   const reply = message.interactive?.button_reply ?? message.interactive?.list_reply;
   if (reply?.id)
     return { ...base, kind: 'choice', text: reply.title ?? reply.id, choiceId: reply.id };
+  if (message.interactive?.nfm_reply) {
+    const form = readForm(message.interactive.nfm_reply.response_json);
+    return { ...base, kind: 'form', text: formText(form), choiceId: null, form };
+  }
   if (message.button?.payload)
     return {
       ...base,
@@ -182,7 +161,16 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
       choiceId: null,
       media,
     };
-  return { ...base, kind: 'other', text: '', choiceId: null };
+  const location = readLocation(message);
+  return {
+    ...base,
+    kind: 'other',
+    text: readOther(message),
+    choiceId: null,
+    ...(location ? { location } : {}),
+    ...(message.type === 'reaction' ? { quiet: true } : {}),
+    ...(message.type === 'unsupported' ? { unsupported: true } : {}),
+  };
 }
 
 const STATUSES = new Set(['sent', 'delivered', 'read', 'failed']);

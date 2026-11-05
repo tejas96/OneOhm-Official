@@ -10,7 +10,7 @@ import type { ChatReply } from '../chat-store';
 import { ONBOARD_LISTS } from '../onboarding/onboard-words';
 import { laterQuestion, question } from '../onboarding/onboarding-replies';
 import { assistantLanguage, inLanguage } from './language';
-import { EN, MEDIA_WORDS, MENU_ROWS, RATINGS, WORDS } from './words';
+import { EN, MEDIA_WORDS, RATINGS, WORDS } from './words';
 import { HI } from './words-hi';
 import { MR } from './words-mr';
 
@@ -19,20 +19,14 @@ const LISTS = { en: EN, mr: MR, hi: HI };
 describe('assistant words in three languages', () => {
   it('answers in the language of the message being handled', async () => {
     expect(await inLanguage('mr', async () => WORDS.menuButton)).toBe('निवडा');
-    expect(await inLanguage('hi', async () => MENU_ROWS[0]?.title)).toBe('प्रोजेक्ट की प्रगति');
     expect(await inLanguage('en', async () => WORDS.menuButton)).toBe('Choose');
     expect(WORDS.menuButton).toBe('Choose');
-  });
-
-  it('keeps the same menu choices, in the same order, in every language', () => {
-    for (const words of [MR, HI])
-      expect(words.MENU_ROWS.map((row) => row.id)).toEqual(EN.MENU_ROWS.map((row) => row.id));
   });
 
   // WhatsApp refuses a list row title over 24, a description over 72, a button over 20.
   it('fits WhatsApp’s limits in every language', () => {
     for (const [language, words] of Object.entries(LISTS)) {
-      for (const row of [...words.MENU_ROWS, ...words.RATINGS]) {
+      for (const row of words.RATINGS) {
         expect(row.title.length, `${language} ${row.title}`).toBeLessThanOrEqual(24);
         expect(row.description.length, `${language} ${row.description}`).toBeLessThanOrEqual(72);
       }
@@ -42,7 +36,6 @@ describe('assistant words in three languages', () => {
         words.WORDS.menuButton,
         words.WORDS.quoteYes,
         words.WORDS.quoteNotYet,
-        words.MEDIA_WORDS.reportProblem,
         words.MEDIA_WORDS.talkToPerson,
       ])
         expect(button.length, `${language} ${button}`).toBeLessThanOrEqual(20);
@@ -59,22 +52,8 @@ describe('assistant words in three languages', () => {
   it('is a working list in Marathi for ratings and media', async () => {
     await inLanguage('mr', async () => {
       expect(RATINGS.map((rating) => rating.id)).toEqual(EN.RATINGS.map((rating) => rating.id));
-      expect(MEDIA_WORDS.ask('फोटो')).toContain('फोटो');
+      expect(MEDIA_WORDS.photoAdded).not.toBe(EN.MEDIA_WORDS.photoAdded);
     });
-  });
-});
-
-describe('hand-over and night words', () => {
-  it('names the person in every language, and falls back to the team', () => {
-    for (const words of [EN, MR, HI]) {
-      expect(words.WORDS.passedToOwner('Asha')).toContain('Asha');
-      expect(words.WORDS.nightReply('Asha')).toContain('Asha');
-      expect(words.WORDS.passedToOwner(null)).not.toContain('null');
-      expect(words.WORDS.nightReply(null)).not.toContain('null');
-    }
-    // A named person takes the respectful plural in Marathi (live review C15).
-    expect(MR.WORDS.passedToOwner('Bharat')).toBe('धन्यवाद. Bharat तुम्हाला इथेच उत्तर देतील.');
-    expect(MR.WORDS.passedToOwner(null)).toBe('धन्यवाद. आमची टीम तुम्हाला इथेच उत्तर देईल.');
   });
 });
 
@@ -125,9 +104,14 @@ describe('onboarding questions', () => {
       for (const { step, reply } of await allQuestions(language)) {
         fits(reply, `${language} ${step}`);
         if (step === 'language') continue;
-        // The estimate's buttons keep "Talk to a person" in the middle.
+        // The estimate's three buttons are Book a visit, Call me and Not now (a person follows each).
         const offered = choicesOf(reply).map((choice) => choice.id);
-        if (step === 'done') expect(offered, `${language} done`).toContain('ob:person');
+        if (step === 'done')
+          expect(offered, `${language} done`).toEqual([
+            'ob:done:visit',
+            'ob:done:call',
+            'ob:done:notnow',
+          ]);
         else expect(offered.at(-1), `${language} ${step}`).toBe('ob:person');
       }
   });
@@ -142,11 +126,11 @@ describe('onboarding questions', () => {
       const size = '1000 panels (545.45 kW)';
       const caption = words.estimateCaption(size, '₹10,00,00,000', '₹10,00,00,000', '₹10,00,000');
       expect(caption.length, `${language} caption`).toBeLessThanOrEqual(1024);
-      expect(words.willCall('Asha', false)).toContain('Asha');
-      expect(words.willCall(null, true)).not.toBe(words.willCall(null, false));
+      expect(words.willCall('Asha', 'today')).toContain('Asha');
+      expect(words.willCall(null, 'tomorrow')).not.toBe(words.willCall(null, 'today'));
     }
-    expect(ONBOARD_LISTS.en.willCall('Asha', false)).toBe('Thank you. Asha will call you today.');
-    expect(ONBOARD_LISTS.en.willCall('Asha', true)).toBe(
+    expect(ONBOARD_LISTS.en.willCall('Asha', 'today')).toBe('Thank you. Asha will call you today.');
+    expect(ONBOARD_LISTS.en.willCall('Asha', 'tomorrow')).toBe(
       'Thank you. Asha will call you tomorrow morning.',
     );
     expect(ONBOARD_LISTS.en.estimateCaption('3 kW', '₹1', '₹1', '₹1')).toContain(

@@ -62,3 +62,35 @@ export async function quotedSteps(
     .limit(1);
   return readQuotedTerms(row?.snapshot)?.steps ?? planSteps(db, null);
 }
+
+/** The "what changed" line the team wrote when sending a revision, or null (kept in the quote's snapshot). */
+export async function changeNoteOf(
+  db: DatabaseExecutor,
+  quotationId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ snapshot: quotations.snapshot })
+    .from(quotations)
+    .where(eq(quotations.id, quotationId))
+    .limit(1);
+  const note = (row?.snapshot as Snapshot | null)?.changeNote;
+  return typeof note === 'string' && note.trim() ? note.trim() : null;
+}
+
+/** Keeps the "what changed" line on the quote (empty clears it). */
+export async function saveChangeNote(
+  db: DatabaseExecutor,
+  quotationId: string,
+  note: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ snapshot: quotations.snapshot })
+    .from(quotations)
+    .where(eq(quotations.id, quotationId))
+    .limit(1);
+  const { changeNote: _old, ...rest } = ((row?.snapshot as Snapshot | null) ?? {}) as Snapshot;
+  await db
+    .update(quotations)
+    .set({ snapshot: note.trim() ? { ...rest, changeNote: note.trim() } : rest })
+    .where(eq(quotations.id, quotationId));
+}

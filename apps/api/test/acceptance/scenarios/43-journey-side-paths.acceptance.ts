@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import * as J from '../support/journey';
-import { NIGHT, NOON, nudgesTo, runNudges, silentFor } from '../support/nudges';
+import { NIGHT, NOON, NUDGE_DAY, nudgesTo, runNudges, silentFor } from '../support/nudges';
 import {
   chatOf,
   choices,
@@ -104,7 +104,7 @@ describe('The journey side paths in the chat', () => {
     const owner = (await J.leadState(leadId)).owner_user_id;
     expect((await handOverAlerts(chat.id)).map((alert) => alert.user_id)).toContain(owner);
     const reply = await lastReply(phone);
-    expect(reply?.body).toContain('will reply to you here');
+    expect(reply?.body).toContain('will reply here');
     expect(reply?.body).not.toContain('did not get that');
   });
 
@@ -147,7 +147,7 @@ describe('The journey side paths in the chat', () => {
     expect(await nudgesTo(phone)).toHaveLength(1);
     const [lead] = await leadsOf(phone);
     expect(lead).toMatchObject({
-      next_action_on: today(),
+      next_action_on: NUDGE_DAY,
       next_action_note: 'Call — stopped at site question',
     });
   });

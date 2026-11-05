@@ -1,7 +1,7 @@
 import { distanceMeters, type GeoPoint } from './attendance';
 
-/** Where a saved site location came from. */
-export const LOCATION_SOURCES = ['gps', 'map_pin', 'address', 'typed'] as const;
+/** Where a saved site location came from; `whatsapp_pin` is the pin a customer sent in the chat. */
+export const LOCATION_SOURCES = ['gps', 'map_pin', 'address', 'typed', 'whatsapp_pin'] as const;
 export type LocationSource = (typeof LOCATION_SOURCES)[number];
 
 /**

@@ -1,6 +1,7 @@
 import {
   customers,
   type DatabaseExecutor,
+  homeNameOf,
   paymentMilestones,
   payments,
   projects,
@@ -9,6 +10,8 @@ import { finalCustomerMilestones, milestoneDueNotice } from '@oneohm/domain';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { queueWhatsApp } from '../../common/outbox';
 import { environmentOnce } from '../../config/environment-once';
+import { mayChat, send } from '../journey/auto-messages';
+import { paymentAsk } from '../send-to-customer/send-messages';
 import { payNowPayload } from './pay-now-message';
 
 /**
@@ -62,13 +65,37 @@ export async function tellCustomerMilestonesDue(
       milestoneLabel: milestone.label,
       owedPaise: notice.owedPaise,
     });
+    const key = `milestone_due:${milestone.id}`;
+    // Inside the 24-hour window: the chat message with [Pay ₹X] [I paid another way] (redesign §19).
+    if (await mayChat(db, customer.phone, notice.message)) {
+      const home = await homeNameOf(db, project.id, null);
+      const online = env.RAZORPAY_MODE !== 'off';
+      await send(db, customer, {
+        template: notice.message,
+        payload,
+        key,
+        reply: async () => {
+          const ask = paymentAsk('reminder', {
+            customer: customer.name,
+            leftPaise: notice.owedPaise,
+            home,
+            milestoneId: milestone.id,
+            online,
+          });
+          const [reply] = ask.replies;
+          if (!reply) throw new Error('payment ask without a chat message');
+          return reply;
+        },
+      });
+      continue;
+    }
     // Only the pay-link template carries the link itself; the others keep the token.
     await queueWhatsApp(
       db,
       customer.phone,
       notice.message,
       notice.message === 'payment_link' ? payload : withoutLink(payload),
-      `milestone_due:${milestone.id}`,
+      key,
     );
   }
 }

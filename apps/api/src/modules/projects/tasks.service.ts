@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ProjectTask } from '@oneohm/api-contracts';
 import { projectActivities, projectFacts, projectTasks } from '@oneohm/database';
 import { factLabel, measurementsFor, type WaitingParty } from '@oneohm/domain';
-import { and, eq, ne, or } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
@@ -11,12 +11,14 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { ReportArchiveService } from '../reports/report-archive.service';
+import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
+import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked, checkedConsumerNumber } from './task-guards';
-import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
+import { tellCustomerAbout, waitStarted } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
 import { closeOpenWait, nextWaitStart } from './task-waits';
@@ -36,6 +38,7 @@ export class TasksService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly budget: BudgetCheckService,
     private readonly archive: ReportArchiveService,
+    private readonly stale: StalePaperAsksService,
   ) {}
 
   /**
@@ -87,7 +90,8 @@ export class TasksService {
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
     // Only the first start counts; resuming after a wait does not message again.
-    if (!task.startedAt) await tellCustomerAbout(this.db, task, 'started');
+    if (!task.startedAt)
+      await Promise.all([tellCustomerAbout(this.db, task, 'started'), this.stale.afterStart(task)]);
     return this.present(id);
   }
 
@@ -120,7 +124,7 @@ export class TasksService {
       if (party === 'internal' && task.status !== 'waiting') await tellHelpAsked(tx, task, actor);
       // The customer hears about a new wait on someone outside OneOhm (PRD 5.2), once per wait.
       if (task.status !== 'waiting' || task.waitingParty !== party)
-        await tellCustomerWaiting(tx, task, party);
+        await waitStarted(tx, task, party);
     });
     return this.present(id);
   }
@@ -207,19 +211,17 @@ export class TasksService {
 
   async assign(actor: Actor, id: string, userId: string | null): Promise<ProjectTask> {
     assertCan(actor, 'tasks.assign');
-    const [task] = await this.db
-      .select()
-      .from(projectTasks)
-      .where(eq(projectTasks.id, id))
-      .limit(1);
+    const [task] = await this.db.select().from(projectTasks).where(eq(projectTasks.id, id));
     if (!task) throw notFound('That task');
     await this.db.transaction(async (tx) => {
+      await lockVisitTarget(tx, { taskId: id });
       await tx
         .update(projectTasks)
         .set({ assigneeUserId: userId, updatedAt: new Date() })
         .where(eq(projectTasks.id, id));
       // A task given to a contractor's crew joins that contractor's work order.
       await syncWorkOrders(tx, task.projectId, actor.userId);
+      await followAssignee(tx, { taskId: id }, userId, actor.userId);
       await recordAudit(tx, actor.userId, 'task.assigned', 'task', id, { userId });
       await tellAssignee(tx, task, userId, actor.userId);
     });
@@ -240,10 +242,7 @@ export class TasksService {
   }
 
   private async present(id: string): Promise<ProjectTask> {
-    const [task] = await presentTasks(
-      this.db,
-      or(eq(projectTasks.id, id)) ?? eq(projectTasks.id, id),
-    );
+    const [task] = await presentTasks(this.db, eq(projectTasks.id, id));
     if (!task) throw notFound('That task');
     return task;
   }

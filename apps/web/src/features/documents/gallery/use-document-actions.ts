@@ -1,9 +1,9 @@
 'use client';
 
-import type { DocumentRecord } from '@oneohm/api-contracts';
+import type { DocumentRecord, MoveDocument } from '@oneohm/api-contracts';
 import { useToast } from '@oneohm/design-system/web';
 import type { DocumentCategory } from '@oneohm/domain';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
@@ -74,5 +74,25 @@ export function useRemoveDocument(onRemoved: () => void) {
     },
     onError: (error) =>
       toast({ tone: 'error', title: t('removeFailed'), description: describeError(error) }),
+  });
+}
+
+/**
+ * Files the paper on another home or kind. Requests and checklists of every project may
+ * change (a request it answered is asked again), so they are read again.
+ */
+export function useMoveDocument(onMoved: (document: DocumentRecord) => void) {
+  const t = useTranslations('documents.gallery.move');
+  const toast = useToast();
+  const client = useQueryClient();
+  const refresh = useRefreshDocuments();
+  return useMutation({
+    mutationFn: ({ id, body }: { readonly id: string; readonly body: MoveDocument }) =>
+      expectStatus(api.documents.moveDocument({ params: { id }, body }), 200),
+    onSuccess: async (document) => {
+      await Promise.all([refresh(), client.invalidateQueries({ queryKey: ['projects'] })]);
+      onMoved(document);
+      toast({ tone: 'success', title: t('moved'), description: titleOf(document.name) });
+    },
   });
 }

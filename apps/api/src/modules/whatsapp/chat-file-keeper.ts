@@ -1,39 +1,43 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { documents, leads, projectActivities, waMessages } from '@oneohm/database';
-import { EVIDENCE_FILE_TYPES } from '@oneohm/domain';
+import { type DatabaseExecutor, leads, waConversations, waMessages } from '@oneohm/database';
+import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
 import { desc, eq } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { logLead } from '../crm/lead-history';
-import { activeHomes } from '../customer-portal/active-projects';
-import { storageScope } from '../documents/document-links';
+import { customerHomes } from '../customer-portal/customer-homes';
 import { ObjectStorageService } from '../documents/object-storage.service';
-import { checkFile } from '../documents/upload-file';
+import { type CheckedFile, checkFile } from '../documents/upload-file';
+import { filesWaitOf } from './assistant/files-wait';
+import { placeOn } from './assistant/kept-files';
+import {
+  answersSomething,
+  isFiled,
+  keptFile,
+  leftToSort,
+  storedBefore,
+  whatsappFileScope,
+} from './chat-files-kept';
 import { tellChatTeam } from './chat-owner';
 import { type Conversation, linkChatFile } from './chat-store';
-import { type MediaGateway, WHATSAPP_MEDIA } from './media-gateway';
+import { FILE_WORDS, filePaper } from './file-paper';
+import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from './media-gateway';
 import type { Incoming, IncomingMedia } from './whatsapp-events';
 
-/** How a file is named in the team's alerts and the project log. */
-export const FILE_WORDS: Readonly<Record<IncomingMedia['type'], string>> = {
-  image: 'a photo',
-  document: 'a document',
-  video: 'a video',
-  audio: 'a voice note',
-};
-
 /**
- * The safety net for files a customer sends on WhatsApp. The assistant files some of them
- * itself (an asked-for paper, a problem photo, a lead's bill). Any file still not filed
- * after the assistant has answered — a voice note, a video, a file sent while a person
- * has the chat — is kept here under Documents, on the customer's newest project or on
- * their lead. The chat message then shows it, the project log says so, and the team hears.
- * It never throws: a failure is logged and the team is told, so no file goes silent.
+ * Every file a customer sends on WhatsApp is stored once, here. A customer's file is kept
+ * the moment it arrives, before the assistant answers, under the customer with no home
+ * yet; the assistant then only files that same document (an asked-for paper, a problem
+ * photo). Whatever no flow filed is put on its home after the answer, or left to sort
+ * (`settle`). A lead's file is kept after the answer on their lead, unless onboarding
+ * filed it. It never throws: a failure is logged and the team is told, so no file goes silent.
  */
 @Injectable()
 export class ChatFileKeeper {
   private readonly log = new Logger('WhatsApp');
+  /** Files just refused, so the assistant can tell the customer why (said once, and true). */
+  private readonly refused = new Map<string, 'too_large' | 'wrong_type' | 'empty'>();
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -41,110 +45,189 @@ export class ChatFileKeeper {
     private readonly storage: ObjectStorageService,
   ) {}
 
-  async keep(chat: Conversation, message: Incoming): Promise<void> {
+  /** Stores the message's file; its document id, or null when it was not kept. */
+  async keep(chat: Conversation, message: Incoming): Promise<string | null> {
     const media = message.media;
-    if (!media) return;
+    if (!media) return null;
     try {
-      await this.file(chat, message, media);
+      const [row] = await this.db
+        .select({ documentId: waMessages.documentId })
+        .from(waMessages)
+        .where(eq(waMessages.waMessageId, message.waMessageId));
+      // Already kept (or filed by onboarding): nothing to do.
+      if (!row || row.documentId) return row?.documentId ?? null;
+      return chat.customerId
+        ? await this.storeForCustomer(chat, message, media, chat.customerId)
+        : await this.fileOnLead(chat, message, media);
     } catch (error) {
       this.log.error(`WhatsApp file ${media.id} not kept: ${String(error)}`);
       await this.tellLost(chat, message, media).catch((alert) =>
         this.log.error(`Could not alert about lost file ${media.id}: ${String(alert)}`),
       );
+      return null;
     }
   }
 
-  private async file(chat: Conversation, message: Incoming, media: IncomingMedia) {
-    const [row] = await this.db
-      .select({ documentId: waMessages.documentId })
-      .from(waMessages)
-      .where(eq(waMessages.waMessageId, message.waMessageId));
-    // Already filed by the assistant (or by an earlier try): nothing to do.
-    if (!row || row.documentId) return;
-    const home = await this.homeOf(chat);
-    if (!home) {
-      // A new number with no lead yet: onboarding holds its bill until the lead is made.
-      this.log.log(`WhatsApp file ${media.id} from ${chat.phone} waits: no customer or lead.`);
-      return;
-    }
-    const download = await this.gateway.download(media);
-    let checked: ReturnType<typeof checkFile>;
+  /** Why `keep` refused this file (once): too big, or a kind we cannot open; null if neither. */
+  refusalFor(mediaId: string): 'too_large' | 'wrong_type' | 'empty' | null {
+    const why = this.refused.get(mediaId) ?? null;
+    this.refused.delete(mediaId);
+    return why;
+  }
+
+  /**
+   * After the assistant answered: a voice note or video goes on the customer's one home
+   * (else it stays "To sort" and the chat's person is told once). A photo or paper waits
+   * for "What is this?" and says nothing yet: the "Files to sort" alert covers it if it is
+   * never answered. A file the assistant filed without answering a request is told once.
+   * Never throws.
+   */
+  async settle(chat: Conversation, message: Incoming): Promise<void> {
+    const media = message.media;
+    if (!media || !chat.customerId) return;
     try {
-      checked = checkFile(
-        { originalname: download.fileName, size: download.buffer.length, buffer: download.buffer },
-        EVIDENCE_FILE_TYPES,
-      );
-    } catch (error) {
-      if (!(error instanceof AppError)) throw error;
-      this.log.warn(`WhatsApp file ${media.id} refused: ${error.message}`);
-      return this.tellLost(chat, message, media, error.message);
-    }
-    const scope = home.leadId ? `leads/${home.leadId}` : storageScope(home);
-    const storageKey = `${scope}/whatsapp/${randomUUID()}/${checked.keyName}`;
-    await this.storage.put(storageKey, checked.buffer, checked.contentType);
-    const what = FILE_WORDS[media.type];
-    try {
+      const [row] = await this.db
+        .select({ documentId: waMessages.documentId })
+        .from(waMessages)
+        .where(eq(waMessages.waMessageId, message.waMessageId));
+      const documentId = row?.documentId;
+      // An answered paper or a problem photo: the asker or the complaint's people hear.
+      if (!documentId || (await answersSomething(this.db, documentId))) return;
+      // Filed by the assistant already (saved on a home).
+      if (await isFiled(this.db, documentId))
+        return await this.tellKept(this.db, chat, message, media);
+      // Only a voice note or video goes on the customer's one home, since nothing asks about it.
+      const sound = media.type === 'audio' || media.type === 'video';
+      if (!sound) return;
+      // A video sent while a problem is open waits for "Are these for your problem?" like a photo.
+      if (media.type === 'video' && (await this.waitsForQuestion(chat.id, documentId))) return;
+      const homes = await customerHomes(this.db, chat.customerId);
+      const [only] = homes;
+      const place = homes.length === 1 && only ? placeOn(homes, only.propertyId, 'other') : null;
       await this.db.transaction(async (tx) => {
-        const [document] = await tx
-          .insert(documents)
-          .values({
-            customerId: home.customerId,
-            projectId: home.projectId,
-            leadId: home.leadId,
-            category: 'other',
-            source: 'upload',
-            name: checked.name,
-            storageKey,
-            contentType: checked.contentType,
-            sizeBytes: checked.buffer.length,
-          })
-          .returning({ id: documents.id });
-        if (!document) throw new Error('Document insert returned nothing');
-        await linkChatFile(tx, media.id, document.id);
-        if (home.projectId)
-          await tx.insert(projectActivities).values({
-            projectId: home.projectId,
-            kind: 'whatsapp_file',
-            message: `Customer sent ${what} on WhatsApp: ${checked.name}`,
-            data: { documentId: document.id },
-          });
-        if (home.leadId)
-          await logLead(tx, home.leadId, null, 'whatsapp', `Customer sent ${what} on WhatsApp`);
-        // A voice note or video already reached a person through the hand-over alert.
-        const handedOver =
-          chat.state !== 'human' && (media.type === 'audio' || media.type === 'video');
-        if (!handedOver)
-          await tellChatTeam(tx, chat, {
-            kind: 'whatsapp_message',
-            title: `WhatsApp from ${chat.profileName ?? chat.phone}`,
-            body: `Sent ${what}. Saved in Documents.`,
-            // The same key as the "customer wrote" alert, so the person hears once.
-            key: `wa_in:${message.waMessageId}`,
-          });
+        if (place) await filePaper(tx, documentId, place);
+        await this.tellKept(tx, chat, message, media, leftToSort(place, true));
       });
     } catch (error) {
-      await this.storage.remove(storageKey).catch(() => undefined);
-      throw error;
+      this.log.error(`WhatsApp file ${media.id} not filed: ${String(error)}`);
+      await tellChatTeam(this.db, chat, {
+        kind: 'whatsapp_file_failed',
+        title: 'WhatsApp file not filed',
+        body: `${chat.profileName ?? chat.phone} sent ${FILE_WORDS[media.type]}. It is in their Documents, but could not be put on their home.`,
+        key: `wa_file_unfiled:${message.waMessageId}`,
+      }).catch((alert) => this.log.error(`Could not alert about ${media.id}: ${String(alert)}`));
     }
   }
 
-  /** Where the file belongs: the customer's newest active project, else their lead. */
-  private async homeOf(chat: Conversation): Promise<{
-    customerId: string | null;
-    projectId: string | null;
-    leadId: string | null;
-  } | null> {
-    if (chat.customerId) {
-      const [newest] = await activeHomes(this.db, chat.customerId);
-      return { customerId: chat.customerId, projectId: newest?.id ?? null, leadId: null };
+  /** Whether the chat's "What is this?" wait holds this file (read fresh: the answer may have changed it). */
+  private async waitsForQuestion(chatId: string, documentId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ context: waConversations.context })
+      .from(waConversations)
+      .where(eq(waConversations.id, chatId));
+    return filesWaitOf(row?.context)?.files.some((file) => file.id === documentId) ?? false;
+  }
+
+  /** Under the customer, no home yet; Meta's retry of the same file finds it again. */
+  private async storeForCustomer(
+    chat: Conversation,
+    message: Incoming,
+    media: IncomingMedia,
+    customerId: string,
+  ): Promise<string | null> {
+    const scope = whatsappFileScope(customerId, media.id);
+    const earlier = await storedBefore(this.db, customerId, media.id);
+    if (earlier) {
+      await linkChatFile(this.db, media.id, earlier.id);
+      return earlier.id;
     }
+    const checked = await this.download(chat, message, media);
+    if (!checked) return null;
+    return keptFile(this.db, this.storage, media.id, `${scope}${checked.keyName}`, checked, {
+      customerId,
+    });
+  }
+
+  /** A lead's file, on their lead, after the assistant (onboarding files its own bills). */
+  private async fileOnLead(chat: Conversation, message: Incoming, media: IncomingMedia) {
     const [lead] = await this.db
       .select({ id: leads.id })
       .from(leads)
       .where(eq(leads.phoneE164, chat.phone))
       .orderBy(desc(leads.createdAt))
       .limit(1);
-    return lead ? { customerId: null, projectId: null, leadId: lead.id } : null;
+    if (!lead) {
+      // A new number with no lead yet: onboarding holds its bill until the lead is made.
+      this.log.log(`WhatsApp file ${media.id} from ${chat.phone} waits: no customer or lead.`);
+      return null;
+    }
+    const checked = await this.download(chat, message, media);
+    if (!checked) return null;
+    const storageKey = `leads/${lead.id}/whatsapp/${randomUUID()}/${checked.keyName}`;
+    return keptFile(this.db, this.storage, media.id, storageKey, checked, {
+      leadId: lead.id,
+      alsoDo: async (tx) => {
+        const what = FILE_WORDS[media.type];
+        await logLead(tx, lead.id, null, 'whatsapp', `Customer sent ${what} on WhatsApp`);
+        await this.tellKept(tx, chat, message, media);
+      },
+    });
+  }
+
+  /** The file from WhatsApp, checked; null (after telling the team) when it is refused. */
+  private async download(
+    chat: Conversation,
+    message: Incoming,
+    media: IncomingMedia,
+  ): Promise<CheckedFile | null> {
+    let download: Awaited<ReturnType<MediaGateway['download']>>;
+    try {
+      download = await this.gateway.download(media);
+    } catch (error) {
+      if (error instanceof MediaTooLargeError) {
+        this.refuse(media.id, 'too_large');
+      }
+      throw error;
+    }
+    try {
+      return checkFile(
+        { originalname: download.fileName, size: download.buffer.length, buffer: download.buffer },
+        WHATSAPP_FILE_TYPES,
+      );
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      this.log.warn(`WhatsApp file ${media.id} refused: ${error.message}`);
+      const why = error.fieldErrors?.file;
+      this.refuse(
+        media.id,
+        why === 'Too large.' ? 'too_large' : why === 'Required.' ? 'empty' : 'wrong_type',
+      );
+      await this.tellLost(chat, message, media, error.message);
+      return null;
+    }
+  }
+
+  private refuse(mediaId: string, why: 'too_large' | 'wrong_type' | 'empty') {
+    if (this.refused.size > 100) this.refused.clear();
+    this.refused.set(mediaId, why);
+  }
+
+  private tellKept(
+    tx: DatabaseExecutor,
+    chat: Conversation,
+    message: Incoming,
+    media: IncomingMedia,
+    toSort = false,
+  ) {
+    // A voice note or video already reached a person through the hand-over alert.
+    if (chat.state !== 'human' && (media.type === 'audio' || media.type === 'video')) return;
+    return tellChatTeam(tx, chat, {
+      kind: 'whatsapp_message',
+      title: `WhatsApp from ${chat.profileName ?? chat.phone}`,
+      body: `Sent ${FILE_WORDS[media.type]}. Saved in Documents${toSort ? ', to sort: no home yet' : ''}.`,
+      // The same key as the "customer wrote" alert, so the person hears once.
+      key: `wa_in:${message.waMessageId}`,
+    });
   }
 
   private tellLost(chat: Conversation, message: Incoming, media: IncomingMedia, why?: string) {

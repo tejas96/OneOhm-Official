@@ -30,11 +30,12 @@ export interface OpenLead {
   readonly id: string;
   readonly name: string;
   readonly city: string;
+  readonly ownerUserId: string | null;
 }
 
 export async function openLeadFor(db: DatabaseExecutor, phone: string): Promise<OpenLead | null> {
   const [lead] = await db
-    .select({ id: leads.id, name: leads.name, city: leads.city })
+    .select({ id: leads.id, name: leads.name, city: leads.city, ownerUserId: leads.ownerUserId })
     .from(leads)
     .where(and(eq(leads.phoneE164, phone), notInArray(leads.stage, ['won', 'lost'])))
     .limit(1);

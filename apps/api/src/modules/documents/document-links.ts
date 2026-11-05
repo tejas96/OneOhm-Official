@@ -52,6 +52,20 @@ async function fromProject(db: DatabaseExecutor, projectId: string, customerId: 
   return project;
 }
 
+/** The home a project is on; null for no project. */
+export async function propertyOfProject(
+  db: DatabaseExecutor,
+  projectId: string | null,
+): Promise<string | null> {
+  if (!projectId) return null;
+  const [project] = await db
+    .select({ propertyId: projects.propertyId })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  return project?.propertyId ?? null;
+}
+
 async function assertCustomer(db: DatabaseExecutor, customerId: string): Promise<void> {
   const [customer] = await db
     .select({ id: customers.id })

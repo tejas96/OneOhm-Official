@@ -30,6 +30,8 @@ interface Draft {
   /** Every folder that counts; the built-in survey paper uses two. */
   categories: DocumentCategory[];
   fromCustomer: boolean;
+  /** Days, as typed; empty means no limit. */
+  maxAge: string;
   rule: NonNullable<Rule>;
   discomCodes: string[];
 }
@@ -39,6 +41,7 @@ const draftOf = (item: DocumentRequirementRecord | null): Draft => ({
   why: item?.why ?? '',
   categories: item ? [...item.categories] : ['other'],
   fromCustomer: item?.fromCustomer ?? false,
+  maxAge: item?.maxAgeDays ? String(item.maxAgeDays) : '',
   rule: item?.conditions ?? {},
   discomCodes: [...(item?.conditions.discomCodes ?? [])],
 });
@@ -76,6 +79,7 @@ export function RequirementDialog({
       why: draft.why.trim(),
       categories: draft.categories,
       fromCustomer: draft.fromCustomer && askable,
+      maxAgeDays: Number(draft.maxAge) > 0 ? Math.round(Number(draft.maxAge)) : null,
       conditions: { ...rule, ...(codes.length ? { discomCodes: codes } : {}) },
     };
     if (requirement) change.mutate({ kind: 'update', key: requirement.key, body });
@@ -133,6 +137,18 @@ export function RequirementDialog({
           description={askable ? t('fromCustomerHint') : t('fromCustomerNotHere')}
           disabled={!askable}
         />
+        {draft.fromCustomer && askable ? (
+          <Field label={t('maxAge')} hint={t('maxAgeHint')}>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={3650}
+              value={draft.maxAge}
+              onChange={(e) => set({ maxAge: e.target.value })}
+            />
+          </Field>
+        ) : null}
         <Field label={t('types')} hint={t('typesHint')}>
           <div className="flex flex-wrap gap-x-5">
             {PROJECT_TYPES.map((type) => (

@@ -22,11 +22,7 @@ import { discomContract } from './discom.contract';
 import { changeRequestTypesContract, reportFormatsContract } from './discom-setup.contract';
 import { documentBundleContract } from './document-bundle.contract';
 import { documentChecklistContract } from './document-checklist.contract';
-import {
-  customerDocumentRequestsContract,
-  documentRequestsContract,
-  reportSettingsContract,
-} from './document-requests.contract';
+import { customerActionContracts } from './document-requests.contract';
 import { documentRequirementsContract } from './document-requirements.contract';
 import { documentsContract } from './documents.contract';
 import { engagementContract } from './engagement.contract';
@@ -68,7 +64,7 @@ import { workforceContract } from './workforce.contract';
  * The whole public API as module contracts. Each app assembles the router with
  * `initContract().router(apiRouterDefinition, apiContractOptions)`.
  */
-export type ApiRouterDefinition = {
+export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly auth: typeof authContract;
   readonly people: typeof peopleContract;
   readonly catalog: typeof catalogContract;
@@ -106,9 +102,6 @@ export type ApiRouterDefinition = {
   readonly documentBundle: typeof documentBundleContract;
   readonly teamLoad: typeof teamLoadContract;
   readonly businessReports: typeof businessReportsContract;
-  readonly documentRequests: typeof documentRequestsContract;
-  readonly customerDocumentRequests: typeof customerDocumentRequestsContract;
-  readonly reportSettings: typeof reportSettingsContract;
   readonly siteActivity: typeof siteActivityContract;
   readonly siteConnection: typeof siteConnectionContract;
   readonly purchasing: typeof purchasingContract;
@@ -139,6 +132,7 @@ export type ApiRouterDefinition = {
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
+  ...customerActionContracts,
   auth: authContract,
   people: peopleContract,
   catalog: catalogContract,
@@ -176,9 +170,6 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   documentBundle: documentBundleContract,
   teamLoad: teamLoadContract,
   businessReports: businessReportsContract,
-  documentRequests: documentRequestsContract,
-  customerDocumentRequests: customerDocumentRequestsContract,
-  reportSettings: reportSettingsContract,
   siteActivity: siteActivityContract,
   siteConnection: siteConnectionContract,
   purchasing: purchasingContract,

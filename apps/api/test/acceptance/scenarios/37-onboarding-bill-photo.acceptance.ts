@@ -146,22 +146,23 @@ describe('The bill photo on the lead', () => {
     await tap(phone, 'ob:site:home');
     await photo(phone, 'sample-too-large');
     const sent = await replies(phone);
-    expect(sent.at(-2)?.body).toContain('too large');
+    expect(sent.at(-2)?.body).toContain('too big');
     expect(choices(sent.at(-1)).some((id) => id.startsWith('ob:bill:'))).toBe(true);
     const [lead] = await leadsOf(phone);
     expect(await docsOf(lead?.id ?? '')).toEqual([]);
   });
 
-  it('files nothing for a stranger outside onboarding who has no lead', async () => {
+  it("with onboarding off a stranger's bill makes a lead, is kept on it, and the reply says so", async () => {
     const off = await withOnboarding(admin, { enabled: false });
     try {
       const phone = uniquePhone();
       await photo(phone);
-      expect(await leadsOf(phone)).toEqual([]);
-      expect(await rows('SELECT 1 FROM wa_conversations WHERE phone = $1', [phone])).toHaveLength(
-        1,
+      const [lead] = await leadsOf(phone);
+      expect(lead).toMatchObject({ source: 'whatsapp', city: 'Not given' });
+      expect(await docsOf(lead?.id ?? '')).toHaveLength(1);
+      expect((await lastReply(phone))?.body).toBe(
+        'Thank you. We have your file and our team will check it and call you.',
       );
-      expect(choices(await lastReply(phone))).toEqual(['callback', 'human']);
     } finally {
       await off();
     }

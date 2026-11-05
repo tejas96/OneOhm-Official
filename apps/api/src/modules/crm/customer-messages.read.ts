@@ -9,6 +9,7 @@ import {
   waMessages,
 } from '@oneohm/database';
 import { and, desc, eq, inArray, isNull, notLike, or, sql } from 'drizzle-orm';
+import { chatFile, chatFileColumns, homesOf } from '../whatsapp/chat-file-label';
 import { deliveryState } from '../whatsapp/delivery-state';
 
 /** Enough to read the thread; the inbox has the rest. */
@@ -33,7 +34,7 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
       status: outbox.status,
       deliveryStatus: outbox.deliveryStatus,
       sentBy: users.fullName,
-      file: { id: documents.id, name: documents.name, contentType: documents.contentType },
+      file: chatFileColumns,
     })
     .from(waMessages)
     .leftJoin(outbox, eq(outbox.id, waMessages.outboxId))
@@ -42,6 +43,7 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
     .where(eq(waMessages.conversationId, chat.id))
     .orderBy(desc(waMessages.createdAt))
     .limit(CHAT_MESSAGES);
+  const homes = await homesOf(db, chat.customerId);
   return {
     id: chat.id,
     state: chat.state,
@@ -55,7 +57,7 @@ export async function customerChat(db: Database, phone: string): Promise<Custome
       at: message.createdAt.toISOString(),
       delivery: status ? deliveryState({ status, deliveryStatus }) : null,
       sentBy,
-      file: file?.id ? file : null,
+      file: chatFile(file, homes),
     })),
   };
 }

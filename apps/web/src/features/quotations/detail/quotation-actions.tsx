@@ -1,7 +1,7 @@
 'use client';
 
 import type { QuotationDetail } from '@oneohm/api-contracts';
-import { Button, useToast } from '@oneohm/design-system/web';
+import { Button, Input, useToast } from '@oneohm/design-system/web';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -35,12 +35,20 @@ export function QuotationActions({ quotation }: { readonly quotation: QuotationD
   const canStartProject = useCan('projects.create');
   const [rejecting, setRejecting] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [changed, setChanged] = useState('');
   const params = { params: { id: quotation.id } };
 
   const step = useMutation({
     mutationFn: (which: Step) => {
       if (which === 'approve') return expectStatus(api.quotations.approveDiscount(params), 200);
-      if (which === 'send') return expectStatus(api.quotations.sendQuotation(params), 200);
+      if (which === 'send')
+        return expectStatus(
+          api.quotations.sendQuotation({
+            ...params,
+            body: changed ? { whatChanged: changed } : {},
+          }),
+          200,
+        );
       return expectStatus(api.quotations.acceptQuotation(params), 200);
     },
     onSuccess: async (updated, which) => {
@@ -90,6 +98,15 @@ export function QuotationActions({ quotation }: { readonly quotation: QuotationD
           >
             {t('reject')}
           </Button>
+          {quotation.revision > 1 && (
+            <Input
+              aria-label={t('whatChanged')}
+              placeholder={t('whatChanged')}
+              maxLength={200}
+              value={changed}
+              onChange={(event) => setChanged(event.target.value)}
+            />
+          )}
           <Button
             variant="secondary"
             leadingIcon={<Send />}

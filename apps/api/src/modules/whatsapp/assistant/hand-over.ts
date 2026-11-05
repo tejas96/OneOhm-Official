@@ -1,21 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  answererFor,
   type DatabaseExecutor,
   notifyStaffHolders,
   readBusinessSetting,
-  users,
   waConversations,
   waMessages,
 } from '@oneohm/database';
-import { isWorkingTime, lastWorkEnd } from '@oneohm/domain';
+import { isWorkingTime, lastWorkEnd, type ReplyTime, replyTime } from '@oneohm/domain';
 import { and, desc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
-import { deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
+import { answererName, deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
+import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
-import { WORDS } from './words';
 
 /**
  * One "asked for a person" alert per customer message: keyed by the message that asked,
@@ -37,7 +35,7 @@ export interface HandOverOptions {
   readonly summary?: string | undefined;
   /** The caller's transaction; the hand-over then commits with the caller's work. */
   readonly db?: DatabaseExecutor | undefined;
-  /** What the customer hears instead of "<name> will reply to you here". */
+  /** What the customer hears instead of "<name> will reply here soon (Mon–Sat…)". */
   readonly reply?: string | undefined;
 }
 
@@ -82,8 +80,25 @@ export class HandOverService {
         subject: { type: 'chat', id: chat.id },
         dedupeKey: alert.key,
       });
-    // Every hand-over reply keeps a Menu tap to go back to the assistant (menu audit M2).
-    return sayWithTaps(db, chat, reply ?? WORDS.humanSoon, ['menu']);
+    // Every hand-over reply names who replies and when, and keeps a Menu tap (redesign §14).
+    const said = reply ?? CHAT_WORDS.talkReply(await this.answererName(owned, db), this.when());
+    return sayWithTaps(db, chat, said, ['menu']);
+  }
+
+  /**
+   * A location pin, a contact card or a sticker: the chat shows it and its person (or the
+   * desk) is told once. The chat stays with the assistant and nothing is said back. A
+   * `quiet` one (a reaction) is only shown in the chat.
+   */
+  async tellSent(chat: Conversation, waMessageId: string, sent: string, quiet = false) {
+    if (quiet) return;
+    const owned = await ensureChatOwner(this.db, chat);
+    await tellChatTeam(this.db, owned, {
+      kind: 'whatsapp_message',
+      title: `WhatsApp from ${chat.profileName ?? chat.phone}`,
+      body: sent.slice(0, 140),
+      key: `wa_in:${waMessageId}`,
+    });
   }
 
   /** To the chat's own person (or its desk), named in the reply; options as in handOver. */
@@ -93,7 +108,7 @@ export class HandOverService {
     return this.handOver(
       owned,
       deskFor(owned),
-      options.reply ?? WORDS.passedToOwner(await this.answererName(owned, db)),
+      options.reply ?? CHAT_WORDS.passed(await this.answererName(owned, db), this.when()),
       options,
     );
   }
@@ -138,17 +153,19 @@ export class HandOverService {
       .limit(1);
     if (said) return;
     const name = await this.answererName(chat);
-    await queueReply(this.db, chat, { kind: 'text', body: WORDS.nightReply(name) });
+    await queueReply(this.db, chat, {
+      kind: 'text',
+      body: CHAT_WORDS.nightReply(name, this.when()),
+    });
   }
 
   /** The first name of whoever answers this chat today, or null for the team. */
-  async answererName(chat: Conversation, db: DatabaseExecutor = this.db): Promise<string | null> {
-    const userId = await answererFor(db, chat.assignedUserId ?? chat.handledByUserId);
-    if (!userId) return null;
-    const [user] = await db
-      .select({ name: users.fullName })
-      .from(users)
-      .where(eq(users.id, userId));
-    return user ? (user.name.split(/\s+/)[0] ?? user.name) : null;
+  answererName(chat: Conversation, db: DatabaseExecutor = this.db): Promise<string | null> {
+    return answererName(db, chat);
+  }
+
+  /** When a person can reply now: in working hours, or the next morning it opens. */
+  when(): ReplyTime {
+    return replyTime(new Date(), this.env.BUSINESS_TIMEZONE);
   }
 }

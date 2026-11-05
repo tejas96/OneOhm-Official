@@ -5,7 +5,7 @@ import { localized, type Words } from '../whatsapp/assistant/language';
 /**
  * The quote's money in one plain line (live review C1): the full price, the instalments
  * in whole rupees from the payment plan that will apply, and the subsidy coming back to
- * the bank later. Said on the quote buttons and on the accept check; no quote number in
+ * the bank later with the cost after it. Said on the quote buttons and on the accept check; no quote number in
  * the chat words (it stays in the PDF and its caption). Buttons keep 20 characters.
  */
 const EN_MONEY = {
@@ -18,7 +18,8 @@ const EN_MONEY = {
   part: (amount: string, when: string) => `${amount} ${when}`,
   line: (total: string, count: number, parts: string) =>
     `Full price ${total}, paid in ${count} parts: ${parts}.`,
-  subsidy: (amount: string) => `Subsidy ${amount} comes back to your bank after commissioning.`,
+  subsidy: (amount: string, net: string) =>
+    `Subsidy ${amount} comes back to your bank after switch-on, so your cost is ${net}.`,
   buttonsBody: (money: string) => `Your solar quotation is above.\n${money}\nHappy to go ahead?`,
   accept: 'Accept quote',
   ask: 'I have a question',
@@ -36,7 +37,8 @@ const MR_MONEY: Words<typeof EN_MONEY> = {
   },
   part: (amount, when) => `${when} ${amount}`,
   line: (total, count, parts) => `पूर्ण किंमत ${total}, ${count} हप्त्यांत: ${parts}.`,
-  subsidy: (amount) => `सबसिडीचे ${amount} सिस्टम सुरू झाल्यावर तुमच्या बँक खात्यात परत येतील.`,
+  subsidy: (amount, net) =>
+    `सबसिडीचे ${amount} सिस्टम सुरू झाल्यावर तुमच्या बँक खात्यात परत येतील, म्हणजे तुमचा खर्च ${net}.`,
   buttonsBody: (money) => `तुमचे सोलर कोटेशन वर पाठवले आहे.\n${money}\nपुढे जायचे का?`,
   accept: 'कोटेशन स्वीकारा',
   ask: 'मला प्रश्न आहे',
@@ -54,7 +56,8 @@ const HI_MONEY: Words<typeof EN_MONEY> = {
   },
   part: (amount, when) => `${when} ${amount}`,
   line: (total, count, parts) => `पूरी कीमत ${total}, ${count} किस्तों में: ${parts}.`,
-  subsidy: (amount) => `सब्सिडी के ${amount} सिस्टम चालू होने के बाद आपके बैंक खाते में वापस आएँगे.`,
+  subsidy: (amount, net) =>
+    `सब्सिडी के ${amount} सिस्टम चालू होने के बाद आपके बैंक खाते में वापस आएँगे, यानी आपका खर्च ${net}.`,
   buttonsBody: (money) => `आपका सोलर कोटेशन ऊपर भेजा गया है.\n${money}\nआगे बढ़ें?`,
   accept: 'कोटेशन स्वीकारें',
   ask: 'मेरा एक सवाल है',
@@ -93,7 +96,10 @@ export function quoteMoney(
   const line = W.line(rupees(totalPaise), parts.length, said.join(', '));
   const [first] = parts;
   return {
-    line: subsidyPaise > 0 ? `${line} ${W.subsidy(rupees(subsidyPaise))}` : line,
+    line:
+      subsidyPaise > 0
+        ? `${line} ${W.subsidy(rupees(subsidyPaise), rupees(totalPaise - subsidyPaise))}`
+        : line,
     first: formatInr(shown[0] ?? whole(totalPaise)),
     firstWhen: W.when[first?.trigger ?? 'quotation_accepted'],
   };

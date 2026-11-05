@@ -1,12 +1,14 @@
 import {
+  alertVisitOwner,
   type DatabaseExecutor,
   projectActivities,
   projectTasks,
   taskDependencies,
+  visits,
 } from '@oneohm/database';
 import { shiftDependents, slipDays } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lt } from 'drizzle-orm';
 
 interface ChangedTask {
   readonly id: string;
@@ -63,6 +65,7 @@ export async function moveLaterTasks(
       .set({ startDate: shift.startDate, dueDate: shift.dueDate, updatedAt: now })
       .where(eq(projectTasks.id, shift.id));
   }
+  await alertVisitsBeforeTasks(tx, shifts);
   return { moved: shifts.length, days: Math.max(0, ...shifts.map((shift) => shift.days)) };
 }
 
@@ -104,4 +107,31 @@ export async function followLateFinish(
 /** The history line for tasks that moved after a manager changed a due date. */
 export function followLine(moved: number, days: number): string {
   return moved === 0 ? '' : ` ${movedLine(moved, days)}`;
+}
+
+/** A task moved later while its visit is booked before the new start: the visit's owner is told. */
+async function alertVisitsBeforeTasks(
+  tx: DatabaseExecutor,
+  shifts: readonly { id: string; startDate: string }[],
+) {
+  for (const shift of shifts) {
+    const [visit] = await tx
+      .select()
+      .from(visits)
+      .where(
+        and(
+          eq(visits.taskId, shift.id),
+          inArray(visits.status, ['proposed', 'confirmed']),
+          lt(visits.day, shift.startDate),
+        ),
+      )
+      .limit(1);
+    if (visit)
+      await alertVisitOwner(tx, visit, {
+        kind: 'visit_task_moved',
+        title: `A task moved to ${shift.startDate}, its visit is on ${visit.day}`,
+        body: 'The visit now falls before the task starts. Move the visit in the visit card.',
+        key: `visit_task_moved:${visit.id}:${shift.startDate}`,
+      });
+  }
 }

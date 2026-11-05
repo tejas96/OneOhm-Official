@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countsForSite } from './site-papers';
+import { countsForSite, isPersonDocumentCategory, isSiteDocumentCategory } from './site-papers';
 
 const siteA = { propertyId: 'A', projectId: 'PA', customerSites: 2 };
 
@@ -28,5 +28,24 @@ describe('Site papers', () => {
     const loose = { category: 'property', propertyId: null, projectId: null };
     expect(countsForSite(loose, siteA)).toBe(false);
     expect(countsForSite(loose, { ...siteA, customerSites: 1 })).toBe(true);
+  });
+
+  it('shares only ID and income papers across homes', () => {
+    expect(['customer_kyc', 'income_proof'].every(isPersonDocumentCategory)).toBe(true);
+    for (const category of ['site_photo', 'discom', 'warranty', 'subsidy', 'bank_loan']) {
+      expect(isSiteDocumentCategory(category)).toBe(true);
+      expect(isPersonDocumentCategory(category)).toBe(false);
+      expect(
+        countsForSite(
+          { category, propertyId: 'A', projectId: 'PA' },
+          { ...siteA, propertyId: 'B', projectId: 'PB' },
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it('counts income proof for every home', () => {
+    const proof = { category: 'income_proof', propertyId: 'B', projectId: 'PB' };
+    expect(countsForSite(proof, siteA)).toBe(true);
   });
 });

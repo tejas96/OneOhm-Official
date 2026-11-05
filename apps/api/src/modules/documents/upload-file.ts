@@ -32,6 +32,8 @@ const EXTENSION: Readonly<Record<DetectedFileType, string>> = {
   'image/webp': 'webp',
   'image/heic': 'heic',
   'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'audio/mp4': 'm4a',
   'audio/mpeg': 'mp3',
   'audio/aac': 'aac',

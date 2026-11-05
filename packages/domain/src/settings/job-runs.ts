@@ -21,6 +21,7 @@ export const JOB_NAMES = [
   'incentive_sweep',
   'payout_sync',
   'onboarding_nudges',
+  'file_questions',
   'sales_checks',
   'whatsapp_heartbeat',
 ] as const;

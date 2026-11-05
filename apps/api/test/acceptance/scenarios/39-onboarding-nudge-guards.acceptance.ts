@@ -4,6 +4,7 @@ import { Session } from '../support/http';
 import { HOUR, NOON, nudgesTo, runNudges, silentFor } from '../support/nudges';
 import { chatOf, leadsOf, say, tap, withOnboarding } from '../support/onboarding';
 import { newCustomer, today, uniquePhone } from '../support/sales';
+import { pastWeekday } from '../support/work-days';
 
 // Part 3, task 7 (fix round 1): the stalled-chat job acts once per chat, leaves customers,
 // closed leads and chats a person has alone, and records a failing chat in the job runs.
@@ -46,7 +47,8 @@ describe('Onboarding nudge guards', () => {
   });
 
   it('a chat stalled in the evening gets its lead at night and its nudge next morning', async () => {
-    const evening = new Date(`${today()}T21:00:00+05:30`);
+    // A past weekday evening: it and the next morning (a working one) are both in the past.
+    const evening = new Date(`${pastWeekday(2)}T21:00:00+05:30`);
     const morning = new Date(evening.getTime() + 13 * HOUR);
     const phone = uniquePhone();
     await say(phone, 'hi');

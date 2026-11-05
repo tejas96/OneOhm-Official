@@ -6,6 +6,8 @@ import {
   chatSummarySchema,
   DELIVERY_STATES,
   deliverySchema,
+  saveWhatsappFormSchema,
+  whatsappFormSchema,
 } from '../schemas/whatsapp.schema';
 
 const c = initContract();
@@ -69,6 +71,20 @@ export const whatsappContract = c.router({
     pathParams: idParams,
     body: c.noBody(),
     responses: { 200: chatDetailSchema },
+  },
+  forms: {
+    method: 'GET',
+    path: '/whatsapp/forms',
+    responses: { 200: z.array(whatsappFormSchema) },
+    summary: 'The forms we send on WhatsApp and whether each is published.',
+  },
+  saveForm: {
+    method: 'PUT',
+    path: '/whatsapp/forms/:key',
+    pathParams: z.object({ key: z.string() }),
+    body: saveWhatsappFormSchema,
+    responses: { 200: whatsappFormSchema },
+    summary: 'Saves the flow id of a form published by hand in WhatsApp Manager.',
   },
   deliveries: {
     method: 'GET',

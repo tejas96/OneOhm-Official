@@ -117,6 +117,7 @@ export class ReportArchiveService {
         propertyId: project?.propertyId ?? null,
         category: 'statutory_report',
         source: 'report',
+        checkedAt: new Date(),
         name: `${definition.name} · ${context.code}.pdf`,
         storageKey,
         contentType: 'application/pdf',

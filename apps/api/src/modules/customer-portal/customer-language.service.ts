@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerLanguageView } from '@oneohm/api-contracts';
-import { customers, type DatabaseExecutor } from '@oneohm/database';
+import { customers, type DatabaseExecutor, waConversations } from '@oneohm/database';
 import { type CustomerLanguage, customerLanguage } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -68,11 +68,16 @@ export class CustomerLanguageService {
     language: CustomerLanguage,
     db: DatabaseExecutor = this.db,
   ): Promise<void> {
-    const updated = await db
+    const [updated] = await db
       .update(customers)
       .set({ preferredLanguage: language, updatedAt: new Date() })
       .where(eq(customers.id, customerId))
-      .returning({ id: customers.id });
-    if (updated.length === 0) throw notFound('That customer');
+      .returning({ phone: customers.phoneE164 });
+    if (!updated) throw notFound('That customer');
+    // The customer's own WhatsApp chat speaks the same language (redesign §14).
+    await db
+      .update(waConversations)
+      .set({ language: language.slice(0, 2), updatedAt: new Date() })
+      .where(eq(waConversations.phone, updated.phone));
   }
 }

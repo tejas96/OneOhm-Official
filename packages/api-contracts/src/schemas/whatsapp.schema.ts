@@ -43,6 +43,8 @@ export const chatFileSchema = z.object({
   id: idSchema,
   name: z.string(),
   contentType: z.string(),
+  /** Where it was filed ("Electricity bill · Pune"); null while it is still to sort. */
+  filedAs: z.string().nullable(),
 });
 export type ChatFile = z.infer<typeof chatFileSchema>;
 
@@ -79,3 +81,18 @@ export const deliverySchema = z.object({
   readAt: instantSchema.nullable(),
 });
 export type Delivery = z.infer<typeof deliverySchema>;
+
+/** A WhatsApp form we can send and whether it is published (its flow id is saved). */
+export const whatsappFormSchema = z.object({
+  key: z.string(),
+  name: z.string(),
+  version: z.string(),
+  /** The flow id from WhatsApp Manager; null while the form is not published. */
+  flowId: z.string().nullable(),
+});
+export type WhatsappForm = z.infer<typeof whatsappFormSchema>;
+
+/** The flow id to save for a form; empty takes the form out of use. */
+export const saveWhatsappFormSchema = z.object({
+  flowId: z.string().trim().max(40).regex(/^\d*$/, 'Use the numbers from WhatsApp Manager.'),
+});

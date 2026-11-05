@@ -1,35 +1,47 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { DatabaseExecutor } from '@oneohm/database';
 import { AppError } from '../../../common/http/errors';
-import { DATABASE, type Database } from '../../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
+import { problemFormStart } from '../../care/care-form-words';
+import { type CareTap, PROBLEM_KINDS, SINCE_CHOICES, type Since } from '../../care/care-taps';
+import { callerOfRequest } from '../../care/problem-call';
+import { PROBLEM_WORDS } from '../../care/problem-words';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
-import { type Conversation, linkChatFile } from '../chat-store';
-import type { ChatFile } from '../media-gateway';
+import { propertyOfProject } from '../../documents/document-links';
+import type { Conversation } from '../chat-store';
+import { filePaper } from '../file-paper';
+import { FormFileKeeper, type KeptFormFile, showFormFiles } from '../forms/form-files';
+import type { IncomingForm } from '../forms/form-reply-data';
+import { FormSendService } from '../forms/form-send';
 import { setStep } from './chat-step';
 import { sayWithTaps } from './closing-taps';
-import { guessCategory } from './guess-category';
-import { CATEGORY_WORDS, MEDIA_WORDS, WORDS } from './words';
+import {
+  askAgain,
+  askExtra,
+  askSince,
+  type Draft,
+  draftOf,
+  startComplaint,
+} from './complaint-start';
+import { type JoinedKind, noteJoined } from './problem-joined';
+import {
+  CATEGORY,
+  problemDescription,
+  type RaisedRequest,
+  tellRaised,
+  waitingDocuments,
+} from './problem-raised';
+import { releaseHeldFiles } from './waiting-files';
+import { MEDIA_WORDS } from './words';
 
-/** For this long after a request is raised, more photos sent are added to it. */
-export const ADD_PHOTOS_MINUTES = 30;
-
-/** What the chat remembers after raising a request, so the next photos join it. */
-export interface RaisedRequest {
-  readonly id: string;
-  readonly at: number;
-}
-
-/** The request raised in this chat a moment ago, if photos may still join it. */
-export function recentRequest(context: unknown, now: number): RaisedRequest | null {
-  const raised = (context as { raised?: RaisedRequest } | null)?.raised;
-  if (!raised?.id || typeof raised.at !== 'number') return null;
-  return now - raised.at <= ADD_PHOTOS_MINUTES * 60_000 ? raised : null;
-}
+const MAX_FILES = 3;
 
 /**
- * "Report a problem" (PRD 6.1): the customer's words become a service request on the home
- * they picked (or their only active one), with any photos sent attached, as in the app.
+ * "Report a problem" (redesign §12): the form when published, else one tap at a time in the chat. The
+ * category is the tap. The reply names who will call and when (a call task, escalated when missed).
  */
 @Injectable()
 export class ProblemFlowService {
@@ -37,58 +49,193 @@ export class ProblemFlowService {
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly portal: CustomerPortalService,
     private readonly photos: CustomerRequestPhotosService,
+    private readonly forms: FormSendService,
+    private readonly files: FormFileKeeper,
   ) {}
 
-  async raise(
+  /** The report starts: the form when published, else the first chat question. */
+  async start(chat: Conversation, customerId: string, topic?: string): Promise<void> {
+    if (await this.forms.available('report_problem')) {
+      const homes = await activeHomes(this.db, customerId);
+      const start = problemFormStart(homes, topic ? { topic } : {});
+      await this.forms.sendForm(chat, customerId, 'report_problem', start, PROBLEM_WORDS.askWhat);
+      return;
+    }
+    return startComplaint(this.db, chat, customerId, topic);
+  }
+
+  /** A tap of the questions: what is wrong, since when, or Done. */
+  async tapped(
     chat: Conversation,
     customerId: string,
-    said: string,
-    files: readonly ChatFile[] = [],
+    tap: Extract<CareTap, { t: 'what' | 'since' | 'done' }>,
   ): Promise<void> {
-    const typed = said.trim();
-    // A photo with no words (or one word) still raises a request; the photo says the rest.
-    const words = typed.length >= 5 || files.length === 0 ? typed : MEDIA_WORDS.photoOnly;
-    if (words.length < 5) return sayWithTaps(this.db, chat, WORDS.tooShort, ['menu']);
-    const { category, label: plain } = guessCategory(words);
-    const label = CATEGORY_WORDS[category] ?? plain;
-    // The home picked from the list (menu audit M10), else the newest active one (M7).
-    const picked = (chat.context as { projectId?: string } | null)?.projectId;
-    const projectId = picked ?? (await activeHomes(this.db, customerId))[0]?.id ?? null;
+    const draft = draftOf(chat.context);
+    if (!draft) return this.start(chat, customerId);
+    if (tap.t === 'what') return askSince(this.db, chat, { ...draft, kind: tap.value });
+    if (tap.t === 'since' && draft.kind)
+      return askExtra(this.db, chat, { ...draft, since: tap.value });
+    if (tap.t === 'done' && draft.kind && draft.since)
+      return this.raise(chat, customerId, draft, '');
+    return askAgain(this.db, chat, draft);
+  }
+
+  /** Words typed while the report waits: they are the "anything to add" once both questions are answered. */
+  async words(chat: Conversation, customerId: string, said: string): Promise<void> {
+    const draft = draftOf(chat.context);
+    if (!draft) return this.start(chat, customerId);
+    if (draft.stage !== 'extra' || !draft.kind || !draft.since)
+      return askAgain(this.db, chat, draft);
+    return this.raise(chat, customerId, draft, said.trim());
+  }
+
+  /** A stored photo or voice note sent while the report waits is kept for it. */
+  async file(chat: Conversation, customerId: string, documentId: string): Promise<void> {
+    const draft = draftOf(chat.context);
+    if (!draft) return;
+    const files = [...(draft.files ?? []), documentId].slice(0, MAX_FILES);
+    const next: Draft = { ...draft, files };
+    if (draft.stage === 'extra' && draft.kind && draft.since) {
+      if (files.length >= MAX_FILES) return this.raise(chat, customerId, next, '');
+      return askExtra(this.db, chat, next);
+    }
+    return askAgain(this.db, chat, next);
+  }
+
+  /** The form came back: every answer is a choice, so the report is raised at once. */
+  async fromForm(chat: Conversation, customerId: string, form: IncomingForm, topic?: string) {
+    const kind = PROBLEM_KINDS.find((one) => one === form.answers.what);
+    const since = SINCE_CHOICES.find((one) => one === form.answers.since);
+    const homes = await activeHomes(this.db, customerId);
+    const offered = homes.slice(0, 10);
+    const said = form.answers.home;
+    const picked = offered.find((home) => home.id === said)?.id ?? null;
+    const stored = await this.keepFiles(chat, customerId, form);
+    // An unknown home is asked in the chat; what the form already said (and its photos) goes along.
+    if (said ? !picked : offered.length > 1)
+      return startComplaint(this.db, chat, customerId, topic, {
+        ...(kind ? { kind } : {}),
+        ...(since ? { since } : {}),
+        files: stored,
+        note: form.answers.note ?? '',
+      });
+    const projectId = picked ?? offered[0]?.id ?? null;
+    const draft: Draft = {
+      stage: 'extra',
+      projectId,
+      topic,
+      ...(kind ? { kind } : {}),
+      ...(since ? { since } : {}),
+    };
+    if (!kind || !since)
+      return askAgain(this.db, chat, { ...draft, stage: kind ? 'since' : 'what', files: stored });
+    return this.raise(chat, customerId, { ...draft, files: stored }, form.answers.note ?? '');
+  }
+
+  /** The form's photos, stored and shown in the chat; the stored documents' ids. */
+  private async keepFiles(chat: Conversation, customerId: string, form: IncomingForm) {
+    const saved: Extract<KeptFormFile, { ok: true }>[] = [];
+    for (const file of form.files.slice(0, MAX_FILES)) {
+      const kept = await this.files.keep(chat, customerId, file);
+      if (kept.ok) saved.push(kept);
+    }
+    if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
+    return saved.map((file) => file.id);
+  }
+
+  /** Raises the report from the draft, then tells the customer who will call and when. */
+  async raise(chat: Conversation, customerId: string, draft: Draft, words: string): Promise<void> {
+    const kind = draft.kind ?? 'other';
+    const since: Since = draft.since ?? 'today';
+    const homes = await activeHomes(this.db, customerId);
+    const projectId = draft.projectId ?? homes[0]?.id ?? null;
+    const description = problemDescription(draft, kind, since, words);
+    const category = CATEGORY[kind];
     const request = await this.portal.raiseServiceRequest(customerId, {
       projectId,
       category,
-      description: `${words} (via WhatsApp)`,
+      description,
     });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
     await setStep(this.db, chat, 'menu', { raised });
+    await releaseHeldFiles(this.db, chat.id);
+    const earlier = await waitingDocuments(this.db, chat.context);
+    const files = [...new Set([...earlier, ...(draft.files ?? [])])].slice(0, MAX_FILES);
     let added = 0;
     for (const file of files) if (await this.attach(customerId, request.id, file)) added += 1;
-    const lines = [
-      added > 0 ? MEDIA_WORDS.problemSavedWithPhotos(label, added) : WORDS.problemSaved(label),
-      added < files.length ? MEDIA_WORDS.photoNotAdded : '',
-    ];
-    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['requests', 'menu']);
+    return tellRaised(
+      this.db,
+      chat,
+      { customerId, requestId: request.id, projectId, kind, timeZone: this.env.BUSINESS_TIMEZONE },
+      added < files.length,
+    );
   }
 
-  /** Another photo for the request just raised. */
-  async addPhoto(chat: Conversation, customerId: string, requestId: string, file: ChatFile) {
-    const added = await this.attach(customerId, requestId, file);
-    const body = added ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
-    return sayWithTaps(this.db, chat, body, ['requests', 'menu']);
+  /** More photos for the request just raised (the documents they were stored as). */
+  async addPhotos(
+    db: DatabaseExecutor,
+    chat: Conversation,
+    customerId: string,
+    requestId: string,
+    files: readonly string[],
+  ) {
+    const added: string[] = [];
+    for (const file of files) if (await this.attach(customerId, requestId, file)) added.push(file);
+    const body = added.length === files.length ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
+    await sayWithTaps(db, chat, body, ['problems', 'menu']);
+    return added;
   }
 
-  /** The app's own photo rule (photos only, six at most); a refusal is not an error. */
-  private async attach(customerId: string, requestId: string, file: ChatFile) {
+  /** A file that joins the problem on its own: attached now, counted for the one reply (false if full). */
+  async join(
+    chat: Conversation,
+    customerId: string,
+    requestId: string,
+    documentId: string,
+    kind: JoinedKind,
+  ): Promise<boolean> {
+    if (!(await this.attach(customerId, requestId, documentId))) return false;
+    await noteJoined(this.db, chat.id, requestId, kind, this.env.FILE_WAIT_SECONDS);
+    return true;
+  }
+
+  /** A voice note sent right after a report joins it, and the person who calls is told. */
+  async addVoice(chat: Conversation, customerId: string, requestId: string, documentId: string) {
+    if (!(await this.attach(customerId, requestId, documentId))) return false;
+    const person = await callerOfRequest(this.db, requestId, chat.phone);
+    await sayWithTaps(this.db, chat, PROBLEM_WORDS.voiceAdded(person.name ?? PROBLEM_WORDS.team), [
+      'problems',
+      'menu',
+    ]);
+    return true;
+  }
+
+  /** The app's file rule (photos, one voice note); a refusal is not an error. Only the stored document moves. */
+  private async attach(customerId: string, requestId: string, documentId: string) {
     try {
-      const documentId = await this.photos.addPhotoFile(customerId, requestId, file);
-      await linkChatFile(this.db, file.mediaId, documentId);
+      const { projectId, category } = await this.photos.roomForStoredFile(
+        customerId,
+        requestId,
+        documentId,
+      );
+      await this.db.transaction(async (tx) =>
+        filePaper(tx, documentId, {
+          projectId,
+          propertyId: await propertyOfProject(tx, projectId),
+          category,
+          serviceRequestId: requestId,
+        }),
+      );
       return true;
     } catch (error) {
       if (!(error instanceof AppError)) throw error;
-      this.log.log(`Photo not added to request ${requestId}: ${error.message}`);
+      this.log.log(`File not added to request ${requestId}: ${error.message}`);
       return false;
     }
   }
 }
+
+export { ADD_PHOTOS_MINUTES, type RaisedRequest, recentRequest } from './problem-raised';

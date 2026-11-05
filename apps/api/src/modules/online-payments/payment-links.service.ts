@@ -104,6 +104,7 @@ export class PaymentLinksService {
             amount: formatInr(owed),
             milestone: milestone.label,
             milestoneId,
+            paidPayload: `paidother:${milestoneId}`,
             project: project.code,
             link: created.url,
             payToken: signPayToken(paySigningSecret(this.env), {

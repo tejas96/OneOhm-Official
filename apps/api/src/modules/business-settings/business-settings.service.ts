@@ -25,7 +25,7 @@ import {
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import type { Actor } from '../../common/auth/actor';
+import { type Actor, assertCan } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
@@ -91,6 +91,16 @@ export class BusinessSettingsService {
     // Onboarding names the limit it breaks (say "At most 8 bill bands."), not just the area.
     if (Object.keys(errors).length > 0) throw invalid(errors.onboarding ?? PROBLEM[key], errors);
     const before = await this.get(key);
+    // The self-survey discount is money off a customer's payment: finance (or the project owner) changes it.
+    if (key === 'reminders') {
+      const was = before as BusinessSettingsMap['reminders'];
+      const now = value as BusinessSettingsMap['reminders'];
+      if (
+        was.selfSurveyOffer !== now.selfSurveyOffer ||
+        was.selfSurveyPaise !== now.selfSurveyPaise
+      )
+        assertCan(actor, 'finance.record_payments', 'projects.manage');
+    }
     await this.db.transaction(async (tx) => {
       await writeBusinessSetting(tx, key, value, actor.userId);
       await recordAudit(tx, actor.userId, `settings.${key}_changed`, 'settings', key, {

@@ -1,12 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CustomerContact, Handover } from '@oneohm/api-contracts';
-import { customerHandovers, customers, projects, users } from '@oneohm/database';
-import { type ContactChannel, routeFor } from '@oneohm/domain';
+import { customerActions, customerHandovers, customers, projects, users } from '@oneohm/database';
+import {
+  type Capability,
+  type ContactChannel,
+  inPersonClose,
+  rightsForAsk,
+  routeFor,
+} from '@oneohm/domain';
 import { and, desc, eq, isNotNull, isNull, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
-import { type Actor, assertCan } from '../../common/auth/actor';
-import { notFound } from '../../common/http/errors';
+import { type Actor, assertCan, can } from '../../common/auth/actor';
+import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { closePlain } from '../documents/document-request-in-person';
+import { readRequests } from '../documents/document-request-read';
 import { paperFor } from './handover-paper';
 
 /** WhatsApp first, SMS second, in person last (owner's rule), per customer. */
@@ -89,9 +97,19 @@ export class CustomerContactService {
         .update(customerHandovers)
         .set({ doneAt: new Date(), doneByUserId: actor.userId, note: note?.trim() || null })
         .where(and(eq(customerHandovers.id, id), isNull(customerHandovers.doneAt)))
-        .returning({ id: customerHandovers.id });
+        .returning({ id: customerHandovers.id, actionId: customerHandovers.actionId });
       if (done.length > 0) {
         await recordAudit(tx, actor.userId, 'handover.done', 'customer_handover', id, { note });
+        // The ask it was about is done too (a plain one; the rest wait for their own step).
+        const [ask] = done[0]?.actionId
+          ? await readRequests(tx, eq(customerActions.id, done[0].actionId), true)
+          : [];
+        if (ask?.status === 'open' && inPersonClose(ask.type, ask.kind).how === 'plain') {
+          // The same right as closing the ask itself in person; without it nothing changes (rolled back).
+          if (!rightsForAsk(ask.type).some((right) => can(actor, right as Capability)))
+            throw forbidden();
+          await closePlain(tx, actor.userId, ask);
+        }
       }
     });
     const [row] = await this.read(eq(customerHandovers.id, id));

@@ -22,10 +22,12 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AssistantService } from './assistant/assistant.service';
 import { assistantAnswers, markAssistantTap } from './assistant/handled-taps';
-import { ChatFileKeeper, FILE_WORDS } from './chat-file-keeper';
+import { optOutAsked, optOutWord } from './assistant/opt-out';
+import { ChatFileKeeper } from './chat-file-keeper';
 import { ensureChatOwner, tellChatTeam } from './chat-owner';
 import { type Conversation, conversationFor, logIncoming } from './chat-store';
 import { DeliveriesService } from './deliveries.service';
+import { FILE_WORDS } from './file-paper';
 import { forgetIncoming, isLateTap, tellNotHandled } from './inbound-retry';
 import { type Incoming, readWebhook, webhookAccess } from './whatsapp-events';
 
@@ -33,7 +35,8 @@ import { type Incoming, readWebhook, webhookAccess } from './whatsapp-events';
  * Meta's WhatsApp webhook: customer messages go to the assistant, and delivery receipts
  * update the outbox. Signed with the app secret; until that is known, a secret key at the
  * end of the URL stands in (see `webhookAccess`). A repeat delivery is ignored. A message
- * that fails is forgotten and answered 500, so Meta sends it again; a late tap is ignored.
+ * that fails is forgotten and answered 500, so Meta sends it again; a late tap is told it
+ * was an earlier message, and the customer gets Home (redesign §14).
  */
 @Public()
 @Controller('v1/webhooks/whatsapp')
@@ -88,10 +91,10 @@ export class WhatsAppWebhookController implements OnModuleInit {
       const chat = await ensureChatOwner(this.db, await conversationFor(this.db, message));
       if (!(await logIncoming(this.db, chat.id, message))) continue;
       if (assistantAnswers(chat, message)) await markAssistantTap(this.db, message.waMessageId);
-      if (isLateTap(chat, message)) {
-        this.log.log(`Ignored a late tap ${message.waMessageId}: the chat has newer messages.`);
-        continue;
-      }
+      // A customer's file is stored before the assistant answers, so every flow files
+      // that one document (never throws).
+      const early = chat.customerId !== null;
+      if (early) await this.files.keep(chat, message);
       try {
         await this.handle(chat, message);
         handled += 1;
@@ -102,8 +105,10 @@ export class WhatsAppWebhookController implements OnModuleInit {
         await this.recover(chat, message);
         continue;
       }
-      // Any file the assistant did not file goes under Documents (never throws).
-      await this.files.keep(chat, message);
+      // Any file the assistant did not file goes on its home (or waits to be sorted) or the lead
+      // (never throws).
+      if (early) await this.files.settle(chat, message);
+      else await this.files.keep(chat, message);
     }
     const receipts = await this.deliveries.applyUpdates(updates);
     if (failed > 0) throw new InternalServerErrorException(`${failed} message(s) not handled.`);
@@ -122,10 +127,16 @@ export class WhatsAppWebhookController implements OnModuleInit {
     // A person has this chat, so the assistant stays quiet: tell them the customer wrote.
     // Menu and quote taps (and the words a bot step waits for) are the assistant's, and
     // alert nobody.
-    if (chat.state === 'human' && !assistantAnswers(chat, message)) {
+    const held = chat.state === 'human';
+    if (held && !assistantAnswers(chat, message)) {
       await this.tellAnswerer(chat, message);
-      await this.assistant.nightReply(chat);
+      // STOP is answered at once: no "we reply from 9:30" before it.
+      if (!optOutWord(optOutAsked(message))) await this.assistant.nightReply(chat);
+      if (isLateTap(chat, message)) return;
     }
+    // A late tap (a customer's or a new contact's): "That was an earlier message", then Home; in a held chat
+    // (one of the bot's own taps) without Home, so the person keeps the chat (§14).
+    if (isLateTap(chat, message)) return this.assistant.earlier(chat, !held);
     await this.assistant.handle(chat, message);
   }
 

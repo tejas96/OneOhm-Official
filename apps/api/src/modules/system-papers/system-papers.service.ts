@@ -146,6 +146,7 @@ export class SystemPapersService implements OnApplicationBootstrap, OnModuleDest
           contractorId: paper.contractorId,
           category: SYSTEM_PAPER_CATEGORY[paper.kind],
           source: 'system',
+          checkedAt: new Date(),
           name: paper.name,
           storageKey: paper.key,
           contentType: 'application/pdf',

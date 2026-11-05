@@ -3,13 +3,12 @@ import {
   customerContacts,
   customers,
   type DatabaseExecutor,
-  documents,
   outbox,
   waConversations,
   waMessages,
 } from '@oneohm/database';
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { type ChatReply, chatReplySummary } from './chat-reply';
 import type { Incoming } from './whatsapp-events';
 
@@ -82,27 +81,27 @@ export async function logIncoming(
   return saved.length > 0;
 }
 
-/**
- * The chat message that carried this WhatsApp file now shows the stored document. A copy
- * kept earlier only for the chat (see `ChatFileKeeper`) is taken off, so the file is filed once.
- */
+/** The chat message that carried this WhatsApp file now shows the stored document. */
 export async function linkChatFile(
   db: DatabaseExecutor,
   mediaId: string | undefined,
   documentId: string,
 ): Promise<void> {
   if (!mediaId) return;
-  const [before] = await db
+  await db.update(waMessages).set({ documentId }).where(eq(waMessages.mediaId, mediaId));
+}
+
+/** The document a WhatsApp file was stored as when it arrived; null when it was not kept. */
+export async function chatDocumentFor(
+  db: DatabaseExecutor,
+  mediaId: string,
+): Promise<string | null> {
+  const [row] = await db
     .select({ documentId: waMessages.documentId })
     .from(waMessages)
-    .where(eq(waMessages.mediaId, mediaId))
+    .where(and(eq(waMessages.mediaId, mediaId), isNotNull(waMessages.documentId)))
     .limit(1);
-  await db.update(waMessages).set({ documentId }).where(eq(waMessages.mediaId, mediaId));
-  if (before?.documentId && before.documentId !== documentId)
-    await db
-      .update(documents)
-      .set({ removedAt: new Date() })
-      .where(and(eq(documents.id, before.documentId), isNull(documents.removedAt)));
+  return row?.documentId ?? null;
 }
 
 /**
@@ -200,9 +199,22 @@ export async function conversationForPhone(
   return again;
 }
 
-/** The new context, still carrying the lead `entry` and onboarding `ob` unless it sets them. */
+/**
+ * The new context, still carrying the lead `entry`, onboarding `ob`, the files waiting for
+ * "What is this?" (`filesWait`), the papers just saved that [Change] can take back
+ * (`filedBatches`) and whether we asked the language (`langAsked`) unless it sets them. A
+ * Menu tap keeps them all.
+ */
 export const keepEntry = (context: Record<string, unknown>) => {
-  const kept = ['entry', 'ob'].filter((key) => context[key] === undefined);
+  const kept = [
+    'entry',
+    'ob',
+    'filesWait',
+    'filedBatches',
+    'langAsked',
+    'joined',
+    'unsupportedAt',
+  ].filter((key) => context[key] === undefined);
   if (kept.length === 0) return context;
   return sql`${JSON.stringify(context)}::jsonb || coalesce((SELECT jsonb_object_agg(key, value) FROM jsonb_each(${waConversations.context}) WHERE key = ANY(${`{${kept.join(',')}}`}::text[])), '{}'::jsonb)`;
 };

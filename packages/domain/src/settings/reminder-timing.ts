@@ -1,4 +1,5 @@
 import { addDays, daysBetween } from '@oneohm/shared';
+import { checkSurveyCredit } from '../survey/self-survey';
 import { checkTime, checkWhole, type SettingErrors } from './settings-check';
 
 /** When reminders and summaries go out (PRD 7.1, 7.2). Owners change them in Settings. */
@@ -13,6 +14,12 @@ export interface ReminderTiming {
   readonly ownerSummaryTime: string;
   /** Days before a lead's follow-up date that its owner is reminded (0 = on the day). */
   readonly followUpLeadDays: number;
+  /** Days after a customer says the subsidy has not reached their bank before the owner is told. */
+  readonly subsidyChaseDays: number;
+  /** The self-survey offer (redesign §7): offered to customers with a project, on or off. */
+  readonly selfSurveyOffer: boolean;
+  /** Paise taken off the next payment when the engineer approves a self survey. */
+  readonly selfSurveyPaise: number;
   /** Outside working hours, one calm WhatsApp reply tells the customer who has their message. */
   readonly whatsappNightReply: boolean;
 }
@@ -23,6 +30,9 @@ export const DEFAULT_REMINDER_TIMING: ReminderTiming = {
   staffDigestTime: '08:30',
   ownerSummaryTime: '08:45',
   followUpLeadDays: 1,
+  subsidyChaseDays: 15,
+  selfSurveyOffer: true,
+  selfSurveyPaise: 100_000,
   whatsappNightReply: true,
 };
 
@@ -33,6 +43,9 @@ export function checkReminderTiming(timing: ReminderTiming): SettingErrors {
   checkTime(errors, 'staffDigestTime', timing.staffDigestTime);
   checkTime(errors, 'ownerSummaryTime', timing.ownerSummaryTime);
   checkWhole(errors, 'followUpLeadDays', timing.followUpLeadDays, 0, 7);
+  checkWhole(errors, 'subsidyChaseDays', timing.subsidyChaseDays, 1, 60);
+  const credit = checkSurveyCredit(timing.selfSurveyPaise);
+  if (credit) errors.selfSurveyPaise = credit;
   return errors;
 }
 

@@ -3,27 +3,14 @@ import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { chatOf, replies, say, tap, withOnboarding } from '../support/onboarding';
 import { newCustomer, uniquePhone } from '../support/sales';
-import { postInbound, sendInbound } from '../support/whatsapp';
+import { askAboutFiles, questions } from '../support/what-is-this';
+import { postInbound, refuseRepliesTo, sendInbound } from '../support/whatsapp';
 
 // Live review A3/A4: a customer message the API could not handle is answered 500 (so Meta
 // sends it again) and handled on that retry, with one alert to the chat's people; a late
 // tap from an older message changes nothing; the chat's last-inbound time never goes back.
 
 const MINUTE = 60 * 1000;
-
-/** Until the returned undo runs, the database refuses every reply to this number. */
-async function refuseRepliesTo(phone: string): Promise<() => Promise<void>> {
-  const name = `refuse_reply_${phone.slice(1)}`;
-  await rows(`CREATE OR REPLACE FUNCTION ${name}() RETURNS trigger AS $$
-    BEGIN IF NEW.recipient = '${phone}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END;
-    $$ LANGUAGE plpgsql`);
-  await rows(`CREATE TRIGGER ${name} BEFORE INSERT ON outbox
-    FOR EACH ROW EXECUTE FUNCTION ${name}()`);
-  return async () => {
-    await rows(`DROP TRIGGER ${name} ON outbox`);
-    await rows(`DROP FUNCTION ${name}()`);
-  };
-}
 
 const lastInboundOf = async (phone: string) => {
   const [chat] = await rows<{ at: Date }>(
@@ -85,7 +72,7 @@ describe('WhatsApp inbound reliability', () => {
     expect(await replies(phone)).toHaveLength(answered.length);
   });
 
-  it('a tap from an older message, arriving after a newer one, changes nothing', async () => {
+  it('a tap from an older message, arriving after a newer one, changes nothing but is told so', async () => {
     const phone = uniquePhone();
     const now = Date.now();
     await sendInbound(phone, { text: 'hi', at: new Date(now - 2 * MINUTE) });
@@ -96,7 +83,11 @@ describe('WhatsApp inbound reliability', () => {
     // Meta delivers a late tap on the language question, sent a minute before "English".
     await sendInbound(phone, { buttonReply: 'ob:language:mr', at: new Date(now - MINUTE) });
     expect(await chatOf(phone)).toEqual(before);
-    expect(await replies(phone)).toHaveLength(said);
+    // Not silent (redesign §14): "earlier message", then the question the chat is on.
+    const after = await replies(phone);
+    expect(after).toHaveLength(said + 2);
+    expect(after.at(-2)?.body).toBe('That was an earlier message — here is the latest.');
+    expect(after.at(-1)?.buttons?.map((b) => b.id)).toContain('ob:name:yes');
     expect(await lastInboundOf(phone)).toBe(newest);
   });
 
@@ -108,34 +99,43 @@ describe('WhatsApp inbound reliability', () => {
     expect(await lastInboundOf(phone)).toBe(newest);
   });
 
-  it('a paper photo filed before the reply failed is not filed again on the retry', async () => {
+  it('a question that cannot be queued is asked on the next run, and the photo is kept once', async () => {
     const customer = await newCustomer(admin, { name: 'Retry Papers (test)' });
-    for (const title of ['Aadhaar card (test)', 'Light bill (test)'])
+    for (const [title, category] of [
+      ['Aadhaar card (test)', 'customer_kyc'],
+      ['Light bill (test)', 'electricity_bill'],
+    ])
       await rows(
-        `INSERT INTO document_requests (customer_id, category, title, created_at)
-          VALUES ($1, 'customer_kyc', $2, now() - interval '1 hour' + $3::interval)`,
-        [customer.customerId, title, title.startsWith('Aadhaar') ? '0 minutes' : '1 minute'],
+        `INSERT INTO customer_actions (type, customer_id, category, title, created_at)
+          VALUES ('paper', $1, $3, $2, now() - interval '1 hour')`,
+        [customer.customerId, title, category],
       );
     const photo = {
       id: `wamid.acceptance-paper-${customer.phone.slice(1)}`,
       media: { type: 'image' as const, fileId: 'retry-paper', mimeType: 'image/jpeg' },
     };
+    // The photo is kept at once; nothing is asked yet, so nothing can fail on it.
+    expect((await postInbound(customer.phone, photo)).status).toBe(200);
     const undo = await refuseRepliesTo(customer.phone);
     try {
-      expect((await postInbound(customer.phone, photo)).status).toBe(500);
+      // The question cannot be queued: it stays due and nothing is half done.
+      await askAboutFiles(admin);
+      expect(await questions(customer.phone)).toHaveLength(0);
     } finally {
       await undo();
     }
     await sendInbound(customer.phone, photo);
-    const papers = await rows<{ title: string; status: string }>(
-      `SELECT title, status::text AS status FROM document_requests WHERE customer_id = $1
-        ORDER BY created_at`,
+    // It backed off a little, so it is asked again a few minutes on.
+    await askAboutFiles(admin, 300);
+    expect(await questions(customer.phone)).toHaveLength(1);
+    const kept = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
+      customer.customerId,
+    ]);
+    expect(kept).toHaveLength(1);
+    const papers = await rows<{ status: string }>(
+      'SELECT status::text AS status FROM customer_actions WHERE customer_id = $1',
       [customer.customerId],
     );
-    expect(papers).toEqual([
-      { title: 'Aadhaar card (test)', status: 'received' },
-      { title: 'Light bill (test)', status: 'open' },
-    ]);
-    expect((await replies(customer.phone)).at(-1)?.body).toContain('Aadhaar card (test)');
+    expect(papers).toEqual([{ status: 'open' }, { status: 'open' }]);
   });
 });

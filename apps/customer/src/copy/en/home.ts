@@ -81,6 +81,12 @@ export const HOME = {
     released: 'Released to your bank account.',
     not_applicable: 'Not applicable to this project.',
   },
+  /** What the customer told us about a released subsidy (the same as the WhatsApp Project update). */
+  subsidyNote: {
+    received: 'Reached your bank account ✅',
+    checking: 'You told us it has not arrived. We are checking with the government.',
+  },
+  subsidyNoteStatus: { received: 'Received', checking: 'Checking' },
   subsidyStatus: {
     pending: 'Not applied yet',
     applied: 'Applied',
