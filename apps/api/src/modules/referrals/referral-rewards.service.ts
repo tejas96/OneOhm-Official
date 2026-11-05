@@ -24,7 +24,8 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from './incentive-shared';
 import { evaluateReferralRewards } from './referral-evaluation';
 import { announceReward } from './referral-messages';
-import { checkedUpi, checkUpi, closePayoutAsks } from './reward-upi';
+import { checkedUpi, checkUpi } from './reward-upi';
+import { closePayoutAsks } from './reward-upi-ask';
 import { upiRows } from './reward-upi-rows';
 
 type Status = ReferralReward['status'];

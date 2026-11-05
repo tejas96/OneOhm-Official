@@ -38,7 +38,7 @@ import { exactChoice, smallTalkOf } from './known-words';
 import { inLanguage } from './language';
 import { MediaIntakeService } from './media-intake';
 import { MenuAnswersService } from './menu-answers';
-import { answerOptOut, optOutAsked, tellOptedOut } from './opt-out';
+import { takeOptOut } from './opt-out';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
 import { StrangerFlowService } from './stranger-flow';
@@ -80,13 +80,12 @@ export class AssistantService {
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
   async handle(seen: Conversation, incoming: Incoming): Promise<void> {
-    // STOP and START come first, before onboarding, a person's hold on the chat or a quote tap.
-    const asked = await inLanguage(await chatLanguage(this.db, seen), () =>
-      answerOptOut(this.db, seen, optOutAsked(incoming)),
-    );
-    if (asked) return;
-    // A stranger who stopped our messages and writes again hears once how to start them again.
-    await inLanguage(await chatLanguage(this.db, seen), () => tellOptedOut(this.db, seen));
+    // STOP and START come first, before onboarding, a person's hold or a quote tap (a stranger who
+    // stopped and writes again hears once how to start again).
+    if (
+      await inLanguage(await chatLanguage(this.db, seen), () => takeOptOut(this.db, seen, incoming))
+    )
+      return;
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works while a person has the chat (accepting is the customer's act) and ends a waiting step (F8).
     const tap = readQuoteTap(incoming.choiceId);
@@ -97,19 +96,18 @@ export class AssistantService {
     await inLanguage(language, () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
-    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14), later if a step waits for words.
+    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14).
     if (ask) await this.menus.askLanguage(chat);
   }
 
   /** A tap Meta delivered after a newer message: said so, then Home (redesign §14). */
   async earlier(chat: Conversation, withHome = true): Promise<void> {
-    const customerId = chat.customerId;
+    const { customerId } = chat;
     await inLanguage(await chatLanguage(this.db, chat), async () => {
       await queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.earlier });
-      if (!withHome) return;
       // A new contact gets the question the chat is on (or the hello), not Home.
-      if (customerId) await this.home.show(chat, customerId);
-      else await this.strangers.greet(chat);
+      if (withHome)
+        await (customerId ? this.home.show(chat, customerId) : this.strangers.greet(chat));
     });
   }
 
@@ -125,8 +123,7 @@ export class AssistantService {
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
     if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location)))
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
-    // A contact card or a sticker is never answered: their person is told
-    // what it was (the chat shows it) and the assistant stays on. A reaction tells nobody.
+    // A card or sticker is never answered: their person is told; a reaction tells nobody.
     if (incoming.kind === 'other')
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     const waits = WAITING_STEPS.includes(stepOf(chat));
@@ -248,7 +245,6 @@ export class AssistantService {
   }
 
   /** Once a night, outside working hours, a chat with a person hears who has it. */
-  async nightReply(chat: Conversation): Promise<void> {
-    await inLanguage(await chatLanguage(this.db, chat), () => this.people.nightReply(chat));
-  }
+  nightReply = async (chat: Conversation): Promise<void> =>
+    inLanguage(await chatLanguage(this.db, chat), () => this.people.nightReply(chat));
 }

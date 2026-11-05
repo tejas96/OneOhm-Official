@@ -88,3 +88,14 @@ export async function tellOptedOut(db: Database, chat: Conversation): Promise<vo
   await markContext(db, chat.id, { optNote: stamp });
   await sayWithTaps(db, chat, OPT_OUT_WORDS.remind, ['start']);
 }
+
+/** STOP and START first, then the once-only note to a stranger who stopped and writes again. */
+export async function takeOptOut(
+  db: Database,
+  chat: Conversation,
+  incoming: Pick<Incoming, 'kind' | 'text' | 'choiceId'>,
+): Promise<boolean> {
+  if (await answerOptOut(db, chat, optOutAsked(incoming))) return true;
+  await tellOptedOut(db, chat);
+  return false;
+}

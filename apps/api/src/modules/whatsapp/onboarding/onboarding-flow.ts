@@ -3,37 +3,36 @@ import { readBusinessSetting, waConversations } from '@oneohm/database';
 import { nextStep, type OnboardAnswers, type OnboardStep } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
-import { updateLeadFromChat } from '../../crm/lead-from-chat';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CHAT_WORDS } from '../assistant/chat-words';
 import { HandOverService } from '../assistant/hand-over';
-import { smallTalkOf } from '../assistant/known-words';
-import { assistantLanguage } from '../assistant/language';
-import { ensureChatOwner } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
-import type { Incoming, IncomingLocation } from '../whatsapp-events';
+import type { Incoming } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
 import { EstimateNextStepsService } from './estimate-next-steps';
 import { MORE_WORDS } from './onboard-words-more';
-import { cityFromPin, readAnswer } from './onboarding-answer';
-import {
-  CONTINUE_CHOICE,
-  firstMissing,
-  isOnboardingChat,
-  readOnboard,
-  stepOfState,
-} from './onboarding-context';
+import { afterEstimate } from './onboarding-after';
+import { readAnswer } from './onboarding-answer';
+import { CONTINUE_CHOICE, firstMissing, isOnboardingChat, stepOfState } from './onboarding-context';
 import { ChatFilesService, type Fetched } from './onboarding-files';
-import { knownFrom, openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
+import { openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
+import { notePin, pinnedCity, pinWaits, say } from './onboarding-pin';
 import { type QuestionView, question } from './onboarding-replies';
-import { backTo, goesBack, saveTurn, speak, type Turn, wantsPerson } from './onboarding-turn';
+import {
+  backTo,
+  goesBack,
+  newTurn,
+  saveTurn,
+  speak,
+  type Turn,
+  wantsPerson,
+} from './onboarding-turn';
 import {
   ensureLead,
   fileHeldBill,
-  HEARD,
   type HeardMedia,
+  handToPerson,
   heardMedia,
-  heardReply,
   takeChatFile,
 } from './onboarding-turn-files';
 
@@ -90,27 +89,7 @@ export class OnboardingFlowService {
     const discard = await this.db.transaction(async (tx) => {
       const chat = await lockedChat(tx, seen.id);
       const lead = await openLeadFor(tx, chat.phone);
-      const kept = readOnboard(chat);
-      // A referral lead's name (and its city, when given) stand; the rest is asked.
-      const seeded = referral ? knownFrom(lead) : {};
-      const turn: Turn = {
-        tx,
-        chat,
-        lead,
-        settings: await readBusinessSetting(tx, 'onboarding'),
-        known: {
-          ...(chat.language ? { language: assistantLanguage(chat.language) } : {}),
-          ...knownFrom(lead),
-        },
-        answers: { ...kept?.answers, ...seeded },
-        misses: kept?.misses ?? 0,
-        awaiting: kept?.awaiting,
-        pendingFile: kept?.pendingFile,
-        pin: kept?.pin,
-        file,
-        discard: [],
-        dropEntry: false,
-      };
+      const turn = await newTurn(tx, chat, lead, file, referral);
       // A referral lead keeps its name and city, but the language (and a name we cannot use) is asked first.
       if (referral) await this.ask(turn, firstMissing(turn.answers, turn.known));
       else await this.take(turn, incoming);
@@ -141,7 +120,7 @@ export class OnboardingFlowService {
     // Nothing to read: a tap on another question (an older list), the nudge's "Continue", or words
     // in the first message after a person handed the chat back. An old tap is told so.
     if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) {
-      if (choice && choice !== CONTINUE_CHOICE) await this.say(turn, CHAT_WORDS.earlier);
+      if (choice && choice !== CONTINUE_CHOICE) await say(turn, CHAT_WORDS.earlier);
       return this.ask(turn, current);
     }
     if (goesBack(current, choice, word)) return this.ask(turn, backTo(turn, current));
@@ -180,35 +159,20 @@ export class OnboardingFlowService {
   /** A reaction needs no reply; a pin at the city question is the city; the rest asks the question again. */
   private async other(turn: Turn, step: OnboardStep, incoming: Incoming): Promise<null> {
     if (incoming.quiet) return null;
-    if (step === 'city' && incoming.location) return this.pinned(turn, incoming.location);
+    if (step === 'city' && incoming.location) {
+      const city = pinnedCity(turn, incoming.location);
+      if (city) return this.apply(turn, 'city', city);
+      await pinWaits(turn);
+      return this.ask(turn, 'city');
+    }
     return this.ask(turn, step);
   }
 
   /** [📍 Send location]: WhatsApp's own button (a single-button message). */
   private async askPin(turn: Turn): Promise<null> {
     await saveTurn(turn, 'city');
-    await this.say(turn, MORE_WORDS.locationAsk, true);
+    await say(turn, MORE_WORDS.locationAsk, true);
     return null;
-  }
-
-  /** A pin: its place names a city we serve, else it waits on the lead and the city is asked. */
-  private async pinned(turn: Turn, pin: IncomingLocation): Promise<null> {
-    turn.pin = { latitude: pin.latitude, longitude: pin.longitude };
-    const city = cityFromPin(pin, turn.settings.serviceCities);
-    if (city) return this.apply(turn, 'city', city);
-    turn.awaiting = turn.settings.serviceCities.length === 0 ? 'city' : undefined;
-    await this.say(turn, MORE_WORDS.pinNoCity);
-    return this.ask(turn, 'city');
-  }
-
-  private say(turn: Turn, body: string, location = false) {
-    return speak(turn, () =>
-      queueReply(
-        turn.tx,
-        turn.chat,
-        location ? { kind: 'location_request', body } : { kind: 'text', body },
-      ),
-    );
   }
 
   /** A clear answer: kept in the chat, written on the lead, then the next question. */
@@ -232,16 +196,7 @@ export class OnboardingFlowService {
     turn.dropEntry ||= written.created;
     if (written.leadId) await fileHeldBill(turn, this.files, written.leadId);
     const leadId = written.leadId ?? turn.lead?.id;
-    if (step === 'city' && turn.pin && leadId) {
-      const { latitude, longitude } = turn.pin;
-      await updateLeadFromChat(
-        tx,
-        leadId,
-        {},
-        `Location pin: https://maps.google.com/?q=${latitude},${longitude}`,
-      );
-      turn.pin = undefined;
-    }
+    if (step === 'city' && leadId) await notePin(turn, leadId);
     const next = nextStep(step, turn.answers, turn.known);
     if (next !== 'done') return this.ask(turn, next);
     // Its lead was closed on the way: a new one, so the estimate or the expert has a lead.
@@ -258,47 +213,21 @@ export class OnboardingFlowService {
     return null;
   }
 
-  /**
-   * After the estimate its own taps are answered. "hi" or Menu shows the options again; "ok", "thanks", a
-   * 👍, a reaction or a sticker gets a short word; an old tap is told so. Only real words go to the owner,
-   * so there is no hand-over loop (§16).
-   */
-  private async afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
-    const { tx, chat, lead } = turn;
-    if (incoming && wantsPerson(incoming)) return this.toPerson(turn, 'done');
-    if (await speak(turn, () => this.nextSteps.answer(tx, chat, lead, incoming))) return null;
-    if (!incoming) return this.ask(turn, 'done');
-    if (incoming.choiceId) {
-      await this.say(turn, CHAT_WORDS.earlier);
-      return this.ask(turn, 'done');
-    }
-    const small = incoming.kind === 'text' && smallTalkOf(incoming.text) !== null;
-    if (incoming.kind === 'other' || small) {
-      if (!incoming.quiet) await this.say(turn, MORE_WORDS.afterEstimate);
-      return null;
-    }
-    return this.toPerson(turn, 'done');
+  /** After the estimate: its own taps, short words, the options again; only real words reach the owner. */
+  private afterEstimate(turn: Turn, incoming: Incoming | null): Promise<null> {
+    return afterEstimate(turn, incoming, this.nextSteps, {
+      toPerson: () => this.toPerson(turn, 'done'),
+      ask: () => this.ask(turn, 'done'),
+    });
   }
 
-  /**
-   * A person takes over with the answers summary, in this transaction: the state, the
-   * alert and the reply commit together. `ob` keeps this step for when the chat returns.
-   */
-  private async toPerson(turn: Turn, step: OnboardStep, media?: HeardMedia): Promise<null> {
-    const { tx, chat } = turn;
-    turn.misses = 0;
-    turn.awaiting = undefined;
-    const deps = { intake: this.intake, files: this.files };
-    await ensureLead(turn, deps, media ? HEARD[media].call : undefined);
-    await saveTurn(turn, step);
-    const said = media ? HEARD[media].note : null;
-    const summary = [said, summaryOf(turn.answers, turn.settings)].filter(Boolean).join('. ');
-    await speak(turn, async () => {
-      if (!media) return this.people.passToOwner(chat, { summary, db: tx });
-      const name = await this.people.answererName(await ensureChatOwner(tx, chat), tx);
-      return this.people.passToOwner(chat, { summary, db: tx, reply: heardReply(media, name) });
+  /** A person takes over with the answers summary (one transaction: state, alert and reply together). */
+  private toPerson(turn: Turn, step: OnboardStep, media?: HeardMedia): Promise<null> {
+    return handToPerson(turn, step, media, {
+      intake: this.intake,
+      files: this.files,
+      people: this.people,
     });
-    return null;
   }
 
   private async ask(turn: Turn, step: OnboardStep, retry = false): Promise<null> {

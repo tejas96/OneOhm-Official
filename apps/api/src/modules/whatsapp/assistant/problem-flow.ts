@@ -1,17 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type DatabaseExecutor, homeNameOf } from '@oneohm/database';
+import type { DatabaseExecutor } from '@oneohm/database';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { problemFormStart } from '../../care/care-form-words';
-import {
-  type CareTap,
-  PROBLEM_KINDS,
-  type ProblemKind,
-  SINCE_CHOICES,
-  type Since,
-} from '../../care/care-taps';
-import { callerOfRequest, promiseProblemCall } from '../../care/problem-call';
+import { type CareTap, PROBLEM_KINDS, SINCE_CHOICES, type Since } from '../../care/care-taps';
+import { callerOfRequest } from '../../care/problem-call';
 import { PROBLEM_LISTS, PROBLEM_WORDS } from '../../care/problem-words';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
@@ -32,7 +26,7 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
-import { CATEGORY, type RaisedRequest, waitingDocuments } from './problem-raised';
+import { CATEGORY, type RaisedRequest, tellRaised, waitingDocuments } from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';
 
@@ -112,13 +106,7 @@ export class ProblemFlowService {
     const offered = homes.slice(0, 10);
     const said = form.answers.home;
     const picked = offered.find((home) => home.id === said)?.id ?? null;
-    const saved: Extract<KeptFormFile, { ok: true }>[] = [];
-    for (const file of form.files.slice(0, MAX_FILES)) {
-      const kept = await this.files.keep(chat, customerId, file);
-      if (kept.ok) saved.push(kept);
-    }
-    const stored = saved.map((file) => file.id);
-    if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
+    const stored = await this.keepFiles(chat, customerId, form);
     // An unknown home is asked in the chat; what the form already said (and its photos) goes along.
     if (said ? !picked : offered.length > 1)
       return startComplaint(this.db, chat, customerId, topic, {
@@ -138,6 +126,17 @@ export class ProblemFlowService {
     if (!kind || !since)
       return askAgain(this.db, chat, { ...draft, stage: kind ? 'since' : 'what', files: stored });
     return this.raise(chat, customerId, { ...draft, files: stored }, form.answers.note ?? '');
+  }
+
+  /** The form's photos, stored and shown in the chat; the stored documents' ids. */
+  private async keepFiles(chat: Conversation, customerId: string, form: IncomingForm) {
+    const saved: Extract<KeptFormFile, { ok: true }>[] = [];
+    for (const file of form.files.slice(0, MAX_FILES)) {
+      const kept = await this.files.keep(chat, customerId, file);
+      if (kept.ok) saved.push(kept);
+    }
+    if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
+    return saved.map((file) => file.id);
   }
 
   /** Raises the report from the draft, then tells the customer who will call and when. */
@@ -167,37 +166,12 @@ export class ProblemFlowService {
     const files = [...new Set([...earlier, ...(draft.files ?? [])])].slice(0, MAX_FILES);
     let added = 0;
     for (const file of files) if (await this.attach(customerId, request.id, file)) added += 1;
-    return this.promise(chat, customerId, request.id, projectId, kind, added < files.length);
-  }
-
-  /** The reply of a raised report: who calls, by when; the call task behind that promise. */
-  private async promise(
-    chat: Conversation,
-    customerId: string,
-    requestId: string,
-    projectId: string | null,
-    kind: ProblemKind,
-    skipped: boolean,
-  ) {
-    const call = await promiseProblemCall(this.db, {
-      customerId,
-      requestId,
-      projectId,
-      kind,
-      phone: chat.phone,
-      timeZone: this.env.BUSINESS_TIMEZONE,
-    });
-    const home = projectId ? await homeNameOf(this.db, projectId) : null;
-    const lines = [
-      PROBLEM_WORDS.saved(
-        PROBLEM_WORDS.what[kind],
-        home,
-        call.name ?? PROBLEM_WORDS.team,
-        call.when,
-      ),
-      skipped ? MEDIA_WORDS.photoNotAdded : '',
-    ];
-    return sayWithTaps(this.db, chat, lines.filter(Boolean).join('\n\n'), ['problems', 'menu']);
+    return tellRaised(
+      this.db,
+      chat,
+      { customerId, requestId: request.id, projectId, kind, timeZone: this.env.BUSINESS_TIMEZONE },
+      added < files.length,
+    );
   }
 
   /** More photos for the request just raised (the documents they were stored as). */
