@@ -2,38 +2,28 @@ import {
   customerActions,
   customers,
   type Database,
-  homeNameOf,
-  messageTemplates,
   notifyHolders,
   projects,
   queueCustomerMessage,
   referralRewards,
+  routeOfCustomer,
 } from '@oneohm/database';
-import { isWorkingTime, templateIsOn } from '@oneohm/domain';
-import { daysBetween, formatInr, titleCaseName, todayIn } from '@oneohm/shared';
-import { and, asc, eq, gt, inArray, or, sql } from 'drizzle-orm';
-import { visitDay } from './after-sales';
+import { isWorkingTime } from '@oneohm/domain';
+import { formatInr, titleCaseName, todayIn } from '@oneohm/shared';
+import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
+import { AMC_REMIND_DAYS, DAY, expireRatings, fixed, type Given, on, renewal } from './care-asks';
 
-const DAY = 86_400_000;
 const PER_TICK = 200;
-/** The AMC renewal is chased this many days before the AMC ends, and the service team told at 7. */
-const AMC_REMIND_DAYS = 10;
-const AMC_ALERT_DAYS = 7;
+/** How long each ask is chased, counted per kind in the query, so a stale kind cannot crowd out a fresh one. */
+const RATING_DAYS = 14;
+const FIXED_DAYS = 7;
+const PAYOUT_DAYS = 14;
 
 const STAGE_NAME: Readonly<Record<string, string>> = {
   survey: 'site survey',
   installation: 'installation',
   commissioning: 'switch-on and handover',
 };
-
-async function on(db: Database, key: string) {
-  const [row] = await db
-    .select({ active: messageTemplates.active })
-    .from(messageTemplates)
-    .where(eq(messageTemplates.key, key))
-    .limit(1);
-  return templateIsOn(key, row);
-}
 
 /**
  * Chases what the care flows asked (phase 6): a rating (the customer at 2 days, by the rating template; staff
@@ -48,6 +38,13 @@ export async function queueCareReminders(
   now: Date,
   timeZone: string,
 ): Promise<number> {
+  await expireRatings(db, now);
+  const ago = (days: number) => new Date(now.getTime() - days * DAY);
+  const today = todayIn(timeZone, now);
+  const horizon = new Date(Date.parse(today) + AMC_REMIND_DAYS * DAY).toISOString().slice(0, 10);
+  const kind = sql`${customerActions.payload}->>'kind'`;
+  // A payout is chased from its latest ask (the first one or an "Ask again").
+  const askedAt = sql`greatest(${customerActions.createdAt}, coalesce((${customerActions.payload}->>'askedAt')::timestamptz, ${customerActions.createdAt}))`;
   const open = await db
     .select({
       action: customerActions,
@@ -61,10 +58,15 @@ export async function queueCareReminders(
     .where(
       and(
         eq(customerActions.status, 'open'),
-        gt(customerActions.createdAt, new Date(now.getTime() - 30 * DAY)),
         or(
-          inArray(customerActions.type, ['rating', 'payout']),
-          sql`${customerActions.payload}->>'kind' in ('problem_fixed', 'amc_renewal')`,
+          and(eq(customerActions.type, 'rating'), gt(customerActions.createdAt, ago(RATING_DAYS))),
+          and(eq(customerActions.type, 'payout'), gt(askedAt, ago(PAYOUT_DAYS))),
+          and(sql`${kind} = 'problem_fixed'`, gt(customerActions.createdAt, ago(FIXED_DAYS))),
+          // The offer is made 30 days before the AMC ends: only the last days before its end count.
+          and(
+            sql`${kind} = 'amc_renewal'`,
+            sql`${customerActions.payload}->>'endsOn' between ${today} and ${horizon}`,
+          ),
         ),
       ),
     )
@@ -87,17 +89,6 @@ export async function queueCareReminders(
   }
   return done;
 }
-
-type Given = {
-  readonly action: typeof customerActions.$inferSelect;
-  readonly customer: string;
-  readonly phone: string;
-  readonly code: string | null;
-  readonly age: number;
-  readonly working: boolean;
-  readonly now: Date;
-  readonly timeZone: string;
-};
 
 async function rating(db: Database, g: Given): Promise<boolean> {
   const { action } = g;
@@ -160,7 +151,9 @@ async function payout(db: Database, g: Given): Promise<boolean> {
   }
   // Day 1, then every 2 days: round 1 from day 1, round 2 from day 3, ...
   const round = 1 + Math.floor((age - DAY) / (2 * DAY));
-  if (g.working && (await on(db, 'reward_upi_ask')))
+  // A customer off WhatsApp was handed over to the team with the first ask: no chat to remind them in.
+  const inChat = (await routeOfCustomer(db, action.customerId)) === 'whatsapp';
+  if (inChat && g.working && (await on(db, 'reward_upi_ask')))
     worked =
       (await queueCustomerMessage(
         db,
@@ -172,75 +165,6 @@ async function payout(db: Database, g: Given): Promise<boolean> {
           sharePayload: `up:go:${action.id}`,
         },
         `payout_reminder:${action.id}${again ? `:${again}` : ''}:${round}`,
-      )) || worked;
-  return worked;
-}
-
-async function fixed(db: Database, g: Given): Promise<boolean> {
-  const { action } = g;
-  let worked = false;
-  // No answer in 2 days (or the template is off and nobody can chase it): the service desk is told, once.
-  if (g.age >= 2 * DAY) {
-    await notifyHolders(db, 'service.manage', {
-      kind: 'problem_fixed_waiting',
-      title: `${g.customer} has not said whether the problem is fixed`,
-      body: 'Call them to check, then close it or reopen the request.',
-      ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
-      dedupeKey: `fixed_waiting:${action.id}`,
-    });
-    worked = true;
-  }
-  if (g.age < DAY || g.age >= 7 * DAY || !g.working) return worked;
-  if (!(await on(db, 'problem_fixed_check'))) return worked;
-  return (
-    (await queueCustomerMessage(
-      db,
-      g.phone,
-      'problem_fixed_check',
-      {
-        customer: titleCaseName(g.customer),
-        topic: String(action.payload.topic ?? 'your problem'),
-        yesPayload: `fx:y:${action.id}`,
-        stillPayload: `fx:n:${action.id}`,
-      },
-      `fixed_reminder:${action.id}`,
-    )) || worked
-  );
-}
-
-async function renewal(db: Database, g: Given): Promise<boolean> {
-  const { action } = g;
-  const endsOn = String(action.payload.endsOn ?? '');
-  if (!endsOn) return false;
-  const left = daysBetween(todayIn(g.timeZone, g.now), endsOn);
-  if (left < 0 || left > AMC_REMIND_DAYS) return false;
-  // An offer made only now (it was due within the last days) is not chased at once.
-  if (g.age < 5 * DAY) return false;
-  let worked = false;
-  if (left <= AMC_ALERT_DAYS) {
-    await notifyHolders(db, 'service.manage', {
-      kind: 'amc_renewal_waiting',
-      title: `${g.customer} has not answered the AMC renewal offer`,
-      body: `Their AMC ends on ${visitDay(endsOn)}. Call them to renew it.`,
-      ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
-      dedupeKey: `amc_renewal_waiting:${action.id}`,
-    });
-    worked = true;
-  }
-  if (g.working && (await on(db, 'amc_renewal_offer')))
-    worked =
-      (await queueCustomerMessage(
-        db,
-        g.phone,
-        'amc_renewal_offer',
-        {
-          customer: titleCaseName(g.customer),
-          home: await homeNameOf(db, action.projectId, action.propertyId),
-          date: visitDay(endsOn),
-          renewPayload: `amc:renew:${action.id}`,
-          talkPayload: `amc:talk:${action.id}`,
-        },
-        `amc_renewal_reminder:${action.id}`,
       )) || worked;
   return worked;
 }
