@@ -58,9 +58,11 @@ export function assistantAnswersTap(
  */
 export function assistantAnswers(
   chat: Pick<Conversation, 'customerId' | 'state' | 'context'>,
-  incoming: Pick<Incoming, 'kind' | 'choiceId'>,
+  incoming: Pick<Incoming, 'kind' | 'choiceId' | 'unsupported'>,
 ): boolean {
   if (assistantAnswersTap(chat, incoming)) return true;
+  // A message WhatsApp could not pass on: the person cannot open it either, so we ask again.
+  if (incoming.unsupported) return true;
   // A form we sent: the customer is using the assistant's own form, so it answers in a held chat.
   if (incoming.kind === 'form') return true;
   const step = chat.customerId === null ? null : heldStep(chat);

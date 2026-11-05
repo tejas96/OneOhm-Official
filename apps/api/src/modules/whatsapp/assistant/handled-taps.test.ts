@@ -76,4 +76,11 @@ describe('taps the assistant answers while a person has the chat', () => {
     for (const step of ['await_referral', 'await_comment', 'await_home'])
       expect(assistantAnswers(at(step), file), step).toBe(false);
   });
+
+  it('answers a message WhatsApp could not pass on, even in a held chat', () => {
+    const held = { customerId: 'c1', state: 'human', context: {} };
+    const unsupported = { kind: 'other' as const, choiceId: null, unsupported: true };
+    expect(assistantAnswers(held, unsupported)).toBe(true);
+    expect(assistantAnswers(held, { kind: 'other' as const, choiceId: null })).toBe(false);
+  });
 });
