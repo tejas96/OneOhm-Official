@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { titleCaseName } from '@oneohm/shared';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
@@ -111,7 +112,8 @@ export class QuoteActionsService {
     });
     if (!quotation || quotation.customer.id !== chat.customerId)
       return this.refuse(chat, WORDS.quoteChanged);
-    if (quotation.customerPhone !== chat.phone) return this.refuse(chat, WORDS.quoteOwnerOnly);
+    if (quotation.customerPhone !== chat.phone)
+      return this.refuse(chat, QUOTE_WORDS.ownerOnly(titleCaseName(quotation.customer.name)));
     if (quotation.status === 'accepted') return this.already(chat, messageId);
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
     const steps = await quotedSteps(this.db, quotationId);
@@ -146,7 +148,10 @@ export class QuoteActionsService {
     if (result === 'already') return this.already(chat, messageId);
     // Accepted now: the thank-you goes once, however often "yes" arrives.
     const taps = ['menu', 'talk'] as const;
-    return sayWithTaps(this.db, chat, QUOTE_WORDS.quoteThanks, taps, `quote_thanks:${quotationId}`);
+    const thanks = QUOTE_WORDS.quoteThanks(
+      (await this.people.answererName(chat)) ?? QUOTE_WORDS.team,
+    );
+    return sayWithTaps(this.db, chat, thanks, taps, `quote_thanks:${quotationId}`);
   }
 
   /**
