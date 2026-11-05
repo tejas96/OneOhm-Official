@@ -116,6 +116,22 @@ describe('Problem: fixed check and reopen', () => {
     expect(all).toHaveLength(1);
   });
 
+  it('1 or 2 stars on a problem: the service desk is told too, beside the call task', async () => {
+    const { phone } = await resolved('Fixed Low (test)');
+    await tap(phone, (await lastReply(phone))?.buttons?.[0]?.id ?? '');
+    const list = await lastReply(phone);
+    await tap(phone, list?.rows?.[4]?.id ?? '');
+    const [ask] = await rows<{ id: string }>(
+      "SELECT ca.id FROM customer_actions ca JOIN customers c ON c.id = ca.customer_id WHERE c.phone_e164 = $1 AND ca.type = 'rating'",
+      [phone],
+    );
+    const desk = await rows(
+      "SELECT 1 FROM notifications WHERE kind = 'call_customer' AND dedupe_key LIKE $1",
+      [`rating_low:${ask?.id}:desk%`],
+    );
+    expect(desk.length).toBeGreaterThan(0);
+  });
+
   it('outside 24 hours the template goes once it is on; while it is off the older update still goes, also in the chat', async () => {
     const { phone: closed } = await resolved('Fixed Template (test)', { open: false });
     const [sent] = await templatesFor(closed, 'problem_fixed_check');

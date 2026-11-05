@@ -84,6 +84,7 @@ export function answerRating(
       stars,
       key: `rating_low:${ask.id}`,
       timeZone,
+      desk: ask.payload.requestId != null,
     });
     return { kind: 'low', name: call.name, when: call.when };
   });

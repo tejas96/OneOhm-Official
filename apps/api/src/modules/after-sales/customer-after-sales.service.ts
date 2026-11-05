@@ -158,6 +158,7 @@ export class CustomerAfterSalesService {
         stars: input.rating,
         key: `rating_low:problem:${requestId}`,
         timeZone: this.env.BUSINESS_TIMEZONE,
+        desk: true,
       });
     }
     const [row] = await serviceRequestRows(this.db, eq(serviceRequests.id, requestId));
