@@ -10,6 +10,7 @@ import { conflict, forbidden, invalid, notFound } from '../../common/http/errors
 import { daySpan } from '../../common/notices';
 import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
+import { openVisitForTask } from '../visits/visit-reads';
 import { canViewTask } from './task-access';
 import { taskTimeline } from './task-activity';
 import { saveTick } from './task-checklist';
@@ -55,6 +56,13 @@ export class TaskFlowService {
     if (input.dueDate < todayIn()) {
       throw invalid('Pick today or a later date.', { dueDate: 'Pick today or a later date.' });
     }
+    // A visit booked after the new due date must be moved first, in the visit card.
+    const visit = await openVisitForTask(this.db, id);
+    if (visit && visit.status !== 'missed' && visit.day > input.dueDate)
+      throw conflict(
+        `A visit is booked on ${visit.day}; change it in the visit card first.`,
+        'visit_booked',
+      );
     const survey = siteVisitKindOf(task) === 'survey';
     await this.db.transaction(async (tx) => {
       await tx

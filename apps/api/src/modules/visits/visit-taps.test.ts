@@ -18,9 +18,24 @@ describe('visit taps', () => {
       day: '2026-11-06',
       slot: 'afternoon',
     });
-    expect(readVisitTap(visitTaps.confirm(id))).toEqual({ t: 'confirm', visitId: id });
-    expect(readVisitTap(visitTaps.okay(id))).toEqual({ t: 'okay', visitId: id });
-    expect(readVisitTap(visitTaps.change(id))).toEqual({ t: 'change', visitId: id });
+    expect(readVisitTap(visitTaps.confirm(id, '2026-11-06'))).toEqual({
+      t: 'confirm',
+      visitId: id,
+      day: '2026-11-06',
+    });
+    expect(readVisitTap(visitTaps.okay(id, '2026-11-06'))).toEqual({
+      t: 'okay',
+      visitId: id,
+      day: '2026-11-06',
+    });
+    expect(readVisitTap(visitTaps.change(id, '2026-11-06'))).toEqual({
+      t: 'change',
+      visitId: id,
+      day: '2026-11-06',
+    });
+  });
+  it('still reads an older id with no day', () => {
+    expect(readVisitTap(`vcf:${id}`)).toEqual({ t: 'confirm', visitId: id });
   });
   it('ignores other ids', () => {
     expect(readVisitTap('pay:x')).toBeNull();

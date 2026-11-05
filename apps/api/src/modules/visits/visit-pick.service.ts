@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { alertVisitOwner, customerActions } from '@oneohm/database';
-import { freeSlots, nextActionStatus } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
+import { freeSlots, isWorkingDay, nextActionStatus } from '@oneohm/domain';
+import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
+import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import type { Built } from '../send-to-customer/send-messages';
@@ -10,6 +11,7 @@ import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { answererName } from '../whatsapp/chat-owner';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';
 import { freeDaysFor, takenSlots } from './visit-capacity';
+import type { VisitRow } from './visit-effects';
 import { dayWords, pickList, proposedThanks, slotButtons } from './visit-messages';
 import {
   openVisitFor,
@@ -107,7 +109,7 @@ export class VisitPickService {
     const target = await targetOf(this.db, scopeOfAction(action));
     const taken = await takenSlots(this.db, target.crew, todayIn(this.env.BUSINESS_TIMEZONE));
     const slots = freeSlots(taken[day] ?? []);
-    if (slots.length === 0 || day <= todayIn(this.env.BUSINESS_TIMEZONE)) {
+    if (slots.length === 0 || badDay(day, todayIn(this.env.BUSINESS_TIMEZONE))) {
       await queueReply(this.db, chat, { kind: 'text', body: VISIT_WORDS.pick.taken });
       return this.list(chat, action, target, false);
     }
@@ -127,36 +129,55 @@ export class VisitPickService {
     if (!action || !next) return this.old(chat);
     const target = await targetOf(this.db, scopeOfAction(action));
     const taken = await takenSlots(this.db, target.crew, todayIn(this.env.BUSINESS_TIMEZONE));
-    if (day <= todayIn(this.env.BUSINESS_TIMEZONE) || !freeSlots(taken[day] ?? []).includes(slot)) {
+    if (
+      badDay(day, todayIn(this.env.BUSINESS_TIMEZONE)) ||
+      !freeSlots(taken[day] ?? []).includes(slot)
+    ) {
       await queueReply(this.db, chat, { kind: 'text', body: VISIT_WORDS.pick.taken });
       return this.list(chat, action, target, false);
     }
     const now = new Date();
-    const row = await this.db.transaction(async (tx) => {
-      const { row } = await saveVisit(
-        tx,
-        target,
-        { day, slot, status: 'proposed', by: 'customer', userId: null },
-        await openVisitFor(tx, target),
-        now,
-      );
-      await tx
-        .update(customerActions)
-        .set({
-          status: next,
-          doneAt: now,
-          updatedAt: now,
-          payload: { ...action.payload, visitId: row.id, day, slot },
-        })
-        .where(eq(customerActions.id, action.id));
-      await alertVisitOwner(tx, row, {
-        kind: 'visit_proposed',
-        title: `${target.customerName} picked ${dayWords(day)}, ${slot}`,
-        body: `${target.title}: confirm the day or change it.`,
-        key: `visit_proposed:${row.id}:${day}:${slot}`,
+    let row: VisitRow | null;
+    try {
+      row = await this.db.transaction(async (tx) => {
+        // Only the first answer to an ask counts, however many taps arrive at once.
+        const [claimed] = await tx
+          .update(customerActions)
+          .set({
+            status: next,
+            doneAt: now,
+            updatedAt: now,
+            payload: { ...action.payload, day, slot },
+          })
+          .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')))
+          .returning({ id: customerActions.id });
+        if (!claimed) return null;
+        const { row } = await saveVisit(
+          tx,
+          target,
+          { day, slot, status: 'proposed', by: 'customer', userId: null },
+          await openVisitFor(tx, target),
+          now,
+        );
+        await tx
+          .update(customerActions)
+          .set({ payload: { ...action.payload, visitId: row.id, day, slot } })
+          .where(eq(customerActions.id, action.id));
+        await alertVisitOwner(tx, row, {
+          kind: 'visit_proposed',
+          title: `${target.customerName} picked ${dayWords(day)}, ${slot}`,
+          body: `${target.title}: confirm the day or change it.`,
+          key: `visit_proposed:${row.id}:${day}:${slot}`,
+        });
+        return row;
       });
-      return row;
-    });
+    } catch (error) {
+      if (!(error instanceof AppError) || error.code !== 'slot_taken') throw error;
+      // Someone took the time between the list and the tap.
+      await queueReply(this.db, chat, { kind: 'text', body: VISIT_WORDS.pick.taken });
+      return this.list(chat, action, target, false);
+    }
+    if (!row) return this.old(chat);
     await sayWithTaps(
       this.db,
       chat,
@@ -178,3 +199,7 @@ export class VisitPickService {
     };
   }
 }
+
+/** A day the customer cannot be offered: today or past, a Sunday, or beyond the look-ahead. */
+const badDay = (day: string, today: string) =>
+  day <= today || !isWorkingDay(day) || day > addDays(today, 45);

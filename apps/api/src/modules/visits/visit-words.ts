@@ -46,8 +46,12 @@ const EN_VISIT = {
     `Our team visits *${home}* ${when} for the *${work}*.`,
   presence: (work: string, home: string, day: string) =>
     `The electricity board (DISCOM) will do the *${work}* at *${home}* on *${day}*. Please be at home.`,
+  byBoard: 'by the electricity board',
+  boardHome: (home: string | null, day: string) =>
+    `The electricity board visits your ${home ? `${home} ` : ''}home on *${day}*.`,
   thanks: {
     okay: 'Thank you ✅',
+    moved: (when: string) => `That day changed — your visit is now *${when}*.`,
     confirmed: 'Thank you ✅ We will see you then.',
     there: 'Thank you ✅ We have noted you will be there.',
     cannot: (name: string) => `Thanks — ${name} will call you about a new day.`,
@@ -90,9 +94,12 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
   cancelled: (work, home) => `${home} येथील *${work}* ची तुमची भेट रद्द झाली आहे. नवा दिवस आम्ही कळवू.`,
   reminder: (home, when, work) => `आमची टीम *${home}* येथे ${when} *${work}* साठी येणार आहे.`,
   presence: (work, home, day) =>
-    `वीज मंडळ (DISCOM) *${home}* येथे *${day}* रोजी *${work}* करणार आहे. कृपया घरी राहा.`,
+    `*${work}* साठी वीज मंडळ (DISCOM) *${home}* येथे *${day}* रोजी येणार आहे. कृपया घरी राहा.`,
+  byBoard: 'वीज मंडळाकडून',
+  boardHome: (home, day) => `वीज मंडळ तुमच्या ${home ? `${home} ` : ''}घरी *${day}* रोजी येणार आहे.`,
   thanks: {
     okay: 'धन्यवाद ✅',
+    moved: (when) => `तो दिवस बदलला आहे — तुमची भेट आता *${when}* ला आहे.`,
     confirmed: 'धन्यवाद ✅ भेटू या.',
     there: 'धन्यवाद ✅ तुम्ही असाल हे आम्ही नोंदवले आहे.',
     cannot: (name) => `धन्यवाद — नवा दिवस ठरवण्यासाठी ${name} तुम्हाला फोन करतील.`,
@@ -131,13 +138,16 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
   booked: (when, name, phone) =>
     `तय हो गया ✅ *${when}*। आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
   changed: (when, name, phone) =>
-    `हमने आपकी विज़िट *${when}* कर दी है। आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
+    `हमने आपकी विज़िट बदलकर *${when}* कर दी है। आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
   cancelled: (work, home) => `${home} पर *${work}* की आपकी विज़िट रद्द हो गई है। नया दिन हम बताएँगे।`,
   reminder: (home, when, work) => `हमारी टीम *${home}* पर ${when} *${work}* के लिए आ रही है।`,
   presence: (work, home, day) =>
-    `बिजली बोर्ड (DISCOM) *${home}* पर *${day}* को *${work}* करेगा। कृपया घर पर रहें।`,
+    `*${work}* के लिए बिजली बोर्ड (DISCOM) *${home}* पर *${day}* को आएगा। कृपया घर पर रहें।`,
+  byBoard: 'बिजली बोर्ड द्वारा',
+  boardHome: (home, day) => `बिजली बोर्ड आपके ${home ? `${home} ` : ''}घर पर *${day}* को आएगा।`,
   thanks: {
     okay: 'धन्यवाद ✅',
+    moved: (when) => `वह दिन बदल गया है — आपकी विज़िट अब *${when}* को है।`,
     confirmed: 'धन्यवाद ✅ मिलते हैं।',
     there: 'धन्यवाद ✅ हमने नोट कर लिया कि आप रहेंगे।',
     cannot: (name) => `धन्यवाद — नया दिन तय करने के लिए ${name} आपको फ़ोन करेंगे।`,

@@ -1,13 +1,14 @@
 import {
   customerActions,
   type DatabaseExecutor,
+  leadActivities,
   leads,
   projectActivities,
   projectTasks,
   serviceRequests,
   type visits,
 } from '@oneohm/database';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logLead } from '../crm/lead-history';
 
@@ -36,6 +37,13 @@ export async function logVisit(
     ...data,
     ...(visit.serviceRequestId ? { serviceRequestId: visit.serviceRequestId } : {}),
   });
+  // A service request's history is its audit rows: the visit shows there too, not on the visit alone.
+  if (visit.serviceRequestId)
+    await recordAudit(tx, userId, audit, 'service_request', visit.serviceRequestId, {
+      ...data,
+      visitId: visit.id,
+      message,
+    });
 }
 
 /** The task's planned dates follow the confirmed visit: it starts that day and is not due before it. */
@@ -67,6 +75,8 @@ export async function mirrorServiceDay(
     .where(eq(serviceRequests.id, serviceRequestId));
 }
 
+const SURVEY_MOVE = 'Moved to Survey scheduled (visit booked).';
+
 /** A survey picked or confirmed on a lead: the lead is "Survey scheduled" with that day as its next action. */
 export async function surveyOnLead(
   tx: DatabaseExecutor,
@@ -89,7 +99,7 @@ export async function surveyOnLead(
     })
     .where(eq(leads.id, leadId));
   if (early)
-    await logLead(tx, leadId, userId, 'stage_change', 'Moved to Survey scheduled (visit booked).');
+    await logLead(tx, leadId, userId, 'stage_change', `${SURVEY_MOVE} Was: ${lead.stage}.`);
 }
 
 /** Closes (or cancels) the visit asks of this visit's target that are still waiting. */
@@ -98,6 +108,7 @@ export async function settleVisitActions(
   visit: Pick<VisitRow, 'customerId' | 'taskId' | 'serviceRequestId' | 'leadId' | 'kind'>,
   to: 'closed' | 'cancelled',
   types: ('visit_pick' | 'presence')[] = ['visit_pick', 'presence'],
+  from: ('open' | 'received')[] = ['open', 'received'],
 ) {
   const target = visit.taskId ? eq(customerActions.taskId, visit.taskId) : undefined;
   const rows = await tx
@@ -107,7 +118,7 @@ export async function settleVisitActions(
       and(
         eq(customerActions.customerId, visit.customerId),
         inArray(customerActions.type, types),
-        inArray(customerActions.status, ['open', 'received']),
+        inArray(customerActions.status, from),
         target,
       ),
     );
@@ -132,5 +143,46 @@ export async function settleVisitActions(
         customerActions.id,
         mine.map((row) => row.id),
       ),
+    );
+}
+
+/**
+ * A cancelled survey: a lead the visit moved to "Survey scheduled" goes back to the stage it was
+ * in, and the next action the visit set is cleared (a plan made by hand is left alone).
+ */
+export async function revertSurveyOnLead(
+  tx: DatabaseExecutor,
+  leadId: string,
+  userId: string | null,
+) {
+  const [lead] = await tx
+    .select({ stage: leads.stage, note: leads.nextActionNote })
+    .from(leads)
+    .where(eq(leads.id, leadId));
+  if (lead?.stage !== 'survey_scheduled') return;
+  const [moved] = await tx
+    .select({ note: leadActivities.note })
+    .from(leadActivities)
+    .where(and(eq(leadActivities.leadId, leadId), like(leadActivities.note, `${SURVEY_MOVE}%`)))
+    .orderBy(desc(leadActivities.createdAt))
+    .limit(1);
+  const was = /Was: (\w+)\./.exec(moved?.note ?? '')?.[1];
+  const back = was === 'new' || was === 'contacted' ? was : null;
+  const own = lead.note?.startsWith('Site survey') ?? false;
+  await tx
+    .update(leads)
+    .set({
+      ...(back ? { stage: back } : {}),
+      ...(own ? { nextActionOn: null, nextActionTime: null, nextActionNote: null } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(leads.id, leadId));
+  if (back)
+    await logLead(
+      tx,
+      leadId,
+      userId,
+      'stage_change',
+      `Back to ${back}: the survey visit was cancelled.`,
     );
 }

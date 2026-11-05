@@ -5,7 +5,7 @@ const DAY = '\\d{4}-\\d{2}-\\d{2}';
 const ASK = new RegExp(`^vask:(${UUID})$`);
 const PICK_DAY = new RegExp(`^vday:(${UUID}):(${DAY})$`);
 const PICK_SLOT = new RegExp(`^vslot:(${UUID}):(${DAY}):(${VISIT_SLOTS.join('|')})$`);
-const VISIT = new RegExp(`^(vcf|vok|vchg):(${UUID})$`);
+const VISIT = new RegExp(`^(vcf|vok|vchg):(${UUID})(?::(${DAY}))?$`);
 
 /** A tap on a button or row the visit messages carry. */
 export type VisitTap =
@@ -19,10 +19,10 @@ export type VisitTap =
       readonly slot: VisitSlot;
     }
   /** [Confirm] / [I'll be there]. */
-  | { readonly t: 'confirm'; readonly visitId: string }
+  | { readonly t: 'confirm'; readonly visitId: string; readonly day?: string }
   /** [Okay] under "Booked". */
-  | { readonly t: 'okay'; readonly visitId: string }
-  | { readonly t: 'change'; readonly visitId: string };
+  | { readonly t: 'okay'; readonly visitId: string; readonly day?: string }
+  | { readonly t: 'change'; readonly visitId: string; readonly day?: string };
 
 export function readVisitTap(id: string | null | undefined): VisitTap | null {
   if (!id) return null;
@@ -41,7 +41,7 @@ export function readVisitTap(id: string | null | undefined): VisitTap | null {
   const visit = VISIT.exec(id);
   if (!visit) return null;
   const t = ({ vcf: 'confirm', vok: 'okay', vchg: 'change' } as const)[visit[1] as 'vcf'];
-  return { t, visitId: visit[2] as string };
+  return { t, visitId: visit[2] as string, ...(visit[3] ? { day: visit[3] } : {}) };
 }
 
 export const isVisitTap = (id: string) => readVisitTap(id) !== null;

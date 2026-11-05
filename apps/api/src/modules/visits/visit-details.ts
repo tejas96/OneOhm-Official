@@ -1,8 +1,9 @@
-import { type DatabaseExecutor, homeNameOf, users, visits } from '@oneohm/database';
+import { type DatabaseExecutor, homeNameOf, projectTasks, users, visits } from '@oneohm/database';
+import { isPresenceKind } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
-import { whenWords } from './visit-messages';
-import { workWords } from './visit-words';
+import { and, asc, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm';
+import { dayWords, whenWords } from './visit-messages';
+import { VISIT_WORDS, workWords } from './visit-words';
 
 /**
  * [Visit details] on Home: the confirmed visits of the next 30 days, each with the day, what
@@ -14,19 +15,22 @@ export async function visitDetails(
   timeZone = 'Asia/Kolkata',
 ): Promise<string | null> {
   const today = todayIn(timeZone);
-  const rows = await db
-    .select()
+  const found = await db
+    .select({ visit: visits })
     .from(visits)
+    .leftJoin(projectTasks, eq(projectTasks.id, visits.taskId))
     .where(
       and(
         eq(visits.customerId, customerId),
         eq(visits.status, 'confirmed'),
+        or(isNull(visits.taskId), eq(projectTasks.notifyCustomer, true)),
         gte(visits.day, today),
         lte(visits.day, addDays(today, 30)),
       ),
     )
     .orderBy(asc(visits.day), asc(visits.slot))
     .limit(5);
+  const rows = found.map((one) => one.visit);
   if (rows.length === 0) return null;
   const lines: string[] = [];
   for (const row of rows) {
@@ -40,7 +44,12 @@ export async function visitDetails(
     const who = crew[0]
       ? `\n  ${crew[0].name.split(/\s+/)[0]}${crew[0].phone ? ` ${crew[0].phone}` : ''}`
       : '';
-    lines.push(`• *${whenWords(row.day, row.slot)}* — ${workWords(row.kind)} · ${home}${who}`);
+    // The board's own visits are told as theirs, with no crew to call.
+    lines.push(
+      isPresenceKind(row.kind)
+        ? `• *${dayWords(row.day)}* — ${workWords(row.kind)} ${VISIT_WORDS.byBoard} · ${home}`
+        : `• *${whenWords(row.day, row.slot)}* — ${workWords(row.kind)} · ${home}${who}`,
+    );
   }
   return lines.join('\n');
 }

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SetVisit, Visit, VisitScope, VisitsOf } from '@oneohm/api-contracts';
-import { homeNameOf, leads, users, visits } from '@oneohm/database';
+import { homeNameOf, leads, projectTasks, users, visits } from '@oneohm/database';
 import { freeSlots, isPresenceKind, isWorkingDay, OPEN_VISIT_STATUSES } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -39,7 +39,14 @@ export class VisitsService {
   async of(actor: Actor, scope: VisitScope): Promise<VisitsOf> {
     await this.allowed(actor, scope);
     if (scope.taskId && !(await taskVisitKind(this.db, scope.taskId)))
-      return { kind: null, presence: false, customerMessages: false, visits: [], freeDays: [] };
+      return {
+        kind: null,
+        presence: false,
+        customerMessages: false,
+        visits: [],
+        taskStartDate: null,
+        freeDays: [],
+      };
     const target = await targetOf(this.db, scope);
     const rows = await this.db
       .select()
@@ -52,6 +59,7 @@ export class VisitsService {
       presence: isPresenceKind(target.kind),
       customerMessages: target.mayMessage,
       visits: await Promise.all(rows.map((row) => this.present(row, target))),
+      taskStartDate: target.taskId ? await this.taskStart(target.taskId) : null,
       freeDays: isPresenceKind(target.kind)
         ? []
         : await freeDaysFor(this.db, target.crew, 9, undefined, this.env.BUSINESS_TIMEZONE),
@@ -106,10 +114,9 @@ export class VisitsService {
   }
 
   async done(actor: Actor, id: string): Promise<Visit> {
-    const row = await this.open(id);
+    // A visit nobody ticked in time (missed) can still be marked done when it did happen.
+    const row = await this.open(id, ['missed']);
     await this.allowed(actor, scopeOfRow(row));
-    if (row.status !== 'confirmed')
-      throw conflict('Confirm the visit before marking it done.', 'not_confirmed');
     const target = await targetOf(this.db, scopeOfRow(row));
     return this.db.transaction(async (tx) => {
       const done = await finishVisit(tx, row, actor.userId, target.title);
@@ -118,10 +125,18 @@ export class VisitsService {
     });
   }
 
-  private async open(id: string): Promise<VisitRow> {
+  private async taskStart(taskId: string): Promise<string | null> {
+    const [task] = await this.db
+      .select({ start: projectTasks.startDate })
+      .from(projectTasks)
+      .where(eq(projectTasks.id, taskId));
+    return task?.start ?? null;
+  }
+
+  private async open(id: string, also: readonly string[] = []): Promise<VisitRow> {
     const [row] = await this.db.select().from(visits).where(eq(visits.id, id));
     if (!row) throw notFound('That visit');
-    if (!OPEN_VISIT_STATUSES.includes(row.status as 'proposed' | 'confirmed'))
+    if (!OPEN_VISIT_STATUSES.some((status) => status === row.status) && !also.includes(row.status))
       throw conflict('This visit is already closed.', 'closed');
     return row;
   }

@@ -25,7 +25,9 @@ export function pendingLine(item: PendingItem): string {
     case 'visit_ask':
       return VISIT_WORDS.pick.homeLine(item.home);
     case 'visit':
-      return home.visit(item.home, daySpan(item.on, item.on));
+      return item.board
+        ? VISIT_WORDS.boardHome(item.home, daySpan(item.on, item.on))
+        : home.visit(item.home, daySpan(item.on, item.on));
     case 'problem':
       return home.problem(item.home);
     case 'quote':

@@ -1,10 +1,14 @@
 import { type DatabaseExecutor, visits } from '@oneohm/database';
-import { isPresenceKind, type VisitSlot } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { freeSlots, isPresenceKind, type VisitSlot } from '@oneohm/domain';
+import { todayIn } from '@oneohm/shared';
+import { eq, sql } from 'drizzle-orm';
+import { conflict } from '../../common/http/errors';
+import { takenSlots } from './visit-capacity';
 import {
   followTaskDates,
   logVisit,
   mirrorServiceDay,
+  revertSurveyOnLead,
   settleVisitActions,
   surveyOnLead,
   type VisitRow,
@@ -44,9 +48,19 @@ export async function saveVisit(
     reminderSentAt: null,
     unconfirmedAlertAt: null,
     // A DISCOM date is told the moment it is saved; the 1-day check counts from then.
-    toldAt: confirmed && isPresenceKind(target.kind) ? now : null,
+    toldAt: confirmed && isPresenceKind(target.kind) && target.mayMessage ? now : null,
     updatedAt: now,
   };
+  await lockCrewDay(tx, target, input.day);
+  if (!isPresenceKind(target.kind)) {
+    // Two taps (or a tap and the desk) at once take turns: the slot is checked again inside the lock.
+    const taken = await takenSlots(tx, target.crew, todayIn(), existing?.id);
+    if (!freeSlots(taken[input.day] ?? []).includes(input.slot))
+      throw conflict(
+        'The person who comes already has a visit then. Pick another time.',
+        'slot_taken',
+      );
+  }
   const moved = Boolean(existing && (existing.day !== input.day || existing.slot !== input.slot));
   let saved: VisitRow | undefined;
   if (existing) {
@@ -98,7 +112,9 @@ async function followVisit(
     if (row.taskId) await followTaskDates(tx, row.taskId, input.day);
     await settleVisitActions(tx, row, 'closed', ['visit_pick']);
   }
-  if (row.serviceRequestId) await mirrorServiceDay(tx, row.serviceRequestId, input.day);
+  // The service request shows the day only once the team have confirmed it.
+  if (row.serviceRequestId)
+    await mirrorServiceDay(tx, row.serviceRequestId, confirmed ? input.day : null);
   if (row.leadId && row.kind === 'survey')
     await surveyOnLead(tx, row.leadId, input.userId, input.day, input.slot);
   await logVisit(
@@ -129,6 +145,10 @@ export async function cancelVisit(
     .returning();
   if (row.serviceRequestId) await mirrorServiceDay(tx, row.serviceRequestId, null);
   await settleVisitActions(tx, row, 'cancelled', ['presence']);
+  // A pick the customer made and the team now cancel is not waiting for a check any more.
+  await settleVisitActions(tx, row, 'cancelled', ['visit_pick'], ['received']);
+  if (row.leadId && row.kind === 'survey' && !row.taskId && !row.serviceRequestId)
+    await revertSurveyOnLead(tx, row.leadId, userId);
   await logVisit(
     tx,
     row,
@@ -155,7 +175,7 @@ export async function finishVisit(
     .set({ status: 'done', doneAt: now, updatedAt: now })
     .where(eq(visits.id, row.id))
     .returning();
-  await settleVisitActions(tx, row, 'closed', ['presence']);
+  await settleVisitActions(tx, row, 'closed', ['presence', 'visit_pick']);
   await logVisit(
     tx,
     row,
@@ -184,4 +204,13 @@ export async function customerConfirmed(
     'visit.customer_confirmed',
     `${title}: the customer confirmed ${say(row.day, row.slot)}`,
   );
+}
+
+/** One person's day is saved by one transaction at a time (the lock lets go when it ends). */
+async function lockCrewDay(tx: DatabaseExecutor, target: VisitTarget, day: string) {
+  // The thing itself too, so two answers to one ask take turns even with no crew named.
+  const thing = target.taskId ?? target.serviceRequestId ?? target.leadId ?? '';
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visit-target:${thing}`}))`);
+  for (const person of [...target.crew].sort())
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visit:${person}:${day}`}))`);
 }

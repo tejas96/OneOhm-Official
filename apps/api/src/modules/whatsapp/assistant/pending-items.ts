@@ -8,6 +8,7 @@ import {
   quotations,
   serviceRequests,
 } from '@oneohm/database';
+import { isPresenceKind } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { upcomingVisits } from './upcoming-visits';
@@ -21,7 +22,7 @@ export type PendingItem =
   | { kind: 'callback'; requestId: string }
   /** A day the team asked the customer to pick for a visit ([Pick a day]). */
   | { kind: 'visit_ask'; requestId: string; home: string | null }
-  | { kind: 'visit'; requestId: string; on: string; home: string | null }
+  | { kind: 'visit'; requestId: string; on: string; home: string | null; board?: boolean }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
   | { kind: 'quote'; quotationId: string };
 
@@ -97,6 +98,7 @@ export async function pendingForCustomer(
       requestId: row.id,
       on: row.day,
       home: homeOf(row.label, row.city),
+      board: isPresenceKind(row.kind),
     })),
     ...problems
       // A problem with a visit coming up shows as that visit.

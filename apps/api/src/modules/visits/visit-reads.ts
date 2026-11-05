@@ -190,3 +190,15 @@ export const scopeOfRow = (row: {
   ...(!row.taskId && row.serviceRequestId ? { serviceRequestId: row.serviceRequestId } : {}),
   ...(!row.taskId && !row.serviceRequestId && row.leadId ? { leadId: row.leadId } : {}),
 });
+
+/** A task's visit that has not been closed: proposed, confirmed, or missed and still to be marked done. */
+export async function openVisitForTask(db: DatabaseExecutor, taskId: string) {
+  const [row] = await db
+    .select()
+    .from(visits)
+    .where(
+      and(eq(visits.taskId, taskId), inArray(visits.status, ['proposed', 'confirmed', 'missed'])),
+    )
+    .limit(1);
+  return row ?? null;
+}

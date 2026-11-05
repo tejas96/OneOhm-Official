@@ -10,6 +10,7 @@ import { serviceRequestRows, toTicket } from '../../common/read-models/service-r
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { setServiceDay } from '../visits/service-day';
+import { openVisitFor, targetOf } from '../visits/visit-reads';
 
 /**
  * The day the technician visits a customer's request (PRD 5.5). It is kept on the visit record
@@ -36,7 +37,12 @@ export class ServiceVisitDayService {
     if (problem === 'resolved') throw conflict('This request is already resolved.', 'resolved');
     if (problem === 'past')
       throw invalid('Pick today or a later day.', { visitOn: 'This day has passed.' });
-    if (before !== visitOn) {
+    // Saving the day the customer picked confirms their pick (and tells them), though the ticket showed no day yet.
+    const open = visitOn
+      ? await openVisitFor(this.db, await targetOf(this.db, { serviceRequestId: id }))
+      : null;
+    const confirmsPick = open?.status === 'proposed' && open.day === visitOn;
+    if (before !== visitOn || confirmsPick) {
       await this.db.transaction(async (tx) => {
         await tx
           .update(serviceRequests)

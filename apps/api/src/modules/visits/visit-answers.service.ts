@@ -8,7 +8,7 @@ import { answererName } from '../whatsapp/chat-owner';
 import { type Conversation } from '../whatsapp/chat-store';
 import { targetKey } from './visit-ask';
 import { logVisit, type VisitRow } from './visit-effects';
-import { dayWords } from './visit-messages';
+import { dayWords, whenWords } from './visit-messages';
 import { VisitPickService } from './visit-pick.service';
 import { scopeOfRow, targetOf } from './visit-reads';
 import { cancelVisit, customerConfirmed } from './visit-store';
@@ -36,9 +36,9 @@ export class VisitAnswersService {
         return this.picks.slot(chat, customerId, tap.actionId, tap.day, tap.slot);
       case 'confirm':
       case 'okay':
-        return this.confirm(chat, customerId, tap.visitId, tap.t === 'okay');
+        return this.confirm(chat, customerId, tap.visitId, tap.t === 'okay', tap.day);
       case 'change':
-        return this.change(chat, customerId, tap.visitId);
+        return this.change(chat, customerId, tap.visitId, tap.day);
     }
   }
 
@@ -57,9 +57,23 @@ export class VisitAnswersService {
   }
 
   /** [Confirm] / [I'll be there] / [Okay]: the customer's presence is logged. */
-  private async confirm(chat: Conversation, customerId: string, visitId: string, okay: boolean) {
+  /** A tap on an old message after the visit moved: nothing changes, the customer hears the new day. */
+  private moved(chat: Conversation, row: VisitRow) {
+    return sayWithTaps(this.db, chat, VISIT_WORDS.thanks.moved(whenWords(row.day, row.slot)), [
+      'menu',
+    ]);
+  }
+
+  private async confirm(
+    chat: Conversation,
+    customerId: string,
+    visitId: string,
+    okay: boolean,
+    day?: string,
+  ) {
     const row = await this.visitOf(customerId, visitId);
     if (!row) return this.picks.old(chat);
+    if (day && day !== row.day) return this.moved(chat, row);
     const target = await targetOf(this.db, scopeOfRow(row));
     if (!row.customerConfirmedAt)
       await this.db.transaction((tx) => customerConfirmed(tx, row, target.title));
@@ -73,9 +87,10 @@ export class VisitAnswersService {
   }
 
   /** [Change day]: a DISCOM date alerts the person who liaises; anything else goes back to the list. */
-  private async change(chat: Conversation, customerId: string, visitId: string) {
+  private async change(chat: Conversation, customerId: string, visitId: string, day?: string) {
     const row = await this.visitOf(customerId, visitId);
     if (!row) return this.picks.old(chat);
+    if (day && day !== row.day) return this.moved(chat, row);
     const target = await targetOf(this.db, scopeOfRow(row));
     const name = (await answererName(this.db, chat)) ?? VISIT_WORDS.pick.team;
     const when = `${dayWords(row.day)}, ${row.slot}`;

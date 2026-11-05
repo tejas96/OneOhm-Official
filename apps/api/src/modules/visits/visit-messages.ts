@@ -27,9 +27,10 @@ export const visitTaps = {
   ask: (visitActionId: string) => `vask:${visitActionId}`,
   day: (actionId: string, day: string) => `vday:${actionId}:${day}`,
   slot: (actionId: string, day: string, slot: VisitSlot) => `vslot:${actionId}:${day}:${slot}`,
-  confirm: (visitId: string) => `vcf:${visitId}`,
-  okay: (visitId: string) => `vok:${visitId}`,
-  change: (visitId: string) => `vchg:${visitId}`,
+  // The day rides along, so a tap on an old message cannot act on a visit that has moved since.
+  confirm: (visitId: string, day: string) => `vcf:${visitId}:${day}`,
+  okay: (visitId: string, day: string) => `vok:${visitId}:${day}`,
+  change: (visitId: string, day: string) => `vchg:${visitId}:${day}`,
 };
 
 const first = (name: string) => titleCaseName(name);
@@ -124,8 +125,8 @@ export function bookedMessage(given: {
         kind: 'buttons',
         body: say(when, given.staff, given.phone),
         buttons: [
-          { id: visitTaps.okay(given.visitId), title: VISIT_WORDS.buttons.okay },
-          { id: visitTaps.change(given.visitId), title: VISIT_WORDS.buttons.change },
+          { id: visitTaps.okay(given.visitId, given.day), title: VISIT_WORDS.buttons.okay },
+          { id: visitTaps.change(given.visitId, given.day), title: VISIT_WORDS.buttons.change },
         ],
       },
     ],
@@ -135,8 +136,8 @@ export function bookedMessage(given: {
         customer: first(given.customer),
         when,
         staff: given.staff,
-        okayPayload: visitTaps.okay(given.visitId),
-        changePayload: visitTaps.change(given.visitId),
+        okayPayload: visitTaps.okay(given.visitId, given.day),
+        changePayload: visitTaps.change(given.visitId, given.day),
       },
     },
   };
@@ -160,8 +161,8 @@ export function reminderMessage(given: {
         kind: 'buttons',
         body: VISIT_WORDS.reminder(given.home, when, work),
         buttons: [
-          { id: visitTaps.confirm(given.visitId), title: VISIT_WORDS.buttons.confirm },
-          { id: visitTaps.change(given.visitId), title: VISIT_WORDS.buttons.change },
+          { id: visitTaps.confirm(given.visitId, given.day), title: VISIT_WORDS.buttons.confirm },
+          { id: visitTaps.change(given.visitId, given.day), title: VISIT_WORDS.buttons.change },
         ],
       },
     ],
@@ -172,8 +173,8 @@ export function reminderMessage(given: {
         home: given.home,
         when,
         work,
-        confirmPayload: visitTaps.confirm(given.visitId),
-        changePayload: visitTaps.change(given.visitId),
+        confirmPayload: visitTaps.confirm(given.visitId, given.day),
+        changePayload: visitTaps.change(given.visitId, given.day),
       },
     },
   };
@@ -195,8 +196,8 @@ export function presenceMessage(given: {
         kind: 'buttons',
         body: VISIT_WORDS.presence(work, given.home, day),
         buttons: [
-          { id: visitTaps.confirm(given.visitId), title: VISIT_WORDS.buttons.there },
-          { id: visitTaps.change(given.visitId), title: VISIT_WORDS.buttons.change },
+          { id: visitTaps.confirm(given.visitId, given.day), title: VISIT_WORDS.buttons.there },
+          { id: visitTaps.change(given.visitId, given.day), title: VISIT_WORDS.buttons.change },
         ],
       },
     ],
@@ -207,8 +208,8 @@ export function presenceMessage(given: {
         work,
         home: given.home,
         day,
-        confirmPayload: visitTaps.confirm(given.visitId),
-        changePayload: visitTaps.change(given.visitId),
+        confirmPayload: visitTaps.confirm(given.visitId, given.day),
+        changePayload: visitTaps.change(given.visitId, given.day),
       },
     },
   };
