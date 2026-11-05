@@ -11,6 +11,7 @@ import { OnlinePaymentsModule } from '../online-payments/online-payments.module'
 import { ReportsModule } from '../reports/reports.module';
 import { SelfSurveyController } from '../self-survey/self-survey.controller';
 import { SurveyChatService } from '../self-survey/survey-chat.service';
+import { SurveyCreditService } from '../self-survey/survey-credit.service';
 import { SurveyStaffService } from '../self-survey/survey-staff.service';
 import { LocationPinService } from '../send-to-customer/location-pin.service';
 import { SendAnswersService } from '../send-to-customer/send-answers.service';
@@ -105,6 +106,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     JourneyAnswersService,
     StepAnswersService,
     SurveyChatService,
+    SurveyCreditService,
     SurveyStaffService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.

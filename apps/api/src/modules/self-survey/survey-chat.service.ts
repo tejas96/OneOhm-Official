@@ -18,6 +18,7 @@ import {
   awaitingOf,
   awaitingSurvey,
   cancelForVisit,
+  clearAwaiting,
   refusalWords,
   saveChoice,
   saveConsumer,
@@ -152,6 +153,8 @@ export class SurveyChatService {
       return true;
     }
     if (incoming.media) return this.takeMedia(chat, customerId, incoming.media);
+    // Another tap means the customer left the survey.
+    if (incoming.kind === 'choice') await clearAwaiting(this.db, customerId);
     return incoming.kind === 'text' && this.takeWords(chat, customerId, incoming.text);
   }
 
@@ -177,6 +180,11 @@ export class SurveyChatService {
     const ask = await awaitingSurvey(this.db, customerId, false);
     if (!ask) return false;
     if ((await this.db.transaction((tx) => saveConsumer(tx, ask.id, said))) === 'bad') {
+      const now = await updateSurvey(this.db, ask.id, (me) => ({
+        badTries: me.badTries + 1,
+        awaiting: me.badTries >= 1 ? null : me.awaiting,
+      }));
+      if (now.badTries > 1) return false;
       await queueReply(this.db, chat, { kind: 'text', body: SURVEY_WORDS.badNumber });
       return true;
     }

@@ -66,20 +66,26 @@ export async function tellLoanNews(
     disbursed: `${amount} was sent by ${bank}`,
     rejected: `${bank} did not approve the loan`,
   }[news];
-  // The log says what really happened: a template that is switched off tells nobody.
-  // A customer who said STOP is told nothing, whatever the message switches say.
-  const sent = row.optIn !== false && (via === 'chat' || (await templateOn(tx, `loan_${news}`)));
+  // The log says what really happened. After STOP there is no WhatsApp, but money and loan news still go by
+  // SMS (owner's rule, `skippedAfterStop`): the message is queued for SMS, which tells them if that channel is on.
+  const stopped = row.optIn === false;
+  const sent = stopped || via === 'chat' || (await templateOn(tx, `loan_${news}`));
+  const how = stopped
+    ? ' by SMS (they said STOP on WhatsApp)'
+    : sent
+      ? ' on WhatsApp'
+      : ' on WhatsApp (not sent: the message is switched off)';
   await logAction(
     tx,
     { projectId, leadId: null },
     {
       kind: 'customer_action',
-      message: `Told the customer ${told} on WhatsApp${sent ? '' : ' (not sent: the message is switched off)'}`,
+      message: `Told the customer ${told}${how}`,
       userId: null,
       data: { news },
     },
   );
-  await recordAudit(tx, null, 'customer.loan_news', 'project', projectId, { news, sent });
+  await recordAudit(tx, null, 'customer.loan_news', 'project', projectId, { news, sent, stopped });
   if (news === 'rejected')
     await tellChatTeam(tx, owned, {
       kind: 'loan_rejected',

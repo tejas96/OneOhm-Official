@@ -74,10 +74,11 @@ export class SurveyStaffService {
         .where(and(eq(customerActions.id, id), eq(customerActions.status, 'received')))
         .returning();
       if (!moved) throw conflict('This survey was just checked.', 'not_waiting');
-      await updateSurvey(tx, id, (now) => ({
-        askAgain: [...new Set([...now.askAgain, ...items])],
+      await updateSurvey(tx, id, (current) => ({
+        askAgain: [...new Set([...current.askAgain, ...items])],
         sentAt: null,
         awaiting: null,
+        askedAgainAt: now.toISOString(),
       }));
       await logAction(
         tx,

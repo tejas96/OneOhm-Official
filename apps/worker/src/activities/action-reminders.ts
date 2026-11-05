@@ -25,6 +25,7 @@ import {
   waitingFor,
 } from './journey-reminders';
 import { chaseSubsidy, expireBankSigns } from './step-chase';
+import { abandonSurveys } from './survey-abandon';
 
 const DAY = 24 * 3_600_000;
 const CUSTOMER_AFTER = 2 * DAY;
@@ -53,6 +54,7 @@ export async function queueActionReminders(
 ): Promise<number> {
   // The day to sign at the bank has passed: that ask closes itself before anything is chased.
   await expireBankSigns(db, now, timeZone);
+  await abandonSurveys(db, now);
   const open = await db
     .select({
       action: customerActions,
@@ -102,7 +104,8 @@ export async function queueActionReminders(
     if (isSubsidyWait(row.action) || isLayoutHandled(row.action)) continue;
     const due = actionReminderDue(askedSince(row.action), now);
     if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
-    if (due === 'team') {
+    // The self survey is optional: nobody on the team is told to "call them" about it.
+    if (due === 'team' && row.action.type !== 'self_survey') {
       await alertAsker(db, row);
       done += 1;
     }

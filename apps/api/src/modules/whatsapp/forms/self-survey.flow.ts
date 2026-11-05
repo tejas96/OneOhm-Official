@@ -62,7 +62,7 @@ function photoScreen(id: string, next: string, heading: string, hint: string) {
               'photo-source': 'camera_gallery',
               'min-uploaded-photos': 1,
               'max-uploaded-photos': 1,
-              'max-file-size-kb': 25600,
+              'max-file-size-kb': 10240,
             },
             navigate(root('next'), next),
           ],

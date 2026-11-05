@@ -6,6 +6,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
+import { clearAwaiting } from '../../self-survey/survey-answers';
 import { newVisitTap, visitTap } from '../../self-survey/survey-taps';
 import { SURVEY_WORDS } from '../../self-survey/survey-words';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
@@ -35,6 +36,8 @@ export class HomeService {
   ) {}
 
   async show(chat: Conversation, customerId: string): Promise<void> {
+    // Menu or hello: a survey photo the chat waited for is not waited for any more.
+    await clearAwaiting(this.db, customerId);
     const [items, { projects }, first, name, waiting] = await Promise.all([
       this.pending(customerId),
       this.portal.home(customerId),

@@ -21,10 +21,10 @@ import { MEDIA_WORDS } from '../whatsapp/assistant/words';
 import {
   EMPTY_SURVEY,
   liveSurveyOf,
+  offerBlocker,
   payloadOf,
   type SurveyAction,
   surveyTarget,
-  surveyTaskOf,
   updateSurvey,
 } from './survey-record';
 
@@ -53,6 +53,21 @@ export async function saveChoice(
   return true;
 }
 
+/** The chat stops waiting for a photo or words (the customer went elsewhere: Menu, another tap). */
+export async function clearAwaiting(db: DatabaseExecutor, customerId: string): Promise<void> {
+  await db
+    .update(customerActions)
+    .set({ payload: sql`${customerActions.payload} || '{"awaiting":null}'::jsonb` })
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'self_survey'),
+        eq(customerActions.status, 'open'),
+        sql`${customerActions.payload}->>'awaiting' is not null`,
+      ),
+    );
+}
+
 /** Saves the typed consumer number; the reason it was refused otherwise. */
 export async function saveConsumer(
   tx: DatabaseExecutor,
@@ -64,6 +79,7 @@ export async function saveConsumer(
   await updateSurvey(tx, id, (now) => ({
     ...started(now),
     answers: { ...now.answers, consumer: number },
+    badTries: 0,
     askAgain: now.askAgain.filter((item) => item !== 'consumer'),
     awaiting: null,
   }));
@@ -103,8 +119,7 @@ export async function startFromHome(
   taskId: string,
 ): Promise<SurveyAction | null> {
   const task = await taskFor(tx, taskId);
-  if (!task || task.status === 'completed' || !task.notifyCustomer) return null;
-  if ((await surveyTaskOf(tx, task.projectId))?.id !== task.id) return null;
+  if (!task?.notifyCustomer || (await offerBlocker(tx, task))) return null;
   const earlier = await liveSurveyOf(tx, task.id);
   if (earlier)
     return earlier.customerId === customerId && earlier.status === 'open' ? earlier : null;

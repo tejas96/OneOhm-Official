@@ -12,6 +12,13 @@ export const isRoofWait = (ask: Pick<Ask, 'payload'>) => ask.payload.answer === 
  * asker's alert count from there), otherwise the day it was asked.
  */
 export function askedSince(ask: Ask): Date {
+  // A self survey counts from the customer's start or the engineer's last ask-again, not from the offer.
+  if (ask.type === 'self_survey') {
+    const touched = [ask.payload.startedAt, ask.payload.askedAgainAt]
+      .map((one) => Date.parse(String(one ?? '')))
+      .filter((one) => !Number.isNaN(one));
+    return touched.length ? new Date(Math.max(...touched)) : ask.createdAt;
+  }
   const answered = isRoofWait(ask) ? Date.parse(String(ask.payload.answeredAt ?? '')) : Number.NaN;
   return Number.isNaN(answered) ? ask.createdAt : new Date(answered);
 }
