@@ -64,7 +64,8 @@ reminders read the same rows. Staff send and cancel everything from **Send to cu
 
 ## 5. Papers, location, payments, documents
 
-- **Papers:** a file is first "What is this?" (the paper) then "Which home?" only when it matters; staff Looks good / Ask again.
+- **Papers:** a file is first "What is this?" (the paper) then "Which home?" only when it matters; staff Looks good / Ask again. A file with no kind is saved as "Your file" (never "Other file"). Staff "Ask for a paper": inside the customer's 24-hour window it is a chat message with [Send it now] (the send-a-paper form); outside it, the approved template.
+- **Unsupported messages:** a message WhatsApp cannot pass on gets one "Sorry, we couldn't open that. Please send it again as a photo, PDF or text." [More] [Talk to {name}] per burst (a held chat stays quiet; a new contact hears it, then the onboarding question they were on).
 - **Location:** [📍 Send location] (a single-button message); a pin is a suggestion staff check when it conflicts.
 - **Payments:** [Pay ₹X] opens our pay page; "I paid another way" is a form (amount, day, photo) → finance records.
 - **Documents:** ours to the customer (quote, invoice, receipts, handover pack) from Documents.
@@ -81,6 +82,9 @@ Quote: [Accept quote] [I have a question] (a list of fixed answers + Call me) ·
 (home · what · since · photos), a named person and a time, a call task; "Fixed ✅ Is it working now?" → Still a problem reopens.
 Rating: 5 taps, one system. Referral: friend form; reward approved → "Share your UPI ID" → staff check → paid (a payout ask closes
 when its reward is paid another way, rejected or cancelled). AMC: renewal offer 30 days before the end.
+Problem files: a photo, video or voice note that arrives while the problem is told, or within 2 minutes after Done / the form (WhatsApp delivers a
+burst a few seconds later), joins that problem on its own with one reply ("Added 2 photos and 1 video to your problem ✅"), no question and no
+hand-over. After 2 minutes (30 minutes in all) a photo or a video is asked about: "Are these for the problem you told us about?".
 
 ## 8. Customers not on WhatsApp (redesign §17)
 
