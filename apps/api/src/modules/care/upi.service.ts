@@ -11,6 +11,7 @@ import { type Conversation } from '../whatsapp/chat-store';
 import type { IncomingForm } from '../whatsapp/forms/form-reply-data';
 import { FormSendService } from '../whatsapp/forms/form-send';
 import { upiFormStart } from './care-form-words';
+import { careTaps } from './care-taps';
 import { REFER_WORDS } from './refer-words';
 import { readUpi } from './upi';
 
@@ -81,7 +82,11 @@ export class UpiService {
     typing: boolean,
   ): Promise<void> {
     const id = readUpi(said);
-    if (!id) return sayWithTaps(this.db, chat, REFER_WORDS.upiBad, ['menu']);
+    if (!id) {
+      // A form is spent once it is sent: the button opens a fresh one.
+      const again = { id: careTaps.upi(actionId), title: REFER_WORDS.upiButton };
+      return sayWithTaps(this.db, chat, REFER_WORDS.upiBad, typing ? ['menu'] : [again, 'menu']);
+    }
     const saved = await this.db.transaction(async (tx) => {
       const [ask] = await tx
         .select()

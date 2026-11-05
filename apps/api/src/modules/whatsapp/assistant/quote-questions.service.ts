@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { customers } from '@oneohm/database';
+import { customers, leads } from '@oneohm/database';
 import { addDays, todayIn } from '@oneohm/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
@@ -9,7 +9,7 @@ import { callPromise, callWhen } from '../../care/call-promise';
 import { alertCall, openCallTask } from '../../care/call-task';
 import { callerFor } from '../../care/care-person';
 import { RATING_WORDS } from '../../care/rating-words';
-import { logLead, setLeadNextAction } from '../../crm/lead-history';
+import { logLead } from '../../crm/lead-history';
 import { quoteIsOpen } from '../../quotations/quotation-accept';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS } from '../../quotations/quote-money-words';
@@ -140,6 +140,23 @@ export class QuoteQuestionsService {
     });
   }
 
+  private async setCheckBack(leadId: string, on: string, note: string): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      const [set] = await tx
+        .update(leads)
+        .set({
+          nextActionOn: on,
+          nextActionTime: null,
+          nextActionNote: note,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(leads.id, leadId), notInArray(leads.stage, ['won', 'lost'])))
+        .returning({ id: leads.id });
+      if (set) await logLead(tx, leadId, null, 'follow_up', `Next action on ${on}: ${note}.`);
+      return Boolean(set);
+    });
+  }
+
   /** [1 week] / [1 month]: the lead's next action is that day; a customer with no lead tells their person. */
   async checkBack(chat: Conversation, id: string, later: 'w' | 'm'): Promise<void> {
     const quotation = await this.open(chat, id);
@@ -147,11 +164,8 @@ export class QuoteQuestionsService {
     const on = addDays(todayIn(this.env.BUSINESS_TIMEZONE), later === 'w' ? 7 : 30);
     const note = `Check back with the customer about quote ${quotation.number} (they said not yet on WhatsApp)`;
     const leadId = quotation.input.leadId;
-    const set = leadId
-      ? await this.db.transaction((tx) =>
-          setLeadNextAction(tx, leadId, null, { on, note, openOnly: true }),
-        )
-      : false;
+    // They may change their mind (a week, then a month): the day is replaced, never kept.
+    const set = leadId ? await this.setCheckBack(leadId, on, note) : false;
     if (!set) {
       const [customer] = await this.db
         .select({ name: customers.name })

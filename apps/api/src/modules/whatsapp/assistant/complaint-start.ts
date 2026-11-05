@@ -4,7 +4,7 @@ import { PROBLEM_WORDS } from '../../care/problem-words';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { type Conversation, queueReply } from '../chat-store';
 import { setStep } from './chat-step';
-import { keepPending } from './media-intake';
+import { keepPending } from './pending-media';
 import { PROJECT_WORDS } from './project-words';
 import { WORDS } from './words';
 

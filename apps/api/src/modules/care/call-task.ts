@@ -8,7 +8,7 @@ import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
 import type { CallPromise } from './call-promise';
 
-export type CallReason = 'problem' | 'low_rating' | 'reopened' | 'quote';
+export type CallReason = 'problem' | 'low_rating' | 'reopened' | 'quote' | 'amc';
 
 /**
  * The call a customer was promised (redesign §12, §13): a call-back ask that is already answered

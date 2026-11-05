@@ -32,7 +32,7 @@ const EN = {
     `Your subsidy is ${subsidy}. It comes back to your bank account after your system is switched on. After the subsidy your cost is ${effective}.`,
   noSubsidy: (why: string) => `This quote has no subsidy${why ? ` (${why})` : ''}.`,
   panels: (count: number, kw: string, panel: string, inverter: string) =>
-    `Your system is ${kw}: ${count} panels (${panel}) with a ${inverter} inverter.`,
+    `Your system is ${kw}: ${count} panels (${panel}). Inverter: ${inverter}.`,
   warranty: (panel: number, perf: number | null, inverter: number, work: number) =>
     `Warranty: panels ${panel} years${perf ? ` (power output ${perf} years)` : ''}, inverter ${inverter} years, our workmanship ${work} ${work === 1 ? 'year' : 'years'}.`,
   timeline: (until: string, first: string, when: string) =>
@@ -63,7 +63,7 @@ const MR: Words<typeof EN> = {
     `तुमची सबसिडी ${subsidy} आहे. सिस्टिम सुरू झाल्यावर ती तुमच्या बँक खात्यात परत येते. सबसिडीनंतर तुमचा खर्च ${effective}.`,
   noSubsidy: (why) => `या कोटेशनमध्ये सबसिडी नाही${why ? ` (${why})` : ''}.`,
   panels: (count, kw, panel, inverter) =>
-    `तुमची सिस्टिम ${kw} ची आहे: ${count} पॅनल (${panel}) आणि ${inverter} इन्व्हर्टर.`,
+    `तुमची सिस्टिम ${kw} ची आहे: ${count} पॅनल (${panel}). इन्व्हर्टर: ${inverter}.`,
   warranty: (panel, perf, inverter, work) =>
     `वॉरंटी: पॅनल ${panel} वर्षे${perf ? ` (पॉवर आउटपुट ${perf} वर्षे)` : ''}, इन्व्हर्टर ${inverter} वर्षे, आमचे काम ${work} वर्ष.`,
   timeline: (until, first, when) =>
@@ -93,7 +93,7 @@ const HI: Words<typeof EN> = {
     `आपकी सब्सिडी ${subsidy} है। सिस्टम चालू होने के बाद यह आपके बैंक खाते में वापस आती है। सब्सिडी के बाद आपकी लागत ${effective} है।`,
   noSubsidy: (why) => `इस कोटेशन में सब्सिडी नहीं है${why ? ` (${why})` : ''}।`,
   panels: (count, kw, panel, inverter) =>
-    `आपका सिस्टम ${kw} का है: ${count} पैनल (${panel}) और ${inverter} इन्वर्टर।`,
+    `आपका सिस्टम ${kw} का है: ${count} पैनल (${panel})। इन्वर्टर: ${inverter}।`,
   warranty: (panel, perf, inverter, work) =>
     `वारंटी: पैनल ${panel} साल${perf ? ` (पावर आउटपुट ${perf} साल)` : ''}, इन्वर्टर ${inverter} साल, हमारा काम ${work} साल।`,
   timeline: (until, first, when) =>

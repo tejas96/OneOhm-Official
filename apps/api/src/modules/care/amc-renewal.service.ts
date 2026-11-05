@@ -56,7 +56,7 @@ export class AmcRenewalService {
         projectId: ask.projectId,
         owner: person.id,
         title: `Call ${customer?.name ?? 'the customer'} to renew the AMC`,
-        reason: 'quote',
+        reason: 'amc',
         once: `call:amc:${ask.id}`,
         promise,
       });

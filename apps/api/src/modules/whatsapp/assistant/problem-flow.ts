@@ -32,7 +32,7 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
-import { pendingMedia } from './media-intake';
+import { pendingMedia } from './pending-media';
 import { CATEGORY, type RaisedRequest } from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';

@@ -8,7 +8,7 @@ import {
   queueCustomerMessage,
 } from '@oneohm/database';
 import { addDays } from '@oneohm/shared';
-import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, ne, sql } from 'drizzle-orm';
 import { visitDay } from './after-sales';
 
 /** The renewal offer goes this many days before the AMC ends. */
@@ -46,6 +46,18 @@ export async function offerAmcRenewals(db: Database, today: string): Promise<num
     if (!row.optIn) continue;
     const { contract } = row;
     const done = await db.transaction(async (tx) => {
+      // The team may have offered it already (Send to customer): one offer per contract.
+      const [offered] = await tx
+        .select({ id: customerActions.id })
+        .from(customerActions)
+        .where(
+          and(
+            sql`${customerActions.payload}->>'target' = ${`amc_renewal:${contract.id}`}`,
+            ne(customerActions.status, 'cancelled'),
+          ),
+        )
+        .limit(1);
+      if (offered) return false;
       const home = await homeNameOf(tx, contract.projectId);
       const [made] = await tx
         .insert(customerActions)
