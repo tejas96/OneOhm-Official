@@ -8,8 +8,15 @@ export function capabilityOf(action: {
   readonly leadId: string | null;
   readonly projectId: string | null;
   readonly payload: Record<string, unknown>;
-}): 'projects.manage' | 'service.manage' | 'leads.manage' | 'finance.record_payments' {
+}):
+  | 'projects.manage'
+  | 'service.manage'
+  | 'leads.manage'
+  | 'finance.record_payments'
+  | 'documents.upload' {
   if (action.type === 'payout') return 'finance.record_payments';
+  // A paper the customer sent is checked by those who handle documents.
+  if (action.type === 'paper') return 'documents.upload';
   if (action.type !== 'visit_pick') return 'projects.manage';
   const kind = action.payload.visitKind;
   if (kind === 'amc' || kind === 'service') return 'service.manage';

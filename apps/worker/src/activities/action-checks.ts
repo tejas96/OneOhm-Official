@@ -34,15 +34,20 @@ const PER_TICK = 200;
 /** The least wall-clock time in which two working days (18 working hours) can pass. */
 const MANAGER_NOT_BEFORE = 30 * 3_600_000;
 
-const WHAT: Readonly<Record<string, (customer: string, slot: unknown) => string>> = {
+const WHAT: Readonly<Record<string, (customer: string, extra: unknown) => string>> = {
   location: (customer) => `Check the location ${customer} sent`,
   pay: (customer) => `Record the payment ${customer} says they made`,
   visit_pick: (customer) => `Confirm the visit day ${customer} picked`,
   self_survey: (customer) => `Check the self survey ${customer} sent`,
   payout: (customer) => `Check the UPI ID ${customer} shared`,
+  paper: (customer, title) =>
+    `Check the ${typeof title === 'string' ? title : 'paper'} ${customer} sent`,
   callback: (customer, slot) =>
     `Call ${customer} back${typeof slot === 'string' ? ` (they picked ${slot})` : ''}`,
 };
+
+/** When the customer answered, to the millisecond (a parked pin: when it was sent). */
+const answerTime = sql`date_trunc('milliseconds', coalesce(${customerActions.doneAt}, ${customerActions.createdAt}))`;
 
 /** One working day on the working clock (9:30 to 18:30), in minutes. */
 const WORKING_DAY_MIN = 9 * 60;
@@ -73,7 +78,10 @@ export async function queueActionChecks(
   now: Date,
   timeZone = 'Asia/Kolkata',
 ): Promise<number> {
-  const tierOf = sql<string | null>`${customerActions.payload}->>'checkedTier'`;
+  // A stored tier belongs to the answer it was made for: an Ask again and a new answer start over.
+  const tierOf = sql<
+    string | null
+  >`case when (${customerActions.payload}->>'checkedFor')::timestamptz = ${answerTime} then ${customerActions.payload}->>'checkedTier' end`;
   const managerFrom = new Date(now.getTime() - MANAGER_NOT_BEFORE);
   const waiting = await db
     .select({
@@ -94,6 +102,7 @@ export async function queueActionChecks(
           'visit_pick',
           'self_survey',
           'payout',
+          'paper',
         ]),
         // A promised call has its own late alerts (call-tasks): no second "Call X back".
         sql`coalesce(${customerActions.payload}->>'kind', '') <> 'call_task'`,
@@ -104,7 +113,7 @@ export async function queueActionChecks(
             isNull(customerActions.requestedByUserId),
             isNull(customerActions.propertyId),
             // A visit ask and a survey are never a pin waiting for its home.
-            notInArray(customerActions.type, ['visit_pick', 'self_survey', 'payout']),
+            notInArray(customerActions.type, ['visit_pick', 'self_survey', 'payout', 'paper']),
           ),
         ),
         gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),
@@ -135,24 +144,24 @@ interface Waiting {
 async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string): Promise<boolean> {
   const { action, customer, phone, manager } = row;
   const parked = action.status === 'open';
-  const due = checkDue(
-    parked ? action.createdAt : (action.doneAt ?? action.updatedAt),
-    now,
-    timeZone,
-  );
+  const answeredAt = parked ? action.createdAt : (action.doneAt ?? action.updatedAt);
+  const due = checkDue(answeredAt, now, timeZone);
   if (!due) return false;
   const notice = {
     kind: parked ? 'location_home_waiting' : 'customer_action_check',
     title: parked
       ? `${customer} sent a location but has not said which home`
-      : (WHAT[action.type]?.(customer, action.payload.slot) ?? `Check ${customer}'s answer`),
+      : (WHAT[action.type]?.(
+          customer,
+          action.type === 'paper' ? action.title : action.payload.slot,
+        ) ?? `Check ${customer}'s answer`),
     body: parked
       ? 'Ask them which home it is for, or add it on the property yourself.'
       : due === 'manager'
         ? 'This has waited more than 2 days for the team.'
         : 'The customer answered and it waits for the team.',
     ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
-    dedupeKey: `action_check:${action.id}:${due}`,
+    dedupeKey: `action_check:${action.id}:${due}:${answeredAt.getTime()}`,
   };
   // Once this tier's alert exists, nothing more is asked of the database or the notifier.
   const [told] = await db
@@ -161,14 +170,14 @@ async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string)
     .where(like(notifications.dedupeKey, `${notice.dedupeKey}%`))
     .limit(1);
   if (told) {
-    await markChecked(db, action, due);
+    await markChecked(db, action, due, answeredAt);
     return false;
   }
   const owner =
     action.requestedByUserId ?? (await chatOwnerFor(db, { customerId: action.customerId, phone }));
   const sent = await tell(db, action, { due, owner, manager }, notice);
   // The tier is recorded either way, so a desk with nobody on it is not looked at every tick.
-  await markChecked(db, action, due);
+  await markChecked(db, action, due, answeredAt);
   if (sent === 0)
     console.warn(`action check ${action.id} (${due}): nobody to tell, will not ask again`);
   return sent > 0;
@@ -198,14 +207,18 @@ async function tell(
   );
 }
 
-/** Remembers the tier an answer was last checked at (without moving its updated time). */
+/** Remembers the tier this answer was last checked at (without moving its updated time). */
 async function markChecked(
   db: Database,
   action: typeof customerActions.$inferSelect,
   tier: 'owner' | 'manager',
+  answeredAt: Date,
 ) {
   await db
     .update(customerActions)
-    .set({ payload: { ...action.payload, checkedTier: tier }, updatedAt: action.updatedAt })
-    .where(eq(customerActions.id, action.id));
+    .set({
+      payload: sql`${customerActions.payload} || jsonb_build_object('checkedTier', ${tier}::text, 'checkedFor', ${answeredAt.toISOString()}::text)`,
+      updatedAt: sql`${customerActions.updatedAt}`,
+    })
+    .where(and(eq(customerActions.id, action.id), eq(customerActions.status, action.status)));
 }
