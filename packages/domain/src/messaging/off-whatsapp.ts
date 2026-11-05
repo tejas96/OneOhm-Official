@@ -37,3 +37,58 @@ export function sendPath(action: SendAction, route: ContactChannel): SendPath {
 /** The channel recorded on the customer action: how the ask actually travels. */
 export const channelOf = (path: SendPath): ContactChannel =>
   path === 'whatsapp' ? 'whatsapp' : path === 'in_person' ? 'in_person' : 'sms';
+
+/**
+ * What an automatic customer message becomes for a customer not on WhatsApp, by template (the same
+ * rule as `sendPath` for the staff menu):
+ * - `never`: marketing (cost, optional) is never sent by SMS;
+ * - `skip`: a reminder of an answer only the WhatsApp chat can take (the first ask was handed over);
+ * - `in_person`: the first ask of such an answer - one "Do in person" task for the team;
+ * - `sms`: it goes as an SMS text in the usual words (which point to the app or the team).
+ */
+export type TemplatePath = 'never' | 'skip' | 'in_person' | 'sms';
+
+const MARKETING: readonly string[] = [
+  'self_survey_offer',
+  'self_survey_reminder',
+  'amc_renewal_offer',
+];
+/** Reminders whose words send the customer to the WhatsApp chat. */
+const CHAT_REMINDERS: readonly string[] = [
+  'visit_reminder',
+  'signature_reminder',
+  'signed_page_reminder',
+  'site_ready_reminder',
+  'layout_reminder',
+];
+/** First asks that only the WhatsApp chat can take: a pin, a pick, a signature, a confirmation, a UPI ID. */
+const CHAT_ASKS: readonly string[] = [
+  'location_request',
+  'callback_request',
+  'visit_pick',
+  'signature_request',
+  'site_ready_check',
+  'installation_check',
+  'reward_upi_ask',
+  'subsidy_register_help',
+  'subsidy_credit_check',
+  'bank_sign_visit',
+  'layout_approval',
+];
+
+export function offWhatsAppPathForTemplate(template: string): TemplatePath {
+  if (MARKETING.includes(template)) return 'never';
+  if (CHAT_REMINDERS.includes(template)) return 'skip';
+  return CHAT_ASKS.includes(template) ? 'in_person' : 'sms';
+}
+
+/** The team's task for something done with a customer who is not on WhatsApp. */
+export const inPersonTask = (customer: string, what: string) => ({
+  title: `Do in person: ${what}`,
+  body: `${customer} is not on WhatsApp: ${what} with them in person.`,
+});
+
+/** Messages whose SMS words differ from the app inbox (the app words point to the WhatsApp chat). */
+export const SMS_WORDS_OF: Readonly<Record<string, string>> = {
+  problem_fixed_check: 'problem_fixed_sms',
+};

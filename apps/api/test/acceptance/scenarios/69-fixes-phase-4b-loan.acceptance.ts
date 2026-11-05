@@ -4,7 +4,14 @@ import { queueActionReminders } from '../../../../worker/src/activities/action-r
 import { acceptanceDb, closeDb, outboxFor, rows } from '../support/db';
 import { upload } from '../support/files';
 import { Session } from '../support/http';
-import { saveLoan, setNotify, stepAsks, taskIdOf, taskRow } from '../support/journey-steps';
+import {
+  saveLoan,
+  setNotify,
+  setTemplate,
+  stepAsks,
+  taskIdOf,
+  taskRow,
+} from '../support/journey-steps';
 import { addDays, sellProject, today } from '../support/sales';
 import { openChat, sendTo } from '../support/send';
 
@@ -109,7 +116,10 @@ describe('Phase 4b fixes: loan', () => {
     await saveLoan(admin, sale);
     await setNotify(sale, 'loan_approval', true);
     await rows('UPDATE customers SET whatsapp_opt_in = false WHERE id = $1', [customer.customerId]);
+    // The SMS goes only while the owner has the message on (Settings -> WhatsApp messages).
+    const back = await setTemplate('loan_rejected', true);
     await saveLoan(admin, sale, { status: 'rejected' });
+    await back();
     const [line] = await rows<{ message: string }>(
       "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE 'Told the customer%did not approve%'",
       [project.id],

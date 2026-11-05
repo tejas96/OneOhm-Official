@@ -1,9 +1,11 @@
 import {
   type ContactChannel,
-  handsOverInPerson,
+  inPersonTask,
+  offWhatsAppPathForTemplate,
   routeFor,
   skippedAfterStop,
   smsText,
+  templateIsOn,
 } from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
@@ -57,16 +59,20 @@ export async function routeCustomerMessage(
         whatsappOptIn: customer.optIn,
       })
     : 'whatsapp';
-  if (route === 'in_person') {
-    if (!customer) return false;
+  if (customer && route !== 'whatsapp') {
+    const path = offWhatsAppPathForTemplate(message.template);
+    // Marketing is never an SMS; a reminder to open the chat has nothing to remind of (the ask was handed over).
+    if (path === 'never' || path === 'skip') return false;
     const [config] = await db
       .select({ active: messageTemplates.active })
       .from(messageTemplates)
       .where(eq(messageTemplates.key, message.template))
       .limit(1);
-    // No row means a built-in message nobody has switched off.
-    if (!handsOverInPerson(route, config?.active ?? true)) return false;
-    return handOver(db, customer.id, message);
+    // A message the owner switched off (or one Meta has not approved yet) is not sent by SMS either.
+    if (!templateIsOn(message.template, config)) return false;
+    // Only the chat can take this answer: the team does it with the customer in person.
+    if (route === 'in_person' || path === 'in_person')
+      return handOver(db, customer.id, message, path === 'in_person');
   }
   const sms = route === 'sms';
   const inserted = await db
@@ -140,6 +146,7 @@ async function handOver(
   db: DatabaseExecutor,
   customerId: string,
   message: Message,
+  chatAsk = false,
 ): Promise<boolean> {
   // `project` holds the town and size by now (plainNames); the code rides as `projectCode`.
   const code = message.payload.projectCode ?? message.payload.project;
@@ -152,13 +159,22 @@ async function handOver(
       customerId,
       projectId: project?.id ?? null,
       template: message.template,
-      title: message.words.title,
-      body: message.words.body,
+      ...(chatAsk ? await chatAskTask(db, customerId, message.words.title) : message.words),
       dedupeKey: message.dedupeKey,
     })
     .onConflictDoNothing()
     .returning({ id: customerHandovers.id });
   return inserted.length > 0;
+}
+
+/** "Do in person: ..." for an ask that only the WhatsApp chat can take. */
+async function chatAskTask(db: DatabaseExecutor, customerId: string, what: string) {
+  const [one] = await db
+    .select({ name: customers.name })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+  return inPersonTask(one?.name ?? 'The customer', what);
 }
 
 /**

@@ -1,3 +1,4 @@
+import { SMS_WORDS_OF } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
@@ -208,15 +209,14 @@ export async function queueCustomerMessage(
   dedupeKey: string,
 ): Promise<boolean> {
   const payload = await plainNames(db, given);
-  const notice = customerNotice(template, payload, dedupeKey);
-  // WhatsApp first; SMS or in person when the customer is not on WhatsApp.
+  // WhatsApp first; SMS or in person when the customer is not on WhatsApp (SMS words: see SMS_WORDS_OF).
   const queued = await routeCustomerMessage(db, {
     recipient: recipientE164,
     template,
     // The customer's language rides along for the worker (WhatsApp stays in its approved one).
     payload: { ...payload, language: await languageOf(db, recipientE164) },
     dedupeKey,
-    words: notice ?? GENERIC_WORDS,
+    words: customerNotice(SMS_WORDS_OF[template] ?? template, payload, dedupeKey) ?? GENERIC_WORDS,
   });
   await noticeCustomer(db, recipientE164, template, payload, dedupeKey);
   return queued;

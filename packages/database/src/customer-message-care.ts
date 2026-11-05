@@ -10,6 +10,8 @@ export const CARE_MESSAGES = [
   'problem_fixed_check',
   'reward_upi_ask',
   'amc_renewal_offer',
+  // The SMS version of the fixed check (no chat to open): see SMS_WORDS_OF.
+  'problem_fixed_sms',
 ] as const;
 export type CareMessage = (typeof CARE_MESSAGES)[number];
 
@@ -26,6 +28,10 @@ export const CARE_EN: Readonly<Record<CareMessage, Words>> = {
     title: 'Your maintenance plan ends soon',
     body: `${p.home}: ends on ${p.date}. Open our WhatsApp chat to renew it.`,
   }),
+  problem_fixed_sms: (p) => ({
+    title: `Fixed: ${p.topic}`,
+    body: 'Is it working now? Please call us or open the OneOhm app.',
+  }),
 };
 
 export const CARE_MR: Readonly<Record<CareMessage, Words>> = {
@@ -41,6 +47,10 @@ export const CARE_MR: Readonly<Record<CareMessage, Words>> = {
     title: 'तुमची देखभाल योजना लवकरच संपते',
     body: `${p.home}: ${p.date} रोजी संपते. नूतनीकरणासाठी आमचा WhatsApp चॅट उघडा.`,
   }),
+  problem_fixed_sms: (p) => ({
+    title: `दुरुस्त केले: ${p.topic}`,
+    body: 'आता ते नीट चालते का? कृपया आम्हाला फोन करा किंवा OneOhm अ‍ॅप उघडा.',
+  }),
 };
 
 export const CARE_HI: Readonly<Record<CareMessage, Words>> = {
@@ -55,5 +65,9 @@ export const CARE_HI: Readonly<Record<CareMessage, Words>> = {
   amc_renewal_offer: (p) => ({
     title: 'आपकी देखरेख योजना जल्द खत्म होगी',
     body: `${p.home}: ${p.date} को खत्म होती है। रिन्यू करने के लिए हमारा WhatsApp चैट खोलें।`,
+  }),
+  problem_fixed_sms: (p) => ({
+    title: `ठीक किया: ${p.topic}`,
+    body: 'क्या अब यह ठीक चल रहा है? कृपया हमें फोन करें या OneOhm ऐप खोलें।',
   }),
 };

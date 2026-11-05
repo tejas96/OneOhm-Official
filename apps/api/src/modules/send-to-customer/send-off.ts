@@ -5,7 +5,7 @@ import {
   routeCustomerMessage,
   routeOfCustomer,
 } from '@oneohm/database';
-import { type ContactChannel, isNews, type SendPath, sendPath } from '@oneohm/domain';
+import { type ContactChannel, inPersonTask, isNews, type SendPath, sendPath } from '@oneohm/domain';
 import type { Environment } from '../../config/environment';
 import { payPageUrl } from '../whatsapp/assistant/pay-buttons';
 import type { SendContext } from './send-context';
@@ -22,9 +22,6 @@ export interface OffPlan {
   readonly title: string;
   readonly body: string;
 }
-
-const STAFF_LINE = (customer: string, what: string) =>
-  `${customer} is not on WhatsApp: ${what} with them in person.`;
 
 /**
  * The plan for a customer not reached by WhatsApp, or null when they are (the chat or the template goes as
@@ -59,12 +56,7 @@ export async function offPlan(
   }
   if (path === 'sms_text')
     return { route, path, ...(request.action === 'ask_rating' ? words.rating : words.paper) };
-  return {
-    route,
-    path: 'in_person',
-    title: `Do in person: ${asked}`,
-    body: STAFF_LINE(ctx.customerName, asked),
-  };
+  return { route, path: 'in_person', ...inPersonTask(ctx.customerName, asked) };
 }
 
 /** What staff see before sending: the SMS the customer gets, or the task for the team. */
