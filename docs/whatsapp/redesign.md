@@ -662,3 +662,33 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   resolved (then it is `done`); "Asked from the customer" shows the ask ("To confirm"); Home lists the visits of the
   next three days from the record and an unanswered ask ([Pick a day]); [Visit details] lists the next 30 days.
 
+
+## 22f. Phase 4a — journey steps (signature, roof ready, installation finished, handover pack, buttons on automatic messages)
+
+- **Four more Send to customer actions** (project and task places; `apps/api/src/modules/journey/`): `send_signature`
+  (documents rights), `ask_site_ready`, `ask_installation_check`, `send_handover_pack` (projects rights). A step that is
+  asked about (the task) must have its template's customer messages on (§21a); the roof question belongs to the dispatch step,
+  the installation question to the installation step. Each is a customer action (`signature`, `confirm`) with status, project
+  log, audit (`customer_action.*`), a cancel that tells the customer, and the "Asked from the customer" card.
+- **Signature:** PDF, then "Please read your *paper* for home." [I agree] [I have a question]. Only the customer's own number
+  agrees (a family number: "Only Tejas's own number can agree to this." + Talk to {name}); the agreement is logged with who, the
+  number and the time, then "Please send a photo of the signed page." [Send photo]. The signed copy is a paper of its own (the
+  existing paper flow: form or chat, then Looks good / Ask again with a reason). Done = agreed + copy checked; the ask closes
+  and, when it came from a task that needs a signature, the checked copy becomes that task's signature evidence. A question
+  goes to the chat's person with the paper named. Cancel cancels the waiting copy too.
+- **Roof ready (`confirm`)**: goes by itself when the dispatch step becomes ready (if its template allows) and from the task.
+  Yes closes; Not yet keeps the ask open, sets the dispatch step "waiting on the customer" (the existing wait, kept stretch),
+  alerts the step's owner, Home lists it with [It's ready now], which closes it and opens the step again.
+- **Installation finished (`confirm`)**: goes by itself when the installation step is completed (if allowed). Yes is logged.
+  Something is wrong tells the project manager and starts Report a problem on this home ("Installation: …").
+- **Handover pack:** every handover paper (warranty cards, commissioning papers, manuals, the saved Work Completion Report when
+  customers may see it, the invoice; at most 8) as documents in one go + "Your n handover papers … are above." [Documents]
+  [Warranty & AMC]; sent by itself when the handover step is done (if allowed) or by staff. Outside 24 h the `handover_pack`
+  template's [Documents] sends the papers. "Handover pack sent" is the project fact `handover_pack_sent` (day) and a log line.
+- **Automatic messages with buttons (§19):** inside 24 h the chat message, outside it the existing template (whose newer version
+  carries the same buttons behind its own quick-reply switch, default off): installation started [Project update]; switch-on
+  [Pay ₹X] (final instalment due) and [Warranty & AMC]; a step waiting on the customer "We need *item* to continue." [Send it now]
+  linking the step's open ask (paper, location, payment, signature, question), free text only when there is none; waiting on the
+  bank or DISCOM one info line. Project created keeps its plain message: the advance-due message that follows it already has [Pay].
+- **Reminders:** the roof and installation questions are asked again at 2 days (template, working hours) and the asker hears at
+  4 days; a paper to agree to is chased through the asker alert at 4 days, and once agreed its signed copy is chased as a paper.

@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 31 templates. Each one:
+The app sends these 35 templates (and newer versions of three). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -401,6 +401,84 @@ Payloads `vcf:<visit id>:<day>` and `vchg:<visit id>:<day>`.
 
 All four are off until Meta approves **all three languages**; then switch each on, and "Meta approved the version
 with file and buttons" too, in Settings → WhatsApp messages.
+
+### 35. `signature_request` — **New** (journey: a paper to agree to)
+Fields: customer, document, home
+
+Sent from Send to customer (Paperwork, the handover task, a report row) when the chat is closed. Inside 24 hours the same
+news is the chat message: the PDF, then "Please read your *paper* for home." with the two buttons.
+
+> en: Hello {{1}}, please read your {{2}} for {{3}}. Tap I agree if you accept it, or ask us if you have a question.
+
+> mr: नमस्कार {{1}}, कृपया {{3}} साठीचे तुमचे {{2}} वाचा. मान्य असल्यास मी सहमत आहे दाबा, किंवा काही प्रश्न असल्यास आम्हाला विचारा.
+
+> hi: नमस्ते {{1}}, कृपया {{3}} के लिए अपना {{2}} पढ़ें। मंज़ूर हो तो मैं सहमत हूँ दबाएँ, या कोई सवाल हो तो हमसे पूछें।
+
+Examples: Ramesh Patil · Net-metering agreement · Sangli
+
+**Header and buttons:** Header **Document** (the app attaches the paper; use any sample PDF). Two quick replies: en `I agree`,
+`I have a question`; mr `मी सहमत आहे`, `मला प्रश्न आहे`; hi `मैं सहमत हूँ`, `मेरा सवाल है`. Payloads `sgn:ok:<id>`, `sgn:q:<id>`.
+
+### 36. `site_ready_check` — **New** (journey: before dispatch; also sent by itself when dispatch is ready)
+Fields: customer, home
+
+> en: Hello {{1}}, is the roof at {{2}} ready for installation? It needs a clear roof, a power point and someone at home.
+
+> mr: नमस्कार {{1}}, {{2}} येथील छप्पर बसवणीसाठी तयार आहे का? मोकळे छप्पर, एक पॉवर पॉइंट आणि घरी कोणीतरी हवे.
+
+> hi: नमस्ते {{1}}, क्या {{2}} की छत इंस्टॉलेशन के लिए तैयार है? खाली छत, एक पावर पॉइंट और घर पर कोई होना चाहिए।
+
+Examples: Ramesh Patil · Sangli
+
+**Buttons:** two quick replies. en `Yes, ready`, `Not yet`; mr `हो, तयार आहे`, `अजून नाही`; hi `हाँ, तैयार है`, `अभी नहीं`.
+Payloads `rdy:y:<id>`, `rdy:n:<id>`. (The chat message after Not yet carries `It's ready now`, payload `rdy:now:<id>`; it is
+sent inside the window the tap opened, so it needs no template.)
+
+### 37. `installation_check` — **New** (journey: installation finished; also sent by itself when the installation task is done)
+Fields: customer, home
+
+> en: Hello {{1}}, is the installation at {{2}} finished to your satisfaction?
+
+> mr: नमस्कार {{1}}, {{2}} येथील बसवणी तुमच्या समाधानानुसार पूर्ण झाली आहे का?
+
+> hi: नमस्ते {{1}}, क्या {{2}} पर इंस्टॉलेशन आपकी संतुष्टि के अनुसार पूरा हो गया है?
+
+Examples: Ramesh Patil · Sangli
+
+**Buttons:** two quick replies. en `Yes, all good`, `Something is wrong`; mr `हो, सर्व ठीक`, `काहीतरी चुकले`; hi `हाँ, सब ठीक`,
+`कुछ गड़बड़ है`. Payloads `ins:y:<id>`, `ins:bad:<id>`.
+
+### 38. `handover_pack` — **New** (journey: handover pack)
+Fields: customer, count, home
+
+Inside 24 hours the papers go as documents with a summary line; with the chat closed this template goes and its first
+button sends the papers (the tap opens the window).
+
+> en: Hello {{1}}, your {{2}} handover papers for {{3}} are ready. Tap Documents to receive them here.
+
+> mr: नमस्कार {{1}}, {{3}} साठीची तुमची {{2}} हस्तांतर कागदपत्रे तयार आहेत. ती इथे मिळवण्यासाठी कागदपत्रे दाबा.
+
+> hi: नमस्ते {{1}}, {{3}} के लिए आपके {{2}} हैंडओवर कागज़ तैयार हैं। उन्हें यहाँ पाने के लिए दस्तावेज़ दबाएँ।
+
+Examples: Ramesh Patil · 4 · Sangli
+
+**Buttons:** two quick replies. en `Documents`, `Warranty & AMC`; mr `कागदपत्रे`, `वॉरंटी आणि AMC`; hi `दस्तावेज़`, `वारंटी और AMC`.
+Payloads `hpack:<project id>`, `go:warranty`.
+
+All four are off until Meta approves **all three languages**; then switch each on, and "Meta approved the version with
+file and buttons" too, in Settings → WhatsApp messages.
+
+### Newer versions of three older templates (buttons on automatic messages, redesign §19)
+`installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text
+bodies do not change. Submit the new version under a **new** Meta name (en, mr, hi), then in Settings → WhatsApp messages
+change the Meta name and turn on **Meta approved the version with file and buttons** and the template's own **quick
+replies** switch together (as for `payment_reminder`). Until then the older text message keeps sending.
+
+| Template | Quick replies (en · mr · hi) | Payloads |
+|---|---|---|
+| `installation_started` | `Project update` · `प्रकल्पाची माहिती` · `प्रोजेक्ट अपडेट` | `go:update` |
+| `commissioning_completed` | `Pay now` · `आता भरा` · `अभी भरें`; `Warranty & AMC` · `वॉरंटी आणि AMC` · `वारंटी और AMC` | `pay:<instalment id>` (else `go:payments`), `go:warranty` |
+| `project_waiting` | `Send it now` · `आत्ता पाठवा` · `अभी भेजें` | the open ask (`sendit:<id>`, `locreq:<id>`, `pay:<id>`, `jr:<id>`); sent only when a step waiting on the customer has one |
 
 ## Staff templates
 
