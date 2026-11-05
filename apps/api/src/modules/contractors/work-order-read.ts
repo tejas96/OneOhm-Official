@@ -121,6 +121,7 @@ export async function presentWorkOrder(db: DatabaseExecutor, id: string): Promis
         advancesPaise: order.advancesPaise,
         retentionBp: contractor.retentionBp,
         tdsBp: await contractorTdsBp(db, contractor.tdsBp),
+        pan: contractor.pan,
       });
   return {
     ...summary,
@@ -161,6 +162,7 @@ export async function presentWorkOrder(db: DatabaseExecutor, id: string): Promis
       amountPaise: row.amountPaise,
       note: row.note,
       createdAt: row.createdAt.toISOString(),
+      payableId: row.payableId,
       payableStatus: status,
     })),
     settlement,

@@ -5,6 +5,8 @@ export * from './customer-credit-postings';
 export * from './gateway-postings';
 export * from './incentive-postings';
 export * from './invoice-number';
+export * from './payable-payment-postings';
+export * from './payable-payments';
 export * from './payable-postings';
 export * from './payout-postings';
 export * from './post-journal';

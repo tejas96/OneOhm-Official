@@ -71,6 +71,38 @@ export async function postings(sourceType: string, sourceId: string): Promise<nu
   return Number(row?.count ?? 0);
 }
 
+/** How many "money paid out" entries a bill has: one per payment that stands or was made. */
+export async function billPostings(billId: string): Promise<number> {
+  const [row] = await rows<{ count: string }>(
+    `select count(*) from journal_entries e
+      where (e.source_type = 'payable_payment'
+             and e.source_id in (select id::text from payable_payments where payable_id = $1))
+         or (e.source_type = 'payable_paid' and e.source_id = $1::text)`,
+    [billId],
+  );
+  return Number(row?.count ?? 0);
+}
+
+/** Debits less credits on the payable account of one bill's payment entries, in paise. */
+export async function billPaidOut(billId: string): Promise<number> {
+  const [row] = await rows<{ paid: string }>(
+    // The bill's payment entries, plus any entry that reverses one of them (undo, bank return).
+    `with paid as (
+       select e.id from journal_entries e
+        where (e.source_type = 'payable_payment'
+               and e.source_id in (select id::text from payable_payments where payable_id = $1))
+           or (e.source_type = 'payable_paid' and e.source_id = $1::text)
+     )
+     select coalesce(sum(l.debit_paise - l.credit_paise), 0) as paid
+       from journal_entries e join journal_lines l on l.entry_id = e.id
+      where l.account_code in ('2000', '2010', '2030')
+        and (e.id in (select id from paid)
+          or (e.source_type = 'reversal' and e.source_id in (select id::text from paid)))`,
+    [billId],
+  );
+  return Number(row?.paid ?? 0);
+}
+
 /** The trial balance must always balance: every posting has equal debits and credits. */
 export async function expectBalanced(who: Session): Promise<TrialBalance> {
   const balance = await who.get<TrialBalance>('/finance/trial-balance');
@@ -130,4 +162,21 @@ export async function payTapOf(phone: string): Promise<string> {
     [phone],
   );
   return sent[0]?.payload.buttons.find((button) => button.id.startsWith('pay:'))?.id ?? '';
+}
+
+/**
+ * What one RazorpayX payout fee left in the books, net of any refund: bank charge (5020),
+ * GST input credit (1310) and bank (1000), as debits less credits in paise.
+ */
+export async function feeBooks(payoutId: string) {
+  const found = await rows<{ account: string; net: string }>(
+    `select l.account_code as account, sum(l.debit_paise - l.credit_paise) as net
+       from journal_entries e join journal_lines l on l.entry_id = e.id
+      where e.source_type in ('payout_fee', 'payout_fee_refund')
+        and (e.source_id = $1 or e.source_id = $1 || ':again')
+      group by l.account_code`,
+    [payoutId],
+  );
+  const net = (code: string) => Number(found.find((row) => row.account === code)?.net ?? 0);
+  return { expense: net('5020'), gstInput: net('1310'), bank: net('1000') };
 }

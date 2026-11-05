@@ -62,6 +62,15 @@ export class BusinessSettingsController {
         await this.settings.save(actor, 'approvals', body);
         return { status: 200, body: await this.settings.approvals() };
       },
+      payments: async () => {
+        configure();
+        return { status: 200, body: await this.settings.payments() };
+      },
+      savePayments: async ({ body }) => {
+        configure();
+        await this.settings.save(actor, 'payments', body);
+        return { status: 200, body: await this.settings.payments() };
+      },
       dashboard: async () => {
         configure();
         return { status: 200, body: await this.settings.get('dashboard') };

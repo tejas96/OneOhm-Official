@@ -9,7 +9,15 @@ import { users } from './identity.schema';
  */
 export const businessSettings = pgTable('business_settings', {
   key: text('key', {
-    enum: ['reminders', 'assignment', 'approvals', 'dashboard', 'lead_assignment', 'onboarding'],
+    enum: [
+      'reminders',
+      'assignment',
+      'approvals',
+      'dashboard',
+      'lead_assignment',
+      'onboarding',
+      'payments',
+    ],
   }).primaryKey(),
   value: jsonb('value').notNull(),
   updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),

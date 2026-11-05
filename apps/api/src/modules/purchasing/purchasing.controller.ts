@@ -95,7 +95,7 @@ export class PurchasingController {
       },
       profile: async ({ params }) => {
         assertCan(actor, ...VIEW_INVENTORY, ...SEE_ADVANCES);
-        return { status: 200, body: await this.performance.profile(params.id) };
+        return { status: 200, body: await this.performance.profile(actor, params.id) };
       },
     });
   }

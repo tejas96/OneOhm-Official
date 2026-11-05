@@ -269,8 +269,28 @@
         "name": "Account holder name",
         "ifsc": "IFSC",
         "number": "Account number",
-        "keep": "Saved: {account}. Leave empty to keep it."
-      }
+        "keep": "Saved: {account}. Leave empty to keep it.",
+        "confirm": "Type the account number again",
+        "confirmHint": "Type it, do not paste. Money goes to this number.",
+        "ifscChecking": "Checking the bank branch…",
+        "ifscUnavailable": "Could not check this IFSC now",
+        "ifscNotFound": "No bank branch has this IFSC",
+        "problems": {
+          "ifsc_length": "An IFSC has 11 characters.",
+          "ifsc_zero": "The 5th character of an IFSC is the number 0.",
+          "ifsc_format": "Enter a valid IFSC, like SBIN0001234.",
+          "number_digits": "Use digits only.",
+          "number_length": "An account number has 9 to 18 digits.",
+          "name_required": "Enter the name on the bank account.",
+          "name_length": "The name on the account has 2 to 120 characters.",
+          "confirm_required": "Type the account number again.",
+          "confirm_mismatch": "Numbers do not match."
+        }
+      },
+      "pan": "PAN",
+      "panHint": "Used for TDS. If left empty and there is a GSTIN, the PAN inside it is used.",
+      "panFromGstin": "Read from the GSTIN. Change it if the vendor gave a different PAN.",
+      "panWrong": "A PAN is 5 letters, 4 digits, 1 letter, like ABCDE1234F."
     },
     "dispatches": {
       "loading": "Loading dispatches",
@@ -409,6 +429,17 @@
         "empty": "Nothing is with this contractor on this project."
       },
       "failed": "That did not work"
+    },
+    "bankHold": {
+      "note": "Bank details changed {date} by {name}. Bank transfers wait until {until}.",
+      "noteNoDate": "Bank details changed by {name}. Bank transfers wait until {until}.",
+      "someone": "someone",
+      "release": "Release now",
+      "keepHold": "Keep waiting",
+      "confirmTitle": "Release bank transfers now?",
+      "confirm": "Only release if you have checked the new account with {name} by phone.",
+      "released": "Bank transfers can go now.",
+      "newAccount": "New account. Check the name with the payee before the first transfer."
     }
   }
 }

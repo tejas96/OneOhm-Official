@@ -8,7 +8,15 @@ import {
   paymentPosting,
   reversalPosting,
 } from './ledger-postings';
-import { billTds, billToPay, customerTdsProblem, receivedMoney, TDS_MAX_BP } from './tds';
+import {
+  billTds,
+  billToPay,
+  customerTdsProblem,
+  isValidPan,
+  receivedMoney,
+  TDS_MAX_BP,
+  tdsRateForPayee,
+} from './tds';
 
 const net = (lines: readonly JournalLine[], account: string) =>
   lines
@@ -127,5 +135,30 @@ describe('TDS a customer deducted', () => {
 
   it('separates the money from what the receipt settles', () => {
     expect(receivedMoney({ amountPaise: 10_000_000, tdsPaise: 200_000 })).toBe(9_800_000);
+  });
+});
+
+describe('TDS for a payee without a PAN', () => {
+  it('accepts only the PAN format', () => {
+    expect(isValidPan('ABCDE1234F')).toBe(true);
+    expect(isValidPan(' abcde1234f ')).toBe(true);
+    expect(isValidPan('ABCDE12345')).toBe(false);
+    expect(isValidPan('ABCD1234F')).toBe(false);
+    expect(isValidPan('')).toBe(false);
+    expect(isValidPan(null)).toBe(false);
+  });
+
+  it('keeps the rate with a valid PAN', () => {
+    expect(tdsRateForPayee({ rateBp: 100, pan: 'ABCDE1234F' })).toBe(100);
+  });
+
+  it('lifts the rate to 20% with a missing or invalid PAN', () => {
+    expect(tdsRateForPayee({ rateBp: 100, pan: null })).toBe(2000);
+    expect(tdsRateForPayee({ rateBp: 200, pan: 'BAD' })).toBe(2000);
+  });
+
+  it('never lowers a higher rate and keeps 0 as 0', () => {
+    expect(tdsRateForPayee({ rateBp: 2500, pan: null })).toBe(2500);
+    expect(tdsRateForPayee({ rateBp: 0, pan: null })).toBe(0);
   });
 });

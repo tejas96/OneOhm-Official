@@ -17,7 +17,25 @@ export interface Payee {
   readonly name: string;
   readonly phone: string | null;
   readonly bank: Partial<BankDetails>;
+  /** The 24-hour hold after saved bank details changed (see `bank-hold.ts`). */
+  readonly hold: PayeeHold;
 }
+
+export interface PayeeHold {
+  readonly heldUntil: Date | null;
+  readonly releasedAt: Date | null;
+  readonly changedByUserId: string | null;
+}
+
+const holdOf = (row: {
+  bankHoldUntil: Date | null;
+  bankHoldReleasedAt: Date | null;
+  bankChangedByUserId: string | null;
+}): PayeeHold => ({
+  heldUntil: row.bankHoldUntil,
+  releasedAt: row.bankHoldReleasedAt,
+  changedByUserId: row.bankChangedByUserId,
+});
 
 const bankOf = (row: {
   bankAccountName: string | null;
@@ -49,6 +67,7 @@ export async function payeeOf(db: DatabaseExecutor, payableId: string): Promise<
       name: vendor.vendor.name,
       phone: vendor.vendor.phoneE164,
       bank: bankOf(vendor.vendor),
+      hold: holdOf(vendor.vendor),
     };
   }
   const [crew] = await db
@@ -74,5 +93,6 @@ export async function payeeOf(db: DatabaseExecutor, payableId: string): Promise<
     name: found.contractor.name,
     phone: found.contractor.phoneE164,
     bank: bankOf(found.contractor),
+    hold: holdOf(found.contractor),
   };
 }

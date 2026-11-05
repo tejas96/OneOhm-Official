@@ -12,6 +12,8 @@ import {
   jobRunsSchema,
   leadAssignmentRulesSchema,
   onboardingSettingsSchema,
+  paymentSettingsSchema,
+  paymentSettingsViewSchema,
   projectVariantInputSchema,
   projectVariantSchema,
   reminderTimingSchema,
@@ -78,6 +80,18 @@ export const businessSettingsContract = c.router({
     path: '/settings/approvals',
     body: approvalPolicySchema,
     responses: { 200: approvalPolicyViewSchema },
+  },
+  payments: {
+    method: 'GET',
+    path: '/settings/payments',
+    responses: { 200: paymentSettingsViewSchema },
+  },
+  savePayments: {
+    method: 'PUT',
+    path: '/settings/payments',
+    body: paymentSettingsSchema,
+    responses: { 200: paymentSettingsViewSchema },
+    summary: 'The RazorpayX fee per payout in paise (null = not known); GST is added at 18%.',
   },
   dashboard: {
     method: 'GET',

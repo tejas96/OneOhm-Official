@@ -20,6 +20,32 @@ describe('payment settings safety', () => {
     ).toThrow(/RAZORPAYX_ACCOUNT_NUMBER/);
   });
 
+  it('needs a webhook secret for live payouts', () => {
+    const live = {
+      ...base,
+      RAZORPAYX_MODE: 'live',
+      RAZORPAY_KEY_ID: 'rzp_test_x',
+      RAZORPAY_KEY_SECRET: 's',
+      RAZORPAYX_ACCOUNT_NUMBER: '2323230000000000',
+    };
+    expect(() => loadEnvironment(live)).toThrow(/webhook secret/);
+    expect(() => loadEnvironment({ ...live, RAZORPAYX_WEBHOOK_SECRET: 'w' })).not.toThrow();
+    expect(() => loadEnvironment({ ...live, RAZORPAY_WEBHOOK_SECRET: 'w' })).not.toThrow();
+  });
+
+  it('refuses an empty RazorpayX account number for live payouts', () => {
+    expect(() =>
+      loadEnvironment({
+        ...base,
+        RAZORPAYX_MODE: 'live',
+        RAZORPAY_KEY_ID: 'rzp_test_x',
+        RAZORPAY_KEY_SECRET: 's',
+        RAZORPAYX_WEBHOOK_SECRET: 'w',
+        RAZORPAYX_ACCOUNT_NUMBER: '',
+      }),
+    ).toThrow(/RAZORPAYX_ACCOUNT_NUMBER/);
+  });
+
   it('refuses test keys and the payout sandbox on the real server', () => {
     const production = {
       ...base,

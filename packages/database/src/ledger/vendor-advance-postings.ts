@@ -1,5 +1,5 @@
 import {
-  billToPay,
+  leftToPay,
   type MoneyOutMethod,
   planAdvanceAdjustments,
   vendorAdvanceAdjustedPosting,
@@ -82,7 +82,10 @@ export async function applyVendorAdvances(
       and(
         eq(goodsReceipts.purchaseOrderId, purchaseOrderId),
         eq(payables.status, 'approved'),
-        gt(payables.amountPaise, sql`${payables.advanceAdjustedPaise} + ${payables.tdsPaise}`),
+        gt(
+          payables.amountPaise,
+          sql`${payables.advanceAdjustedPaise} + ${payables.tdsPaise} + ${payables.paidPaise}`,
+        ),
       ),
     )
     .orderBy(asc(payables.createdAt))
@@ -91,7 +94,7 @@ export async function applyVendorAdvances(
     advances.map((row) => ({ id: row.id, openPaise: row.amountPaise - row.adjustedPaise })),
     bills.map(({ payable }) => ({
       id: payable.id,
-      balancePaise: billToPay(payable),
+      balancePaise: leftToPay(payable),
     })),
   );
   const today = todayIn();
@@ -145,8 +148,9 @@ async function adjustOne(
       amountPaise: payables.amountPaise,
       advanceAdjustedPaise: payables.advanceAdjustedPaise,
       tdsPaise: payables.tdsPaise,
+      paidPaise: payables.paidPaise,
     });
-  if (after && billToPay(after) <= 0) {
+  if (after && leftToPay(after) <= 0) {
     await db
       .update(payables)
       .set({

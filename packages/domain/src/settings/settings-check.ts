@@ -33,7 +33,11 @@ export function withDefaults<T extends object>(defaults: T, saved: unknown): T {
   const merged: Record<string, unknown> = { ...base };
   for (const key of Object.keys(base)) {
     const value = (saved as Record<string, unknown>)[key];
-    if (value !== undefined && typeof value === typeof base[key]) merged[key] = value;
+    // A default of null means "not set yet": a saved number (or null) is a real answer.
+    const sameKind =
+      typeof value === typeof base[key] ||
+      (base[key] === null && (value === null || typeof value === 'number'));
+    if (value !== undefined && sameKind) merged[key] = value;
   }
   return merged as T;
 }

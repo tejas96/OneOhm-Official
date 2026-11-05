@@ -14,6 +14,7 @@ import {
   receivedPaymentSchema,
   trialBalanceSchema,
 } from '../schemas/finance.schema';
+import { payablePaymentSchema, undoPaymentBodySchema } from '../schemas/payable-payment.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
@@ -117,8 +118,26 @@ export const financeContract = c.router({
       method: moneyOutMethodSchema,
       paidOn: calendarDateSchema,
       reference: shortText(120).nullable().optional(),
+      /** A part of the bill; leave out to pay all that is left. */
+      amountPaise: paiseSchema.optional(),
     }),
     responses: { 200: payableSchema },
+  },
+  listPayablePayments: {
+    method: 'GET',
+    path: '/payables/:id/payments',
+    pathParams: idParams,
+    responses: { 200: z.array(payablePaymentSchema) },
+    summary: 'Every payment made on a bill, newest first, with whether the caller may undo it.',
+  },
+  undoPayablePayment: {
+    method: 'POST',
+    path: '/payables/:id/payments/:paymentId/undo',
+    pathParams: z.object({ id: idSchema, paymentId: idSchema }),
+    body: undoPaymentBodySchema,
+    responses: { 200: payableSchema },
+    summary:
+      'Undoes a payment recorded by hand: marks it reversed with the reason and reverses its ledger entry. Needs approve payments, or record payments for the same person within 24 hours. Bank transfers cannot be undone here.',
   },
   listLoans: {
     method: 'GET',

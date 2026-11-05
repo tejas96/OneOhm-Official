@@ -63,6 +63,14 @@ export function BillAmount({ bill }: { readonly bill: Payable }) {
           {t('advanceAdjusted', { amount: formatInr(bill.advanceAdjustedPaise) })}
         </span>
       )}
+      {bill.paidPaise > 0 && bill.status !== 'paid' && (
+        <span className="whitespace-nowrap type-label text-ink-faint">
+          {t('paidOfTotal', {
+            paid: formatInr(bill.paidPaise),
+            total: formatInr(bill.toPayPaise),
+          })}
+        </span>
+      )}
       <InvoiceFlag match={bill.invoiceMatch} compact />
     </span>
   );

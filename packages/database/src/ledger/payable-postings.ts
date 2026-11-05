@@ -1,19 +1,11 @@
-import {
-  billToPay,
-  contractorTdsPosting,
-  type MoneyOutMethod,
-  payableApprovedPosting,
-  payablePaidPosting,
-} from '@oneohm/domain';
+import { contractorTdsPosting, payableApprovedPosting } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from '../client';
 import { contractors, payables, projects, workOrders } from '../schema';
 import { postJournal } from './post-journal';
 import { businessDate } from './receivable-postings';
 
-const OUT_METHODS: readonly MoneyOutMethod[] = ['cash', 'cheque', 'bank_transfer', 'upi'];
-
-async function loadPayable(db: DatabaseExecutor, payableId: string) {
+export async function loadPayable(db: DatabaseExecutor, payableId: string) {
   const [row] = await db
     .select({ payable: payables, code: projects.code })
     .from(payables)
@@ -23,7 +15,7 @@ async function loadPayable(db: DatabaseExecutor, payableId: string) {
   return row;
 }
 
-const memoOf = (row: { payable: typeof payables.$inferSelect; code: string | null }) =>
+export const memoOf = (row: { payable: typeof payables.$inferSelect; code: string | null }) =>
   [row.code, row.payable.partyName, row.payable.description].filter(Boolean).join(' · ');
 
 /** An approved bill: the cost and what is owed are booked on the approval date. */
@@ -47,31 +39,6 @@ export async function postPayableApproved(
       amountPaise: payable.amountPaise,
       tdsPaise: payable.tdsPaise,
     }),
-  });
-}
-
-/** A bill paid: what is owed goes down, and so does the bank or cash it came from. */
-export async function postPayablePaid(
-  db: DatabaseExecutor,
-  payableId: string,
-  userId: string | null,
-): Promise<void> {
-  const row = await loadPayable(db, payableId);
-  if (row?.payable.status !== 'paid') return;
-  const { payable } = row;
-  // TDS went to its own account on approval, and vendor advances set against the bill
-  // were posted when adjusted; only the rest is paid.
-  const paidOut = billToPay(payable);
-  if (paidOut <= 0) return;
-  const method = OUT_METHODS.find((entry) => entry === payable.paidMethod) ?? 'bank_transfer';
-  await postJournal(db, {
-    entryDate: payable.paidOn ?? businessDate(payable.paidAt ?? payable.updatedAt),
-    memo: `Bill paid · ${memoOf(row)}${payable.paidReference ? ` · ${payable.paidReference}` : ''}`,
-    sourceType: 'payable_paid',
-    sourceId: payable.id,
-    projectId: payable.projectId,
-    postedByUserId: userId,
-    lines: payablePaidPosting({ party: payable.party, method, amountPaise: paidOut }),
   });
 }
 

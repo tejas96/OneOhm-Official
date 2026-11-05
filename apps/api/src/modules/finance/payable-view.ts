@@ -1,6 +1,6 @@
 import type { Payable } from '@oneohm/api-contracts';
 import type { payables } from '@oneohm/database';
-import { billToPay, matchVendorInvoice } from '@oneohm/domain';
+import { billToPay, leftToPay, matchVendorInvoice } from '@oneohm/domain';
 
 type Row = typeof payables.$inferSelect;
 
@@ -43,5 +43,7 @@ export function presentPayable(
     tdsBp: row.tdsBp,
     tdsPaise: row.tdsPaise,
     toPayPaise: billToPay(row),
+    paidPaise: row.paidPaise,
+    leftPaise: leftToPay(row),
   };
 }

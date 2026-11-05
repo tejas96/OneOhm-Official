@@ -714,7 +714,8 @@
       "off": "Off",
       "audience": {
         "customer": "To customers",
-        "staff": "To staff"
+        "staff": "To staff",
+        "vendor": "To vendors and crews"
       },
       "names": {
         "quotation_sent": "Quotation sent",
@@ -730,6 +731,7 @@
         "referral_reward": "Referral reward update",
         "survey_scheduled": "Site survey date",
         "staff_daily_digest": "Morning summary for staff",
+        "vendor_paid": "Payee told they were paid",
         "stage_rating_request": "Ask the customer to rate a stage",
         "document_requested": "Paper requested",
         "maintenance_visit": "Free maintenance visit",
@@ -1235,6 +1237,14 @@
           "daysHint": "Counted from the day it was asked for.",
           "daysBlank": "Enter a number of days from 1 to 30.",
           "open": "Open Waiting for my approval"
+        },
+        "second": {
+          "title": "Two people for big transfers",
+          "description": "For bank transfers only.",
+          "limit": "Two people needed to send above (₹)",
+          "hint": "Above this, one person asks or approves and another sends. Needs at least two people with payment rights.",
+          "on": "Bank transfers above {amount} need two different people.",
+          "off": "Off (0). One person with payment rights can send any amount."
         }
       },
       "dashboard": {
@@ -1443,6 +1453,77 @@
       "business": "Shop or business",
       "useSuggested": "Use the suggested panel"
     },
-    "loading": "Loading this section"
+    "loading": "Loading this section",
+    "bankTransfers": {
+      "title": "Bank transfers (RazorpayX)",
+      "intro": "Pay vendor and contractor bills straight to their bank account. This shows whether the setup is right.",
+      "loading": "Checking bank transfer setup",
+      "status": {
+        "off": "Off",
+        "practice": "Practice (no real money)",
+        "liveTest": "Live (test keys)",
+        "live": "Live"
+      },
+      "statusNote": {
+        "off": "Bank transfers are off. Bills can still be paid by recording a payment by hand.",
+        "practice": "Practice mode. Transfers look real but no money moves, and nothing finishes until you mark it in the bill.",
+        "liveTest": "Live mode, but the keys are test keys. Real transfers will not work until your technical person adds the live keys.",
+        "live": "Live. Bank transfers send real money from your RazorpayX balance."
+      },
+      "items": {
+        "accountNumber": "RazorpayX account number",
+        "keys": "RazorpayX keys",
+        "webhookSecret": "Webhook secret",
+        "lastWebhook": "Last update received from RazorpayX",
+        "lastCheck": "Last check with RazorpayX",
+        "openPayouts": "Transfers on their way",
+        "lowBalance": "Last low-balance failure",
+        "allowList": "RazorpayX allow-list"
+      },
+      "allowListBlocked": "RazorpayX blocked this server. Ask your technical person to add the server's IP address in RazorpayX → Settings → Developer Controls → Allowlist IPs. Nothing was sent.",
+      "serverIp": {
+        "label": "Server IP for RazorpayX allow-list:",
+        "hint": "Your technical person adds this in RazorpayX → Settings → Developer Controls → Allowlist IPs (an Owner or Admin, with an OTP). Live transfers are refused from any other address.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyFailed": "Could not copy. Select the address and copy it."
+      },
+      "match": {
+        "button": "Check against RazorpayX",
+        "hint": "Compares the last {days} days of transfers with RazorpayX's own list.",
+        "failed": "Could not check with RazorpayX. Try again in a moment.",
+        "allMatch": "{count, plural, =0 {No transfers to compare} one {All # transfer matches} other {All # transfers match}}",
+        "practice": "Practice mode has no RazorpayX list to compare with. {count, plural, one {# practice transfer} other {# practice transfers}} counted.",
+        "differences": "{count, plural, one {# difference} other {# differences}} found; {matched, plural, =0 {none match} other {# match}}",
+        "truncated": "Showing the first 50 differences."
+      },
+      "tone": {
+        "ok": "Good",
+        "warn": "Check",
+        "idle": "Not needed"
+      },
+      "set": "Set",
+      "notSet": "Not set. Set by your technical person in the server settings.",
+      "testKeysInLive": "These are test keys, but the mode is Live.",
+      "noWebhookYet": "None yet",
+      "noWebhookYetLive": "None yet. The webhook may not be set up in RazorpayX.",
+      "noCheckYet": "Not checked yet. We check every 5 minutes.",
+      "checkFailed": "The last check failed: {error}",
+      "counts": "{open, plural, =0 {None on their way} one {# on their way} other {# on their way}}; {stuck, plural, =0 {none taking too long} one {# taking too long} other {# taking too long}}",
+      "lowBalanceNever": "None",
+      "lowBalanceOpen": "{when}. Add money in RazorpayX, then pay again.",
+      "lowBalancePast": "{when}. A transfer has gone through since.",
+      "secretsNote": "Set by your technical person in the server settings. Keys and secrets are never shown here.",
+      "openTransfers": "See transfers in Payables",
+      "refresh": "Check again",
+      "fee": {
+        "title": "RazorpayX fee",
+        "loading": "Loading the fee",
+        "label": "RazorpayX fee per payout (₹)",
+        "hint": "From your RazorpayX plan. Leave empty if you do not know; we show the real fee after each transfer.",
+        "unknown": "No fee entered. Transfers will say the fee is shown after sending.",
+        "gst": "Plus {percent}% GST of {gst}. About {total} in all per transfer."
+      }
+    }
   }
 }

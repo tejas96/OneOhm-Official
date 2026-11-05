@@ -12,6 +12,11 @@ export const NOTICE_SUBJECTS = [
   'quotation',
   'purchase_request',
   'vendor_advance',
+  /** A bill; opens it in Finance (bank transfer alerts). */
+  'payable',
+  /** A vendor or crew page; opens it (bank detail alerts). */
+  'vendor',
+  'contractor',
   'stock',
   'travel_claim',
   'lead',

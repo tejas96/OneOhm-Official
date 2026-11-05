@@ -57,6 +57,7 @@ describe('settleWorkOrder', () => {
       advancesPaise: 500_000,
       retentionBp: 500,
       tdsBp: 100,
+      pan: 'ABCDE1234F',
     });
     expect(settlement.grossPaise).toBe(2_057_500);
     expect(settlement.retentionPaise).toBe(100_000);
@@ -71,7 +72,22 @@ describe('settleWorkOrder', () => {
       advancesPaise: 500_000,
       retentionBp: 0,
       tdsBp: 0,
+      pan: null,
     });
     expect(settlement.netPayablePaise).toBe(0);
+  });
+
+  it('holds 20% TDS when the contractor has no valid PAN, and says why', () => {
+    const settlement = settleWorkOrder({
+      lineAmountsPaise: [1_000_000],
+      reworkDeductionsPaise: 0,
+      advancesPaise: 0,
+      retentionBp: 0,
+      tdsBp: 100,
+      pan: null,
+    });
+    expect(settlement.tdsBp).toBe(2000);
+    expect(settlement.tdsPaise).toBe(200_000);
+    expect(settlement.tdsNote).toBe('No PAN: TDS at 20% (section 397(2))');
   });
 });

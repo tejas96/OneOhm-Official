@@ -126,6 +126,16 @@ function missingKeys(env: Raw): Issue[] {
           'Needed for RazorpayX payouts.',
         )
       : []),
+    ...(env.RAZORPAYX_MODE === 'live' &&
+    !env.RAZORPAYX_WEBHOOK_SECRET &&
+    !env.RAZORPAY_WEBHOOK_SECRET
+      ? [
+          [
+            'RAZORPAYX_WEBHOOK_SECRET',
+            'RazorpayX payouts need a webhook secret: set RAZORPAYX_WEBHOOK_SECRET (or RAZORPAY_WEBHOOK_SECRET)',
+          ] as Issue,
+        ]
+      : []),
     ...(env.WHATSAPP_DELIVERY === 'live'
       ? needs(['WHATSAPP_ACCESS_TOKEN'], 'Needed to download photos customers send on WhatsApp.')
       : []),

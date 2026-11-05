@@ -1,4 +1,9 @@
-import type { CrewPayments, Payable, WorkOrderDetail } from '@oneohm/api-contracts';
+import type {
+  ContractorDetail,
+  CrewPayments,
+  Payable,
+  WorkOrderDetail,
+} from '@oneohm/api-contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Session } from '../support/http';
 import { type Sale, sellProject, today } from '../support/sales';
@@ -177,5 +182,48 @@ describe('Contractors', () => {
     }
     const bills = await lead.raw('GET', '/finance/payables');
     expect([403, 404]).toContain(bills.status);
+  });
+
+  it('applies 20% TDS to a contractor with no valid PAN (section 397(2))', async () => {
+    const withPan = await admin.get<ContractorDetail>(`/contractors/${contractor.id}`);
+    expect(withPan.effectiveTdsBp).toBe(withPan.tdsBp);
+
+    const noPan = await admin.post<ContractorDetail>('/contractors', {
+      name: `No PAN Crew ${Date.now()} (test)`,
+      kind: 'individual',
+      skills: ['ic_partner'],
+      tdsBp: 100,
+    });
+    expect(noPan.pan).toBeNull();
+    expect(noPan.tdsBp).toBe(100);
+    expect(noPan.effectiveTdsBp).toBe(2000);
+
+    const fixed = await admin.patch<ContractorDetail>(`/contractors/${noPan.id}`, {
+      pan: 'abcde1234f',
+    });
+    expect(fixed.pan).toBe('ABCDE1234F');
+    expect(fixed.effectiveTdsBp).toBe(100);
+  });
+
+  it('refuses a contractor account number of 8 digits (payouts need 9 to 18)', async () => {
+    const reply = await admin.raw('POST', '/contractors', {
+      name: `Short Account Crew ${Date.now()} (test)`,
+      kind: 'individual',
+      skills: ['ic_partner'],
+      bankAccountName: 'Short Account Crew',
+      bankAccountNumber: '12345678',
+      bankAccountNumberConfirm: '12345678',
+      bankIfsc: 'HDFC0000001',
+    });
+    expect(reply.status).toBe(400);
+  });
+
+  it('refuses an account number typed twice differently', async () => {
+    const reply = await admin.raw('PATCH', `/contractors/${contractor.id}`, {
+      bankAccountName: CREWS.main.name,
+      bankAccountNumber: '123456789012',
+      bankAccountNumberConfirm: '123456789013',
+    });
+    expect(reply.status).toBe(400);
   });
 });

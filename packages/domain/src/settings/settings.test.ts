@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkApprovalPolicy, DEFAULT_APPROVAL_POLICY, mayApproveAmount } from './approval-policy';
 import { checkDashboardSettings, DEFAULT_DASHBOARD_SETTINGS } from './dashboard-settings';
 import { compareRuns, isRetryableJob, jobErrorText } from './job-runs';
+import { checkPaymentSettings, DEFAULT_PAYMENT_SETTINGS, feeEstimate } from './payment-settings';
 import { checkProjectVariant, projectVariantOf } from './project-types';
 import {
   checkReminderTiming,
@@ -81,7 +82,12 @@ describe('approval limits (PRD 7.2, 7.3)', () => {
     expect(checkApprovalPolicy(DEFAULT_APPROVAL_POLICY)).toEqual({});
     expect(
       Object.keys(
-        checkApprovalPolicy({ billLimitPaise: -1, bonusLimitPaise: 0.5, escalateAfterDays: 0 }),
+        checkApprovalPolicy({
+          billLimitPaise: -1,
+          bonusLimitPaise: 0.5,
+          secondPersonAbovePaise: 0,
+          escalateAfterDays: 0,
+        }),
       ).sort(),
     ).toEqual(['billLimitPaise', 'bonusLimitPaise', 'escalateAfterDays']);
   });
@@ -110,5 +116,34 @@ describe('dashboard settings, project kinds and job runs', () => {
     expect(jobErrorText(new Error('Lost https://x.y/z?key=1'))).toBe('Lost [link]');
     expect(isRetryableJob('payment_reminders')).toBe(true);
     expect(isRetryableJob('payout_sync')).toBe(false);
+  });
+});
+
+describe('payment settings', () => {
+  it('has no fee until the owner enters one, and checks what they enter', () => {
+    expect(DEFAULT_PAYMENT_SETTINGS.razorpayxFeePaise).toBeNull();
+    expect(checkPaymentSettings({ razorpayxFeePaise: null })).toEqual({});
+    expect(checkPaymentSettings({ razorpayxFeePaise: 590 })).toEqual({});
+    expect(Object.keys(checkPaymentSettings({ razorpayxFeePaise: -1 }))).toEqual([
+      'razorpayxFeePaise',
+    ]);
+    expect(Object.keys(checkPaymentSettings({ razorpayxFeePaise: 5.5 }))).toEqual([
+      'razorpayxFeePaise',
+    ]);
+  });
+
+  it('adds 18% GST separately and says nothing while the fee is unknown', () => {
+    expect(feeEstimate(null)).toBeNull();
+    expect(feeEstimate(1000)).toEqual({ feePaise: 1000, gstPaise: 180 });
+    expect(feeEstimate(590)).toEqual({ feePaise: 590, gstPaise: 106 });
+  });
+
+  it('keeps a saved fee over the empty default', () => {
+    expect(withDefaults(DEFAULT_PAYMENT_SETTINGS, { razorpayxFeePaise: 700 })).toEqual({
+      razorpayxFeePaise: 700,
+    });
+    expect(withDefaults(DEFAULT_PAYMENT_SETTINGS, { razorpayxFeePaise: 'x' })).toEqual({
+      razorpayxFeePaise: null,
+    });
   });
 });

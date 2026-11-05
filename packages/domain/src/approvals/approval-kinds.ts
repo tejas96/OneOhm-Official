@@ -15,6 +15,8 @@ export const APPROVAL_KINDS = [
   'purchase_request',
   'vendor_advance',
   'bill',
+  /** A request to send a bank transfer for an approved bill; an approver sends it. */
+  'bank_payout',
   'points',
   'bonus',
   'commission',
@@ -45,6 +47,7 @@ const FIXED: Readonly<Record<Exclude<ApprovalKind, 'task_review' | 'bill' | 'bon
     travel_claim: 'leave.approve',
     purchase_request: 'procurement.manage',
     vendor_advance: 'finance.approve_payments',
+    bank_payout: 'finance.approve_payments',
     points: 'people.manage',
     commission: 'finance.approve_payments',
     referral_reward: 'finance.approve_payments',
@@ -88,6 +91,7 @@ const NOT_OWN: ReadonlySet<ApprovalKind> = new Set([
   'attendance_correction',
   'travel_claim',
   'points',
+  'bank_payout',
 ]);
 
 /** True when the item is this person's own leave, attendance fix, claim or points, or names them as the proposed assignee. */

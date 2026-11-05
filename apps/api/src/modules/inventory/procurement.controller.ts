@@ -28,7 +28,7 @@ export class ProcurementController {
     return tsRestHandler(apiContract.inventory.vendors, {
       list: async () => {
         assertCan(actor, ...VIEW_INVENTORY);
-        return { status: 200, body: await this.vendors.list() };
+        return { status: 200, body: await this.vendors.list(actor) };
       },
       create: async ({ body }) => {
         assertCan(actor, 'procurement.manage');

@@ -2,6 +2,7 @@
 
 import type { ApprovalPolicyRecord, ApprovalPolicyView } from '@oneohm/api-contracts';
 import { Badge, Button, Field } from '@oneohm/design-system/web';
+import { checkApprovalPolicy } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
@@ -56,13 +57,17 @@ export function ApprovalsPanel() {
   if (rule.query.isError)
     return <LoadError error={rule.query.error} onRetry={() => rule.query.refetch()} />;
   if (!draft) return null;
-  const errors = withBlankErrors(form.fieldErrors, blank, {
+  // The server's own rules, shown while typing; an emptied box says so instead.
+  const live = withBlankErrors(checkApprovalPolicy(draft), blank, {
     billLimitPaise: t('limitBlank'),
     bonusLimitPaise: t('limitBlank'),
     escalateAfterDays: t('waiting.daysBlank'),
+    secondPersonAbovePaise: t('limitBlank'),
   });
+  const blocked = Object.keys(live).length > 0;
+  const errors = { ...form.fieldErrors, ...live };
   const submit = (event: FormEvent<HTMLFormElement>) => {
-    if (blank.size > 0) {
+    if (blocked) {
       event.preventDefault();
       return;
     }
@@ -108,6 +113,32 @@ export function ApprovalsPanel() {
           </SettingsSection>
         );
       })}
+      <SettingsSection title={t('second.title')} description={t('second.description')}>
+        <Field
+          label={t('second.limit')}
+          hint={t('second.hint')}
+          error={errors.secondPersonAbovePaise}
+        >
+          <div className="sm:max-w-56">
+            <NumberInput
+              key={boxes}
+              unit="paise"
+              value={draft.secondPersonAbovePaise}
+              onValueChange={(value) => typed('secondPersonAbovePaise', value)}
+            />
+          </div>
+        </Field>
+        <p className="rounded-md bg-sunken px-4 py-3 type-body-sm text-ink-muted">
+          {draft.secondPersonAbovePaise > 0
+            ? t('second.on', { amount: formatInr(draft.secondPersonAbovePaise) })
+            : t('second.off')}
+        </p>
+        {form.error && (
+          <p role="alert" className="type-body-sm text-overdue">
+            {form.error}
+          </p>
+        )}
+      </SettingsSection>
       <SettingsSection title={t('refunds.title')} description={t('refunds.description')}>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="soft">{t('refunds.fixed')}</Badge>
@@ -136,6 +167,7 @@ export function ApprovalsPanel() {
         dirty={rule.dirty || blank.size > 0}
         pending={form.pending}
         error={form.error}
+        blocked={blocked}
         onDiscard={discard}
       />
     </form>

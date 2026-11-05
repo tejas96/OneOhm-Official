@@ -1,17 +1,19 @@
 import { LEDGER_ACCOUNTS } from '@oneohm/domain';
-import { and, asc, eq, gt, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { Database } from '../client';
 import {
   customerCredits,
   customerRefunds,
   ledgerAccounts,
+  payablePayments,
   payables,
   paymentMilestones,
   payments,
   workOrders,
 } from '../schema';
 import { postCustomerCredit, postCustomerRefund } from './customer-credit-postings';
-import { postPayableApproved, postPayablePaid, postWorkOrderTds } from './payable-postings';
+import { postPayablePayment } from './payable-payment-postings';
+import { postPayableApproved, postWorkOrderTds } from './payable-postings';
 import { postMilestoneDue, postPayment } from './receivable-postings';
 
 /** The chart of accounts. Safe to run again: names follow the code, nothing is removed. */
@@ -52,13 +54,21 @@ export async function backfillLedger(db: Database): Promise<BackfillResult> {
     await db.transaction((tx) => postPayment(tx, id, null));
   }
   const bills = await db
-    .select({ id: payables.id, status: payables.status })
+    .select({ id: payables.id })
     .from(payables)
     .where(inArray(payables.status, ['approved', 'paid']));
   for (const bill of bills) {
     await db.transaction(async (tx) => {
       await postPayableApproved(tx, bill.id, null);
-      if (bill.status === 'paid') await postPayablePaid(tx, bill.id, null);
+      // Every payment that stands (reversed ones net to nothing). A payment from an old
+      // bill books under the bill's own "bill paid" entry, any other under its own id, so
+      // nothing is booked twice and parts never dedupe each other. See `paymentSource`.
+      const standing = await tx
+        .select({ id: payablePayments.id })
+        .from(payablePayments)
+        .where(and(eq(payablePayments.payableId, bill.id), isNull(payablePayments.reversedAt)))
+        .orderBy(asc(payablePayments.createdAt), asc(payablePayments.id));
+      for (const payment of standing) await postPayablePayment(tx, payment.id, null);
     });
   }
   const settled = await db

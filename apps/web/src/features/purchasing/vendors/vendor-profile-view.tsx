@@ -22,11 +22,13 @@ import { DocumentsGallery } from '@/features/documents/gallery/documents-gallery
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
 import { AgeingBars } from '../../finance/overview/ageing-bars';
+import { BankHoldNote } from '../../inventory/vendors/bank-hold-note';
 import { VendorDialog } from '../../inventory/vendors/vendor-dialog';
 import { RecordAdvanceDialog } from '../advances/record-advance-dialog';
 import { useVendorProfile } from '../use-purchasing';
 import { VendorKpis } from './vendor-kpis';
 import { VendorAdvancesTable, VendorBillsTable } from './vendor-money-tables';
+import { VendorPanNote } from './vendor-pan-note';
 import { VendorOrdersTable, VendorRejectionsTable } from './vendor-supply-tables';
 
 const TABS = ['orders', 'bills', 'advances', 'inspection', 'papers'] as const;
@@ -118,6 +120,16 @@ export function VendorProfileView({ id }: { readonly id: string }) {
           )}
         </div>
       </header>
+      {/* A recent bank change holds transfers; say so where the owner looks first. */}
+      <BankHoldNote
+        kind="vendor"
+        id={vendor.id}
+        payeeName={vendor.name}
+        hold={vendor.bankHold}
+        isNew={vendor.bankIsNew}
+        onReleased={() => void query.refetch()}
+      />
+      <VendorPanNote vendor={vendor} />
       <VendorKpis scorecard={scorecard} />
       <Card>
         <CardHeader title={t('ageing.title')} description={t('ageing.description')} />

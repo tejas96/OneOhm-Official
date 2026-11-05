@@ -26,6 +26,7 @@ export function approvalHref(item: Pick<PendingApprovalRow, 'kind' | 'id' | 'pro
       // The advances list holds only the newest few hundred; pending keeps an old one in it.
       return `/finance?tab=advances&filter=pending&advance=${id}`;
     case 'bill':
+    case 'bank_payout':
       return `/finance?tab=payables&bill=${id}`;
     case 'points':
       return `/team?tab=points&points=${id}`;

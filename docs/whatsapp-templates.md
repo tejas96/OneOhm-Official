@@ -79,6 +79,7 @@ news still goes inside 24 hours while it is off (money and answer flows never go
 | `chat_follow_up` | A staff message after the 24-hour window | Utility | none | — | To submit |
 | `staff_daily_digest` | Staff daily summary | Utility | none | — | To submit |
 | `staff_welcome` | Welcome a new staff member | Utility | none | — | To submit |
+| `vendor_paid` | Tell a vendor or crew a bank transfer reached them | Utility | none | — (the On/Off switch) | To submit |
 
 Quick-reply switch: **extras approved** = the version with the quick replies / document header is approved (turn it on with the new Meta name in the
 same dialog); **quick replies approved** = a newer version with quick replies in front of an older button is approved (the older version keeps working
@@ -830,6 +831,25 @@ partners. Turn on with `STAFF_INVITES=on` only after Meta approves it.
 > Hi {{1}}, you have been added to the OneOhm team. Open the app here: {{2}}. Sign in with this mobile number. For the website, choose "First time here?" to set your password.
 
 Examples: Priya · https://app.oneohm.in
+
+## Vendor and crew template
+
+### 56. `vendor_paid` — **New** (a RazorpayX bank transfer reached the payee; **Utility**)
+Fields: payee, amount, company, utr, date, last4
+
+Sent by itself, once, when a bank transfer of a bill is processed. It goes to the phone saved on the
+vendor or crew, never to a customer. It is **off** until Meta approves it in all three languages and the
+owner switches it on in **Settings → Messages** (the same On/Off switch as every plain template). While
+it is off, or the payee has no phone, nothing is sent and the bill says "Payee not told". `{{6}}` is only
+the last four digits of the account; the full number is never sent.
+
+> en: Hello {{1}}, {{3}} has paid you {{2}} by bank transfer on {{5}}. Bank reference (UTR): {{4}}. It went to the account ending {{6}}.
+
+> mr: नमस्कार {{1}}, {{3}} यांनी तुम्हाला {{5}} रोजी बँक ट्रान्सफरने {{2}} दिले आहेत. बँक संदर्भ (UTR): {{4}}. रक्कम {{6}} ने संपणाऱ्या खात्यात गेली आहे.
+
+> hi: नमस्ते {{1}}, {{3}} ने आपको {{5}} को बैंक ट्रांसफर से {{2}} का भुगतान किया है। बैंक संदर्भ (UTR): {{4}}। यह {{6}} पर खत्म होने वाले खाते में गया है।
+
+Examples: Shree Electricals · ₹12,500 · OneOhm Solar · SBIN52611050012 · 5 Nov 2026 · 1234
 
 ## Chat template
 

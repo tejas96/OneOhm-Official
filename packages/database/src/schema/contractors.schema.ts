@@ -41,6 +41,17 @@ export const contractors = pgTable(
     bankAccountName: text('bank_account_name'),
     bankAccountNumber: text('bank_account_number'),
     bankIfsc: text('bank_ifsc'),
+    /** When saved bank details last really changed, and by whom. */
+    bankChangedAt: instant('bank_changed_at'),
+    bankChangedByUserId: uuid('bank_changed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    /** No bank transfer goes to the new details before this time. */
+    bankHoldUntil: instant('bank_hold_until'),
+    bankHoldReleasedByUserId: uuid('bank_hold_released_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    bankHoldReleasedAt: instant('bank_hold_released_at'),
     paymentTermsDays: integer('payment_terms_days').notNull().default(15),
     /** TDS withheld, in basis points (100 = 1%); null follows the company's tax setting. */
     tdsBp: integer('tds_bp'),

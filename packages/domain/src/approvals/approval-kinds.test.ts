@@ -26,6 +26,16 @@ describe('who may decide an approval (PRD 7.1, 7.3)', () => {
     expect(mayDecide(advance, owner, policy)).toBe(true);
   });
 
+  it('a request to send a bank transfer is for approvers, never the asker', () => {
+    const send = item({ kind: 'bank_payout', requestedByUserId: 'asha', amountPaise: 500_000 });
+    const approver = { userId: 'owner', capabilities: ['finance.approve_payments'] };
+    expect(mayDecide(send, approver, policy)).toBe(true);
+    expect(mayDecide(send, { ...approver, userId: 'asha' }, policy)).toBe(false);
+    expect(
+      mayDecide(send, { userId: 'ravi', capabilities: ['finance.record_payments'] }, policy),
+    ).toBe(false);
+  });
+
   it('task reviews follow the task’s reviewers only', () => {
     const review = item({ kind: 'task_review', reviewerIds: ['meena'] });
     expect(mayDecide(review, manager, policy)).toBe(false);

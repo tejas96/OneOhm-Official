@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
+import { BankTransfersCard } from '../payouts/bank-transfers-card';
+import { PayoutFeeForm } from '../payouts/payout-fee-form';
 import { PlanDialog } from './plan-dialog';
 import { PLANS_KEY, usePaymentPlans } from './use-payment-plans';
 
@@ -40,6 +42,10 @@ export function PaymentPlansPanel() {
   };
   return (
     <section className="flex flex-col gap-5">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BankTransfersCard />
+        <PayoutFeeForm />
+      </div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex max-w-2xl flex-col gap-1">
           <h2 className="type-display-md text-ink">{t('title')}</h2>

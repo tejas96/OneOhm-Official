@@ -36,6 +36,16 @@ export async function approveItem(item: ApprovalItem): Promise<void> {
     case 'bill':
       await expectStatus(api.finance.approvePayable({ params }), 200);
       return;
+    case 'bank_payout':
+      // The inbox item is the bill; sending is the same server path as the Pay dialog.
+      await expectStatus(
+        api.bankPayouts.sendPayout({
+          params,
+          body: item.amountPaise === null ? undefined : { amountPaise: item.amountPaise },
+        }),
+        201,
+      );
+      return;
     case 'points':
       await expectStatus(api.rewards.decidePoints({ params, body: { approve: true } }), 200);
       return;

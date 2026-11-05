@@ -57,7 +57,7 @@ export async function settlement(db: DatabaseExecutor, userId: string): Promise<
       .innerJoin(projectBonuses, eq(projectBonuses.id, projectBonusShares.bonusId))
       .where(and(eq(projectBonusShares.userId, userId), eq(projectBonuses.status, 'pending'))),
     db
-      .select({ count, paise: total(payables.amountPaise) })
+      .select({ count, paise: total(sql`${payables.amountPaise} - ${payables.paidPaise}`) })
       .from(payables)
       .where(and(eq(payables.partyUserId, userId), ne(payables.status, 'paid'))),
     db

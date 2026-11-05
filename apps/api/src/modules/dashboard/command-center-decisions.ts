@@ -22,7 +22,7 @@ const countWhere = async (db: Database, table: PgTable, where: SQL | undefined) 
 const APPROVALS: readonly { key: DecisionKey; kinds: readonly ApprovalKind[] }[] = [
   { key: 'discounts', kinds: ['discount'] },
   { key: 'task_reviews', kinds: ['task_review'] },
-  { key: 'bills', kinds: ['bill'] },
+  { key: 'bills', kinds: ['bill', 'bank_payout'] },
   { key: 'leave', kinds: ['leave'] },
   { key: 'attendance_corrections', kinds: ['attendance_correction'] },
   { key: 'travel_claims', kinds: ['travel_claim'] },

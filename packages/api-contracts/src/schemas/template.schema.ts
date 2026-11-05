@@ -14,7 +14,7 @@ import { idSchema } from '../common/primitives';
 /** A WhatsApp template as approved in Meta's WhatsApp Manager (PRD 7.2). */
 export const messageTemplateSchema = z.object({
   key: z.string(),
-  audience: z.enum(['customer', 'staff']),
+  audience: z.enum(['customer', 'staff', 'vendor']),
   metaName: z.string(),
   language: z.string(),
   /** The same message approved in Marathi (mr) and Hindi (hi); null sends English. */

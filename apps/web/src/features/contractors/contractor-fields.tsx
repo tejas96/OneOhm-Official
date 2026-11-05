@@ -1,114 +1,37 @@
 'use client';
 
-import type { ContractorDetail, ContractorInput } from '@oneohm/api-contracts';
 import { Checkbox, Field, Input, SegmentedControl, Textarea } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import type { BankCheck } from '@/features/inventory/vendors/bank-check';
+import { VendorBankFields } from '@/features/inventory/vendors/vendor-bank-fields';
 import { NumberInput } from '@/features/settings/number-input';
 import { useRoles } from '@/features/team/use-team';
+import type { ContractorDraft } from './contractor-draft';
 
-export interface ContractorDraft {
-  readonly name: string;
-  readonly kind: 'company' | 'individual';
-  readonly contactName: string;
-  readonly phone: string;
-  readonly email: string;
-  readonly gstin: string;
-  readonly pan: string;
-  readonly address: string;
-  readonly bankAccountName: string;
-  readonly bankAccountNumber: string;
-  readonly bankIfsc: string;
-  readonly paymentTermsDays: number | null;
-  readonly tdsBp: number | null;
-  readonly retentionBp: number | null;
-  readonly retentionDays: number | null;
-  readonly skills: readonly string[];
-  readonly serviceAreas: string;
-  readonly notes: string;
-}
-
-export const EMPTY_CONTRACTOR: ContractorDraft = {
-  name: '',
-  kind: 'company',
-  contactName: '',
-  phone: '',
-  email: '',
-  gstin: '',
-  pan: '',
-  address: '',
-  bankAccountName: '',
-  bankAccountNumber: '',
-  bankIfsc: '',
-  paymentTermsDays: 15,
-  tdsBp: 100,
-  retentionBp: 0,
-  retentionDays: 90,
-  skills: ['ic_partner'],
-  serviceAreas: '',
-  notes: '',
-};
-
-export function draftFrom(contractor: ContractorDetail): ContractorDraft {
-  return {
-    name: contractor.name,
-    kind: contractor.kind,
-    contactName: contractor.contactName ?? '',
-    phone: contractor.phone?.replace(/^\+91/, '') ?? '',
-    email: contractor.email ?? '',
-    gstin: contractor.gstin ?? '',
-    pan: contractor.pan ?? '',
-    address: contractor.address ?? '',
-    bankAccountName: contractor.bankAccountName ?? '',
-    bankAccountNumber: contractor.bankAccountNumber ?? '',
-    bankIfsc: contractor.bankIfsc ?? '',
-    paymentTermsDays: contractor.paymentTermsDays,
-    tdsBp: contractor.tdsBp,
-    retentionBp: contractor.retentionBp,
-    retentionDays: contractor.retentionDays,
-    skills: contractor.skills,
-    serviceAreas: contractor.serviceAreas.join(', '),
-    notes: contractor.notes ?? '',
-  };
-}
-
-const orNull = (value: string) => (value.trim() ? value.trim() : null);
-
-/** The API body; blank optional fields are sent as null so they clear. */
-export function contractorBody(draft: ContractorDraft): ContractorInput {
-  return {
-    name: draft.name.trim(),
-    kind: draft.kind,
-    contactName: orNull(draft.contactName),
-    phone: orNull(draft.phone),
-    email: orNull(draft.email),
-    gstin: orNull(draft.gstin),
-    pan: orNull(draft.pan),
-    address: orNull(draft.address),
-    bankAccountName: orNull(draft.bankAccountName),
-    bankAccountNumber: orNull(draft.bankAccountNumber),
-    bankIfsc: orNull(draft.bankIfsc),
-    paymentTermsDays: draft.paymentTermsDays ?? 0,
-    tdsBp: draft.tdsBp ?? 0,
-    retentionBp: draft.retentionBp ?? 0,
-    retentionDays: draft.retentionDays ?? 0,
-    skills: [...draft.skills],
-    serviceAreas: draft.serviceAreas
-      .split(',')
-      .map((area) => area.trim())
-      .filter(Boolean),
-    notes: orNull(draft.notes),
-  };
-}
+export {
+  type ContractorDraft,
+  contractorBody,
+  draftFrom,
+  EMPTY_CONTRACTOR,
+} from './contractor-draft';
 
 /** Profile, bank, money terms and the kinds of work a contractor's crews take. */
 export function ContractorFields({
   draft,
   onChange,
   errors,
+  savedAccount = null,
+  bank,
+  showRequired = false,
 }: {
   readonly draft: ContractorDraft;
   readonly onChange: (draft: ContractorDraft) => void;
   readonly errors: Readonly<Record<string, string>>;
+  /** The saved account number, masked; typing a new one replaces it. */
+  readonly savedAccount?: string | null;
+  /** The live check of the bank fields; the form refuses to save while it is blocked. */
+  readonly bank: BankCheck;
+  readonly showRequired?: boolean;
 }) {
   const t = useTranslations('contractors.form');
   const roles = useRoles();
@@ -147,12 +70,14 @@ export function ContractorFields({
         {text('pan', { mono: true })}
         <div className="sm:col-span-2">{text('address')}</div>
       </div>
-      <fieldset className="grid gap-4 sm:grid-cols-3">
-        <legend className="mb-3 type-overline text-ink-faint uppercase">{t('bank')}</legend>
-        {text('bankAccountName')}
-        {text('bankAccountNumber', { mono: true })}
-        {text('bankIfsc', { mono: true })}
-      </fieldset>
+      <VendorBankFields
+        values={draft}
+        onChange={(key, value) => set(key, value)}
+        check={bank}
+        errors={errors}
+        showRequired={showRequired}
+        savedAccount={savedAccount}
+      />
       <fieldset className="grid gap-4 sm:grid-cols-4">
         <legend className="mb-3 type-overline text-ink-faint uppercase">{t('terms')}</legend>
         <Field label={t('fields.paymentTermsDays')} error={errors.paymentTermsDays}>

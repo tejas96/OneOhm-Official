@@ -92,23 +92,32 @@ export async function ensurePerson(
   return created;
 }
 
+const CREW_PAN = { main: 'AAAPK1234C', other: 'AAAPM5678D' } as const;
+
 async function ensureCrew(admin: Session, key: CrewKey): Promise<void> {
   const crew = CREWS[key];
   const lead = await ensurePerson(admin, { ...crew.lead, roles: ['ic_partner'] });
   const member = await ensurePerson(admin, { ...crew.member, roles: ['ic_partner'] });
   const contractors = await admin.get<Contractor[]>('/contractors');
-  if (contractors.some((contractor) => contractor.name === crew.name)) return;
+  const existing = contractors.find((contractor) => contractor.name === crew.name);
+  // Without a PAN, TDS is held at 20%; the test crews have one so their 1% still applies.
+  if (existing) {
+    await admin.patch(`/contractors/${existing.id}`, { pan: CREW_PAN[key] });
+    return;
+  }
   const contractor = await admin.post<Contractor>('/contractors', {
     name: crew.name,
     kind: 'company',
     phone: crew.phone,
     skills: ['ic_partner'],
+    pan: CREW_PAN[key],
     tdsBp: 100,
     retentionBp: 500,
     retentionDays: 90,
     paymentTermsDays: 15,
     bankAccountName: crew.name,
     bankAccountNumber: key === 'main' ? '000111222333' : '000444555666',
+    bankAccountNumberConfirm: key === 'main' ? '000111222333' : '000444555666',
     bankIfsc: 'HDFC0000001',
   });
   await admin.put(`/contractors/${contractor.id}/members`, {

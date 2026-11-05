@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import {
+  billPostings,
   expectBalanced,
   milestoneOf,
   postings,
@@ -192,6 +193,11 @@ describe('Finance', () => {
     expect(options).toMatchObject({ mode: 'sandbox', problem: null });
     const payout = await admin.post<BankPayout>(`/payables/${bill?.id}/payouts`);
     expect(payout).toMatchObject({ sandbox: true, status: 'processing' });
+    const manual = await accounts.raw('POST', `/finance/payables/${bill?.id}/pay`, {
+      method: 'bank_transfer',
+      paidOn: today(),
+    });
+    expect(manual.status, 'no second payment while the transfer is on its way').toBe(409);
     const utr = `UTR${tag().toUpperCase()}`;
     const hook = await signedWebhook({
       event: 'payout.processed',
@@ -212,7 +218,7 @@ describe('Finance', () => {
     );
     expect(done?.status).toBe('paid');
     expect(done?.paidReference).toContain(utr);
-    expect(await postings('payable_paid', bill?.id ?? '')).toBe(1);
+    expect(await billPostings(bill?.id ?? '')).toBe(1);
     expect(await postings('payout_fee', payout.id)).toBe(1);
   });
 
@@ -232,7 +238,7 @@ describe('Finance', () => {
       reference: `NEFT-${tag()} (test)`,
     });
     expect(paidBill.status).toBe('paid');
-    expect(await postings('payable_paid', bill.id)).toBe(1);
+    expect(await billPostings(bill.id)).toBe(1);
   });
 
   it('keeps the books balanced: debits equal credits', async () => {

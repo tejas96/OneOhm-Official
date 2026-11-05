@@ -69,6 +69,10 @@ export const SAMPLE = {
   count: '4',
   bank: 'HDFC Bank',
   branch: 'Sangli main branch',
+  payee: 'Shree Electricals',
+  company: 'OneOhm Solar',
+  utr: 'SBIN52611050012',
+  last4: '1234',
 } as const;
 
 /** Samples that differ by message: the invite carries the app link, not a pay link. */
