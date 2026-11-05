@@ -75,6 +75,8 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('ask_rating'), actionId: idSchema }),
   /** The AMC renewal offer for a contract that is ending (marketing; skipped after STOP). */
   z.object({ action: z.literal('amc_renewal'), contractId: idSchema }),
+  /** The UPI ID of an approved reward asked again (a payout ask still waiting for the customer). */
+  z.object({ action: z.literal('ask_upi'), actionId: idSchema }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 

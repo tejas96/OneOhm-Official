@@ -1,14 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { customerActions } from '@oneohm/database';
+import { and, eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { ProblemFlowService } from '../whatsapp/assistant/problem-flow';
-import type { Conversation } from '../whatsapp/chat-store';
+import { type Conversation, queueReply } from '../whatsapp/chat-store';
 import { AmcRenewalService } from './amc-renewal.service';
-import { callPromise, callWhen } from './call-promise';
-import { openCallTask } from './call-task';
-import { callerFor } from './care-person';
-import { type CareTap } from './care-taps';
+import { type CareTap, careTaps } from './care-taps';
 import { answerFixed } from './fixed-check';
 import { PROBLEM_WORDS } from './problem-words';
 import { askRating } from './rating-ask';
@@ -43,6 +42,8 @@ export class CareAnswersService {
         return this.ratings.tapped(chat, customerId, tap);
       case 'fixed':
         return this.fixed(chat, customerId, tap.id, tap.working);
+      case 'fixedShow':
+        return this.showFixed(chat, customerId, tap.id);
       case 'city':
         return this.referrals.city(chat, customerId, tap.value);
       case 'link':
@@ -54,9 +55,29 @@ export class CareAnswersService {
     }
   }
 
+  /** Home's [Answer now]: the question again, with its two buttons, while it is still open. */
+  private async showFixed(chat: Conversation, customerId: string, id: string) {
+    const [ask] = await this.db
+      .select()
+      .from(customerActions)
+      .where(and(eq(customerActions.id, id), eq(customerActions.customerId, customerId)));
+    if (ask?.status !== 'open') return sayWithTaps(this.db, chat, PROBLEM_WORDS.fixedOld, ['menu']);
+    return queueReply(this.db, chat, {
+      kind: 'buttons',
+      body: PROBLEM_WORDS.fixed(String(ask.payload.topic ?? '')),
+      buttons: [
+        { id: careTaps.fixedYes(id), title: PROBLEM_WORDS.yes },
+        { id: careTaps.fixedNo(id), title: PROBLEM_WORDS.still },
+      ],
+    });
+  }
+
   /** "Is it working now?": Yes opens the rating; Still a problem reopens it with a promised call. */
   private async fixed(chat: Conversation, customerId: string, id: string, working: boolean) {
-    const result = await answerFixed(this.db, customerId, id, working);
+    const result = await answerFixed(this.db, customerId, id, working, {
+      timeZone: this.env.BUSINESS_TIMEZONE,
+      phone: chat.phone,
+    });
     if (result.kind === 'old') return sayWithTaps(this.db, chat, PROBLEM_WORDS.fixedOld, ['menu']);
     if (result.kind === 'ok') {
       await this.db.transaction((tx) =>
@@ -64,25 +85,10 @@ export class CareAnswersService {
       );
       return;
     }
-    const person = await callerFor(this.db, {
-      assignee: result.assignee,
-      projectId: result.projectId,
-      phone: chat.phone,
-    });
-    const promise = callPromise(new Date(), this.env.BUSINESS_TIMEZONE);
-    await openCallTask(this.db, {
-      customerId,
-      projectId: result.projectId,
-      owner: person.id,
-      title: `Call about the reopened problem`,
-      reason: 'reopened',
-      once: `call:reopened:${id}`,
-      promise,
-    });
     return sayWithTaps(
       this.db,
       chat,
-      PROBLEM_WORDS.reopened(person.name ?? PROBLEM_WORDS.team, callWhen(promise)),
+      PROBLEM_WORDS.reopened(result.name ?? PROBLEM_WORDS.team, result.when),
       ['problems', 'menu'],
     );
   }

@@ -1,5 +1,4 @@
 import {
-  customers,
   type DatabaseExecutor,
   messageTemplates,
   noticeCustomer,
@@ -8,16 +7,17 @@ import {
 import { templateIsOn } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
-import { chatOpenFor } from '../send-to-customer/send-context';
+import { mayChat } from '../journey/auto-messages';
 import { inLanguage } from '../whatsapp/assistant/language';
 import type { ChatReply } from '../whatsapp/chat-reply';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
 
 /**
- * One message of the care flows (problem fixed, UPI ask, AMC renewal, a payout's paid line). Inside the
- * 24-hour window, and when the customer has not said STOP, it is the chat message with its buttons (free
- * text needs no template). Outside it the approved template goes, once its switch is on; while it is off
- * `fallback` runs (the older message that always went), or nothing is sent. Returns where it went.
+ * One message of the care flows (problem fixed, UPI ask, AMC renewal, a payout's paid line). It is the chat
+ * message with its buttons when the window is open, the customer has not said STOP and the message's switch
+ * is on (`mayChat`, the worker's rule). Otherwise the approved template goes, once its switch is on; while it
+ * is off `fallback` runs (the older message that always went), or nothing is sent and the caller tells
+ * staff. Returns where it went.
  */
 export async function deliverCare(
   tx: DatabaseExecutor,
@@ -30,12 +30,8 @@ export async function deliverCare(
     readonly fallback?: () => Promise<void>;
   },
 ): Promise<'chat' | 'template' | 'fallback' | 'none'> {
-  const [customer] = await tx
-    .select({ optIn: customers.whatsappOptIn })
-    .from(customers)
-    .where(eq(customers.phoneE164, person.phone))
-    .limit(1);
-  if (customer?.optIn !== false && (await chatOpenFor(tx, person.phone))) {
+  // The chat message follows the template's switch, the window and STOP (the worker's rule too).
+  if (await mayChat(tx, person.phone, message.template)) {
     const chat = await conversationForPhone(tx, person.phone);
     const language = await languageOfPhone(tx, person.phone);
     await queueReply(tx, chat, await inLanguage(language, message.reply), null, message.key);

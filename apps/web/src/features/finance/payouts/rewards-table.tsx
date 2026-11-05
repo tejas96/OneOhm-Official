@@ -13,6 +13,7 @@ const targetOf = (reward: ReferralReward): PayoutTarget => ({
   id: reward.id,
   amountPaise: reward.amountPaise,
   party: reward.referrer.name,
+  upiId: reward.upi.id,
 });
 
 /** Referral rewards: who referred whom, the project that earned it and the terms. */

@@ -24,7 +24,8 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from './incentive-shared';
 import { evaluateReferralRewards } from './referral-evaluation';
 import { announceReward } from './referral-messages';
-import { checkedUpi, checkUpi, upiRows } from './reward-upi';
+import { checkedUpi, checkUpi } from './reward-upi';
+import { upiRows } from './reward-upi-rows';
 
 type Status = ReferralReward['status'];
 
@@ -122,14 +123,20 @@ export class ReferralRewardsService {
 
   async pay(actor: Actor, id: string, input: PayoutInput): Promise<ReferralReward> {
     assertNotFuture(input.paidOn, 'paidOn');
-    await this.step(actor, id, 'approved', {
-      status: 'paid',
-      paidAt: new Date(),
-      paidOn: input.paidOn,
-      paidMethod: input.method,
-      paidReference: input.reference ?? null,
-      paidByUserId: actor.userId,
-    });
+    await this.step(
+      actor,
+      id,
+      'approved',
+      {
+        status: 'paid',
+        paidAt: new Date(),
+        paidOn: input.paidOn,
+        paidMethod: input.method,
+        paidReference: input.reference ?? null,
+        paidByUserId: actor.userId,
+      },
+      input.upiId,
+    );
     return this.get(id);
   }
 
@@ -139,12 +146,13 @@ export class ReferralRewardsService {
     id: string,
     from: Status,
     change: Partial<typeof referralRewards.$inferInsert> & { status: Status },
+    upiSeen?: string | null,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
       // Paid by UPI: only to a UPI ID staff checked, and the ID the money went to is kept on the reward.
       const paidUpi =
         change.status === 'paid' && change.paidMethod === 'upi'
-          ? { paidUpiId: await checkedUpi(tx, id) }
+          ? { paidUpiId: await checkedUpi(tx, id, upiSeen) }
           : {};
       const [updated] = await tx
         .update(referralRewards)

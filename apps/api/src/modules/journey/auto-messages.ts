@@ -35,7 +35,11 @@ interface Person {
  * Whether the chat message may go: the window is open, the customer has not opted out and the message
  * is switched on in Settings (the worker's rule for the template, so the two never disagree).
  */
-async function mayChat(tx: DatabaseExecutor, phone: string, template: string): Promise<boolean> {
+export async function mayChat(
+  tx: DatabaseExecutor,
+  phone: string,
+  template: string,
+): Promise<boolean> {
   if (!(await chatOpenFor(tx, phone))) return false;
   const [row] = await tx
     .select({ active: messageTemplates.active })

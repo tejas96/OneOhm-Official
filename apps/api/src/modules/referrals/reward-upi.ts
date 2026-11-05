@@ -1,12 +1,13 @@
-import type { ReferralReward, UpiCheckInput } from '@oneohm/api-contracts';
+import type { UpiCheckInput } from '@oneohm/api-contracts';
 import {
   customerActions,
   customers,
   type DatabaseExecutor,
+  notifyHolders,
   referralRewards,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
@@ -32,7 +33,8 @@ export async function askUpi(tx: DatabaseExecutor, rewardId: string): Promise<bo
     .from(referralRewards)
     .innerJoin(customers, eq(customers.id, referralRewards.referrerCustomerId))
     .where(eq(referralRewards.id, rewardId));
-  if (!row || (row.customer.upiId && row.customer.upiCheckedAt)) return false;
+  // A customer who has shared a UPI ID (checked or not) is not asked again: the new reward joins that check.
+  if (!row || row.customer.upiId) return false;
   const amount = formatInr(row.reward.amountPaise);
   const [made] = await tx
     .insert(customerActions)
@@ -60,14 +62,24 @@ export async function askUpi(tx: DatabaseExecutor, rewardId: string): Promise<bo
   return sent !== 'none';
 }
 
-async function sendAsk(
+/** The ask could not reach the customer (window closed, template off, STOP): finance is told to ask. */
+async function tellFinance(tx: DatabaseExecutor, name: string, actionId: string, amount: string) {
+  await notifyHolders(tx, 'finance.record_payments', {
+    kind: 'referral_upi_ask_failed',
+    title: `Ask ${name} for their UPI ID`,
+    body: `${amount} reward: the message could not reach them. Use Send to customer -> Ask for the UPI ID, or call.`,
+    dedupeKey: `referral_upi_ask_failed:${actionId}:${Date.now()}`,
+  });
+}
+
+export async function sendAsk(
   tx: DatabaseExecutor,
   customer: { readonly name: string; readonly phoneE164: string },
   actionId: string,
   amount: string,
   again: string | null,
 ) {
-  return deliverCare(
+  const sent = await deliverCare(
     tx,
     { phone: customer.phoneE164 },
     {
@@ -85,21 +97,41 @@ async function sendAsk(
       }),
     },
   );
+  if (sent === 'none') await tellFinance(tx, customer.name, actionId, amount);
+  return sent;
 }
 
-/** The UPI ID staff checked for this reward's customer, or a 409 saying it is not ready to pay by UPI. */
-export async function checkedUpi(tx: DatabaseExecutor, rewardId: string): Promise<string> {
-  const [row] = await tx
-    .select({ upiId: customers.upiId, checkedAt: customers.upiCheckedAt })
+/**
+ * The UPI ID staff checked for this reward's customer, read under a lock in the paying transaction. `seen` is
+ * the ID the person paying saw; a customer who changed it meanwhile makes it a 409 (never pay an unseen ID).
+ */
+export async function checkedUpi(
+  tx: DatabaseExecutor,
+  rewardId: string,
+  seen: string | null | undefined,
+): Promise<string> {
+  const [reward] = await tx
+    .select({ customerId: referralRewards.referrerCustomerId })
     .from(referralRewards)
-    .innerJoin(customers, eq(customers.id, referralRewards.referrerCustomerId))
     .where(eq(referralRewards.id, rewardId));
+  const [row] = reward
+    ? await tx
+        .select({ upiId: customers.upiId, checkedAt: customers.upiCheckedAt })
+        .from(customers)
+        .where(eq(customers.id, reward.customerId))
+        .for('update')
+    : [];
   if (!row?.upiId)
     throw conflict('The customer has not shared a UPI ID yet. Ask for it first.', 'no_upi');
   if (!row.checkedAt)
     throw conflict(
       "Check the customer's UPI ID (Looks good) before paying by UPI.",
       'upi_unchecked',
+    );
+  if (!seen || seen.toLowerCase() !== row.upiId)
+    throw conflict(
+      'The UPI ID changed. Open the reward again and pay to the ID you see.',
+      'upi_changed',
     );
   return row.upiId;
 }
@@ -117,29 +149,46 @@ export async function checkUpi(
     .innerJoin(customers, eq(customers.id, referralRewards.referrerCustomerId))
     .where(eq(referralRewards.id, rewardId));
   if (!row) throw notFound('That reward');
+  // Read the customer under a lock: the ID checked is the ID the person saw.
+  const [customer] = await db
+    .select()
+    .from(customers)
+    .where(eq(customers.id, row.customer.id))
+    .for('update');
+  if (!customer?.upiId)
+    throw conflict('There is no UPI ID waiting to be checked for this reward.', 'nothing_to_check');
+  if (customer.upiId !== input.upiId.toLowerCase())
+    throw conflict('The UPI ID changed. Open the reward again to see the new one.', 'upi_changed');
   const [ask] = await db
     .select()
     .from(customerActions)
     .where(sql`${customerActions.payload}->>'once' = ${onceOf(rewardId)}`)
     .for('update');
-  if (!ask || ask.status !== 'received' || !row.customer.upiId)
-    throw conflict('There is no UPI ID waiting to be checked for this reward.', 'nothing_to_check');
   const now = new Date();
+  const amount = formatInr(row.reward.amountPaise);
   if (input.result === 'good') {
     await db
       .update(customers)
       .set({ upiCheckedAt: now, upiCheckedByUserId: actor.userId, updatedAt: now })
-      .where(eq(customers.id, row.customer.id));
+      .where(eq(customers.id, customer.id));
+    // Every payout ask of this customer that waited for this check is done with it.
     await db
       .update(customerActions)
       .set({ status: 'closed', closedAt: now, updatedAt: now })
-      .where(and(eq(customerActions.id, ask.id), eq(customerActions.status, 'received')));
-    await logAction(db, ask, {
-      kind: 'customer_action',
-      message: 'The UPI ID looks good',
-      userId: actor.userId,
-      data: { customerActionId: ask.id },
-    });
+      .where(
+        and(
+          eq(customerActions.customerId, customer.id),
+          eq(customerActions.type, 'payout'),
+          eq(customerActions.status, 'received'),
+        ),
+      );
+    if (ask)
+      await logAction(db, ask, {
+        kind: 'customer_action',
+        message: 'The UPI ID looks good',
+        userId: actor.userId,
+        data: { customerActionId: ask.id },
+      });
     await recordAudit(
       db,
       actor.userId,
@@ -152,60 +201,34 @@ export async function checkUpi(
     );
     return;
   }
-  const { upi: _upi, ...rest } = ask.payload;
   await db
     .update(customers)
     .set({ upiId: null, upiCheckedAt: null, upiCheckedByUserId: null, updatedAt: now })
-    .where(eq(customers.id, row.customer.id));
-  await db
-    .update(customerActions)
-    .set({ status: 'open', doneAt: null, reason: input.reason, updatedAt: now, payload: rest })
-    .where(and(eq(customerActions.id, ask.id), eq(customerActions.status, 'received')));
-  await logAction(db, ask, {
-    kind: 'customer_action',
-    message: `Asked the customer for their UPI ID again${input.reason ? `: ${input.reason}` : ''}`,
-    userId: actor.userId,
-    data: { customerActionId: ask.id },
-  });
+    .where(eq(customers.id, customer.id));
+  let askId = ask?.id;
+  if (ask)
+    await db
+      .update(customerActions)
+      .set({ status: 'open', doneAt: null, reason: input.reason, updatedAt: now })
+      .where(and(eq(customerActions.id, ask.id), ne(customerActions.status, 'cancelled')));
+  else {
+    // The reward joined an earlier check: it gets its own ask now.
+    const [made] = await db
+      .insert(customerActions)
+      .values({
+        type: 'payout',
+        customerId: customer.id,
+        projectId: row.reward.projectId,
+        title: `UPI ID for the ${amount} reward`,
+        reason: input.reason,
+        payload: { rewardId, amountPaise: row.reward.amountPaise, once: onceOf(rewardId) },
+      })
+      .returning({ id: customerActions.id });
+    askId = made?.id;
+  }
   await recordAudit(db, actor.userId, 'referral_reward.upi_checked', 'referral_reward', rewardId, {
     result: 'again',
     reason: input.reason,
   });
-  await sendAsk(db, row.customer, ask.id, formatInr(row.reward.amountPaise), input.reason);
-}
-
-/** The UPI side of each reward row: what the customer shared, whether it was checked, the ask's state. */
-export async function upiRows(
-  db: DatabaseExecutor,
-  rewards: readonly { id: string; paidUpiId: string | null; customerId: string }[],
-): Promise<Map<string, ReferralReward['upi']>> {
-  const out = new Map<string, ReferralReward['upi']>();
-  if (rewards.length === 0) return out;
-  const asks = await db
-    .select({
-      once: sql<string>`${customerActions.payload}->>'once'`,
-      status: customerActions.status,
-    })
-    .from(customerActions)
-    .where(
-      inArray(
-        sql`${customerActions.payload}->>'once'`,
-        rewards.map((r) => onceOf(r.id)),
-      ),
-    );
-  const people = await db
-    .select({ id: customers.id, upiId: customers.upiId, checkedAt: customers.upiCheckedAt })
-    .from(customers)
-    .where(inArray(customers.id, [...new Set(rewards.map((r) => r.customerId))]));
-  for (const reward of rewards) {
-    const person = people.find((p) => p.id === reward.customerId);
-    const ask = asks.find((a) => a.once === onceOf(reward.id));
-    out.set(reward.id, {
-      id: person?.upiId ?? null,
-      checked: Boolean(person?.checkedAt),
-      ask: ask && ask.status !== 'cancelled' ? ask.status : 'none',
-      paidTo: reward.paidUpiId,
-    });
-  }
-  return out;
+  if (askId) await sendAsk(db, customer, askId, amount, input.reason);
 }

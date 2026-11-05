@@ -157,7 +157,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     fields: ['customer', 'stage', 'project'],
     extras: { optionalQuickReplies: ['ratePayload'] },
     preview:
-      'Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Tap the button to rate it.',
+      'Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Please rate it in the OneOhm app.',
   },
   ...STEP_MESSAGE_TEMPLATES,
   ...SEND_MESSAGE_TEMPLATES,

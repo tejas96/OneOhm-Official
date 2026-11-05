@@ -26,7 +26,13 @@ export function RewardUpi({ reward }: { readonly reward: ReferralReward }) {
 
   const check = useMutation({
     mutationFn: (body: { result: 'good' } | { result: 'again'; reason: string }) =>
-      expectStatus(api.referrals.checkRewardUpi({ params: { id: reward.id }, body }), 200),
+      expectStatus(
+        api.referrals.checkRewardUpi({
+          params: { id: reward.id },
+          body: { ...body, upiId: upi.id ?? '' },
+        }),
+        200,
+      ),
     onSuccess: async (_done, body) => {
       await invalidate();
       setAsking(false);
@@ -47,7 +53,7 @@ export function RewardUpi({ reward }: { readonly reward: ReferralReward }) {
   return (
     <span className="mt-1 flex flex-col gap-1 type-body-sm text-ink-faint">
       <span>{line}</span>
-      {canCheck && upi.ask === 'received' && reward.status === 'approved' && (
+      {canCheck && upi.id && !upi.checked && reward.status === 'approved' && (
         <span className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"

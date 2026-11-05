@@ -15,7 +15,10 @@ import { queueWhatsApp } from '../../common/outbox';
 import { logAction } from '../documents/customer-action-log';
 import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
 import { CATEGORY_WORDS } from '../whatsapp/assistant/words';
+import { callPromise, callWhen } from './call-promise';
+import { openCallTask } from './call-task';
 import { deliverCare } from './care-deliver';
+import { callerFor } from './care-person';
 import { careTaps } from './care-taps';
 import { PROBLEM_WORDS } from './problem-words';
 
@@ -54,6 +57,7 @@ export async function tellFixed(
       title: `Is it working now? ${topic}`,
       payload: {
         kind: 'problem_fixed',
+        topic,
         requestId: request.id,
         once: `fixed:${request.id}:${row.reopened}`,
       },
@@ -110,21 +114,22 @@ export type Reopened =
   | { readonly kind: 'ok'; readonly requestId: string; readonly projectId: string | null }
   | {
       readonly kind: 'reopened';
-      readonly requestId: string;
-      readonly projectId: string | null;
-      readonly assignee: string | null;
+      readonly name: string | null;
+      readonly when: string;
     };
 
 /**
  * The customer's answer to "Is it working now?". Yes closes the check (the rating follows); Still a
- * problem reopens the request: status open, the response clock starts again, the person on it is told.
- * Tapping again changes nothing (the check is closed once).
+ * problem reopens the request: status open, the response clock starts again, the person on it is told and
+ * the promised call is made a task, all in one transaction. A check that no longer fits (the request is not
+ * resolved any more) is "old" and is left as it was. Tapping again changes nothing (closed once).
  */
 export function answerFixed(
   db: Database,
   customerId: string,
   actionId: string,
   working: boolean,
+  given: { readonly timeZone: string; readonly phone: string },
 ): Promise<Reopened> {
   return db.transaction(async (tx): Promise<Reopened> => {
     const [ask] = await tx
@@ -139,9 +144,17 @@ export function answerFixed(
         ),
       )
       .for('update');
-    if (!ask || ask.payload.kind !== 'problem_fixed') return { kind: 'old' };
+    if (ask?.payload.kind !== 'problem_fixed') return { kind: 'old' };
     const requestId = String(ask.payload.requestId);
+    const [request] = await tx
+      .select()
+      .from(serviceRequests)
+      .where(eq(serviceRequests.id, requestId))
+      .for('update');
+    // Reopening needs a resolved request; if it is not, nothing is closed and nothing changes.
+    if (!request || (!working && request.status !== 'resolved')) return { kind: 'old' };
     const now = new Date();
+    const answer = working ? 'yes' : 'still';
     await tx
       .update(customerActions)
       .set({
@@ -149,12 +162,10 @@ export function answerFixed(
         doneAt: now,
         closedAt: now,
         updatedAt: now,
-        payload: { ...ask.payload, answer: working ? 'yes' : 'still' },
+        payload: { ...ask.payload, answer },
       })
       .where(eq(customerActions.id, ask.id));
-    await recordAudit(tx, null, 'customer_action.answered', 'customer_action', ask.id, {
-      answer: working ? 'yes' : 'still',
-    });
+    await recordAudit(tx, null, 'customer_action.answered', 'customer_action', ask.id, { answer });
     if (working) {
       await logAction(tx, ask, {
         kind: 'customer_action',
@@ -164,12 +175,6 @@ export function answerFixed(
       });
       return { kind: 'ok', requestId, projectId: ask.projectId };
     }
-    const [request] = await tx
-      .select()
-      .from(serviceRequests)
-      .where(eq(serviceRequests.id, requestId))
-      .for('update');
-    if (!request || request.status !== 'resolved') return { kind: 'old' };
     const hours = await categoryHours(tx, request.category);
     const due = hours ? slaDueDates(hours, now) : null;
     await tx
@@ -204,11 +209,21 @@ export function answerFixed(
     };
     if (request.assigneeUserId) await notify(tx, { userId: request.assigneeUserId }, notice);
     await notifyHolders(tx, 'service.manage', notice);
-    return {
-      kind: 'reopened',
-      requestId,
-      projectId: request.projectId,
+    const person = await callerFor(tx, {
       assignee: request.assigneeUserId,
-    };
+      projectId: request.projectId,
+      phone: given.phone,
+    });
+    const promise = callPromise(now, given.timeZone);
+    await openCallTask(tx, {
+      customerId,
+      projectId: request.projectId,
+      owner: person.id,
+      title: `Call about the reopened problem: ${request.description.slice(0, 80)}`,
+      reason: 'reopened',
+      once: `call:reopened:${ask.id}`,
+      promise,
+    });
+    return { kind: 'reopened', name: person.name, when: callWhen(promise) };
   });
 }

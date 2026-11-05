@@ -11,10 +11,16 @@ import { closeChat, openChat, templatesFor } from '../support/send';
 
 describe('Problem: fixed check and reopen', () => {
   let admin: Session;
+  let undoTemplate: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    // The chat message follows the template's switch (it is on once Meta approved it).
+    undoTemplate = await setTemplate('problem_fixed_check', true);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await undoTemplate();
+    await closeDb();
+  });
 
   /** A problem raised through the chat and resolved by the desk; returns what the scenarios need. */
   async function resolved(name: string, options: { open?: boolean } = {}) {
@@ -110,17 +116,19 @@ describe('Problem: fixed check and reopen', () => {
     expect(all).toHaveLength(1);
   });
 
-  it('outside 24 hours the template goes once it is on; while it is off the older update still goes', async () => {
-    const undo = await setTemplate('problem_fixed_check', true);
-    try {
-      const { phone } = await resolved('Fixed Template (test)', { open: false });
-      const [sent] = await templatesFor(phone, 'problem_fixed_check');
-      expect(sent?.payload.yesPayload).toMatch(/^fx:y:/);
-      expect(sent?.payload.stillPayload).toMatch(/^fx:n:/);
-      expect(await templatesFor(phone, 'service_update')).toHaveLength(0);
-    } finally {
-      await undo();
-    }
+  it('outside 24 hours the template goes once it is on; while it is off the older update still goes, also in the chat', async () => {
+    const { phone: closed } = await resolved('Fixed Template (test)', { open: false });
+    const [sent] = await templatesFor(closed, 'problem_fixed_check');
+    expect(sent?.payload.yesPayload).toMatch(/^fx:y:/);
+    expect(sent?.payload.stillPayload).toMatch(/^fx:n:/);
+    expect(await templatesFor(closed, 'service_update')).toHaveLength(0);
+
+    await undoTemplate();
+    undoTemplate = await setTemplate('problem_fixed_check', false);
+    // Window open, switch off: no chat question, the older "resolved" update goes (C1).
+    const { phone: open } = await resolved('Fixed Switch Off (test)');
+    expect((await lastReply(open))?.body ?? '').not.toContain('Is it working now');
+    expect((await templatesFor(open, 'service_update'))[0]?.payload.status).toBe('resolved');
     const { phone } = await resolved('Fixed Template Off (test)', { open: false });
     expect(await templatesFor(phone, 'problem_fixed_check')).toHaveLength(0);
     const [older] = await templatesFor(phone, 'service_update');

@@ -80,6 +80,10 @@ export async function announceReward(
         payload,
         key,
         reply: async () => ({ kind: 'text', body: REFER_WORDS.paid(amount) }),
+        // The reward message always went: with its switch off it is still queued (app inbox, as before).
+        fallback: async () => {
+          await queueCustomerMessage(db, referrer.phoneE164, 'referral_reward', payload, key);
+        },
       },
     );
   } else if (!asked)

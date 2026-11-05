@@ -108,12 +108,7 @@ export class UpiService {
         .where(eq(customers.id, customerId));
       await tx
         .update(customerActions)
-        .set({
-          status: 'received',
-          doneAt: now,
-          updatedAt: now,
-          payload: { ...ask.payload, upi: id },
-        })
+        .set({ status: 'received', doneAt: now, updatedAt: now })
         .where(eq(customerActions.id, actionId));
       await logAction(tx, ask, {
         kind: 'customer_action',
@@ -132,7 +127,7 @@ export class UpiService {
         kind: 'referral_upi_check',
         title: 'Check a customer’s UPI ID',
         body: `${reward ? formatInr(reward.amount) : 'A reward'}: open the reward and say Looks good or Ask again.`,
-        dedupeKey: `referral_upi_check:${actionId}:${id}`,
+        dedupeKey: `referral_upi_check:${actionId}:${now.getTime()}`,
       });
       return true;
     });

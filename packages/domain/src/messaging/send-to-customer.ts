@@ -23,6 +23,7 @@ export const SEND_ACTIONS = [
   'self_survey',
   'ask_rating',
   'amc_renewal',
+  'ask_upi',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -75,6 +76,8 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     // The one pending rating asked again (redesign §13), and the AMC renewal offer (§4, §18 18).
     ask_rating: true,
     amc_renewal: withProject,
+    // The UPI ID of an approved reward asked again.
+    ask_upi: true,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -102,6 +105,7 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   self_survey: ['projects.manage'],
   ask_rating: ['customers.manage', 'projects.manage', 'service.manage'],
   amc_renewal: ['service.manage', 'customers.manage', 'projects.manage'],
+  ask_upi: ['finance.record_payments'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
@@ -129,6 +133,8 @@ export function rightsForAsk(type: string): readonly string[] {
       return RIGHTS.self_survey;
     case 'rating':
       return RIGHTS.ask_rating;
+    case 'payout':
+      return RIGHTS.ask_upi;
     default:
       return RIGHTS.ask_paper;
   }

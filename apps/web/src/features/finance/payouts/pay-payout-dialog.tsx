@@ -41,7 +41,13 @@ export function PayPayoutDialog({
     event.preventDefault();
     if (!target) return;
     await form.run(
-      () => payPayout(target, { method, paidOn, reference: reference.trim() || null }),
+      () =>
+        payPayout(target, {
+          method,
+          paidOn,
+          reference: reference.trim() || null,
+          ...(method === 'upi' && target.upiId ? { upiId: target.upiId } : {}),
+        }),
       async () => {
         await invalidate();
         toast({ title: t('done'), description: target.party, tone: 'success' });

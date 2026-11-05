@@ -32,6 +32,7 @@ describe('sendActionsFor', () => {
       'ask_payment_proof',
       'ask_callback',
       'ask_rating',
+      'ask_upi',
     ]);
   });
 
@@ -44,6 +45,7 @@ describe('sendActionsFor', () => {
       'ask_callback',
       'ask_visit',
       'ask_rating',
+      'ask_upi',
     ]);
   });
 

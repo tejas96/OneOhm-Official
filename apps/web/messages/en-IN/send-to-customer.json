@@ -28,7 +28,8 @@
       "send_layout": "Send the roof layout for approval",
       "self_survey": "Offer a self site survey",
       "ask_rating": "Ask for the pending rating again",
-      "amc_renewal": "Offer to renew the AMC"
+      "amc_renewal": "Offer to renew the AMC",
+      "ask_upi": "Ask for the UPI ID again"
     },
     "quickPapers": {
       "title": "Ask for these papers",

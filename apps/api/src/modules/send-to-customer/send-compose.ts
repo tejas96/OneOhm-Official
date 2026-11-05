@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { SendRequest } from '@oneohm/api-contracts';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { amcRenewalCompose, ratingCompose } from '../care/care-send';
+import { upiCompose } from '../care/care-send-upi';
 import {
   installCheckCompose,
   packCompose,
@@ -194,10 +195,7 @@ const askCallback: Compose<'ask_callback'> = async ({ db }, ctx, _request, id) =
   },
 });
 
-/**
- * The message and the record for one request, checked against the customer's own data (a home, an
- * instalment or a paper that is not theirs is refused). `id` is the action it makes, so buttons can name it.
- */
+/** The message and the record for one request, checked against the customer's own data. */
 export function compose(
   deps: Deps,
   ctx: SendContext,
@@ -245,6 +243,8 @@ export function compose(
         return ratingCompose(deps, ctx, request);
       case 'amc_renewal':
         return amcRenewalCompose(deps, ctx, request, id);
+      case 'ask_upi':
+        return upiCompose(deps, ctx, request);
     }
   });
 }

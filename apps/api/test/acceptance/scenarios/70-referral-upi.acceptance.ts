@@ -16,23 +16,38 @@ import { sendInbound } from '../support/whatsapp';
 describe('Referral: UPI payout', () => {
   let admin: Session;
   let undo: () => Promise<unknown>;
+  let undoAsk: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
     undo = await programOn(admin);
+    undoAsk = await setTemplate('reward_upi_ask', true);
   });
   afterAll(async () => {
+    await undoAsk();
     await undo();
     await setForm('share_upi', null);
     await closeDb();
   });
 
   const approve = (id: string) => admin.post<ReferralReward>(`/referral-rewards/${id}/approve`, {});
-  const check = (id: string, body: Record<string, string>) =>
-    admin.post<ReferralReward>(`/referral-rewards/${id}/upi-check`, body);
-  const payUpi = (id: string) =>
+  /** The UPI ID the person at the screen sees: the customer's current one. */
+  const seen = async (id: string) =>
+    (
+      await rows<{ upi: string | null }>(
+        `SELECT c.upi_id AS upi FROM referral_rewards r JOIN customers c ON c.id = r.referrer_customer_id WHERE r.id = $1`,
+        [id],
+      )
+    )[0]?.upi ?? '';
+  const check = async (id: string, body: Record<string, string>) =>
+    admin.post<ReferralReward>(`/referral-rewards/${id}/upi-check`, {
+      ...body,
+      upiId: await seen(id),
+    });
+  const payUpi = async (id: string) =>
     admin.raw('POST', `/referral-rewards/${id}/pay`, {
       method: 'upi',
       paidOn: new Date().toISOString().slice(0, 10),
+      upiId: await seen(id),
     });
 
   /** A reward approved with the customer's chat open: the UPI ask is on the phone. */
@@ -208,6 +223,7 @@ describe('Referral: UPI payout', () => {
     } finally {
       await undoTemplate();
     }
+    const offAsk = await setTemplate('reward_upi_ask', false);
     const { referrer, reward } = await earnedReward(admin, 'Upi Template Off');
     await closeChat(referrer.customer.phone);
     await approve(reward.id);
@@ -217,6 +233,7 @@ describe('Referral: UPI payout', () => {
     );
     expect(plain).toHaveLength(1);
 
+    await offAsk();
     const marathi = await earnedReward(admin, 'Upi Marathi');
     await openChat(marathi.referrer.customer.phone, marathi.referrer.customer.customerId);
     await tap(marathi.referrer.customer.phone, 'lang:mr');
