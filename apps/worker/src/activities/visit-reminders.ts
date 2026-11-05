@@ -161,7 +161,10 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
   if (
     presence &&
     previousWorkingDay(row.day) === todayIn(timeZone, now) &&
-    isWorkingTime(now, timeZone)
+    isWorkingTime(now, timeZone) &&
+    // Not straight after the date was told: they have had no time to answer yet.
+    row.toldAt !== null &&
+    workingMinutesBetween(row.toldAt, now, timeZone) >= 120
   ) {
     // The key makes this one alert, whatever the number of ticks.
     await alertVisitOwner(db, row, {
@@ -187,7 +190,7 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
       ? 'They were told the DISCOM date and have not answered. Please call them.'
       : row.reminderSentAt
         ? 'They did not answer the reminder. Please call them before the team goes.'
-        : 'No reminder reached them (the message is off). Please call them before the team goes.',
+        : `${(await templateOn(db, 'visit_reminder')) ? 'No reminder reached them' : 'No reminder reached them (the message is off)'}. Please call them before the team goes.`,
     key: `visit_unconfirmed:${row.id}`,
   });
   return true;

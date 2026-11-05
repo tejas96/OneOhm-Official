@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useSendAction } from '@/features/send-to-customer/use-send-to-customer';
 import { useCan } from '@/providers/current-user';
 import { useVisitMutations, useVisits } from './use-visits';
+import { showsTaskDifference, visitActions } from './visit-actions';
 
 const rightsOf = (scope: VisitScope): Capability[] =>
   scope.taskId
@@ -62,7 +63,8 @@ function VisitBody({
   const t = useTranslations('visits');
   const format = useFormatter();
   const visit = data.visits.find((one) => OPEN.has(one.status)) ?? data.visits[0];
-  const open = visit && OPEN.has(visit.status) ? visit : undefined;
+  const can = visitActions(visit);
+  const open = visit && can.open ? visit : undefined;
   const mutations = useVisitMutations(scope);
   const ask = useSendAction(scope);
   const [day, setDay] = useState(open?.day ?? data.freeDays[0] ?? '');
@@ -76,7 +78,7 @@ function VisitBody({
         {t(`title.${data.kind ?? 'service'}`)}
       </h3>
       {visit && <VisitLine visit={visit} label={label(visit.day)} />}
-      {open && data.taskStartDate && data.taskStartDate !== open.day && (
+      {open && data.taskStartDate && showsTaskDifference(open, data.taskStartDate) && (
         <p className="type-body-sm text-at-risk">
           {t('taskDiffers', { task: label(data.taskStartDate), visit: label(open.day) })}
         </p>
@@ -122,7 +124,7 @@ function VisitBody({
             pending={mutations.set.isPending}
             onClick={() => mutations.set.mutate({ day, slot: data.presence ? 'morning' : slot })}
           >
-            {t(setLabel(data.presence, open?.status))}
+            {t(setLabel(data.presence, visit?.status))}
           </Button>
         </div>
       )}
@@ -146,11 +148,11 @@ function VisitBody({
             {t('confirm')}
           </Button>
         )}
-        {open?.status === 'confirmed' && (
+        {can.done && visit && (
           <Button
             variant="quiet"
             pending={mutations.done.isPending}
-            onClick={() => mutations.done.mutate(open.id)}
+            onClick={() => mutations.done.mutate(visit.id)}
           >
             {t('done')}
           </Button>
@@ -170,8 +172,11 @@ function VisitBody({
   );
 }
 
-const setLabel = (presence: boolean, status: Visit['status'] | undefined) =>
-  presence ? 'tellDate' : status ? 'move' : 'book';
+const setLabel = (presence: boolean, status: Visit['status'] | undefined) => {
+  if (presence) return 'tellDate';
+  if (status === 'missed') return 'bookAgain';
+  return status === 'proposed' || status === 'confirmed' ? 'move' : 'book';
+};
 
 /** The free days plus the visit's own day, which may no longer be free. */
 function withCurrent(

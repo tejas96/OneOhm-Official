@@ -6,6 +6,7 @@ import { deliver } from '../send-to-customer/send-deliver';
 import type { Built } from '../send-to-customer/send-messages';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
+import { dayWords } from './visit-messages';
 import type { VisitTarget } from './visit-reads';
 import { VISIT_WORDS, workWords } from './visit-words';
 
@@ -62,4 +63,20 @@ export async function tellCancelled(
     await queueReply(tx, chat, { kind: 'text', body }, null, key);
   }
   await noticeCustomer(tx, ctx.phone, 'visit_cancelled', { home: given.home, body }, key);
+}
+
+/** "Your visit on Fri 6 Nov: Ravi will call before coming." after the person who comes changed. */
+export async function tellCrewChanged(
+  tx: DatabaseExecutor,
+  ctx: SendContext,
+  given: { day: string; name: string; phone: string; key: string },
+): Promise<void> {
+  const body = await inLanguage(ctx.language, async () =>
+    VISIT_WORDS.crewChanged(dayWords(given.day), given.name, given.phone),
+  );
+  if (ctx.chatOpen) {
+    const chat = await conversationForPhone(tx, ctx.phone);
+    await queueReply(tx, chat, { kind: 'text', body }, null, given.key);
+  }
+  await noticeCustomer(tx, ctx.phone, 'visit_crew_changed', { body }, given.key);
 }

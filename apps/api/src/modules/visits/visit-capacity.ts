@@ -86,3 +86,18 @@ export async function contactOf(
     .where(eq(users.id, userId));
   return user ? { name: user.name.split(/\s+/)[0] ?? user.name, phone: user.phone ?? '' } : null;
 }
+
+/** Why a person cannot take a visit on a day: on leave, or already holding that slot. */
+export async function busyOn(
+  db: DatabaseExecutor,
+  userId: string,
+  day: string,
+  slot: VisitSlot,
+  exceptVisitId: string,
+  timeZone = 'Asia/Kolkata',
+): Promise<'leave' | 'booked' | null> {
+  const today = todayIn(timeZone);
+  if ((await leaveDays(db, [userId], today)).has(day)) return 'leave';
+  const taken = await takenSlots(db, [userId], today, exceptVisitId);
+  return (taken[day] ?? []).includes(slot) ? 'booked' : null;
+}

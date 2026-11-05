@@ -24,6 +24,7 @@ import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
+import { followAssignee } from '../visits/follow-assignee';
 import { changesFor, type Patch } from './service-ticket-changes';
 
 type Ticket = ServiceTicket;
@@ -133,6 +134,8 @@ export class ServiceDeskService {
         );
       }
       const owner = patch.assigneeUserId;
+      if (owner !== undefined && owner !== before.assigneeUserId)
+        await followAssignee(tx, { serviceRequestId: id }, owner, actorId);
       if (owner && owner !== before.assigneeUserId && owner !== actorId) {
         await notify(tx, { userId: owner }, assignedNotice(current, owner, now));
       }

@@ -168,6 +168,7 @@ const WORDS: Readonly<Record<string, Words>> = {
     body: `The electricity board (DISCOM) visits ${p.home}. Please be at home.`,
   }),
   visit_cancelled: (p) => ({ title: 'Visit cancelled', body: p.body ?? '' }),
+  visit_crew_changed: (p) => ({ title: 'Who is coming', body: p.body ?? '' }),
   referral_reward: (p) => ({
     title: 'Referral reward update',
     body: `${p.friend}: ${p.amount} is ${p.status}.`,

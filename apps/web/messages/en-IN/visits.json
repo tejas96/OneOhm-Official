@@ -37,6 +37,7 @@
     "confirm": "Confirm",
     "done": "Mark done",
     "cancel": "Cancel visit",
-    "taskDiffers": "Task starts {task}, visit is {visit}"
+    "taskDiffers": "Task starts {task}, visit is {visit}",
+    "bookAgain": "Book again and tell the customer"
   }
 }

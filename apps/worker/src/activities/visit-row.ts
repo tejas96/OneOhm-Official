@@ -10,8 +10,8 @@ export type Row = typeof visitsTable.$inferSelect & {
   finished: boolean;
 };
 
-export /** Tells the owner once per visit (the flag is claimed first, so two ticks cannot both tell). */
-async function claimAlert(db: Database, row: Row, now: Date): Promise<boolean> {
+/** Tells the owner once per visit (the flag is claimed first, so two ticks cannot both tell). */
+export async function claimAlert(db: Database, row: Row, now: Date): Promise<boolean> {
   const claimed = await db
     .update(visitsTable)
     .set({ unconfirmedAlertAt: now })

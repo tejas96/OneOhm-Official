@@ -12,6 +12,7 @@ import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { ReportArchiveService } from '../reports/report-archive.service';
 import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
+import { followAssignee } from '../visits/follow-assignee';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
@@ -210,11 +211,7 @@ export class TasksService {
 
   async assign(actor: Actor, id: string, userId: string | null): Promise<ProjectTask> {
     assertCan(actor, 'tasks.assign');
-    const [task] = await this.db
-      .select()
-      .from(projectTasks)
-      .where(eq(projectTasks.id, id))
-      .limit(1);
+    const [task] = await this.db.select().from(projectTasks).where(eq(projectTasks.id, id));
     if (!task) throw notFound('That task');
     await this.db.transaction(async (tx) => {
       await tx
@@ -223,6 +220,7 @@ export class TasksService {
         .where(eq(projectTasks.id, id));
       // A task given to a contractor's crew joins that contractor's work order.
       await syncWorkOrders(tx, task.projectId, actor.userId);
+      await followAssignee(tx, { taskId: id }, userId, actor.userId);
       await recordAudit(tx, actor.userId, 'task.assigned', 'task', id, { userId });
       await tellAssignee(tx, task, userId, actor.userId);
     });

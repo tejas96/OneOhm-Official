@@ -15,6 +15,7 @@ import {
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { syncWorkOrders } from '../../contractors/work-order-sync';
+import { followAssignees } from '../../visits/follow-assignee';
 import {
   moveBackups,
   moveLeaveReviews,
@@ -46,11 +47,13 @@ async function moveOwnership(
         updatedAt: now,
       })
       .where(inArray(leads.id, [...work.leads]));
+  await followAssignees(tx, 'leadId', work.leads, to);
   if (work.tasks.length > 0)
     await tx
       .update(projectTasks)
       .set({ assigneeUserId: to, version: sql`${projectTasks.version} + 1`, updatedAt: now })
       .where(inArray(projectTasks.id, [...work.tasks]));
+  await followAssignees(tx, 'taskId', work.tasks, to);
   if (work.proposedTasks.length > 0)
     await tx
       .update(projectTasks)
@@ -61,6 +64,7 @@ async function moveOwnership(
       .update(serviceRequests)
       .set({ assigneeUserId: to, updatedAt: now })
       .where(inArray(serviceRequests.id, [...work.serviceRequests]));
+  await followAssignees(tx, 'serviceRequestId', work.serviceRequests, to);
   if (work.discomSteps.length > 0)
     await tx
       .update(changeRequestSteps)

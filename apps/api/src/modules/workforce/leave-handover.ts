@@ -12,6 +12,7 @@ import {
 } from '@oneohm/database';
 import { inArray, sql } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
+import { followAssignees } from '../visits/follow-assignee';
 import type { AffectedWork } from './leave-impact';
 
 type LeaveRow = typeof leaveRequests.$inferSelect;
@@ -86,6 +87,13 @@ export async function handOverWork(
           work.tasks.map((task) => task.id),
         ),
       );
+    await followAssignees(
+      tx,
+      'taskId',
+      work.tasks.map((task) => task.id),
+      backupId,
+      approverId,
+    );
     await tx.insert(projectActivities).values(
       work.tasks.map((task) => ({
         projectId: task.projectId,
@@ -96,22 +104,21 @@ export async function handOverWork(
       })),
     );
   }
-  if (work.serviceRequests.length > 0)
+  if (work.serviceRequests.length > 0) {
+    const requestIds = work.serviceRequests.map((request) => request.id);
     await tx
       .update(serviceRequests)
       .set({ assigneeUserId: backupId, updatedAt: now })
-      .where(
-        inArray(
-          serviceRequests.id,
-          work.serviceRequests.map((request) => request.id),
-        ),
-      );
+      .where(inArray(serviceRequests.id, requestIds));
+    await followAssignees(tx, 'serviceRequestId', requestIds, backupId, approverId);
+  }
   if (work.followUps.length > 0) {
     const ids = work.followUps.map((lead) => lead.id);
     await tx
       .update(leads)
       .set({ ownerUserId: backupId, version: sql`${leads.version} + 1`, updatedAt: now })
       .where(inArray(leads.id, ids));
+    await followAssignees(tx, 'leadId', ids, backupId, approverId);
     await tx.insert(leadActivities).values(
       ids.map((leadId) => ({
         leadId,

@@ -84,6 +84,8 @@ export class VisitsService {
         target,
         { day: body.day, slot: body.slot, status: 'confirmed', by: 'staff', userId: actor.userId },
         existing,
+        new Date(),
+        this.env.BUSINESS_TIMEZONE,
       );
       if (target.mayMessage) await tellBooked(tx, target, row, moved, actor.userId);
       return this.present(row, target, tx);

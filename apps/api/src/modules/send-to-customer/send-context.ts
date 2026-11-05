@@ -96,12 +96,7 @@ export async function resolveScope(
     customerId = project.customerId;
     projectCode = project.code;
   } else if (scope.serviceRequestId) {
-    const [request] = await db
-      .select({ customerId: serviceRequests.customerId, projectId: serviceRequests.projectId })
-      .from(serviceRequests)
-      .where(eq(serviceRequests.id, scope.serviceRequestId))
-      .limit(1);
-    if (!request) throw notFound('That service request');
+    const request = await serviceRequestOf(db, scope.serviceRequestId);
     customerId = request.customerId;
     projectId = request.projectId;
   } else if (scope.leadId) {
@@ -152,4 +147,14 @@ export function allowedActions(actor: Actor, place: SendPlace): SendAction[] {
 /** Throws unless the person may send this action from this place. */
 export function assertAllowed(actor: Actor, place: SendPlace, action: SendAction): void {
   if (!allowedActions(actor, place).includes(action)) throw forbidden();
+}
+
+async function serviceRequestOf(db: DatabaseExecutor, id: string) {
+  const [request] = await db
+    .select({ customerId: serviceRequests.customerId, projectId: serviceRequests.projectId })
+    .from(serviceRequests)
+    .where(eq(serviceRequests.id, id))
+    .limit(1);
+  if (!request) throw notFound('That service request');
+  return request;
 }

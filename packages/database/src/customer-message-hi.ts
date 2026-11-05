@@ -169,6 +169,7 @@ export const HINDI_WORDS: LanguageWords = {
       body: `बिजली बोर्ड (DISCOM) ${p.home} पर आएगा। कृपया घर पर रहें।`,
     }),
     visit_cancelled: (p) => ({ title: 'विज़िट रद्द हुई', body: p.body ?? '' }),
+    visit_crew_changed: (p) => ({ title: 'कौन आएगा', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफ़रल इनाम की जानकारी',
       body: `${p.friend}: ${p.amount} — ${p.status}।`,

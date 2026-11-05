@@ -158,6 +158,7 @@ export class VisitPickService {
           { day, slot, status: 'proposed', by: 'customer', userId: null },
           await openVisitFor(tx, target),
           now,
+          this.env.BUSINESS_TIMEZONE,
         );
         await tx
           .update(customerActions)

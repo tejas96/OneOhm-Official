@@ -169,6 +169,7 @@ export const MARATHI_WORDS: LanguageWords = {
       body: `वीज मंडळ (DISCOM) ${p.home} येथे येणार आहे. कृपया घरी राहा.`,
     }),
     visit_cancelled: (p) => ({ title: 'भेट रद्द झाली', body: p.body ?? '' }),
+    visit_crew_changed: (p) => ({ title: 'कोण येणार', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफरल बक्षिसाची माहिती',
       body: `${p.friend}: ${p.amount} — ${p.status}.`,

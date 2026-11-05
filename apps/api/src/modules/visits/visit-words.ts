@@ -46,6 +46,8 @@ const EN_VISIT = {
     `Our team visits *${home}* ${when} for the *${work}*.`,
   presence: (work: string, home: string, day: string) =>
     `The electricity board (DISCOM) will do the *${work}* at *${home}* on *${day}*. Please be at home.`,
+  crewChanged: (when: string, name: string, phone: string) =>
+    `Your visit on *${when}*: ${name} will call before coming${phone ? ` (${phone})` : ''}.`,
   byBoard: 'by the electricity board',
   boardHome: (home: string | null, day: string) =>
     `The electricity board visits your ${home ? `${home} ` : ''}home on *${day}*.`,
@@ -95,6 +97,8 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
   reminder: (home, when, work) => `आमची टीम *${home}* येथे ${when} *${work}* साठी येणार आहे.`,
   presence: (work, home, day) =>
     `*${work}* साठी वीज मंडळ (DISCOM) *${home}* येथे *${day}* रोजी येणार आहे. कृपया घरी राहा.`,
+  crewChanged: (when, name, phone) =>
+    `तुमची *${when}* ची भेट: येण्यापूर्वी ${name} तुम्हाला फोन करतील${phone ? ` (${phone})` : ''}.`,
   byBoard: 'वीज मंडळाकडून',
   boardHome: (home, day) => `वीज मंडळ तुमच्या ${home ? `${home} ` : ''}घरी *${day}* रोजी येणार आहे.`,
   thanks: {
@@ -143,6 +147,8 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
   reminder: (home, when, work) => `हमारी टीम *${home}* पर ${when} *${work}* के लिए आ रही है।`,
   presence: (work, home, day) =>
     `*${work}* के लिए बिजली बोर्ड (DISCOM) *${home}* पर *${day}* को आएगा। कृपया घर पर रहें।`,
+  crewChanged: (when, name, phone) =>
+    `*${when}* की आपकी विज़िट: आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
   byBoard: 'बिजली बोर्ड द्वारा',
   boardHome: (home, day) => `बिजली बोर्ड आपके ${home ? `${home} ` : ''}घर पर *${day}* को आएगा।`,
   thanks: {

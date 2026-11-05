@@ -362,7 +362,7 @@ customer's language, for example "Thu 6 Nov, morning".
 Examples: Ramesh Patil · Thu 6 Nov, morning · Ravi
 
 **Buttons:** two quick replies. en `Okay`, `Change day`; mr `ठीक आहे`, `दिवस बदला`; hi `ठीक है`, `दिन बदलें`.
-Payloads `vok:<visit id>` and `vchg:<visit id>`. Until this is switched on, a service visit keeps its older
+Payloads `vok:<visit id>:<day>` and `vchg:<visit id>:<day>`. Until this is switched on, a service visit keeps its older
 `service_visit_booked` message.
 
 ### 33. `visit_reminder` — **New**
@@ -380,7 +380,7 @@ The working day before the visit (Saturday for a Monday visit), in working hours
 Examples: Ramesh Patil · Sangli · tomorrow morning · installation
 
 **Buttons:** two quick replies. en `Confirm`, `Change day`; mr `पक्के करा`, `दिवस बदला`; hi `पक्का करें`, `दिन बदलें`.
-Payloads `vcf:<visit id>` and `vchg:<visit id>`.
+Payloads `vcf:<visit id>:<day>` and `vchg:<visit id>:<day>`.
 
 ### 34. `inspection_presence` — **New** (DISCOM inspection and net meter fitting)
 Fields: customer, work, home, day
@@ -397,7 +397,7 @@ meter fitting, in the customer's language.
 Examples: Ramesh Patil · DISCOM inspection · Sangli · Thu 6 Nov
 
 **Buttons:** two quick replies. en `I'll be there`, `Change day`; mr `मी असेन`, `दिवस बदला`; hi `मैं रहूँगा`, `दिन बदलें`.
-Payloads `vcf:<visit id>` and `vchg:<visit id>`.
+Payloads `vcf:<visit id>:<day>` and `vchg:<visit id>:<day>`.
 
 All four are off until Meta approves **all three languages**; then switch each on, and "Meta approved the version
 with file and buttons" too, in Settings → WhatsApp messages.

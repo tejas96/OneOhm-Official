@@ -13,15 +13,6 @@ const _alerts = async (kind: string, name: string) =>
     (one) => one.title.includes(name),
   );
 
-const workingDayAfter = (day: string, n = 1) => {
-  let at = day;
-  for (let left = n; left > 0; ) {
-    at = addDays(at, 1);
-    if (new Date(`${at}T00:00:00Z`).getUTCDay() !== 0) left -= 1;
-  }
-  return at;
-};
-
 describe('Visits: review fixes (taps)', () => {
   let admin: Session;
   beforeAll(async () => {
@@ -49,7 +40,7 @@ describe('Visits: review fixes (taps)', () => {
     const [visit] = await visitsFor(sale.customer.customerId);
     const moved = await setVisit(admin, {
       taskId: task,
-      day: workingDayAfter(visit?.day ?? today(), 1),
+      day: nextWorkingDay(visit?.day ?? today()),
       slot: 'morning',
     });
     await tap(sale.customer.phone, `vcf:${visit?.id}:${visit?.day}`);
@@ -92,7 +83,7 @@ describe('Visits: review fixes (taps)', () => {
   });
 });
 
-const _workingDayAfter = (day: string) => {
+const nextWorkingDay = (day: string) => {
   let at = addDays(day, 1);
   if (new Date(`${at}T00:00:00Z`).getUTCDay() === 0) at = addDays(at, 1);
   return at;

@@ -50,7 +50,15 @@ export class MessageTemplatesService {
   }
 
   async update(actor: Actor, key: string, change: MessageTemplateChange): Promise<MessageTemplate> {
-    checkMessageTemplate(key, change);
+    const [stored] = await this.db
+      .select({ extrasApproved: messageTemplates.extrasApproved })
+      .from(messageTemplates)
+      .where(eq(messageTemplates.key, key));
+    // A change that leaves the buttons switch out keeps what is stored.
+    checkMessageTemplate(key, {
+      ...change,
+      extrasApproved: change.extrasApproved ?? stored?.extrasApproved,
+    });
     const [row] = await this.db
       .update(messageTemplates)
       .set({ ...change, updatedAt: new Date() })

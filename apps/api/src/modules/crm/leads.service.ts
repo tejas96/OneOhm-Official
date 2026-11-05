@@ -9,6 +9,7 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { resolveReferralCode } from '../referrals/referral-codes';
+import { followAssignee } from '../visits/follow-assignee';
 import { autoMoveLead, logLead, logLeadChanges, tellLeadOwner } from './lead-history';
 import { alertNobodyFree, assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
@@ -163,6 +164,8 @@ export class LeadsService {
       })
       .where(eq(leads.id, id));
     await logLeadChanges(this.db, actor, current, { patch, step, stage, lost, owner });
+    if (owner && owner !== current.owner?.id)
+      await followAssignee(this.db, { leadId: id }, owner, actor.userId);
     if (ruled?.fallback) await alertNobodyFree(this.db, current);
     return this.get(actor, id);
   }

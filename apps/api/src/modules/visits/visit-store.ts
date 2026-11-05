@@ -37,6 +37,7 @@ export async function saveVisit(
   input: SaveVisit,
   existing: VisitRow | null,
   now = new Date(),
+  timeZone = 'Asia/Kolkata',
 ): Promise<{ row: VisitRow; moved: boolean }> {
   const confirmed = input.status === 'confirmed';
   const stamp = confirmed
@@ -54,7 +55,7 @@ export async function saveVisit(
   await lockCrewDay(tx, target, input.day);
   if (!isPresenceKind(target.kind)) {
     // Two taps (or a tap and the desk) at once take turns: the slot is checked again inside the lock.
-    const taken = await takenSlots(tx, target.crew, todayIn(), existing?.id);
+    const taken = await takenSlots(tx, target.crew, todayIn(timeZone, now), existing?.id);
     if (!freeSlots(taken[input.day] ?? []).includes(input.slot))
       throw conflict(
         'The person who comes already has a visit then. Pick another time.',
@@ -66,7 +67,15 @@ export async function saveVisit(
   if (existing) {
     [saved] = await tx
       .update(visits)
-      .set({ day: input.day, slot: input.slot, status: input.status, ...stamp, ...fresh })
+      .set({
+        day: input.day,
+        slot: input.slot,
+        status: input.status,
+        ...stamp,
+        ...fresh,
+        // A new pick starts the promise to confirm it afresh.
+        ...(input.status === 'proposed' ? { createdAt: now } : {}),
+      })
       .where(eq(visits.id, existing.id))
       .returning();
   } else {

@@ -14,6 +14,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { followAssignee } from '../visits/follow-assignee';
 import { tellAssignee } from './task-notices';
 
 export interface HandOverMove {
@@ -108,7 +109,10 @@ export async function handOverTasks(
         reason: 'team_change',
       });
       // A proposal is only told once a manager confirms it, so only a real assignment notifies.
-      if (task.assigneeUserId === fromUserId) await tellAssignee(tx, task, toUserId, actor.userId);
+      if (task.assigneeUserId === fromUserId) {
+        await followAssignee(tx, { taskId: task.id }, toUserId, actor.userId);
+        await tellAssignee(tx, task, toUserId, actor.userId);
+      }
       moved += 1;
     }
   }

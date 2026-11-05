@@ -60,27 +60,3 @@ INSERT INTO "message_templates" ("key", "audience", "meta_name", "fields", "prev
 ('visit_reminder', 'customer', 'visit_reminder', ARRAY['customer','home','when','work'], 'Hello {{1}}, our team visits {{2}} {{3}} for the {{4}}. Please confirm.', false),
 ('inspection_presence', 'customer', 'inspection_presence', ARRAY['customer','work','home','day'], 'Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.', false)
 ON CONFLICT ("key") DO NOTHING;
-
---> statement-breakpoint
--- An open visit follows its person: when the task, the service request or the lead changes hands, the visit's crew changes with it (any path that reassigns).
-CREATE FUNCTION "visits_follow_assignee"() RETURNS trigger AS $$
-BEGIN
-  IF TG_TABLE_NAME = 'project_tasks' THEN
-    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."assignee_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."assignee_user_id"] END, "updated_at" = now()
-     WHERE "task_id" = NEW."id" AND "status" IN ('proposed', 'confirmed');
-  ELSIF TG_TABLE_NAME = 'service_requests' THEN
-    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."assignee_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."assignee_user_id"] END, "updated_at" = now()
-     WHERE "service_request_id" = NEW."id" AND "status" IN ('proposed', 'confirmed');
-  ELSE
-    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."owner_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."owner_user_id"] END, "updated_at" = now()
-     WHERE "lead_id" = NEW."id" AND "task_id" IS NULL AND "service_request_id" IS NULL AND "status" IN ('proposed', 'confirmed');
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
---> statement-breakpoint
-CREATE TRIGGER "project_tasks_visit_crew" AFTER UPDATE OF "assignee_user_id" ON "project_tasks" FOR EACH ROW WHEN (OLD."assignee_user_id" IS DISTINCT FROM NEW."assignee_user_id") EXECUTE FUNCTION "visits_follow_assignee"();
---> statement-breakpoint
-CREATE TRIGGER "service_requests_visit_crew" AFTER UPDATE OF "assignee_user_id" ON "service_requests" FOR EACH ROW WHEN (OLD."assignee_user_id" IS DISTINCT FROM NEW."assignee_user_id") EXECUTE FUNCTION "visits_follow_assignee"();
---> statement-breakpoint
-CREATE TRIGGER "leads_visit_crew" AFTER UPDATE OF "owner_user_id" ON "leads" FOR EACH ROW WHEN (OLD."owner_user_id" IS DISTINCT FROM NEW."owner_user_id") EXECUTE FUNCTION "visits_follow_assignee"();
