@@ -10,7 +10,7 @@ import type {
   SendScope,
 } from '@oneohm/api-contracts';
 import { auditLog, customerActions } from '@oneohm/database';
-import type { SendAction } from '@oneohm/domain';
+import { channelOf, type SendAction } from '@oneohm/domain';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -28,9 +28,11 @@ import {
   resolveScope,
   type SendContext,
 } from './send-context';
-import { deliver, previewOf, templateOn } from './send-deliver';
+import { deliver, templateOn } from './send-deliver';
+import { deliverOff, type OffPlan, offPlan, previewFor } from './send-off';
 import { offersFor } from './send-offers';
 import type { Deps } from './send-papers';
+import type { Recorded } from './send-recorded';
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -72,7 +74,7 @@ export class SendToCustomerService {
   async preview(actor: Actor, body: SendBody): Promise<SendPreview> {
     const ctx = await this.context(actor, body);
     assertAllowed(actor, ctx.place, ACTION_OF(body.request));
-    return previewOf(this.db, ctx, (await compose(this.deps, ctx, body.request)).built);
+    return previewFor(this.deps, ctx, body.request, await compose(this.deps, ctx, body.request));
   }
 
   async send(actor: Actor, body: SendBody): Promise<SendResult> {
@@ -80,16 +82,21 @@ export class SendToCustomerService {
     assertAllowed(actor, ctx.place, ACTION_OF(body.request));
     const id = randomUUID();
     const composed = await compose(this.deps, ctx, body.request, id);
+    // A customer not on WhatsApp: an SMS text or a task for the team (redesign §17).
+    const off = await offPlan(this.db, this.env, ctx, body.request, composed);
     return this.db.transaction(async (tx) => {
       // One press of Send is one send: a double tap or a retry with the same id answers the first.
       const again = body.requestId ? await this.sentBefore(tx, body.requestId) : null;
       if (again) return again;
       // A chat message goes; a template only goes when it is switched on (said in the log if not).
-      const delivered = ctx.chatOpen || (await templateOn(tx, composed.built.template.key));
-      const actionId = await this.record(tx, ctx, actor.userId, composed, delivered);
+      const delivered =
+        off !== null || ctx.chatOpen || (await templateOn(tx, composed.built.template.key));
+      const actionId = await this.record(tx, ctx, actor.userId, composed, delivered, off);
       // The same ask is one message; a re-sent reminder of an open ask gets its own key.
       const key = `send:${body.request.action}:${actionId ?? id}:${id}`;
-      const via = await deliver(tx, ctx, composed.built, key, actor.userId);
+      const via = off
+        ? await deliverOff(tx, ctx, off, key, composed.record.projectId)
+        : await deliver(tx, ctx, composed.built, key, actor.userId);
       await composed.after?.(tx, delivered);
       if (body.requestId)
         await recordAudit(
@@ -129,14 +136,25 @@ export class SendToCustomerService {
     tx: Tx,
     ctx: SendContext,
     userId: string,
-    { record }: Composed,
+    composed: Composed,
     delivered: boolean,
+    off: OffPlan | null,
   ): Promise<string | null> {
-    if (record.kind === 'log') {
-      const log = delivered ? record.log : `${record.log} (not sent: the message is switched off)`;
-      await logSend(tx, ctx, userId, { ...record, log }, record.data);
+    const how = off ? (off.path === 'in_person' ? ' (in person)' : ' (SMS)') : '';
+    const first = composed.record;
+    if (first.kind === 'log') {
+      const log = delivered
+        ? `${first.log}${how}`
+        : `${first.log} (not sent: the message is switched off)`;
+      await logSend(tx, ctx, userId, { ...first, log }, first.data);
       return null;
     }
+    // The action remembers how it travels: WhatsApp, SMS or in person.
+    const record: Extract<Recorded, { kind: 'action' }> = {
+      ...first,
+      log: `${first.log}${how}`,
+      payload: { ...first.payload, channel: off ? channelOf(off.path) : 'whatsapp' },
+    };
     const existing = await openActionFor(tx, ctx.customerId, record.type, {
       ...(record.type === 'location' && record.propertyId ? { propertyId: record.propertyId } : {}),
       ...(record.type === 'pay' ? { milestoneId: String(record.payload.milestoneId) } : {}),

@@ -7,14 +7,20 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { useSendAction, useSendPreview } from './use-send-to-customer';
 
+const VIA_LABEL = {
+  chat: 'viaChat',
+  template: 'viaTemplate',
+  sms: 'viaSms',
+  in_person: 'viaInPerson',
+} as const;
+
 /** What the customer gets: the words as a chat bubble, the buttons under it, and how it travels. */
 export function PreviewBubble({ preview }: { readonly preview: SendPreview }) {
   const t = useTranslations('sendToCustomer');
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-sunken px-4 py-3">
       <p className="type-label text-ink-faint">
-        {t('customerGets')} · {t(`language.${preview.language}`)} ·{' '}
-        {preview.via === 'chat' ? t('viaChat') : t('viaTemplate')}
+        {t('customerGets')} · {t(`language.${preview.language}`)} · {t(VIA_LABEL[preview.via])}
       </p>
       <p className="whitespace-pre-line type-body-sm text-ink">{preview.body}</p>
       {preview.buttons.length > 0 && (

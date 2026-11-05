@@ -12,7 +12,7 @@ import { workWords } from '../visits/visit-words';
 import { customerPapers } from '../whatsapp/assistant/customer-papers';
 import { compose } from './send-compose';
 import type { SendContext } from './send-context';
-import { previewOf } from './send-deliver';
+import { previewFor } from './send-off';
 import type { Deps } from './send-papers';
 import { crewOf, dueInstalments, homesOf, receiptsOf, waitingTask } from './send-reads';
 
@@ -29,7 +29,7 @@ export async function offersFor(
     detail: string,
     request: SendRequest,
   ): Promise<SendOffer> => {
-    const { built } = await compose(deps, ctx, request);
+    const composed = await compose(deps, ctx, request);
     return {
       key,
       action: request.action,
@@ -37,7 +37,7 @@ export async function offersFor(
       detail,
       request,
       input: null,
-      preview: await previewOf(db, ctx, built),
+      preview: await previewFor(deps, ctx, request, composed),
     };
   };
   switch (action) {

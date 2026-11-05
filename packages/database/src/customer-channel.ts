@@ -1,4 +1,10 @@
-import { handsOverInPerson, routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
+import {
+  type ContactChannel,
+  handsOverInPerson,
+  routeFor,
+  skippedAfterStop,
+  smsText,
+} from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
@@ -81,6 +87,52 @@ export async function routeCustomerMessage(
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });
+  return inserted.length > 0;
+}
+
+/** How a message reaches this customer now (their setting, what WhatsApp told us, STOP). */
+export async function routeOfCustomer(
+  db: DatabaseExecutor,
+  customerId: string,
+): Promise<ContactChannel> {
+  const [customer] = await db
+    .select({
+      channel: customers.contactChannel,
+      unreachable: customers.whatsappUnreachableAt,
+      optIn: customers.whatsappOptIn,
+    })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+  return customer
+    ? routeFor({
+        channel: customer.channel,
+        whatsappUnreachable: customer.unreachable !== null,
+        whatsappOptIn: customer.optIn,
+      })
+    : 'whatsapp';
+}
+
+/** A task for the team on the customer handovers list: do or say this with the customer in person. */
+export async function handOverInPerson(
+  db: DatabaseExecutor,
+  customerId: string,
+  message: Pick<Message, 'template' | 'dedupeKey' | 'words'> & {
+    readonly projectId?: string | null;
+  },
+): Promise<boolean> {
+  const inserted = await db
+    .insert(customerHandovers)
+    .values({
+      customerId,
+      projectId: message.projectId ?? null,
+      template: message.template,
+      title: message.words.title,
+      body: message.words.body,
+      dedupeKey: message.dedupeKey,
+    })
+    .onConflictDoNothing()
+    .returning({ id: customerHandovers.id });
   return inserted.length > 0;
 }
 

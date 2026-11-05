@@ -39,6 +39,13 @@ export function useSendPreview() {
 }
 
 /** Sends one action; every ask lands in "Asked from the customer", so those lists refresh. */
+const SENT_LABEL = {
+  chat: 'sent',
+  template: 'sentTemplate',
+  sms: 'sentSms',
+  in_person: 'sentInPerson',
+} as const;
+
 export function useSendAction(scope: SendScope) {
   const t = useTranslations('sendToCustomer');
   const toast = useToast();
@@ -59,7 +66,7 @@ export function useSendAction(scope: SendScope) {
       await client.invalidateQueries({ queryKey: ['send-to-customer'] });
       toast({
         tone: 'success',
-        title: result.via === 'chat' ? t('sent') : t('sentTemplate'),
+        title: t(SENT_LABEL[result.via]),
       });
     },
     onError: (error) =>

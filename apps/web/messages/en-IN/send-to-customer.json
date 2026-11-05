@@ -48,6 +48,8 @@
     "customerGets": "The customer gets",
     "viaTemplate": "As an approved message",
     "viaChat": "In the chat",
+    "viaSms": "As an SMS",
+    "viaInPerson": "In person",
     "language": {
       "en": "English",
       "mr": "Marathi",
@@ -57,6 +59,8 @@
     "sendDocument": "Send {name} to the customer on WhatsApp",
     "sent": "Sent to the customer",
     "sentTemplate": "Sent as an approved message, the chat is closed",
+    "sentSms": "Sent as an SMS, the customer is not on WhatsApp",
+    "sentInPerson": "Added to the handovers list: do it in person",
     "failed": "Could not send",
     "reason": "Why is it waiting?",
     "reasonHint": "The customer reads this exactly as you write it.",

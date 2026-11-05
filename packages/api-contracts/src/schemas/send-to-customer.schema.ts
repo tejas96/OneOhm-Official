@@ -92,8 +92,8 @@ export type SendBody = z.infer<typeof sendBodySchema>;
 export const sendPreviewSchema = z.object({
   body: z.string(),
   buttons: z.array(z.string()),
-  /** Inside the 24-hour window the chat message goes; outside it an approved template. */
-  via: z.enum(['chat', 'template']),
+  /** Inside the 24-hour window the chat message goes; outside it an approved template; a customer off WhatsApp gets an SMS or the team does it in person. */
+  via: z.enum(['chat', 'template', 'sms', 'in_person']),
   /** The customer's language, as the words are written in it. */
   language: z.enum(['en', 'mr', 'hi']),
   /** A line for staff when something is different (the template is not switched on yet). */
@@ -126,7 +126,7 @@ export const sendOptionsSchema = z.object({
 export type SendOptions = z.infer<typeof sendOptionsSchema>;
 
 export const sendResultSchema = z.object({
-  via: z.enum(['chat', 'template']),
+  via: z.enum(['chat', 'template', 'sms', 'in_person']),
   /** The customer action this made, for the actions that have one. */
   actionId: idSchema.nullable(),
 });
