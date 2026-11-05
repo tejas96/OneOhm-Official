@@ -853,3 +853,35 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   `report_problem`, `refer_friend`, `share_upi`.
 - **Migration 0085** (drizzle-kit): customers.upi_id / upi_checked_at / upi_checked_by_user_id, service_requests.reopen_count /
   reopened_at, referral_rewards.paid_upi_id, the unique `payload.once` index on customer_actions, the three template rows.
+
+---
+
+## 22j. Phase 7 — new contacts, customers not on WhatsApp, clean-up
+
+- **Phase 6 leftovers (money):** a payout ask closes when its reward is paid by any method, rejected or cancelled (`closePayoutAsks`, in the
+  same transaction as the status change, with a log line); the payout reminder and its finance "still waiting" alert check the reward is
+  still approved; the "Received, to check" alert goes to the holders of `finance.record_payments` (not the chat owner or project manager);
+  the "Is it working now?" check has one key per resolve (resolve, reopen by staff, resolve again asks again); the customer UPI save and the
+  staff check lock customer first, then ask; payout reminder rounds count from the latest ask (`payload.askedAt`, set by Ask again); an AMC
+  offer made less than 5 days ago is not chased; a report form whose home had to be asked in the chat keeps its photos, answers and note; an
+  unanswered fixed check tells the service desk at 2 days (also when its template is off).
+- **New contacts (§16):** the name is offered only when usable (`usableName`: two letters, no digits or emoji, no business word); the city list has
+  [📍 Send location] (WhatsApp's single-button location request); a pin that names a served city fills it, any other pin waits on the lead as a map
+  link and the city is asked; under the estimate **[Book a visit] [Call me] [Not now]**. **Roof and floors stay two list questions and the bill
+  photo stays in the chat** (the brief allowed the fallback; no new form to publish).
+- **Decision — Book a visit for a lead without a customer:** visit records, visit asks and the callback ask need a customer, and a new contact has none
+  (the lead gets a customer when staff add the site). So the tap flow (free days of the owner → Morning/Afternoon) writes the pick on the LEAD (next
+  action = that day, history note, alert) and the owner confirms by call; nothing is reserved. Once the lead has a customer, Send to customer → ask a
+  visit uses the full 3b flow. **Call me** likewise keeps the lead next action + alert (the "To call" card needs a customer).
+- **Old issues fixed (part-1 section 5):** a short reply instead of a hand-over loop after the estimate; reactions and stickers are never unclear
+  answers; stale and late taps (strangers too) get the "earlier message" line; a team-made lead's hello names its person; onboarding off keeps bills
+  and people as leads; referral entry asks language and name; a bill after the estimate sends no buttons again; hours text is Mon–Sat everywhere;
+  STOP while held has no night reply first; a stopped stranger is told once how to start again; an onboarding "Talk to a person" tap works in a held chat.
+- **Customers not on WhatsApp (§17):** `sendPath(action, route)` (domain): papers and ratings → SMS text; payment → SMS pay link (in person when online
+  payments are off or nothing is due); location, self survey, visit pick, signature, site ready, installation check, subsidy, bank sign, call-back,
+  UPI, payment proof, AMC renewal → in person; a customer on neither → in person; news keeps the usual route. In person = a row on the customer
+  handovers list ("Do in person: …"). The sheet's preview shows the path; the action's `payload.channel` and its log line record it; the result says
+  `sms` or `in_person`. Quote accept stays staff-side (Mark accepted with the customer present).
+- **Other decisions:** the old menu ids stay readable until 2026-12-04 (`OLD_MENU_IDS_UNTIL`), then go; "Talk to a person" with onboarding off alerts
+  twice (the new lead and the hand-over) because the lead owner and the hand-over desk can differ; the web shows the new "SMS"/"In person" labels in
+  English only (no mr/hi web strings, as before).

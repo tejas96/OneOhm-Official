@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 43 templates (and newer versions of four). Each one:
+The app sends these 56 templates (the numbered sections below; a few have newer versions). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -13,6 +13,105 @@ approves a template, the app's wording (code default and database) must match it
 The 4 templates already approved on Meta (`quotation_pdf`, `project_step_update`,
 `maintenance_visit_opened`, `maintenance_visit_closed`) use named fields. The app cannot fill
 named fields, so they stay unused.
+
+## Summary of every template (phase 7)
+
+One row per template: its key (the same as the Meta name unless a "file" version is approved), what it is for, its Meta category, its buttons,
+the switch in **Settings → WhatsApp messages** that must be on for the buttons to go out, and where it stands with Meta. Fields, wording and
+Marathi/Hindi text are in the numbered sections below. A template is **off** in the app until you switch it on; the chat message of the same
+news still goes inside 24 hours while it is off (money and answer flows never go silent).
+
+| Key | Purpose | Category | Buttons | Quick-reply switch | Meta status |
+|---|---|---|---|---|---|
+| `quotation_sent` | The quote PDF with its two buttons | Utility | 2 quick replies + document header | extras approved | Approved en, mr, hi (`quotation_sent_file`) |
+| `project_started` | The project has started | Utility | none | — | Approved mr, hi; en to submit |
+| `project_milestone` | A project step is done | Utility | none | — | To submit |
+| `project_manager_changed` | A new project manager | Utility | none | — | To submit |
+| `payment_received` | A payment was received (receipt PDF) | Utility | document header | extras approved | Approved en, mr, hi (`payment_received_file`) |
+| `payment_reminder` | An instalment is due | Utility | 1 quick reply + URL "Pay now" | quick replies approved | Approved mr, hi (text); en and newer to submit |
+| `payment_link` | An instalment with the pay link | Utility | 1 quick reply + URL "Pay now" | quick replies approved | Approved mr, hi (text); en and newer to submit |
+| `service_update` | A service request changed status | Utility | none | — | To submit |
+| `contact_changed` | The contact person changed | Utility | none | — | To submit |
+| `change_request_raised` | A change to the project was started | Utility | none | — | To submit |
+| `change_request_completed` | A change to the project is done | Utility | none | — | To submit |
+| `document_requested` | Older paper request (replaced by `paper_request`) | Utility | none | — | To submit |
+| `paper_request` | The team asks for a paper | Utility | none | — | To submit |
+| `referral_reward` | A referral reward changed status | Utility (Meta may say Marketing) | none | — | To submit |
+| `maintenance_visit` | A free AMC visit is booked | Utility | none | — | To submit |
+| `survey_scheduled` | The site survey visit is scheduled | Utility | none | — | To submit |
+| `stage_rating_request` | Rate a finished stage | Utility | 1 quick reply | quick replies approved | To submit |
+| `installation_started` | Installation has started | Utility | 1 quick reply | quick replies approved | To submit |
+| `commissioning_completed` | The system is switched on | Utility | 2 quick replies | quick replies approved | To submit |
+| `project_update_link` | Project update with a link | Utility | none | — | To submit |
+| `service_visit_booked` | A technician visit for a service request | Utility | none | — | To submit |
+| `project_waiting` | A short delay, waiting on a step | Utility | 1 quick reply | quick replies approved | To submit |
+| `location_request` | Ask for the home location (staff) | Utility | 1 quick reply | extras approved | To submit |
+| `payment_due` | Payment due, pay or send proof (staff) | Utility | 2 quick replies | extras approved | To submit |
+| `callback_request` | Pick a call time (staff) | Utility | 3 quick replies | extras approved | To submit |
+| `delay_notice` | A delay notice (staff) | Utility | none | — | To submit |
+| `crew_contact` | Who is coming (staff) | Utility | none | — | To submit |
+| `document_share` | A paper of ours as a file (staff) | Utility | document header | extras approved | To submit |
+| `visit_pick` | Pick a visit day | Utility | 1 quick reply | extras approved | To submit |
+| `visit_booked` | The visit is booked | Utility | 2 quick replies | extras approved | To submit |
+| `visit_reminder` | The visit is tomorrow | Utility | 2 quick replies | extras approved | To submit |
+| `inspection_presence` | DISCOM inspection or net meter date | Utility | 2 quick replies | extras approved | To submit |
+| `signature_request` | Read and agree to a paper | Utility | 2 quick replies + document header | extras approved | To submit |
+| `site_ready_check` | Is the roof ready? | Utility | 2 quick replies | extras approved | To submit |
+| `installation_check` | Is the installation finished? | Utility | 2 quick replies | extras approved | To submit |
+| `handover_pack` | The handover papers are ready | Utility | 2 quick replies | extras approved | To submit |
+| `signature_reminder` | Reminder: agree to a paper | Utility | 1 quick reply | extras approved | To submit |
+| `signed_page_reminder` | Reminder: send the signed page | Utility | 1 quick reply | extras approved | To submit |
+| `site_ready_reminder` | Reminder: roof not ready | Utility | 1 quick reply | extras approved | To submit |
+| `subsidy_register_help` | Register on the subsidy portal | Utility | 2 quick replies | extras approved | To submit |
+| `subsidy_credit_check` | Did the subsidy reach your bank? | Utility | 2 quick replies | extras approved | To submit |
+| `bank_sign_visit` | Sign the loan papers at the bank | Utility | 2 quick replies | extras approved | To submit |
+| `layout_approval` | Look at the panel layout | Utility | 2 quick replies + document header | extras approved | To submit |
+| `layout_reminder` | Reminder: look at the layout | Utility | 1 quick reply | extras approved | To submit |
+| `loan_sanctioned` | Loan sanctioned | Utility | none | — | To submit |
+| `loan_disbursed` | Loan money sent | Utility | none | — | To submit |
+| `loan_rejected` | Loan not approved | Utility | none | — | To submit |
+| `self_survey_offer` | Self site survey with a discount | Marketing | 2 quick replies | extras approved | To submit |
+| `self_survey_reminder` | Reminder: finish the survey | Marketing | 1 quick reply | extras approved | To submit |
+| `self_survey_approved` | The survey is approved | Utility | none | — | To submit |
+| `problem_fixed_check` | Is it working now? | Utility | 2 quick replies | extras approved | To submit |
+| `reward_upi_ask` | Share a UPI ID for the reward | Utility | 1 quick reply | extras approved | To submit |
+| `amc_renewal_offer` | The AMC ends soon: renew | Marketing | 2 quick replies | extras approved | To submit |
+| `chat_follow_up` | A staff message after the 24-hour window | Utility | none | — | To submit |
+| `staff_daily_digest` | Staff daily summary | Utility | none | — | To submit |
+| `staff_welcome` | Welcome a new staff member | Utility | none | — | To submit |
+
+Quick-reply switch: **extras approved** = the version with the quick replies / document header is approved (turn it on with the new Meta name in the
+same dialog); **quick replies approved** = a newer version with quick replies in front of an older button is approved (the older version keeps working
+until then). Marketing templates cost more per message and are never sent to a customer who said STOP.
+
+## Meta submission checklist (for the owner)
+
+1. In WhatsApp Manager submit every row marked **To submit** in **English, Marathi and Hindi**, with the category in the table. The three **Marketing**
+   ones are `self_survey_offer`, `self_survey_reminder` and `amc_renewal_offer`; `referral_reward` may be re-classified by Meta as Marketing (it
+   still works, each message costs more).
+2. For templates that have a newer version (the "Newer version" sections: `stage_rating_request` with [Rate now], and the buttons on
+   `installation_started`, `commissioning_completed`, `project_waiting`, `payment_link`, `payment_reminder`) submit the new version under a **new**
+   Meta name. Never edit an approved template.
+3. Wait until **all three languages** of a template are approved. Then, in Settings → WhatsApp messages, set the Meta name (and the Marathi and Hindi
+   names), turn the quick-reply switch on in the same dialog, and finally turn the template on.
+4. Publish the forms (WhatsApp Flows) and paste each flow id under Settings → WhatsApp → Forms: `send_paper`, `paid_another_way`, `self_survey`,
+   `report_problem`, `refer_friend`, `share_upi` (see DEPLOYMENT.md, "WhatsApp redesign release"). A form that is not published falls back to the chat.
+5. Register the SMS texts below with your DLT provider (MSG91) before turning `SMS_DELIVERY` on.
+6. Never set `WHATSAPP_TEST_NUMBERS` in production.
+
+## SMS texts for customers not on WhatsApp (DLT registration is yours)
+
+Sent through the one SMS flow of DEPLOYMENT.md section 5c; the company name is added after the text and the text is cut at 160 characters per part.
+A customer on the "In person" channel gets no SMS: the team does it from the customer handovers list. Marathi and Hindi are Unicode SMS and need a
+Unicode DLT template.
+
+| Used for | English | Marathi | Hindi |
+|---|---|---|---|
+| A paper is asked | We need a paper from you. Please send it from the OneOhm app, or give it to our team. | आम्हाला तुमचा एक कागद हवा आहे. कृपया तो OneOhm ॲपवरून पाठवा, किंवा आमच्या टीमकडे द्या. | हमें आपका एक कागज़ चाहिए. कृपया उसे OneOhm ऐप से भेजें, या हमारी टीम को दें। |
+| A rating is asked | How did we do? Please rate us in the OneOhm app, or tell our team. | आमचे काम कसे वाटले? कृपया OneOhm ॲपमध्ये रेटिंग द्या, किंवा आमच्या टीमला सांगा. | हमारा काम कैसा लगा? कृपया OneOhm ऐप में रेटिंग दें, या हमारी टीम को बताएँ। |
+| A payment is due (pay link) | Payment due {amount} for {home}. Pay here: {link} | {home}: {amount} भरायचे आहेत. इथे भरा: {link} | {home}: {amount} देने हैं. यहाँ भरें: {link} |
+
+Other news (documents, receipts, crew, delay, handover pack, layout, the older approved messages) goes as the app's own short title and body, as before.
 
 ## Customer templates
 

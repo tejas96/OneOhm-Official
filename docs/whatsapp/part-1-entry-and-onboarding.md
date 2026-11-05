@@ -1,5 +1,9 @@
 # WhatsApp conversation map: everything before a person is a known customer, plus routing
 
+> **Updated after the redesign (phase 7, 2026-11-05).** This page describes the stranger, lead and onboarding flows as they are now;
+> the changes against the old map are marked **(new)**, and section 5 lists every old issue with what became of it. For the
+> customer side see [flow-map.md](flow-map.md) and [redesign.md](redesign.md).
+
 Scope: `apps/api/src/modules/whatsapp/` plus the pieces it calls (`packages/domain`, `packages/database/src/chat-*.ts`, the worker, `crm/*`, `quotations/*`). Everything below comes from reading the code; I ran nothing. Paths are relative to `apps/api/src/modules/whatsapp/` unless they start with `/`. Titles are English. Marathi and Hindi versions exist for every string and have the same ids.
 
 ---
@@ -61,10 +65,12 @@ Scope: `apps/api/src/modules/whatsapp/` plus the pieces it calls (`packages/doma
      - A chat nobody owns gets the newest lead owner on that number, if staff. Otherwise it stays null, which means the desk.
    - `logIncoming`. A duplicate Meta delivery (same `wa_message_id`) is skipped silently.
    - A tap the assistant answers is marked `assistant_tap` and does not count as "customer waiting".
-   - `isLateTap`: a button or list tap at least 1 second older than the chat's newest inbound is dropped silently, with only a log line.
+   - `isLateTap`: a button or list tap at least 1 second older than the chat's newest inbound. **(new)** It is answered, never dropped: "That was an
+     earlier message — here is the latest." and then the question the chat is on (strangers) or Home (customers); in a held chat only the first line.
    - Customers' files are stored before the assistant runs (`files.keep`).
    - `handle()`:
-     - If `state==='human'` and the assistant does not own this message, **staff are alerted** (`tellAnswerer`) and `nightReply` runs.
+     - If `state==='human'` and the assistant does not own this message, **staff are alerted** (`tellAnswerer`) and `nightReply` runs
+       (**new:** not for STOP — the confirmation comes first and alone).
      - Then `assistant.handle`.
    - On failure: log, alert staff, forget the message and answer 500, so Meta retries. The customer hears nothing.
    - After the assistant, strangers and leads get `files.keep` (files the lead on a lead), and customers get `files.settle`.
@@ -89,6 +95,8 @@ Order of decisions, top to bottom:
    - Opt-out only blocks template (business-initiated) sends. The worker checks it in `optOutNote`.
    - It does not block conversational replies. Session messages never check it (`worker delivery.activities.ts:~221`).
    - The nudge job skips opted-out chats.
+   - **(new)** A stranger who stopped and writes again hears once (per STOP) "You stopped our WhatsApp messages earlier… Tap "Start again"" with
+     [Start again]; their words are still answered (`tellOptedOut`).
 2. `captureEntry` (`entry-capture.ts`).
    - Applies to non-customers with no saved entry and no open lead.
    - If the message carries a Meta ad referral, or is text exactly like `[hi|hello|hey] oneohm <CODE>` where the code has a digit, `-` or `_` or is on the Ad and campaign codes list, then `context.entry` is saved. First touch wins.
@@ -109,7 +117,7 @@ Order of decisions, top to bottom:
         - For a customer: `setState(menu)` and the menu list.
         - Strangers: `greet` resumes onboarding if it applies. Otherwise state goes to `menu` and the stranger buttons (2.1) are sent.
    2. `heldByPerson`. If `state==='human'` and the assistant does not own this message, return silently.
-      - Owned means: the taps `menu`, `start`, a quote tap, a stranger's `callback` or `human`, and (customers only) menu ids, paper taps, ratings and home or paper rows.
+      - Owned means: the taps `menu`, `start`, a quote tap, a stranger's `callback`, `human` or **(new)** `ob:person`, and (customers only) menu ids, paper taps, ratings and home or paper rows.
       - A held chat that sends an unowned tap, such as an old `ob:…` list tap, gets silence plus a staff alert.
    3. `if (!chat.customerId) return stranger(...)`. See 1.3.
    4. Customer branch, out of scope here: "Talk to a person" opener, files, other, thanks, home taps, waiting step, rate, `menuChoice`, papers, then unknown text goes to a person with "Thank you. {name|Our team} will reply to you here.".
@@ -139,21 +147,14 @@ Order of decisions, top to bottom:
   - Hours are 9:30 to 18:30 in `BUSINESS_TIMEZONE`.
   - `FIRST_NUDGE_MIN=30`, `LATE_MIN=120`, `HAND_BACK_MIN=240` working minutes.
   - `CHAT_WINDOW_HOURS=23`.
-- `isWorkingTime` looks only at minute-of-day. It has no day-of-week or holiday logic.
-- **Customer-facing hours text** appears in only two places:
-  1. `WORDS.humanSoon`: "A team member will reply here soon (Monday to Saturday, 9:30 am to 6:30 pm). Tap "Menu" to go back to the assistant."
-     - Used when a stranger taps `human` and onboarding does not apply, and when a customer taps `human`.
-  2. `WORDS.nightReply`: "Thank you. We reply from 9:30 am to 6:30 pm. Your message is with {name|our team}."
-- **`nightReply`** (`hand-over.ts:137`):
-  - Runs only for a held chat when the customer writes something the assistant does not own.
-  - Conditions:
-    - Outside working hours.
-    - Settings → Reminders → `whatsappNightReply` is on.
-    - Our side has not already sent a non-note, non-staff message since the last 18:30.
-  - The hand-over reply counts as a prior message.
-  - At night the hand-over text itself is therefore the only reply, and it carries no hours (see Issue 11).
-  - It is sent after the staff alert, in the customer's language.
-- The onboarding "I'll call you" reply says "today" in hours and "tomorrow morning" after hours (`afterHours()` in `estimate-next-steps.ts`).
+- `isWorkingTime` knows Sunday: **(new)** no working minutes on a Sunday (holidays are not known). `replyTime` says "now", "today from 9:30",
+  "tomorrow from 9:30" or "on Monday from 9:30" (after Saturday evening and all Sunday).
+- **Customer-facing hours text (new):** every hand-over reply names who replies and when: "{name} will reply here (Mon–Sat, 9:30–6:30)" or
+  "…tomorrow from 9:30" (`CHAT_WORDS.talkReply`, `passed`, `passedUnknown`, `nightReply`); the promised call says today, tomorrow morning or
+  on Monday morning. The old `humanSoon` text is gone.
+- **`nightReply`** (`hand-over.ts`): runs only for a held chat when the customer writes something the assistant does not own, outside working hours,
+  with Settings → Reminders → `whatsappNightReply` on, and only once a night (our side has not already sent a non-note, non-staff message since the
+  last 18:30; the hand-over reply counts). It is sent after the staff alert, in the customer's language. **(new)** Never for STOP.
 - There is no after-hours notice for an unheld chat. The bot answers 24/7.
 
 ### 1.5 Language choice
@@ -208,42 +209,20 @@ Order of decisions, top to bottom:
 
 ## 2. Stranger (unknown number), by onboarding setting
 
-### 2.1 Onboarding OFF (settings.enabled=false), or any message from a stranger with no lead and no `ob`
+### 2.1 Onboarding OFF (settings.enabled=false), or a stranger with no lead and no `ob`
 
-Reached from: hello or Menu → `greet` → `state='menu'` → `answer(chat,'')`. Any other typed text, media or tap from a no-lead stranger with onboarding off also lands here.
+A hello, Menu or any typed text → reply buttons: "Hello! This number is not linked to any of our customers yet. If you are interested in solar, tap
+"Call me back". If you are a customer with another number, please write from that number." [Call me back → `callback`] [Talk to a person → `human`].
 
-**2.1.1** Any such message → reply buttons:
-> "Hello! This number is not linked to any of our customers yet. If you are interested in solar, tap "Call me back". If you are a customer with another number, please write from that number."
-> [Call me back → `callback`] [Talk to a person → `human`]
-
-Loop: every further message from this stranger, text or photo, gets the same two buttons.
-- A photo or paper from a stranger with no lead is stored nowhere. The file is not kept, and `files.keep` finds no lead and logs "waits: no customer or lead".
-
-**2.1.2** Tap "Call me back" (`callback`) → `callBack` (`stranger-flow.ts:147`):
-- Calls `intake.receive` with:
-  - name = WhatsApp profile name or "WhatsApp contact"
-  - city "Not given"
-  - source `whatsapp`
-  - nextActionNote "Call back: asked on WhatsApp"
-  - firstNote "Asked for a call back on WhatsApp."
-  - the saved entry
-- If an open lead already exists, no new lead is made:
-  - Its next action is set to today and a note is added.
-  - The owner is alerted.
-- New lead: the owner is picked by rule. Staff alert (kind `lead_assigned`): title "New lead · WhatsApp", body "<name>, Not given. <campaign> Call back: asked on WhatsApp.". The lead throws a 409 error if nobody is eligible to own leads.
-- `clearEntry`, then `toPerson`: the chat goes to `human` with no handover alert beyond the lead alert.
-- Reply: "Thank you! Someone from our team will call you soon." [Menu → menu].
-- Tap **Menu** → restart → clears the hold → state `menu` → the 2.1.1 buttons again.
-
-**2.1.3** Tap "Talk to a person" (`human`) → `handOver(chat, 'leads.manage')`:
-- No lead is created.
-- Alert is the plain hand-over alert to the owner or the `leads.manage` desk.
-- Reply: `WORDS.humanSoon` [Menu].
-- Only a hello or Menu returns the stranger to the bot.
-
-**2.1.4** While held, a stranger's typed words and files are silent plus a staff alert.
-- Taps `callback` or `human` while held repeat the callback nudge or the hand-over.
-- There is no lead for the typed words.
+- **Call me back** → `callBack`: a lead (`intake.receive`; name = a usable profile name, else "WhatsApp contact"; city "Not given"; note "Call back:
+  asked on WhatsApp"), owner by rule and alerted, the chat goes to `human`; "Thank you! Someone from our team will call you soon." [Menu].
+- **Talk to a person** → **(new)** `talkToPerson`: makes the lead the same way when there is none ("Call — asked for a person on WhatsApp"), or
+  passes the chat to the lead's person ("Thank you. {name} will reply to you here (Mon–Sat…)"); a held chat tapping it again (also the onboarding
+  `ob:person`) is answered the same way, not swallowed.
+- **A photo, paper, voice note or video (new):** a lead is made when there is none ("Call — sent a file on WhatsApp"), the file is filed on it (bill
+  document) and the reply is honest: "Thank you. We have your file and our team will check it and call you." Voice notes and videos go to the
+  lead's person as in onboarding.
+- While held, typed words and files are silent plus a staff alert, as before.
 
 ### 2.2 Onboarding ON, new number with no lead — the normal path
 
@@ -266,17 +245,12 @@ The first reply to any first message is the language question (3.1).
 ### 2.3 Team-made lead (stranger with an open lead and no `ob`, onboarding on)
 
 `takes()` is false, so `route()`:
-- Hello or Menu → `greet` → `state='menu'` → 2.1.1 buttons. **See Issue 5.**
-- Typed words or `other` → `passToOwner(chat, other? {summary: text})`:
-  - Handover alert (summary only for `other`).
-  - Reply "Thank you. {OwnerFirstName|Our team} will reply to you here." [Menu].
-  - `state='human'`.
-- Photo or paper → 3.7. Voice note or video → 3.7.
-- Tap `callback` → 2.1.2 (nudge on the existing lead).
-- Tap `human` → `handOver` with `WORDS.humanSoon`.
-- Quote taps: the chat has no `customerId`, so Accept → `refuse(quoteChanged)` and a hand-over.
-  - Reply "This quote has changed or is no longer open." then "Thank you. {name} will reply to you here." [Menu].
-  - Quotes are only sent to customers (`quotation.customerPhone`), so this is an edge case.
+- **Hello or Menu (new)** → `greet` → "Hi {first name} 👋 {owner} from OneOhm is helping you." [Talk to {owner}] [Quick estimate] (the team when nobody
+  owns it). Never "not linked to any customer". **[Quick estimate]** (`ob:quick`) starts the onboarding questions on that lead (the language first).
+- Typed words or `other` → `passToOwner` ("Thank you. {FirstName} will reply to you here (Mon–Sat…)", state `human`, summary only for `other`).
+- Photo or paper → filed on the lead (3.7). Voice note or video → the lead's person.
+- Tap `callback` → the nudge on the existing lead; tap `human` → `passToOwner`.
+- Quote taps from a chat with no customer get "This quote has changed or is no longer open." and a hand-over (quotes are only sent to customers).
 
 ### 2.4 `passToOwner` replies (reused everywhere)
 
@@ -326,16 +300,12 @@ On answer: `wa_conversations.language` is saved. There is no lead yet. → Step 
 
 ### 3.2 Step `name`
 
-- If the chat has a profile name:
-  - > "Shall we call you {ProfileName in title case}?" [Yes → `ob:name:yes`] [Change → `ob:name:change`] [Talk to a person → `ob:person`]
-  - Accepted: Yes, or typed yes, y, ok, okay, ho, haan, हो, होय, हां, हाँ → the name is the profile name.
-  - Change, or typed no, change, nahi, नाही, नहीं, बदला, बदलें → "wait for a typed name".
-    - > "Please type your name." [Talk to a person]
-  - Any other typed text of 2–60 characters is accepted as the name (even digits).
-- No profile name, or after Change: the "Please type your name." question with `[Talk to a person]` only.
-- Tapping any other id is a miss.
-- There is no Back button here. Typing "back" (or मागे, परत, पीछे, वापस) goes back to the language step.
-  - "change", "बदला" and "बदलें" are never Back at this step.
+- If the WhatsApp profile name is a name we may use **(new, `usableName`)** — at least two letters, no digits or emoji, no business word (solar,
+  energy, traders, enterprises…) — "Shall we call you {Name in title case}?" [Yes] [Change] [Talk to a person].
+  - Yes (or typed yes, y, ok, ho, haan, हो, होय, हां) → that name. Change (or no, nahi, नाही, नहीं, बदला, बदलें) → "Please type your name."
+- No usable profile name (an emoji, initials, a shop), or after Change: "Please type your name." with [Back] [Talk to a person]. A typed answer must
+  pass the same check; otherwise "Sorry, we did not get that…" and "Please type your name in letters, like Suresh Patil." (**new:** Back is offered).
+- Typed "back" (or मागे, परत, पीछे, वापस) goes back to the language step; "change", "बदला", "बदलें" are never Back here.
 - The name is `titleCaseName`'d. There is no lead yet.
 
 ### 3.3 Back and "back" typed (`onboarding-turn.ts:goesBack`)
@@ -346,14 +316,14 @@ On answer: `wa_conversations.language` is saved. There is no lead yet. → Step 
 
 ### 3.4 Step `city`
 
-- With a configured city list:
-  > "Which city is your home or site in?" list rows: one per city (`ob:city:<City>`), "Other city" (`ob:city:other`), "Back", "Talk to a person". Button label "Choose".
-  - A typed city name that matches a row, or a row number, works.
-  - Any other typed text of 2–40 characters is also accepted as the city.
-  - Tapping Other city → await city.
-- With no list (the default), or after Other city:
-  > "Please type your city name." [Back] [Talk to a person]
-  - Anything 2–40 characters is accepted, including digits. A miss is anything shorter or longer.
+- With a configured city list: "Which city is your home or site in?" rows: one per city (`ob:city:<City>`), **(new) "📍 Send location"** (`ob:city:pin`,
+  left out only when the list is full), "Other city", "Back", "Talk to a person". With no list (the default) or after Other city: "Please type your
+  city name." [📍 Send location] [Back] [Talk to a person].
+- **[📍 Send location] (new):** WhatsApp's own location button ("Tap the button to share your location. We use it to find your city."). A pin whose
+  place name or address contains a served city fills the city; any other pin is kept ("Thanks, we have your location. Which city is it in?" and the
+  question again) and lands on the lead as the note "Location pin: https://maps.google.com/?q=lat,lng" when the city makes it. No unclear answer.
+  A reaction or a sticker is also never an unclear answer.
+- A typed city name that matches a row, or a row number, works; any other text of 2–40 characters is also accepted as the city.
 - **On a valid city answer the lead is created** (`writeAnswer`, `onboarding-lead.ts`):
   - Calls `intake.receive` with:
     - name = answered name, else profile name, else "WhatsApp contact"
@@ -424,9 +394,8 @@ Triggers:
 - Typed exact opener ("Talk to a person" and its Marathi/Hindi forms).
 - Two unclear answers in a row.
 - A voice note or video.
-- Typed words after the estimate (3.11).
+- Real words after the estimate (3.11); "ok", thanks, 👍 and Menu are not hand-overs any more.
 - A site we cannot price (3.10).
-- A "Menu" tap after the estimate (Issue 1).
 
 Effects, all in one transaction:
 - `ensureLead`: makes a lead if none exists.
@@ -437,7 +406,7 @@ Effects, all in one transaction:
 - Hand-over alert with the summary "Onboarding answers so far: Language: English; Name: …; City: …; Site: …; Bill: … (about N kW); Roof: …; Floors: …; Bill photo: sent|will send later" (staff read English). For media it is prefixed "Sent a voice note." or "Sent a video.".
 - The customer hears "Thank you. {Name|Our team} will reply to you here." [Menu], or the voice or video text from 3.7.
 
-After the hand-over the chat is `human`. Typed words and files are silent plus a staff alert. `ob:*` taps are ignored with an alert. Menu or Hello (typed "menu" only) → 3.12.
+After the hand-over the chat is `human`. Typed words and files are silent plus a staff alert. **(new)** `ob:person` is answered again (not swallowed); other old `ob:*` taps are ignored with an alert. Menu or Hello (typed "menu" only) → 3.12.
 
 ### 3.9 Referral entry (message containing a customer's code)
 
@@ -453,56 +422,41 @@ Trigger: a stranger message with no `ob`, containing `code is RAME7K2Q` or `code
   - If an open lead already exists on the number, the customer is told "We are already in touch with this number. Thank you!" as plain text (the error message). The code consumption is aborted. The chat is otherwise not handed on.
   - Customer hears: "Welcome to {Company}! {ReferrerFirstName} referred you. Our team will call you on this number soon to plan your solar."
   - Then, if onboarding is on, `fromReferral`:
-    - The name step is skipped, even when the lead's name is the placeholder "WhatsApp contact" (see Issue 8).
-    - Language is skipped, so the chat is English.
-    - The next open question is asked straight away, normally the city question: "Which city is your home or site in?" or the typed city prompt. The rest of the flow is as in 3.4 to 3.11.
+    - **(new)** The first open question is asked straight away: the language if the chat has none, then the name when the lead's name is the placeholder
+      "WhatsApp contact" or the profile name cannot be used, then the city it lacks. The lead's name is a usable profile name or the placeholder (never
+      an emoji). The welcome itself is in English because the language is not known yet. The rest of the flow is as in 3.4 to 3.11.
   - Onboarding off: only the welcome. Later messages go to `passToOwner` (2.3).
 
 ### 3.10 Estimate (end of onboarding, `onboarding/estimate.service.ts`)
 
-After `photo` is answered, `nextStep` returns `done` and `finish`:
-- Ensures a lead exists. If its lead was closed along the way it makes a new one, with next action "Call — finished onboarding".
-- State goes to `onboard:done`.
-- `EstimateService.make` prices with the real quotation engine:
-  - Panel is the owner's configured one or `suggestPanel`, plus an on-grid inverter mix. Distance is 0 km.
-  - It writes a `lead_estimates` row.
-  - It writes a note: "Estimate sent: {size}, {price} ({after} after subsidy)."
-  - Next action is today: "Call — estimate sent ({size}, {price})".
-- **Sent estimate:**
-  1. A PDF (document, filename built from `customerPdfName`).
-     - Caption: "Your solar estimate: {size}, {price} ({after} after subsidy). You could save up to {saving} a month.\nEstimate — final price in your quotation after a free call or visit."
-     - The document link is a shared file URL (`file-links.ts`).
-  2. Buttons: "What would you like to do next?" [Call me back → `ob:done:call`] [Talk to a person → `ob:person`] [Not now → `ob:done:notnow`].
-- **Expert (no instant price):** bands with no `targetWp` (default "Over ₹5,000"), a farm site, a housing society, an "Other" roof, missing catalogue products, or a pricing error.
-  - The lead's next action is today: "Call — price by hand (<reason>)", with a history note.
-  - Hand-over with summary "…. No instant estimate: <reason>".
-  - The customer gets: "Thank you! Our expert will prepare your price and call you." [Menu]. State is `human`.
+After `photo` is answered, `nextStep` returns `done` and `finish`: it ensures a lead (a new one with next action "Call — finished onboarding" if it was closed
+on the way), prices with the real quotation engine (the owner's panel or `suggestPanel`, on-grid inverter mix, distance 0), writes a `lead_estimates` row, a
+note "Estimate sent: {size}, {price} ({after} after subsidy)." and the next action today "Call — estimate sent (…)".
 
-### 3.11 After the estimate (`afterEstimate`, `estimate-next-steps.ts`)
+- **Sent estimate:** the PDF with its caption, then "What would you like to do next?" **[Book a visit] [Call me] [Not now]** (new; ids `ob:done:visit`,
+  `ob:done:call`, `ob:done:notnow`). "Talk to a person" is typed or follows each answer.
+- **Expert (no instant price):** a band with no size, a farm, a housing society, an "Other" roof, missing catalogue products or a pricing error → next action
+  "Call — price by hand (reason)", a hand-over with "No instant estimate: reason"; the customer hears "Thank you! Our expert will prepare your price and call you." [Menu].
 
-Taps:
-- **3.11.1 Call me back (`ob:done:call`).**
-  - The lead's next action is today, or tomorrow if past 18:30 (using the tap's own time).
-  - Note "Asked for a call today|tomorrow morning after the estimate". It is written once a day and is not repeated on a second tap the same day.
-  - Staff alert kind `whatsapp_callback`, title "Call back today|tomorrow morning: asked after the estimate", body "<name> · <phone>", one per chat per day.
-  - The customer hears: "Thank you. {Name|Our team} will call you today|tomorrow morning." [Talk to a person → `ob:person`].
-  - The chat stays on `onboard:done`, not `human`.
-- **3.11.2 Not now (`ob:done:notnow`).**
-  - List: "When should we check back with you?" rows In 1 week (`ob:done:later:1w`), In 1 month (`ob:done:later:1m`), In 3 months (`ob:done:later:3m`), Talk to a person. Button "Choose".
-  - A pick sets the lead's next action to that date: "Check back (customer chose)". History note "Not now after the estimate: check back in 1 week".
-  - The customer hears: "Thank you! We will check back with you then." [Call me back] [Talk to a person].
-  - Nothing is sent to the customer at check-back time. It is a staff task only.
-- **3.11.3 Talk to a person (`ob:person`).** The 3.8 hand-over.
-- **3.11.4 Anything else** (typed words, a sticker, a 👍 or reaction, an "ok", "thanks", an old `ob:*` tap, a "hi", "menu" or the nudge's Continue) → `toPerson` hand-over (3.8).
-  - The customer hears "Thank you. {Name} will reply to you here." [Menu].
-  - Staff are alerted with "Someone wants to talk on WhatsApp".
-  - See Issue 1 and Issue 2.
+### 3.11 After the estimate (`onboarding-after.ts`, `estimate-next-steps.ts`, `estimate-visit.ts`)
+
+- **Book a visit (new):** a new contact has no customer record yet, so the visit cannot be a visit record. The free days of the lead's owner (the same days as a
+  customer's pick, leave and booked slots excluded, Mon–Sat, 45 days) are a list with [Talk to a person]; a day gives [Morning] [Afternoon] for what is free;
+  the pick sets the lead's next action to that day ("Confirm the site visit the customer picked"), a history note, an alert to the owner, and tells the customer
+  "{name} will confirm your visit by 6:30 pm today / tomorrow 12 noon / Monday 12 noon". Nothing is reserved until the owner books the visit. A past, Sunday or
+  taken day is refused with the list again. Once the lead has a customer record the usual visit ask (Send to customer) applies.
+- **Call me:** next action today (or the next working morning by the tap's time), note "Asked for a call today|tomorrow morning|on Monday morning after the
+  estimate" (once a day), alert `whatsapp_callback` once a day, "Thank you. {name} will call you …" [Talk to a person]. The chat stays on `onboard:done`.
+- **Not now:** "When should we check back with you?" [In 1 week] [In 1 month] [In 3 months] [Talk to a person] → next action that date ("Check back (customer
+  chose)"); "Thank you! We will check back with you then." [Call me] [Talk to a person]. Nothing is sent to the customer at check-back time; it is a staff task.
+- **Anything else (new):** "ok", "thanks", 👍, a sticker → "You are welcome! Tap an option whenever you are ready."; a reaction → nothing; "hi" or Menu → the
+  three options again, once; an old tap → "That was an earlier message — here is the latest." and the options; a bill → filed, "Thank you. File received…",
+  the owner told, **no** option buttons again; real typed words → the 3.8 hand-over to the owner. No hand-over loop, no alert for small talk.
 
 ### 3.12 Menu or "hi" after a hand-over (stranger or lead)
 
-- `restart()` clears `handedOverAt` and `handledByUserId`, then `greet` → `onboarding.resume` → `run(chat, null)`.
-- If answers are incomplete: the current open question is asked again, and state goes to `onboard:<step>`.
-- If all questions are answered: `current==='done'` → 3.11.4, so it hands over again. See Issue 1.
+`restart()` clears `handedOverAt` and `handledByUserId`, then `greet`: onboarding resumes at the open question; a finished onboarding shows the estimate options
+(3.11); a team-made lead gets the hello (2.3); a stranger with onboarding off gets the two buttons (2.1).
 
 ### 3.13 Nudges and unattended chats (`onboarding-nudges.service.ts`, `onboarding-nudge-rules.ts`)
 
@@ -534,7 +488,7 @@ A job runs every 5 minutes, per chat under a lock.
 
 | When | What they hear | Staff side |
 |---|---|---|
-| Stranger taps `human` with onboarding off | `WORDS.humanSoon` (hours text) [Menu] | Alert "Someone wants to talk on WhatsApp"; no lead |
+| Stranger taps `human` with onboarding off | "{name} will reply here (Mon–Sat, 9:30–6:30)" [Menu] | Lead made or updated, alert "Someone wants to talk on WhatsApp" |
 | Stranger taps `callback` | "Thank you! Someone from our team will call you soon." [Menu] | Lead made, or the existing lead nudged; no separate hand-over alert |
 | Onboarding hand-over of any kind | "Thank you. {Name\|Our team} will reply to you here." [Menu] | Alert with summary; lead made if none |
 | Voice note or video, first or at any step | "Thank you for the voice note. {Name\|Our team} will listen to it and reply to you here." or the video equivalent [Menu] | Alert with "Sent a voice note" or "Sent a video"; call lead |
@@ -548,68 +502,28 @@ A job runs every 5 minutes, per chat under a lock.
 
 ---
 
-## 5. Issues seen
+## 5. Issues seen in the old map, and what happened to each
 
-1. **Menu or "hi" after the estimate re-hands-over (loop), and it is the same for "hi" or "menu" typed while not held.**
-   - `onboarding-flow.ts:121` sends `current==='done'` to `afterEstimate`, and `:198` calls `toPerson` for anything that is not an estimate tap.
-   - With `incoming=null` (resume), `estimate-next-steps.ts` returns false, so another "Someone wants to talk" alert goes out and the customer hears "Thank you. X will reply to you here." again.
-   - Every Menu button on those replies leads straight back into another hand-over.
-   - Reaching Menu from a held post-estimate chat is the common case.
-   - This comes from reading the code. No acceptance test covers it.
-2. **"ok", "thanks", "👍" and reactions after the estimate hand over** (`onboarding-flow.ts:121,198`).
-   - `thanksOnly` and `isThanks` exist only on the customer branch (`assistant.service.ts:94`).
-   - A reaction is kind `other`, quiet for the log but not quiet here, so it triggers a full hand-over alert.
-3. **A reaction or sticker mid-onboarding counts as an unclear answer** (`onboarding-flow.ts:125-142`).
-   - Kind `other` with text like "Reaction 👍" is passed to `readAnswer`, which returns a miss. Two in a row hand the chat over.
-   - A location pin sent at the city step is a miss too.
-   - Typed "ok", "yes please", "help", "call me" or "I want to talk" also count as misses, because `wantsPerson` only matches three exact opener phrases.
-4. **Silent re-ask on a stale tap** (`onboarding-flow.ts:128`).
-   - A tap on an old list row or old Back, or the nudge's Continue, just re-asks the current question with no explanation and no "retry" wording.
-   - The customer taps and nothing seems to happen.
-5. **A lead the team made gets the "not linked to any customer" text on a hello** (`assistant.service.ts:78`, `words.ts:28`).
-   - `restartsChat` wins before `stranger()`, so a team-made lead who says "Hi" is told "This number is not linked to any of our customers yet. If you are interested in solar, tap "Call me back"…".
-   - Typed non-greeting words go to their person, so the behaviour differs depending on the first word.
-6. **Onboarding off: dead-end loop and silent file loss** (`stranger-flow.ts:106`).
-   - Every message gets the same two buttons. A bill photo is neither stored nor acknowledged, except by those buttons. `files.keep` only logs it.
-7. **"Talk to a person" with onboarding off creates no lead** (`stranger-flow.ts:109`).
-   - It only alerts staff with the hand-over key. If nobody is on the desk the person is invisible in CRM.
-8. **Referral entry skips the name step and the language step** (`onboarding-flow.ts:104`, `nextStep('name', …)`).
-   - A referral with no profile name gets the lead name "WhatsApp contact", never asked.
-   - The language question is never shown, so these customers are English-only unless the chat language already exists.
-   - Marathi or Hindi referees also get "Welcome to {company}!" in English, since language is not known.
-9. **Name step has no Back button** (`onboarding-replies.ts:60`).
-   - A wrong language choice cannot be undone by tapping. Typing "back" works but is never offered. After onboarding there is no in-chat way to change language at all.
-10. **A bill sent after the estimate re-sends the "What would you like to do next?" buttons** (`onboarding-flow.ts` `takeFile` then `ask(turn, 'done')`).
-    - It also sends "Thank you. File received — our team will check it.". The call-back and not-now choices come back as if nothing was decided.
-    - A customer who already chose "Call me back" sees the question again.
-11. **Hours text is inconsistent and untrue on Sunday** (`words.ts:75`, `chat-rules.ts:46`).
-    - `humanSoon` says "Monday to Saturday", but `isWorkingTime` has no day check, so Sunday counts as working time. Holidays do too.
-    - Onboarding hand-over replies and `passedToOwner` give no hours at all.
-    - Hours appear only in `humanSoon` and `nightReply`.
-    - At night the hand-over reply counts as the "calm reply" (`hand-over.ts:155`), so `nightReply` (the one place that names hours) usually never fires after a night hand-over.
-12. **STOP typed while held fires a staff alert and a night reply before the STOP confirmation** (`whatsapp-webhook.controller.ts:129-134`).
-    - `handle()` alerts and runs `nightReply` before `assistant.handle` reaches `answerOptOut`.
-    - The customer may get "Thank you. We reply from 9:30 am to 6:30 pm…" right after typing STOP.
-13. **Opted-out numbers still get all conversational replies** (worker `delivery.activities.ts`).
-    - Opt-out stops templates only. A stranger who sent STOP and then writes again is onboarded normally, with no reminder that they opted out.
-    - The nudge is correctly suppressed.
-    - Tapping Menu on the STOP/welcome-back message does not clear the opt-out. Only START or "Start again" does.
-14. **Held chat swallows onboarding taps silently** (`handled-taps.ts:14,35`).
-    - `STRANGER_TAPS` contains only `callback` and `human`. A tap on `ob:person` or any `ob:*` row while the chat is `human` is ignored (and alerts staff), instead of being treated as "I want a person".
-    - After a staff reply, an earlier list the customer taps does nothing.
-15. **Confusing, robotic or copy-driven wording:**
-    - "Sorry, I did not get that. Please tap one option below." is shown even when the question is a typed one on the buttons variant (`notClear` vs `notClearTyped`). The language question uses the tap variant.
-    - "Shall we call you {ProfileName}?" uses the raw WhatsApp profile name, which is often an emoji, initials or a brand name.
-    - The Hindi hand-over for the estimate uses `{name ?? 'हमारी टीम'}`, while the Marathi differs in structure. Check parity.
-    - "Thank you. File received — our team will check it." is the reply for both a bill and any paper, so it never says what was received.
-    - The estimate caption carries a long second line: "Estimate — final price in your quotation after a free call or visit."
-    - The estimate has no reply to "ok"/"thanks" (Issue 2).
-16. **Quote taps from a lead or stranger** (`quote-actions.ts:~70`).
-    - Anyone whose chat has no `customerId` gets "This quote has changed or is no longer open." plus a hand-over, whichever quote button they tap. This is unlikely in practice, since quotes are sent only to customers.
-    - Quote sharing, acceptance and payment happen only once the lead is a customer (customer-side buttons "Accept quote", "I have a question", "Yes, accept", "Not yet", "Pay now"). See `quotation-message.ts` and `quote-actions.ts`.
-17. **Late-tap drop is silent** (`inbound-retry.ts`, `whatsapp-webhook.controller.ts:~84`).
-    - A tap older than the chat's newest message by 1 second or more is ignored with no reply. After a nudge or two quick taps, a legitimate tap can vanish.
-18. **Failure handling is invisible to the customer** (`whatsapp-webhook.controller.ts:~103-122`).
-    - If handling throws, the message is forgotten, staff are alerted ("A WhatsApp message was not handled") and Meta retries. The customer sees nothing, and the 500 can repeat.
-19. **Coincidental sharing of "start".**
-    - "start" is a greeting, a START opt-in word and a campaign non-code. For a non-opted-out chat it is a hello, so a person who types START meaning "begin" gets onboarding, which is fine, but for an opted-out one it gets "Welcome back!" first and the onboarding only on the next message.
+All 19 issues of the old map were fixed or removed in phase 7 (acceptance `71-onboarding-fixes`, `71-onboarding-flow`).
+
+| # | Issue | Now |
+|---|---|---|
+| 1 | Menu or "hi" after the estimate re-hands-over (loop) | Shows the three options again; no hand-over, no alert |
+| 2 | "ok", "thanks", 👍, reactions after the estimate hand over | One short word (a reaction: nothing); only real words reach the owner |
+| 3 | A reaction, sticker or pin mid-onboarding counts as an unclear answer | Never a miss; a pin at the city question is the city; others ask the question again |
+| 4 | Silent re-ask on a stale tap | "That was an earlier message — here is the latest." then the question |
+| 5 | A team-made lead saying "hi" is told "not linked to any customer" | "Hi {name} 👋 {owner} from OneOhm is helping you." [Talk to {owner}] [Quick estimate] |
+| 6 | Onboarding off: dead end, bills lost | A bill or voice note makes/updates a lead, is filed on it and the reply says so |
+| 7 | "Talk to a person" with onboarding off creates no lead | Creates or updates the lead, then the hand-over |
+| 8 | Referral entry skips language and name, silently "WhatsApp contact" | Asks the language, then the name when unknown (never an emoji name) |
+| 9 | Name step has no Back | The typed-name question offers [Back]; language is changed under More once a customer |
+| 10 | A bill after the estimate re-sends the next-step buttons | Thank-you and owner alert only |
+| 11 | Hours text untrue on Sunday and missing in replies | Mon–Sat 9:30–6:30 in every hand-over reply; Sunday says Monday |
+| 12 | STOP while held sends a night reply first | STOP is confirmed alone (staff are still told the customer wrote) |
+| 13 | Opted-out strangers writing again are not told | Told once per STOP how to start again [Start again] |
+| 14 | Held chat swallows an onboarding "Talk to a person" tap | `ob:person` is the bot's own tap: answered, person told again |
+| 15 | Robot wording (I / "File received") | "We" voice; names only when usable; emoji/brand names asked to type |
+| 16 | Quote taps from a lead or stranger | Unchanged: quotes are only sent to customers |
+| 17 | Late-tap drop is silent | Answered with the "earlier message" line (strangers and customers) |
+| 18 | Failure handling invisible to the customer | Unchanged: staff are alerted and Meta retries (no customer-facing text on purpose) |
+| 19 | Coincidental sharing of "start" | Unchanged: START only counts for an opted-out chat |

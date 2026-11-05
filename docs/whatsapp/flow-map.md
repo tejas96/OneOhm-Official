@@ -1,13 +1,11 @@
-# WhatsApp flow map (as built today)
+# WhatsApp flow map (as built after the redesign)
 
-Date: 2026-11-04 · Branch: `feat/papers-per-home` · Read from code, not run.
-
-This page is the short overview. The full step-by-step maps, with every message word for word,
-every button and list row, and every staff alert, are in:
-
-- [Part 1 — Entry, strangers, leads, onboarding, hand-over](part-1-entry-and-onboarding.md)
-- [Part 2 — Customer menu and every option](part-2-customer-menu.md)
-- [Part 3 — Files, papers, requests, problems](part-3-files-papers-problems.md)
+Date: 2026-11-05 · Branch: `feat/whatsapp-redesign` · Replaces the old three-part map of the ten-row menu.
+The design and its reasons are in [redesign.md](redesign.md) (sections 1 to 22j); the rules every message follows
+are in [conversation-principles.md](conversation-principles.md). Entry, strangers and onboarding are described step by step
+in [part-1-entry-and-onboarding.md](part-1-entry-and-onboarding.md). Templates and their Meta status are in
+[../whatsapp-templates.md](../whatsapp-templates.md). Parts 2 and 3 (the old customer menu, files and complaint maps) are gone:
+every flow they described has been replaced by the flows below.
 
 ---
 
@@ -15,125 +13,90 @@ every button and list row, and every staff alert, are in:
 
 ```
 Message comes in
-├─ STOP / START typed ............ opt out / back in (always first)
-├─ "hi", "hello", "menu" ......... start over (menu for customers, onboarding/buttons for others)
-├─ Chat held by a person ......... bot stays quiet, person is alerted (except bot's own taps)
+├─ STOP / START typed ............ opt out / back in (always first; a stranger who stopped and writes again is told once)
+├─ "hi", "hello", "menu" ......... Home for a customer · the onboarding question for a new contact · the hello for a team-made lead
+├─ Chat held by a person ......... bot stays quiet and the person is alerted — except the bot's own taps (Menu, Talk to a person,
+│                                  forms, the buttons of its messages); STOP gets no night reply first
+├─ Late tap (older than the chat's newest message) ... "That was an earlier message — here is the latest." + the current step
 ├─ Unknown number (stranger)
-│   ├─ Onboarding ON (default) ... onboarding questions → estimate
-│   ├─ Onboarding OFF ............ "This number is not linked…" [Call me back] [Talk to a person]
-│   └─ Lead made by the team ..... typed words → passed to their salesperson
-└─ Known customer ................ customer menu, files, papers, problems
+│   ├─ Onboarding ON (default) ... onboarding by taps (section 3)
+│   ├─ Onboarding OFF ............ buttons [Call me back] [Talk to a person]; a bill or voice note still makes/updates a lead
+│   └─ Lead made by the team ..... "Hi {name} 👋 {owner} from OneOhm is helping you." [Talk to {owner}] [Quick estimate]
+└─ Known customer ................ Home, asks, papers, problems (sections 2 and 4 to 9)
 ```
 
-## 2. Stranger → lead: onboarding (Part 1, §3)
+Languages: English, Marathi, Hindi everywhere. A new contact chooses with 3 buttons; a customer changes it under More → Language;
+typing in Devanagari switches automatically (asked once when Marathi and Hindi cannot be told apart).
+Hours text is always "Mon–Sat, 9:30 am–6:30 pm"; on Sunday a person "replies on Monday from 9:30".
+
+## 2. Home and More (customers)
+
+"Hi {name} 👋" + the one thing that matters now (first that applies): open ask → money due → visit in 3 days → open problem → quote
+waiting → "How can we help today?". Buttons: [the action] [Project update] [More]. Two or more things → "2 things need you" [See them].
+[More]: Project update · Payments · Documents · Send a paper · Report a problem · My problems · Warranty & AMC · Refer a friend ·
+Talk to {name} · Language. Small talk ("ok", "thanks", 👍) gets a short word back; unknown text gets "Sorry, we didn't get that."
+[Talk to {name}] [Project update] [More]; a second unknown message in a row goes to the person, said clearly.
+
+## 3. New contacts (redesign §16)
 
 ```
-1. Language   [English] [मराठी] [हिंदी]
-2. Name       "Shall we call you Tejas?" [Yes] [Change] [Talk to a person]
-3. City       list or typed city            → lead is created here, salesperson alerted
-4. Site       Home / Society / Shop or business / Farm
-5. Bill       ₹ bands (Up to ₹1,000 … Over ₹5,000)
-6. Roof       RCC slab / Tin sheet / Other
-7. Floors     Ground only / 2 floors / 3 or more
-8. Bill photo send it, or [Send later]
-9. Estimate   PDF + "What would you like to do next?" [Call me back] [Talk to a person] [Not now]
-              (farm, society, big bill, other roof → "Our expert will prepare your price and call you.")
-Every step: [Back] [Talk to a person]; 2 unclear answers → handed to a person.
-Silent for 3 h → lead made + one "Shall we continue?" nudge.
-Referral code message → lead + "X referred you" → skips language and name.
+Language [English] [मराठी] [हिंदी] → "Shall we call you Suresh?" [Yes] [Change]   (emoji, initials, shop names: asked to type)
+→ City: list + [📍 Send location]     (a pin that names a served city fills it; else the city is asked and the pin kept on the lead)
+→ Site: Home / Society / Shop / Farm → Monthly bill bands → Roof → Floors → Bill photo [Send later]
+→ Estimate PDF → [Book a visit] [Call me] [Not now]
+     Book a visit → free days list → Morning/Afternoon → lead next action + owner alert (no customer record yet, so no reservation)
+     Call me      → "{owner} will call you today / tomorrow morning / on Monday morning" (lead next action + alert)
+     Not now      → [1 week] [1 month] [3 months] → check-back date on the lead
+After the estimate: "ok / thanks / 👍 / sticker / reaction" → one short word; "hi" or Menu → the three options again;
+a bill → filed, one thank-you, no buttons again; real words → the lead's owner.
 ```
 
-## 3. Customer menu (Part 2, §1–2)
+Every question has [Back] and [Talk to a person]; two unclear answers hand over. A reaction, sticker or pin is never an unclear
+answer. An old tap gets the "earlier message" line. Silent for 3 hours → lead made + one "Shall we continue?" nudge.
+A referral code message makes the lead, welcomes in English, then asks language and (if unknown) name.
 
-"Hello {name}! I am the OneOhm assistant. What would you like to see?" [Choose]
+## 4. Customer actions — one status system (redesign §2)
 
-| # | Row | What happens |
+Every ask of a customer is one record: `paper · location · self_survey · visit_pick · presence · signature · pay · confirm · rating ·
+payout · callback`, with the status line *Sent → Done by customer → Checked / Ask again → Closed* (or Cancelled), reminders at 2 days,
+staff checks at 1 and 2 working days, and its channel (`whatsapp`, `sms` or `in_person`). Home, "Asked from the customer" and the
+reminders read the same rows. Staff send and cancel everything from **Send to customer** (redesign §18).
+
+## 5. Papers, location, payments, documents
+
+- **Papers:** a file is first "What is this?" (the paper) then "Which home?" only when it matters; staff Looks good / Ask again.
+- **Location:** [📍 Send location] (a single-button message); a pin is a suggestion staff check when it conflicts.
+- **Payments:** [Pay ₹X] opens our pay page; "I paid another way" is a form (amount, day, photo) → finance records.
+- **Documents:** ours to the customer (quote, invoice, receipts, handover pack) from Documents.
+
+## 6. Visits and the journey (redesign §4, §8)
+
+Visit pick (free days → slot → proposed → staff confirm → Booked), day-before [Confirm] [Change day], DISCOM presence
+[I'll be there] [Change day]; journey steps with buttons (agreement signature, roof ready, installation finished, handover pack,
+subsidy, loan, layout); self site survey with a discount (form, approve, credit on the next instalment).
+
+## 7. Quote, problems, rating, referral, AMC (phase 6)
+
+Quote: [Accept quote] [I have a question] (a list of fixed answers + Call me) · Not yet → check-back. Problem: form or taps
+(home · what · since · photos), a named person and a time, a call task; "Fixed ✅ Is it working now?" → Still a problem reopens.
+Rating: 5 taps, one system. Referral: friend form; reward approved → "Share your UPI ID" → staff check → paid (a payout ask closes
+when its reward is paid another way, rejected or cancelled). AMC: renewal offer 30 days before the end.
+
+## 8. Customers not on WhatsApp (redesign §17)
+
+| Action | Path (SMS customer) | Path (customer on neither) |
 |---|---|---|
-| 1 | Project progress | All projects in one text: stage, next step, waiting on, subsidy. [Menu] [Pay now] [Talk to us] |
-| 2 | Payments | Instalment list, then one "Pay now" card per due amount, then "What next?" |
-| 3 | Documents | 0 → "No documents yet"; 1 → sent straight away; 2+ → "Which paper would you like?" list |
-| 4 | Report a problem | 2+ homes → "Which home is the problem at?" → "Please tell us the problem…" → request raised |
-| 5 | My requests | Up to 5 requests with status |
-| 6 | Warranty and AMC | Cover per project |
-| 7 | Refer a friend | "Send your friend's name and number…" → lead made |
-| 8 | My rewards | Referrals and rewards |
-| 9 | Rate us | 5-step list → "Anything to add?" |
-| 10 | Talk to a person | Handed to a person: "A team member will reply here soon (Mon–Sat, 9:30–6:30)…" |
+| Paper, rating | SMS text: "send it from the OneOhm app, or give it to our team" | In person |
+| Payment | SMS with the pay link | In person |
+| Location, self survey, visit pick, signature, site ready, installation check, subsidy, bank sign, call-back, UPI, payment proof, AMC renewal | In person | In person |
+| Quote accept | In person (staff mark it accepted with the customer) | In person |
+| News (document, receipt, crew, delay, pack, layout) | The approved message's SMS | Customer handovers list |
 
-Quote buttons (sent by the team): [Accept quote] → "Accept … for ₹T?" [Yes, accept] [Not yet]; [I have a question] → person.
-Any other typed text → handed to a person: "Thank you. {Name} will reply to you here."
+"In person" is a task on **Customers → to share in person** for the owner. The Send-to-customer sheet shows which path will be used
+and the action keeps it in `payload.channel`.
 
-## 4. Files, papers, problems (Part 3)
+## 9. Held chats, hand-back, hours
 
-```
-Customer sends a file
-├─ Voice note / video ............. handed to a person ("will listen/watch")
-├─ During "describe the problem" .. added to the new problem
-├─ Within 30 min of a problem ..... added to that problem (photos only)
-├─ 0 homes ........................ "Thank you! We got your photo…"
-├─ 1 home / home picked <30 min / only one home has open requests → that home
-└─ otherwise ...................... "Which home is this for?" [homes…] [Aadhaar/PAN (all homes)]
-       then on that home:
-       ├─ 0 open requests ......... "Saved: photo for your home at X."
-       ├─ 1 open request .......... answers it (no check what the photo is)
-       └─ 2+ open requests ........ "Which paper is this?" [requests…] [Something else]
-Location / contact / sticker → person alerted, no reply. Reaction → nothing.
-```
-
-Team asks for a paper (web) → WhatsApp template (or SMS / app) → reminder at 2 days → staff alert at 4 days.
-Ask again, cancel, staff upload and Move all tell the right side (Part 3 §2.8).
-
----
-
-## 5. Biggest problems found (for the redesign)
-
-Grouped by what you asked for. Numbers point to the "Issues seen" list in each part (P1, P2, P3).
-
-### A. It feels like a robot, not a person
-- Same greeting every time ("I am the OneOhm assistant. What would you like to see?"); never says what is new (payment due, step done, paper needed). P2-15
-- Menu needs 2 taps (open list, pick row) for everything; answers end with only [Menu] [Talk to us], so the next natural step costs 3 more taps. P2-6, P2-14, P2-22
-- Answers tell the customer to tap buttons that are not there ("tap Report a problem in the menu"). P2-6
-- Odd sentences: "Your no generation request is raised", "Bank loan: ₹X (bank loan)", "(via WhatsApp)" shown to the customer. P2-16, P2-18, P3-15
-- Two names for the same thing: "Talk to a person" vs "Talk to us"; "Back to menu" vs "Menu". P2-13, P2-14
-
-### B. Replies are "dumb" (not reading what the customer means)
-- Any typed text that is not a menu word ("Good morning", "yes", "when will you come?", "Hello!") silently hands the chat to a person; the bot then goes quiet. P2-1, P2-2
-- "ok" after a quote gets "You're welcome 🙏"; "yes" goes to a person — neither accepts. P2-3
-- Typed menu words during "describe the problem" become the complaint ("documents (via WhatsApp)"). P2-4, P3-34
-- After the estimate, "ok", "thanks", 👍 or Menu all hand over again — a loop. P1-1, P1-2
-- One open request + any photo = answered, even a roof photo for "electricity bill". P3-2
-- 30-minute "glue": a second paper within 30 min is silently filed as the same paper. P3-3
-
-### C. Aadhaar/PAN mixed with property choices
-- "Aadhaar/PAN (all homes)" is a row inside "Which home is this for?" — two different questions in one list. P3-12, P3-27
-- Reply after that row: "files you send now are for *Aadhaar/PAN (all homes)*". P3-12
-- One-home customers get "Saved: Aadhaar card for your home at Pune". P3-13
-- Request template says "your Aadhaar card for your solar at Pune". P3-30
-- An Aadhaar photo can answer a bill request on the "only home with open requests". P3-28
-
-### D. Not predictable
-- Remembered home for 30 min: a photo for the other home goes to the wrong one with no question and no way to change. P3-32
-- Menu / hello / another step quietly drops waiting files; a late tap then says "Noted…" and files nothing. P3-4
-- Late taps are dropped with no reply. P2-0.1, P3-45
-- Bot hands the chat back after 4 hours, or on Menu, without telling the customer. P2-12
-- Hours text says Mon–Sat, but Sunday counts as working time. P1-11
-
-### E. Dead ends and gaps
-- Onboarding off: every message gets the same two buttons; bill photos are not stored. P1-6
-- Team-made lead says "hi" → "This number is not linked to any of our customers". P1-5
-- No way to change language in chat. P1-9, P2-21
-- Voice note during a complaint wipes the complaint. P3-8
-- Unsupported file: "send it again in a little while" (it will never work). P3-9
-- Staff note on a paper request never reaches WhatsApp. P3-19
-
----
-
-## 6. What is next
-
-Agree the target conversation first (how it should sound and behave), then change the code to match.
-Suggested order of the conversation design:
-1. Principles (tone, names, buttons rule, what the bot does with text it does not understand).
-2. Customer menu and answers.
-3. Files and papers (separate "whose paper" from "which home").
-4. Problems.
-5. Strangers and onboarding.
+Talk to a person: "{name} will reply here (Mon–Sat, 9:30–6:30)" or "…tomorrow from 9:30". The person's hold ends with Menu, Release
+or 4 working hours of silence; the customer is told only if they wrote meanwhile ("{name} is away now — we're here to help.").
+A held chat still answers the bot's own taps (including an onboarding "Talk to a person").
