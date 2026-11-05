@@ -386,14 +386,13 @@ Payloads `vcf:<visit id>` and `vchg:<visit id>`.
 Fields: customer, work, home, day
 
 Sent when the team tells the customer the date the electricity board visits. `work` is DISCOM inspection or net
-meter fitting, in the customer's language. The Marathi and Hindi texts put {{3}} and {{4}} before {{2}}; if Meta
-insists on numbering in order of appearance, reorder the fields in Settings → WhatsApp messages to match.
+meter fitting, in the customer's language.
 
 > en: Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.
 
-> mr: नमस्कार {{1}}, वीज मंडळ (DISCOM) {{3}} येथे {{4}} रोजी {{2}} करणार आहे. कृपया घरी राहा.
+> mr: नमस्कार {{1}}, {{2}} साठी वीज मंडळ (DISCOM) {{3}} येथे {{4}} रोजी येणार आहे. कृपया घरी राहा.
 
-> hi: नमस्ते {{1}}, बिजली बोर्ड (DISCOM) {{3}} पर {{4}} को {{2}} करेगा। कृपया घर पर रहें।
+> hi: नमस्ते {{1}}, {{2}} के लिए बिजली बोर्ड (DISCOM) {{3}} पर {{4}} को आएगा। कृपया घर पर रहें।
 
 Examples: Ramesh Patil · DISCOM inspection · Sangli · Thu 6 Nov
 

@@ -45,12 +45,12 @@ CREATE INDEX "visits_day_idx" ON "visits" USING btree ("day","status");--> state
 CREATE UNIQUE INDEX "visits_one_open_task" ON "visits" USING btree ("task_id") WHERE "visits"."status" in ('proposed','confirmed') and "visits"."task_id" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "visits_one_open_service" ON "visits" USING btree ("service_request_id") WHERE "visits"."status" in ('proposed','confirmed') and "visits"."service_request_id" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "visits_one_open_lead" ON "visits" USING btree ("lead_id","kind") WHERE "visits"."status" in ('proposed','confirmed') and "visits"."lead_id" is not null and "visits"."task_id" is null and "visits"."service_request_id" is null;--> statement-breakpoint
--- A day already booked on a service request (including AMC visits) becomes its visit record, so nothing shows two dates.
+-- A day still ahead on a service request (including AMC visits) becomes its visit record, so nothing shows two dates; days already past are left alone (they would only raise missed-visit alerts).
 INSERT INTO "visits" ("kind", "status", "customer_id", "project_id", "service_request_id", "amc_visit_id", "day", "slot", "crew_user_ids", "proposed_by", "confirmed_at")
 SELECT CASE WHEN a."id" IS NULL THEN 'service'::"visit_kind" ELSE 'amc'::"visit_kind" END, 'confirmed', r."customer_id", r."project_id", r."id", a."id", r."visit_on", 'morning',
        CASE WHEN r."assignee_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[r."assignee_user_id"] END, 'staff', now()
 FROM "service_requests" r LEFT JOIN "amc_visits" a ON a."service_request_id" = r."id"
-WHERE r."visit_on" IS NOT NULL AND r."status" <> 'resolved'
+WHERE r."visit_on" IS NOT NULL AND r."status" <> 'resolved' AND r."visit_on" >= current_date
 ON CONFLICT DO NOTHING;
 --> statement-breakpoint
 -- New customer templates for visits: off until Meta approves them (en, mr, hi); a row already there is kept.
@@ -60,3 +60,27 @@ INSERT INTO "message_templates" ("key", "audience", "meta_name", "fields", "prev
 ('visit_reminder', 'customer', 'visit_reminder', ARRAY['customer','home','when','work'], 'Hello {{1}}, our team visits {{2}} {{3}} for the {{4}}. Please confirm.', false),
 ('inspection_presence', 'customer', 'inspection_presence', ARRAY['customer','work','home','day'], 'Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.', false)
 ON CONFLICT ("key") DO NOTHING;
+
+--> statement-breakpoint
+-- An open visit follows its person: when the task, the service request or the lead changes hands, the visit's crew changes with it (any path that reassigns).
+CREATE FUNCTION "visits_follow_assignee"() RETURNS trigger AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'project_tasks' THEN
+    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."assignee_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."assignee_user_id"] END, "updated_at" = now()
+     WHERE "task_id" = NEW."id" AND "status" IN ('proposed', 'confirmed');
+  ELSIF TG_TABLE_NAME = 'service_requests' THEN
+    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."assignee_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."assignee_user_id"] END, "updated_at" = now()
+     WHERE "service_request_id" = NEW."id" AND "status" IN ('proposed', 'confirmed');
+  ELSE
+    UPDATE "visits" SET "crew_user_ids" = CASE WHEN NEW."owner_user_id" IS NULL THEN '{}'::uuid[] ELSE ARRAY[NEW."owner_user_id"] END, "updated_at" = now()
+     WHERE "lead_id" = NEW."id" AND "task_id" IS NULL AND "service_request_id" IS NULL AND "status" IN ('proposed', 'confirmed');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--> statement-breakpoint
+CREATE TRIGGER "project_tasks_visit_crew" AFTER UPDATE OF "assignee_user_id" ON "project_tasks" FOR EACH ROW WHEN (OLD."assignee_user_id" IS DISTINCT FROM NEW."assignee_user_id") EXECUTE FUNCTION "visits_follow_assignee"();
+--> statement-breakpoint
+CREATE TRIGGER "service_requests_visit_crew" AFTER UPDATE OF "assignee_user_id" ON "service_requests" FOR EACH ROW WHEN (OLD."assignee_user_id" IS DISTINCT FROM NEW."assignee_user_id") EXECUTE FUNCTION "visits_follow_assignee"();
+--> statement-breakpoint
+CREATE TRIGGER "leads_visit_crew" AFTER UPDATE OF "owner_user_id" ON "leads" FOR EACH ROW WHEN (OLD."owner_user_id" IS DISTINCT FROM NEW."owner_user_id") EXECUTE FUNCTION "visits_follow_assignee"();

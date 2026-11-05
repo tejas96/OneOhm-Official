@@ -38,6 +38,8 @@ export const visitsOfSchema = z.object({
   /** The customer may be messaged (the task's template allows it). */
   customerMessages: z.boolean(),
   visits: z.array(visitSchema),
+  /** The task's own start day, so the card can show when the visit and the task differ. */
+  taskStartDate: calendarDateSchema.nullable(),
   freeDays: z.array(calendarDateSchema),
 });
 export type VisitsOf = z.infer<typeof visitsOfSchema>;

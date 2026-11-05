@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  confirmDeadline,
   freeSlots,
   freeVisitDays,
   isPresenceKind,
@@ -9,6 +10,7 @@ import {
   reminderDue,
   visitKindOfTask,
   visitMissed,
+  zonedInstant,
 } from './visit-rules';
 
 // 2026-11-05 is a Thursday; 2026-11-08 a Sunday.
@@ -82,5 +84,23 @@ describe('missed and kinds', () => {
     expect(visitKindOfTask('discom_application')).toBeNull();
     expect(isPresenceKind('inspection')).toBe(true);
     expect(isPresenceKind('survey')).toBe(false);
+  });
+});
+
+describe('the promise to confirm', () => {
+  const tz = 'Asia/Kolkata';
+  it('a pick in working hours is promised for 6:30 pm that day', () => {
+    // 2026-11-05 is a Thursday; 11:00 UTC is 16:30 in India.
+    expect(confirmDeadline(new Date('2026-11-05T11:00:00Z'), tz).toISOString()).toBe(
+      '2026-11-05T13:00:00.000Z',
+    );
+  });
+  it('a pick on Saturday evening is promised for noon on Monday', () => {
+    expect(confirmDeadline(new Date('2026-11-07T14:00:00Z'), tz).toISOString()).toBe(
+      '2026-11-09T06:30:00.000Z',
+    );
+  });
+  it('turns a local clock time into an instant', () => {
+    expect(zonedInstant('2026-11-05', 12 * 60, tz).toISOString()).toBe('2026-11-05T06:30:00.000Z');
   });
 });

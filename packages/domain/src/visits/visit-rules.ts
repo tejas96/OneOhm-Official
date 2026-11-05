@@ -1,5 +1,5 @@
 import { addDays, todayIn } from '@oneohm/shared';
-import { WORK_END_MIN } from '../messaging/chat-rules';
+import { callDay, WORK_END_MIN } from '../messaging/chat-rules';
 
 /** The visits the team books with a customer (redesign §8). */
 export const VISIT_KINDS = [
@@ -133,3 +133,36 @@ export const visitDayStarted = (visitDay: string, now: Date, timeZone: string): 
 
 /** The days the home shows an upcoming visit: today and the next three. */
 export const HOME_VISIT_DAYS = 3;
+
+/** The instant a clock time (minutes after midnight) on a calendar day is reached in a time zone. */
+export function zonedInstant(day: string, minutes: number, timeZone: string): Date {
+  const guess = Date.parse(`${day}T00:00:00Z`) + minutes * 60_000;
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(guess));
+  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
+  const local = Date.UTC(
+    part('year'),
+    part('month') - 1,
+    part('day'),
+    part('hour'),
+    part('minute'),
+  );
+  return new Date(guess - (local - guess));
+}
+
+/**
+ * When the team promised to confirm a customer's pick ("we'll confirm by 6:30 pm today", or by
+ * 12 noon on the next working day), the same promise the customer was told.
+ */
+export function confirmDeadline(pickedAt: Date, timeZone: string): Date {
+  const { add } = callDay(pickedAt, timeZone);
+  const day = addDays(todayIn(timeZone, pickedAt), add);
+  return zonedInstant(day, add === 0 ? WORK_END_MIN : 12 * 60, timeZone);
+}
