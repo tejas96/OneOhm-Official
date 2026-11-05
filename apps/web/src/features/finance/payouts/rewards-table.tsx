@@ -5,6 +5,7 @@ import { ResponsiveTable, type TableColumn } from '@oneohm/design-system/web';
 import { formatInr, formatKwp } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type PayoutActions, PayoutStatus } from './payout-status';
+import { RewardUpi } from './reward-upi';
 import type { PayoutTarget } from './use-payouts';
 
 const targetOf = (reward: ReferralReward): PayoutTarget => ({
@@ -78,7 +79,12 @@ export function RewardsTable({
     {
       key: 'status',
       header: t('columns.status'),
-      cell: (reward) => <PayoutStatus row={reward} target={targetOf(reward)} actions={actions} />,
+      cell: (reward) => (
+        <span className="flex flex-col">
+          <PayoutStatus row={reward} target={targetOf(reward)} actions={actions} />
+          <RewardUpi reward={reward} />
+        </span>
+      ),
     },
   ];
   return (

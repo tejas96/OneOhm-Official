@@ -307,7 +307,9 @@
         "presence": "Be at home",
         "signature": "Signature",
         "confirm": "Question",
-        "self_survey": "Self survey"
+        "self_survey": "Self survey",
+        "rating": "Rating",
+        "payout": "UPI ID"
       },
       "callback": {
         "called": "Called"

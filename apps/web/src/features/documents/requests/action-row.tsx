@@ -17,6 +17,8 @@ import {
   MapPin,
   PenLine,
   PhoneCall,
+  Star,
+  Wallet,
 } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { documentUrl } from '@/lib/api/upload';
@@ -51,6 +53,8 @@ const ICON: Readonly<Record<string, LucideIcon>> = {
   signature: PenLine,
   confirm: CircleHelp,
   self_survey: ClipboardCheck,
+  rating: Star,
+  payout: Wallet,
 };
 
 /** A call-back that waits is "To call", a picked visit day "To confirm"; the rest by status. */
