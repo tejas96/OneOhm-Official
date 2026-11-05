@@ -92,7 +92,7 @@ export class DocumentRequestsService {
         projectId: target.projectId,
         category: input.category,
       });
-      await askCustomer(tx, { ...target, id: row.id, title }, 0);
+      await askCustomer(tx, { ...target, id: row.id, title }, 0, actor.userId);
       await logAction(tx, target, {
         kind: 'document_request',
         message: `Asked the customer for ${title} (WhatsApp and app)`,
