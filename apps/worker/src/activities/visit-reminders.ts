@@ -12,8 +12,10 @@ import {
   visits,
 } from '@oneohm/database';
 import {
+  confirmDeadline,
   isPresenceKind,
   isWorkingTime,
+  previousWorkingDay,
   reminderDue,
   templateIsOn,
   VISIT_PHRASES,
@@ -25,7 +27,7 @@ import {
   workingMinutesBetween,
 } from '@oneohm/domain';
 import { titleCaseName, todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
 const PER_TICK = 200;
 const WORKING_DAY_MIN = 9 * 60;
@@ -38,6 +40,9 @@ type Row = typeof visits.$inferSelect & {
   finished: boolean;
 };
 
+/** The work itself is finished: the task is completed or the request resolved. */
+const finishedNow = sql`coalesce(${projectTasks.status} = 'completed', ${serviceRequests.status} = 'resolved', false)`;
+
 const select = (db: Database) =>
   db
     .select({
@@ -45,7 +50,7 @@ const select = (db: Database) =>
       customer: customers.name,
       phone: customers.phoneE164,
       notify: projectTasks.notifyCustomer,
-      finished: sql<boolean>`coalesce(${projectTasks.status} = 'completed', ${serviceRequests.status} = 'resolved', false)`,
+      finished: sql<boolean>`${finishedNow}`,
     })
     .from(visits)
     .innerJoin(customers, eq(customers.id, visits.customerId))
@@ -83,20 +88,29 @@ export async function queueVisitReminders(
 ): Promise<number> {
   const open = flat(
     await select(db)
-      .where(inArray(visits.status, ['proposed', 'confirmed']))
+      .where(
+        or(
+          inArray(visits.status, ['proposed', 'confirmed']),
+          // A missed visit stays in view only while its work turns out to be finished.
+          and(eq(visits.status, 'missed'), finishedNow),
+        ),
+      )
       .orderBy(asc(visits.day))
       .limit(PER_TICK),
   );
   let done = 0;
-  for (const row of open) {
-    if (row.status === 'confirmed' && row.finished) done += (await markDone(db, row, now)) ? 1 : 0;
-    else if (visitMissed(row.day, now, timeZone)) done += (await markMissed(db, row, now)) ? 1 : 0;
-    else if (row.status === 'confirmed') {
-      done += (await remind(db, row, now, timeZone)) ? 1 : 0;
-      done += (await alertUnconfirmed(db, row, now, timeZone)) ? 1 : 0;
-    }
-  }
+  for (const row of open) done += (await step(db, row, now, timeZone)) ? 1 : 0;
   return done;
+}
+
+/** What one open visit is due for this tick; true when it did something. */
+async function step(db: Database, row: Row, now: Date, timeZone: string): Promise<boolean> {
+  if (row.finished && row.status !== 'proposed') return markDone(db, row, now);
+  if (row.status === 'missed') return false;
+  if (visitMissed(row.day, now, timeZone)) return markMissed(db, row, now);
+  if (row.status === 'proposed') return alertProposed(db, row, now, timeZone);
+  const reminded = await remind(db, row, now, timeZone);
+  return (await alertUnconfirmed(db, row, now, timeZone)) || reminded;
 }
 
 async function templateOn(db: Database, key: string) {
@@ -118,15 +132,9 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
     today,
     working: isWorkingTime(now, timeZone),
   });
-  if (!due) return false;
+  // With the message off nothing is sent and nothing is marked: the visit morning alert says so.
+  if (!due || !(await templateOn(db, 'visit_reminder'))) return false;
   const lang = await language(db, row.phone);
-  const claimed = await db
-    .update(visits)
-    .set({ reminderSentAt: now, updatedAt: now })
-    .where(and(eq(visits.id, row.id), isNull(visits.reminderSentAt)))
-    .returning({ id: visits.id });
-  if (claimed.length === 0) return false;
-  if (!(await templateOn(db, 'visit_reminder'))) return false;
   await queueCustomerMessage(
     db,
     row.phone,
@@ -136,41 +144,85 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
       home: await homeNameOf(db, row.projectId, row.propertyId),
       when: visitReminderWhen(row.day, today, row.slot, lang),
       work: VISIT_PHRASES[lang].work[row.kind],
-      confirmPayload: `vcf:${row.id}`,
-      changePayload: `vchg:${row.id}`,
+      confirmPayload: `vcf:${row.id}:${row.day}`,
+      changePayload: `vchg:${row.id}:${row.day}`,
     },
     `visit_reminder:${row.id}:${row.day}:${row.slot}`,
   );
+  // Marked only once it is queued; the key above makes a repeat harmless.
+  await db
+    .update(visits)
+    .set({ reminderSentAt: now, updatedAt: now })
+    .where(and(eq(visits.id, row.id), isNull(visits.reminderSentAt)));
   return true;
 }
 
-/**
- * No reply by the visit morning: the owner is told once. A DISCOM date the customer has not
- * answered after 1 working day is told the same way.
- */
-async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: string) {
-  if (row.unconfirmedAlertAt || row.customerConfirmedAt || row.customerCannotAt) return false;
-  const presence = isPresenceKind(row.kind);
-  const waited = presence
-    ? row.toldAt !== null && workingMinutesBetween(row.toldAt, now, timeZone) >= WORKING_DAY_MIN
-    : row.reminderSentAt !== null &&
-      visitDayStarted(row.day, now, timeZone) &&
-      isWorkingTime(now, timeZone);
-  if (!waited) return false;
+/** Tells the owner once per visit (the flag is claimed first, so two ticks cannot both tell). */
+async function claimAlert(db: Database, row: Row, now: Date): Promise<boolean> {
   const claimed = await db
     .update(visits)
     .set({ unconfirmedAlertAt: now })
     .where(and(eq(visits.id, row.id), isNull(visits.unconfirmedAlertAt)))
     .returning({ id: visits.id });
-  if (claimed.length === 0) return false;
+  return claimed.length > 0;
+}
+
+/**
+ * No reply by the visit morning: the owner is told once, saying whether a reminder reached the
+ * customer. A DISCOM date unanswered after 1 working day is told the same way, and again the
+ * working day before it. Nothing for a task whose customer is not messaged (PRD 6.2).
+ */
+async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: string) {
+  if (!mayMessage(row) || row.customerConfirmedAt || row.customerCannotAt) return false;
+  const presence = isPresenceKind(row.kind);
   const day = visitDayLabel(row.day, 'en');
+  if (
+    presence &&
+    previousWorkingDay(row.day) === todayIn(timeZone, now) &&
+    isWorkingTime(now, timeZone)
+  ) {
+    // The key makes this one alert, whatever the number of ticks.
+    await alertVisitOwner(db, row, {
+      kind: 'visit_not_confirmed',
+      title: `${visitName(row)} is tomorrow and ${row.customer} has not confirmed`,
+      body: `They were told the DISCOM date (${day}) and have not answered. Please call them.`,
+      key: `visit_presence_tomorrow:${row.id}`,
+    });
+  }
+  if (row.unconfirmedAlertAt) return false;
+  const confirmedOn = todayIn(timeZone, row.confirmedAt ?? row.createdAt);
+  const waited = presence
+    ? row.toldAt !== null && workingMinutesBetween(row.toldAt, now, timeZone) >= WORKING_DAY_MIN
+    : visitDayStarted(row.day, now, timeZone) &&
+      isWorkingTime(now, timeZone) &&
+      // A visit booked for the day itself was never due a reminder.
+      (row.reminderSentAt !== null || confirmedOn < row.day);
+  if (!waited || !(await claimAlert(db, row, now))) return false;
   await alertVisitOwner(db, row, {
     kind: 'visit_not_confirmed',
     title: `${row.customer} has not confirmed ${presence ? `the visit on ${day}` : "today's visit"}`,
     body: presence
       ? 'They were told the DISCOM date and have not answered. Please call them.'
-      : 'They did not answer the reminder. Please call them before the team goes.',
+      : row.reminderSentAt
+        ? 'They did not answer the reminder. Please call them before the team goes.'
+        : 'No reminder reached them (the message is off). Please call them before the team goes.',
     key: `visit_unconfirmed:${row.id}`,
+  });
+  return true;
+}
+
+const visitName = (row: Row) =>
+  row.kind === 'net_meter' ? 'Net meter fitting' : 'DISCOM inspection';
+
+/** The customer's pick still waits for the team after the time we promised: the owner is told. */
+async function alertProposed(db: Database, row: Row, now: Date, timeZone: string) {
+  if (row.unconfirmedAlertAt || now < confirmDeadline(row.createdAt, timeZone)) return false;
+  if (!(await claimAlert(db, row, now))) return false;
+  await alertVisitOwner(db, row, {
+    kind: 'visit_pick_waiting',
+    title: `${row.customer}'s pick for ${visitDayLabel(row.day, 'en')} is still waiting`,
+    body: 'We told them we would confirm by now. Confirm the day or change it.',
+    key: `visit_pick_waiting:${row.id}`,
   });
   return true;
 }
@@ -180,7 +232,7 @@ async function markDone(db: Database, row: Row, now: Date): Promise<boolean> {
   const marked = await db
     .update(visits)
     .set({ status: 'done', doneAt: now, updatedAt: now })
-    .where(and(eq(visits.id, row.id), eq(visits.status, 'confirmed')))
+    .where(and(eq(visits.id, row.id), inArray(visits.status, ['confirmed', 'missed'])))
     .returning({ id: visits.id });
   return marked.length > 0;
 }
@@ -193,19 +245,32 @@ async function markMissed(db: Database, row: Row, now: Date): Promise<boolean> {
     .where(and(eq(visits.id, row.id), inArray(visits.status, ['proposed', 'confirmed'])))
     .returning({ id: visits.id });
   if (marked.length === 0) return false;
+  // The ticket must not keep showing a day that has gone by.
+  if (row.serviceRequestId)
+    await db
+      .update(serviceRequests)
+      .set({ visitOn: null, updatedAt: now })
+      .where(eq(serviceRequests.id, row.serviceRequestId));
   const day = visitDayLabel(row.day, 'en');
+  const never = row.status === 'proposed';
   if (row.projectId)
     await db.insert(projectActivities).values({
       projectId: row.projectId,
       taskId: row.taskId,
       kind: 'visit',
-      message: `Visit on ${day} was not marked done: marked missed`,
+      message: never
+        ? `The customer's pick for ${day} was never confirmed`
+        : `Visit on ${day} was not marked done: marked missed`,
       data: { visitId: row.id },
     });
   await alertVisitOwner(db, row, {
     kind: 'visit_missed',
-    title: `Visit to ${row.customer} on ${day} was not marked done`,
-    body: 'Mark it done if it happened, or book a new day with the customer.',
+    title: never
+      ? `${row.customer}'s pick for ${day} was never confirmed`
+      : `Visit to ${row.customer} on ${day} was not marked done`,
+    body: never
+      ? 'The day has passed. Book a new day with the customer.'
+      : 'Mark it done if it happened, or book a new day with the customer.',
     key: `visit_missed:${row.id}`,
   });
   return true;

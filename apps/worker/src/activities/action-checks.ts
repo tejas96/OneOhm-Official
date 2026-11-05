@@ -3,6 +3,7 @@ import {
   customerActions,
   customers,
   type Database,
+  type Notice,
   notifications,
   notifyCover,
   notifyHolders,
@@ -11,6 +12,7 @@ import {
 } from '@oneohm/database';
 import { workingMinutesBetween } from '@oneohm/domain';
 import { and, asc, eq, gt, inArray, isNotNull, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
+import { capabilityOf } from './action-capability';
 
 const DAY = 86_400_000;
 const UNTIL = 14 * DAY;
@@ -76,6 +78,8 @@ export async function queueActionChecks(
             eq(customerActions.status, 'open'),
             isNull(customerActions.requestedByUserId),
             isNull(customerActions.propertyId),
+            // A visit ask is the team's, never a pin waiting for its home.
+            ne(customerActions.type, 'visit_pick'),
           ),
         ),
         gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),
@@ -137,23 +141,34 @@ async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string)
   }
   const owner =
     action.requestedByUserId ?? (await chatOwnerFor(db, { customerId: action.customerId, phone }));
-  let sent = 0;
-  if (due === 'owner') {
-    sent = owner
-      ? await notifyCover(db, owner, 'projects.manage', notice)
-      : await notifyHolders(db, 'projects.manage', notice);
-  } else if (manager) {
-    sent = await notifyCover(db, manager, 'projects.manage', notice);
-  } else {
-    // No project (a pin waiting for its home, a call-back on a lead): the customer desk, not
-    // everyone who manages projects.
-    sent = await notifyStaffHolders(db, 'service.manage', notice);
-  }
+  const sent = await tell(db, action, { due, owner, manager }, notice);
   // The tier is recorded either way, so a desk with nobody on it is not looked at every tick.
   await markChecked(db, action, due);
   if (sent === 0)
     console.warn(`action check ${action.id} (${due}): nobody to tell, will not ask again`);
   return sent > 0;
+}
+
+/** Tells the owner (tier 1) or the manager (tier 2) by the rights that fit the ask; returns how many. */
+async function tell(
+  db: Database,
+  action: typeof customerActions.$inferSelect,
+  who: { due: 'owner' | 'manager'; owner: string | null; manager: string | null },
+  notice: Notice,
+): Promise<number> {
+  const capability = capabilityOf(action);
+  if (who.due === 'owner')
+    return who.owner
+      ? notifyCover(db, who.owner, capability, notice)
+      : notifyHolders(db, capability, notice);
+  if (who.manager) return notifyCover(db, who.manager, capability, notice);
+  // No project (a pin waiting for its home, a call-back on a lead): the customer desk, not
+  // everyone who manages projects.
+  return notifyStaffHolders(
+    db,
+    action.type === 'visit_pick' ? capability : 'service.manage',
+    notice,
+  );
 }
 
 /** Remembers the tier an answer was last checked at (without moving its updated time). */

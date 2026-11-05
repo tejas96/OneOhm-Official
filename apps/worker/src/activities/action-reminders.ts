@@ -14,6 +14,7 @@ import {
 import { isWorkingTime, VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { capabilityOf } from './action-capability';
 
 const DAY = 24 * 3_600_000;
 const CUSTOMER_AFTER = 2 * DAY;
@@ -121,7 +122,7 @@ async function alertAsker(db: Database, { action, customer, manager }: Row) {
     dedupeKey: `action_waiting:${action.id}`,
   };
   const person = action.requestedByUserId ?? manager;
-  const capability = action.payload.visitKind === 'amc' ? 'service.manage' : 'projects.manage';
+  const capability = capabilityOf(action);
   if (person) await notifyCover(db, person, capability, notice);
   else await notifyHolders(db, capability, notice);
 }
