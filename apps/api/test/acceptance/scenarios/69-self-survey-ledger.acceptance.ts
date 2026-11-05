@@ -117,6 +117,8 @@ describe('Self survey: the discount in the ledger', () => {
     await rows("UPDATE payment_milestones SET status = 'due', due_at = now() WHERE id = $1", [
       final.id,
     ]);
+    // Falling due books it (the due date and the entry go together).
+    await acceptanceDb().db.transaction((tx) => postMilestoneDue(tx, final.id, admin.userId));
     await approve(made.id);
     expect((await credits(made.id))[0]).toMatchObject({ status: 'pending', milestone_id: null });
     return { sale, dispatch, final };

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { applyPendingCredit } from '../../../src/modules/self-survey/survey-credit';
-import { settleByHand } from '../../../src/modules/self-survey/survey-credit-hand';
+import { reverseCredit, settleByHand } from '../../../src/modules/self-survey/survey-credit-hand';
 import { acceptanceDb, closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { lastReply, replies, tap } from '../support/onboarding';
@@ -71,6 +71,26 @@ describe('Self survey: settling, words, other survey steps', () => {
     expect(moved?.amount).toBe(
       after?.status === 'applied' ? (last?.amount ?? 0) - 100_000 : last?.amount,
     );
+  });
+
+  it('dropping a pending credit marks its finance alert read', async () => {
+    const { sale } = await received('Survey Drop Pending (test)');
+    await rows(
+      "UPDATE payment_milestones SET status = 'due', due_at = now() WHERE project_id = $1 AND status = 'upcoming'",
+      [sale.project.id],
+    );
+    await finish(sale, true);
+    const unread = () =>
+      rows(
+        "SELECT 1 FROM notifications WHERE kind = 'credit_pending' AND project_id = $1 AND read_at IS NULL",
+        [sale.project.id],
+      );
+    expect((await unread()).length).toBeGreaterThan(0);
+    const done = await tx<{ kind: string }>((trx) =>
+      reverseCredit(trx, { projectId: sale.project.id, userId: admin.userId, reason: 'test' }),
+    );
+    expect(done.kind).toBe('reversed');
+    expect(await unread()).toEqual([]);
   });
 
   it('the customer reads the payment in their own language (Marathi)', async () => {
