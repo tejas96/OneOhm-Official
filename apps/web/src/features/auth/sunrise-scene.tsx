@@ -3,6 +3,7 @@
 import { cn } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { SkyArt, useSky } from './sky-art';
+import { greetingPart } from './sun-path';
 
 /**
  * Phones: a calm sky above the rooftop drawing. The sun sits where it is over the
@@ -11,7 +12,7 @@ import { SkyArt, useSky } from './sky-art';
  */
 export function SunriseScene({ className }: { readonly className?: string }) {
   const t = useTranslations('signIn.sky');
-  const { phase } = useSky();
+  const { hours, phase } = useSky();
   const night = phase === 'night';
   return (
     <section
@@ -40,7 +41,7 @@ export function SunriseScene({ className }: { readonly className?: string }) {
               night ? 'text-on-panel-muted' : 'text-ink-muted',
             )}
           >
-            {t(`hello.${phase}`)}
+            {t(`hello.${greetingPart(hours)}`)}
           </span>
           <span
             className={cn(

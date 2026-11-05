@@ -45,6 +45,7 @@
       "open": "Open",
       "waitingLong": "Waiting long",
       "askedBy": "{name} · {when}",
+      "earns": "For {name} · {when}",
       "asked": "Asked {when}",
       "kinds": {
         "task_review": "Finished task",

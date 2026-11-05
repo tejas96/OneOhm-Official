@@ -16,7 +16,9 @@ import { TaskStepButtons } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
 import { taskStatusKey, taskTone } from '../tasks/task-status';
+import { UnassignedLabel } from '../tasks/unassigned-label';
 import { useTaskSteps } from '../tasks/use-task-steps';
+import { isProposed, ProposalActions } from '../team/proposal-actions';
 import { PanelChecklist } from './panel-checklist';
 import { PriorityControl } from './priority-control';
 import { BlockersSection, FactsSection, PanelSection } from './task-panel-sections';
@@ -66,7 +68,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
               {task.assignee.fullName}
             </span>
           ) : (
-            <span className="text-at-risk">{taskT('unassigned')}</span>
+            <UnassignedLabel task={task} />
           )}
           <span
             className={cn(
@@ -126,6 +128,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
             <TaskStepButtons steps={steps} />
           </span>
         </div>
+        {isProposed(task) && <ProposalActions task={task} />}
       </div>
 
       {task.description && (

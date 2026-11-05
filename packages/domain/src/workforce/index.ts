@@ -3,6 +3,7 @@ export * from './attendance';
 export * from './bonus';
 export * from './capacity';
 export * from './leave';
+export * from './leave-clash';
 export * from './leave-handover';
 export * from './policy';
 export * from './rating-split';

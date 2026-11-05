@@ -21,6 +21,8 @@ export class AssignmentConfirmService {
     const [task] = await this.db.select().from(projectTasks).where(eq(projectTasks.id, taskId));
     if (!task) throw notFound('That task');
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
+    if (task.proposedUserId === actor.userId && userId === actor.userId)
+      throw conflict('A proposal that names you is confirmed by someone else.', 'own');
     const [person] = await this.db
       .select({ name: users.fullName, crew: contractorMembers.contractorId })
       .from(users)

@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadMore } from '@/components/load-more';
-import { LoadError } from '@/components/query-state';
+import { BlockedPage, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
 import { useCan } from '@/providers/current-user';
@@ -45,6 +45,12 @@ function ProjectsSkeleton({ label }: { readonly label: string }) {
  * orders and pages them (PRD 9.3); more arrive as the person scrolls.
  */
 export function ProjectsListView() {
+  const t = useTranslations('projects.list');
+  if (!useCan('projects.view_all')) return <BlockedPage title={t('title')} />;
+  return <ProjectsContent />;
+}
+
+function ProjectsContent() {
   const t = useTranslations('projects.list');
   const [filters, setFilters] = useProjectFilters();
   const [search, setSearch] = useState(filters.search);

@@ -67,3 +67,41 @@ export function helpRecipients(input: {
   add(askerManagerUserId);
   return { userIds, projectManagers: !projectHasManager };
 }
+
+/** True when `managerUserId` is somewhere above `userId` in the reporting line. */
+export function isAboveInLine(input: {
+  readonly managerUserId: string;
+  readonly userId: string;
+  readonly managers: ReadonlyMap<string, string>;
+}): boolean {
+  const seen = new Set<string>();
+  let next = input.managers.get(input.userId);
+  while (next && !seen.has(next)) {
+    if (next === input.managerUserId) return true;
+    seen.add(next);
+    next = input.managers.get(next);
+  }
+  return false;
+}
+
+/**
+ * Who may decide someone's points: a Super Admin, or a person above the earner in the
+ * reporting line. Nobody decides their own, and only a Super Admin decides a Super
+ * Admin's. With no manager set the earner has no one above, so only a Super Admin can.
+ */
+export function mayDecidePoints(input: {
+  readonly deciderUserId: string;
+  readonly deciderIsSuperAdmin: boolean;
+  readonly earnerUserId: string;
+  readonly earnerIsSuperAdmin: boolean;
+  readonly managers: ReadonlyMap<string, string>;
+}): boolean {
+  if (input.deciderUserId === input.earnerUserId) return false;
+  if (input.deciderIsSuperAdmin) return true;
+  if (input.earnerIsSuperAdmin) return false;
+  return isAboveInLine({
+    managerUserId: input.deciderUserId,
+    userId: input.earnerUserId,
+    managers: input.managers,
+  });
+}

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { FormError } from '@/components/form-error';
 import { describeError } from '@/lib/api/api-error';
 import { daysOf, useWorkforceFormat } from '../workforce-format';
+import { LeaveClashNotes } from './leave-clash-notes';
 
 /** Days counted, the balance left after, overlaps, and the work the leave touches. */
 export function LeaveImpactPanel({
@@ -58,6 +59,7 @@ export function LeaveImpactPanel({
           {t('overlap')}
         </p>
       )}
+      <LeaveClashNotes clashes={impact.clashes} />
       {impact.tasks.length === 0 ? (
         <p className="type-body-sm text-ink-muted">{t('noTasks')}</p>
       ) : (

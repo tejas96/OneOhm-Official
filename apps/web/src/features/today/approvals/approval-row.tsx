@@ -8,6 +8,12 @@ import Link from 'next/link';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { approvesInPlace } from './approve-item';
 
+/** Points and proposals name the person they are for, not someone who asked. */
+function subtitleKey(kind: ApprovalItem['kind']) {
+  if (kind === 'assignee_confirm') return 'proposed';
+  return kind === 'points' ? 'earns' : 'askedBy';
+}
+
 /** One waiting item: what it is, who asked and when, with Approve and Open. */
 export function ApprovalRow({
   item,
@@ -35,7 +41,7 @@ export function ApprovalRow({
         <p className="type-body font-medium break-words text-ink">{item.subject}</p>
         <p className="type-body-sm text-ink-muted">
           {item.requesterName
-            ? t(item.kind === 'assignee_confirm' ? 'proposed' : 'askedBy', {
+            ? t(subtitleKey(item.kind), {
                 name: item.requesterName,
                 when: format.relativeTime(asked, now),
               })

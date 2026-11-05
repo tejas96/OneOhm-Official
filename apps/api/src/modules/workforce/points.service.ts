@@ -6,10 +6,11 @@ import { monthOf } from '@oneohm/shared';
 import { and, eq, ne, type SQL, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { conflict, invalid, notFound } from '../../common/http/errors';
+import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { inMonth } from './monthly-review.read';
+import { loadPointsAuthority } from './points-authority';
 import { loadPolicy } from './policy';
 import { readPoints } from './workforce-read';
 
@@ -76,6 +77,17 @@ export class PointsService {
 
   /** A suggestion (for example from a customer rating) approved or turned down. */
   async decide(actor: Actor, id: string, approve: boolean): Promise<PointsEntry> {
+    const [entry] = await this.db
+      .select({ userId: pointsEntries.userId })
+      .from(pointsEntries)
+      .where(eq(pointsEntries.id, id));
+    if (!entry) throw notFound('That suggestion');
+    // Own points are left to the "or it is for you" check below.
+    if (entry.userId !== actor.userId) {
+      const authority = await loadPointsAuthority(this.db, actor);
+      if (!authority.may(actor.userId, entry.userId))
+        throw forbidden('Only someone above them in the team, or a Super Admin, can decide this.');
+    }
     const [row] = await this.db
       .update(pointsEntries)
       .set({

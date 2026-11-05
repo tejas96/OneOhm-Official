@@ -8,7 +8,7 @@ import {
   users,
 } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import type { Environment } from '../../config/environment';
 import { inviteDeliveries, inviteTextFor, roleKindsByUser } from './person-invite';
 import { skillsOf } from './person-skills';
@@ -48,13 +48,16 @@ export async function readPeople(
       .where(and(inArray(projectTasks.assigneeUserId, ids), ne(projectTasks.status, 'completed')))
       .groupBy(projectTasks.assigneeUserId),
     db
-      .select({ userId: leaveRequests.userId })
+      .select({
+        userId: leaveRequests.userId,
+        fromDate: leaveRequests.fromDate,
+        toDate: leaveRequests.toDate,
+      })
       .from(leaveRequests)
       .where(
         and(
           inArray(leaveRequests.userId, ids),
           eq(leaveRequests.status, 'approved'),
-          lte(leaveRequests.fromDate, today),
           gte(leaveRequests.toDate, today),
         ),
       ),
@@ -64,7 +67,9 @@ export async function readPeople(
     inviteDeliveries(db, ids),
     roleKindsByUser(db, ids),
   ]);
-  const awayIds = new Set(away.map((row) => row.userId));
+  const awayIds = new Set(
+    away.filter((row) => row.fromDate <= today && row.toDate >= today).map((row) => row.userId),
+  );
   return rows.map((row) => {
     const open = loads.find((load) => load.userId === row.id)?.open ?? 0;
     return {
@@ -76,6 +81,9 @@ export async function readPeople(
       designation: row.designation,
       status: row.status,
       onLeave: row.onLeave || awayIds.has(row.id),
+      leaveRanges: away
+        .filter((leave) => leave.userId === row.id)
+        .map(({ fromDate, toDate }) => ({ fromDate, toDate })),
       roles: roleRows
         .filter((role) => role.userId === row.id)
         .map(({ userId: _ignored, ...role }) => role),

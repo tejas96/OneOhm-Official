@@ -79,7 +79,10 @@ export const teamCapacitySchema = z.object({
       limit: z.number().int().nullable(),
       state: z.enum(['ok', 'full', 'over']),
       dueByWeek: z.array(z.number().int()),
-      leaveDaysByWeek: z.array(z.number().int()),
+      /** Approved leave days per week; a half day is 0.5. */
+      leaveDaysByWeek: z.array(z.number()),
+      /** Leave asked for but not yet approved, per week. */
+      pendingLeaveDaysByWeek: z.array(z.number()).default([]),
     }),
   ),
 });

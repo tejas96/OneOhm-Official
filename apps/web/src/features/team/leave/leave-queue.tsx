@@ -10,6 +10,7 @@ import { useCurrentUser } from '@/providers/current-user';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
 import { LeaveApproveDialog } from './leave-approve-dialog';
+import { LeaveClashNotes } from './leave-clash-notes';
 import { LeaveCover, LeaveKind, useLeaveText } from './leave-facts';
 import { useDecideLeave } from './use-leave';
 
@@ -58,19 +59,25 @@ export function LeaveQueue({ requests }: { readonly requests: readonly LeaveRequ
               <p className="type-title-md text-ink">{when(item)}</p>
               {item.reason && <p className="type-body-sm text-ink-muted">“{item.reason}”</p>}
               <LeaveCover leave={item} />
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button size="sm" leadingIcon={<X />} onClick={() => start(item, false)}>
-                  {t('decline')}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  leadingIcon={<Check />}
-                  onClick={() => start(item, true)}
-                >
-                  {t('approve')}
-                </Button>
-              </div>
+              <LeaveClashNotes clashes={item.clashes} applicant={item.user.fullName} />
+              {item.backup?.id === me.id ? (
+                // The named backup does not decide the leave they cover.
+                <p className="type-body-sm text-ink-muted">{t('youCover')}</p>
+              ) : (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button size="sm" leadingIcon={<X />} onClick={() => start(item, false)}>
+                    {t('decline')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    leadingIcon={<Check />}
+                    onClick={() => start(item, true)}
+                  >
+                    {t('approve')}
+                  </Button>
+                </div>
+              )}
             </motion.li>
           ))}
         </ul>
