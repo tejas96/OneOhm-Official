@@ -1,6 +1,7 @@
 import { type DatabaseExecutor, waMessages } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
 import { isSendTap } from '../../send-to-customer/send-taps';
+import { isVisitTap } from '../../visits/visit-taps';
 import type { Conversation } from '../chat-store';
 import { isFormTap } from '../forms/form-pick';
 import type { Incoming } from '../whatsapp-events';
@@ -40,6 +41,7 @@ export function assistantAnswersTap(
     isWhatTap(id) ||
     isFormTap(id) ||
     isSendTap(id) ||
+    isVisitTap(id) ||
     OWN_TAP.test(id)
   );
 }

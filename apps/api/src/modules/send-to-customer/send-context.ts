@@ -5,6 +5,7 @@ import {
   leads,
   projects,
   projectTasks,
+  serviceRequests,
   waConversations,
 } from '@oneohm/database';
 import {
@@ -31,6 +32,7 @@ export interface SendContext {
   readonly projectCode: string | null;
   readonly leadId: string | null;
   readonly taskId: string | null;
+  readonly serviceRequestId: string | null;
   readonly place: SendPlace;
   /** The customer's chat is open (24 hours) and has not said STOP. */
   readonly chatOpen: boolean;
@@ -42,7 +44,7 @@ export interface NoCustomer {
   readonly reason: string;
 }
 
-async function chatOpenFor(db: DatabaseExecutor, phone: string): Promise<boolean> {
+export async function chatOpenFor(db: DatabaseExecutor, phone: string): Promise<boolean> {
   const [chat] = await db
     .select({ at: waConversations.lastInboundAt, out: waConversations.optedOutAt })
     .from(waConversations)
@@ -93,6 +95,15 @@ export async function resolveScope(
     if (!project) throw notFound('That project');
     customerId = project.customerId;
     projectCode = project.code;
+  } else if (scope.serviceRequestId) {
+    const [request] = await db
+      .select({ customerId: serviceRequests.customerId, projectId: serviceRequests.projectId })
+      .from(serviceRequests)
+      .where(eq(serviceRequests.id, scope.serviceRequestId))
+      .limit(1);
+    if (!request) throw notFound('That service request');
+    customerId = request.customerId;
+    projectId = request.projectId;
   } else if (scope.leadId) {
     const [lead] = await db
       .select({ id: leads.id, customerId: leads.customerId })
@@ -117,11 +128,13 @@ export async function resolveScope(
     projectCode,
     leadId,
     taskId,
+    serviceRequestId: scope.serviceRequestId ?? null,
     place: {
       customer: true,
-      project: projectId !== null && taskId === null,
+      project: projectId !== null && taskId === null && !scope.serviceRequestId,
       lead: leadId !== null,
       task: taskId !== null,
+      service: Boolean(scope.serviceRequestId),
     },
     chatOpen: await chatOpenFor(db, customer.phone),
   };

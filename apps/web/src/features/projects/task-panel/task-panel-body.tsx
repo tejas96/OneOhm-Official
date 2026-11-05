@@ -8,6 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
 import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
+import { VisitCard } from '@/features/visits/visit-card';
 import { useCan } from '@/providers/current-user';
 import { StaleBadge } from '../tasks/stale-badge';
 import { TaskStepButtons } from '../tasks/task-actions';
@@ -125,6 +126,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
       <FactsSection task={task} />
       <EvidenceUploader task={task} />
       <TaskVisitLine task={task} />
+      <VisitCard scope={{ taskId: task.id }} />
       <PanelSection
         title={t('timeline')}
         action={

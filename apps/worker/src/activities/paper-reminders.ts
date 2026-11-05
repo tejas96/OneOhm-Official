@@ -19,6 +19,7 @@ import { and, asc, desc, eq, gt, isNull, like, lte, ne, or, sql } from 'drizzle-
 import { queueActionChecks } from './action-checks';
 import { queueActionReminders } from './action-reminders';
 import { filesNotMatched, unmatchedBody } from './paper-unmatched';
+import { queueVisitReminders } from './visit-reminders';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -222,6 +223,8 @@ export async function queuePaperReminders(
 ): Promise<number> {
   const reminded = await remindOpenRequests(db, now, timeZone);
   const asked =
-    (await queueActionReminders(db, now, timeZone)) + (await queueActionChecks(db, now, timeZone));
+    (await queueActionReminders(db, now, timeZone)) +
+    (await queueActionChecks(db, now, timeZone)) +
+    (await queueVisitReminders(db, now, timeZone));
   return reminded + asked + (await alertFilesToSort(db, now));
 }

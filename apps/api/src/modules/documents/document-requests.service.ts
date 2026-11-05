@@ -128,7 +128,12 @@ export class DocumentRequestsService {
       await recordAudit(tx, actor.userId, 'customer_action.cancelled', 'customer_action', id);
       if (request.type === 'paper')
         await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
-      else if (request.type === 'location' || request.type === 'pay' || request.type === 'callback')
+      else if (
+        request.type === 'location' ||
+        request.type === 'pay' ||
+        request.type === 'callback' ||
+        request.type === 'visit_pick'
+      )
         await tellActionCancelled(
           tx,
           {

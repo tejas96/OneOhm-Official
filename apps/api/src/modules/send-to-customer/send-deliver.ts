@@ -80,7 +80,7 @@ export async function deliver(
   ctx: SendContext,
   built: Built,
   key: string,
-  userId: string,
+  userId: string | null,
 ): Promise<'chat' | 'template'> {
   if (!ctx.chatOpen) {
     await queueCustomerMessage(tx, ctx.phone, built.template.key, built.template.payload, key);

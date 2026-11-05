@@ -152,6 +152,23 @@ export const HINDI_WORDS: LanguageWords = {
       title: `आपका ${p.document}`,
       body: 'हमने इसे WhatsApp पर भेजा है। यह ‘दस्तावेज़’ में भी है।',
     }),
+    visit_pick: (p) => ({
+      title: `${p.work} के लिए दिन चुनें`,
+      body: `हमारी टीम ${p.home} पर कब आ सकती है? हमारे WhatsApp चैट में ‘दिन चुनें’ दबाएँ।`,
+    }),
+    visit_booked: (p) => ({
+      title: `विज़िट तय हुई: ${p.when}`,
+      body: `आने से पहले ${p.staff} आपको फ़ोन करेंगे।`,
+    }),
+    visit_reminder: (p) => ({
+      title: `हमारी टीम ${p.home} पर ${p.when} आ रही है`,
+      body: `${p.work} के लिए। कृपया हमारे WhatsApp चैट में पक्का करें।`,
+    }),
+    inspection_presence: (p) => ({
+      title: `${p.day} को ${p.work}`,
+      body: `बिजली बोर्ड (DISCOM) ${p.home} पर आएगा। कृपया घर पर रहें।`,
+    }),
+    visit_cancelled: (p) => ({ title: 'विज़िट रद्द हुई', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफ़रल इनाम की जानकारी',
       body: `${p.friend}: ${p.amount} — ${p.status}।`,

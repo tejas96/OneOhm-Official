@@ -10,7 +10,7 @@ export async function openActionFor(
   tx: DatabaseExecutor,
   customerId: string,
   type: CustomerActionType,
-  match: { propertyId?: string; milestoneId?: string },
+  match: { propertyId?: string; milestoneId?: string; target?: string },
 ): Promise<string | null> {
   const [row] = await tx
     .select({ id: customerActions.id })
@@ -21,6 +21,7 @@ export async function openActionFor(
         eq(customerActions.type, type),
         eq(customerActions.status, 'open'),
         match.propertyId ? eq(customerActions.propertyId, match.propertyId) : undefined,
+        match.target ? sql`${customerActions.payload}->>'target' = ${match.target}` : undefined,
         match.milestoneId
           ? sql`${customerActions.payload}->>'milestoneId' = ${match.milestoneId}`
           : undefined,
@@ -40,7 +41,8 @@ export async function openAction(
   userId: string,
   input: {
     id: string;
-    type: 'location' | 'pay' | 'callback';
+    type: 'location' | 'pay' | 'callback' | 'visit_pick';
+    taskId?: string | null;
     title: string;
     propertyId?: string | null;
     projectId?: string | null;
@@ -58,7 +60,7 @@ export async function openAction(
       projectId,
       leadId: projectId ? null : ctx.leadId,
       propertyId: input.propertyId ?? null,
-      taskId: ctx.taskId,
+      taskId: input.taskId ?? ctx.taskId,
       title: input.title,
       payload: input.payload ?? {},
       requestedByUserId: userId,

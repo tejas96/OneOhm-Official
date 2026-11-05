@@ -21,6 +21,7 @@ const MANAGER_NOT_BEFORE = 30 * 3_600_000;
 const WHAT: Readonly<Record<string, (customer: string, slot: unknown) => string>> = {
   location: (customer) => `Check the location ${customer} sent`,
   pay: (customer) => `Record the payment ${customer} says they made`,
+  visit_pick: (customer) => `Confirm the visit day ${customer} picked`,
   callback: (customer, slot) =>
     `Call ${customer} back${typeof slot === 'string' ? ` (they picked ${slot})` : ''}`,
 };
@@ -68,7 +69,7 @@ export async function queueActionChecks(
     .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        inArray(customerActions.type, ['location', 'pay', 'callback']),
+        inArray(customerActions.type, ['location', 'pay', 'callback', 'visit_pick']),
         or(
           and(eq(customerActions.status, 'received'), isNotNull(customerActions.doneAt)),
           and(

@@ -1,6 +1,9 @@
 import type { SendOffer, SendRequest } from '@oneohm/api-contracts';
 import type { SendAction } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
+import { visitAskRequests } from '../visits/visit-ask';
+import { targetOf } from '../visits/visit-reads';
+import { workWords } from '../visits/visit-words';
 import { customerPapers } from '../whatsapp/assistant/customer-papers';
 import { compose } from './send-compose';
 import type { SendContext } from './send-context';
@@ -119,6 +122,22 @@ export async function offersFor(
           { action: 'ask_callback' },
         ),
       ];
+    case 'ask_visit': {
+      const offers: SendOffer[] = [];
+      for (const request of await visitAskRequests(db, ctx)) {
+        const target = await targetOf(db, request).catch(() => null);
+        if (!target?.mayMessage) continue;
+        // A crew with no free day cannot be offered; the sheet simply does not list it.
+        const offer = await make(
+          `visit:${target.taskId ?? target.serviceRequestId ?? target.leadId}`,
+          `Ask ${target.customerName.split(/\s+/)[0]} to pick a day for the ${workWords(target.kind)}`,
+          target.title,
+          request,
+        ).catch(() => null);
+        if (offer) offers.push(offer);
+      }
+      return offers;
+    }
     case 'ask_paper':
       return [];
   }

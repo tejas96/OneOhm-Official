@@ -21,4 +21,5 @@ export * from './reports';
 export * from './settings';
 export * from './subsidy';
 export * from './tasks';
+export * from './visits';
 export * from './workforce';

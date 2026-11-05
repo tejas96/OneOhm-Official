@@ -25,14 +25,21 @@ export const CUSTOMER_ACTION_STATUSES = ['open', 'received', 'closed', 'cancelle
 export type CustomerActionStatus = (typeof CUSTOMER_ACTION_STATUSES)[number];
 
 /** The types whose answer the team always looks at before it is done. */
-const CHECKED_TYPES: readonly CustomerActionType[] = ['paper'];
+const CHECKED_TYPES: readonly CustomerActionType[] = ['paper', 'visit_pick'];
 
 /**
  * The types the team may check: a paper always; a location only when it conflicts with a point
  * the home already has (`needs_check`); a payment proof waits for finance to record it; a call-back
- * waits as "To call" once the customer picked a time, until staff say they called.
+ * waits as "To call" once the customer picked a time, until staff say they called; a picked visit day
+ * waits for the team to confirm it.
  */
-const CHECKABLE_TYPES: readonly CustomerActionType[] = ['paper', 'location', 'pay', 'callback'];
+const CHECKABLE_TYPES: readonly CustomerActionType[] = [
+  'paper',
+  'location',
+  'pay',
+  'callback',
+  'visit_pick',
+];
 
 /** What happens to an action: the customer does it, staff file it, check it, ask again or cancel. */
 export type CustomerActionEvent =

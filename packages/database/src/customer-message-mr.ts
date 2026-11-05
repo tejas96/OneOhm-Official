@@ -152,6 +152,23 @@ export const MARATHI_WORDS: LanguageWords = {
       title: `तुमचे ${p.document}`,
       body: 'आम्ही ते WhatsApp वर पाठवले आहे. ते ‘कागदपत्रे’ मध्येही आहे.',
     }),
+    visit_pick: (p) => ({
+      title: `${p.work} साठी दिवस निवडा`,
+      body: `आमची टीम ${p.home} येथे कधी येऊ शकते? आमच्या WhatsApp चॅटमध्ये ‘दिवस निवडा’ दाबा.`,
+    }),
+    visit_booked: (p) => ({
+      title: `भेट ठरली: ${p.when}`,
+      body: `येण्यापूर्वी ${p.staff} तुम्हाला फोन करतील.`,
+    }),
+    visit_reminder: (p) => ({
+      title: `आमची टीम ${p.home} येथे ${p.when} येणार आहे`,
+      body: `${p.work} साठी. कृपया आमच्या WhatsApp चॅटमध्ये पक्के करा.`,
+    }),
+    inspection_presence: (p) => ({
+      title: `${p.day} रोजी ${p.work}`,
+      body: `वीज मंडळ (DISCOM) ${p.home} येथे येणार आहे. कृपया घरी राहा.`,
+    }),
+    visit_cancelled: (p) => ({ title: 'भेट रद्द झाली', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफरल बक्षिसाची माहिती',
       body: `${p.friend}: ${p.amount} — ${p.status}.`,

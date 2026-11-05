@@ -135,8 +135,12 @@ export class SendToCustomerService {
     const existing = await openActionFor(tx, ctx.customerId, record.type, {
       ...(record.type === 'location' && record.propertyId ? { propertyId: record.propertyId } : {}),
       ...(record.type === 'pay' ? { milestoneId: String(record.payload.milestoneId) } : {}),
+      ...(record.type === 'visit_pick' ? { target: String(record.payload.target) } : {}),
     });
-    if (existing && (record.type === 'location' || record.type === 'callback')) {
+    if (
+      existing &&
+      (record.type === 'location' || record.type === 'callback' || record.type === 'visit_pick')
+    ) {
       throw conflict('The customer has already been asked for this.', 'already_asked');
     }
     if (existing && record.type === 'pay') {

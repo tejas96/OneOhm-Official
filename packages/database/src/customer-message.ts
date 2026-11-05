@@ -150,6 +150,24 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Your ${p.document}`,
     body: 'We sent it on WhatsApp. It is also in Documents.',
   }),
+  // Visits (redesign §8): the app inbox says the same as the chat.
+  visit_pick: (p) => ({
+    title: `Pick a day for the ${p.work}`,
+    body: `When can our team visit ${p.home}? Open our WhatsApp chat and tap Pick a day.`,
+  }),
+  visit_booked: (p) => ({
+    title: `Visit booked: ${p.when}`,
+    body: `${p.staff} will call before coming.`,
+  }),
+  visit_reminder: (p) => ({
+    title: `Our team visits ${p.home} ${p.when}`,
+    body: `For the ${p.work}. Please confirm in our WhatsApp chat.`,
+  }),
+  inspection_presence: (p) => ({
+    title: `${p.work} on ${p.day}`,
+    body: `The electricity board (DISCOM) visits ${p.home}. Please be at home.`,
+  }),
+  visit_cancelled: (p) => ({ title: 'Visit cancelled', body: p.body ?? '' }),
   referral_reward: (p) => ({
     title: 'Referral reward update',
     body: `${p.friend}: ${p.amount} is ${p.status}.`,

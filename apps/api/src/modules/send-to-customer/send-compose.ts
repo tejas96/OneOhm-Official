@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { SendRequest } from '@oneohm/api-contracts';
 import { conflict, invalid, notFound } from '../../common/http/errors';
+import { askVisitCompose } from '../visits/visit-ask';
 import { receiptById } from '../whatsapp/assistant/customer-papers';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { sharedFileUrl } from '../whatsapp/file-links';
@@ -24,7 +25,8 @@ export type Recorded =
   | {
       readonly kind: 'action';
       readonly id: string;
-      readonly type: 'location' | 'pay' | 'callback';
+      readonly type: 'location' | 'pay' | 'callback' | 'visit_pick';
+      readonly taskId?: string | null;
       readonly title: string;
       readonly propertyId: string | null;
       readonly projectId: string | null;
@@ -233,6 +235,8 @@ export function compose(
         return tellDelay(deps, ctx, request, id);
       case 'ask_callback':
         return askCallback(deps, ctx, request, id);
+      case 'ask_visit':
+        return askVisitCompose(deps, ctx, request, id);
     }
   });
 }

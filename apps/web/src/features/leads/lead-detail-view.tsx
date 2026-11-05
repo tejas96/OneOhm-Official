@@ -13,6 +13,7 @@ import { PapersSection } from '@/features/documents/papers-section';
 import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { OpenChatButton } from '@/features/service/whatsapp/open-chat-button';
 import { RecordChat } from '@/features/service/whatsapp/record-chat';
+import { VisitCard } from '@/features/visits/visit-card';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { formatPhone } from '@/lib/format/contact';
 import { useCan } from '@/providers/current-user';
@@ -112,6 +113,7 @@ export function LeadDetailView({ id }: { readonly id: string }) {
           {/* The lead's WhatsApp chat, answered here from the business number. */}
           <RecordChat phone={lead.phone} name={lead.name} />
           <LeadAskedCard leadId={lead.id} hasSite={lead.customerId !== null} />
+          {lead.customerId && <VisitCard scope={{ leadId: lead.id }} />}
           <section aria-label={t('timeline.title')} className="flex flex-col gap-4">
             <SectionHeading index="01" title={t('timeline.title')} />
             <LeadTimeline activities={lead.activities} />

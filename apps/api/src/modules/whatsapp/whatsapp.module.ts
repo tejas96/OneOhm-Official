@@ -9,6 +9,8 @@ import { OnlinePaymentsModule } from '../online-payments/online-payments.module'
 import { ReportsModule } from '../reports/reports.module';
 import { LocationPinService } from '../send-to-customer/location-pin.service';
 import { SendAnswersService } from '../send-to-customer/send-answers.service';
+import { VisitAnswersService } from '../visits/visit-answers.service';
+import { VisitPickService } from '../visits/visit-pick.service';
 import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
 import { FeedbackFlowService } from './assistant/feedback-flow';
@@ -92,6 +94,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     FormFileKeeper,
     LocationPinService,
     SendAnswersService,
+    VisitAnswersService,
+    VisitPickService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

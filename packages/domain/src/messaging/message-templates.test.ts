@@ -56,6 +56,10 @@ describe('follow-up text', () => {
       'payment_due',
       'callback_request',
       'document_share',
+      'visit_pick',
+      'visit_booked',
+      'visit_reminder',
+      'inspection_presence',
     ]);
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');

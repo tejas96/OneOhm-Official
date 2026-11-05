@@ -50,6 +50,37 @@ export const SEND_MESSAGE_TEMPLATES = [
     extras: { document: { urlField: 'documentUrl', nameField: 'documentName' } },
     preview: 'Hello {{1}}, here is your {{2}} from OneOhm. Reply here if you have any questions.',
   },
+  {
+    key: 'visit_pick',
+    audience: 'customer',
+    fields: ['customer', 'home', 'work'],
+    // The button opens the chat step with the list of free days.
+    extras: { quickReplies: ['pickPayload'] },
+    preview:
+      'Hello {{1}}, when can our team visit {{2}} for the {{3}}? Tap the button below to pick a day.',
+  },
+  {
+    key: 'visit_booked',
+    audience: 'customer',
+    fields: ['customer', 'when', 'staff'],
+    extras: { quickReplies: ['okayPayload', 'changePayload'] },
+    preview: 'Hello {{1}}, your visit is booked ✅ {{2}}. {{3}} will call before coming.',
+  },
+  {
+    key: 'visit_reminder',
+    audience: 'customer',
+    fields: ['customer', 'home', 'when', 'work'],
+    extras: { quickReplies: ['confirmPayload', 'changePayload'] },
+    preview: 'Hello {{1}}, our team visits {{2}} {{3}} for the {{4}}. Please confirm.',
+  },
+  {
+    key: 'inspection_presence',
+    audience: 'customer',
+    fields: ['customer', 'work', 'home', 'day'],
+    extras: { quickReplies: ['confirmPayload', 'changePayload'] },
+    preview:
+      'Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.',
+  },
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

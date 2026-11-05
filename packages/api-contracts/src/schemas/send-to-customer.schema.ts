@@ -8,6 +8,7 @@ export const sendScopeSchema = z.object({
   projectId: idSchema.optional(),
   leadId: idSchema.optional(),
   taskId: idSchema.optional(),
+  serviceRequestId: idSchema.optional(),
 });
 export type SendScope = z.infer<typeof sendScopeSchema>;
 
@@ -32,6 +33,13 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
     reason: z.string().trim().min(2).max(200),
   }),
   z.object({ action: z.literal('ask_callback') }),
+  /** Ask the customer to pick a day for a task's visit, a lead's survey or a service request. */
+  z.object({
+    action: z.literal('ask_visit'),
+    taskId: idSchema.optional(),
+    leadId: idSchema.optional(),
+    serviceRequestId: idSchema.optional(),
+  }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 

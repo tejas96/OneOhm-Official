@@ -60,5 +60,6 @@ export * from './task-flow.schema';
 export * from './task-priority.schema';
 export * from './team-load.schema';
 export * from './template.schema';
+export * from './visit.schema';
 export * from './whatsapp.schema';
 export * from './workforce.schema';

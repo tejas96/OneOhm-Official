@@ -5,7 +5,16 @@ import { Button, type PillTone, StatusPill } from '@oneohm/design-system/web';
 import type { Capability } from '@oneohm/domain';
 import { rightsForAsk } from '@oneohm/domain';
 import type { LucideIcon } from 'lucide-react';
-import { Check, ExternalLink, FileText, IndianRupee, MapPin, PhoneCall } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarClock,
+  Check,
+  ExternalLink,
+  FileText,
+  IndianRupee,
+  MapPin,
+  PhoneCall,
+} from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { documentUrl } from '@/lib/api/upload';
 import { useCan } from '@/providers/current-user';
@@ -34,7 +43,16 @@ const ICON: Readonly<Record<string, LucideIcon>> = {
   location: MapPin,
   pay: IndianRupee,
   callback: PhoneCall,
+  visit_pick: CalendarClock,
+  presence: CalendarCheck,
 };
+
+/** A call-back that waits is "To call", a picked visit day "To confirm"; the rest by status. */
+function statusKey(request: DocumentRequest): string {
+  if (request.status === 'received' && request.type === 'callback') return 'toCall';
+  if (request.status === 'received' && request.type === 'visit_pick') return 'toConfirm';
+  return STATUS_KEY[request.status];
+}
 
 /** "1.2 km" or "340 m": how far a customer's pin is from the saved point. */
 const distance = (metres: number) =>
@@ -104,9 +122,7 @@ export function ActionRow({
         <StatusPill
           size="sm"
           tone={TONE[request.status]}
-          label={t(
-            `status.${request.type === 'callback' && request.status === 'received' ? 'toCall' : STATUS_KEY[request.status]}`,
-          )}
+          label={t(`status.${statusKey(request)}`)}
         />
         {request.documentId && request.status !== 'cancelled' && request.status !== 'open' && (
           <Button asChild size="sm" variant="quiet">

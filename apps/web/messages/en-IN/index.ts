@@ -35,6 +35,7 @@ import signIn from './sign-in.json';
 import siteActivity from './site-activity.json';
 import team from './team.json';
 import today from './today.json';
+import visits from './visits.json';
 
 /**
  * English (India) messages, one file per feature so screens can grow independently.
@@ -78,5 +79,6 @@ const messages = {
   ...siteActivity,
   ...team,
   ...today,
+  ...visits,
 };
 export default messages;

@@ -11,6 +11,7 @@ export const SEND_ACTIONS = [
   'share_crew',
   'delay_notice',
   'ask_callback',
+  'ask_visit',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -22,6 +23,8 @@ export interface SendPlace {
   readonly lead: boolean;
   /** A task of a project, which brings the project with it. */
   readonly task: boolean;
+  /** A service request (a ticket or an AMC visit): only visits can be asked from here. */
+  readonly service?: boolean;
 }
 
 /**
@@ -31,6 +34,7 @@ export interface SendPlace {
  */
 export function sendActionsFor(place: SendPlace): SendAction[] {
   if (!place.customer) return [];
+  if (place.service) return ['ask_visit', 'ask_callback'];
   const withProject = place.project || place.task;
   const onlyLead = place.lead && !withProject;
   const shown: Record<SendAction, boolean> = {
@@ -43,6 +47,7 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     share_crew: withProject,
     delay_notice: place.task,
     ask_callback: true,
+    ask_visit: withProject || place.lead,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -58,6 +63,7 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   ask_payment_proof: ['finance.record_payments', 'projects.manage'],
   share_crew: ['projects.manage'],
   delay_notice: ['projects.manage'],
+  ask_visit: ['projects.manage', 'tasks.assign', 'leads.manage', 'service.manage'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
@@ -74,6 +80,9 @@ export function rightsForAsk(type: string): readonly string[] {
       return RIGHTS.payment_reminder;
     case 'callback':
       return RIGHTS.ask_callback;
+    case 'visit_pick':
+    case 'presence':
+      return RIGHTS.ask_visit;
     default:
       return RIGHTS.ask_paper;
   }

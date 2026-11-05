@@ -20,7 +20,7 @@ export async function tellActionCancelled(
   tx: DatabaseExecutor,
   action: {
     readonly id: string;
-    readonly type: 'location' | 'pay' | 'callback';
+    readonly type: 'location' | 'pay' | 'callback' | 'visit_pick';
     readonly projectId: string | null;
     readonly propertyId: string | null;
   },

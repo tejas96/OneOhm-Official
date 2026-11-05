@@ -7,6 +7,8 @@ import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { SendAnswersService } from '../../send-to-customer/send-answers.service';
 import { readSendTap } from '../../send-to-customer/send-taps';
+import { VisitAnswersService } from '../../visits/visit-answers.service';
+import { readVisitTap } from '../../visits/visit-taps';
 import { type Conversation, queueReply, setState } from '../chat-store';
 import { FormPickService, readFormTap } from '../forms/form-pick';
 import { FormReplyService } from '../forms/form-reply';
@@ -64,6 +66,7 @@ export class AssistantService {
     private readonly formReplies: FormReplyService,
     private readonly formPicks: FormPickService,
     private readonly sends: SendAnswersService,
+    private readonly visitAnswers: VisitAnswersService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -148,6 +151,8 @@ export class AssistantService {
     if (request) return this.menus.askPaper(chat, customerId, request);
     const sendTap = readSendTap(id);
     if (sendTap) return this.sends.tapped(chat, customerId, sendTap);
+    const visitTap = readVisitTap(id);
+    if (visitTap) return this.visitAnswers.tapped(chat, customerId, visitTap);
     const formTap = readFormTap(id);
     if (formTap) return this.formPicks.tapped(chat, customerId, formTap);
     const language = languageTapped(id);

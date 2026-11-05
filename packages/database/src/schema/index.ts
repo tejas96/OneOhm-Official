@@ -49,5 +49,6 @@ export * from './stage-ratings.schema';
 export * from './state-support.schema';
 export * from './task-reviews.schema';
 export * from './tax.schema';
+export * from './visits.schema';
 export * from './whatsapp.schema';
 export * from './workforce.schema';

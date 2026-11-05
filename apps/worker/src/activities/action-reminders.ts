@@ -4,13 +4,14 @@ import {
   customers,
   type Database,
   homeNameOf,
+  languageOf,
   notifyCover,
   notifyHolders,
   projects,
   queueCustomerMessage,
   users,
 } from '@oneohm/database';
-import { isWorkingTime } from '@oneohm/domain';
+import { isWorkingTime, VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 
@@ -32,6 +33,7 @@ const WHAT: Readonly<Record<string, string>> = {
   location: 'the location of their home',
   pay: 'a payment (or its proof)',
   callback: 'a time for a call back',
+  visit_pick: 'a day for our visit',
 };
 
 /**
@@ -57,7 +59,7 @@ export async function queueActionReminders(
     .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        inArray(customerActions.type, ['location', 'pay', 'callback']),
+        inArray(customerActions.type, ['location', 'pay', 'callback', 'visit_pick']),
         eq(customerActions.status, 'open'),
         gt(customerActions.createdAt, new Date(now.getTime() - TEAM_UNTIL)),
         lte(customerActions.createdAt, new Date(now.getTime() - CUSTOMER_AFTER)),
@@ -69,7 +71,7 @@ export async function queueActionReminders(
   let done = 0;
   for (const row of open) {
     // A pin waiting for its home is the customer's own move; nobody asked.
-    if (!row.action.requestedByUserId) continue;
+    if (!row.action.requestedByUserId && row.action.type !== 'visit_pick') continue;
     const due = actionReminderDue(row.action.createdAt, now);
     if (due === 'customer' && (await remindCustomer(db, row, now, timeZone))) done += 1;
     if (due === 'team') {
@@ -93,6 +95,7 @@ async function remindCustomer(db: Database, row: Row, now: Date, timeZone: strin
   if (!isWorkingTime(now, timeZone)) return false;
   if (now.getTime() - action.createdAt.getTime() >= CUSTOMER_UNTIL) return false;
   if (action.type === 'callback') return remindCallback(db, row, `action_reminder:${action.id}`);
+  if (action.type === 'visit_pick') return remindVisitPick(db, row, `action_reminder:${action.id}`);
   if (action.type !== 'location') return false;
   const home = await homeNameOf(db, action.projectId, action.propertyId);
   return queueCustomerMessage(
@@ -118,8 +121,28 @@ async function alertAsker(db: Database, { action, customer, manager }: Row) {
     dedupeKey: `action_waiting:${action.id}`,
   };
   const person = action.requestedByUserId ?? manager;
-  if (person) await notifyCover(db, person, 'projects.manage', notice);
-  else await notifyHolders(db, 'projects.manage', notice);
+  const capability = action.payload.visitKind === 'amc' ? 'service.manage' : 'projects.manage';
+  if (person) await notifyCover(db, person, capability, notice);
+  else await notifyHolders(db, capability, notice);
+}
+
+/** The customer never picked a day for a visit: the same ask again, by the approved template. */
+async function remindVisitPick(db: Database, { action, customer, phone }: Row, key: string) {
+  const code = (await languageOf(db, phone)).slice(0, 2);
+  const kind = (action.payload.visitKind as VisitKind | undefined) ?? 'service';
+  const words = VISIT_PHRASES[code === 'mr' || code === 'hi' ? code : 'en'];
+  return queueCustomerMessage(
+    db,
+    phone,
+    'visit_pick',
+    {
+      customer: titleCaseName(customer),
+      home: await homeNameOf(db, action.projectId, action.propertyId),
+      work: words.work[kind],
+      pickPayload: `vask:${action.id}`,
+    },
+    key,
+  );
 }
 
 /** The customer never picked a time: the three buttons again, by the approved template. */

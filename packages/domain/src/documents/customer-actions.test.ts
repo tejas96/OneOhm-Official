@@ -65,6 +65,12 @@ describe('canAskCustomerFor', () => {
 });
 
 describe('nextActionStatus', () => {
+  it('a picked visit day waits for the team to confirm it', () => {
+    expect(nextActionStatus('visit_pick', 'open', 'customer_did_it')).toBe('received');
+    expect(nextActionStatus('visit_pick', 'received', 'looks_good')).toBe('closed');
+    expect(nextActionStatus('presence', 'open', 'customer_did_it')).toBe('closed');
+  });
+
   it('a paper the customer sends waits for the check, then closes', () => {
     expect(nextActionStatus('paper', 'open', 'customer_did_it')).toBe('received');
     expect(nextActionStatus('paper', 'received', 'looks_good')).toBe('closed');

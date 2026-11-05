@@ -45,6 +45,11 @@ export const IN_APP_MESSAGES = [
   'delay_notice',
   'crew_contact',
   'document_share',
+  'visit_pick',
+  'visit_booked',
+  'visit_reminder',
+  'inspection_presence',
+  'visit_cancelled',
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 

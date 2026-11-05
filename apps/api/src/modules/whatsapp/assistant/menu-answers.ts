@@ -7,6 +7,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { paperKindWords } from '../../documents/paper-kind-words';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
+import { visitDetails } from '../../visits/visit-details';
 import { type Conversation, queueReply } from '../chat-store';
 import { FormPickService } from '../forms/form-pick';
 import { FormSendService } from '../forms/form-send';
@@ -75,8 +76,12 @@ export class MenuAnswersService {
       case 'problem':
         return startComplaint(this.db, chat, customerId);
       case 'problems':
-      case 'visit':
         return say(await this.answers.requests(customerId), ['problem', 'menu']);
+      case 'visit':
+        return say(
+          (await visitDetails(this.db, customerId)) ?? (await this.answers.requests(customerId)),
+          ['problem', 'menu'],
+        );
       case 'warranty':
         return say(await this.answers.warranty(customerId), ['problem', 'menu']);
       case 'refer':

@@ -1,6 +1,6 @@
 /**
  * The Marathi and Hindi wording of the "Send to customer" templates and the titles of their
- * quick-reply buttons, as submitted to Meta (docs/whatsapp-templates.md 25-30). The staff preview
+ * quick-reply buttons, as submitted to Meta (docs/whatsapp-templates.md 25-34). The staff preview
  * shows these when the chat is closed, so they see the message the customer will read. English is
  * the template's own `preview`.
  */
@@ -52,5 +52,37 @@ export const SEND_TEMPLATE_WORDS: Readonly<Record<string, SendTemplateWords>> = 
     mr: 'नमस्कार {{1}}, तुमचे {{2}} OneOhm कडून येथे आहे. काही प्रश्न असल्यास इथे कळवा.',
     hi: 'नमस्ते {{1}}, आपका {{2}} OneOhm की ओर से यहाँ है। कोई सवाल हो तो यहीं लिखें।',
     buttons: { en: [], mr: [], hi: [] },
+  },
+  visit_pick: {
+    mr: 'नमस्कार {{1}}, आमची टीम {{2}} येथे {{3}} साठी कधी येऊ शकते? दिवस निवडण्यासाठी खालील बटण दाबा.',
+    hi: 'नमस्ते {{1}}, हमारी टीम {{2}} पर {{3}} के लिए कब आ सकती है? दिन चुनने के लिए नीचे का बटन दबाएँ।',
+    buttons: { en: ['Pick a day'], mr: ['दिवस निवडा'], hi: ['दिन चुनें'] },
+  },
+  visit_booked: {
+    mr: 'नमस्कार {{1}}, तुमची भेट ठरली ✅ {{2}}. येण्यापूर्वी {{3}} तुम्हाला फोन करतील.',
+    hi: 'नमस्ते {{1}}, आपकी विज़िट तय हो गई ✅ {{2}}। आने से पहले {{3}} आपको फ़ोन करेंगे।',
+    buttons: {
+      en: ['Okay', 'Change day'],
+      mr: ['ठीक आहे', 'दिवस बदला'],
+      hi: ['ठीक है', 'दिन बदलें'],
+    },
+  },
+  visit_reminder: {
+    mr: 'नमस्कार {{1}}, आमची टीम {{2}} येथे {{3}} {{4}} साठी येणार आहे. कृपया पक्के करा.',
+    hi: 'नमस्ते {{1}}, हमारी टीम {{2}} पर {{3}} {{4}} के लिए आ रही है। कृपया पक्का करें।',
+    buttons: {
+      en: ['Confirm', 'Change day'],
+      mr: ['पक्के करा', 'दिवस बदला'],
+      hi: ['पक्का करें', 'दिन बदलें'],
+    },
+  },
+  inspection_presence: {
+    mr: 'नमस्कार {{1}}, वीज मंडळ (DISCOM) {{3}} येथे {{4}} रोजी {{2}} करणार आहे. कृपया घरी राहा.',
+    hi: 'नमस्ते {{1}}, बिजली बोर्ड (DISCOM) {{3}} पर {{4}} को {{2}} करेगा। कृपया घर पर रहें।',
+    buttons: {
+      en: ["I'll be there", 'Change day'],
+      mr: ['मी असेन', 'दिवस बदला'],
+      hi: ['मैं रहूँगा', 'दिन बदलें'],
+    },
   },
 };

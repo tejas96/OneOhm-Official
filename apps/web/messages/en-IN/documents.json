@@ -263,6 +263,7 @@
         "waiting": "Waiting on customer",
         "toCheck": "To check",
         "toCall": "To call",
+        "toConfirm": "To confirm",
         "done": "Done",
         "cancelled": "Cancelled"
       },
@@ -301,7 +302,9 @@
         "paper": "Paper",
         "location": "Location",
         "pay": "Payment",
-        "callback": "Call back"
+        "callback": "Call back",
+        "visit_pick": "Visit day",
+        "presence": "Be at home"
       },
       "callback": {
         "called": "Called"

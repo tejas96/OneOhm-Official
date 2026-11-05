@@ -7,9 +7,10 @@ import {
   properties,
   quotations,
   serviceRequests,
+  visits as visitRows,
 } from '@oneohm/database';
 import { addDays } from '@oneohm/shared';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
@@ -56,17 +57,14 @@ export async function pendingForCustomer(
   customerId: string,
   today: string,
 ): Promise<PendingItem[]> {
-  const [papers, due, problems, quotes, asks] = await Promise.all([
+  const [papers, due, problems, quotes, asks, upcoming] = await Promise.all([
     openPapers(db, customerId),
     dueInstalments(db, customerId),
     openProblems(db, customerId),
     waitingQuotes(db, customerId, today),
     openAsks(db, customerId),
+    upcomingVisits(db, customerId, today),
   ]);
-  const until = addDays(today, VISIT_DAYS);
-  const visits = problems.filter(
-    (row) => row.visitOn && row.visitOn >= today && row.visitOn <= until,
-  );
   return orderPending([
     ...papers.map((row) => ({
       kind: 'paper' as const,
@@ -93,14 +91,15 @@ export async function pendingForCustomer(
         ? { kind: 'location' as const, requestId: row.id, home: homeOf(row.label, row.city) }
         : { kind: 'callback' as const, requestId: row.id },
     ),
-    ...visits.map((row) => ({
+    ...upcoming.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,
-      on: row.visitOn ?? today,
+      on: row.day,
       home: homeOf(row.label, row.city),
     })),
     ...problems
-      .filter((row) => !visits.includes(row))
+      // A problem with a visit coming up shows as that visit.
+      .filter((row) => !upcoming.some((visit) => visit.serviceRequestId === row.id))
       .map((row) => ({
         kind: 'problem' as const,
         requestId: row.id,
@@ -182,6 +181,35 @@ function dueInstalments(db: DatabaseExecutor, customerId: string) {
       ),
     )
     .orderBy(asc(projects.createdAt), asc(paymentMilestones.position));
+}
+
+/** The confirmed visits in the next 3 days (any kind), from the visit record. */
+export function upcomingVisits(db: DatabaseExecutor, customerId: string, today: string) {
+  return db
+    .select({
+      id: visitRows.id,
+      day: visitRows.day,
+      slot: visitRows.slot,
+      kind: visitRows.kind,
+      serviceRequestId: visitRows.serviceRequestId,
+      label: properties.label,
+      city: properties.city,
+    })
+    .from(visitRows)
+    .leftJoin(projects, eq(projects.id, visitRows.projectId))
+    .leftJoin(
+      properties,
+      eq(properties.id, sql`coalesce(${visitRows.propertyId}, ${projects.propertyId})`),
+    )
+    .where(
+      and(
+        eq(visitRows.customerId, customerId),
+        eq(visitRows.status, 'confirmed'),
+        gte(visitRows.day, today),
+        lte(visitRows.day, addDays(today, VISIT_DAYS)),
+      ),
+    )
+    .orderBy(asc(visitRows.day), asc(visitRows.slot));
 }
 
 /** Problems not yet resolved, newest first, with any technician visit day. */
