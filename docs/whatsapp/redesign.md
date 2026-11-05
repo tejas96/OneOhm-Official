@@ -771,13 +771,16 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   A second survey on the same project, or a second completion, never earns a second. While the step waits for review the
   survey is not offered again (menu, API, Home); a project that already had its survey is not offered it.
 - **No payment left to take it:** the credit is `pending`, the finance desk is alerted (`credit_pending`, like a price
-  difference the final payment cannot absorb), the project log says so, and the customer is told "₹1,000 will come off your
-  final payment." It is applied by itself when a payment becomes upcoming with room (a revision or change accepted) or just
+  difference the final payment cannot absorb), the project log says so, and the customer is told "Our team will give you this ₹1,000
+  discount with your final bill." It is applied by itself when a payment becomes upcoming with room (a revision or change accepted) or just
   before an instalment falls due (task completion). Finance sees it on the project's Payments tab and can mark it given another
-  way with a reason (`paid_out`, audited). Not done: recording it as customer credit (2110) needs a ledger source for a
+  way with a reason (`paid_out`, audited). Marking it paid out makes no ledger entry: the payout must be booked by hand (the alert, the card and the log say so). The alert is marked read once the credit is applied or settled. Not done: recording it as customer credit (2110) needs a ledger source for a
   non-cash credit (a new journal source and the accountant's say).
 - **GST:** the discount is GST inclusive and shown on the tax invoice as "Self-survey discount" lines (one per GST rate, negative
-  taxable value and tax); the milestones carry the GST left over, so the invoice, the payment schedule and the ledger agree.
+  taxable value and tax); the milestones carry the GST left over (the last instalment to fall due takes exactly what is left),
+  so the invoice, the payment schedule and the ledger agree to the paisa. A receipt shows the price less the discount given, so a
+  fully paid customer owes ₹0. If a tax invoice was already issued before the credit was applied, it is for the CA to say:
+  cancel and re-issue, or a credit note.
   **CA to confirm: discount on the invoice vs a credit note.**
 - **Undo:** a reviewer's send-back before the final approval has taken nothing off. `undoApproval` (ready for a future "reopen
   step") puts an applied credit back unless its instalment fell due (then it is refused until finance adjusts) and tells the
@@ -788,5 +791,6 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
 - **Known limit:** a loan paper ask made before the "Collect loan documents" step waits on the customer ends that wait when
   checked, whatever the wait was about (asks made during a wait on someone else never do).
 - **Unfinished:** a started survey shows on Home as "Finish your site survey"; the 2-day reminder (`self_survey_reminder`, docs 51)
-  counts from the start or the last ask-again; after 7 days it is cancelled as abandoned (log) and nobody is told to call. The customer app subsidy line reads the same note as the WhatsApp Project update.
+  counts from the start or the last ask-again; after 7 days it is cancelled as abandoned (log), it is not offered on Home again for
+  14 days, and nobody is told to call. The customer app subsidy line reads the same note as the WhatsApp Project update.
 

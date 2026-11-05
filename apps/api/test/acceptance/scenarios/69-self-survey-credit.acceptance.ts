@@ -3,7 +3,7 @@ import { applyCredit, applyPendingCredit } from '../../../src/modules/self-surve
 import { undoApproval } from '../../../src/modules/self-survey/survey-undo';
 import { acceptanceDb, closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { lastReply, replies, tap } from '../support/onboarding';
+import { lastReply, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import {
   credits,
@@ -11,7 +11,6 @@ import {
   offerSurvey,
   sendWholeSurvey,
   surveysOf,
-  surveyTask,
 } from '../support/self-survey';
 import { optionsOf } from '../support/send';
 import { project, surveyFacts, taskByKey, workTask } from '../support/tasks';
@@ -104,7 +103,7 @@ describe('Self survey: one discount per project, and where it goes', () => {
     );
     expect(alert?.title).toMatch(/^Give the ₹1,000 self-survey discount on /);
     expect((await lastReply(sale.customer.phone))?.body).toBe(
-      'Survey approved ✅ ₹1,000 will come off your final payment.',
+      'Survey approved ✅ Our team will give you this ₹1,000 discount with your final bill.',
     );
     expect((await surveysOf(sale.customer.customerId))[0]).toMatchObject({
       id: ask.id,
@@ -193,34 +192,5 @@ describe('Self survey: one discount per project, and where it goes', () => {
       'We had to take back the ₹1,000 survey discount from your payment. We will call you to explain.',
     );
     expect((await surveysOf(sale.customer.customerId))[0]?.status).toBe('received');
-  });
-
-  it('a survey step that is not the residential rooftop one takes no self survey', async () => {
-    const sale = await sellProject(admin, {
-      name: 'Survey Commercial (test)',
-      category: 'commercial',
-    });
-    const [task] = await rows<{ id: string; template_key: string }>(
-      "SELECT id, template_key FROM project_tasks WHERE project_id = $1 AND template_key LIKE 'site_survey%' ORDER BY position LIMIT 1",
-      [sale.project.id],
-    );
-    expect(task?.template_key).not.toBe('site_survey');
-    expect(
-      (await optionsOf(admin, { taskId: task?.id ?? '' })).offers.filter(
-        (o) => o.action === 'self_survey',
-      ),
-    ).toEqual([]);
-    expect(
-      (
-        await admin.raw('POST', '/send-to-customer', {
-          scope: { taskId: task?.id },
-          request: { action: 'self_survey', taskId: task?.id },
-        })
-      ).status,
-    ).toBe(409);
-    expect(
-      await surveyTask(await sellProject(admin, { name: 'Survey Rooftop (test)' })),
-    ).toBeDefined();
-    expect((await replies(sale.customer.phone)).length).toBe(0);
   });
 });

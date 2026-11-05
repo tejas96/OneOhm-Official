@@ -102,6 +102,16 @@ describe('Self survey: optional, abandoned, finished by the engineer', () => {
     const [after] = await surveysOf(sale.customer.customerId);
     expect(after).toMatchObject({ status: 'cancelled' });
     expect(after?.payload.awaiting).toBeNull();
+    // Given up: not offered again on Home for 14 days.
+    await settle(sale.project.id);
+    await tap(sale.customer.phone, 'menu');
+    expect((await lastReply(sale.customer.phone))?.body ?? '').not.toContain('site survey');
+    await rows(
+      `UPDATE customer_actions SET payload = jsonb_set(payload, '{abandonedAt}', to_jsonb($2::text)) WHERE id = $1`,
+      [ask.id, new Date(Date.now() - 15 * 86_400_000).toISOString()],
+    );
+    await tap(sale.customer.phone, 'menu');
+    expect((await lastReply(sale.customer.phone))?.body ?? '').toContain('site survey');
     expect(
       await rows(
         "SELECT 1 FROM project_activities WHERE project_id = $1 AND message LIKE 'Self survey abandoned%'",

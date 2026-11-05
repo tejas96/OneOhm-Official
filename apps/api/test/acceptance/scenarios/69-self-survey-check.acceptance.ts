@@ -57,7 +57,7 @@ describe('Self survey: the engineer approves', () => {
       status: 'closed',
     });
     expect((await lastReply(sale.customer.phone))?.body).toBe(
-      `Survey approved ✅ ₹1,000 off your payment: ${next?.label}.`,
+      'Survey approved ✅ ₹1,000 off your payment before dispatch.',
     );
     const [line] = await rows<{ message: string }>(
       "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE 'Self survey approved%'",
