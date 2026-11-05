@@ -95,7 +95,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     t.step('8b. The customer accepts');
     await t.send({ buttonPayload: `quote_accept:${quote.id}` });
     const check = await lastReply(phone);
-    expect(choices(check)).toEqual([`quote_yes:${quote.id}`, `quote_ask:${quote.id}`]);
+    expect(choices(check)).toEqual([`quote_yes:${quote.id}`, `quote_no:${quote.id}`]);
     // The accept check says the first instalment in whole rupees, with no quote code (C1, C9).
     expect(check?.body).toMatch(/^₹[\d,]+ चे सोलर कोटेशन स्वीकारायचे\? पहिला हप्ता ₹[\d,]+ स्वीकारताना/);
     await t.tap(`quote_yes:${quote.id}`);

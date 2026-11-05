@@ -9,6 +9,8 @@ const EN = {
     `Thank you! *${name}* will call you ${when} to renew your AMC.`,
   team: 'Our team',
   old: 'This offer is closed. Thank you!',
+  what: 'your AMC renewal',
+  cancelled: 'You do not need to answer about the AMC renewal any more. Thank you.',
 };
 
 const MR: Words<typeof EN> = {
@@ -18,6 +20,8 @@ const MR: Words<typeof EN> = {
   renewed: (name, when) => `धन्यवाद! AMC नूतनीकरणासाठी *${name}* तुम्हाला ${when} फोन करतील.`,
   team: 'आमची टीम',
   old: 'ही ऑफर बंद झाली आहे. धन्यवाद!',
+  what: 'AMC नूतनीकरण',
+  cancelled: 'AMC नूतनीकरणाबद्दल उत्तर देण्याची आता गरज नाही. धन्यवाद.',
 };
 
 const HI: Words<typeof EN> = {
@@ -27,6 +31,8 @@ const HI: Words<typeof EN> = {
   renewed: (name, when) => `धन्यवाद! AMC रिन्यू करने के लिए *${name}* आपको ${when} फ़ोन करेंगे।`,
   team: 'हमारी टीम',
   old: 'यह ऑफ़र बंद हो गया है। धन्यवाद!',
+  what: 'AMC रिन्यू',
+  cancelled: 'AMC रिन्यू के बारे में जवाब देने की अब ज़रूरत नहीं। धन्यवाद।',
 };
 
 export const AMC_LISTS = { en: EN, mr: MR, hi: HI };

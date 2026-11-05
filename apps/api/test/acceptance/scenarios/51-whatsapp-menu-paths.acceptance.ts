@@ -23,7 +23,15 @@ describe('WhatsApp menu paths', () => {
     const { phone, customerId } = sale.customer;
 
     await tap(phone, 'service');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
+    expect(choices(await endsWithTaps(phone))).toEqual([
+      'pb:what:inverter',
+      'pb:what:nopower',
+      'pb:what:lowpower',
+      'pb:what:damage',
+      'pb:what:cleaning',
+      'pb:what:bill',
+      'pb:what:other',
+    ]);
     expect((await chatOf(phone)).state).toBe('await_problem');
 
     // H1: a menu row tapped while the bot waits is that row, never the complaint.
@@ -34,8 +42,18 @@ describe('WhatsApp menu paths', () => {
 
     await tap(phone, 'service');
     await say(phone, 'ok');
-    // Too short: asked again, with Menu to leave.
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
+    // Words before the choices are made: the question is asked again, nothing is raised.
+    expect(choices(await endsWithTaps(phone))).toEqual([
+      'pb:what:inverter',
+      'pb:what:nopower',
+      'pb:what:lowpower',
+      'pb:what:damage',
+      'pb:what:cleaning',
+      'pb:what:bill',
+      'pb:what:other',
+    ]);
+    await tap(phone, 'pb:what:inverter');
+    await tap(phone, 'pb:since:today');
     await say(phone, 'Inverter shows an error since morning (test)');
     expect(choices(await endsWithTaps(phone))).toEqual(['go:problems', 'menu']);
     const [raised] = await requestsOf(customerId);
@@ -43,7 +61,7 @@ describe('WhatsApp menu paths', () => {
 
     // My problems lists it, and ends with taps.
     await tap(phone, 'requests');
-    expect((await endsWithTaps(phone))?.body).toContain('Inverter shows an error');
+    expect((await endsWithTaps(phone))?.body).toContain('Inverter error');
   });
 
   it('Raise a complaint with two homes asks which home first, then files on that one', async () => {
@@ -59,8 +77,18 @@ describe('WhatsApp menu paths', () => {
     expect(list?.rows?.map((row) => row.title)).toEqual(['Pune', 'Sangli']);
 
     await tap(phone, `home:${pune}`);
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
-    await say(phone, 'No power from the panels today (test)');
+    expect(choices(await endsWithTaps(phone))).toEqual([
+      'pb:what:inverter',
+      'pb:what:nopower',
+      'pb:what:lowpower',
+      'pb:what:damage',
+      'pb:what:cleaning',
+      'pb:what:bill',
+      'pb:what:other',
+    ]);
+    await tap(phone, 'pb:what:nopower');
+    await tap(phone, 'pb:since:today');
+    await tap(phone, 'pb:done');
     const [raised] = await requestsOf(customerId);
     expect(raised?.project_id).toBe(pune);
 
@@ -69,7 +97,15 @@ describe('WhatsApp menu paths', () => {
     await tap(phone, `home:${pune}`);
     const said = (await replies(phone)).slice(-2);
     expect(said[0]?.body).toBe('That home is no longer active.');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
+    expect(choices(await endsWithTaps(phone))).toEqual([
+      'pb:what:inverter',
+      'pb:what:nopower',
+      'pb:what:lowpower',
+      'pb:what:damage',
+      'pb:what:cleaning',
+      'pb:what:bill',
+      'pb:what:other',
+    ]);
     expect((await chatOf(phone)).state).toBe('await_problem');
   });
 
@@ -107,7 +143,7 @@ describe('WhatsApp menu paths', () => {
     await say(phone, 'no idea');
     expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
     await say(phone, `Suresh Patil ${uniquePhone().slice(-10)}`);
-    expect((await endsWithTaps(phone))?.body).toContain('We will call Suresh');
+    expect((await endsWithTaps(phone))?.body).toContain("We'll call Suresh");
     await tap(phone, 'rewards');
     expect((await endsWithTaps(phone))?.body).toContain('Suresh');
   });

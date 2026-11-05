@@ -89,7 +89,7 @@ describe('WhatsApp quote and pay', () => {
     expect(ask?.payload.kind).toBe('buttons');
     expect(ask?.payload.buttons.map((button) => button.id)).toEqual([
       `quote_yes:${quotation.id}`,
-      `quote_ask:${quotation.id}`,
+      `quote_no:${quotation.id}`,
     ]);
     expect(await statusOf(quotation.id)).toBe('sent');
 

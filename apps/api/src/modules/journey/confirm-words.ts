@@ -1,3 +1,5 @@
+import { AMC_WORDS } from '../care/amc-words';
+import { PROBLEM_WORDS } from '../care/problem-words';
 import { JOURNEY_WORDS } from './journey-words';
 import { STEP_WORDS } from './step-words';
 
@@ -15,6 +17,10 @@ export function confirmWords(kind: string): { what: string; cancelled: string } 
       return { what: step.bank.what, cancelled: step.bank.cancelled };
     case 'layout':
       return { what: step.layout.what, cancelled: step.layout.cancelled };
+    case 'amc_renewal':
+      return { what: AMC_WORDS.what, cancelled: AMC_WORDS.cancelled };
+    case 'problem_fixed':
+      return { what: PROBLEM_WORDS.fixedWhat, cancelled: PROBLEM_WORDS.fixedCancelled };
     default:
       return { what: JOURNEY_WORDS.ready.what, cancelled: JOURNEY_WORDS.ready.cancelled };
   }

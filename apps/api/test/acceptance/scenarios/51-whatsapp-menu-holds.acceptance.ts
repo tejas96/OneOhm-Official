@@ -21,20 +21,35 @@ describe('WhatsApp menu paths in a held chat', () => {
     const chat = await chatOf(phone);
     await admin.post(`/whatsapp/chats/${chat.id}/reply`, { text: 'Hello from the office (test)' });
 
+    // One rating system (redesign §13): the pending rating ask is answered with five taps.
+    const [ask] = await rows<{ id: string }>(
+      `INSERT INTO customer_actions (type, customer_id, project_id, title, payload)
+       VALUES ('rating', $1, $2, 'Rate: survey', $3::jsonb) RETURNING id`,
+      [
+        customerId,
+        sale.project.id,
+        JSON.stringify({
+          kind: 'stage',
+          projectId: sale.project.id,
+          stage: 'survey',
+          once: `rating:stage:${sale.project.id}:survey`,
+        }),
+      ],
+    );
     await tap(phone, 'feedback');
-    expect(choices(await endsWithTaps(phone))).toContain('rate:4');
-    await tap(phone, 'rate:4');
-    expect(choices(await endsWithTaps(phone))).toEqual(['menu']);
-    await say(phone, 'Great team (test)');
-    expect((await endsWithTaps(phone))?.body).toContain('noted');
-    const saved = await rows<{ rating: number; comment: string | null }>(
-      'SELECT rating, comment FROM customer_feedback WHERE customer_id = $1',
+    expect(choices(await endsWithTaps(phone))).toContain(`rt:${ask?.id}:4`);
+    await tap(phone, `rt:${ask?.id}:4`);
+    expect((await endsWithTaps(phone))?.body).toContain('Thank you for rating us');
+    const saved = await rows<{ rating: number }>(
+      'SELECT rating FROM stage_ratings WHERE customer_id = $1',
       [customerId],
     );
-    expect(saved).toEqual([{ rating: 4, comment: 'Great team (test)' }]);
+    expect(saved).toEqual([{ rating: 4 }]);
 
-    // M6: Raise a complaint runs as the bot's flow inside the hold, and the hold stays.
+    // M6: Report a problem runs as the bot's flow inside the hold, and the hold stays.
     await tap(phone, 'service');
+    await tap(phone, 'pb:what:other');
+    await tap(phone, 'pb:since:today');
     await say(phone, 'Meter reading looks wrong (test)');
     expect(await requestsOf(customerId)).toHaveLength(1);
     expect((await chatOf(phone)).state).toBe('human');

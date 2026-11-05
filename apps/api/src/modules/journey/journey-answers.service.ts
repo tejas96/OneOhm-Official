@@ -15,6 +15,7 @@ import { HandOverService } from '../whatsapp/assistant/hand-over';
 import { answererName } from '../whatsapp/chat-owner';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
+import { askForStageRating } from '../workforce/rating-request';
 import { markPackSent } from './journey-compose';
 import { answerConfirm, type Confirmed } from './journey-confirm';
 import {
@@ -138,6 +139,21 @@ export class JourneyAnswersService {
           ? words.ready.yes
           : words.install.yes;
     await sayWithTaps(this.db, chat, text, ['menu']);
+    if (kind === 'installation' && result.kind === 'yes')
+      await this.rateInstallation(chat, actionId);
+  }
+
+  /** The installation is fine: now the five taps for that stage (redesign §13). */
+  private async rateInstallation(chat: Conversation, actionId: string) {
+    const [ask] = await this.db
+      .select({ projectId: customerActions.projectId })
+      .from(customerActions)
+      .where(eq(customerActions.id, actionId));
+    const projectId = ask?.projectId;
+    if (projectId)
+      await this.db.transaction((tx) =>
+        askForStageRating(tx, { projectId, stage: 'installation' }, chat),
+      );
   }
 
   /** "Something is wrong": the problem report starts on this home, for the installation. */

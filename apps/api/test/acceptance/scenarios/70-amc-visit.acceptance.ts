@@ -38,7 +38,13 @@ describe('AMC: the visit', () => {
     expect(ask?.payload.work).toBe('free AMC visit');
     await openChat(sale.customer.phone, sale.customer.customerId);
     await tap(sale.customer.phone, String(ask?.payload.pickPayload));
-    const picked = await pickDay(sale.customer.phone, await lastReply(sale.customer.phone));
+    // A day late in the list: other scenarios book the first free days of the same crew.
+    const list = await lastReply(sale.customer.phone);
+    const last = list?.rows?.filter((row) => row.id.startsWith('vday:')).at(-1);
+    const picked = await pickDay(sale.customer.phone, {
+      ...list,
+      rows: last ? [last] : [],
+    } as never);
     const [proposed] = await visitsFor(sale.customer.customerId);
     expect(proposed).toMatchObject({ kind: 'amc', status: 'proposed' });
 

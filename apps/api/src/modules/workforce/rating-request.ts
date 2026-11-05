@@ -1,6 +1,6 @@
-import { type DatabaseExecutor, projectTasks } from '@oneohm/database';
+import { customerActions, type DatabaseExecutor, projectTasks } from '@oneohm/database';
 import { isRatedStage, stageDone } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { askRating } from '../care/rating-ask';
 
 /**
@@ -13,6 +13,8 @@ import { askRating } from '../care/rating-ask';
 export async function askForStageRating(
   db: DatabaseExecutor,
   task: { readonly projectId: string; readonly stage: string },
+  /** The customer just answered in this chat: the five taps go straight there. */
+  chat?: { readonly id: string; readonly phone: string },
 ): Promise<boolean> {
   const { stage } = task;
   if (!isRatedStage(stage)) return false;
@@ -26,6 +28,27 @@ export async function askForStageRating(
     .where(eq(projectTasks.projectId, task.projectId));
   if (!stageDone(tasks, stage)) return false;
   if (!tasks.some((row) => row.stage === stage && row.customerVisible)) return false;
+  // "Is the installation finished?" comes first; its Yes asks for the rating (one question at a time).
+  if (!chat && stage === 'installation' && (await installationAsked(db, task.projectId)))
+    return false;
   // The five taps on WhatsApp (redesign §13), or the template whose button opens them; once per stage.
-  return (await askRating(db, { kind: 'stage', projectId: task.projectId, stage })) === 'sent';
+  const target = { kind: 'stage', projectId: task.projectId, stage } as const;
+  return (await askRating(db, target, chat ? { chat } : {})) === 'sent';
+}
+
+/** The installation question is still waiting for the customer's answer. */
+async function installationAsked(db: DatabaseExecutor, projectId: string): Promise<boolean> {
+  const [open] = await db
+    .select({ id: customerActions.id })
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.projectId, projectId),
+        eq(customerActions.type, 'confirm'),
+        eq(customerActions.status, 'open'),
+        sql`${customerActions.payload}->>'kind' = 'installation'`,
+      ),
+    )
+    .limit(1);
+  return Boolean(open);
 }

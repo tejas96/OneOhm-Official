@@ -94,6 +94,19 @@ describe('AMC: renewal offer', () => {
     expect(await callTasks(sale.customer.customerId)).toHaveLength(1);
   });
 
+  it('an open offer is not a roof question on Home, and the cancel words name the AMC', async () => {
+    const sale = await sellProject(admin, { name: 'Amc Home (test)' });
+    await amcEnding(sale, 15, plan);
+    await offerRenewals(today());
+    await openChat(sale.customer.phone, sale.customer.customerId);
+    await tap(sale.customer.phone, 'menu');
+    expect((await lastReply(sale.customer.phone))?.body ?? '').not.toMatch(/roof/i);
+    const [ask] = await renewalAsks(sale.customer.customerId);
+    await admin.post(`/document-requests/${ask?.id}/cancel`, {});
+    expect(await bodyOf(sale.customer.phone)).toContain('AMC renewal');
+    expect((await renewalAsks(sale.customer.customerId))[0]?.status).toBe('cancelled');
+  });
+
   it('[Talk to us] hands the chat to their person and closes the offer', async () => {
     const sale = await sellProject(admin, { name: 'Amc Talk (test)' });
     await amcEnding(sale, 15, plan);

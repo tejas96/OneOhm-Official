@@ -46,6 +46,8 @@ export async function journeyAsks(db: DatabaseExecutor, customerId: string): Pro
         inArray(customerActions.type, ['signature', 'confirm']),
         eq(customerActions.status, 'open'),
         sql`${customerActions.payload}->>'signedActionId' is null`,
+        // The fixed check and the AMC renewal offer have their own buttons, not a journey line on Home.
+        sql`coalesce(${customerActions.payload}->>'kind', '') not in ('problem_fixed', 'amc_renewal')`,
       ),
     )
     .orderBy(asc(customerActions.createdAt));

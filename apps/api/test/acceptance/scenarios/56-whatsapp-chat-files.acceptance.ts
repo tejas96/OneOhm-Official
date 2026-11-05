@@ -111,6 +111,8 @@ describe('WhatsApp chat files', () => {
     const [kept] = await rows<{ id: string }>('SELECT id FROM documents WHERE customer_id = $1', [
       customer.customerId,
     ]);
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
     await say(customer.phone, 'The inverter shows a red light (test)');
     // The same document now shows the problem: no second copy, nothing removed.
     const docs = await projectDocs(project.id);

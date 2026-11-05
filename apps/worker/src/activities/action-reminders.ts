@@ -77,6 +77,8 @@ export async function queueActionReminders(
           'self_survey',
         ]),
         eq(customerActions.status, 'open'),
+        // The fixed check and the AMC renewal offer are not chased with the journey reminders.
+        sql`coalesce(${customerActions.payload}->>'kind', '') not in ('problem_fixed', 'amc_renewal')`,
         // Asks older than 14 days are over; only a roof answered "Not yet" counts from its answer, so
         // it may be older (up to 56 days), and nothing else can crowd the batch.
         or(

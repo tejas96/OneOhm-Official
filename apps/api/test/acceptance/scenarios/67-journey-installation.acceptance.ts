@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, outboxFor, rows } from '../support/db';
 import { Session } from '../support/http';
 import { asksOf, setNotify } from '../support/journey-steps';
-import { lastReply, say, tap } from '../support/onboarding';
+import { lastReply, replies, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { closeChat, openChat } from '../support/send';
 import { completeThrough } from '../support/tasks';
@@ -32,7 +32,11 @@ describe('Journey: is the installation finished?', () => {
     ]);
     await tap(customer.phone, question?.buttons?.[0]?.id ?? '');
     expect((await asksOf(customer.customerId, 'confirm'))[0]).toMatchObject({ status: 'closed' });
-    expect((await lastReply(customer.phone))?.body).toBe('Thank you ✅ We are glad it went well.');
+    // Thanks first; then the five taps for the installation (one question at a time, redesign §13).
+    const said = await replies(customer.phone);
+    expect(said.at(-2)?.body).toBe('Thank you ✅ We are glad it went well.');
+    expect(said.at(-1)?.kind).toBe('list');
+    expect(said.at(-1)?.body).toBe('How was your installation? Please tap a rating.');
     const [log] = await rows(
       "SELECT 1 FROM project_activities WHERE project_id = $1 AND message LIKE '%confirmed the installation%'",
       [sale.project.id],
@@ -47,24 +51,31 @@ describe('Journey: is the installation finished?', () => {
     await completeThrough(admin, sale.project.id, 'installation_complete');
     const question = await lastReply(customer.phone);
     await tap(customer.phone, question?.buttons?.[1]?.id ?? '');
-    expect((await lastReply(customer.phone))?.body).toMatch(
+    const said = await replies(customer.phone);
+    expect(said.at(-2)?.body).toMatch(
       /^We are sorry\. Please tell us what is wrong with the installation at /,
     );
+    expect(said.at(-1)?.kind).toBe('list');
     const [alert] = await rows<{ title: string }>(
       "SELECT title FROM notifications WHERE kind = 'installation_not_ok' AND user_id = $1 AND subject_id = $2",
       [admin.userId, sale.project.id],
     );
     expect(alert?.title).toMatch(/says the installation is not right/);
     expect((await asksOf(customer.customerId, 'confirm'))[0]?.payload.answer).toBe('problem');
-    await say(customer.phone, 'One panel looks loose on the roof');
+    await tap(customer.phone, 'pb:what:damage');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     const [request] = await rows<{ description: string; project_id: string }>(
       'SELECT description, project_id FROM service_requests WHERE customer_id = $1',
       [customer.customerId],
     );
     expect(request).toEqual({
-      description: 'Installation: One panel looks loose on the roof (via WhatsApp)',
+      description: 'Installation · Damage · since today',
       project_id: sale.project.id,
     });
+    // The installation was not "all good": no rating is asked for it.
+    const ratings = await asksOf(customer.customerId, 'rating');
+    expect(ratings.filter((ask) => ask.payload.stage === 'installation')).toHaveLength(0);
   });
 
   it('the window closed sends the approved template; a step that may not message sends nothing', async () => {

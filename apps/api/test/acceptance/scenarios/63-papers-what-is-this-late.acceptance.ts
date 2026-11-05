@@ -58,7 +58,9 @@ describe('Papers: late files, many files and the timer', () => {
   it('a photo after a problem is offered to it, never attached unasked', async () => {
     const { customer } = await sellProject(admin, { name: 'Problem Then Photo (test)' });
     await tap(customer.phone, 'go:problem');
-    await say(customer.phone, 'The inverter shows a red light (test)');
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     await sendPhoto(customer.phone);
     const [kept] = await docsOf(customer.customerId);
     const request = () =>
@@ -79,7 +81,9 @@ describe('Papers: late files, many files and the timer', () => {
     await ask(project.id, 'electricity_bill', 'Electricity bill (test)', 'bill');
     await ask(project.id, 'property', 'Sale deed (test)', 'property');
     await tap(customer.phone, 'go:problem');
-    await say(customer.phone, 'The inverter shows a red light (test)');
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     await sendPhoto(customer.phone);
     await askAboutFiles(admin);
     expect(choices(await lastReply(customer.phone))[0]).toBe('what:probadd');
@@ -160,7 +164,9 @@ describe('Papers: late files, many files and the timer', () => {
   it('a PDF after a problem is not offered to it', async () => {
     const { customer } = await sellProject(admin, { name: 'Pdf After Problem (test)' });
     await tap(customer.phone, 'go:problem');
-    await say(customer.phone, 'The inverter shows a red light (test)');
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     await sendInbound(customer.phone, {
       media: { type: 'document', fileId: 'pdf-after-problem', filename: 'bill.pdf' },
     });
@@ -202,7 +208,9 @@ describe('Papers: late files, many files and the timer', () => {
     // The problem steps are not cut across, however much time passes.
     await askAboutFiles(admin, 600);
     expect((await replies(customer.phone)).length).toBe(before);
-    await say(customer.phone, 'The inverter shows a red light (test)');
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     await askAboutFiles(admin, 600);
     // Now it is asked about; the problem just told is offered for the photo.
     expect((await lastReply(customer.phone))?.body).toBe(

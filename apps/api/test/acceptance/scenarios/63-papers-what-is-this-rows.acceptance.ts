@@ -4,7 +4,7 @@ import { acceptanceDb, closeDb, rows } from '../support/db';
 import { anotherHome } from '../support/homes';
 import { Session } from '../support/http';
 import { milestoneOf, recordPayment } from '../support/money';
-import { choices, lastReply, replies, say, tap } from '../support/onboarding';
+import { choices, lastReply, replies, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { advanceTo, project as projectOf } from '../support/tasks';
 import {
@@ -94,8 +94,10 @@ describe('Papers: Payment proof, Problem photo, errors and old papers', () => {
     const { customer, project } = await sellProject(admin, { name: 'Problem Row (test)' });
     await photoAndQuestion(admin, customer.phone);
     await tap(customer.phone, 'what:prob');
-    expect((await lastReply(customer.phone))?.body).toContain('Please tell us the problem');
-    await say(customer.phone, 'The inverter shows a red light (test)');
+    expect((await lastReply(customer.phone))?.body).toContain('What is wrong?');
+    await tap(customer.phone, 'pb:what:inverter');
+    await tap(customer.phone, 'pb:since:today');
+    await tap(customer.phone, 'pb:done');
     const docs = await rows<{ id: string; request: string | null; project_id: string | null }>(
       `SELECT id, service_request_id AS request, project_id FROM documents WHERE customer_id = $1`,
       [customer.customerId],

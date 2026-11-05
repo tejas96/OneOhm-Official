@@ -824,7 +824,8 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   stage -> the five taps in the chat (template `stage_rating_request` with [Rate now] outside 24 hours); resolved problem confirmed by
   Yes -> the same five taps. One store per kind: `stage_ratings`, `service_ratings`; the old WhatsApp feedback rating (and its comment
   step) is retired, its data in `customer_feedback` stays and "Rate us" in More opens the pending ask or says there is none. The app
-  still rates stages and problems and closes the ask. 1–2 stars: "Sorry to hear that. *{name}* will call you {when}.", the project
+  still rates stages and problems and closes the ask. The installation rating waits for the answer to "Is the installation
+  finished?" (one question at a time): its Yes asks for the rating, "Something is wrong" asks for none. 1–2 stars: "Sorry to hear that. *{name}* will call you {when}.", the project
   manager (stage) or service desk (problem) is alerted and a call task is made. Staff **Ask for the pending rating again** (Send to
   customer, customer place) re-sends only the pending ask.
 - **Referral (§15):** Refer a friend opens the `refer_friend` form (name, mobile, city from the service cities) or, without it, takes
