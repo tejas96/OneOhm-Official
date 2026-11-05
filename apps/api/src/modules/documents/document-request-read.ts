@@ -25,6 +25,9 @@ const category = (value: string | null): CustomerRequestableCategory =>
 const reasksOf = sql`(select count(*)::int from audit_log a where a.entity in ('customer_action', 'document_request') and a.action in ('customer_action.reasked', 'document_request.reasked') and a.entity_id = ${customerActions.id}::text)`;
 const remindersOf = sql<number>`(select count(*)::int from outbox o where o.dedupe_key = 'paper_reminder:' || ${customerActions.id}::text || ':' || ${reasksOf}::text)`;
 
+const channelOf = (value: unknown): DocumentRequest['channel'] =>
+  value === 'whatsapp' || value === 'sms' || value === 'in_person' ? value : null;
+
 /** The pin a customer sent for a home that already has a point, with how far it is from it. */
 function suggestionOf(
   request: typeof customerActions.$inferSelect,
@@ -101,6 +104,7 @@ export async function readRequests(
     documentChecked: request.documentId ? checkedAt !== null : null,
     documentByTeam: request.documentId ? uploadedBy !== null : null,
     requestedBy: by,
+    channel: channelOf(request.payload.channel),
     suggestion: suggestionOf(request, point),
     remindersSent: reminders,
     createdAt: request.createdAt.toISOString(),

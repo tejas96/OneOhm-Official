@@ -259,6 +259,11 @@
       "cancel": "Cancel",
       "cancelled": "Request cancelled",
       "cancelFailed": "Could not cancel the request",
+      "doneInPerson": {
+        "action": "Done in person",
+        "done": "Marked as done in person",
+        "failed": "Could not close the ask"
+      },
       "status": {
         "waiting": "Waiting on customer",
         "toCheck": "To check",

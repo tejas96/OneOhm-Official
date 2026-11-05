@@ -65,3 +65,9 @@ export const setForm = (key: string, id: string | null) =>
         [key, id],
       )
     : rows('DELETE FROM wa_forms WHERE key = $1', [key]);
+
+/** Sends the "Ask for the location" offer the send sheet shows for this place. */
+export async function askLocation(admin: Session, scope: SendBody['scope']) {
+  const offer = (await optionsOf(admin, scope)).offers.find((one) => one.action === 'ask_location');
+  return sendTo(admin, scope, offer?.request as never);
+}

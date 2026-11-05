@@ -83,6 +83,29 @@ export function useCancelRequest() {
   });
 }
 
+/** The team did the ask in person with a customer who is not on WhatsApp: it closes. */
+export function useDoneInPerson() {
+  const t = useTranslations('documents.requests');
+  const toast = useToast();
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: (request: DocumentRequest) =>
+      expectStatus(
+        api.documentRequests.doneInPersonDocumentRequest({
+          params: { id: request.id },
+          body: {},
+        }),
+        200,
+      ),
+    onSuccess: async (request) => {
+      await refresh();
+      toast({ tone: 'success', title: t('doneInPerson.done'), description: request.title });
+    },
+    onError: (error) =>
+      toast({ tone: 'error', title: t('doneInPerson.failed'), description: describeError(error) }),
+  });
+}
+
 /** "Not right, ask again": the request opens again with a reason the customer sees. */
 export function useReaskRequest(onDone: () => void) {
   const t = useTranslations('documents.requests.reask');

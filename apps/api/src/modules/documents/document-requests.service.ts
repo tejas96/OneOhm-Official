@@ -19,6 +19,7 @@ import { tellAskCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
 import { homeOfRequest, openRequestsFor } from './document-request-home';
+import { closeInPerson } from './document-request-in-person';
 import { askCustomer, tellCancelled } from './document-request-messages';
 import { readRequests } from './document-request-read';
 import { contactOf, reopenRequest } from './document-request-reopen';
@@ -145,6 +146,12 @@ export class DocumentRequestsService {
           actor.userId,
         );
     });
+    return this.one(id);
+  }
+
+  /** An ask for a customer who is not on WhatsApp was done in person: it closes (log and audit). */
+  async doneInPerson(actor: Actor, id: string): Promise<DocumentRequest> {
+    await closeInPerson(this.db, actor, await this.one(id));
     return this.one(id);
   }
 

@@ -1,4 +1,5 @@
 import {
+  CONTACT_CHANNELS,
   CUSTOMER_ACTION_STATUSES,
   CUSTOMER_ACTION_TYPES,
   CUSTOMER_REQUESTABLE_CATEGORIES,
@@ -37,6 +38,8 @@ export const documentRequestSchema = z.object({
   /** The paper was filed by the team (a staff upload): asking again keeps it. */
   documentByTeam: z.boolean().nullable(),
   requestedBy: z.string().nullable(),
+  /** How the ask travels (WhatsApp, SMS or in person); null for asks made before this was recorded. */
+  channel: z.enum(CONTACT_CHANNELS).nullable().default(null),
   /** A pin the customer sent for a home that already has a point, waiting for the team to check. */
   suggestion: z
     .object({

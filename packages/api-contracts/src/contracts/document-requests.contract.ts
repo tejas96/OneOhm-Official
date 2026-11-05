@@ -39,6 +39,14 @@ export const documentRequestsContract = c.router({
     body: z.object({}).optional(),
     responses: { 200: documentRequestSchema },
   },
+  doneInPersonDocumentRequest: {
+    method: 'POST',
+    path: '/document-requests/:id/done-in-person',
+    pathParams: idParams,
+    body: z.object({}).optional(),
+    responses: { 200: documentRequestSchema },
+    summary: 'The team did an ask in person with a customer who is not on WhatsApp: it closes.',
+  },
   reaskDocumentRequest: {
     method: 'POST',
     path: '/document-requests/:id/reask',
