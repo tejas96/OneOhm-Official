@@ -109,6 +109,8 @@ describe('rights of the journey steps', () => {
       'bank_sign_visit',
       'layout_approval',
       'layout_reminder',
+      'self_survey_offer',
+      'self_survey_reminder',
       'loan_sanctioned',
       'loan_disbursed',
       'loan_rejected',

@@ -45,6 +45,7 @@ export * from './quotation.schema';
 export * from './receipt-papers.schema';
 export * from './reports';
 export * from './search.schema';
+export * from './self-survey.schema';
 export * from './send-to-customer.schema';
 export * from './service-desk.schema';
 export * from './service-visit.schema';

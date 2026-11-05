@@ -75,6 +75,8 @@ describe('follow-up text', () => {
       'bank_sign_visit',
       'layout_approval',
       'layout_reminder',
+      'self_survey_offer',
+      'self_survey_reminder',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.
     expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([

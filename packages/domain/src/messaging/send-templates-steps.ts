@@ -70,4 +70,28 @@ export const STEP_ASK_TEMPLATES = [
     preview:
       'Hello {{1}}, {{2}} did not approve the loan. {{3}} will call you to plan the next steps.',
   },
+  {
+    // Marketing (a discount offer): skipped after STOP.
+    key: 'self_survey_offer',
+    audience: 'customer',
+    fields: ['customer', 'home', 'amount'],
+    extras: { quickReplies: ['startPayload', 'visitPayload'] },
+    preview:
+      'Hello {{1}}, do your own site survey for your {{2}} solar in 5 minutes and get {{3}} off your next payment. Our engineer checks your photos - no visit needed.',
+  },
+  {
+    // Marketing: the 2-day reminder of a survey offered or started and not sent.
+    key: 'self_survey_reminder',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    extras: { quickReplies: ['continuePayload'] },
+    preview:
+      'Hello {{1}}, a reminder: your site survey for your {{2}} solar is not finished yet. It takes about 5 minutes. Tap the button to continue.',
+  },
+  {
+    key: 'self_survey_approved',
+    audience: 'customer',
+    fields: ['customer', 'home', 'amount'],
+    preview: 'Hello {{1}}, your site survey for your {{2}} solar is approved. {{3}}',
+  },
 ] as const satisfies readonly MessageTemplateDefault[];

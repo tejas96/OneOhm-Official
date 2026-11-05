@@ -27,6 +27,7 @@ export * from './lead-steps.schema';
 export * from './ledger.schema';
 export * from './loans.schema';
 export * from './message-templates.schema';
+export * from './milestone-credits.schema';
 export * from './notifications.schema';
 export * from './payment-links.schema';
 export * from './payment-plans.schema';

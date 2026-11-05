@@ -32,6 +32,9 @@ export const SKIPPED_AFTER_STOP: readonly string[] = [
   'stage_rating_request',
   'referral_reward',
   'contact_changed',
+  // Marketing: the self-survey offer and its reminder.
+  'self_survey_offer',
+  'self_survey_reminder',
 ];
 
 export const skippedAfterStop = (template: string, whatsappOptIn: boolean): boolean =>

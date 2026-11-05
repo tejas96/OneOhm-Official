@@ -9,6 +9,7 @@ import {
   reaskDocumentRequestSchema,
 } from '../schemas/document-request.schema';
 import { reportKeySchema } from './reports.contract';
+import { selfSurveyContract } from './self-survey.contract';
 import { sendToCustomerContract } from './send-to-customer.contract';
 import { visitsContract } from './visits.contract';
 
@@ -105,4 +106,5 @@ export const customerActionContracts = {
   reportSettings: reportSettingsContract,
   sendToCustomer: sendToCustomerContract,
   visits: visitsContract,
+  selfSurvey: selfSurveyContract,
 };

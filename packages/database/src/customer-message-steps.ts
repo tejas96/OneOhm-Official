@@ -14,6 +14,9 @@ export const STEP_MESSAGES = [
   'loan_sanctioned',
   'loan_disbursed',
   'loan_rejected',
+  'self_survey_offer',
+  'self_survey_reminder',
+  'self_survey_approved',
 ] as const;
 export type StepMessage = (typeof STEP_MESSAGES)[number];
 
@@ -46,6 +49,18 @@ export const STEP_EN: Readonly<Record<StepMessage, Words>> = {
     title: 'The loan was not approved',
     body: `${p.bank} did not approve it. ${p.staff} will call you to plan the next steps.`,
   }),
+  self_survey_offer: (p) => ({
+    title: `Do your own site survey and get ${p.amount} off`,
+    body: `For ${p.home}. It takes about 5 minutes. Open our WhatsApp chat to start.`,
+  }),
+  self_survey_reminder: (p) => ({
+    title: 'Your site survey is not finished',
+    body: `For ${p.home}. Open our WhatsApp chat to continue.`,
+  }),
+  self_survey_approved: (p) => ({
+    title: 'Your site survey is approved',
+    body: `${p.home}: ${p.amount}`,
+  }),
 };
 
 export const STEP_MR: Readonly<Record<StepMessage, Words>> = {
@@ -77,6 +92,18 @@ export const STEP_MR: Readonly<Record<StepMessage, Words>> = {
     title: 'कर्ज मंजूर झाले नाही',
     body: `${p.bank} ने ते मंजूर केले नाही. पुढच्या योजनेसाठी ${p.staff} तुम्हाला फोन करतील.`,
   }),
+  self_survey_offer: (p) => ({
+    title: `स्वतः साइट सर्वे करा आणि ${p.amount} सूट मिळवा`,
+    body: `${p.home} साठी. सुमारे ५ मिनिटे लागतात. सुरू करण्यासाठी आमचे WhatsApp चॅट उघडा.`,
+  }),
+  self_survey_reminder: (p) => ({
+    title: 'तुमचा साइट सर्वे पूर्ण झालेला नाही',
+    body: `${p.home} साठी. पुढे जाण्यासाठी आमचे WhatsApp चॅट उघडा.`,
+  }),
+  self_survey_approved: (p) => ({
+    title: 'तुमचा साइट सर्वे मंजूर झाला',
+    body: `${p.home}: ${p.amount}`,
+  }),
 };
 
 export const STEP_HI: Readonly<Record<StepMessage, Words>> = {
@@ -107,5 +134,17 @@ export const STEP_HI: Readonly<Record<StepMessage, Words>> = {
   loan_rejected: (p) => ({
     title: 'लोन स्वीकृत नहीं हुआ',
     body: `${p.bank} ने इसे स्वीकृत नहीं किया। आगे की योजना के लिए ${p.staff} आपको फ़ोन करेंगे।`,
+  }),
+  self_survey_offer: (p) => ({
+    title: `खुद साइट सर्वे करें और ${p.amount} की छूट पाएँ`,
+    body: `${p.home} के लिए। लगभग 5 मिनट लगते हैं। शुरू करने के लिए हमारा WhatsApp चैट खोलें।`,
+  }),
+  self_survey_reminder: (p) => ({
+    title: 'आपका साइट सर्वे पूरा नहीं हुआ',
+    body: `${p.home} के लिए। आगे बढ़ने के लिए हमारा WhatsApp चैट खोलें।`,
+  }),
+  self_survey_approved: (p) => ({
+    title: 'आपका साइट सर्वे मंज़ूर हो गया',
+    body: `${p.home}: ${p.amount}`,
   }),
 };

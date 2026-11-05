@@ -20,6 +20,7 @@ export const SEND_ACTIONS = [
   'ask_subsidy_credit',
   'ask_bank_sign',
   'send_layout',
+  'self_survey',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -67,6 +68,8 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     ask_subsidy_credit: withProject,
     ask_bank_sign: withProject,
     send_layout: withProject,
+    // The self survey belongs to the survey task of a project (never a lead).
+    self_survey: withProject,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -91,6 +94,7 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   ask_subsidy_credit: ['projects.manage'],
   ask_bank_sign: ['projects.manage'],
   send_layout: ['projects.manage', 'documents.manage'],
+  self_survey: ['projects.manage'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
@@ -114,6 +118,8 @@ export function rightsForAsk(type: string): readonly string[] {
       return RIGHTS.send_signature;
     case 'confirm':
       return RIGHTS.ask_site_ready;
+    case 'self_survey':
+      return RIGHTS.self_survey;
     default:
       return RIGHTS.ask_paper;
   }

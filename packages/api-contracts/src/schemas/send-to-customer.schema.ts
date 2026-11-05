@@ -69,6 +69,8 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
     paperId: z.string().min(3).max(200),
     taskId: idSchema,
   }),
+  /** The self site survey with a discount, offered from the project's survey step. */
+  z.object({ action: z.literal('self_survey'), taskId: idSchema }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 

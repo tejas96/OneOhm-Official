@@ -31,13 +31,15 @@ export function SubsidyCard({ subsidy }: { readonly subsidy: CustomerProject['su
           <Text variant="displayMd">{formatInr(subsidy.amountPaise)}</Text>
         </View>
         <StatusPill
-          tone={SUBSIDY_TONE[subsidy.status]}
-          label={HOME.subsidyStatus[subsidy.status]}
+          tone={subsidy.note === 'checking' ? 'waiting' : SUBSIDY_TONE[subsidy.status]}
+          label={
+            subsidy.note ? HOME.subsidyNoteStatus[subsidy.note] : HOME.subsidyStatus[subsidy.status]
+          }
           size="sm"
         />
       </View>
       <Text variant="bodySm" tone="secondary">
-        {HOME.subsidy[subsidy.status]}
+        {subsidy.note ? HOME.subsidyNote[subsidy.note] : HOME.subsidy[subsidy.status]}
       </Text>
     </Card>
   );
