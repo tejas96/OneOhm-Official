@@ -124,7 +124,13 @@ export async function checkUpi(
   const [ask] = await db
     .select()
     .from(customerActions)
-    .where(sql`${customerActions.payload}->>'once' = ${onceOf(rewardId)}`)
+    .where(
+      and(
+        sql`${customerActions.payload}->>'once' = ${onceOf(rewardId)}`,
+        // A cancelled ask is gone: Ask again makes a new one.
+        ne(customerActions.status, 'cancelled'),
+      ),
+    )
     .for('update');
   const now = new Date();
   const amount = formatInr(row.reward.amountPaise);

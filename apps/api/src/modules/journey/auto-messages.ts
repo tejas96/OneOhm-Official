@@ -1,6 +1,5 @@
 import {
   customerActions,
-  customers,
   type DatabaseExecutor,
   homeNameOf,
   messageTemplates,
@@ -46,13 +45,7 @@ export async function mayChat(
     .from(messageTemplates)
     .where(eq(messageTemplates.key, template))
     .limit(1);
-  if (!templateIsOn(template, row)) return false;
-  const [customer] = await tx
-    .select({ optIn: customers.whatsappOptIn })
-    .from(customers)
-    .where(eq(customers.phoneE164, phone))
-    .limit(1);
-  return customer?.optIn !== false;
+  return templateIsOn(template, row);
 }
 
 /**

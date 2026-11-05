@@ -7,7 +7,6 @@ import {
   visits,
   waConversations,
 } from '@oneohm/database';
-import { chatWindowOpen } from '@oneohm/domain';
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
@@ -16,6 +15,7 @@ import { cancelVisit } from '../visits/visit-store';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
 import { settleCancelledAsk } from './send-cancel';
+import { chatOpenFor } from './send-context';
 import { SEND_WORDS } from './send-words';
 
 export type CancelScope = { readonly projectId: string } | { readonly leadId: string };
@@ -136,7 +136,7 @@ async function tellOnce(
         .from(waConversations)
         .where(eq(waConversations.phone, phone))
         .limit(1);
-      if (!chat || chat.optedOutAt || !chatWindowOpen(chat.lastInboundAt)) return;
+      if (!chat || !(await chatOpenFor(tx, phone))) return;
       await queueReply(tx, chat, { kind: 'text', body }, userId, key);
     });
   }

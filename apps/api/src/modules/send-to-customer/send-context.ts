@@ -44,13 +44,20 @@ export interface NoCustomer {
   readonly reason: string;
 }
 
+/** May we chat now: the 24-hour window is open and the customer has not said STOP (chat or WhatsApp opt-in). */
 export async function chatOpenFor(db: DatabaseExecutor, phone: string): Promise<boolean> {
   const [chat] = await db
     .select({ at: waConversations.lastInboundAt, out: waConversations.optedOutAt })
     .from(waConversations)
     .where(eq(waConversations.phone, phone))
     .limit(1);
-  return Boolean(chat && !chat.out && chatWindowOpen(chat.at));
+  if (!chat || chat.out || !chatWindowOpen(chat.at)) return false;
+  const [customer] = await db
+    .select({ optIn: customers.whatsappOptIn })
+    .from(customers)
+    .where(eq(customers.phoneE164, phone))
+    .limit(1);
+  return customer?.optIn !== false;
 }
 
 async function customerOf(db: DatabaseExecutor, customerId: string) {

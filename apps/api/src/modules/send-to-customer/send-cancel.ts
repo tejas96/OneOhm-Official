@@ -4,7 +4,6 @@ import {
   noticeCustomer,
   waConversations,
 } from '@oneohm/database';
-import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
 import { confirmWords } from '../journey/confirm-words';
@@ -13,6 +12,7 @@ import { cancelSignedCopy } from '../journey/journey-signature';
 import { JOURNEY_WORDS } from '../journey/journey-words';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
+import { chatOpenFor } from './send-context';
 import { SEND_WORDS } from './send-words';
 
 /**
@@ -53,7 +53,7 @@ export async function tellActionCancelled(
       .from(waConversations)
       .where(eq(waConversations.phone, phone))
       .limit(1);
-    if (!chat || chat.optedOutAt || !chatWindowOpen(chat.lastInboundAt)) return;
+    if (!chat || !(await chatOpenFor(tx, phone))) return;
     const words = SEND_WORDS.cancelled;
     const body =
       action.type === 'location'
