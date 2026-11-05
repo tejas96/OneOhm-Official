@@ -52,7 +52,7 @@ describe('assistant words in three languages', () => {
   it('is a working list in Marathi for ratings and media', async () => {
     await inLanguage('mr', async () => {
       expect(RATINGS.map((rating) => rating.id)).toEqual(EN.RATINGS.map((rating) => rating.id));
-      expect(MEDIA_WORDS.problemSavedWithPhotos('इन्व्हर्टर', 2)).toContain('2 फोटोंसह');
+      expect(MEDIA_WORDS.photoAdded).not.toBe(EN.MEDIA_WORDS.photoAdded);
     });
   });
 });

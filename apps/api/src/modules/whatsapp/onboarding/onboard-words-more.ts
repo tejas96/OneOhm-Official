@@ -15,7 +15,6 @@ const EN = {
   /** "ok", "thanks", a 👍 after the estimate. */
   afterEstimate: 'You are welcome! Tap an option whenever you are ready.',
   /** A bill after the estimate: the buttons are not sent again. */
-  billAfter: 'Thank you. We have your new bill and our team will look at it.',
   visitDay: 'Which day suits you for the free site visit?',
   visitSlot: (day: string) => `${day}: morning or afternoon?`,
   visitNone: (name: string | null) =>
@@ -29,8 +28,6 @@ const EN = {
   /** A bill or paper sent when the bot is off for new numbers: kept for our team. */
   fileKept: 'Thank you. We have your file and our team will check it and call you.',
   /** The stranger who stopped our messages and writes again. */
-  optedOut:
-    'You stopped our WhatsApp messages earlier. We can still reply here. Tap "Start again" to get our updates back.',
 };
 
 export type MoreWords = typeof EN;
@@ -43,7 +40,6 @@ const MR: Words<MoreWords> = {
   bookVisit: 'भेट ठरवा',
   callMe: 'मला कॉल करा',
   afterEstimate: 'स्वागत आहे! तयार असाल तेव्हा खालील पर्याय दाबा.',
-  billAfter: 'धन्यवाद. तुमचे नवे बिल मिळाले, आमची टीम ते पाहील.',
   visitDay: 'मोफत साइट भेटीसाठी कोणता दिवस सोयीचा आहे?',
   visitSlot: (day) => `${day}: सकाळी की दुपारी?`,
   visitNone: (name) =>
@@ -54,8 +50,6 @@ const MR: Words<MoreWords> = {
     `नमस्कार ${name} 👋 ${owner ? `OneOhm चे ${owner}` : 'OneOhm ची टीम'} तुम्हाला मदत करत आहे.`,
   talkTo: (name) => (name ? `${name} शी बोला` : 'टीमशी बोला'),
   fileKept: 'धन्यवाद. तुमची फाईल मिळाली, आमची टीम ती तपासून तुम्हाला कॉल करेल.',
-  optedOut:
-    'तुम्ही आधी आमचे WhatsApp संदेश बंद केले होते. आम्ही इथे उत्तर देऊ शकतो. अपडेट पुन्हा हवे असतील तर "पुन्हा सुरू करा" दाबा.',
 };
 
 const HI: Words<MoreWords> = {
@@ -66,7 +60,6 @@ const HI: Words<MoreWords> = {
   bookVisit: 'विज़िट बुक करें',
   callMe: 'मुझे कॉल करें',
   afterEstimate: 'आपका स्वागत है! तैयार हों तब नीचे का कोई विकल्प दबाएँ.',
-  billAfter: 'धन्यवाद. आपका नया बिल मिल गया, हमारी टीम इसे देखेगी.',
   visitDay: 'मुफ़्त साइट विज़िट के लिए कौन सा दिन ठीक रहेगा?',
   visitSlot: (day) => `${day}: सुबह या दोपहर?`,
   visitNone: (name) =>
@@ -77,8 +70,6 @@ const HI: Words<MoreWords> = {
     `नमस्ते ${name} 👋 ${owner ? `OneOhm से ${owner}` : 'OneOhm की टीम'} आपकी मदद कर रही है.`,
   talkTo: (name) => (name ? `${name} से बात करें` : 'टीम से बात करें'),
   fileKept: 'धन्यवाद. आपकी फ़ाइल मिल गई, हमारी टीम इसे देखकर आपको कॉल करेगी.',
-  optedOut:
-    'आपने पहले हमारे WhatsApp संदेश बंद किए थे. हम यहाँ जवाब दे सकते हैं. अपडेट फिर चाहिए हों तो "फिर से शुरू करें" दबाएँ.',
 };
 
 export const MORE_LISTS = { en: EN, mr: MR, hi: HI };

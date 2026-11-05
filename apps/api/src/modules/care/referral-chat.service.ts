@@ -9,7 +9,7 @@ import { ensureReferralCode } from '../referrals/referral-codes';
 import { loadProgram, whatsappDigits } from '../referrals/referral-program';
 import { setStep } from '../whatsapp/assistant/chat-step';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
-import { readReferral } from '../whatsapp/assistant/guess-category';
+import { readReferral } from '../whatsapp/assistant/read-referral';
 import { WORDS } from '../whatsapp/assistant/words';
 import { businessWhatsAppNumber } from '../whatsapp/business-number';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';

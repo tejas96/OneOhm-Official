@@ -37,21 +37,13 @@ const EN_WORDS = {
   noDocuments: 'No documents yet. They will appear here as your project moves.',
   askProblem:
     'Please tell us the problem in one message (for example "inverter shows an error since morning"). You can send a photo with a caption.',
-  problemSaved: (category: string) =>
-    `Thank you ✅ We noted your problem (${category}). Our team will call you.`,
-  tooShort: 'Please write a few more words so we can help.',
   noRequests: 'You have not told us about any problem.',
   askReferral:
     'Send your friend\'s name and 10-digit mobile number in one message, for example "Suresh Patil 9876543210".',
-  referralSaved: (name: string) =>
-    `Thank you! We will call ${name}. You earn a reward when their solar is installed.`,
   referralKnown: 'We are already in touch with this number. Thank you for thinking of us!',
   referralUnclear: 'We could not find a name and a 10-digit mobile number. Please try again.',
   referredWelcome: (referrer: string, company: string) =>
     `Welcome${company ? ` to ${company}` : ''}! ${referrer} referred you. Our team will call you on this number soon to plan your solar.`,
-  askRating: 'How happy are you with us so far?',
-  ratingSaved: 'Thank you for rating us! It helps the team.',
-  notUnderstood: 'Sorry, we didn’t get that.',
   /** The buttons of the check before an accept binds (its words: quote-money-words). */
   quoteYes: 'Yes, accept',
   quoteNotYet: 'Not yet',
@@ -72,15 +64,12 @@ const EN_MEDIA_WORDS = {
   talkToPerson: 'Talk to a person',
   photoAdded: 'Thank you, the photo is added to your problem.',
   photoNotAdded: 'We could not add the file to your problem. Please send a photo of it.',
-  photoOnly: 'Photo or paper sent on WhatsApp.',
   tooLarge: 'That file is too big (max 25 MB). Please send a photo or PDF.',
   wrongType: "We can't open this kind of file. Please send a photo or PDF.",
   emptyFile: 'That file is empty. Please send it again.',
   failed: 'Sorry, we could not open that file. Please send it again in a little while.',
   paperGone: 'That paper is no longer needed, or we have it already. Nothing was changed.',
   paperAskEnded: 'Your files are already saved. Nothing else was changed.',
-  problemSavedWithPhotos: (category: string, photos: number) =>
-    `Thank you ✅ We noted your problem (${category}) with your ${photos === 1 ? 'photo' : `${photos} photos`}. Our team will call you.`,
 } as const;
 
 /** The "Warranty and AMC" answer, the same cover the app shows (PRD 5.5). */
@@ -134,9 +123,6 @@ const EN_REWARD_WORDS = {
 /** Rating OneOhm on WhatsApp (PRD 6.1), asked only once the system is switched on. */
 const EN_FEEDBACK_WORDS = {
   later: 'Thank you! We will ask for your rating once your solar system is switched on.',
-  askComment: 'Thank you for rating us! Anything to add? Write it here, or tap "Menu".',
-  commentSaved: 'Thank you, we have noted it. It helps the team do better.',
-  skipWords: ['skip', 'no', 'nothing', 'no thanks', 'none', 'nahi', 'nako'] as readonly string[],
 } as const;
 
 /** Lines in the progress, payments and requests answers. */

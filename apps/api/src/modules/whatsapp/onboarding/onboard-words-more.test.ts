@@ -12,14 +12,12 @@ describe('the onboarding words of phase 7', () => {
         words.pinNoCity,
         words.nameAgain,
         words.afterEstimate,
-        words.billAfter,
         words.visitDay,
         words.visitSlot('Thu 6 Nov'),
         words.visitNone('Asha'),
         words.visitDone('Asha', '6:30 pm today'),
         words.leadHello('Suresh', 'Priya'),
         words.fileKept,
-        words.optedOut,
       ]) {
         expect(text.length, `${language} ${text}`).toBeGreaterThan(0);
         expect(text.length, `${language} ${text}`).toBeLessThanOrEqual(1024);

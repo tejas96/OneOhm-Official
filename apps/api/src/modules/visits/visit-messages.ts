@@ -1,10 +1,4 @@
-import {
-  callDay,
-  type VisitKind,
-  type VisitSlot,
-  visitDayLabel,
-  visitReminderWhen,
-} from '@oneohm/domain';
+import { callDay, type VisitKind, type VisitSlot, visitDayLabel } from '@oneohm/domain';
 import { titleCaseName } from '@oneohm/shared';
 import type { Built } from '../send-to-customer/send-messages';
 import { DESCRIPTION_MAX, fitTitle, ROW_MAX } from '../whatsapp/assistant/chat-words';
@@ -17,10 +11,6 @@ export const dayWords = (day: string): string => visitDayLabel(day, languageNow(
 /** "Thu 6 Nov, morning". */
 export const whenWords = (day: string, slot: VisitSlot) =>
   `${dayWords(day)}, ${VISIT_WORDS.slots[slot]}`;
-
-/** "tomorrow morning" the day before, else "on Mon 9 Nov, morning". */
-export const reminderWhen = (day: string, today: string, slot: VisitSlot): string =>
-  visitReminderWhen(day, today, slot, languageNow());
 
 /** The tap ids (kept short; WhatsApp allows 256 characters). */
 export const visitTaps = {
@@ -137,43 +127,6 @@ export function bookedMessage(given: {
         when,
         staff: given.staff,
         okayPayload: visitTaps.okay(given.visitId, given.day),
-        changePayload: visitTaps.change(given.visitId, given.day),
-      },
-    },
-  };
-}
-
-/** "Our team visits Sangli tomorrow morning for the installation." [Confirm] [Change day]. */
-export function reminderMessage(given: {
-  customer: string;
-  visitId: string;
-  home: string;
-  kind: VisitKind;
-  day: string;
-  slot: VisitSlot;
-  today: string;
-}): Built {
-  const work = workWords(given.kind);
-  const when = reminderWhen(given.day, given.today, given.slot);
-  return {
-    replies: [
-      {
-        kind: 'buttons',
-        body: VISIT_WORDS.reminder(given.home, when, work),
-        buttons: [
-          { id: visitTaps.confirm(given.visitId, given.day), title: VISIT_WORDS.buttons.confirm },
-          { id: visitTaps.change(given.visitId, given.day), title: VISIT_WORDS.buttons.change },
-        ],
-      },
-    ],
-    template: {
-      key: 'visit_reminder',
-      payload: {
-        customer: first(given.customer),
-        home: given.home,
-        when,
-        work,
-        confirmPayload: visitTaps.confirm(given.visitId, given.day),
         changePayload: visitTaps.change(given.visitId, given.day),
       },
     },

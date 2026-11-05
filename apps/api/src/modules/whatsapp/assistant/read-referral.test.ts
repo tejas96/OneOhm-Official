@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readReferral } from './guess-category';
+import { readReferral } from './read-referral';
 
 describe('assistant reading', () => {
   it('reads a name and mobile number', () => {

@@ -1,13 +1,7 @@
 import { VISIT_KINDS } from '@oneohm/domain';
 import { describe, expect, it } from 'vitest';
 import { inLanguage } from '../whatsapp/assistant/language';
-import {
-  bookedMessage,
-  pickList,
-  presenceMessage,
-  reminderMessage,
-  slotButtons,
-} from './visit-messages';
+import { bookedMessage, pickList, presenceMessage, slotButtons } from './visit-messages';
 import { VISIT_LISTS } from './visit-words';
 
 const id = '0b6f1c7e-7d3a-4f0e-9c1d-2a4b5c6d7e8f';
@@ -34,15 +28,6 @@ function titles(language: 'en' | 'mr' | 'hi') {
       staff: 'Ravi',
       phone: '98',
       moved: false,
-    }).replies,
-    ...reminderMessage({
-      customer: 'T',
-      visitId: id,
-      home: 'Sangli',
-      kind: 'service',
-      day: '2026-11-06',
-      slot: 'morning',
-      today: '2026-11-05',
     }).replies,
     ...presenceMessage({
       customer: 'T',
@@ -98,18 +83,6 @@ describe('visit words fit WhatsApp', () => {
       }).replies;
       expect(booked).toMatchObject({
         body: 'Booked ✅ *Fri 6 Nov, morning*. Ravi will call before coming.',
-      });
-      const [reminder] = reminderMessage({
-        customer: 'T',
-        visitId: id,
-        home: 'Sangli',
-        kind: 'installation',
-        day: '2026-11-06',
-        slot: 'morning',
-        today: '2026-11-05',
-      }).replies;
-      expect(reminder).toMatchObject({
-        body: 'Our team visits *Sangli* tomorrow morning for the *installation*.',
       });
     });
   });

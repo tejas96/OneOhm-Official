@@ -141,16 +141,6 @@ export async function askRating(
   return 'sent';
 }
 
-/** Puts the five taps in the chat now (the customer tapped [Rate now] or "Rate us"). */
-export async function showRatingList(
-  tx: DatabaseExecutor,
-  chat: { readonly id: string; readonly phone: string },
-  actionId: string,
-  body: string,
-): Promise<void> {
-  await queueReply(tx, chat, ratingList(actionId, body));
-}
-
 /** The rating was given another way (the customer app): its ask closes, so WhatsApp never asks again. */
 export async function closeRatingAsk(tx: DatabaseExecutor, target: RatingTarget): Promise<void> {
   const once =

@@ -28,8 +28,6 @@ const EN = {
   } as Record<Since, string>,
   addOn: 'Send up to 3 photos or a few words if you like, then tap Done.',
   done: 'Done',
-  voice: 'Voice note',
-  photoOnly: 'Photo',
   saved: (what: string, home: string | null, name: string, when: string) =>
     `Thank you ✅ Noted: *${what}${home ? ` · ${home}` : ''}*. *${name}* will call you ${when}.`,
   team: 'Our service team',
@@ -47,7 +45,6 @@ const EN = {
   answerNow: 'Answer now',
   fixedWhat: 'the check on your problem',
   fixedCancelled: 'You do not need to tell us whether it is working any more. Thank you.',
-  workingThanks: 'Great, thank you! 🙏',
   none: 'You have no problem open right now.',
 };
 
@@ -68,8 +65,6 @@ const MR: Words<typeof EN> = {
   sinceNote: { today: 'आजपासून', week: 'या आठवड्यापासून', longer: 'आठवड्यापेक्षा जास्त काळ' },
   addOn: 'हवे असल्यास ३ पर्यंत फोटो किंवा थोडे शब्द पाठवा, मग पूर्ण झाले दाबा.',
   done: 'पूर्ण झाले',
-  voice: 'व्हॉइस नोट',
-  photoOnly: 'फोटो',
   saved: (what, home, name, when) =>
     `धन्यवाद ✅ नोंद केली: *${what}${home ? ` · ${home}` : ''}*. *${name}* तुम्हाला ${when} फोन करतील.`,
   team: 'आमची सर्व्हिस टीम',
@@ -86,7 +81,6 @@ const MR: Words<typeof EN> = {
   answerNow: 'आता सांगा',
   fixedWhat: 'अडचणीबद्दलची तपासणी',
   fixedCancelled: 'ते नीट चालते का हे सांगण्याची आता गरज नाही. धन्यवाद.',
-  workingThanks: 'छान, धन्यवाद! 🙏',
   none: 'सध्या तुमची कोणतीही अडचण उघडी नाही.',
 };
 
@@ -107,8 +101,6 @@ const HI: Words<typeof EN> = {
   sinceNote: { today: 'आज से', week: 'इस हफ़्ते से', longer: 'एक हफ़्ते से ज़्यादा समय से' },
   addOn: 'चाहें तो 3 तक फ़ोटो या कुछ शब्द भेजें, फिर पूरा हुआ दबाएँ।',
   done: 'पूरा हुआ',
-  voice: 'वॉइस नोट',
-  photoOnly: 'फ़ोटो',
   saved: (what, home, name, when) =>
     `धन्यवाद ✅ दर्ज किया: *${what}${home ? ` · ${home}` : ''}*. *${name}* आपको ${when} फ़ोन करेंगे।`,
   team: 'हमारी सर्विस टीम',
@@ -125,7 +117,6 @@ const HI: Words<typeof EN> = {
   answerNow: 'अभी बताएँ',
   fixedWhat: 'समस्या की जाँच',
   fixedCancelled: 'यह बताने की अब ज़रूरत नहीं कि यह चल रहा है या नहीं। धन्यवाद।',
-  workingThanks: 'बढ़िया, धन्यवाद! 🙏',
   none: 'अभी आपकी कोई समस्या खुली नहीं है।',
 };
 

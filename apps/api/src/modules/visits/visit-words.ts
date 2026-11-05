@@ -42,8 +42,6 @@ const EN_VISIT = {
     `We have moved your visit to *${when}*. ${name} will call before coming${phone ? ` (${phone})` : ''}.`,
   cancelled: (work: string, home: string) =>
     `Your visit for the *${work}* at ${home} is cancelled. We will tell you the new day.`,
-  reminder: (home: string, when: string, work: string) =>
-    `Our team visits *${home}* ${when} for the *${work}*.`,
   presence: (work: string, home: string, day: string) =>
     `The electricity board (DISCOM) will do the *${work}* at *${home}* on *${day}*. Please be at home.`,
   crewChanged: (when: string, name: string, phone: string) =>
@@ -94,7 +92,6 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
   changed: (when, name, phone) =>
     `आम्ही तुमची भेट *${when}* ला हलवली आहे. येण्यापूर्वी ${name} तुम्हाला फोन करतील${phone ? ` (${phone})` : ''}.`,
   cancelled: (work, home) => `${home} येथील *${work}* ची तुमची भेट रद्द झाली आहे. नवा दिवस आम्ही कळवू.`,
-  reminder: (home, when, work) => `आमची टीम *${home}* येथे ${when} *${work}* साठी येणार आहे.`,
   presence: (work, home, day) =>
     `*${work}* साठी वीज मंडळ (DISCOM) *${home}* येथे *${day}* रोजी येणार आहे. कृपया घरी राहा.`,
   crewChanged: (when, name, phone) =>
@@ -144,7 +141,6 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
   changed: (when, name, phone) =>
     `हमने आपकी विज़िट बदलकर *${when}* कर दी है। आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
   cancelled: (work, home) => `${home} पर *${work}* की आपकी विज़िट रद्द हो गई है। नया दिन हम बताएँगे।`,
-  reminder: (home, when, work) => `हमारी टीम *${home}* पर ${when} *${work}* के लिए आ रही है।`,
   presence: (work, home, day) =>
     `*${work}* के लिए बिजली बोर्ड (DISCOM) *${home}* पर *${day}* को आएगा। कृपया घर पर रहें।`,
   crewChanged: (when, name, phone) =>
