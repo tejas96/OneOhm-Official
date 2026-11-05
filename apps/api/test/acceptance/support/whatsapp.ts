@@ -44,6 +44,8 @@ export interface InboundMessage {
     /** The "I paid another way" form's typed amount and picked day. */
     amount?: string | number;
     date?: string;
+    /** The self-survey form's answers and its one photo per screen, by name. */
+    fields?: Record<string, unknown>;
   };
   /** A location pin, as Meta posts it. */
   location?: { latitude: number; longitude: number; name?: string; address?: string };
@@ -198,6 +200,7 @@ function formMessage(
           ...(form.pdfs ? { pdfs: form.pdfs } : {}),
           ...(form.amount !== undefined ? { amount: form.amount } : {}),
           ...(form.date ? { date: form.date } : {}),
+          ...(form.fields ?? {}),
         }),
       },
     },

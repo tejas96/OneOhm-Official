@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 37 templates (and newer versions of three). Each one:
+The app sends these 40 templates (and newer versions of three). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -611,6 +611,45 @@ Fields: customer, home
 Examples: Ramesh Patil · Sangli
 
 **Button:** one quick reply: en `See the layout`; mr `आराखडा पाहा`; hi `लेआउट देखें`. Payload `jr:<id>` (the layout again with its two buttons). Off until Meta approves all three languages.
+
+### 50. `self_survey_offer` — **New** (self site survey with a discount; **Marketing** category)
+Fields: customer, home, amount
+
+> en: Hello {{1}}, do your own site survey for your {{2}} solar in 5 minutes and get {{3}} off your next payment. Our engineer checks your photos - no visit needed.
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरचे साइट सर्वेक्षण स्वतः ५ मिनिटांत करा आणि पुढच्या पेमेंटमध्ये {{3}} सूट मिळवा. आमचे इंजिनिअर तुमचे फोटो तपासतील - भेट देण्याची गरज नाही.
+
+> hi: नमस्ते {{1}}, अपने {{2}} सोलर का साइट सर्वे खुद 5 मिनट में करें और अगले पेमेंट में {{3}} की छूट पाएँ। हमारे इंजीनियर आपकी फ़ोटो जाँचेंगे - विज़िट की ज़रूरत नहीं।
+
+Examples: Ramesh Patil · Sangli · ₹1,000
+
+**Buttons:** two quick replies: en `Start survey`, `Book a visit`; mr `सर्वे सुरू करा`, `भेट बुक करा`; hi `सर्वे शुरू करें`, `विज़िट बुक करें`. Payloads `ss:go:<id>`, `ss:visit:<id>`. **Marketing:** cost per message; never sent to a customer who said STOP. Off until Meta approves all three languages.
+
+### 51. `self_survey_reminder` — **New** (the survey was offered or started and not sent; 2 days after; **Marketing**)
+Fields: customer, home
+
+> en: Hello {{1}}, a reminder: your site survey for your {{2}} solar is not finished yet. It takes about 5 minutes. Tap the button to continue.
+
+> mr: नमस्कार {{1}}, आठवण: तुमच्या {{2}} सोलरचे साइट सर्वेक्षण अजून पूर्ण झालेले नाही. यास सुमारे ५ मिनिटे लागतात. पुढे जाण्यासाठी बटण दाबा.
+
+> hi: नमस्ते {{1}}, याद दिलाना: आपके {{2}} सोलर का साइट सर्वे अभी पूरा नहीं हुआ है। इसमें लगभग 5 मिनट लगते हैं। आगे बढ़ने के लिए बटन दबाएँ।
+
+Examples: Ramesh Patil · Sangli
+
+**Button:** one quick reply: en `Continue survey`; mr `सर्वे पुढे करा`; hi `सर्वे आगे बढ़ाएँ`. Payload `ss:go:<id>`. Also sent when the engineer asks for an item again and the 24-hour window is closed. Off until approved.
+
+### 52. `self_survey_approved` — **New** (the survey was approved; **Utility**)
+Fields: customer, home, amount (the sentence that follows: the discount, or a short thanks)
+
+> en: Hello {{1}}, your site survey for your {{2}} solar is approved. {{3}}
+
+> mr: नमस्कार {{1}}, तुमच्या {{2}} सोलरचे साइट सर्वेक्षण मंजूर झाले. {{3}}
+
+> hi: नमस्ते {{1}}, आपके {{2}} सोलर का साइट सर्वे मंज़ूर हो गया। {{3}}
+
+Examples: Ramesh Patil · Sangli · Survey approved ✅ ₹1,000 off your next payment.
+
+No buttons. The app fills {{3}} in the customer's language. Off until approved. Meta may reject a body ending with a field: if so, add a closing line such as "Thank you." and change the app's wording to match.
 
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text

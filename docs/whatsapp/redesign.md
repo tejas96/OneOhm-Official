@@ -732,3 +732,44 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
 - **Templates (inactive by default, migration 0083, docs 42-48):** `subsidy_register_help`, `subsidy_credit_check`, `bank_sign_visit`,
   `layout_approval` (quick replies), `loan_sanctioned`, `loan_disbursed`, `loan_rejected`. The 2-day reminders reuse the ask's own
   template (the layout reminder uses `signature_reminder`, whose button shows the layout again).
+
+## 22h. Phase 5 — self site survey with a discount
+
+- **Setting** (Settings → Reminders → "Self survey offer"): on/off (default on) and the amount (default ₹1,000, whole rupees, 1 to
+  1,00,000), stored with the reminder timing (`selfSurveyOffer`, `selfSurveyPaise`). Off: the Send to customer sheet, the
+  API (409) and Home offer nothing. The amount is written in the ask when offered (`offerPaise`); a later change in Settings does
+  not change a survey already offered.
+- **Offer** (`self_survey`, project and task places, rights projects.manage): "Do your own site survey in 5 minutes and get *₹1,000
+  off* your next payment. Our engineer checks your photos - no visit needed." [Start survey] [Book a visit instead]. Needs the
+  survey step (customer messages on), no booked visit, not done. Outside 24 h the marketing template `self_survey_offer`
+  (docs 50; off by default; never sent after STOP). Home shows the same line at the survey stage (after money due) with the same
+  two buttons; [Start survey] there makes the ask itself (`ss:new:<task>`).
+- **Customer action `self_survey`** (checked type): `open` -> `received` (survey sent, "Self survey received - check it") -> `closed`
+  (approved) or `cancelled` (visit instead). Payload keeps answers, photo document ids, the items asked again, what the chat waits
+  for, `startedAt`/`sentAt` and the credit. Taps `ss:go|visit|new|vnew:<id>`, `ss:ans:<id>:<question>:<value>`.
+- **Form** `self_survey` (Flow JSON `forms/self-survey.flow.ts`, version 1.0): ROOF (roof type, floors), four photo screens (one
+  PhotoPicker each: roof corner A, corner B, meter, main switch board), DETAILS (shade, roof size, consumer number only when
+  the home has none, shown with `visible`). A PhotoPicker value cannot ride in a navigate payload, so the last screen reads
+  each photo from its own screen (`${screen.CORNER_A.form.photo}`); words come from the first screen's data. Publish with
+  `pnpm --filter @oneohm/api forms:publish` (dry run without `--yes`), then paste the flow id in Settings → WhatsApp → Forms.
+  Unverified against Meta until it is published.
+- **Chat fallback** (no flow id, or a form that does not open): one question at a time (a list for a choice, "send the photo here"
+  for a photo, the consumer number as typed words); a photo or words are taken only while the survey waits for them.
+- **Behind:** when everything is in, the answers become the survey's report fields (project facts `site_floors`,
+  `structure_type`, `self_survey_shade`, `self_survey_roof_size`), the photos site photos on the survey step with captions
+  ("Self survey: roof corner A"), the step's owner is told, and if the home has no location the 📍 ask follows. The step's panel
+  shows the card with answers and [Approve] [Ask again] [Book a visit].
+- **Engineer:** Approve is the step's own completion form (cable lengths, shade-free area, checklist); the re-pricing flow is
+  unchanged. Ask again asks only the picked items (chat, or the reminder template when the window is closed; a new photo replaces
+  the old one on the step, the old file is kept and taken off). Book a visit cancels the survey (no discount) and sends the days.
+  Deadline: owner after 1 working day, manager after 2 (the staff-check pattern).
+- **Discount:** when the survey step is submitted for approval (or completed with no reviewer), `milestone_credits` takes the offered
+  amount off the next customer instalment that has not fallen due (status upcoming, no due date): the instalment's amount drops,
+  so the ledger books the reduced amount when it falls due. One live credit per approval (unique index); audit
+  `milestone_credit.applied`; project log line; the customer hears "Survey approved ✅ ₹1,000 off your next payment." If the
+  reviewer sends the step back the amount is put back (`milestone_credit.reversed`) and the survey waits for its check again;
+  if that instalment already fell due the send-back is refused until finance adjusts it. No upcoming instalment: the log says
+  so, the customer is not promised, and finance gives the discount by hand.
+- **Unfinished:** a started survey shows on Home as "Finish your site survey" for 7 days; the 2-day reminder is
+  `self_survey_reminder` (docs 51). The customer app subsidy line reads the same note as the WhatsApp Project update.
+
