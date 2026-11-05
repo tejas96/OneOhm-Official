@@ -1,11 +1,12 @@
 import type { OnboardStep } from '@oneohm/domain';
 import type { LeadIntakeService } from '../../crm/lead-intake.service';
+import type { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
-import { queueReply } from '../chat-store';
+import { linkChatFile, queueReply } from '../chat-store';
 import { ONBOARD_WORDS } from './onboard-words';
 import { type ChatFilesService, type FileOutcome, fileWords } from './onboarding-files';
-import { makeLead, NO_NAME } from './onboarding-lead';
-import { speak, type Turn } from './onboarding-turn';
+import { makeLead, NO_NAME, summaryOf } from './onboarding-lead';
+import { saveTurn, speak, type Turn } from './onboarding-turn';
 
 /**
  * A photo or paper in this turn: filed on the lead, or held until the lead is made. The
@@ -49,7 +50,9 @@ export async function fileHeldBill(
   const held = turn.pendingFile;
   if (!held) return;
   // If it cannot be filed the object and `ob.pendingFile` stay, so it can be recovered.
-  if (!(await files.filePendingBill(turn.tx, leadId, held))) return;
+  const documentId = await files.filePendingBill(turn.tx, leadId, held);
+  if (!documentId) return;
+  await linkChatFile(turn.tx, held.mediaId, documentId);
   turn.answers = { ...turn.answers, photo: 'sent' };
   turn.discard.push(held.storageKey);
   turn.pendingFile = undefined;
@@ -90,3 +93,32 @@ export const HEARD: Record<HeardMedia, { readonly call: string; readonly note: s
 /** The warm reply, in the language being spoken, naming who will reply. */
 export const heardReply = (media: HeardMedia, name: string | null) =>
   media === 'audio' ? ONBOARD_WORDS.voiceHandOver(name) : ONBOARD_WORDS.videoHandOver(name);
+
+/**
+ * A person takes over with the answers summary, in this transaction: the state, the alert and the reply
+ * commit together. `ob` keeps this step for when the chat returns.
+ */
+export async function handToPerson(
+  turn: Turn,
+  step: OnboardStep,
+  media: HeardMedia | undefined,
+  deps: {
+    readonly intake: LeadIntakeService;
+    readonly files: ChatFilesService;
+    readonly people: HandOverService;
+  },
+): Promise<null> {
+  const { tx, chat } = turn;
+  turn.misses = 0;
+  turn.awaiting = undefined;
+  await ensureLead(turn, deps, media ? HEARD[media].call : undefined);
+  await saveTurn(turn, step);
+  const said = media ? HEARD[media].note : null;
+  const summary = [said, summaryOf(turn.answers, turn.settings)].filter(Boolean).join('. ');
+  await speak(turn, async () => {
+    if (!media) return deps.people.passToOwner(chat, { summary, db: tx });
+    const name = await deps.people.answererName(await ensureChatOwner(tx, chat), tx);
+    return deps.people.passToOwner(chat, { summary, db: tx, reply: heardReply(media, name) });
+  });
+  return null;
+}

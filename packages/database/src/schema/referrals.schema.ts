@@ -94,6 +94,8 @@ export const referralRewards = pgTable(
     paidOn: calendarDate('paid_on'),
     paidMethod: paymentMethodEnum('paid_method'),
     paidReference: text('paid_reference'),
+    /** The customer's UPI ID the money was sent to, copied when it is marked paid by UPI. */
+    paidUpiId: text('paid_upi_id'),
     paidByUserId: uuid('paid_by_user_id').references(() => users.id),
     version: version(),
     createdAt: createdAt(),

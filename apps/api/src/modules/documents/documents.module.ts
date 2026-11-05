@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { CompanyAssetsService } from './company-assets.service';
 import { DocumentBundleController } from './document-bundle.controller';
 import { DocumentBundleService } from './document-bundle.service';
+import { DocumentCheckService } from './document-check.service';
+import { DocumentMoveService } from './document-move.service';
 import { DocumentRequestsController } from './document-requests.controller';
 import { DocumentRequestsService } from './document-requests.service';
 import { DocumentThumbnailsController } from './document-thumbnails.controller';
@@ -21,11 +23,13 @@ import { ObjectStorageService } from './object-storage.service';
   providers: [
     ObjectStorageService,
     DocumentsService,
+    DocumentMoveService,
+    DocumentCheckService,
     CompanyAssetsService,
     DocumentBundleService,
     DocumentRequestsService,
     DocumentThumbnailsService,
   ],
-  exports: [CompanyAssetsService, ObjectStorageService],
+  exports: [CompanyAssetsService, ObjectStorageService, DocumentMoveService],
 })
 export class DocumentsModule {}

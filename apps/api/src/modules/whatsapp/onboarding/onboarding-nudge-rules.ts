@@ -76,6 +76,7 @@ export function nudgeTurn(input: {
     misses: kept?.misses ?? 0,
     awaiting: kept?.awaiting,
     pendingFile: kept?.pendingFile,
+    pin: kept?.pin,
     dropEntry: false,
   };
 }

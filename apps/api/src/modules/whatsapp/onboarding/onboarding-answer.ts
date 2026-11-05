@@ -3,6 +3,7 @@ import {
   type OnboardingSettings,
   type OnboardStep,
   parseAnswer,
+  usableName,
 } from '@oneohm/domain';
 import { titleCaseName } from '@oneohm/shared';
 
@@ -54,7 +55,8 @@ function readName(
   text: string,
   view: Parameters<typeof readAnswer>[2],
 ): ReadAnswer {
-  const profile = view.profileName?.trim();
+  // A profile name that is an emoji, initials or a shop is not offered; they type their own.
+  const profile = usableName(view.profileName);
   const typing = view.awaiting === 'name' || !profile;
   const word = text.toLowerCase();
   if (choiceId === 'ob:name:change' || (!typing && !choiceId && NOT_NAME.has(word)))
@@ -64,4 +66,13 @@ function readName(
   if (choiceId) return MISS;
   const parsed = parseAnswer('name', { choiceId: null, text }, view.settings);
   return parsed.ok ? value(titleCaseName(String(parsed.value))) : MISS;
+}
+
+/** The configured city a shared pin names in its place name or address, else null (the city is then asked). */
+export function cityFromPin(
+  pin: { readonly name: string | null; readonly address: string | null },
+  cities: readonly string[],
+): string | null {
+  const place = `${pin.name ?? ''} ${pin.address ?? ''}`.toLowerCase();
+  return cities.find((city) => place.includes(city.toLowerCase())) ?? null;
 }

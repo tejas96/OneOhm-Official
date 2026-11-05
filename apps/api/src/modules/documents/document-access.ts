@@ -59,3 +59,9 @@ export const canPrintDocuments = (actor: Actor) =>
 /** One ZIP of many files: `documents.download`. */
 export const canDownloadMany = (actor: Actor) =>
   can(actor, 'documents.download') || can(actor, 'documents.manage');
+
+/** The team's own papers are checked as they come in. */
+export const checkedBy = (actor: Actor) => ({
+  checkedAt: new Date(),
+  checkedByUserId: actor.userId,
+});

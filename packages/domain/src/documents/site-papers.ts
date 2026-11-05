@@ -1,16 +1,19 @@
 import type { DocumentCategory } from './document-categories';
 
 /**
- * Papers that belong to one site, not to the person: each connection has its own bill,
- * each roof its own proof. ID papers stay with the customer and serve every site.
+ * Papers that belong to the person and serve every home: ID and income proof. Every other
+ * paper belongs to one home (its bill, its roof, its photos, its subsidy and loan papers).
  */
-export const SITE_DOCUMENT_CATEGORIES = [
-  'electricity_bill',
-  'property',
+export const PERSON_DOCUMENT_CATEGORIES = [
+  'customer_kyc',
+  'income_proof',
 ] as const satisfies readonly DocumentCategory[];
 
+export const isPersonDocumentCategory = (category: string): boolean =>
+  (PERSON_DOCUMENT_CATEGORIES as readonly string[]).includes(category);
+
 export const isSiteDocumentCategory = (category: string): boolean =>
-  (SITE_DOCUMENT_CATEGORIES as readonly string[]).includes(category);
+  !isPersonDocumentCategory(category);
 
 /** Where a paper (or a request for one) was filed. */
 export interface FiledFor {

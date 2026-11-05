@@ -7,7 +7,13 @@ import type {
   CustomerVisit,
   ServiceRequest,
 } from '@oneohm/api-contracts';
-import { notifyHolders, projects, serviceRatings, serviceRequests } from '@oneohm/database';
+import {
+  customers,
+  notifyHolders,
+  projects,
+  serviceRatings,
+  serviceRequests,
+} from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq } from 'drizzle-orm';
 import { invalid, notFound } from '../../common/http/errors';
@@ -16,7 +22,10 @@ import {
   serviceRequestRows,
   toCustomerRequest,
 } from '../../common/read-models/service-request-rows';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
+import { lowRatingFollowUp } from '../care/low-rating';
+import { closeRatingAsk } from '../care/rating-ask';
 import { assetsOf, contractsOf } from './after-sales.read';
 import { commissionedOn } from './installed-assets.record';
 
@@ -62,7 +71,10 @@ function upcoming(code: string, contracts: readonly AmcContract[], today: string
 /** What a signed-in customer sees of warranties, AMCs, visits and their ratings (PRD 5.5). */
 @Injectable()
 export class CustomerAfterSalesService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
+  ) {}
 
   async cover(customerId: string): Promise<CustomerAfterSales> {
     const own = await this.db
@@ -118,6 +130,7 @@ export class CustomerAfterSalesService {
         target: serviceRatings.serviceRequestId,
         set: { rating: input.rating, comment, createdAt: new Date() },
       });
+    await closeRatingAsk(this.db, { kind: 'problem', requestId });
     if (input.rating <= 2) {
       await notifyHolders(this.db, 'service.manage', {
         kind: 'service_low_rating',
@@ -125,6 +138,27 @@ export class CustomerAfterSalesService {
         body: comment ?? 'No comment. Call them to find out what went wrong.',
         subject: { type: 'service_request', id: requestId, projectId: request.projectId },
         dedupeKey: `service_rating:${requestId}:${input.rating}`,
+      });
+      // The same follow-up as on WhatsApp: a promised call as a task.
+      const [who] = await this.db
+        .select({ name: customers.name, phone: customers.phoneE164 })
+        .from(customers)
+        .where(eq(customers.id, customerId));
+      const [asked] = await this.db
+        .select({ assignee: serviceRequests.assigneeUserId })
+        .from(serviceRequests)
+        .where(eq(serviceRequests.id, requestId));
+      await lowRatingFollowUp(this.db, {
+        customerId,
+        customerName: who?.name ?? 'The customer',
+        phone: who?.phone ?? '',
+        projectId: request.projectId,
+        assignee: asked?.assignee ?? null,
+        label: 'the service request',
+        stars: input.rating,
+        key: `rating_low:problem:${requestId}`,
+        timeZone: this.env.BUSINESS_TIMEZONE,
+        desk: true,
       });
     }
     const [row] = await serviceRequestRows(this.db, eq(serviceRequests.id, requestId));

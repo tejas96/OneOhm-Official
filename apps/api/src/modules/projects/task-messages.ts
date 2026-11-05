@@ -16,6 +16,8 @@ import { formatKwp } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
 import { queueWhatsApp } from '../../common/outbox';
+import { tellStepWithButtons, tellWaitingWithButtons } from '../journey/auto-messages';
+import { loanWaitStarted } from '../journey/loan-papers';
 import { attachmentLink, messagePhones } from './task-message-reach';
 
 type TaskRow = Pick<
@@ -59,22 +61,24 @@ export async function tellCustomerAbout(
   // A message that carries a link falls back to the plain update when the paper is not there yet.
   const messageKey = template?.attachment && !link ? 'project_milestone' : template?.messageKey;
   const people = await messagePhones(db, project.customer, template?.recipients);
-  for (const [index, person] of people.entries())
-    await queueWhatsApp(
-      db,
-      person.phone,
-      messageKey ?? 'project_milestone',
-      {
-        customer: person.name,
-        project: project.code,
-        milestone: template?.customerTitle?.trim() || task.title,
-        capacity: formatKwp(project.capacityWp),
-        ...(link ? { link } : {}),
-        // The step's key, so the in-app alert can name it in the customer's language.
-        step: task.templateKey,
-      },
-      index === 0 ? `task_${event}:${task.id}` : `task_${event}:${task.id}:${person.phone}`,
-    );
+  for (const [index, person] of people.entries()) {
+    const payload = {
+      customer: person.name,
+      project: project.code,
+      milestone: template?.customerTitle?.trim() || task.title,
+      capacity: formatKwp(project.capacityWp),
+      ...(link ? { link } : {}),
+      // The step's key, so the in-app alert can name it in the customer's language.
+      step: task.templateKey,
+    };
+    const key =
+      index === 0 ? `task_${event}:${task.id}` : `task_${event}:${task.id}:${person.phone}`;
+    const message = messageKey ?? 'project_milestone';
+    // Installation started and switch-on carry buttons inside the chat window (redesign §19).
+    const about = { id: project.id, customerId: project.customerId };
+    if (await tellStepWithButtons(db, message, about, person, payload, key)) continue;
+    await queueWhatsApp(db, person.phone, message, payload, key);
+  }
 }
 
 async function projectOf(db: DatabaseExecutor, projectId: string) {
@@ -97,27 +101,30 @@ async function projectOf(db: DatabaseExecutor, projectId: string) {
 }
 
 /**
- * A customer-visible step now waits on someone outside OneOhm (PRD 5.2 "delay notification
- * with the reason"): the customer hears why, once per wait, by the usual route.
+ * A customer-visible step that may message the customer now waits on someone outside OneOhm (PRD
+ * 5.2 "delay notification with the reason"): the customer hears why, once per wait, by the usual route.
  */
 export async function tellCustomerWaiting(
   db: DatabaseExecutor,
   task: Pick<typeof projectTasks.$inferSelect, 'id' | 'title' | 'projectId' | 'templateKey'> & {
     readonly customerVisible: boolean;
+    /** The step may message the customer (Settings → Task templates), the PRD rule (redesign §21a). */
+    readonly notifyCustomer: boolean;
   },
   party: WaitingParty,
 ): Promise<void> {
-  if (!task.customerVisible || !isOutsideParty(party)) return;
+  if (!task.customerVisible || !task.notifyCustomer || !isOutsideParty(party)) return;
   const project = await projectOf(db, task.projectId);
   if (!project) return;
   const template = await templateOf(db, task.templateKey);
   // One message per wait: the minute it started keeps a double tap from sending twice.
-  const started = new Date().toISOString().slice(0, 16);
-  await queueWhatsApp(
-    db,
-    project.phone,
-    'project_waiting',
-    {
+  const now = new Date();
+  await tellWaitingWithButtons(db, {
+    taskId: task.id,
+    party,
+    project: { id: project.id, customerId: project.customerId },
+    phone: project.phone,
+    payload: {
       customer: project.name,
       project: project.code,
       milestone: template?.customerTitle?.trim() || task.title,
@@ -125,8 +132,20 @@ export async function tellCustomerWaiting(
       party,
       step: task.templateKey,
     },
-    `task_waiting:${task.id}:${party}:${started}`,
-  );
+    key: `task_waiting:${task.id}:${party}:${now.toISOString().slice(0, 16)}`,
+    since: now,
+  });
+}
+
+/** A new wait began: the customer hears why, and the loan papers already asked join a loan wait. */
+export async function waitStarted(
+  db: DatabaseExecutor,
+  task: Parameters<typeof tellCustomerWaiting>[1],
+  party: WaitingParty,
+): Promise<void> {
+  await tellCustomerWaiting(db, task, party);
+  if (party === 'customer' && task.templateKey === 'loan_documents')
+    await loanWaitStarted(db, task.projectId);
 }
 
 /** The project manager hears when a task flagged for them is done (PRD 3.7). */

@@ -6,8 +6,9 @@ import { API, Session } from '../support/http';
 import * as J from '../support/journey';
 import { JOURNEY, onboardFromAd } from '../support/journey-onboard';
 import { Transcript } from '../support/journey-transcript';
-import { expectPaidNews, milestoneOf, owed } from '../support/money';
+import { expectPaidNews, milestoneOf, owed, payTapOf } from '../support/money';
 import { chatOf, choices, lastReply, promisedCall, replies } from '../support/onboarding';
+import { expectStartedInChat } from '../support/outbox-key';
 import { quoteInput, uniquePhone } from '../support/sales';
 
 // The full WhatsApp customer journey, second half (Steps 7-12): one customer from the Diwali
@@ -16,7 +17,7 @@ import { quoteInput, uniquePhone } from '../support/sales';
 // The run writes the owner's transcript of this customer's whole journey.
 const OUT = 'docs/testing/2026-11-03-whatsapp-journey-transcript.md';
 const MR_THANKS =
-  'धन्यवाद. तुमचे प्रोजेक्ट मॅनेजर आज (किंवा पुढच्या कामाच्या दिवशी) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील.';
+  /^धन्यवाद ✅ \S+ आज \(किंवा पुढच्या कामाच्या दिवशी\) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील\.$/;
 const pdfType = { status: 200, type: expect.stringContaining('application/pdf') };
 
 describe('The full WhatsApp customer journey: quote to paid advance', () => {
@@ -95,7 +96,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     t.step('8b. The customer accepts');
     await t.send({ buttonPayload: `quote_accept:${quote.id}` });
     const check = await lastReply(phone);
-    expect(choices(check)).toEqual([`quote_yes:${quote.id}`, `quote_ask:${quote.id}`]);
+    expect(choices(check)).toEqual([`quote_yes:${quote.id}`, `quote_no:${quote.id}`]);
     // The accept check says the first instalment in whole rupees, with no quote code (C1, C9).
     expect(check?.body).toMatch(/^₹[\d,]+ चे सोलर कोटेशन स्वीकारायचे\? पहिला हप्ता ₹[\d,]+ स्वीकारताना/);
     await t.tap(`quote_yes:${quote.id}`);
@@ -114,7 +115,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       await rows('SELECT 1 FROM outbox WHERE dedupe_key = $1', [`quote_thanks:${quote.id}`]),
     ).toHaveLength(1);
     t.ourSide(
-      `Quotation accepted by the customer (audit: by customer, channel whatsapp, their phone); lead stage won; "start the project" alert to ${j.owner.name} and every projects.create holder (${told.length} people); one thank-you.${(await lastReply(phone))?.body === MR_THANKS ? '' : ' ⚠ From here on the bot and the templates speak English, though the customer chose मराठी (check 8c).'}`,
+      `Quotation accepted by the customer (audit: by customer, channel whatsapp, their phone); lead stage won; "start the project" alert to ${j.owner.name} and every projects.create holder (${told.length} people); one thank-you.${MR_THANKS.test((await lastReply(phone))?.body ?? '') ? '' : ' ⚠ From here on the bot and the templates speak English, though the customer chose मराठी (check 8c).'}`,
     );
   });
 
@@ -123,10 +124,8 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       sent.filter((row) => row.dedupe_key === `quote_thanks:${quote.id}`),
     );
     const [sent] = await J.outboxOf(phone, 'quotation_sent');
-    expect({ thanks: thanks?.payload.body, quote: sent?.payload.language }).toEqual({
-      thanks: MR_THANKS,
-      quote: 'mr-IN',
-    });
+    expect(thanks?.payload.body).toMatch(MR_THANKS);
+    expect(sent?.payload.language).toBe('mr-IN');
   });
 
   it('9. staff start the project: the advance is due and Pay now opens the pay page', async () => {
@@ -134,23 +133,22 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     const created = await J.startProject(admin, quote.id);
     project = await admin.get<ProjectDetail>(`/projects/${created.id}`);
     expect(advance().status).toBe('due');
-    // The worker sends one person's messages in queued order: "started" before "please pay".
-    const order = await J.sendOrder(phone, ['project_started', 'payment_link']);
-    expect(order).toEqual(['project_started', 'payment_link']);
     await t.collect();
-    const [link] = await J.outboxOf(phone, 'payment_link');
-    payToken = link?.payload.payToken ?? '';
+    await expectStartedInChat(phone, created.id, advance().id, 'मॅनेजर');
+    await t.tap(`pay:${advance().id}`);
+    payToken =
+      String((await J.outboxOf(phone, 'session:cta_url'))[0]?.payload.url).split('/due/')[1] ?? '';
     expect(payToken).toBeTruthy();
     // Opening the link shows the amount in Marathi (her language); Continue opens the gateway.
     expect(await (await fetch(`${API}/pay/due/${payToken}`)).text()).toContain('पेमेंट करा');
     const go = await fetch(`${API}/pay/due/${payToken}?go=1`, { redirect: 'manual' });
     sandboxUrl = go.status === 302 ? (go.headers.get('location') ?? '') : '';
     expect(sandboxUrl).toContain('/v1/pay/sandbox/');
-    await t.send({ text: 'payments' });
-    const [button] = await J.outboxOf(phone, 'session:cta_url');
-    expect(button?.payload.url).toContain('/v1/pay/due/');
+    await t.send({ text: 'payments' }); // Redesign §10: [Pay ₹X] answers with the pay link.
+    await t.tap(await payTapOf(phone));
+    expect((await J.outboxOf(phone, 'session:cta_url'))[0]?.payload.url).toContain('/pay/due/');
     t.ourSide(
-      `Project ${project.code} made from the accepted quote; advance "${advance().label}" (₹${owed(advance()) / 100}) due; payment_link queued with a Pay now token that opens the Razorpay sandbox page; the Payments menu answers with a Pay now button.`,
+      `Project ${project.code} made from the accepted quote; advance "${advance().label}" (₹${owed(advance()) / 100}) due; [Pay ₹X] in the chat answers with a Pay now link that opens the Razorpay sandbox page; the Payments menu answers with a Pay now button.`,
     );
   });
 

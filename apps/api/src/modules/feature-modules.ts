@@ -25,12 +25,14 @@ import { PurchasingModule } from './purchasing/purchasing.module';
 import { QuotationsModule } from './quotations/quotations.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { SearchModule } from './search/search.module';
+import { SendToCustomerModule } from './send-to-customer/send-to-customer.module';
 import { ServiceDeskModule } from './service-desk/service-desk.module';
 import { ServiceVisitsModule } from './service-visits/service-visits.module';
 import { SiteActivityModule } from './site-activity/site-activity.module';
 import { StateSupportModule } from './state-support/state-support.module';
 import { SystemPapersModule } from './system-papers/system-papers.module';
 import { TemplatesModule } from './templates/templates.module';
+import { VisitsModule } from './visits/visits.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { WorkforceModule } from './workforce/workforce.module';
 
@@ -57,6 +59,8 @@ export const FEATURE_MODULES = [
   GatewayModule,
   OnlinePaymentsModule,
   WhatsAppModule,
+  SendToCustomerModule,
+  VisitsModule,
   TemplatesModule,
   AuditModule,
   BankPayoutsModule,

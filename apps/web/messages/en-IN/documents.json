@@ -38,6 +38,7 @@
       "warranty": "Warranty",
       "product_manual": "Product manuals",
       "statutory_report": "Statutory report",
+      "payment_proof": "Payment proof",
       "other": "Other",
       "customer_signature": "Customer signature",
       "voice_note": "Voice note"
@@ -177,7 +178,8 @@
           "remove": "Remove document"
         },
         "removed": "Document removed",
-        "removeFailed": "Could not remove the document"
+        "removeFailed": "Could not remove the document",
+        "move": "Move / change kind"
       },
       "upload": {
         "description": "One photo or PDF, filed in a folder so the team can find it.",
@@ -207,6 +209,20 @@
         "done": "Done",
         "failed": "The download did not work.",
         "defaultName": "OneOhm documents"
+      },
+      "move": {
+        "title": "Move / change kind",
+        "description": "File this paper on another home of this customer, or as another kind. Nothing is sent to the customer, unless a request it answered is now asked again.",
+        "home": "Home",
+        "homePlaceholder": "Choose a home",
+        "noHome": "No home (ID / income papers)",
+        "kind": "Kind",
+        "needsHome": "Choose the home this paper belongs to.",
+        "loadFailed": "Could not load the customer's homes",
+        "save": "Move",
+        "cancel": "Cancel",
+        "moved": "Paper moved",
+        "failed": "Could not move the paper"
       }
     },
     "checklist": {
@@ -221,15 +237,20 @@
         "present": "On file",
         "missing": "Missing",
         "ready_to_save": "Ready to save",
-        "not_ready": "Not ready"
+        "not_ready": "Not ready",
+        "to_check": "Received – to check",
+        "checked": "Checked"
       },
+      "tooOld": "Too old — ask again",
       "ask": "Ask the customer",
-      "asked": "Asked"
+      "asked": "Asked",
+      "looksGood": "Looks good",
+      "askAgain": "Ask again"
     },
     "requests": {
       "title": "Asked from the customer",
-      "intro": "Papers only the customer holds. They get WhatsApp and an app alert, and send a photo or PDF from the OneOhm app.",
-      "ask": "Ask for a paper",
+      "intro": "Everything we asked the customer to do: papers, locations, payments and calls. Use Send to customer at the top to ask for more.",
+      "ask": "Ask for papers",
       "loading": "Loading requests",
       "askedBy": "Asked by {name}, {when}",
       "askedWhen": "Asked {when}",
@@ -238,9 +259,19 @@
       "cancel": "Cancel",
       "cancelled": "Request cancelled",
       "cancelFailed": "Could not cancel the request",
+      "doneInPerson": {
+        "action": "Done in person",
+        "yes": "Yes, done",
+        "notYet": "Not yet",
+        "done": "Marked as done in person",
+        "failed": "Could not close the ask"
+      },
       "status": {
-        "open": "Waiting",
-        "received": "Received",
+        "waiting": "Waiting on customer",
+        "toCheck": "To check",
+        "toCall": "To call",
+        "toConfirm": "To confirm",
+        "done": "Done",
         "cancelled": "Cancelled"
       },
       "sheet": {
@@ -252,9 +283,55 @@
         "note": "Note for the customer (optional)",
         "notePlaceholder": "For example: the bill must show the consumer number.",
         "send": "Send request",
-        "sent": "Request sent to the customer",
+        "sent": "{count, plural, one {Request sent to the customer} other {# requests sent to the customer}}",
         "failed": "Could not send the request",
-        "close": "Cancel"
+        "close": "Cancel",
+        "addAnother": "Add another paper",
+        "removeRow": "Remove this paper"
+      },
+      "reask": {
+        "action": "Ask again",
+        "title": "Ask again for this paper",
+        "description": "The paper is taken off and the customer is asked again. They see your reason in the OneOhm app and on WhatsApp.",
+        "note": "What is wrong with it? The customer sees this.",
+        "notePlaceholder": "For example: the photo is blurred; please send a clear one.",
+        "send": "Ask again",
+        "sent": "The customer is asked again",
+        "failed": "Could not ask again",
+        "close": "Cancel",
+        "descriptionTeam": "The paper our team filed stays on file. The customer will be asked to send it again, and sees your reason in the OneOhm app and on WhatsApp."
+      },
+      "reminders": "{count, plural, one {# reminder sent} other {# reminders sent}}",
+      "looksGood": "Looks good",
+      "checked": "Paper checked. The customer is told.",
+      "checkFailed": "Could not mark the paper as checked",
+      "type": {
+        "paper": "Paper",
+        "location": "Location",
+        "pay": "Payment",
+        "callback": "Call back",
+        "visit_pick": "Visit day",
+        "presence": "Be at home",
+        "signature": "Signature",
+        "confirm": "Question",
+        "self_survey": "Self survey",
+        "rating": "Rating",
+        "payout": "UPI ID"
+      },
+      "callback": {
+        "called": "Called"
+      },
+      "location": {
+        "check": "Check location",
+        "suggestion": "The customer sent a pin {distance} from the saved point.",
+        "suggestionNew": "The customer sent a pin; the home has no saved point.",
+        "accept": "Use this location",
+        "ignore": "Ignore",
+        "accepted": "The home location is updated",
+        "called": "Marked as called",
+        "ignored": "The home keeps its location",
+        "failed": "Could not update the location",
+        "open": "View the pin"
       }
     },
     "reportVisibility": {

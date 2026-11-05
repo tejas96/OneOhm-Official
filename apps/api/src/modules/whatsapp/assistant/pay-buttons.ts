@@ -1,13 +1,15 @@
 import type { Database } from '@oneohm/database';
 import { paymentMilestones, payments, projects, properties } from '@oneohm/database';
+import type { MilestoneTrigger } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Environment } from '../../../config/environment';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { paySigningSecret, signPayToken } from '../../online-payments/pay-token';
+import { QUOTE_MONEY_WORDS } from '../../quotations/quote-money-words';
 import type { ChatReply } from '../chat-store';
-import { PROJECT_WORDS } from './project-words';
-import { ANSWER_WORDS, WORDS } from './words';
+import { CHAT_WORDS } from './chat-words';
+import { WORDS } from './words';
 
 /** Our pay page for one due amount: it makes the gateway page only when opened. */
 export function payPageUrl(env: Environment, customerId: string, milestoneId: string): string {
@@ -24,6 +26,7 @@ export async function payNowReplies(
   db: Database,
   env: Environment,
   customerId: string,
+  milestoneId?: string,
 ): Promise<ChatReply[]> {
   if (env.RAZORPAY_MODE === 'off') return [];
   const rows = await db
@@ -31,9 +34,8 @@ export async function payNowReplies(
       id: paymentMilestones.id,
       amount: paymentMilestones.amountPaise,
       city: properties.city,
-      // Its place among the project's customer shares, for "1st instalment" (C9).
-      index: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer' and m.position < ${paymentMilestones.position})::int`,
-      count: sql<number>`(select count(*) from ${paymentMilestones} m where m.project_id = ${paymentMilestones.projectId} and m.payer = 'customer')::int`,
+      label: properties.label,
+      trigger: paymentMilestones.trigger,
       paid: sql<string>`coalesce((select sum(${payments.amountPaise}) from ${payments} where ${payments.milestoneId} = ${paymentMilestones.id}), 0)`,
     })
     .from(paymentMilestones)
@@ -44,6 +46,7 @@ export async function payNowReplies(
         activeProjectsOf(customerId),
         eq(paymentMilestones.payer, 'customer'),
         inArray(paymentMilestones.status, ['due', 'partly_paid']),
+        milestoneId ? eq(paymentMilestones.id, milestoneId) : undefined,
       ),
     )
     .orderBy(paymentMilestones.position);
@@ -53,7 +56,11 @@ export async function payNowReplies(
     return [
       {
         kind: 'cta_url' as const,
-        body: `*${PROJECT_WORDS.projectIn(row.city)}*\n${ANSWER_WORDS.due(PROJECT_WORDS.instalment(Number(row.index), Number(row.count)), formatInr(left))}`,
+        body: CHAT_WORDS.payLink(
+          formatInr(left),
+          QUOTE_MONEY_WORDS.when[row.trigger as MilestoneTrigger] ?? '',
+          row.label?.trim() || row.city,
+        ),
         label: WORDS.payNow,
         url: payPageUrl(env, customerId, row.id),
       },

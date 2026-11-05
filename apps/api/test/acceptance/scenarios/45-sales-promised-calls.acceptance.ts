@@ -2,15 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb } from '../support/db';
 import { Session } from '../support/http';
 import { lastReply, leadsOf, notesOf, tap, upToSite, withOnboarding } from '../support/onboarding';
-import { addDays, today, uniquePhone } from '../support/sales';
+import { addDays, uniquePhone } from '../support/sales';
 import { alertsKeyed, ist, nextActionOf, runSalesChecks } from '../support/sales-checks';
 import { sendInbound } from '../support/whatsapp';
+import { nextWeekday } from '../support/work-days';
 
 // Live review B10: "Call me back" promises a call today only inside working hours, else
 // tomorrow morning; when that day's working hours end with no call logged, the owner
 // gets one alert. The taps carry tomorrow's times, so they are newer than the onboarding.
 const PROMISED = 'Customer asked for a call after the estimate';
-const DAY = addDays(today(), 1);
+/** A coming Monday-to-Friday: its taps are newer than the onboarding, its evening is followed by a working morning. */
+const DAY = nextWeekday();
 
 /** Onboarding to the estimate, then "Call me back" tapped at this time; the lead. */
 async function askForCall(phone: string, at: Date) {

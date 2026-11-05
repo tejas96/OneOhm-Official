@@ -1,8 +1,13 @@
+import { homeMr } from '@oneohm/shared';
 /**
  * Marathi words for the customer's in-app alerts (PRD 5.1).
  *
  * Drafted by the OneOhm team. Have a native Marathi speaker read it once before go-live.
  */
+
+import { CARE_MR } from './customer-message-care';
+import { JOURNEY_MR } from './customer-message-journey';
+import { STEP_MR } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
 
 const MR_STAGES: Readonly<Record<string, string>> = {
@@ -20,6 +25,9 @@ const MR_WAITING: Readonly<Record<string, string>> = {
 
 export const MARATHI_WORDS: LanguageWords = {
   messages: {
+    ...JOURNEY_MR,
+    ...STEP_MR,
+    ...CARE_MR,
     quotation_sent: (p) => ({
       title: 'तुमचे कोटेशन तयार आहे',
       body: `${p.number}: ${p.total}. सबसिडीनंतर तुम्हाला ${p.effective} भरायचे आहेत.`,
@@ -66,7 +74,35 @@ export const MARATHI_WORDS: LanguageWords = {
     }),
     document_requested: (p) => ({
       title: `कृपया ${p.document} पाठवा`,
-      body: `${p.project}: ‘कागदपत्रे’ उघडा आणि फोटो किंवा PDF पाठवा.`,
+      body: `${p.project ? `${p.project}: ` : ''}‘कागदपत्रे’ उघडा आणि फोटो किंवा PDF पाठवा.`,
+    }),
+    paper_request: (p) => ({
+      title: `कृपया ${p.document} पाठवा`,
+      body: `${p.home} येथील तुमच्या सोलरसाठी. OneOhm ॲपमधून पाठवा, किंवा आमच्या टीमकडे द्या.`,
+    }),
+    paper_again: (p) => ({
+      title: `कृपया तुमचे ${p.document} पुन्हा पाठवा`,
+      body: p.reason ?? '',
+    }),
+    paper_checked: (p) => ({
+      title: `तुमचे ${p.document} तपासले ✅`,
+      body: 'धन्यवाद.',
+    }),
+    paper_stale: (p) => ({
+      title: `${p.home} साठी आम्हाला तुमचे ताजे ${p.document} हवे आहे`,
+      body: `आमच्याकडे असलेले ${p.month} चे आहे.`,
+    }),
+    document_request_cancelled: (p) => ({
+      title: `${p.document} आता लागणार नाही`,
+      body: 'तुम्हाला ते पाठवण्याची गरज नाही.',
+    }),
+    action_cancelled: (p) => ({
+      title: `${p.what} आता नको आहे`,
+      body: p.note ?? 'तुम्हाला काही करण्याची गरज नाही.',
+    }),
+    document_received_by_team: (p) => ({
+      title: `तुमचे ${p.document} आम्हाला मिळाले`,
+      body: `${p.home} येथील तुमच्या सोलरसाठी. धन्यवाद.`,
     }),
     maintenance_visit: (p) => ({
       title: `मोफत ${p.visit} भेट: ${p.date}`,
@@ -100,6 +136,48 @@ export const MARATHI_WORDS: LanguageWords = {
       title: MR_WAITING[p.party ?? ''] ?? 'थोडा उशीर होत आहे',
       body: `${p.project}: ${p.milestone}. पुढची माहिती आम्ही कळवू.`,
     }),
+    location_request: (p) => ({
+      title: `तुमच्या ${homeMr(p.home, 'घराचे')} लोकेशन पाठवा`,
+      body: 'आमच्या WhatsApp चॅटमध्ये ‘लोकेशन पाठवा’ दाबा, म्हणजे आमची टीम सहज पोहोचेल.',
+    }),
+    payment_due: (p) => ({
+      title: `${p.amount} बाकी आहे`,
+      body: `तुमच्या ${homeMr(p.home, 'घरासाठी')}. ‘पेमेंट’ उघडून भरा, किंवा दुसऱ्या मार्गाने भरले असल्यास आम्हाला सांगा.`,
+    }),
+    callback_request: (p) => ({
+      title: `${p.staff} यांनी कधी फोन करावा?`,
+      body: 'आमच्या WhatsApp चॅटमध्ये सांगा: सकाळी, दुपारी किंवा संध्याकाळी.',
+    }),
+    delay_notice: (p) => ({
+      title: `तुमचे ${p.stage} थांबले आहे`,
+      body: `${p.reason}. पुढची माहिती आम्ही कळवू.`,
+    }),
+    crew_contact: (p) => ({
+      title: `${p.staff} तुमच्या ${p.work} साठी येतील`,
+      body: `तुम्ही त्यांना ${p.phone} वर फोन करू शकता.`,
+    }),
+    document_share: (p) => ({
+      title: `तुमचे ${p.document}`,
+      body: 'आम्ही ते WhatsApp वर पाठवले आहे. ते ‘कागदपत्रे’ मध्येही आहे.',
+    }),
+    visit_pick: (p) => ({
+      title: `${p.work} साठी दिवस निवडा`,
+      body: `आमची टीम ${p.home} येथे कधी येऊ शकते? आमच्या WhatsApp चॅटमध्ये ‘दिवस निवडा’ दाबा.`,
+    }),
+    visit_booked: (p) => ({
+      title: `भेट ठरली: ${p.when}`,
+      body: `येण्यापूर्वी ${p.staff} तुम्हाला फोन करतील.`,
+    }),
+    visit_reminder: (p) => ({
+      title: `आमची टीम ${p.home} येथे ${p.when} येणार आहे`,
+      body: `${p.work} साठी. कृपया आमच्या WhatsApp चॅटमध्ये पक्के करा.`,
+    }),
+    inspection_presence: (p) => ({
+      title: `${p.day} रोजी ${p.work}`,
+      body: `वीज मंडळ (DISCOM) ${p.home} येथे येणार आहे. कृपया घरी राहा.`,
+    }),
+    visit_cancelled: (p) => ({ title: 'भेट रद्द झाली', body: p.body ?? '' }),
+    visit_crew_changed: (p) => ({ title: 'कोण येणार', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफरल बक्षिसाची माहिती',
       body: `${p.friend}: ${p.amount} — ${p.status}.`,
@@ -154,5 +232,6 @@ export const MARATHI_WORDS: LanguageWords = {
     service: 'तुमच्या सर्व्हिस विनंती',
     enquiry: 'तुमच्या सोलर चौकशी',
   },
+  someHome: 'तुमच्या घरी',
   alerts: { stage_rating_reply: 'आम्ही तुमच्या अभिप्रायाला उत्तर दिले' },
 };

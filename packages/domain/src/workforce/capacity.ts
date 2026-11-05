@@ -58,9 +58,12 @@ export function dueByWeek(dueDates: readonly string[], windows: readonly WeekWin
   return counts;
 }
 
-/** Days of approved or pending leave inside each week (inclusive ranges). */
+/**
+ * Days of leave inside each week (inclusive ranges). A half day counts 0.5. Pass only the
+ * leave that should count: approved leave is away time, pending leave is only asked for.
+ */
 export function leaveDaysByWeek(
-  leave: readonly { readonly from: string; readonly to: string }[],
+  leave: readonly { readonly from: string; readonly to: string; readonly halfDay?: boolean }[],
   windows: readonly WeekWindow[],
 ): number[] {
   return windows.map((week) => {
@@ -68,7 +71,10 @@ export function leaveDaysByWeek(
     for (let offset = 0; offset < 7; offset += 1) {
       const day = addDays(week.from, offset);
       if (day > week.to) break;
-      if (leave.some((range) => range.from <= day && day <= range.to)) days += 1;
+      const covering = leave.filter((range) => range.from <= day && day <= range.to);
+      if (covering.length === 0) continue;
+      // A whole day wins over a half day on the same date.
+      days += covering.some((range) => !(range.halfDay && range.from === range.to)) ? 1 : 0.5;
     }
     return days;
   });

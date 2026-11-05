@@ -80,6 +80,12 @@ export const HOME: Copy<typeof en.HOME> = {
     released: 'तुमच्या बँक खात्यात जमा झाली.',
     not_applicable: 'या प्रकल्पाला लागू नाही.',
   },
+  /** What the customer told us about a released subsidy (the same as the WhatsApp Project update). */
+  subsidyNote: {
+    received: 'तुमच्या बँक खात्यात जमा झाली ✅',
+    checking: 'तुम्ही सांगितले की ती अजून आली नाही. आम्ही सरकारकडे चौकशी करत आहोत.',
+  },
+  subsidyNoteStatus: { received: 'मिळाली', checking: 'तपासत आहोत' },
   subsidyStatus: {
     pending: 'अजून अर्ज केला नाही',
     applied: 'अर्ज केला',

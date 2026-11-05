@@ -233,6 +233,7 @@
       "reject": "Mark rejected",
       "send": "Send",
       "sendAgain": "Send again",
+      "whatChanged": "What changed (the customer reads this first)",
       "accept": "Mark accepted",
       "createProject": "Create project",
       "openProject": "Open project",

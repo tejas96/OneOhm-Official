@@ -20,11 +20,13 @@ describe('reminder timing (PRD 7.2)', () => {
       paymentRepeatDays: 0,
       staffDigestTime: '25:00',
       followUpLeadDays: 1.5,
+      subsidyChaseDays: 0,
     });
     expect(Object.keys(errors).sort()).toEqual([
       'followUpLeadDays',
       'paymentRepeatDays',
       'staffDigestTime',
+      'subsidyChaseDays',
     ]);
   });
 

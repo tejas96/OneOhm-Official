@@ -28,12 +28,15 @@ import reportTeam from './report-team.json';
 import reports from './reports.json';
 import rewards from './rewards.json';
 import scopeChanges from './scope-changes.json';
+import selfSurvey from './self-survey.json';
+import sendToCustomer from './send-to-customer.json';
 import service from './service.json';
 import settings from './settings.json';
 import signIn from './sign-in.json';
 import siteActivity from './site-activity.json';
 import team from './team.json';
 import today from './today.json';
+import visits from './visits.json';
 
 /**
  * English (India) messages, one file per feature so screens can grow independently.
@@ -70,11 +73,14 @@ const messages = {
   ...reportProfitability,
   ...reportTeam,
   ...reportService,
+  ...selfSurvey,
+  ...sendToCustomer,
   ...service,
   ...scopeChanges,
   ...settings,
   ...siteActivity,
   ...team,
   ...today,
+  ...visits,
 };
 export default messages;

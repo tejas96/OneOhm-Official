@@ -5,11 +5,13 @@ import {
   type OnboardStep,
   type RoofChoice,
   type SiteChoice,
+  usableName,
 } from '@oneohm/domain';
 import { titleCaseName } from '@oneohm/shared';
 import { languageNow } from '../assistant/language';
 import type { ChatReply } from '../chat-store';
 import { ONBOARD_WORDS } from './onboard-words';
+import { MORE_WORDS } from './onboard-words-more';
 import { ESTIMATE_CHOICES, LATER_PERIODS, PERSON_CHOICE } from './onboarding-context';
 
 /** What a question needs to know besides its step. */
@@ -54,10 +56,12 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
     // A list saved before the row limits were cut keeps its rows; typed "back" still works.
     rows: rows.length + 2 <= MAX_ROWS ? [...rows, back, person] : [...rows, person],
   });
+  const pin = { id: 'ob:city:pin', title: MORE_WORDS.sendLocation };
   const typed = (text: string): ChatReply => ({
     kind: 'buttons',
     body: body(text, true),
-    buttons: step === 'name' ? [person] : [back, person],
+    // The pin button sits with the typed city question: a pin answers it too (§16).
+    buttons: step === 'city' ? [pin, back, person] : [back, person],
   });
   switch (step) {
     case 'language':
@@ -70,8 +74,11 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
         })),
       };
     case 'name': {
-      const name = view.profileName?.trim() && titleCaseName(view.profileName);
-      if (!name || view.awaiting === 'name') return typed(W.typeName);
+      // An emoji, initials or a shop name is not a name we call a person by: they type theirs.
+      const usable = usableName(view.profileName);
+      const name = usable && titleCaseName(usable);
+      if (!name || view.awaiting === 'name')
+        return typed(view.retry ? MORE_WORDS.nameAgain : W.typeName);
       return {
         kind: 'buttons',
         body: body(W.askName(name)),
@@ -87,6 +94,8 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
       if (cities.length === 0 || view.awaiting === 'city') return typed(W.typeCity);
       return list(W.askCity, [
         ...cities.map((city) => ({ id: `ob:city:${city}`, title: city })),
+        // A list saved with more cities than today's limit has no room for the 📍 row.
+        ...(cities.length + 3 <= MAX_ROWS ? [pin] : []),
         { id: CITY_OTHER_CHOICE, title: W.otherCity },
       ]);
     }
@@ -125,8 +134,8 @@ export function question(step: OnboardStep, view: QuestionView): ChatReply {
         kind: 'buttons',
         body: W.estimateNext,
         buttons: [
-          { id: ESTIMATE_CHOICES.call, title: W.callMeBack },
-          person,
+          { id: ESTIMATE_CHOICES.visit, title: MORE_WORDS.bookVisit },
+          { id: ESTIMATE_CHOICES.call, title: MORE_WORDS.callMe },
           { id: ESTIMATE_CHOICES.notNow, title: W.notNow },
         ],
       };

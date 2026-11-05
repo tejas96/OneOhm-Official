@@ -43,6 +43,12 @@ export const customers = pgTable(
     contactChannel: contactChannelEnum('contact_channel').notNull().default('whatsapp'),
     /** When WhatsApp said this number is not on WhatsApp; messages then go by SMS. */
     whatsappUnreachableAt: instant('whatsapp_unreachable_at'),
+    /** Where referral rewards are paid (UPI only); `upiCheckedAt` is when staff said it looks right. */
+    upiId: text('upi_id'),
+    upiCheckedAt: instant('upi_checked_at'),
+    upiCheckedByUserId: uuid('upi_checked_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdByUserId: uuid('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),

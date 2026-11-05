@@ -19,6 +19,8 @@ export interface PayoutTarget {
   readonly id: string;
   readonly amountPaise: number;
   readonly party: string;
+  /** A referral reward paid by UPI: the ID on the screen, sent so a changed ID is refused. */
+  readonly upiId?: string | null;
 }
 
 export const payoutKeys = {

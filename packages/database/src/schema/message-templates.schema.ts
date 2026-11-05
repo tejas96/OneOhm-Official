@@ -19,5 +19,10 @@ export const messageTemplates = pgTable('message_templates', {
   active: boolean('active').notNull().default(true),
   /** On once Meta approved the version with a file and buttons; off sends the plain text only. */
   extrasApproved: boolean('extras_approved').notNull().default(false),
+  /**
+   * On once Meta approved the NEWER version that adds a quick reply (I paid another way) before the link
+   * button. Off keeps the older shape, so a live template approved without it never breaks.
+   */
+  quickRepliesApproved: boolean('quick_replies_approved').notNull().default(false),
   updatedAt: updatedAt(),
 });

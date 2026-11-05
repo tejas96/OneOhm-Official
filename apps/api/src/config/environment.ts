@@ -85,6 +85,10 @@ const environmentSchema = z
     API_PUBLIC_URL: z.string().url().default('http://localhost:4200'),
     /** Runs the WhatsApp onboarding nudge every 5 minutes; the acceptance suite turns it off. */
     ONBOARDING_NUDGE_TIMER: flag,
+    /** Asks "What is this?" about waiting WhatsApp files every 2 seconds; the acceptance suite turns it off. */
+    FILE_QUESTION_TIMER: flag,
+    /** Seconds after the last file a customer sends before we ask what the files are. */
+    FILE_WAIT_SECONDS: z.coerce.number().int().min(0).max(120).default(15),
     /** Runs the sales checks (quote validity, promised calls, start project) every 15 minutes. */
     SALES_CHECKS_TIMER: flag,
   })

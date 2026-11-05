@@ -53,6 +53,7 @@ describe('WhatsApp onboarding flow', () => {
     expect(choices(await lastReply(phone))).toEqual([
       'ob:city:Pune',
       'ob:city:Satara',
+      'ob:city:pin',
       'ob:city:other',
       'ob:city:back',
       'ob:person',
@@ -139,7 +140,7 @@ describe('WhatsApp onboarding flow', () => {
     expect(alerts.map((alert) => alert.user_id)).toContain(lead?.owner_user_id);
     expect(alerts[0]?.body).toContain('Onboarding answers so far');
     expect(alerts[0]?.body).toContain('Site: Home');
-    expect((await lastReply(phone))?.body).toContain('will reply to you here');
+    expect((await lastReply(phone))?.body).toContain('will reply here');
   });
 
   it('"Talk to a person" at the site question hands over with the summary', async () => {
@@ -161,7 +162,7 @@ describe('WhatsApp onboarding flow', () => {
     const first = await chatOf(unclear);
     expect(first.state).toBe('human');
     expect((await handOverAlerts(first.id)).length).toBeGreaterThan(0);
-    expect((await lastReply(unclear))?.body).toContain('will reply to you here');
+    expect((await lastReply(unclear))?.body).toContain('will reply here');
 
     const person = uniquePhone();
     await say(person, 'hi');

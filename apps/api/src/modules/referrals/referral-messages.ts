@@ -9,6 +9,9 @@ import {
 import type { IncentiveStatus } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
+import { deliverCare } from '../care/care-deliver';
+import { REFER_WORDS } from '../care/refer-words';
+import { askUpi } from './reward-upi';
 
 const METHOD: Readonly<Record<string, string>> = {
   cash: 'in cash',
@@ -58,18 +61,33 @@ export async function announceReward(
   if (!row) return;
   const { reward, referrer, friend } = row;
   const amount = formatInr(reward.amountPaise);
-  await queueCustomerMessage(
-    db,
-    referrer.phoneE164,
-    'referral_reward',
-    {
-      customer: referrer.name.split(/\s+/)[0] ?? referrer.name,
-      friend,
-      amount,
-      status: statusWords(reward),
-    },
-    `referral_reward:${reward.id}:${reward.status}`,
-  );
+  const payload = {
+    customer: referrer.name.split(/\s+/)[0] ?? referrer.name,
+    friend,
+    amount,
+    status: statusWords(reward),
+  };
+  const key = `referral_reward:${reward.id}:${reward.status}`;
+  // Approved: the customer is asked for their UPI ID instead of the plain "approved" line.
+  const asked = reward.status === 'approved' && (await askUpi(db, reward.id));
+  if (reward.status === 'paid' && reward.paidMethod === 'upi') {
+    // Paid by UPI: "₹2,000 sent to your UPI ✅" in the chat; outside it the usual reward message.
+    await deliverCare(
+      db,
+      { phone: referrer.phoneE164 },
+      {
+        template: 'referral_reward',
+        payload,
+        key,
+        reply: async () => ({ kind: 'text', body: REFER_WORDS.paid(amount) }),
+        // The reward message always went: with its switch off it is still queued (app inbox, as before).
+        fallback: async () => {
+          await queueCustomerMessage(db, referrer.phoneE164, 'referral_reward', payload, key);
+        },
+      },
+    );
+  } else if (!asked)
+    await queueCustomerMessage(db, referrer.phoneE164, 'referral_reward', payload, key);
   const next: Partial<Record<IncentiveStatus, { capability: string; title: string }>> = {
     pending: { capability: 'finance.approve_payments', title: 'Referral reward to approve' },
     approved: { capability: 'finance.record_payments', title: 'Referral reward to pay' },

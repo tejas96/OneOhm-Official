@@ -24,6 +24,9 @@ export const reminderTimingSchema = z.object({
   staffDigestTime: clock,
   ownerSummaryTime: clock,
   followUpLeadDays: whole,
+  subsidyChaseDays: whole,
+  selfSurveyOffer: z.boolean(),
+  selfSurveyPaise: whole,
   whatsappNightReply: z.boolean(),
 });
 export type ReminderTimingRecord = z.infer<typeof reminderTimingSchema>;

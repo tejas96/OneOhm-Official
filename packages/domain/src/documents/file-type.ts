@@ -6,6 +6,13 @@ import {
   VIDEO_FILE_TYPES,
 } from './media-type';
 
+const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Word and Excel files: kept when a customer sends them on WhatsApp, never accepted elsewhere. */
+export const OFFICE_FILE_TYPES = [DOCX_TYPE, XLSX_TYPE] as const;
+export type OfficeFileType = (typeof OFFICE_FILE_TYPES)[number];
+
 /**
  * Every paper and photo OneOhm accepts. The type comes from the file's bytes, never its
  * name. Voice notes and videos are accepted only as field evidence (`EVIDENCE_FILE_TYPES`).
@@ -37,13 +44,19 @@ export const COMPANY_ASSET_FILE_TYPES: readonly AcceptedFileType[] = [
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /** Any type OneOhm can recognise: papers and photos, voice notes and videos. */
-export type DetectedFileType = AcceptedFileType | MediaFileType;
+export type DetectedFileType = AcceptedFileType | MediaFileType | OfficeFileType;
 
 /** A task's or service visit's evidence: photos and papers, voice notes and short videos. */
 export const EVIDENCE_FILE_TYPES: readonly DetectedFileType[] = [
   ...ACCEPTED_FILE_TYPES,
   ...AUDIO_FILE_TYPES,
   ...VIDEO_FILE_TYPES,
+];
+
+/** What a customer's WhatsApp file may be: evidence, plus Word and Excel files (kept, never filed as a paper). */
+export const WHATSAPP_FILE_TYPES: readonly DetectedFileType[] = [
+  ...EVIDENCE_FILE_TYPES,
+  ...OFFICE_FILE_TYPES,
 ];
 
 /** The size cap of one file of this type (papers and photos 25 MB). */
@@ -60,8 +73,51 @@ function ascii(bytes: Uint8Array, start: number, length: number): string {
   return String.fromCharCode(...bytes.subarray(start, start + length));
 }
 
+/** The most central-directory entries read before deciding. */
+const ZIP_ENTRIES_READ = 2000;
+/** The end-of-directory record is 22 bytes, then a comment of up to 65535 bytes. */
+const EOCD_SEARCH_BYTES = 22 + 0xffff;
+
+const u16 = (bytes: Uint8Array, at: number) => (bytes[at] ?? 0) | ((bytes[at + 1] ?? 0) << 8);
+const u32 = (bytes: Uint8Array, at: number) => u16(bytes, at) + u16(bytes, at + 2) * 0x10000;
+
+/** Where the ZIP's end-of-directory record starts, searching back from the end; else -1. */
+function findEndRecord(bytes: Uint8Array): number {
+  const lowest = Math.max(0, bytes.length - EOCD_SEARCH_BYTES);
+  for (let at = bytes.length - 22; at >= lowest; at -= 1)
+    if (bytes[at] === 0x50 && ascii(bytes, at, 4) === 'PK\x05\x06') return at;
+  return -1;
+}
+
 /**
- * Detects JPEG, PNG, WebP, HEIC/HEIF and PDF, and the accepted audio and video formats,
+ * Word and Excel files are ZIPs: `PK\x03\x04` first, then a central directory (found from the
+ * end of the file) that lists `[Content_Types].xml` and entries under `word/` or `xl/`.
+ * The directory lists only top-level entries, so a file stored inside another one never
+ * shows; it also names entries whose local headers hold no size (streaming writers).
+ */
+function detectOffice(bytes: Uint8Array): DetectedFileType | null {
+  if (bytes.length < 30 || ascii(bytes, 0, 4) !== 'PK\x03\x04') return null;
+  const end = findEndRecord(bytes);
+  if (end < 0) return null;
+  let at = u32(bytes, end + 16);
+  const stop = Math.min(at + u32(bytes, end + 12), bytes.length);
+  let types = false;
+  let kind: DetectedFileType | null = null;
+  for (let entry = 0; entry < ZIP_ENTRIES_READ && at + 46 <= stop; entry += 1) {
+    if (ascii(bytes, at, 4) !== 'PK\x01\x02') break;
+    const nameLength = u16(bytes, at + 28);
+    if (at + 46 + nameLength > stop) break;
+    const name = ascii(bytes, at + 46, Math.min(nameLength, 64));
+    if (name === '[Content_Types].xml') types = true;
+    else if (name.startsWith('word/')) kind ??= DOCX_TYPE;
+    else if (name.startsWith('xl/')) kind ??= XLSX_TYPE;
+    at += 46 + nameLength + u16(bytes, at + 30) + u16(bytes, at + 32);
+  }
+  return types ? kind : null;
+}
+
+/**
+ * Detects JPEG, PNG, WebP, HEIC/HEIF, PDF, Word and Excel files, and the accepted audio and video formats,
  * from their signatures; anything else is null.
  */
 export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
@@ -84,7 +140,7 @@ export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
     return 'image/heic';
   }
   if (bytes.length >= 5 && ascii(bytes, 0, 5) === '%PDF-') return 'application/pdf';
-  return detectMediaType(bytes);
+  return detectOffice(bytes) ?? detectMediaType(bytes);
 }
 
 export const isImageType = (contentType: string): boolean => contentType.startsWith('image/');

@@ -1,4 +1,5 @@
-import { boolean, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers } from './crm.schema';
 import { users } from './identity.schema';
@@ -20,6 +21,10 @@ export const waConversations = pgTable(
     state: text('state').notNull().default('menu'),
     context: jsonb('context').notNull().default({}),
     lastInboundAt: instant('last_inbound_at'),
+    /** When "What is this?" is due for the files waiting in this chat; null when nothing is scheduled. */
+    filesAskAt: instant('files_ask_at'),
+    /** Failed attempts to ask; after a few we stop and tell staff once. */
+    filesAskTries: integer('files_ask_tries').notNull().default(0),
     /** When the person sent STOP; empty once they send START. Templates and nudges skip them. */
     optedOutAt: instant('opted_out_at'),
     handedOverAt: instant('handed_over_at'),
@@ -38,6 +43,9 @@ export const waConversations = pgTable(
   },
   (table) => [
     index('wa_conversations_customer_idx').on(table.customerId),
+    index('wa_conversations_files_ask_idx')
+      .on(table.filesAskAt)
+      .where(sql`${table.filesAskAt} is not null`),
     index('wa_conversations_assigned_idx').on(table.assignedUserId),
   ],
 );
@@ -68,5 +76,40 @@ export const waMessages = pgTable(
   (table) => [
     index('wa_messages_conversation_idx').on(table.conversationId, table.createdAt),
     index('wa_messages_media_idx').on(table.mediaId),
+    index('wa_messages_document_idx').on(table.documentId),
   ],
+);
+
+/**
+ * The WhatsApp form (Flow) each form key is published as. A form with no flow id is not
+ * available: the chat asks for the photo here instead. The owner pastes the id after publishing.
+ */
+export const waForms = pgTable('wa_forms', {
+  key: text('key').primaryKey(),
+  flowId: text('flow_id').notNull(),
+  updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: updatedAt(),
+});
+
+/**
+ * What one form we sent is for: the reply carries this token back. It names the chat and
+ * customer it was sent to and the thing asked (`payload`), and stops working at `expiresAt`.
+ */
+export const waFlowTokens = pgTable(
+  'wa_flow_tokens',
+  {
+    token: text('token').primaryKey(),
+    formKey: text('form_key').notNull(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => waConversations.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    payload: jsonb('payload').notNull().default({}),
+    expiresAt: instant('expires_at').notNull(),
+    usedAt: instant('used_at'),
+    createdAt: createdAt(),
+  },
+  (table) => [index('wa_flow_tokens_conversation_idx').on(table.conversationId)],
 );

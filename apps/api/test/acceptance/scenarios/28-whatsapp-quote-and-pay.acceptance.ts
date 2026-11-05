@@ -89,7 +89,7 @@ describe('WhatsApp quote and pay', () => {
     expect(ask?.payload.kind).toBe('buttons');
     expect(ask?.payload.buttons.map((button) => button.id)).toEqual([
       `quote_yes:${quotation.id}`,
-      `quote_ask:${quotation.id}`,
+      `quote_no:${quotation.id}`,
     ]);
     expect(await statusOf(quotation.id)).toBe('sent');
 
@@ -215,7 +215,7 @@ describe('WhatsApp quote and pay', () => {
     expect(go.headers.get('location')).toContain('/v1/pay/sandbox/');
   });
 
-  it('the Payments menu sends a Pay now button for each due amount', async () => {
+  it('Payments offers Pay ₹X for the due amount; its tap sends the Pay now link', async () => {
     const { customer } = await sellProject(admin, { name: 'Quote Pay Menu Customer (test)' });
     await rows(
       `insert into wa_conversations (phone, customer_id, last_inbound_at) values ($1, $2, now())
@@ -224,6 +224,16 @@ describe('WhatsApp quote and pay', () => {
     );
 
     await sendInbound(customer.phone, { text: 'payments' });
+    // Redesign §10: the summary carries [Pay ₹X] [Receipts] [Menu], never a raw link.
+    const [summary] = await rows<{ payload: { body: string; buttons: { id: string }[] } }>(
+      "select payload from outbox where recipient = $1 and template = 'session:buttons' order by created_at desc limit 1",
+      [customer.phone],
+    );
+    expect(summary?.payload.body).toContain('₹');
+    expect(summary?.payload.body).not.toMatch(/https?:\/\//);
+    const pay = summary?.payload.buttons[0]?.id ?? '';
+    expect(pay).toMatch(/^pay:/);
+    await sendInbound(customer.phone, { buttonReply: pay });
 
     const buttons = await rows<{ payload: { label: string; url: string } }>(
       "select payload from outbox where recipient = $1 and template = 'session:cta_url'",
@@ -232,12 +242,5 @@ describe('WhatsApp quote and pay', () => {
     expect(buttons.length).toBeGreaterThan(0);
     expect(buttons[0]?.payload.label).toBe('Pay now');
     expect(buttons[0]?.payload.url).toContain('/v1/pay/due/');
-    // The summary before the buttons keeps the amounts but no raw gateway link.
-    const [summary] = await rows<{ payload: { body: string } }>(
-      "select payload from outbox where recipient = $1 and template = 'session:text' order by created_at desc limit 1",
-      [customer.phone],
-    );
-    expect(summary?.payload.body).toContain('₹');
-    expect(summary?.payload.body).not.toMatch(/https?:\/\//);
   });
 });

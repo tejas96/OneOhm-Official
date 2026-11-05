@@ -13,8 +13,12 @@ import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { conflict } from '../../common/http/errors';
 import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
+import { journeyOnComplete, journeyOnReady } from '../journey/journey-auto';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { recordSubsidyClaim } from '../quotations/subsidy-claim';
+import { applyPendingCredit } from '../self-survey/survey-credit';
+import { openVisitForTask } from '../visits/visit-reads';
+import { finishVisit } from '../visits/visit-store';
 import { awardTaskPoints } from '../workforce/points';
 import { askForStageRating } from '../workforce/rating-request';
 import { closeIfSettled } from './financial-closure';
@@ -38,6 +42,9 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     .where(and(eq(projectTasks.id, task.id), ne(projectTasks.status, 'completed')))
     .returning({ id: projectTasks.id });
   if (finished.length === 0) throw conflict('This task is already done.', 'done');
+  // The visit for this task happened, whoever did not tick it.
+  const visit = await openVisitForTask(tx, task.id);
+  if (visit) await finishVisit(tx, visit, userId, task.title);
 
   const dependents = await tx
     .select({ taskId: taskDependencies.taskId })
@@ -50,10 +57,13 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
       .where(and(eq(taskDependencies.taskId, taskId), ne(projectTasks.status, 'completed')));
     if (open.length === 0) {
-      await tx
+      const [ready] = await tx
         .update(projectTasks)
         .set({ status: 'ready', updatedAt: now })
-        .where(and(eq(projectTasks.id, taskId), eq(projectTasks.status, 'pending')));
+        .where(and(eq(projectTasks.id, taskId), eq(projectTasks.status, 'pending')))
+        .returning();
+      // Dispatch is next: ask the customer whether the roof is ready (if the step may message them).
+      if (ready) await journeyOnReady(tx, ready);
     }
   }
 
@@ -63,6 +73,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .set({ status: 'operational', operationalAt: now, updatedAt: now })
       .where(eq(projects.id, task.projectId));
   } else if (task.onComplete) {
+    // A self-survey discount that had no payment to come off goes on the one about to fall due (still upcoming now).
+    await applyPendingCredit(tx, task.projectId, userId);
     // "Not due yet" is an empty due date: an advance may already have part-paid it.
     const due = await tx
       .update(paymentMilestones)
@@ -108,6 +120,7 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
   }
 
   await tellCustomerAbout(tx, task, 'completed');
+  await journeyOnComplete(tx, task, userId);
   await tellManagerDone(tx, task, userId);
   await tx.insert(projectActivities).values({
     projectId: task.projectId,

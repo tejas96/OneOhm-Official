@@ -2,11 +2,11 @@ import {
   describeError,
   EmptyState,
   ErrorState,
+  greetingPart,
   Illustration,
   LoadingState,
   localHours,
   Screen,
-  skyPhase,
   Text,
   unwrap,
   useTheme,
@@ -43,7 +43,7 @@ export function TodayScreen() {
   const user = useCurrentUser();
   const query = useQuery({ queryKey: keys.tasks, queryFn: () => unwrap(api.tasks.myTasks()) });
   const workday = useWorkday();
-  const phase = skyPhase(localHours(new Date(), BUSINESS_TIME_ZONE));
+  const part = greetingPart(localHours(new Date(), BUSINESS_TIME_ZONE));
   const firstName = user.fullName.split(' ')[0] ?? user.fullName;
   const tasks = query.data ?? [];
   // Service visits count as work too: no "nothing assigned" while one is waiting.
@@ -70,7 +70,7 @@ export function TodayScreen() {
           </View>
         </View>
         <View>
-          <Text variant="displayXl">{TODAY.greeting[phase]},</Text>
+          <Text variant="displayXl">{TODAY.greeting[part]},</Text>
           <Text variant="displayXl" italic color={theme.colors.accent}>
             {firstName}.
           </Text>

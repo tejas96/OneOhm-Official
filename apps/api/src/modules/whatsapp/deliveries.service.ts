@@ -10,9 +10,9 @@ import {
   fallBackToSms,
   GENERIC_WORDS,
   outbox,
-  tellChatFileFailed,
+  tellChatSendFailed,
 } from '@oneohm/database';
-import { isNotOnWhatsApp } from '@oneohm/domain';
+import { isNotOnWhatsApp, smsCanStandIn } from '@oneohm/domain';
 import { and, count, desc, eq, inArray, type SQL, sql } from 'drizzle-orm';
 import { conflict, notFound } from '../../common/http/errors';
 import { offsetOf, pageFrom } from '../../common/paging';
@@ -84,7 +84,7 @@ export class DeliveriesService {
     let applied = 0;
     for (const update of updates) {
       const [row] = await this.db
-        .select({ id: outbox.id, deliveryStatus: outbox.deliveryStatus })
+        .select({ id: outbox.id, deliveryStatus: outbox.deliveryStatus, template: outbox.template })
         .from(outbox)
         .where(eq(outbox.providerMessageId, update.providerMessageId))
         .limit(1);
@@ -110,8 +110,10 @@ export class DeliveriesService {
               : {}),
           })
           .where(eq(outbox.id, row.id));
-        // A chat file WhatsApp could not deliver: the chat's people are told to send it again.
-        if (update.status === 'failed') await tellChatFileFailed(tx, row.id);
+        // A message WhatsApp could not deliver tells the chat's people; a number not on
+        // WhatsApp gets the same news by SMS instead, so nobody is bothered.
+        if (update.status === 'failed' && !isNotOnWhatsApp(update.errorCode))
+          await tellChatSendFailed(tx, row.id);
       });
       // Not on WhatsApp: the same news goes by SMS, and later messages go by SMS first.
       if (update.status === 'failed' && isNotOnWhatsApp(update.errorCode)) {
@@ -120,6 +122,8 @@ export class DeliveriesService {
           row.id,
           (template, payload) => customerNotice(template, payload, 'sms') ?? GENERIC_WORDS,
         );
+        // A staff message has no SMS to stand in: its people hear it failed, like any other failure.
+        if (!smsCanStandIn(row.template)) await tellChatSendFailed(this.db, row.id);
       }
       applied += 1;
     }

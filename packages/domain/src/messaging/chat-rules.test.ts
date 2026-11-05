@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CALL_DAY_WORDS,
   CHAT_WINDOW_HOURS,
+  callDay,
   chatWaitStage,
   chatWindowOpen,
   isWorkingTime,
   lastWorkEnd,
   pickAnswerer,
+  replyTime,
   soleCustomer,
+  workingMinutesBetween,
   workingMinutesSince,
 } from './chat-rules';
 
@@ -51,6 +55,58 @@ describe('working time', () => {
     expect(isWorkingTime(ist('18:29'), TZ)).toBe(true);
     expect(isWorkingTime(ist('18:30'), TZ)).toBe(false);
   });
+
+  it('is closed all Sunday (1 Nov 2026), open on Saturday (7 Nov)', () => {
+    expect(isWorkingTime(new Date('2026-11-01T11:00:00+05:30'), TZ)).toBe(false);
+    expect(isWorkingTime(new Date('2026-11-07T11:00:00+05:30'), TZ)).toBe(true);
+    // No working minutes on a Sunday, so nothing is late and no chat is handed back.
+    expect(
+      workingMinutesSince(
+        new Date('2026-11-01T09:00:00+05:30'),
+        new Date('2026-11-01T15:00:00+05:30'),
+        TZ,
+      ),
+    ).toBe(0);
+    expect(
+      chatWaitStage(
+        new Date('2026-11-01T10:00:00+05:30'),
+        new Date('2026-11-01T16:00:00+05:30'),
+        TZ,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('the last work end skips Sunday', () => {
+  it('is Saturday 6:30 pm all through Sunday and Monday morning', () => {
+    const sat = new Date('2026-10-31T18:30:00+05:30').toISOString();
+    for (const at of ['2026-11-01T10:00', '2026-11-01T21:00', '2026-11-02T08:00'])
+      expect(lastWorkEnd(new Date(`${at}:00+05:30`), TZ).toISOString(), at).toBe(sat);
+  });
+});
+
+describe('when a promised call is due', () => {
+  const at = (iso: string) => callDay(new Date(`${iso}:00+05:30`), TZ);
+  it('is today in working hours; Friday evening → Saturday; Saturday evening and Sunday → Monday', () => {
+    expect(at('2026-11-06T11:00')).toEqual({ day: 'today', add: 0 });
+    expect(at('2026-11-06T20:00')).toEqual({ day: 'tomorrow', add: 1 });
+    expect(at('2026-11-07T20:00')).toEqual({ day: 'monday', add: 2 });
+    expect(at('2026-11-08T11:00')).toEqual({ day: 'tomorrow', add: 1 });
+    expect(at('2026-11-09T08:00')).toEqual({ day: 'today', add: 0 });
+    expect(CALL_DAY_WORDS.monday).toBe('on Monday morning');
+  });
+});
+
+describe('when a person can reply', () => {
+  const at = (iso: string) => replyTime(new Date(`${iso}:00+05:30`), TZ);
+  it('is now in working hours, else the next 9:30 (Saturday evening → Monday)', () => {
+    expect(at('2026-11-02T11:00')).toBe('now');
+    expect(at('2026-11-02T08:00')).toBe('today');
+    expect(at('2026-11-02T19:00')).toBe('tomorrow');
+    expect(at('2026-11-07T19:00')).toBe('monday');
+    expect(at('2026-11-01T08:00')).toBe('tomorrow');
+    expect(at('2026-11-01T20:00')).toBe('tomorrow');
+  });
 });
 
 describe('who answers', () => {
@@ -65,8 +121,9 @@ describe('who answers', () => {
 describe('last end of working hours', () => {
   it('is 6:30 pm today after 6:30 pm, else 6:30 pm yesterday', () => {
     expect(lastWorkEnd(ist('22:15'), TZ).toISOString()).toBe(ist('18:30').toISOString());
+    // 2 Nov is a Monday: yesterday was Sunday (closed), so Saturday's end.
     expect(lastWorkEnd(ist('06:30'), TZ).toISOString()).toBe(
-      new Date('2026-11-01T18:30:00+05:30').toISOString(),
+      new Date('2026-10-31T18:30:00+05:30').toISOString(),
     );
   });
 });
@@ -105,5 +162,21 @@ describe('chat window', () => {
   it('is closed when the customer never wrote', () => {
     expect(chatWindowOpen(null, now)).toBe(false);
     expect(chatWindowOpen(undefined, now)).toBe(false);
+  });
+});
+
+describe('workingMinutesBetween', () => {
+  const at = (day: string, utc: string) => new Date(`${day}T${utc}:00Z`);
+  it('counts only Monday to Saturday 9:30 to 18:30 (IST)', () => {
+    // Friday 17:30 to Monday 09:30: one hour on Friday, a whole Saturday, no Sunday.
+    expect(
+      workingMinutesBetween(at('2026-11-06', '12:00'), at('2026-11-09', '04:00'), 'Asia/Kolkata'),
+    ).toBe(600);
+    expect(
+      workingMinutesBetween(at('2026-11-08', '04:00'), at('2026-11-08', '12:00'), 'Asia/Kolkata'),
+    ).toBe(0);
+    expect(
+      workingMinutesBetween(at('2026-11-05', '06:00'), at('2026-11-05', '05:00'), 'Asia/Kolkata'),
+    ).toBe(0);
   });
 });

@@ -632,6 +632,19 @@
         "submit": "Record payment",
         "done": "Payment recorded"
       },
+      "upi": {
+        "waiting": "Waiting for the customer's UPI ID",
+        "toCheck": "UPI ID {id}: check it",
+        "looksGood": "UPI ID {id} ✓ checked",
+        "paidTo": "Paid to UPI ID {id}",
+        "good": "Looks good",
+        "again": "Ask again",
+        "reason": "Why (the customer reads this)",
+        "send": "Ask again",
+        "checked": "UPI ID checked",
+        "askedAgain": "The customer is asked again",
+        "failed": "Could not check the UPI ID"
+      },
       "rejectDialog": {
         "title": "Do not approve",
         "description": "{amount} for {party}. They are told the reason.",

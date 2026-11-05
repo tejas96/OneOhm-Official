@@ -1,4 +1,4 @@
-import { type Transaction, waConversations } from '@oneohm/database';
+import { readBusinessSetting, type Transaction, waConversations } from '@oneohm/database';
 import {
   asksForPerson,
   type OnboardAnswers,
@@ -13,7 +13,7 @@ import type { Incoming } from '../whatsapp-events';
 import { changesName } from './onboarding-answer';
 import { onboardState, PERSON_CHOICE, readOnboard } from './onboarding-context';
 import type { Fetched, PendingFile } from './onboarding-files';
-import type { OpenLead } from './onboarding-lead';
+import { knownFrom, type OpenLead } from './onboarding-lead';
 
 /** One message being applied, inside the transaction that holds the chat row. */
 export interface Turn {
@@ -31,6 +31,8 @@ export interface Turn {
   awaiting: 'name' | 'city' | undefined;
   /** A bill sent before the lead existed, waiting in object storage. */
   pendingFile: PendingFile | undefined;
+  /** A pin that named no known city, kept for the lead the city answer makes. */
+  pin: { readonly latitude: number; readonly longitude: number } | undefined;
   /** The lead was made from the saved ad entry, so the chat forgets it. */
   dropEntry: boolean;
 }
@@ -67,6 +69,7 @@ export async function saveTurn(turn: Turn, step: OnboardStep): Promise<void> {
     misses: turn.misses,
     ...(turn.awaiting ? { awaiting: turn.awaiting } : {}),
     ...(turn.pendingFile ? { pendingFile: turn.pendingFile } : {}),
+    ...(turn.pin ? { pin: turn.pin } : {}),
   };
   const context = { ...rest, ...(turn.dropEntry || entry === undefined ? {} : { entry }), ob };
   await turn.tx
@@ -83,4 +86,34 @@ export function backTo(turn: Turn, step: OnboardStep): OnboardStep {
   const typingCity = step === 'city' && turn.awaiting === 'city';
   turn.awaiting = undefined;
   return typingCity && turn.settings.serviceCities.length > 0 ? 'city' : previousStep(step);
+}
+
+/** The turn for one message: what the chat remembers (`ob`), the lead and the owner's settings. */
+export async function newTurn(
+  tx: Transaction,
+  chat: Conversation,
+  lead: OpenLead | null,
+  file: Fetched | null,
+  referral: boolean,
+): Promise<Turn> {
+  const kept = readOnboard(chat);
+  return {
+    tx,
+    chat,
+    lead,
+    settings: await readBusinessSetting(tx, 'onboarding'),
+    known: {
+      ...(chat.language ? { language: assistantLanguage(chat.language) } : {}),
+      ...knownFrom(lead),
+    },
+    // A referral lead's name (and its city, when given) stand; the rest is asked.
+    answers: { ...kept?.answers, ...(referral ? knownFrom(lead) : {}) },
+    misses: kept?.misses ?? 0,
+    awaiting: kept?.awaiting,
+    pendingFile: kept?.pendingFile,
+    pin: kept?.pin,
+    file,
+    discard: [],
+    dropEntry: false,
+  };
 }

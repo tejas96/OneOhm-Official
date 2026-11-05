@@ -6,14 +6,19 @@ import { CalendarClock, Layers, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
+import { SelfSurveyCard } from '@/features/self-survey/survey-card';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
+import { VisitCard } from '@/features/visits/visit-card';
 import { useCan } from '@/providers/current-user';
 import { StaleBadge } from '../tasks/stale-badge';
 import { TaskStepButtons } from '../tasks/task-actions';
 import { swatchFor } from '../tasks/task-card';
 import { TaskCardNotes } from '../tasks/task-card-notes';
 import { taskStatusKey, taskTone } from '../tasks/task-status';
+import { UnassignedLabel } from '../tasks/unassigned-label';
 import { useTaskSteps } from '../tasks/use-task-steps';
+import { isProposed, ProposalActions } from '../team/proposal-actions';
 import { PanelChecklist } from './panel-checklist';
 import { PriorityControl } from './priority-control';
 import { BlockersSection, FactsSection, PanelSection } from './task-panel-sections';
@@ -29,6 +34,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
   const taskT = useTranslations('projects.task');
   const partyT = useTranslations('commandCenter.party');
   const stagesT = useTranslations('stages');
+  const sendT = useTranslations('sendToCustomer');
   const format = useFormatter();
   const canOpenProject = useCan('projects.view_all');
   const steps = useTaskSteps(task);
@@ -62,7 +68,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
               {task.assignee.fullName}
             </span>
           ) : (
-            <span className="text-at-risk">{taskT('unassigned')}</span>
+            <UnassignedLabel task={task} />
           )}
           <span
             className={cn(
@@ -103,8 +109,26 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
           ) : (
             <span />
           )}
-          <TaskStepButtons steps={steps} />
+          <span className="flex flex-wrap items-center gap-2">
+            <SendToCustomerButton
+              variant="quiet"
+              scope={{ taskId: task.id, projectId: task.projectId }}
+              {...(task.templateKey.startsWith('subsidy_')
+                ? {
+                    quickPapers: [
+                      {
+                        category: 'subsidy',
+                        title: sendT('quickPapers.passbook'),
+                        requirementKey: 'subsidy_bank',
+                      },
+                    ],
+                  }
+                : {})}
+            />
+            <TaskStepButtons steps={steps} />
+          </span>
         </div>
+        {isProposed(task) && <ProposalActions task={task} />}
       </div>
 
       {task.description && (
@@ -118,6 +142,8 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
       <FactsSection task={task} />
       <EvidenceUploader task={task} />
       <TaskVisitLine task={task} />
+      <VisitCard scope={{ taskId: task.id }} />
+      <SelfSurveyCard task={task} steps={steps} />
       <PanelSection
         title={t('timeline')}
         action={

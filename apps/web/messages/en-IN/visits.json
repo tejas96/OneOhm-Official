@@ -1,0 +1,43 @@
+{
+  "visits": {
+    "failed": "Could not save the visit",
+    "saved": "Visit saved. The customer has been told.",
+    "cancelled": "Visit cancelled. The customer has been told.",
+    "doneSaved": "Visit marked done",
+    "title": {
+      "survey": "Site survey visit",
+      "installation": "Installation visit",
+      "inspection": "DISCOM inspection",
+      "net_meter": "Net meter fitting",
+      "amc": "AMC visit",
+      "service": "Service visit"
+    },
+    "day": "Day",
+    "slot": "Time",
+    "noFreeDay": "No free day",
+    "noMessages": "This step is not set to message customers, so the customer is not told.",
+    "slots": {
+      "morning": "Morning",
+      "afternoon": "Afternoon"
+    },
+    "status": {
+      "proposed": "To confirm",
+      "confirmed": "Confirmed",
+      "done": "Done",
+      "cancelled": "Cancelled",
+      "missed": "Missed"
+    },
+    "proposedHint": "The customer picked this day. Confirm it, or set another day.",
+    "customerConfirmed": "Customer confirmed",
+    "cannot": "Customer cannot be there",
+    "book": "Book and tell the customer",
+    "move": "Move and tell the customer",
+    "tellDate": "Tell the customer the DISCOM date",
+    "ask": "Ask the customer to pick a day",
+    "confirm": "Confirm",
+    "done": "Mark done",
+    "cancel": "Cancel visit",
+    "taskDiffers": "Task starts {task}, visit is {visit}",
+    "bookAgain": "Book again and tell the customer"
+  }
+}

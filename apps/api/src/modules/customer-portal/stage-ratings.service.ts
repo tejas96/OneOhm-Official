@@ -13,7 +13,10 @@ import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
+import { lowRatingFollowUp } from '../care/low-rating';
+import { closeRatingAsk } from '../care/rating-ask';
 import { suggestStageRatingPoints } from '../workforce/points';
 import { customerStageCards, readStageRatings } from './stage-ratings-read';
 
@@ -30,7 +33,10 @@ const STAGE_NAME = {
  */
 @Injectable()
 export class StageRatingsService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
+  ) {}
 
   cards(customerId: string): Promise<CustomerStageCard[]> {
     return customerStageCards(this.db, customerId);
@@ -64,6 +70,7 @@ export class StageRatingsService {
         .onConflictDoNothing()
         .returning({ id: stageRatings.id });
       if (!row) throw conflict('You have already rated this stage. Thank you.', 'rated');
+      await closeRatingAsk(tx, { kind: 'stage', projectId: input.projectId, stage: input.stage });
       if (people.length > 0) {
         await tx
           .insert(stageRatingPeople)
@@ -89,6 +96,23 @@ export class StageRatingsService {
             dedupeKey: `stage_rated:${row.id}`,
           },
         );
+        if (low) {
+          const [who] = await tx
+            .select({ phone: customers.phoneE164 })
+            .from(customers)
+            .where(eq(customers.id, customerId));
+          await lowRatingFollowUp(tx, {
+            customerId,
+            customerName: project.customer,
+            phone: who?.phone ?? '',
+            projectId: input.projectId,
+            assignee: project.manager,
+            label: `the ${STAGE_NAME[input.stage]}`,
+            stars: input.rating,
+            key: `rating_low:stage:${row.id}`,
+            timeZone: this.env.BUSINESS_TIMEZONE,
+          });
+        }
       }
     });
     const updated = (await this.cards(customerId)).find(

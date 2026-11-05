@@ -93,17 +93,18 @@ export async function tellChatTeam(
 }
 
 /**
- * A file we sent in a chat (an estimate PDF, a document) ended failed, by the worker or by
- * WhatsApp's receipt: the chat's people are told to send it again. Once per outbox row;
- * other messages are left alone. Both the API and the worker call this.
+ * A WhatsApp message of ours to a customer ended failed, by the worker or by WhatsApp's
+ * receipt: the chat's people are told. A file says to send it again; any other message
+ * says it did not arrive. Once per outbox row. Both the API and the worker call this, but
+ * never for a number that is not on WhatsApp (that message goes by SMS instead).
  */
-export async function tellChatFileFailed(db: DatabaseExecutor, outboxId: string): Promise<void> {
+export async function tellChatSendFailed(db: DatabaseExecutor, outboxId: string): Promise<void> {
   const [row] = await db
-    .select({ template: outbox.template, recipient: outbox.recipient })
+    .select({ template: outbox.template, recipient: outbox.recipient, channel: outbox.channel })
     .from(outbox)
     .where(eq(outbox.id, outboxId))
     .limit(1);
-  if (row?.template !== 'session:document') return;
+  if (row?.channel !== 'whatsapp') return;
   const [chat] = await db
     .select({
       id: waConversations.id,
@@ -119,14 +120,22 @@ export async function tellChatFileFailed(db: DatabaseExecutor, outboxId: string)
   if (!chat) return;
   const owner = chat.assignedUserId ?? (await chatOwnerFor(db, chat));
   const who = chat.profileName ? `${chat.profileName} (${chat.phone})` : chat.phone;
+  const file = row.template === 'session:document';
   await tellChatTeam(
     db,
     { ...chat, assignedUserId: owner },
-    {
-      kind: 'whatsapp_file_failed',
-      title: 'A WhatsApp file was not sent',
-      body: `A file could not be sent to ${who} on WhatsApp — please send it again.`,
-      key: `wa_file_failed:${outboxId}`,
-    },
+    file
+      ? {
+          kind: 'whatsapp_file_failed',
+          title: 'A WhatsApp file was not sent',
+          body: `A file could not be sent to ${who} on WhatsApp — please send it again.`,
+          key: `wa_file_failed:${outboxId}`,
+        }
+      : {
+          kind: 'whatsapp_send_failed',
+          title: 'A WhatsApp message was not sent',
+          body: `A message could not be sent to ${who} on WhatsApp — please check the chat and reply to them.`,
+          key: `wa_send_failed:${outboxId}`,
+        },
   );
 }

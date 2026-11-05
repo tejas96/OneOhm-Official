@@ -16,7 +16,8 @@ import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import { QUOTE_MONEY_WORDS, quoteMoney } from './quote-money-words';
-import { quotedSteps } from './quoted-terms';
+import { QUOTE_Q_WORDS } from './quote-question-words';
+import { changeNoteOf, quotedSteps } from './quoted-terms';
 
 /** The quote's PDF as a link the customer's phone can open, named for the customer. */
 function pdfOf(env: Environment, quotation: QuotationDetail) {
@@ -76,7 +77,6 @@ export async function queueQuotePdf(
     .where(eq(waConversations.phone, quotation.customerPhone))
     .limit(1);
   if (!chat || chat.optedOutAt || !chatWindowOpen(chat.at)) return false;
-  const pdf = pdfOf(env, quotation);
   const [earlier] = await tx
     .select({ status: outbox.status, delivery: outbox.deliveryStatus })
     .from(outbox)
@@ -91,34 +91,49 @@ export async function queueQuotePdf(
     .from(customers)
     .where(eq(customers.id, quotation.customer.id))
     .limit(1);
-  const steps = await quotedSteps(tx, quotation.id);
   await inLanguage(assistantLanguage(customer?.language), async () => {
-    const W = QUOTE_MONEY_WORDS;
-    if (!earlier || failed) {
-      const caption = W.caption(quotation.number);
-      await queueReply(
-        tx,
-        chat,
-        { kind: 'document', ...pdf, caption },
-        null,
-        earlier ? `quote_pdf:${quotation.id}:${randomUUID()}` : `quote_pdf:${quotation.id}`,
-      );
-    }
-    const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
-    await queueReply(
-      tx,
-      chat,
-      {
-        kind: 'buttons',
-        body: W.buttonsBody(money.line),
-        buttons: [
-          { id: `quote_accept:${quotation.id}`, title: W.accept },
-          { id: `quote_ask:${quotation.id}`, title: W.ask },
-        ],
-      },
-      null,
-      `quote_buttons:${quotation.id}:${randomUUID()}`,
-    );
+    const pdfKey = earlier
+      ? `quote_pdf:${quotation.id}:${randomUUID()}`
+      : `quote_pdf:${quotation.id}`;
+    await queueQuoteInChat(tx, env, quotation, chat, !earlier || failed ? pdfKey : null);
   });
   return true;
+}
+
+/**
+ * The quote in the chat, in the language being spoken: its PDF (unless `pdfKey` is null),
+ * then the money in plain words with [Accept quote] [I have a question]. Home's [See
+ * quotation] sends it this way too (redesign §3).
+ */
+export async function queueQuoteInChat(
+  tx: DatabaseExecutor,
+  env: Environment,
+  quotation: QuotationDetail,
+  chat: { readonly id: string; readonly phone: string },
+  pdfKey: string | null = `quote_pdf:${quotation.id}:${randomUUID()}`,
+): Promise<void> {
+  const W = QUOTE_MONEY_WORDS;
+  if (pdfKey) {
+    const document = { kind: 'document', ...pdfOf(env, quotation) } as const;
+    await queueReply(tx, chat, { ...document, caption: W.caption(quotation.number) }, null, pdfKey);
+  }
+  const steps = await quotedSteps(tx, quotation.id);
+  const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
+  // A revision says what changed first (redesign §9): the line the team wrote when sending it.
+  const changed = await changeNoteOf(tx, quotation.id);
+  const body = W.buttonsBody(money.line);
+  await queueReply(
+    tx,
+    chat,
+    {
+      kind: 'buttons',
+      body: changed ? `${QUOTE_Q_WORDS.changed(changed)}\n\n${body}` : body,
+      buttons: [
+        { id: `quote_accept:${quotation.id}`, title: W.accept },
+        { id: `quote_ask:${quotation.id}`, title: W.ask },
+      ],
+    },
+    null,
+    `quote_buttons:${quotation.id}:${randomUUID()}`,
+  );
 }

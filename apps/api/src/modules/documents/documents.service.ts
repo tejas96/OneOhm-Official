@@ -15,13 +15,15 @@ import {
   canDownloadDocument,
   canViewAllDocuments,
   canViewDocument,
+  checkedBy,
   type DocumentLinks,
 } from './document-access';
 import { resolveLinks, storageScope } from './document-links';
 import { currentProjectFiles, presentDocuments } from './document-read';
-import { leadFilesScope, leadUploadLinks } from './lead-files';
+import { leadFileRecords, leadUploadLinks } from './lead-files';
 import { ObjectStorageService, type StoredObject } from './object-storage.service';
 import { partyFilesScope, partyScope, partyUploadLinks } from './party-files';
+import { closeRequestWithUpload } from './request-received';
 import { checkFile, type IncomingFile } from './upload-file';
 
 export interface DocumentFilter {
@@ -43,7 +45,7 @@ export class DocumentsService {
   ) {}
 
   async list(actor: Actor, filter: DocumentFilter): Promise<DocumentRecord[]> {
-    if (filter.leadId) return this.leadFiles(actor, filter.leadId, filter.category);
+    if (filter.leadId) return leadFileRecords(this.db, actor, filter.leadId, filter.category);
     const party = partyFilesScope(actor, filter);
     if (!party && !canViewAllDocuments(actor)) {
       const assignee = filter.taskId ? (await this.taskOf(filter.taskId)).assignee : null;
@@ -113,6 +115,7 @@ export class DocumentsService {
           contentType: checked.contentType,
           sizeBytes: checked.buffer.length,
           uploadedByUserId: actor.userId,
+          ...checkedBy(actor),
         })
         .returning({ id: documents.id });
       if (!row) throw new Error('Document insert returned nothing');
@@ -130,6 +133,7 @@ export class DocumentsService {
         taskId: links.taskId,
         ...(fields.leadId ? { leadId: fields.leadId } : {}),
       });
+      await closeRequestWithUpload(tx, actor, row.id, { ...links, category: fields.category });
       return row.id;
     });
     return this.one(id);
@@ -175,6 +179,7 @@ export class DocumentsService {
           sizeBytes: checked.buffer.length,
           replacesDocumentId: id,
           uploadedByUserId: actor.userId,
+          ...checkedBy(actor),
           source: 'upload',
         })
         .returning({ id: documents.id });
@@ -205,17 +210,6 @@ export class DocumentsService {
         .where(eq(documents.id, id));
       await recordAudit(tx, actor.userId, 'document.removed', 'document', id, { name: row.name });
     });
-  }
-
-  private async leadFiles(
-    actor: Actor,
-    leadId: string,
-    category?: string,
-  ): Promise<DocumentRecord[]> {
-    const scope = await leadFilesScope(this.db, actor, leadId);
-    const conditions: SQL[] = [currentProjectFiles, scope];
-    if (category) conditions.push(eq(documents.category, category));
-    return presentDocuments(this.db, and(...conditions) as SQL);
   }
 
   private async one(id: string): Promise<DocumentRecord> {

@@ -15,7 +15,15 @@ type Row = TeamCapacity['people'][number];
 
 export const CAPACITY_KEY = ['team', 'capacity'] as const;
 
-function WeekCell({ due, leaveDays }: { readonly due: number; readonly leaveDays: number }) {
+function WeekCell({
+  due,
+  leaveDays,
+  pendingDays,
+}: {
+  readonly due: number;
+  readonly leaveDays: number;
+  readonly pendingDays: number;
+}) {
   const t = useTranslations('team.workload');
   return (
     <span className="inline-flex flex-col items-end md:items-start">
@@ -30,6 +38,11 @@ function WeekCell({ due, leaveDays }: { readonly due: number; readonly leaveDays
       </span>
       {leaveDays > 0 && (
         <span className="type-label text-waiting">{t('leaveDays', { count: leaveDays })}</span>
+      )}
+      {pendingDays > 0 && (
+        <span className="type-label text-ink-faint">
+          {t('pendingLeave', { count: pendingDays })}
+        </span>
       )}
     </span>
   );
@@ -85,7 +98,11 @@ export function WorkloadTab() {
       header: index === 0 ? t('thisWeek') : format.range(week.from, week.to),
       align: 'end' as const,
       cell: (row: Row) => (
-        <WeekCell due={row.dueByWeek[index] ?? 0} leaveDays={row.leaveDaysByWeek[index] ?? 0} />
+        <WeekCell
+          due={row.dueByWeek[index] ?? 0}
+          leaveDays={row.leaveDaysByWeek[index] ?? 0}
+          pendingDays={row.pendingLeaveDaysByWeek[index] ?? 0}
+        />
       ),
     })),
   ];

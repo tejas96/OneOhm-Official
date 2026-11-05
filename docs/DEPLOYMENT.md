@@ -113,14 +113,47 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
   `FILE_LINK_SECRET`, with a temporary or `http` `API_PUBLIC_URL`, and (API) with
   `WHATSAPP_DELIVERY=live` but no `WHATSAPP_APP_SECRET`.
 
+- **Papers per home (November 2026):** migrations `0071_papers_per_home` and
+  `0072_wa_messages_document_index` build indexes on `documents` and `wa_messages` and fill
+  `documents.property_id` from each paper's project, each in one transaction that holds
+  those tables' write locks until it ends. Deploy off-peak (evening or Sunday), when few
+  people upload papers or send WhatsApp messages.
+
+- **WhatsApp redesign release (migrations 0073 to 0086):** fourteen migrations run on their own at start, in file order, in one go; deploy
+  **off-peak** (evening or Sunday). Most only add tables, columns, indexes and inactive template rows (fast, no long locks). Watch these:
+  `0073_customer_actions` creates the customer-actions table, copies every paper request into it and sets `documents.checked_at` on all existing
+  papers (one `UPDATE` on the documents table, which holds its write lock until it ends); `0076_files_ask_at` fills
+  `wa_conversations.files_ask_at` from each chat's memory; `0080_visits` creates the visits table and turns every booked service day ahead
+  into a confirmed visit; `0084_self_survey` adds the milestone credits; `0085_care_upi_reopen` adds a unique index on
+  `customer_actions.payload->>'once'` (it fails if two live rows share a key, which only the redesign code writes); `0086_handover_ask_link` adds `customer_handovers.action_id` (nullable, so ticking a task closes its ask). `0075` adds
+  the bill paper's age limit (90 days) and a reminders-paused column on instalments; `0079` adds the templates' "quick replies approved" flag (off). Take a database backup first (section 6);
+  the migrations cannot be rolled back, so restore the backup to go back.
+
+  Order after the containers are up:
+  1. Start the API and worker (`up -d --build`); check `GET /v1/health` and that the worker registers its schedules.
+  2. Forms: `pnpm --filter @oneohm/api forms:publish` prints what it would create and calls Meta only with `--yes`. Run it with `--yes`
+     once, copy each printed flow id into **Settings → WhatsApp messages → Forms** (`send_paper`, `paid_another_way`, `self_survey`,
+     `report_problem`, `refer_friend`, `share_upi`). Test each form on a real phone (the Flow JSON is checked by Meta only when published).
+  3. Templates: submit them to Meta (checklist in [whatsapp-templates.md](whatsapp-templates.md)); the migrations add every template **off**.
+     Turn them on only after all three languages are approved, in this order: (a) the older utility messages with their quick-reply
+     versions (`quotation_sent`, `payment_*`, `stage_rating_request`, step messages), (b) the visit and journey messages (`visit_*`,
+     `inspection_presence`, `signature_*`, `site_ready_*`, `installation_check`, `handover_pack`, subsidy, loan, layout), (c) the care
+     messages (`problem_fixed_check`, `reward_upi_ask`), (d) the **marketing** ones last (`self_survey_*`, `amc_renewal_offer`), because
+     they cost per message. Each switch is Settings → WhatsApp messages → the template → on (with its quick-reply switch in the same dialog).
+  4. SMS (section 5c) for customers not on WhatsApp: register the six SMS texts in whatsapp-templates.md (a paper, a rating, a pay link, the fixed check, a shared paper, a visit reminder), then set `SMS_DELIVERY=msg91`.
+  5. Smoke test with your own number: "hi" as a stranger (onboarding), then as a customer (Home), a problem, a payment reminder.
+
 ## 5. WhatsApp
 
 ### Templates
 
 Business-initiated WhatsApp messages need templates approved in **WhatsApp Manager**. The
-full list (24 templates, category *Utility*, language *English*), with each body, field
-order and sample values, is in [whatsapp-templates.md](whatsapp-templates.md). The names
-match the app's keys, so no change in **Settings → WhatsApp messages** is needed.
+full list (56 templates: 53 *Utility* (`referral_reward` is a transactional reward notice, so
+Utility) and 3 *Marketing*: `self_survey_offer`, `self_survey_reminder`,
+`amc_renewal_offer`), each submitted in English, Marathi and Hindi, with each body, field order and
+sample values, is in [whatsapp-templates.md](whatsapp-templates.md) (summary table first). The names
+match the app's keys, so no change in **Settings → WhatsApp messages** is needed. Marketing ones
+cost more per message and are never sent to a customer who said STOP or is not on WhatsApp.
 
 - With the access token in place, the templates can be registered through the Graph API
   (`POST /<WHATSAPP_BUSINESS_ACCOUNT_ID>/message_templates`, `parameter_format: POSITIONAL`).
@@ -189,7 +222,10 @@ customer page (How we reach them). When WhatsApp rejects a number as "not on Wha
    `OneOhm: ##message##`, and create a flow for it.
 2. Set `SMS_DELIVERY=msg91` and `MSG91_SMS_TEMPLATE_ID` (the flow ID); `MSG91_AUTH_KEY`
    is the same key used for sign-in codes. Restart the worker.
-3. SMS text is English for now; Marathi and Hindi SMS need their own DLT templates.
+3. SMS text is English for now for the app's own news; the six texts for customers not on WhatsApp (a paper, a rating, a pay link, the fixed check, a shared paper, a visit reminder) are
+   written in English, Marathi and Hindi (see whatsapp-templates.md, "SMS texts"); Marathi and Hindi SMS need a Unicode DLT template.
+4. In **Send to customer** the sheet says which path a customer takes (SMS text, SMS pay link or in person); an SMS customer's pin, signature,
+   visit pick and confirmations become tasks on **Customers → to share in person**.
 
 ## 5d. RazorpayX payouts to vendors and crews
 

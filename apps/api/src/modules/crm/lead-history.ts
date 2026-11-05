@@ -1,5 +1,12 @@
 import type { LeadDetail } from '@oneohm/api-contracts';
-import { type DatabaseExecutor, leadActivities, leads, notify, users } from '@oneohm/database';
+import {
+  customerActions,
+  type DatabaseExecutor,
+  leadActivities,
+  leads,
+  notify,
+  users,
+} from '@oneohm/database';
 import { effectiveStep, type LeadStage, type LeadStep } from '@oneohm/domain';
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
@@ -19,6 +26,19 @@ export async function logLead(
   internal = false,
 ): Promise<void> {
   await db.insert(leadActivities).values({ leadId, userId, kind, note, internal });
+  // A call written on the lead is the call the customer asked for (a "To call" ask is done).
+  if (kind === 'call')
+    await db
+      .update(customerActions)
+      .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(customerActions.type, 'callback'),
+          eq(customerActions.status, 'received'),
+          // The lead's customer, or the customer with the lead's number (a lead not linked yet).
+          sql`${customerActions.customerId} in (select c.id from customers c, leads l where l.id = ${leadId} and (c.id = l.customer_id or c.phone_e164 = l.phone_e164))`,
+        ),
+      );
 }
 
 /** Tells the new owner the lead is theirs, with a link to it. */
@@ -27,14 +47,17 @@ export function tellLeadOwner(
   owner: string,
   lead: { readonly id: string; readonly name: string; readonly city: string },
   by: string,
+  words: { readonly title: string; readonly body: string } = {
+    title: 'A lead is yours to follow up',
+    body: `${lead.name}, ${lead.city}. From ${by}.`,
+  },
 ): Promise<void> {
   return notify(
     db,
     { userId: owner },
     {
       kind: 'lead_assigned',
-      title: 'A lead is yours to follow up',
-      body: `${lead.name}, ${lead.city}. From ${by}.`,
+      ...words,
       subject: { type: 'lead', id: lead.id },
       dedupeKey: `lead_owner:${lead.id}:${owner}:${Date.now()}`,
     },

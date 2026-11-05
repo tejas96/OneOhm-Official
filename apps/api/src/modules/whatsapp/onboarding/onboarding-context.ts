@@ -13,6 +13,8 @@ export interface OnboardContext {
   readonly awaiting?: 'name' | 'city';
   /** A bill sent before the lead existed; filed on the lead when it is made. */
   readonly pendingFile?: PendingFile;
+  /** A pin sent at the city question that named no city we know; kept on the lead once there is one. */
+  readonly pin?: { readonly latitude: number; readonly longitude: number };
   /** When the one "Shall we continue?" nudge was sent (never sent twice). */
   readonly nudgedAt?: string;
   /** When this onboarding began; a lead made since then counts even once closed. */
@@ -28,6 +30,10 @@ export const CONTINUE_CHOICE = 'ob:continue';
 
 /** The taps under the estimate: a call today, or "Not now" and then when to check back. */
 export const ESTIMATE_CHOICES = {
+  visit: 'ob:done:visit',
+  /** `ob:vday:<day>` and `ob:vslot:<day>:<slot>`: the free site visit, picked by taps. */
+  pickDay: 'ob:vday:',
+  pickSlot: 'ob:vslot:',
   call: 'ob:done:call',
   notNow: 'ob:done:notnow',
   later: 'ob:done:later:',

@@ -25,6 +25,8 @@ export const documentRequirements = pgTable('document_requirements', {
   active: boolean('active').notNull().default(true),
   position: integer('position').notNull().default(0),
   builtIn: boolean('built_in').notNull().default(false),
+  /** A paper older than this many days stops counting (an electricity bill: 90); none = never. */
+  maxAgeDays: integer('max_age_days'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

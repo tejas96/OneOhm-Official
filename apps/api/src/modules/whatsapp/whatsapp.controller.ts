@@ -6,12 +6,14 @@ import { forbidden } from '../../common/http/errors';
 import { apiContract } from '../../contract';
 import { ChatsService } from './chats.service';
 import { DeliveriesService } from './deliveries.service';
+import { FormSettingsService } from './forms/form-settings';
 
 @Controller()
 export class WhatsAppController {
   constructor(
     private readonly chats: ChatsService,
     private readonly deliveries: DeliveriesService,
+    private readonly forms: FormSettingsService,
   ) {}
 
   @TsRestHandler(apiContract.whatsapp)
@@ -56,6 +58,14 @@ export class WhatsAppController {
       release: async ({ params }) => {
         staff();
         return { status: 200, body: await this.chats.release(actor, params.id) };
+      },
+      forms: async () => {
+        assertCan(actor, 'settings.manage');
+        return { status: 200, body: await this.forms.list() };
+      },
+      saveForm: async ({ params, body }) => {
+        assertCan(actor, 'settings.manage');
+        return { status: 200, body: await this.forms.save(actor, params.key, body.flowId) };
       },
       deliveries: async ({ query }) => {
         allowed();

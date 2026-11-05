@@ -23,11 +23,11 @@ export const requestsOf = (customerId: string) =>
 export const alerts = (chatId: string, kind: string) =>
   rows('SELECT 1 FROM notifications WHERE kind = $1 AND subject_id = $2', [kind, chatId]);
 
-/** A sold customer who said hello: the menu is the last reply. */
+/** A sold customer who said hello: Home (with its More button) is the last reply. */
 export async function customerInChat(admin: Session, name: string): Promise<Sale> {
   const sale = await sellProject(admin, { name });
   await say(sale.customer.phone, 'hi');
-  expect((await lastReply(sale.customer.phone))?.kind).toBe('list');
+  expect(choices(await lastReply(sale.customer.phone))).toContain('go:more');
   return sale;
 }
 

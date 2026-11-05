@@ -1,7 +1,7 @@
 import { DEFAULT_MESSAGE_TEMPLATES } from '@oneohm/domain';
 import { describe, expect, it } from 'vitest';
 import { customerNotice } from './customer-message';
-import { localAlertTitle, localValues, localWords } from './customer-message-words';
+import { localAlertTitle, localValues, localWords, SOME_HOME } from './customer-message-words';
 
 const payload = {
   customer: 'Ramesh',
@@ -122,5 +122,60 @@ describe('contact_changed in Marathi and Hindi', () => {
     expect(localValues('en-IN', 'contact_changed', told('project')).subject).toBe(
       'your solar project (Pune · 3 kW)',
     );
+  });
+
+  it('says a paper with no home as “your home” in the language', () => {
+    const paper = { customer: 'Ramesh', document: 'Electricity bill', home: SOME_HOME };
+    expect(localValues('mr-IN', 'paper_request', paper).home).toBe('तुमच्या घरी');
+    expect(localValues('hi-IN', 'paper_request', paper).home).toBe('आपके घर');
+    expect(localValues('en-IN', 'paper_request', paper).home).toBe('your home');
+    expect(customerNotice('paper_request', paper, 'k', 'hi-IN')?.body).toContain('आपके घर पर');
+  });
+});
+
+describe('a paper asked for with no project', () => {
+  it('says plain words, never "undefined"', () => {
+    const { project: _project, ...noProject } = payload;
+    for (const language of [undefined, 'mr-IN', 'hi-IN']) {
+      const notice = customerNotice('document_requested', noProject, 'k', language);
+      expect(notice?.body, language).not.toContain('undefined');
+      expect(notice?.body, language).not.toMatch(/^:/);
+    }
+    expect(customerNotice('document_requested', noProject, 'k')?.body).toBe(
+      'Open Documents and tap Send to add a photo or PDF.',
+    );
+  });
+});
+
+describe('a paper checked, and a paper asked again with the reason', () => {
+  const paper = { customer: 'Ramesh', document: 'Electricity bill', home: 'Sangli' };
+  const again = { ...paper, reason: 'The photo is blurred' };
+
+  it('says the checked paper in all three languages', () => {
+    expect(customerNotice('paper_checked', paper, 'k')?.title).toBe(
+      'Your Electricity bill is checked ✅',
+    );
+    for (const language of ['mr-IN', 'hi-IN']) {
+      const notice = customerNotice('paper_checked', paper, 'k', language);
+      expect(notice?.title, language).toContain('Electricity bill');
+      expect(notice?.title, language).toContain('✅');
+    }
+  });
+
+  it('puts the reason after "Please send your … again" for either request template', () => {
+    for (const template of ['document_requested', 'paper_request']) {
+      const notice = customerNotice(template, again, 'k');
+      expect(notice).toMatchObject({
+        kind: template,
+        title: 'Please send your Electricity bill again',
+        body: 'The photo is blurred',
+      });
+      for (const language of ['mr-IN', 'hi-IN']) {
+        const local = customerNotice(template, again, 'k', language);
+        expect(local?.body, `${template} ${language}`).toBe('The photo is blurred');
+        expect(local?.title, `${template} ${language}`).toContain('Electricity bill');
+        expect(local?.title, `${template} ${language}`).not.toBe(notice?.title);
+      }
+    }
   });
 });

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { SectionHeading } from '@/features/command-center/section-heading';
+import { CustomerActionsCard } from '@/features/documents/requests/customer-actions-card';
 import { ContactSection } from './contact/contact-section';
 import { CustomerProperties } from './customer-properties';
 import { CustomerProjects, CustomerQuotations } from './customer-records';
@@ -13,6 +14,8 @@ export function CustomerOverviewTab({ customer }: { readonly customer: CustomerR
   const t = useTranslations('customers.sections');
   return (
     <div className="flex flex-col gap-10">
+      {/* Shows itself only when the team has asked this customer for something. */}
+      <CustomerActionsCard scope={{ customerId: customer.id }} onAsk={null} />
       <section aria-label={t('properties')} className="flex flex-col gap-5">
         <SectionHeading index="01" title={t('properties')} />
         <CustomerProperties

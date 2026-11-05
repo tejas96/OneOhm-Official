@@ -125,6 +125,7 @@ export class ReceiptPapersService {
           propertyId: row.propertyId,
           category: 'dcr_certificate',
           source: 'upload',
+          checkedAt: new Date(),
           name: checked.name,
           storageKey,
           contentType: checked.contentType,

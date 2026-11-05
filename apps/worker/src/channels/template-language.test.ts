@@ -112,9 +112,10 @@ describe('approvedMessage', () => {
         'payment_link',
         ['customer'],
         { metaName: 'payment_link', language: 'en' },
-        { customer: 'R', payToken: 'tok' },
+        { customer: 'R', payToken: 'tok', paidPayload: 'paidother:m1' },
         true,
       );
+      // The newer quick reply has its own switch: off, the link button stays at position 0.
       expect(pay.buttons).toEqual([{ kind: 'url', index: 0, suffix: 'tok' }]);
       expect(pay.header).toBeUndefined();
     });

@@ -737,7 +737,29 @@
         "commissioning_completed": "Switched on, final payment due",
         "project_update_link": "Update with a link",
         "service_visit_booked": "Technician visit booked",
-        "project_waiting": "Step waiting on someone outside"
+        "project_waiting": "Step waiting on someone outside",
+        "paper_request": "Paper requested (names the home)",
+        "location_request": "Ask for the home location",
+        "payment_due": "Payment due (Pay, I paid another way)",
+        "callback_request": "Ask when to call back",
+        "delay_notice": "Delay notice with the reason",
+        "crew_contact": "Crew or technician contact",
+        "document_share": "A document sent by the team",
+        "signature_request": "A paper to read and agree to",
+        "signature_reminder": "Reminder to agree to a paper",
+        "signed_page_reminder": "Reminder to send the signed page",
+        "site_ready_reminder": "Reminder: the roof is not ready yet",
+        "site_ready_check": "Is the roof ready? (before dispatch)",
+        "installation_check": "Is the installation finished?",
+        "handover_pack": "Handover pack",
+        "subsidy_register_help": "Help to register on the PM Surya Ghar portal",
+        "subsidy_credit_check": "Did the subsidy reach your bank?",
+        "bank_sign_visit": "Sign the loan papers at the bank",
+        "layout_approval": "Roof layout to look at and approve",
+        "layout_reminder": "Reminder: look at the roof layout",
+        "loan_sanctioned": "Loan sanctioned",
+        "loan_disbursed": "Loan money sent",
+        "loan_rejected": "Loan not approved"
       },
       "dialog": {
         "title": "Edit {name}",
@@ -756,7 +778,9 @@
         "metaNameHi": "Hindi template name (optional)",
         "localHint": "Approved in WhatsApp Manager in Marathi (mr) or Hindi (hi), with the same details in the same order. Customers who chose that language get it; everyone else gets the English one.",
         "extrasApproved": "Meta approved the version with file and buttons",
-        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off."
+        "extrasApprovedHint": "Turn on only after Meta approves it. If messages fail, turn it off.",
+        "quickRepliesApproved": "Meta approved the newer version with I paid another way",
+        "quickRepliesApprovedHint": "Needs \"Meta approved the version with file and buttons\" on too, and the newer version approved in English, Marathi and Hindi first. If messages fail, turn it off."
       }
     },
     "activity": {
@@ -955,6 +979,8 @@
       "eligibility": {
         "title": "Who qualifies",
         "description": "The kinds of project that earn a reward, and where friends send the code.",
+        "maxAge": "Newest paper may be this old (days)",
+        "maxAgeHint": "Leave empty for no limit. An older paper shows as missing, and the customer is asked for a new one before the DISCOM application.",
         "types": "Project types",
         "allTypes": "None ticked: every project type qualifies.",
         "someTypes": "Only the ticked project types earn a reward.",
@@ -1036,7 +1062,8 @@
         "noSubsidy": "no subsidy",
         "nameChange": "with a name change",
         "noNameChange": "no name change",
-        "fromCustomer": "from the customer"
+        "fromCustomer": "from the customer",
+        "maxAge": "ok for {days} days"
       },
       "dialog": {
         "addTitle": "Add a required paper",
@@ -1098,6 +1125,21 @@
           "lead": "Remind this many days before",
           "leadHint": "0 reminds on the day itself.",
           "preview": "{days, plural, =0 {A follow-up planned for {date} is reminded that morning at {time}.} one {A follow-up planned for {date} is reminded on {remind} at {time}, a day before.} other {A follow-up planned for {date} is reminded on {remind} at {time}, # days before.}}"
+        },
+        "subsidy": {
+          "title": "Subsidy not received",
+          "description": "When a customer says the subsidy has not reached their bank, the project owner is told after this many days.",
+          "chase": "Tell the owner after (days)",
+          "chaseHint": "Counted from the day the customer said it had not arrived."
+        },
+        "selfSurvey": {
+          "title": "Self survey offer",
+          "description": "Customers with a project can do their own site survey on WhatsApp and send photos. When the engineer approves it, this amount is taken off their next payment that has not fallen due yet. It is added once per survey.",
+          "offer": "Offer the self survey",
+          "amount": "Amount off the next payment",
+          "amountHint": "A whole number of rupees, shown in the offer text.",
+          "preview": "The customer reads: “Do your own site survey in 5 minutes and get {amount} off your next payment.”",
+          "off": "The offer is off: Send to customer and Home do not offer the self survey."
         },
         "whatsapp": {
           "title": "WhatsApp at night",
@@ -1330,6 +1372,7 @@
         "incentive_sweep": "Referral and commission check",
         "payout_sync": "Bank payout check",
         "onboarding_nudges": "WhatsApp onboarding follow-up",
+        "file_questions": "WhatsApp \"What is this?\" questions",
         "sales_checks": "Sales checks",
         "whatsapp_heartbeat": "WhatsApp webhook check"
       },
@@ -1351,9 +1394,23 @@
         "incentive_sweep": "{count, plural, one {1 reward earned} other {# rewards earned}}",
         "payout_sync": "{count, plural, one {1 payout updated} other {# payouts updated}}",
         "onboarding_nudges": "{count, plural, one {1 chat followed up} other {# chats followed up}}",
+        "file_questions": "{count, plural, one {1 chat asked} other {# chats asked}}",
         "sales_checks": "{count, plural, one {1 alert or hand-back} other {# alerts and hand-backs}}",
         "whatsapp_heartbeat": "{count, plural, other {Webhook looks silent: settings team told}}"
       }
+    },
+    "forms": {
+      "title": "Forms",
+      "help": "Forms we send in WhatsApp chats. A form that is not published is not offered: customers are asked to send the photo in the chat instead.",
+      "loading": "Loading the forms",
+      "version": "Version {version}",
+      "published": "Published",
+      "notPublished": "Not published",
+      "flowId": "Flow ID",
+      "flowIdHint": "Printed by the publish script, or copied from WhatsApp Manager if you published it by hand. Clear it to stop using the form. If the ID is wrong, customers get a plain message asking for the photo in the chat instead.",
+      "flowIdPlaceholder": "Numbers only",
+      "save": "Save",
+      "saved": "Form saved"
     },
     "onboarding": {
       "title": "WhatsApp onboarding",

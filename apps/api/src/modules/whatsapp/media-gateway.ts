@@ -30,6 +30,14 @@ const SAMPLE_PNG = Buffer.from(
   'base64',
 );
 
+/** Stand-ins with the right bytes, so a voice note is kept as audio and a video as video. */
+const SAMPLE_OGG = Buffer.concat([Buffer.from('OggS'), Buffer.alloc(24), Buffer.from('OpusHead')]);
+const SAMPLE_MP4 = Buffer.concat([
+  Buffer.from([0, 0, 0, 16]),
+  Buffer.from('ftypisom'),
+  Buffer.alloc(4),
+]);
+
 /** A one-page blank PDF with a correct cross-reference table: the stand-in paper. */
 export function samplePdf(): Buffer {
   const objects = [
@@ -50,6 +58,35 @@ export function samplePdf(): Buffer {
   return Buffer.from(body, 'latin1');
 }
 
+/** A Word or Excel file stand-in: a ZIP of `[Content_Types].xml` and one `word/` or `xl/` entry. */
+function sampleOffice(entry: string): Buffer {
+  const names = ['[Content_Types].xml', entry];
+  const local: Buffer[] = [];
+  const central: Buffer[] = [];
+  let offset = 0;
+  for (const name of names) {
+    const label = Buffer.from(name, 'latin1');
+    const head = Buffer.alloc(30);
+    head.write('PK\x03\x04', 0, 'latin1');
+    head.writeUInt16LE(label.length, 26);
+    const index = Buffer.alloc(46);
+    index.write('PK\x01\x02', 0, 'latin1');
+    index.writeUInt16LE(label.length, 28);
+    index.writeUInt32LE(offset, 42);
+    local.push(head, label);
+    central.push(index, label);
+    offset += head.length + label.length;
+  }
+  const size = central.reduce((total, part) => total + part.length, 0);
+  const end = Buffer.alloc(22);
+  end.write('PK\x05\x06', 0, 'latin1');
+  end.writeUInt16LE(names.length, 8);
+  end.writeUInt16LE(names.length, 10);
+  end.writeUInt32LE(size, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...local, ...central, end]);
+}
+
 const EXTENSION: Readonly<Record<IncomingMedia['type'], string>> = {
   image: 'jpg',
   document: 'pdf',
@@ -68,16 +105,34 @@ export function mediaFileName(media: IncomingMedia): string {
 /** In log mode this media id stands in for a file over the size cap (used by the tests). */
 export const SAMPLE_TOO_LARGE_ID = 'sample-too-large';
 
+/** In log mode this media id stands in for a file of a kind we cannot open (plain text). */
+export const SAMPLE_WRONG_TYPE_ID = 'sample-wrong-type';
+
+/** In log mode this media id stands in for a file with nothing in it. */
+export const SAMPLE_EMPTY_ID = 'sample-empty';
+
 /** Local and test mode: nothing leaves the machine, and the flow still runs end to end. */
 export function logMediaGateway(log: (line: string) => void): MediaGateway {
   return {
     mode: 'log',
     async download(media) {
       if (media.id === SAMPLE_TOO_LARGE_ID) throw new MediaTooLargeError('Stand-in large file.');
+      if (media.id === SAMPLE_EMPTY_ID) return { buffer: Buffer.alloc(0), fileName: 'empty.pdf' };
+      if (media.id === SAMPLE_WRONG_TYPE_ID)
+        return { buffer: Buffer.from('Just some plain text.'), fileName: 'notes.txt' };
       log(`[whatsapp:log] media ${media.id} (${media.type}) stood in by a sample file`);
-      const buffer = media.type === 'document' ? samplePdf() : Buffer.from(SAMPLE_PNG);
+      // A paper named like a Word or Excel file stands in as one (the tests send those).
+      const office = /\.(docx|xlsx)$/i.exec(media.fileName ?? '')?.[1]?.toLowerCase();
+      const [buffer, extension] = {
+        image: [Buffer.from(SAMPLE_PNG), 'png'],
+        document: office
+          ? [sampleOffice(office === 'docx' ? 'word/document.xml' : 'xl/workbook.xml'), office]
+          : [samplePdf(), 'pdf'],
+        audio: [SAMPLE_OGG, 'ogg'],
+        video: [SAMPLE_MP4, 'mp4'],
+      }[media.type] as [Buffer, string];
       const fileName = mediaFileName(media).replace(/\.[a-z0-9]{1,5}$/i, '');
-      return { buffer, fileName: `${fileName}.${media.type === 'document' ? 'pdf' : 'png'}` };
+      return { buffer, fileName: `${fileName}.${extension}` };
     },
   };
 }

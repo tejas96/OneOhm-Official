@@ -25,6 +25,8 @@ export const DOCUMENT_CATEGORIES = [
   /** Makers' user manuals for the panels, inverter and battery (PRD 5.4). */
   'product_manual',
   'statutory_report',
+  /** A photo of a payment the customer made another way; finance records the payment from it. */
+  'payment_proof',
   'other',
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];

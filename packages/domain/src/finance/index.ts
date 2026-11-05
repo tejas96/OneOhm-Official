@@ -11,6 +11,7 @@ export * from './milestone-due-notice';
 export * from './payment-milestones';
 export * from './payment-plan';
 export * from './receivable-ageing';
+export * from './survey-discount';
 export * from './tax-invoice';
 export * from './tds';
 export * from './tds-register';

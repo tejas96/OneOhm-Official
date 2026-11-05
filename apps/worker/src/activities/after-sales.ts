@@ -1,9 +1,13 @@
 import {
   amcContracts,
   amcVisits,
+  customerActions,
   customers,
   type Database,
   type DatabaseExecutor,
+  homeNameOf,
+  languageOf,
+  messageTemplates,
   type Notice,
   notify,
   notifyHolders,
@@ -11,8 +15,13 @@ import {
   projects,
   queueCustomerMessage,
 } from '@oneohm/database';
-import { MAINTENANCE_VISIT_CATEGORY, VISIT_LEAD_DAYS } from '@oneohm/domain';
-import { addDays } from '@oneohm/shared';
+import {
+  MAINTENANCE_VISIT_CATEGORY,
+  templateIsOn,
+  VISIT_LEAD_DAYS,
+  VISIT_PHRASES,
+} from '@oneohm/domain';
+import { addDays, titleCaseName } from '@oneohm/shared';
 import { and, between, eq, isNull, sql } from 'drizzle-orm';
 
 /** "Sat, 7 Nov" for a calendar date, as customers read it. */
@@ -120,15 +129,65 @@ async function openVisit(db: Database, visit: DueVisit): Promise<boolean> {
       },
       opened.assigneeUserId,
     );
-    await queueCustomerMessage(
-      tx,
-      visit.phone,
-      'maintenance_visit',
-      { customer: visit.customer, visit: visit.visitName, date: day, project: visit.code },
-      `amc_visit:${visit.visitId}`,
-    );
+    // The customer picks the day (redesign §8) once that message is switched on; until then they
+    // hear the planned day as before.
+    if (!(await askToPick(tx, visit, opened.id)))
+      await queueCustomerMessage(
+        tx,
+        visit.phone,
+        'maintenance_visit',
+        { customer: visit.customer, visit: visit.visitName, date: day, project: visit.code },
+        `amc_visit:${visit.visitId}`,
+      );
     return true;
   });
+}
+
+/** "Your free AMC visit for Sangli is due. Pick a day:" as a visit ask the customer answers in chat. */
+async function askToPick(tx: DatabaseExecutor, visit: DueVisit, requestId: string) {
+  const [row] = await tx
+    .select({ active: messageTemplates.active })
+    .from(messageTemplates)
+    .where(eq(messageTemplates.key, 'visit_pick'))
+    .limit(1);
+  if (!templateIsOn('visit_pick', row)) return false;
+  const [project] = await tx
+    .select({ propertyId: projects.propertyId })
+    .from(projects)
+    .where(eq(projects.id, visit.projectId));
+  const home = await homeNameOf(tx, visit.projectId, project?.propertyId ?? null);
+  const language = (await languageOf(tx, visit.phone)).slice(0, 2);
+  const words = VISIT_PHRASES[language === 'mr' || language === 'hi' ? language : 'en'];
+  const [action] = await tx
+    .insert(customerActions)
+    .values({
+      type: 'visit_pick',
+      customerId: visit.customerId,
+      projectId: visit.projectId,
+      propertyId: project?.propertyId ?? null,
+      title: `Pick a day: ${VISIT_PHRASES.en.work.amc} — ${home}`,
+      payload: {
+        target: `amc:${requestId}`,
+        visitKind: 'amc',
+        serviceRequestId: requestId,
+        amcVisitId: visit.visitId,
+      },
+    })
+    .returning({ id: customerActions.id });
+  if (!action) return false;
+  await queueCustomerMessage(
+    tx,
+    visit.phone,
+    'visit_pick',
+    {
+      customer: titleCaseName(visit.customer),
+      home,
+      work: words.work.amc,
+      pickPayload: `vask:${action.id}`,
+    },
+    `amc_visit:${visit.visitId}`,
+  );
+  return true;
 }
 
 class VisitTaken extends Error {}

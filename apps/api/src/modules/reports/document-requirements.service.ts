@@ -34,6 +34,7 @@ export async function loadRequirements(db: DatabaseExecutor): Promise<Configured
     active: row.active,
     position: row.position,
     builtIn: row.builtIn,
+    maxAgeDays: row.maxAgeDays,
   }));
 }
 
@@ -65,6 +66,7 @@ const present = (requirement: ConfiguredRequirement): DocumentRequirementRecord 
   active: requirement.active,
   position: requirement.position,
   builtIn: requirement.builtIn,
+  maxAgeDays: requirement.maxAgeDays ?? null,
 });
 
 /** Settings → Required documents (PRD 3.14). Every change answers with the whole list. */
@@ -92,6 +94,7 @@ export class DocumentRequirementsService {
         categories: input.categories,
         fromCustomer: input.fromCustomer ?? false,
         conditions: input.conditions ?? {},
+        maxAgeDays: input.maxAgeDays ?? null,
         position: Math.max(-1, ...last.map((item) => item.position)) + 1,
       })
       .onConflictDoNothing()
@@ -116,6 +119,7 @@ export class DocumentRequirementsService {
       categories?: DocumentCategory[] | undefined;
       fromCustomer?: boolean | undefined;
       conditions?: DocumentRequirementRecord['conditions'] | undefined;
+      maxAgeDays?: number | null | undefined;
       active?: boolean | undefined;
       move?: 'up' | 'down' | undefined;
     },

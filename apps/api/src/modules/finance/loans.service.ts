@@ -7,12 +7,14 @@ import {
   projects,
   type Transaction,
 } from '@oneohm/database';
+import { loanStatusNews } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { tellLoanNews } from '../journey/loan-news';
 import { FinanceService } from '../projects/finance.service';
 import { readLoans } from './loan-read';
 import { type LoanInput, syncTranches } from './loan-tranches';
@@ -64,8 +66,15 @@ export class LoansService {
         throw invalid('Pick a lender from the list.', { lendingPartnerId: 'Not found.' });
     }
     await this.db.transaction(async (tx) => {
-      const loanId = await upsertLoan(tx, actor, projectId, input);
+      const { id: loanId, from } = await upsertLoan(tx, actor, projectId, input);
       await syncTranches(tx, loanId, input.tranches);
+      // The bank's decision reaches the customer (when the loan step may message them), once.
+      const news = loanStatusNews(from, input.status);
+      if (news)
+        await tellLoanNews(tx, projectId, news, {
+          amountPaise: input.sanctionedPaise ?? current.bankSharePaise,
+          key: `loan_news:${loanId}:${news}`,
+        });
       await recordAudit(tx, actor.userId, 'loan.saved', 'project', projectId, {
         status: input.status,
         sanctionedPaise: input.sanctionedPaise ?? null,
@@ -111,7 +120,7 @@ export class LoansService {
             .where(eq(loanTranches.id, tranche.id));
         }
         const received = loan.receivedPaise + input.amountPaise;
-        const loanId = loan.started
+        const opened = loan.started
           ? null
           : await upsertLoan(tx, actor, projectId, {
               version: null,
@@ -120,6 +129,7 @@ export class LoansService {
               documents: [],
               tranches: [],
             });
+        const loanId = opened?.id ?? null;
         await tx
           .update(projectLoans)
           .set({
@@ -127,6 +137,11 @@ export class LoansService {
             updatedAt: new Date(),
           })
           .where(loanId ? eq(projectLoans.id, loanId) : eq(projectLoans.projectId, projectId));
+        // The money sent by the bank reaches the customer (when the loan step may message them), once per payment.
+        await tellLoanNews(tx, projectId, 'disbursed', {
+          amountPaise: input.amountPaise,
+          key: `loan_news:${paymentId}:disbursed`,
+        });
       },
     );
     return this.one(projectId);
@@ -139,7 +154,7 @@ async function upsertLoan(
   actor: Actor,
   projectId: string,
   input: LoanInput,
-): Promise<string> {
+): Promise<{ id: string; from: string | null }> {
   const [project] = await tx
     .select({ loan: projects.loan })
     .from(projects)
@@ -147,7 +162,7 @@ async function upsertLoan(
     .limit(1);
   if (!project?.loan) throw conflict('This project is not bank-financed.');
   const [existing] = await tx
-    .select({ id: projectLoans.id, version: projectLoans.version })
+    .select({ id: projectLoans.id, version: projectLoans.version, status: projectLoans.status })
     .from(projectLoans)
     .where(eq(projectLoans.projectId, projectId))
     .for('update')
@@ -174,12 +189,12 @@ async function upsertLoan(
       .update(projectLoans)
       .set({ ...values, version: existing.version + 1 })
       .where(eq(projectLoans.id, existing.id));
-    return existing.id;
+    return { id: existing.id, from: existing.status };
   }
   const [created] = await tx
     .insert(projectLoans)
     .values({ projectId, ...values })
     .returning({ id: projectLoans.id });
   if (!created) throw new Error('Loan insert returned nothing.');
-  return created.id;
+  return { id: created.id, from: null };
 }

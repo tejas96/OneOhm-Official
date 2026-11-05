@@ -126,9 +126,11 @@ describe('Live QA round 2', () => {
     expect(list?.kind).toBe('list');
     const titles = list?.rows?.map((row) => row.title) ?? [];
     expect(titles).toContain('Your quotation');
-    expect(titles).toContain('Receipt · 1st instalment');
-    expect(titles).toContain('Receipt · 2nd instalment');
-    expect(titles.at(-1)).toBe('Back to menu');
+    // Receipts say when the payment fell due, never "2nd instalment" (redesign §10).
+    expect(titles.filter((title) => title === 'Payment receipt')).toHaveLength(2);
+    const notes = list?.rows?.map((row) => (row as { description?: string }).description ?? '');
+    expect(notes?.some((note) => note.includes('on acceptance'))).toBe(true);
+    expect(notes?.some((note) => note.includes('before dispatch'))).toBe(true);
     expect(list?.rows?.length).toBeLessThanOrEqual(10);
     for (const title of titles) {
       expect(title.length).toBeLessThanOrEqual(24);
@@ -137,7 +139,7 @@ describe('Live QA round 2', () => {
 
     await sendInbound(sale.customer.phone, { listReply: `paper:receipt:${payment?.id}` });
 
-    const [file, taps] = (await replies(sale.customer.phone)).slice(-2);
+    const file = (await replies(sale.customer.phone)).at(-1);
     expect(file).toMatchObject({
       kind: 'document',
       filename: 'OneOhm-Paper-List-Customer-test-receipt.pdf',
@@ -146,7 +148,6 @@ describe('Live QA round 2', () => {
     expect((await fetch(file?.link ?? '')).headers.get('content-type')).toContain(
       'application/pdf',
     );
-    expect(taps?.buttons?.map((button) => button.id)).toEqual(['menu', 'human']);
     // A paper tap is the bot's own: it never counts as the customer waiting for staff.
     const [logged] = await rows<{ mine: boolean }>(
       `select m.assistant_tap as mine from wa_messages m join wa_conversations c on c.id = m.conversation_id

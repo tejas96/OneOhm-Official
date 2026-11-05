@@ -74,6 +74,7 @@ export class CompanyAssetsService {
         .values({
           category,
           source: 'upload',
+          checkedAt: new Date(),
           name: checked.name,
           storageKey,
           contentType: checked.contentType,

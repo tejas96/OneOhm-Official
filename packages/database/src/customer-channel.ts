@@ -1,11 +1,20 @@
-import { handsOverInPerson, routeFor, skippedAfterStop, smsText } from '@oneohm/domain';
+import {
+  type ContactChannel,
+  offWhatsAppPathForTemplate,
+  routeFor,
+  SMS_WORDS_OF,
+  skippedAfterStop,
+  smsCanStandIn,
+  smsText,
+  templateIsOn,
+} from '@oneohm/domain';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { brandName } from './company-brand';
+import { actionIn, handOver, markChannel } from './customer-channel-tasks';
 import { customers } from './schema/crm.schema';
 import { customerHandovers } from './schema/customer-handovers.schema';
 import { messageTemplates } from './schema/message-templates.schema';
-import { projects } from './schema/projects.schema';
 import { outbox } from './schema/records.schema';
 
 /** Plain words for a message with no in-app wording of its own. */
@@ -20,18 +29,36 @@ interface Message {
   readonly payload: Record<string, string>;
   readonly dedupeKey: string;
   readonly words: { readonly title: string; readonly body: string };
+  /** WhatsApp said the number is not on WhatsApp: route it as an SMS customer's message. */
+  readonly fallback?: boolean;
+}
+
+/**
+ * What routing a message did: queued for WhatsApp or SMS, made a task for the team, was already
+ * queued (same dedupe key), or was not sent for a real reason (marketing, STOP, switched off, no
+ * way to reach them).
+ */
+export type Routed = 'whatsapp' | 'sms' | 'task' | 'duplicate' | 'none';
+
+/** Whether something new was queued or made (a message or a task). */
+export const wasQueued = (routed: Routed): boolean =>
+  routed === 'whatsapp' || routed === 'sms' || routed === 'task';
+
+/** `routeMessage`, answered as "was something new queued". */
+export async function routeCustomerMessage(
+  db: DatabaseExecutor,
+  message: Message,
+): Promise<boolean> {
+  return wasQueued(await routeMessage(db, message));
 }
 
 /**
  * Sends one customer message the way that reaches them (owner's rule): WhatsApp first,
  * SMS when they are not on WhatsApp, and a "share in person" item when neither works.
  * A nice-to-have message to a customer who said STOP is not sent at all (`skippedAfterStop`).
- * Returns whether something new was queued.
+ * Says what was done (see `Routed`).
  */
-export async function routeCustomerMessage(
-  db: DatabaseExecutor,
-  message: Message,
-): Promise<boolean> {
+export async function routeMessage(db: DatabaseExecutor, message: Message): Promise<Routed> {
   const [customer] = await db
     .select({
       id: customers.id,
@@ -43,24 +70,43 @@ export async function routeCustomerMessage(
     .where(eq(customers.phoneE164, message.recipient))
     .limit(1);
   // After STOP the nice-to-have messages are skipped, not moved to SMS.
-  if (customer && skippedAfterStop(message.template, customer.optIn)) return false;
-  const route = customer
+  if (customer && skippedAfterStop(message.template, customer.optIn)) return 'none';
+  const chosen = customer
     ? routeFor({
         channel: customer.channel,
         whatsappUnreachable: customer.unreachable !== null,
         whatsappOptIn: customer.optIn,
       })
     : 'whatsapp';
-  if (route === 'in_person') {
-    if (!customer) return false;
-    const [config] = await db
-      .select({ active: messageTemplates.active })
-      .from(messageTemplates)
-      .where(eq(messageTemplates.key, message.template))
-      .limit(1);
-    // No row means a built-in message nobody has switched off.
-    if (!handsOverInPerson(route, config?.active ?? true)) return false;
-    return handOver(db, customer.id, message);
+  const route = message.fallback && chosen === 'whatsapp' ? 'sms' : chosen;
+  let chatAsk = false;
+  if (route !== 'whatsapp') {
+    const path = offWhatsAppPathForTemplate(message.template);
+    // Marketing is never an SMS; a reminder to open the chat has nothing to remind of (the ask was handed over).
+    if (path === 'never' || path === 'skip') return 'none';
+    chatAsk = path === 'in_person';
+    // The team's task is staff work, not a message: the template's switch does not stop it. An SMS does stop.
+    if (route === 'sms' && !chatAsk) {
+      const [config] = await db
+        .select({ active: messageTemplates.active })
+        .from(messageTemplates)
+        .where(eq(messageTemplates.key, message.template))
+        .limit(1);
+      // A message the owner switched off (or one Meta has not approved yet) is not sent by SMS either.
+      if (!templateIsOn(message.template, config)) return 'none';
+    }
+    const inPerson = route === 'in_person' || chatAsk;
+    const actionId = customer ? await actionIn(db, customer.id, message.payload) : null;
+    // The ask remembers how it travels now (a staff-sent one said WhatsApp before the number failed).
+    if (actionId) await markChannel(db, actionId, inPerson ? 'in_person' : 'sms');
+    // Only the chat can take this answer: the team does it with the customer in person.
+    if (customer && inPerson)
+      return (await handOver(db, customer.id, message, chatAsk, actionId)) ? 'task' : 'duplicate';
+    // A number that is no customer's has nobody to hand a task to, and a chat-only ask cannot be an SMS.
+    if (inPerson) {
+      console.warn(`Not sent: ${message.template} to a number with no customer (in-person ask).`);
+      return 'none';
+    }
   }
   const sms = route === 'sms';
   const inserted = await db
@@ -81,24 +127,45 @@ export async function routeCustomerMessage(
     })
     .onConflictDoNothing()
     .returning({ id: outbox.id });
-  return inserted.length > 0;
+  return inserted.length > 0 ? (sms ? 'sms' : 'whatsapp') : 'duplicate';
 }
 
-async function handOver(
+/** How a message reaches this customer now (their setting, what WhatsApp told us, STOP). */
+export async function routeOfCustomer(
   db: DatabaseExecutor,
   customerId: string,
-  message: Message,
+): Promise<ContactChannel> {
+  const [customer] = await db
+    .select({
+      channel: customers.contactChannel,
+      unreachable: customers.whatsappUnreachableAt,
+      optIn: customers.whatsappOptIn,
+    })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+  return customer
+    ? routeFor({
+        channel: customer.channel,
+        whatsappUnreachable: customer.unreachable !== null,
+        whatsappOptIn: customer.optIn,
+      })
+    : 'whatsapp';
+}
+
+/** A task for the team on the customer handovers list: do or say this with the customer in person. */
+export async function handOverInPerson(
+  db: DatabaseExecutor,
+  customerId: string,
+  message: Pick<Message, 'template' | 'dedupeKey' | 'words'> & {
+    readonly projectId?: string | null;
+  },
 ): Promise<boolean> {
-  // `project` holds the town and size by now (plainNames); the code rides as `projectCode`.
-  const code = message.payload.projectCode ?? message.payload.project;
-  const [project] = code
-    ? await db.select({ id: projects.id }).from(projects).where(eq(projects.code, code)).limit(1)
-    : [];
   const inserted = await db
     .insert(customerHandovers)
     .values({
       customerId,
-      projectId: project?.id ?? null,
+      projectId: message.projectId ?? null,
       template: message.template,
       title: message.words.title,
       body: message.words.body,
@@ -117,26 +184,24 @@ export async function fallBackToSms(
   db: DatabaseExecutor,
   outboxId: string,
   words: (template: string, payload: Record<string, string>) => { title: string; body: string },
-): Promise<boolean> {
+): Promise<'sms' | 'task' | 'none'> {
   const [row] = await db.select().from(outbox).where(eq(outbox.id, outboxId)).limit(1);
-  if (row?.channel !== 'whatsapp') return false;
+  // A staff message fails visibly instead of going by SMS.
+  if (row?.channel !== 'whatsapp' || !smsCanStandIn(row.template)) return 'none';
   await db
     .update(customers)
     .set({ whatsappUnreachableAt: new Date() })
     .where(and(eq(customers.phoneE164, row.recipient), isNull(customers.whatsappUnreachableAt)));
   const payload = (row.payload ?? {}) as Record<string, string>;
-  const said = words(row.template, payload);
-  const inserted = await db
-    .insert(outbox)
-    .values({
-      channel: 'sms',
-      recipient: row.recipient,
-      template: row.template,
-      payload: { ...payload, text: smsText(said.title, said.body, await brandName(db)) },
-      dedupeKey: `${row.dedupeKey ?? row.id}:sms`,
-      createdAt: sql`clock_timestamp()`,
-    })
-    .onConflictDoNothing()
-    .returning({ id: outbox.id });
-  return inserted.length > 0;
+  // The same rules as any message to a customer off WhatsApp: marketing never, chat-only asks a task.
+  const routed = await routeMessage(db, {
+    recipient: row.recipient,
+    template: row.template,
+    payload,
+    dedupeKey: row.dedupeKey ?? row.id,
+    words: words(SMS_WORDS_OF[row.template] ?? row.template, payload),
+    fallback: true,
+  });
+  // A repeat (the same news was already turned into an SMS or a task) did nothing new.
+  return routed === 'sms' || routed === 'task' ? routed : 'none';
 }

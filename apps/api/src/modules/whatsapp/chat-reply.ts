@@ -15,6 +15,26 @@ export type ChatReply =
       readonly url: string;
     }
   | {
+      /** A WhatsApp form (Flow) that opens on `screen` with `data`; `token` comes back with the reply. */
+      readonly kind: 'flow';
+      readonly body: string;
+      /** The button that opens the form (WhatsApp keeps 30 characters). */
+      readonly button: string;
+      readonly flowId: string;
+      readonly token: string;
+      readonly screen: string;
+      readonly data: Readonly<
+        Record<string, string | boolean | readonly { id: string; title: string }[]>
+      >;
+      /** Said in plain words instead if the form cannot be delivered (the worker queues it). */
+      readonly fallbackText?: string;
+    }
+  | {
+      /** WhatsApp's own "📍 Send location" button; a single-button message (redesign §1, §6). */
+      readonly kind: 'location_request';
+      readonly body: string;
+    }
+  | {
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
@@ -38,6 +58,8 @@ export function chatReplySummary(reply: ChatReply): string {
   if (reply.kind === 'document')
     return `${reply.caption ? `${reply.caption}\n` : ''}[${reply.filename}]`;
   if (reply.kind === 'cta_url') return `${reply.body}\n[${reply.label}]`;
+  if (reply.kind === 'location_request') return `${reply.body}\n[📍 Send location]`;
+  if (reply.kind === 'flow') return `${reply.body}\n[${reply.button}]`;
   const options =
     reply.kind === 'buttons'
       ? reply.buttons.map((button) => button.title)

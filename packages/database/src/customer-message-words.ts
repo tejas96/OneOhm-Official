@@ -1,9 +1,12 @@
 import { customerLanguage, DEFAULT_MILESTONES, DEFAULT_SERVICE_CATEGORIES } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { CARE_EN, CARE_MESSAGES } from './customer-message-care';
 import { HINDI_WORDS } from './customer-message-hi';
+import { JOURNEY_MESSAGES, JOURNEY_EN as JOURNEY_ONLY_EN } from './customer-message-journey';
 import { MARATHI_WORDS } from './customer-message-mr';
 import { instalmentWords } from './customer-message-names';
+import { STEP_EN, STEP_MESSAGES } from './customer-message-steps';
 import { customers } from './schema/crm.schema';
 
 type Payload = Readonly<Record<string, string>>;
@@ -23,6 +26,13 @@ export const IN_APP_MESSAGES = [
   'change_request_raised',
   'change_request_completed',
   'document_requested',
+  'paper_request',
+  'paper_again',
+  'paper_checked',
+  'paper_stale',
+  'document_request_cancelled',
+  'action_cancelled',
+  'document_received_by_team',
   'maintenance_visit',
   'survey_scheduled',
   'referral_reward',
@@ -32,8 +42,29 @@ export const IN_APP_MESSAGES = [
   'project_update_link',
   'service_visit_booked',
   'project_waiting',
+  'location_request',
+  'payment_due',
+  'callback_request',
+  'delay_notice',
+  'crew_contact',
+  'document_share',
+  'visit_pick',
+  'visit_booked',
+  'visit_reminder',
+  'inspection_presence',
+  'visit_cancelled',
+  'visit_crew_changed',
+  ...JOURNEY_MESSAGES,
+  ...STEP_MESSAGES,
+  ...CARE_MESSAGES,
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
+
+/** The journey messages and the subsidy, loan and layout ones, as the app inbox says them in English. */
+export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN, ...CARE_EN };
+
+/** A paper's home when its request has no project; said in the customer's language. */
+export const SOME_HOME = 'your home';
 
 /** contact_changed says what the new contact looks after as one of these, never in English. */
 export type ContactSubject = 'project' | 'service' | 'enquiry';
@@ -86,6 +117,8 @@ export interface LanguageWords {
   readonly reward: Readonly<Record<'pending' | 'approved' | 'paid' | 'rejected', string>>;
   /** What a new contact looks after (contact_changed), by the payload's `subjectKind`. */
   readonly contactSubjects: Readonly<Record<ContactSubject, string>>;
+  /** SOME_HOME in the language. */
+  readonly someHome: string;
   /** Titles of alerts written straight into the app, with no WhatsApp message behind them. */
   readonly alerts: Readonly<Record<'stage_rating_reply', string>>;
 }
@@ -159,6 +192,7 @@ function localPayload(
   const subject = contactSubject(template, p, words);
   return {
     ...p,
+    ...(p.home === SOME_HOME ? { home: words.someHome } : {}),
     ...(subject ? { subject } : {}),
     ...(milestone ? { milestone } : {}),
     ...(topic ? { topic } : {}),

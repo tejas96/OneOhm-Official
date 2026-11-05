@@ -1,8 +1,13 @@
+import { homeHi } from '@oneohm/shared';
 /**
  * Hindi words for the customer's in-app alerts (PRD 5.1).
  *
  * Drafted by the OneOhm team. Have a native Hindi speaker read it once before go-live.
  */
+
+import { CARE_HI } from './customer-message-care';
+import { JOURNEY_HI } from './customer-message-journey';
+import { STEP_HI } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
 
 const HI_STAGES: Readonly<Record<string, string>> = {
@@ -20,6 +25,9 @@ const HI_WAITING: Readonly<Record<string, string>> = {
 
 export const HINDI_WORDS: LanguageWords = {
   messages: {
+    ...JOURNEY_HI,
+    ...STEP_HI,
+    ...CARE_HI,
     quotation_sent: (p) => ({
       title: 'आपका कोटेशन तैयार है',
       body: `${p.number}: ${p.total}। सब्सिडी के बाद आपको ${p.effective} देने हैं।`,
@@ -66,7 +74,35 @@ export const HINDI_WORDS: LanguageWords = {
     }),
     document_requested: (p) => ({
       title: `कृपया ${p.document} भेजें`,
-      body: `${p.project}: ‘दस्तावेज़’ खोलें और फ़ोटो या PDF भेजें।`,
+      body: `${p.project ? `${p.project}: ` : ''}‘दस्तावेज़’ खोलें और फ़ोटो या PDF भेजें।`,
+    }),
+    paper_request: (p) => ({
+      title: `कृपया ${p.document} भेजें`,
+      body: `${p.home} पर आपके सोलर के लिए। इसे OneOhm ऐप से भेजें, या हमारी टीम को दे दें।`,
+    }),
+    paper_again: (p) => ({
+      title: `कृपया अपना ${p.document} फिर से भेजें`,
+      body: p.reason ?? '',
+    }),
+    paper_checked: (p) => ({
+      title: `आपका ${p.document} जाँच लिया गया ✅`,
+      body: 'धन्यवाद।',
+    }),
+    paper_stale: (p) => ({
+      title: `${p.home} के लिए हमें आपका ताज़ा ${p.document} चाहिए`,
+      body: `हमारे पास जो है वह ${p.month} का है।`,
+    }),
+    document_request_cancelled: (p) => ({
+      title: `${p.document} की अब ज़रूरत नहीं है`,
+      body: 'आपको इसे भेजने की ज़रूरत नहीं है।',
+    }),
+    action_cancelled: (p) => ({
+      title: `${p.what} अब ज़रूरी नहीं है`,
+      body: p.note ?? 'आपको कुछ करने की ज़रूरत नहीं है।',
+    }),
+    document_received_by_team: (p) => ({
+      title: `आपका ${p.document} हमें मिल गया`,
+      body: `${p.home} पर आपके सोलर के लिए। धन्यवाद।`,
     }),
     maintenance_visit: (p) => ({
       title: `मुफ़्त ${p.visit} विज़िट: ${p.date}`,
@@ -100,6 +136,48 @@ export const HINDI_WORDS: LanguageWords = {
       title: HI_WAITING[p.party ?? ''] ?? 'थोड़ी देर हो रही है',
       body: `${p.project}: ${p.milestone}। आगे की जानकारी हम देंगे।`,
     }),
+    location_request: (p) => ({
+      title: `अपने ${homeHi(p.home)} की लोकेशन भेजें`,
+      body: 'हमारी WhatsApp चैट में ‘लोकेशन भेजें’ दबाएँ, ताकि हमारी टीम आसानी से पहुँच सके।',
+    }),
+    payment_due: (p) => ({
+      title: `${p.amount} बाकी है`,
+      body: `आपके ${homeHi(p.home)} के लिए। ‘पेमेंट’ खोलकर भरें, या किसी और तरीके से भरा हो तो हमें बताएँ।`,
+    }),
+    callback_request: (p) => ({
+      title: `${p.staff} आपको कब फ़ोन करें?`,
+      body: 'हमारी WhatsApp चैट में बताएँ: सुबह, दोपहर या शाम।',
+    }),
+    delay_notice: (p) => ({
+      title: `आपका ${p.stage} रुका हुआ है`,
+      body: `${p.reason}। आगे की जानकारी हम देंगे।`,
+    }),
+    crew_contact: (p) => ({
+      title: `${p.staff} आपके ${p.work} के लिए आएँगे`,
+      body: `आप उन्हें ${p.phone} पर फ़ोन कर सकते हैं।`,
+    }),
+    document_share: (p) => ({
+      title: `आपका ${p.document}`,
+      body: 'हमने इसे WhatsApp पर भेजा है। यह ‘दस्तावेज़’ में भी है।',
+    }),
+    visit_pick: (p) => ({
+      title: `${p.work} के लिए दिन चुनें`,
+      body: `हमारी टीम ${p.home} पर कब आ सकती है? हमारे WhatsApp चैट में ‘दिन चुनें’ दबाएँ।`,
+    }),
+    visit_booked: (p) => ({
+      title: `विज़िट तय हुई: ${p.when}`,
+      body: `आने से पहले ${p.staff} आपको फ़ोन करेंगे।`,
+    }),
+    visit_reminder: (p) => ({
+      title: `हमारी टीम ${p.home} पर ${p.when} आ रही है`,
+      body: `${p.work} के लिए। कृपया हमारे WhatsApp चैट में पक्का करें।`,
+    }),
+    inspection_presence: (p) => ({
+      title: `${p.day} को ${p.work}`,
+      body: `बिजली बोर्ड (DISCOM) ${p.home} पर आएगा। कृपया घर पर रहें।`,
+    }),
+    visit_cancelled: (p) => ({ title: 'विज़िट रद्द हुई', body: p.body ?? '' }),
+    visit_crew_changed: (p) => ({ title: 'कौन आएगा', body: p.body ?? '' }),
     referral_reward: (p) => ({
       title: 'रेफ़रल इनाम की जानकारी',
       body: `${p.friend}: ${p.amount} — ${p.status}।`,
@@ -154,5 +232,6 @@ export const HINDI_WORDS: LanguageWords = {
     service: 'आपकी सर्विस रिक्वेस्ट',
     enquiry: 'आपकी सोलर पूछताछ',
   },
+  someHome: 'आपके घर',
   alerts: { stage_rating_reply: 'हमने आपकी राय का जवाब दिया' },
 };

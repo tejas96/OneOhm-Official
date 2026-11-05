@@ -46,6 +46,8 @@ export const STEP_MESSAGE_TEMPLATES = [
     key: 'installation_started',
     audience: 'customer',
     fields: ['customer', 'project', 'capacity'],
+    // [Project update]: a newer version of the template; sent only once its quick-reply switch is on.
+    extras: { optionalQuickReplies: ['updatePayload'] },
     preview:
       'Hello {{1}}, installation of your solar system {{2}} ({{3}}) has started today. We will tell you when it is done.',
   },
@@ -53,6 +55,8 @@ export const STEP_MESSAGE_TEMPLATES = [
     key: 'commissioning_completed',
     audience: 'customer',
     fields: ['customer', 'project'],
+    // [Pay now] (the final instalment, else the Payments answer) and [Warranty & AMC]: newer version, own switch.
+    extras: { optionalQuickReplies: ['payPayload', 'warrantyPayload'] },
     preview:
       'Hello {{1}}, your solar system {{2}} is tested and switched on. The final payment is now due; we will send the amount and how to pay.',
   },
@@ -74,6 +78,8 @@ export const STEP_MESSAGE_TEMPLATES = [
     key: 'project_waiting',
     audience: 'customer',
     fields: ['customer', 'project', 'milestone', 'reason'],
+    // [Send it now] when the wait is for the customer's own paper or reply: newer version, own switch.
+    extras: { optionalQuickReplies: ['sendPayload'] },
     preview:
       'Hello {{1}}, a short delay on your solar project {{2}}: "{{3}}" is waiting for {{4}}. We will keep you posted here.',
   },

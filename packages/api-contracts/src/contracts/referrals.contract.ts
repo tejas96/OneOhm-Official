@@ -9,6 +9,7 @@ import {
   referralProgramSchema,
   referralRewardSchema,
   rejectInputSchema,
+  upiCheckInputSchema,
 } from '../schemas/incentives.schema';
 
 const c = initContract();
@@ -56,6 +57,14 @@ export const referralsContract = c.router({
     pathParams: idParams,
     body: rejectInputSchema,
     responses: { 200: referralRewardSchema },
+  },
+  checkRewardUpi: {
+    method: 'POST',
+    path: '/referral-rewards/:id/upi-check',
+    pathParams: idParams,
+    body: upiCheckInputSchema,
+    responses: { 200: referralRewardSchema },
+    summary: "Looks good, or Ask again, on the customer's UPI ID.",
   },
   payReward: {
     method: 'POST',

@@ -71,7 +71,10 @@ function RequestCard({ request }: { readonly request: CustomerDocumentRequest })
       <View style={styles.text}>
         <Text variant="titleMd">{request.title}</Text>
         <Text variant="label" tone="tertiary">
-          {DOCUMENTS.requestMeta(request.projectCode, `${kind} · ${momentDate(request.createdAt)}`)}
+          {DOCUMENTS.requestMeta(
+            request.homeName ?? request.projectCode,
+            `${kind} · ${momentDate(request.createdAt)}`,
+          )}
         </Text>
         {request.note ? (
           <Text variant="body" tone="secondary">

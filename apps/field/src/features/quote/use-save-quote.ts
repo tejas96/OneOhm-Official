@@ -44,7 +44,8 @@ export function useSaveQuote(input: QuotationInput | null) {
     },
   });
   const send = useMutation({
-    mutationFn: (id: string) => unwrap(api.quotations.sendQuotation({ params: { id } })),
+    mutationFn: (id: string) =>
+      unwrap(api.quotations.sendQuotation({ params: { id }, body: undefined })),
     onSuccess: (updated) => {
       remember(updated);
       toast(QUOTE.save.sentToast(updated.customer.name));

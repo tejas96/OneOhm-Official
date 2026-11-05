@@ -106,6 +106,7 @@ export class SurveyReportService {
         propertyId: data.propertyId,
         category: 'site_survey',
         source: 'system',
+        checkedAt: new Date(),
         name: `Site survey report · ${data.code}.pdf`,
         storageKey,
         contentType: 'application/pdf',

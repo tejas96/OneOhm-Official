@@ -56,6 +56,13 @@ export const documents = pgTable(
     contractorId: uuid('contractor_id').references(() => contractors.id, {
       onDelete: 'set null',
     }),
+    /** When the team looked at a paper the customer sent; staff papers are checked on upload. */
+    checkedAt: instant('checked_at'),
+    /** The customer said what a WhatsApp file is (or where it goes): it is no longer "to sort". */
+    sortedAt: instant('sorted_at'),
+    checkedByUserId: uuid('checked_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (table) => [
@@ -67,6 +74,7 @@ export const documents = pgTable(
     index('documents_task_idx').on(table.taskId),
     index('documents_customer_idx').on(table.customerId),
     index('documents_category_idx').on(table.category),
+    index('documents_property_idx').on(table.propertyId),
   ],
 );
 

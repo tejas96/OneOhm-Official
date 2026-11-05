@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { notifications, type Transaction } from '@oneohm/database';
-import { addMonths, isWorkingTime, lastWorkEnd } from '@oneohm/domain';
+import { addMonths, CALL_DAY_WORDS, callDay } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
 import { ENVIRONMENT } from '../../../config/core.module';
@@ -14,7 +14,9 @@ import { HandOverService } from '../assistant/hand-over';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
+import { askVisitDay, pickVisitDay, pickVisitSlot } from './estimate-visit';
 import { ONBOARD_WORDS } from './onboard-words';
+import { MORE_WORDS } from './onboard-words-more';
 import {
   ESTIMATE_CHOICES,
   LATER_PERIODS,
@@ -51,11 +53,6 @@ const laterPeriod = (choiceId: string): LaterPeriod | null => {
     : null;
 };
 
-/** After working hours the call is promised for the next morning, never "today" at 11 pm. */
-function afterHours(now: Date, zone: string): boolean {
-  return !isWorkingTime(now, zone) && todayIn(zone, lastWorkEnd(now, zone)) === todayIn(zone, now);
-}
-
 /**
  * The customer's taps under the estimate, in the chat's transaction. "Call me back" puts
  * a call on the owner's Today (tomorrow after working hours, by the tap's time) and alerts
@@ -69,11 +66,31 @@ export class EstimateNextStepsService {
     private readonly people: HandOverService,
   ) {}
 
+  /** [Book a visit] and the day and slot taps that follow it; false for any other tap. */
+  private async visitTap(
+    tx: Transaction,
+    chat: Conversation,
+    lead: { readonly id: string; readonly ownerUserId?: string | null },
+    choiceId: string,
+    now: Date,
+  ): Promise<boolean> {
+    const zone = this.env.BUSINESS_TIMEZONE;
+    const given = { id: lead.id, ownerUserId: lead.ownerUserId ?? null };
+    if (choiceId === ESTIMATE_CHOICES.visit) await askVisitDay(tx, chat, given, zone);
+    else if (choiceId.startsWith(ESTIMATE_CHOICES.pickDay))
+      await pickVisitDay(tx, chat, given, choiceId.slice(ESTIMATE_CHOICES.pickDay.length), zone);
+    else if (choiceId.startsWith(ESTIMATE_CHOICES.pickSlot)) {
+      const [day = '', slot = ''] = choiceId.slice(ESTIMATE_CHOICES.pickSlot.length).split(':');
+      await pickVisitSlot(tx, chat, given, { day, slot }, { now, zone });
+    } else return false;
+    return true;
+  }
+
   /** True when the tap was one of the estimate's; false (typed words too) leaves it to the caller. */
   async answer(
     tx: Transaction,
     chat: Conversation,
-    lead: { readonly id: string } | null,
+    lead: { readonly id: string; readonly ownerUserId?: string | null } | null,
     incoming: Incoming | null,
   ): Promise<boolean> {
     const choiceId = incoming?.choiceId;
@@ -87,12 +104,12 @@ export class EstimateNextStepsService {
       // One alert and one history note a day: a second tap is already on the owner's Today.
       const key = `wa_callback:${chat.id}:${today}`;
       const again = await alertedAlready(tx, key);
-      const tomorrow = afterHours(now, zone);
-      const when = tomorrow ? 'tomorrow morning' : 'today';
+      const call = callDay(now, zone);
+      const when = CALL_DAY_WORDS[call.day];
       await updateLeadFromChat(
         tx,
         leadId,
-        { nextAction: { on: tomorrow ? addDays(today, 1) : today, note: PROMISED_CALL_NOTE } },
+        { nextAction: { on: addDays(today, call.add), note: PROMISED_CALL_NOTE } },
         again ? null : `${PROMISED_CALL_HISTORY} ${when} after the estimate`,
       );
       const owned = await ensureChatOwner(tx, chat);
@@ -106,11 +123,13 @@ export class EstimateNextStepsService {
       // Every closing message ends with a tap (C5): a person stays one tap away.
       await queueReply(tx, chat, {
         kind: 'buttons',
-        body: W.willCall(name, tomorrow),
+        body: W.willCall(name, call.day),
         buttons: [{ id: PERSON_CHOICE, title: W.talkToPerson }],
       });
       return true;
     }
+    const visit = await this.visitTap(tx, chat, lead, choiceId, now);
+    if (visit) return true;
     if (choiceId === ESTIMATE_CHOICES.notNow) {
       await queueReply(tx, chat, laterQuestion());
       return true;
@@ -128,7 +147,7 @@ export class EstimateNextStepsService {
       kind: 'buttons',
       body: W.laterThanks,
       buttons: [
-        { id: ESTIMATE_CHOICES.call, title: W.callMeBack },
+        { id: ESTIMATE_CHOICES.call, title: MORE_WORDS.callMe },
         { id: PERSON_CHOICE, title: W.talkToPerson },
       ],
     });

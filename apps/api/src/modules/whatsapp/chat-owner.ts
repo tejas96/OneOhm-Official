@@ -1,7 +1,9 @@
 import {
+  answererFor,
   chatOwnerFor,
   type DatabaseExecutor,
   projects,
+  users,
   waConversations,
   waMessages,
 } from '@oneohm/database';
@@ -25,6 +27,17 @@ export async function ensureChatOwner<T extends Conversation>(
     .set({ assignedUserId: owner })
     .where(and(eq(waConversations.id, chat.id), isNull(waConversations.assignedUserId)));
   return { ...chat, assignedUserId: owner };
+}
+
+/** The first name of whoever answers this chat today, or null for the team. */
+export async function answererName(
+  db: DatabaseExecutor,
+  chat: Pick<Conversation, 'assignedUserId' | 'handledByUserId'>,
+): Promise<string | null> {
+  const userId = await answererFor(db, chat.assignedUserId ?? chat.handledByUserId);
+  if (!userId) return null;
+  const [user] = await db.select({ name: users.fullName }).from(users).where(eq(users.id, userId));
+  return user ? (user.name.split(/\s+/)[0] ?? user.name) : null;
 }
 
 /**

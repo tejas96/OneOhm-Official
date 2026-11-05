@@ -14,6 +14,7 @@ import {
 import { EPC_STAGES } from '@oneohm/domain';
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { environmentOnce } from '../../config/environment-once';
+import { subsidyNote } from '../journey/subsidy-note';
 import { openLinksFor } from '../online-payments/open-links';
 import { pendingChangesFor } from '../project-changes/customer-pending';
 import { activeProjectsOf } from './active-projects';
@@ -117,6 +118,10 @@ export async function customerProjects(
     .from(projectTasks)
     .leftJoin(taskTemplates, eq(taskTemplates.key, projectTasks.templateKey))
     .where(inArray(projectTasks.projectId, ids));
+  // Same status as the WhatsApp Project update line (received / checking).
+  const notes = new Map(
+    await Promise.all(rows.map(async (row) => [row.id, await subsidyNote(db, row.id)] as const)),
+  );
   const milestones = await db
     .select()
     .from(paymentMilestones)
@@ -189,6 +194,8 @@ export async function customerProjects(
       subsidy: {
         amountPaise: row.subsidy ? row.subsidyPaise : 0,
         status: subsidyStatus(row.subsidy, own),
+        note:
+          row.subsidy && subsidyStatus(row.subsidy, own) === 'released' ? notes.get(row.id) : null,
         stateSupportPaise: row.subsidy ? row.stateSupportPaise : 0,
       },
       quotation: { id: row.quotationId, number: row.quotationNumber },

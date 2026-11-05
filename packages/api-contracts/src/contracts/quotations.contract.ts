@@ -52,7 +52,8 @@ export const quotationsContract = c.router({
     method: 'POST',
     path: '/quotations/:id/send',
     pathParams: idParams,
-    body: c.noBody(),
+    // A revision says what changed (one short line); the customer reads it first.
+    body: z.object({ whatChanged: z.string().trim().max(200).optional() }).optional(),
     responses: { 200: quotationDetailSchema },
     summary: 'Marks it sent and queues the WhatsApp message with the PDF link.',
   },

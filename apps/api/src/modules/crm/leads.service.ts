@@ -9,6 +9,8 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { definedOnly } from '../../common/patch';
 import { DATABASE, type Database } from '../../config/core.module';
 import { resolveReferralCode } from '../referrals/referral-codes';
+import { cancelAllAsks } from '../send-to-customer/send-cancel-all';
+import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { autoMoveLead, logLead, logLeadChanges, tellLeadOwner } from './lead-history';
 import { alertNobodyFree, assertCanOwnLeads, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
@@ -148,21 +150,30 @@ export class LeadsService {
     const ruled = needsOwner ? await ownerByRule(this.db, { city: current.city }) : null;
     const owner = needsOwner ? ruled?.userId : patch.ownerUserId;
     if (needsOwner && !owner) throw invalid('Pick who follows this lead up.');
-    await this.db
-      .update(leads)
-      .set({
-        ...definedOnly({
-          ...patch,
-          ...lost,
-          ...(owner === undefined ? {} : { ownerUserId: owner }),
-        }),
-        ...timeColumns(current, patch),
-        ...stepColumns(step, patch.stage),
-        ...(stage === 'won' && current.stage !== 'won' ? { wonAt: new Date() } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(leads.id, id));
-    await logLeadChanges(this.db, actor, current, { patch, step, stage, lost, owner });
+    await this.db.transaction(async (tx) => {
+      const handsOver = owner !== undefined && owner !== current.owner?.id;
+      // Before the owner changes: booking a survey takes this lock first too.
+      if (handsOver) await lockVisitTarget(tx, { leadId: id });
+      await tx
+        .update(leads)
+        .set({
+          ...definedOnly({
+            ...patch,
+            ...lost,
+            ...(owner === undefined ? {} : { ownerUserId: owner }),
+          }),
+          ...timeColumns(current, patch),
+          ...stepColumns(step, patch.stage),
+          ...(stage === 'won' && current.stage !== 'won' ? { wonAt: new Date() } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(leads.id, id));
+      await logLeadChanges(tx, actor, current, { patch, step, stage, lost, owner });
+      if (owner && handsOver) await followAssignee(tx, { leadId: id }, owner, actor.userId);
+      // A lost lead has nothing more to ask of the customer: every open ask and visit is cancelled, once told.
+      if (stage === 'lost' && current.stage !== 'lost')
+        await cancelAllAsks(tx, { leadId: id }, actor.userId, 'lead lost');
+    });
     if (ruled?.fallback) await alertNobodyFree(this.db, current);
     return this.get(actor, id);
   }

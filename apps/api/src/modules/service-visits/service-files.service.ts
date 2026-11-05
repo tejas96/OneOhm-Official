@@ -77,6 +77,7 @@ export class ServiceFilesService {
           serviceRequestId: id,
           category,
           source: 'upload',
+          checkedAt: new Date(),
           name: checked.name,
           storageKey,
           contentType: checked.contentType,

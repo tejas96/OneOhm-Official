@@ -135,6 +135,11 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
           <span className="block type-label text-ink-faint">{t('picked')}</span>
         )}
         {message.file && <MessageFile file={message.file} />}
+        {message.file && (
+          <span className="mt-1 block type-label text-ink-faint">
+            {message.file.filedAs ? t('filedAs', { where: message.file.filedAs }) : t('toSort')}
+          </span>
+        )}
         {caption(message) && (
           <span className={cn('block', message.file && 'mt-1.5')}>
             <RichText body={caption(message)} links={outgoing} />

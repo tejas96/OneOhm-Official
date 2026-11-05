@@ -1,0 +1,224 @@
+import {
+  chatOwnerFor,
+  customerActions,
+  customers,
+  type Database,
+  type Notice,
+  notifications,
+  notifyCover,
+  notifyHolders,
+  notifyStaffHolders,
+  projects,
+} from '@oneohm/database';
+import { workingMinutesBetween } from '@oneohm/domain';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
+import { capabilityOf } from './action-capability';
+
+const DAY = 86_400_000;
+const UNTIL = 14 * DAY;
+const PER_TICK = 200;
+/** The least wall-clock time in which two working days (18 working hours) can pass. */
+const MANAGER_NOT_BEFORE = 30 * 3_600_000;
+
+const WHAT: Readonly<Record<string, (customer: string, extra: unknown) => string>> = {
+  location: (customer) => `Check the location ${customer} sent`,
+  pay: (customer) => `Record the payment ${customer} says they made`,
+  visit_pick: (customer) => `Confirm the visit day ${customer} picked`,
+  self_survey: (customer) => `Check the self survey ${customer} sent`,
+  payout: (customer) => `Check the UPI ID ${customer} shared`,
+  paper: (customer, title) =>
+    `Check the ${typeof title === 'string' ? title : 'paper'} ${customer} sent`,
+  callback: (customer, slot) =>
+    `Call ${customer} back${typeof slot === 'string' ? ` (they picked ${slot})` : ''}`,
+};
+
+/** When the customer answered, to the millisecond (a parked pin: when it was sent). */
+const answerTime = sql`date_trunc('milliseconds', coalesce(${customerActions.doneAt}, ${customerActions.createdAt}))`;
+
+/** One working day on the working clock (9:30 to 18:30), in minutes. */
+const WORKING_DAY_MIN = 9 * 60;
+
+/**
+ * What a staff check is due for, counted in working time (Monday to Saturday 9:30 to 18:30, Sunday
+ * closed): the person who asked after 1 working day, the manager after 2. Nothing after 14 days.
+ */
+export function checkDue(
+  answeredAt: Date,
+  now: Date,
+  timeZone = 'Asia/Kolkata',
+): 'owner' | 'manager' | null {
+  if (now.getTime() - answeredAt.getTime() >= UNTIL) return null;
+  const worked = workingMinutesBetween(answeredAt, now, timeZone);
+  if (worked >= 2 * WORKING_DAY_MIN) return 'manager';
+  return worked >= WORKING_DAY_MIN ? 'owner' : null;
+}
+
+/**
+ * Staff checks (redesign §2.3): a location suggestion, a payment proof or a "To call" call-back the
+ * customer answered waits for the team. After 1 day the person who asked is told, after 2 days the
+ * project manager (else those who manage projects). Also a pin that waited for the customer to pick
+ * a home for a day: the chat's person is told. Each alert has its own key, so a repeat says nothing.
+ */
+export async function queueActionChecks(
+  db: Database,
+  now: Date,
+  timeZone = 'Asia/Kolkata',
+): Promise<number> {
+  // A stored tier belongs to the answer it was made for: an Ask again and a new answer start over.
+  const tierOf = sql<
+    string | null
+  >`case when (${customerActions.payload}->>'checkedFor')::timestamptz = ${answerTime} then ${customerActions.payload}->>'checkedTier' end`;
+  const managerFrom = new Date(now.getTime() - MANAGER_NOT_BEFORE);
+  const waiting = await db
+    .select({
+      action: customerActions,
+      customer: customers.name,
+      phone: customers.phoneE164,
+      manager: projects.managerUserId,
+    })
+    .from(customerActions)
+    .innerJoin(customers, eq(customers.id, customerActions.customerId))
+    .leftJoin(projects, eq(projects.id, customerActions.projectId))
+    .where(
+      and(
+        inArray(customerActions.type, [
+          'location',
+          'pay',
+          'callback',
+          'visit_pick',
+          'self_survey',
+          'payout',
+          'paper',
+        ]),
+        // A promised call has its own late alerts (call-tasks): no second "Call X back".
+        sql`coalesce(${customerActions.payload}->>'kind', '') <> 'call_task'`,
+        or(
+          and(eq(customerActions.status, 'received'), isNotNull(customerActions.doneAt)),
+          and(
+            eq(customerActions.status, 'open'),
+            isNull(customerActions.requestedByUserId),
+            isNull(customerActions.propertyId),
+            // A visit ask and a survey are never a pin waiting for its home.
+            notInArray(customerActions.type, ['visit_pick', 'self_survey', 'payout', 'paper']),
+          ),
+        ),
+        gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),
+        // A working day can pass in 9 hours; the working clock decides below.
+        lte(customerActions.updatedAt, new Date(now.getTime() - 9 * 3_600_000)),
+        // Rows already told at their last tier cannot crowd out new ones: all done after the
+        // manager tier; after the owner tier they wait until the manager tier can be due.
+        or(isNull(tierOf), ne(tierOf, 'manager')),
+        or(isNull(tierOf), ne(tierOf, 'owner'), lte(customerActions.updatedAt, managerFrom)),
+        or(isNull(projects.id), ne(projects.status, 'cancelled')),
+      ),
+    )
+    .orderBy(asc(customerActions.updatedAt))
+    .limit(PER_TICK);
+  let done = 0;
+  for (const row of waiting) if (await tellOnce(db, row, now, timeZone)) done += 1;
+  return done;
+}
+
+interface Waiting {
+  readonly action: typeof customerActions.$inferSelect;
+  readonly customer: string;
+  readonly phone: string;
+  readonly manager: string | null;
+}
+
+/** The alert this answer is due for (owner at 1 day, manager at 2), or false when none is. */
+async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string): Promise<boolean> {
+  const { action, customer, phone, manager } = row;
+  const parked = action.status === 'open';
+  const answeredAt = parked ? action.createdAt : (action.doneAt ?? action.updatedAt);
+  const due = checkDue(answeredAt, now, timeZone);
+  if (!due) return false;
+  const notice = {
+    kind: parked ? 'location_home_waiting' : 'customer_action_check',
+    title: parked
+      ? `${customer} sent a location but has not said which home`
+      : (WHAT[action.type]?.(
+          customer,
+          action.type === 'paper' ? action.title : action.payload.slot,
+        ) ?? `Check ${customer}'s answer`),
+    body: parked
+      ? 'Ask them which home it is for, or add it on the property yourself.'
+      : due === 'manager'
+        ? 'This has waited more than 2 days for the team.'
+        : 'The customer answered and it waits for the team.',
+    ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
+    dedupeKey: `action_check:${action.id}:${due}:${answeredAt.getTime()}`,
+  };
+  // Once this tier's alert exists, nothing more is asked of the database or the notifier.
+  const [told] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(like(notifications.dedupeKey, `${notice.dedupeKey}%`))
+    .limit(1);
+  if (told) {
+    await markChecked(db, action, due, answeredAt);
+    return false;
+  }
+  const owner =
+    action.requestedByUserId ?? (await chatOwnerFor(db, { customerId: action.customerId, phone }));
+  const sent = await tell(db, action, { due, owner, manager }, notice);
+  // The tier is recorded either way, so a desk with nobody on it is not looked at every tick.
+  await markChecked(db, action, due, answeredAt);
+  if (sent === 0)
+    console.warn(`action check ${action.id} (${due}): nobody to tell, will not ask again`);
+  return sent > 0;
+}
+
+/** Tells the owner (tier 1) or the manager (tier 2) by the rights that fit the ask; returns how many. */
+async function tell(
+  db: Database,
+  action: typeof customerActions.$inferSelect,
+  who: { due: 'owner' | 'manager'; owner: string | null; manager: string | null },
+  notice: Notice,
+): Promise<number> {
+  const capability = capabilityOf(action);
+  // A UPI ID to check is money work: whoever may record payments, not the chat's owner or a project manager.
+  if (action.type === 'payout') return notifyHolders(db, capability, notice);
+  if (who.due === 'owner')
+    return who.owner
+      ? notifyCover(db, who.owner, capability, notice)
+      : notifyHolders(db, capability, notice);
+  if (who.manager) return notifyCover(db, who.manager, capability, notice);
+  // No project (a pin waiting for its home, a call-back on a lead): the customer desk, not
+  // everyone who manages projects.
+  return notifyStaffHolders(
+    db,
+    action.type === 'visit_pick' ? capability : 'service.manage',
+    notice,
+  );
+}
+
+/** Remembers the tier this answer was last checked at (without moving its updated time). */
+async function markChecked(
+  db: Database,
+  action: typeof customerActions.$inferSelect,
+  tier: 'owner' | 'manager',
+  answeredAt: Date,
+) {
+  await db
+    .update(customerActions)
+    .set({
+      payload: sql`${customerActions.payload} || jsonb_build_object('checkedTier', ${tier}::text, 'checkedFor', ${answeredAt.toISOString()}::text)`,
+      updatedAt: sql`${customerActions.updatedAt}`,
+    })
+    .where(and(eq(customerActions.id, action.id), eq(customerActions.status, action.status)));
+}

@@ -10,7 +10,7 @@ import {
 import { paymentReminderRound } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { signPayToken } from '@oneohm/shared/pay-token';
-import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
 
 /** What signs a reminder's Pay now link, and for how long it works. */
 export interface PayLinkSettings {
@@ -50,6 +50,11 @@ export async function queuePaymentReminders(
         inArray(paymentMilestones.status, ['due', 'partly_paid']),
         isNotNull(paymentMilestones.dueAt),
         lte(paymentMilestones.dueAt, new Date()),
+        // The customer sent proof of payment: no reminder until finance records it, or 2 days.
+        or(
+          isNull(paymentMilestones.remindersPausedUntil),
+          lte(paymentMilestones.remindersPausedUntil, new Date()),
+        ),
       ),
     );
   if (due.length === 0) return 0;
@@ -81,6 +86,7 @@ export async function queuePaymentReminders(
         amount: formatInr(outstanding),
         milestone: row.label,
         milestoneId: row.id,
+        paidPayload: `paidother:${row.id}`,
         project: row.projectCode,
         payToken: signPayToken(payLinks.secret, {
           milestoneId: row.id,

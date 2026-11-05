@@ -1,4 +1,5 @@
 import { STEP_MESSAGE_TEMPLATES } from './customer-steps';
+import { SEND_MESSAGE_TEMPLATES } from './send-templates';
 
 /**
  * Business-initiated WhatsApp messages use templates approved in Meta's WhatsApp
@@ -20,6 +21,13 @@ export interface MessageTemplateDefault {
     readonly quickReplies?: readonly string[];
     /** The payload field holding the URL button's suffix. */
     readonly urlButton?: string;
+    /**
+     * Quick replies placed before the URL button in a NEWER version of the template. They send only
+     * while the template's own "quick replies approved" switch is on, so the older version (the link
+     * button alone) keeps working until the owner submits and approves the new one. A message
+     * queued without the payload still sends.
+     */
+    readonly optionalQuickReplies?: readonly string[];
   };
 }
 
@@ -68,7 +76,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_reminder',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project'],
-    extras: { urlButton: 'payToken' },
+    // The newer version adds [I paid another way] before [Pay now]; its own switch turns it on.
+    extras: { optionalQuickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, {{2}} for {{3}} on project {{4}} is due. Please pay at your convenience. If you have already paid, please ignore this message.',
   },
@@ -76,7 +85,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'payment_link',
     audience: 'customer',
     fields: ['customer', 'amount', 'milestone', 'project', 'link'],
-    extras: { urlButton: 'payToken' },
+    // The newer version adds [I paid another way] before [Pay now]; its own switch turns it on.
+    extras: { optionalQuickReplies: ['paidPayload'], urlButton: 'payToken' },
     preview:
       'Hello {{1}}, please pay {{2}} for {{3}} on project {{4}}. Pay securely here: {{5}} Reply here if you need help.',
   },
@@ -115,6 +125,13 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
       'Hello {{1}}, please send your {{2}} for project {{3}}. Open the OneOhm app, go to Documents and tap Send.',
   },
   {
+    key: 'paper_request',
+    audience: 'customer',
+    fields: ['customer', 'document', 'home'],
+    preview:
+      'Hello {{1}}, please send your {{2}} for your solar at {{3}}. Reply here with a clear photo or PDF. You can also send it from the OneOhm app.',
+  },
+  {
     key: 'referral_reward',
     audience: 'customer',
     fields: ['customer', 'friend', 'amount', 'status'],
@@ -138,10 +155,12 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
     key: 'stage_rating_request',
     audience: 'customer',
     fields: ['customer', 'stage', 'project'],
+    extras: { optionalQuickReplies: ['ratePayload'] },
     preview:
       'Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Please rate it in the OneOhm app.',
   },
   ...STEP_MESSAGE_TEMPLATES,
+  ...SEND_MESSAGE_TEMPLATES,
   {
     // A team member writes after WhatsApp's 24-hour window closed; their words go in {{3}}.
     key: 'chat_follow_up',

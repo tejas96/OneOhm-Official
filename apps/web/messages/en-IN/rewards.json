@@ -13,6 +13,8 @@
     },
     "missedTitle": "Missed this month",
     "missedNone": "Nothing missed this month. Well done.",
+    "missedNoneJudged": "Nothing judged yet this month.",
+    "ratesNote": "Rates count work from {date}, when the fair points rules started.",
     "historyTitle": "All points · {total} in total",
     "historyEmpty": "No points yet. Finish a task on time to earn your first.",
     "missed": "Missed",

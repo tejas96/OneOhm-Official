@@ -2,6 +2,7 @@ import { clearOldJobRuns, type Database } from '@oneohm/database';
 import type { JobName } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { openMaintenanceVisits } from './after-sales';
+import { offerAmcRenewals } from './amc-renewals';
 import { queueApprovalEscalations } from './approval-escalations';
 import { queueCashReminders } from './cash-reminders';
 import { queueEscalations } from './escalations';
@@ -21,6 +22,7 @@ export type WorkerJob = Exclude<
   | 'incentive_sweep'
   | 'payout_sync'
   | 'onboarding_nudges'
+  | 'file_questions'
   | 'sales_checks'
   | 'whatsapp_heartbeat'
 >;
@@ -39,7 +41,8 @@ export function jobRunners(
     follow_up_reminders: () => queueFollowUpReminders(db, today()),
     escalations: () => queueEscalations(db, today()),
     approval_escalations: () => queueApprovalEscalations(db, timeZone),
-    maintenance_visits: () => openMaintenanceVisits(db, today()),
+    maintenance_visits: async () =>
+      (await openMaintenanceVisits(db, today())) + (await offerAmcRenewals(db, today())),
     cash_reminders: () => queueCashReminders(db, today()),
     location_cleanup: () => clearOldLocations(db, today()),
     service_sla: () => queueSlaAlerts(db, new Date(), timeZone),

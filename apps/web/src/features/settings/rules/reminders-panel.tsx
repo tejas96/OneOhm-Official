@@ -2,7 +2,7 @@
 
 import type { ReminderTimingRecord } from '@oneohm/api-contracts';
 import { Field, Input, Switch } from '@oneohm/design-system/web';
-import { addDays, todayIn } from '@oneohm/shared';
+import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
@@ -11,7 +11,7 @@ import { SettingsSection } from '../settings-section';
 import { SaveBar } from './save-bar';
 import { RULE_KEYS, useRuleSettings } from './use-rule-settings';
 
-type DayField = 'paymentGraceDays' | 'paymentRepeatDays' | 'followUpLeadDays';
+type DayField = 'paymentGraceDays' | 'paymentRepeatDays' | 'followUpLeadDays' | 'subsidyChaseDays';
 type TimeField = 'staffDigestTime' | 'ownerSummaryTime';
 
 /** When reminders and summaries go out (PRD 7.2); the worker reads these on each run. */
@@ -94,6 +94,34 @@ export function RemindersPanel() {
             remind: day(3 - draft.followUpLeadDays),
             time: draft.staffDigestTime,
           })}
+        </p>
+      </SettingsSection>
+      <SettingsSection title={t('subsidy.title')} description={t('subsidy.description')}>
+        {days('subsidyChaseDays', 'subsidy.chase', 'subsidy.chaseHint')}
+      </SettingsSection>
+      <SettingsSection title={t('selfSurvey.title')} description={t('selfSurvey.description')}>
+        <Switch
+          checked={draft.selfSurveyOffer}
+          onCheckedChange={(value) => patch({ selfSurveyOffer: value })}
+          label={t('selfSurvey.offer')}
+        />
+        <Field
+          label={t('selfSurvey.amount')}
+          hint={t('selfSurvey.amountHint')}
+          error={errors.selfSurveyPaise}
+        >
+          <div className="sm:max-w-40">
+            <NumberInput
+              unit="paise"
+              value={draft.selfSurveyPaise}
+              onValueChange={(value) => patch({ selfSurveyPaise: value ?? 0 })}
+            />
+          </div>
+        </Field>
+        <p className="rounded-md bg-sunken px-4 py-3 type-body-sm text-ink-muted">
+          {draft.selfSurveyOffer
+            ? t('selfSurvey.preview', { amount: formatInr(draft.selfSurveyPaise) })
+            : t('selfSurvey.off')}
         </p>
       </SettingsSection>
       <SettingsSection title={t('whatsapp.title')} description={t('whatsapp.description')}>

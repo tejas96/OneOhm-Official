@@ -84,6 +84,8 @@ export const customerProjectSchema = z.object({
   subsidy: z.object({
     amountPaise: paiseSchema,
     status: z.enum(['not_applicable', 'pending', 'applied', 'inspected', 'released']),
+    /** What the customer told us about a released subsidy: it reached their bank, or it has not yet. */
+    note: z.enum(['received', 'checking']).nullable().optional(),
     /** Expected state support for a low-income household, on top (PRD 3.5). */
     stateSupportPaise: paiseSchema.optional(),
   }),

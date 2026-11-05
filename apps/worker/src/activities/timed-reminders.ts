@@ -9,6 +9,7 @@ import { todayIn } from '@oneohm/shared';
 import { queueChatReminders } from './chat-reminders';
 import { queueTimedFollowUps } from './follow-up-reminders';
 import type { WorkerJob } from './job-runners';
+import { queuePaperReminders } from './paper-reminders';
 
 /** Jobs that go out at a time set in Settings → Reminders, once a day (PRD 7.2). */
 const TIMED: readonly (readonly [WorkerJob, keyof ReminderTiming])[] = [
@@ -64,6 +65,12 @@ export async function runTimedReminders(
   // WhatsApp customers waiting for a person's answer (each alert goes once).
   try {
     ran += await queueChatReminders(db, new Date(), timeZone);
+  } catch (error) {
+    failure ??= error;
+  }
+  // Papers asked for and not sent, and files left to sort (each goes once per ask or file).
+  try {
+    ran += await queuePaperReminders(db, new Date(), timeZone);
   } catch (error) {
     failure ??= error;
   }

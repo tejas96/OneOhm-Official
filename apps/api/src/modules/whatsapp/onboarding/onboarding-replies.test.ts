@@ -51,11 +51,14 @@ describe('a Back row on every list after the first question (live review C14)', 
         targetWp: 1000,
       })),
     };
-    for (const step of ['city', 'bill'] as const) {
-      const offered = ids(question(step, { settings: full, profileName: null }));
-      expect(offered.length, step).toBe(10);
-      expect(offered).toContain(`ob:${step}:back`);
-    }
+    // The city list also holds the 📍 row, so at the most cities Back is the row left out.
+    const bill = ids(question('bill', { settings: full, profileName: null }));
+    expect(bill).toHaveLength(10);
+    expect(bill).toContain('ob:bill:back');
+    const city = ids(question('city', { settings: full, profileName: null }));
+    expect(city).toHaveLength(10);
+    expect(city).toContain('ob:city:pin');
+    expect(city.at(-1)).toBe('ob:person');
     // A list saved before the limits were cut still fits: Back is left out, not the rows.
     const old = { ...full, serviceCities: [...full.serviceCities, 'City 7'] };
     const offered = ids(question('city', { settings: old, profileName: null }));
@@ -90,10 +93,10 @@ describe('names and Marathi wording (live review C15)', () => {
   });
 
   it('uses respectful forms for the person who will call', () => {
-    expect(ONBOARD_LISTS.mr.willCall('Priya', false)).toBe(
+    expect(ONBOARD_LISTS.mr.willCall('Priya', 'today')).toBe(
       'धन्यवाद. आज Priya यांच्याकडून तुम्हाला कॉल येईल.',
     );
-    expect(ONBOARD_LISTS.mr.willCall(null, true)).toBe(
+    expect(ONBOARD_LISTS.mr.willCall(null, 'tomorrow')).toBe(
       'धन्यवाद. उद्या सकाळी आमच्या टीमकडून तुम्हाला कॉल येईल.',
     );
     expect(ONBOARD_LISTS.mr.askPhoto).not.toContain('नवीन');

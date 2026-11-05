@@ -31,6 +31,7 @@ export function useRuleSummary() {
       item.categories.map((category) => folderLabel(category)).join(', '),
       ...(when.length > 0 ? when : [t('always')]),
       ...(item.fromCustomer && canAskCustomerFor(item.categories) ? [t('fromCustomer')] : []),
+      ...(item.maxAgeDays ? [t('maxAge', { days: item.maxAgeDays })] : []),
     ].join(' · ');
   };
 }

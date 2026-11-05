@@ -3,14 +3,13 @@ import {
   customers,
   type Database,
   type DatabaseExecutor,
-  fallBackToSms,
   GENERIC_WORDS,
   messageTemplates,
   outbox,
-  tellChatFileFailed,
+  tellChatSendFailed,
   waConversations,
 } from '@oneohm/database';
-import { chatWindowOpen, isNotOnWhatsApp } from '@oneohm/domain';
+import { chatWindowOpen, isNotOnWhatsApp, templateIsOn } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import {
@@ -29,6 +28,8 @@ import type {
 } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
+import { queueFlowFallback } from './flow-fallback';
+import { fallBackNote } from './not-on-whatsapp';
 import { deliverPush } from './push-delivery';
 import { alertTokenExpired, CHAT_WINDOW_CLOSED, smsCanStandIn } from './send-checks';
 
@@ -121,9 +122,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     if (!fields) {
       return { verdict: 'failed', note: `No WhatsApp template is set up for "${row.template}".` };
     }
-    if (config && !config.active) {
+    if (!templateIsOn(row.template, config))
       return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
-    }
     const unwanted = await optOutNote(row.recipient);
     if (unwanted) return { verdict: 'skipped', note: unwanted };
     try {
@@ -135,7 +135,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
           fields,
           names,
           row.payload,
-          config?.extrasApproved ?? false,
+          config?.extrasApproved,
+          config?.quickRepliesApproved,
         ),
       };
     } catch (error) {
@@ -144,11 +145,12 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
     }
   };
 
-  /** A file in a chat that never arrived tells the chat's people; a bad token tells admins. */
+  /** A message in a chat that never arrived tells the chat's people; a bad token tells admins. */
   const failWithAlerts = (id: string, reason: string, tokenInvalid = false) =>
     db.transaction(async (tx) => {
       await finish(id, 'failed', reason, null, tx);
-      await tellChatFileFailed(tx, id);
+      await tellChatSendFailed(tx, id);
+      await queueFlowFallback(tx, id, reason);
       if (tokenInvalid) await alertTokenExpired(tx);
     });
 
@@ -171,7 +173,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return 'skipped';
       }
       await finish(row.id, 'sent', null, result.providerId);
-      // The history is a nicety: it must never turn a sent message into a retry.
       if (row.channel === 'whatsapp') await logTemplateInChat(db, row).catch(() => undefined);
       return 'sent';
     } catch (error) {
@@ -180,8 +181,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         // Not on WhatsApp: customer news goes by SMS (later ones SMS first); staff ones fail.
         const viaSms = row.channel === 'whatsapp' && smsCanStandIn(row.template);
         if (viaSms && isNotOnWhatsApp(error.code)) {
-          await fallBackToSms(db, row.id, wordsFor);
-          await finish(row.id, 'skipped', 'Not on WhatsApp: sent by SMS instead.');
+          await finish(row.id, 'skipped', await fallBackNote(db, row.id, wordsFor));
           return 'skipped';
         }
         await failWithAlerts(row.id, reason, error.tokenInvalid);
@@ -218,7 +218,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         }
         return send(row, () => sms.send(row.recipient, text));
       }
-      // A chat reply (the customer wrote first), so no template and no opt-in check.
       if (row.template.startsWith('session:')) {
         if (!(await windowOpenFor(row.recipient))) {
           await failWithAlerts(id, CHAT_WINDOW_CLOSED);
