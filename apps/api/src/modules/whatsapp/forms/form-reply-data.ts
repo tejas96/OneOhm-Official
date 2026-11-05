@@ -39,6 +39,15 @@ const text = (value: unknown): string | null =>
 const scalar = (value: unknown): string | null =>
   typeof value === 'number' ? String(value) : text(value)?.trim() || null;
 
+/** A value's shape for the log: its type, and for a list the first item's type or keys. */
+function shapeOf(value: unknown): string {
+  if (!Array.isArray(value)) return typeof value;
+  const first: unknown = value[0];
+  const inner =
+    first && typeof first === 'object' ? `{${Object.keys(first).join(',')}}` : typeof first;
+  return `list[${value.length}] of ${inner}`;
+}
+
 /** A picker's value: a list, or the same list sent as a JSON string. */
 function listOf(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
@@ -52,6 +61,9 @@ function listOf(value: unknown): unknown[] {
 }
 
 function readFile(raw: unknown): FormFile | null {
+  // Some replies list plain media ids.
+  if (typeof raw === 'string' && raw.length > 0)
+    return { id: raw, fileName: null, mimeType: null, sha256: null };
   if (!raw || typeof raw !== 'object') return null;
   const entry = raw as Record<string, unknown>;
   const id = text(entry.id) ?? text(entry.media_id);
@@ -98,9 +110,7 @@ export function readForm(responseJson: unknown): IncomingForm {
     amount: scalar(data.amount),
     date: scalar(data.date),
     // Name and shape only (never values), so an unreadable reply can be diagnosed from the log.
-    keys: Object.entries(data).map(
-      ([key, value]) => `${key}:${Array.isArray(value) ? 'list' : typeof value}`,
-    ),
+    keys: Object.entries(data).map(([key, value]) => `${key}:${shapeOf(value)}`),
   };
 }
 

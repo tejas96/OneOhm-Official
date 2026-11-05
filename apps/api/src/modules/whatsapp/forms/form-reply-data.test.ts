@@ -17,7 +17,10 @@ describe('reading a form reply (nfm_reply response_json)', () => {
       { id: 'm1', fileName: 'a.jpg', mimeType: 'image/jpeg', sha256: 'h-m1' },
       { id: 'm2', fileName: 'b.jpg', mimeType: 'image/jpeg', sha256: 'h-m2' },
     ]);
-    expect(form.keys).toEqual(['flow_token:string', 'photos:list']);
+    expect(form.keys).toEqual([
+      'flow_token:string',
+      'photos:list[2] of {id,file_name,mime_type,sha256}',
+    ]);
   });
 
   it('reads photos sent as a JSON string, and media_id instead of id', () => {
@@ -29,6 +32,11 @@ describe('reading a form reply (nfm_reply response_json)', () => {
     );
     expect(form.files.map((one) => one.id)).toEqual(['m9']);
     expect(form.keys).toEqual(['flow_token:string', 'photos:string']);
+  });
+
+  it('reads a list of plain media ids', () => {
+    const form = readForm(reply({ flow_token: 'tok', photos: ['m7', 'm8'] }));
+    expect(form.files.map((one) => one.id)).toEqual(['m7', 'm8']);
   });
 
   it('reads the PDFs of the second screen alone', () => {
@@ -45,7 +53,7 @@ describe('reading a form reply (nfm_reply response_json)', () => {
   it('keeps at most four files, skips entries without an id, and survives bad JSON', () => {
     const many = Array.from({ length: 7 }, (_, n) => ({ id: `m${n}` }));
     expect(readForm(reply({ flow_token: 't', photos: many })).files).toHaveLength(4);
-    expect(readForm(reply({ photos: [{ file_name: 'x' }, null, 'x'] })).files).toEqual([]);
+    expect(readForm(reply({ photos: [{ file_name: 'x' }, null, ''] })).files).toEqual([]);
     expect(readForm('not json')).toEqual({
       token: null,
       files: [],
