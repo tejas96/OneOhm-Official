@@ -101,17 +101,19 @@ async function projectOf(db: DatabaseExecutor, projectId: string) {
 }
 
 /**
- * A customer-visible step now waits on someone outside OneOhm (PRD 5.2 "delay notification
- * with the reason"): the customer hears why, once per wait, by the usual route.
+ * A customer-visible step that may message the customer now waits on someone outside OneOhm (PRD
+ * 5.2 "delay notification with the reason"): the customer hears why, once per wait, by the usual route.
  */
 export async function tellCustomerWaiting(
   db: DatabaseExecutor,
   task: Pick<typeof projectTasks.$inferSelect, 'id' | 'title' | 'projectId' | 'templateKey'> & {
     readonly customerVisible: boolean;
+    /** The step may message the customer (Settings → Task templates), the PRD rule (redesign §21a). */
+    readonly notifyCustomer: boolean;
   },
   party: WaitingParty,
 ): Promise<void> {
-  if (!task.customerVisible || !isOutsideParty(party)) return;
+  if (!task.customerVisible || !task.notifyCustomer || !isOutsideParty(party)) return;
   const project = await projectOf(db, task.projectId);
   if (!project) return;
   const template = await templateOf(db, task.templateKey);
