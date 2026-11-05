@@ -329,6 +329,80 @@ header only goes out once "extras approved" is switched on for this template in 
 All six start **switched off** (migration 0078). Switch each on in **Settings → WhatsApp messages** after
 Meta approves en, mr and hi, and set the Marathi and Hindi names, as for `paper_request`.
 
+### 31. `visit_pick` — **New** (visits, redesign §8)
+Fields: customer, home, work
+
+Sent when the team asks the customer to pick a day (outside the 24-hour window) and when an AMC visit is due.
+`work` is the customer's words for the visit in their language: site survey, installation, DISCOM inspection,
+net meter fitting, free AMC visit, service visit.
+
+> en: Hello {{1}}, when can our team visit {{2}} for the {{3}}? Tap the button below to pick a day.
+
+> mr: नमस्कार {{1}}, आमची टीम {{2}} येथे {{3}} साठी कधी येऊ शकते? दिवस निवडण्यासाठी खालील बटण दाबा.
+
+> hi: नमस्ते {{1}}, हमारी टीम {{2}} पर {{3}} के लिए कब आ सकती है? दिन चुनने के लिए नीचे का बटन दबाएँ।
+
+Examples: Ramesh Patil · Sangli · installation
+
+**Buttons:** one quick reply. en `Pick a day`, mr `दिवस निवडा`, hi `दिन चुनें`. Payload `vask:<ask id>`; a tap opens
+the chat window and the app answers with the list of free days and "Talk to {name}".
+
+### 32. `visit_booked` — **New**
+Fields: customer, when, staff
+
+Sent when the team confirms or moves a visit outside the 24-hour window. `when` is a day and slot in the
+customer's language, for example "Thu 6 Nov, morning".
+
+> en: Hello {{1}}, your visit is booked ✅ {{2}}. {{3}} will call before coming.
+
+> mr: नमस्कार {{1}}, तुमची भेट ठरली ✅ {{2}}. येण्यापूर्वी {{3}} तुम्हाला फोन करतील.
+
+> hi: नमस्ते {{1}}, आपकी विज़िट तय हो गई ✅ {{2}}। आने से पहले {{3}} आपको फ़ोन करेंगे।
+
+Examples: Ramesh Patil · Thu 6 Nov, morning · Ravi
+
+**Buttons:** two quick replies. en `Okay`, `Change day`; mr `ठीक आहे`, `दिवस बदला`; hi `ठीक है`, `दिन बदलें`.
+Payloads `vok:<visit id>` and `vchg:<visit id>`. Until this is switched on, a service visit keeps its older
+`service_visit_booked` message.
+
+### 33. `visit_reminder` — **New**
+Fields: customer, home, when, work
+
+The working day before the visit (Saturday for a Monday visit), in working hours. `when` is "tomorrow morning"
+(or "on Mon 9 Nov, morning" when the next working day is not tomorrow), in the customer's language.
+
+> en: Hello {{1}}, our team visits {{2}} {{3}} for the {{4}}. Please confirm.
+
+> mr: नमस्कार {{1}}, आमची टीम {{2}} येथे {{3}} {{4}} साठी येणार आहे. कृपया पक्के करा.
+
+> hi: नमस्ते {{1}}, हमारी टीम {{2}} पर {{3}} {{4}} के लिए आ रही है। कृपया पक्का करें।
+
+Examples: Ramesh Patil · Sangli · tomorrow morning · installation
+
+**Buttons:** two quick replies. en `Confirm`, `Change day`; mr `पक्के करा`, `दिवस बदला`; hi `पक्का करें`, `दिन बदलें`.
+Payloads `vcf:<visit id>` and `vchg:<visit id>`.
+
+### 34. `inspection_presence` — **New** (DISCOM inspection and net meter fitting)
+Fields: customer, work, home, day
+
+Sent when the team tells the customer the date the electricity board visits. `work` is DISCOM inspection or net
+meter fitting, in the customer's language. The Marathi and Hindi texts put {{3}} and {{4}} before {{2}}; if Meta
+insists on numbering in order of appearance, reorder the fields in Settings → WhatsApp messages to match.
+
+> en: Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.
+
+> mr: नमस्कार {{1}}, वीज मंडळ (DISCOM) {{3}} येथे {{4}} रोजी {{2}} करणार आहे. कृपया घरी राहा.
+
+> hi: नमस्ते {{1}}, बिजली बोर्ड (DISCOM) {{3}} पर {{4}} को {{2}} करेगा। कृपया घर पर रहें।
+
+Examples: Ramesh Patil · DISCOM inspection · Sangli · Thu 6 Nov
+
+**Buttons:** two quick replies. en `I'll be there`, `Change day`; mr `मी असेन`, `दिवस बदला`; hi `मैं रहूँगा`, `दिन बदलें`.
+Payloads `vcf:<visit id>` and `vchg:<visit id>`.
+
+All four are off until Meta approves **all three languages**; then switch each on, and "Meta approved the version
+with file and buttons" too, in Settings → WhatsApp messages.
+
 ## Staff templates
 
 ### 22. `staff_daily_digest` — Changed

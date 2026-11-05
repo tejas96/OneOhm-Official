@@ -9,8 +9,10 @@ import { setVisit, visitsFor, visitsOf, visitTask } from '../support/visits';
 
 // The day-before reminder, the customer's Change day, "not confirmed" and "missed" (redesign §8).
 
-const alertsOf = (kind: string) =>
-  rows<{ title: string }>('SELECT title FROM notifications WHERE kind = $1', [kind]);
+const alertsOf = async (kind: string, name = '') =>
+  (await rows<{ title: string }>('SELECT title FROM notifications WHERE kind = $1', [kind])).filter(
+    (alert) => alert.title.includes(name),
+  );
 
 /** The day before the visit day, as the worker sees it (the previous working day). */
 function reminderDay(day: string) {
@@ -39,10 +41,12 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
     await closeChat(customer.phone);
 
     // Not yet: two working days before.
-    expect(await runVisitWorker(noonOn(addDays(reminderDay(day), -1)))).toBe(0);
+    await runVisitWorker(noonOn(addDays(reminderDay(day), -1)));
+    expect(await templatesFor(customer.phone, 'visit_reminder')).toHaveLength(0);
     // Outside working hours (19:30) nothing goes.
-    expect(await runVisitWorker(eveningOn(reminderDay(day)))).toBe(0);
-    expect(await runVisitWorker(noonOn(reminderDay(day)))).toBe(1);
+    await runVisitWorker(eveningOn(reminderDay(day)));
+    expect(await templatesFor(customer.phone, 'visit_reminder')).toHaveLength(0);
+    await runVisitWorker(noonOn(reminderDay(day)));
     const [sent] = await templatesFor(customer.phone, 'visit_reminder');
     expect(sent?.payload).toMatchObject({
       home: expect.any(String),
@@ -52,7 +56,7 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
       changePayload: `vchg:${visit.id}`,
     });
     // A repeated tick says nothing twice.
-    expect(await runVisitWorker(noonOn(reminderDay(day)))).toBe(0);
+    await runVisitWorker(noonOn(reminderDay(day)));
     expect(await templatesFor(customer.phone, 'visit_reminder')).toHaveLength(1);
 
     await tap(customer.phone, `vcf:${visit.id}`);
@@ -60,7 +64,7 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
     expect((await visitsFor(customer.customerId))[0]?.customer_confirmed_at).not.toBeNull();
     // Confirmed: nothing to alert on the visit morning.
     await runVisitWorker(morningOn(day));
-    expect(await alertsOf('visit_not_confirmed')).toHaveLength(0);
+    expect(await alertsOf('visit_not_confirmed', 'Visit Remind')).toHaveLength(0);
 
     // The same visit, then Change day: the visit is released and the list comes back.
     const other = await sellProject(admin, { name: 'Visit Change Day (test)' });
@@ -78,7 +82,7 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
       [other.customer.customerId],
     );
     expect(ask).toBeDefined();
-    expect((await alertsOf('visit_change_day')).length).toBeGreaterThan(0);
+    expect((await alertsOf('visit_change_day', 'Visit Change Day')).length).toBeGreaterThan(0);
   });
 
   it('no reply by the visit morning alerts the owner once; a visit not marked done by evening is missed', async () => {
@@ -88,16 +92,14 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
     const visit = await setVisit(admin, { taskId: task, day, slot: 'morning' });
     await closeChat(sale.customer.phone);
     await runVisitWorker(noonOn(reminderDay(day)));
-    const before = (await alertsOf('visit_not_confirmed')).length;
-    expect(await runVisitWorker(morningOn(day))).toBeGreaterThanOrEqual(1);
-    expect(await alertsOf('visit_not_confirmed')).toHaveLength(before + 1);
     await runVisitWorker(morningOn(day));
-    expect(await alertsOf('visit_not_confirmed')).toHaveLength(before + 1);
+    expect(await alertsOf('visit_not_confirmed', 'Visit Missed')).toHaveLength(1);
+    await runVisitWorker(morningOn(day));
+    expect(await alertsOf('visit_not_confirmed', 'Visit Missed')).toHaveLength(1);
 
     await runVisitWorker(eveningOn(day));
     expect((await visitsFor(sale.customer.customerId))[0]?.status).toBe('missed');
-    const missed = await alertsOf('visit_missed');
-    expect(missed.some((alert) => alert.title.includes('was not marked done'))).toBe(true);
+    expect(await alertsOf('visit_missed', 'Visit Missed')).toHaveLength(1);
     // A missed visit is closed: a new day can be booked.
     const free = (await visitsOf(admin, { taskId: task })).freeDays[0] ?? '';
     const again = await setVisit(admin, { taskId: task, day: free, slot: 'morning' });

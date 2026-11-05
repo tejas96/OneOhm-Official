@@ -621,3 +621,44 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   older shape (the Pay link alone at position 0) so a live template never breaks; submit the newer version to
   Meta first, then switch on. A missing template row is off for the Send to customer templates, by one rule
   (`templateIsOn`) in both the staff preview and the worker.
+
+## 22e. Phase 3b — visits (pick a day, confirm, remind, change, DISCOM presence)
+
+- **One visit record** (`visits`, migration 0080): kind (survey, installation, inspection, net_meter, amc, service),
+  the task / lead / service request / AMC visit it belongs to, home, day, slot (morning or afternoon), crew,
+  `proposed` (the customer's pick) → `confirmed` → `done`, or `cancelled` / `missed`. One open visit per task, per
+  service request and per lead survey (partial unique indexes). A service request's own `visit_on` mirrors its open
+  visit, so ticket screens keep working and no screen shows two dates; the migration turns every booked service day
+  into a visit.
+- **Ask to pick a day** (Send to customer `ask_visit`, also the "Ask the customer to pick a day" button in the visit
+  card on a task, ticket and lead): the list of the next 9 working days the person who comes is free (Monday to
+  Saturday, not on leave, at least one of the two slots not held by another open visit of theirs) plus "Talk to
+  {name}", then [Morning] [Afternoon] (only free slots). Material readiness for an installation is **not** checked: the
+  data is not kept per project. The pick makes the visit `proposed`, the ask `received` (Staff check: Confirm), alerts the owner, and
+  answers "Thanks — we'll confirm by …". Only for tasks whose template allows customer messages; service, AMC and
+  lead surveys always.
+- **Staff steps** (visit card, `/visits`): Confirm (the proposed day), set or move a day (checked against the crew's
+  slots), Mark done, Cancel. Confirm sets the task's start date to the day (due date moves out if earlier), closes the
+  ask and tells the customer "Booked ✅ Fri 6 Nov, morning. Ravi will call before coming" with [Okay] [Change day];
+  a move says "We have moved your visit"; cancel tells the customer (chat while open, always the app inbox). A visit
+  the team sets without a pick is confirmed straight away. A survey on a lead moves an early lead to
+  `survey_scheduled` and sets the day as its next action.
+- **Day-before reminder** (worker, working hours): the working day before (Saturday for Monday), once, only if the
+  booking is older than that day, by the `visit_reminder` template [Confirm] [Change day]. Confirm is logged
+  (`customer_confirmed_at`). Change day cancels the visit, opens a new ask, answers with the list again ("No problem.")
+  and alerts the owner. No confirmation by the visit morning alerts the owner once.
+- **DISCOM inspection and net meter** (`presence`): staff set the date in the visit card ("Tell the customer the DISCOM
+  date") — the customer gets [I'll be there] [Change day]. Change day does not reopen a pick (the board chose the
+  day): the person who liaises (task assignee, else the project manager) is alerted that the customer cannot be there;
+  no answer in 1 working day alerts too.
+- **Service and AMC**: the service desk's visit day goes through the record (the first free slot of the person
+  assigned; the desk chooses days, not times) and the same messages; the older `service_visit_booked` message still
+  goes outside the window until `visit_booked` is switched on. An AMC visit due (a week ahead) asks "Your free AMC visit
+  for Sangli is due. Pick a day:" by `visit_pick` once that template is on, otherwise the older notice. Unanswered asks
+  are repeated at 2 days and reach the asker at 4 days like the other asks; a picked day nobody confirms reaches the
+  owner at 1 working day, the manager at 2.
+- **Loop closing**: every change writes the project log or lead timeline and an audit row (`visit.*`); a visit not
+  marked done by 6:30 pm of its day is `missed` and the owner is told, unless its task is completed or its request
+  resolved (then it is `done`); "Asked from the customer" shows the ask ("To confirm"); Home lists the visits of the
+  next three days from the record and an unanswered ask ([Pick a day]); [Visit details] lists the next 30 days.
+

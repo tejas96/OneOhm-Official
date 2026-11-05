@@ -7,11 +7,10 @@ import {
   properties,
   quotations,
   serviceRequests,
-  visits as visitRows,
 } from '@oneohm/database';
-import { addDays } from '@oneohm/shared';
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
+import { upcomingVisits } from './upcoming-visits';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
 export type PendingItem =
@@ -20,6 +19,8 @@ export type PendingItem =
   /** A location the team asked for ([📍 Send location]) and a call time they asked for. */
   | { kind: 'location'; requestId: string; home: string | null }
   | { kind: 'callback'; requestId: string }
+  /** A day the team asked the customer to pick for a visit ([Pick a day]). */
+  | { kind: 'visit_ask'; requestId: string; home: string | null }
   | { kind: 'visit'; requestId: string; on: string; home: string | null }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
   | { kind: 'quote'; quotationId: string };
@@ -30,13 +31,11 @@ const ORDER: readonly PendingItem['kind'][] = [
   'pay',
   'location',
   'callback',
+  'visit_ask',
   'visit',
   'problem',
   'quote',
 ];
-
-/** Visits this many days ahead show on Home. */
-export const VISIT_DAYS = 3;
 
 /** The items in Home's order; within a kind, as they came. */
 export function orderPending(items: readonly PendingItem[]): PendingItem[] {
@@ -86,11 +85,13 @@ export async function pendingForCustomer(
           ]
         : [];
     }),
-    ...asks.map((row) =>
-      row.type === 'location'
-        ? { kind: 'location' as const, requestId: row.id, home: homeOf(row.label, row.city) }
-        : { kind: 'callback' as const, requestId: row.id },
-    ),
+    ...asks.map((row) => {
+      if (row.type === 'location')
+        return { kind: 'location' as const, requestId: row.id, home: homeOf(row.label, row.city) };
+      if (row.type === 'visit_pick')
+        return { kind: 'visit_ask' as const, requestId: row.id, home: homeOf(row.label, row.city) };
+      return { kind: 'callback' as const, requestId: row.id };
+    }),
     ...upcoming.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,
@@ -137,7 +138,7 @@ function openPapers(db: DatabaseExecutor, customerId: string) {
     .orderBy(asc(customerActions.createdAt));
 }
 
-/** Location and call-time asks the team made that still wait for the customer. */
+/** Location, call-time and visit-day asks that that still wait for the customer. */
 function openAsks(db: DatabaseExecutor, customerId: string) {
   return db
     .select({
@@ -151,10 +152,11 @@ function openAsks(db: DatabaseExecutor, customerId: string) {
     .where(
       and(
         eq(customerActions.customerId, customerId),
-        inArray(customerActions.type, ['location', 'callback']),
+        inArray(customerActions.type, ['location', 'callback', 'visit_pick']),
         eq(customerActions.status, 'open'),
-        // A pin waiting for its home is the customer's own move, not an ask of ours.
-        isNotNull(customerActions.requestedByUserId),
+        // A pin waiting for its home is the customer's own move, not an ask of ours (an AMC visit
+        // ask is made by the system).
+        or(isNotNull(customerActions.requestedByUserId), eq(customerActions.type, 'visit_pick')),
       ),
     )
     .orderBy(asc(customerActions.createdAt));
@@ -181,35 +183,6 @@ function dueInstalments(db: DatabaseExecutor, customerId: string) {
       ),
     )
     .orderBy(asc(projects.createdAt), asc(paymentMilestones.position));
-}
-
-/** The confirmed visits in the next 3 days (any kind), from the visit record. */
-export function upcomingVisits(db: DatabaseExecutor, customerId: string, today: string) {
-  return db
-    .select({
-      id: visitRows.id,
-      day: visitRows.day,
-      slot: visitRows.slot,
-      kind: visitRows.kind,
-      serviceRequestId: visitRows.serviceRequestId,
-      label: properties.label,
-      city: properties.city,
-    })
-    .from(visitRows)
-    .leftJoin(projects, eq(projects.id, visitRows.projectId))
-    .leftJoin(
-      properties,
-      eq(properties.id, sql`coalesce(${visitRows.propertyId}, ${projects.propertyId})`),
-    )
-    .where(
-      and(
-        eq(visitRows.customerId, customerId),
-        eq(visitRows.status, 'confirmed'),
-        gte(visitRows.day, today),
-        lte(visitRows.day, addDays(today, VISIT_DAYS)),
-      ),
-    )
-    .orderBy(asc(visitRows.day), asc(visitRows.slot));
 }
 
 /** Problems not yet resolved, newest first, with any technician visit day. */

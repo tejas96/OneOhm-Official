@@ -8,6 +8,7 @@ import {
   projectActivities,
   projectTasks,
   queueCustomerMessage,
+  serviceRequests,
   visits,
 } from '@oneohm/database';
 import {
@@ -24,12 +25,18 @@ import {
   workingMinutesBetween,
 } from '@oneohm/domain';
 import { titleCaseName, todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 const PER_TICK = 200;
 const WORKING_DAY_MIN = 9 * 60;
 
-type Row = typeof visits.$inferSelect & { customer: string; phone: string; notify: boolean | null };
+type Row = typeof visits.$inferSelect & {
+  customer: string;
+  phone: string;
+  notify: boolean | null;
+  /** The work itself is finished (task completed, request resolved). */
+  finished: boolean;
+};
 
 const select = (db: Database) =>
   db
@@ -38,10 +45,12 @@ const select = (db: Database) =>
       customer: customers.name,
       phone: customers.phoneE164,
       notify: projectTasks.notifyCustomer,
+      finished: sql<boolean>`coalesce(${projectTasks.status} = 'completed', ${serviceRequests.status} = 'resolved', false)`,
     })
     .from(visits)
     .innerJoin(customers, eq(customers.id, visits.customerId))
-    .leftJoin(projectTasks, eq(projectTasks.id, visits.taskId));
+    .leftJoin(projectTasks, eq(projectTasks.id, visits.taskId))
+    .leftJoin(serviceRequests, eq(serviceRequests.id, visits.serviceRequestId));
 
 const flat = (
   rows: {
@@ -49,14 +58,9 @@ const flat = (
     customer: string;
     phone: string;
     notify: boolean | null;
+    finished: boolean;
   }[],
-): Row[] =>
-  rows.map((row) => ({
-    ...row.visit,
-    customer: row.customer,
-    phone: row.phone,
-    notify: row.notify,
-  }));
+): Row[] => rows.map(({ visit, ...rest }) => ({ ...visit, ...rest }));
 
 const language = async (db: Database, phone: string): Promise<VisitLanguage> => {
   const code = (await languageOf(db, phone)).slice(0, 2);
@@ -85,7 +89,8 @@ export async function queueVisitReminders(
   );
   let done = 0;
   for (const row of open) {
-    if (visitMissed(row.day, now, timeZone)) done += (await markMissed(db, row, now)) ? 1 : 0;
+    if (row.status === 'confirmed' && row.finished) done += (await markDone(db, row, now)) ? 1 : 0;
+    else if (visitMissed(row.day, now, timeZone)) done += (await markMissed(db, row, now)) ? 1 : 0;
     else if (row.status === 'confirmed') {
       done += (await remind(db, row, now, timeZone)) ? 1 : 0;
       done += (await alertUnconfirmed(db, row, now, timeZone)) ? 1 : 0;
@@ -168,6 +173,16 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
     key: `visit_unconfirmed:${row.id}`,
   });
   return true;
+}
+
+/** The task was completed or the request resolved: the visit happened, whoever did not tick it. */
+async function markDone(db: Database, row: Row, now: Date): Promise<boolean> {
+  const marked = await db
+    .update(visits)
+    .set({ status: 'done', doneAt: now, updatedAt: now })
+    .where(and(eq(visits.id, row.id), eq(visits.status, 'confirmed')))
+    .returning({ id: visits.id });
+  return marked.length > 0;
 }
 
 /** Not marked done by the end of its day: missed; the owner decides (done late, or a new day). */

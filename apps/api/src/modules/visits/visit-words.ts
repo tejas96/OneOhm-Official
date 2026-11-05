@@ -21,6 +21,8 @@ const EN_VISIT = {
     again: (home: string, work: string) =>
       `No problem. When can our team visit *${home}* for the *${work}*?`,
     amc: (home: string) => `Your free AMC visit for *${home}* is due. Pick a day:`,
+    homeLine: (home: string | null) =>
+      `Please pick a day for our visit${home ? ` to your ${home} home` : ''}.`,
     list: 'Pick a day',
     section: 'Days we are free',
     rowLine: 'Our team can come this day',
@@ -68,6 +70,7 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
     ask: (home, work) => `आमची टीम *${home}* येथे *${work}* साठी कधी येऊ शकते?`,
     again: (home, work) => `ठीक आहे. आमची टीम *${home}* येथे *${work}* साठी कधी येऊ शकते?`,
     amc: (home) => `*${home}* साठी तुमची मोफत AMC भेट आता देय आहे. दिवस निवडा:`,
+    homeLine: (home) => `कृपया आमच्या भेटीसाठी${home ? ` तुमच्या ${home} घरी` : ''} दिवस निवडा.`,
     list: 'दिवस निवडा',
     section: 'आम्ही मोकळे असलेले दिवस',
     rowLine: 'आमची टीम या दिवशी येऊ शकते',
@@ -112,6 +115,7 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
     ask: (home, work) => `हमारी टीम *${home}* पर *${work}* के लिए कब आ सकती है?`,
     again: (home, work) => `ठीक है। हमारी टीम *${home}* पर *${work}* के लिए कब आ सकती है?`,
     amc: (home) => `*${home}* के लिए आपकी मुफ़्त AMC विज़िट का समय हो गया है। दिन चुनें:`,
+    homeLine: (home) => `कृपया हमारी विज़िट${home ? ` आपके ${home} घर पर` : ''} के लिए दिन चुनें।`,
     list: 'दिन चुनें',
     section: 'हमारे खाली दिन',
     rowLine: 'हमारी टीम इस दिन आ सकती है',

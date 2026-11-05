@@ -80,6 +80,19 @@ export async function saveVisit(
   }
   if (!saved) throw new Error('The visit was not saved.');
   const row = saved;
+  await followVisit(tx, target, row, input, moved);
+  return { row, moved };
+}
+
+/** What a saved visit changes around it: the task, the service request, the lead, the waiting ask and the log. */
+async function followVisit(
+  tx: DatabaseExecutor,
+  target: VisitTarget,
+  row: VisitRow,
+  input: SaveVisit,
+  moved: boolean,
+): Promise<void> {
+  const confirmed = input.status === 'confirmed';
   const when = say(input.day, input.slot);
   if (confirmed) {
     if (row.taskId) await followTaskDates(tx, row.taskId, input.day);
@@ -98,7 +111,6 @@ export async function saveVisit(
       : `${target.title}: the customer picked ${when} (waiting for the team to confirm)`,
     { day: input.day, slot: input.slot, by: input.by },
   );
-  return { row, moved };
 }
 
 /** Cancelled: the service request's day is cleared, the waiting asks are cancelled. */

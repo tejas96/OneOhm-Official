@@ -32,7 +32,9 @@ export const visitsFor = (customerId: string) =>
     customer_cannot_at: Date | null;
     reminder_sent_at: Date | null;
     crew_user_ids: string[];
-  }>('SELECT * FROM visits WHERE customer_id = $1 ORDER BY created_at', [customerId]);
+  }>('SELECT *, day::text AS day FROM visits WHERE customer_id = $1 ORDER BY created_at', [
+    customerId,
+  ]);
 
 export const visitsOf = (admin: Session, scope: Record<string, string>) =>
   admin.get<VisitsOf>(`/visits?${new URLSearchParams(scope).toString()}`);
@@ -57,10 +59,16 @@ export async function pickDay(phone: string, list: SentReply | undefined, slot =
   if (!row) throw new Error('No day on the list.');
   await tap(phone, row.id);
   const buttons = await lastReply(phone);
-  const button = buttons?.buttons?.find((one) => one.id.endsWith(`:${slot}`));
-  if (!button) throw new Error(`No ${slot} button.`);
+  // The slot asked for, else the one the crew still has free that day.
+  const button =
+    buttons?.buttons?.find((one) => one.id.endsWith(`:${slot}`)) ?? buttons?.buttons?.[0];
+  if (!button) throw new Error('No slot button.');
   await tap(phone, button.id);
-  return { day: row.id.split(':').slice(2).join(':'), row };
+  return {
+    day: row.id.split(':').slice(2).join(':'),
+    row,
+    slot: button.id.split(':').at(-1) ?? slot,
+  };
 }
 
 export const lastTexts = async (phone: string, count = 3) =>

@@ -37,13 +37,13 @@ describe('Visits: pick, confirm, change, cancel', () => {
     });
     expect(again.status).toBe(409);
 
-    const { day } = await pickDay(customer.phone, list, 'afternoon');
+    const { day, slot } = await pickDay(customer.phone, list, 'afternoon');
     expect((await lastReply(customer.phone))?.body).toMatch(/^Thanks — we'll confirm by \*.+\*\.$/);
     const [proposed] = await visitsFor(customer.customerId);
     expect(proposed).toMatchObject({
       kind: 'survey',
       status: 'proposed',
-      slot: 'afternoon',
+      slot,
       proposed_by: 'customer',
       task_id: task,
     });
@@ -60,10 +60,12 @@ describe('Visits: pick, confirm, change, cancel', () => {
 
     const shown = await visitsOf(admin, { taskId: task });
     expect(shown.visits[0]).toMatchObject({ status: 'proposed', day });
-    const confirmed = await setVisit(admin, { taskId: task, day, slot: 'afternoon' });
+    const confirmed = await setVisit(admin, { taskId: task, day, slot });
     expect(confirmed.status).toBe('confirmed');
     const booked = await lastReply(customer.phone);
-    expect(booked?.body).toMatch(/^Booked ✅ \*.+, afternoon\*\. .+ will call before coming/);
+    expect(booked?.body).toMatch(
+      new RegExp(`^Booked ✅ \\*.+, ${slot}\\*\\. .+ will call before coming`),
+    );
     expect(booked?.buttons?.map((button) => button.title)).toEqual(['Okay', 'Change day']);
     const [dates] = await rows<{ start_date: string }>(
       'SELECT start_date::text FROM project_tasks WHERE id = $1',

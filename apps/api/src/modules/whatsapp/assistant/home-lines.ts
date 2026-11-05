@@ -1,6 +1,7 @@
 import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
+import { VISIT_WORDS } from '../../visits/visit-words';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
 import { type TapChoice, tapButton } from './closing-taps';
 import type { PendingItem } from './pending-items';
@@ -21,6 +22,8 @@ export function pendingLine(item: PendingItem): string {
       return SEND_WORDS.location.ask(item.home ?? SEND_WORDS.location.anyHome);
     case 'callback':
       return SEND_WORDS.callback.homeLine;
+    case 'visit_ask':
+      return VISIT_WORDS.pick.homeLine(item.home);
     case 'visit':
       return home.visit(item.home, daySpan(item.on, item.on));
     case 'problem':
@@ -48,6 +51,8 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
       return { id: `locreq:${item.requestId}`, title: SEND_WORDS.buttons.sendLocation };
     case 'callback':
       return { id: `cbask:${item.requestId}`, title: SEND_WORDS.buttons.pickTime };
+    case 'visit_ask':
+      return { id: `vask:${item.requestId}`, title: VISIT_WORDS.buttons.pick };
     case 'visit':
       return { id: 'go:visit', title: buttons.visit };
     case 'problem':
@@ -68,6 +73,7 @@ function pendingRow(item: PendingItem, paysOnline: boolean): Row {
     pay: () => (item.kind === 'pay' ? home.payRow(item.home) : ''),
     location: () => (item.kind === 'location' ? (item.home ?? '') : ''),
     callback: () => SEND_WORDS.callback.homeRow,
+    visit_ask: () => (item.kind === 'visit_ask' ? (item.home ?? '') : ''),
     visit: () =>
       item.kind === 'visit'
         ? [daySpan(item.on, item.on), item.home].filter(Boolean).join(' · ')
