@@ -163,6 +163,7 @@ export async function amcRenewalCompose(
       payload: {
         kind: 'amc_renewal',
         contractId: contract.id,
+        endsOn: contract.endsOn,
         target: `amc_renewal:${contract.id}`,
       },
       log: `Offered the customer to renew the AMC (${contract.planName}, ends ${contract.endsOn})`,

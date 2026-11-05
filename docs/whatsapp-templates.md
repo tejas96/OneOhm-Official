@@ -690,8 +690,8 @@ Examples: Ramesh Patil · Sangli · 12 Dec
 
 **Buttons:** two quick replies: en `Renew AMC`, `Talk to us`; mr `AMC नूतनीकरण`, `आमच्याशी बोला`; hi `AMC रिन्यू करें`, `हमसे बात करें`. Payloads `amc:renew:<id>`, `amc:talk:<id>`. **Marketing:** cost per message; never sent to a customer who said STOP. Off until Meta approves all three languages.
 
-### Changed: `stage_rating_request` (one rating system, redesign §13)
-The text now ends "Tap the button to rate it." (en: `Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Tap the button to rate it.`). A newer version carries one quick reply: en `Rate now`; mr `आता रेटिंग द्या`; hi `अभी रेटिंग दें`; payload `rt:go:<id>` (opens the five rating taps in the chat). It sends only behind the template's own **quick replies** switch; until then the older text sends and the customer rates by typing "Rate us".
+### Newer version: `stage_rating_request` (one rating system, redesign §13)
+The approved text and the app wording stay as they are ("... How did we do? Please rate it in the OneOhm app."), so SMS and in-person customers keep the app route. A newer Meta version, submitted under a **new** name, has the body `Hello {{1}}, the {{2}} for your solar project {{3}} is done. How did we do? Tap the button to rate it.` and one quick reply: en `Rate now`; mr `आता रेटिंग द्या`; hi `अभी रेटिंग दें`; payload `rt:go:<id>` (opens the five rating taps in the chat). It sends only behind the template's own **quick replies** switch (with the new Meta name).
 
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text

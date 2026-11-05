@@ -13,9 +13,7 @@ import { LOW_RATING } from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
-import { callPromise, callWhen } from './call-promise';
-import { alertCall, openCallTask } from './call-task';
-import { callerFor } from './care-person';
+import { lowRatingFollowUp } from './low-rating';
 import { RATING_WORDS } from './rating-words';
 
 export type RatingResult =
@@ -76,29 +74,18 @@ export function answerRating(
     });
     await recordAudit(tx, null, 'customer_action.answered', 'customer_action', ask.id, { stars });
     if (!low) return { kind: 'thanks' };
-    const person = await callerFor(tx, {
-      assignee: what.assignee,
-      projectId: ask.projectId,
-      phone: customer?.phone ?? null,
-    });
-    const promise = callPromise(now, timeZone);
-    await openCallTask(tx, {
+    const call = await lowRatingFollowUp(tx, {
       customerId,
+      customerName: customer?.name ?? 'The customer',
+      phone: customer?.phone ?? '',
       projectId: ask.projectId,
-      owner: person.id,
-      title: `Call ${customer?.name ?? 'the customer'}: rated ${what.label} ${stars}/5`,
-      reason: 'low_rating',
-      once: `call:rating:${ask.id}`,
-      promise,
-    });
-    await alertCall(tx, {
-      owner: person.id,
-      projectId: ask.projectId,
-      title: `Low rating: ${customer?.name ?? 'A customer'} gave ${what.label} ${stars}/5`,
-      body: `Please call them ${callWhen(promise)}.`,
+      assignee: what.assignee,
+      label: what.label,
+      stars,
       key: `rating_low:${ask.id}`,
+      timeZone,
     });
-    return { kind: 'low', name: person.name, when: callWhen(promise) };
+    return { kind: 'low', name: call.name, when: call.when };
   });
 }
 

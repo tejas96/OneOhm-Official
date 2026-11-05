@@ -84,7 +84,7 @@ export async function askRating(
           ne(customerActions.status, 'cancelled'),
         ),
       );
-    if (!row || row.status !== 'open') return 'rated';
+    if (row?.status !== 'open') return 'rated';
     if (!options.again) return 'already_asked';
     id = row.id;
   }

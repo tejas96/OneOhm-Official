@@ -70,7 +70,9 @@ export class ReferralChatService {
   async fromForm(chat: Conversation, customerId: string, form: IncomingForm): Promise<void> {
     const friend = readReferral(`${form.answers.friend ?? ''} ${form.answers.mobile ?? ''}`);
     if (!friend) return this.start(chat, customerId);
-    return this.finish(chat, customerId, friend, form.answers.city ?? null);
+    // A city that is not one we offered (a changed list, a forged answer) is "Other city".
+    const city = (await this.cities()).find((one) => one === form.answers.city) ?? null;
+    return this.finish(chat, customerId, friend, city);
   }
 
   private async askCity(chat: Conversation, customerId: string, friend: Friend) {

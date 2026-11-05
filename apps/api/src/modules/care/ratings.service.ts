@@ -50,8 +50,7 @@ export class RatingsService {
       .select()
       .from(customerActions)
       .where(and(eq(customerActions.id, id), eq(customerActions.customerId, customerId)));
-    if (!ask || ask.status !== 'open')
-      return sayWithTaps(this.db, chat, RATING_WORDS.old, ['menu']);
+    if (ask?.status !== 'open') return sayWithTaps(this.db, chat, RATING_WORDS.old, ['menu']);
     return queueReply(this.db, chat, ratingList(id, this.question(ask.payload, ask.title)));
   }
 
@@ -95,6 +94,18 @@ export class RatingsService {
       .orderBy(asc(customerActions.createdAt))
       .limit(1);
     if (!ask || stars < 1 || stars > 5) return this.offer(chat, customerId);
+    // The old list had no name: say what this answer rates before saving it.
+    const [row] = await this.db
+      .select({ title: customerActions.title, payload: customerActions.payload })
+      .from(customerActions)
+      .where(eq(customerActions.id, ask.id));
+    const stage = String(row?.payload.stage ?? '');
+    const W = RATING_WORDS;
+    const what =
+      row?.payload.kind === 'stage'
+        ? W.stageWhat(W.stage[stage] ?? stage)
+        : W.problemWhat((row?.title ?? '').replace(/^Rate: /, ''));
+    await queueReply(this.db, chat, { kind: 'text', body: W.legacyNote(what, stars) });
     return this.tapped(chat, customerId, { t: 'rate', id: ask.id, stars });
   }
 }

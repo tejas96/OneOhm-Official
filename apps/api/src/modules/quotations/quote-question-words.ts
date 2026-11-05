@@ -29,7 +29,7 @@ const EN = {
     other: 'Something else',
   } as Record<QuoteTopic, string>,
   subsidy: (subsidy: string, effective: string) =>
-    `Your subsidy is ${subsidy}. It comes back to your bank account after your system is switched on. After the subsidy your cost is ${effective}.`,
+    `Your subsidy is ${subsidy}. It comes back to your bank account after your system is switched on and the government approves it. After the subsidy your cost is ${effective}.`,
   noSubsidy: (why: string) => `This quote has no subsidy${why ? ` (${why})` : ''}.`,
   panels: (count: number, kw: string, panel: string, inverter: string) =>
     `Your system is ${kw}: ${count} panels (${panel}). Inverter: ${inverter}.`,
@@ -60,7 +60,7 @@ const MR: Words<typeof EN> = {
     other: 'दुसरे काही',
   },
   subsidy: (subsidy, effective) =>
-    `तुमची सबसिडी ${subsidy} आहे. सिस्टिम सुरू झाल्यावर ती तुमच्या बँक खात्यात परत येते. सबसिडीनंतर तुमचा खर्च ${effective}.`,
+    `तुमची सबसिडी ${subsidy} आहे. सिस्टिम सुरू झाल्यावर आणि सरकारची मंजुरी मिळाल्यावर ती तुमच्या बँक खात्यात परत येते. सबसिडीनंतर तुमचा खर्च ${effective}.`,
   noSubsidy: (why) => `या कोटेशनमध्ये सबसिडी नाही${why ? ` (${why})` : ''}.`,
   panels: (count, kw, panel, inverter) =>
     `तुमची सिस्टिम ${kw} ची आहे: ${count} पॅनल (${panel}). इन्व्हर्टर: ${inverter}.`,
@@ -90,7 +90,7 @@ const HI: Words<typeof EN> = {
     other: 'कुछ और',
   },
   subsidy: (subsidy, effective) =>
-    `आपकी सब्सिडी ${subsidy} है। सिस्टम चालू होने के बाद यह आपके बैंक खाते में वापस आती है। सब्सिडी के बाद आपकी लागत ${effective} है।`,
+    `आपकी सब्सिडी ${subsidy} है। सिस्टम चालू होने और सरकारी मंज़ूरी के बाद यह आपके बैंक खाते में वापस आती है। सब्सिडी के बाद आपकी लागत ${effective} है।`,
   noSubsidy: (why) => `इस कोटेशन में सब्सिडी नहीं है${why ? ` (${why})` : ''}।`,
   panels: (count, kw, panel, inverter) =>
     `आपका सिस्टम ${kw} का है: ${count} पैनल (${panel})। इन्वर्टर: ${inverter}।`,

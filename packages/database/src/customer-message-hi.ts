@@ -113,7 +113,7 @@ export const HINDI_WORDS: LanguageWords = {
     }),
     stage_rating_request: (p) => ({
       title: 'हमारा काम कैसा लगा?',
-      body: `${p.project}: ${HI_STAGES[p.stageKey ?? ''] ?? p.stage} पूरा हुआ। कृपया हमारे WhatsApp चैट या ऐप में रेटिंग दें।`,
+      body: `${p.project}: ${HI_STAGES[p.stageKey ?? ''] ?? p.stage} पूरा हुआ। कृपया ऐप में रेटिंग दें।`,
     }),
     installation_started: (p) => ({
       title: 'लगाने का काम शुरू हो गया',

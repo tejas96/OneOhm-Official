@@ -37,7 +37,7 @@ export class AmcRenewalService {
           eq(customerActions.type, 'confirm'),
         ),
       );
-    if (!ask || ask.payload.kind !== 'amc_renewal' || ask.status !== 'open')
+    if (ask?.payload.kind !== 'amc_renewal' || ask.status !== 'open')
       return sayWithTaps(this.db, chat, AMC_WORDS.old, ['menu']);
     if (!renew) {
       await this.close(ask, 'talk');

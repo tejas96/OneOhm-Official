@@ -17,7 +17,7 @@ import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import { propertyOfProject } from '../../documents/document-links';
-import { type Conversation, chatDocumentFor } from '../chat-store';
+import type { Conversation } from '../chat-store';
 import { filePaper } from '../file-paper';
 import { FormFileKeeper, type KeptFormFile, showFormFiles } from '../forms/form-files';
 import type { IncomingForm } from '../forms/form-reply-data';
@@ -32,8 +32,7 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
-import { pendingMedia } from './pending-media';
-import { CATEGORY, type RaisedRequest } from './problem-raised';
+import { CATEGORY, type RaisedRequest, waitingDocuments } from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';
 
@@ -110,8 +109,12 @@ export class ProblemFlowService {
     const kind = PROBLEM_KINDS.find((one) => one === form.answers.what);
     const since = SINCE_CHOICES.find((one) => one === form.answers.since);
     const homes = await activeHomes(this.db, customerId);
-    const projectId =
-      homes.find((home) => home.id === form.answers.home)?.id ?? homes[0]?.id ?? null;
+    const offered = homes.slice(0, 10);
+    const said = form.answers.home;
+    const picked = offered.find((home) => home.id === said)?.id ?? null;
+    if (said ? !picked : offered.length > 1)
+      return startComplaint(this.db, chat, customerId, topic);
+    const projectId = picked ?? offered[0]?.id ?? null;
     const draft: Draft = {
       stage: 'extra',
       projectId,
@@ -154,11 +157,7 @@ export class ProblemFlowService {
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
     await setStep(this.db, chat, 'menu', { raised });
     await releaseHeldFiles(this.db, chat.id);
-    const earlier: string[] = [];
-    for (const waiting of pendingMedia(chat.context, Date.now())) {
-      const id = await chatDocumentFor(this.db, waiting.id);
-      if (id) earlier.push(id);
-    }
+    const earlier = await waitingDocuments(this.db, chat.context);
     const files = [...new Set([...earlier, ...(draft.files ?? [])])].slice(0, MAX_FILES);
     let added = 0;
     for (const file of files) if (await this.attach(customerId, request.id, file)) added += 1;

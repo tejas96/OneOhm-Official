@@ -20,7 +20,7 @@ const radio = (name: string, label: string, source: string, visible?: string) =>
   type: 'RadioButtonsGroup',
   name,
   label,
-  required: !visible,
+  required: visible ?? true,
   'data-source': source,
   ...(visible ? { visible } : {}),
 });

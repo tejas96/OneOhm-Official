@@ -23,6 +23,12 @@ const EN = {
   team: 'Our team',
   nothing: 'Nothing is waiting for your rating right now. Thank you!',
   old: 'You have rated this already. Thank you!',
+  rateNow: 'Rate now',
+  homeStage: (stage: string) => `Please rate your ${stage}.`,
+  homeProblem: (topic: string) => `Please rate our help with "${topic}".`,
+  legacyNote: (what: string, stars: number) => `Rating ${what}: ${stars} of 5.`,
+  problemWhat: (topic: string) => `our help with "${topic}"`,
+  stageWhat: (stage: string) => `your ${stage}`,
 };
 
 const MR: Words<typeof EN> = {
@@ -47,6 +53,12 @@ const MR: Words<typeof EN> = {
   team: 'आमची टीम',
   nothing: 'सध्या तुमच्या रेटिंगची कोणतीही वाट पाहत नाही. धन्यवाद!',
   old: 'तुम्ही आधीच रेटिंग दिले आहे. धन्यवाद!',
+  rateNow: 'आता रेटिंग द्या',
+  homeStage: (stage) => `कृपया तुमच्या ${stage} ला रेटिंग द्या.`,
+  homeProblem: (topic) => `कृपया "${topic}" साठी आमच्या मदतीला रेटिंग द्या.`,
+  legacyNote: (what, stars) => `रेटिंग: ${what} - ५ पैकी ${stars}.`,
+  problemWhat: (topic) => `"${topic}" साठी आमची मदत`,
+  stageWhat: (stage) => `तुमचा ${stage}`,
 };
 
 const HI: Words<typeof EN> = {
@@ -67,6 +79,12 @@ const HI: Words<typeof EN> = {
   team: 'हमारी टीम',
   nothing: 'अभी आपकी रेटिंग का कोई इंतज़ार नहीं है। धन्यवाद!',
   old: 'आप पहले ही रेटिंग दे चुके हैं। धन्यवाद!',
+  rateNow: 'अभी रेटिंग दें',
+  homeStage: (stage) => `कृपया अपने ${stage} को रेटिंग दें।`,
+  homeProblem: (topic) => `कृपया "${topic}" में हमारी मदद को रेटिंग दें।`,
+  legacyNote: (what, stars) => `रेटिंग: ${what} - 5 में से ${stars}।`,
+  problemWhat: (topic) => `"${topic}" में हमारी मदद`,
+  stageWhat: (stage) => `आपका ${stage}`,
 };
 
 export const RATING_LISTS = { en: EN, mr: MR, hi: HI };

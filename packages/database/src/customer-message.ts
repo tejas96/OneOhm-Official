@@ -103,7 +103,7 @@ const WORDS: Readonly<Record<string, Words>> = {
   }),
   stage_rating_request: (p) => ({
     title: 'How did we do?',
-    body: `${p.project}: the ${p.stage} is done. Please rate it in our WhatsApp chat or the app.`,
+    body: `${p.project}: the ${p.stage} is done. Please rate it in the app.`,
   }),
   installation_started: (p) => ({
     title: 'Installation has started',

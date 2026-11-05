@@ -45,7 +45,10 @@ describe.each(LANGUAGES)('customer words in %s', (language) => {
     const F = CARE_FORM_LISTS[language];
     for (const heading of [F.problemHeading, F.referHeading, F.upiHeading])
       expect(heading.length).toBeLessThanOrEqual(80);
-    for (const label of [F.friendLabel, F.mobileLabel, F.cityLabel, F.upiLabel])
+    // A TextInput label keeps 20 characters, a radio group's 30.
+    for (const label of [F.noteLabel, F.friendLabel, F.mobileLabel, F.upiLabel])
+      expect(label.length, label).toBeLessThanOrEqual(20);
+    for (const label of [F.homeLabel, F.whatLabel, F.sinceLabel, F.cityLabel])
       expect(label.length, label).toBeLessThanOrEqual(30);
     for (const hint of [F.mobileHint, F.upiHint]) expect(hint.length).toBeLessThanOrEqual(80);
     expect(F.photosHint.length).toBeLessThanOrEqual(300);

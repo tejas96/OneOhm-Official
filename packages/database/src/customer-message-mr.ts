@@ -113,7 +113,7 @@ export const MARATHI_WORDS: LanguageWords = {
     }),
     stage_rating_request: (p) => ({
       title: 'आमचे काम कसे वाटले?',
-      body: `${p.project}: ${MR_STAGES[p.stageKey ?? ''] ?? p.stage} पूर्ण झाले. कृपया आमच्या WhatsApp चॅटमध्ये किंवा ॲपमध्ये रेटिंग द्या.`,
+      body: `${p.project}: ${MR_STAGES[p.stageKey ?? ''] ?? p.stage} पूर्ण झाले. कृपया ॲपमध्ये रेटिंग द्या.`,
     }),
     installation_started: (p) => ({
       title: 'बसवण्याचे काम सुरू झाले',

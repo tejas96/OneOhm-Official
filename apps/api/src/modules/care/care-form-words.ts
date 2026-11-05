@@ -37,7 +37,7 @@ const MR: Words<typeof EN> = {
   sinceLabel: 'किती दिवसांपासून?',
   photosLabel: 'फोटो किंवा व्हिडिओ',
   photosHint: '३ पर्यंत. त्यामुळे आम्हाला खूप मदत होते.',
-  noteLabel: 'आणखी काही सांगायचे आहे?',
+  noteLabel: 'आणखी काही?',
   send: 'पाठवा',
   referHeading: 'मित्राला सांगा',
   friendLabel: 'मित्राचे नाव',

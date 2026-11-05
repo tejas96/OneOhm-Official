@@ -9,7 +9,7 @@ import { quotedSteps } from './quoted-terms';
 
 const kw = (watts: number) => `${Number((watts / 1000).toFixed(2))} kW`;
 const named = (p: { brand: string; name: string; wattageWp: number | null } | undefined) =>
-  p ? `${p.brand} ${p.name}`.trim() : '';
+  p ? `${p.brand} ${p.name}${p.wattageWp ? ` ${p.wattageWp} Wp` : ''}`.trim() : '';
 
 /**
  * The fixed answer to one quote question, built from the quote's own data (redesign §9): its subsidy and

@@ -43,6 +43,8 @@ const EN = {
   reopened: (name: string, when: string) =>
     `Sorry about that. We have opened your problem again. *${name}* will call you ${when}.`,
   fixedOld: 'Thank you, we have noted it.',
+  homeFixed: (topic: string) => `Is it working now? ${topic}`,
+  answerNow: 'Answer now',
   fixedWhat: 'the check on your problem',
   fixedCancelled: 'You do not need to tell us whether it is working any more. Thank you.',
   workingThanks: 'Great, thank you! 🙏',
@@ -80,6 +82,8 @@ const MR: Words<typeof EN> = {
   reopened: (name, when) =>
     `क्षमस्व. आम्ही तुमची अडचण पुन्हा उघडली आहे. *${name}* तुम्हाला ${when} फोन करतील.`,
   fixedOld: 'धन्यवाद, आम्ही नोंद केली आहे.',
+  homeFixed: (topic) => `आता ते नीट चालते का? ${topic}`,
+  answerNow: 'आता सांगा',
   fixedWhat: 'अडचणीबद्दलची तपासणी',
   fixedCancelled: 'ते नीट चालते का हे सांगण्याची आता गरज नाही. धन्यवाद.',
   workingThanks: 'छान, धन्यवाद! 🙏',
@@ -117,6 +121,8 @@ const HI: Words<typeof EN> = {
   reopened: (name, when) =>
     `माफ़ कीजिए। हमने आपकी समस्या फिर से खोल दी है। *${name}* आपको ${when} फ़ोन करेंगे।`,
   fixedOld: 'धन्यवाद, हमने दर्ज कर लिया है।',
+  homeFixed: (topic) => `क्या अब यह ठीक चल रहा है? ${topic}`,
+  answerNow: 'अभी बताएँ',
   fixedWhat: 'समस्या की जाँच',
   fixedCancelled: 'यह बताने की अब ज़रूरत नहीं कि यह चल रहा है या नहीं। धन्यवाद।',
   workingThanks: 'बढ़िया, धन्यवाद! 🙏',

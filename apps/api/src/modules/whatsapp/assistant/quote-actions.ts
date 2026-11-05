@@ -6,8 +6,12 @@ import { quoteIsOpen } from '../../quotations/quotation-accept';
 import { queueQuoteInChat } from '../../quotations/quotation-message';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
-import { QUOTE_TOPICS, type QuoteTopic } from '../../quotations/quote-question-words';
-import { quotedSteps } from '../../quotations/quoted-terms';
+import {
+  QUOTE_Q_WORDS,
+  QUOTE_TOPICS,
+  type QuoteTopic,
+} from '../../quotations/quote-question-words';
+import { changeNoteOf, quotedSteps } from '../../quotations/quoted-terms';
 import { type Conversation, queueReply } from '../chat-store';
 import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
@@ -112,9 +116,16 @@ export class QuoteActionsService {
     if (quotation.status !== 'sent') return this.refuse(chat, WORDS.quoteChanged);
     const steps = await quotedSteps(this.db, quotationId);
     const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
+    // A revision's change line comes first here too (Accept can arrive from the template's button).
+    const changed = await changeNoteOf(this.db, quotationId);
+    const confirm = QUOTE_MONEY_WORDS.confirm(
+      rupees(quotation.totalPaise),
+      money.first,
+      money.firstWhen,
+    );
     await queueReply(this.db, chat, {
       kind: 'buttons',
-      body: QUOTE_MONEY_WORDS.confirm(rupees(quotation.totalPaise), money.first, money.firstWhen),
+      body: changed ? `${QUOTE_Q_WORDS.changed(changed)}\n\n${confirm}` : confirm,
       buttons: [
         { id: `quote_yes:${quotationId}`, title: WORDS.quoteYes },
         { id: `quote_no:${quotationId}`, title: WORDS.quoteNotYet },

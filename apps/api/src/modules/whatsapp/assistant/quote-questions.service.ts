@@ -19,6 +19,7 @@ import {
   type QuoteTopic,
 } from '../../quotations/quote-question-words';
 import { quoteAnswer } from '../../quotations/quote-questions';
+import { changeNoteOf } from '../../quotations/quoted-terms';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import { talkTitle } from './chat-words';
@@ -61,9 +62,12 @@ export class QuoteQuestionsService {
   /** [I have a question]: the topics as a list. */
   async questions(chat: Conversation, id: string): Promise<void> {
     if (!(await this.open(chat, id))) return;
+    const changed = await changeNoteOf(this.db, id);
     await queueReply(this.db, chat, {
       kind: 'list',
-      body: QUOTE_Q_WORDS.ask,
+      body: changed
+        ? `${QUOTE_Q_WORDS.changed(changed)}\n\n${QUOTE_Q_WORDS.ask}`
+        : QUOTE_Q_WORDS.ask,
       button: QUOTE_Q_WORDS.button,
       rows: QUOTE_TOPICS.map((topic) => ({
         id: `quote_q:${id}:${topic}`,

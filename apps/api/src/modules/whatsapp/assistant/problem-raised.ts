@@ -1,4 +1,7 @@
+import type { Database } from '@oneohm/database';
 import type { ProblemKind } from '../../care/care-taps';
+import { chatDocumentFor } from '../chat-store';
+import { pendingMedia } from './pending-media';
 
 /** For this long after a request is raised, more photos sent are added to it. */
 export const ADD_PHOTOS_MINUTES = 30;
@@ -26,3 +29,13 @@ export const CATEGORY: Readonly<Record<ProblemKind, string>> = {
   bill: 'billing_net_meter',
   other: 'other',
 };
+
+/** The stored documents of photos sent before the questions (waiting in the chat). */
+export async function waitingDocuments(db: Database, context: unknown): Promise<string[]> {
+  const documents: string[] = [];
+  for (const waiting of pendingMedia(context, Date.now())) {
+    const id = await chatDocumentFor(db, waiting.id);
+    if (id) documents.push(id);
+  }
+  return documents;
+}
