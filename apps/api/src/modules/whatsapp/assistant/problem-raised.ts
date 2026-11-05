@@ -16,11 +16,18 @@ export interface RaisedRequest {
   readonly at: number;
 }
 
-/** The request raised in this chat a moment ago, if photos may still join it. */
-export function recentRequest(context: unknown, now: number): RaisedRequest | null {
+/**
+ * The request raised in this chat a moment ago, if photos may still join it: within
+ * `ADD_PHOTOS_MINUTES`, or the shorter `withinSeconds` (the burst that follows "Done").
+ */
+export function recentRequest(
+  context: unknown,
+  now: number,
+  withinSeconds = ADD_PHOTOS_MINUTES * 60,
+): RaisedRequest | null {
   const raised = (context as { raised?: RaisedRequest } | null)?.raised;
   if (!raised?.id || typeof raised.at !== 'number') return null;
-  return now - raised.at <= ADD_PHOTOS_MINUTES * 60_000 ? raised : null;
+  return now - raised.at <= withinSeconds * 1000 ? raised : null;
 }
 
 /** The service category each tap stands for: the customer's choice, never a guess from words. */

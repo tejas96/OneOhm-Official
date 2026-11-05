@@ -15,7 +15,7 @@ const HOUR = 3_600_000;
 export interface WaitingFile {
   readonly id: string;
   readonly media: string;
-  readonly type: 'image' | 'document';
+  readonly type: 'image' | 'video' | 'document';
   readonly at: number;
 }
 

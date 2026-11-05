@@ -63,6 +63,15 @@ export const MR: Words<AssistantWords> = {
     talkToPerson: 'व्यक्तीशी बोला',
     photoAdded: 'धन्यवाद, फोटो तुमच्या समस्येला जोडला आहे.',
     photoNotAdded: 'फाइल तुमच्या समस्येला जोडता आली नाही. कृपया समस्येचा फोटो पाठवा.',
+    joined: (photos, videos, voices) => {
+      const parts = [
+        photos > 0 ? `${photos} फोटो` : '',
+        videos > 0 ? `${videos} व्हिडिओ` : '',
+        voices > 0 ? `${voices} व्हॉइस नोट` : '',
+      ].filter(Boolean);
+      const last = parts.pop();
+      return `तुमच्या समस्येला ${parts.length > 0 ? `${parts.join(', ')} आणि ${last}` : last} जोडले ✅`;
+    },
     // Saved as the request's description, which the team reads: kept in English.
     tooLarge: 'ती फाइल खूप मोठी आहे (जास्तीत जास्त 25 MB). कृपया फोटो किंवा PDF पाठवा.',
     wrongType: 'या प्रकारची फाइल आम्ही उघडू शकत नाही. कृपया फोटो किंवा PDF पाठवा.',

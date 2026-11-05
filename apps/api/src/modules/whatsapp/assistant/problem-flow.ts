@@ -11,7 +11,7 @@ import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import { propertyOfProject } from '../../documents/document-links';
-import type { Conversation } from '../chat-store';
+import { type Conversation, lockedChat } from '../chat-store';
 import { filePaper } from '../file-paper';
 import { FormFileKeeper, type KeptFormFile, showFormFiles } from '../forms/form-files';
 import type { IncomingForm } from '../forms/form-reply-data';
@@ -26,6 +26,9 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
+import { filesWaitOf } from './files-wait';
+import { saveWait } from './files-wait-store';
+import { type JoinedKind, withJoined } from './problem-joined';
 import { CATEGORY, type RaisedRequest, tellRaised, waitingDocuments } from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';
@@ -187,6 +190,33 @@ export class ProblemFlowService {
     const body = added.length === files.length ? MEDIA_WORDS.photoAdded : MEDIA_WORDS.photoNotAdded;
     await sayWithTaps(db, chat, body, ['problems', 'menu']);
     return added;
+  }
+
+  /**
+   * A photo, video or voice note that joins the problem on its own (during the report, or within
+   * two minutes after it): attached now, and counted so the customer gets one reply for the burst
+   * (`FileQuestionsService`). False when the problem cannot take it (full, resolved).
+   */
+  async join(
+    chat: Conversation,
+    customerId: string,
+    requestId: string,
+    documentId: string,
+    kind: JoinedKind,
+  ): Promise<boolean> {
+    if (!(await this.attach(customerId, requestId, documentId))) return false;
+    await this.db.transaction(async (tx) => {
+      const locked = await lockedChat(tx, chat.id);
+      const joined = withJoined(
+        locked.context,
+        requestId,
+        kind,
+        Date.now(),
+        this.env.FILE_WAIT_SECONDS,
+      );
+      await saveWait(tx, locked, filesWaitOf(locked.context), { joined });
+    });
+    return true;
   }
 
   /** A voice note sent right after a report joins it, and the person who calls is told. */

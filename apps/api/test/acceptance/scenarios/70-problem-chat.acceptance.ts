@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  ageRaisedProblem,
   bodyOf,
   callerNameOf,
   callTasks,
@@ -136,6 +137,8 @@ describe('Problem: reported in the chat', () => {
     await tap(phone, 'pb:since:week');
     await tap(phone, 'pb:done');
     const [request] = await requestsOf(sale.customer.customerId);
+    // Later than two minutes after Done (the first two attach with one reply for the burst).
+    await ageRaisedProblem(phone, 300);
     await sendVoice(phone);
     expect(await bodyOf(phone)).toContain(
       `${await callerNameOf(admin, request?.assignee_user_id ?? null)} will listen to it`,

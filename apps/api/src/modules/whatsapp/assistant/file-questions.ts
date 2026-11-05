@@ -14,13 +14,16 @@ import { DocumentChecklistService } from '../../reports/document-checklist.servi
 import { tellChatTeam } from '../chat-owner';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
 import { chatLanguage } from './chat-language';
+import { sayWithTaps } from './closing-taps';
 import { ASK_AT_MOST, asked, filesWaitOf, isDue, withoutFiles } from './files-wait';
 import { saveWait } from './files-wait-store';
 import { inLanguage } from './language';
 import { unfiledFiles } from './paper-reads';
 import { recentRequest } from './problem-flow';
+import { joinedOf } from './problem-joined';
 import { buildQuestion } from './what-question';
 import { askedRows, missingRows } from './what-reads';
+import { MEDIA_WORDS } from './words';
 
 const EVERY_SECONDS = 2;
 /** After this many failures in a row we stop asking and tell staff once. */
@@ -103,21 +106,47 @@ export class FileQuestionsService implements OnApplicationBootstrap, OnModuleDes
 
   private askIfDue(chatId: string, now: number): Promise<boolean> {
     return this.db.transaction(async (tx) => {
-      const chat = await lockedChat(tx, chatId);
+      let chat = await lockedChat(tx, chatId);
+      // Files that joined the problem on their own: one reply for the burst.
+      const told = await this.tellJoinedIfDue(tx, chat, now);
+      if (told) chat = told;
       const wait = filesWaitOf(chat.context);
       // Nothing to ask (files gone, or a chat with no customer): the time is cleared, so the
       // chat is never picked again; a due time that moved is read again from the context.
       if (!wait || !chat.customerId) {
         await saveWait(tx, chat, wait && { ...wait, askAt: null });
-        return false;
+        return told !== null;
       }
       if (!isDue(wait, now)) {
         await saveWait(tx, chat, wait);
-        return false;
+        return told !== null;
       }
       const language = await chatLanguage(tx, chat);
       return inLanguage(language, () => this.ask(tx, chat, chat.customerId ?? '', now));
     });
+  }
+
+  /**
+   * The one reply for photos, videos and voice notes that joined the problem on their own
+   * (`problem-joined.ts`), once the burst is over. The chat as it is after, or null when none was due.
+   */
+  private async tellJoinedIfDue(
+    tx: DatabaseExecutor,
+    chat: Conversation,
+    now: number,
+  ): Promise<Conversation | null> {
+    const joined = joinedOf(chat.context);
+    if (!joined || joined.replyAt > now) return null;
+    const language = await chatLanguage(tx, chat);
+    await inLanguage(language, () =>
+      sayWithTaps(tx, chat, MEDIA_WORDS.joined(joined.photos, joined.videos, joined.voices), [
+        'problems',
+        'menu',
+      ]),
+    );
+    const context = { ...(chat.context as object), joined: null };
+    await saveWait(tx, { ...chat, context }, filesWaitOf(context), { joined: null });
+    return { ...chat, context };
   }
 
   /**
@@ -193,9 +222,10 @@ export class FileQuestionsService implements OnApplicationBootstrap, OnModuleDes
       stage,
       asked: rows,
       missing,
-      // Only photos can join a problem; a PDF or Word file is never offered to it.
+      // Only photos and videos can join a problem; a PDF or Word file is never offered to it.
       problem:
-        recentRequest(chat.context, now) !== null && subject.every((file) => file.type === 'image'),
+        recentRequest(chat.context, now) !== null &&
+        subject.every((file) => file.type === 'image' || file.type === 'video'),
     });
     await queueReply(tx, chat, reply);
     const next = asked(current, now, { focus: subject.map((file) => file.id), offered, each });

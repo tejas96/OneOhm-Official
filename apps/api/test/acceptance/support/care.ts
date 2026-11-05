@@ -107,3 +107,28 @@ export const settleAdvance = (projectId: string) =>
   rows("UPDATE payment_milestones SET status = 'paid' WHERE project_id = $1 AND status = 'due'", [
     projectId,
   ]);
+
+/** A video the customer sends in the chat. */
+export function sendVideo(phone: string) {
+  counter += 1;
+  return sendInbound(phone, {
+    media: { type: 'video', fileId: `care-video-${Date.now()}-${counter}`, mimeType: 'video/mp4' },
+  });
+}
+
+/**
+ * Makes the problem just raised in this chat `seconds` old, so a file sent now arrives that long
+ * after "Done" (the first two minutes attach by themselves; later files are asked about).
+ */
+export async function ageRaisedProblem(phone: string, seconds: number): Promise<void> {
+  await rows(
+    `UPDATE wa_conversations
+        SET context = jsonb_set(context, '{raised,at}', to_jsonb(($2::bigint)))
+      WHERE phone = $1 AND context ? 'raised'`,
+    [phone, Date.now() - seconds * 1000],
+  );
+}
+
+/** The documents on a request with their content types, newest last. */
+export const kindsOn = async (requestId: string) =>
+  (await filesOn(requestId)).map((file) => file.content_type);

@@ -63,6 +63,15 @@ export const HI: Words<AssistantWords> = {
     talkToPerson: 'टीम से बात करें',
     photoAdded: 'धन्यवाद, फ़ोटो आपकी समस्या में जोड़ दी गई है।',
     photoNotAdded: 'फ़ाइल आपकी समस्या में नहीं जुड़ सकी। कृपया समस्या की फ़ोटो भेजें।',
+    joined: (photos, videos, voices) => {
+      const parts = [
+        photos > 0 ? `${photos} फ़ोटो` : '',
+        videos > 0 ? `${videos} वीडियो` : '',
+        voices > 0 ? `${voices} वॉइस नोट` : '',
+      ].filter(Boolean);
+      const last = parts.pop();
+      return `आपकी समस्या में ${parts.length > 0 ? `${parts.join(', ')} और ${last}` : last} जोड़ दिए गए ✅`;
+    },
     // Saved as the request's description, which the team reads: kept in English.
     wrongType: 'हम इस तरह की फ़ाइल नहीं खोल सकते। कृपया फ़ोटो या PDF भेजें।',
     emptyFile: 'वह फ़ाइल खाली है। कृपया उसे फिर से भेजें।',

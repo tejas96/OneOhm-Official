@@ -79,8 +79,8 @@ export class CustomerRequestPhotosService {
       .where(and(eq(documents.id, documentId), eq(documents.customerId, customerId)));
     if (!stored) throw notFound('That file');
     const voice = isAudioType(stored.contentType);
-    const allowed: readonly string[] = voice ? REQUEST_FILE_TYPES : PHOTO_FILE_TYPES;
-    if (!allowed.includes(stored.contentType))
+    // A photo, a short video or a voice note; a paper never joins a problem.
+    if (!(REQUEST_FILE_TYPES as readonly string[]).includes(stored.contentType))
       throw invalid('Send a photo.', { file: 'This file type is not accepted.' });
     const request = await this.roomFor(customerId, requestId, stored.contentType, documentId);
     return { projectId: request.projectId, category: voice ? VOICE_NOTE_CATEGORY : 'site_photo' };

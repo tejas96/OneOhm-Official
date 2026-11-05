@@ -2,6 +2,15 @@ import { type DatabaseExecutor, waConversations } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
 import { type Conversation, setState } from '../chat-store';
 import type { FilesWait } from './files-wait';
+import { joinedOf } from './problem-joined';
+
+/** The first time the timer has something to do: the question, or the reply to joined files. */
+function nextDue(wait: FilesWait | null, context: object): Date | null {
+  const times = [wait?.askAt ?? null, joinedOf(context)?.replyAt ?? null].filter(
+    (time): time is number => time !== null,
+  );
+  return times.length > 0 ? new Date(Math.min(...times)) : null;
+}
 
 /**
  * Saves the chat's waiting files (`context.filesWait`) and, beside it, the time the question
@@ -15,13 +24,10 @@ export async function saveWait(
   wait: FilesWait | null,
   extra: Record<string, unknown> = {},
 ): Promise<void> {
-  await setState(tx, chat.id, chat.state, {
-    ...(chat.context as object),
-    ...extra,
-    filesWait: wait,
-  });
+  const merged = { ...(chat.context as object), ...extra, filesWait: wait };
+  await setState(tx, chat.id, chat.state, merged);
   await tx
     .update(waConversations)
-    .set({ filesAskAt: wait?.askAt != null ? new Date(wait.askAt) : null, filesAskTries: 0 })
+    .set({ filesAskAt: nextDue(wait, merged), filesAskTries: 0 })
     .where(eq(waConversations.id, chat.id));
 }

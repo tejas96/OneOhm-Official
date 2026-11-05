@@ -64,6 +64,16 @@ const EN_MEDIA_WORDS = {
   talkToPerson: 'Talk to a person',
   photoAdded: 'Thank you, the photo is added to your problem.',
   photoNotAdded: 'We could not add the file to your problem. Please send a photo of it.',
+  /** One reply for a burst of files that joined the problem (photos, videos, voice notes). */
+  joined: (photos: number, videos: number, voices: number) => {
+    const parts = [
+      photos > 0 ? `${photos} ${photos === 1 ? 'photo' : 'photos'}` : '',
+      videos > 0 ? `${videos} ${videos === 1 ? 'video' : 'videos'}` : '',
+      voices > 0 ? `${voices} ${voices === 1 ? 'voice note' : 'voice notes'}` : '',
+    ].filter(Boolean);
+    const last = parts.pop();
+    return `Added ${parts.length > 0 ? `${parts.join(', ')} and ${last}` : last} to your problem ✅`;
+  },
   tooLarge: 'That file is too big (max 25 MB). Please send a photo or PDF.',
   wrongType: "We can't open this kind of file. Please send a photo or PDF.",
   emptyFile: 'That file is empty. Please send it again.',

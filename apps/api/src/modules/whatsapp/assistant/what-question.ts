@@ -72,7 +72,7 @@ export function buildQuestion(input: QuestionInput): { reply: ChatReply; offered
     return {
       reply: {
         kind: 'buttons',
-        body: words.confirmProblem(count),
+        body: words.confirmProblem(count, input.photos),
         buttons: confirmButtons('what:probadd'),
       },
       offered: null,

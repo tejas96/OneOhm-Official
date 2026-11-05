@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ageRaisedProblem } from '../support/care';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
@@ -61,6 +62,8 @@ describe('Papers: late files, many files and the timer', () => {
     await tap(customer.phone, 'pb:what:inverter');
     await tap(customer.phone, 'pb:since:today');
     await tap(customer.phone, 'pb:done');
+    // The first two minutes attach a photo by themselves; a photo later is asked about.
+    await ageRaisedProblem(customer.phone, 300);
     await sendPhoto(customer.phone);
     const [kept] = await docsOf(customer.customerId);
     const request = () =>
@@ -84,6 +87,7 @@ describe('Papers: late files, many files and the timer', () => {
     await tap(customer.phone, 'pb:what:inverter');
     await tap(customer.phone, 'pb:since:today');
     await tap(customer.phone, 'pb:done');
+    await ageRaisedProblem(customer.phone, 300);
     await sendPhoto(customer.phone);
     await askAboutFiles(admin);
     expect(choices(await lastReply(customer.phone))[0]).toBe('what:probadd');

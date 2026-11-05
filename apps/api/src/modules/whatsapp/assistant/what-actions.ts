@@ -127,7 +127,11 @@ export async function changeSaved(
           {
             id: row.id,
             media: row.media,
-            type: row.type.startsWith('image/') ? ('image' as const) : ('document' as const),
+            type: row.type.startsWith('image/')
+              ? ('image' as const)
+              : row.type.startsWith('video/')
+                ? ('video' as const)
+                : ('document' as const),
             at: now,
           },
         ]

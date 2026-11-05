@@ -12,7 +12,21 @@ import { withFile } from './files-wait';
 import { saveWait } from './files-wait-store';
 import { HandOverService } from './hand-over';
 import { ProblemFlowService, recentRequest } from './problem-flow';
+import { AUTO_ATTACH_SECONDS, type JoinedKind } from './problem-joined';
 import { MEDIA_WORDS } from './words';
+
+const JOINED_KIND: Partial<Record<IncomingMedia['type'], JoinedKind>> = {
+  image: 'photo',
+  video: 'video',
+  audio: 'voice',
+};
+
+const WAIT_TYPE = {
+  image: 'image',
+  video: 'video',
+  document: 'document',
+  audio: 'document',
+} as const;
 
 /**
  * Photos and papers a customer sends on WhatsApp (PRD 6.1, redesign 5.2), kept only for the
@@ -32,8 +46,11 @@ export class MediaIntakeService {
   ) {}
 
   /**
-   * The problem being reported takes its photos; any other file waits for "What is this?"
-   * (which offers a problem told a moment ago). In a chat a person holds the questions still go out.
+   * The problem being reported takes its photos, videos and voice notes; so does a problem raised in
+   * the last two minutes (WhatsApp delivers a burst of media a few seconds after "Done"), with one
+   * reply for the burst. Any other photo or paper waits for "What is this?" (which offers a problem
+   * told a moment ago, videos too). A voice note after the first two minutes joins the problem;
+   * with no problem open a voice note or video goes warmly to their person, as for leads (C12).
    */
   async receive(
     chat: Conversation,
@@ -43,26 +60,30 @@ export class MediaIntakeService {
   ): Promise<void> {
     const now = Date.now();
     const reporting = stepOf(chat) === 'await_problem' && draftOf(chat.context) !== null;
-    // A voice note sent during a problem report, or right after one, joins the problem (redesign §12):
-    // no hand-over. Any other voice note or video goes warmly to their person, as for leads (C12); it
-    // is put on a home when that needs no question (`ChatFileKeeper.settle`).
+    const kind = JOINED_KIND[media.type];
+    const justRaised = recentRequest(chat.context, now, AUTO_ATTACH_SECONDS);
+    if (kind && (reporting || justRaised)) {
+      const documentId = await this.storedOrSay(chat, media);
+      if (!documentId) return;
+      if (reporting) return this.problems.file(chat, customerId, documentId);
+      if (
+        justRaised &&
+        (await this.problems.join(chat, customerId, justRaised.id, documentId, kind))
+      )
+        return;
+    }
+    const raised = recentRequest(chat.context, now);
     if (media.type === 'audio' || media.type === 'video') {
-      const raised = recentRequest(chat.context, now);
-      if (media.type === 'audio' && (reporting || raised)) {
+      if (media.type === 'audio' && raised) {
         const documentId = await this.storedOrSay(chat, media);
         if (!documentId) return;
-        if (reporting) return this.problems.file(chat, customerId, documentId);
-        if (raised && (await this.problems.addVoice(chat, customerId, raised.id, documentId)))
-          return;
+        if (await this.problems.addVoice(chat, customerId, raised.id, documentId)) return;
       }
+      // A video sent while a problem is open is asked about, like a photo (never a hand-over).
+      if (media.type === 'video' && raised) return this.wait(chat, media, now);
       if (chat.state === 'human' && stepOf(chat) !== 'await_problem') return;
       const reply = heardReply(media.type, await this.people.answererName(chat));
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
-    }
-    if (reporting) {
-      const file = await this.storedOrSay(chat, media);
-      if (!file) return;
-      return this.problems.file(chat, customerId, file);
     }
     return this.wait(chat, media, now);
   }
@@ -77,7 +98,7 @@ export class MediaIntakeService {
       const file = {
         id: documentId,
         media: media.id,
-        type: media.type === 'image' ? ('image' as const) : ('document' as const),
+        type: WAIT_TYPE[media.type],
         at: now,
       };
       const filesWait = withFile(locked.context, file, now, this.env.FILE_WAIT_SECONDS);

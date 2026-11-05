@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type DatabaseExecutor, leads, waMessages } from '@oneohm/database';
+import { type DatabaseExecutor, leads, waConversations, waMessages } from '@oneohm/database';
 import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
 import { desc, eq } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
@@ -9,6 +9,7 @@ import { logLead } from '../crm/lead-history';
 import { customerHomes } from '../customer-portal/customer-homes';
 import { ObjectStorageService } from '../documents/object-storage.service';
 import { type CheckedFile, checkFile } from '../documents/upload-file';
+import { filesWaitOf } from './assistant/files-wait';
 import { placeOn } from './assistant/kept-files';
 import {
   answersSomething,
@@ -98,6 +99,8 @@ export class ChatFileKeeper {
       // Only a voice note or video goes on the customer's one home, since nothing asks about it.
       const sound = media.type === 'audio' || media.type === 'video';
       if (!sound) return;
+      // A video sent while a problem is open waits for "Are these for your problem?" like a photo.
+      if (media.type === 'video' && (await this.waitsForQuestion(chat.id, documentId))) return;
       const homes = await customerHomes(this.db, chat.customerId);
       const [only] = homes;
       const place = homes.length === 1 && only ? placeOn(homes, only.propertyId, 'other') : null;
@@ -114,6 +117,15 @@ export class ChatFileKeeper {
         key: `wa_file_unfiled:${message.waMessageId}`,
       }).catch((alert) => this.log.error(`Could not alert about ${media.id}: ${String(alert)}`));
     }
+  }
+
+  /** Whether the chat's "What is this?" wait holds this file (read fresh: the answer may have changed it). */
+  private async waitsForQuestion(chatId: string, documentId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ context: waConversations.context })
+      .from(waConversations)
+      .where(eq(waConversations.id, chatId));
+    return filesWaitOf(row?.context)?.files.some((file) => file.id === documentId) ?? false;
   }
 
   /** Under the customer, no home yet; Meta's retry of the same file finds it again. */
