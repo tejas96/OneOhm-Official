@@ -12,7 +12,7 @@ import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { ReportArchiveService } from '../reports/report-archive.service';
 import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
-import { followAssignee } from '../visits/follow-assignee';
+import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
@@ -214,6 +214,7 @@ export class TasksService {
     const [task] = await this.db.select().from(projectTasks).where(eq(projectTasks.id, id));
     if (!task) throw notFound('That task');
     await this.db.transaction(async (tx) => {
+      await lockVisitTarget(tx, { taskId: id });
       await tx
         .update(projectTasks)
         .set({ assigneeUserId: userId, updatedAt: new Date() })

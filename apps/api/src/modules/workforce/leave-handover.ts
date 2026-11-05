@@ -12,7 +12,7 @@ import {
 } from '@oneohm/database';
 import { inArray, sql } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
-import { followAssignees } from '../visits/follow-assignee';
+import { followAssignees, lockVisitTargets } from '../visits/follow-assignee';
 import type { AffectedWork } from './leave-impact';
 
 type LeaveRow = typeof leaveRequests.$inferSelect;
@@ -78,6 +78,11 @@ export async function handOverWork(
   const now = new Date();
   const [person, backup] = await Promise.all([nameOf(tx, leave.userId), nameOf(tx, backupId)]);
   if (work.tasks.length > 0) {
+    await lockVisitTargets(
+      tx,
+      'taskId',
+      work.tasks.map((task) => task.id),
+    );
     await tx
       .update(projectTasks)
       .set({ assigneeUserId: backupId, updatedAt: now })
@@ -106,6 +111,7 @@ export async function handOverWork(
   }
   if (work.serviceRequests.length > 0) {
     const requestIds = work.serviceRequests.map((request) => request.id);
+    await lockVisitTargets(tx, 'serviceRequestId', requestIds);
     await tx
       .update(serviceRequests)
       .set({ assigneeUserId: backupId, updatedAt: now })
@@ -114,6 +120,7 @@ export async function handOverWork(
   }
   if (work.followUps.length > 0) {
     const ids = work.followUps.map((lead) => lead.id);
+    await lockVisitTargets(tx, 'leadId', ids);
     await tx
       .update(leads)
       .set({ ownerUserId: backupId, version: sql`${leads.version} + 1`, updatedAt: now })

@@ -14,7 +14,7 @@ import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { followAssignees } from '../visits/follow-assignee';
+import { followAssignees, lockVisitTargets } from '../visits/follow-assignee';
 import { presentWorkOrder, workOrderSummaries } from './work-order-read';
 import { syncWorkOrders } from './work-order-sync';
 
@@ -92,6 +92,11 @@ export class WorkOrdersService {
       );
 
     const workOrderId = await this.db.transaction(async (tx) => {
+      await lockVisitTargets(
+        tx,
+        'taskId',
+        tasks.map((task) => task.id),
+      );
       await tx
         .update(projectTasks)
         .set({ assigneeUserId: lead.userId, updatedAt: new Date() })

@@ -15,7 +15,7 @@ import {
 } from '@oneohm/database';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { syncWorkOrders } from '../../contractors/work-order-sync';
-import { followAssignees } from '../../visits/follow-assignee';
+import { followAssignees, lockVisitTargets } from '../../visits/follow-assignee';
 import {
   moveBackups,
   moveLeaveReviews,
@@ -37,6 +37,9 @@ async function moveOwnership(
   reseller: boolean,
 ) {
   const now = new Date();
+  await lockVisitTargets(tx, 'leadId', work.leads);
+  await lockVisitTargets(tx, 'taskId', work.tasks);
+  await lockVisitTargets(tx, 'serviceRequestId', work.serviceRequests);
   if (work.leads.length > 0)
     await tx
       .update(leads)

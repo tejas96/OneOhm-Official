@@ -24,7 +24,7 @@ import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
-import { followAssignee } from '../visits/follow-assignee';
+import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { changesFor, type Patch } from './service-ticket-changes';
 
 type Ticket = ServiceTicket;
@@ -116,6 +116,7 @@ export class ServiceDeskService {
       : undefined;
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      if (patch.assigneeUserId !== undefined) await lockVisitTarget(tx, { serviceRequestId: id });
       await tx
         .update(serviceRequests)
         .set(changesFor(patch, before, now, recategory))

@@ -33,6 +33,8 @@ export async function setServiceDay(
     target,
     { day: visitOn, slot, status: 'confirmed', by: 'staff', userId },
     existing,
+    new Date(),
+    timeZone,
   );
   await tellBooked(tx, target, row, moved, userId);
 }

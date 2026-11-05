@@ -9,7 +9,7 @@ import {
   visits,
 } from '@oneohm/database';
 import { OPEN_VISIT_STATUSES, type VisitKind, visitKindOfTask } from '@oneohm/domain';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { invalid, notFound } from '../../common/http/errors';
 
 /** What a visit is about, resolved from a task, a lead or a service request. */
@@ -199,6 +199,25 @@ export async function openVisitForTask(db: DatabaseExecutor, taskId: string) {
     .where(
       and(eq(visits.taskId, taskId), inArray(visits.status, ['proposed', 'confirmed', 'missed'])),
     )
+    .limit(1);
+  return row ?? null;
+}
+
+/** The open visit of a task, service request or lead, found by its id alone (no target needed). */
+export async function openVisitByScope(db: DatabaseExecutor, scope: VisitScope) {
+  const where = scope.taskId
+    ? eq(visits.taskId, scope.taskId)
+    : scope.serviceRequestId
+      ? eq(visits.serviceRequestId, scope.serviceRequestId)
+      : and(
+          eq(visits.leadId, scope.leadId ?? ''),
+          isNull(visits.taskId),
+          isNull(visits.serviceRequestId),
+        );
+  const [row] = await db
+    .select()
+    .from(visits)
+    .where(and(where, inArray(visits.status, [...OPEN_VISIT_STATUSES])))
     .limit(1);
   return row ?? null;
 }

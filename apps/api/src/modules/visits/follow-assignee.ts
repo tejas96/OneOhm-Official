@@ -1,9 +1,11 @@
 import { alertVisitOwner, type DatabaseExecutor, visits } from '@oneohm/database';
-import { eq } from 'drizzle-orm';
+import { isPresenceKind } from '@oneohm/domain';
+import { and, eq, inArray } from 'drizzle-orm';
 import { busyOn, contactOf } from './visit-capacity';
 import { logVisit } from './visit-effects';
+import { lockVisitTarget, lockVisitTargets } from './visit-lock';
 import { dayWords } from './visit-messages';
-import { openVisitFor, targetOf, type VisitScope } from './visit-reads';
+import { openVisitByScope, targetOf, type VisitScope } from './visit-reads';
 import { tellCrewChanged, visitContext } from './visit-tell';
 
 /**
@@ -18,11 +20,13 @@ export async function followAssignee(
   scope: VisitScope,
   newUserId: string | null,
   actorId: string | null = null,
+  timeZone = 'Asia/Kolkata',
 ): Promise<void> {
-  const target = await targetOf(tx, scope).catch(() => null);
-  if (!target) return;
-  const visit = await openVisitFor(tx, target);
+  // Normally taken before the assignee was changed (see lockVisitTarget); a repeat is harmless.
+  await lockVisitTarget(tx, scope);
+  const visit = await openVisitByScope(tx, scope);
   if (!visit) return;
+  const target = await targetOf(tx, scope);
   const crew = newUserId ? [newUserId] : [];
   if (visit.crewUserIds[0] === crew[0]) return;
   await tx
@@ -38,15 +42,17 @@ export async function followAssignee(
     `${target.title}: ${who?.name ?? 'nobody'} now comes for the visit on ${dayWords(visit.day)}`,
     { userId: newUserId },
   );
+  // A service or AMC visit's trouble goes to the service desk, even when it has a project.
+  const service = visit.kind === 'service' || visit.kind === 'amc';
   const busy =
-    newUserId && visit.kind !== 'inspection' && visit.kind !== 'net_meter'
-      ? await busyOn(tx, newUserId, visit.day, visit.slot, visit.id)
+    newUserId && !isPresenceKind(visit.kind)
+      ? await busyOn(tx, newUserId, visit.day, visit.slot, visit.id, timeZone)
       : null;
   if (busy)
     // Not the busy person: the manager, desk or lead owner decides.
     await alertVisitOwner(
       tx,
-      { ...visit, crewUserIds: [] },
+      { ...visit, crewUserIds: [], ...(service ? { projectId: null } : {}) },
       {
         kind: 'visit_crew_busy',
         title: `${who?.name ?? 'The new person'} is busy on ${dayWords(visit.day)}`,
@@ -54,22 +60,37 @@ export async function followAssignee(
         key: `visit_crew_busy:${visit.id}:${newUserId}`,
       },
     );
-  if (visit.status === 'confirmed' && target.mayMessage && who)
+  // The board's own dates are not the customer's crew to announce.
+  if (visit.status === 'confirmed' && target.mayMessage && who && !isPresenceKind(visit.kind))
     await tellCrewChanged(tx, await visitContext(tx, target), {
       day: visit.day,
       name: who.name,
       phone: who.phone,
-      key: `visit_crew:${visit.id}:${newUserId}`,
+      key: `visit_crew:${visit.id}:${newUserId}:${Date.now()}`,
     });
 }
 
-/** The same for several tasks, requests or leads reassigned at once. */
+/** The same for several tasks, requests or leads reassigned at once (only those with an open visit). */
 export async function followAssignees(
   tx: DatabaseExecutor,
   kind: 'taskId' | 'serviceRequestId' | 'leadId',
   ids: readonly string[],
   newUserId: string | null,
   actorId: string | null = null,
+  timeZone = 'Asia/Kolkata',
 ): Promise<void> {
-  for (const id of ids) await followAssignee(tx, { [kind]: id }, newUserId, actorId);
+  if (ids.length === 0) return;
+  const column = {
+    taskId: visits.taskId,
+    serviceRequestId: visits.serviceRequestId,
+    leadId: visits.leadId,
+  }[kind];
+  const open = await tx
+    .select({ id: column })
+    .from(visits)
+    .where(and(inArray(column, [...ids]), inArray(visits.status, ['proposed', 'confirmed'])));
+  for (const id of new Set(open.flatMap((row) => (row.id ? [row.id] : []))))
+    await followAssignee(tx, { [kind]: id }, newUserId, actorId, timeZone);
 }
+
+export { lockVisitTarget, lockVisitTargets };

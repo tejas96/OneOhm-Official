@@ -13,8 +13,9 @@ import {
   surveyOnLead,
   type VisitRow,
 } from './visit-effects';
+import { lockVisitTarget } from './visit-lock';
 import { dayWords } from './visit-messages';
-import type { VisitTarget } from './visit-reads';
+import { scopeOfRow, targetOf, type VisitTarget } from './visit-reads';
 
 const say = (day: string, slot: VisitSlot) => `${dayWords(day)}, ${slot}`;
 
@@ -52,10 +53,13 @@ export async function saveVisit(
     toldAt: confirmed && isPresenceKind(target.kind) && target.mayMessage ? now : null,
     updatedAt: now,
   };
-  await lockCrewDay(tx, target, input.day);
+  // Locks first, in the same order as a reassignment, then the crew as it is now (not as it was read).
+  await lockVisitTarget(tx, scopeOfRow(target));
+  const crew = (await targetOf(tx, scopeOfRow(target))).crew;
+  await lockCrewDay(tx, crew, input.day);
   if (!isPresenceKind(target.kind)) {
     // Two taps (or a tap and the desk) at once take turns: the slot is checked again inside the lock.
-    const taken = await takenSlots(tx, target.crew, todayIn(timeZone, now), existing?.id);
+    const taken = await takenSlots(tx, crew, todayIn(timeZone, now), existing?.id);
     if (!freeSlots(taken[input.day] ?? []).includes(input.slot))
       throw conflict(
         'The person who comes already has a visit then. Pick another time.',
@@ -93,7 +97,7 @@ export async function saveVisit(
         propertyId: target.propertyId,
         day: input.day,
         slot: input.slot,
-        crewUserIds: [...target.crew],
+        crewUserIds: [...crew],
         proposedBy: input.by,
         proposedByUserId: input.by === 'staff' ? input.userId : null,
         ...stamp,
@@ -216,10 +220,7 @@ export async function customerConfirmed(
 }
 
 /** One person's day is saved by one transaction at a time (the lock lets go when it ends). */
-async function lockCrewDay(tx: DatabaseExecutor, target: VisitTarget, day: string) {
-  // The thing itself too, so two answers to one ask take turns even with no crew named.
-  const thing = target.taskId ?? target.serviceRequestId ?? target.leadId ?? '';
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visit-target:${thing}`}))`);
-  for (const person of [...target.crew].sort())
+async function lockCrewDay(tx: DatabaseExecutor, crew: readonly string[], day: string) {
+  for (const person of [...crew].sort())
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visit:${person}:${day}`}))`);
 }
