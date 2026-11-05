@@ -1,3 +1,4 @@
+import { homeEn, homeHi, homeMr } from '@oneohm/shared';
 import { localized, type Words } from '../whatsapp/assistant/language';
 
 /**
@@ -18,17 +19,17 @@ const EN_SEND = {
   location: {
     ask: (home: string) =>
       `Please share the location of your *${home}* home so our team finds it easily.`,
-    saved: (home: string) => `Thank you ✅ Location saved for your ${home} home.`,
+    saved: (home: string) => `Thank you ✅ Location saved for your ${homeEn(home)}.`,
     checking: (home: string) =>
-      `Thank you ✅ We got the location of your ${home} home. Our team will check it.`,
+      `Thank you ✅ We got the location of your ${homeEn(home)}. Our team will check it.`,
     anyHome: 'solar',
     which: 'Which home is this location for?',
-    same: (home: string) => `Thank you ✅ We already have this location for your ${home} home.`,
+    same: (home: string) => `Thank you ✅ We already have this location for your ${homeEn(home)}.`,
   },
   pay: {
-    due: (amount: string, home: string) => `*${amount}* is due for your ${home} home.`,
+    due: (amount: string, home: string) => `*${amount}* is due for your ${homeEn(home)}.`,
     askProof: (amount: string, home: string) =>
-      `If you have paid *${amount}* for your ${home} home another way, please send us the proof.`,
+      `If you have paid *${amount}* for your ${homeEn(home)} another way, please send us the proof.`,
     chatProof:
       'Please send a photo of the payment proof here, and tell us the amount and the date. We will confirm within 1 working day.',
     thanks: "Thanks — we'll confirm within 1 working day.",
@@ -52,7 +53,7 @@ const EN_SEND = {
   /** The customer is told when the team cancels what they asked. */
   cancelled: {
     location: (home: string) =>
-      `You do not need to share the location of your ${home} home any more. Thank you.`,
+      `You do not need to share the location of your ${homeEn(home)} any more. Thank you.`,
     pay: 'We are not waiting for a payment proof from you any more. Your payment is still due.',
     callback: 'You do not need to pick a time for the call any more. Thank you.',
     visit_pick: 'You do not need to pick a day for our visit any more. Thank you.',
@@ -82,16 +83,16 @@ const MR_SEND: Words<typeof EN_SEND> = {
   },
   location: {
     ask: (home) => `कृपया तुमच्या *${home}* घराचे लोकेशन पाठवा, म्हणजे आमची टीम सहज पोहोचेल.`,
-    saved: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे लोकेशन सेव्ह केले.`,
-    checking: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे लोकेशन मिळाले. आमची टीम ते तपासेल.`,
+    saved: (home) => `धन्यवाद ✅ तुमच्या ${homeMr(home, 'घराचे')} लोकेशन सेव्ह केले.`,
+    checking: (home) => `धन्यवाद ✅ तुमच्या ${homeMr(home, 'घराचे')} लोकेशन मिळाले. आमची टीम ते तपासेल.`,
     anyHome: 'सोलर',
     which: 'हे लोकेशन कोणत्या घराचे आहे?',
-    same: (home) => `धन्यवाद ✅ तुमच्या ${home} घराचे हे लोकेशन आमच्याकडे आधीच आहे.`,
+    same: (home) => `धन्यवाद ✅ तुमच्या ${homeMr(home, 'घराचे')} हे लोकेशन आमच्याकडे आधीच आहे.`,
   },
   pay: {
-    due: (amount, home) => `तुमच्या ${home} घरासाठी *${amount}* बाकी आहे.`,
+    due: (amount, home) => `तुमच्या ${homeMr(home, 'घरासाठी')} *${amount}* बाकी आहे.`,
     askProof: (amount, home) =>
-      `तुमच्या ${home} घरासाठी *${amount}* दुसऱ्या मार्गाने भरले असतील, तर कृपया पुरावा पाठवा.`,
+      `तुमच्या ${homeMr(home, 'घरासाठी')} *${amount}* दुसऱ्या मार्गाने भरले असतील, तर कृपया पुरावा पाठवा.`,
     chatProof:
       'कृपया पेमेंटच्या पुराव्याचा फोटो इथे पाठवा, आणि रक्कम व तारीख सांगा. आम्ही १ कामाच्या दिवसात खात्री करू.',
     thanks: 'धन्यवाद — आम्ही १ कामाच्या दिवसात खात्री करू.',
@@ -111,7 +112,7 @@ const MR_SEND: Words<typeof EN_SEND> = {
   stageFallback: 'तुमच्या प्रकल्पाचे काम',
   document: (name) => `तुमचे ${name}`,
   cancelled: {
-    location: (home) => `तुमच्या ${home} घराचे लोकेशन पाठवण्याची आता गरज नाही. धन्यवाद.`,
+    location: (home) => `तुमच्या ${homeMr(home, 'घराचे')} लोकेशन पाठवण्याची आता गरज नाही. धन्यवाद.`,
     pay: 'आम्ही आता तुमच्याकडून पेमेंटच्या पुराव्याची वाट पाहत नाही. तुमचे पेमेंट अजून बाकी आहे.',
     callback: 'फोनसाठी वेळ निवडण्याची आता गरज नाही. धन्यवाद.',
     visit_pick: 'आमच्या भेटीसाठी दिवस निवडण्याची आता गरज नाही. धन्यवाद.',
@@ -141,16 +142,16 @@ const HI_SEND: Words<typeof EN_SEND> = {
   },
   location: {
     ask: (home) => `कृपया अपने *${home}* घर की लोकेशन भेजें, ताकि हमारी टीम आसानी से पहुँच सके।`,
-    saved: (home) => `धन्यवाद ✅ आपके ${home} घर की लोकेशन सेव कर ली।`,
-    checking: (home) => `धन्यवाद ✅ आपके ${home} घर की लोकेशन मिल गई। हमारी टीम इसे जाँचेगी।`,
+    saved: (home) => `धन्यवाद ✅ आपके ${homeHi(home)} की लोकेशन सेव कर ली।`,
+    checking: (home) => `धन्यवाद ✅ आपके ${homeHi(home)} की लोकेशन मिल गई। हमारी टीम इसे जाँचेगी।`,
     anyHome: 'सोलर',
     which: 'यह लोकेशन किस घर की है?',
-    same: (home) => `धन्यवाद ✅ आपके ${home} घर की यह लोकेशन हमारे पास पहले से है।`,
+    same: (home) => `धन्यवाद ✅ आपके ${homeHi(home)} की यह लोकेशन हमारे पास पहले से है।`,
   },
   pay: {
-    due: (amount, home) => `आपके ${home} घर के लिए *${amount}* बाकी है।`,
+    due: (amount, home) => `आपके ${homeHi(home)} के लिए *${amount}* बाकी है।`,
     askProof: (amount, home) =>
-      `अगर आपने ${home} घर के लिए *${amount}* किसी और तरीके से भरा है, तो कृपया सबूत भेजें।`,
+      `अगर आपने ${homeHi(home)} के लिए *${amount}* किसी और तरीके से भरा है, तो कृपया सबूत भेजें।`,
     chatProof: 'कृपया पेमेंट के सबूत की फ़ोटो यहाँ भेजें, और रकम व तारीख़ बताएँ। हम 1 कामकाजी दिन में पुष्टि करेंगे।',
     thanks: 'धन्यवाद — हम 1 कामकाजी दिन में पुष्टि करेंगे।',
     paidAlready: 'वह भुगतान हो चुका है ✅ धन्यवाद।',
@@ -169,7 +170,7 @@ const HI_SEND: Words<typeof EN_SEND> = {
   stageFallback: 'आपके प्रोजेक्ट का काम',
   document: (name) => `आपका ${name}`,
   cancelled: {
-    location: (home) => `अब आपको ${home} घर की लोकेशन भेजने की ज़रूरत नहीं है। धन्यवाद।`,
+    location: (home) => `अब आपको ${homeHi(home)} की लोकेशन भेजने की ज़रूरत नहीं है। धन्यवाद।`,
     pay: 'अब हम आपसे भुगतान के सबूत का इंतज़ार नहीं कर रहे। आपका भुगतान अभी बाकी है।',
     callback: 'अब आपको फ़ोन के लिए समय चुनने की ज़रूरत नहीं है। धन्यवाद।',
     visit_pick: 'अब आपको हमारी विज़िट के लिए दिन चुनने की ज़रूरत नहीं है। धन्यवाद।',

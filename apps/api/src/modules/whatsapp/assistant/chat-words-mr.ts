@@ -1,4 +1,5 @@
 import type { ReplyTime } from '@oneohm/domain';
+import { homeMr } from '@oneohm/shared';
 import type { ChatWords } from './chat-words';
 import type { Words } from './language';
 
@@ -50,7 +51,7 @@ export const MR_CHAT: Words<ChatWords> = {
   },
   pay: (amount) => `${amount} भरा`,
   payLink: (amount, when, home) =>
-    `तुमच्या ${home} येथील घरासाठी ${when ? `${when} ` : ''}*${amount}* भरायचे आहेत.`,
+    `तुमच्या ${homeMr(home, 'येथील घरासाठी')} ${when ? `${when} ` : ''}*${amount}* भरायचे आहेत.`,
   moreDue: (count) => `आणखी ${count} घरांसाठी पेमेंट बाकी आहे. त्यासाठी आम्हाला इथे विचारा.`,
   quoteChanged: 'ते कोटेशन बदलले आहे — हे सध्याचे आहे.',
   talkTo: (name) => `${name} शी बोला`,
@@ -77,18 +78,19 @@ export const MR_CHAT: Words<ChatWords> = {
       `तुमचे ${home} येथील सोलर *${stage}* टप्प्यावर आहे (${steps} पैकी ${done} टप्पे).`,
     complete: (home) => `तुमचे ${home} येथील सोलर पूर्ण झाले आहे.`,
     paper: (paper, home) =>
-      `आम्हाला ${home ? `तुमच्या ${home} येथील घरासाठी ` : ''}तुमचे *${paper}* हवे आहे.`,
-    pay: (amount, home) => `तुमच्या ${home} येथील घरासाठी *${amount}* भरायचे आहेत.`,
-    visit: (home, day) => `आमची टीम *${day}* रोजी तुमच्या ${home ? `${home} येथील ` : ''}घरी येईल.`,
-    problem: (home) => `आम्ही ${home ? `तुमच्या ${home} येथील घरच्या ` : 'तुमच्या '}समस्येवर काम करत आहोत.`,
+      `आम्हाला ${home ? `तुमच्या ${homeMr(home, 'येथील घरासाठी')} ` : ''}तुमचे *${paper}* हवे आहे.`,
+    pay: (amount, home) => `तुमच्या ${homeMr(home, 'येथील घरासाठी')} *${amount}* भरायचे आहेत.`,
+    visit: (home, day) => `आमची टीम *${day}* रोजी तुमच्या ${homeMr(home, 'येथील घरी')} येईल.`,
+    problem: (home) =>
+      `आम्ही ${home ? `तुमच्या ${homeMr(home, 'येथील घरच्या')} ` : 'तुमच्या '}समस्येवर काम करत आहोत.`,
     quote: 'तुमचे कोटेशन तुमच्या उत्तराची वाट पाहत आहे.',
     nothing: 'आज आम्ही कशी मदत करू?',
     count: (count) => `${count} गोष्टी तुमच्याकडून हव्या आहेत.`,
     noProject: (name, when) =>
       `आम्ही तुमचा सोलर प्लॅन तयार करत आहोत. ${name ? `${name} तुम्हाला ${CALL[when]} कॉल करतील` : `आमची टीम तुम्हाला ${CALL[when]} कॉल करेल`}.`,
     seeThem: 'आत्ता तुमच्याकडून हे हवे आहे.',
-    paperRow: (home) => (home ? `${home} येथील घरासाठी हवे आहे` : 'तुमच्याकडून हवे आहे'),
-    payRow: (home) => `${home} येथील घरासाठी भरायचे आहे`,
+    paperRow: (home) => (home ? `${homeMr(home, 'येथील घरासाठी')} हवे आहे` : 'तुमच्याकडून हवे आहे'),
+    payRow: (home) => `${homeMr(home, 'येथील घरासाठी')} भरायचे आहे`,
     quoteRow: 'तुमच्या उत्तराची वाट',
   },
   smallTalk: {
@@ -115,7 +117,7 @@ export const MR_CHAT: Words<ChatWords> = {
   },
   paper: {
     ask: (paper, home) =>
-      `कृपया ${home ? `तुमच्या ${home} येथील घरासाठी ` : ''}तुमचे *${paper}* इथे फोटो किंवा PDF म्हणून पाठवा.`,
+      `कृपया ${home ? `तुमच्या ${homeMr(home, 'येथील घरासाठी')} ` : ''}तुमचे *${paper}* इथे फोटो किंवा PDF म्हणून पाठवा.`,
     list: (papers) => `आम्हाला अजून हवे: ${papers}.\nफोटो किंवा PDF इथे पाठवा.`,
     any: 'फोटो किंवा PDF इथे पाठवा आणि ते काय आहे ते सांगा.',
   },

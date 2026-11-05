@@ -1,4 +1,5 @@
 import type { ReplyTime } from '@oneohm/domain';
+import { homeHi } from '@oneohm/shared';
 import type { ChatWords } from './chat-words';
 import type { Words } from './language';
 
@@ -48,7 +49,7 @@ export const HI_CHAT: Words<ChatWords> = {
   },
   pay: (amount) => `${amount} भरें`,
   payLink: (amount, when, home) =>
-    `${home} वाले घर के लिए ${when ? `${when} ` : ''}*${amount}* भरने हैं।`,
+    `${homeHi(home, 'वाले')} के लिए ${when ? `${when} ` : ''}*${amount}* भरने हैं।`,
   moreDue: (count) => `${count} और घरों का पेमेंट बाकी है। उसके लिए हमसे यहाँ पूछें।`,
   quoteChanged: 'वह कोटेशन बदल गया है — यह ताज़ा है।',
   talkTo: (name) => `${name} से बात करें`,
@@ -74,18 +75,19 @@ export const HI_CHAT: Words<ChatWords> = {
     stage: (home, stage, done, steps) =>
       `${home} में आपका सोलर *${stage}* पर है (${steps} में से ${done} चरण)।`,
     complete: (home) => `${home} में आपका सोलर पूरा हो गया है।`,
-    paper: (paper, home) => `हमें ${home ? `${home} वाले घर के लिए ` : ''}आपका *${paper}* चाहिए।`,
-    pay: (amount, home) => `${home} वाले घर के लिए *${amount}* भरने हैं।`,
-    visit: (home, day) => `हमारी टीम *${day}* को आपके ${home ? `${home} वाले ` : ''}घर आएगी।`,
-    problem: (home) => `हम ${home ? `${home} वाले घर की ` : 'आपकी '}समस्या पर काम कर रहे हैं।`,
+    paper: (paper, home) =>
+      `हमें ${home ? `${homeHi(home, 'वाले')} के लिए ` : ''}आपका *${paper}* चाहिए।`,
+    pay: (amount, home) => `${homeHi(home, 'वाले')} के लिए *${amount}* भरने हैं।`,
+    visit: (home, day) => `हमारी टीम *${day}* को आपके ${homeHi(home, 'वाले')} आएगी।`,
+    problem: (home) => `हम ${home ? `${homeHi(home, 'वाले')} की ` : 'आपकी '}समस्या पर काम कर रहे हैं।`,
     quote: 'आपका कोटेशन आपके जवाब का इंतज़ार कर रहा है।',
     nothing: 'आज हम कैसे मदद करें?',
     count: (count) => `${count} चीज़ें आपसे चाहिए।`,
     noProject: (name, when) =>
       `हम आपका सोलर प्लान तैयार कर रहे हैं। ${name ? `${name} आपको ${CALL[when]} कॉल करेंगे` : `हमारी टीम आपको ${CALL[when]} कॉल करेगी`}।`,
     seeThem: 'अभी आपसे यह चाहिए।',
-    paperRow: (home) => (home ? `${home} वाले घर के लिए चाहिए` : 'आपसे चाहिए'),
-    payRow: (home) => `${home} वाले घर के लिए बाकी`,
+    paperRow: (home) => (home ? `${homeHi(home, 'वाले')} के लिए चाहिए` : 'आपसे चाहिए'),
+    payRow: (home) => `${homeHi(home, 'वाले')} के लिए बाकी`,
     quoteRow: 'आपके जवाब का इंतज़ार',
   },
   smallTalk: {
@@ -112,7 +114,7 @@ export const HI_CHAT: Words<ChatWords> = {
   },
   paper: {
     ask: (paper, home) =>
-      `कृपया ${home ? `${home} वाले घर के लिए ` : ''}अपना *${paper}* यहाँ फ़ोटो या PDF में भेजें।`,
+      `कृपया ${home ? `${homeHi(home, 'वाले')} के लिए ` : ''}अपना *${paper}* यहाँ फ़ोटो या PDF में भेजें।`,
     list: (papers) => `हमें अभी भी चाहिए: ${papers}।\nफ़ोटो या PDF यहाँ भेजें।`,
     any: 'फ़ोटो या PDF यहाँ भेजें और बताएँ कि यह क्या है।',
   },

@@ -1,3 +1,4 @@
+import { homeMr } from '@oneohm/shared';
 /**
  * Marathi words for the customer's in-app alerts (PRD 5.1).
  *
@@ -136,12 +137,12 @@ export const MARATHI_WORDS: LanguageWords = {
       body: `${p.project}: ${p.milestone}. पुढची माहिती आम्ही कळवू.`,
     }),
     location_request: (p) => ({
-      title: `तुमच्या ${p.home} घराचे लोकेशन पाठवा`,
+      title: `तुमच्या ${homeMr(p.home, 'घराचे')} लोकेशन पाठवा`,
       body: 'आमच्या WhatsApp चॅटमध्ये ‘लोकेशन पाठवा’ दाबा, म्हणजे आमची टीम सहज पोहोचेल.',
     }),
     payment_due: (p) => ({
       title: `${p.amount} बाकी आहे`,
-      body: `तुमच्या ${p.home} घरासाठी. ‘पेमेंट’ उघडून भरा, किंवा दुसऱ्या मार्गाने भरले असल्यास आम्हाला सांगा.`,
+      body: `तुमच्या ${homeMr(p.home, 'घरासाठी')}. ‘पेमेंट’ उघडून भरा, किंवा दुसऱ्या मार्गाने भरले असल्यास आम्हाला सांगा.`,
     }),
     callback_request: (p) => ({
       title: `${p.staff} यांनी कधी फोन करावा?`,

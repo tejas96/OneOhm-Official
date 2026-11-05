@@ -1,4 +1,5 @@
 import { SMS_WORDS_OF } from '@oneohm/domain';
+import { homeEn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
@@ -128,12 +129,12 @@ const WORDS: Readonly<Record<string, Words>> = {
   }),
   // Sent from the team's "Send to customer" menu (redesign §18); app inbox and SMS say the same.
   location_request: (p) => ({
-    title: `Please share the location of your ${p.home} home`,
+    title: `Please share the location of your ${homeEn(p.home)}`,
     body: 'Open our WhatsApp chat and tap Send location, so our team finds it easily.',
   }),
   payment_due: (p) => ({
     title: `${p.amount} is due`,
-    body: `For your ${p.home} home. Open Payments to pay, or tell us if you paid another way.`,
+    body: `For your ${homeEn(p.home)}. Open Payments to pay, or tell us if you paid another way.`,
   }),
   callback_request: (p) => ({
     title: `When should ${p.staff} call you?`,

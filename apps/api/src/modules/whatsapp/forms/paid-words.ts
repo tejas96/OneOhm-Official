@@ -1,3 +1,4 @@
+import { homeEn, homeHi, homeMr } from '@oneohm/shared';
 import { localized, type Words } from '../assistant/language';
 import { PAID_SCREEN } from './paid-another-way.flow';
 
@@ -9,7 +10,7 @@ import { PAID_SCREEN } from './paid-another-way.flow';
 const EN_PAID = {
   button: 'Send payment proof',
   body: (amount: string, home: string) =>
-    `Thanks for telling us. Please add the details of your *${amount}* payment for your ${home} home.\nTap the button, then Send.\n\nOr just send the photo of the proof here.`,
+    `Thanks for telling us. Please add the details of your *${amount}* payment for your ${homeEn(home)}.\nTap the button, then Send.\n\nOr just send the photo of the proof here.`,
   heading: (amount: string, home: string) => `${amount} — ${home}`,
   amountLabel: 'Amount paid (₹)',
   amountHint: (amount: string) => `Amount due: ${amount}`,
@@ -22,7 +23,7 @@ const EN_PAID = {
 const MR_PAID: Words<typeof EN_PAID> = {
   button: 'पुरावा पाठवा',
   body: (amount, home) =>
-    `सांगितल्याबद्दल धन्यवाद. तुमच्या ${home} घराच्या *${amount}* पेमेंटची माहिती द्या.\nबटण दाबा, मग पाठवा.\n\nकिंवा पुराव्याचा फोटो इथेच पाठवा.`,
+    `सांगितल्याबद्दल धन्यवाद. तुमच्या ${homeMr(home, 'घराच्या')} *${amount}* पेमेंटची माहिती द्या.\nबटण दाबा, मग पाठवा.\n\nकिंवा पुराव्याचा फोटो इथेच पाठवा.`,
   heading: (amount, home) => `${amount} — ${home}`,
   amountLabel: 'भरलेली रक्कम (₹)',
   amountHint: (amount) => `बाकी रक्कम: ${amount}`,
@@ -35,7 +36,7 @@ const MR_PAID: Words<typeof EN_PAID> = {
 const HI_PAID: Words<typeof EN_PAID> = {
   button: 'सबूत भेजें',
   body: (amount, home) =>
-    `बताने के लिए धन्यवाद। अपने ${home} घर के *${amount}* पेमेंट की जानकारी दें।\nबटन दबाएँ, फिर भेजें।\n\nया सबूत की फ़ोटो यहीं भेज दें।`,
+    `बताने के लिए धन्यवाद। अपने ${homeHi(home)} के *${amount}* पेमेंट की जानकारी दें।\nबटन दबाएँ, फिर भेजें।\n\nया सबूत की फ़ोटो यहीं भेज दें।`,
   heading: (amount, home) => `${amount} — ${home}`,
   amountLabel: 'चुकाई गई रकम (₹)',
   amountHint: (amount) => `बाकी रकम: ${amount}`,

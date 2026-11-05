@@ -1,4 +1,5 @@
 import { VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
+import { homeEn, homeHi, homeMr } from '@oneohm/shared';
 import { localized, type Words } from '../whatsapp/assistant/language';
 
 /**
@@ -22,7 +23,7 @@ const EN_VISIT = {
       `No problem. When can our team visit *${home}* for the *${work}*?`,
     amc: (home: string) => `Your free AMC visit for *${home}* is due. Pick a day:`,
     homeLine: (home: string | null) =>
-      `Please pick a day for our visit${home ? ` to your ${home} home` : ''}.`,
+      `Please pick a day for our visit${home ? ` to your ${homeEn(home)}` : ''}.`,
     list: 'Pick a day',
     section: 'Days we are free',
     rowLine: 'Our team can come this day',
@@ -48,7 +49,7 @@ const EN_VISIT = {
     `Your visit on *${when}*: ${name} will call before coming${phone ? ` (${phone})` : ''}.`,
   byBoard: 'by the electricity board',
   boardHome: (home: string | null, day: string) =>
-    `The electricity board visits your ${home ? `${home} ` : ''}home on *${day}*.`,
+    `The electricity board visits your ${homeEn(home)} on *${day}*.`,
   thanks: {
     okay: 'Thank you ✅',
     moved: (when: string) => `That day changed — your visit is now *${when}*.`,
@@ -74,7 +75,8 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
     ask: (home, work) => `आमची टीम *${home}* येथे *${work}* साठी कधी येऊ शकते?`,
     again: (home, work) => `ठीक आहे. आमची टीम *${home}* येथे *${work}* साठी कधी येऊ शकते?`,
     amc: (home) => `*${home}* साठी तुमची मोफत AMC भेट आता देय आहे. दिवस निवडा:`,
-    homeLine: (home) => `कृपया आमच्या भेटीसाठी${home ? ` तुमच्या ${home} घरी` : ''} दिवस निवडा.`,
+    homeLine: (home) =>
+      `कृपया आमच्या भेटीसाठी${home ? ` तुमच्या ${homeMr(home, 'घरी')}` : ''} दिवस निवडा.`,
     list: 'दिवस निवडा',
     section: 'आम्ही मोकळे असलेले दिवस',
     rowLine: 'आमची टीम या दिवशी येऊ शकते',
@@ -97,7 +99,7 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
   crewChanged: (when, name, phone) =>
     `तुमची *${when}* ची भेट: येण्यापूर्वी ${name} तुम्हाला फोन करतील${phone ? ` (${phone})` : ''}.`,
   byBoard: 'वीज मंडळाकडून',
-  boardHome: (home, day) => `वीज मंडळ तुमच्या ${home ? `${home} ` : ''}घरी *${day}* रोजी येणार आहे.`,
+  boardHome: (home, day) => `वीज मंडळ तुमच्या ${homeMr(home, 'घरी')} *${day}* रोजी येणार आहे.`,
   thanks: {
     okay: 'धन्यवाद ✅',
     moved: (when) => `तो दिवस बदलला आहे — तुमची भेट आता *${when}* ला आहे.`,
@@ -123,7 +125,7 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
     ask: (home, work) => `हमारी टीम *${home}* पर *${work}* के लिए कब आ सकती है?`,
     again: (home, work) => `ठीक है। हमारी टीम *${home}* पर *${work}* के लिए कब आ सकती है?`,
     amc: (home) => `*${home}* के लिए आपकी मुफ़्त AMC विज़िट का समय हो गया है। दिन चुनें:`,
-    homeLine: (home) => `कृपया हमारी विज़िट${home ? ` आपके ${home} घर पर` : ''} के लिए दिन चुनें।`,
+    homeLine: (home) => `कृपया हमारी विज़िट${home ? ` आपके ${homeHi(home)} पर` : ''} के लिए दिन चुनें।`,
     list: 'दिन चुनें',
     section: 'हमारे खाली दिन',
     rowLine: 'हमारी टीम इस दिन आ सकती है',
@@ -146,7 +148,7 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
   crewChanged: (when, name, phone) =>
     `*${when}* की आपकी विज़िट: आने से पहले ${name} आपको फ़ोन करेंगे${phone ? ` (${phone})` : ''}।`,
   byBoard: 'बिजली बोर्ड द्वारा',
-  boardHome: (home, day) => `बिजली बोर्ड आपके ${home ? `${home} ` : ''}घर पर *${day}* को आएगा।`,
+  boardHome: (home, day) => `बिजली बोर्ड आपके ${homeHi(home)} पर *${day}* को आएगा।`,
   thanks: {
     okay: 'धन्यवाद ✅',
     moved: (when) => `वह दिन बदल गया है — आपकी विज़िट अब *${when}* को है।`,

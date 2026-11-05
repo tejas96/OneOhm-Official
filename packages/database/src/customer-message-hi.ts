@@ -1,3 +1,4 @@
+import { homeHi } from '@oneohm/shared';
 /**
  * Hindi words for the customer's in-app alerts (PRD 5.1).
  *
@@ -136,12 +137,12 @@ export const HINDI_WORDS: LanguageWords = {
       body: `${p.project}: ${p.milestone}। आगे की जानकारी हम देंगे।`,
     }),
     location_request: (p) => ({
-      title: `अपने ${p.home} घर की लोकेशन भेजें`,
+      title: `अपने ${homeHi(p.home)} की लोकेशन भेजें`,
       body: 'हमारी WhatsApp चैट में ‘लोकेशन भेजें’ दबाएँ, ताकि हमारी टीम आसानी से पहुँच सके।',
     }),
     payment_due: (p) => ({
       title: `${p.amount} बाकी है`,
-      body: `आपके ${p.home} घर के लिए। ‘पेमेंट’ खोलकर भरें, या किसी और तरीके से भरा हो तो हमें बताएँ।`,
+      body: `आपके ${homeHi(p.home)} के लिए। ‘पेमेंट’ खोलकर भरें, या किसी और तरीके से भरा हो तो हमें बताएँ।`,
     }),
     callback_request: (p) => ({
       title: `${p.staff} आपको कब फ़ोन करें?`,

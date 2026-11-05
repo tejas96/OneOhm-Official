@@ -1,4 +1,5 @@
 import type { ReplyTime } from '@oneohm/domain';
+import { homeEn } from '@oneohm/shared';
 import { HI_CHAT } from './chat-words-hi';
 import { MR_CHAT } from './chat-words-mr';
 import { localized } from './language';
@@ -36,7 +37,7 @@ const EN_CHAT = {
   pay: (amount: string) => `Pay ${amount}`,
   /** The pay-link message (one button, redesign §1): what is due, when, for which home. */
   payLink: (amount: string, when: string, home: string) =>
-    `*${amount}* is due ${when ? `${when} ` : ''}for your ${home} home.`,
+    `*${amount}* is due ${when ? `${when} ` : ''}for your ${homeEn(home)}.`,
   /** Under the second Payments message when a third home also owes. */
   moreDue: (count: number) =>
     count === 1
@@ -72,12 +73,12 @@ const EN_CHAT = {
       `Your ${home} solar is at *${stage}* (${done} of ${steps} steps).`,
     complete: (home: string) => `Your ${home} solar is complete.`,
     paper: (paper: string, home: string | null) =>
-      `We need your *${paper}*${home ? ` for your ${home} home` : ''}.`,
-    pay: (amount: string, home: string) => `*${amount}* is due for your ${home} home.`,
+      `We need your *${paper}*${home ? ` for your ${homeEn(home)}` : ''}.`,
+    pay: (amount: string, home: string) => `*${amount}* is due for your ${homeEn(home)}.`,
     visit: (home: string | null, day: string) =>
-      `Our team visits your ${home ? `${home} ` : ''}home on *${day}*.`,
+      `Our team visits your ${homeEn(home)} on *${day}*.`,
     problem: (home: string | null) =>
-      `We are working on your problem${home ? ` at your ${home} home` : ''}.`,
+      `We are working on your problem${home ? ` at your ${homeEn(home)}` : ''}.`,
     quote: 'Your quotation is waiting for your answer.',
     nothing: 'How can we help today?',
     count: (count: number) => `${count} things need you.`,
@@ -85,8 +86,8 @@ const EN_CHAT = {
       `We are preparing your solar plan. ${name ?? 'Our team'} will call you ${EN_CALL[when]}.`,
     seeThem: 'Here is what needs you now.',
     paperRow: (home: string | null) =>
-      home ? `We need it for your ${home} home` : 'We need it from you',
-    payRow: (home: string) => `Due for your ${home} home`,
+      home ? `We need it for your ${homeEn(home)}` : 'We need it from you',
+    payRow: (home: string) => `Due for your ${homeEn(home)}`,
     quoteRow: 'Waiting for your answer',
   },
   /** "ok", "thanks", 👍, "good morning": a short reply, no buttons (redesign §14). */
@@ -121,7 +122,7 @@ const EN_CHAT = {
   /** "Send a paper" and [Send it now]: the paper path of today (photo or PDF here). */
   paper: {
     ask: (paper: string, home: string | null) =>
-      `Please send your *${paper}*${home ? ` for your ${home} home` : ''} here as a photo or PDF.`,
+      `Please send your *${paper}*${home ? ` for your ${homeEn(home)}` : ''} here as a photo or PDF.`,
     list: (papers: string) => `We still need: ${papers}.\nSend the photo or PDF here.`,
     any: 'Send the photo or PDF here and tell us what it is.',
   },
