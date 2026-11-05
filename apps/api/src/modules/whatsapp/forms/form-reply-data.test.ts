@@ -17,7 +17,18 @@ describe('reading a form reply (nfm_reply response_json)', () => {
       { id: 'm1', fileName: 'a.jpg', mimeType: 'image/jpeg', sha256: 'h-m1' },
       { id: 'm2', fileName: 'b.jpg', mimeType: 'image/jpeg', sha256: 'h-m2' },
     ]);
-    expect(form.keys).toEqual(['flow_token', 'photos']);
+    expect(form.keys).toEqual(['flow_token:string', 'photos:list']);
+  });
+
+  it('reads photos sent as a JSON string, and media_id instead of id', () => {
+    const form = readForm(
+      reply({
+        flow_token: 'tok',
+        photos: JSON.stringify([{ media_id: 'm9', file_name: 'c.jpg' }]),
+      }),
+    );
+    expect(form.files.map((one) => one.id)).toEqual(['m9']);
+    expect(form.keys).toEqual(['flow_token:string', 'photos:string']);
   });
 
   it('reads the PDFs of the second screen alone', () => {

@@ -39,10 +39,22 @@ const text = (value: unknown): string | null =>
 const scalar = (value: unknown): string | null =>
   typeof value === 'number' ? String(value) : text(value)?.trim() || null;
 
+/** A picker's value: a list, or the same list sent as a JSON string. */
+function listOf(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return value && typeof value === 'object' ? [value] : [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' ? [parsed] : [];
+  } catch {
+    return [];
+  }
+}
+
 function readFile(raw: unknown): FormFile | null {
   if (!raw || typeof raw !== 'object') return null;
   const entry = raw as Record<string, unknown>;
-  const id = text(entry.id);
+  const id = text(entry.id) ?? text(entry.media_id);
   if (!id) return null;
   return {
     id,
@@ -65,8 +77,7 @@ export function readForm(responseJson: unknown): IncomingForm {
     // Not JSON: no token and no files.
   }
   const files = PICKERS.flatMap((name) => {
-    const list = data[name];
-    return Array.isArray(list) ? list.flatMap((raw) => readFile(raw) ?? []) : [];
+    return listOf(data[name]).flatMap((raw) => readFile(raw) ?? []);
   }).slice(0, MAX_FORM_FILES);
   const answers: Record<string, string> = {};
   for (const key of [...SURVEY_ANSWERS, ...CARE_ANSWERS]) {
@@ -75,9 +86,8 @@ export function readForm(responseJson: unknown): IncomingForm {
   }
   const named: Record<string, FormFile> = {};
   for (const key of SURVEY_PHOTOS) {
-    const list = data[key];
     // One photo per screen: a one-item list (or the item itself).
-    const file = readFile(Array.isArray(list) ? list[0] : list);
+    const file = readFile(listOf(data[key])[0]);
     if (file) named[key] = file;
   }
   return {
@@ -87,7 +97,10 @@ export function readForm(responseJson: unknown): IncomingForm {
     files,
     amount: scalar(data.amount),
     date: scalar(data.date),
-    keys: Object.keys(data),
+    // Name and shape only (never values), so an unreadable reply can be diagnosed from the log.
+    keys: Object.entries(data).map(
+      ([key, value]) => `${key}:${Array.isArray(value) ? 'list' : typeof value}`,
+    ),
   };
 }
 
