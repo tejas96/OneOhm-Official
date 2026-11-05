@@ -91,26 +91,35 @@ export async function expireBankSigns(db: Database, now: Date, timeZone: string)
     )
     .limit(PER_TICK);
   for (const { action, assignee, manager } of late) {
-    const closed = await db
-      .update(customerActions)
-      .set({
-        status: 'cancelled',
-        cancelledAt: now,
-        updatedAt: now,
-        payload: { ...action.payload, answer: 'expired' },
-      })
-      .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')))
-      .returning({ id: customerActions.id });
-    if (closed.length === 0 || !action.projectId) continue;
     const bank = String(action.payload.bank ?? 'the bank');
     const day = String(action.payload.dayText ?? action.payload.day ?? '');
-    await db.insert(projectActivities).values({
-      projectId: action.projectId,
-      taskId: action.taskId,
-      kind: 'customer_action',
-      message: `The visit to ${bank} on ${day} was not confirmed, so the ask closed. Please plan a new day.`,
-      data: { customerActionId: action.id },
+    // The status change and the log line stand or fall together; an answer the customer gave stays.
+    const closed = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(customerActions)
+        .set({
+          status: 'cancelled',
+          cancelledAt: now,
+          updatedAt: now,
+          payload: {
+            ...action.payload,
+            expired: true,
+            ...(action.payload.answer ? {} : { answer: 'expired' }),
+          },
+        })
+        .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')))
+        .returning({ id: customerActions.id });
+      if (!row || !action.projectId) return false;
+      await tx.insert(projectActivities).values({
+        projectId: action.projectId,
+        taskId: action.taskId,
+        kind: 'customer_action',
+        message: `The visit to ${bank} on ${day} was not confirmed, so the ask closed. Please plan a new day.`,
+        data: { customerActionId: action.id },
+      });
+      return true;
     });
+    if (!closed || !action.projectId) continue;
     const notice = {
       kind: 'bank_sign_expired',
       title: `Bank visit on ${day} was never confirmed`,

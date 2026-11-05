@@ -104,6 +104,7 @@ export class VisitsService {
         reason ?? 'Cancelled by the team',
         target.title,
       );
+      if (!done) throw conflict('This visit already changed.', 'visit_changed');
       if (target.mayMessage)
         await tellCancelled(
           tx,

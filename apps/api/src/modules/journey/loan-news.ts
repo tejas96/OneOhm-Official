@@ -28,7 +28,12 @@ export async function tellLoanNews(
   const task = await taskByKey(tx, projectId, 'loan_approval');
   if (!task?.notifyCustomer) return;
   const [row] = await tx
-    .select({ name: customers.name, phone: customers.phoneE164, bank: projectLoans.lenderName })
+    .select({
+      name: customers.name,
+      phone: customers.phoneE164,
+      optIn: customers.whatsappOptIn,
+      bank: projectLoans.lenderName,
+    })
     .from(projects)
     .innerJoin(customers, eq(customers.id, projects.customerId))
     .innerJoin(projectLoans, eq(projectLoans.projectId, projects.id))
@@ -62,7 +67,8 @@ export async function tellLoanNews(
     rejected: `${bank} did not approve the loan`,
   }[news];
   // The log says what really happened: a template that is switched off tells nobody.
-  const sent = via === 'chat' || (await templateOn(tx, `loan_${news}`));
+  // A customer who said STOP is told nothing, whatever the message switches say.
+  const sent = row.optIn !== false && (via === 'chat' || (await templateOn(tx, `loan_${news}`)));
   await logAction(
     tx,
     { projectId, leadId: null },

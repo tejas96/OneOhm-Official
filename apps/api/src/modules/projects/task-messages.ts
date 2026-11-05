@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
 import { queueWhatsApp } from '../../common/outbox';
 import { tellStepWithButtons, tellWaitingWithButtons } from '../journey/auto-messages';
+import { loanWaitStarted } from '../journey/loan-papers';
 import { attachmentLink, messagePhones } from './task-message-reach';
 
 type TaskRow = Pick<
@@ -132,6 +133,17 @@ export async function tellCustomerWaiting(
     key: `task_waiting:${task.id}:${party}:${now.toISOString().slice(0, 16)}`,
     since: now,
   });
+}
+
+/** A new wait began: the customer hears why, and the loan papers already asked join a loan wait. */
+export async function waitStarted(
+  db: DatabaseExecutor,
+  task: Parameters<typeof tellCustomerWaiting>[1],
+  party: WaitingParty,
+): Promise<void> {
+  await tellCustomerWaiting(db, task, party);
+  if (party === 'customer' && task.templateKey === 'loan_documents')
+    await loanWaitStarted(db, task.projectId);
 }
 
 /** The project manager hears when a task flagged for them is done (PRD 3.7). */

@@ -15,13 +15,44 @@ export async function loanPaperAsked(
 ): Promise<void> {
   if (ask.category !== 'bank_loan' || !ask.projectId) return;
   const task = await taskByKey(tx, ask.projectId, LOAN_KEY);
+  // Asked during a wait on someone else (the bank, DISCOM): it belongs to no customer wait, now or later.
+  const patch =
+    task?.status === 'waiting' && task.waitingParty !== 'customer'
+      ? { otherWait: true }
+      : task?.status === 'waiting' && task.waitingSince
+        ? { waitSince: task.waitingSince.toISOString() }
+        : null;
+  if (!patch) return;
+  await tx
+    .update(customerActions)
+    .set({ payload: sql`${customerActions.payload} || ${JSON.stringify(patch)}::jsonb` })
+    .where(eq(customerActions.id, ask.id));
+}
+
+/**
+ * The "Collect loan documents" step just started waiting on the customer (redesign §4 Loan): the loan
+ * papers already asked for and still open belong to this wait, so each remembers it (ask first, wait
+ * later). A paper that already remembers a wait keeps it; a paper asked during some other wait never
+ * got one. Runs in the wait's transaction.
+ */
+export async function loanWaitStarted(tx: DatabaseExecutor, projectId: string): Promise<void> {
+  const task = await taskByKey(tx, projectId, LOAN_KEY);
   if (task?.status !== 'waiting' || task.waitingParty !== 'customer' || !task.waitingSince) return;
   await tx
     .update(customerActions)
     .set({
       payload: sql`${customerActions.payload} || ${JSON.stringify({ waitSince: task.waitingSince.toISOString() })}::jsonb`,
     })
-    .where(eq(customerActions.id, ask.id));
+    .where(
+      and(
+        eq(customerActions.projectId, projectId),
+        eq(customerActions.type, 'paper'),
+        eq(customerActions.category, 'bank_loan'),
+        inArray(customerActions.status, ['open', 'received']),
+        sql`${customerActions.payload}->>'waitSince' is null`,
+        sql`${customerActions.payload}->>'otherWait' is null`,
+      ),
+    );
 }
 
 /**

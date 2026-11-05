@@ -7,7 +7,7 @@ import {
   projectFacts,
 } from '@oneohm/database';
 import { isStepKind, type StepKind } from '@oneohm/domain';
-import { formatInr } from '@oneohm/shared';
+import { formatInr, todayIn } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
@@ -43,7 +43,7 @@ interface Facts {
 
 /** The checklist row "Subsidy received": a project fact with the day, kept once. */
 async function markReceived(tx: DatabaseExecutor, projectId: string): Promise<void> {
-  const day = new Date().toISOString().slice(0, 10);
+  const day = todayIn();
   await tx
     .insert(projectFacts)
     .values({ projectId, key: 'subsidy_received', value: day })
@@ -91,7 +91,7 @@ const HANDLERS: Readonly<
       await tx
         .update(customerActions)
         .set({
-          note: `Customer says not received yet (since ${plainDate(new Date().toISOString().slice(0, 10))})`,
+          note: `Customer says not received yet (since ${plainDate(todayIn())})`,
         })
         .where(eq(customerActions.id, action.id));
       return { kind: 'notYet', again: false };

@@ -1,7 +1,7 @@
 import { type DatabaseExecutor, visits } from '@oneohm/database';
-import { freeSlots, isPresenceKind, type VisitSlot } from '@oneohm/domain';
+import { freeSlots, isPresenceKind, OPEN_VISIT_STATUSES, type VisitSlot } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { conflict } from '../../common/http/errors';
 import { takenSlots } from './visit-capacity';
 import {
@@ -142,20 +142,24 @@ async function followVisit(
   );
 }
 
-/** Cancelled: the service request's day is cleared, the waiting asks are cancelled. */
+/**
+ * Cancelled: the service request's day is cleared, the waiting asks are cancelled. Only a proposed or
+ * confirmed visit is cancelled; one that changed meanwhile is left alone and `null` is returned.
+ */
 export async function cancelVisit(
   tx: DatabaseExecutor,
   row: VisitRow,
   userId: string | null,
   reason: string,
   title: string,
-): Promise<VisitRow> {
+): Promise<VisitRow | null> {
   const now = new Date();
   const [updated] = await tx
     .update(visits)
     .set({ status: 'cancelled', cancelledAt: now, cancelReason: reason, updatedAt: now })
-    .where(eq(visits.id, row.id))
+    .where(and(eq(visits.id, row.id), inArray(visits.status, OPEN_VISIT_STATUSES)))
     .returning();
+  if (!updated) return null;
   if (row.serviceRequestId) await mirrorServiceDay(tx, row.serviceRequestId, null);
   await settleVisitActions(tx, row, 'cancelled', ['presence']);
   // A pick the customer made and the team now cancel is not waiting for a check any more.
@@ -172,7 +176,7 @@ export async function cancelVisit(
       reason,
     },
   );
-  return updated ?? row;
+  return updated;
 }
 
 /** The visit happened. */

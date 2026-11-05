@@ -49,11 +49,18 @@ export async function cancelAllAsks(
     .from(customerActions)
     .where(and(inScope, inArray(customerActions.status, ['open', 'received'])));
   const now = new Date();
+  // Only what this call really changed counts: an ask the customer answered a moment ago stays closed.
+  const cancelled: (typeof asks)[number][] = [];
   for (const ask of asks) {
-    await tx
+    const [changed] = await tx
       .update(customerActions)
       .set({ status: 'cancelled', cancelledAt: now, updatedAt: now })
-      .where(eq(customerActions.id, ask.id));
+      .where(
+        and(eq(customerActions.id, ask.id), inArray(customerActions.status, ['open', 'received'])),
+      )
+      .returning({ id: customerActions.id });
+    if (!changed) continue;
+    cancelled.push(ask);
     await settleCancelledAsk(tx, ask, userId);
     await recordAudit(tx, userId, 'customer_action.cancelled', 'customer_action', ask.id, {
       reason,
@@ -70,8 +77,11 @@ export async function cancelAllAsks(
         inArray(visits.status, ['proposed', 'confirmed']),
       ),
     );
-  for (const visit of planned) await cancelVisit(tx, visit, userId, reason, 'Visit');
-  const total = asks.length + planned.length;
+  const stopped: (typeof planned)[number][] = [];
+  for (const visit of planned) {
+    if (await cancelVisit(tx, visit, userId, reason, 'Visit')) stopped.push(visit);
+  }
+  const total = cancelled.length + stopped.length;
   if (total === 0) return 0;
   await logAction(
     tx,
@@ -86,16 +96,16 @@ export async function cancelAllAsks(
     },
   );
   // A paper already sent and waiting for its check is not something the customer still has to do.
-  const waiting = asks.some((ask) => ask.status === 'open') || planned.length > 0;
+  const waiting = cancelled.some((ask) => ask.status === 'open') || stopped.length > 0;
   if (waiting) {
-    const first = asks[0];
+    const first = cancelled[0];
     const home = await homeNameOf(
       tx,
       first?.projectId ?? ('projectId' in scope ? scope.projectId : null),
-      first?.propertyId ?? planned[0]?.propertyId ?? null,
+      first?.propertyId ?? stopped[0]?.propertyId ?? null,
     );
     const owners = [
-      ...new Set([...asks.map((a) => a.customerId), ...planned.map((v) => v.customerId)]),
+      ...new Set([...cancelled.map((a) => a.customerId), ...stopped.map((v) => v.customerId)]),
     ];
     await tellOnce(tx, owners, home, `asks_cancelled:${scopeId}`, userId);
   }

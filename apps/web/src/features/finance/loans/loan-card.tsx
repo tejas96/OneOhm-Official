@@ -53,7 +53,9 @@ export function LoanCard({
     );
   const missing =
     loan.documents.length === 0
-      ? [{ category: 'bank_loan' as const, title: asked('loanFallback'), requirementKey: 'loan' }]
+      ? isAsked(asked('loanFallback'))
+        ? []
+        : [{ category: 'bank_loan' as const, title: asked('loanFallback'), requirementKey: 'loan' }]
       : loan.documents
           .filter((document) => !document.received && !isAsked(document.name))
           .map((document) => ({ category: 'bank_loan' as const, title: document.name }));

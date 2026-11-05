@@ -4,6 +4,7 @@ import {
   type Database,
   type DatabaseExecutor,
   homeNameOf,
+  projects,
 } from '@oneohm/database';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -147,7 +148,14 @@ export async function cancelConfirm(
   if (ask.payload.answer !== 'not_yet' || ask.payload.kind !== 'site_ready') return;
   const [action] = await tx.select().from(customerActions).where(eq(customerActions.id, ask.id));
   const task = action?.taskId ? await taskFor(tx, action.taskId) : null;
-  if (task) await resumeAfterWait(tx, task, String(ask.payload.waitSince ?? '') || null);
+  if (!task) return;
+  // A cancelled project has nothing left to resume.
+  const [project] = await tx
+    .select({ status: projects.status })
+    .from(projects)
+    .where(eq(projects.id, task.projectId));
+  if (project?.status === 'cancelled') return;
+  await resumeAfterWait(tx, task, String(ask.payload.waitSince ?? '') || null);
 }
 
 /**

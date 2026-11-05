@@ -18,7 +18,7 @@ import { checkHandoverMaterial, recordHandoverOverride } from './handover-materi
 import { canViewTask } from './task-access';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked, checkedConsumerNumber } from './task-guards';
-import { tellCustomerAbout, tellCustomerWaiting } from './task-messages';
+import { tellCustomerAbout, waitStarted } from './task-messages';
 import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
 import { closeOpenWait, nextWaitStart } from './task-waits';
@@ -124,7 +124,7 @@ export class TasksService {
       if (party === 'internal' && task.status !== 'waiting') await tellHelpAsked(tx, task, actor);
       // The customer hears about a new wait on someone outside OneOhm (PRD 5.2), once per wait.
       if (task.status !== 'waiting' || task.waitingParty !== party)
-        await tellCustomerWaiting(tx, task, party);
+        await waitStarted(tx, task, party);
     });
     return this.present(id);
   }
