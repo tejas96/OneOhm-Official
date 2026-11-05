@@ -75,17 +75,17 @@ describe('Visits: DISCOM presence, service visits, Home', () => {
     const quietTask = await visitTask(quiet, 'discom_inspection', admin.userId);
     await closeChat(quiet.customer.phone);
     await setVisit(admin, { taskId: quietTask, day, slot: 'morning' });
-    expect(await runVisitWorker(new Date())).toBe(0);
+    const waiting = async () =>
+      (await alertsOf('visit_not_confirmed')).filter((one) =>
+        one.title.includes('Visit Quiet Discom'),
+      );
+    await runVisitWorker(new Date());
+    expect(await waiting()).toHaveLength(0);
     const later = noonOn(addDays(today(), 3));
-    expect(await runVisitWorker(later)).toBeGreaterThanOrEqual(1);
-    const waiting = (await alertsOf('visit_not_confirmed')).filter((one) =>
-      one.body.includes('DISCOM date'),
-    );
-    expect(waiting).toHaveLength(1);
     await runVisitWorker(later);
-    expect(
-      (await alertsOf('visit_not_confirmed')).filter((one) => one.body.includes('DISCOM date')),
-    ).toHaveLength(1);
+    expect(await waiting()).toHaveLength(1);
+    await runVisitWorker(later);
+    expect(await waiting()).toHaveLength(1);
   });
 
   it('the service desk visit day goes through the same record, messages with Okay / Change day, and Home shows it', async () => {
@@ -93,8 +93,8 @@ describe('Visits: DISCOM presence, service visits, Home', () => {
     const { customer } = sale;
     const [request] = await rows<{ id: string }>(
       `INSERT INTO service_requests (customer_id, project_id, category, description, assignee_user_id)
-       VALUES ($1, $2, 'inverter', 'Inverter error (test)', $3) RETURNING id`,
-      [customer.customerId, sale.project.id, admin.userId],
+       VALUES ($1, $2, 'inverter', 'Inverter error (test)', NULL) RETURNING id`,
+      [customer.customerId, sale.project.id],
     );
     const id = request?.id ?? '';
     await openChat(customer.phone, customer.customerId);

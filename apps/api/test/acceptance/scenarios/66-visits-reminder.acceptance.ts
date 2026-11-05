@@ -52,8 +52,8 @@ describe('Visits: reminder, change day, not confirmed, missed', () => {
       home: expect.any(String),
       when: expect.stringMatching(/morning$/),
       work: 'installation',
-      confirmPayload: `vcf:${visit.id}`,
-      changePayload: `vchg:${visit.id}`,
+      confirmPayload: `vcf:${visit.id}:${day}`,
+      changePayload: `vchg:${visit.id}:${day}`,
     });
     // A repeated tick says nothing twice.
     await runVisitWorker(noonOn(reminderDay(day)));

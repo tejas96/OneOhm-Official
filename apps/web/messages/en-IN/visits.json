@@ -36,6 +36,7 @@
     "ask": "Ask the customer to pick a day",
     "confirm": "Confirm",
     "done": "Mark done",
-    "cancel": "Cancel visit"
+    "cancel": "Cancel visit",
+    "taskDiffers": "Task starts {task}, visit is {visit}"
   }
 }

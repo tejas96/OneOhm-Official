@@ -2,6 +2,7 @@
 
 import type { Visit, VisitScope, VisitsOf } from '@oneohm/api-contracts';
 import { Button, Field, Input, type PillTone, Select, StatusPill } from '@oneohm/design-system/web';
+import type { Capability } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { CalendarCheck, Check, X } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -9,6 +10,13 @@ import { useState } from 'react';
 import { useSendAction } from '@/features/send-to-customer/use-send-to-customer';
 import { useCan } from '@/providers/current-user';
 import { useVisitMutations, useVisits } from './use-visits';
+
+const rightsOf = (scope: VisitScope): Capability[] =>
+  scope.taskId
+    ? ['projects.manage', 'tasks.assign']
+    : scope.serviceRequestId
+      ? ['service.manage']
+      : ['leads.manage'];
 
 const SLOTS = ['morning', 'afternoon'] as const;
 const DAY = { weekday: 'short', day: 'numeric', month: 'short' } as const;
@@ -35,7 +43,8 @@ export function VisitCard({
   /** The screen already has its own day picker (a service ticket): only the status and steps. */
   readonly compact?: boolean;
 }) {
-  const allowed = useCan('projects.manage', 'tasks.assign', 'service.manage', 'leads.manage');
+  // The same rights the server asks for this kind of visit.
+  const allowed = useCan(...rightsOf(scope));
   const query = useVisits(scope, allowed);
   if (!allowed || !query.data?.kind) return null;
   return <VisitBody scope={scope} data={query.data} compact={compact} />;
@@ -67,6 +76,11 @@ function VisitBody({
         {t(`title.${data.kind ?? 'service'}`)}
       </h3>
       {visit && <VisitLine visit={visit} label={label(visit.day)} />}
+      {open && data.taskStartDate && data.taskStartDate !== open.day && (
+        <p className="type-body-sm text-at-risk">
+          {t('taskDiffers', { task: label(data.taskStartDate), visit: label(open.day) })}
+        </p>
+      )}
       {open?.status === 'proposed' && (
         <p className="type-body-sm text-ink-muted">{t('proposedHint')}</p>
       )}
