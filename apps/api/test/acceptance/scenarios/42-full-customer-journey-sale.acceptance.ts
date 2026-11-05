@@ -15,8 +15,9 @@ import { quoteInput, uniquePhone } from '../support/sales';
 // acceptance on WhatsApp, the project and the paid advance, to the reports and the history.
 // The run writes the owner's transcript of this customer's whole journey.
 const OUT = 'docs/testing/2026-11-03-whatsapp-journey-transcript.md';
+// The thank-you names who starts the project (redesign §4).
 const MR_THANKS =
-  'धन्यवाद. तुमचे प्रोजेक्ट मॅनेजर आज (किंवा पुढच्या कामाच्या दिवशी) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील.';
+  /^धन्यवाद ✅ \S+ आज \(किंवा पुढच्या कामाच्या दिवशी\) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील\.$/;
 const pdfType = { status: 200, type: expect.stringContaining('application/pdf') };
 
 describe('The full WhatsApp customer journey: quote to paid advance', () => {
@@ -114,7 +115,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       await rows('SELECT 1 FROM outbox WHERE dedupe_key = $1', [`quote_thanks:${quote.id}`]),
     ).toHaveLength(1);
     t.ourSide(
-      `Quotation accepted by the customer (audit: by customer, channel whatsapp, their phone); lead stage won; "start the project" alert to ${j.owner.name} and every projects.create holder (${told.length} people); one thank-you.${(await lastReply(phone))?.body === MR_THANKS ? '' : ' ⚠ From here on the bot and the templates speak English, though the customer chose मराठी (check 8c).'}`,
+      `Quotation accepted by the customer (audit: by customer, channel whatsapp, their phone); lead stage won; "start the project" alert to ${j.owner.name} and every projects.create holder (${told.length} people); one thank-you.${MR_THANKS.test((await lastReply(phone))?.body ?? '') ? '' : ' ⚠ From here on the bot and the templates speak English, though the customer chose मराठी (check 8c).'}`,
     );
   });
 
@@ -123,10 +124,8 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       sent.filter((row) => row.dedupe_key === `quote_thanks:${quote.id}`),
     );
     const [sent] = await J.outboxOf(phone, 'quotation_sent');
-    expect({ thanks: thanks?.payload.body, quote: sent?.payload.language }).toEqual({
-      thanks: MR_THANKS,
-      quote: 'mr-IN',
-    });
+    expect(thanks?.payload.body).toMatch(MR_THANKS);
+    expect(sent?.payload.language).toBe('mr-IN');
   });
 
   it('9. staff start the project: the advance is due and Pay now opens the pay page', async () => {
@@ -137,6 +136,12 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     // Her chat is open, so "please pay" is a chat message with [Pay ₹X] [I paid another way]
     // (redesign §19), not the payment_link template; [Pay ₹X] answers with the pay link.
     await t.collect();
+    // "Started" names her project manager in the chat, in Marathi (redesign §19).
+    const [started] = await rows<{ body: string }>(
+      "SELECT payload->>'body' AS body FROM outbox WHERE recipient = $1 AND dedupe_key = $2",
+      [phone, `project_started:${created.id}`],
+    );
+    expect(started?.body).toContain('प्रोजेक्ट मॅनेजर');
     expect(await J.outboxOf(phone, 'payment_link')).toHaveLength(0);
     const due = (await J.outboxOf(phone, 'session:buttons')).find((one) =>
       JSON.stringify(one.payload).includes(`paidother:${advance().id}`),
