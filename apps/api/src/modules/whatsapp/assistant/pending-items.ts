@@ -12,6 +12,7 @@ import { isPresenceKind } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { type JourneyAsk, journeyAsks } from '../../journey/journey-pending';
+import { type SurveyAsk, surveyAsks } from '../../self-survey/survey-pending';
 import { upcomingVisits } from './upcoming-visits';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
@@ -24,6 +25,7 @@ export type PendingItem =
   /** A day the team asked the customer to pick for a visit ([Pick a day]). */
   | { kind: 'visit_ask'; requestId: string; home: string | null }
   | JourneyAsk
+  | SurveyAsk
   | { kind: 'visit'; requestId: string; on: string; home: string | null; board?: boolean }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
   | { kind: 'quote'; quotationId: string };
@@ -36,6 +38,7 @@ const ORDER: readonly PendingItem['kind'][] = [
   'callback',
   'visit_ask',
   'journey',
+  'survey',
   'visit',
   'problem',
   'quote',
@@ -60,7 +63,7 @@ export async function pendingForCustomer(
   customerId: string,
   today: string,
 ): Promise<PendingItem[]> {
-  const [papers, due, problems, quotes, asks, upcoming, journey] = await Promise.all([
+  const [papers, due, problems, quotes, asks, upcoming, journey, survey] = await Promise.all([
     openPapers(db, customerId),
     dueInstalments(db, customerId),
     openProblems(db, customerId),
@@ -68,6 +71,7 @@ export async function pendingForCustomer(
     openAsks(db, customerId),
     upcomingVisits(db, customerId, today),
     journeyAsks(db, customerId),
+    surveyAsks(db, customerId),
   ]);
   return orderPending([
     ...papers.map((row) => ({
@@ -98,6 +102,7 @@ export async function pendingForCustomer(
       return { kind: 'callback' as const, requestId: row.id };
     }),
     ...journey,
+    ...survey,
     ...upcoming.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,

@@ -1,3 +1,5 @@
+import { SURVEY_ANSWERS, SURVEY_PHOTOS } from '@oneohm/domain';
+
 /** The most files one "Send a paper" reply takes (4 photos, or 2 PDFs). */
 export const MAX_FORM_FILES = 4;
 
@@ -20,6 +22,9 @@ export interface IncomingForm {
   /** The "I paid another way" form: the amount typed (digits) and the day picked. */
   readonly amount: string | null;
   readonly date: string | null;
+  /** The self-survey form: typed and picked answers by name, and the one photo of each photo screen. */
+  readonly answers: Readonly<Record<string, string>>;
+  readonly named: Readonly<Record<string, FormFile>>;
   /** The top-level keys of the reply, kept for the log when no file could be read. */
   readonly keys: readonly string[];
 }
@@ -60,7 +65,21 @@ export function readForm(responseJson: unknown): IncomingForm {
     const list = data[name];
     return Array.isArray(list) ? list.flatMap((raw) => readFile(raw) ?? []) : [];
   }).slice(0, MAX_FORM_FILES);
+  const answers: Record<string, string> = {};
+  for (const key of SURVEY_ANSWERS) {
+    const value = scalar(data[key]);
+    if (value) answers[key] = value;
+  }
+  const named: Record<string, FormFile> = {};
+  for (const key of SURVEY_PHOTOS) {
+    const list = data[key];
+    // One photo per screen: a one-item list (or the item itself).
+    const file = readFile(Array.isArray(list) ? list[0] : list);
+    if (file) named[key] = file;
+  }
   return {
+    answers,
+    named,
     token: text(data.flow_token),
     files,
     amount: scalar(data.amount),

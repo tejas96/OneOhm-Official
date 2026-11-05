@@ -10,6 +10,7 @@ import { conflict, forbidden, invalid, notFound } from '../../common/http/errors
 import { daySpan } from '../../common/notices';
 import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
+import { surveyReturned } from '../self-survey/survey-undo';
 import { openVisitForTask } from '../visits/visit-reads';
 import { canViewTask } from './task-access';
 import { taskTimeline } from './task-activity';
@@ -109,6 +110,7 @@ export class TaskFlowService {
         .set({ status: 'in_progress', updatedAt: new Date() })
         .where(eq(projectTasks.id, id));
       await closeReview(tx, id, 'returned', actor.userId, reason);
+      await surveyReturned(tx, task, actor.userId);
       await tx.insert(projectActivities).values({
         projectId: task.projectId,
         taskId: id,

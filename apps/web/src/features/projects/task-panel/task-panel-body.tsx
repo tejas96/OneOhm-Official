@@ -6,6 +6,7 @@ import { CalendarClock, Layers, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { EvidenceUploader } from '@/features/documents/evidence-uploader';
+import { SelfSurveyCard } from '@/features/self-survey/survey-card';
 import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { TaskVisitLine } from '@/features/site-activity/task-visit-line';
 import { VisitCard } from '@/features/visits/visit-card';
@@ -139,6 +140,7 @@ export function TaskPanelBody({ task }: { readonly task: ProjectTask }) {
       <EvidenceUploader task={task} />
       <TaskVisitLine task={task} />
       <VisitCard scope={{ taskId: task.id }} />
+      <SelfSurveyCard task={task} steps={steps} />
       <PanelSection
         title={t('timeline')}
         action={

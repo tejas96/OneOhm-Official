@@ -13,6 +13,7 @@ import {
   layoutCompose,
   registerCompose,
 } from '../journey/step-compose';
+import { surveyOfferCompose } from '../self-survey/survey-offer';
 import { askVisitCompose } from '../visits/visit-ask';
 import { receiptById } from '../whatsapp/assistant/customer-papers';
 import { inLanguage } from '../whatsapp/assistant/language';
@@ -238,6 +239,8 @@ export function compose(
         return bankSignCompose(deps, ctx, request, id);
       case 'send_layout':
         return layoutCompose(deps, ctx, request, id);
+      case 'self_survey':
+        return surveyOfferCompose(deps, ctx, request, id);
     }
   });
 }

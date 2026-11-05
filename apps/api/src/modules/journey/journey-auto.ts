@@ -5,6 +5,7 @@ import { recordAudit } from '../../common/audit';
 import { AppError } from '../../common/http/errors';
 import { environmentOnce } from '../../config/environment-once';
 import { logAction } from '../documents/customer-action-log';
+import { surveyOnComplete } from '../self-survey/survey-approve';
 import { openAction } from '../send-to-customer/send-actions';
 import { deliver, templateOn } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
@@ -92,8 +93,13 @@ export async function journeyOnReady(tx: DatabaseExecutor, task: JourneyTask): P
 }
 
 /** A step was just completed: installation asks "Is it finished?", handover sends the pack. */
-export async function journeyOnComplete(tx: DatabaseExecutor, task: JourneyTask): Promise<void> {
+export async function journeyOnComplete(
+  tx: DatabaseExecutor,
+  task: JourneyTask,
+  userId: string | null = null,
+): Promise<void> {
   await closeStaleAsks(tx, task);
+  await surveyOnComplete(tx, task, userId);
   if (task.templateKey === INSTALLATION_KEY) await ask(tx, task, 'installation');
   if (task.templateKey === HANDOVER_KEY) await pack(tx, task);
   await stepOnComplete(tx, task);

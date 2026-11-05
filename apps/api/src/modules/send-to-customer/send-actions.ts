@@ -41,7 +41,7 @@ export async function openAction(
   userId: string | null,
   input: {
     id: string;
-    type: 'location' | 'pay' | 'callback' | 'visit_pick' | 'signature' | 'confirm';
+    type: 'location' | 'pay' | 'callback' | 'visit_pick' | 'signature' | 'confirm' | 'self_survey';
     taskId?: string | null;
     title: string;
     propertyId?: string | null;

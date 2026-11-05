@@ -11,7 +11,21 @@ import {
   projects,
 } from '@oneohm/database';
 import { workingMinutesBetween } from '@oneohm/domain';
-import { and, asc, eq, gt, inArray, isNotNull, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { capabilityOf } from './action-capability';
 
 const DAY = 86_400_000;
@@ -24,6 +38,7 @@ const WHAT: Readonly<Record<string, (customer: string, slot: unknown) => string>
   location: (customer) => `Check the location ${customer} sent`,
   pay: (customer) => `Record the payment ${customer} says they made`,
   visit_pick: (customer) => `Confirm the visit day ${customer} picked`,
+  self_survey: (customer) => `Check the self survey ${customer} sent`,
   callback: (customer, slot) =>
     `Call ${customer} back${typeof slot === 'string' ? ` (they picked ${slot})` : ''}`,
 };
@@ -71,15 +86,15 @@ export async function queueActionChecks(
     .leftJoin(projects, eq(projects.id, customerActions.projectId))
     .where(
       and(
-        inArray(customerActions.type, ['location', 'pay', 'callback', 'visit_pick']),
+        inArray(customerActions.type, ['location', 'pay', 'callback', 'visit_pick', 'self_survey']),
         or(
           and(eq(customerActions.status, 'received'), isNotNull(customerActions.doneAt)),
           and(
             eq(customerActions.status, 'open'),
             isNull(customerActions.requestedByUserId),
             isNull(customerActions.propertyId),
-            // A visit ask is the team's, never a pin waiting for its home.
-            ne(customerActions.type, 'visit_pick'),
+            // A visit ask and a survey are never a pin waiting for its home.
+            notInArray(customerActions.type, ['visit_pick', 'self_survey']),
           ),
         ),
         gt(customerActions.createdAt, new Date(now.getTime() - UNTIL - 30 * DAY)),

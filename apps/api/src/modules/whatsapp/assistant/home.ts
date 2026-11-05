@@ -6,6 +6,8 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.modul
 import type { Environment } from '../../../config/environment';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
+import { newVisitTap, visitTap } from '../../self-survey/survey-taps';
+import { SURVEY_WORDS } from '../../self-survey/survey-words';
 import { ensureChatOwner, tellChatTeam } from '../chat-owner';
 import { type Conversation, queueReply } from '../chat-store';
 import { CHAT_WORDS, ROW_MAX, talkTitle } from './chat-words';
@@ -62,12 +64,21 @@ export class HomeService {
       count >= 2 ? CHAT_WORDS.home.count(count) : '',
     ].filter(Boolean);
     const talk = { id: 'go:talk', title: talkTitle(name) };
+    // The survey offer's second button is the visit it can be swapped for.
+    const visitInstead: TapChoice | null =
+      top?.kind === 'survey' && !top.started && count < 2
+        ? {
+            id: top.requestId ? visitTap(top.requestId) : newVisitTap(top.taskId),
+            title: SURVEY_WORDS.buttons.visit,
+          }
+        : null;
     const next: TapChoice =
-      count >= 2
+      visitInstead ??
+      (count >= 2
         ? { id: 'go:see', title: CHAT_WORDS.buttons.seeThem }
         : projects.length > 0
           ? 'update'
-          : talk;
+          : talk);
     return sayWithTaps(this.db, chat, body.join('\n'), this.taps(top, next, waiting));
   }
 

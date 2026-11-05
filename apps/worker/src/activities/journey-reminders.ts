@@ -46,6 +46,7 @@ export function waitingFor(ask: Ask): string {
       pay: 'a payment (or its proof)',
       callback: 'a time for a call back',
       visit_pick: 'a day for our visit',
+      self_survey: 'the self site survey',
     } as Record<string, string>
   )[ask.type] as string;
 }

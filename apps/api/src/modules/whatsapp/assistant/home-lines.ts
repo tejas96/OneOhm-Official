@@ -4,6 +4,8 @@ import { stepNowTap } from '../../journey/journey-taps';
 import { JOURNEY_WORDS } from '../../journey/journey-words';
 import { stepLine } from '../../journey/step-lines';
 import { STEP_WORDS } from '../../journey/step-words';
+import { newTap, startTap } from '../../self-survey/survey-taps';
+import { SURVEY_WORDS } from '../../self-survey/survey-words';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { VISIT_WORDS } from '../../visits/visit-words';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
@@ -30,6 +32,8 @@ export function pendingLine(item: PendingItem): string {
       return VISIT_WORDS.pick.homeLine(item.home);
     case 'journey':
       return journeyLine(item);
+    case 'survey':
+      return item.started ? SURVEY_WORDS.homeFinish : SURVEY_WORDS.offer(formatInr(item.paise));
     case 'visit':
       return item.board
         ? VISIT_WORDS.boardHome(item.home, daySpan(item.on, item.on))
@@ -67,6 +71,11 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
       return item.ask === 'roof_now'
         ? { id: `rdy:now:${item.requestId}`, title: JOURNEY_WORDS.buttons.readyNow }
         : { id: `jr:${item.requestId}`, title: JOURNEY_WORDS.buttons.answerNow };
+    case 'survey':
+      return {
+        id: item.requestId ? startTap(item.requestId) : newTap(item.taskId),
+        title: item.started ? SURVEY_WORDS.buttons.finish : SURVEY_WORDS.buttons.start,
+      };
     case 'visit':
       return { id: 'go:visit', title: buttons.visit };
     case 'problem':
@@ -89,6 +98,7 @@ function pendingRow(item: PendingItem, paysOnline: boolean): Row {
     callback: () => SEND_WORDS.callback.homeRow,
     visit_ask: () => (item.kind === 'visit_ask' ? (item.home ?? '') : ''),
     journey: () => (item.kind === 'journey' ? (item.home ?? '') : ''),
+    survey: () => (item.kind === 'survey' ? (item.home ?? '') : ''),
     visit: () =>
       item.kind === 'visit'
         ? [daySpan(item.on, item.on), item.home].filter(Boolean).join(' · ')

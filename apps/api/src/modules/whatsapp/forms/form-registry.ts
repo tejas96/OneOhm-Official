@@ -1,8 +1,9 @@
 import { PAID_ANOTHER_WAY_FLOW, PAID_ANOTHER_WAY_VERSION } from './paid-another-way.flow';
+import { SELF_SURVEY_FLOW, SELF_SURVEY_VERSION } from './self-survey.flow';
 import { SEND_PAPER_FLOW, SEND_PAPER_VERSION } from './send-paper.flow';
 
 /** The forms we publish to WhatsApp, by key. The Flow JSON of each lives beside it. */
-export const FORM_KEYS = ['send_paper', 'paid_another_way'] as const;
+export const FORM_KEYS = ['send_paper', 'paid_another_way', 'self_survey'] as const;
 export type FormKey = (typeof FORM_KEYS)[number];
 
 export interface FormDefinition {
@@ -28,6 +29,13 @@ export const FORMS: readonly FormDefinition[] = [
     name: 'I paid another way',
     version: PAID_ANOTHER_WAY_VERSION,
     flowJson: PAID_ANOTHER_WAY_FLOW,
+    categories: ['OTHER'],
+  },
+  {
+    key: 'self_survey',
+    name: 'Self site survey',
+    version: SELF_SURVEY_VERSION,
+    flowJson: SELF_SURVEY_FLOW,
     categories: ['OTHER'],
   },
 ];

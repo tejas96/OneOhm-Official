@@ -2,7 +2,7 @@
 
 import type { ReminderTimingRecord } from '@oneohm/api-contracts';
 import { Field, Input, Switch } from '@oneohm/design-system/web';
-import { addDays, todayIn } from '@oneohm/shared';
+import { addDays, formatInr, todayIn } from '@oneohm/shared';
 import { useFormatter, useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
@@ -98,6 +98,31 @@ export function RemindersPanel() {
       </SettingsSection>
       <SettingsSection title={t('subsidy.title')} description={t('subsidy.description')}>
         {days('subsidyChaseDays', 'subsidy.chase', 'subsidy.chaseHint')}
+      </SettingsSection>
+      <SettingsSection title={t('selfSurvey.title')} description={t('selfSurvey.description')}>
+        <Switch
+          checked={draft.selfSurveyOffer}
+          onCheckedChange={(value) => patch({ selfSurveyOffer: value })}
+          label={t('selfSurvey.offer')}
+        />
+        <Field
+          label={t('selfSurvey.amount')}
+          hint={t('selfSurvey.amountHint')}
+          error={errors.selfSurveyPaise}
+        >
+          <div className="sm:max-w-40">
+            <NumberInput
+              unit="paise"
+              value={draft.selfSurveyPaise}
+              onValueChange={(value) => patch({ selfSurveyPaise: value ?? 0 })}
+            />
+          </div>
+        </Field>
+        <p className="rounded-md bg-sunken px-4 py-3 type-body-sm text-ink-muted">
+          {draft.selfSurveyOffer
+            ? t('selfSurvey.preview', { amount: formatInr(draft.selfSurveyPaise) })
+            : t('selfSurvey.off')}
+        </p>
       </SettingsSection>
       <SettingsSection title={t('whatsapp.title')} description={t('whatsapp.description')}>
         <Switch

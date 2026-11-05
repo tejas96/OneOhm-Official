@@ -33,7 +33,9 @@ export type SessionMessage =
       readonly flowId: string;
       readonly token: string;
       readonly screen: string;
-      readonly data: Readonly<Record<string, string>>;
+      readonly data: Readonly<
+        Record<string, string | boolean | readonly { id: string; title: string }[]>
+      >;
       /** Sent as plain words if the form cannot be delivered; not part of the Meta message. */
       readonly fallbackText?: string;
     }

@@ -9,6 +9,9 @@ import { JourneyAnswersService } from '../journey/journey-answers.service';
 import { StepAnswersService } from '../journey/step-answers.service';
 import { OnlinePaymentsModule } from '../online-payments/online-payments.module';
 import { ReportsModule } from '../reports/reports.module';
+import { SelfSurveyController } from '../self-survey/self-survey.controller';
+import { SurveyChatService } from '../self-survey/survey-chat.service';
+import { SurveyStaffService } from '../self-survey/survey-staff.service';
 import { LocationPinService } from '../send-to-customer/location-pin.service';
 import { SendAnswersService } from '../send-to-customer/send-answers.service';
 import { VisitAnswersService } from '../visits/visit-answers.service';
@@ -64,6 +67,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     SharedFilesController,
     OnboardingNudgesController,
     FileQuestionsController,
+    SelfSurveyController,
   ],
   providers: [
     AssistantService,
@@ -100,6 +104,8 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     VisitPickService,
     JourneyAnswersService,
     StepAnswersService,
+    SurveyChatService,
+    SurveyStaffService,
     {
       // Photos customers send: fetched from Meta when live, a sample file in log mode.
       provide: WHATSAPP_MEDIA,

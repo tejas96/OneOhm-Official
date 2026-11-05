@@ -1132,6 +1132,15 @@
           "chase": "Tell the owner after (days)",
           "chaseHint": "Counted from the day the customer said it had not arrived."
         },
+        "selfSurvey": {
+          "title": "Self survey offer",
+          "description": "Customers with a project can do their own site survey on WhatsApp and send photos. When the engineer approves it, this amount is taken off their next payment that has not fallen due yet. It is added once per survey.",
+          "offer": "Offer the self survey",
+          "amount": "Amount off the next payment",
+          "amountHint": "A whole number of rupees, shown in the offer text.",
+          "preview": "The customer reads: “Do your own site survey in 5 minutes and get {amount} off your next payment.”",
+          "off": "The offer is off: Send to customer and Home do not offer the self survey."
+        },
         "whatsapp": {
           "title": "WhatsApp at night",
           "description": "When a customer writes outside 9:30 am to 6:30 pm and a person has their chat.",

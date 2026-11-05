@@ -306,7 +306,8 @@
         "visit_pick": "Visit day",
         "presence": "Be at home",
         "signature": "Signature",
-        "confirm": "Question"
+        "confirm": "Question",
+        "self_survey": "Self survey"
       },
       "callback": {
         "called": "Called"

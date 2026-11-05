@@ -140,7 +140,7 @@ export class SendToCustomerService {
     const existing = await openActionFor(tx, ctx.customerId, record.type, {
       ...(record.type === 'location' && record.propertyId ? { propertyId: record.propertyId } : {}),
       ...(record.type === 'pay' ? { milestoneId: String(record.payload.milestoneId) } : {}),
-      ...(['visit_pick', 'signature', 'confirm'].includes(record.type)
+      ...(['visit_pick', 'signature', 'confirm', 'self_survey'].includes(record.type)
         ? { target: String(record.payload.target) }
         : {}),
     });

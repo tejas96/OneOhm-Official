@@ -23,7 +23,9 @@ export type ChatReply =
       readonly flowId: string;
       readonly token: string;
       readonly screen: string;
-      readonly data: Readonly<Record<string, string>>;
+      readonly data: Readonly<
+        Record<string, string | boolean | readonly { id: string; title: string }[]>
+      >;
       /** Said in plain words instead if the form cannot be delivered (the worker queues it). */
       readonly fallbackText?: string;
     }

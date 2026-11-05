@@ -6,7 +6,14 @@ export type Recorded =
   | {
       readonly kind: 'action';
       readonly id: string;
-      readonly type: 'location' | 'pay' | 'callback' | 'visit_pick' | 'signature' | 'confirm';
+      readonly type:
+        | 'location'
+        | 'pay'
+        | 'callback'
+        | 'visit_pick'
+        | 'signature'
+        | 'confirm'
+        | 'self_survey';
       readonly taskId?: string | null;
       readonly title: string;
       readonly propertyId: string | null;

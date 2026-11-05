@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
+import { SurveyChatService } from '../../self-survey/survey-chat.service';
 import { sayWithTaps } from '../assistant/closing-taps';
 import type { Chosen } from '../assistant/files-wait';
 import { HomeService } from '../assistant/home';
@@ -56,6 +57,7 @@ export class FormReplyService {
     private readonly files: FormFileKeeper,
     private readonly requests: CustomerDocumentRequestsService,
     private readonly home: HomeService,
+    private readonly survey: SurveyChatService,
   ) {}
 
   async receive(chat: Conversation, customerId: string, incoming: Incoming): Promise<void> {
@@ -63,6 +65,15 @@ export class FormReplyService {
     if (!form) return;
     const token = await takeFlowToken(this.db, form.token, chat.id);
     if (!token || token.customerId !== customerId) return this.old(chat, customerId);
+    // The self-survey form carries answers and one photo per screen: the survey keeps them.
+    if (token.formKey === 'self_survey') {
+      try {
+        return await this.survey.fromForm(chat, customerId, String(token.payload.actionId), form);
+      } catch (error) {
+        await releaseFlowToken(this.db, token.token);
+        throw error;
+      }
+    }
     if (form.files.length === 0) {
       this.log.warn(
         `Form reply ${incoming.waMessageId} had no readable file (keys: ${form.keys.join(',')}).`,

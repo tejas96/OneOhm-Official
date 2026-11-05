@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Check,
   CircleHelp,
+  ClipboardCheck,
   ExternalLink,
   FileText,
   IndianRupee,
@@ -49,6 +50,7 @@ const ICON: Readonly<Record<string, LucideIcon>> = {
   presence: CalendarCheck,
   signature: PenLine,
   confirm: CircleHelp,
+  self_survey: ClipboardCheck,
 };
 
 /** A call-back that waits is "To call", a picked visit day "To confirm"; the rest by status. */

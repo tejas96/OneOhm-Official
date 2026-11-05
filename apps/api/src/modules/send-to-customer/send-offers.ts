@@ -3,6 +3,7 @@ import type { SendAction } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { journeyOffers } from '../journey/journey-offers';
 import { stepOffers } from '../journey/step-offers';
+import { surveyOffers } from '../self-survey/survey-offer';
 import { visitAskRequests } from '../visits/visit-ask';
 import { targetOf } from '../visits/visit-reads';
 import { workWords } from '../visits/visit-words';
@@ -152,6 +153,8 @@ export async function offersFor(
     case 'ask_bank_sign':
     case 'send_layout':
       return stepOffers(deps, ctx, action, make);
+    case 'self_survey':
+      return surveyOffers(deps, ctx, make);
   }
 }
 

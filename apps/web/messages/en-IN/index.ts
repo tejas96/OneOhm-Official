@@ -28,6 +28,7 @@ import reportTeam from './report-team.json';
 import reports from './reports.json';
 import rewards from './rewards.json';
 import scopeChanges from './scope-changes.json';
+import selfSurvey from './self-survey.json';
 import sendToCustomer from './send-to-customer.json';
 import service from './service.json';
 import settings from './settings.json';
@@ -72,6 +73,7 @@ const messages = {
   ...reportProfitability,
   ...reportTeam,
   ...reportService,
+  ...selfSurvey,
   ...sendToCustomer,
   ...service,
   ...scopeChanges,

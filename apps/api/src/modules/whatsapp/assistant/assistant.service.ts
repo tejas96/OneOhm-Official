@@ -7,6 +7,7 @@ import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { JourneyAnswersService } from '../../journey/journey-answers.service';
 import { readJourneyTap } from '../../journey/journey-taps';
+import { SurveyChatService } from '../../self-survey/survey-chat.service';
 import { SendAnswersService } from '../../send-to-customer/send-answers.service';
 import { readSendTap } from '../../send-to-customer/send-taps';
 import { VisitAnswersService } from '../../visits/visit-answers.service';
@@ -70,6 +71,7 @@ export class AssistantService {
     private readonly sends: SendAnswersService,
     private readonly visitAnswers: VisitAnswersService,
     private readonly journey: JourneyAnswersService,
+    private readonly survey: SurveyChatService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -80,9 +82,8 @@ export class AssistantService {
     );
     if (asked) return;
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
-    // A quote button works even while a person has the chat: accepting is the customer's act.
+    // A quote button works while a person has the chat (accepting is the customer's act) and ends a waiting step (F8).
     const tap = readQuoteTap(incoming.choiceId);
-    // A quote tap, like any tap, ends a step left waiting (review F8).
     if (tap && WAITING_STEPS.includes(stepOf(chat))) await setStep(this.db, chat, 'menu');
     const typed = incoming.kind === 'text' ? incoming.text : null;
     const waits = WAITING_STEPS.includes(stepOf(chat));
@@ -90,8 +91,7 @@ export class AssistantService {
     await inLanguage(language, () =>
       tap ? this.quotes.tap(chat, tap, incoming.waMessageId) : this.answer(chat, incoming),
     );
-    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14) —
-    // unless the answer opened a step that waits for words; then on a later message.
+    // Devanagari we cannot place as Marathi or Hindi: answered, then asked once (§14), later if a step waits for words.
     if (ask) await this.menus.askLanguage(chat);
   }
 
@@ -114,6 +114,7 @@ export class AssistantService {
     // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
       return this.menus.choose(chat, customerId, 'talk');
+    if (await this.survey.takeInput(chat, customerId, incoming)) return;
     // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     // A "Send a paper" form came back: its files answer the paper it was sent for.

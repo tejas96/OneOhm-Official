@@ -117,7 +117,7 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
   }
 
   await tellCustomerAbout(tx, task, 'completed');
-  await journeyOnComplete(tx, task);
+  await journeyOnComplete(tx, task, userId);
   await tellManagerDone(tx, task, userId);
   await tx.insert(projectActivities).values({
     projectId: task.projectId,

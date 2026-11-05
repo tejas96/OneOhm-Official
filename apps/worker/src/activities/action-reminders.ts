@@ -72,6 +72,7 @@ export async function queueActionReminders(
           'visit_pick',
           'confirm',
           'signature',
+          'self_survey',
         ]),
         eq(customerActions.status, 'open'),
         // Asks older than 14 days are over; only a roof answered "Not yet" counts from its answer, so
@@ -94,7 +95,7 @@ export async function queueActionReminders(
     // A pin waiting for its home is the customer's own move; nobody asked. The system asks the visit
     // day and the roof and installation questions itself. Once a paper is agreed to, its signed copy
     // is a paper of its own and is chased as one.
-    const bySystem = ['visit_pick', 'confirm'].includes(row.action.type);
+    const bySystem = ['visit_pick', 'confirm', 'self_survey'].includes(row.action.type);
     if (!row.action.requestedByUserId && !bySystem) continue;
     if (row.action.type === 'signature' && row.action.payload.signedActionId) continue;
     // A subsidy that has not arrived waits for the money, not for an answer: the owner hears after the set days.
@@ -125,6 +126,7 @@ async function remindCustomer(db: Database, row: Row, now: Date, timeZone: strin
   if (action.type === 'visit_pick') return remindVisitPick(db, row, `action_reminder:${action.id}`);
   if (action.type === 'confirm' || action.type === 'signature')
     return remindJourney(db, row, `action_reminder:${action.id}`);
+  if (action.type === 'self_survey') return remindSurvey(db, row, `action_reminder:${action.id}`);
   if (action.type !== 'location') return false;
   const home = await homeNameOf(db, action.projectId, action.propertyId);
   return queueCustomerMessage(
@@ -212,4 +214,19 @@ async function remindJourney(db: Database, { action, customer, phone }: Row, key
   const { template, payload } =
     action.type === 'signature' ? signatureReminder(action, given) : confirmReminder(action, given);
   return queueCustomerMessage(db, phone, template, payload, key);
+}
+
+/** The self survey offered or started and not sent: the same way in again, by the (marketing) template. */
+async function remindSurvey(db: Database, { action, customer, phone }: Row, key: string) {
+  return queueCustomerMessage(
+    db,
+    phone,
+    'self_survey_reminder',
+    {
+      customer: titleCaseName(customer),
+      home: await homeNameOf(db, action.projectId, action.propertyId),
+      continuePayload: `ss:go:${action.id}`,
+    },
+    key,
+  );
 }

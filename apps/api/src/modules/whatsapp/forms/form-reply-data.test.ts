@@ -38,6 +38,8 @@ describe('reading a form reply (nfm_reply response_json)', () => {
     expect(readForm('not json')).toEqual({
       token: null,
       files: [],
+      answers: {},
+      named: {},
       amount: null,
       date: null,
       keys: [],
@@ -45,6 +47,8 @@ describe('reading a form reply (nfm_reply response_json)', () => {
     expect(readForm(undefined)).toEqual({
       token: null,
       files: [],
+      answers: {},
+      named: {},
       amount: null,
       date: null,
       keys: [],
@@ -66,5 +70,30 @@ describe('reading a form reply (nfm_reply response_json)', () => {
       amount: '1,200',
       date: '1762128000000',
     });
+  });
+
+  it('reads the self survey: answers by name and one photo per screen', () => {
+    const form = readForm(
+      reply({
+        flow_token: 't',
+        roof: 'rcc',
+        floors: '2',
+        shade: 'none',
+        size: 'unknown',
+        consumer: ' 12345 ',
+        corner_a: [{ id: 'a', file_name: 'a.jpg' }],
+        meter: [{ id: 'm' }],
+        board: 'nope',
+      }),
+    );
+    expect(form.answers).toEqual({
+      roof: 'rcc',
+      floors: '2',
+      shade: 'none',
+      size: 'unknown',
+      consumer: '12345',
+    });
+    expect(Object.keys(form.named)).toEqual(['corner_a', 'meter']);
+    expect(form.files).toEqual([]);
   });
 });

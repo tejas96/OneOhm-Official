@@ -15,7 +15,9 @@ export interface FormStart {
   readonly body: string;
   readonly button: string;
   readonly screen: string;
-  readonly data: Readonly<Record<string, string>>;
+  readonly data: Readonly<
+    Record<string, string | boolean | readonly { id: string; title: string }[]>
+  >;
   /** Saved with the token: what the reply answers. */
   readonly payload: Record<string, unknown>;
 }
