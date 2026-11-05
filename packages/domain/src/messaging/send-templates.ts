@@ -1,4 +1,5 @@
 import type { MessageTemplateDefault } from './message-templates';
+import { CARE_TEMPLATES } from './send-templates-care';
 import { STEP_ASK_TEMPLATES } from './send-templates-steps';
 
 /**
@@ -145,6 +146,7 @@ export const SEND_MESSAGE_TEMPLATES = [
       'Hello {{1}}, we are waiting for the roof at {{2}} to be ready for installation. Tap the button when it is ready.',
   },
   ...STEP_ASK_TEMPLATES,
+  ...CARE_TEMPLATES,
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

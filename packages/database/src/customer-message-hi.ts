@@ -3,6 +3,8 @@
  *
  * Drafted by the OneOhm team. Have a native Hindi speaker read it once before go-live.
  */
+
+import { CARE_HI } from './customer-message-care';
 import { JOURNEY_HI } from './customer-message-journey';
 import { STEP_HI } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
@@ -24,6 +26,7 @@ export const HINDI_WORDS: LanguageWords = {
   messages: {
     ...JOURNEY_HI,
     ...STEP_HI,
+    ...CARE_HI,
     quotation_sent: (p) => ({
       title: 'आपका कोटेशन तैयार है',
       body: `${p.number}: ${p.total}। सब्सिडी के बाद आपको ${p.effective} देने हैं।`,
@@ -110,7 +113,7 @@ export const HINDI_WORDS: LanguageWords = {
     }),
     stage_rating_request: (p) => ({
       title: 'हमारा काम कैसा लगा?',
-      body: `${p.project}: ${HI_STAGES[p.stageKey ?? ''] ?? p.stage} पूरा हुआ। कृपया ऐप में रेटिंग दें।`,
+      body: `${p.project}: ${HI_STAGES[p.stageKey ?? ''] ?? p.stage} पूरा हुआ। कृपया हमारे WhatsApp चैट या ऐप में रेटिंग दें।`,
     }),
     installation_started: (p) => ({
       title: 'लगाने का काम शुरू हो गया',

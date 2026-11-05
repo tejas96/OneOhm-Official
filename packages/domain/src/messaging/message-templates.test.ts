@@ -52,6 +52,7 @@ describe('follow-up text', () => {
       'payment_received',
       'payment_reminder',
       'payment_link',
+      'stage_rating_request',
       'installation_started',
       'commissioning_completed',
       'project_waiting',
@@ -77,6 +78,9 @@ describe('follow-up text', () => {
       'layout_reminder',
       'self_survey_offer',
       'self_survey_reminder',
+      'problem_fixed_check',
+      'reward_upi_ask',
+      'amc_renewal_offer',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.
     expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([

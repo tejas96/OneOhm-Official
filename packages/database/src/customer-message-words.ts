@@ -1,6 +1,7 @@
 import { customerLanguage, DEFAULT_MILESTONES, DEFAULT_SERVICE_CATEGORIES } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { CARE_EN, CARE_MESSAGES } from './customer-message-care';
 import { HINDI_WORDS } from './customer-message-hi';
 import { JOURNEY_MESSAGES, JOURNEY_EN as JOURNEY_ONLY_EN } from './customer-message-journey';
 import { MARATHI_WORDS } from './customer-message-mr';
@@ -55,11 +56,12 @@ export const IN_APP_MESSAGES = [
   'visit_crew_changed',
   ...JOURNEY_MESSAGES,
   ...STEP_MESSAGES,
+  ...CARE_MESSAGES,
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
 /** The journey messages and the subsidy, loan and layout ones, as the app inbox says them in English. */
-export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN };
+export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN, ...CARE_EN };
 
 /** A paper's home when its request has no project; said in the customer's language. */
 export const SOME_HOME = 'your home';

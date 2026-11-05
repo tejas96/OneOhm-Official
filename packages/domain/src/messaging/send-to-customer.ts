@@ -21,6 +21,8 @@ export const SEND_ACTIONS = [
   'ask_bank_sign',
   'send_layout',
   'self_survey',
+  'ask_rating',
+  'amc_renewal',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -70,6 +72,9 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     send_layout: withProject,
     // The self survey belongs to the survey task of a project (never a lead).
     self_survey: withProject,
+    // The one pending rating asked again (redesign §13), and the AMC renewal offer (§4, §18 18).
+    ask_rating: true,
+    amc_renewal: withProject,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -95,6 +100,8 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   ask_bank_sign: ['projects.manage'],
   send_layout: ['projects.manage', 'documents.manage'],
   self_survey: ['projects.manage'],
+  ask_rating: ['customers.manage', 'projects.manage', 'service.manage'],
+  amc_renewal: ['service.manage', 'customers.manage', 'projects.manage'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
@@ -120,6 +127,8 @@ export function rightsForAsk(type: string): readonly string[] {
       return RIGHTS.ask_site_ready;
     case 'self_survey':
       return RIGHTS.self_survey;
+    case 'rating':
+      return RIGHTS.ask_rating;
     default:
       return RIGHTS.ask_paper;
   }

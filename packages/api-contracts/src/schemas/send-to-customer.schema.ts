@@ -71,6 +71,10 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
   }),
   /** The self site survey with a discount, offered from the project's survey step. */
   z.object({ action: z.literal('self_survey'), taskId: idSchema }),
+  /** The rating still waiting (a finished stage or a resolved problem) asked again; never a second one. */
+  z.object({ action: z.literal('ask_rating'), actionId: idSchema }),
+  /** The AMC renewal offer for a contract that is ending (marketing; skipped after STOP). */
+  z.object({ action: z.literal('amc_renewal'), contractId: idSchema }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 

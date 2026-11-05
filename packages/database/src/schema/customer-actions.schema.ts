@@ -1,4 +1,14 @@
-import { boolean, index, jsonb, pgEnum, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers, leads, properties } from './crm.schema';
 import { users } from './identity.schema';
@@ -78,6 +88,11 @@ export const customerActions = pgTable(
     index('customer_actions_lead_idx').on(table.leadId),
     index('customer_actions_task_idx').on(table.taskId),
     index('customer_actions_status_type_idx').on(table.status, table.type),
+    // Asks that must exist once (a payout per reward, a rating per stage or problem, a renewal per
+    // AMC) name themselves in `payload.once`; a cancelled one frees the name.
+    uniqueIndex('customer_actions_once_unique')
+      .on(sql`(${table.payload}->>'once')`)
+      .where(sql`${table.payload}->>'once' is not null and ${table.status} <> 'cancelled'`),
   ],
 );
 

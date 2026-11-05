@@ -3,6 +3,8 @@
  *
  * Drafted by the OneOhm team. Have a native Marathi speaker read it once before go-live.
  */
+
+import { CARE_MR } from './customer-message-care';
 import { JOURNEY_MR } from './customer-message-journey';
 import { STEP_MR } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
@@ -24,6 +26,7 @@ export const MARATHI_WORDS: LanguageWords = {
   messages: {
     ...JOURNEY_MR,
     ...STEP_MR,
+    ...CARE_MR,
     quotation_sent: (p) => ({
       title: 'तुमचे कोटेशन तयार आहे',
       body: `${p.number}: ${p.total}. सबसिडीनंतर तुम्हाला ${p.effective} भरायचे आहेत.`,
@@ -110,7 +113,7 @@ export const MARATHI_WORDS: LanguageWords = {
     }),
     stage_rating_request: (p) => ({
       title: 'आमचे काम कसे वाटले?',
-      body: `${p.project}: ${MR_STAGES[p.stageKey ?? ''] ?? p.stage} पूर्ण झाले. कृपया ॲपमध्ये रेटिंग द्या.`,
+      body: `${p.project}: ${MR_STAGES[p.stageKey ?? ''] ?? p.stage} पूर्ण झाले. कृपया आमच्या WhatsApp चॅटमध्ये किंवा ॲपमध्ये रेटिंग द्या.`,
     }),
     installation_started: (p) => ({
       title: 'बसवण्याचे काम सुरू झाले',

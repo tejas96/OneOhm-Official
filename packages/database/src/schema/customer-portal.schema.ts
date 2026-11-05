@@ -44,6 +44,9 @@ export const serviceRequests = pgTable(
     resolvedAt: instant('resolved_at'),
     /** The day the service desk booked the technician's visit (PRD 5.5); null until booked. */
     visitOn: calendarDate('visit_on'),
+    /** "Still a problem" after a fix: how many times it came back and when last. */
+    reopenCount: integer('reopen_count').notNull().default(0),
+    reopenedAt: instant('reopened_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

@@ -31,6 +31,7 @@ describe('sendActionsFor', () => {
       'send_receipt',
       'ask_payment_proof',
       'ask_callback',
+      'ask_rating',
     ]);
   });
 
@@ -42,6 +43,7 @@ describe('sendActionsFor', () => {
       'send_document',
       'ask_callback',
       'ask_visit',
+      'ask_rating',
     ]);
   });
 
