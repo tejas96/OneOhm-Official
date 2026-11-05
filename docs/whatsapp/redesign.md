@@ -692,3 +692,10 @@ forms in WhatsApp Manager (I prepare them); SMS DLT templates.
   bank or DISCOM one info line. Project created keeps its plain message: the advance-due message that follows it already has [Pay].
 - **Reminders:** the roof and installation questions are asked again at 2 days (template, working hours) and the asker hears at
   4 days; a paper to agree to is chased through the asker alert at 4 days, and once agreed its signed copy is chased as a paper.
+- **Review round 1:** the chat version of an automatic message follows the template's on/off switch and the customer's WhatsApp
+  opt-in (else the template path); "I have a question"/the link of a waiting message resend the paper itself with its two
+  buttons; a roof ask cancelled after "Not yet" opens its step again (only the wait that ask started); a roof or installation
+  ask whose step is done closes quietly; waiting-on-customer names what is needed ("your roof check", "your signature on …",
+  or the step); the handover pack offer says "Sent on …/Not sent yet" and the fact is set only when the papers really went;
+  reminders for "Not yet" count from the answer (`site_ready_reminder`), a paper not agreed gets `signature_reminder` at 2 days;
+  cancelling only the signed copy reopens the signature; the signed copy is filed in the paper's own folder (else DISCOM papers).

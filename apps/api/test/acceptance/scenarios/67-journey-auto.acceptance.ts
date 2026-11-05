@@ -6,7 +6,7 @@ import { milestoneOf, recordPayment } from '../support/money';
 import { lastReply, replies } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { closeChat, openChat } from '../support/send';
-import { advanceTo, completeThrough, project } from '../support/tasks';
+import { advanceTo, completeThrough, project, sessionOf, taskByKey } from '../support/tasks';
 import { staffEmail, TEAM_PASSWORD } from '../support/team';
 
 // Automatic messages carry buttons (redesign §19): switch-on has [Pay ₹X] when the final instalment
@@ -157,7 +157,89 @@ describe('Journey: automatic messages with buttons', () => {
     expect(
       (await outboxFor(sale.customer.phone)).some((row) => row.template === 'project_waiting'),
     ).toBe(false);
-    // And the handover pack waits for a template that allows messages.
+  });
+
+  async function startInstallation(sale: Awaited<ReturnType<typeof sellProject>>) {
+    await completeThrough(admin, sale.project.id, 'dispatch_material');
+    const structure = taskByKey(await project(admin, sale.project.id), 'structure_installation');
+    const crew = await sessionOf(admin, structure.assignee?.id ?? '');
+    await openChat(sale.customer.phone, sale.customer.customerId);
+    const before = (await replies(sale.customer.phone)).length;
+    await crew.post(`/tasks/${structure.id}/start`);
+    return (await replies(sale.customer.phone)).slice(before);
+  }
+
+  it('installation started carries [Project update]', async () => {
+    const sale = await sellProject(admin, { name: 'Auto Started (test)' });
+    const [message] = await startInstallation(sale);
+    expect(message?.body).toMatch(/^Our team started installing at .+ today\.$/);
+    expect(message?.buttons).toEqual([{ id: 'go:update', title: 'Project update' }]);
+  });
+
+  it('a message switched off in Settings does not go in the chat either', async () => {
+    const sale = await sellProject(admin, { name: 'Auto Switched Off (test)' });
+    await rows("UPDATE message_templates SET active = false WHERE key = 'installation_started'");
+    try {
+      const sent = await startInstallation(sale);
+      expect(sent).toHaveLength(0);
+      const [row] = (await outboxFor(sale.customer.phone)).filter(
+        (one) => one.template === 'installation_started',
+      );
+      expect(row).toBeDefined();
+    } finally {
+      await rows("UPDATE message_templates SET active = true WHERE key = 'installation_started'");
+    }
+  });
+
+  it('a customer who opted out of WhatsApp gets no chat message either', async () => {
+    const sale = await sellProject(admin, { name: 'Auto Opted Out (test)' });
+    await rows('UPDATE customers SET whatsapp_opt_in = false WHERE id = $1', [
+      sale.customer.customerId,
+    ]);
+    expect(await startInstallation(sale)).toHaveLength(0);
+  });
+
+  it('switch-on with nothing due offers Warranty & AMC alone; a handover step that may not message sends no pack (PRD rule)', {
+    timeout: 240_000,
+  }, async () => {
+    const sale = await sellProject(admin, { name: 'Auto Nothing Due (test)' });
+    const { customer } = sale;
+    await reachCommissioning(admin, sale);
+    await rows(
+      "UPDATE payment_milestones SET payer = 'bank' WHERE project_id = $1 AND trigger = 'commissioning_completed'",
+      [sale.project.id],
+    );
     await setNotify(sale, 'handover', false);
+    await openChat(customer.phone, customer.customerId);
+    await completeThrough(admin, sale.project.id, 'testing_commissioning');
+    const message = await lastReply(customer.phone);
+    expect(message?.body).toMatch(
+      /^Your solar at .+ is ON ☀️\nYour warranty and free check-ups are one tap away\.$/,
+    );
+    expect(message?.buttons).toEqual([{ id: 'go:warranty', title: 'Warranty & AMC' }]);
+    await addPaper(admin, sale, 'warranty', 'Quiet warranty card (test)');
+    const before = (await replies(customer.phone)).length;
+    await completeThrough(admin, sale.project.id, 'handover');
+    expect(
+      (await replies(customer.phone)).slice(before).some((reply) => reply.kind === 'document'),
+    ).toBe(false);
+    const [fact] = await rows(
+      "SELECT 1 FROM project_facts WHERE project_id = $1 AND key = 'handover_pack_sent'",
+      [sale.project.id],
+    );
+    expect(fact).toBeUndefined();
+  });
+
+  it('a wait on the customer with no ask to open says which step is waiting', async () => {
+    const sale = await sellProject(admin, { name: 'Auto Waiting Plain (test)' });
+    await openChat(sale.customer.phone, sale.customer.customerId);
+    const survey = (await project(admin, sale.project.id)).tasks.find(
+      (task) => task.templateKey === 'site_survey',
+    );
+    await rows('UPDATE project_tasks SET customer_visible = true WHERE id = $1', [survey?.id]);
+    await admin.post(`/tasks/${survey?.id}/waiting`, { party: 'customer', note: 'Plain (test)' });
+    const message = await lastReply(sale.customer.phone);
+    expect(message?.kind).toBe('text');
+    expect(message?.body).toMatch(/^\*.+\* is waiting for a paper or a reply from you\.$/);
   });
 });

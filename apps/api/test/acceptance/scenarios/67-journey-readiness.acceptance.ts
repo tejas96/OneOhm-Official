@@ -5,7 +5,7 @@ import { asksOf, setNotify, taskRow } from '../support/journey-steps';
 import { choices, lastReply, replies, say, tap } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { closeChat, openChat, optionsOf, sendTo } from '../support/send';
-import { advanceTo } from '../support/tasks';
+import { advanceTo, completeThrough } from '../support/tasks';
 
 // Site readiness before dispatch (redesign §4 Before dispatch, §18 13): the roof question goes by
 // itself when dispatch becomes ready, and staff can send it. Not yet makes the step wait.
@@ -131,7 +131,78 @@ describe('Journey: is the roof ready?', () => {
     await admin.post(`/document-requests/${ask?.id}/cancel`);
     expect((await asksOf(customer.customerId, 'confirm'))[0]?.status).toBe('cancelled');
     expect((await lastReply(customer.phone))?.body).toMatch(
-      /You do not need to answer that question any more/,
+      /You do not need to tell us about the roof any more/,
     );
+  });
+
+  async function notYet() {
+    const sale = await sellProject(admin, { name: 'Roof Cancel (test)' });
+    const { customer } = sale;
+    await openChat(customer.phone, customer.customerId);
+    const dispatch = await advanceTo(admin, sale.project.id, 'dispatch_material');
+    const [ask] = await asksOf(customer.customerId, 'confirm');
+    await tap(customer.phone, `rdy:n:${ask?.id}`);
+    expect((await taskRow(dispatch.id))?.status).toBe('waiting');
+    return { customer, dispatch, ask };
+  }
+
+  it('cancelling the ask after Not yet opens the step again; another wait is left alone', async () => {
+    const { dispatch, ask } = await notYet();
+    await admin.post(`/document-requests/${ask?.id}/cancel`);
+    expect((await taskRow(dispatch.id))?.status).toBe('ready');
+
+    const other = await notYet();
+    await admin.post(`/tasks/${other.dispatch.id}/waiting`, {
+      party: 'discom',
+      note: 'Board (test)',
+    });
+    await admin.post(`/document-requests/${other.ask?.id}/cancel`);
+    expect(await taskRow(other.dispatch.id)).toMatchObject({
+      status: 'waiting',
+      waiting_party: 'discom',
+    });
+  });
+
+  it('an open roof ask closes quietly when the step is done: no Home line, no alert', async () => {
+    const sale = await sellProject(admin, { name: 'Roof Stale (test)' });
+    const { customer } = sale;
+    await openChat(customer.phone, customer.customerId);
+    const dispatch = await advanceTo(admin, sale.project.id, 'dispatch_material');
+    const [ask] = await asksOf(customer.customerId, 'confirm');
+    expect(ask?.status).toBe('open');
+    await completeThrough(admin, sale.project.id, 'dispatch_material');
+    const [closed] = await asksOf(customer.customerId, 'confirm');
+    expect(closed).toMatchObject({ status: 'closed' });
+    expect(closed?.payload.answer).toBe('step_done');
+    const alerts = await rows(
+      "SELECT 1 FROM notifications WHERE kind LIKE 'site_%' AND subject_id = $1",
+      [dispatch.id],
+    );
+    expect(alerts).toHaveLength(0);
+    await say(customer.phone, 'hi');
+    const home = await lastReply(customer.phone);
+    expect(choices(home).some((id) => id.startsWith('rdy:'))).toBe(false);
+    // A late tap on the old question changes nothing and says so.
+    await tap(customer.phone, `rdy:n:${ask?.id}`);
+    expect((await lastReply(customer.phone))?.body).toBe(
+      'That message is no longer open, so nothing has changed.',
+    );
+  });
+
+  it('a wait on the customer names what is needed: your roof check, linked to the question', async () => {
+    const sale = await sellProject(admin, { name: 'Roof Waiting (test)' });
+    const { customer } = sale;
+    await openChat(customer.phone, customer.customerId);
+    const dispatch = await advanceTo(admin, sale.project.id, 'dispatch_material');
+    const [ask] = await asksOf(customer.customerId, 'confirm');
+    await admin.post(`/tasks/${dispatch.id}/waiting`, { party: 'customer', note: 'Roof (test)' });
+    const need = await lastReply(customer.phone);
+    expect(need?.body).toBe('We need *your roof check* to continue.');
+    expect(need?.buttons).toEqual([{ id: `jr:${ask?.id}`, title: 'Answer now' }]);
+    await tap(customer.phone, need?.buttons?.[0]?.id ?? '');
+    expect((await lastReply(customer.phone))?.buttons?.map((button) => button.title)).toEqual([
+      'Yes, ready',
+      'Not yet',
+    ]);
   });
 });

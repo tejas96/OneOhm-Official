@@ -161,4 +161,38 @@ describe('Journey: send for signature', () => {
     });
     expect(sent.status).toBe(400);
   });
+
+  it('the waiting link shows the paper itself again; cancelling only the signed copy reopens the signature', async () => {
+    const sale = await sellProject(admin, { name: 'Sign Reopen (test)' });
+    const { customer } = sale;
+    const taskId = await setNotify(sale, 'handover', true);
+    await addPaper(admin, sale, 'bank_loan', 'Agreement reopen (test)');
+    await openChat(customer.phone, customer.customerId);
+    await sendForSignature(admin, taskId);
+    const [signature] = await asksOf(customer.customerId, 'signature');
+    // Before agreeing: the paper and the two buttons again.
+    await tap(customer.phone, `jr:${signature?.id}`);
+    const [file, ask] = (await replies(customer.phone)).slice(-2);
+    expect(file?.kind).toBe('document');
+    expect(ask?.buttons?.map((button) => button.title)).toEqual(['I agree', 'I have a question']);
+    await tap(customer.phone, ask?.buttons?.[0]?.id ?? '');
+    const [agreed] = await asksOf(customer.customerId, 'signature');
+    const copyId = String(agreed?.payload.signedActionId);
+    // The signed copy is filed in the paper's own folder (a handover paper falls back to DISCOM papers), not Other.
+    const [copy] = await rows<{ category: string }>(
+      'SELECT category FROM customer_actions WHERE id = $1',
+      [copyId],
+    );
+    expect(copy?.category).toBe('bank_loan');
+    await admin.post(`/document-requests/${copyId}/cancel`);
+    const [open] = await asksOf(customer.customerId, 'signature');
+    expect(open?.status).toBe('open');
+    expect(open?.payload.signedActionId).toBeUndefined();
+    // The next tap asks for a fresh copy.
+    await tap(customer.phone, `jr:${signature?.id}`);
+    const again = await lastReply(customer.phone);
+    const fresh = (again?.buttons?.[0]?.id ?? '').replace('sendit:', '');
+    expect(fresh).not.toBe(copyId);
+    expect((await asksOf(customer.customerId, 'signature'))[0]?.payload.signedActionId).toBe(fresh);
+  });
 });

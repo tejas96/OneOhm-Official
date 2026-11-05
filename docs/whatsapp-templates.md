@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 35 templates (and newer versions of three). Each one:
+The app sends these 37 templates (and newer versions of three). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -468,11 +468,42 @@ Payloads `hpack:<project id>`, `go:warranty`.
 All four are off until Meta approves **all three languages**; then switch each on, and "Meta approved the version with
 file and buttons" too, in Settings → WhatsApp messages.
 
+### 39. `signature_reminder` — **New** (journey: a paper not yet agreed to, 2 days after)
+Fields: customer, document, home
+
+> en: Hello {{1}}, a reminder: please read your {{2}} for {{3}} and tell us if you agree. Tap the button to see it again.
+
+> mr: नमस्कार {{1}}, आठवण: कृपया {{3}} साठीचे तुमचे {{2}} वाचा आणि सहमत आहात का ते सांगा. पुन्हा पाहण्यासाठी बटण दाबा.
+
+> hi: नमस्ते {{1}}, याद दिलाना: कृपया {{3}} के लिए अपना {{2}} पढ़ें और बताएँ कि आप सहमत हैं या नहीं। फिर से देखने के लिए बटन दबाएँ।
+
+Examples: Ramesh Patil · Net-metering agreement · Sangli
+
+**Button:** one quick reply: en `See it again`; mr `पुन्हा पाहा`; hi `फिर से देखें`. Payload `jr:<id>` (the paper again with its two buttons).
+
+### 40. `site_ready_reminder` — **New** (journey: the customer said the roof is not ready yet; 2 days after)
+Fields: customer, home
+
+> en: Hello {{1}}, we are waiting for the roof at {{2}} to be ready for installation. Tap the button when it is ready.
+
+> mr: नमस्कार {{1}}, {{2}} येथील छप्पर बसवणीसाठी तयार होण्याची आम्ही वाट पाहत आहोत. तयार झाल्यावर बटण दाबा.
+
+> hi: नमस्ते {{1}}, हम {{2}} की छत के इंस्टॉलेशन के लिए तैयार होने का इंतज़ार कर रहे हैं। तैयार होने पर बटन दबाएँ।
+
+Examples: Ramesh Patil · Sangli
+
+**Button:** one quick reply: en `It's ready now`; mr `आता तयार आहे`; hi `अब तैयार है`. Payload `rdy:now:<id>`.
+
+Both are off until Meta approves all three languages.
+
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text
 bodies do not change. Submit the new version under a **new** Meta name (en, mr, hi), then in Settings → WhatsApp messages
 change the Meta name and turn on **Meta approved the version with file and buttons** and the template's own **quick
 replies** switch together (as for `payment_reminder`). Until then the older text message keeps sending.
+The switches also apply to the Marathi and Hindi names: submit and approve **all three languages together**, give the
+Marathi and Hindi templates their own Meta names, and only then switch on; a language not approved yet sends its older
+text. In the chat the Pay button reads `Pay ₹X` (the amount); the template's fixed title is `Pay now`.
 
 | Template | Quick replies (en · mr · hi) | Payloads |
 |---|---|---|

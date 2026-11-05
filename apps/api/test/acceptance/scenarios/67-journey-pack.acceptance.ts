@@ -45,6 +45,7 @@ describe('Journey: handover pack', () => {
     const before = (await replies(customer.phone)).length;
     const offer = await packOffer(project.id);
     expect(offer?.preview?.buttons).toEqual(['Documents', 'Warranty & AMC']);
+    expect(offer?.detail).toBe('Not sent yet');
     if (!offer?.request) throw new Error('No pack offer.');
     const sent = await sendTo(admin, { projectId: project.id }, offer.request);
     expect(sent.via).toBe('chat');
@@ -71,6 +72,7 @@ describe('Journey: handover pack', () => {
       { id: 'go:warranty', title: 'Warranty & AMC' },
     ]);
     expect((await packFact(project.id))[0]?.value).toMatch(/^20\d\d-\d\d-\d\d$/);
+    expect((await packOffer(project.id))?.detail).toMatch(/^Sent on 20\d\d-\d\d-\d\d$/);
     const [log] = await rows(
       "SELECT 1 FROM project_activities WHERE project_id = $1 AND message LIKE 'Sent the handover pack (3 papers)%'",
       [project.id],
@@ -101,6 +103,9 @@ describe('Journey: handover pack', () => {
       warrantyPayload: 'go:warranty',
     });
     expect(await replies(customer.phone)).toHaveLength(0);
+    // The template is not switched on yet, so nothing really went: the checklist row is not set.
+    expect(await packFact(project.id)).toHaveLength(0);
+    expect((await packOffer(project.id))?.detail).toBe('Not sent yet');
     await tap(customer.phone, template?.payload.documentsPayload ?? '');
     const sent = await replies(customer.phone);
     expect(sent.map((reply) => reply.kind)).toEqual(['document', 'buttons']);
