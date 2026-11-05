@@ -18,7 +18,7 @@ import type { SendContext } from './send-context';
 import type { Built } from './send-messages';
 
 /** Whether the template the customer would get outside the chat window is switched on (the worker's rule). */
-async function templateOn(db: DatabaseExecutor, key: string): Promise<boolean> {
+export async function templateOn(db: DatabaseExecutor, key: string): Promise<boolean> {
   const [row] = await db
     .select({ active: messageTemplates.active })
     .from(messageTemplates)

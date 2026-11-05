@@ -13,6 +13,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { leadVisibility } from '../crm/lead-read';
+import { reopenSignature } from '../journey/journey-signature';
 import { tellAskCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
@@ -126,9 +127,11 @@ export class DocumentRequestsService {
         data: { customerActionId: id },
       });
       await recordAudit(tx, actor.userId, 'customer_action.cancelled', 'customer_action', id);
-      if (request.type === 'paper')
-        await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
-      else
+      if (request.type === 'paper') {
+        // A signed copy cancelled alone reopens its signature (the customer can send it again).
+        const reopened = await reopenSignature(tx, { payload: row?.payload ?? {} }, actor.userId);
+        if (!reopened) await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
+      } else
         await tellAskCancelled(
           tx,
           { ...request, propertyId: row?.propertyId ?? null, payload: row?.payload ?? {} },

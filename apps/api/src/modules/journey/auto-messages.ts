@@ -1,10 +1,13 @@
 import {
   customerActions,
+  customers,
   type DatabaseExecutor,
   homeNameOf,
+  messageTemplates,
   noticeCustomer,
   queueCustomerMessage,
 } from '@oneohm/database';
+import { templateIsOn } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
 import { and, asc, eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
@@ -28,6 +31,26 @@ interface Person {
 }
 
 /**
+ * Whether the chat message may go: the window is open, the customer has not opted out and the message
+ * is switched on in Settings (the worker's rule for the template, so the two never disagree).
+ */
+async function mayChat(tx: DatabaseExecutor, phone: string, template: string): Promise<boolean> {
+  if (!(await chatOpenFor(tx, phone))) return false;
+  const [row] = await tx
+    .select({ active: messageTemplates.active })
+    .from(messageTemplates)
+    .where(eq(messageTemplates.key, template))
+    .limit(1);
+  if (!templateIsOn(template, row)) return false;
+  const [customer] = await tx
+    .select({ optIn: customers.whatsappOptIn })
+    .from(customers)
+    .where(eq(customers.phoneE164, phone))
+    .limit(1);
+  return customer?.optIn !== false;
+}
+
+/**
  * One automatic message (redesign §19): inside the 24-hour window the chat message with its buttons
  * (and the same news in the app inbox); outside it the approved template as before, whose newer
  * version may carry the same buttons as quick replies (behind its own switch in Settings).
@@ -42,7 +65,7 @@ async function send(
     readonly reply: () => Promise<ChatReply>;
   },
 ): Promise<void> {
-  if (!(await chatOpenFor(tx, person.phone))) {
+  if (!(await mayChat(tx, person.phone, message.template))) {
     await queueCustomerMessage(tx, person.phone, message.template, message.payload, message.key);
     return;
   }
@@ -158,13 +181,16 @@ export async function tellWaitingWithButtons(
       key: given.key,
       reply: async () => {
         const words = JOURNEY_WORDS;
-        if (!link || party !== 'customer') {
-          const who = words.auto.parties[party as 'customer' | 'bank' | 'discom'];
+        if (party !== 'customer') {
+          const who = words.auto.parties[party as 'bank' | 'discom'];
           return {
             kind: 'text',
             body: words.auto.waitingOn(who, plainDate(given.since.toISOString().slice(0, 10))),
           };
         }
+        // Waiting on the customer with no ask to open: say what the step is.
+        if (!link)
+          return { kind: 'text', body: words.auto.waitingYou(given.payload.milestone ?? '') };
         const left = link.ask.payload.leftPaise;
         const title =
           link.ask.type === 'pay' && typeof left === 'number'
@@ -174,10 +200,19 @@ export async function tellWaitingWithButtons(
               : words.buttons.sendNow;
         return {
           kind: 'buttons',
-          body: words.auto.needs(link.ask.title),
+          body: words.auto.needs(askNoun(link.ask)),
           buttons: [{ id: link.tap, title }],
         };
       },
     },
   );
+}
+
+/** What an ask is called in "We need … to continue": a friendly noun for a question or a paper to sign. */
+function askNoun(ask: { type: string; title: string; payload: Record<string, unknown> }): string {
+  const nouns = JOURNEY_WORDS.nouns;
+  if (ask.type === 'confirm')
+    return ask.payload.kind === 'installation' ? nouns.install : nouns.roof;
+  if (ask.type === 'signature') return nouns.sign(String(ask.payload.paperTitle ?? ask.title));
+  return ask.title;
 }

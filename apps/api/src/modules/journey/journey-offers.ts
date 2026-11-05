@@ -1,5 +1,7 @@
 import type { SendOffer, SendRequest } from '@oneohm/api-contracts';
+import { projectFacts } from '@oneohm/database';
 import type { SendAction } from '@oneohm/domain';
+import { and, eq } from 'drizzle-orm';
 import type { SendContext } from '../send-to-customer/send-context';
 import type { Deps } from '../send-to-customer/send-papers';
 import { customerPapers } from '../whatsapp/assistant/customer-papers';
@@ -73,10 +75,19 @@ export async function journeyOffers(
     }
     case 'send_handover_pack': {
       if (!ctx.projectId) return [];
+      const [sent] = await db
+        .select({ day: projectFacts.value })
+        .from(projectFacts)
+        .where(
+          and(
+            eq(projectFacts.projectId, ctx.projectId),
+            eq(projectFacts.key, 'handover_pack_sent'),
+          ),
+        );
       const offer = await make(
         'pack',
         'Send the handover pack',
-        'Warranty cards, manuals, the Work Completion Report and the invoice.',
+        sent ? `Sent on ${sent.day}` : 'Not sent yet',
         {
           action: 'send_handover_pack',
           projectId: ctx.projectId,

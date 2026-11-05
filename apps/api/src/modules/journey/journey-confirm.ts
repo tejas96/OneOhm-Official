@@ -1,5 +1,11 @@
-import { customerActions, customers, type Database, homeNameOf } from '@oneohm/database';
-import { and, eq } from 'drizzle-orm';
+import {
+  customerActions,
+  customers,
+  type Database,
+  type DatabaseExecutor,
+  homeNameOf,
+} from '@oneohm/database';
+import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
 import {
@@ -82,7 +88,14 @@ export function answerConfirm(
       if (asked) return { kind: 'notYet' };
       await record('not_yet', `${who} said the roof at ${home} is not ready yet (WhatsApp)`, false);
       if (task) {
-        await waitOnCustomer(tx, task, 'roof not ready');
+        const since = await waitOnCustomer(tx, task, 'roof not ready');
+        if (since)
+          await tx
+            .update(customerActions)
+            .set({
+              payload: sql`${customerActions.payload} || ${JSON.stringify({ waitSince: since })}::jsonb`,
+            })
+            .where(eq(customerActions.id, action.id));
         await alertTaskOwner(tx, task, {
           kind: 'site_not_ready',
           title: `Roof not ready at ${home}`,
@@ -113,7 +126,7 @@ export function answerConfirm(
         : `${who} confirmed the installation at ${home} is finished (WhatsApp)`;
     await record(answer === 'now' ? 'ready_now' : 'yes', line, true);
     if (task && asked) {
-      await resumeAfterWait(tx, task);
+      await resumeAfterWait(tx, task, String(action.payload.waitSince ?? '') || null);
       await alertTaskOwner(tx, task, {
         kind: 'site_ready_now',
         title: `Roof is ready at ${home}`,
@@ -123,4 +136,58 @@ export function answerConfirm(
     }
     return { kind: asked ? 'now' : 'yes' };
   });
+}
+
+/** The team cancelled a roof ask that was answered "Not yet": the step it kept waiting opens again. */
+export async function cancelConfirm(
+  tx: DatabaseExecutor,
+  ask: { readonly id: string; readonly payload: Record<string, unknown> },
+): Promise<void> {
+  if (ask.payload.answer !== 'not_yet') return;
+  const [action] = await tx.select().from(customerActions).where(eq(customerActions.id, ask.id));
+  const task = action?.taskId ? await taskFor(tx, action.taskId) : null;
+  if (task) await resumeAfterWait(tx, task, String(ask.payload.waitSince ?? '') || null);
+}
+
+/**
+ * A step was completed: the roof question of that step has no point any more, and the installation
+ * question is over once the system is tested and switched on. They close quietly: no Home line, no
+ * alert, no message (the log keeps one line).
+ */
+export async function closeStaleAsks(
+  tx: DatabaseExecutor,
+  task: { readonly id: string; readonly projectId: string; readonly templateKey: string },
+): Promise<void> {
+  const open = await tx
+    .select()
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.projectId, task.projectId),
+        eq(customerActions.type, 'confirm'),
+        eq(customerActions.status, 'open'),
+      ),
+    );
+  const now = new Date();
+  for (const action of open) {
+    const stale =
+      action.taskId === task.id ||
+      (task.templateKey === 'testing_commissioning' && action.payload.kind === 'installation');
+    if (!stale) continue;
+    await tx
+      .update(customerActions)
+      .set({
+        status: 'closed',
+        closedAt: now,
+        updatedAt: now,
+        payload: { ...action.payload, answer: 'step_done' },
+      })
+      .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')));
+    await logAction(tx, action, {
+      kind: 'customer_action',
+      message: `${action.title}: closed, the step moved on`,
+      userId: null,
+      data: { customerActionId: action.id },
+    });
+  }
 }

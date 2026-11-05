@@ -7,6 +7,7 @@ import {
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
+import { cancelConfirm } from '../journey/journey-confirm';
 import { cancelSignedCopy } from '../journey/journey-signature';
 import { JOURNEY_WORDS } from '../journey/journey-words';
 import { inLanguage } from '../whatsapp/assistant/language';
@@ -27,6 +28,8 @@ export async function tellActionCancelled(
     readonly propertyId: string | null;
     /** The paper a cancelled signature ask was for. */
     readonly paper?: string;
+    /** Which question a cancelled confirm ask was. */
+    readonly kind?: string;
   },
   phone: string,
   userId: string,
@@ -57,16 +60,23 @@ export async function tellActionCancelled(
         : action.type === 'signature'
           ? JOURNEY_WORDS.sign.cancelled(action.paper ?? JOURNEY_WORDS.sign.what)
           : action.type === 'confirm'
-            ? JOURNEY_WORDS.confirmCancelled
+            ? action.kind === 'installation'
+              ? JOURNEY_WORDS.install.cancelled
+              : JOURNEY_WORDS.ready.cancelled
             : words[action.type];
     await queueReply(tx, chat, { kind: 'text', body }, userId, key);
   });
 }
 
 /** What a cancelled ask was about, in the customer's language ("your payment proof is no longer needed"). */
-function whatOf(action: { readonly type: string; readonly paper?: string }): string {
+function whatOf(action: {
+  readonly type: string;
+  readonly paper?: string;
+  readonly kind?: string;
+}): string {
   if (action.type === 'signature') return action.paper ?? JOURNEY_WORDS.sign.what;
-  if (action.type === 'confirm') return JOURNEY_WORDS.ready.what;
+  if (action.type === 'confirm')
+    return action.kind === 'installation' ? JOURNEY_WORDS.install.what : JOURNEY_WORDS.ready.what;
   return SEND_WORDS.cancelled.what[action.type as keyof typeof SEND_WORDS.cancelled.what];
 }
 
@@ -89,6 +99,7 @@ export async function tellAskCancelled(
   const type = TOLD.find((one) => one === ask.type);
   if (!type) return;
   if (type === 'signature') await cancelSignedCopy(tx, ask, userId);
+  if (type === 'confirm') await cancelConfirm(tx, ask);
   const paper = String(ask.payload.paperTitle ?? ask.title);
   await tellActionCancelled(
     tx,
@@ -98,6 +109,7 @@ export async function tellAskCancelled(
       projectId: ask.projectId,
       propertyId: ask.propertyId,
       ...(type === 'signature' ? { paper } : {}),
+      ...(type === 'confirm' ? { kind: String(ask.payload.kind ?? '') } : {}),
     },
     phone,
     userId,

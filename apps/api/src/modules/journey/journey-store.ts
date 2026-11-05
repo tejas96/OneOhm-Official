@@ -90,14 +90,15 @@ export async function waitOnCustomer(
   tx: DatabaseExecutor,
   task: JourneyTask,
   note: string,
-): Promise<void> {
-  if (task.status === 'completed') return;
+): Promise<string | null> {
+  if (task.status === 'completed') return null;
+  const since = await nextWaitStart(tx, task, 'customer');
   await tx
     .update(projectTasks)
     .set({
       status: 'waiting',
       waitingParty: 'customer',
-      waitingSince: await nextWaitStart(tx, task, 'customer'),
+      waitingSince: since,
       updatedAt: new Date(),
     })
     .where(eq(projectTasks.id, task.id));
@@ -108,11 +109,21 @@ export async function waitOnCustomer(
     message: `${task.title}: waiting on the customer (${note}).`,
     userId: null,
   });
+  // The stretch this ask started: only it is ended when the ask ends (a later wait on someone else stays).
+  return since.toISOString();
 }
 
-/** The wait on the customer ends: the step is ready or running again, as it was before it waited. */
-export async function resumeAfterWait(tx: DatabaseExecutor, task: JourneyTask): Promise<void> {
+/**
+ * The wait on the customer ends: the step is ready or running again, as it was before it waited. With
+ * `since` (the stretch the ask started) only that very wait ends; any other wait is left alone.
+ */
+export async function resumeAfterWait(
+  tx: DatabaseExecutor,
+  task: JourneyTask,
+  since?: string | null,
+): Promise<void> {
   if (task.status !== 'waiting' || task.waitingParty !== 'customer') return;
+  if (since && task.waitingSince?.toISOString() !== since) return;
   await closeOpenWait(tx, task);
   await tx
     .update(projectTasks)

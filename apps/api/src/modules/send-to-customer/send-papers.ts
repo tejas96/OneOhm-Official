@@ -20,7 +20,11 @@ export interface Deps {
 }
 
 /** A paper of the customer by the id their paper list gives, or `document:<id>` for one file. */
-export async function resolvePaper(deps: Deps, ctx: SendContext, paperId: string): Promise<Paper> {
+export async function resolvePaper(
+  deps: Deps,
+  ctx: Pick<SendContext, 'customerId'>,
+  paperId: string,
+): Promise<Paper> {
   const { db, portal, documents } = deps;
   const papers = await customerPapers({ db, portal, documents }, ctx.customerId);
   const listed = papers.find((paper) => paper.id === paperId);

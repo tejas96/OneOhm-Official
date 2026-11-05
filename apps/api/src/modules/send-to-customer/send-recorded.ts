@@ -29,6 +29,6 @@ export type Recorded =
 export interface Composed {
   readonly built: Built;
   readonly record: Recorded;
-  /** Work done in the same transaction once the send is recorded (the handover pack marks itself sent). */
-  readonly after?: (tx: DatabaseExecutor) => Promise<void>;
+  /** Work done in the same transaction once the send is made; `delivered` is false when nothing really goes out (the template is off). */
+  readonly after?: (tx: DatabaseExecutor, delivered: boolean) => Promise<void>;
 }

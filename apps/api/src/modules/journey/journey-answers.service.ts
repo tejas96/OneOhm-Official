@@ -3,7 +3,10 @@ import { customerActions, customers, type Database, homeNameOf, projects } from 
 import { and, eq } from 'drizzle-orm';
 import { DATABASE, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { CustomerDocumentsService } from '../customer-portal/customer-documents.service';
+import { CustomerPortalService } from '../customer-portal/customer-portal.service';
 import { logAction } from '../documents/customer-action-log';
+import { resolvePaper } from '../send-to-customer/send-papers';
 import { setStep } from '../whatsapp/assistant/chat-step';
 import { talkTitle } from '../whatsapp/assistant/chat-words';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
@@ -11,17 +14,20 @@ import { HandOverService } from '../whatsapp/assistant/hand-over';
 import { keepPending } from '../whatsapp/assistant/media-intake';
 import { answererName } from '../whatsapp/chat-owner';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';
+import { sharedFileUrl } from '../whatsapp/file-links';
+import { markPackSent } from './journey-compose';
 import { answerConfirm, type Confirmed } from './journey-confirm';
 import {
   handoverPack,
   installationAsk,
   notYetReply,
   readinessAsk,
+  signatureAsk,
   signedCopyAsk,
 } from './journey-messages';
 import { handoverPapers } from './journey-papers';
 import { agree } from './journey-signature';
-import type { JourneyTap } from './journey-taps';
+import { agreeTap, type JourneyTap, questionTap } from './journey-taps';
 import { JOURNEY_WORDS } from './journey-words';
 
 /**
@@ -35,6 +41,8 @@ export class JourneyAnswersService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly people: HandOverService,
+    private readonly portal: CustomerPortalService,
+    private readonly documents: CustomerDocumentsService,
   ) {}
 
   async tapped(chat: Conversation, customerId: string, tap: JourneyTap): Promise<void> {
@@ -153,6 +161,7 @@ export class JourneyAnswersService {
     const home = await homeNameOf(this.db, projectId);
     const built = handoverPack({ customer: project.name, home, projectId }, papers);
     for (const reply of built.replies) await queueReply(this.db, chat, reply);
+    await markPackSent(this.db, projectId);
   }
 
   /** The link of "We need … to continue": the open question or the signed-page ask, again. */
@@ -169,24 +178,45 @@ export class JourneyAnswersService {
       );
     if (!action) return this.old(chat);
     const home = await homeNameOf(this.db, action.projectId);
-    const copy = action.payload.signedActionId;
-    if (action.type === 'signature' && typeof copy === 'string')
-      return void (await queueReply(this.db, chat, signedCopyAsk(`sendit:${copy}`)));
     if (action.type === 'signature') {
-      const paper = String(action.payload.paperTitle ?? action.title);
-      return void (await queueReply(this.db, chat, {
-        kind: 'buttons',
-        body: JOURNEY_WORDS.sign.ask(paper, home),
-        buttons: [
-          { id: `sgn:ok:${action.id}`, title: JOURNEY_WORDS.buttons.agree },
-          { id: `sgn:q:${action.id}`, title: JOURNEY_WORDS.buttons.question },
-        ],
-      }));
+      // Agreed: the signed page again (a fresh copy ask if the earlier one was cancelled).
+      if (action.payload.agreedAt) return this.agree(chat, customerId, action.id);
+      return this.askToSign(chat, customerId, action, home);
     }
     if (action.type !== 'confirm') return this.old(chat);
     if (action.payload.answer === 'not_yet')
       return void (await queueReply(this.db, chat, notYetReply(action.id)));
     const ask = action.payload.kind === 'site_ready' ? readinessAsk : installationAsk;
     for (const reply of ask('', home, action.id).replies) await queueReply(this.db, chat, reply);
+  }
+
+  /** The paper again with its two buttons; if the file cannot be found, the buttons alone. */
+  private async askToSign(
+    chat: Conversation,
+    customerId: string,
+    action: typeof customerActions.$inferSelect,
+    home: string,
+  ) {
+    const deps = { db: this.db, env: this.env, portal: this.portal, documents: this.documents };
+    const paper = await resolvePaper(deps, { customerId }, String(action.payload.paperId)).catch(
+      () => null,
+    );
+    if (paper) {
+      const ask = signatureAsk(
+        { customer: '', paper, home, link: sharedFileUrl(this.env, paper.file) },
+        action.id,
+      );
+      for (const reply of ask.replies) await queueReply(this.db, chat, reply);
+      return;
+    }
+    const title = String(action.payload.paperTitle ?? action.title);
+    await queueReply(this.db, chat, {
+      kind: 'buttons',
+      body: JOURNEY_WORDS.sign.ask(title, home),
+      buttons: [
+        { id: agreeTap(action.id), title: JOURNEY_WORDS.buttons.agree },
+        { id: questionTap(action.id), title: JOURNEY_WORDS.buttons.question },
+      ],
+    });
   }
 }

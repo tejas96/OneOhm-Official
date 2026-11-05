@@ -151,7 +151,9 @@ export async function packFor(
       projectId,
       data: { papers: papers.map((one) => one.paper.caption) },
     },
-    after: (tx) => markPackSent(tx, projectId),
+    after: async (tx, delivered) => {
+      if (delivered) await markPackSent(tx, projectId);
+    },
   };
 }
 

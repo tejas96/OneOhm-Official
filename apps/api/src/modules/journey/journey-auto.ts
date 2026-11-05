@@ -6,9 +6,10 @@ import { environmentOnce } from '../../config/environment-once';
 import { logAction } from '../documents/customer-action-log';
 import { openAction } from '../send-to-customer/send-actions';
 import { contextFor, type SendContext } from '../send-to-customer/send-context';
-import { deliver } from '../send-to-customer/send-deliver';
+import { deliver, templateOn } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { confirmCompose, packFor } from './journey-compose';
+import { closeStaleAsks } from './journey-confirm';
 import { DISPATCH_KEY, HANDOVER_KEY, INSTALLATION_KEY, type JourneyTask } from './journey-store';
 
 /** The customer's context for a project task, as the system acting on its own (no staff member). */
@@ -72,27 +73,28 @@ async function pack(tx: DatabaseExecutor, task: JourneyTask) {
   const composed = await inLanguage(ctx.language, () =>
     packFor(tx, environmentOnce(), ctx, task.projectId),
   ).catch(() => null);
-  if (!composed || composed.record.kind !== 'log') return;
-  await deliver(tx, ctx, composed.built, `journey:pack:${task.projectId}`, null);
-  await composed.after?.(tx);
-  await logAction(
-    tx,
-    { projectId: task.projectId, leadId: null },
-    {
+  const about = { projectId: task.projectId, leadId: null };
+  if (composed?.record.kind !== 'log') {
+    // Nothing the customer may see yet: said in the project log, nothing recorded as sent.
+    await logAction(tx, about, {
       kind: 'customer_action',
-      message: composed.record.log,
+      message: 'Handover pack not sent: there are no handover papers the customer can see.',
       userId: null,
-      data: composed.record.data,
-    },
-  );
-  await recordAudit(
-    tx,
-    null,
-    composed.record.audit,
-    composed.record.entity,
-    composed.record.entityId,
-    composed.record.data,
-  );
+      data: {},
+    });
+    return;
+  }
+  const { record } = composed;
+  const via = await deliver(tx, ctx, composed.built, `journey:pack:${task.projectId}`, null);
+  const delivered = via === 'chat' || (await templateOn(tx, composed.built.template.key));
+  await composed.after?.(tx, delivered);
+  await logAction(tx, about, {
+    kind: 'customer_action',
+    message: delivered ? record.log : `${record.log} (not sent: the message is switched off)`,
+    userId: null,
+    data: record.data,
+  });
+  await recordAudit(tx, null, record.audit, record.entity, record.entityId, record.data);
 }
 
 /** A step just became ready: the dispatch step asks "Is the roof ready?". */
@@ -102,6 +104,7 @@ export async function journeyOnReady(tx: DatabaseExecutor, task: JourneyTask): P
 
 /** A step was just completed: installation asks "Is it finished?", handover sends the pack. */
 export async function journeyOnComplete(tx: DatabaseExecutor, task: JourneyTask): Promise<void> {
+  await closeStaleAsks(tx, task);
   if (task.templateKey === INSTALLATION_KEY) await ask(tx, task, 'installation');
   if (task.templateKey === HANDOVER_KEY) await pack(tx, task);
 }

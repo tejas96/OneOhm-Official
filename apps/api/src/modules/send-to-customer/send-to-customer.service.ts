@@ -28,7 +28,7 @@ import {
   resolveScope,
   type SendContext,
 } from './send-context';
-import { deliver, previewOf } from './send-deliver';
+import { deliver, previewOf, templateOn } from './send-deliver';
 import { offersFor } from './send-offers';
 import type { Deps } from './send-papers';
 
@@ -85,10 +85,12 @@ export class SendToCustomerService {
       const again = body.requestId ? await this.sentBefore(tx, body.requestId) : null;
       if (again) return again;
       const actionId = await this.record(tx, ctx, actor.userId, composed);
-      await composed.after?.(tx);
       // The same ask is one message; a re-sent reminder of an open ask gets its own key.
       const key = `send:${body.request.action}:${actionId ?? id}:${id}`;
       const via = await deliver(tx, ctx, composed.built, key, actor.userId);
+      // A chat message went; a template only goes when it is switched on.
+      const delivered = via === 'chat' || (await templateOn(tx, composed.built.template.key));
+      await composed.after?.(tx, delivered);
       if (body.requestId)
         await recordAudit(
           tx,

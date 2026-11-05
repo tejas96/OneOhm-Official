@@ -8,8 +8,8 @@ import {
   projects,
   projectTasks,
 } from '@oneohm/database';
-import { SIGNATURE_CATEGORY } from '@oneohm/domain';
-import { and, eq } from 'drizzle-orm';
+import { isCustomerRequestable, SIGNATURE_CATEGORY } from '@oneohm/domain';
+import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
 import { JOURNEY_WORDS } from './journey-words';
@@ -59,11 +59,98 @@ async function agreeIn(
   if (row.phone !== chat.phone) return { kind: 'own', name: row.name.split(/\s+/)[0] ?? row.name };
   const given = row.action.payload.signedActionId;
   if (typeof given === 'string') return { kind: 'agreed', copyId: given };
+  // Agreed before, but the signed copy was cancelled: only a new copy is asked for.
+  if (row.action.payload.agreedAt) return { kind: 'agreed', copyId: await newCopy(db, row.action) };
   const copyId = randomUUID();
   const at = new Date();
   const title = String(row.action.payload.paperTitle ?? row.action.title);
   await recordAgreement(db, row.action, { copyId, title, phone: chat.phone, name: row.name, at });
   return { kind: 'agreed', copyId };
+}
+
+/** The folder a signed agreement is filed in: the paper's own when it has a customer folder, else DISCOM papers. */
+async function copyCategory(tx: DatabaseExecutor, paperId: unknown): Promise<string> {
+  const id = /^(?:paper:)?document:([0-9a-f-]{36})$/.exec(String(paperId))?.[1];
+  const [doc] = id
+    ? await tx.select({ category: documents.category }).from(documents).where(eq(documents.id, id))
+    : [];
+  return doc && isCustomerRequestable(doc.category) && doc.category !== 'other'
+    ? doc.category
+    : 'discom';
+}
+
+async function insertCopy(
+  tx: DatabaseExecutor,
+  action: typeof customerActions.$inferSelect,
+  copyId: string,
+  title: string,
+  propertyId: string | null,
+) {
+  await tx.insert(customerActions).values({
+    id: copyId,
+    type: 'paper',
+    customerId: action.customerId,
+    projectId: action.projectId,
+    propertyId,
+    title: JOURNEY_WORDS.sign.signedTitle(title),
+    category: await copyCategory(tx, action.payload.paperId),
+    payload: { signatureActionId: action.id },
+    requestedByUserId: action.requestedByUserId,
+  });
+}
+
+/** A fresh signed-copy ask for a signature whose earlier copy was cancelled. */
+export async function newCopy(
+  tx: DatabaseExecutor,
+  action: typeof customerActions.$inferSelect,
+): Promise<string> {
+  const copyId = randomUUID();
+  const [home] = action.projectId
+    ? await tx
+        .select({ propertyId: projects.propertyId })
+        .from(projects)
+        .where(eq(projects.id, action.projectId))
+    : [];
+  await insertCopy(
+    tx,
+    action,
+    copyId,
+    String(action.payload.paperTitle ?? action.title),
+    home?.propertyId ?? null,
+  );
+  await tx
+    .update(customerActions)
+    .set({
+      payload: { ...action.payload, signedActionId: copyId },
+      note: 'Waiting for the signed copy again.',
+      updatedAt: new Date(),
+    })
+    .where(eq(customerActions.id, action.id));
+  return copyId;
+}
+
+/**
+ * Only the signed copy was cancelled: the signature itself stays open (agreed, no copy) so the customer
+ * can send it again and the reminders go on; the next tap on the paper asks for a fresh copy.
+ */
+export async function reopenSignature(
+  tx: DatabaseExecutor,
+  copy: { readonly payload: Record<string, unknown> },
+  userId: string,
+): Promise<boolean> {
+  const id = copy.payload.signatureActionId;
+  if (typeof id !== 'string') return false;
+  const [row] = await tx
+    .update(customerActions)
+    .set({
+      payload: sql`${customerActions.payload} - 'signedActionId'`,
+      note: 'The signed copy was cancelled. Waiting for the customer to send it again.',
+      updatedAt: new Date(),
+    })
+    .where(and(eq(customerActions.id, id), eq(customerActions.status, 'open')))
+    .returning({ id: customerActions.id });
+  if (row) await recordAudit(tx, userId, 'customer_action.copy_cancelled', 'customer_action', id);
+  return true;
 }
 
 async function recordAgreement(
@@ -77,17 +164,7 @@ async function recordAgreement(
         .from(projects)
         .where(eq(projects.id, action.projectId))
     : [];
-  await tx.insert(customerActions).values({
-    id: agreed.copyId,
-    type: 'paper',
-    customerId: action.customerId,
-    projectId: action.projectId,
-    propertyId: home?.propertyId ?? null,
-    title: JOURNEY_WORDS.sign.signedTitle(agreed.title),
-    category: 'other',
-    payload: { signatureActionId: action.id },
-    requestedByUserId: action.requestedByUserId,
-  });
+  await insertCopy(tx, action, agreed.copyId, agreed.title, home?.propertyId ?? null);
   await tx
     .update(customerActions)
     .set({

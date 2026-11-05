@@ -37,6 +37,7 @@ const EN_JOURNEY = {
     notYet: 'No problem — we have noted it. Tap the button when the roof is ready.',
     now: 'Thank you ✅ We have noted that the roof is ready. We will plan the next step.',
     what: 'the roof check',
+    cancelled: 'You do not need to tell us about the roof any more. Thank you.',
   },
   install: {
     ask: (home: string) => `Is the installation at *${home}* finished to your satisfaction?`,
@@ -44,6 +45,7 @@ const EN_JOURNEY = {
     wrong: (home: string) =>
       `We are sorry. Please tell us what is wrong with the installation at ${home}, in a few words or a photo.`,
     what: 'the installation check',
+    cancelled: 'You do not need to tell us about the installation any more. Thank you.',
   },
   pack: {
     summary: (count: number, home: string) =>
@@ -59,12 +61,17 @@ const EN_JOURNEY = {
         ? `Your solar at ${home} is ON ☀️\nThe final payment of *${amount}* is now due.`
         : `Your solar at ${home} is ON ☀️\nYour warranty and free check-ups are one tap away.`,
     needs: (item: string) => `We need *${item}* to continue.`,
+    waitingYou: (step: string) => `*${step}* is waiting for a paper or a reply from you.`,
     waitingOn: (party: string, since: string) =>
       `Waiting for ${party} since ${since}. We'll update you.`,
     parties: { customer: 'you', bank: 'your bank', discom: 'the electricity board' },
   },
-  confirmCancelled: 'You do not need to answer that question any more. Thank you.',
-  old: 'That was an earlier message — we have noted what you sent.',
+  nouns: {
+    roof: 'your roof check',
+    install: 'your installation check',
+    sign: (paper: string) => `your signature on ${paper}`,
+  },
+  old: 'That message is no longer open, so nothing has changed.',
 };
 
 const MR_JOURNEY: Words<typeof EN_JOURNEY> = {
@@ -99,12 +106,14 @@ const MR_JOURNEY: Words<typeof EN_JOURNEY> = {
     notYet: 'काही हरकत नाही — नोंद केली. छप्पर तयार झाल्यावर बटण दाबा.',
     now: 'धन्यवाद ✅ छप्पर तयार असल्याची नोंद केली. आम्ही पुढची तयारी करू.',
     what: 'छप्पर तपासणी',
+    cancelled: 'छप्परबद्दल सांगण्याची आता गरज नाही. धन्यवाद.',
   },
   install: {
     ask: (home) => `${home} येथील बसवणी तुमच्या समाधानानुसार पूर्ण झाली आहे का?`,
     yes: 'धन्यवाद ✅ सगळे नीट झाले, याचा आनंद आहे.',
     wrong: (home) => `क्षमस्व. ${home} येथील बसवणीत काय चुकले ते थोडक्यात किंवा फोटोने सांगा.`,
     what: 'बसवणी तपासणी',
+    cancelled: 'बसवणीबद्दल सांगण्याची आता गरज नाही. धन्यवाद.',
   },
   pack: {
     summary: (count, home) => `${home} साठीची तुमची *${count}* हस्तांतर कागदपत्रे वर आहेत.`,
@@ -117,11 +126,16 @@ const MR_JOURNEY: Words<typeof EN_JOURNEY> = {
         ? `${home} येथील तुमचा सोलर सुरू झाला ☀️\nआता अंतिम पेमेंट *${amount}* बाकी आहे.`
         : `${home} येथील तुमचा सोलर सुरू झाला ☀️\nवॉरंटी आणि मोफत तपासण्या एका दाबावर.`,
     needs: (item) => `पुढे जाण्यासाठी आम्हाला *${item}* हवे आहे.`,
+    waitingYou: (step) => `*${step}* साठी तुमच्याकडून कागद किंवा उत्तर हवे आहे.`,
     waitingOn: (party, since) => `${since} पासून ${party} कडून उत्तराची वाट पाहत आहोत. आम्ही कळवू.`,
     parties: { customer: 'तुमच्याकडून', bank: 'तुमच्या बँकेकडून', discom: 'वीज मंडळाकडून' },
   },
-  confirmCancelled: 'त्या प्रश्नाचे उत्तर देण्याची आता गरज नाही. धन्यवाद.',
-  old: 'तो आधीचा मेसेज होता — तुम्ही पाठवलेले आम्ही नोंदवले आहे.',
+  nouns: {
+    roof: 'तुमची छप्पर तपासणी',
+    install: 'तुमची बसवणी तपासणी',
+    sign: (paper) => `${paper} वरील तुमची सही`,
+  },
+  old: 'तो मेसेज आता खुला नाही, म्हणून काही बदलले नाही.',
 };
 
 const HI_JOURNEY: Words<typeof EN_JOURNEY> = {
@@ -156,12 +170,14 @@ const HI_JOURNEY: Words<typeof EN_JOURNEY> = {
     notYet: 'कोई बात नहीं — हमने दर्ज कर लिया। छत तैयार होने पर बटन दबाएँ।',
     now: 'धन्यवाद ✅ छत तैयार है, यह दर्ज कर लिया। हम अगला कदम तय करेंगे।',
     what: 'छत की जाँच',
+    cancelled: 'अब आपको छत के बारे में बताने की ज़रूरत नहीं है। धन्यवाद।',
   },
   install: {
     ask: (home) => `क्या ${home} पर इंस्टॉलेशन आपकी संतुष्टि के अनुसार पूरा हो गया है?`,
     yes: 'धन्यवाद ✅ सब ठीक रहा, यह जानकर खुशी हुई।',
     wrong: (home) => `हमें खेद है। ${home} पर इंस्टॉलेशन में क्या गड़बड़ है, कुछ शब्दों में या फ़ोटो से बताएँ।`,
     what: 'इंस्टॉलेशन की जाँच',
+    cancelled: 'अब आपको इंस्टॉलेशन के बारे में बताने की ज़रूरत नहीं है। धन्यवाद।',
   },
   pack: {
     summary: (count, home) => `${home} के लिए आपके *${count}* हैंडओवर कागज़ ऊपर हैं।`,
@@ -174,11 +190,16 @@ const HI_JOURNEY: Words<typeof EN_JOURNEY> = {
         ? `${home} पर आपका सोलर चालू हो गया ☀️\nअब अंतिम भुगतान *${amount}* बाकी है।`
         : `${home} पर आपका सोलर चालू हो गया ☀️\nवारंटी और मुफ़्त जाँच बस एक टैप दूर।`,
     needs: (item) => `आगे बढ़ने के लिए हमें *${item}* चाहिए।`,
+    waitingYou: (step) => `*${step}* के लिए आपसे कागज़ या जवाब चाहिए।`,
     waitingOn: (party, since) => `${since} से ${party} के जवाब का इंतज़ार है। हम बताएँगे।`,
     parties: { customer: 'आपसे', bank: 'आपके बैंक से', discom: 'बिजली बोर्ड से' },
   },
-  confirmCancelled: 'अब आपको उस सवाल का जवाब देने की ज़रूरत नहीं है। धन्यवाद।',
-  old: 'वह पहले का संदेश था — आपने जो भेजा, हमने नोट कर लिया है।',
+  nouns: {
+    roof: 'आपकी छत की जाँच',
+    install: 'आपकी इंस्टॉलेशन की जाँच',
+    sign: (paper) => `${paper} पर आपके हस्ताक्षर`,
+  },
+  old: 'वह संदेश अब खुला नहीं है, इसलिए कुछ नहीं बदला।',
 };
 
 export const JOURNEY_LISTS = { en: EN_JOURNEY, mr: MR_JOURNEY, hi: HI_JOURNEY };
