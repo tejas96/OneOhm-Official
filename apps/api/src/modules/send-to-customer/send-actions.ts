@@ -38,10 +38,10 @@ export async function openActionFor(
 export async function openAction(
   tx: DatabaseExecutor,
   ctx: SendContext,
-  userId: string,
+  userId: string | null,
   input: {
     id: string;
-    type: 'location' | 'pay' | 'callback' | 'visit_pick';
+    type: 'location' | 'pay' | 'callback' | 'visit_pick' | 'signature' | 'confirm';
     taskId?: string | null;
     title: string;
     propertyId?: string | null;

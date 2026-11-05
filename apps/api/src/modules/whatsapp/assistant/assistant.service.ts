@@ -5,6 +5,8 @@ import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
+import { JourneyAnswersService } from '../../journey/journey-answers.service';
+import { readJourneyTap } from '../../journey/journey-taps';
 import { SendAnswersService } from '../../send-to-customer/send-answers.service';
 import { readSendTap } from '../../send-to-customer/send-taps';
 import { VisitAnswersService } from '../../visits/visit-answers.service';
@@ -67,6 +69,7 @@ export class AssistantService {
     private readonly formPicks: FormPickService,
     private readonly sends: SendAnswersService,
     private readonly visitAnswers: VisitAnswersService,
+    private readonly journey: JourneyAnswersService,
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
@@ -153,6 +156,8 @@ export class AssistantService {
     if (sendTap) return this.sends.tapped(chat, customerId, sendTap);
     const visitTap = readVisitTap(id);
     if (visitTap) return this.visitAnswers.tapped(chat, customerId, visitTap);
+    const journeyTap = readJourneyTap(id);
+    if (journeyTap) return this.journey.tapped(chat, customerId, journeyTap);
     const formTap = readFormTap(id);
     if (formTap) return this.formPicks.tapped(chat, customerId, formTap);
     const language = languageTapped(id);

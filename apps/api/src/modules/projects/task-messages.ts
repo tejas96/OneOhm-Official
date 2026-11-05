@@ -16,6 +16,7 @@ import { formatKwp } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
 import { queueWhatsApp } from '../../common/outbox';
+import { tellStepWithButtons, tellWaitingWithButtons } from '../journey/auto-messages';
 import { attachmentLink, messagePhones } from './task-message-reach';
 
 type TaskRow = Pick<
@@ -59,22 +60,24 @@ export async function tellCustomerAbout(
   // A message that carries a link falls back to the plain update when the paper is not there yet.
   const messageKey = template?.attachment && !link ? 'project_milestone' : template?.messageKey;
   const people = await messagePhones(db, project.customer, template?.recipients);
-  for (const [index, person] of people.entries())
-    await queueWhatsApp(
-      db,
-      person.phone,
-      messageKey ?? 'project_milestone',
-      {
-        customer: person.name,
-        project: project.code,
-        milestone: template?.customerTitle?.trim() || task.title,
-        capacity: formatKwp(project.capacityWp),
-        ...(link ? { link } : {}),
-        // The step's key, so the in-app alert can name it in the customer's language.
-        step: task.templateKey,
-      },
-      index === 0 ? `task_${event}:${task.id}` : `task_${event}:${task.id}:${person.phone}`,
-    );
+  for (const [index, person] of people.entries()) {
+    const payload = {
+      customer: person.name,
+      project: project.code,
+      milestone: template?.customerTitle?.trim() || task.title,
+      capacity: formatKwp(project.capacityWp),
+      ...(link ? { link } : {}),
+      // The step's key, so the in-app alert can name it in the customer's language.
+      step: task.templateKey,
+    };
+    const key =
+      index === 0 ? `task_${event}:${task.id}` : `task_${event}:${task.id}:${person.phone}`;
+    const message = messageKey ?? 'project_milestone';
+    // Installation started and switch-on carry buttons inside the chat window (redesign §19).
+    const about = { id: project.id, customerId: project.customerId };
+    if (await tellStepWithButtons(db, message, about, person, payload, key)) continue;
+    await queueWhatsApp(db, person.phone, message, payload, key);
+  }
 }
 
 async function projectOf(db: DatabaseExecutor, projectId: string) {
@@ -112,12 +115,13 @@ export async function tellCustomerWaiting(
   if (!project) return;
   const template = await templateOf(db, task.templateKey);
   // One message per wait: the minute it started keeps a double tap from sending twice.
-  const started = new Date().toISOString().slice(0, 16);
-  await queueWhatsApp(
-    db,
-    project.phone,
-    'project_waiting',
-    {
+  const now = new Date();
+  await tellWaitingWithButtons(db, {
+    taskId: task.id,
+    party,
+    project: { id: project.id, customerId: project.customerId },
+    phone: project.phone,
+    payload: {
       customer: project.name,
       project: project.code,
       milestone: template?.customerTitle?.trim() || task.title,
@@ -125,8 +129,9 @@ export async function tellCustomerWaiting(
       party,
       step: task.templateKey,
     },
-    `task_waiting:${task.id}:${party}:${started}`,
-  );
+    key: `task_waiting:${task.id}:${party}:${now.toISOString().slice(0, 16)}`,
+    since: now,
+  });
 }
 
 /** The project manager hears when a task flagged for them is done (PRD 3.7). */

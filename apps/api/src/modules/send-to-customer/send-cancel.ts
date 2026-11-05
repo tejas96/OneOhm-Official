@@ -7,6 +7,8 @@ import {
 import { chatWindowOpen } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
+import { cancelSignedCopy } from '../journey/journey-signature';
+import { JOURNEY_WORDS } from '../journey/journey-words';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
 import { SEND_WORDS } from './send-words';
@@ -20,9 +22,11 @@ export async function tellActionCancelled(
   tx: DatabaseExecutor,
   action: {
     readonly id: string;
-    readonly type: 'location' | 'pay' | 'callback' | 'visit_pick';
+    readonly type: 'location' | 'pay' | 'callback' | 'visit_pick' | 'signature' | 'confirm';
     readonly projectId: string | null;
     readonly propertyId: string | null;
+    /** The paper a cancelled signature ask was for. */
+    readonly paper?: string;
   },
   phone: string,
   userId: string,
@@ -35,7 +39,7 @@ export async function tellActionCancelled(
       phone,
       'action_cancelled',
       {
-        what: SEND_WORDS.cancelled.what[action.type],
+        what: whatOf(action),
         ...(action.type === 'pay' ? { note: SEND_WORDS.cancelled.stillDue } : {}),
       },
       key,
@@ -50,7 +54,52 @@ export async function tellActionCancelled(
     const body =
       action.type === 'location'
         ? words.location(await homeNameOf(tx, action.projectId, action.propertyId))
-        : words[action.type];
+        : action.type === 'signature'
+          ? JOURNEY_WORDS.sign.cancelled(action.paper ?? JOURNEY_WORDS.sign.what)
+          : action.type === 'confirm'
+            ? JOURNEY_WORDS.confirmCancelled
+            : words[action.type];
     await queueReply(tx, chat, { kind: 'text', body }, userId, key);
   });
+}
+
+/** What a cancelled ask was about, in the customer's language ("your payment proof is no longer needed"). */
+function whatOf(action: { readonly type: string; readonly paper?: string }): string {
+  if (action.type === 'signature') return action.paper ?? JOURNEY_WORDS.sign.what;
+  if (action.type === 'confirm') return JOURNEY_WORDS.ready.what;
+  return SEND_WORDS.cancelled.what[action.type as keyof typeof SEND_WORDS.cancelled.what];
+}
+
+const TOLD = ['location', 'pay', 'callback', 'visit_pick', 'signature', 'confirm'] as const;
+
+/** The team cancelled an ask that is not a paper: a signed copy still waiting goes with it, the customer is told. */
+export async function tellAskCancelled(
+  tx: DatabaseExecutor,
+  ask: {
+    readonly id: string;
+    readonly type: string;
+    readonly title: string;
+    readonly projectId: string | null;
+    readonly propertyId: string | null;
+    readonly payload: Record<string, unknown>;
+  },
+  phone: string,
+  userId: string,
+): Promise<void> {
+  const type = TOLD.find((one) => one === ask.type);
+  if (!type) return;
+  if (type === 'signature') await cancelSignedCopy(tx, ask, userId);
+  const paper = String(ask.payload.paperTitle ?? ask.title);
+  await tellActionCancelled(
+    tx,
+    {
+      id: ask.id,
+      type,
+      projectId: ask.projectId,
+      propertyId: ask.propertyId,
+      ...(type === 'signature' ? { paper } : {}),
+    },
+    phone,
+    userId,
+  );
 }

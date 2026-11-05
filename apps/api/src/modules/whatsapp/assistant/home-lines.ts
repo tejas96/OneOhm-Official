@@ -1,5 +1,6 @@
 import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
+import { JOURNEY_WORDS } from '../../journey/journey-words';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { VISIT_WORDS } from '../../visits/visit-words';
 import { CHAT_WORDS, DESCRIPTION_MAX, fitTitle, ROW_MAX } from './chat-words';
@@ -24,6 +25,8 @@ export function pendingLine(item: PendingItem): string {
       return SEND_WORDS.callback.homeLine;
     case 'visit_ask':
       return VISIT_WORDS.pick.homeLine(item.home);
+    case 'journey':
+      return journeyLine(item);
     case 'visit':
       return item.board
         ? VISIT_WORDS.boardHome(item.home, daySpan(item.on, item.on))
@@ -55,6 +58,10 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
       return { id: `cbask:${item.requestId}`, title: SEND_WORDS.buttons.pickTime };
     case 'visit_ask':
       return { id: `vask:${item.requestId}`, title: VISIT_WORDS.buttons.pick };
+    case 'journey':
+      return item.ask === 'roof_now'
+        ? { id: `rdy:now:${item.requestId}`, title: JOURNEY_WORDS.buttons.readyNow }
+        : { id: `jr:${item.requestId}`, title: JOURNEY_WORDS.buttons.answerNow };
     case 'visit':
       return { id: 'go:visit', title: buttons.visit };
     case 'problem':
@@ -76,6 +83,7 @@ function pendingRow(item: PendingItem, paysOnline: boolean): Row {
     location: () => (item.kind === 'location' ? (item.home ?? '') : ''),
     callback: () => SEND_WORDS.callback.homeRow,
     visit_ask: () => (item.kind === 'visit_ask' ? (item.home ?? '') : ''),
+    journey: () => (item.kind === 'journey' ? (item.home ?? '') : ''),
     visit: () =>
       item.kind === 'visit'
         ? [daySpan(item.on, item.on), item.home].filter(Boolean).join(' · ')
@@ -98,4 +106,13 @@ export function pendingRows(items: readonly PendingItem[], paysOnline: boolean):
   return rows
     .filter((row, index) => rows.findIndex((other) => other.id === row.id) === index)
     .slice(0, 10);
+}
+
+/** Home's line for a roof or installation question, or a paper to agree to. */
+function journeyLine(item: Extract<PendingItem, { kind: 'journey' }>): string {
+  const home = item.home ?? SEND_WORDS.location.anyHome;
+  const words = JOURNEY_WORDS;
+  if (item.ask === 'sign') return words.sign.ask(item.paper ?? '', home);
+  if (item.ask === 'install') return words.install.ask(home);
+  return item.ask === 'roof_now' ? words.ready.notYet : words.ready.ask(home);
 }

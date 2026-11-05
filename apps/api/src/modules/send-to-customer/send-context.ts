@@ -113,23 +113,36 @@ export async function resolveScope(
     }
   }
   if (!customerId) throw invalid('Choose a customer, a project, a lead or a task.');
-  const customer = await customerOf(db, customerId);
-  return {
-    customerId: customer.id,
-    customerName: customer.name,
-    phone: customer.phone,
-    language: await languageOfPhone(db, customer.phone),
+  return contextFor(db, {
+    customerId,
     projectId,
     projectCode,
     leadId,
     taskId,
     serviceRequestId: scope.serviceRequestId ?? null,
+  });
+}
+
+/** The context for ids already known (the scope above, or the system acting on a task). */
+export async function contextFor(
+  db: DatabaseExecutor,
+  ids: Pick<
+    SendContext,
+    'customerId' | 'projectId' | 'projectCode' | 'leadId' | 'taskId' | 'serviceRequestId'
+  >,
+): Promise<SendContext> {
+  const customer = await customerOf(db, ids.customerId);
+  return {
+    ...ids,
+    customerName: customer.name,
+    phone: customer.phone,
+    language: await languageOfPhone(db, customer.phone),
     place: {
       customer: true,
-      project: projectId !== null && taskId === null && !scope.serviceRequestId,
-      lead: leadId !== null,
-      task: taskId !== null,
-      service: Boolean(scope.serviceRequestId),
+      project: ids.projectId !== null && ids.taskId === null && !ids.serviceRequestId,
+      lead: ids.leadId !== null,
+      task: ids.taskId !== null,
+      service: Boolean(ids.serviceRequestId),
     },
     chatOpen: await chatOpenFor(db, customer.phone),
   };

@@ -1,6 +1,7 @@
 import type { SendOffer, SendRequest } from '@oneohm/api-contracts';
 import type { SendAction } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
+import { journeyOffers } from '../journey/journey-offers';
 import { visitAskRequests } from '../visits/visit-ask';
 import { targetOf } from '../visits/visit-reads';
 import { workWords } from '../visits/visit-words';
@@ -140,6 +141,11 @@ export async function offersFor(
     }
     case 'ask_paper':
       return [];
+    case 'send_signature':
+    case 'ask_site_ready':
+    case 'ask_installation_check':
+    case 'send_handover_pack':
+      return journeyOffers(deps, ctx, action, make);
   }
 }
 

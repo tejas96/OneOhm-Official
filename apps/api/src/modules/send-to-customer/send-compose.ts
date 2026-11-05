@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { SendRequest } from '@oneohm/api-contracts';
 import { conflict, invalid, notFound } from '../../common/http/errors';
+import {
+  installCheckCompose,
+  packCompose,
+  signatureCompose,
+  siteReadyCompose,
+} from '../journey/journey-compose';
 import { askVisitCompose } from '../visits/visit-ask';
 import { receiptById } from '../whatsapp/assistant/customer-papers';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import type { SendContext } from './send-context';
-import type { Built } from './send-messages';
+import type { Composed, Recorded } from './send-recorded';
+
+export type { Composed, Recorded };
+
 import {
   callbackAsk,
   crewContact,
@@ -19,36 +28,6 @@ import {
 } from './send-messages';
 import { callerName, type Deps, resolvePaper } from './send-papers';
 import { crewOf, dueInstalments, homesOf, receiptsOf, waitingTask } from './send-reads';
-
-/** What a send records besides the message: a customer action, or only a log line and audit. */
-export type Recorded =
-  | {
-      readonly kind: 'action';
-      readonly id: string;
-      readonly type: 'location' | 'pay' | 'callback' | 'visit_pick';
-      readonly taskId?: string | null;
-      readonly title: string;
-      readonly propertyId: string | null;
-      readonly projectId: string | null;
-      readonly payload: { [key: string]: unknown };
-      readonly log: string;
-      /** Asked already (a reminder for an instalment already asked about): no new action. */
-      readonly reuse?: string | null;
-    }
-  | {
-      readonly kind: 'log';
-      readonly audit: string;
-      readonly entity: string;
-      readonly entityId: string;
-      readonly log: string;
-      readonly projectId: string | null;
-      readonly data: { [key: string]: unknown };
-    };
-
-export interface Composed {
-  readonly built: Built;
-  readonly record: Recorded;
-}
 
 type Request<A extends SendRequest['action']> = Extract<SendRequest, { action: A }>;
 type Compose<A extends SendRequest['action']> = (
@@ -237,6 +216,14 @@ export function compose(
         return askCallback(deps, ctx, request, id);
       case 'ask_visit':
         return askVisitCompose(deps, ctx, request, id);
+      case 'send_signature':
+        return signatureCompose(deps, ctx, request, id);
+      case 'ask_site_ready':
+        return siteReadyCompose(deps, ctx, request, id);
+      case 'ask_installation_check':
+        return installCheckCompose(deps, ctx, request, id);
+      case 'send_handover_pack':
+        return packCompose(deps, ctx, request);
     }
   });
 }

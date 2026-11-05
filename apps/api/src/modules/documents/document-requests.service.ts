@@ -13,7 +13,7 @@ import { type Actor, can } from '../../common/auth/actor';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { leadVisibility } from '../crm/lead-read';
-import { tellActionCancelled } from '../send-to-customer/send-cancel';
+import { tellAskCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
 import { homeOfRequest, openRequestsFor } from './document-request-home';
@@ -111,7 +111,7 @@ export class DocumentRequestsService {
     }
     const { phone } = await contactOf(this.db, request.customerId);
     const [row] = await this.db
-      .select({ propertyId: customerActions.propertyId })
+      .select({ propertyId: customerActions.propertyId, payload: customerActions.payload })
       .from(customerActions)
       .where(eq(customerActions.id, id));
     await this.db.transaction(async (tx) => {
@@ -128,20 +128,10 @@ export class DocumentRequestsService {
       await recordAudit(tx, actor.userId, 'customer_action.cancelled', 'customer_action', id);
       if (request.type === 'paper')
         await tellCancelled(tx, { id, title: request.title, phone }, actor.userId);
-      else if (
-        request.type === 'location' ||
-        request.type === 'pay' ||
-        request.type === 'callback' ||
-        request.type === 'visit_pick'
-      )
-        await tellActionCancelled(
+      else
+        await tellAskCancelled(
           tx,
-          {
-            id,
-            type: request.type,
-            projectId: request.projectId,
-            propertyId: row?.propertyId ?? null,
-          },
+          { ...request, propertyId: row?.propertyId ?? null, payload: row?.payload ?? {} },
           phone,
           actor.userId,
         );

@@ -59,10 +59,12 @@ export class ProblemFlowService {
     // The home picked from the list (menu audit M10), else the newest active one (M7).
     const picked = (chat.context as { projectId?: string } | null)?.projectId;
     const projectId = picked ?? (await activeHomes(this.db, customerId))[0]?.id ?? null;
+    // "Something is wrong" under the installation check starts the report on that topic.
+    const topic = (chat.context as { topic?: string } | null)?.topic;
     const request = await this.portal.raiseServiceRequest(customerId, {
       projectId,
       category,
-      description: `${words} (via WhatsApp)`,
+      description: `${topic === 'installation' ? 'Installation: ' : ''}${words} (via WhatsApp)`,
     });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
     await setStep(this.db, chat, 'menu', { raised });

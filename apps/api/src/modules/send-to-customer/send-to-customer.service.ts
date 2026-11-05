@@ -85,6 +85,7 @@ export class SendToCustomerService {
       const again = body.requestId ? await this.sentBefore(tx, body.requestId) : null;
       if (again) return again;
       const actionId = await this.record(tx, ctx, actor.userId, composed);
+      await composed.after?.(tx);
       // The same ask is one message; a re-sent reminder of an open ask gets its own key.
       const key = `send:${body.request.action}:${actionId ?? id}:${id}`;
       const via = await deliver(tx, ctx, composed.built, key, actor.userId);
@@ -135,12 +136,11 @@ export class SendToCustomerService {
     const existing = await openActionFor(tx, ctx.customerId, record.type, {
       ...(record.type === 'location' && record.propertyId ? { propertyId: record.propertyId } : {}),
       ...(record.type === 'pay' ? { milestoneId: String(record.payload.milestoneId) } : {}),
-      ...(record.type === 'visit_pick' ? { target: String(record.payload.target) } : {}),
+      ...(['visit_pick', 'signature', 'confirm'].includes(record.type)
+        ? { target: String(record.payload.target) }
+        : {}),
     });
-    if (
-      existing &&
-      (record.type === 'location' || record.type === 'callback' || record.type === 'visit_pick')
-    ) {
+    if (existing && record.type !== 'pay') {
       throw conflict('The customer has already been asked for this.', 'already_asked');
     }
     if (existing && record.type === 'pay') {

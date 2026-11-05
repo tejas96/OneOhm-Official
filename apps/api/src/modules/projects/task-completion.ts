@@ -13,6 +13,7 @@ import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { conflict } from '../../common/http/errors';
 import { recordInstalledAssets } from '../after-sales/installed-assets.record';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
+import { journeyOnComplete, journeyOnReady } from '../journey/journey-auto';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { recordSubsidyClaim } from '../quotations/subsidy-claim';
 import { openVisitForTask } from '../visits/visit-reads';
@@ -55,10 +56,13 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .innerJoin(projectTasks, eq(projectTasks.id, taskDependencies.dependsOnTaskId))
       .where(and(eq(taskDependencies.taskId, taskId), ne(projectTasks.status, 'completed')));
     if (open.length === 0) {
-      await tx
+      const [ready] = await tx
         .update(projectTasks)
         .set({ status: 'ready', updatedAt: now })
-        .where(and(eq(projectTasks.id, taskId), eq(projectTasks.status, 'pending')));
+        .where(and(eq(projectTasks.id, taskId), eq(projectTasks.status, 'pending')))
+        .returning();
+      // Dispatch is next: ask the customer whether the roof is ready (if the step may message them).
+      if (ready) await journeyOnReady(tx, ready);
     }
   }
 
@@ -113,6 +117,7 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
   }
 
   await tellCustomerAbout(tx, task, 'completed');
+  await journeyOnComplete(tx, task);
   await tellManagerDone(tx, task, userId);
   await tx.insert(projectActivities).values({
     projectId: task.projectId,

@@ -7,6 +7,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { signedCopyChecked } from '../journey/journey-signature';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments } from './document-access';
 import { presentDocuments } from './document-read';
@@ -77,6 +78,9 @@ export class DocumentCheckService {
         await reaskCount(tx, action.id),
         actor.userId,
       );
+      // The signed copy of a paper the customer agreed to: agreed and checked, so the ask is done.
+      const signature = action.payload.signatureActionId;
+      if (typeof signature === 'string') await signedCopyChecked(tx, signature, id, actor.userId);
     }
     if (answered.length === 0) await this.tellUnasked(tx, actor, id);
   }

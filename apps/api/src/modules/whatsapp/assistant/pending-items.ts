@@ -11,6 +11,7 @@ import {
 import { isPresenceKind } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
+import { type JourneyAsk, journeyAsks } from '../../journey/journey-pending';
 import { upcomingVisits } from './upcoming-visits';
 
 /** One thing that needs the customer now, as Home shows it (redesign §3). */
@@ -22,6 +23,7 @@ export type PendingItem =
   | { kind: 'callback'; requestId: string }
   /** A day the team asked the customer to pick for a visit ([Pick a day]). */
   | { kind: 'visit_ask'; requestId: string; home: string | null }
+  | JourneyAsk
   | { kind: 'visit'; requestId: string; on: string; home: string | null; board?: boolean }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
   | { kind: 'quote'; quotationId: string };
@@ -33,6 +35,7 @@ const ORDER: readonly PendingItem['kind'][] = [
   'location',
   'callback',
   'visit_ask',
+  'journey',
   'visit',
   'problem',
   'quote',
@@ -57,13 +60,14 @@ export async function pendingForCustomer(
   customerId: string,
   today: string,
 ): Promise<PendingItem[]> {
-  const [papers, due, problems, quotes, asks, upcoming] = await Promise.all([
+  const [papers, due, problems, quotes, asks, upcoming, journey] = await Promise.all([
     openPapers(db, customerId),
     dueInstalments(db, customerId),
     openProblems(db, customerId),
     waitingQuotes(db, customerId, today),
     openAsks(db, customerId),
     upcomingVisits(db, customerId, today),
+    journeyAsks(db, customerId),
   ]);
   return orderPending([
     ...papers.map((row) => ({
@@ -93,6 +97,7 @@ export async function pendingForCustomer(
         return { kind: 'visit_ask' as const, requestId: row.id, home: homeOf(row.label, row.city) };
       return { kind: 'callback' as const, requestId: row.id };
     }),
+    ...journey,
     ...upcoming.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,
