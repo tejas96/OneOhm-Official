@@ -172,7 +172,7 @@ describe('Phase 4b fixes', () => {
 });
 
 function nextWorkingDay(): string {
-  const day = new Date(Date.now() + 3 * 86_400_000);
+  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 40)) * 86_400_000);
   if (day.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1);
   return day.toISOString().slice(0, 10);
 }
