@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { GENERIC_WORDS, routeCustomerMessage } from './customer-channel';
 import { plainNames } from './customer-message-names';
-import { languageOf, localWords } from './customer-message-words';
+import { JOURNEY_EN, languageOf, localWords } from './customer-message-words';
 import { type Notice, notify } from './notify';
 import { customers } from './schema/crm.schema';
 
@@ -150,7 +150,6 @@ const WORDS: Readonly<Record<string, Words>> = {
     title: `Your ${p.document}`,
     body: 'We sent it on WhatsApp. It is also in Documents.',
   }),
-  // Visits (redesign §8): the app inbox says the same as the chat.
   visit_pick: (p) => ({
     title: `Pick a day for the ${p.work}`,
     body: `When can our team visit ${p.home}? Open our WhatsApp chat and tap Pick a day.`,
@@ -169,6 +168,7 @@ const WORDS: Readonly<Record<string, Words>> = {
   }),
   visit_cancelled: (p) => ({ title: 'Visit cancelled', body: p.body ?? '' }),
   visit_crew_changed: (p) => ({ title: 'Who is coming', body: p.body ?? '' }),
+  ...JOURNEY_EN,
   referral_reward: (p) => ({
     title: 'Referral reward update',
     body: `${p.friend}: ${p.amount} is ${p.status}.`,

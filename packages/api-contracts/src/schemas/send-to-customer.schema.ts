@@ -40,6 +40,18 @@ export const sendRequestSchema = z.discriminatedUnion('action', [
     leadId: idSchema.optional(),
     serviceRequestId: idSchema.optional(),
   }),
+  /** A paper (or report) the customer reads and agrees to; a task with a signature step takes the signed copy. */
+  z.object({
+    action: z.literal('send_signature'),
+    paperId: z.string().min(3).max(200),
+    taskId: idSchema.optional(),
+  }),
+  /** "Is the roof ready?" before dispatch; `taskId` is the dispatch task. */
+  z.object({ action: z.literal('ask_site_ready'), taskId: idSchema }),
+  /** "Is the installation finished to your satisfaction?"; `taskId` is the installation task. */
+  z.object({ action: z.literal('ask_installation_check'), taskId: idSchema }),
+  /** Every handover paper in one go. */
+  z.object({ action: z.literal('send_handover_pack'), projectId: idSchema }),
 ]);
 export type SendRequest = z.infer<typeof sendRequestSchema>;
 

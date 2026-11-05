@@ -12,6 +12,10 @@ export const SEND_ACTIONS = [
   'delay_notice',
   'ask_callback',
   'ask_visit',
+  'send_signature',
+  'ask_site_ready',
+  'ask_installation_check',
+  'send_handover_pack',
 ] as const;
 export type SendAction = (typeof SEND_ACTIONS)[number];
 
@@ -48,6 +52,12 @@ export function sendActionsFor(place: SendPlace): SendAction[] {
     delay_notice: place.task,
     ask_callback: true,
     ask_visit: withProject || place.lead,
+    // Journey steps (redesign §18 10, 13, 14, 16): a paper to sign, the dispatch and installation
+    // checks (offered on the project or its task; the server limits them to those tasks) and the pack.
+    send_signature: withProject,
+    ask_site_ready: withProject,
+    ask_installation_check: withProject,
+    send_handover_pack: withProject,
   };
   return SEND_ACTIONS.filter((action) => shown[action]);
 }
@@ -64,6 +74,10 @@ const RIGHTS: Readonly<Record<SendAction, readonly string[]>> = {
   share_crew: ['projects.manage'],
   delay_notice: ['projects.manage'],
   ask_visit: ['projects.manage', 'tasks.assign', 'leads.manage', 'service.manage'],
+  send_signature: ['documents.upload', 'documents.manage'],
+  ask_site_ready: ['projects.manage'],
+  ask_installation_check: ['projects.manage'],
+  send_handover_pack: ['projects.manage', 'documents.manage'],
 };
 
 export const rightsFor = (action: SendAction): readonly string[] => RIGHTS[action];
@@ -83,6 +97,10 @@ export function rightsForAsk(type: string): readonly string[] {
     case 'visit_pick':
     case 'presence':
       return RIGHTS.ask_visit;
+    case 'signature':
+      return RIGHTS.send_signature;
+    case 'confirm':
+      return RIGHTS.ask_site_ready;
     default:
       return RIGHTS.ask_paper;
   }

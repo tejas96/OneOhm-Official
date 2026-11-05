@@ -58,6 +58,21 @@ describe('sendActionsFor', () => {
     expect(sendActionsFor(place({ project: true, task: true }))).toContain('delay_notice');
   });
 
+  it('the journey steps (signature, roof, installation, pack) fit a project or a task, never a lead alone', () => {
+    const journey = [
+      'send_signature',
+      'ask_site_ready',
+      'ask_installation_check',
+      'send_handover_pack',
+    ];
+    for (const action of journey) {
+      expect(sendActionsFor(place({ project: true }))).toContain(action);
+      expect(sendActionsFor(place({ project: true, task: true }))).toContain(action);
+      expect(sendActionsFor(place({ lead: true }))).not.toContain(action);
+      expect(sendActionsFor(place({}))).not.toContain(action);
+    }
+  });
+
   it('offers nothing without a customer', () => {
     expect(sendActionsFor(place({ customer: false, lead: true }))).toEqual([]);
   });
@@ -68,6 +83,31 @@ describe('rightsFor', () => {
     expect(rightsFor('ask_paper')).toEqual(['documents.upload', 'documents.manage']);
     expect(rightsFor('ask_location')).toContain('customers.manage');
     expect(rightsFor('payment_reminder')).toContain('finance.record_payments');
+  });
+});
+
+describe('rights of the journey steps', () => {
+  it('a paper to sign follows the documents rights; the questions and the pack the project rights', () => {
+    expect(rightsFor('send_signature')).toEqual(['documents.upload', 'documents.manage']);
+    expect(rightsFor('ask_site_ready')).toEqual(['projects.manage']);
+    expect(rightsFor('send_handover_pack')).toContain('projects.manage');
+    expect(rightsForAsk('signature')).toEqual(rightsFor('send_signature'));
+    expect(rightsForAsk('confirm')).toEqual(rightsFor('ask_installation_check'));
+  });
+
+  it('every new template has Marathi and Hindi words and button titles of 20 characters at most', () => {
+    for (const key of [
+      'signature_request',
+      'site_ready_check',
+      'installation_check',
+      'handover_pack',
+    ]) {
+      const words = SEND_TEMPLATE_WORDS[key];
+      expect(words, key).toBeDefined();
+      for (const language of ['en', 'mr', 'hi'] as const)
+        for (const title of words?.buttons[language] ?? [])
+          expect(title.length, `${key} ${language}`).toBeLessThanOrEqual(20);
+    }
   });
 });
 

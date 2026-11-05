@@ -3,6 +3,7 @@
  *
  * Drafted by the OneOhm team. Have a native Marathi speaker read it once before go-live.
  */
+import { JOURNEY_MR } from './customer-message-journey';
 import type { LanguageWords } from './customer-message-words';
 
 const MR_STAGES: Readonly<Record<string, string>> = {
@@ -20,6 +21,7 @@ const MR_WAITING: Readonly<Record<string, string>> = {
 
 export const MARATHI_WORDS: LanguageWords = {
   messages: {
+    ...JOURNEY_MR,
     quotation_sent: (p) => ({
       title: 'तुमचे कोटेशन तयार आहे',
       body: `${p.number}: ${p.total}. सबसिडीनंतर तुम्हाला ${p.effective} भरायचे आहेत.`,

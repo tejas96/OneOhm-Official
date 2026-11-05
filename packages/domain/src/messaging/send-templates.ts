@@ -81,6 +81,42 @@ export const SEND_MESSAGE_TEMPLATES = [
     preview:
       'Hello {{1}}, the electricity board (DISCOM) will do the {{2}} at {{3}} on {{4}}. Please be at home.',
   },
+  {
+    key: 'signature_request',
+    audience: 'customer',
+    fields: ['customer', 'document', 'home'],
+    // The paper rides as the document header; [I agree] logs the agreement, [I have a question] goes to a person.
+    extras: {
+      document: { urlField: 'documentUrl', nameField: 'documentName' },
+      quickReplies: ['agreePayload', 'questionPayload'],
+    },
+    preview:
+      'Hello {{1}}, please read your {{2}} for {{3}}. Tap I agree if you accept it, or ask us if you have a question.',
+  },
+  {
+    key: 'site_ready_check',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    extras: { quickReplies: ['yesPayload', 'notYetPayload'] },
+    preview:
+      'Hello {{1}}, is the roof at {{2}} ready for installation? It needs a clear roof, a power point and someone at home.',
+  },
+  {
+    key: 'installation_check',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    extras: { quickReplies: ['yesPayload', 'wrongPayload'] },
+    preview: 'Hello {{1}}, is the installation at {{2}} finished to your satisfaction?',
+  },
+  {
+    key: 'handover_pack',
+    audience: 'customer',
+    fields: ['customer', 'count', 'home'],
+    // [Documents] opens the chat step that sends the papers; [Warranty & AMC] shows the warranty answer.
+    extras: { quickReplies: ['documentsPayload', 'warrantyPayload'] },
+    preview:
+      'Hello {{1}}, your {{2}} handover papers for {{3}} are ready. Tap Documents to receive them here.',
+  },
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

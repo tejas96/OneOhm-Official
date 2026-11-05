@@ -52,6 +52,9 @@ describe('follow-up text', () => {
       'payment_received',
       'payment_reminder',
       'payment_link',
+      'installation_started',
+      'commissioning_completed',
+      'project_waiting',
       'location_request',
       'payment_due',
       'callback_request',
@@ -60,6 +63,15 @@ describe('follow-up text', () => {
       'visit_booked',
       'visit_reminder',
       'inspection_presence',
+      'signature_request',
+      'site_ready_check',
+      'installation_check',
+      'handover_pack',
+    ]);
+    // The newer buttons of the older step messages are optional: they send only behind their own switch.
+    expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([
+      'payPayload',
+      'warrantyPayload',
     ]);
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');

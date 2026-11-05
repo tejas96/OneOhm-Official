@@ -2,6 +2,7 @@ import { customerLanguage, DEFAULT_MILESTONES, DEFAULT_SERVICE_CATEGORIES } from
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { HINDI_WORDS } from './customer-message-hi';
+import { JOURNEY_EN, JOURNEY_MESSAGES } from './customer-message-journey';
 import { MARATHI_WORDS } from './customer-message-mr';
 import { instalmentWords } from './customer-message-names';
 import { customers } from './schema/crm.schema';
@@ -51,8 +52,11 @@ export const IN_APP_MESSAGES = [
   'inspection_presence',
   'visit_cancelled',
   'visit_crew_changed',
+  ...JOURNEY_MESSAGES,
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
+
+export { JOURNEY_EN };
 
 /** A paper's home when its request has no project; said in the customer's language. */
 export const SOME_HOME = 'your home';
