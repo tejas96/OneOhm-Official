@@ -3,6 +3,7 @@ import { amcEnding, planId, renewalAsks } from '../support/amc';
 import { bodyOf, callTasks, PROMISE } from '../support/care';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
+import { setTemplate } from '../support/journey-steps';
 import { lastReply, say, tap } from '../support/onboarding';
 import { sellProject, today } from '../support/sales';
 import { closeChat, openChat, optionsOf, sendTo, templatesFor } from '../support/send';
@@ -15,11 +16,17 @@ import { sendInbound } from '../support/whatsapp';
 describe('AMC: renewal offer', () => {
   let admin: Session;
   let plan: string;
+  let undoTemplate: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
     plan = await planId();
+    // The offer is made once Meta has approved the template (the switch is on).
+    undoTemplate = await setTemplate('amc_renewal_offer', true);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await undoTemplate();
+    await closeDb();
+  });
 
   it('goes to an AMC ending within 30 days, once, as the marketing template with both buttons', async () => {
     const sale = await sellProject(admin, { name: 'Amc Offer (test)' });
@@ -35,10 +42,6 @@ describe('AMC: renewal offer', () => {
       renewPayload: `amc:renew:${ask?.id}`,
       talkPayload: `amc:talk:${ask?.id}`,
     });
-    const [template] = await rows<{ active: boolean }>(
-      "SELECT active FROM message_templates WHERE key = 'amc_renewal_offer'",
-    );
-    expect(template?.active).toBe(false);
     // Once: a second morning makes no second offer; a contract ending in 90 days is not offered yet.
     await offerRenewals(today());
     expect(await renewalAsks(sale.customer.customerId)).toHaveLength(1);

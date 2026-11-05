@@ -8,7 +8,8 @@ export function capabilityOf(action: {
   readonly leadId: string | null;
   readonly projectId: string | null;
   readonly payload: Record<string, unknown>;
-}): 'projects.manage' | 'service.manage' | 'leads.manage' {
+}): 'projects.manage' | 'service.manage' | 'leads.manage' | 'finance.record_payments' {
+  if (action.type === 'payout') return 'finance.record_payments';
   if (action.type !== 'visit_pick') return 'projects.manage';
   const kind = action.payload.visitKind;
   if (kind === 'amc' || kind === 'service') return 'service.manage';

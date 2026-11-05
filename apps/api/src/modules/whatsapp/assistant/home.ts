@@ -4,6 +4,7 @@ import { titleCaseName, todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { careTaps } from '../../care/care-taps';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { PaymentLinksService } from '../../online-payments/payment-links.service';
 import { clearAwaiting } from '../../self-survey/survey-answers';
@@ -75,8 +76,14 @@ export class HomeService {
             title: SURVEY_WORDS.buttons.visit,
           }
         : null;
+    // The AMC renewal offer's second button is Talk to {name}.
+    const talkInstead: TapChoice | null =
+      top?.kind === 'care' && top.ask === 'renew' && count < 2
+        ? { id: careTaps.amcTalk(top.requestId), title: talk.title }
+        : null;
     const next: TapChoice =
       visitInstead ??
+      talkInstead ??
       (count >= 2
         ? { id: 'go:see', title: CHAT_WORDS.buttons.seeThem }
         : projects.length > 0

@@ -1,5 +1,6 @@
 import { formatInr } from '@oneohm/shared';
 import { daySpan } from '../../../common/notices';
+import { careButton, careLine } from '../../care/care-lines';
 import { stepNowTap } from '../../journey/journey-taps';
 import { JOURNEY_WORDS } from '../../journey/journey-words';
 import { stepLine } from '../../journey/step-lines';
@@ -32,6 +33,8 @@ export function pendingLine(item: PendingItem): string {
       return VISIT_WORDS.pick.homeLine(item.home);
     case 'journey':
       return journeyLine(item);
+    case 'care':
+      return careLine(item);
     case 'survey':
       return item.started ? SURVEY_WORDS.homeFinish : SURVEY_WORDS.offer(formatInr(item.paise));
     case 'visit':
@@ -71,6 +74,8 @@ export function pendingButton(item: PendingItem, paysOnline: boolean): TapChoice
       return item.ask === 'roof_now'
         ? { id: `rdy:now:${item.requestId}`, title: JOURNEY_WORDS.buttons.readyNow }
         : { id: `jr:${item.requestId}`, title: JOURNEY_WORDS.buttons.answerNow };
+    case 'care':
+      return careButton(item);
     case 'survey':
       return {
         id: item.requestId ? startTap(item.requestId) : newTap(item.taskId),
@@ -98,6 +103,7 @@ function pendingRow(item: PendingItem, paysOnline: boolean): Row {
     callback: () => SEND_WORDS.callback.homeRow,
     visit_ask: () => (item.kind === 'visit_ask' ? (item.home ?? '') : ''),
     journey: () => (item.kind === 'journey' ? (item.home ?? '') : ''),
+    care: () => (item.kind === 'care' ? (item.home ?? '') : ''),
     survey: () => (item.kind === 'survey' ? (item.home ?? '') : ''),
     visit: () =>
       item.kind === 'visit'

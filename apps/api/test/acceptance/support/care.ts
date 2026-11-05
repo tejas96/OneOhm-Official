@@ -101,3 +101,9 @@ export const bodyOf = async (phone: string): Promise<string> =>
 export async function repliesAfter(phone: string, skip: number): Promise<SentReply[]> {
   return (await replies(phone)).slice(skip);
 }
+
+/** The advance is paid (so Home has no payment to put first). */
+export const settleAdvance = (projectId: string) =>
+  rows("UPDATE payment_milestones SET status = 'paid' WHERE project_id = $1 AND status = 'due'", [
+    projectId,
+  ]);

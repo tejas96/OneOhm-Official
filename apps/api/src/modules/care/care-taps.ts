@@ -15,7 +15,7 @@ export const SINCE_CHOICES = ['today', 'week', 'longer'] as const;
 export type Since = (typeof SINCE_CHOICES)[number];
 
 const WORD = new RegExp(
-  `^(?:pb:(what|since):([a-z]{3,10})|pb:done|rt:(go):(${UUID})|rt:(${UUID}):([1-5])|fx:(y|n):(${UUID})|rf:city:([^:]{1,60})|rf:link|up:go:(${UUID})|amc:(renew|talk):(${UUID}))$`,
+  `^(?:pb:(what|since):([a-z]{3,10})|pb:done|rt:(go):(${UUID})|rt:(${UUID}):([1-5])|fx:(y|n|show):(${UUID})|rf:city:([^:]{1,60})|rf:link|up:go:(${UUID})|amc:(renew|talk):(${UUID}))$`,
 );
 
 /** A tap of the problem report, the rating, the fixed check, the referral or the UPI ask. */
@@ -26,6 +26,7 @@ export type CareTap =
   | { readonly t: 'rateGo'; readonly id: string }
   | { readonly t: 'rate'; readonly id: string; readonly stars: number }
   | { readonly t: 'fixed'; readonly id: string; readonly working: boolean }
+  | { readonly t: 'fixedShow'; readonly id: string }
   | { readonly t: 'city'; readonly value: string }
   | { readonly t: 'link' }
   | { readonly t: 'upi'; readonly id: string }
@@ -42,6 +43,7 @@ export function readCareTap(id: string | null | undefined): CareTap | null {
   if (id === 'pb:done') return { t: 'done' };
   if (go && goId) return { t: 'rateGo', id: goId };
   if (rateId && stars) return { t: 'rate', id: rateId, stars: Number(stars) };
+  if (fixed === 'show' && fixedId) return { t: 'fixedShow', id: fixedId };
   if (fixed && fixedId) return { t: 'fixed', id: fixedId, working: fixed === 'y' };
   if (city) return { t: 'city', value: city };
   if (id === 'rf:link') return { t: 'link' };
@@ -60,6 +62,7 @@ export const careTaps = {
   rate: (id: string, stars: number) => `rt:${id}:${stars}`,
   fixedYes: (id: string) => `fx:y:${id}`,
   fixedNo: (id: string) => `fx:n:${id}`,
+  fixedShow: (id: string) => `fx:show:${id}`,
   city: (value: string) => `rf:city:${value.slice(0, 60)}`,
   link: 'rf:link',
   upi: (id: string) => `up:go:${id}`,

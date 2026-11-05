@@ -4,9 +4,11 @@ import {
   customers,
   type Database,
   homeNameOf,
+  messageTemplates,
   projects,
   queueCustomerMessage,
 } from '@oneohm/database';
+import { templateIsOn } from '@oneohm/domain';
 import { addDays } from '@oneohm/shared';
 import { and, eq, gte, isNull, lte, ne, sql } from 'drizzle-orm';
 import { visitDay } from './after-sales';
@@ -40,10 +42,17 @@ export async function offerAmcRenewals(db: Database, today: string): Promise<num
         sql`not exists (select 1 from amc_contracts later where later.project_id = ${amcContracts.projectId} and later.cancelled_at is null and later.ends_on > ${amcContracts.endsOn})`,
       ),
     );
+  // The template is off until Meta approves it: nothing is asked, so the offer is not used up.
+  const [template] = await db
+    .select({ active: messageTemplates.active })
+    .from(messageTemplates)
+    .where(eq(messageTemplates.key, 'amc_renewal_offer'))
+    .limit(1);
+  if (!templateIsOn('amc_renewal_offer', template)) return 0;
   let offered = 0;
   for (const row of ending) {
     // Marketing: nothing for a customer who said STOP (they can still ask us for it).
-    if (!row.optIn) continue;
+    if (row.optIn === false) continue;
     const { contract } = row;
     const done = await db.transaction(async (tx) => {
       // The team may have offered it already (Send to customer): one offer per contract.
@@ -69,6 +78,7 @@ export async function offerAmcRenewals(db: Database, today: string): Promise<num
           payload: {
             kind: 'amc_renewal',
             contractId: contract.id,
+            endsOn: contract.endsOn,
             target: `amc_renewal:${contract.id}`,
             once: `amc_renewal:${contract.id}`,
           },

@@ -10,6 +10,7 @@ import {
 } from '@oneohm/database';
 import { isPresenceKind } from '@oneohm/domain';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { type CareAsk, careAsks } from '../../care/care-pending';
 import { activeProjectsOf } from '../../customer-portal/active-projects';
 import { type JourneyAsk, journeyAsks } from '../../journey/journey-pending';
 import { type SurveyAsk, surveyAsks } from '../../self-survey/survey-pending';
@@ -25,6 +26,7 @@ export type PendingItem =
   /** A day the team asked the customer to pick for a visit ([Pick a day]). */
   | { kind: 'visit_ask'; requestId: string; home: string | null }
   | JourneyAsk
+  | CareAsk
   | SurveyAsk
   | { kind: 'visit'; requestId: string; on: string; home: string | null; board?: boolean }
   | { kind: 'problem'; requestId: string; description: string; home: string | null }
@@ -38,6 +40,7 @@ const ORDER: readonly PendingItem['kind'][] = [
   'callback',
   'visit_ask',
   'journey',
+  'care',
   'survey',
   'visit',
   'problem',
@@ -63,7 +66,7 @@ export async function pendingForCustomer(
   customerId: string,
   today: string,
 ): Promise<PendingItem[]> {
-  const [papers, due, problems, quotes, asks, upcoming, journey, survey] = await Promise.all([
+  const [papers, due, problems, quotes, asks, upcoming, journey, care, survey] = await Promise.all([
     openPapers(db, customerId),
     dueInstalments(db, customerId),
     openProblems(db, customerId),
@@ -71,10 +74,11 @@ export async function pendingForCustomer(
     openAsks(db, customerId),
     upcomingVisits(db, customerId, today),
     journeyAsks(db, customerId),
+    careAsks(db, customerId),
     surveyAsks(db, customerId),
   ]);
   // The survey is optional: it is a line of its own only when nothing else needs the customer.
-  const others = [papers, due, problems, quotes, asks, upcoming, journey].some(
+  const others = [papers, due, problems, quotes, asks, upcoming, journey, care].some(
     (list) => list.length > 0,
   );
   return orderPending([
@@ -106,6 +110,7 @@ export async function pendingForCustomer(
       return { kind: 'callback' as const, requestId: row.id };
     }),
     ...journey,
+    ...care,
     ...(others ? [] : survey),
     ...upcoming.map((row) => ({
       kind: 'visit' as const,
