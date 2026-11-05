@@ -3,7 +3,6 @@ import {
   customers,
   type Database,
   type DatabaseExecutor,
-  fallBackToSms,
   GENERIC_WORDS,
   messageTemplates,
   outbox,
@@ -30,15 +29,9 @@ import type {
 import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
 import { queueFlowFallback } from './flow-fallback';
+import { fallBackNote } from './not-on-whatsapp';
 import { deliverPush } from './push-delivery';
 import { alertTokenExpired, CHAT_WINDOW_CLOSED, smsCanStandIn } from './send-checks';
-
-/** What the note says happened to a message WhatsApp refused as "not on WhatsApp". */
-export const NOT_ON_WHATSAPP = {
-  sms: 'Not on WhatsApp: sent by SMS instead.',
-  task: 'Not on WhatsApp: task made to tell them in person.',
-  none: 'Not on WhatsApp: not sent.',
-} as const;
 
 /** Written just before the provider call; found on entry, the last attempt died mid-send. */
 export const SENDING = 'sending';
@@ -188,8 +181,7 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         // Not on WhatsApp: customer news goes by SMS (later ones SMS first); staff ones fail.
         const viaSms = row.channel === 'whatsapp' && smsCanStandIn(row.template);
         if (viaSms && isNotOnWhatsApp(error.code)) {
-          const did = await fallBackToSms(db, row.id, wordsFor);
-          await finish(row.id, 'skipped', NOT_ON_WHATSAPP[did]);
+          await finish(row.id, 'skipped', await fallBackNote(db, row.id, wordsFor));
           return 'skipped';
         }
         await failWithAlerts(row.id, reason, error.tokenInvalid);

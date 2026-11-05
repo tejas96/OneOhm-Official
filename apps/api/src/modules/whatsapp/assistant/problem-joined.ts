@@ -1,3 +1,8 @@
+import type { Database } from '@oneohm/database';
+import { lockedChat } from '../chat-store';
+import { filesWaitOf } from './files-wait';
+import { saveWait } from './files-wait-store';
+
 /**
  * Files that join a problem on their own (redesign §12): any photo, video or voice note that
  * arrives while the problem is being told, or within `AUTO_ATTACH_SECONDS` after it was raised
@@ -51,4 +56,19 @@ export function withJoined(
     voices: (same?.voices ?? 0) + (kind === 'voice' ? 1 : 0),
     replyAt: now + delaySeconds * 1000,
   };
+}
+
+/** Counts one more file that joined the problem, in the chat's context (under its lock). */
+export function noteJoined(
+  db: Database,
+  chatId: string,
+  requestId: string,
+  kind: JoinedKind,
+  delaySeconds: number,
+): Promise<void> {
+  return db.transaction(async (tx) => {
+    const locked = await lockedChat(tx, chatId);
+    const joined = withJoined(locked.context, requestId, kind, Date.now(), delaySeconds);
+    await saveWait(tx, locked, filesWaitOf(locked.context), { joined });
+  });
 }

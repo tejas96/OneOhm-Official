@@ -18,9 +18,9 @@ import { loanPaperAsked } from '../journey/loan-papers';
 import { tellAskCancelled } from '../send-to-customer/send-cancel';
 import { logAction } from './customer-action-log';
 import { canUploadDocuments, canViewAllDocuments } from './document-access';
+import { askCustomer, tellCancelled } from './document-request-ask';
 import { homeOfRequest, openRequestsFor } from './document-request-home';
 import { closeInPerson } from './document-request-in-person';
-import { askCustomer, tellCancelled } from './document-request-messages';
 import { readRequests } from './document-request-read';
 import { contactOf, reopenRequest } from './document-request-reopen';
 

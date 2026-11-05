@@ -32,8 +32,13 @@ export class FreeTextService {
     return queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.smallTalk[kind] });
   }
 
-  /** A message WhatsApp could not pass on: one "Sorry, we couldn't open that" per burst. */
-  async unsupported(chat: Conversation): Promise<void> {
+  /**
+   * A card, sticker or pin nobody asked for: their person is told (a reaction, `quiet`, tells nobody). A
+   * message WhatsApp could not pass on gets one "Sorry, we couldn't open that" per burst.
+   */
+  async other(chat: Conversation, incoming: Incoming): Promise<void> {
+    if (!incoming.unsupported)
+      return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     if (!(await firstUnsupported(this.db, chat))) return;
     const talk = { id: 'go:talk', title: talkTitle(await this.people.answererName(chat)) };
     return sayWithTaps(this.db, chat, CHAT_WORDS.unsupported, ['more', talk]);

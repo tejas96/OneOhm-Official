@@ -4,7 +4,7 @@ import type { PushSender } from '../channels/expo-push';
 import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
 import type { WhatsAppSender } from '../channels/whatsapp-cloud';
-import { deliveryActivities, NOT_ON_WHATSAPP, SENDING } from './delivery.activities';
+import { deliveryActivities, SENDING } from './delivery.activities';
 
 type Row = typeof outbox.$inferSelect;
 
@@ -132,13 +132,5 @@ describe('a staff message the number cannot get on WhatsApp', () => {
       status: 'failed',
       lastError: 'WhatsApp 400: not a WhatsApp user',
     });
-  });
-});
-
-describe('the note on a message WhatsApp refused as "not on WhatsApp"', () => {
-  it('says what happened: an SMS, a task, or nothing', () => {
-    expect(NOT_ON_WHATSAPP.sms).toBe('Not on WhatsApp: sent by SMS instead.');
-    expect(NOT_ON_WHATSAPP.task).toBe('Not on WhatsApp: task made to tell them in person.');
-    expect(NOT_ON_WHATSAPP.none).toBe('Not on WhatsApp: not sent.');
   });
 });

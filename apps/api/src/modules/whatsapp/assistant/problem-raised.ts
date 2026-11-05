@@ -1,7 +1,7 @@
 import { type Database, homeNameOf } from '@oneohm/database';
-import type { ProblemKind } from '../../care/care-taps';
+import type { ProblemKind, Since } from '../../care/care-taps';
 import { promiseProblemCall } from '../../care/problem-call';
-import { PROBLEM_WORDS } from '../../care/problem-words';
+import { PROBLEM_LISTS, PROBLEM_WORDS } from '../../care/problem-words';
 import { type Conversation, chatDocumentFor } from '../chat-store';
 import { sayWithTaps } from './closing-taps';
 import { pendingMedia } from './pending-media';
@@ -72,4 +72,22 @@ export async function tellRaised(
     skipped ? MEDIA_WORDS.photoNotAdded : '',
   ];
   return sayWithTaps(db, chat, lines.filter(Boolean).join('\n\n'), ['problems', 'menu']);
+}
+
+/** The request's description (the team reads it, so always English): topic, what, since when, the note. */
+export function problemDescription(
+  draft: { readonly topic?: string | undefined; readonly note?: string | undefined },
+  kind: ProblemKind,
+  since: Since,
+  words: string,
+): string {
+  const W = PROBLEM_LISTS.en;
+  return [
+    draft.topic === 'installation' ? 'Installation' : null,
+    W.what[kind],
+    W.sinceNote[since],
+    words || draft.note || null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }

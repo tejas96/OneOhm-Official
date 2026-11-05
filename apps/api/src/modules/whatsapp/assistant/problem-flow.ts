@@ -6,12 +6,12 @@ import type { Environment } from '../../../config/environment';
 import { problemFormStart } from '../../care/care-form-words';
 import { type CareTap, PROBLEM_KINDS, SINCE_CHOICES, type Since } from '../../care/care-taps';
 import { callerOfRequest } from '../../care/problem-call';
-import { PROBLEM_LISTS, PROBLEM_WORDS } from '../../care/problem-words';
+import { PROBLEM_WORDS } from '../../care/problem-words';
 import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import { propertyOfProject } from '../../documents/document-links';
-import { type Conversation, lockedChat } from '../chat-store';
+import type { Conversation } from '../chat-store';
 import { filePaper } from '../file-paper';
 import { FormFileKeeper, type KeptFormFile, showFormFiles } from '../forms/form-files';
 import type { IncomingForm } from '../forms/form-reply-data';
@@ -26,10 +26,14 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
-import { filesWaitOf } from './files-wait';
-import { saveWait } from './files-wait-store';
-import { type JoinedKind, withJoined } from './problem-joined';
-import { CATEGORY, type RaisedRequest, tellRaised, waitingDocuments } from './problem-raised';
+import { type JoinedKind, noteJoined } from './problem-joined';
+import {
+  CATEGORY,
+  problemDescription,
+  type RaisedRequest,
+  tellRaised,
+  waitingDocuments,
+} from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';
 
@@ -148,18 +152,11 @@ export class ProblemFlowService {
     const since: Since = draft.since ?? 'today';
     const homes = await activeHomes(this.db, customerId);
     const projectId = draft.projectId ?? homes[0]?.id ?? null;
-    const W = PROBLEM_LISTS.en;
-    const description = [
-      draft.topic === 'installation' ? 'Installation' : null,
-      W.what[kind],
-      W.sinceNote[since],
-      words || draft.note || null,
-    ]
-      .filter(Boolean)
-      .join(' · ');
+    const description = problemDescription(draft, kind, since, words);
+    const category = CATEGORY[kind];
     const request = await this.portal.raiseServiceRequest(customerId, {
       projectId,
-      category: CATEGORY[kind],
+      category,
       description,
     });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
@@ -192,11 +189,7 @@ export class ProblemFlowService {
     return added;
   }
 
-  /**
-   * A photo, video or voice note that joins the problem on its own (during the report, or within
-   * two minutes after it): attached now, and counted so the customer gets one reply for the burst
-   * (`FileQuestionsService`). False when the problem cannot take it (full, resolved).
-   */
+  /** A file that joins the problem on its own: attached now, counted for the one reply (false if full). */
   async join(
     chat: Conversation,
     customerId: string,
@@ -205,17 +198,7 @@ export class ProblemFlowService {
     kind: JoinedKind,
   ): Promise<boolean> {
     if (!(await this.attach(customerId, requestId, documentId))) return false;
-    await this.db.transaction(async (tx) => {
-      const locked = await lockedChat(tx, chat.id);
-      const joined = withJoined(
-        locked.context,
-        requestId,
-        kind,
-        Date.now(),
-        this.env.FILE_WAIT_SECONDS,
-      );
-      await saveWait(tx, locked, filesWaitOf(locked.context), { joined });
-    });
+    await noteJoined(this.db, chat.id, requestId, kind, this.env.FILE_WAIT_SECONDS);
     return true;
   }
 

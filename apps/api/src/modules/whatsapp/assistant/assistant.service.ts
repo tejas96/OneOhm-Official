@@ -119,14 +119,11 @@ export class AssistantService {
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
       return this.menus.choose(chat, customerId, 'talk');
     if (await this.survey.takeInput(chat, customerId, incoming)) return;
-    if (incoming.unsupported) return this.words.unsupported(chat);
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
-    if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location)))
-      return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
-    // A card or sticker is never answered: their person is told; a reaction tells nobody.
-    if (incoming.kind === 'other')
-      return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
+    // A pin that was asked for, a card or a sticker: their person is told; a reaction tells nobody.
+    const pinned = incoming.location && (await this.sends.pin(chat, customerId, incoming.location));
+    if (pinned || incoming.kind === 'other') return this.words.other(chat, incoming);
     const waits = WAITING_STEPS.includes(stepOf(chat));
     // "ok", "thanks", 👍: a short word back (redesign §14). A step waiting for words gets
     // them first; a step waiting for a tap (which home, which paper) stays as it is.
