@@ -37,11 +37,9 @@ import {
 } from './onboarding-turn-files';
 
 /**
- * The guided WhatsApp onboarding for a new number (Part 3): language, name, city, site,
- * bill, roof, floors and the bill photo, mostly by taps. The lead is made at the city
- * answer and every later answer writes it at once. "Talk to a person" or two unclear
- * answers in a row hand the chat over with a summary, so a person is always one tap away.
- * Each message is applied under a row lock on the chat, so quick messages take turns.
+ * The guided WhatsApp onboarding for a new number (redesign §16): language, name, city, site, bill, roof,
+ * floors and the bill photo by taps, then the estimate. The lead is made at the city answer; a person is one
+ * tap away. Each message is applied under a row lock on the chat, so quick messages take turns.
  */
 @Injectable()
 export class OnboardingFlowService {
@@ -75,7 +73,7 @@ export class OnboardingFlowService {
     return this.run(chat, null);
   }
 
-  /** A friend's referral code made the lead: its name and city stand, so the site is next. */
+  /** A friend's referral code made the lead: its name and city stand; the rest is asked. */
   fromReferral(chat: Conversation): Promise<void> {
     return this.run(chat, null, true);
   }
@@ -90,7 +88,6 @@ export class OnboardingFlowService {
       const chat = await lockedChat(tx, seen.id);
       const lead = await openLeadFor(tx, chat.phone);
       const turn = await newTurn(tx, chat, lead, file, referral);
-      // A referral lead keeps its name and city, but the language (and a name we cannot use) is asked first.
       if (referral) await this.ask(turn, firstMissing(turn.answers, turn.known));
       else await this.take(turn, incoming);
       return turn.discard;
@@ -98,7 +95,6 @@ export class OnboardingFlowService {
     await this.files.discard(discard);
   }
 
-  /** Applies one message, under the chat's row lock. */
   private async take(turn: Turn, incoming: Incoming | null): Promise<null> {
     // A message that waited for the lock behind a hand-over: the person has the chat now.
     if (incoming && turn.chat.state === 'human') return null;
@@ -113,9 +109,18 @@ export class OnboardingFlowService {
     if (wantsPerson(incoming)) return this.toPerson(turn, current);
     // A reaction, sticker, card or pin is not an answer: never an unclear one (§16 fixes).
     if (incoming.kind === 'other') return this.other(turn, current, incoming);
+    return this.answerStep(turn, current, onStep !== null, incoming);
+  }
+
+  /** A tap or typed words for the question the chat is on: Back, an answer, "type it", or an unclear one. */
+  private async answerStep(
+    turn: Turn,
+    current: OnboardStep,
+    onStep: boolean,
+    incoming: Incoming,
+  ): Promise<null> {
     const choice = incoming.choiceId;
     const text = incoming.text.trim();
-    const word = text.toLowerCase();
     if (current === 'city' && choice === 'ob:city:pin') return this.askPin(turn);
     // Nothing to read: a tap on another question (an older list), the nudge's "Continue", or words
     // in the first message after a person handed the chat back. An old tap is told so.
@@ -123,16 +128,13 @@ export class OnboardingFlowService {
       if (choice && choice !== CONTINUE_CHOICE) await say(turn, CHAT_WORDS.earlier);
       return this.ask(turn, current);
     }
-    if (goesBack(current, choice, word)) return this.ask(turn, backTo(turn, current));
-    const read = readAnswer(
-      current,
-      { choiceId: choice, text },
-      {
-        settings: turn.settings,
-        profileName: turn.chat.profileName,
-        awaiting: turn.awaiting,
-      },
-    );
+    if (goesBack(current, choice, text.toLowerCase())) return this.ask(turn, backTo(turn, current));
+    const view = {
+      settings: turn.settings,
+      profileName: turn.chat.profileName,
+      awaiting: turn.awaiting,
+    };
+    const read = readAnswer(current, { choiceId: choice, text }, view);
     if (read.kind === 'miss') {
       turn.misses += 1;
       return turn.misses >= 2 ? this.toPerson(turn, current) : this.ask(turn, current, true);
