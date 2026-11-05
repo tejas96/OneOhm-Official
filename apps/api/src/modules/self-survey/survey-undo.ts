@@ -7,7 +7,7 @@ import { logAction } from '../documents/customer-action-log';
 import type { JourneyTask } from '../journey/journey-store';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { languageOfCustomer, tellPlain } from './survey-approve';
-import { reverseCredit } from './survey-credit';
+import { reverseCredit } from './survey-credit-hand';
 import { lastSurveyOf, surveyTaskOf, updateSurvey } from './survey-record';
 import { SURVEY_WORDS } from './survey-words';
 

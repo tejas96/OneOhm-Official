@@ -16,6 +16,7 @@ import { logAction } from '../documents/customer-action-log';
 import { languageOfPhone } from '../documents/document-request-messages';
 import { contextOfTask } from '../journey/journey-context';
 import type { JourneyTask } from '../journey/journey-store';
+import { QUOTE_MONEY_WORDS } from '../quotations/quote-money-words';
 import { chatOpenFor } from '../send-to-customer/send-context';
 import { deliver } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
@@ -66,6 +67,13 @@ export async function languageOfCustomer(tx: DatabaseExecutor, customerId: strin
   return languageOfPhone(tx, person?.phone ?? '');
 }
 
+/** The payment the credit came off, in the customer's language (the same words the quote uses). */
+function whenWords(credit: { readonly label: string; readonly trigger: string }): string {
+  return (
+    (QUOTE_MONEY_WORDS.when as Record<string, string | undefined>)[credit.trigger] ?? credit.label
+  );
+}
+
 /** What follows "Survey approved" for the customer: the discount and the payment it comes off, or only thanks. */
 export function clauseOf(
   credit: Awaited<ReturnType<typeof applyCredit>>,
@@ -74,7 +82,7 @@ export function clauseOf(
 ): string {
   const amount = formatInr(paise);
   if (credit?.kind === 'applied')
-    return SURVEY_WORDS.clauseApplied(amount, payment ?? credit.label);
+    return SURVEY_WORDS.clauseApplied(amount, payment ?? whenWords(credit));
   if (credit?.kind === 'pending') return SURVEY_WORDS.clausePending(amount);
   return SURVEY_WORDS.clausePlain;
 }

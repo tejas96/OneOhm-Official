@@ -1,9 +1,9 @@
 import {
   ACCOUNT,
   advanceAppliedPosting,
-  allocateTax,
   type LedgerAccountCode,
   milestoneDuePosting,
+  milestoneGst,
   paymentPosting,
   reversalPosting,
 } from '@oneohm/domain';
@@ -20,7 +20,7 @@ import {
   quotations,
 } from '../schema';
 import { handlingRemap } from './cash-handling-postings';
-import { creditTaxOf } from './credit-tax';
+import { creditTaxOf, gstBookedBefore, isLastToFall } from './credit-tax';
 import { postJournal } from './post-journal';
 
 /** Calendar date in India for an instant. */
@@ -55,12 +55,17 @@ export async function postMilestoneDue(
     .from(paymentMilestones)
     .where(eq(paymentMilestones.projectId, milestone.projectId))
     .orderBy(asc(paymentMilestones.position));
-  // The self-survey discount is GST inclusive and on the tax invoice: the milestones carry the GST left over.
-  const taxes = allocateTax(
+  // The self-survey discount is GST inclusive and on the tax invoice: the milestones carry the GST left over,
+  // and the last one to fall due takes exactly what is left, so the GST adds up to the invoice's.
+  const totalGst = row.taxPaise - (await creditTaxOf(db, milestone.projectId, row.quotationId));
+  const last = await isLastToFall(db, milestone.projectId, milestone.id);
+  const gstPaise = milestoneGst(
     siblings.map((sibling) => sibling.amountPaise),
-    row.taxPaise - (await creditTaxOf(db, milestone.projectId, row.quotationId)),
+    siblings.findIndex((sibling) => sibling.id === milestone.id),
+    totalGst,
+    last ? await gstBookedBefore(db, milestone.projectId, milestone.id) : 0,
+    last,
   );
-  const gstPaise = taxes[siblings.findIndex((sibling) => sibling.id === milestone.id)] ?? 0;
   const base = { projectId: milestone.projectId, postedByUserId: userId };
   await postJournal(db, {
     ...base,

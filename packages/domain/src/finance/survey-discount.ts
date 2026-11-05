@@ -57,3 +57,20 @@ export function ratesOf(
   }
   return [...byRate].map(([taxRateBp, grossPaise]) => ({ taxRateBp, grossPaise }));
 }
+
+/**
+ * The GST one milestone is booked with when it falls due. Each takes its share of the project's GST by its
+ * amount at that moment, but the last one to fall due takes whatever is left after the ones already booked, so
+ * the milestones' GST always adds up to the invoice's GST exactly (a discount taken off a payment between two
+ * due dates changes the amounts the earlier shares were worked from).
+ */
+export function milestoneGst(
+  amounts: readonly number[],
+  index: number,
+  totalGstPaise: number,
+  bookedPaise: number,
+  last: boolean,
+): number {
+  if (last) return Math.max(0, totalGstPaise - bookedPaise);
+  return allocateTax(amounts, totalGstPaise)[index] ?? 0;
+}

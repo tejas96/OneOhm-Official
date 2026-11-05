@@ -7,7 +7,7 @@ import {
   readBusinessSetting,
 } from '@oneohm/database';
 import { offerPaise, SURVEY_HOME_DAYS } from '@oneohm/domain';
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { activeProjectsOf } from '../customer-portal/active-projects';
 import { openVisitForTask } from '../visits/visit-reads';
 import { offerBlocker, payloadOf, selfSurveyTaskOf } from './survey-record';
@@ -68,6 +68,20 @@ export async function surveyAsks(
           inArray(customerActions.status, ['open', 'received']),
         ),
       );
+    // A survey given up is not offered again on Home for 14 days.
+    const [gone] = await db
+      .select({ payload: customerActions.payload })
+      .from(customerActions)
+      .where(
+        and(
+          eq(customerActions.type, 'self_survey'),
+          eq(customerActions.taskId, task.id),
+          eq(customerActions.status, 'cancelled'),
+          sql`(${customerActions.payload}->>'abandonedAt')::timestamptz > ${new Date(now.getTime() - 14 * 86_400_000).toISOString()}::timestamptz`,
+        ),
+      )
+      .limit(1);
+    if (gone) continue;
     const home = homeName(project);
     if (ask?.status === 'received') continue;
     if (ask) {

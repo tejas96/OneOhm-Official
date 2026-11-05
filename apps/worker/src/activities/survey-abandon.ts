@@ -31,7 +31,7 @@ export async function abandonSurveys(db: Database, now: Date): Promise<number> {
         status: 'cancelled',
         cancelledAt: now,
         updatedAt: now,
-        payload: { ...ask.payload, awaiting: null },
+        payload: { ...ask.payload, awaiting: null, abandonedAt: now.toISOString() },
       })
       .where(and(eq(customerActions.id, ask.id), eq(customerActions.status, 'open')))
       .returning({ id: customerActions.id });

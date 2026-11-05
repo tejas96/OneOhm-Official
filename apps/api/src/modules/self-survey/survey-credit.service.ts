@@ -5,7 +5,7 @@ import { desc, eq } from 'drizzle-orm';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 import { DATABASE } from '../../config/core.module';
-import { settleByHand } from './survey-credit';
+import { settleByHand } from './survey-credit-hand';
 
 /** Finance's view of the self-survey discount of a project, and the hand settlement when no payment could take it. */
 @Injectable()

@@ -60,8 +60,9 @@ const EN = {
   sent: 'Thank you ✅ We have your survey. Our engineer checks your photos and we tell you here. No visit needed.',
   approvedHead: 'Survey approved ✅',
   /** What follows "approved": the discount and the payment it comes off, said plainly. */
-  clauseApplied: (amount: string, payment: string) => `${amount} off your payment: ${payment}.`,
-  clausePending: (amount: string) => `${amount} will come off your final payment.`,
+  clauseApplied: (amount: string, payment: string) => `${amount} off your payment ${payment}.`,
+  clausePending: (amount: string) =>
+    `Our team will give you this ${amount} discount with your final bill.`,
   clausePlain: 'Thank you.',
   reversed: (amount: string) =>
     `We had to take back the ${amount} survey discount from your payment. We will call you to explain.`,
@@ -121,7 +122,7 @@ const MR: Words<typeof EN> = {
   sent: 'धन्यवाद ✅ तुमचा सर्वे मिळाला. आमचे इंजिनिअर फोटो तपासतात आणि आम्ही इथे कळवू. भेट देण्याची गरज नाही.',
   approvedHead: 'सर्वे मंजूर ✅',
   clauseApplied: (amount, payment) => `तुमच्या पेमेंटमध्ये (${payment}) ${amount} सूट.`,
-  clausePending: (amount) => `तुमच्या शेवटच्या पेमेंटमधून ${amount} कमी होतील.`,
+  clausePending: (amount) => `ही ${amount} सूट आमची टीम तुम्हाला तुमच्या शेवटच्या बिलासोबत देईल.`,
   clausePlain: 'धन्यवाद.',
   reversed: (amount) => `सर्वेची ${amount} सूट आम्हाला तुमच्या पेमेंटमधून परत घ्यावी लागली. आम्ही फोन करून सांगू.`,
   noNeed: 'आमच्या इंजिनिअरनी तुमचा सर्वे पूर्ण केला आहे, त्यामुळे आता पाठवण्याची गरज नाही. धन्यवाद.',
@@ -180,7 +181,7 @@ const HI: Words<typeof EN> = {
   sent: 'धन्यवाद ✅ आपका सर्वे मिल गया। हमारे इंजीनियर फ़ोटो जाँचते हैं और हम यहाँ बताएँगे। विज़िट की ज़रूरत नहीं।',
   approvedHead: 'सर्वे मंज़ूर ✅',
   clauseApplied: (amount, payment) => `आपके पेमेंट (${payment}) में ${amount} की छूट।`,
-  clausePending: (amount) => `आपके आख़िरी पेमेंट से ${amount} कम होंगे।`,
+  clausePending: (amount) => `यह ${amount} की छूट हमारी टीम आपको आपके आख़िरी बिल के साथ देगी।`,
   clausePlain: 'धन्यवाद।',
   reversed: (amount) => `सर्वे की ${amount} की छूट हमें आपके पेमेंट से वापस लेनी पड़ी। हम फ़ोन करके बताएँगे।`,
   noNeed: 'हमारे इंजीनियर ने आपका सर्वे पूरा कर लिया है, इसलिए अब भेजने की ज़रूरत नहीं। धन्यवाद।',
