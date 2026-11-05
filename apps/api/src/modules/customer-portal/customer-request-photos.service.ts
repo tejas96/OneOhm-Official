@@ -65,22 +65,25 @@ export class CustomerRequestPhotosService {
   }
 
   /**
-   * The app's photo rule for a photo the customer already sent on WhatsApp (stored once
-   * when it arrived): the request it may join, or an error saying why it cannot.
+   * The app's rule for a photo or voice note the customer already sent on WhatsApp (stored once
+   * when it arrived): the request it may join and the folder it goes in, or an error saying why not.
    */
-  async roomForStoredPhoto(
+  async roomForStoredFile(
     customerId: string,
     requestId: string,
     documentId: string,
-  ): Promise<{ readonly projectId: string | null }> {
+  ): Promise<{ readonly projectId: string | null; readonly category: string }> {
     const [stored] = await this.db
       .select({ contentType: documents.contentType })
       .from(documents)
       .where(and(eq(documents.id, documentId), eq(documents.customerId, customerId)));
     if (!stored) throw notFound('That file');
-    if (!(PHOTO_FILE_TYPES as readonly string[]).includes(stored.contentType))
+    const voice = isAudioType(stored.contentType);
+    const allowed: readonly string[] = voice ? REQUEST_FILE_TYPES : PHOTO_FILE_TYPES;
+    if (!allowed.includes(stored.contentType))
       throw invalid('Send a photo.', { file: 'This file type is not accepted.' });
-    return this.roomFor(customerId, requestId, stored.contentType, documentId);
+    const request = await this.roomFor(customerId, requestId, stored.contentType, documentId);
+    return { projectId: request.projectId, category: voice ? VOICE_NOTE_CATEGORY : 'site_photo' };
   }
 
   private async store(

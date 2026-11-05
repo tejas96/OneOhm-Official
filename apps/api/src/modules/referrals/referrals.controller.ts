@@ -41,6 +41,10 @@ export class ReferralsController {
         assertCan(actor, 'finance.approve_payments');
         return { status: 200, body: await this.rewards.reject(actor, params.id, body.reason) };
       },
+      checkRewardUpi: async ({ params, body }) => {
+        assertCan(actor, 'finance.record_payments');
+        return { status: 200, body: await this.rewards.checkUpi(actor, params.id, body) };
+      },
       payReward: async ({ params, body }) => {
         assertCan(actor, 'finance.record_payments');
         return { status: 200, body: await this.rewards.pay(actor, params.id, body) };

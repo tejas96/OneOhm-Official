@@ -7,10 +7,11 @@ import { type Conversation, chatDocumentFor, lockedChat, queueReply } from '../c
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { IncomingMedia } from '../whatsapp-events';
 import { stepOf } from './chat-step';
+import { draftOf } from './complaint-start';
 import { withFile } from './files-wait';
 import { saveWait } from './files-wait-store';
 import { HandOverService } from './hand-over';
-import { ProblemFlowService } from './problem-flow';
+import { ProblemFlowService, recentRequest } from './problem-flow';
 import { MEDIA_WORDS } from './words';
 
 /** Files sent before the customer said what they are about wait this long, at most six. */
@@ -62,23 +63,30 @@ export class MediaIntakeService {
     chat: Conversation,
     customerId: string,
     media: IncomingMedia,
-    said: string,
+    _said: string,
   ): Promise<void> {
-    // A voice note or a video goes warmly to their person, as for leads (C12); it is put on
-    // a home when that needs no question (`ChatFileKeeper.settle`).
+    const now = Date.now();
+    const reporting = stepOf(chat) === 'await_problem' && draftOf(chat.context) !== null;
+    // A voice note sent during a problem report, or right after one, joins the problem (redesign §12):
+    // no hand-over. Any other voice note or video goes warmly to their person, as for leads (C12); it
+    // is put on a home when that needs no question (`ChatFileKeeper.settle`).
     if (media.type === 'audio' || media.type === 'video') {
+      const raised = recentRequest(chat.context, now);
+      if (media.type === 'audio' && (reporting || raised)) {
+        const documentId = await this.storedOrSay(chat, media);
+        if (!documentId) return;
+        if (reporting) return this.problems.file(chat, customerId, documentId);
+        if (raised && (await this.problems.addVoice(chat, customerId, raised.id, documentId)))
+          return;
+      }
       if (chat.state === 'human' && stepOf(chat) !== 'await_problem') return;
       const reply = heardReply(media.type, await this.people.answererName(chat));
       return this.people.passToOwner(chat, { summary: HEARD[media.type].note, reply });
     }
-    const now = Date.now();
-    if (stepOf(chat) === 'await_problem') {
+    if (reporting) {
       const file = await this.storedOrSay(chat, media);
       if (!file) return;
-      const earlier = await this.storedPending(pendingMedia(chat.context, now));
-      // A paper's file name is not a description of the problem; only a caption is.
-      const words = said === media.fileName ? '' : said;
-      return this.problems.raise(chat, customerId, words, [...earlier, file]);
+      return this.problems.file(chat, customerId, file);
     }
     return this.wait(chat, media, now);
   }
@@ -101,10 +109,9 @@ export class MediaIntakeService {
     });
   }
 
-  /** The words of "Report a problem": they raise it, with any photos sent just before. */
-  async problemText(chat: Conversation, customerId: string, said: string): Promise<void> {
-    const pending = said.trim().length >= 5 ? pendingMedia(chat.context, Date.now()) : [];
-    return this.problems.raise(chat, customerId, said, await this.storedPending(pending));
+  /** The words typed during "Report a problem": the note, once both questions are answered. */
+  problemText(chat: Conversation, customerId: string, said: string): Promise<void> {
+    return this.problems.words(chat, customerId, said);
   }
 
   /** The document this file was stored as, or null after telling the customer it was not. */
@@ -123,15 +130,5 @@ export class MediaIntakeService {
             : MEDIA_WORDS.failed;
     await queueReply(this.db, chat, { kind: 'text', body });
     return null;
-  }
-
-  /** Files sent earlier, as stored; any that were not kept are quietly left out. */
-  private async storedPending(pending: readonly PendingMedia[]): Promise<string[]> {
-    const stored: string[] = [];
-    for (const media of pending) {
-      const documentId = await chatDocumentFor(this.db, media.id);
-      if (documentId) stored.push(documentId);
-    }
-    return stored;
   }
 }

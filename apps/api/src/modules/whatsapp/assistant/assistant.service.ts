@@ -3,8 +3,12 @@ import { waConversations } from '@oneohm/database';
 import { asksForPerson } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../config/core.module';
+import { CareAnswersService } from '../../care/care-answers.service';
+import { readCareTap } from '../../care/care-taps';
+import { RatingsService } from '../../care/ratings.service';
+import { ReferralChatService } from '../../care/referral-chat.service';
+import { UpiService } from '../../care/upi.service';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
-import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { JourneyAnswersService } from '../../journey/journey-answers.service';
 import { readJourneyTap } from '../../journey/journey-taps';
 import { SurveyChatService } from '../../self-survey/survey-chat.service';
@@ -23,7 +27,6 @@ import { CHAT_WORDS } from './chat-words';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
 import { captureEntry } from './entry-capture';
-import { AWAIT_COMMENT, FeedbackFlowService } from './feedback-flow';
 import { readWhatTap, readWhereTap } from './files-wait';
 import { FreeTextService } from './free-text';
 import { tellHandedBack } from './hand-back';
@@ -38,12 +41,11 @@ import { MenuAnswersService } from './menu-answers';
 import { answerOptOut, optOutAsked } from './opt-out';
 import { PaperRepliesService } from './paper-replies';
 import { QuoteActionsService, readQuoteTap } from './quote-actions';
-import { takeReferral } from './referral-step';
 import { StrangerFlowService } from './stranger-flow';
 import { WhatAnswerService } from './what-answer';
 
-/** The steps that wait for typed words; the others (which home) wait for a tap. */
-const TEXT_STEPS = ['await_problem', 'await_referral', AWAIT_COMMENT];
+/** Steps that wait for typed words; the others wait for a tap. */
+const TEXT_STEPS = ['await_problem', 'await_referral', 'await_upi'];
 
 /**
  * The customer WhatsApp assistant (PRD 6.1, redesign §3, §14): Home over the customer's
@@ -56,9 +58,11 @@ export class AssistantService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly menus: MenuAnswersService,
     private readonly home: HomeService,
-    private readonly portal: CustomerPortalService,
     private readonly media: MediaIntakeService,
-    private readonly feedback: FeedbackFlowService,
+    private readonly ratings: RatingsService,
+    private readonly care: CareAnswersService,
+    private readonly referrals: ReferralChatService,
+    private readonly upi: UpiService,
     private readonly people: HandOverService,
     private readonly strangers: StrangerFlowService,
     private readonly quotes: QuoteActionsService,
@@ -107,19 +111,14 @@ export class AssistantService {
 
   private async answer(chat: Conversation, incoming: Incoming): Promise<void> {
     if (restartsChat(chat, incoming)) return this.restart(chat, incoming.waMessageId);
-    // With a person, the assistant answers only its own taps and its own steps' words.
     if (await this.heldByPerson(chat, incoming)) return;
     if (!chat.customerId) return this.stranger(chat, incoming, wordOf(incoming));
     const customerId = chat.customerId;
-    // Sent from the customer app's "WhatsApp your contact" button: straight to a person.
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
       return this.menus.choose(chat, customerId, 'talk');
     if (await this.survey.takeInput(chat, customerId, incoming)) return;
-    // Files are stored only for a number saved on a customer, and only against that customer.
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
-    // A "Send a paper" form came back: its files answer the paper it was sent for.
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
-    // A pin answers the location the team asked for (else "which home"); it is never answered otherwise.
     if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location)))
       return this.people.tellSent(chat, incoming.waMessageId, incoming.text, incoming.quiet);
     // A contact card or a sticker is never answered: their person is told
@@ -148,7 +147,9 @@ export class AssistantService {
   /** A tap or typed words that pick an answer; else "Sorry, we didn't get that". */
   private picked(chat: Conversation, customerId: string, incoming: Incoming) {
     const id = incoming.choiceId;
-    if (id?.startsWith('rate:')) return this.feedback.rate(chat, customerId, Number(id.slice(5)));
+    if (id?.startsWith('rate:')) return this.ratings.legacy(chat, customerId, Number(id.slice(5)));
+    const careTap = readCareTap(id);
+    if (careTap) return this.care.tapped(chat, customerId, careTap);
     const milestone = payTapped(id);
     if (milestone) return this.menus.pay(chat, customerId, milestone);
     const request = sendTapped(id);
@@ -208,9 +209,8 @@ export class AssistantService {
     const step = stepOf(chat);
     if (incoming.kind === 'choice' || !TEXT_STEPS.includes(step)) return false;
     if (step === 'await_problem') await this.media.problemText(chat, customerId, incoming.text);
-    else if (step === 'await_referral')
-      await takeReferral(this.db, this.portal, chat, customerId, incoming.text);
-    else if (step === AWAIT_COMMENT) await this.feedback.comment(chat, customerId, incoming.text);
+    else if (step === 'await_referral') await this.referrals.typed(chat, customerId, incoming.text);
+    else if (step === 'await_upi') await this.upi.typed(chat, customerId, incoming.text);
     return true;
   }
 

@@ -8,11 +8,10 @@ import { CustomerDocumentsService } from '../customer-portal/customer-documents.
 import { CustomerPortalService } from '../customer-portal/customer-portal.service';
 import { logAction } from '../documents/customer-action-log';
 import { resolvePaper } from '../send-to-customer/send-papers';
-import { setStep } from '../whatsapp/assistant/chat-step';
 import { talkTitle } from '../whatsapp/assistant/chat-words';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
+import { askWhat } from '../whatsapp/assistant/complaint-start';
 import { HandOverService } from '../whatsapp/assistant/hand-over';
-import { keepPending } from '../whatsapp/assistant/media-intake';
 import { answererName } from '../whatsapp/chat-owner';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
@@ -143,12 +142,12 @@ export class JourneyAnswersService {
 
   /** "Something is wrong": the problem report starts on this home, for the installation. */
   private async startProblem(chat: Conversation, bad: Extract<Confirmed, { kind: 'bad' }>) {
-    await setStep(this.db, chat, 'await_problem', {
-      ...keepPending(chat.context),
-      ...(bad.projectId ? { projectId: bad.projectId } : {}),
+    await sayWithTaps(this.db, chat, JOURNEY_WORDS.install.wrong(bad.home), ['menu']);
+    await askWhat(this.db, chat, {
+      stage: 'what',
+      projectId: bad.projectId,
       topic: 'installation',
     });
-    await sayWithTaps(this.db, chat, JOURNEY_WORDS.install.wrong(bad.home), ['menu']);
   }
 
   /** [Documents] on the closed-window handover template: now the chat is open, the papers go in one go. */

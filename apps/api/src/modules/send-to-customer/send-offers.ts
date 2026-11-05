@@ -1,6 +1,7 @@
 import type { SendOffer, SendRequest } from '@oneohm/api-contracts';
 import type { SendAction } from '@oneohm/domain';
 import { formatInr } from '@oneohm/shared';
+import { amcRenewalOffers, ratingOffers } from '../care/care-send';
 import { journeyOffers } from '../journey/journey-offers';
 import { stepOffers } from '../journey/step-offers';
 import { surveyOffers } from '../self-survey/survey-offer';
@@ -155,6 +156,10 @@ export async function offersFor(
       return stepOffers(deps, ctx, action, make);
     case 'self_survey':
       return surveyOffers(deps, ctx, make);
+    case 'ask_rating':
+      return ratingOffers(deps, ctx, make);
+    case 'amc_renewal':
+      return amcRenewalOffers(deps, ctx, make);
   }
 }
 

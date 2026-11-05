@@ -1,5 +1,6 @@
 import { type DatabaseExecutor, waMessages } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
+import { isCareTap } from '../../care/care-taps';
 import { isJourneyTap } from '../../journey/journey-taps';
 import { isSurveyTap } from '../../self-survey/survey-taps';
 import { isSendTap } from '../../send-to-customer/send-taps';
@@ -46,6 +47,7 @@ export function assistantAnswersTap(
     isVisitTap(id) ||
     isJourneyTap(id) ||
     isSurveyTap(id) ||
+    isCareTap(id) ||
     OWN_TAP.test(id)
   );
 }

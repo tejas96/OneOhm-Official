@@ -24,6 +24,7 @@ import { invalid, notFound } from '../../common/http/errors';
 import { queueWhatsApp } from '../../common/outbox';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
+import { tellFixed } from '../care/fixed-check';
 import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { changesFor, type Patch } from './service-ticket-changes';
 
@@ -42,6 +43,8 @@ export function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
 }
 
 type Row = Awaited<ReturnType<typeof serviceRequestRows>>[number];
+
+const topicOf = (row: Row) => (row.customerLabel ?? row.label ?? 'your request').toLowerCase();
 
 function assignedNotice(current: Row, owner: string, now: Date) {
   const { request } = current;
@@ -121,14 +124,17 @@ export class ServiceDeskService {
         .update(serviceRequests)
         .set(changesFor(patch, before, now, recategory))
         .where(eq(serviceRequests.id, id));
-      if (patch.status && patch.status !== before.status) {
+      if (patch.status === 'resolved' && before.status !== 'resolved') {
+        // "Fixed ✅ Is it working now?" with two buttons (redesign §12); the older update while it is off.
+        await tellFixed(tx, { id, topicWords: topicOf(current) }, now);
+      } else if (patch.status && patch.status !== before.status) {
         await queueWhatsApp(
           tx,
           current.customer.phone,
           'service_update',
           {
             customer: current.customer.name,
-            topic: (current.customerLabel ?? current.label ?? 'your request').toLowerCase(),
+            topic: topicOf(current),
             status: STATUS_LABEL[patch.status],
           },
           `service:${id}:${patch.status}:${now.getTime()}`,

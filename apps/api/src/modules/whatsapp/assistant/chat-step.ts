@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { type Conversation, setState } from '../chat-store';
 
 /** The bot's own steps that wait for the customer's next words or tap. */
-export const WAITING_STEPS = ['await_home', 'await_problem', 'await_referral', 'await_comment'];
+export const WAITING_STEPS = ['await_home', 'await_problem', 'await_referral', 'await_upi'];
 
 /** A step waits this long; older, the customer's words are read as new ones (to a person). */
 export const STEP_MINUTES = 30;

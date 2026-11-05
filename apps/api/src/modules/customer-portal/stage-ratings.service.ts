@@ -14,6 +14,7 @@ import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { closeRatingAsk } from '../care/rating-ask';
 import { suggestStageRatingPoints } from '../workforce/points';
 import { customerStageCards, readStageRatings } from './stage-ratings-read';
 
@@ -64,6 +65,7 @@ export class StageRatingsService {
         .onConflictDoNothing()
         .returning({ id: stageRatings.id });
       if (!row) throw conflict('You have already rated this stage. Thank you.', 'rated');
+      await closeRatingAsk(tx, { kind: 'stage', projectId: input.projectId, stage: input.stage });
       if (people.length > 0) {
         await tx
           .insert(stageRatingPeople)

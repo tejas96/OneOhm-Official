@@ -2,6 +2,11 @@ import { Logger, Module } from '@nestjs/common';
 import { ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { AfterSalesModule } from '../after-sales/after-sales.module';
+import { AmcRenewalService } from '../care/amc-renewal.service';
+import { CareAnswersService } from '../care/care-answers.service';
+import { RatingsService } from '../care/ratings.service';
+import { ReferralChatService } from '../care/referral-chat.service';
+import { UpiService } from '../care/upi.service';
 import { CustomerPortalModule } from '../customer-portal/customer-portal.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { FinanceModule } from '../finance/finance.module';
@@ -19,7 +24,6 @@ import { VisitAnswersService } from '../visits/visit-answers.service';
 import { VisitPickService } from '../visits/visit-pick.service';
 import { AnswersService } from './assistant/answers.service';
 import { AssistantService } from './assistant/assistant.service';
-import { FeedbackFlowService } from './assistant/feedback-flow';
 import { FileQuestionsService } from './assistant/file-questions';
 import { FileQuestionsController } from './assistant/file-questions.controller';
 import { FreeTextService } from './assistant/free-text';
@@ -30,6 +34,7 @@ import { MenuAnswersService } from './assistant/menu-answers';
 import { PaperRepliesService } from './assistant/paper-replies';
 import { ProblemFlowService } from './assistant/problem-flow';
 import { QuoteActionsService } from './assistant/quote-actions';
+import { QuoteQuestionsService } from './assistant/quote-questions.service';
 import { StrangerFlowService } from './assistant/stranger-flow';
 import { WhatAnswerService } from './assistant/what-answer';
 import { ChatFileKeeper } from './chat-file-keeper';
@@ -84,7 +89,12 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     FileQuestionsService,
     WhatAnswerService,
     ProblemFlowService,
-    FeedbackFlowService,
+    RatingsService,
+    CareAnswersService,
+    ReferralChatService,
+    UpiService,
+    AmcRenewalService,
+    QuoteQuestionsService,
     HandOverService,
     StrangerFlowService,
     OnboardingFlowService,

@@ -1,12 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { ReferralChatService } from '../../care/referral-chat.service';
+import { UpiService } from '../../care/upi.service';
 import { CustomerDocumentRequestsService } from '../../customer-portal/customer-document-requests.service';
 import { SurveyChatService } from '../../self-survey/survey-chat.service';
 import { sayWithTaps } from '../assistant/closing-taps';
 import type { Chosen } from '../assistant/files-wait';
 import { HomeService } from '../assistant/home';
 import { takePaymentProof } from '../assistant/payment-proof';
+import { ProblemFlowService } from '../assistant/problem-flow';
 import { WHAT_WORDS } from '../assistant/what-words';
 import { MEDIA_WORDS } from '../assistant/words';
 import { tellChatTeam } from '../chat-owner';
@@ -58,6 +61,9 @@ export class FormReplyService {
     private readonly requests: CustomerDocumentRequestsService,
     private readonly home: HomeService,
     private readonly survey: SurveyChatService,
+    private readonly problems: ProblemFlowService,
+    private readonly referrals: ReferralChatService,
+    private readonly upi: UpiService,
   ) {}
 
   async receive(chat: Conversation, customerId: string, incoming: Incoming): Promise<void> {
@@ -69,6 +75,15 @@ export class FormReplyService {
     if (token.formKey === 'self_survey') {
       try {
         return await this.survey.fromForm(chat, customerId, String(token.payload.actionId), form);
+      } catch (error) {
+        await releaseFlowToken(this.db, token.token);
+        throw error;
+      }
+    }
+    // The problem, refer-a-friend and UPI forms carry choices and typed words, not papers.
+    if (['report_problem', 'refer_friend', 'share_upi'].includes(token.formKey)) {
+      try {
+        return await this.careForm(chat, customerId, token, form);
       } catch (error) {
         await releaseFlowToken(this.db, token.token);
         throw error;
@@ -96,6 +111,15 @@ export class FormReplyService {
       await releaseFlowToken(this.db, token.token);
       throw error;
     }
+  }
+
+  private careForm(chat: Conversation, customerId: string, token: FlowToken, form: IncomingForm) {
+    if (token.formKey === 'report_problem') {
+      const topic = typeof token.payload.topic === 'string' ? token.payload.topic : undefined;
+      return this.problems.fromForm(chat, customerId, form, topic);
+    }
+    if (token.formKey === 'refer_friend') return this.referrals.fromForm(chat, customerId, form);
+    return this.upi.fromForm(chat, customerId, String(token.payload.actionId), form);
   }
 
   private async fileThem(

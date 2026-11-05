@@ -5,6 +5,8 @@ import { formatInr, todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
+import { RatingsService } from '../../care/ratings.service';
+import { ReferralChatService } from '../../care/referral-chat.service';
 import { paperKindWords } from '../../documents/paper-kind-words';
 import { SEND_WORDS } from '../../send-to-customer/send-words';
 import { visitDetails } from '../../visits/visit-details';
@@ -15,16 +17,15 @@ import { sendPaperStart } from '../forms/form-words';
 import { AnswersService } from './answers.service';
 import type { Choice } from './chat-choices';
 import { saveLanguage } from './chat-language';
-import { markContext, setStep, stepOf, WAITING_STEPS } from './chat-step';
+import { markContext, stepOf, WAITING_STEPS } from './chat-step';
 import { CHAT_WORDS, LANGUAGE_BUTTONS, talkTitle } from './chat-words';
 import { sayWithTaps, type TapChoice } from './closing-taps';
-import { startComplaint } from './complaint-start';
-import { FeedbackFlowService } from './feedback-flow';
 import { HandOverService } from './hand-over';
 import { HomeService } from './home';
 import { type AssistantLanguage, inLanguage, languageNow } from './language';
 import { PaperRepliesService } from './paper-replies';
 import { pendingForCustomer } from './pending-items';
+import { ProblemFlowService } from './problem-flow';
 import { WORDS } from './words';
 
 /**
@@ -38,7 +39,9 @@ export class MenuAnswersService {
     @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly answers: AnswersService,
     private readonly papers: PaperRepliesService,
-    private readonly feedback: FeedbackFlowService,
+    private readonly ratings: RatingsService,
+    private readonly referrals: ReferralChatService,
+    private readonly problemFlow: ProblemFlowService,
     private readonly people: HandOverService,
     private readonly home: HomeService,
     private readonly forms: FormSendService,
@@ -74,7 +77,7 @@ export class MenuAnswersService {
       case 'sendbill':
         return this.askPaper(chat, customerId, null, 'electricity_bill');
       case 'problem':
-        return startComplaint(this.db, chat, customerId);
+        return this.problemFlow.start(chat, customerId);
       case 'problems':
         return say(await this.answers.requests(customerId), ['problem', 'menu']);
       case 'visit':
@@ -85,8 +88,7 @@ export class MenuAnswersService {
       case 'warranty':
         return say(await this.answers.warranty(customerId), ['problem', 'menu']);
       case 'refer':
-        await setStep(this.db, chat, 'await_referral');
-        return say(WORDS.askReferral, ['menu']);
+        return this.referrals.start(chat, customerId);
       case 'rewards':
         return say(await this.answers.rewards(customerId), ['refer', 'menu']);
       case 'talk':
@@ -94,7 +96,7 @@ export class MenuAnswersService {
       case 'language':
         return this.languageButtons(chat);
       case 'feedback':
-        return this.feedback.offer(chat, customerId);
+        return this.ratings.offer(chat, customerId);
     }
   }
 

@@ -17,6 +17,7 @@ import {
   toCustomerRequest,
 } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
+import { closeRatingAsk } from '../care/rating-ask';
 import { assetsOf, contractsOf } from './after-sales.read';
 import { commissionedOn } from './installed-assets.record';
 
@@ -118,6 +119,7 @@ export class CustomerAfterSalesService {
         target: serviceRatings.serviceRequestId,
         set: { rating: input.rating, comment, createdAt: new Date() },
       });
+    await closeRatingAsk(this.db, { kind: 'problem', requestId });
     if (input.rating <= 2) {
       await notifyHolders(this.db, 'service.manage', {
         kind: 'service_low_rating',
