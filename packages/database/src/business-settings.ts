@@ -7,9 +7,11 @@ import {
   DEFAULT_DASHBOARD_SETTINGS,
   DEFAULT_LEAD_ASSIGNMENT,
   DEFAULT_ONBOARDING,
+  DEFAULT_PAYMENT_SETTINGS,
   DEFAULT_REMINDER_TIMING,
   type LeadAssignmentRules,
   type OnboardingSettings,
+  type PaymentSettings,
   type ReminderTiming,
   withDefaults,
 } from '@oneohm/domain';
@@ -25,6 +27,7 @@ export interface BusinessSettingsMap {
   readonly dashboard: DashboardSettings;
   readonly lead_assignment: LeadAssignmentRules;
   readonly onboarding: OnboardingSettings;
+  readonly payments: PaymentSettings;
 }
 export type BusinessSettingKey = keyof BusinessSettingsMap;
 
@@ -37,6 +40,7 @@ export const BUSINESS_SETTING_DEFAULTS: {
   dashboard: DEFAULT_DASHBOARD_SETTINGS,
   lead_assignment: DEFAULT_LEAD_ASSIGNMENT,
   onboarding: DEFAULT_ONBOARDING,
+  payments: DEFAULT_PAYMENT_SETTINGS,
 };
 
 /** The saved values for one area over the shipped ones; never throws for a missing row. */

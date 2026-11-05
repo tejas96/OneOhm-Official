@@ -33,6 +33,11 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
     service_request: ({ id }) => `/service?tab=requests&view=all&request=${id}`,
     purchase_request: ({ id }) => `/inventory?tab=requests&status=all&request=${id}`,
     vendor_advance: ({ id }) => `/finance?tab=advances&filter=pending&advance=${id}`,
+    // Bank transfer alerts: the bill itself, whatever happened to the money.
+    payable: ({ id }) => `/finance?tab=payables&bill=${id}`,
+    // Bank detail alerts: the vendor's or crew's own page.
+    vendor: ({ id }) => `/inventory/vendors/${id}`,
+    contractor: ({ id }) => `/contractors/${id}`,
     stock: () => '/inventory?tab=stock',
     lead: ({ id }) => `/leads/${id}`,
     approval: () => '/today?tab=approvals',
@@ -43,6 +48,8 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
 const KIND_HREF: Readonly<Record<string, string>> = {
   departure_cover: '/today',
   payout_details_changed: '/finance?tab=payouts',
+  // The RazorpayX check is failing; no single bill is to blame.
+  payout_sync_failing: '/finance?tab=payables',
 };
 
 export function hrefOf({ subject, kind }: Pick<NotificationItem, 'subject' | 'kind'>): string {

@@ -9,11 +9,14 @@ export function SaveBar({
   dirty,
   pending,
   error,
+  blocked = false,
   onDiscard,
 }: {
   readonly dirty: boolean;
   readonly pending: boolean;
   readonly error: string | null;
+  /** A box has a mistake: Save waits until it is fixed. */
+  readonly blocked?: boolean;
   readonly onDiscard: () => void;
 }) {
   const t = useTranslations('settings');
@@ -26,7 +29,7 @@ export function SaveBar({
           {t('rules.discard')}
         </Button>
       )}
-      <Button type="submit" variant="primary" pending={pending} disabled={!dirty}>
+      <Button type="submit" variant="primary" pending={pending} disabled={!dirty || blocked}>
         {t('save')}
       </Button>
     </div>

@@ -3,6 +3,7 @@ import type {
   ApprovalPolicyView,
   LeadAssignmentRulesRecord,
   OnboardingSettingsRecord,
+  PaymentSettingsView,
 } from '@oneohm/api-contracts';
 import {
   type BusinessSettingKey,
@@ -14,13 +15,16 @@ import {
 import {
   checkApprovalPolicy,
   checkDashboardSettings,
+  checkPaymentSettings,
   checkReminderTiming,
   cleanCityOwners,
+  feeEstimate,
   isAssignmentRules,
   isLeadAssignmentRules,
   type LeadAssignmentRules,
   onboardingFieldErrors,
   onboardingProblem,
+  PAYOUT_FEE_GST_PERCENT,
   type SettingErrors,
 } from '@oneohm/domain';
 import { desc, sql } from 'drizzle-orm';
@@ -31,6 +35,7 @@ import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { cityOwnerStanding } from '../crm/lead-owner';
+import { assertSecondPersonCovered } from './second-person-check';
 
 const CHECKS: {
   readonly [K in BusinessSettingKey]: (value: BusinessSettingsMap[K]) => SettingErrors;
@@ -38,6 +43,7 @@ const CHECKS: {
   reminders: checkReminderTiming,
   assignment: (value) => (isAssignmentRules(value) ? {} : { strategy: 'Pick a way to assign.' }),
   approvals: checkApprovalPolicy,
+  payments: checkPaymentSettings,
   dashboard: checkDashboardSettings,
   lead_assignment: (value) =>
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
@@ -52,6 +58,7 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   reminders: 'Check the reminder times.',
   assignment: 'Check the assignment rules.',
   approvals: 'Check the approval limits.',
+  payments: 'Check the RazorpayX fee.',
   dashboard: 'Check the dashboard numbers.',
   lead_assignment: 'Check the lead rule.',
   onboarding: 'Check the onboarding settings.',
@@ -90,6 +97,12 @@ export class BusinessSettingsService {
     const errors = CHECKS[key](value);
     // Onboarding names the limit it breaks (say "At most 8 bill bands."), not just the area.
     if (Object.keys(errors).length > 0) throw invalid(errors.onboarding ?? PROBLEM[key], errors);
+    if (key === 'approvals') {
+      await assertSecondPersonCovered(
+        this.db,
+        (value as BusinessSettingsMap['approvals']).secondPersonAbovePaise,
+      );
+    }
     const before = await this.get(key);
     // The self-survey discount is money off a customer's payment: finance (or the project owner) changes it.
     if (key === 'reminders') {
@@ -204,6 +217,16 @@ export class BusinessSettingsService {
   }
 
   /** The approval limits with the discount limit from the rate card, on one screen. */
+  /** The RazorpayX fee per payout with its 18% GST worked out; both null while unknown. */
+  async payments(): Promise<PaymentSettingsView> {
+    const { razorpayxFeePaise } = await this.get('payments');
+    return {
+      razorpayxFeePaise,
+      gstPercent: PAYOUT_FEE_GST_PERCENT,
+      gstPaise: feeEstimate(razorpayxFeePaise)?.gstPaise ?? null,
+    };
+  }
+
   async approvals(): Promise<ApprovalPolicyView> {
     const policy = await this.get('approvals');
     const [card] = await this.db

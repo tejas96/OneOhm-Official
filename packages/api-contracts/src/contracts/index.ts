@@ -2,6 +2,7 @@ import { afterSalesContract, customerAfterSalesContract } from './after-sales.co
 import { auditContract } from './audit.contract';
 import { authContract } from './auth.contract';
 import { bankPayoutsContract } from './bank-payouts.contract';
+import { bankingContract } from './banking.contract';
 import { billingContract, customerBillingContract } from './billing.contract';
 import { businessReportsContract } from './business-reports.contract';
 import { businessSettingsContract } from './business-settings.contract';
@@ -115,6 +116,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly customerLanguage: typeof customerLanguageContract;
   readonly customerContact: typeof customerContactContract;
   readonly bankPayouts: typeof bankPayoutsContract;
+  readonly banking: typeof bankingContract;
   readonly gatewayCheck: typeof gatewayCheckContract;
   readonly stageRatings: typeof stageRatingsContract;
   readonly customerStageRatings: typeof customerStageRatingsContract;
@@ -183,6 +185,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   customerLanguage: customerLanguageContract,
   customerContact: customerContactContract,
   bankPayouts: bankPayoutsContract,
+  banking: bankingContract,
   gatewayCheck: gatewayCheckContract,
   stageRatings: stageRatingsContract,
   customerStageRatings: customerStageRatingsContract,
@@ -199,7 +202,12 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   stateSupport: stateSupportContract,
 };
 
-export { type ContractorInput, contractorInputSchema } from './contractors.contract';
+export type { IfscBranch, IfscLookup } from './banking.contract';
+export {
+  type ContractorInput,
+  contractorInputSchema,
+  contractorPatchSchema,
+} from './contractors.contract';
 export { type PropertyInput, propertyInputSchema } from './crm.contract';
 export { type CustomerPayLink, customerPayLinkSchema } from './customer-pay.contract';
 export { type ReportSetting, reportSettingSchema } from './document-requests.contract';

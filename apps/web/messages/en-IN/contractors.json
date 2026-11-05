@@ -53,6 +53,7 @@
         "individual": "Individual"
       },
       "bank": "Bank details",
+      "keepAccount": "Saved: {account}. Leave empty to keep it.",
       "terms": "Payment terms",
       "skills": "Kinds of work their crews take",
       "serviceAreasHint": "Separate places with commas, for example Sangli, Miraj, Kupwad."
@@ -177,6 +178,8 @@
       "title": "Terms",
       "payment": "Payment",
       "tds": "TDS",
+      "tdsEffective": "{applied} applies (set at {set})",
+      "noPan": "No PAN saved. By law, TDS on this contractor's bills is 20% until you add a valid PAN.",
       "retention": "Retention",
       "bank": "Bank",
       "noBank": "Not added",
@@ -201,7 +204,8 @@
       },
       "reworkLog": "Rework",
       "advanceLog": "Advances",
-      "advance": "Advance"
+      "advance": "Advance",
+      "pay": "Pay"
     },
     "actions": {
       "line": {

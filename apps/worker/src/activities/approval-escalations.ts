@@ -28,6 +28,7 @@ const WHAT: Readonly<Record<ApprovalKind, string>> = {
   purchase_request: 'Purchase request',
   vendor_advance: 'Vendor advance',
   bill: 'Bill to approve',
+  bank_payout: 'Bank transfer to send',
   points: 'Points to approve',
   bonus: 'Bonus to approve',
   commission: 'Reseller commission',

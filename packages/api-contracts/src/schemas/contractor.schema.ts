@@ -2,6 +2,7 @@ import { RATE_BASES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { userRefSchema } from './crm.schema';
+import { payeeBankHoldSchema } from './inventory.schema';
 import { projectTypeSchema, taskStatusSchema } from './project.schema';
 
 export const rateBasisSchema = z.enum(RATE_BASES);
@@ -78,10 +79,17 @@ export const contractorDetailSchema = contractorSummarySchema.extend({
   pan: z.string().nullable(),
   address: z.string().nullable(),
   bankAccountName: z.string().nullable(),
-  bankAccountNumber: z.string().nullable(),
+  /** The full number is never sent back; only the last four digits. */
+  bankAccountMasked: z.string().nullable(),
   bankIfsc: z.string().nullable(),
+  /** Null when no hold is running. */
+  bankHold: payeeBankHoldSchema.nullable(),
+  /** First entered in the last 7 days and nothing paid to them by bank yet. */
+  bankIsNew: z.boolean(),
   paymentTermsDays: z.number().int(),
   tdsBp: z.number().int(),
+  /** The rate that really applies: 20% or more while there is no valid PAN. */
+  effectiveTdsBp: z.number().int(),
   retentionBp: z.number().int(),
   retentionDays: z.number().int(),
   notes: z.string().nullable(),
@@ -140,6 +148,8 @@ export const workOrderDetailSchema = workOrderSummarySchema.extend({
       amountPaise: paiseSchema,
       note: z.string().nullable(),
       createdAt: instantSchema,
+      /** The advance's bill, for the Pay link once it is approved. */
+      payableId: idSchema,
       payableStatus: z.enum(['pending', 'approved', 'paid']),
     }),
   ),

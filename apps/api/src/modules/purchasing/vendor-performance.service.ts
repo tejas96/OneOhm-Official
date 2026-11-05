@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { VendorProfile, VendorScorecard } from '@oneohm/api-contracts';
 import { projects, vendorAdvances, vendors } from '@oneohm/database';
-import { billToPay, deliveryOutcome, payableAgeing, summariseDeliveries } from '@oneohm/domain';
+import { deliveryOutcome, leftToPay, payableAgeing, summariseDeliveries } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, eq, inArray } from 'drizzle-orm';
+import type { Actor } from '../../common/auth/actor';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { VendorsService } from '../inventory/vendors.service';
@@ -31,8 +32,8 @@ export class VendorPerformanceService {
     return rows.map((vendor) => scorecard(vendor, facts, dates, today));
   }
 
-  async profile(id: string): Promise<VendorProfile> {
-    const vendor = (await this.vendors.list()).find((row) => row.id === id);
+  async profile(actor: Actor, id: string): Promise<VendorProfile> {
+    const vendor = (await this.vendors.list(actor)).find((row) => row.id === id);
     if (!vendor) throw notFound('That vendor');
     const facts = await loadVendorFacts(this.db, id);
     const today = todayIn();
@@ -71,7 +72,7 @@ export class VendorPerformanceService {
         dueOn: payable.dueOn,
         amountPaise: payable.amountPaise,
         adjustedPaise: payable.advanceAdjustedPaise,
-        balancePaise: billToPay(payable),
+        balancePaise: leftToPay(payable),
         status: payable.status,
         overdue: payable.dueOn < today,
       })),
@@ -96,7 +97,7 @@ function scorecard(
     facts.bills
       .filter((bill) => bill.vendorId === vendor.id)
       .map(({ payable, billedOn }) => ({
-        balancePaise: billToPay(payable),
+        balancePaise: leftToPay(payable),
         billedOn,
         dueOn: payable.dueOn,
       })),

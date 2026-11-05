@@ -11,6 +11,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { describeError } from '@/lib/api/api-error';
 import { ApprovalRow } from './approval-row';
 import { approveItem } from './approve-item';
+import { DeclineSendDialog } from './decline-send-dialog';
 
 /**
  * Everything this person may say yes to, oldest first (PRD 7.1): task reviews,
@@ -25,6 +26,7 @@ export function ApprovalsInbox({ query }: { readonly query: UseQueryResult<Appro
   const pathname = usePathname();
   const params = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
+  const [declining, setDeclining] = useState<ApprovalItem | null>(null);
   const wanted = (params.get('kind') ?? '').split(',').filter(Boolean);
   const items = query.data ?? [];
   const shown = wanted.length ? items.filter((item) => wanted.includes(item.kind)) : items;
@@ -40,7 +42,11 @@ export function ApprovalsInbox({ query }: { readonly query: UseQueryResult<Appro
     setBusy(item.id);
     try {
       await approveItem(item);
-      toast({ title: t('approved'), reference: item.subject, tone: 'success' });
+      toast({
+        title: t(item.kind === 'bank_payout' ? 'sentToBank' : 'approved'),
+        reference: item.subject,
+        tone: 'success',
+      });
       await client.invalidateQueries();
     } catch (error) {
       toast({ title: describeError(error), tone: 'error' });
@@ -93,10 +99,12 @@ export function ApprovalsInbox({ query }: { readonly query: UseQueryResult<Appro
               item={item}
               pending={busy === item.id}
               onApprove={approve}
+              onDecline={setDeclining}
             />
           ))}
         </ul>
       )}
+      <DeclineSendDialog item={declining} onClose={() => setDeclining(null)} />
     </div>
   );
 }

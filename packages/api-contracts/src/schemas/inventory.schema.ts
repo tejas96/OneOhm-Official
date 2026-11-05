@@ -6,29 +6,8 @@ import {
   instantSchema,
   nameSchema,
   paiseSchema,
-  phoneSchema,
 } from '../common/primitives';
-
-const optional = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .transform((value) => (value.length === 0 ? null : value))
-    .nullable()
-    .default(null);
-
-/** An Indian mobile number, or blank. */
-const optionalPhone = z
-  .string()
-  .trim()
-  .transform((value) => value.replace(/[\s-]/g, ''))
-  .refine(
-    (value) => value === '' || phoneSchema.safeParse(value).success,
-    'Enter a 10-digit Indian mobile number.',
-  )
-  .transform((value) => (value === '' ? null : value.startsWith('+91') ? value : `+91${value}`))
-  .nullable();
+import { optional, optionalPhone } from './optional-fields';
 
 /** Stock quantities: metres of cable can be fractional; at most 3 decimals. */
 export const quantitySchema = z
@@ -39,10 +18,23 @@ export const quantitySchema = z
     'Use up to 3 decimals.',
   );
 
+/** The 24-hour hold after a payee's saved bank details changed (spec decision 2). */
+export const payeeBankHoldSchema = z.object({
+  changedAt: instantSchema.nullable(),
+  changedByName: z.string().nullable(),
+  /** No bank transfer goes to the new details before this time. */
+  until: instantSchema,
+  /** The viewer approves payments and did not make the change. */
+  canRelease: z.boolean(),
+});
+export type PayeeBankHold = z.infer<typeof payeeBankHoldSchema>;
+
 export const vendorSchema = z.object({
   id: idSchema,
   name: z.string(),
   gstin: z.string().nullable(),
+  /** The vendor's own PAN, for TDS; blank when none is saved. */
+  pan: z.string().nullable(),
   contactName: z.string().nullable(),
   phone: z.string().nullable(),
   email: z.string().nullable(),
@@ -52,6 +44,10 @@ export const vendorSchema = z.object({
   bankAccountName: z.string().nullable(),
   bankIfsc: z.string().nullable(),
   bankAccountMasked: z.string().nullable(),
+  /** Null when no hold is running. */
+  bankHold: payeeBankHoldSchema.nullable(),
+  /** First entered in the last 7 days and nothing paid to them by bank yet. */
+  bankIsNew: z.boolean(),
   notes: z.string().nullable(),
   active: z.boolean(),
   productIds: z.array(idSchema),
@@ -60,60 +56,6 @@ export const vendorSchema = z.object({
   openOrders: z.number().int(),
 });
 export type Vendor = z.infer<typeof vendorSchema>;
-
-export const vendorInputSchema = z.object({
-  name: nameSchema,
-  gstin: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .refine(
-      (value) => value === '' || /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/.test(value),
-      'Enter a 15-character GSTIN.',
-    )
-    .transform((value) => (value === '' ? null : value))
-    .nullable(),
-  contactName: optional(120),
-  phone: optionalPhone,
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .refine((value) => value === '' || z.string().email().safeParse(value).success, {
-      message: 'Enter a valid email address.',
-    })
-    .transform((value) => (value === '' ? null : value))
-    .nullable(),
-  address: optional(400),
-  paymentTermsDays: z.number().int().min(0).max(180),
-  bankAccountName: optional(120).optional(),
-  bankIfsc: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .refine(
-      (value) => value === '' || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value),
-      'Enter an 11-character IFSC.',
-    )
-    .transform((value) => (value === '' ? null : value))
-    .nullable()
-    .optional(),
-  /** Write-only: leave empty to keep the saved number. */
-  bankAccountNumber: z
-    .string()
-    .trim()
-    .transform((value) => value.replace(/\s+/g, ''))
-    .refine(
-      (value) => value === '' || /^\d{9,18}$/.test(value),
-      'Enter the 9 to 18 digit account number.',
-    )
-    .optional(),
-  notes: optional(1000),
-  active: z.boolean().default(true),
-  productIds: z.array(idSchema).max(200).default([]),
-});
-export type VendorInput = z.input<typeof vendorInputSchema>;
-export type VendorData = z.output<typeof vendorInputSchema>;
 
 export const stockLocationSchema = z.object({
   id: idSchema,

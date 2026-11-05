@@ -2,6 +2,7 @@
 
 import type { ContractorDetail } from '@oneohm/api-contracts';
 import { Badge, Button, pageEnter, Skeleton, SkeletonGroup } from '@oneohm/design-system/web';
+import { isValidPan } from '@oneohm/domain';
 import { formatInrCompact } from '@oneohm/shared';
 import { ArrowLeft, ClipboardList, Landmark, PencilLine } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -10,13 +11,14 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LoadError } from '@/components/query-state';
 import { PapersSection } from '@/features/documents/papers-section';
+import { BankHoldNote } from '@/features/inventory/vendors/bank-hold-note';
 import { formatPhone } from '@/lib/format/contact';
 import { ContractorCrewCard } from './contractor-crew-card';
 import { ContractorEditSheet } from './contractor-edit-sheet';
 import { ContractorMaterialCard } from './contractor-material-card';
 import { ContractorRatesCard } from './contractor-rates-card';
 import { IssueWorkOrderDialog } from './issue-work-order-dialog';
-import { useContractor } from './use-contractors';
+import { useContractor, useRefreshContractors } from './use-contractors';
 import { WorkOrdersTable } from './work-orders-table';
 
 /** One contractor: who they are, how they perform, their crew, rates and work orders. */
@@ -136,18 +138,27 @@ function PerformanceStrip({ contractor }: { readonly contractor: ContractorDetai
 
 function TermsCard({ contractor }: { readonly contractor: ContractorDetail }) {
   const t = useTranslations('contractors.terms');
+  const refresh = useRefreshContractors();
   const percent = (bp: number) => `${bp / 100}%`;
   const rows = [
     [t('payment'), t('days', { count: contractor.paymentTermsDays })],
-    [t('tds'), percent(contractor.tdsBp)],
+    [
+      t('tds'),
+      contractor.effectiveTdsBp > contractor.tdsBp
+        ? t('tdsEffective', {
+            set: percent(contractor.tdsBp),
+            applied: percent(contractor.effectiveTdsBp),
+          })
+        : percent(contractor.tdsBp),
+    ],
     [
       t('retention'),
       `${percent(contractor.retentionBp)} · ${t('days', { count: contractor.retentionDays })}`,
     ],
     [
       t('bank'),
-      contractor.bankAccountNumber
-        ? `${contractor.bankAccountName ?? ''} ••${contractor.bankAccountNumber.slice(-4)} · ${contractor.bankIfsc ?? ''}`
+      contractor.bankAccountMasked
+        ? `${contractor.bankAccountName ?? ''} ${contractor.bankAccountMasked} · ${contractor.bankIfsc ?? ''}`
         : t('noBank'),
     ],
   ] as const;
@@ -157,6 +168,9 @@ function TermsCard({ contractor }: { readonly contractor: ContractorDetail }) {
         <Landmark aria-hidden className="size-4 text-ink-faint" />
         {t('title')}
       </h2>
+      {!isValidPan(contractor.pan) && (
+        <p className="rounded-2xl bg-sunken px-4 py-3 type-body-sm text-ink-muted">{t('noPan')}</p>
+      )}
       <dl className="flex flex-col">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-baseline gap-3 py-2">
@@ -166,6 +180,14 @@ function TermsCard({ contractor }: { readonly contractor: ContractorDetail }) {
           </div>
         ))}
       </dl>
+      <BankHoldNote
+        kind="contractor"
+        id={contractor.id}
+        payeeName={contractor.name}
+        hold={contractor.bankHold}
+        isNew={contractor.bankIsNew}
+        onReleased={() => void refresh()}
+      />
     </section>
   );
 }

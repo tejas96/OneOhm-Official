@@ -610,6 +610,48 @@
       "when": 1793867862341,
       "tag": "0086_handover_ask_link",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1793886068613,
+      "tag": "0087_payout_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793886633936,
+      "tag": "0088_part_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1793887265534,
+      "tag": "0089_payout_requests_bank_hold",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1793888748641,
+      "tag": "0090_payee_told",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1793898035962,
+      "tag": "0091_colorful_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1793900201304,
+      "tag": "0092_vendor_pan",
+      "breakpoints": true
     }
   ]
 }

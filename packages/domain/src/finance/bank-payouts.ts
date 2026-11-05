@@ -49,11 +49,30 @@ export function maskAccount(number: string): string {
   return digits.length <= 4 ? digits : `•••• ${digits.slice(-4)}`;
 }
 
-/** RazorpayX's fee (with GST) comes out of the bank balance as a bank charge. */
-export function payoutFeePosting(feePaise: number): JournalLine[] {
+/**
+ * RazorpayX's fee comes out of the bank balance. `feePaise` is the whole fee including GST;
+ * `taxPaise` is the GST part. The rest is a bank charge (expense) and the GST goes to the
+ * input credit account. The bank pays the full fee. A refund is the mirror image.
+ */
+export function payoutFeePosting(feePaise: number, taxPaise = 0): JournalLine[] {
   if (feePaise <= 0) return [];
-  return [
-    { account: ACCOUNT.gatewayFees, debitPaise: feePaise, creditPaise: 0 },
+  const tax = Math.min(Math.max(taxPaise, 0), feePaise);
+  const lines: JournalLine[] = [
+    { account: ACCOUNT.gatewayFees, debitPaise: feePaise - tax, creditPaise: 0 },
+    { account: ACCOUNT.gstInput, debitPaise: tax, creditPaise: 0 },
     { account: ACCOUNT.bank, debitPaise: 0, creditPaise: feePaise },
   ];
+  return lines.filter((line) => line.debitPaise > 0 || line.creditPaise > 0);
 }
+
+/**
+ * True when a payout failed for lack of money in the RazorpayX balance. `code` is our own
+ * `low_balance`, or the reason RazorpayX gives in `status_details` (for example
+ * `insufficient_balance`). The one place that decides this, so every screen agrees.
+ */
+export const isLowBalanceFailure = (code: string | null | undefined): boolean =>
+  !!code && /^low_balance$|insufficient|not_enough_balance|balance_low/i.test(code);
+
+/** Whether the payee was told by WhatsApp that they were paid: sent, switched off, or no phone. */
+export const PAYEE_TOLD = ['sent', 'off', 'no_phone'] as const;
+export type PayeeTold = (typeof PAYEE_TOLD)[number];

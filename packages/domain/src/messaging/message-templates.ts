@@ -1,14 +1,14 @@
 import { STEP_MESSAGE_TEMPLATES } from './customer-steps';
+import { PAYEE_MESSAGE_TEMPLATES } from './payee-templates';
 import { SEND_MESSAGE_TEMPLATES } from './send-templates';
 
 /**
- * Business-initiated WhatsApp messages use templates approved in Meta's WhatsApp
- * Manager (PRD 6.2, 7.2). These are the defaults; owners can change the Meta name,
- * language, field order and wording in Settings. `fields` fill {{1}}, {{2}}… in order.
+ * Business-initiated WhatsApp messages use templates approved in Meta's WhatsApp Manager (PRD 6.2,
+ * 7.2). These are the defaults; owners change the Meta name, language and wording in Settings.
  */
 export interface MessageTemplateDefault {
   readonly key: string;
-  readonly audience: 'customer' | 'staff';
+  readonly audience: 'customer' | 'staff' | 'vendor';
   readonly fields: readonly string[];
   readonly preview: string;
   /**
@@ -161,8 +161,8 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
   },
   ...STEP_MESSAGE_TEMPLATES,
   ...SEND_MESSAGE_TEMPLATES,
+  ...PAYEE_MESSAGE_TEMPLATES,
   {
-    // A team member writes after WhatsApp's 24-hour window closed; their words go in {{3}}.
     key: 'chat_follow_up',
     audience: 'customer',
     fields: ['customer', 'staff', 'message'],

@@ -8,6 +8,7 @@ import {
   noteSchema,
   phoneSchema,
 } from '../common/primitives';
+import { refineBank } from '../schemas/bank-details.schema';
 import {
   contractorDetailSchema,
   contractorRateSchema,
@@ -28,7 +29,7 @@ const optionalText = (max: number) => z.string().trim().max(max).nullable().opti
 const basisPoints = z.number().int().min(0).max(5000);
 const amount = z.number().int().positive('Enter an amount above zero.');
 
-export const contractorInputSchema = z.object({
+const contractorBase = z.object({
   name: nameSchema,
   kind: z.enum(['company', 'individual']).default('company'),
   contactName: optionalText(160),
@@ -53,16 +54,17 @@ export const contractorInputSchema = z.object({
   bankAccountNumber: z
     .string()
     .trim()
-    .regex(/^\d{6,20}$/, 'Use digits only.')
+    .transform((value) => value.replace(/\s+/g, ''))
     .nullable()
     .optional(),
-  bankIfsc: z
+  /** The number typed a second time; needed only when a new number is sent. */
+  bankAccountNumberConfirm: z
     .string()
     .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{4}0[A-Z\d]{6}$/, 'Enter a valid IFSC.')
+    .transform((value) => value.replace(/\s+/g, ''))
     .nullable()
     .optional(),
+  bankIfsc: z.string().trim().toUpperCase().nullable().optional(),
   paymentTermsDays: z.number().int().min(0).max(180).default(15),
   tdsBp: basisPoints.default(100),
   retentionBp: basisPoints.default(0),
@@ -71,6 +73,15 @@ export const contractorInputSchema = z.object({
   serviceAreas: z.array(z.string().trim().min(1).max(80)).default([]),
   notes: noteSchema.nullable().optional(),
 });
+
+export const contractorInputSchema = contractorBase.superRefine((body, ctx) =>
+  refineBank(body, ctx, true),
+);
+/** An edit: only the keys sent. The saved account name is checked by the service. */
+export const contractorPatchSchema = contractorBase
+  .partial()
+  .extend({ active: z.boolean().optional() })
+  .superRefine((body, ctx) => refineBank(body, ctx, false));
 export type ContractorInput = z.infer<typeof contractorInputSchema>;
 
 export const contractorsContract = c.router({
@@ -97,7 +108,7 @@ export const contractorsContract = c.router({
     method: 'PATCH',
     path: '/contractors/:id',
     pathParams: idParams,
-    body: contractorInputSchema.partial().extend({ active: z.boolean().optional() }),
+    body: contractorPatchSchema,
     responses: { 200: contractorDetailSchema },
   },
   crewCandidates: {

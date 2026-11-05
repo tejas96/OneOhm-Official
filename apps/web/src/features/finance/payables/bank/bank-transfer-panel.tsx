@@ -1,90 +1,54 @@
 'use client';
 
 import type { Payable } from '@oneohm/api-contracts';
-import { Badge, Button, useToast } from '@oneohm/design-system/web';
-import { formatInr } from '@oneohm/shared';
-import { Landmark } from 'lucide-react';
-import { useFormatter, useNow, useTranslations } from 'next-intl';
-import { ListSkeleton } from '@/components/query-state';
-import { describeError } from '@/lib/api/api-error';
-import { useCan } from '@/providers/current-user';
-import { usePayoutOptions, useSendPayout } from './use-payouts';
+import { Badge } from '@oneohm/design-system/web';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { ListSkeleton, LoadError } from '@/components/query-state';
+import { PayoutState } from './payout-state';
+import { payoutIsOpen } from './payout-status';
+import { PracticeButtons } from './practice-buttons';
+import { ProblemNote } from './problem-note';
+import { TransferForm } from './transfer-form';
+import { usePayoutOptions } from './use-payouts';
 
 /**
  * Pay the bill straight to the payee's bank through RazorpayX. The bill is marked paid
- * when the bank confirms the transfer, with its UTR (PRD 3.11).
+ * when the bank confirms the transfer, with its UTR (PRD 3.11). While a transfer is open
+ * the panel only shows where it is: Pay stays locked so nobody pays twice.
  */
-export function BankTransferPanel({
-  bill,
-  onSent,
-}: {
-  readonly bill: Payable;
-  readonly onSent: () => void;
-}) {
+export function BankTransferPanel({ bill }: { readonly bill: Payable }) {
   const t = useTranslations('finance.payables.bank');
-  const format = useFormatter();
-  const now = useNow();
-  const toast = useToast();
-  const canSend = useCan('finance.approve_payments');
   const options = usePayoutOptions(bill.id);
-  const send = useSendPayout(() => {
-    toast({ tone: 'success', title: t('sent'), description: bill.partyName });
-    onSent();
-  });
+  const [confirming, setConfirming] = useState(false);
   if (options.isPending) return <ListSkeleton label={t('loading')} rows={2} />;
+  if (options.isError) return <LoadError error={options.error} onRetry={() => options.refetch()} />;
   const data = options.data;
-  if (!data) return null;
   const latest = data.latest;
-  const rows = [
-    [t('to'), data.payee?.accountName ?? data.payee?.name ?? '—'],
-    [
-      t('account'),
-      data.payee?.accountMasked ? `${data.payee.accountMasked} · ${data.payee.ifsc ?? ''}` : '—',
-    ],
-    [t('how'), t(`mode.${data.transferMode}`)],
-  ] as const;
+  const open = payoutIsOpen(latest);
+  // Everything is paid and the bank confirmed: nothing more to send.
+  const finished = latest?.phase === 'paid' && data.leftPaise <= 0;
+  const canTry = !open && !finished;
   return (
     <div className="flex flex-col gap-4">
-      {data.mode === 'sandbox' && (
+      {data.mode === 'sandbox' && !latest?.sandbox && (
         <Badge variant="soft" className="self-start">
-          {t('practice')}
+          {t('practice.badge')}
         </Badge>
       )}
-      <dl className="grid gap-2 rounded-xl border border-hairline p-4 type-body-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt className="text-ink-faint">{label}</dt>
-            <dd className="text-right font-medium text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {latest && (
-        <p className="type-body-sm text-ink-muted">
-          {t(`latest.${latest.status}`, {
-            amount: formatInr(latest.amountPaise),
-            when: format.relativeTime(new Date(latest.updatedAt), now),
-            reason: latest.failureReason ?? '',
-            utr: latest.utr ?? '',
-          })}
-        </p>
+      {/* While confirming a new send, an old failure is noise: show only the question. */}
+      {latest && !(confirming && canTry) && <PayoutState payout={latest} />}
+      {latest?.sandbox && <PracticeButtons payout={latest} />}
+      {canTry && data.problem !== null && <ProblemNote data={data} />}
+      {canTry && data.problem === null && data.payee && (
+        <TransferForm
+          key={data.request?.id ?? 'none'}
+          bill={bill}
+          data={data}
+          payee={data.payee}
+          onConfirming={setConfirming}
+        />
       )}
-      {data.problem ? (
-        <p role="status" className="rounded-md bg-sunken px-3 py-2.5 type-body-sm text-ink-muted">
-          {t(`problem.${data.problem}`)}
-        </p>
-      ) : canSend ? (
-        <Button
-          variant="primary"
-          leadingIcon={<Landmark />}
-          pending={send.isPending}
-          onClick={() => send.mutate(bill.id)}
-        >
-          {t('send', { amount: formatInr(data.amountPaise) })}
-        </Button>
-      ) : (
-        <p className="type-body-sm text-ink-faint">{t('needsApprover')}</p>
-      )}
-      {send.isError && <p className="type-body-sm text-overdue">{describeError(send.error)}</p>}
     </div>
   );
 }

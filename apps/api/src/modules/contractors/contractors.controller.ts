@@ -39,7 +39,7 @@ export class ContractorsController {
       },
       getContractor: async ({ params }) => {
         manage();
-        return { status: 200, body: await this.contractors.get(params.id) };
+        return { status: 200, body: await this.contractors.get(actor, params.id) };
       },
       updateContractor: async ({ params, body }) => {
         manage();

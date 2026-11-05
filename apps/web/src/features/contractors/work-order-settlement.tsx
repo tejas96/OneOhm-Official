@@ -3,7 +3,9 @@
 import type { WorkOrderDetail } from '@oneohm/api-contracts';
 import { StatusPill } from '@oneohm/design-system/web';
 import { formatInr } from '@oneohm/shared';
+import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { useCan } from '@/providers/current-user';
 
 /**
  * The money on the ocean panel: gross, what comes off (rework, retention, TDS,
@@ -14,6 +16,7 @@ export function WorkOrderSettlement({ order }: { readonly order: WorkOrderDetail
   const format = useFormatter();
   const s = order.settlement;
   const settled = order.status === 'completed';
+  const canPay = useCan('finance.record_payments', 'finance.approve_payments');
   const less = [
     { key: 'rework', value: s.reworkDeductionsPaise },
     { key: 'retention', value: s.retentionPaise },
@@ -44,6 +47,14 @@ export function WorkOrderSettlement({ order }: { readonly order: WorkOrderDetail
             tone={ref.status === 'paid' ? 'done' : 'waiting'}
             label={t(`payable.${ref.status}`)}
           />
+          {canPay && ref.status === 'approved' && (
+            <Link
+              href={`/finance?tab=payables&bill=${encodeURIComponent(ref.id)}&pay=1`}
+              className="type-label text-on-panel underline underline-offset-4"
+            >
+              {t('pay')}
+            </Link>
+          )}
         </span>
       </div>
     );
@@ -91,8 +102,16 @@ export function WorkOrderSettlement({ order }: { readonly order: WorkOrderDetail
             {order.advances.map((item) => (
               <li key={item.id} className="flex justify-between gap-3 type-body-sm text-on-panel">
                 <span>{item.note ?? t('advance')}</span>
-                <span className="tabular-nums">
+                <span className="flex items-center gap-2 tabular-nums">
                   {formatInr(item.amountPaise)} · {t(`payable.${item.payableStatus}`)}
+                  {canPay && item.payableStatus === 'approved' && (
+                    <Link
+                      href={`/finance?tab=payables&bill=${encodeURIComponent(item.payableId)}&pay=1`}
+                      className="type-label underline underline-offset-4"
+                    >
+                      {t('pay')}
+                    </Link>
+                  )}
                 </span>
               </li>
             ))}

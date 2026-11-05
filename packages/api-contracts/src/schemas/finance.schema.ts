@@ -98,6 +98,10 @@ export const payableSchema = z.object({
   tdsPaise: paiseSchema,
   /** What still goes to the payee: amount less TDS and advances set off. */
   toPayPaise: paiseSchema,
+  /** Paid so far, in parts or in full (payments that were not reversed). */
+  paidPaise: paiseSchema,
+  /** What is still to pay: `toPayPaise` less `paidPaise`, never below zero. */
+  leftPaise: paiseSchema,
 });
 export type Payable = z.infer<typeof payableSchema>;
 

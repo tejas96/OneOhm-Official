@@ -11,7 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { products } from './catalog.schema';
-import { createdAt, primaryId, updatedAt } from './columns';
+import { createdAt, instant, primaryId, updatedAt } from './columns';
 import { users } from './identity.schema';
 import { projects } from './projects.schema';
 
@@ -48,6 +48,8 @@ export const vendors = pgTable('vendors', {
   id: primaryId(),
   name: text('name').notNull(),
   gstin: text('gstin'),
+  /** The vendor's own PAN, for TDS. When blank, the PAN inside the GSTIN is used. */
+  pan: text('pan'),
   contactName: text('contact_name'),
   phoneE164: text('phone_e164'),
   email: text('email'),
@@ -58,6 +60,17 @@ export const vendors = pgTable('vendors', {
   bankAccountName: text('bank_account_name'),
   bankAccountNumber: text('bank_account_number'),
   bankIfsc: text('bank_ifsc'),
+  /** When saved bank details last really changed, and by whom. */
+  bankChangedAt: instant('bank_changed_at'),
+  bankChangedByUserId: uuid('bank_changed_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  /** No bank transfer goes to the new details before this time. */
+  bankHoldUntil: instant('bank_hold_until'),
+  bankHoldReleasedByUserId: uuid('bank_hold_released_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  bankHoldReleasedAt: instant('bank_hold_released_at'),
   notes: text('notes'),
   active: boolean('active').notNull().default(true),
   createdAt: createdAt(),

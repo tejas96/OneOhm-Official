@@ -5,16 +5,14 @@ import {
   Button,
   EmptyState,
   Input,
-  type PillTone,
   ResponsiveTable,
   SegmentedControl,
-  StatusPill,
   type TableColumn,
 } from '@oneohm/design-system/web';
 import { ClipboardCheck, Plus, ReceiptIndianRupee, Search, Wallet } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useMayDecide } from '@/features/today/approvals/use-my-approvals';
 import { useFocusRow } from '@/lib/use-focus-row';
@@ -22,17 +20,15 @@ import { matchesSearch, useSearchParam } from '@/lib/use-search-param';
 import { useCan } from '@/providers/current-user';
 import { type PayableFilter, usePayables } from '../use-finance';
 import { AddBillDialog } from './add-bill-dialog';
-import { latestByBill, PayoutBadge } from './bank/payout-badge';
+import { BillStatusPill } from './bank/bill-status-pill';
+import { LowBalanceBanner } from './bank/low-balance-banner';
+import { latestByBill } from './bank/payout-status';
 import { useRecentPayouts } from './bank/use-payouts';
 import { BillAmount } from './bill-amount';
+import { BillPaymentsDialog } from './bill-payments-dialog';
 import { PayBillDialog } from './pay-bill-dialog';
 import { ReviewBillSheet } from './review-bill-sheet';
 
-const TONE: Readonly<Record<Payable['status'], PillTone>> = {
-  pending: 'review',
-  approved: 'onTrack',
-  paid: 'done',
-};
 const FILTERS = ['open', 'pending', 'approved', 'paid', 'all'] as const;
 
 /** The chosen status lives in `?filter=`, so "bills to approve" opens exactly those bills. */
@@ -54,7 +50,7 @@ function useBillFilter(): readonly [PayableFilter, (next: PayableFilter) => void
 /**
  * Bills from vendors and crews: review (vendor invoice, TDS), approve, then pay.
  * Approval books the cost and the TDS held. `?bill=<id>` opens one bill (an approval's
- * "Open"); `?q=` searches by vendor, bill number, project or what it is for.
+ * "Open"), with `&pay=1` the pay dialog too (a contractor's "Pay" link); `?q=` searches by vendor, bill number, project or what it is for.
  */
 export function PayablesTab() {
   const t = useTranslations('finance.payables');
@@ -65,6 +61,7 @@ export function PayablesTab() {
   const [filter, setFilter] = useBillFilter();
   const [adding, setAdding] = useState(false);
   const [paying, setPaying] = useState<Payable | null>(null);
+  const [viewing, setViewing] = useState<Payable | null>(null);
   const [reviewing, setReviewing] = useState<Payable | null>(null);
   const query = usePayables(filter);
   const payouts = latestByBill(useRecentPayouts().data ?? []);
@@ -72,9 +69,23 @@ export function PayablesTab() {
   // Within the limit in Settings, accounts may approve a bill too; the inbox knows which.
   const mayDecide = useMayDecide('bill');
   const mayApprove = (bill: Payable) => canApprove || mayDecide.has(bill.id);
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const wantsPay = params.get('pay') === '1';
   const focused = useFocusRow('bill', query.data, (bill) => {
     if (bill.status === 'pending' && (canAdd || mayApprove(bill))) setReviewing(bill);
+    if (bill.status === 'approved' && canAdd && wantsPay) setPaying(bill);
   });
+  // `pay=1` is a one-time nudge: drop it once `bill` has been handled.
+  useEffect(() => {
+    if (!wantsPay || params.get('bill')) return;
+    const next = new URLSearchParams(params);
+    next.delete('pay');
+    router.replace(`${pathname}${next.size ? `?${next.toString()}` : ''}`, { scroll: false });
+  }, [wantsPay, params, pathname, router]);
+  // The dialog stays open on the bill while it is paid; show the newest figures of that bill.
+  const payingNow = paying ? (query.data?.find((bill) => bill.id === paying.id) ?? paying) : null;
   const rows = (query.data ?? []).filter((bill) =>
     matchesSearch(search, [bill.partyName, bill.description, bill.billNumber, bill.projectCode]),
   );
@@ -136,8 +147,7 @@ export function PayablesTab() {
       header: t('columns.status'),
       cell: (bill) => (
         <span className="flex flex-wrap items-center gap-2">
-          <StatusPill size="sm" tone={TONE[bill.status]} label={t(`status.${bill.status}`)} />
-          <PayoutBadge bill={bill} latest={payouts.get(bill.id)} />
+          <BillStatusPill bill={bill} latest={payouts.get(bill.id)} />
           {bill.status === 'pending' && (mayApprove(bill) || canAdd) && (
             <Button
               size="sm"
@@ -146,6 +156,11 @@ export function PayablesTab() {
               onClick={() => setReviewing(bill)}
             >
               {mayApprove(bill) ? t('approve') : t('review.title')}
+            </Button>
+          )}
+          {bill.paidPaise > 0 && (
+            <Button size="sm" variant="quiet" onClick={() => setViewing(bill)}>
+              {t('payments.open')}
             </Button>
           )}
           {bill.status === 'approved' && canAdd && (
@@ -191,6 +206,7 @@ export function PayablesTab() {
           </Button>
         )}
       </div>
+      <LowBalanceBanner />
       {query.isPending ? (
         <ListSkeleton label={t('loading')} />
       ) : query.isError ? (
@@ -213,7 +229,11 @@ export function PayablesTab() {
         />
       )}
       <AddBillDialog open={adding} onOpenChange={setAdding} />
-      <PayBillDialog bill={paying} onClose={() => setPaying(null)} />
+      <PayBillDialog bill={payingNow} onClose={() => setPaying(null)} />
+      <BillPaymentsDialog
+        bill={viewing ? (query.data?.find((bill) => bill.id === viewing.id) ?? viewing) : null}
+        onClose={() => setViewing(null)}
+      />
       <ReviewBillSheet
         bill={reviewing}
         mayApprove={reviewing !== null && mayApprove(reviewing)}

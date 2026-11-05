@@ -1,6 +1,7 @@
 import { AfterSalesModule } from './after-sales/after-sales.module';
 import { AuditModule } from './audit/audit.module';
 import { BankPayoutsModule } from './bank-payouts/bank-payouts.module';
+import { BankingModule } from './banking/banking.module';
 import { BusinessReportsModule } from './business-reports/business-reports.module';
 import { BusinessSettingsModule } from './business-settings/business-settings.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -51,6 +52,7 @@ export const FEATURE_MODULES = [
   ServiceVisitsModule,
   AfterSalesModule,
   FinanceModule,
+  BankingModule,
   ContractorsModule,
   DiscomModule,
   WorkforceModule,

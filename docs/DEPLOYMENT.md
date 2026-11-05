@@ -229,23 +229,75 @@ customer page (How we reach them). When WhatsApp rejects a number as "not on Wha
 
 ## 5d. RazorpayX payouts to vendors and crews
 
-Approved bills can be sent straight to the payee's bank (Finance → Payables → Pay → Send
-by bank). The bill is marked paid only when RazorpayX reports the payout processed, with
-its UTR; the payout fee is booked as a bank charge. Sending needs the right to approve
-payments. Vendors get their bank account on the vendor page; crews on the contractor page.
+Approved bills (vendor bills, and contractor work-order, retention and advance bills) can be
+sent straight to the payee's bank: Finance → Payables → Pay → Send by bank. A bill can be
+paid in parts. It is marked paid only when RazorpayX reports the money processed, with its
+UTR. Full design: `docs/specs/2026-11-05-razorpayx-payouts.md`.
 
-1. Switch RazorpayX on first: Razorpay dashboard → More → Banking+ → Get started (until
-   then `x.razorpay.com` says "Access denied" and there is no account number). Live mode
-   also needs Razorpay's KYC for Banking+.
-2. In RazorpayX, copy the account number: My Account & Settings → Banking → Customer
-   Identifier. Test and live modes have different numbers. In test mode, add a dummy
-   balance with "+ Add test balance" before sending a test payout.
-3. Add a RazorpayX webhook to `https://<domain>/api/v1/webhooks/razorpay` with the events
-   `payout.processed`, `payout.reversed`, `payout.failed` (and `payout.updated` if offered).
-   Use the same secret as the payment-link webhook, or set `RAZORPAYX_WEBHOOK_SECRET`.
-4. Set `RAZORPAYX_ACCOUNT_NUMBER` and `RAZORPAYX_MODE=live`, restart the API, and send one
-   small payout to your own account first. If a webhook is missed, OneOhm still asks
-   RazorpayX about open payouts every 5 minutes.
+**Modes (`RAZORPAYX_MODE`)**
+- `off`: no bank transfers. Bills are recorded by hand.
+- `sandbox`: practice inside OneOhm. Nothing calls Razorpay. Each transfer has
+  Mark paid / Fail / Came back buttons that run the real webhook code.
+- `live`: calls RazorpayX. With `rzp_test_` keys and the test account number this is
+  Razorpay's test mode (no real money). With live keys it moves real money.
+
+**Go-live checklist**
+1. Database: run `pnpm --filter @oneohm/database db:migrate` on the server. Migrations
+   0087–0090 add payout safety, part payments (old paid bills become one payment each),
+   ask-to-send, the bank-change hold and the payee message switch. They only add.
+2. RazorpayX account: Razorpay dashboard → More → Banking+ → Get started. Finish KYC.
+   Until then `x.razorpay.com` says "Access denied".
+3. Money in: top up the RazorpayX balance (check the minimum balance on your plan). Fees and
+   GST come out of this balance too. Low balance makes a transfer fail with a clear message.
+4. Account number: RazorpayX → My Account & Settings → Banking → Customer Identifier.
+   Test and live numbers differ.
+5. Keys: Razorpay dashboard → Account & Settings → API keys. Payouts use the same
+   `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` as payment links.
+6. Allow-list the server (live mode only; test mode is not affected). In live mode RazorpayX
+   refuses every payout call (contacts, fund accounts, payouts, fetch) from a server IP that
+   is not on the account's list. An Owner or Admin adds it in RazorpayX → Settings →
+   Developer Controls → Allowlist IPs (an OTP is needed; up to 20 IPs). Find the server's
+   public IP with `curl -s https://api.ipify.org` on the server, or read it in OneOhm under
+   Settings → Payments → Bank transfers ("Server IP for RazorpayX allow-list"). If the server's
+   IP changes (new host, no fixed address), add the new one. Until it is added, a transfer is
+   refused with "RazorpayX blocked this server … Nothing was sent" and the setup check shows
+   the Check mark "RazorpayX allow-list".
+7. Webhook: RazorpayX → Settings → Developer Controls → Setup Webhooks. URL
+   `<API_PUBLIC_URL>/v1/webhooks/razorpay`. Tick `payout.processed`, `payout.reversed`,
+   `payout.updated`, `payout.rejected`, `payout.queued`, `payout.pending`,
+   `payout.initiated`. There is no `payout.failed` event: failures arrive as
+   `payout.updated` or `payout.rejected`. Type a secret and use the same value in `.env`.
+   Saving asks for an SMS code (2-step check). In **test mode** the code is `754081`.
+8. `.env` on the server:
+   ```
+   RAZORPAYX_MODE=live
+   RAZORPAYX_ACCOUNT_NUMBER=<customer identifier>
+   RAZORPAYX_WEBHOOK_SECRET=<webhook secret>
+   ```
+   The API refuses to start in live mode without the account number, keys or a webhook
+   secret. Restart the API.
+9. Check: Settings → Payments → Bank transfers. Every line should say Good. "Last update
+   received from RazorpayX" turns Good after the first webhook arrives.
+10. Owner settings: Settings → Payments → fee per payout (from your plan, optional).
+   Settings → Approvals → two people needed above ₹X (optional).
+11. Payee message: submit the `vendor_paid` template to Meta (text in
+    `docs/whatsapp-templates.md`). After Meta approves it, switch it on in Settings →
+    Messages. Until then bills say "Payee not told".
+12. Rehearse first with test keys (`rzp_test_…`, test account number, "+ Add test balance"
+    on the RazorpayX home page). Test payouts stay "Processing" until you open the payout in
+    RazorpayX and press **Change Status** (test mode only): Processed, Reversed after
+    processed, or Reversed from processing (a failure). Each change sends a real signed
+    webhook. Checked on 5 Nov 2026: low balance, part payment, processed, came back after
+    processed, failure before credit, contractor payee, ledger balanced.
+13. Then one real ₹1 transfer to your own account. Check: bill paid with UTR, fee booked,
+    alert received.
+
+**Turn it off fast**: set `RAZORPAYX_MODE=off` and restart. Open transfers keep being
+checked only in `live`; finish them in the RazorpayX dashboard.
+
+**Where problems show**: every failure, return, stuck transfer (30 min IMPS, 4 h NEFT),
+paid-twice case and lost connection to RazorpayX becomes an alert that opens the bill,
+plus a line on the bill and in Settings → Payments.
 
 ## 5b. Push notifications
 

@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import type { PendingApprovalRow } from './pending-approvals';
+import { bankPayoutRows } from './pending-approvals-payouts';
 import { rewardRows } from './pending-approvals-rewards';
 import { readableDay } from './readable-day';
 import { customers } from './schema/crm.schema';
@@ -171,6 +172,12 @@ async function billRows(db: DatabaseExecutor): Promise<PendingApprovalRow[]> {
 
 /** Approvals that move money or price: discounts, claims, bills, bonuses and payouts. */
 export async function moneyApprovals(db: DatabaseExecutor): Promise<PendingApprovalRow[]> {
-  const groups = await Promise.all([discountRows(db), claimRows(db), billRows(db), rewardRows(db)]);
+  const groups = await Promise.all([
+    discountRows(db),
+    claimRows(db),
+    billRows(db),
+    rewardRows(db),
+    bankPayoutRows(db),
+  ]);
   return groups.flat();
 }

@@ -2,50 +2,28 @@
 
 import { Input } from '@oneohm/design-system/web';
 import { type ComponentPropsWithRef, useEffect, useState } from 'react';
-
-type Unit = 'paise' | 'basisPoints' | 'watts' | 'whole' | 'decimal';
-
-/** Stored value → what the person types: paise as rupees, basis points as percent. */
-const SCALE: Readonly<Record<Unit, number>> = {
-  paise: 100,
-  basisPoints: 100,
-  watts: 1000,
-  whole: 1,
-  decimal: 1,
-};
-
-function toText(value: number | null, unit: Unit): string {
-  if (value === null) return '';
-  const shown = value / SCALE[unit];
-  return Number.isInteger(shown) ? String(shown) : shown.toFixed(3).replace(/0+$/, '');
-}
-
-function fromText(text: string, unit: Unit): number | null | undefined {
-  const cleaned = text.replace(/[,\s₹%]/g, '');
-  if (cleaned === '') return null;
-  const parsed = Number(cleaned);
-  if (!Number.isFinite(parsed)) return undefined;
-  // `decimal` keeps what was typed (115.5); every other unit stores whole numbers.
-  return unit === 'decimal' ? parsed : Math.round(parsed * SCALE[unit]);
-}
+import { type NumberUnit, readNumberText, toText } from './number-text';
 
 interface NumberInputProps
   extends Omit<ComponentPropsWithRef<'input'>, 'value' | 'onChange' | 'type'> {
   readonly value: number | null;
   readonly onValueChange: (value: number | null) => void;
   /** paise (shown as ₹), basisPoints (shown as %), watts (shown as kW), whole or decimal numbers. */
-  readonly unit: Unit;
+  readonly unit: NumberUnit;
 }
 
 /**
  * A number field that keeps integers in the model (paise, basis points) while people
- * type rupees and percentages. Partial input like "12." stays as typed.
+ * type rupees and percentages. Partial input like "12." stays as typed; the value is
+ * never negative, never NaN and never a fraction of a paise.
  */
 export function NumberInput({ value, onValueChange, unit, ...props }: NumberInputProps) {
   const [text, setText] = useState(() => toText(value, unit));
 
   useEffect(() => {
-    setText((current) => (fromText(current, unit) === value ? current : toText(value, unit)));
+    setText((current) =>
+      readNumberText(current, unit).value === value ? current : toText(value, unit),
+    );
   }, [value, unit]);
 
   return (
@@ -60,9 +38,10 @@ export function NumberInput({ value, onValueChange, unit, ...props }: NumberInpu
       }
       className="text-right font-mono tabular-nums"
       onChange={(event) => {
-        setText(event.target.value);
-        const parsed = fromText(event.target.value, unit);
-        if (parsed !== undefined) onValueChange(parsed);
+        // Letters, minus signs and extra decimals never get in; pasted "₹1,00,000.50" works.
+        const next = readNumberText(event.target.value, unit);
+        setText(next.text);
+        onValueChange(next.value);
       }}
     />
   );

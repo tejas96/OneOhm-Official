@@ -86,6 +86,8 @@ export type OnboardingSettingsRecord = z.infer<typeof onboardingSettingsSchema>;
 export const approvalPolicySchema = z.object({
   billLimitPaise: whole,
   bonusLimitPaise: whole,
+  /** Bank transfers above this need two people; 0 is off. */
+  secondPersonAbovePaise: whole,
   escalateAfterDays: whole,
 });
 export type ApprovalPolicyRecord = z.infer<typeof approvalPolicySchema>;
@@ -96,6 +98,20 @@ export const approvalPolicyViewSchema = approvalPolicySchema.extend({
   discountLimitBp: whole,
 });
 export type ApprovalPolicyView = z.infer<typeof approvalPolicyViewSchema>;
+
+/** Money settings for bank transfers. */
+export const paymentSettingsSchema = z.object({
+  /** What RazorpayX charges per payout, in paise before GST. Null means not known. */
+  razorpayxFeePaise: whole.nullable(),
+});
+export type PaymentSettingsRecord = z.infer<typeof paymentSettingsSchema>;
+
+/** The saved fee with the GST rate and GST amount worked out (both null while unknown). */
+export const paymentSettingsViewSchema = paymentSettingsSchema.extend({
+  gstPercent: whole,
+  gstPaise: whole.nullable(),
+});
+export type PaymentSettingsView = z.infer<typeof paymentSettingsViewSchema>;
 
 /** What the command centre treats as late or soon (PRD 3.1, 7.2). */
 export const dashboardSettingsSchema = z.object({

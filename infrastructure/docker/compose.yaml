@@ -35,7 +35,7 @@ services:
 
   # Photos, survey evidence, documents and generated report PDFs (S3-compatible API).
   object-store:
-    image: rustfs/rustfs:1.0.0
+    image: rustfs/rustfs:1.0.4
     container_name: oneohm-object-store
     restart: unless-stopped
     logging: *default-logging

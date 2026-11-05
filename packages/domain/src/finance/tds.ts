@@ -8,6 +8,26 @@
 /** The highest rate a bill may carry: 20%, the rate for a payee without a PAN. */
 export const TDS_MAX_BP = 2000;
 
+/** The rate for a payee with no valid PAN: 20% (section 397(2), once 206AA). */
+const NO_PAN_BP = 2000;
+
+/** A PAN is five letters, four digits and a letter, e.g. ABCDE1234F. */
+export function isValidPan(pan: string | null | undefined): boolean {
+  return typeof pan === 'string' && /^[A-Z]{5}\d{4}[A-Z]$/.test(pan.trim().toUpperCase());
+}
+
+/**
+ * The TDS rate that really applies: the normal rate with a valid PAN, otherwise the
+ * higher of that and 20%. A rate of 0 (TDS does not apply) stays 0.
+ */
+export function tdsRateForPayee(input: {
+  readonly rateBp: number;
+  readonly pan: string | null | undefined;
+}): number {
+  if (input.rateBp <= 0 || isValidPan(input.pan)) return input.rateBp;
+  return Math.max(input.rateBp, NO_PAN_BP);
+}
+
 /** The Income-tax Act rounds TDS to the nearest rupee. */
 const toRupee = (paise: number) => Math.round(paise / 100) * 100;
 

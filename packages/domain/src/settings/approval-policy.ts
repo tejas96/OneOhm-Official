@@ -16,6 +16,11 @@ export interface ApprovalPolicy {
    * need someone who approves payments. Zero means every bonus needs an approver.
    */
   readonly bonusLimitPaise: number;
+  /**
+   * Bank transfers above this amount need two different people: the sender plus someone
+   * else who approved the bill or asked to send it. Zero means the rule is off.
+   */
+  readonly secondPersonAbovePaise: number;
   /** Days an approval may wait before the owner is told. */
   readonly escalateAfterDays: number;
 }
@@ -23,6 +28,7 @@ export interface ApprovalPolicy {
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
   billLimitPaise: 0,
   bonusLimitPaise: 0,
+  secondPersonAbovePaise: 0,
   escalateAfterDays: 3,
 };
 
@@ -31,7 +37,7 @@ const MAX_LIMIT_PAISE = 1_00_00_000_00;
 
 export function checkApprovalPolicy(policy: ApprovalPolicy): SettingErrors {
   const errors: SettingErrors = {};
-  for (const field of ['billLimitPaise', 'bonusLimitPaise'] as const) {
+  for (const field of ['billLimitPaise', 'bonusLimitPaise', 'secondPersonAbovePaise'] as const) {
     const value = policy[field];
     if (!Number.isInteger(value) || value < 0 || value > MAX_LIMIT_PAISE)
       errors[field] = 'Use an amount from ₹0 to ₹1,00,00,000.';

@@ -63,7 +63,12 @@ export async function contractorPerformance(
   const payableOwner = await payableOwners(db, orders, contractorOf);
   const money = payableOwner.size
     ? await db
-        .select({ id: payables.id, status: payables.status, amount: payables.amountPaise })
+        .select({
+          id: payables.id,
+          status: payables.status,
+          amount: payables.amountPaise,
+          paid: payables.paidPaise,
+        })
         .from(payables)
         .where(inArray(payables.id, [...payableOwner.keys()]))
     : [];
@@ -145,10 +150,15 @@ function tallyTask(
   onTime.set(entry, tally);
 }
 
-function tallyMoney(entry: Performance | undefined, row: { status: string; amount: number }): void {
+function tallyMoney(
+  entry: Performance | undefined,
+  row: { status: string; amount: number; paid: number },
+): void {
   if (!entry) return;
-  if (row.status === 'paid') entry.paidPaise += row.amount;
-  else entry.pendingPayablePaise += row.amount;
+  // A bill paid in parts counts the part paid as paid and the rest as pending.
+  const paid = row.status === 'paid' ? row.amount : row.paid;
+  entry.paidPaise += paid;
+  entry.pendingPayablePaise += row.amount - paid;
 }
 
 /** Which contractor each payable (settlement, retention or advance) belongs to. */

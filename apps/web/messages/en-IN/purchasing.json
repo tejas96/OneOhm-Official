@@ -334,7 +334,8 @@
           "quantity": "Rejected",
           "reason": "Reason"
         }
-      }
+      },
+      "noPan": "No PAN saved. If this vendor has no PAN, TDS must be at least 5% on goods and 20% on services. Add their PAN with Edit vendor."
     },
     "inspection": {
       "accepted": "Accepted",

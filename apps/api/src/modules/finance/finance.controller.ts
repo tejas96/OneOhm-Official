@@ -77,6 +77,17 @@ export class FinanceController {
         assertCan(actor, 'finance.record_payments');
         return { status: 200, body: await this.payables.pay(actor, params.id, body) };
       },
+      listPayablePayments: async ({ params }) => {
+        view();
+        return { status: 200, body: await this.payables.payments(actor, params.id) };
+      },
+      undoPayablePayment: async ({ params, body }) => {
+        assertCan(actor, 'finance.approve_payments', 'finance.record_payments');
+        return {
+          status: 200,
+          body: await this.payables.undoPayment(actor, params.id, params.paymentId, body.reason),
+        };
+      },
       listLoans: async () => {
         assertCan(actor, 'finance.view', 'loans.manage');
         return { status: 200, body: await this.loans.list() };

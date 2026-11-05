@@ -1,114 +1,110 @@
+import { bankPayouts, type Database, type Transaction } from '@oneohm/database';
 import {
-  bankPayouts,
-  type Database,
-  notifyHolders,
-  payables,
-  postPayablePaid,
-  postPayoutFee,
-  type Transaction,
-} from '@oneohm/database';
-import { isPayoutStatus, payoutFailed, payoutSucceeded } from '@oneohm/domain';
-import { formatInr, todayIn } from '@oneohm/shared';
-import { and, eq } from 'drizzle-orm';
-import { recordAudit } from '../../common/audit';
+  isPayoutStatus,
+  type PayoutStatus,
+  payoutDead,
+  payoutProblemReason,
+  payoutTransition,
+} from '@oneohm/domain';
+import { eq } from 'drizzle-orm';
+import { billOf } from './payout-alerts';
+import { bookFee, refundFee, reverseSettlement, settle, warnFailed } from './payout-settle';
 
 interface PayoutEntity {
   id?: string;
+  reference_id?: string | null;
   status?: string;
   utr?: string | null;
   fees?: number;
+  tax?: number;
   failure_reason?: string | null;
-  status_details?: { description?: string | null } | null;
+  status_details?: { description?: string | null; reason?: string | null } | null;
 }
 
-type Row = typeof bankPayouts.$inferSelect;
+/** A payout already ended without the money arriving (failed, rejected, cancelled, reversed). */
+const payoutFailedNow = (status: PayoutStatus): boolean =>
+  payoutDead(status) || status === 'reversed';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Applies a RazorpayX payout event (processed, failed, reversed and the steps between).
- * A processed payout marks the bill paid with its UTR and books the fee; a failed one
- * leaves the bill to pay and tells finance. Each payout settles once.
+ * Applies a RazorpayX payout event (processed, failed, reversed and the steps between),
+ * from a webhook or from our own check. The payout is found by RazorpayX's id, or by our
+ * reference when we never saved their id. RazorpayX's later word wins over our guess;
+ * out-of-order events are ignored. Each change runs in one transaction with the row locked.
  */
 export async function applyPayoutEvent(db: Database, body: unknown): Promise<string> {
   const entity = (body as { payload?: { payout?: { entity?: PayoutEntity } } }).payload?.payout
     ?.entity;
   if (!entity?.id || !entity.status || !isPayoutStatus(entity.status)) return 'ignored';
-  const status = entity.status;
-  const [row] = await db
-    .select()
+  const reported = entity.status;
+  const entityId = entity.id;
+  const [found] = await db
+    .select({ id: bankPayouts.id })
     .from(bankPayouts)
-    .where(eq(bankPayouts.providerPayoutId, entity.id))
+    .where(eq(bankPayouts.providerPayoutId, entityId))
     .limit(1);
+  const rowId =
+    found?.id ??
+    (entity.reference_id && UUID.test(entity.reference_id) ? entity.reference_id : null);
+  if (!rowId) return 'unknown_payout';
+  return db.transaction((tx) => applyToRow(tx, rowId, entity, entityId, reported));
+}
+
+/** The locked half of `applyPayoutEvent`: decide, save, then settle, reverse or warn. */
+async function applyToRow(
+  tx: Transaction,
+  rowId: string,
+  entity: PayoutEntity,
+  entityId: string,
+  reported: PayoutStatus,
+): Promise<string> {
+  const [row] = await tx.select().from(bankPayouts).where(eq(bankPayouts.id, rowId)).for('update');
   if (!row) return 'unknown_payout';
-  const wasPaid = payoutSucceeded(row.status);
-  if (payoutFailed(row.status) || (wasPaid && status !== 'reversed')) return 'repeat';
-  const reason = entity.status_details?.description ?? entity.failure_reason ?? null;
-  await db.transaction(async (tx) => {
-    await tx
-      .update(bankPayouts)
-      .set({
-        status,
-        utr: entity.utr ?? row.utr,
-        feePaise: entity.fees ?? row.feePaise,
-        failureReason: payoutFailed(status) ? (reason ?? 'The bank did not accept it.') : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(bankPayouts.id, row.id));
-    if (payoutSucceeded(status)) await settle(tx, row, entity.utr ?? null, entity.fees ?? 0);
-    if (payoutFailed(status)) await warn(tx, row, wasPaid, reason);
-  });
-  return status;
-}
-
-/** The money reached the payee: the bill is paid, with the UTR as its reference. */
-async function settle(tx: Transaction, row: Row, utr: string | null, feePaise: number) {
-  const paidOn = todayIn();
-  const [bill] = await tx
-    .update(payables)
+  // A different RazorpayX id on a row that has one is not ours.
+  if (row.providerPayoutId && row.providerPayoutId !== entityId) return 'unknown_payout';
+  const bill = await billOf(tx, row.payableId);
+  const fees = entity.fees ?? 0;
+  const tax = fees > 0 ? Math.min(Math.max(entity.tax ?? 0, 0), fees) : 0;
+  const decision = payoutTransition(row.status, reported);
+  const dead = payoutDead(reported) || reported === 'reversed';
+  // The fee is booked once per payout while RazorpayX holds it (any open state, or processed).
+  // A payout that ends failed or reversed gets it back, so nothing is booked on that event.
+  const endsBad = dead && decision === 'apply';
+  if (fees > 0 && !endsBad && !(decision !== 'apply' && payoutFailedNow(row.status)))
+    await bookFee(tx, row, bill, fees, tax);
+  const base = {
+    providerPayoutId: row.providerPayoutId ?? entityId,
+    feePaise: fees > 0 ? fees : row.feePaise,
+    feeTaxPaise: fees > 0 ? tax : row.feeTaxPaise,
+    utr: entity.utr ?? row.utr,
+    updatedAt: new Date(),
+  };
+  if (decision !== 'apply') {
+    await tx.update(bankPayouts).set(base).where(eq(bankPayouts.id, row.id));
+    return decision;
+  }
+  // Plain words the owner can act on, never a leftover "processed" message.
+  const problem = payoutProblemReason(
+    { details: entity.status_details, failureReason: entity.failure_reason },
+    reported,
+  );
+  const reason = dead ? problem.text : null;
+  await tx
+    .update(bankPayouts)
     .set({
-      status: 'paid',
-      paidAt: new Date(),
-      paidOn,
-      paidMethod: 'bank_transfer',
-      paidReference: `RazorpayX ${utr ?? row.providerPayoutId ?? row.id}`,
-      paidByUserId: row.requestedByUserId,
-      updatedAt: new Date(),
+      ...base,
+      status: reported,
+      failureReason: reason,
+      failureCode: dead ? problem.code : null,
     })
-    .where(and(eq(payables.id, row.payableId), eq(payables.status, 'approved')))
-    .returning({ name: payables.partyName, projectId: payables.projectId });
-  if (!bill) return;
-  await postPayablePaid(tx, row.payableId, row.requestedByUserId);
-  await postPayoutFee(tx, {
-    id: row.id,
-    feePaise,
-    paidOn,
-    label: bill.name,
-    projectId: bill.projectId,
-  });
-  await recordAudit(tx, null, 'payable.paid', 'payable', row.payableId, {
-    by: 'razorpayx',
-    utr,
-    amountPaise: row.amountPaise,
-  });
-  await notifyHolders(tx, 'finance.record_payments', {
-    kind: 'payout_processed',
-    title: `${formatInr(row.amountPaise)} reached ${bill.name}`,
-    body: `Bank transfer done${utr ? `, UTR ${utr}` : ''}. The bill is marked paid.`,
-    dedupeKey: `payout_processed:${row.id}`,
-  });
-}
-
-/** It did not arrive (or came back): the bill stays to pay; finance decides what next. */
-async function warn(tx: Transaction, row: Row, wasPaid: boolean, reason: string | null) {
-  const [bill] = await tx
-    .select({ name: payables.partyName })
-    .from(payables)
-    .where(eq(payables.id, row.payableId));
-  await notifyHolders(tx, 'finance.approve_payments', {
-    kind: 'payout_failed',
-    title: wasPaid
-      ? `Bank transfer to ${bill?.name ?? 'a payee'} came back`
-      : `Bank transfer to ${bill?.name ?? 'a payee'} did not go through`,
-    body: `${formatInr(row.amountPaise)}: ${reason ?? 'the bank did not accept it'}.${wasPaid ? ' The bill was marked paid; check it in Finance.' : ' The bill is still to pay.'}`,
-    dedupeKey: `payout_failed:${row.id}`,
-  });
+    .where(eq(bankPayouts.id, row.id));
+  const updated = { ...row, ...base, status: reported as PayoutStatus };
+  // Failed, rejected, cancelled or reversed: RazorpayX gives back the fee and its GST.
+  if (dead) await refundFee(tx, updated, bill);
+  if (reported === 'processed') await settle(tx, updated, bill, base.utr, payoutDead(row.status));
+  else if (reported === 'reversed' && row.status === 'processed')
+    await reverseSettlement(tx, updated, bill, reason);
+  else if (dead) await warnFailed(tx, updated, bill, reason);
+  return reported;
 }

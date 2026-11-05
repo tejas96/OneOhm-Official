@@ -126,6 +126,8 @@ export const payables = pgTable(
     /** TDS held on the bill (PRD 3.11): owed to the government, not paid to the payee. */
     tdsBp: integer('tds_bp').notNull().default(0),
     tdsPaise: money('tds_paise').notNull().default(0),
+    /** Paid so far: the sum of this bill's payments that were not reversed (kept with them). */
+    paidPaise: money('paid_paise').notNull().default(0),
   },
   (table) => [index('payables_due_idx').on(table.dueOn)],
 );

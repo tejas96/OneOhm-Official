@@ -136,8 +136,8 @@ async function goingOut(db: Database, today: string, dueSoonDays: number) {
   const outgoing = await db
     .select({
       party: payables.party,
-      // What is left to pay once any vendor advance is set against the bill.
-      amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise})::float8`,
+      // What is left once any vendor advance is set against the bill and any part paid.
+      amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise} - ${payables.paidPaise})::float8`,
       dueOn: payables.dueOn,
       advance: workOrderAdvances.id,
     })

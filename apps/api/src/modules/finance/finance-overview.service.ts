@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { FinanceOverview } from '@oneohm/api-contracts';
-import { payables, payments, vendorAdvances } from '@oneohm/database';
-import { ACCOUNT, AGEING_BUCKETS, billToPay } from '@oneohm/domain';
+import { payablePayments, payables, payments, vendorAdvances } from '@oneohm/database';
+import { ACCOUNT, AGEING_BUCKETS, leftToPay } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { and, eq, gte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { accountBalances } from './ledger-read.service';
 import { ReceivablesService } from './receivables.service';
@@ -52,7 +52,7 @@ export class FinanceOverviewService {
     const bills = await this.db.select().from(payables).where(ne(payables.status, 'paid'));
     const weekEnd = addDays(today, 7);
     const billSum = (filter: (bill: (typeof bills)[number]) => boolean) =>
-      bills.filter(filter).reduce((sum, bill) => sum + billToPay(bill), 0);
+      bills.filter(filter).reduce((sum, bill) => sum + leftToPay(bill), 0);
 
     const received = await this.db
       // TDS a customer deducted settles the milestone but is not money in.
@@ -62,15 +62,15 @@ export class FinanceOverviewService {
       })
       .from(payments)
       .where(gte(payments.receivedOn, from));
-    // Money out: bills (less any vendor advance set against them and TDS held) and the
-    // advances themselves.
+    // Money out: each payment made on a bill (all of it or a part; reversed ones, such as a
+    // bank transfer that came back, do not count) and the vendor advances themselves.
     const billsPaid = await this.db
       .select({
-        on: payables.paidOn,
-        amount: sql<number>`(${payables.amountPaise} - ${payables.advanceAdjustedPaise} - ${payables.tdsPaise})::float8`,
+        on: payablePayments.paidOn,
+        amount: sql<number>`${payablePayments.amountPaise}::float8`,
       })
-      .from(payables)
-      .where(and(eq(payables.status, 'paid'), gte(payables.paidOn, from)));
+      .from(payablePayments)
+      .where(and(isNull(payablePayments.reversedAt), gte(payablePayments.paidOn, from)));
     const advancesPaid = await this.db
       .select({ on: vendorAdvances.paidOn, amount: vendorAdvances.amountPaise })
       .from(vendorAdvances)

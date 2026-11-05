@@ -60,9 +60,27 @@
         "points": "Points",
         "bonus": "Bonus",
         "commission": "Commission",
-        "referral_reward": "Referral reward"
+        "referral_reward": "Referral reward",
+        "bank_payout": "Send to bank"
       },
-      "proposed": "Proposed: {name} · {when}"
+      "proposed": "Proposed: {name} · {when}",
+      "sendLine": "Send {amount} to {payee}",
+      "sendNow": "Send now",
+      "sentToBank": "Sent to the bank",
+      "decline": {
+        "button": "Decline",
+        "title": "Decline this transfer",
+        "description": "{subject}. The person who asked is told.",
+        "note": "Why not? (optional)",
+        "noteHint": "They will read this.",
+        "submit": "Decline",
+        "done": "Declined",
+        "defaultNote": "Declined.",
+        "noteShort": "Say a little more, at least {min} characters, or leave it empty.",
+        "noteLong": "Keep this to {max} characters or fewer.",
+        "noteCount": "{used} of {max} characters."
+      },
+      "payoutAskedBy": "Asked by {name} · {when}"
     },
     "reason": {
       "priority": "Marked {level}",

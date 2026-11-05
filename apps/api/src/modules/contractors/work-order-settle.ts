@@ -78,6 +78,7 @@ export async function settleIfDone(
     advancesPaise: order.order.advancesPaise,
     retentionBp: order.contractor.retentionBp,
     tdsBp: await contractorTdsBp(db, order.contractor.tdsBp),
+    pan: order.contractor.pan,
   });
   const [lead] = await db
     .select({ userId: contractorMembers.userId })

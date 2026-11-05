@@ -10,7 +10,6 @@ import {
   stockMovementSchema,
   stockRowSchema,
   thresholdInputSchema,
-  vendorInputSchema,
   vendorSchema,
 } from '../schemas/inventory.schema';
 import {
@@ -21,6 +20,7 @@ import {
   purchaseOrderSummarySchema,
   receiptInputSchema,
 } from '../schemas/procurement.schema';
+import { vendorInputSchema, vendorPatchSchema } from '../schemas/vendor-input.schema';
 import { custodyRouter } from './material-custody.contract';
 import { receiptPapersRouter } from './receipt-papers.contract';
 
@@ -39,7 +39,7 @@ const vendors = c.router({
     method: 'PATCH',
     path: '/inventory/vendors/:id',
     pathParams: idParams,
-    body: vendorInputSchema.partial(),
+    body: vendorPatchSchema,
     responses: { 200: vendorSchema },
   },
 });

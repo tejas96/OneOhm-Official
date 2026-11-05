@@ -52,7 +52,7 @@ export class ContractorCrewService {
     id: string,
     members: readonly { userId: string; lead: boolean }[],
   ): Promise<ContractorDetail> {
-    await this.contractors.get(id);
+    await this.contractors.get(actor, id);
     const allowed = new Set((await this.crewCandidates()).map((candidate) => candidate.userId));
     const outsider = members.find((member) => !allowed.has(member.userId));
     if (outsider)
@@ -72,7 +72,7 @@ export class ContractorCrewService {
         members: members.length,
       });
     });
-    return this.contractors.get(id);
+    return this.contractors.get(actor, id);
   }
 
   async addRate(
@@ -83,7 +83,7 @@ export class ContractorCrewService {
       projectType?: ContractorRate['projectType'] | undefined;
     },
   ): Promise<ContractorRate> {
-    await this.contractors.get(contractorId);
+    await this.contractors.get(actor, contractorId);
     if (input.basis === 'per_task' && !input.taskKey)
       throw invalid('Pick the task this rate pays for.', { taskKey: 'Pick a task.' });
     const [rate] = await this.db
