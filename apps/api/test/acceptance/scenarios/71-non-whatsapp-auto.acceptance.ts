@@ -35,9 +35,8 @@ describe('Customers not on WhatsApp: automatic messages', () => {
       [customerId],
     );
 
-  it('a location ask is one in-person task; its reminder and marketing send nothing', async () => {
+  it('a location ask is one in-person task even with its template off; its reminder and marketing send nothing', async () => {
     const customer = await smsCustomer('Auto Off Chat (test)');
-    const back = await setTemplate('location_request', true);
     const given = { customer: 'Auto Off Chat', home: 'Baner', locationPayload: 'locreq:a1' };
     await queue(customer.phone, 'location_request', given, 'auto_ask:a1');
     await queue(customer.phone, 'location_request', given, 'auto_ask:a1');
@@ -50,7 +49,6 @@ describe('Customers not on WhatsApp: automatic messages', () => {
     await queue(customer.phone, 'amc_renewal_offer', { customer: 'A', home: 'Baner' }, 'm2');
     expect(await tasks(customer.customerId)).toHaveLength(1);
     expect(await sms(customer.phone)).toHaveLength(0);
-    await back();
   });
 
   it('a paper request is an SMS pointing to the app; a switched-off message sends nothing', async () => {

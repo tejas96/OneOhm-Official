@@ -63,13 +63,16 @@ export async function routeCustomerMessage(
     const path = offWhatsAppPathForTemplate(message.template);
     // Marketing is never an SMS; a reminder to open the chat has nothing to remind of (the ask was handed over).
     if (path === 'never' || path === 'skip') return false;
-    const [config] = await db
-      .select({ active: messageTemplates.active })
-      .from(messageTemplates)
-      .where(eq(messageTemplates.key, message.template))
-      .limit(1);
-    // A message the owner switched off (or one Meta has not approved yet) is not sent by SMS either.
-    if (!templateIsOn(message.template, config)) return false;
+    // A chat-only ask is staff work, not a message: the template's switch does not stop the task.
+    if (path !== 'in_person') {
+      const [config] = await db
+        .select({ active: messageTemplates.active })
+        .from(messageTemplates)
+        .where(eq(messageTemplates.key, message.template))
+        .limit(1);
+      // A message the owner switched off (or one Meta has not approved yet) is not sent by SMS either.
+      if (!templateIsOn(message.template, config)) return false;
+    }
     // Only the chat can take this answer: the team does it with the customer in person.
     if (route === 'in_person' || path === 'in_person')
       return handOver(db, customer.id, message, path === 'in_person');
