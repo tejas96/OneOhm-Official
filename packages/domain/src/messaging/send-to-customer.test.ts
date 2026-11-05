@@ -49,8 +49,12 @@ describe('sendActionsFor', () => {
     ]);
   });
 
-  it('a service request offers only a visit ask and a call back', () => {
-    expect(sendActionsFor(place({ service: true }))).toEqual(['ask_visit', 'ask_callback']);
+  it("a service request offers a visit ask, the technician's number and a call back", () => {
+    expect(sendActionsFor(place({ service: true }))).toEqual([
+      'ask_visit',
+      'share_crew',
+      'ask_callback',
+    ]);
     expect(sendActionsFor(place({ customer: true }))).not.toContain('ask_visit');
   });
 

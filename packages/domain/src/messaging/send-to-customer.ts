@@ -35,7 +35,7 @@ export interface SendPlace {
   readonly lead: boolean;
   /** A task of a project, which brings the project with it. */
   readonly task: boolean;
-  /** A service request (a ticket or an AMC visit): only visits can be asked from here. */
+  /** A service request (a ticket or an AMC visit): a visit, the technician's number, a call-back. */
   readonly service?: boolean;
 }
 
@@ -46,7 +46,7 @@ export interface SendPlace {
  */
 export function sendActionsFor(place: SendPlace): SendAction[] {
   if (!place.customer) return [];
-  if (place.service) return ['ask_visit', 'ask_callback'];
+  if (place.service) return ['ask_visit', 'share_crew', 'ask_callback'];
   const withProject = place.project || place.task;
   const onlyLead = place.lead && !withProject;
   const shown: Record<SendAction, boolean> = {

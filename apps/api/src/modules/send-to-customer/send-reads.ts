@@ -6,6 +6,7 @@ import {
   projects,
   projectTasks,
   properties,
+  serviceRequests,
   taskTemplates,
   users,
 } from '@oneohm/database';
@@ -151,7 +152,6 @@ export interface CrewChoice {
 
 /** The project's manager and the people on its tasks (or on the one task), who have a phone. */
 export async function crewOf(db: DatabaseExecutor, ctx: SendContext): Promise<CrewChoice[]> {
-  if (!ctx.projectId) return [];
   const crew: CrewChoice[] = [];
   const add = (
     row: { userId: string | null; name: string | null; phone: string | null },
@@ -161,6 +161,17 @@ export async function crewOf(db: DatabaseExecutor, ctx: SendContext): Promise<Cr
     if (crew.some((one) => one.userId === row.userId && one.work === work)) return;
     crew.push({ userId: row.userId, name: row.name, phone: row.phone, work });
   };
+  // On a ticket: the technician it is assigned to (redesign §18 6).
+  if (ctx.serviceRequestId) {
+    const [technician] = await db
+      .select({ userId: users.id, name: users.fullName, phone: users.phoneE164 })
+      .from(serviceRequests)
+      .innerJoin(users, eq(users.id, serviceRequests.assigneeUserId))
+      .where(eq(serviceRequests.id, ctx.serviceRequestId));
+    if (technician) add(technician, 'service visit');
+    return crew;
+  }
+  if (!ctx.projectId) return [];
   const tasks = await db
     .select({
       userId: projectTasks.assigneeUserId,
