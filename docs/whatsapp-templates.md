@@ -110,8 +110,12 @@ Unicode DLT template.
 | A paper is asked | We need a paper from you. Please send it from the OneOhm app, or give it to our team. | आम्हाला तुमचा एक कागद हवा आहे. कृपया तो OneOhm ॲपवरून पाठवा, किंवा आमच्या टीमकडे द्या. | हमें आपका एक कागज़ चाहिए. कृपया उसे OneOhm ऐप से भेजें, या हमारी टीम को दें। |
 | A rating is asked | How did we do? Please rate us in the OneOhm app, or tell our team. | आमचे काम कसे वाटले? कृपया OneOhm ॲपमध्ये रेटिंग द्या, किंवा आमच्या टीमला सांगा. | हमारा काम कैसा लगा? कृपया OneOhm ऐप में रेटिंग दें, या हमारी टीम को बताएँ। |
 | A payment is due (pay link) | Payment due {amount} for {home}. Pay here: {link} | {home}: {amount} भरायचे आहेत. इथे भरा: {link} | {home}: {amount} देने हैं. यहाँ भरें: {link} |
+| The fixed check (`problem_fixed_sms`) | Fixed: {topic} Is it working now? Please call us or open the OneOhm app. | दुरुस्त केले: {topic} आता ते नीट चालते का? कृपया आम्हाला फोन करा किंवा OneOhm अ‍ॅप उघडा. | ठीक किया: {topic} क्या अब यह ठीक चल रहा है? कृपया हमें फोन करें या OneOhm ऐप खोलें। |
+| A paper is shared (`document_share_sms`) | Your {document} is ready Find it in the OneOhm app or ask our team. | तुमचे {document} तयार आहे ते OneOhm अ‍ॅपमध्ये पाहा किंवा आमच्या टीमला विचारा. | आपका {document} तैयार है इसे OneOhm ऐप में देखें या हमारी टीम से पूछें। |
+| A visit reminder (`visit_reminder_sms`) | Our team visits {home} {when} For the {work}. | आमची टीम {home} येथे {when} येणार आहे {work} साठी. | हमारी टीम {home} पर {when} आ रही है {work} के लिए। |
 
-Other news (documents, receipts, crew, delay, handover pack, layout, the older approved messages) goes as the app's own short title and body, as before.
+The last three rows are the SMS twins of `problem_fixed_check`, `document_share` and `visit_reminder` (their WhatsApp words point to the chat, so the SMS says
+something else). Register them with the others. Other news (receipts, crew, delay, handover pack, layout, the older approved messages) goes as the app's own short title and body, as before.
 
 ## Customer templates
 

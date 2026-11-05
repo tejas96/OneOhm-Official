@@ -140,7 +140,7 @@ docker compose -f infrastructure/docker/compose.production.yaml --env-file /opt/
      `inspection_presence`, `signature_*`, `site_ready_*`, `installation_check`, `handover_pack`, subsidy, loan, layout), (c) the care
      messages (`problem_fixed_check`, `reward_upi_ask`), (d) the **marketing** ones last (`self_survey_*`, `amc_renewal_offer`), because
      they cost per message. Each switch is Settings → WhatsApp messages → the template → on (with its quick-reply switch in the same dialog).
-  4. SMS (section 5c) for customers not on WhatsApp: register the three new SMS texts in whatsapp-templates.md, then set `SMS_DELIVERY=msg91`.
+  4. SMS (section 5c) for customers not on WhatsApp: register the six SMS texts in whatsapp-templates.md (a paper, a rating, a pay link, the fixed check, a shared paper, a visit reminder), then set `SMS_DELIVERY=msg91`.
   5. Smoke test with your own number: "hi" as a stranger (onboarding), then as a customer (Home), a problem, a payment reminder.
 
 ## 5. WhatsApp
@@ -222,7 +222,7 @@ customer page (How we reach them). When WhatsApp rejects a number as "not on Wha
    `OneOhm: ##message##`, and create a flow for it.
 2. Set `SMS_DELIVERY=msg91` and `MSG91_SMS_TEMPLATE_ID` (the flow ID); `MSG91_AUTH_KEY`
    is the same key used for sign-in codes. Restart the worker.
-3. SMS text is English for now for the app's own news; the three texts for customers not on WhatsApp (a paper, a rating, a pay link) are
+3. SMS text is English for now for the app's own news; the six texts for customers not on WhatsApp (a paper, a rating, a pay link, the fixed check, a shared paper, a visit reminder) are
    written in English, Marathi and Hindi (see whatsapp-templates.md, "SMS texts"); Marathi and Hindi SMS need a Unicode DLT template.
 4. In **Send to customer** the sheet says which path a customer takes (SMS text, SMS pay link or in person); an SMS customer's pin, signature,
    visit pick and confirmations become tasks on **Customers → to share in person**.
