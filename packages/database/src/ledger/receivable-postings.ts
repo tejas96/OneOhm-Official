@@ -20,7 +20,7 @@ import {
   quotations,
 } from '../schema';
 import { handlingRemap } from './cash-handling-postings';
-import { creditTaxOf, gstBookedBefore, isLastToFall } from './credit-tax';
+import { creditTaxOf, gstBookedBefore, isLastToFall, lockProject } from './credit-tax';
 import { postJournal } from './post-journal';
 
 /** Calendar date in India for an instant. */
@@ -57,6 +57,8 @@ export async function postMilestoneDue(
     .orderBy(asc(paymentMilestones.position));
   // The self-survey discount is GST inclusive and on the tax invoice: the milestones carry the GST left over,
   // and the last one to fall due takes exactly what is left, so the GST adds up to the invoice's.
+  // One booking at a time per project, so two milestones falling due together cannot both miss the remainder.
+  await lockProject(db, milestone.projectId);
   const totalGst = row.taxPaise - (await creditTaxOf(db, milestone.projectId, row.quotationId));
   const last = await isLastToFall(db, milestone.projectId, milestone.id);
   const gstPaise = milestoneGst(

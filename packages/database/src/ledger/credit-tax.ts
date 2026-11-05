@@ -1,5 +1,5 @@
 import { discountTaxPaise, ratesOf } from '@oneohm/domain';
-import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from '../client';
 import {
   journalEntries,
@@ -29,7 +29,15 @@ export async function creditTaxOf(db: DatabaseExecutor, projectId: string, quota
   return discountTaxPaise(ratesOf(lines), discount);
 }
 
-/** Whether every other milestone of the project has already fallen due (this is the last one to). */
+/** The credit/ledger lock of a project: the same one the self-survey discount takes, held to the end of the transaction. */
+export const lockProject = (db: DatabaseExecutor, projectId: string) =>
+  db.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit:${projectId}`}))`);
+
+/**
+ * Whether every other milestone of the project already has its "fell due" entry in the books (this one is the last
+ * to be booked). The journal decides, not the due date: milestones released together all have a due date before the
+ * first is posted, and only the one posted last may take the GST that is left.
+ */
 export async function isLastToFall(db: DatabaseExecutor, projectId: string, milestoneId: string) {
   const [open] = await db
     .select({ id: paymentMilestones.id })
@@ -37,8 +45,10 @@ export async function isLastToFall(db: DatabaseExecutor, projectId: string, mile
     .where(
       and(
         eq(paymentMilestones.projectId, projectId),
-        isNull(paymentMilestones.dueAt),
         ne(paymentMilestones.id, milestoneId),
+        // A milestone of nothing is never booked and never waited for.
+        gt(paymentMilestones.amountPaise, 0),
+        sql`not exists (select 1 from ${journalEntries} where ${journalEntries.sourceType} = 'milestone_due' and ${journalEntries.sourceId}::text = ${paymentMilestones.id}::text)`,
       ),
     )
     .limit(1);

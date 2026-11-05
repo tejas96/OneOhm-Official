@@ -72,6 +72,7 @@ export async function reverseCredit(
       .set({ amountPaise: milestone.amountPaise + credit.amountPaise, updatedAt: new Date() })
       .where(eq(paymentMilestones.id, milestone.id));
   }
+  if (credit.status === 'pending') await resolveAlert(tx, credit.projectId);
   await tx
     .update(milestoneCredits)
     .set({

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { allocateTax } from './ledger-postings';
 import { discountShares, discountTaxPaise, milestoneGst, ratesOf } from './survey-discount';
 import { buildTaxInvoice, type InvoiceLineInput } from './tax-invoice';
 
@@ -67,5 +68,29 @@ describe('the GST of a payment schedule when a discount is taken off between due
     const gst3 = milestoneGst(after, 2, totalGst, booked, true);
     expect(gst1 + gst2 + gst3).toBe(totalGst);
     expect(gst3).toBeGreaterThanOrEqual(0);
+  });
+
+  it('milestones released together: only the one booked last takes the remainder, the others their share', () => {
+    const amounts = [2_000_000, 3_000_000, 3_000_000, 2_000_000];
+    const total = 1_234_567;
+    // The first fell due earlier. The next three are released together and booked one after the other; the
+    // journal says which is last (the one whose siblings are all booked), not the due date.
+    const booked: number[] = [];
+    amounts.forEach((_, index) => {
+      const last = index === amounts.length - 1;
+      booked.push(
+        milestoneGst(
+          amounts,
+          index,
+          total,
+          booked.reduce((sum, one) => sum + one, 0),
+          last,
+        ),
+      );
+    });
+    const shares = allocateTax(amounts, total);
+    expect(booked.slice(0, 3)).toEqual(shares.slice(0, 3));
+    expect(booked.reduce((sum, one) => sum + one, 0)).toBe(total);
+    expect(booked[3]).toBe(total - shares.slice(0, 3).reduce((sum, one) => sum + one, 0));
   });
 });
