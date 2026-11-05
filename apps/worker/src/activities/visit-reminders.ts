@@ -5,14 +5,12 @@ import {
   homeNameOf,
   languageOf,
   messageTemplates,
-  projectActivities,
   projectTasks,
   queueCustomerMessage,
   serviceRequests,
   visits,
 } from '@oneohm/database';
 import {
-  confirmDeadline,
   isPresenceKind,
   isWorkingTime,
   previousWorkingDay,
@@ -28,17 +26,11 @@ import {
 } from '@oneohm/domain';
 import { titleCaseName, todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { alertProposed, markDone, markMissed } from './visit-closing';
+import { claimAlert, type Row } from './visit-row';
 
 const PER_TICK = 200;
 const WORKING_DAY_MIN = 9 * 60;
-
-type Row = typeof visits.$inferSelect & {
-  customer: string;
-  phone: string;
-  notify: boolean | null;
-  /** The work itself is finished (task completed, request resolved). */
-  finished: boolean;
-};
 
 /** The work itself is finished: the task is completed or the request resolved. */
 const finishedNow = sql`coalesce(${projectTasks.status} = 'completed', ${serviceRequests.status} = 'resolved', false)`;
@@ -157,16 +149,6 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
   return true;
 }
 
-/** Tells the owner once per visit (the flag is claimed first, so two ticks cannot both tell). */
-async function claimAlert(db: Database, row: Row, now: Date): Promise<boolean> {
-  const claimed = await db
-    .update(visits)
-    .set({ unconfirmedAlertAt: now })
-    .where(and(eq(visits.id, row.id), isNull(visits.unconfirmedAlertAt)))
-    .returning({ id: visits.id });
-  return claimed.length > 0;
-}
-
 /**
  * No reply by the visit morning: the owner is told once, saying whether a reminder reached the
  * customer. A DISCOM date unanswered after 1 working day is told the same way, and again the
@@ -213,65 +195,3 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
 
 const visitName = (row: Row) =>
   row.kind === 'net_meter' ? 'Net meter fitting' : 'DISCOM inspection';
-
-/** The customer's pick still waits for the team after the time we promised: the owner is told. */
-async function alertProposed(db: Database, row: Row, now: Date, timeZone: string) {
-  if (row.unconfirmedAlertAt || now < confirmDeadline(row.createdAt, timeZone)) return false;
-  if (!(await claimAlert(db, row, now))) return false;
-  await alertVisitOwner(db, row, {
-    kind: 'visit_pick_waiting',
-    title: `${row.customer}'s pick for ${visitDayLabel(row.day, 'en')} is still waiting`,
-    body: 'We told them we would confirm by now. Confirm the day or change it.',
-    key: `visit_pick_waiting:${row.id}`,
-  });
-  return true;
-}
-
-/** The task was completed or the request resolved: the visit happened, whoever did not tick it. */
-async function markDone(db: Database, row: Row, now: Date): Promise<boolean> {
-  const marked = await db
-    .update(visits)
-    .set({ status: 'done', doneAt: now, updatedAt: now })
-    .where(and(eq(visits.id, row.id), inArray(visits.status, ['confirmed', 'missed'])))
-    .returning({ id: visits.id });
-  return marked.length > 0;
-}
-
-/** Not marked done by the end of its day: missed; the owner decides (done late, or a new day). */
-async function markMissed(db: Database, row: Row, now: Date): Promise<boolean> {
-  const marked = await db
-    .update(visits)
-    .set({ status: 'missed', missedAt: now, updatedAt: now })
-    .where(and(eq(visits.id, row.id), inArray(visits.status, ['proposed', 'confirmed'])))
-    .returning({ id: visits.id });
-  if (marked.length === 0) return false;
-  // The ticket must not keep showing a day that has gone by.
-  if (row.serviceRequestId)
-    await db
-      .update(serviceRequests)
-      .set({ visitOn: null, updatedAt: now })
-      .where(eq(serviceRequests.id, row.serviceRequestId));
-  const day = visitDayLabel(row.day, 'en');
-  const never = row.status === 'proposed';
-  if (row.projectId)
-    await db.insert(projectActivities).values({
-      projectId: row.projectId,
-      taskId: row.taskId,
-      kind: 'visit',
-      message: never
-        ? `The customer's pick for ${day} was never confirmed`
-        : `Visit on ${day} was not marked done: marked missed`,
-      data: { visitId: row.id },
-    });
-  await alertVisitOwner(db, row, {
-    kind: 'visit_missed',
-    title: never
-      ? `${row.customer}'s pick for ${day} was never confirmed`
-      : `Visit to ${row.customer} on ${day} was not marked done`,
-    body: never
-      ? 'The day has passed. Book a new day with the customer.'
-      : 'Mark it done if it happened, or book a new day with the customer.',
-    key: `visit_missed:${row.id}`,
-  });
-  return true;
-}

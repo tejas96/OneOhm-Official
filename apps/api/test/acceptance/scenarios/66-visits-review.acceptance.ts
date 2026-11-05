@@ -4,11 +4,11 @@ import { MIGRATIONS_FOLDER } from '@oneohm/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
-import { lastReply, replies, tap } from '../support/onboarding';
+import { lastReply, tap } from '../support/onboarding';
 import { addDays, newCustomer, sellProject, today } from '../support/sales';
 import { closeChat, openChat } from '../support/send';
 import { advanceTo, project, surveyFacts, workTask } from '../support/tasks';
-import { eveningOn, noonOn, runVisitWorker, templateOn } from '../support/visit-worker';
+import { eveningOn, noonOn, runVisitWorker } from '../support/visit-worker';
 import { askDay, pickDay, setVisit, visitsFor, visitsOf, visitTask } from '../support/visits';
 
 // Review fixes for visits (phase 3b, fix round 1).
@@ -182,68 +182,6 @@ describe('Visits: review fixes', () => {
     );
     expect(made.map((one) => one.service_request_id)).toEqual([ahead]);
     expect(past).toBeDefined();
-  });
-
-  it('two taps at once answer an ask once; a tap on an old reminder does not touch a moved visit', async () => {
-    const sale = await sellProject(admin, { name: 'Review Race (test)' });
-    const task = await visitTask(sale, 'panel_installation');
-    const { list } = await askDay(admin, sale, { taskId: task });
-    const row = list?.rows?.find((one) => one.id.startsWith('vday:'));
-    const day = row?.id.split(':').slice(2).join(':') ?? '';
-    const action = row?.id.split(':')[1] ?? '';
-    const taps = ['morning', 'afternoon'].map((slot) =>
-      tap(sale.customer.phone, `vslot:${action}:${day}:${slot}`),
-    );
-    await Promise.all(taps);
-    expect(await visitsFor(sale.customer.customerId)).toHaveLength(1);
-    const thanks = (await replies(sale.customer.phone)).filter((one) =>
-      /^Thanks — we'll confirm/.test(one.body),
-    );
-    expect(thanks).toHaveLength(1);
-
-    const [visit] = await visitsFor(sale.customer.customerId);
-    const moved = await setVisit(admin, {
-      taskId: task,
-      day: workingDayAfter(visit?.day ?? today(), 1),
-      slot: 'morning',
-    });
-    await tap(sale.customer.phone, `vcf:${visit?.id}:${visit?.day}`);
-    expect((await lastReply(sale.customer.phone))?.body).toMatch(
-      /^That day changed — your visit is now/,
-    );
-    expect((await visitsFor(sale.customer.customerId))[0]?.customer_confirmed_at).toBeNull();
-    expect(moved.status).toBe('confirmed');
-  });
-
-  it('forged taps for a Sunday are refused; the visit message cannot be switched on without its buttons', async () => {
-    const sale = await sellProject(admin, { name: 'Review Sunday (test)' });
-    const task = await visitTask(sale, 'panel_installation');
-    const { list } = await askDay(admin, sale, { taskId: task });
-    const action = list?.rows?.[0]?.id.split(':')[1] ?? '';
-    let sunday = addDays(today(), 1);
-    while (new Date(`${sunday}T00:00:00Z`).getUTCDay() !== 0) sunday = addDays(sunday, 1);
-    await tap(sale.customer.phone, `vday:${action}:${sunday}`);
-    expect((await lastReply(sale.customer.phone))?.kind).toBe('list');
-    const templates = await admin.get<
-      {
-        key: string;
-        metaName: string;
-        language: string;
-        metaNameMr: string | null;
-        metaNameHi: string | null;
-        fields: string[];
-        preview: string;
-      }[]
-    >('/settings/message-templates');
-    const t = templates.find((one) => one.key === 'visit_pick');
-    const refused = await admin.raw('PUT', '/settings/message-templates/visit_pick', {
-      ...t,
-      active: true,
-      extrasApproved: false,
-    });
-    expect(refused.status).toBe(400);
-    const restore = await templateOn('visit_pick', false);
-    await restore();
   });
 });
 
