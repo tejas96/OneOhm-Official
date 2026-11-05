@@ -7,6 +7,7 @@ import {
   notifyHolders,
   projects,
   queueCustomerMessage,
+  referralRewards,
 } from '@oneohm/database';
 import { isWorkingTime, templateIsOn } from '@oneohm/domain';
 import { daysBetween, formatInr, titleCaseName, todayIn } from '@oneohm/shared';
@@ -135,20 +136,30 @@ async function rating(db: Database, g: Given): Promise<boolean> {
 
 async function payout(db: Database, g: Given): Promise<boolean> {
   const { action } = g;
-  if (g.age < DAY || g.age >= 14 * DAY) return false;
+  // Rounds count from the latest ask (the first one or an "Ask again"), not from the first creation.
+  const again = Date.parse(String(action.payload.askedAt ?? '')) || 0;
+  const asked = Math.max(again, action.createdAt.getTime());
+  const age = g.now.getTime() - asked;
+  if (age < DAY || age >= 14 * DAY) return false;
+  // Nothing is owed any more (paid some other way, turned down): no reminder and no alert.
+  const [reward] = await db
+    .select({ status: referralRewards.status })
+    .from(referralRewards)
+    .where(eq(referralRewards.id, String(action.payload.rewardId ?? '')));
+  if (reward?.status !== 'approved') return false;
   const amountPaise = Number(action.payload.amountPaise ?? 0);
   let worked = false;
-  if (g.age >= 2 * DAY) {
+  if (age >= 2 * DAY) {
     await notifyHolders(db, 'finance.record_payments', {
       kind: 'referral_upi_waiting',
       title: `Still waiting for ${g.customer}'s UPI ID`,
       body: `${formatInr(amountPaise)} reward. Ask them again with Send to customer, or call.`,
-      dedupeKey: `upi_waiting:${action.id}`,
+      dedupeKey: `upi_waiting:${action.id}${again ? `:${again}` : ''}`,
     });
     worked = true;
   }
   // Day 1, then every 2 days: round 1 from day 1, round 2 from day 3, ...
-  const round = 1 + Math.floor((g.age - DAY) / (2 * DAY));
+  const round = 1 + Math.floor((age - DAY) / (2 * DAY));
   if (g.working && (await on(db, 'reward_upi_ask')))
     worked =
       (await queueCustomerMessage(
@@ -160,26 +171,40 @@ async function payout(db: Database, g: Given): Promise<boolean> {
           amount: formatInr(amountPaise),
           sharePayload: `up:go:${action.id}`,
         },
-        `payout_reminder:${action.id}:${round}`,
+        `payout_reminder:${action.id}${again ? `:${again}` : ''}:${round}`,
       )) || worked;
   return worked;
 }
 
 async function fixed(db: Database, g: Given): Promise<boolean> {
   const { action } = g;
-  if (g.age < DAY || g.age >= 7 * DAY || !g.working) return false;
-  if (!(await on(db, 'problem_fixed_check'))) return false;
-  return queueCustomerMessage(
-    db,
-    g.phone,
-    'problem_fixed_check',
-    {
-      customer: titleCaseName(g.customer),
-      topic: String(action.payload.topic ?? 'your problem'),
-      yesPayload: `fx:y:${action.id}`,
-      stillPayload: `fx:n:${action.id}`,
-    },
-    `fixed_reminder:${action.id}`,
+  let worked = false;
+  // No answer in 2 days (or the template is off and nobody can chase it): the service desk is told, once.
+  if (g.age >= 2 * DAY) {
+    await notifyHolders(db, 'service.manage', {
+      kind: 'problem_fixed_waiting',
+      title: `${g.customer} has not said whether the problem is fixed`,
+      body: 'Call them to check, then close it or reopen the request.',
+      ...(action.projectId ? { subject: { type: 'project' as const, id: action.projectId } } : {}),
+      dedupeKey: `fixed_waiting:${action.id}`,
+    });
+    worked = true;
+  }
+  if (g.age < DAY || g.age >= 7 * DAY || !g.working) return worked;
+  if (!(await on(db, 'problem_fixed_check'))) return worked;
+  return (
+    (await queueCustomerMessage(
+      db,
+      g.phone,
+      'problem_fixed_check',
+      {
+        customer: titleCaseName(g.customer),
+        topic: String(action.payload.topic ?? 'your problem'),
+        yesPayload: `fx:y:${action.id}`,
+        stillPayload: `fx:n:${action.id}`,
+      },
+      `fixed_reminder:${action.id}`,
+    )) || worked
   );
 }
 
@@ -189,6 +214,8 @@ async function renewal(db: Database, g: Given): Promise<boolean> {
   if (!endsOn) return false;
   const left = daysBetween(todayIn(g.timeZone, g.now), endsOn);
   if (left < 0 || left > AMC_REMIND_DAYS) return false;
+  // An offer made only now (it was due within the last days) is not chased at once.
+  if (g.age < 5 * DAY) return false;
   let worked = false;
   if (left <= AMC_ALERT_DAYS) {
     await notifyHolders(db, 'service.manage', {

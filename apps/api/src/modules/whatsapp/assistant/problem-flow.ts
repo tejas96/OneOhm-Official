@@ -112,8 +112,21 @@ export class ProblemFlowService {
     const offered = homes.slice(0, 10);
     const said = form.answers.home;
     const picked = offered.find((home) => home.id === said)?.id ?? null;
+    const saved: Extract<KeptFormFile, { ok: true }>[] = [];
+    for (const file of form.files.slice(0, MAX_FILES)) {
+      const kept = await this.files.keep(chat, customerId, file);
+      if (kept.ok) saved.push(kept);
+    }
+    const stored = saved.map((file) => file.id);
+    if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
+    // An unknown home is asked in the chat; what the form already said (and its photos) goes along.
     if (said ? !picked : offered.length > 1)
-      return startComplaint(this.db, chat, customerId, topic);
+      return startComplaint(this.db, chat, customerId, topic, {
+        ...(kind ? { kind } : {}),
+        ...(since ? { since } : {}),
+        files: stored,
+        note: form.answers.note ?? '',
+      });
     const projectId = picked ?? offered[0]?.id ?? null;
     const draft: Draft = {
       stage: 'extra',
@@ -122,13 +135,6 @@ export class ProblemFlowService {
       ...(kind ? { kind } : {}),
       ...(since ? { since } : {}),
     };
-    const saved: Extract<KeptFormFile, { ok: true }>[] = [];
-    for (const file of form.files.slice(0, MAX_FILES)) {
-      const kept = await this.files.keep(chat, customerId, file);
-      if (kept.ok) saved.push(kept);
-    }
-    const stored = saved.map((file) => file.id);
-    if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
     if (!kind || !since)
       return askAgain(this.db, chat, { ...draft, stage: kind ? 'since' : 'what', files: stored });
     return this.raise(chat, customerId, { ...draft, files: stored }, form.answers.note ?? '');
@@ -145,7 +151,7 @@ export class ProblemFlowService {
       draft.topic === 'installation' ? 'Installation' : null,
       W.what[kind],
       W.sinceNote[since],
-      words || null,
+      words || draft.note || null,
     ]
       .filter(Boolean)
       .join(' · ');

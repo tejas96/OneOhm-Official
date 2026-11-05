@@ -24,7 +24,7 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { outMethod, statusCondition } from './incentive-shared';
 import { evaluateReferralRewards } from './referral-evaluation';
 import { announceReward } from './referral-messages';
-import { checkedUpi, checkUpi } from './reward-upi';
+import { checkedUpi, checkUpi, closePayoutAsks } from './reward-upi';
 import { upiRows } from './reward-upi-rows';
 
 type Status = ReferralReward['status'];
@@ -158,8 +158,12 @@ export class ReferralRewardsService {
         .update(referralRewards)
         .set({ ...change, ...paidUpi, updatedAt: new Date() })
         .where(and(eq(referralRewards.id, id), eq(referralRewards.status, from)))
-        .returning({ amountPaise: referralRewards.amountPaise });
+        .returning({
+          amountPaise: referralRewards.amountPaise,
+          customerId: referralRewards.referrerCustomerId,
+        });
       if (!updated) throw await this.notReady(id, from);
+      if (change.status !== 'approved') await closePayoutAsks(tx, updated.customerId, actor.userId);
       if (change.status === 'approved') {
         await postIncentiveApproved(tx, 'referral_reward', id, actor.userId);
       }

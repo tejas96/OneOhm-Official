@@ -88,6 +88,12 @@ export class UpiService {
       return sayWithTaps(this.db, chat, REFER_WORDS.upiBad, typing ? ['menu'] : [again, 'menu']);
     }
     const saved = await this.db.transaction(async (tx) => {
+      // Same order as the staff check (checkUpi): the customer first, then the ask.
+      await tx
+        .select({ id: customers.id })
+        .from(customers)
+        .where(eq(customers.id, customerId))
+        .for('update');
       const [ask] = await tx
         .select()
         .from(customerActions)

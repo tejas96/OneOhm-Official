@@ -7,7 +7,7 @@ import {
   referralRewards,
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
@@ -43,7 +43,11 @@ export async function askUpi(tx: DatabaseExecutor, rewardId: string): Promise<bo
       customerId: row.customer.id,
       projectId: row.reward.projectId,
       title: `UPI ID for the ${amount} reward`,
-      payload: { rewardId, amountPaise: row.reward.amountPaise, once: onceOf(rewardId) },
+      payload: {
+        rewardId,
+        amountPaise: row.reward.amountPaise,
+        once: onceOf(rewardId),
+      },
     })
     .onConflictDoNothing()
     .returning({ id: customerActions.id });
@@ -60,6 +64,46 @@ export async function askUpi(tx: DatabaseExecutor, rewardId: string): Promise<bo
   );
   const sent = await sendAsk(tx, row.customer, made.id, amount, null);
   return sent !== 'none';
+}
+
+/**
+ * A payout ask is done when its reward is paid (any method), rejected or cancelled: every open or received
+ * payout ask of the customer whose reward is no longer pending or approved is closed, with a line in the log.
+ */
+export async function closePayoutAsks(
+  tx: DatabaseExecutor,
+  customerId: string,
+  userId: string | null,
+): Promise<void> {
+  const asks = await tx
+    .select()
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.customerId, customerId),
+        eq(customerActions.type, 'payout'),
+        inArray(customerActions.status, ['open', 'received']),
+      ),
+    )
+    .for('update');
+  for (const ask of asks) {
+    const [reward] = await tx
+      .select({ status: referralRewards.status })
+      .from(referralRewards)
+      .where(eq(referralRewards.id, String(ask.payload.rewardId ?? '')));
+    if (reward && (reward.status === 'pending' || reward.status === 'approved')) continue;
+    const now = new Date();
+    await tx
+      .update(customerActions)
+      .set({ status: 'closed', closedAt: now, updatedAt: now })
+      .where(eq(customerActions.id, ask.id));
+    await logAction(tx, ask, {
+      kind: 'customer_action',
+      message: `The UPI ID ask was closed: the reward is ${reward?.status ?? 'gone'}`,
+      userId,
+      data: { customerActionId: ask.id },
+    });
+  }
 }
 
 /** The ask could not reach the customer (window closed, template off, STOP): finance is told to ask. */
@@ -209,7 +253,13 @@ export async function checkUpi(
   if (ask)
     await db
       .update(customerActions)
-      .set({ status: 'open', doneAt: null, reason: input.reason, updatedAt: now })
+      .set({
+        status: 'open',
+        doneAt: null,
+        reason: input.reason,
+        payload: sql`${customerActions.payload} || ${JSON.stringify({ askedAt: now.toISOString() })}::jsonb`,
+        updatedAt: now,
+      })
       .where(and(eq(customerActions.id, ask.id), ne(customerActions.status, 'cancelled')));
   else {
     // The reward joined an earlier check: it gets its own ask now.
@@ -221,7 +271,11 @@ export async function checkUpi(
         projectId: row.reward.projectId,
         title: `UPI ID for the ${amount} reward`,
         reason: input.reason,
-        payload: { rewardId, amountPaise: row.reward.amountPaise, once: onceOf(rewardId) },
+        payload: {
+          rewardId,
+          amountPaise: row.reward.amountPaise,
+          once: onceOf(rewardId),
+        },
       })
       .returning({ id: customerActions.id });
     askId = made?.id;

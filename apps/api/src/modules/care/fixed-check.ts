@@ -38,7 +38,6 @@ export async function tellFixed(
       customerId: serviceRequests.customerId,
       projectId: serviceRequests.projectId,
       category: serviceRequests.category,
-      reopened: serviceRequests.reopenCount,
       name: customers.name,
       phone: customers.phoneE164,
       language: customers.preferredLanguage,
@@ -59,7 +58,8 @@ export async function tellFixed(
         kind: 'problem_fixed',
         topic,
         requestId: request.id,
-        once: `fixed:${request.id}:${row.reopened}`,
+        // One check per resolve: reopened (by the customer or by staff) and resolved again asks again.
+        once: `fixed:${request.id}:${now.getTime()}`,
       },
     })
     .onConflictDoNothing()

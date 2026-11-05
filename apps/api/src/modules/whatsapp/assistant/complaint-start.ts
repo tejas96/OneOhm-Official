@@ -29,7 +29,12 @@ export interface Draft {
   readonly since?: (typeof SINCE_CHOICES)[number];
   /** Photos and voice notes sent while the questions were asked (stored documents). */
   readonly files?: readonly string[];
+  /** The form's "anything to add" words, kept while the home is asked in the chat. */
+  readonly note?: string | undefined;
 }
+
+/** What a report form already answered when its home had to be asked again in the chat. */
+export type Carry = Pick<Draft, 'kind' | 'since' | 'files' | 'note'>;
 
 /** The draft in the chat's memory, or null when no problem is being reported. */
 export function draftOf(context: unknown): Draft | null {
@@ -49,13 +54,20 @@ export async function startComplaint(
   chat: Conversation,
   customerId: string,
   topic?: string,
+  carry?: Carry,
 ): Promise<void> {
   const homes = await activeHomes(db, customerId);
   if (homes.length < 2)
-    return askWhat(db, chat, { stage: 'what', projectId: homes[0]?.id ?? null, topic });
+    return continueFrom(db, chat, {
+      stage: 'what',
+      projectId: homes[0]?.id ?? null,
+      topic,
+      ...carry,
+    });
   await setStep(db, chat, 'await_home', {
     ...keepPending(chat.context),
     ...(topic ? { topic } : {}),
+    ...(carry ? { carry } : {}),
   });
   await queueReply(db, chat, {
     kind: 'list',
@@ -80,12 +92,20 @@ export async function pickHome(
   projectId: string,
 ): Promise<void> {
   const homes = await activeHomes(db, customerId);
-  const topic = (chat.context as { topic?: string } | null)?.topic;
+  const held = chat.context as { topic?: string; carry?: Carry } | null;
+  const topic = held?.topic;
   if (!homes.some((home) => home.id === projectId)) {
     await queueReply(db, chat, { kind: 'text', body: PROJECT_WORDS.homeGone });
-    return startComplaint(db, chat, customerId, topic);
+    return startComplaint(db, chat, customerId, topic, held?.carry);
   }
-  return askWhat(db, chat, { stage: 'what', projectId, topic });
+  return continueFrom(db, chat, { stage: 'what', projectId, topic, ...held?.carry });
+}
+
+/** The first question still unanswered: everything the form already said (and its photos) is kept. */
+function continueFrom(db: DatabaseExecutor, chat: Conversation, draft: Draft) {
+  if (!draft.kind) return askWhat(db, chat, draft);
+  if (!draft.since) return askSince(db, chat, draft);
+  return askExtra(db, chat, draft);
 }
 
 /** "What is wrong?" as a list. */

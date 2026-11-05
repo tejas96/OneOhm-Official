@@ -182,6 +182,8 @@ async function tell(
   notice: Notice,
 ): Promise<number> {
   const capability = capabilityOf(action);
+  // A UPI ID to check is money work: whoever may record payments, not the chat's owner or a project manager.
+  if (action.type === 'payout') return notifyHolders(db, capability, notice);
   if (who.due === 'owner')
     return who.owner
       ? notifyCover(db, who.owner, capability, notice)
@@ -191,7 +193,7 @@ async function tell(
   // everyone who manages projects.
   return notifyStaffHolders(
     db,
-    action.type === 'visit_pick' || action.type === 'payout' ? capability : 'service.manage',
+    action.type === 'visit_pick' ? capability : 'service.manage',
     notice,
   );
 }
