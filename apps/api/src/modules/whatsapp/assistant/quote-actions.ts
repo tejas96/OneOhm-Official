@@ -6,18 +6,23 @@ import { quoteIsOpen } from '../../quotations/quotation-accept';
 import { queueQuoteInChat } from '../../quotations/quotation-message';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { QUOTE_MONEY_WORDS, quoteMoney, rupees } from '../../quotations/quote-money-words';
+import { QUOTE_TOPICS, type QuoteTopic } from '../../quotations/quote-question-words';
 import { quotedSteps } from '../../quotations/quoted-terms';
 import { type Conversation, queueReply } from '../chat-store';
 import { CHAT_WORDS } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
 import { PaperRepliesService } from './paper-replies';
+import { QuoteQuestionsService } from './quote-questions.service';
 import { QUOTE_WORDS } from './quote-words';
 import { WORDS } from './words';
 
 export interface QuoteTap {
-  readonly action: 'accept' | 'confirm' | 'ask' | 'show';
+  /** `topic` is a row of the question list, `back` one of the check-back buttons, `no` "Not yet". */
+  readonly action: 'accept' | 'confirm' | 'ask' | 'show' | 'topic' | 'no' | 'back';
   readonly quotationId: string;
+  readonly topic?: QuoteTopic;
+  readonly later?: 'w' | 'm';
 }
 
 const ACTIONS = {
@@ -25,16 +30,34 @@ const ACTIONS = {
   quote_yes: 'confirm',
   quote_ask: 'ask',
   quote_show: 'show',
+  quote_no: 'no',
 } as const;
-const TAP =
-  /^(quote_accept|quote_yes|quote_ask|quote_show):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const TAP = new RegExp(`^(quote_accept|quote_yes|quote_ask|quote_show|quote_no):(${UUID})$`, 'i');
+const TOPIC = new RegExp(`^quote_q:(${UUID}):(${QUOTE_TOPICS.join('|')})$`, 'i');
+const BACK = new RegExp(`^quote_back:(${UUID}):(w|m)$`, 'i');
 
 /**
  * A tap on a quote button: "Accept quote" and "I have a question" on the quote message,
  * "Yes, accept" on the check that follows, and Home's "See quotation". Null for anything else.
  */
 export function readQuoteTap(choiceId: string | null): QuoteTap | null {
-  const match = TAP.exec(choiceId?.trim() ?? '');
+  const id = choiceId?.trim() ?? '';
+  const topic = TOPIC.exec(id);
+  if (topic?.[1] && topic[2])
+    return {
+      action: 'topic',
+      quotationId: topic[1].toLowerCase(),
+      topic: topic[2].toLowerCase() as QuoteTopic,
+    };
+  const back = BACK.exec(id);
+  if (back?.[1] && back[2])
+    return {
+      action: 'back',
+      quotationId: back[1].toLowerCase(),
+      later: back[2].toLowerCase() as 'w' | 'm',
+    };
+  const match = TAP.exec(id);
   if (!match?.[1] || !match[2]) return null;
   return {
     action: ACTIONS[match[1].toLowerCase() as keyof typeof ACTIONS],
@@ -55,11 +78,17 @@ export class QuoteActionsService {
     private readonly quotations: QuotationsService,
     private readonly people: HandOverService,
     private readonly papers: PaperRepliesService,
+    private readonly asks: QuoteQuestionsService,
   ) {}
 
   /** `messageId` is the tap's own WhatsApp id: an "already accepted" reply goes once per tap. */
   async tap(chat: Conversation, tap: QuoteTap, messageId: string): Promise<void> {
-    if (tap.action === 'ask') return this.people.passToOwner(chat);
+    if (tap.action === 'ask') return this.asks.questions(chat, tap.quotationId);
+    if (tap.action === 'topic' && tap.topic)
+      return this.asks.topic(chat, tap.quotationId, tap.topic);
+    if (tap.action === 'no') return this.asks.whenToCheck(chat, tap.quotationId);
+    if (tap.action === 'back' && tap.later)
+      return this.asks.checkBack(chat, tap.quotationId, tap.later);
     if (tap.action === 'show') return this.show(chat, tap.quotationId);
     if (tap.action === 'accept') return this.askToConfirm(chat, tap.quotationId, messageId);
     return this.accept(chat, tap.quotationId, messageId);
@@ -88,7 +117,7 @@ export class QuoteActionsService {
       body: QUOTE_MONEY_WORDS.confirm(rupees(quotation.totalPaise), money.first, money.firstWhen),
       buttons: [
         { id: `quote_yes:${quotationId}`, title: WORDS.quoteYes },
-        { id: `quote_ask:${quotationId}`, title: WORDS.quoteNotYet },
+        { id: `quote_no:${quotationId}`, title: WORDS.quoteNotYet },
       ],
     });
   }

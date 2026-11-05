@@ -16,7 +16,8 @@ import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
 import { queueReply } from '../whatsapp/chat-store';
 import { sharedFileUrl } from '../whatsapp/file-links';
 import { QUOTE_MONEY_WORDS, quoteMoney } from './quote-money-words';
-import { quotedSteps } from './quoted-terms';
+import { QUOTE_Q_WORDS } from './quote-question-words';
+import { changeNoteOf, quotedSteps } from './quoted-terms';
 
 /** The quote's PDF as a link the customer's phone can open, named for the customer. */
 function pdfOf(env: Environment, quotation: QuotationDetail) {
@@ -118,12 +119,15 @@ export async function queueQuoteInChat(
   }
   const steps = await quotedSteps(tx, quotation.id);
   const money = quoteMoney(quotation.totalPaise, quotation.subsidyPaise, steps);
+  // A revision says what changed first (redesign §9): the line the team wrote when sending it.
+  const changed = await changeNoteOf(tx, quotation.id);
+  const body = W.buttonsBody(money.line);
   await queueReply(
     tx,
     chat,
     {
       kind: 'buttons',
-      body: W.buttonsBody(money.line),
+      body: changed ? `${QUOTE_Q_WORDS.changed(changed)}\n\n${body}` : body,
       buttons: [
         { id: `quote_accept:${quotation.id}`, title: W.accept },
         { id: `quote_ask:${quotation.id}`, title: W.ask },

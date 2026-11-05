@@ -47,12 +47,12 @@ export class QuotationsController {
         assertCan(actor, 'quotations.approve_discount');
         return { status: 200, body: await this.quotations.approveDiscount(actor, params.id) };
       },
-      sendQuotation: async ({ params }) => {
+      sendQuotation: async ({ params, body }) => {
         assertCan(actor, 'quotations.create');
         await assertQuotationAccess(this.db, actor, params.id);
         return {
           status: 200,
-          body: detailFor(actor, await this.quotations.send(actor, params.id)),
+          body: detailFor(actor, await this.quotations.send(actor, params.id, body?.whatChanged)),
         };
       },
       acceptQuotation: async ({ params }) => {
