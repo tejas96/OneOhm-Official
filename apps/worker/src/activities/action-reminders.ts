@@ -13,7 +13,7 @@ import {
 } from '@oneohm/database';
 import { isWorkingTime, VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { capabilityOf } from './action-capability';
 import {
   askedSince,
@@ -69,8 +69,15 @@ export async function queueActionReminders(
           'signature',
         ]),
         eq(customerActions.status, 'open'),
-        // A roof answered "Not yet" counts from the answer, so an older ask can still be due.
-        gt(customerActions.createdAt, new Date(now.getTime() - 4 * TEAM_UNTIL)),
+        // Asks older than 14 days are over; only a roof answered "Not yet" counts from its answer, so
+        // it may be older (up to 56 days), and nothing else can crowd the batch.
+        or(
+          gt(customerActions.createdAt, new Date(now.getTime() - TEAM_UNTIL)),
+          and(
+            sql`${customerActions.payload}->>'answer' = 'not_yet'`,
+            gt(customerActions.createdAt, new Date(now.getTime() - 4 * TEAM_UNTIL)),
+          ),
+        ),
         lte(customerActions.createdAt, new Date(now.getTime() - CUSTOMER_AFTER)),
         or(isNull(projects.id), ne(projects.status, 'cancelled')),
       ),

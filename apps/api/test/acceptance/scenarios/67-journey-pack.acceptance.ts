@@ -106,6 +106,11 @@ describe('Journey: handover pack', () => {
     // The template is not switched on yet, so nothing really went: the checklist row is not set.
     expect(await packFact(project.id)).toHaveLength(0);
     expect((await packOffer(project.id))?.detail).toBe('Not sent yet');
+    const [note] = await rows<{ message: string }>(
+      "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE '%handover pack%'",
+      [project.id],
+    );
+    expect(note?.message).toMatch(/\(not sent: the message is switched off\)$/);
     await tap(customer.phone, template?.payload.documentsPayload ?? '');
     const sent = await replies(customer.phone);
     expect(sent.map((reply) => reply.kind)).toEqual(['document', 'buttons']);

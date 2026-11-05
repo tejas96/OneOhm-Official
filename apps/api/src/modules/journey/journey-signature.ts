@@ -74,9 +74,8 @@ async function copyCategory(tx: DatabaseExecutor, paperId: unknown): Promise<str
   const [doc] = id
     ? await tx.select({ category: documents.category }).from(documents).where(eq(documents.id, id))
     : [];
-  return doc && isCustomerRequestable(doc.category) && doc.category !== 'other'
-    ? doc.category
-    : 'discom';
+  // A paper already filed under Other stays there; only one with no customer folder of its own goes to DISCOM papers.
+  return doc && isCustomerRequestable(doc.category) ? doc.category : 'discom';
 }
 
 async function insertCopy(

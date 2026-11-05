@@ -12,6 +12,7 @@ export const JOURNEY_MESSAGES = [
   'installation_check',
   'handover_pack',
   'signature_reminder',
+  'signed_page_reminder',
   'site_ready_reminder',
 ] as const;
 export type JourneyMessage = (typeof JOURNEY_MESSAGES)[number];
@@ -36,6 +37,10 @@ export const JOURNEY_EN: Readonly<Record<JourneyMessage, Words>> = {
   signature_reminder: (p) => ({
     title: `Reminder: please read your ${p.document}`,
     body: `For ${p.home}. Open our WhatsApp chat and tell us if you agree.`,
+  }),
+  signed_page_reminder: (p) => ({
+    title: `Please send the signed page of ${p.document} again`,
+    body: `For ${p.home}. Open our WhatsApp chat and send a photo of the signed page.`,
   }),
   site_ready_reminder: (p) => ({
     title: `We are waiting for the roof at ${p.home}`,
@@ -64,6 +69,10 @@ export const JOURNEY_MR: Readonly<Record<JourneyMessage, Words>> = {
     title: `आठवण: कृपया तुमचे ${p.document} वाचा`,
     body: `${p.home} साठी. सहमत आहात का ते आमच्या WhatsApp चॅटमध्ये सांगा.`,
   }),
+  signed_page_reminder: (p) => ({
+    title: `${p.document} चे सही केलेले पान पुन्हा पाठवा`,
+    body: `${p.home} साठी. आमच्या WhatsApp चॅटमध्ये सही केलेल्या पानाचा फोटो पाठवा.`,
+  }),
   site_ready_reminder: (p) => ({
     title: `${p.home} येथील छप्पर तयार होण्याची वाट पाहत आहोत`,
     body: 'बसवणीसाठी तयार झाल्यावर आमच्या WhatsApp चॅटमध्ये सांगा.',
@@ -90,6 +99,10 @@ export const JOURNEY_HI: Readonly<Record<JourneyMessage, Words>> = {
   signature_reminder: (p) => ({
     title: `याद दिलाना: कृपया अपना ${p.document} पढ़ें`,
     body: `${p.home} के लिए। सहमत हैं या नहीं, हमारे WhatsApp चैट में बताएँ।`,
+  }),
+  signed_page_reminder: (p) => ({
+    title: `${p.document} का हस्ताक्षर किया पन्ना फिर से भेजें`,
+    body: `${p.home} के लिए। हमारे WhatsApp चैट में हस्ताक्षर किए पन्ने की फ़ोटो भेजें।`,
   }),
   site_ready_reminder: (p) => ({
     title: `हम ${p.home} की छत के तैयार होने का इंतज़ार कर रहे हैं`,

@@ -68,6 +68,7 @@ describe('follow-up text', () => {
       'installation_check',
       'handover_pack',
       'signature_reminder',
+      'signed_page_reminder',
       'site_ready_reminder',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.

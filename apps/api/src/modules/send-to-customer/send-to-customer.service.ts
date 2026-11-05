@@ -84,12 +84,12 @@ export class SendToCustomerService {
       // One press of Send is one send: a double tap or a retry with the same id answers the first.
       const again = body.requestId ? await this.sentBefore(tx, body.requestId) : null;
       if (again) return again;
-      const actionId = await this.record(tx, ctx, actor.userId, composed);
+      // A chat message goes; a template only goes when it is switched on (said in the log if not).
+      const delivered = ctx.chatOpen || (await templateOn(tx, composed.built.template.key));
+      const actionId = await this.record(tx, ctx, actor.userId, composed, delivered);
       // The same ask is one message; a re-sent reminder of an open ask gets its own key.
       const key = `send:${body.request.action}:${actionId ?? id}:${id}`;
       const via = await deliver(tx, ctx, composed.built, key, actor.userId);
-      // A chat message went; a template only goes when it is switched on.
-      const delivered = via === 'chat' || (await templateOn(tx, composed.built.template.key));
       await composed.after?.(tx, delivered);
       if (body.requestId)
         await recordAudit(
@@ -130,9 +130,11 @@ export class SendToCustomerService {
     ctx: SendContext,
     userId: string,
     { record }: Composed,
+    delivered: boolean,
   ): Promise<string | null> {
     if (record.kind === 'log') {
-      await logSend(tx, ctx, userId, record, record.data);
+      const log = delivered ? record.log : `${record.log} (not sent: the message is switched off)`;
+      await logSend(tx, ctx, userId, { ...record, log }, record.data);
       return null;
     }
     const existing = await openActionFor(tx, ctx.customerId, record.type, {

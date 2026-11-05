@@ -747,6 +747,8 @@
         "document_share": "A document sent by the team",
         "signature_request": "A paper to read and agree to",
         "signature_reminder": "Reminder to agree to a paper",
+        "signed_page_reminder": "Reminder to send the signed page",
+        "site_ready_reminder": "Reminder: the roof is not ready yet",
         "site_ready_check": "Is the roof ready? (before dispatch)",
         "installation_check": "Is the installation finished?",
         "handover_pack": "Handover pack"

@@ -494,7 +494,18 @@ Examples: Ramesh Patil · Sangli
 
 **Button:** one quick reply: en `It's ready now`; mr `आता तयार आहे`; hi `अब तैयार है`. Payload `rdy:now:<id>`.
 
-Both are off until Meta approves all three languages.
+### 41. `signed_page_reminder` — **New** (journey: agreed, but the signed page is missing, e.g. the team cancelled it)
+Fields: customer, document, home
+
+> en: Hello {{1}}, please send the signed page of your {{2}} for {{3}} again. Tap the button to send it.
+
+> mr: नमस्कार {{1}}, कृपया {{3}} साठीच्या तुमच्या {{2}} चे सही केलेले पान पुन्हा पाठवा. पाठवण्यासाठी बटण दाबा.
+
+> hi: नमस्ते {{1}}, कृपया {{3}} के लिए अपने {{2}} का हस्ताक्षर किया पन्ना फिर से भेजें। भेजने के लिए बटन दबाएँ।
+
+**Button:** one quick reply: en `Send signed page`; mr `सही केलेले पान`; hi `हस्ताक्षर वाला पन्ना`. Payload `jr:<id>`.
+
+All three reminders are off until Meta approves all three languages.
 
 ### Newer versions of three older templates (buttons on automatic messages, redesign §19)
 `installation_started`, `commissioning_completed` and `project_waiting` have a second version with quick replies. The text

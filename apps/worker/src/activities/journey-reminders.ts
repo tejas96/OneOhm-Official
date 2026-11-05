@@ -62,10 +62,13 @@ export function confirmReminder(ask: Ask, given: { customer: string; home: strin
   };
 }
 
-/** The reminder for a paper not yet agreed to: its button shows the paper again. */
+/**
+ * The reminder for a paper not yet agreed to (its button shows the paper again), or, once the customer
+ * agreed but the signed page is missing (cancelled, never sent), for the signed page again.
+ */
 export function signatureReminder(ask: Ask, given: { customer: string; home: string }) {
   return {
-    template: 'signature_reminder',
+    template: ask.payload.agreedAt ? 'signed_page_reminder' : 'signature_reminder',
     payload: {
       ...given,
       document: String(ask.payload.paperTitle ?? 'paper'),

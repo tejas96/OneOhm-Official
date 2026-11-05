@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { customerActions, type DatabaseExecutor, projectFacts, projects } from '@oneohm/database';
 import { and, eq, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { AppError } from '../../common/http/errors';
 import { environmentOnce } from '../../config/environment-once';
 import { logAction } from '../documents/customer-action-log';
 import { openAction } from '../send-to-customer/send-actions';
@@ -10,7 +11,13 @@ import { deliver, templateOn } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { confirmCompose, packFor } from './journey-compose';
 import { closeStaleAsks } from './journey-confirm';
-import { DISPATCH_KEY, HANDOVER_KEY, INSTALLATION_KEY, type JourneyTask } from './journey-store';
+import {
+  alertTaskOwner,
+  DISPATCH_KEY,
+  HANDOVER_KEY,
+  INSTALLATION_KEY,
+  type JourneyTask,
+} from './journey-store';
 
 /** The customer's context for a project task, as the system acting on its own (no staff member). */
 async function contextOfTask(db: DatabaseExecutor, task: JourneyTask): Promise<SendContext | null> {
@@ -70,20 +77,33 @@ async function pack(tx: DatabaseExecutor, task: JourneyTask) {
   if (sent) return;
   const ctx = await contextOfTask(tx, task);
   if (!ctx) return;
-  const composed = await inLanguage(ctx.language, () =>
-    packFor(tx, environmentOnce(), ctx, task.projectId),
-  ).catch(() => null);
   const about = { projectId: task.projectId, leadId: null };
-  if (composed?.record.kind !== 'log') {
-    // Nothing the customer may see yet: said in the project log, nothing recorded as sent.
+  let composed: Awaited<ReturnType<typeof packFor>>;
+  try {
+    composed = await inLanguage(ctx.language, () =>
+      packFor(tx, environmentOnce(), ctx, task.projectId),
+    );
+  } catch (error) {
+    // "No papers yet" is expected; anything else is a failure the step's owner must hear about.
+    const none = error instanceof AppError && error.code === 'nothing_to_send';
     await logAction(tx, about, {
       kind: 'customer_action',
-      message: 'Handover pack not sent: there are no handover papers the customer can see.',
+      message: none
+        ? 'Handover pack not sent: there are no handover papers the customer can see.'
+        : `Handover pack could not be made: ${error instanceof Error ? error.message : 'unknown error'}`,
       userId: null,
       data: {},
     });
+    if (!none)
+      await alertTaskOwner(tx, task, {
+        kind: 'handover_pack_failed',
+        title: 'The handover pack could not be sent',
+        body: 'Please send it by hand from Send to customer.',
+        key: `handover_pack_failed:${task.projectId}`,
+      });
     return;
   }
+  if (composed.record.kind !== 'log') return;
   const { record } = composed;
   const via = await deliver(tx, ctx, composed.built, `journey:pack:${task.projectId}`, null);
   const delivered = via === 'chat' || (await templateOn(tx, composed.built.template.key));

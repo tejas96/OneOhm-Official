@@ -102,6 +102,7 @@ describe('rights of the journey steps', () => {
       'installation_check',
       'handover_pack',
       'signature_reminder',
+      'signed_page_reminder',
       'site_ready_reminder',
     ]) {
       const words = SEND_TEMPLATE_WORDS[key];

@@ -127,6 +127,15 @@ export const SEND_MESSAGE_TEMPLATES = [
       'Hello {{1}}, a reminder: please read your {{2}} for {{3}} and tell us if you agree. Tap the button to see it again.',
   },
   {
+    key: 'signed_page_reminder',
+    audience: 'customer',
+    fields: ['customer', 'document', 'home'],
+    // The customer agreed, but the signed page was cancelled or never came: the button asks for it again.
+    extras: { quickReplies: ['showPayload'] },
+    preview:
+      'Hello {{1}}, please send the signed page of your {{2}} for {{3}} again. Tap the button to send it.',
+  },
+  {
     key: 'site_ready_reminder',
     audience: 'customer',
     fields: ['customer', 'home'],

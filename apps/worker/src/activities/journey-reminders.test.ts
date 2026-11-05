@@ -72,4 +72,13 @@ describe('signature reminder', () => {
     });
     expect(waitingFor(paper)).toBe('a paper to agree to');
   });
+
+  it('once agreed, the reminder asks for the signed page again', () => {
+    const agreed = ask(
+      { paperTitle: 'Net-metering agreement', agreedAt: '2026-11-08T06:00:00Z' },
+      'signature',
+    );
+    expect(signatureReminder(agreed, given).template).toBe('signed_page_reminder');
+    expect(signatureReminder(agreed, given).payload.showPayload).toBe('jr:a1');
+  });
 });
