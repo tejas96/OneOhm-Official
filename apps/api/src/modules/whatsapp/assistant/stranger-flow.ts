@@ -16,10 +16,11 @@ import { OnboardingFlowService } from '../onboarding/onboarding-flow';
 import { openLeadFor } from '../onboarding/onboarding-lead';
 import { HEARD, heardReply } from '../onboarding/onboarding-turn-files';
 import type { Incoming, IncomingMedia } from '../whatsapp-events';
-import { fitTitle } from './chat-words';
+import { CHAT_WORDS, fitTitle } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { clearEntry, savedEntry } from './entry-capture';
 import { HandOverService } from './hand-over';
+import { firstUnsupported } from './unsupported';
 import { MEDIA_WORDS, WORDS } from './words';
 
 const QUICK_ESTIMATE = 'ob:quick';
@@ -43,6 +44,7 @@ export class StrangerFlowService {
 
   /** A stranger's message, after hellos and while no person has the chat. */
   async route(chat: Conversation, incoming: Incoming, word: string): Promise<void> {
+    if (incoming.unsupported) return this.unsupported(chat, incoming);
     const code = isOnboardingChat(chat) ? null : findReferralCode(incoming.text);
     if (code && (await this.referredFriend(chat, code))) return;
     if (await this.onboarding.takes(chat)) return this.onboarding.handle(chat, incoming);
@@ -62,6 +64,19 @@ export class StrangerFlowService {
         incoming.kind === 'other' ? { summary: incoming.text } : {},
       );
     return this.answer(chat, word);
+  }
+
+  /**
+   * A message WhatsApp could not pass on: "Sorry, we couldn't open that…" once per burst, then the
+   * onboarding question the chat is on (or the lead's person is told, or the hello).
+   */
+  private async unsupported(chat: Conversation, incoming: Incoming): Promise<void> {
+    if (!(await firstUnsupported(this.db, chat))) return;
+    await this.say(chat, { kind: 'text', body: CHAT_WORDS.unsupported });
+    if (await this.onboarding.takes(chat)) return this.onboarding.resume(chat);
+    if (await openLeadFor(this.db, chat.phone))
+      return this.people.tellSent(chat, incoming.waMessageId, incoming.text);
+    return this.answer(chat, '');
   }
 
   /**

@@ -99,6 +99,8 @@ const EN_CHAT = {
     night: 'Good night 🙏',
   },
   unknown: 'Sorry, we didn’t get that. Pick one below.',
+  /** A message WhatsApp could not deliver to us (type unsupported): said once per burst. */
+  unsupported: 'Sorry, we couldn’t open that. Please send it again as a photo, PDF or text.',
   /** Talk to Priya: who replies and when, said every time (principles §5). */
   talkReply: (name: string | null, when: ReplyTime) =>
     `${name ?? 'Our team'} will reply ${EN_WHEN[when]}.`,

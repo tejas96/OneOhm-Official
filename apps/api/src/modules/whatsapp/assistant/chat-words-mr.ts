@@ -101,6 +101,7 @@ export const MR_CHAT: Words<ChatWords> = {
     night: 'शुभ रात्री 🙏',
   },
   unknown: 'माफ करा, आम्हाला समजले नाही. खालीलपैकी एक निवडा.',
+  unsupported: 'माफ करा, आम्हाला ते उघडता आले नाही. कृपया ते फोटो, PDF किंवा मजकूर म्हणून पुन्हा पाठवा.',
   talkReply: replies,
   passed: (name, when) => `धन्यवाद. आम्ही हे ${toWhom(name)} कळवले आहे. ${replies(name, when)}`,
   passedUnknown: (name, when) =>

@@ -70,6 +70,8 @@ export interface Incoming {
   readonly location?: IncomingLocation | null;
   /** Set on a message the chat shows but nobody is alerted to (a reaction). */
   readonly quiet?: boolean;
+  /** Set on a message WhatsApp could not pass on (type `unsupported`): answered once per burst. */
+  readonly unsupported?: boolean;
   /** Set when the chat was opened from a Meta click-to-WhatsApp ad. */
   readonly referral?: IncomingReferral | null;
 }
@@ -208,6 +210,7 @@ function readMessage(message: RawMessage, names: Map<string, string>): Incoming 
     choiceId: null,
     ...(location ? { location } : {}),
     ...(message.type === 'reaction' ? { quiet: true } : {}),
+    ...(message.type === 'unsupported' ? { unsupported: true } : {}),
   };
 }
 

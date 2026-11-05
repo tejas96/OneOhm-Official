@@ -9,6 +9,7 @@ import { CHAT_WORDS, talkTitle } from './chat-words';
 import { sayWithTaps } from './closing-taps';
 import { HandOverService } from './hand-over';
 import type { SmallTalk } from './known-words';
+import { firstUnsupported } from './unsupported';
 
 const DAY_MS = 24 * 3600 * 1000;
 /** Words not understood count as "in a row" only within this long of the first. */
@@ -29,6 +30,13 @@ export class FreeTextService {
   /** "ok", "thanks", 👍, "good morning": a short reply; no buttons, no alert, no hand-over. */
   smallTalk(chat: Conversation, kind: SmallTalk): Promise<void> {
     return queueReply(this.db, chat, { kind: 'text', body: CHAT_WORDS.smallTalk[kind] });
+  }
+
+  /** A message WhatsApp could not pass on: one "Sorry, we couldn't open that" per burst. */
+  async unsupported(chat: Conversation): Promise<void> {
+    if (!(await firstUnsupported(this.db, chat))) return;
+    const talk = { id: 'go:talk', title: talkTitle(await this.people.answererName(chat)) };
+    return sayWithTaps(this.db, chat, CHAT_WORDS.unsupported, ['more', talk]);
   }
 
   /** Words we did not understand: "Sorry…" [Talk to {name}] [Project update] [More]. */

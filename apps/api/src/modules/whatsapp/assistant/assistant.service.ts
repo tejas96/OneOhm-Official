@@ -119,6 +119,7 @@ export class AssistantService {
     if (incoming.kind === 'text' && asksForPerson(incoming.text))
       return this.menus.choose(chat, customerId, 'talk');
     if (await this.survey.takeInput(chat, customerId, incoming)) return;
+    if (incoming.unsupported) return this.words.unsupported(chat);
     if (incoming.media) return this.media.receive(chat, customerId, incoming.media, incoming.text);
     if (incoming.form) return this.formReplies.receive(chat, customerId, incoming);
     if (incoming.location && (await this.sends.pin(chat, customerId, incoming.location)))

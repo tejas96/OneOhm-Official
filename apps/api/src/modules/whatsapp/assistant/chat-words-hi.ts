@@ -98,6 +98,7 @@ export const HI_CHAT: Words<ChatWords> = {
     night: 'शुभ रात्रि 🙏',
   },
   unknown: 'माफ़ कीजिए, हम समझ नहीं पाए। नीचे से एक चुनें।',
+  unsupported: 'माफ़ कीजिए, हम उसे खोल नहीं पाए। कृपया उसे फ़ोटो, PDF या टेक्स्ट के रूप में फिर से भेजें।',
   talkReply: replies,
   passed: (name, when) => `धन्यवाद। हमने यह ${toWhom(name)} बता दिया है। ${replies(name, when)}`,
   passedUnknown: (name, when) =>
