@@ -57,12 +57,15 @@ export async function startComplaint(
   carry?: Carry,
 ): Promise<void> {
   const homes = await activeHomes(db, customerId);
+  // One home: the questions start again (an unknown home is never trusted with the form's choices), but the
+  // photos and the note the form carried stay with the report.
   if (homes.length < 2)
-    return continueFrom(db, chat, {
+    return askWhat(db, chat, {
       stage: 'what',
       projectId: homes[0]?.id ?? null,
       topic,
-      ...carry,
+      ...(carry?.files ? { files: carry.files } : {}),
+      note: carry?.note,
     });
   await setStep(db, chat, 'await_home', {
     ...keepPending(chat.context),

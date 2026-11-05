@@ -142,7 +142,8 @@ describe('Customer clarity on WhatsApp', () => {
     await tap(phone, 'ob:language:en');
     await tap(phone, 'ob:name:yes');
     await tap(phone, 'ob:city:other');
-    expect(choices(await lastReply(phone))).toEqual(['ob:city:back', 'ob:person']);
+    // The typed-city question also offers the 📍 pin (redesign §16).
+    expect(choices(await lastReply(phone))).toEqual(['ob:city:pin', 'ob:city:back', 'ob:person']);
     await sendInbound(phone, { buttonReply: 'ob:city:back' });
     expect(choices(await lastReply(phone))).toContain('ob:city:Pune');
     expect((await chatOf(phone)).state).toBe('onboard:city');

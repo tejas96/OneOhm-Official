@@ -61,6 +61,17 @@ describe('Care: AMC chase, report form and the small gaps', () => {
       "UPDATE customer_actions SET payload = payload || jsonb_build_object('endsOn', $2::text) WHERE id = $1",
       [ask?.id, ends],
     );
+    // An offer made only now is not chased at once (phase 7): this one was made 6 days ago.
+    await runCare(NOON);
+    expect(
+      (await templatesFor(sale.customer.phone, 'amc_renewal_offer')).filter(
+        (m) => m.dedupe_key === `amc_renewal_reminder:${ask?.id}`,
+      ),
+    ).toHaveLength(0);
+    await rows('UPDATE customer_actions SET created_at = $2 WHERE id = $1', [
+      ask?.id,
+      new Date(NOON.getTime() - 6 * 86_400_000),
+    ]);
     await runCare(NOON);
     await runCare(NOON);
     const sent = (await templatesFor(sale.customer.phone, 'amc_renewal_offer')).filter(
