@@ -1,4 +1,11 @@
-import { customerActions, type DatabaseExecutor, homeNameOf, properties } from '@oneohm/database';
+import {
+  customerActions,
+  customers,
+  type DatabaseExecutor,
+  homeNameOf,
+  noticeCustomer,
+  properties,
+} from '@oneohm/database';
 import { consumerNumberProblem, normalizeConsumerNumber } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
@@ -6,11 +13,14 @@ import { recordAudit } from '../../common/audit';
 import { AppError } from '../../common/http/errors';
 import { assertConsumerNumberFree } from '../crm/site-rules';
 import { logAction } from '../documents/customer-action-log';
+import { languageOfPhone } from '../documents/document-request-messages';
 import { contextOfTask } from '../journey/journey-context';
 import type { JourneyTask } from '../journey/journey-store';
+import { chatOpenFor } from '../send-to-customer/send-context';
 import { deliver } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
-import { applyCredit, type CreditResult } from './survey-credit';
+import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
+import { applyCredit } from './survey-credit';
 import {
   homeOfProject,
   lastSurveyOf,
@@ -47,18 +57,52 @@ async function keepConsumerNumber(
   return null;
 }
 
-/** What the customer is told once the survey is approved, in their language. */
-function toldWords(credit: CreditResult, paise: number): string {
-  if (credit.kind === 'none' && paise > 0) return SURVEY_WORDS.approvedPending;
-  if (paise <= 0) return SURVEY_WORDS.approvedPlain;
-  return SURVEY_WORDS.approved(formatInr(paise));
+/** The language of a customer's chat. */
+export async function languageOfCustomer(tx: DatabaseExecutor, customerId: string) {
+  const [person] = await tx
+    .select({ phone: customers.phoneE164 })
+    .from(customers)
+    .where(eq(customers.id, customerId));
+  return languageOfPhone(tx, person?.phone ?? '');
+}
+
+/** What follows "Survey approved" for the customer: the discount and the payment it comes off, or only thanks. */
+export function clauseOf(
+  credit: Awaited<ReturnType<typeof applyCredit>>,
+  paise: number,
+  payment: string | null,
+): string {
+  const amount = formatInr(paise);
+  if (credit?.kind === 'applied')
+    return SURVEY_WORDS.clauseApplied(amount, payment ?? credit.label);
+  if (credit?.kind === 'pending') return SURVEY_WORDS.clausePending(amount);
+  return SURVEY_WORDS.clausePlain;
+}
+
+/** Tells the customer one thing: the app inbox always, the chat while its window is open and they did not say STOP. */
+async function tellPlain(tx: DatabaseExecutor, customerId: string, key: string, body: string) {
+  const [person] = await tx
+    .select({ phone: customers.phoneE164 })
+    .from(customers)
+    .where(eq(customers.id, customerId));
+  if (!person) return;
+  await noticeCustomer(tx, person.phone, 'action_cancelled', { what: body, note: body }, key);
+  if (await chatOpenFor(tx, person.phone))
+    await queueReply(
+      tx,
+      await conversationForPhone(tx, person.phone),
+      { kind: 'text', body },
+      null,
+      key,
+    );
 }
 
 /**
- * The survey step was completed (the engineer approved the survey, the same completion as a field
- * survey, redesign §7): the self survey waiting for its check is closed, the typed consumer number goes on
- * the home, the offered credit is taken off the next instalment (once: `applyCredit` finds an earlier one),
- * the customer is told, and the project log and audit say so. Nothing happens for a task with no sent survey.
+ * The survey step was completed (the engineer approved the survey: the same completion as a field survey, redesign §7).
+ * A survey the customer is still asked to send (an ask-again left open) is cancelled and they are told there is no
+ * need. A survey waiting for its check is closed, the typed consumer number goes on the home, the project earns its
+ * discount once (`applyCredit`: one per project, so a second survey never earns a second), the customer is told,
+ * and the log and audit say so. Nothing happens for a task with no sent survey.
  */
 export async function surveyOnComplete(
   tx: DatabaseExecutor,
@@ -68,6 +112,28 @@ export async function surveyOnComplete(
   const survey = await surveyTaskOf(tx, task.projectId);
   if (survey?.id !== task.id) return;
   const ask = await lastSurveyOf(tx, task.id);
+  if (ask?.status === 'open') {
+    const [cancelled] = await tx
+      .update(customerActions)
+      .set({ status: 'cancelled', cancelledAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(customerActions.id, ask.id), eq(customerActions.status, 'open')))
+      .returning();
+    if (!cancelled) return;
+    await logAction(
+      tx,
+      { projectId: task.projectId, leadId: null },
+      {
+        kind: 'customer_action',
+        message: 'Self survey cancelled: the engineer finished the survey step',
+        userId,
+        data: { customerActionId: ask.id },
+      },
+    );
+    await inLanguage(await languageOfCustomer(tx, ask.customerId), () =>
+      tellPlain(tx, ask.customerId, `self_survey_no_need:${ask.id}`, SURVEY_WORDS.noNeed),
+    );
+    return;
+  }
   if (ask?.status !== 'received') return;
   const now = new Date();
   const [closed] = await tx
@@ -84,33 +150,43 @@ export async function surveyOnComplete(
     userId,
   });
   const problem = await keepConsumerNumber(tx, task.projectId, payload.answers.consumer);
-  if (credit.kind === 'applied') await updateSurvey(tx, ask.id, () => ({ creditId: credit.id }));
+  if (credit?.kind === 'applied') await updateSurvey(tx, ask.id, () => ({ creditId: credit.id }));
   const home = await homeNameOf(tx, task.projectId);
-  const line = `Self survey approved${credit.kind === 'applied' ? `: ${formatInr(payload.offerPaise)} taken off ${credit.label}` : credit.kind === 'none' && payload.offerPaise > 0 ? ': no upcoming payment could take the discount, please give it by hand' : ''}${problem ? `. The consumer number was not saved (${problem})` : ''}`;
+  const said = {
+    applied: `: ${formatInr(payload.offerPaise)} taken off ${credit?.kind === 'applied' ? credit.label : ''}`,
+    pending: `: ${formatInr(payload.offerPaise)} discount is pending, finance was told`,
+    already: ': the project already had its survey discount, no second one',
+    none: '',
+  }[credit?.kind ?? 'none'];
   await logAction(
     tx,
     { projectId: task.projectId, leadId: null },
-    { kind: 'customer_action', message: line, userId, data: { customerActionId: ask.id } },
+    {
+      kind: 'customer_action',
+      message: `Self survey approved${said}${problem ? `. The consumer number was not saved (${problem})` : ''}`,
+      userId,
+      data: { customerActionId: ask.id },
+    },
   );
   await recordAudit(tx, userId, 'customer_action.self_survey_approved', 'customer_action', ask.id, {
-    credit: credit.kind,
+    credit: credit?.kind ?? 'none',
     amountPaise: payload.offerPaise,
   });
   const ctx = await contextOfTask(tx, task);
   if (!ctx) return;
   await inLanguage(ctx.language, async () => {
-    const words = toldWords(credit, payload.offerPaise);
+    const clause = clauseOf(credit?.kind === 'already' ? null : credit, payload.offerPaise, null);
     await deliver(
       tx,
       ctx,
       {
-        replies: [{ kind: 'text', body: words }],
+        replies: [{ kind: 'text', body: `${SURVEY_WORDS.approvedHead} ${clause}` }],
         template: {
           key: 'self_survey_approved',
           payload: {
             customer: titleCaseName(ctx.customerName.split(/\s+/)[0] ?? ''),
             home,
-            amount: words,
+            amount: clause,
           },
         },
       },
@@ -119,3 +195,5 @@ export async function surveyOnComplete(
     );
   });
 }
+
+export { tellPlain };

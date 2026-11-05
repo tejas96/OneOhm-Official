@@ -55,3 +55,37 @@ export function useSurveyChoices(taskId: string) {
     taskId,
   };
 }
+
+export const surveyCreditsKey = (projectId: string) => ['self-survey-credits', projectId];
+
+/** The project's self-survey discount and where it stands. */
+export function useSurveyCredits(projectId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: surveyCreditsKey(projectId),
+    queryFn: () => expectStatus(api.selfSurvey.surveyCredits({ query: { projectId } }), 200),
+    enabled,
+  });
+}
+
+/** Finance marks a pending discount as given another way. */
+export function useSettleCredit(projectId: string) {
+  const t = useTranslations('selfSurvey.credit');
+  const toast = useToast();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { readonly id: string; readonly reason: string }) =>
+      expectStatus(
+        api.selfSurvey.settleSurveyCredit({
+          params: { id: input.id },
+          body: { reason: input.reason },
+        }),
+        200,
+      ),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: surveyCreditsKey(projectId) });
+      toast({ tone: 'success', title: t('settled') });
+    },
+    onError: (error) =>
+      toast({ tone: 'error', title: t('failed'), description: describeError(error) }),
+  });
+}

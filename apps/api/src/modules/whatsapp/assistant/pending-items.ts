@@ -73,6 +73,10 @@ export async function pendingForCustomer(
     journeyAsks(db, customerId),
     surveyAsks(db, customerId),
   ]);
+  // The survey is optional: it is a line of its own only when nothing else needs the customer.
+  const others = [papers, due, problems, quotes, asks, upcoming, journey].some(
+    (list) => list.length > 0,
+  );
   return orderPending([
     ...papers.map((row) => ({
       kind: 'paper' as const,
@@ -102,7 +106,7 @@ export async function pendingForCustomer(
       return { kind: 'callback' as const, requestId: row.id };
     }),
     ...journey,
-    ...survey,
+    ...(others ? [] : survey),
     ...upcoming.map((row) => ({
       kind: 'visit' as const,
       requestId: row.id,

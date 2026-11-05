@@ -1,5 +1,6 @@
 import {
   customerActions,
+  customers,
   type DatabaseExecutor,
   projects,
   properties,
@@ -9,7 +10,7 @@ import { offerPaise, SURVEY_HOME_DAYS } from '@oneohm/domain';
 import { and, asc, eq, inArray, ne } from 'drizzle-orm';
 import { activeProjectsOf } from '../customer-portal/active-projects';
 import { openVisitForTask } from '../visits/visit-reads';
-import { payloadOf, surveyTaskOf } from './survey-record';
+import { offerBlocker, payloadOf, selfSurveyTaskOf } from './survey-record';
 
 /** The self survey as Home shows it: the offer, or "finish your survey" once started. */
 export interface SurveyAsk {
@@ -27,14 +28,20 @@ const homeName = (row: { label: string | null; city: string | null }) =>
 
 /**
  * The survey still waiting for the customer: an ask of ours that is open (a started one shows for 7 days),
- * or, with none, the offer for a project whose survey step is not done, has no visit booked and may message
- * the customer, while the offer is on in Settings (redesign §7). Never on a lead.
+ * or, with none, the offer for a project whose residential survey step is open, has no visit booked and may
+ * message the customer, while the offer is on in Settings (redesign §7). Never on a lead, never twice per project.
  */
 export async function surveyAsks(
   db: DatabaseExecutor,
   customerId: string,
   now = new Date(),
 ): Promise<SurveyAsk[]> {
+  // A customer who said STOP is offered nothing by us.
+  const [person] = await db
+    .select({ optIn: customers.whatsappOptIn })
+    .from(customers)
+    .where(eq(customers.id, customerId));
+  if (person?.optIn === false) return [];
   const setting = await readBusinessSetting(db, 'reminders');
   const projectRows = await db
     .select({
@@ -48,8 +55,8 @@ export async function surveyAsks(
     .orderBy(asc(projects.createdAt));
   const found: SurveyAsk[] = [];
   for (const project of projectRows) {
-    const task = await surveyTaskOf(db, project.id);
-    if (!task || task.status === 'completed' || !task.notifyCustomer) continue;
+    const task = await selfSurveyTaskOf(db, project.id);
+    if (!task?.notifyCustomer || (await offerBlocker(db, task))) continue;
     if (await openVisitForTask(db, task.id)) continue;
     const [ask] = await db
       .select()

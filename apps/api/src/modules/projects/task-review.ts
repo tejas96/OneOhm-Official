@@ -12,7 +12,6 @@ import { and, desc, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { forbidden } from '../../common/http/errors';
-import { surveyOnComplete } from '../self-survey/survey-approve';
 import { finishTask } from './task-completion';
 import { askReviewers } from './task-notices';
 
@@ -71,8 +70,6 @@ export async function sendForReview(
     userId: actor.userId,
   });
   await askReviewers(tx, task, actor, route.reviewers);
-  // The engineer's approval of a self survey stands now (redesign §7); the reviewer may still send it back.
-  await surveyOnComplete(tx, task, actor.userId);
   return false;
 }
 

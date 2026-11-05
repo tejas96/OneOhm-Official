@@ -8,7 +8,13 @@ import type { SendContext } from '../send-to-customer/send-context';
 import type { Deps } from '../send-to-customer/send-papers';
 import { openVisitForTask } from '../visits/visit-reads';
 import { offerBuilt } from './survey-messages';
-import { EMPTY_SURVEY, liveSurveyOf, surveyTarget, surveyTaskOf } from './survey-record';
+import {
+  EMPTY_SURVEY,
+  liveSurveyOf,
+  offerBlocker,
+  selfSurveyTaskOf,
+  surveyTarget,
+} from './survey-record';
 
 type Make = (
   key: string,
@@ -29,12 +35,12 @@ export async function surveyOfferCompose(
   id: string,
 ): Promise<Composed> {
   const task = await taskFor(deps.db, request.taskId);
-  const survey = task && (await surveyTaskOf(deps.db, task.projectId));
-  if (!task || survey?.id !== task.id || task.projectId !== ctx.projectId)
+  if (!task || task.projectId !== ctx.projectId)
     throw invalid('Choose the survey step of this project.');
   if (!task.notifyCustomer)
     throw invalid('This step is not set to message customers (Settings → Task templates).');
-  if (task.status === 'completed') throw conflict('The survey is already done.', 'survey_done');
+  const blocked = await offerBlocker(deps.db, task);
+  if (blocked) throw conflict(blocked, 'survey_not_offerable');
   const setting = await readBusinessSetting(deps.db, 'reminders');
   const paise = offerPaise(setting);
   if (paise <= 0) throw conflict('The self survey offer is switched off in Settings.', 'offer_off');
@@ -62,9 +68,10 @@ export async function surveyOffers(deps: Deps, ctx: SendContext, make: Make): Pr
   const task = ctx.taskId
     ? await taskFor(deps.db, ctx.taskId)
     : ctx.projectId
-      ? await surveyTaskOf(deps.db, ctx.projectId)
+      ? await selfSurveyTaskOf(deps.db, ctx.projectId)
       : null;
-  if (!task || (await liveSurveyOf(deps.db, task.id))) return [];
+  if (!task || (await offerBlocker(deps.db, task)) || (await liveSurveyOf(deps.db, task.id)))
+    return [];
   const offer = await make(
     `survey:${task.id}`,
     'Offer a self site survey with a discount',

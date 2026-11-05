@@ -9,6 +9,7 @@ import {
 } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
 import { and, desc, eq } from 'drizzle-orm';
+import { applyPendingCredit } from '../self-survey/survey-credit';
 
 /**
  * A survey revision the customer accepted (Flow A step 6): the project moves to it and
@@ -92,5 +93,7 @@ export async function adjustFinalPayment(
       subject: { type: 'project', id: project.id, projectId: project.id },
       dedupeKey: `schedule_adjust:${quotationId}`,
     });
+  // A payment that is upcoming with room can now take a self-survey discount that had nowhere to go.
+  await applyPendingCredit(tx, project.id, null);
   return { fits, last };
 }

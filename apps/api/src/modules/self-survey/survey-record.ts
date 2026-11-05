@@ -1,17 +1,19 @@
 import {
   customerActions,
   type DatabaseExecutor,
+  milestoneCredits,
   projects,
   projectTasks,
   properties,
 } from '@oneohm/database';
 import {
+  SELF_SURVEY_TASK_KEY,
   SURVEY_FACT_KEYS,
   type SurveyAnswers,
   type SurveyItem,
   type SurveyPhoto,
 } from '@oneohm/domain';
-import { and, arrayOverlaps, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, arrayOverlaps, asc, desc, eq, inArray, ne } from 'drizzle-orm';
 
 export type SurveyAction = typeof customerActions.$inferSelect;
 
@@ -27,6 +29,10 @@ export interface SurveyPayload {
   /** The chat is waiting for this item (a photo or typed words). */
   readonly awaiting: SurveyItem | null;
   readonly startedAt: string | null;
+  /** The engineer last asked for items again: the 7 days and the reminder count from here (or the start). */
+  readonly askedAgainAt: string | null;
+  /** Wrong consumer numbers typed in a row: one re-prompt, then the words are treated as ordinary chat. */
+  readonly badTries: number;
   readonly sentAt: string | null;
   /** The credit this approval gave (milestone_credits id). */
   readonly creditId: string | null;
@@ -38,6 +44,8 @@ export const EMPTY_SURVEY: Omit<SurveyPayload, 'target' | 'offerPaise'> = {
   askAgain: [],
   awaiting: null,
   startedAt: null,
+  askedAgainAt: null,
+  badTries: 0,
   sentAt: null,
   creditId: null,
 };
@@ -152,4 +160,56 @@ export async function homeOfProject(db: DatabaseExecutor, projectId: string) {
     .innerJoin(properties, eq(properties.id, projects.propertyId))
     .where(eq(projects.id, projectId));
   return row ?? null;
+}
+
+/**
+ * Why this survey step cannot be offered a self survey now, or null: only the residential rooftop survey takes
+ * one, not while it waits for review or is done, and a project earns the discount once (a closed survey or a
+ * live credit ends the offer).
+ */
+export async function offerBlocker(
+  db: DatabaseExecutor,
+  task: Pick<typeof projectTasks.$inferSelect, 'id' | 'projectId' | 'templateKey' | 'status'>,
+): Promise<string | null> {
+  if (task.templateKey !== SELF_SURVEY_TASK_KEY)
+    return 'The self survey is for the residential rooftop survey only.';
+  if (task.status === 'completed') return 'The survey is already done.';
+  if (task.status === 'in_review') return 'The survey is waiting for its review.';
+  const [credit] = await db
+    .select({ id: milestoneCredits.id })
+    .from(milestoneCredits)
+    .where(
+      and(
+        eq(milestoneCredits.projectId, task.projectId),
+        eq(milestoneCredits.source, 'self_survey'),
+        ne(milestoneCredits.status, 'reversed'),
+      ),
+    )
+    .limit(1);
+  const [closed] = await db
+    .select({ id: customerActions.id })
+    .from(customerActions)
+    .where(
+      and(
+        eq(customerActions.projectId, task.projectId),
+        eq(customerActions.type, 'self_survey'),
+        eq(customerActions.status, 'closed'),
+      ),
+    )
+    .limit(1);
+  return credit || closed ? 'This project already had its self survey.' : null;
+}
+
+/** The project's survey step that takes a self survey. */
+export async function selfSurveyTaskOf(db: DatabaseExecutor, projectId: string) {
+  const [task] = await db
+    .select()
+    .from(projectTasks)
+    .where(
+      and(
+        eq(projectTasks.projectId, projectId),
+        eq(projectTasks.templateKey, SELF_SURVEY_TASK_KEY),
+      ),
+    );
+  return task ?? null;
 }

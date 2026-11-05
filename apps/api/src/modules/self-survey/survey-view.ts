@@ -18,7 +18,7 @@ export async function viewOf(db: DatabaseExecutor, action: SurveyAction): Promis
   const payload = payloadOf(action);
   const facts = surveyFacts(payload.answers);
   const words: Record<string, string> = {
-    roof: facts.structure_type ?? '',
+    roof: facts.self_survey_roof ?? '',
     floors: facts.site_floors
       ? `${facts.site_floors}${facts.site_floors === '4' ? ' or more' : ''}`
       : '',

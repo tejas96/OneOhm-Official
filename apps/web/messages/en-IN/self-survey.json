@@ -31,6 +31,18 @@
       "size": "Roof size",
       "consumer": "Consumer number"
     },
-    "missing": "Still missing: {items}"
+    "missing": "Still missing: {items}",
+    "credit": {
+      "title": "Self-survey discount",
+      "pending": "{amount} is waiting: no payment that has not fallen due could take it. It is applied by itself if one can later. Finance was told.",
+      "applied": "{amount} taken off {payment}.",
+      "paid_out": "{amount} settled by hand: {note}",
+      "reversed": "{amount} was taken back.",
+      "settle": "Settle by hand",
+      "reason": "How was it given? (a cheque, cash, a lower final bill)",
+      "save": "Mark as given",
+      "settled": "Marked as given. It is in the log.",
+      "failed": "Could not save"
+    }
   }
 }

@@ -3,6 +3,7 @@ import {
   companyProfile,
   customers,
   type DatabaseExecutor,
+  milestoneCredits,
   paymentMilestones,
   products,
   projects,
@@ -12,11 +13,13 @@ import {
 } from '@oneohm/database';
 import {
   buildTaxInvoice,
+  discountShares,
   type GstState,
   gstStateByName,
   gstStateFromGstin,
   type InvoiceLineInput,
   isValidGstin,
+  ratesOf,
   scheduleDifference,
   stateLabel,
   supplyTypeFor,
@@ -63,6 +66,25 @@ async function codesByLineKey(
   );
 }
 
+/** The self-survey discount, GST inclusive, as negative invoice lines (one per GST rate): the invoice equals the payment schedule. */
+function surveyDiscountLines(
+  priced: Parameters<typeof ratesOf>[0],
+  discountPaise: number,
+  codeAt: (taxRateBp: number) => string | null,
+): InvoiceLineInput[] {
+  return discountShares(ratesOf(priced), discountPaise).map((share) => ({
+    description: 'Self-survey discount',
+    hsnSac: codeAt(share.taxRateBp),
+    quantity: 1,
+    unit: 'nos',
+    amountPaise: -share.taxablePaise,
+    contingencyPaise: 0,
+    discountPaise: 0,
+    taxRateBp: share.taxRateBp,
+    taxPaise: -share.taxPaise,
+  }));
+}
+
 export async function loadInvoiceSource(
   db: DatabaseExecutor,
   projectId: string,
@@ -88,22 +110,39 @@ export async function loadInvoiceSource(
     .from(paymentMilestones)
     .where(eq(paymentMilestones.projectId, projectId));
   const gstin = profile?.gstin ?? '';
+  const [credit] = await db
+    .select({ total: sql<string>`coalesce(sum(${milestoneCredits.amountPaise}), 0)` })
+    .from(milestoneCredits)
+    .where(and(eq(milestoneCredits.projectId, projectId), eq(milestoneCredits.status, 'applied')));
   return {
     ...row,
     company: profile ?? null,
     supplier: isValidGstin(gstin) ? gstStateFromGstin(gstin) : null,
     site: gstStateByName(row.property.state),
-    lines: priced.map((line) => ({
-      description: line.description,
-      hsnSac: codes.get(line.key) ?? null,
-      quantity: line.quantity,
-      unit: line.unit,
-      amountPaise: line.amountPaise,
-      contingencyPaise: line.contingencyPaise,
-      discountPaise: line.discountPaise,
-      taxRateBp: line.taxRateBp,
-      taxPaise: line.taxPaise,
-    })),
+    lines: priced
+      .map((line) => ({
+        description: line.description,
+        hsnSac: codes.get(line.key) ?? null,
+        quantity: line.quantity,
+        unit: line.unit,
+        amountPaise: line.amountPaise,
+        contingencyPaise: line.contingencyPaise,
+        discountPaise: line.discountPaise,
+        taxRateBp: line.taxRateBp,
+        taxPaise: line.taxPaise,
+      }))
+      .concat(
+        surveyDiscountLines(
+          priced,
+          Number(credit?.total ?? 0),
+          // The discount carries the code of what was sold at its rate.
+          (rate) =>
+            priced
+              .filter((line) => line.taxRateBp === rate)
+              .map((line) => codes.get(line.key) ?? null)
+              .find(Boolean) ?? null,
+        ),
+      ),
     scheduleTotalPaise: Number(schedule?.total ?? 0),
   };
 }

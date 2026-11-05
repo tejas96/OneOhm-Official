@@ -16,6 +16,7 @@ import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { journeyOnComplete, journeyOnReady } from '../journey/journey-auto';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { recordSubsidyClaim } from '../quotations/subsidy-claim';
+import { applyPendingCredit } from '../self-survey/survey-credit';
 import { openVisitForTask } from '../visits/visit-reads';
 import { finishVisit } from '../visits/visit-store';
 import { awardTaskPoints } from '../workforce/points';
@@ -72,6 +73,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
       .set({ status: 'operational', operationalAt: now, updatedAt: now })
       .where(eq(projects.id, task.projectId));
   } else if (task.onComplete) {
+    // A self-survey discount that had no payment to come off goes on the one about to fall due (still upcoming now).
+    await applyPendingCredit(tx, task.projectId, userId);
     // "Not due yet" is an empty due date: an advance may already have part-paid it.
     const due = await tx
       .update(paymentMilestones)
