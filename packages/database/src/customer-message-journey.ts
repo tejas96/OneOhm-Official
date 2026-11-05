@@ -11,6 +11,8 @@ export const JOURNEY_MESSAGES = [
   'site_ready_check',
   'installation_check',
   'handover_pack',
+  'signature_reminder',
+  'site_ready_reminder',
 ] as const;
 export type JourneyMessage = (typeof JOURNEY_MESSAGES)[number];
 
@@ -31,6 +33,14 @@ export const JOURNEY_EN: Readonly<Record<JourneyMessage, Words>> = {
     title: `Your ${p.count} handover papers`,
     body: `For ${p.home}. They are also in Documents.`,
   }),
+  signature_reminder: (p) => ({
+    title: `Reminder: please read your ${p.document}`,
+    body: `For ${p.home}. Open our WhatsApp chat and tell us if you agree.`,
+  }),
+  site_ready_reminder: (p) => ({
+    title: `We are waiting for the roof at ${p.home}`,
+    body: 'Tell us in our WhatsApp chat when it is ready for installation.',
+  }),
 };
 
 export const JOURNEY_MR: Readonly<Record<JourneyMessage, Words>> = {
@@ -50,6 +60,14 @@ export const JOURNEY_MR: Readonly<Record<JourneyMessage, Words>> = {
     title: `तुमची ${p.count} हस्तांतर कागदपत्रे`,
     body: `${p.home} साठी. ती कागदपत्रे विभागातही आहेत.`,
   }),
+  signature_reminder: (p) => ({
+    title: `आठवण: कृपया तुमचे ${p.document} वाचा`,
+    body: `${p.home} साठी. सहमत आहात का ते आमच्या WhatsApp चॅटमध्ये सांगा.`,
+  }),
+  site_ready_reminder: (p) => ({
+    title: `${p.home} येथील छप्पर तयार होण्याची वाट पाहत आहोत`,
+    body: 'बसवणीसाठी तयार झाल्यावर आमच्या WhatsApp चॅटमध्ये सांगा.',
+  }),
 };
 
 export const JOURNEY_HI: Readonly<Record<JourneyMessage, Words>> = {
@@ -68,5 +86,13 @@ export const JOURNEY_HI: Readonly<Record<JourneyMessage, Words>> = {
   handover_pack: (p) => ({
     title: `आपके ${p.count} हैंडओवर कागज़`,
     body: `${p.home} के लिए। वे दस्तावेज़ में भी हैं।`,
+  }),
+  signature_reminder: (p) => ({
+    title: `याद दिलाना: कृपया अपना ${p.document} पढ़ें`,
+    body: `${p.home} के लिए। सहमत हैं या नहीं, हमारे WhatsApp चैट में बताएँ।`,
+  }),
+  site_ready_reminder: (p) => ({
+    title: `हम ${p.home} की छत के तैयार होने का इंतज़ार कर रहे हैं`,
+    body: 'इंस्टॉलेशन के लिए तैयार होने पर हमारे WhatsApp चैट में बताएँ।',
   }),
 };

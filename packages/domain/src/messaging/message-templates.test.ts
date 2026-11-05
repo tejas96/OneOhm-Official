@@ -67,6 +67,8 @@ describe('follow-up text', () => {
       'site_ready_check',
       'installation_check',
       'handover_pack',
+      'signature_reminder',
+      'site_ready_reminder',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.
     expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([

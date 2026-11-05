@@ -575,6 +575,13 @@
       "when": 1793842650184,
       "tag": "0081_journey_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1793844375103,
+      "tag": "0082_journey_reminders",
+      "breakpoints": true
     }
   ]
 }

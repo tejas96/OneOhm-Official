@@ -117,6 +117,23 @@ export const SEND_MESSAGE_TEMPLATES = [
     preview:
       'Hello {{1}}, your {{2}} handover papers for {{3}} are ready. Tap Documents to receive them here.',
   },
+  {
+    key: 'signature_reminder',
+    audience: 'customer',
+    fields: ['customer', 'document', 'home'],
+    // The button runs the same step as the tap in the waiting message: the paper again, with its two buttons.
+    extras: { quickReplies: ['showPayload'] },
+    preview:
+      'Hello {{1}}, a reminder: please read your {{2}} for {{3}} and tell us if you agree. Tap the button to see it again.',
+  },
+  {
+    key: 'site_ready_reminder',
+    audience: 'customer',
+    fields: ['customer', 'home'],
+    extras: { quickReplies: ['readyNowPayload'] },
+    preview:
+      'Hello {{1}}, we are waiting for the roof at {{2}} to be ready for installation. Tap the button when it is ready.',
+  },
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

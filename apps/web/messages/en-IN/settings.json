@@ -744,7 +744,12 @@
         "callback_request": "Ask when to call back",
         "delay_notice": "Delay notice with the reason",
         "crew_contact": "Crew or technician contact",
-        "document_share": "A document sent by the team"
+        "document_share": "A document sent by the team",
+        "signature_request": "A paper to read and agree to",
+        "signature_reminder": "Reminder to agree to a paper",
+        "site_ready_check": "Is the roof ready? (before dispatch)",
+        "installation_check": "Is the installation finished?",
+        "handover_pack": "Handover pack"
       },
       "dialog": {
         "title": "Edit {name}",

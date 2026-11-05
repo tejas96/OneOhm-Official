@@ -101,6 +101,8 @@ describe('rights of the journey steps', () => {
       'site_ready_check',
       'installation_check',
       'handover_pack',
+      'signature_reminder',
+      'site_ready_reminder',
     ]) {
       const words = SEND_TEMPLATE_WORDS[key];
       expect(words, key).toBeDefined();

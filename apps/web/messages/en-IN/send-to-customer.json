@@ -16,7 +16,12 @@
       "send_receipt": "Send a receipt",
       "share_crew": "Share a contact",
       "delay_notice": "Delay notice",
-      "ask_callback": "Ask when to call back"
+      "ask_callback": "Ask when to call back",
+      "ask_visit": "Ask for a visit day",
+      "send_signature": "Send for signature",
+      "ask_site_ready": "Ask if the roof is ready",
+      "ask_installation_check": "Ask if the installation is finished",
+      "send_handover_pack": "Send the handover pack"
     },
     "customerGets": "The customer gets",
     "viaTemplate": "As an approved message",
