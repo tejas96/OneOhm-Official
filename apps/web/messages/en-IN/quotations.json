@@ -93,7 +93,8 @@
         "draft": "Drafts",
         "sent": "Sent",
         "accepted": "Accepted",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "no_project": "Accepted, no project yet"
       },
       "approvalFilter": "Approval · {count}",
       "approvalCallout": "{count, plural, one {# discount is} other {# discounts are}} waiting for approval before the quotation can go out.",

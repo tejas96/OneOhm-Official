@@ -102,6 +102,8 @@ export const commandCenterSchema = z.object({
     quotationsAccepted: z.number().int(),
   }),
   risks: z.array(riskItemSchema),
+  /** Every risk found; `risks` holds only the top few (Settings → Late and due-soon). */
+  risksTotal: z.number().int().nonnegative().optional(),
   decisions: z.array(
     z.object({ key: decisionKeySchema, count: z.number().int(), href: z.string() }),
   ),

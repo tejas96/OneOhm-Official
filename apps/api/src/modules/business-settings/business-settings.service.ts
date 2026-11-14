@@ -183,7 +183,7 @@ export class BusinessSettingsService {
     return this.leadAssignment();
   }
 
-    async onboarding(): Promise<OnboardingSettingsRecord> {
+  async onboarding(): Promise<OnboardingSettingsRecord> {
     const saved = await this.get('onboarding');
     return {
       ...saved,

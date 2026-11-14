@@ -15,6 +15,7 @@ import { formatKwp } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
+import { loadCalendar } from '../../common/calendar';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { assertVariantOffered } from '../business-settings/project-variant-check';
@@ -28,6 +29,7 @@ import { moveLeadPapers } from './project-lead-papers';
 import { loadLoanPartner, setUpProjectLoan } from './project-loan-setup';
 import { activateMilestones } from './project-milestones';
 import { createdMessage, initialFacts, nextCode, writeGeneratedTasks } from './project-setup';
+import { fillSiteDiscom } from './project-site-discom';
 import { tellProjectStarted } from './project-started-message';
 import { resolveProjectTeam, saveProjectTeam, type TeamChoice } from './project-team';
 import { checkManagerCandidate } from './project-team-rules';
@@ -139,6 +141,7 @@ export class ProjectCreationService {
         nameChange: input.nameChange,
       },
       input.startDate,
+      await loadCalendar(this.db),
     );
     const candidates = await loadAssigneeCandidates(this.db);
     const team = await resolveProjectTeam(this.db, input, generated, candidates, [
@@ -175,9 +178,9 @@ export class ProjectCreationService {
         })
         .returning({ id: projects.id });
       if (!project) throw new Error('Project insert returned nothing.');
+      await fillSiteDiscom(tx, actor.userId, property, discom.id, project.id);
       await moveLeadPapers(tx, quotation.leadId, project.id, property.id, customer.id);
       await openManagerTerm(tx, project.id, managerUserId, new Date());
-      // The customer's WhatsApp chat goes to the project's manager from now on.
       await moveCustomerChats(tx, customer.id, managerUserId, project.id);
 
       await saveProjectTeam(tx, project.id, team, actor.userId);
@@ -189,7 +192,7 @@ export class ProjectCreationService {
         team.pool,
       );
       await syncWorkOrders(tx, project.id, actor.userId);
-      // A name change is the DISCOM change request, linked here: one track (PRD 3.15).
+      // A name change is the DISCOM change request: one track (PRD 3.15).
       if (input.nameChange) {
         const site = { propertyId: property.id, discomId: property.discomId ?? discom.id };
         await raiseProjectNameChange(

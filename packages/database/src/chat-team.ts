@@ -135,7 +135,8 @@ export async function tellChatSendFailed(db: DatabaseExecutor, outboxId: string)
           kind: 'whatsapp_send_failed',
           title: 'A WhatsApp message was not sent',
           body: `A message could not be sent to ${who} on WhatsApp — please check the chat and reply to them.`,
-          key: `wa_send_failed:${outboxId}`,
+          // One alert per chat per hour: a burst of failed replies is one thing to check.
+          key: `wa_send_failed:${chat.id}:${new Date().toISOString().slice(0, 13)}`,
         },
   );
 }

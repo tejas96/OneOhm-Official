@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { api, expectStatus } from '@/lib/api/api-client';
+import { InfoButton } from './info-button';
 import { SectionHeading } from './section-heading';
 import { type TeamRow, type TeamView, teamRowKey, useTeamColumns } from './team-load-columns';
 
@@ -39,7 +40,7 @@ export function TeamLoadSection({ query }: { readonly query: CommandCenterQuery 
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <SectionHeading index="03" title={t('title')} />
+          <SectionHeading index="03" title={t('title')} info={<InfoButton card="team" />} />
           <p className="type-body-sm text-ink-muted">{t('description')}</p>
         </div>
         <SegmentedControl<TeamView>

@@ -75,7 +75,9 @@ const DRAW_PROBLEM: Readonly<Record<DrawProblem, (holding: CustodyHolding) => st
   not_positive: () => 'Enter a quantity above 0.',
   not_whole: (holding) => `Count ${holding.name} in whole units.`,
   more_than_held: (holding) =>
-    `Only ${fmt(holding.balance)} ${holding.unit} of ${holding.name} is with this contractor.`,
+    holding.balance <= 0
+      ? `No ${holding.name} is left with this contractor. All of it is already used or returned.`
+      : `Only ${fmt(holding.balance)} ${holding.unit} of ${holding.name} is with this contractor.`,
 };
 
 /**

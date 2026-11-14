@@ -23,6 +23,7 @@ import { bankAfterSave, bankFieldsOf, recordBankChange } from '../bank-payouts/b
 import { assertNameWithNumber } from '../banking/bank-input';
 import { payeeBankViews } from '../inventory/payee-bank-view';
 import { contractorPerformance } from './contractor-performance';
+import { assertKnownSkills } from './contractor-skills';
 import { contractorTdsBp } from './contractor-tds';
 import { workOrderSummaries } from './work-order-read';
 
@@ -127,6 +128,7 @@ export class ContractorsService {
 
   async create(actor: Actor, input: ContractorInput): Promise<ContractorDetail> {
     await this.assertNameFree(input.name, null);
+    await assertKnownSkills(this.db, input.skills);
     assertNameWithNumber(input.bankAccountNumber, input.bankAccountName);
     const row = await this.db.transaction(async (tx) => {
       const [created] = await tx
@@ -162,6 +164,7 @@ export class ContractorsService {
     patch: Patch<ContractorInput> & { active?: boolean | undefined },
   ): Promise<ContractorDetail> {
     if (patch.name) await this.assertNameFree(patch.name, id);
+    await assertKnownSkills(this.db, patch.skills);
     await this.db.transaction(async (tx) => {
       const [existing] = await tx
         .select()

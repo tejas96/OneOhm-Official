@@ -26,7 +26,7 @@ import { heldStep, setStep, stepOf, WAITING_STEPS } from './chat-step';
 import { CHAT_WORDS } from './chat-words';
 import { homeTapped, pickHome } from './complaint-start';
 import { isPaperTap } from './customer-papers';
-import { captureEntry } from './entry-capture';
+import { asOpener, captureEntry } from './entry-capture';
 import { readWhatTap, readWhereTap } from './files-wait';
 import { FreeTextService } from './free-text';
 import { tellHandedBack } from './hand-back';
@@ -79,13 +79,14 @@ export class AssistantService {
   ) {}
 
   /** Answers in the customer's own language (Marathi, Hindi or English). */
-  async handle(seen: Conversation, incoming: Incoming): Promise<void> {
+  async handle(seen: Conversation, received: Incoming): Promise<void> {
     // STOP and START come first, before onboarding, a person's hold or a quote tap (a stranger who
     // stopped and writes again hears once how to start again).
     if (
-      await inLanguage(await chatLanguage(this.db, seen), () => takeOptOut(this.db, seen, incoming))
+      await inLanguage(await chatLanguage(this.db, seen), () => takeOptOut(this.db, seen, received))
     )
       return;
+    const incoming = await asOpener(this.db, seen, received); // "Diwali26" = "Hi OneOhm DIWALI26"
     const chat = await captureEntry(this.db, this.intake, seen, incoming);
     // A quote button works while a person has the chat (accepting is the customer's act) and ends a waiting step (F8).
     const tap = readQuoteTap(incoming.choiceId);
@@ -197,8 +198,9 @@ export class AssistantService {
     return null;
   }
 
-  /** A held stranger has only its own Call me back / Talk to a person buttons (review F5). */
-  private stranger(chat: Conversation, incoming: Incoming, word: string) {
+  /** A held stranger has only its own Call me back / Talk to a person buttons (review F5); a lead's visit tap is its own. */
+  private async stranger(chat: Conversation, incoming: Incoming, word: string) {
+    if (await this.visitAnswers.tappedByLead(chat, readVisitTap(incoming.choiceId))) return;
     if (chat.state === 'human') return this.strangers.answer(chat, word);
     return this.strangers.route(chat, incoming, word);
   }

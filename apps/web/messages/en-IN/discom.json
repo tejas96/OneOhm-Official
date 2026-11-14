@@ -56,6 +56,11 @@
       "repricingTitle": "Priced for another property type",
       "repricing": "This quotation was priced as {pricedAs}, but the site is now {siteIs}. Revise the price before it is accepted."
     },
+    "projectRequests": {
+      "title": "Change requests",
+      "body": "DISCOM changes raised from this project.",
+      "steps": "{done} of {total} steps"
+    },
     "requests": {
       "title": "Change requests",
       "filter": "Show",

@@ -6,10 +6,16 @@ import {
   readBusinessSetting,
   type Transaction,
 } from '@oneohm/database';
-import { type AssigneeCandidate, type ChangeRequestStep, pickAssignee } from '@oneohm/domain';
+import {
+  type AssigneeCandidate,
+  type ChangeRequestStep,
+  onWorkingDay,
+  pickAssignee,
+} from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { loadCalendar } from '../../common/calendar';
 import { queueWhatsApp } from '../../common/outbox';
 import {
   type ChangeRequestTypeRow,
@@ -157,10 +163,12 @@ async function writeSteps(
 ): Promise<void> {
   const rules = await readBusinessSetting(tx, 'assignment');
   let people = [...candidates];
+  const cal = await loadCalendar(tx);
   let due = today;
   for (const [position, step] of steps.entries()) {
     const starts = due;
-    due = addDays(due, step.durationDays);
+    // A step never falls due on a weekly off or a holiday.
+    due = onWorkingDay(addDays(due, step.durationDays), cal);
     const assignee = pickAssignee(people, step.roleKey, { from: starts, to: due }, null, rules);
     if (assignee) {
       const given = new Date(Date.now() + position).toISOString();

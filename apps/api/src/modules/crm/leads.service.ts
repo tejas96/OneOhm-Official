@@ -12,7 +12,7 @@ import { resolveReferralCode } from '../referrals/referral-codes';
 import { cancelAllAsks } from '../send-to-customer/send-cancel-all';
 import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { autoMoveLead, logLead, logLeadChanges, tellLeadOwner } from './lead-history';
-import { alertNobodyFree, assertCanOwnLeads, ownerByRule } from './lead-owner';
+import { alertNobodyFree, assertCanOwnLeads, newLeadOwner, ownerByRule } from './lead-owner';
 import { presentLeads } from './lead-present';
 import { leadVisibility, needsFollowUp, readLeadDetail, unownedLeads } from './lead-read';
 import { pickStep, stepColumns } from './lead-steps-read';
@@ -95,9 +95,7 @@ export class LeadsService {
     }
     const reseller = actor.kind === 'reseller';
     const referrer = await this.referrer(input);
-    // A reseller's lead gets a OneOhm owner by rule; staff own what they add unless they pick.
-    const ruled = reseller ? await ownerByRule(this.db, { city: input.city }) : null;
-    const owner = reseller ? ruled?.userId : (input.ownerUserId ?? actor.userId);
+    const { ruled, owner } = await newLeadOwner(this.db, actor, input);
     if (!owner) throw conflict('Nobody can take new leads yet. Ask an admin to set up Sales.');
     if (input.ownerUserId) await assertCanOwnLeads(this.db, input.ownerUserId);
     const [created] = await this.db

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { alertVisitOwner, customerActions, visits } from '@oneohm/database';
+import { alertVisitOwner, customerActions, leads, visits } from '@oneohm/database';
 import { isPresenceKind, OPEN_VISIT_STATUSES } from '@oneohm/domain';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { answererName } from '../whatsapp/chat-owner';
@@ -45,18 +45,49 @@ export class VisitAnswersService {
     }
   }
 
-  private async visitOf(customerId: string, id: string): Promise<VisitRow | null> {
-    const [row] = await this.db
-      .select()
+  /**
+   * A lead's [Okay] / [Confirm] / [Change day] (no customer yet): acted on only when the visit is
+   * on a lead with this chat's number. False for any other tap, an unknown visit or someone
+   * else's, so the caller answers it as a stranger and nothing is touched.
+   */
+  async tappedByLead(chat: Conversation, tap: VisitTap | null): Promise<boolean> {
+    if (!tap || (tap.t !== 'confirm' && tap.t !== 'okay' && tap.t !== 'change')) return false;
+    if (!(await this.visitFor(chat, null, tap.visitId))) return false;
+    if (tap.t === 'change') await this.change(chat, null, tap.visitId, tap.day);
+    else await this.confirm(chat, null, tap.visitId, tap.t === 'okay', tap.day);
+    return true;
+  }
+
+  /**
+   * The visit by id when it is this person's: its customer is them, or it is on a lead that is
+   * them (the lead's number is the chat's, or the lead became this customer).
+   */
+  private async visitFor(
+    chat: Pick<Conversation, 'phone'>,
+    customerId: string | null,
+    id: string,
+  ): Promise<VisitRow | null> {
+    const [found] = await this.db
+      .select({ visit: visits, leadPhone: leads.phoneE164, leadCustomerId: leads.customerId })
       .from(visits)
-      .where(
-        and(
-          eq(visits.id, id),
-          eq(visits.customerId, customerId),
-          inArray(visits.status, [...OPEN_VISIT_STATUSES]),
-        ),
-      );
-    return row ?? null;
+      .leftJoin(leads, eq(leads.id, visits.leadId))
+      .where(eq(visits.id, id));
+    if (!found) return null;
+    const own = customerId !== null && found.visit.customerId === customerId;
+    const onLead =
+      found.leadPhone === chat.phone ||
+      (customerId !== null && found.leadCustomerId === customerId);
+    return own || onLead ? found.visit : null;
+  }
+
+  /** The visit when it is theirs and still open; else null (a closed one is "an earlier message"). */
+  private async visitOf(
+    chat: Pick<Conversation, 'phone'>,
+    customerId: string | null,
+    id: string,
+  ): Promise<VisitRow | null> {
+    const row = await this.visitFor(chat, customerId, id);
+    return row && (OPEN_VISIT_STATUSES as readonly string[]).includes(row.status) ? row : null;
   }
 
   /** [Confirm] / [I'll be there] / [Okay]: the customer's presence is logged. */
@@ -72,12 +103,12 @@ export class VisitAnswersService {
 
   private async confirm(
     chat: Conversation,
-    customerId: string,
+    customerId: string | null,
     visitId: string,
     okay: boolean,
     day?: string,
   ) {
-    const row = await this.visitOf(customerId, visitId);
+    const row = await this.visitOf(chat, customerId, visitId);
     if (!row) return this.picks.old(chat);
     if (day && day !== row.day) return this.moved(chat, row);
     const target = await targetOf(this.db, scopeOfRow(row));
@@ -93,8 +124,13 @@ export class VisitAnswersService {
   }
 
   /** [Change day]: a DISCOM date alerts the person who liaises; anything else goes back to the list. */
-  private async change(chat: Conversation, customerId: string, visitId: string, day?: string) {
-    const row = await this.visitOf(customerId, visitId);
+  private async change(
+    chat: Conversation,
+    customerId: string | null,
+    visitId: string,
+    day?: string,
+  ) {
+    const row = await this.visitOf(chat, customerId, visitId);
     if (!row) return this.picks.old(chat);
     if (day && day !== row.day) return this.moved(chat, row);
     const target = await targetOf(this.db, scopeOfRow(row));
@@ -122,13 +158,16 @@ export class VisitAnswersService {
       });
       return void (await sayWithTaps(this.db, chat, VISIT_WORDS.thanks.cannot(name), ['menu']));
     }
+    // A lead has no customer to hold a "pick a day" ask: its person is alerted and calls.
+    const asker = customerId ?? row.customerId;
+    if (!asker) return this.leadChange(chat, row, target, name, when);
     const action = await this.db.transaction(async (tx) => {
       await cancelVisit(tx, row, null, 'The customer asked for another day', target.title);
       const [fresh] = await tx
         .insert(customerActions)
         .values({
           type: 'visit_pick',
-          customerId,
+          customerId: asker,
           projectId: row.projectId,
           leadId: row.leadId,
           propertyId: row.propertyId,
@@ -151,5 +190,25 @@ export class VisitAnswersService {
       return fresh;
     });
     if (action) await this.picks.list(chat, action, target, true);
+  }
+
+  /** A lead cannot make the day: the visit is cancelled, its owner is alerted, the lead hears a call is coming. */
+  private async leadChange(
+    chat: Conversation,
+    row: VisitRow,
+    target: Awaited<ReturnType<typeof targetOf>>,
+    name: string,
+    when: string,
+  ) {
+    await this.db.transaction(async (tx) => {
+      await cancelVisit(tx, row, null, 'The customer asked for another day', target.title);
+      await alertVisitOwner(tx, row, {
+        kind: 'visit_change_day',
+        title: `${target.customerName} wants another day`,
+        body: `${target.title}: they cannot make ${when}. Call them to agree a new day.`,
+        key: `visit_change:${row.id}`,
+      });
+    });
+    await sayWithTaps(this.db, chat, VISIT_WORDS.thanks.cannot(name), ['menu']);
   }
 }

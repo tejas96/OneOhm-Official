@@ -17,9 +17,11 @@ export async function startProjectActions(db: Database): Promise<ActionItem[]> {
         '# accepted quotes without a project',
       ),
       detail: `Oldest: ${oldest.number} · ${oldest.customer}`,
-      action: 'Start project',
+      action: count === 1 ? 'Start project' : 'Start projects',
       party: 'internal',
-      href: '/quotations?filter=accepted',
+      // One quote: open it with the "Create project" form. Several: only those quotes.
+      href:
+        count === 1 ? `/quotations/${oldest.id}?start=project` : '/quotations?filter=no_project',
     },
   ];
 }

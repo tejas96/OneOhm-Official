@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 
 /** A side panel on the command centre: hairline paper, like the other cards. */
 export const TILE = 'rounded-xl border border-hairline bg-raised p-5';
@@ -56,9 +57,12 @@ export function WaitingTile({
   const total = PARTIES.reduce((sum, party) => sum + days[party], 0);
   return (
     <section id="waiting" className={cn(TILE, 'flex scroll-mt-24 flex-col gap-5', className)}>
-      <Link href={centerHref('/reports/delays', query)} className="self-start hover:underline">
-        <Overline>{t('waiting')}</Overline>
-      </Link>
+      <div className="flex items-center gap-1.5">
+        <InfoButton card="waiting" />
+        <Link href={centerHref('/reports/delays', query)} className="hover:underline">
+          <Overline>{t('waiting')}</Overline>
+        </Link>
+      </div>
       <div className="flex items-center gap-5">
         <DonutChart
           size={112}

@@ -23,6 +23,7 @@ import { loadCalendar } from '../../common/calendar';
 import { invalid } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { recountOpenLeave } from '../workforce/leave-recount';
 import { loadPolicy } from '../workforce/policy';
 import { workingTimeErrors } from './working-time-check';
 
@@ -91,6 +92,8 @@ export class WorkingTimeService {
           .insert(holidays)
           .values(holiday)
           .onConflictDoUpdate({ target: holidays.day, set: { name: holiday.name } });
+      // Leave still to come is counted again: a new holiday is never a day of leave.
+      await recountOpenLeave(tx, { weeklyOff: next.weeklyOff, holidays: days }, todayIn());
       await recordAudit(
         tx,
         actor.userId,

@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 import { TILE } from './waiting-tile';
 
 const STEPS = ['leads', 'surveys', 'quotations', 'accepted'] as const;
@@ -36,12 +37,15 @@ export function PipelineTile({
   const widest = Math.max(1, pipeline.leads);
   return (
     <section className={cn(TILE, 'flex flex-col gap-5', className)}>
-      <Link
-        href={centerHref('/reports/sales', query)}
-        className="self-start type-overline text-ink-faint uppercase hover:underline"
-      >
-        {t('pipeline')}
-      </Link>
+      <div className="flex items-center gap-1.5">
+        <InfoButton card="pipeline" />
+        <Link
+          href={centerHref('/reports/sales', query)}
+          className="type-overline text-ink-faint uppercase hover:underline"
+        >
+          {t('pipeline')}
+        </Link>
+      </div>
       <ol className="flex flex-col items-center gap-1.5">
         {STEPS.map((step, index) => (
           <motion.li

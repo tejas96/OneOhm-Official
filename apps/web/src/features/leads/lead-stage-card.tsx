@@ -7,9 +7,12 @@ import { CalendarClock, RotateCcw, XCircle } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useLeadSteps } from '@/features/settings/lead-steps/use-lead-steps';
+import { useVisits } from '@/features/visits/use-visits';
 import { ApiError } from '@/lib/api/api-error';
 import { STAGE_TONE } from './lead-labels';
 import { LostLeadDialog } from './lost-lead-dialog';
+import { needsSurveyBooking } from './survey-booking';
+import { SurveyBookingDialog } from './survey-booking-dialog';
 import { useUpdateLead } from './use-lead-mutations';
 
 /** Where the lead stands, how to move it on, and closing it as lost with a reason. */
@@ -24,11 +27,22 @@ export function LeadStageCard({
   const update = useUpdateLead(lead.id);
   const steps = useLeadSteps();
   const [losing, setLosing] = useState(false);
+  const [surveyStep, setSurveyStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const visits = useVisits({ leadId: lead.id }, canManage);
   const lost = lead.stage === 'lost';
 
-  const move = (value: string) => {
+  const move = async (value: string) => {
     setError(null);
+    const target = steps.data?.find((step) => step.key === value);
+    if (target?.stage === 'survey_scheduled' && lead.stage !== 'survey_scheduled') {
+      // A survey is a visit: ask for the day, unless one is already booked for this lead.
+      const known = visits.data ?? (await visits.refetch()).data;
+      if (needsSurveyBooking(lead, target.stage, known?.visits)) {
+        setSurveyStep(value);
+        return;
+      }
+    }
     update.mutate(value === 'won' ? { stage: 'won' } : { stepKey: value }, {
       onError: (caught) => setError(caught instanceof ApiError ? caught.message : String(caught)),
     });
@@ -105,6 +119,15 @@ export function LeadStageCard({
         <p role="alert" className="type-body-sm text-overdue">
           {error}
         </p>
+      )}
+      {canManage && (
+        <SurveyBookingDialog
+          lead={lead}
+          stepKey={surveyStep ?? ''}
+          data={visits.data}
+          open={surveyStep !== null}
+          onOpenChange={(open) => !open && setSurveyStep(null)}
+        />
       )}
       {canManage && <LostLeadDialog lead={lead} open={losing} onOpenChange={setLosing} />}
     </Card>

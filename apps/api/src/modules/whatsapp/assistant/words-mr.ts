@@ -139,7 +139,7 @@ export const MR: Words<AssistantWords> = {
     technicianVisit: (when) => `तंत्रज्ञ भेट: ${when}`,
   },
   CATEGORY_WORDS: {
-    inverter_error: 'इन्व्हर्टर',
+    inverter_error: 'इन्व्हर्टरमधील बिघाड',
     no_generation: 'वीज निर्मिती बंद',
     low_generation: 'कमी वीज निर्मिती',
     physical_damage: 'नुकसान',

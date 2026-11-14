@@ -4,7 +4,7 @@ import { isCareTap } from '../../care/care-taps';
 import { isJourneyTap } from '../../journey/journey-taps';
 import { isSurveyTap } from '../../self-survey/survey-taps';
 import { isSendTap } from '../../send-to-customer/send-taps';
-import { isVisitTap } from '../../visits/visit-taps';
+import { isLeadVisitTap, isVisitTap } from '../../visits/visit-taps';
 import type { Conversation } from '../chat-store';
 import { isFormTap } from '../forms/form-pick';
 import type { Incoming } from '../whatsapp-events';
@@ -37,7 +37,7 @@ export function assistantAnswersTap(
   const own = ['menu', 'start'].includes(incoming.choiceId);
   if (own || readQuoteTap(incoming.choiceId)) return true;
   const id = incoming.choiceId;
-  if (chat.customerId === null) return STRANGER_TAPS.has(id);
+  if (chat.customerId === null) return STRANGER_TAPS.has(id) || isLeadVisitTap(id);
   return (
     isChoiceTap(id) ||
     isPaperTap(id) ||

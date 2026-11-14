@@ -55,6 +55,7 @@ export * from './settings.schema';
 export * from './site-activity.schema';
 export * from './site-connection.schema';
 export * from './skill.schema';
+export * from './staff-calendar.schema';
 export * from './stage-rating.schema';
 export * from './state-support.schema';
 export * from './subsidy-rule.schema';

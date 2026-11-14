@@ -150,6 +150,13 @@
       "markLost": "Mark as lost",
       "reopen": "Reopen lead"
     },
+    "surveyDialog": {
+      "title": "Book the site survey",
+      "description": "Pick the day and time of the survey for {name}. The step changes once the visit is booked.",
+      "cancel": "Cancel",
+      "loading": "Loading free days…",
+      "bookedNotMoved": "The visit is booked, but the step could not be changed: {reason}"
+    },
     "customerCard": {
       "title": "Ready to quote?",
       "body": "Add the site and its electricity connection. The customer is matched by phone, so no duplicates.",

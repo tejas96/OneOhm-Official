@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { visitTaps } from './visit-messages';
-import { readVisitTap } from './visit-taps';
+import { isLeadVisitTap, readVisitTap } from './visit-taps';
 
 const id = '0b6f1c7e-7d3a-4f0e-9c1d-2a4b5c6d7e8f';
 
@@ -41,5 +41,14 @@ describe('visit taps', () => {
     expect(readVisitTap('pay:x')).toBeNull();
     expect(readVisitTap('vslot:bad')).toBeNull();
     expect(readVisitTap(null)).toBeNull();
+  });
+});
+
+describe("a lead's visit taps", () => {
+  it('are the booked buttons only', () => {
+    expect(isLeadVisitTap(`vok:${id}`)).toBe(true);
+    expect(isLeadVisitTap(`vchg:${id}:2026-11-06`)).toBe(true);
+    expect(isLeadVisitTap(`vask:${id}`)).toBe(false);
+    expect(isLeadVisitTap(null)).toBe(false);
   });
 });

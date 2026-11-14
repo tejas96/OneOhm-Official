@@ -9,7 +9,7 @@ export const startProjectNote = (number: string) => `Start project for ${number}
  * No project was set up from this quotation number yet: no project is on any revision of
  * it, and none waits on it as its survey revision.
  */
-const noProject: SQL = sql`not exists (
+export const noProject: SQL = sql`not exists (
   select 1 from projects p join quotations pq on pq.id = p.quotation_id
    where pq.number = ${quotations.number} or p.revision_quotation_id = ${quotations.id})`;
 

@@ -57,3 +57,9 @@ export function readVisitTap(id: string | null | undefined): VisitTap | null {
 }
 
 export const isVisitTap = (id: string) => readVisitTap(id) !== null;
+
+/** The taps a lead (no customer yet) can make: the buttons under "Booked" for its site survey. */
+export const isLeadVisitTap = (id: string | null | undefined): boolean => {
+  const tap = readVisitTap(id);
+  return tap !== null && (tap.t === 'confirm' || tap.t === 'okay' || tap.t === 'change');
+};

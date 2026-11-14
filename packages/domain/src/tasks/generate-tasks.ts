@@ -1,4 +1,5 @@
 import { addDays } from '@oneohm/shared';
+import { type BusinessCalendar, onWorkingDay } from '../calendar/business-calendar';
 import { type AssignmentRules, DEFAULT_ASSIGNMENT_RULES } from '../settings/assignment-rules';
 import { appliesTo, type ProjectFacts, type TaskTemplate } from './task-template';
 
@@ -11,13 +12,16 @@ export interface GeneratedTask extends TaskTemplate {
  * The project's task list from the library: only the tasks whose conditions hold,
  * dependencies on tasks that do not apply dropped, and dates that follow the chain
  * (a task starts after everything it waits for). Library order must list a task
- * after the tasks it depends on.
+ * after the tasks it depends on. With the business calendar, a start or due date that
+ * falls on a weekly off or a holiday moves to the next working day.
  */
 export function generateTasks(
   library: readonly TaskTemplate[],
   facts: ProjectFacts,
   projectStart: string,
+  calendar?: BusinessCalendar,
 ): readonly GeneratedTask[] {
+  const working = (day: string) => (calendar ? onWorkingDay(day, calendar) : day);
   const included = library.filter((template) => appliesTo(template.when, facts));
   const keys = new Set(included.map((template) => template.key));
   const due = new Map<string, string>();
@@ -30,7 +34,8 @@ export function generateTasks(
         throw new Error(`Task "${template.key}" depends on "${key}", listed after it.`);
       if (dependencyDue > startDate) startDate = dependencyDue;
     }
-    const dueDate = addDays(startDate, template.durationDays);
+    startDate = working(startDate);
+    const dueDate = working(addDays(startDate, template.durationDays));
     due.set(template.key, dueDate);
     return { ...template, dependsOn, startDate, dueDate };
   });

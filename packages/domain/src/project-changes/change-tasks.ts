@@ -1,4 +1,5 @@
 import { addDays, daysBetween } from '@oneohm/shared';
+import { type BusinessCalendar, onWorkingDay } from '../calendar/business-calendar';
 import {
   type DateShift,
   type PlannedTask,
@@ -54,6 +55,8 @@ export interface TaskPlanInput {
   readonly tasks: readonly ExistingTask[];
   readonly links: readonly TaskLink[];
   readonly today: string;
+  /** With it, new and moved dates never land on a weekly off or a holiday. */
+  readonly calendar?: BusinessCalendar;
 }
 
 const NEW = 'new:';
@@ -92,11 +95,14 @@ function additions(input: TaskPlanInput, staying: readonly ExistingTask[]): Task
     if (have.has(template.key)) continue;
     if (appliesTo(template.when, input.before) || !appliesTo(template.when, input.after)) continue;
     const dependsOn = template.dependsOn.filter((key) => ends.has(key));
-    const startDate = dependsOn.reduce(
-      (latest, key) => ((ends.get(key) ?? '') > latest ? (ends.get(key) as string) : latest),
-      input.today,
+    const working = (day: string) => (input.calendar ? onWorkingDay(day, input.calendar) : day);
+    const startDate = working(
+      dependsOn.reduce(
+        (latest, key) => ((ends.get(key) ?? '') > latest ? (ends.get(key) as string) : latest),
+        input.today,
+      ),
     );
-    const dueDate = addDays(startDate, template.durationDays);
+    const dueDate = working(addDays(startDate, template.durationDays));
     ends.set(template.key, dueDate);
     const dependentIds = staying
       .filter((task) => task.status !== 'completed')
@@ -134,6 +140,7 @@ function shiftsFor(
   staying: readonly ExistingTask[],
   links: readonly TaskLink[],
   added: readonly TaskAddition[],
+  calendar?: BusinessCalendar,
 ) {
   const asPlanned = (task: TaskAddition): PlannedTask => ({
     id: `${NEW}${task.key}`,
@@ -146,7 +153,9 @@ function shiftsFor(
   for (const task of added) {
     const id = `${NEW}${task.key}`;
     const endsOn = current.find((row) => row.id === id)?.dueDate ?? task.dueDate;
-    const moves = new Map(shiftDependents(current, allLinks, { id, endsOn }).map((m) => [m.id, m]));
+    const moves = new Map(
+      shiftDependents(current, allLinks, { id, endsOn }, calendar).map((m) => [m.id, m]),
+    );
     current = current.map((row) => {
       const move = moves.get(row.id);
       return move ? { ...row, startDate: move.startDate, dueDate: move.dueDate } : row;
@@ -178,7 +187,12 @@ export function planTaskChange(input: TaskPlanInput): TaskPlan {
   const links = input.links.filter(
     (link) => !gone.has(link.taskId) && !gone.has(link.dependsOnTaskId),
   );
-  const { shifts, planned, added } = shiftsFor(staying, links, additions(input, staying));
+  const { shifts, planned, added } = shiftsFor(
+    staying,
+    links,
+    additions(input, staying),
+    input.calendar,
+  );
   const finishBefore = lastEnd(input.tasks);
   const finishAfter = lastEnd(planned);
   const finishMoveDays = finishBefore && finishAfter ? daysBetween(finishBefore, finishAfter) : 0;

@@ -1,5 +1,6 @@
 import { cn } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import { PanelGreeting } from './panel-greeting';
 import { SkyArt } from './sky-art';
 
 const LEGEND = ['array', 'inverter', 'meter', 'grid'] as const;
@@ -31,6 +32,7 @@ export function BrandPanel({ className }: { readonly className?: string }) {
       <SkyArt onPanel className="mx-auto hidden w-full max-w-[34rem] md:block" />
 
       <div className="flex flex-col gap-6">
+        <PanelGreeting />
         <div className="flex flex-col gap-3">
           <h1 className="type-display-lg text-on-panel md:type-display-xl">
             {t('headlineOne')}

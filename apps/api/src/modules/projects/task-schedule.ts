@@ -9,6 +9,7 @@ import {
 import { shiftDependents, slipDays } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, lt } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 
 interface ChangedTask {
   readonly id: string;
@@ -57,7 +58,7 @@ export async function moveLaterTasks(
           : row.dueDate
         : null,
   }));
-  const shifts = shiftDependents(planned, links, { id: task.id, endsOn });
+  const shifts = shiftDependents(planned, links, { id: task.id, endsOn }, await loadCalendar(tx));
   const now = new Date();
   for (const shift of shifts) {
     await tx

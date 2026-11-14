@@ -18,6 +18,7 @@ import {
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, inArray, isNull, max, notInArray, sql } from 'drizzle-orm';
+import type { Actor } from '../../common/auth/actor';
 import { invalid } from '../../common/http/errors';
 import { environmentOnce } from '../../config/environment-once';
 
@@ -43,6 +44,25 @@ function holders(db: DatabaseExecutor): Promise<Holder[]> {
     )
     .where(eq(users.status, 'active'))
     .orderBy(asc(users.fullName));
+}
+
+/** Active people whose staff role can make quotations. */
+async function quoterIds(db: DatabaseExecutor): Promise<Set<string>> {
+  const rows = await db
+    .select({ userId: userRoles.userId })
+    .from(userRoles)
+    .innerJoin(
+      roles,
+      and(eq(roles.id, userRoles.roleId), isNull(roles.archivedAt), eq(roles.kind, 'staff')),
+    )
+    .innerJoin(
+      roleCapabilities,
+      and(
+        eq(roleCapabilities.roleId, roles.id),
+        eq(roleCapabilities.capability, 'quotations.create'),
+      ),
+    );
+  return new Set(rows.map((row) => row.userId));
 }
 
 /** Who is away today in the business time zone (approved leave, or marked on leave). */
@@ -105,7 +125,12 @@ export async function ownerByRule(
   options: { readonly city?: string | null } = {},
 ): Promise<RuledOwner | null> {
   const all = await holders(db);
-  const sellers = all.filter((holder) => !holder.system);
+  const staff = all.filter((holder) => !holder.system);
+  // By rule a lead goes to someone who can quote it (Sales), not to Marketing who only
+  // brings leads in; when nobody can quote, anyone who works on leads.
+  const quoting = await quoterIds(db);
+  const quoters = staff.filter((holder) => quoting.has(holder.userId));
+  const sellers = quoters.length > 0 ? quoters : staff;
   const away = await awayToday(db);
   const seller = pickLeadOwner(
     await withLoads(db, sellers, away),
@@ -173,4 +198,20 @@ export async function cityOwnerStanding(
           .from(users)
           .where(inArray(users.id, [...ids]));
   return { canOwn, names: new Map(named.map((row) => [row.id, row.name])) };
+}
+
+/**
+ * Who owns a new lead: a reseller's gets a OneOhm owner by rule, and so does one added by
+ * someone who cannot quote (Marketing) without picking an owner; Sales own what they add.
+ */
+export async function newLeadOwner(
+  db: DatabaseExecutor,
+  actor: Pick<Actor, 'kind' | 'capabilities' | 'userId'>,
+  input: { readonly ownerUserId?: string | null | undefined; readonly city: string },
+): Promise<{ ruled: RuledOwner | null; owner: string | undefined }> {
+  const byRule =
+    actor.kind === 'reseller' ||
+    (!input.ownerUserId && !actor.capabilities.has('quotations.create'));
+  const ruled = byRule ? await ownerByRule(db, { city: input.city }) : null;
+  return { ruled, owner: byRule ? ruled?.userId : (input.ownerUserId ?? actor.userId) };
 }

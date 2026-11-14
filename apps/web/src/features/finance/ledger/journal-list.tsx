@@ -61,7 +61,7 @@ export function JournalList() {
                       year: 'numeric',
                     })}
                     <Badge variant="soft" className="font-sans">
-                      {sourceT(entry.sourceType)}
+                      {sourceT.has(entry.sourceType) ? sourceT(entry.sourceType) : sourceT('other')}
                     </Badge>
                     {entry.reversedByNumber && (
                       <Badge variant="outline" className="font-sans">

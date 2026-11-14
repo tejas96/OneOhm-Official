@@ -73,6 +73,7 @@ export const QUOTATION_LIST_FILTERS = [
   'accepted',
   'rejected',
   'approval',
+  'no_project',
 ] as const;
 export type QuotationListFilter = (typeof QUOTATION_LIST_FILTERS)[number];
 

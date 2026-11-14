@@ -14,6 +14,7 @@ import { leadVisibility } from '../crm/lead-read';
 import { tellBooked } from './visit-booked';
 import type { VisitRow } from './visit-effects';
 import { openVisitFor, scopeOfRow, targetOf, taskVisitKind, type VisitTarget } from './visit-reads';
+import { assertReadyForDate, unfinishedBefore } from './visit-ready';
 import { cancelVisit, finishVisit, saveVisit } from './visit-store';
 import { tellCancelled, visitContext } from './visit-tell';
 import { daysFor, timesFor } from './visit-times';
@@ -81,6 +82,8 @@ export class VisitsService {
       throw invalid('We do not visit on a day off or a holiday.', {
         day: 'Pick a working day (Settings → Working time & holidays).',
       });
+    if (target.taskId)
+      assertReadyForDate(target.kind, await unfinishedBefore(this.db, target.taskId));
     const existing = await openVisitFor(this.db, target);
     return this.db.transaction(async (tx) => {
       const { row, moved } = await saveVisit(

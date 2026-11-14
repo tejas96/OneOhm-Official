@@ -67,6 +67,11 @@ export function nextWorkingDay(day: string, cal: BusinessCalendar = DEFAULT_CALE
   return addDays(day, 1);
 }
 
+/** `day` itself when it is a working day, else the next one (a holiday Friday → Saturday). */
+export function onWorkingDay(day: string, cal: BusinessCalendar = DEFAULT_CALENDAR): string {
+  return isWorkingDay(day, cal) ? day : nextWorkingDay(day, cal);
+}
+
 /** The working day before `day` (Monday → Saturday); `day - 1` if no day ever works. */
 export function previousWorkingDay(day: string, cal: BusinessCalendar = DEFAULT_CALENDAR): string {
   for (let step = 1; step <= SEARCH_DAYS; step += 1) {

@@ -5,6 +5,7 @@ import { cn } from '@oneohm/design-system/web';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 
 const STATES = [
   { key: 'onTrack', dot: 'bg-on-track-solid', health: 'onTrack' },
@@ -30,40 +31,46 @@ export function ProjectStates({
   const cell =
     'flex min-w-0 flex-col gap-1 rounded-lg px-4 py-3 transition-colors hover:bg-surface focus-visible:bg-surface';
   return (
-    <nav
-      aria-label={t('label')}
-      className="grid grid-cols-2 gap-1 rounded-xl border border-hairline bg-raised p-1.5 sm:grid-cols-3 xl:grid-cols-6"
-    >
-      {STATES.map((state) => (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center gap-1.5">
+        <InfoButton card="states" />
+        <h2 className="type-title-md text-ink">{t('title')}</h2>
+      </div>
+      <nav
+        aria-label={t('label')}
+        className="grid grid-cols-2 gap-1 rounded-xl border border-hairline bg-raised p-1.5 sm:grid-cols-3 xl:grid-cols-6"
+      >
+        {STATES.map((state) => (
+          <Link
+            key={state.key}
+            href={centerHref('/projects', query, { health: state.health })}
+            className={cell}
+          >
+            <span className="flex items-center gap-2 type-body-sm text-ink-muted">
+              <span aria-hidden className={cn('size-2 rounded-full', state.dot)} />
+              {t(state.key)}
+            </span>
+            <span className="type-display-md text-ink tabular-nums">{states[state.key]}</span>
+          </Link>
+        ))}
         <Link
-          key={state.key}
-          href={centerHref('/projects', query, { health: state.health })}
+          href={centerHref('/projects', query, { status: 'completed', since: data.range.start })}
           className={cell}
         >
           <span className="flex items-center gap-2 type-body-sm text-ink-muted">
-            <span aria-hidden className={cn('size-2 rounded-full', state.dot)} />
-            {t(state.key)}
+            <span aria-hidden className="size-2 rounded-full bg-done-solid" />
+            {t('completed')}
           </span>
-          <span className="type-display-md text-ink tabular-nums">{states[state.key]}</span>
+          <span className="flex items-baseline gap-2">
+            <span className="type-display-md text-ink tabular-nums">{states.completed}</span>
+            {states.completedUnpaid > 0 && (
+              <span className="truncate type-label text-overdue">
+                {t('unpaid', { count: states.completedUnpaid })}
+              </span>
+            )}
+          </span>
         </Link>
-      ))}
-      <Link
-        href={centerHref('/projects', query, { status: 'completed', since: data.range.start })}
-        className={cell}
-      >
-        <span className="flex items-center gap-2 type-body-sm text-ink-muted">
-          <span aria-hidden className="size-2 rounded-full bg-done-solid" />
-          {t('completed')}
-        </span>
-        <span className="flex items-baseline gap-2">
-          <span className="type-display-md text-ink tabular-nums">{states.completed}</span>
-          {states.completedUnpaid > 0 && (
-            <span className="truncate type-label text-overdue">
-              {t('unpaid', { count: states.completedUnpaid })}
-            </span>
-          )}
-        </span>
-      </Link>
-    </nav>
+      </nav>
+    </section>
   );
 }

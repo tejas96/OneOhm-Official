@@ -2,7 +2,7 @@
 
 import type { LeaveImpact } from '@oneohm/api-contracts';
 import { Badge, Skeleton } from '@oneohm/design-system/web';
-import { CalendarSearch, TriangleAlert } from 'lucide-react';
+import { CalendarHeart, CalendarSearch, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { FormError } from '@/components/form-error';
 import { describeError } from '@/lib/api/api-error';
@@ -53,6 +53,19 @@ export function LeaveImpactPanel({
             : t('left', { count: daysOf(impact.balanceAfterHalfDays), kind: kindLabel })}
         </p>
       </div>
+      {impact.halfDays === 0 && (
+        <p className="type-body-sm text-at-risk">{t('noWorkingDaysHint')}</p>
+      )}
+      {impact.holidays.length > 0 && (
+        <p className="flex items-start gap-2 rounded-md bg-accent-soft px-3 py-2.5 type-body-sm text-ink">
+          <CalendarHeart aria-hidden className="mt-0.5 size-4 shrink-0 text-accent" />
+          {t('holidays', {
+            names: impact.holidays
+              .map((holiday) => `${holiday.name} (${format.day(holiday.day)})`)
+              .join(', '),
+          })}
+        </p>
+      )}
       {impact.overlapsExisting && (
         <p className="flex items-start gap-2 rounded-md bg-at-risk-tint px-3 py-2.5 type-body-sm text-ink">
           <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />

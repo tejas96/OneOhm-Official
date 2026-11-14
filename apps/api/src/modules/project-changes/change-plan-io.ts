@@ -17,6 +17,7 @@ import {
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 import { syncWorkOrders } from '../contractors/work-order-sync';
 import { writeGeneratedTasks } from '../projects/project-setup';
 import { loadAssigneeCandidates, loadTaskLibrary } from '../projects/task-library.loader';
@@ -84,6 +85,7 @@ export async function loadPlanInput(
       rows.map((row) => row.id),
     ),
     today: todayIn(),
+    calendar: await loadCalendar(db),
   };
 }
 

@@ -2,20 +2,25 @@ import { addDays, daysBetween } from '@oneohm/shared';
 
 /**
  * Leave counted in half days, so a half day is exact: the working days from `from` to
- * `to` (inclusive), skipping weekly offs. A one-day half-day request counts as one half.
+ * `to` (inclusive), skipping weekly offs and the business's holidays (Settings → Working
+ * time & holidays). A one-day half-day request counts as one half.
  */
 export function leaveHalfDays(input: {
   readonly from: string;
   readonly to: string;
   readonly halfDay: boolean;
   readonly weeklyOff: readonly number[];
+  /** Holiday dates (YYYY-MM-DD); a holiday is never a day of leave. */
+  readonly holidays?: readonly string[];
 }): number {
+  const holidays = new Set(input.holidays ?? []);
   const span = daysBetween(input.from, input.to);
   if (span < 0) return 0;
   let working = 0;
   for (let offset = 0; offset <= span; offset += 1) {
-    const day = new Date(`${addDays(input.from, offset)}T00:00:00Z`).getUTCDay();
-    if (!input.weeklyOff.includes(day)) working += 1;
+    const date = addDays(input.from, offset);
+    const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+    if (!input.weeklyOff.includes(day) && !holidays.has(date)) working += 1;
   }
   if (input.halfDay && span === 0 && working === 1) return 1;
   return working * 2;

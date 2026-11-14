@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 import { leaveClashesSchema } from './leave-impact.schema';
+import { staffCalendarSchema } from './staff-calendar.schema';
 
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 09:30.');
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -183,6 +184,8 @@ export const myWorkdaySchema = z.object({
     retentionDays: z.number().int(),
   }),
   balances: z.array(leaveBalanceSchema),
+  /** Working days, hours and holidays ahead (older APIs leave it out). */
+  calendar: staffCalendarSchema.optional(),
   leave: z.array(leaveRequestSchema),
   points: z.object({
     total: z.number().int(),

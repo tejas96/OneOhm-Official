@@ -1,6 +1,6 @@
 import type { LeaveImpact } from '@oneohm/api-contracts';
 import { Card, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
-import { Check, TriangleAlert } from 'lucide-react-native';
+import { CalendarHeart, Check, TriangleAlert } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { InitialsBadge } from '@/components/initials';
 import { REQUEST_LEAVE } from '@/copy/workforce';
@@ -25,6 +25,23 @@ export function ImpactCard({
       <Text variant="bodySm" color={over ? theme.status.overdue.fg : theme.colors.textSecondary}>
         {REQUEST_LEAVE.after(impact.balanceAfterHalfDays)}
       </Text>
+      {impact.holidays.length > 0 ? (
+        <View style={styles.warn}>
+          <CalendarHeart size={16} color={theme.colors.accent} />
+          <Text variant="bodySm" tone="secondary" style={styles.warnText}>
+            {REQUEST_LEAVE.holidays(
+              impact.holidays
+                .map((holiday) => `${holiday.name} (${shortDate(holiday.day)})`)
+                .join(', '),
+            )}
+          </Text>
+        </View>
+      ) : null}
+      {impact.halfDays === 0 ? (
+        <Text variant="bodySm" color={theme.status.atRisk.fg}>
+          {REQUEST_LEAVE.noWorkingDays}
+        </Text>
+      ) : null}
       {impact.overlapsExisting ? (
         <View style={styles.warn}>
           <TriangleAlert size={16} color={theme.status.atRisk.fg} />
@@ -98,6 +115,7 @@ export function ImpactCard({
 const styles = StyleSheet.create({
   card: { gap: 8 },
   warn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  warnText: { flex: 1 },
   task: { gap: 2 },
   person: {
     flexDirection: 'row',

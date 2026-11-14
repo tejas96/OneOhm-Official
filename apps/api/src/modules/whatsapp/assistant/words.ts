@@ -152,12 +152,12 @@ const EN_ANSWER_WORDS = {
 
 /** The kind of problem, in the customer's words, for "We noted your problem (…)". */
 const EN_CATEGORY_WORDS = {
-  inverter_error: 'inverter',
-  no_generation: 'no generation',
+  inverter_error: 'inverter error',
+  no_generation: 'no electricity from solar',
   low_generation: 'low generation',
-  physical_damage: 'damage',
-  cleaning: 'cleaning',
-  billing_net_meter: 'bill or meter',
+  physical_damage: 'damage to panels or wiring',
+  cleaning: 'panel cleaning',
+  billing_net_meter: 'bill or net meter',
   subsidy: 'subsidy',
   other: 'service',
 } as Record<string, string>;
