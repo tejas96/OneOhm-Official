@@ -38,6 +38,8 @@ export interface FileResult {
   readonly pending?: PendingFile;
   /** Pending objects to remove once the caller's transaction has committed. */
   readonly discard: readonly string[];
+  /** The document made (only when the outcome is `filed`). */
+  readonly documentId?: string;
 }
 
 /** The reply for an outcome, in the language being spoken (call it inside the language scope). */
@@ -108,7 +110,7 @@ export class ChatFilesService {
       if (chat.leadId) {
         const documentId = await this.fileOnLead(tx, chat.leadId, file.originalname, file.buffer);
         await linkChatFile(tx, file.mediaId, documentId);
-        return { outcome: 'filed', discard: [] };
+        return { outcome: 'filed', discard: [], documentId };
       }
       const pending = await this.hold(chat.id, file);
       return { outcome: 'held', pending, discard: chat.pending ? [chat.pending.storageKey] : [] };

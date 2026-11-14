@@ -21,6 +21,8 @@ export function PropertyFields({
   defaultCategory = 'individual',
   defaultCity,
   defaultLabel,
+  defaultFloors,
+  defaultPoint,
   errors,
 }: {
   readonly initial?: Property | undefined;
@@ -28,6 +30,10 @@ export function PropertyFields({
   readonly defaultCity?: string | undefined;
   /** A second site starts unnamed, so it is not called Home like the first. */
   readonly defaultLabel?: string | undefined;
+  /** Floors the customer already told us (a lead from WhatsApp). */
+  readonly defaultFloors?: number | null | undefined;
+  /** Where the customer's pin is, so the map opens there. */
+  readonly defaultPoint?: { readonly latitude: number; readonly longitude: number } | undefined;
   /** Field messages keyed by property field name. */
   readonly errors: (field: string) => string | undefined;
 }) {
@@ -75,7 +81,13 @@ export function PropertyFields({
         <Input name="label" defaultValue={text('label') ?? defaultLabel ?? t('labelDefault')} />
       </Field>
       <Field label={t('floors')} error={errors('floors')}>
-        <Input name="floors" type="number" min={0} max={40} defaultValue={text('floors') ?? '1'} />
+        <Input
+          name="floors"
+          type="number"
+          min={0}
+          max={40}
+          defaultValue={text('floors') ?? String(defaultFloors ?? 1)}
+        />
       </Field>
       <Field label={t('address')} required error={errors('addressLine')} className="sm:col-span-2">
         <Input
@@ -96,7 +108,7 @@ export function PropertyFields({
       <Field label={t('pincode')} error={errors('pincode')}>
         <Input name="pincode" inputMode="numeric" maxLength={6} defaultValue={text('pincode')} />
       </Field>
-      <GpsFields initial={initial} errors={errors} />
+      <GpsFields initial={initial} defaultPoint={defaultPoint} errors={errors} />
       {category === 'society' && (
         <Field label={t('households')} hint={t('householdsHint')} error={errors('households')}>
           <Input name="households" type="number" min={1} defaultValue={text('households')} />

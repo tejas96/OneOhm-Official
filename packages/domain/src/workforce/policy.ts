@@ -10,9 +10,15 @@ export interface LeaveType {
 }
 
 export interface AttendancePolicy {
-  /** Day start and end, "HH:MM" in India time. */
+  /** Day start and end, "HH:MM" in the business time zone: these are the business hours. */
   readonly dayStart: string;
   readonly dayEnd: string;
+  /**
+   * The lunch break inside the day ("HH:MM"); no visit time may overlap it. Both null = no
+   * break. Edited with the working days in Settings → Working time & holidays.
+   */
+  readonly lunchStart: string | null;
+  readonly lunchEnd: string | null;
   /** Minutes after the day start before a check-in counts as late. */
   readonly graceMinutes: number;
   /** Ask for the phone's location at check-in and check-out (with consent). */
@@ -63,7 +69,7 @@ export interface SiteTravelPolicy {
 
 export interface WorkforcePolicy {
   readonly leaveTypes: readonly LeaveType[];
-  /** Days of the week off (0 = Sunday … 6 = Saturday); not counted as leave. */
+  /** Days of the week off (0 = Sunday … 6 = Saturday); not counted as leave. The business's days off. */
   readonly weeklyOff: readonly number[];
   readonly attendance: AttendancePolicy;
   readonly points: PointsPolicy;
@@ -80,6 +86,8 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
   attendance: {
     dayStart: '09:30',
     dayEnd: '18:30',
+    lunchStart: '13:00',
+    lunchEnd: '14:00',
     graceMinutes: 15,
     captureLocation: true,
     retentionDays: 90,

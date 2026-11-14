@@ -70,13 +70,7 @@ export function ContractorEditSheet({
       description={contractor.name}
       width="lg"
       footer={
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          pending={form.pending}
-          disabled={bank.blocked}
-        >
+        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
           {t('save')}
         </Button>
       }

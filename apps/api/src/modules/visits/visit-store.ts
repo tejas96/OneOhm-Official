@@ -1,9 +1,7 @@
 import { type DatabaseExecutor, visits } from '@oneohm/database';
-import { freeSlots, isPresenceKind, OPEN_VISIT_STATUSES, type VisitSlot } from '@oneohm/domain';
-import { todayIn } from '@oneohm/shared';
+import { isPresenceKind, OPEN_VISIT_STATUSES, slotHalf, type VisitSlot } from '@oneohm/domain';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { conflict } from '../../common/http/errors';
-import { takenSlots } from './visit-capacity';
 import {
   followTaskDates,
   logVisit,
@@ -14,14 +12,17 @@ import {
   type VisitRow,
 } from './visit-effects';
 import { lockVisitTarget } from './visit-lock';
-import { dayWords } from './visit-messages';
 import { scopeOfRow, targetOf, type VisitTarget } from './visit-reads';
+import { timesFor, visitRules } from './visit-times';
 
-const say = (day: string, slot: VisitSlot) => `${dayWords(day)}, ${slot}`;
+import { visitWhen as say } from './visit-when';
 
 export interface SaveVisit {
   readonly day: string;
+  /** Kept for older callers; the exact time is `startMin` (else the first free time in this half). */
   readonly slot: VisitSlot;
+  /** Start of the visit in minutes after midnight; it ends after the visit length in Settings. */
+  readonly startMin?: number;
   readonly status: 'proposed' | 'confirmed';
   readonly by: 'customer' | 'staff';
   readonly userId: string | null;
@@ -57,23 +58,53 @@ export async function saveVisit(
   await lockVisitTarget(tx, scopeOfRow(target));
   const crew = (await targetOf(tx, scopeOfRow(target))).crew;
   await lockCrewDay(tx, crew, input.day);
+  let time: { startMin: number; endMin: number } | null = null;
   if (!isPresenceKind(target.kind)) {
-    // Two taps (or a tap and the desk) at once take turns: the slot is checked again inside the lock.
-    const taken = await takenSlots(tx, crew, todayIn(timeZone, now), existing?.id);
-    if (!freeSlots(taken[input.day] ?? []).includes(input.slot))
+    // Two taps (or a tap and the desk) at once take turns: the time is checked again inside the lock.
+    const free = await timesFor(tx, input.day, {
+      crew,
+      who: input.by,
+      now,
+      timeZone,
+      ...(existing ? { exceptVisitId: existing.id } : {}),
+    });
+    const kept =
+      existing && existing.day === input.day && existing.startMin === input.startMin
+        ? existing
+        : null;
+    const chosen =
+      input.startMin !== undefined
+        ? free.find((slot) => slot.startMin === input.startMin)
+        : free.find((slot) => slotHalf(slot.startMin) === input.slot);
+    if (chosen) time = { startMin: chosen.startMin, endMin: chosen.endMin };
+    else if (kept?.startMin != null && kept.endMin != null)
+      // Re-confirming the visit as it is (a time that is no longer offered stays as it was).
+      time = { startMin: kept.startMin, endMin: kept.endMin };
+    else
       throw conflict(
         'The person who comes already has a visit then. Pick another time.',
         'slot_taken',
       );
+  } else if (input.startMin !== undefined) {
+    const { settings } = await visitRules(tx, timeZone);
+    time = { startMin: input.startMin, endMin: input.startMin + settings.visitMinutes };
   }
-  const moved = Boolean(existing && (existing.day !== input.day || existing.slot !== input.slot));
+  const slot = time ? slotHalf(time.startMin) : input.slot;
+  const moved = Boolean(
+    existing &&
+      (existing.day !== input.day ||
+        existing.slot !== slot ||
+        (time !== null && existing.startMin !== time.startMin)),
+  );
   let saved: VisitRow | undefined;
   if (existing) {
     [saved] = await tx
       .update(visits)
       .set({
         day: input.day,
-        slot: input.slot,
+        slot,
+        startMin: time?.startMin ?? null,
+        endMin: time?.endMin ?? null,
         status: input.status,
         ...stamp,
         ...fresh,
@@ -96,7 +127,9 @@ export async function saveVisit(
         taskId: target.taskId,
         propertyId: target.propertyId,
         day: input.day,
-        slot: input.slot,
+        slot,
+        startMin: time?.startMin ?? null,
+        endMin: time?.endMin ?? null,
         crewUserIds: [...crew],
         proposedBy: input.by,
         proposedByUserId: input.by === 'staff' ? input.userId : null,
@@ -120,7 +153,7 @@ async function followVisit(
   moved: boolean,
 ): Promise<void> {
   const confirmed = input.status === 'confirmed';
-  const when = say(input.day, input.slot);
+  const when = say(row.day, row.slot, row.startMin, row.endMin);
   if (confirmed) {
     if (row.taskId) await followTaskDates(tx, row.taskId, input.day);
     await settleVisitActions(tx, row, 'closed', ['visit_pick']);
@@ -129,7 +162,7 @@ async function followVisit(
   if (row.serviceRequestId)
     await mirrorServiceDay(tx, row.serviceRequestId, confirmed ? input.day : null);
   if (row.leadId && row.kind === 'survey')
-    await surveyOnLead(tx, row.leadId, input.userId, input.day, input.slot);
+    await surveyOnLead(tx, row.leadId, input.userId, row.day, row.slot, row.startMin);
   await logVisit(
     tx,
     row,
@@ -138,7 +171,7 @@ async function followVisit(
     confirmed
       ? `${target.title}: visit ${moved ? 'moved to' : 'booked for'} ${when}`
       : `${target.title}: the customer picked ${when} (waiting for the team to confirm)`,
-    { day: input.day, slot: input.slot, by: input.by },
+    { day: row.day, slot: row.slot, startMin: row.startMin, by: input.by },
   );
 }
 
@@ -171,7 +204,7 @@ export async function cancelVisit(
     row,
     userId,
     'visit.cancelled',
-    `${title}: visit on ${say(row.day, row.slot)} cancelled`,
+    `${title}: visit on ${say(row.day, row.slot, row.startMin, row.endMin)} cancelled`,
     {
       reason,
     },
@@ -179,52 +212,10 @@ export async function cancelVisit(
   return updated;
 }
 
-/** The visit happened. */
-export async function finishVisit(
-  tx: DatabaseExecutor,
-  row: VisitRow,
-  userId: string | null,
-  title: string,
-): Promise<VisitRow> {
-  const now = new Date();
-  const [updated] = await tx
-    .update(visits)
-    .set({ status: 'done', doneAt: now, updatedAt: now })
-    .where(eq(visits.id, row.id))
-    .returning();
-  await settleVisitActions(tx, row, 'closed', ['presence', 'visit_pick']);
-  await logVisit(
-    tx,
-    row,
-    userId,
-    'visit.done',
-    `${title}: visit on ${say(row.day, row.slot)} done`,
-  );
-  return updated ?? row;
-}
-
-/** The customer said [Confirm] / [I'll be there]. */
-export async function customerConfirmed(
-  tx: DatabaseExecutor,
-  row: VisitRow,
-  title: string,
-): Promise<void> {
-  await tx
-    .update(visits)
-    .set({ customerConfirmedAt: new Date(), customerCannotAt: null, updatedAt: new Date() })
-    .where(eq(visits.id, row.id));
-  await settleVisitActions(tx, row, 'closed', ['presence']);
-  await logVisit(
-    tx,
-    row,
-    null,
-    'visit.customer_confirmed',
-    `${title}: the customer confirmed ${say(row.day, row.slot)}`,
-  );
-}
-
 /** One person's day is saved by one transaction at a time (the lock lets go when it ends). */
 async function lockCrewDay(tx: DatabaseExecutor, crew: readonly string[], day: string) {
   for (const person of [...crew].sort())
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visit:${person}:${day}`}))`);
 }
+
+export { customerConfirmed, finishVisit } from './visit-finish';

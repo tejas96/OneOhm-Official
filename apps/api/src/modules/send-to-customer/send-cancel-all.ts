@@ -106,8 +106,13 @@ export async function cancelAllAsks(
       first?.projectId ?? ('projectId' in scope ? scope.projectId : null),
       first?.propertyId ?? stopped[0]?.propertyId ?? null,
     );
+    // A lead's visit has no customer yet: only customers with an app inbox are told.
     const owners = [
-      ...new Set([...cancelled.map((a) => a.customerId), ...stopped.map((v) => v.customerId)]),
+      ...new Set(
+        [...cancelled.map((a) => a.customerId), ...stopped.map((v) => v.customerId)].filter(
+          (id): id is string => id !== null,
+        ),
+      ),
     ];
     await tellOnce(tx, owners, home, `asks_cancelled:${scopeId}`, userId);
   }

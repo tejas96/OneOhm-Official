@@ -130,6 +130,11 @@ export const leads = pgTable(
     phoneE164: text('phone_e164').notNull(),
     email: text('email'),
     city: text('city').notNull(),
+    /** The pin the customer shared on WhatsApp, to pre-fill the site when the lead converts. */
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
+    /** Floors to the roof as the customer said on WhatsApp. */
+    floors: integer('floors'),
     source: leadSourceEnum('source').notNull().default('manual'),
     /** Set when an existing customer referred this lead from the customer app. */
     referredByCustomerId: uuid('referred_by_customer_id').references(() => customers.id, {

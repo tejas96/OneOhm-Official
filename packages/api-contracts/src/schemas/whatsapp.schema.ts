@@ -53,6 +53,21 @@ export const chatFileSchema = z.object({
 });
 export type ChatFile = z.infer<typeof chatFileSchema>;
 
+/** A form (WhatsApp Flow) the customer filled in: its answers as staff read them, and its files. */
+export const chatFormSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  rows: z.array(z.object({ label: z.string(), value: z.string() })),
+  files: z.array(chatFileSchema),
+  link: z
+    .object({
+      kind: z.enum(['service_request', 'lead', 'customer', 'payment', 'project']),
+      id: idSchema,
+    })
+    .optional(),
+});
+export type ChatForm = z.infer<typeof chatFormSchema>;
+
 export const chatMessageSchema = z.object({
   id: idSchema,
   direction: z.enum(['in', 'out']),
@@ -62,6 +77,8 @@ export const chatMessageSchema = z.object({
   delivery: z.enum(DELIVERY_STATES).nullable(),
   sentBy: z.string().nullable(),
   file: chatFileSchema.nullable(),
+  /** Set on a form reply; older rows have none and show their body. */
+  form: chatFormSchema.optional(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 

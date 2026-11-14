@@ -69,3 +69,11 @@ describe.each(LANGUAGES)('customer words in %s', (language) => {
     expect(REFER_LISTS[language].thanks('Suresh', null)).not.toContain('₹');
   });
 });
+
+describe.each(LANGUAGES)('rating subjects in %s', (language) => {
+  it('asks about the switch-on, not the handover', () => {
+    const subject = RATING_LISTS[language].stage.commissioning ?? '';
+    expect(subject).not.toMatch(/handover|हैंडओवर|हस्तांतरण/i);
+    expect(RATING_LISTS[language].askStage(subject)).toContain(subject);
+  });
+});

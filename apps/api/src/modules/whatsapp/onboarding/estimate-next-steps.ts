@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { notifications, type Transaction } from '@oneohm/database';
-import { addMonths, CALL_DAY_WORDS, callDay } from '@oneohm/domain';
+import { addMonths, callDay, callDayWords } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { like } from 'drizzle-orm';
+import { loadCalendar } from '../../../common/calendar';
 import { ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import {
@@ -104,8 +105,8 @@ export class EstimateNextStepsService {
       // One alert and one history note a day: a second tap is already on the owner's Today.
       const key = `wa_callback:${chat.id}:${today}`;
       const again = await alertedAlready(tx, key);
-      const call = callDay(now, zone);
-      const when = CALL_DAY_WORDS[call.day];
+      const call = callDay(now, await loadCalendar(tx, zone));
+      const when = callDayWords(call);
       await updateLeadFromChat(
         tx,
         leadId,

@@ -1,4 +1,4 @@
-import type { DatabaseExecutor } from '@oneohm/database';
+import { type DatabaseExecutor, readBusinessSetting } from '@oneohm/database';
 import { freeSlots, type VisitSlot } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { tellBooked } from './visit-booked';
@@ -26,8 +26,11 @@ export async function setServiceDay(
   }
   if (existing && existing.day === visitOn && existing.status === 'confirmed') return;
   const taken = await takenSlots(tx, target.crew, todayIn(timeZone), existing?.id);
+  const { visitsPerSlot } = await readBusinessSetting(tx, 'visits');
   const slot: VisitSlot =
-    existing?.day === visitOn ? existing.slot : (freeSlots(taken[visitOn] ?? [])[0] ?? 'morning');
+    existing?.day === visitOn
+      ? existing.slot
+      : (freeSlots(taken[visitOn] ?? [], visitsPerSlot)[0] ?? 'morning');
   const { row, moved } = await saveVisit(
     tx,
     target,

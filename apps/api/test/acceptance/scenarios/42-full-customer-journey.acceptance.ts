@@ -149,7 +149,7 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
     expect((await replies(phone)).some((reply) => reply.body?.includes('फाईल मिळाली'))).toBe(true);
   });
 
-  it('5. the instant estimate: stored, PDF sent, next steps offered, lead still New with a call today', async () => {
+  it('5. the instant estimate: stored, PDF sent, next steps offered, lead Contacted with a call today', async () => {
     const [estimate, ...more] = await rows<{
       id: string;
       capacity_wp: number;
@@ -176,9 +176,11 @@ describe('The full WhatsApp customer journey: ad to call-back', () => {
       'ob:done:notnow',
     ]);
     const now = await lead();
-    expect(now).toMatchObject({ stage: 'new', next_action_on: today() });
+    expect(now).toMatchObject({ stage: 'contacted', next_action_on: today() });
     expect(now.next_action_note).toMatch(/^Call — estimate sent \(3(\.\d+)? kW, ₹/);
-    expect((await J.historyOf(leadId)).at(-1)).toMatch(/^Estimate sent: 3(\.\d+)? kW, ₹/);
+    expect((await J.historyOf(leadId)).at(-1)).toMatch(
+      /^Instant estimate sent on WhatsApp: 3(\.\d+)? kW, ₹.+ Moved from New to Contacted\.$/,
+    );
     const detail = await admin.get<LeadDetail>(`/leads/${leadId}`);
     expect(detail.latestEstimate?.id).toBe(estimate?.id);
     const file = await admin.download(detail.latestEstimate?.pdfUrl ?? '');

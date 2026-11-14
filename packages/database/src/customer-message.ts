@@ -2,6 +2,12 @@ import { SMS_WORDS_OF } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { GENERIC_WORDS, type Routed, routeMessage, wasQueued } from './customer-channel';
+import {
+  holdMessage,
+  isHeldMessage,
+  mergeIntoHeldMilestone,
+  releaseHeldMilestones,
+} from './customer-message-burst';
 import { NOTICE_WORDS } from './customer-message-en';
 import { plainNames } from './customer-message-names';
 import { languageOf, localWords } from './customer-message-words';
@@ -55,6 +61,12 @@ export async function queueCustomerMessageAs(
   dedupeKey: string,
 ): Promise<Routed> {
   const payload = await plainNames(db, given);
+  const held = isHeldMessage(template);
+  // Step updates finished close together go out as one message; each keeps its own app notice.
+  if (held && (await mergeIntoHeldMilestone(db, recipientE164, payload, dedupeKey))) {
+    await noticeCustomer(db, recipientE164, template, payload, dedupeKey);
+    return 'whatsapp';
+  }
   // WhatsApp first; SMS or in person when the customer is not on WhatsApp (SMS words: see SMS_WORDS_OF).
   const queued = await routeMessage(db, {
     recipient: recipientE164,
@@ -64,6 +76,9 @@ export async function queueCustomerMessageAs(
     dedupeKey,
     words: customerNotice(SMS_WORDS_OF[template] ?? template, payload, dedupeKey) ?? GENERIC_WORDS,
   });
+  if (held && queued === 'whatsapp') await holdMessage(db, dedupeKey);
+  // Queue order holds: a step update still waiting goes out before this newer message.
+  if (!held && queued === 'whatsapp') await releaseHeldMilestones(db, recipientE164);
   await noticeCustomer(db, recipientE164, template, payload, dedupeKey);
   return queued;
 }

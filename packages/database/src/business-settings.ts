@@ -9,10 +9,13 @@ import {
   DEFAULT_ONBOARDING,
   DEFAULT_PAYMENT_SETTINGS,
   DEFAULT_REMINDER_TIMING,
+  DEFAULT_VISIT_SETTINGS,
   type LeadAssignmentRules,
   type OnboardingSettings,
   type PaymentSettings,
   type ReminderTiming,
+  type VisitSettings,
+  visitSettingsWithDefaults,
   withDefaults,
 } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
@@ -28,6 +31,7 @@ export interface BusinessSettingsMap {
   readonly lead_assignment: LeadAssignmentRules;
   readonly onboarding: OnboardingSettings;
   readonly payments: PaymentSettings;
+  readonly visits: VisitSettings;
 }
 export type BusinessSettingKey = keyof BusinessSettingsMap;
 
@@ -41,6 +45,7 @@ export const BUSINESS_SETTING_DEFAULTS: {
   lead_assignment: DEFAULT_LEAD_ASSIGNMENT,
   onboarding: DEFAULT_ONBOARDING,
   payments: DEFAULT_PAYMENT_SETTINGS,
+  visits: DEFAULT_VISIT_SETTINGS,
 };
 
 /** The saved values for one area over the shipped ones; never throws for a missing row. */
@@ -52,6 +57,11 @@ export async function readBusinessSetting<K extends BusinessSettingKey>(
     .select({ value: businessSettings.value })
     .from(businessSettings)
     .where(eq(businessSettings.key, key));
+  // Visit settings nest their reminders: a save from before a field existed keeps its default.
+  if (key === 'visits')
+    return visitSettingsWithDefaults(
+      withDefaults(DEFAULT_VISIT_SETTINGS, row?.value),
+    ) as BusinessSettingsMap[K];
   return withDefaults(BUSINESS_SETTING_DEFAULTS[key], row?.value);
 }
 

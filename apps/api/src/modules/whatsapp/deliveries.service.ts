@@ -8,9 +8,12 @@ import {
 import {
   customerNotice,
   fallBackToSms,
+  fallbackOf,
   GENERIC_WORDS,
   outbox,
+  queueFallback,
   tellChatSendFailed,
+  WINDOW_CLOSED_ERROR_CODE,
 } from '@oneohm/database';
 import { isNotOnWhatsApp, smsCanStandIn } from '@oneohm/domain';
 import { and, count, desc, eq, inArray, type SQL, sql } from 'drizzle-orm';
@@ -20,6 +23,9 @@ import { DATABASE, type Database } from '../../config/core.module';
 import { deliverySearch, deliveryStateWhere } from './delivery-filter';
 import { deliveryState, laterStatus } from './delivery-state';
 import type { DeliveryUpdate } from './whatsapp-events';
+
+const WINDOW_CLOSED_NOTE =
+  'WhatsApp refused the chat message: the 24-hour window had closed. It was sent as a template message instead.';
 
 /** Every business message and its receipts (PRD 6.2); failed ones can be sent again. */
 @Injectable()
@@ -84,11 +90,34 @@ export class DeliveriesService {
     let applied = 0;
     for (const update of updates) {
       const [row] = await this.db
-        .select({ id: outbox.id, deliveryStatus: outbox.deliveryStatus, template: outbox.template })
+        .select({
+          id: outbox.id,
+          deliveryStatus: outbox.deliveryStatus,
+          template: outbox.template,
+          recipient: outbox.recipient,
+          dedupeKey: outbox.dedupeKey,
+          payload: outbox.payload,
+        })
         .from(outbox)
         .where(eq(outbox.providerMessageId, update.providerMessageId))
         .limit(1);
       if (!row || !laterStatus(row.deliveryStatus, update.status)) continue;
+      // Meta took a chat message but the 24-hour window was closed: its template goes instead.
+      if (
+        update.status === 'failed' &&
+        update.errorCode === WINDOW_CLOSED_ERROR_CODE &&
+        fallbackOf(row.payload)
+      ) {
+        await this.db.transaction(async (tx) => {
+          await queueFallback(tx, row);
+          await tx
+            .update(outbox)
+            .set({ status: 'skipped', lastError: WINDOW_CLOSED_NOTE })
+            .where(eq(outbox.id, row.id));
+        });
+        applied += 1;
+        continue;
+      }
       await this.db.transaction(async (tx) => {
         await tx
           .update(outbox)

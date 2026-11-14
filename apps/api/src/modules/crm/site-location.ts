@@ -6,7 +6,7 @@ import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 
 type PropertyRow = typeof properties.$inferSelect;
-type WebSource = 'map_pin' | 'typed';
+type WebSource = 'map_pin' | 'typed' | 'whatsapp_pin';
 
 const pointOf = (latitude: number | null | undefined, longitude: number | null | undefined) =>
   latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined

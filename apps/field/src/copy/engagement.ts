@@ -71,7 +71,7 @@ export const REWARDS = {
   stages: {
     survey: 'Site survey',
     installation: 'Installation',
-    commissioning: 'Switch-on and handover',
+    commissioning: 'Switch-on',
   } as Readonly<Record<string, string>>,
   stars: (stars: number) => `${stars} of 5 stars`,
   noComment: 'No comment',

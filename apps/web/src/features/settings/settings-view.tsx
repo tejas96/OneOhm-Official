@@ -36,7 +36,9 @@ import { openSection, type Section, visibleMenu } from './settings-menu';
 import { SettingsNav } from './settings-nav';
 import { MessageTemplatesPanel } from './templates/message-templates-panel';
 import { TaskTemplatesPanel } from './templates/task-templates-panel';
+import { VisitsPanel } from './visits/visits-panel';
 import { WorkforcePanel } from './workforce/workforce-panel';
+import { WorkingTimePanel } from './working-time/working-time-panel';
 
 const TABS = [
   { value: 'roles', requires: 'roles.manage', Panel: RolesPanel },
@@ -51,6 +53,8 @@ const TABS = [
   { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
   { value: 'leadAssignment', requires: 'settings.manage', Panel: LeadAssignmentSection },
   { value: 'workforce', requires: 'settings.manage', Panel: WorkforcePanel },
+  { value: 'workingTime', requires: 'settings.manage', Panel: WorkingTimePanel },
+  { value: 'visits', requires: 'settings.manage', Panel: VisitsPanel },
   { value: 'rewards', requires: 'settings.manage', Panel: RewardsPanel },
   { value: 'tasks', requires: 'settings.manage', Panel: TaskTemplatesPanel },
   { value: 'documents', requires: 'settings.manage', Panel: RequirementsPanel },

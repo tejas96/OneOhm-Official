@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { readBusinessSetting } from '@oneohm/database';
+import { customers, leadActivities, leads, readBusinessSetting } from '@oneohm/database';
 import { formatInr } from '@oneohm/shared';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
@@ -13,11 +14,27 @@ import { readReferral } from '../whatsapp/assistant/read-referral';
 import { WORDS } from '../whatsapp/assistant/words';
 import { businessWhatsAppNumber } from '../whatsapp/business-number';
 import { type Conversation, queueReply } from '../whatsapp/chat-store';
+import { linkFormReply } from '../whatsapp/forms/form-record';
 import type { IncomingForm } from '../whatsapp/forms/form-reply-data';
 import { FormSendService } from '../whatsapp/forms/form-send';
 import { referFormStart } from './care-form-words';
 import { careTaps } from './care-taps';
 import { REFER_WORDS } from './refer-words';
+
+/** A 10-digit Indian mobile from what was typed ("+91 98765 43210", "098765-43210"), or null. */
+export function mobileOf(typed: string | undefined): string | null {
+  const digits = (typed ?? '').replace(/\D/g, '').replace(/^(?:91|0)(?=\d{10}$)/, '');
+  return /^[6-9]\d{9}$/.test(digits) ? `+91${digits}` : null;
+}
+
+/** A friend's name: letters, spaces and . ' -, 2 to 60 characters; null when there is none. */
+export function nameOf(typed: string | undefined): string | null {
+  const name = (typed ?? '')
+    .replace(/[^\p{L}\p{M}\s.'-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return name.length >= 2 ? name.slice(0, 60) : null;
+}
 
 /** The friend a customer typed, waiting for their city. */
 interface Friend {
@@ -66,13 +83,23 @@ export class ReferralChatService {
     return this.askCity(chat, customerId, friend);
   }
 
-  /** The form came back: name, mobile and city are chosen, so the lead is made at once. */
+  /**
+   * The form came back: name, mobile and city are read strictly (the mobile alone: +91 or 0 in front and
+   * spaces are fine). Something unusable is said so and a fresh form is offered; the city "Other" is none.
+   */
   async fromForm(chat: Conversation, customerId: string, form: IncomingForm): Promise<void> {
-    const friend = readReferral(`${form.answers.friend ?? ''} ${form.answers.mobile ?? ''}`);
-    if (!friend) return this.start(chat, customerId);
-    // A city that is not one we offered (a changed list, a forged answer) is "Other city".
+    const phone = mobileOf(form.answers.mobile);
+    const name = nameOf(form.answers.friend);
+    if (!phone || !name) {
+      await queueReply(this.db, chat, {
+        kind: 'text',
+        body: phone ? REFER_WORDS.nameBad : REFER_WORDS.mobileBad,
+      });
+      return this.start(chat, customerId);
+    }
+    // A city that is not one we offered ("Other city", a changed list, a forged answer) is not given.
     const city = (await this.cities()).find((one) => one === form.answers.city) ?? null;
-    return this.finish(chat, customerId, friend, city);
+    return this.finish(chat, customerId, { name, phone }, city, true);
   }
 
   private async askCity(chat: Conversation, customerId: string, friend: Friend) {
@@ -104,10 +131,21 @@ export class ReferralChatService {
     customerId: string,
     friend: Friend,
     city: string | null,
+    fromForm = false,
   ) {
     await setStep(this.db, chat, 'menu');
+    const refused = await this.refused(customerId, friend.phone);
+    if (refused) {
+      if (fromForm && refused.leadId)
+        await linkFormReply(this.db, chat.id, { kind: 'lead', id: refused.leadId });
+      return sayWithTaps(this.db, chat, refused.body, ['menu']);
+    }
     try {
-      await this.portal.refer(customerId, { ...friend, ...(city ? { city } : {}) });
+      const made = await this.portal.refer(customerId, {
+        ...friend,
+        ...(city ? { city } : { note: 'City not given.' }),
+      });
+      if (fromForm) await linkFormReply(this.db, chat.id, { kind: 'lead', id: made.id });
     } catch (error) {
       if (error instanceof AppError && error.code === 'duplicate')
         return sayWithTaps(this.db, chat, WORDS.referralKnown, ['menu']);
@@ -126,6 +164,32 @@ export class ReferralChatService {
       'rewards',
       { id: careTaps.link, title: REFER_WORDS.shareButton },
     ]);
+  }
+
+  /** Own number, a number that is already a customer, or already an open lead: said politely, nothing made. */
+  private async refused(customerId: string, phone: string) {
+    const [self] = await this.db
+      .select({ phone: customers.phoneE164, name: customers.name })
+      .from(customers)
+      .where(eq(customers.id, customerId));
+    if (self?.phone === phone) return { body: REFER_WORDS.ownNumber, leadId: null };
+    const [known] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.phoneE164, phone));
+    if (known) return { body: REFER_WORDS.alreadyCustomer, leadId: null };
+    const [open] = await this.db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.phoneE164, phone), notInArray(leads.stage, ['won', 'lost'])));
+    if (!open) return null;
+    // The lead is not made twice, but the team sees who else sent this number their way.
+    await this.db.insert(leadActivities).values({
+      leadId: open.id,
+      kind: 'note',
+      note: `${self?.name ?? 'A customer'} also referred this number on WhatsApp.`,
+    });
+    return { body: WORDS.referralKnown, leadId: open.id };
   }
 
   /** [Share my link]: the customer's code with a link a friend can tap to message us. */

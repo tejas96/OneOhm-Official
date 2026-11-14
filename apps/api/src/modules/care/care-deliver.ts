@@ -8,6 +8,7 @@ import { templateIsOn } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { languageOfPhone } from '../documents/document-request-messages';
 import { mayChat } from '../journey/auto-messages';
+import { chatOpenFor } from '../send-to-customer/send-context';
 import { inLanguage } from '../whatsapp/assistant/language';
 import type { ChatReply } from '../whatsapp/chat-reply';
 import { conversationForPhone, queueReply } from '../whatsapp/chat-store';
@@ -28,10 +29,15 @@ export async function deliverCare(
     readonly key: string;
     readonly reply: () => Promise<ChatReply>;
     readonly fallback?: () => Promise<void>;
+    /** The chat reply does not wait for the template's Settings switch (it still needs the window and no STOP). */
+    readonly chatIgnoresSwitch?: boolean;
   },
 ): Promise<'chat' | 'template' | 'fallback' | 'none'> {
   // The chat message follows the template's switch, the window and STOP (the worker's rule too).
-  if (await mayChat(tx, person.phone, message.template)) {
+  const chatNow = message.chatIgnoresSwitch
+    ? await chatOpenFor(tx, person.phone)
+    : await mayChat(tx, person.phone, message.template);
+  if (chatNow) {
     const chat = await conversationForPhone(tx, person.phone);
     const language = await languageOfPhone(tx, person.phone);
     await queueReply(tx, chat, await inLanguage(language, message.reply), null, message.key);

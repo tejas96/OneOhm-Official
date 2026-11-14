@@ -7,6 +7,7 @@ import { ApprovalsInboxService } from './approvals-inbox.service';
 import { BusinessSettingsService } from './business-settings.service';
 import { JobRunsService } from './job-runs.service';
 import { ProjectVariantsService } from './project-variants.service';
+import { WorkingTimeService } from './working-time.service';
 
 @Controller()
 export class BusinessSettingsController {
@@ -15,6 +16,7 @@ export class BusinessSettingsController {
     private readonly variants: ProjectVariantsService,
     private readonly runs: JobRunsService,
     private readonly inbox: ApprovalsInboxService,
+    private readonly workingTime: WorkingTimeService,
   ) {}
 
   @TsRestHandler(apiContract.businessSettings)
@@ -78,6 +80,23 @@ export class BusinessSettingsController {
       saveDashboard: async ({ body }) => {
         configure();
         return { status: 200, body: await this.settings.save(actor, 'dashboard', body) };
+      },
+      workingTime: async () => {
+        configure();
+        return { status: 200, body: await this.workingTime.get() };
+      },
+      saveWorkingTime: async ({ body }) => {
+        configure();
+        return { status: 200, body: await this.workingTime.save(actor, body) };
+      },
+      visitSettings: async () => {
+        configure();
+        return { status: 200, body: await this.settings.visits() };
+      },
+      saveVisitSettings: async ({ body }) => {
+        configure();
+        await this.settings.save(actor, 'visits', body);
+        return { status: 200, body: await this.settings.visits() };
       },
       projectVariants: async () => {
         assertCan(actor, 'settings.manage', 'projects.create');

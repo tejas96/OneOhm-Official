@@ -16,6 +16,10 @@ export interface LeadChatChange {
   readonly city?: string;
   readonly subsidyCategory?: 'individual' | 'society' | 'commercial';
   readonly estimatedWp?: number;
+  /** The customer's shared location pin and the floors they told us. */
+  readonly latitude?: number;
+  readonly longitude?: number;
+  readonly floors?: number;
   /** The owner's next step after the estimate: a date (`YYYY-MM-DD`) and what to do. */
   readonly nextAction?: { readonly on: string; readonly note: string };
 }
@@ -36,6 +40,10 @@ export async function updateLeadFromChat(
     ...(change.city !== undefined ? { city: change.city } : {}),
     ...(change.subsidyCategory !== undefined ? { subsidyCategory: change.subsidyCategory } : {}),
     ...(change.estimatedWp !== undefined ? { estimatedWp: change.estimatedWp } : {}),
+    ...(change.latitude !== undefined && change.longitude !== undefined
+      ? { latitude: change.latitude, longitude: change.longitude }
+      : {}),
+    ...(change.floors !== undefined ? { floors: change.floors } : {}),
     ...(change.nextAction !== undefined
       ? {
           nextActionOn: change.nextAction.on,

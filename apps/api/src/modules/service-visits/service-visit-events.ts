@@ -1,9 +1,7 @@
 import type { ServiceTicket } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, notifyHolders, projectActivities } from '@oneohm/database';
-import { queueWhatsApp } from '../../common/outbox';
+import { tellServiceStatus } from '../care/service-status';
 import { distanceWords, durationWords } from '../site-activity/site-visit-read';
-
-const STATUS_WORDS = { in_progress: 'being worked on', resolved: 'resolved' } as const;
 
 interface Visit {
   readonly visitId: string;
@@ -20,23 +18,17 @@ const subjectOf = (ticket: ServiceTicket) => ({
   projectId: ticket.project?.id ?? null,
 });
 
-/** Tells the customer the request moved on, as the desk does when it changes the status. */
+/** Tells the customer the request is being worked on: in their chat when it is open, else the template. */
 export async function tellCustomer(
   db: DatabaseExecutor,
   { ticket, topic }: { readonly ticket: ServiceTicket; readonly topic: string },
-  status: keyof typeof STATUS_WORDS,
   now: Date,
 ): Promise<void> {
-  await queueWhatsApp(
+  await tellServiceStatus(
     db,
-    ticket.customer.phone,
-    'service_update',
-    {
-      customer: ticket.customer.name,
-      topic,
-      status: STATUS_WORDS[status],
-    },
-    `service:${ticket.id}:${status}:${now.getTime()}`,
+    { id: ticket.id, category: ticket.category, topic, customer: ticket.customer },
+    'in_progress',
+    now,
   );
 }
 

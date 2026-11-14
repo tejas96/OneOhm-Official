@@ -80,3 +80,15 @@ export async function openedForm(phone: string, askId: string): Promise<FlowRepl
   await tap(phone, `sendit:${askId}`);
   return (await flowOf(phone)) as FlowReply;
 }
+
+/** The link the newest form-reply card of this phone's chat carries (what staff open), or null. */
+export async function formLinkOf(phone: string): Promise<{ kind: string; id: string } | null> {
+  const [row] = await rows<{ link: { kind: string; id: string } | null }>(
+    `SELECT m.data->'form'->'link' AS link
+       FROM wa_messages m JOIN wa_conversations c ON c.id = m.conversation_id
+      WHERE c.phone = $1 AND m.kind = 'form' AND m.direction = 'in'
+      ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
+    [phone],
+  );
+  return row?.link ?? null;
+}

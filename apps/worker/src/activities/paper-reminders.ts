@@ -8,6 +8,7 @@ import {
   notifications,
   paperRequestTemplate,
   projects,
+  readBusinessCalendar,
   tellChatTeam,
   waConversations,
   waMessages,
@@ -97,6 +98,7 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
     .orderBy(asc(askedAt))
     .limit(PER_TICK);
   let template: Awaited<ReturnType<typeof paperRequestTemplate>> | undefined;
+  const cal = await readBusinessCalendar(db, timeZone);
   let done = 0;
   for (const request of open) {
     const due = paperReminderDue(request.askedAt, now);
@@ -104,7 +106,7 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
     // Files sent but not matched: the team matches them; the customer is not chased.
     const unmatched = await filesNotMatched(db, request);
     // The customer hears in working hours only (as onboarding nudges); a later tick sends it.
-    const chase = unmatched === 0 && isWorkingTime(now, timeZone);
+    const chase = unmatched === 0 && isWorkingTime(now, cal);
     if (chase && now.getTime() - request.askedAt.getTime() < CUSTOMER_UNTIL) {
       template ??= await paperRequestTemplate(db);
       const key = `paper_reminder:${request.id}:${request.round}`;
@@ -112,7 +114,7 @@ async function remindOpenRequests(db: Database, now: Date, timeZone: string): Pr
     }
     if (due !== 'team' && unmatched === 0) continue;
     // The team hears in working hours only; a later tick tells them.
-    if (!isWorkingTime(now, timeZone)) continue;
+    if (!isWorkingTime(now, cal)) continue;
     await tellAsker(db, request, unmatched, now.getTime() - request.askedAt.getTime());
     done += 1;
   }

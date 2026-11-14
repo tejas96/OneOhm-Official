@@ -1,6 +1,7 @@
 import type { DelaysReport, ProjectDetail, ProjectTask } from '@oneohm/api-contracts';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Session } from '../support/http';
+import { retire } from '../support/people';
 import { addDays, type Sale, sellProject, today, uniquePhone } from '../support/sales';
 import { advanceTo, project, sessionOf, taskByKey } from '../support/tasks';
 import { ensurePerson } from '../support/team';
@@ -61,6 +62,11 @@ describe('DISCOM', () => {
       discom: 'TATA',
       managerUserId: managerId,
     });
+  });
+
+  // The manager was made for this file only: removed, so later scenarios do not see an extra admin.
+  afterAll(async () => {
+    await retire(admin, [{ id: managerId, phone: '', name: '' }]);
   });
 
   it('MSEDCL adds the MSEDCL net-metering steps and nothing of another DISCOM', () => {

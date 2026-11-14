@@ -135,7 +135,7 @@ export class CustomersService {
             .returning({ id: customers.id });
         }
         if (!customer) throw new Error('Customer insert returned nothing.');
-        const propertyId = await this.siteFor(tx, actor, customer.id, site);
+        const propertyId = await this.siteFor(tx, actor, customer.id, site, lead);
         await recordAudit(tx, actor.userId, 'lead.converted', 'lead', leadId, {
           customerId: customer.id,
           propertyId,
@@ -157,6 +157,7 @@ export class CustomersService {
     actor: Actor,
     customerId: string,
     site: { property?: PropertyInput | undefined; propertyId?: string | undefined },
+    lead: { latitude?: number | null | undefined; longitude?: number | null | undefined },
   ): Promise<string> {
     if (site.propertyId) {
       const [own] = await tx
@@ -168,7 +169,10 @@ export class CustomersService {
       return own.id;
     }
     if (!site.property) throw invalid('Add the site address.');
-    return insertLeadSite(tx, actor, customerId, site.property);
+    return insertLeadSite(tx, actor, customerId, site.property, {
+      latitude: lead.latitude ?? null,
+      longitude: lead.longitude ?? null,
+    });
   }
 
   async property(id: string): Promise<typeof properties.$inferSelect> {

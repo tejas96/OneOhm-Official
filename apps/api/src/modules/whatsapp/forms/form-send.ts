@@ -8,7 +8,7 @@ import { issueFlowToken } from './flow-token';
 import type { FormKey } from './form-registry';
 import { FORM_LIMITS } from './form-words';
 
-const WINDOW_MS = 24 * 3_600_000;
+export const WINDOW_MS = 24 * 3_600_000;
 
 /** What a form message says, and what its reply is for. */
 export interface FormStart {

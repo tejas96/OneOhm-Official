@@ -184,3 +184,10 @@ export const pointsEntries = pgTable(
     index('points_entries_user_idx').on(table.userId),
   ],
 );
+
+/** Company holidays: no visits are offered or booked on these days (Settings → Working time). */
+export const holidays = pgTable('holidays', {
+  day: calendarDate('day').primaryKey(),
+  name: text('name').notNull(),
+  createdAt: createdAt(),
+});

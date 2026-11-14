@@ -15,6 +15,7 @@ import {
 import { isWorkingTime, type OnboardingSettings } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq, isNull, like, ne, sql } from 'drizzle-orm';
+import { loadCalendar } from '../../../common/calendar';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { updateLeadFromChat } from '../../crm/lead-from-chat';
@@ -118,7 +119,8 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
     const ago = (hours: number) => new Date(now.getTime() - hours * HOUR);
     const silentAt = waConversations.lastInboundAt;
     const nudgeDue =
-      settings.nudgeAfterHours > 0 && isWorkingTime(now, this.env.BUSINESS_TIMEZONE)
+      settings.nudgeAfterHours > 0 &&
+      isWorkingTime(now, await loadCalendar(this.db, this.env.BUSINESS_TIMEZONE))
         ? sql`or (${waConversations.optedOutAt} is null and ${waConversations.context}->'ob'->>'nudgedAt' is null
               and ${silentAt} <= ${ago(settings.nudgeAfterHours)} and ${silentAt} > ${ago(WINDOW_HOURS)}
               and exists (select 1 from leads where leads.phone_e164 = ${waConversations.phone}
@@ -149,6 +151,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
   /** One chat, under its lock: a lead if it has none at all, then the nudge when due. */
   private async stalledChat(id: string, now: Date, settings: OnboardingSettings) {
     const zone = this.env.BUSINESS_TIMEZONE;
+    const calendar = await loadCalendar(this.db, zone);
     const discard: string[] = [];
     const outcome = await this.db.transaction(async (tx) => {
       const chat = await lockedChat(tx, id);
@@ -167,6 +170,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
         silent,
         now,
         zone,
+        calendar,
         kept,
         hasLead: lead !== null,
         hadLead: here,

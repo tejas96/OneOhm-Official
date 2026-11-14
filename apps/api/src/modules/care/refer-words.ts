@@ -26,6 +26,11 @@ const EN = {
   upiThanks: 'Thank you! Our team will check it and send your reward.',
   upiOld: 'That request is closed. Thank you!',
   paid: (amount: string) => `${amount} sent to your UPI ✅`,
+  mobileBad:
+    'That mobile number does not look right. It should be 10 digits, like 98765 43210. Please fill the form again.',
+  nameBad: "We could not read your friend's name. Please fill the form again.",
+  ownNumber: "That is your own number. Please give your friend's mobile number.",
+  alreadyCustomer: 'This friend is already with us. Thank you for thinking of us!',
 };
 
 const MR: Words<typeof EN> = {
@@ -53,6 +58,11 @@ const MR: Words<typeof EN> = {
   upiThanks: 'धन्यवाद! आमची टीम तो तपासून तुमचे बक्षीस पाठवेल.',
   upiOld: 'ही विनंती बंद झाली आहे. धन्यवाद!',
   paid: (amount) => `${amount} तुमच्या UPI वर पाठवले ✅`,
+  mobileBad:
+    'हा मोबाईल नंबर बरोबर वाटत नाही. तो १० अंकी असावा, उदा. 98765 43210. कृपया फॉर्म पुन्हा भरा.',
+  nameBad: 'मित्राचे नाव वाचता आले नाही. कृपया फॉर्म पुन्हा भरा.',
+  ownNumber: 'हा तुमचाच नंबर आहे. कृपया तुमच्या मित्राचा मोबाईल नंबर द्या.',
+  alreadyCustomer: 'हे आमचे ग्राहक आधीच आहेत. आमची आठवण ठेवल्याबद्दल धन्यवाद!',
 };
 
 const HI: Words<typeof EN> = {
@@ -80,6 +90,11 @@ const HI: Words<typeof EN> = {
   upiThanks: 'धन्यवाद! हमारी टीम इसे जाँचकर आपका इनाम भेजेगी।',
   upiOld: 'यह अनुरोध बंद हो गया है। धन्यवाद!',
   paid: (amount) => `${amount} आपके UPI पर भेज दिए ✅`,
+  mobileBad:
+    'यह मोबाइल नंबर सही नहीं लगता। यह 10 अंकों का होना चाहिए, जैसे 98765 43210। कृपया फ़ॉर्म फिर से भरें।',
+  nameBad: 'दोस्त का नाम पढ़ा नहीं गया। कृपया फ़ॉर्म फिर से भरें।',
+  ownNumber: 'यह आपका ही नंबर है। कृपया अपने दोस्त का मोबाइल नंबर दें।',
+  alreadyCustomer: 'ये पहले से हमारे ग्राहक हैं। हमें याद करने के लिए धन्यवाद!',
 };
 
 export const REFER_LISTS = { en: EN, mr: MR, hi: HI };

@@ -1,22 +1,43 @@
-import { callDay, type VisitKind, type VisitSlot, visitDayLabel } from '@oneohm/domain';
+import {
+  type BusinessCalendar,
+  callDay,
+  slotLabel,
+  type VisitKind,
+  type VisitSlot,
+  visitDayLabel,
+  type WordsLang,
+} from '@oneohm/domain';
 import { titleCaseName } from '@oneohm/shared';
 import type { Built } from '../send-to-customer/send-messages';
 import { DESCRIPTION_MAX, fitTitle, ROW_MAX } from '../whatsapp/assistant/chat-words';
 import { languageNow } from '../whatsapp/assistant/language';
 import { VISIT_WORDS, workWords } from './visit-words';
 
+const langOf = (language: string): WordsLang =>
+  language.startsWith('mr') ? 'mr' : language.startsWith('hi') ? 'hi' : 'en';
+
 /** "Thu 6 Nov" in the language being spoken. */
 export const dayWords = (day: string): string => visitDayLabel(day, languageNow());
 
-/** "Thu 6 Nov, morning". */
-export const whenWords = (day: string, slot: VisitSlot) =>
-  `${dayWords(day)}, ${VISIT_WORDS.slots[slot]}`;
+/** "Thu 6 Nov, 10:00–11:30 am" (older visits without a time: "Thu 6 Nov, morning"). */
+export const whenWords = (
+  day: string,
+  slot: VisitSlot,
+  startMin?: number | null,
+  endMin?: number | null,
+) =>
+  `${dayWords(day)}, ${
+    startMin != null && endMin != null
+      ? slotLabel(startMin, endMin, langOf(languageNow()))
+      : VISIT_WORDS.slots[slot]
+  }`;
 
 /** The tap ids (kept short; WhatsApp allows 256 characters). */
 export const visitTaps = {
   ask: (visitActionId: string) => `vask:${visitActionId}`,
   day: (actionId: string, day: string) => `vday:${actionId}:${day}`,
   slot: (actionId: string, day: string, slot: VisitSlot) => `vslot:${actionId}:${day}:${slot}`,
+  time: (actionId: string, day: string, startMin: number) => `vtime:${actionId}:${day}:${startMin}`,
   // The day rides along, so a tap on an old message cannot act on a visit that has moved since.
   confirm: (visitId: string, day: string) => `vcf:${visitId}:${day}`,
   okay: (visitId: string, day: string) => `vok:${visitId}:${day}`,
@@ -92,9 +113,34 @@ export function slotButtons(actionId: string, day: string, slots: readonly Visit
   };
 }
 
+/** The free times of a day as a list ("10:00–11:30 am" …), with "Another day" at the end. */
+export function timeList(
+  actionId: string,
+  day: string,
+  times: readonly { startMin: number; label: string }[],
+): Built {
+  return {
+    replies: [
+      {
+        kind: 'list',
+        body: VISIT_WORDS.pick.time(dayWords(day)),
+        button: VISIT_WORDS.pick.times,
+        rows: [
+          ...times.slice(0, 9).map((time) => ({
+            id: visitTaps.time(actionId, day, time.startMin),
+            title: fitTitle(time.label, ROW_MAX),
+          })),
+          { id: visitTaps.ask(actionId), title: fitTitle(VISIT_WORDS.pick.otherDay, ROW_MAX) },
+        ],
+      },
+    ],
+    template: { key: 'visit_pick', payload: {} },
+  };
+}
+
 /** "Thanks — we'll confirm by 6:30 pm today." */
-export function proposedThanks(now: Date, timeZone: string): string {
-  return VISIT_WORDS.pick.thanks(VISIT_WORDS.pick.by[callDay(now, timeZone).day]);
+export function proposedThanks(now: Date, cal: BusinessCalendar): string {
+  return VISIT_WORDS.pick.thanks(VISIT_WORDS.pick.by[callDay(now, cal).day]);
 }
 
 /** "Booked ✅ Thu 6 Nov, morning. Ravi will call before coming." with [Okay] [Change day]. */
@@ -103,11 +149,13 @@ export function bookedMessage(given: {
   visitId: string;
   day: string;
   slot: VisitSlot;
+  startMin?: number | null;
+  endMin?: number | null;
   staff: string;
   phone: string;
   moved: boolean;
 }): Built {
-  const when = whenWords(given.day, given.slot);
+  const when = whenWords(given.day, given.slot, given.startMin, given.endMin);
   const say = given.moved ? VISIT_WORDS.changed : VISIT_WORDS.booked;
   return {
     replies: [

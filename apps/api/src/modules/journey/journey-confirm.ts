@@ -5,9 +5,10 @@ import {
   homeNameOf,
   projects,
 } from '@oneohm/database';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gt, or, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logAction } from '../documents/customer-action-log';
+import { LATE_ANSWER_DAYS, lateRoofAnswer } from './journey-late-answer';
 import {
   alertManager,
   alertTaskOwner,
@@ -53,11 +54,20 @@ export function answerConfirm(
           eq(customerActions.id, actionId),
           eq(customerActions.customerId, customerId),
           eq(customerActions.type, 'confirm'),
-          eq(customerActions.status, 'open'),
+          or(
+            eq(customerActions.status, 'open'),
+            // A roof question the step closed before the customer answered still takes the answer.
+            and(
+              eq(customerActions.status, 'closed'),
+              sql`${customerActions.payload}->>'answer' = 'step_done'`,
+              gt(customerActions.closedAt, new Date(Date.now() - LATE_ANSWER_DAYS * 86_400_000)),
+            ),
+          ),
         ),
       )
       .for('update');
     if (!action || action.payload.kind !== kind) return { kind: 'old' };
+    if (action.status === 'closed' && kind !== 'site_ready') return { kind: 'old' };
     const [customer] = await tx
       .select({ name: customers.name })
       .from(customers)
@@ -65,7 +75,21 @@ export function answerConfirm(
     const task = action.taskId ? await taskFor(tx, action.taskId) : null;
     const home = await homeNameOf(tx, action.projectId);
     const who = customer?.name ?? 'The customer';
+    if (action.status === 'closed') {
+      if (answer === 'bad') return { kind: 'old' };
+      const late = await lateRoofAnswer(tx, {
+        action,
+        task,
+        answer,
+        who,
+        home,
+        via,
+        userId: by?.userId ?? null,
+      });
+      return { kind: late };
+    }
     const asked = action.payload.answer === 'not_yet';
+    const dispatched = task?.status === 'completed';
     const now = new Date();
     const record = async (answered: string, line: string, close: boolean) => {
       await tx
@@ -107,7 +131,9 @@ export function answerConfirm(
         await alertTaskOwner(tx, task, {
           kind: 'site_not_ready',
           title: `Roof not ready at ${home}`,
-          body: `${who} said the roof is not ready. ${task.title} now waits on the customer.`,
+          body: dispatched
+            ? `Material is dispatched but ${who} says the roof is not ready. Please call before the crew goes.`
+            : `${who} said the roof is not ready. ${task.title} now waits on the customer.`,
           key: `site_not_ready:${action.id}`,
         });
       }
@@ -138,7 +164,9 @@ export function answerConfirm(
       await alertTaskOwner(tx, task, {
         kind: 'site_ready_now',
         title: `Roof is ready at ${home}`,
-        body: `${who} says the roof is ready now. ${task.title} is open again.`,
+        body: dispatched
+          ? `${who} says the roof is ready now.`
+          : `${who} says the roof is ready now. ${task.title} is open again.`,
         key: `site_ready_now:${action.id}`,
       });
     }
@@ -155,7 +183,7 @@ export async function cancelConfirm(
   if (ask.payload.answer !== 'not_yet' || ask.payload.kind !== 'site_ready') return;
   const [action] = await tx.select().from(customerActions).where(eq(customerActions.id, ask.id));
   const task = action?.taskId ? await taskFor(tx, action.taskId) : null;
-  if (!task) return;
+  if (!task || task.status === 'completed') return;
   // A cancelled project has nothing left to resume.
   const [project] = await tx
     .select({ status: projects.status })
@@ -163,50 +191,4 @@ export async function cancelConfirm(
     .where(eq(projects.id, task.projectId));
   if (project?.status === 'cancelled') return;
   await resumeAfterWait(tx, task, String(ask.payload.waitSince ?? '') || null);
-}
-
-/**
- * A step was completed: the roof question of that step has no point any more, and the installation
- * question is over once the system is tested and switched on. They close quietly: no Home line, no
- * alert, no message (the log keeps one line).
- */
-export async function closeStaleAsks(
-  tx: DatabaseExecutor,
-  task: { readonly id: string; readonly projectId: string; readonly templateKey: string },
-): Promise<void> {
-  const open = await tx
-    .select()
-    .from(customerActions)
-    .where(
-      and(
-        eq(customerActions.projectId, task.projectId),
-        eq(customerActions.type, 'confirm'),
-        eq(customerActions.status, 'open'),
-      ),
-    );
-  const now = new Date();
-  for (const action of open) {
-    // Only the roof and installation questions end with their step; the subsidy, bank and layout
-    // questions wait for the customer's own answer.
-    const stale =
-      (action.taskId === task.id &&
-        ['site_ready', 'installation'].includes(String(action.payload.kind))) ||
-      (task.templateKey === 'testing_commissioning' && action.payload.kind === 'installation');
-    if (!stale) continue;
-    await tx
-      .update(customerActions)
-      .set({
-        status: 'closed',
-        closedAt: now,
-        updatedAt: now,
-        payload: { ...action.payload, answer: 'step_done' },
-      })
-      .where(and(eq(customerActions.id, action.id), eq(customerActions.status, 'open')));
-    await logAction(tx, action, {
-      kind: 'customer_action',
-      message: `${action.title}: closed, the step moved on`,
-      userId: null,
-      data: { customerActionId: action.id },
-    });
-  }
 }

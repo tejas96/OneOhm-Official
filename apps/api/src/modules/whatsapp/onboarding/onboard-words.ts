@@ -1,4 +1,5 @@
-import { CALL_DAY_WORDS, type CallDay } from '@oneohm/domain';
+import { type CallDay, callDayWords, onWeekday } from '@oneohm/domain';
+import { laterWeekday } from '../assistant/hours-words';
 import { localized, type Words } from '../assistant/language';
 
 /**
@@ -44,7 +45,7 @@ const EN_ONBOARD = {
   later: { '1w': 'In 1 week', '1m': 'In 1 month', '3m': 'In 3 months' },
   /** The call promise: today in working hours, else the next working morning. */
   willCall: (name: string | null, day: CallDay) =>
-    `Thank you. ${name ?? 'Our team'} will call you ${CALL_DAY_WORDS[day]}.`,
+    `Thank you. ${name ?? 'Our team'} will call you ${callDayWords({ day, weekday: laterWeekday() })}.`,
   laterThanks: 'Thank you! We will check back with you then.',
   /** No instant price for this site (a farm, a society, other roof…): a person prices it. */
   expertPrice: 'Thank you! Our expert will prepare your price and call you.',
@@ -99,7 +100,7 @@ const MR_ONBOARD: Words<OnboardWords> = {
   askWhenLater: 'आम्ही तुम्हाला पुन्हा केव्हा संपर्क करू?',
   later: { '1w': '1 आठवड्यात', '1m': '1 महिन्यात', '3m': '3 महिन्यांत' },
   willCall: (name, day) =>
-    `धन्यवाद. ${{ today: 'आज', tomorrow: 'उद्या सकाळी', monday: 'सोमवारी सकाळी' }[day]} ${name ? `${name} यांच्याकडून` : 'आमच्या टीमकडून'} तुम्हाला कॉल येईल.`,
+    `धन्यवाद. ${{ today: 'आज', tomorrow: 'उद्या सकाळी', later: `${onWeekday(laterWeekday(), 'mr')} सकाळी` }[day]} ${name ? `${name} यांच्याकडून` : 'आमच्या टीमकडून'} तुम्हाला कॉल येईल.`,
   laterThanks: 'धन्यवाद! आम्ही तेव्हा तुमच्याशी पुन्हा संपर्क करू.',
   expertPrice: 'धन्यवाद! आमचे तज्ज्ञ तुमची किंमत तयार करून तुम्हाला कॉल करतील.',
   firstDetails: 'धन्यवाद — आधी काही माहिती घेऊया. तुमची फाईल आमच्याकडे आहे.',
@@ -146,7 +147,7 @@ const HI_ONBOARD: Words<OnboardWords> = {
   askWhenLater: 'हम आपसे फिर कब संपर्क करें?',
   later: { '1w': '1 हफ़्ते में', '1m': '1 महीने में', '3m': '3 महीने में' },
   willCall: (name, day) =>
-    `धन्यवाद. ${{ today: 'आज', tomorrow: 'कल सुबह', monday: 'सोमवार सुबह' }[day]} ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
+    `धन्यवाद. ${{ today: 'आज', tomorrow: 'कल सुबह', later: `${onWeekday(laterWeekday(), 'hi')} सुबह` }[day]} ${name ?? 'हमारी टीम'} की ओर से आपको कॉल आएगा.`,
   laterThanks: 'धन्यवाद! हम तब आपसे फिर संपर्क करेंगे.',
   expertPrice: 'धन्यवाद! हमारे विशेषज्ञ आपकी कीमत तैयार करके आपको कॉल करेंगे.',
   firstDetails: 'धन्यवाद — पहले कुछ जानकारी ले लें. आपकी फाइल हमारे पास है.',

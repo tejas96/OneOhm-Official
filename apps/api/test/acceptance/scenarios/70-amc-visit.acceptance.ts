@@ -6,7 +6,7 @@ import { lastReply, tap } from '../support/onboarding';
 import { addDays, sellProject, today } from '../support/sales';
 import { closeChat, openChat, templatesFor } from '../support/send';
 import { noonOn, openMaintenance, runVisitWorker, templateOn } from '../support/visit-worker';
-import { pickDay, setVisit, visitsFor } from '../support/visits';
+import { pickDay, setVisit, teamConfirmsPicks, visitsFor } from '../support/visits';
 
 // An AMC visit due (redesign §4, phase 6): the customer picks a day, the team confirms, the day before
 // the customer gets [Confirm] [Change day]; the visit is confirmed on the AMC record.
@@ -15,14 +15,17 @@ describe('AMC: the visit', () => {
   let admin: Session;
   let undoPick: () => Promise<void>;
   let undoRemind: () => Promise<void>;
+  let restoreSettings: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    restoreSettings = await teamConfirmsPicks(admin);
     undoPick = await templateOn('visit_pick');
     undoRemind = await templateOn('visit_reminder');
   });
   afterAll(async () => {
     await undoPick();
     await undoRemind();
+    await restoreSettings();
     await closeDb();
   });
 

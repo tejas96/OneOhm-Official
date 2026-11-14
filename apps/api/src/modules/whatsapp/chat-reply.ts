@@ -38,6 +38,8 @@ export type ChatReply =
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
+      /** A file shown on top of the message (the receipt PDF); WhatsApp allows a document header. */
+      readonly header?: { readonly document: { readonly url: string; readonly filename: string } };
     }
   | {
       readonly kind: 'list';
@@ -64,5 +66,7 @@ export function chatReplySummary(reply: ChatReply): string {
     reply.kind === 'buttons'
       ? reply.buttons.map((button) => button.title)
       : reply.rows.map((row) => row.title);
-  return `${reply.body}\n[${options.join(' · ')}]`;
+  const file =
+    reply.kind === 'buttons' && reply.header ? `[${reply.header.document.filename}]\n` : '';
+  return `${file}${reply.body}\n[${options.join(' · ')}]`;
 }

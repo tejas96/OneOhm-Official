@@ -1,8 +1,9 @@
 import type { ChatSummary } from '@oneohm/api-contracts';
 import { chatsWaitingSince, customers, users, waConversations, waMessages } from '@oneohm/database';
-import { chatWaitStage, chatWindowOpen } from '@oneohm/domain';
+import { type BusinessCalendar, chatWaitStage, chatWindowOpen } from '@oneohm/domain';
 import { desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { loadCalendar } from '../../common/calendar';
 import { searchWords } from '../../common/paging';
 import { matchWords } from '../../common/search-match';
 import type { Database } from '../../config/core.module';
@@ -11,8 +12,8 @@ import type { Environment } from '../../config/environment';
 const assignee = alias(users, 'assignee');
 
 /** Waiting over 2 working hours for a person's answer. */
-function isLate(since: Date | undefined, now: Date, env: Environment): boolean {
-  return since !== undefined && chatWaitStage(since, now, env.BUSINESS_TIMEZONE) === 2;
+function isLate(since: Date | undefined, now: Date, cal: BusinessCalendar): boolean {
+  return since !== undefined && chatWaitStage(since, now, cal) === 2;
 }
 
 /** A chat by the customer's name, WhatsApp profile name or either phone (customer joined). */
@@ -64,6 +65,7 @@ export async function chatSummaries(
     rows.map(({ chat }) => chat.id),
   );
   const now = new Date();
+  const cal = await loadCalendar(db, env.BUSINESS_TIMEZONE);
   return rows.map(({ chat, customer, assigneeName }) => {
     const message = lastBy.get(chat.id);
     return {
@@ -80,7 +82,7 @@ export async function chatSummaries(
           : null,
       // A person has the chat and the customer spoke last: someone owes them an answer.
       needsReply: chat.state === 'human' && waiting.has(chat.id),
-      late: chat.state === 'human' && isLate(waiting.get(chat.id), now, env),
+      late: chat.state === 'human' && isLate(waiting.get(chat.id), now, cal),
       lastMessage: message
         ? {
             body: message.body,

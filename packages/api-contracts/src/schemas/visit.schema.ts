@@ -16,6 +16,10 @@ export const visitSchema = z.object({
   status: z.enum(VISIT_STATUSES),
   day: calendarDateSchema,
   slot: z.enum(VISIT_SLOTS),
+  /** Exact time in minutes after midnight (null for a DISCOM date); `time` says it ("10:00–11:30 am"). */
+  startMin: z.number().int().nullable(),
+  endMin: z.number().int().nullable(),
+  time: z.string().nullable(),
   home: z.string(),
   taskId: idSchema.nullable(),
   leadId: idSchema.nullable(),
@@ -41,14 +45,47 @@ export const visitsOfSchema = z.object({
   /** The task's own start day, so the card can show when the visit and the task differ. */
   taskStartDate: calendarDateSchema.nullable(),
   freeDays: z.array(calendarDateSchema),
+  /** The free times of each free day, for staff (Settings → Visits & bookings). */
+  freeTimes: z.record(
+    calendarDateSchema,
+    z.array(z.object({ startMin: z.number().int(), endMin: z.number().int(), label: z.string() })),
+  ),
 });
 export type VisitsOf = z.infer<typeof visitsOfSchema>;
 
 /** Set the day: confirms the customer's pick, moves it, or books it with no pick. */
 export const setVisitSchema = visitScopeSchema.extend({
   day: calendarDateSchema,
+  /** Older clients send a half of the day; the exact time is `startMin`. */
   slot: z.enum(VISIT_SLOTS),
+  startMin: z.number().int().min(0).max(1439).optional(),
 });
 export type SetVisit = z.infer<typeof setVisitSchema>;
 
 export const cancelVisitSchema = z.object({ reason: z.string().trim().max(200).optional() });
+
+/** The visits page: open and recent visits of a date range, for one person or everyone. */
+export const visitListQuerySchema = z.object({
+  from: calendarDateSchema,
+  to: calendarDateSchema,
+  userId: idSchema.optional(),
+});
+
+export const visitListRowSchema = z.object({
+  id: idSchema,
+  kind: z.enum(VISIT_KINDS),
+  status: z.enum(VISIT_STATUSES),
+  day: calendarDateSchema,
+  startMin: z.number().int().nullable(),
+  time: z.string(),
+  customer: z.string(),
+  phone: z.string(),
+  home: z.string(),
+  crew: z.array(z.object({ id: idSchema, name: z.string() })),
+  leadId: idSchema.nullable(),
+  taskId: idSchema.nullable(),
+  projectId: idSchema.nullable(),
+  serviceRequestId: idSchema.nullable(),
+  customerConfirmed: z.boolean(),
+});
+export type VisitListRow = z.infer<typeof visitListRowSchema>;

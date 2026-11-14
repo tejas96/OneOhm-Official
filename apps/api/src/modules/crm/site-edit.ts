@@ -16,14 +16,28 @@ export async function insertLeadSite(
   actor: Actor,
   customerId: string,
   input: PropertyInput,
+  /** The lead's own pin, used when the form sent no point. */
+  leadPin?: { latitude: number | null; longitude: number | null },
 ): Promise<string> {
   await assertConsumerNumberFree(tx, input.consumerNumber, {
     field: 'property.consumerNumber',
     reveal: reveals(actor),
   });
   const label = await freeLabel(tx, customerId, input.label);
-  const { locationSource, ...fields } = input;
-  const located = webLocation(actor, null, input, locationSource);
+  const { locationSource, ...typed } = input;
+  const hasPoint = input.latitude != null && input.longitude != null;
+  const fromLead =
+    leadPin?.latitude != null &&
+    leadPin.longitude != null &&
+    (!hasPoint ||
+      // The form opened on the lead's pin and the office left it as it was.
+      (!locationSource &&
+        input.latitude === leadPin.latitude &&
+        input.longitude === leadPin.longitude));
+  const fields = fromLead
+    ? { ...typed, latitude: leadPin?.latitude, longitude: leadPin?.longitude }
+    : typed;
+  const located = webLocation(actor, null, fields, fromLead ? 'whatsapp_pin' : locationSource);
   const [created] = await tx
     .insert(properties)
     .values({

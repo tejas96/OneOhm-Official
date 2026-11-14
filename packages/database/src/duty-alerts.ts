@@ -19,12 +19,18 @@ async function atWork(
  * away today is covered by the backup on their leave (one at work today). The person who
  * caused the alert (`exceptUserId`) is left out before that choice, so when they are the
  * only other holder the desk still hears. When nobody at all is at work, every holder
- * but them still hears, so the alert never goes silent.
+ * but them still hears, so the alert never goes silent. With `includeDesk` the desk is
+ * not held back: everyone at work who holds the duty hears (for an alert that is about
+ * an action only these people can take, such as starting a project).
  */
 export async function dutyAlertTargets(
   db: DatabaseExecutor,
   capability: string,
-  options: { readonly staffOnly?: boolean; readonly exceptUserId?: string | null | undefined } = {},
+  options: {
+    readonly staffOnly?: boolean;
+    readonly exceptUserId?: string | null | undefined;
+    readonly includeDesk?: boolean;
+  } = {},
 ): Promise<string[]> {
   const except = options.exceptUserId ?? null;
   const rows = await db
@@ -44,7 +50,8 @@ export async function dutyAlertTargets(
   // Desk only when every role that gives them this duty is the all-powers one.
   const desk = holders.filter((id) => rows.every((row) => row.id !== id || row.system));
   const others = holders.filter((id) => !desk.includes(id));
-  for (const group of [others, desk]) {
+  const groups = options.includeDesk ? [holders] : [others, desk];
+  for (const group of groups) {
     const present = await atWork(db, group, except);
     if (present.length > 0) return present;
   }

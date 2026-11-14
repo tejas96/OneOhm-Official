@@ -68,6 +68,7 @@ describe('New contacts: onboarding by taps', () => {
     expect((await chatOf(phone)).state).toBe('onboard:site');
     const notes = (await notesOf(lead?.id ?? '')).map((row) => row.note);
     expect(notes).toContain('Location pin: https://maps.google.com/?q=17.68,74.02');
+    expect([lead?.latitude, lead?.longitude]).toEqual([17.68, 74.02]);
   });
 
   it('a pin that names no known city is kept: the city list is asked, and the pin lands on the lead then', async () => {
@@ -83,6 +84,7 @@ describe('New contacts: onboarding by taps', () => {
     const [lead] = await leadsOf(phone);
     const notes = (await notesOf(lead?.id ?? '')).map((row) => row.note);
     expect(notes).toContain('Location pin: https://maps.google.com/?q=19.07,72.87');
+    expect([lead?.latitude, lead?.longitude]).toEqual([19.07, 72.87]);
   });
 
   async function atEstimate(phone: string) {
@@ -95,7 +97,7 @@ describe('New contacts: onboarding by taps', () => {
     return (await leadsOf(phone))[0];
   }
 
-  it('[Book a visit] offers free days, then Morning/Afternoon; the pick lands on the lead and the owner is told', async () => {
+  it('[Book a visit] offers free days, then exact times; the pick books a visit on the lead and the owner is told', async () => {
     const phone = uniquePhone();
     const lead = await atEstimate(phone);
     const estimate = await lastReply(phone);
@@ -107,19 +109,23 @@ describe('New contacts: onboarding by taps', () => {
     const day = days?.rows?.[0]?.id ?? '';
     expect(day).toMatch(/^ob:vday:\d{4}-\d{2}-\d{2}$/);
     await tap(phone, day);
-    const slots = await lastReply(phone);
-    expect(slots?.buttons?.map((b) => b.title)).toEqual(['Morning', 'Afternoon']);
-    await tap(phone, slots?.buttons?.[0]?.id ?? '');
+    const times = await lastReply(phone);
+    expect(times?.buttons).toBeUndefined();
+    const slot = times?.rows?.[0]?.id ?? '';
+    expect(slot).toMatch(new RegExp(`^ob:vslot:${day.slice('ob:vday:'.length)}:\\d+$`));
+    await tap(phone, slot);
+    // Booked at once on the lead (no customer yet), with the exact time.
+    const [visit] = await rows<{ status: string; customer_id: string | null; day: string }>(
+      'SELECT status::text, customer_id, day::text FROM visits WHERE lead_id = $1',
+      [lead?.id],
+    );
+    expect(visit).toMatchObject({ status: 'confirmed', customer_id: null });
+    expect(visit?.day).toBe(day.slice('ob:vday:'.length));
+    expect((await lastReply(phone))?.body).toMatch(/^Booked ✅/);
     const [after] = await leadsOf(phone);
     expect(after?.next_action_on).toBe(day.slice('ob:vday:'.length));
-    expect(after?.next_action_note).toBe('Confirm the site visit the customer picked');
-    const notes = (await notesOf(lead?.id ?? '')).map((row) => row.note);
-    expect(notes.some((note) => note.startsWith('Asked for a free site visit on WhatsApp'))).toBe(
-      true,
-    );
-    expect((await lastReply(phone))?.body).toMatch(/will confirm your visit by/);
     const alert = await rows(
-      "SELECT 1 FROM notifications WHERE kind = 'whatsapp_callback' AND title LIKE '%for the site visit'",
+      "SELECT 1 FROM notifications WHERE kind = 'visit_booked' AND title LIKE '%for the site visit'",
     );
     expect(alert.length).toBeGreaterThan(0);
   });

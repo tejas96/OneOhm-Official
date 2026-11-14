@@ -9,7 +9,13 @@ export async function proofReceived(
   tx: DatabaseExecutor,
   customerId: string,
   milestoneId: string | null,
-  detail: { documentId: string | null; amountPaise: number | null; paidOn: string | null },
+  detail: {
+    documentId: string | null;
+    amountPaise: number | null;
+    paidOn: string | null;
+    amountText?: string;
+    dateText?: string;
+  },
 ): Promise<number> {
   // Proof with no named instalment answers the oldest ask still waiting, not all of them.
   const target = await tx

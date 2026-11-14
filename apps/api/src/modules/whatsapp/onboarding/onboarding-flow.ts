@@ -1,22 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { readBusinessSetting, waConversations } from '@oneohm/database';
-import { nextStep, type OnboardAnswers, type OnboardStep } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
-import { DATABASE, type Database } from '../../../config/core.module';
+import { readBusinessSetting } from '@oneohm/database';
+import { nextStep, type OnboardStep } from '@oneohm/domain';
+import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
+import type { Environment } from '../../../config/environment';
 import { LeadIntakeService } from '../../crm/lead-intake.service';
+import { type GeoPlace, type ReverseGeocode, reverseGeocodeFor } from '../../maps/reverse-geocode';
 import { CHAT_WORDS } from '../assistant/chat-words';
 import { HandOverService } from '../assistant/hand-over';
 import { type Conversation, lockedChat, queueReply } from '../chat-store';
+import { FormSendService } from '../forms/form-send';
 import type { Incoming } from '../whatsapp-events';
 import { EstimateService } from './estimate.service';
 import { EstimateNextStepsService } from './estimate-next-steps';
-import { MORE_WORDS } from './onboard-words-more';
 import { afterEstimate } from './onboarding-after';
 import { readAnswer } from './onboarding-answer';
 import { CONTINUE_CHOICE, firstMissing, isOnboardingChat, stepOfState } from './onboarding-context';
 import { ChatFilesService, type Fetched } from './onboarding-files';
-import { openLeadFor, summaryOf, writeAnswer } from './onboarding-lead';
-import { notePin, pinnedCity, pinWaits, say } from './onboarding-pin';
+import { type FormSteps, mediaOfForm, offerForm, takeForm } from './onboarding-form';
+import { openLeadFor, summaryOf } from './onboarding-lead';
+import { askPin, pinnedCity, pinWaits, placeOf, say } from './onboarding-pin';
+import { recordAnswer } from './onboarding-record';
 import { type QuestionView, question } from './onboarding-replies';
 import {
   backTo,
@@ -29,7 +32,6 @@ import {
 } from './onboarding-turn';
 import {
   ensureLead,
-  fileHeldBill,
   type HeardMedia,
   handToPerson,
   heardMedia,
@@ -50,7 +52,18 @@ export class OnboardingFlowService {
     private readonly estimates: EstimateService,
     private readonly nextSteps: EstimateNextStepsService,
     private readonly files: ChatFilesService,
-  ) {}
+    private readonly forms: FormSendService,
+    @Inject(ENVIRONMENT) env: Environment,
+  ) {
+    this.geocode = reverseGeocodeFor(env);
+  }
+  private readonly geocode: ReverseGeocode;
+  private readonly formSteps: FormSteps = {
+    record: (turn, step, answer) =>
+      recordAnswer(turn, { intake: this.intake, files: this.files }, step, answer),
+    ask: (turn, step) => this.ask(turn, step),
+    finish: (turn, leadId) => this.finish(turn, leadId),
+  };
 
   /**
    * True when a stranger's message belongs here: a chat onboarding started (it finishes
@@ -63,9 +76,10 @@ export class OnboardingFlowService {
     return settings.enabled && !(await openLeadFor(this.db, chat.phone));
   }
 
-  /** A photo or paper is downloaded first, so the chat row is not locked during the fetch. */
+  /** A photo, paper or pin is fetched or named first, so the chat row is not locked during it. */
   async handle(chat: Conversation, incoming: Incoming): Promise<void> {
-    return this.run(chat, incoming, false, await this.files.download(incoming.media));
+    const file = await this.files.download(incoming.media ?? mediaOfForm(incoming.form));
+    return this.run(chat, incoming, false, file, await placeOf(this.geocode, incoming));
   }
 
   /** "hi", "menu" or the first message after a release: the question the chat is on. */
@@ -83,11 +97,12 @@ export class OnboardingFlowService {
     incoming: Incoming | null,
     referral = false,
     file: Fetched | null = null,
+    place: GeoPlace | null = null,
   ) {
     const discard = await this.db.transaction(async (tx) => {
       const chat = await lockedChat(tx, seen.id);
       const lead = await openLeadFor(tx, chat.phone);
-      const turn = await newTurn(tx, chat, lead, file, referral);
+      const turn = await newTurn(tx, chat, lead, file, referral, place);
       if (referral) await this.ask(turn, firstMissing(turn.answers, turn.known));
       else await this.take(turn, incoming);
       return turn.discard;
@@ -98,6 +113,7 @@ export class OnboardingFlowService {
   private async take(turn: Turn, incoming: Incoming | null): Promise<null> {
     // A message that waited for the lock behind a hand-over: the person has the chat now.
     if (incoming && turn.chat.state === 'human') return null;
+    if (incoming?.form) return takeForm(turn, incoming, this.files, this.formSteps);
     const onStep = stepOfState(turn.chat.state);
     const current = onStep ?? firstMissing(turn.answers, turn.known);
     // A voice note or a video is a person's to hear (C12); a photo or paper is filed.
@@ -121,7 +137,7 @@ export class OnboardingFlowService {
   ): Promise<null> {
     const choice = incoming.choiceId;
     const text = incoming.text.trim();
-    if (current === 'city' && choice === 'ob:city:pin') return this.askPin(turn);
+    if (current === 'city' && choice === 'ob:city:pin') return askPin(turn);
     // Nothing to read: a tap on another question (an older list), the nudge's "Continue", or words
     // in the first message after a person handed the chat back. An old tap is told so.
     if (choice ? !choice.startsWith(`ob:${current}:`) : !onStep) {
@@ -170,38 +186,22 @@ export class OnboardingFlowService {
     return this.ask(turn, step);
   }
 
-  /** [📍 Send location]: WhatsApp's own button (a single-button message). */
-  private async askPin(turn: Turn): Promise<null> {
-    await saveTurn(turn, 'city');
-    await say(turn, MORE_WORDS.locationAsk, true);
-    return null;
-  }
-
   /** A clear answer: kept in the chat, written on the lead, then the next question. */
   private async apply(turn: Turn, step: OnboardStep, answer: unknown): Promise<null> {
-    const { tx, chat } = turn;
-    turn.answers = { ...turn.answers, [step]: answer } as OnboardAnswers;
-    turn.misses = 0;
-    turn.awaiting = undefined;
-    if (step === 'language')
-      await tx
-        .update(waConversations)
-        .set({ language: String(answer) })
-        .where(eq(waConversations.id, chat.id));
-    const written = await writeAnswer(tx, this.intake, {
-      chat,
-      lead: turn.lead,
-      step,
-      answers: turn.answers,
-      settings: turn.settings,
-    });
-    turn.dropEntry ||= written.created;
-    if (written.leadId) await fileHeldBill(turn, this.files, written.leadId);
-    const leadId = written.leadId ?? turn.lead?.id;
-    if (step === 'city' && leadId) await notePin(turn, leadId);
+    const leadId = await this.formSteps.record(turn, step, answer);
+    if (
+      step === 'language' &&
+      !turn.lead &&
+      (await offerForm(turn, await this.forms.flowIdOf('onboarding')))
+    )
+      return null;
     const next = nextStep(step, turn.answers, turn.known);
-    if (next !== 'done') return this.ask(turn, next);
-    // Its lead was closed on the way: a new one, so the estimate or the expert has a lead.
+    return next === 'done' ? this.finish(turn, leadId) : this.ask(turn, next);
+  }
+
+  /** All answered: the estimate and next steps, or the expert path; a closed lead gets a new one. */
+  private async finish(turn: Turn, leadId: string | null): Promise<null> {
+    const { tx, chat } = turn;
     const made =
       leadId ??
       (await ensureLead(

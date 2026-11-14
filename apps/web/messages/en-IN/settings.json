@@ -29,7 +29,9 @@
       "leadAssignment": "Lead assignment",
       "reminders": "Reminders",
       "dashboard": "Late and due-soon",
-      "automation": "Automation runs"
+      "automation": "Automation runs",
+      "workingTime": "Working time & holidays",
+      "visits": "Visits & bookings"
     },
     "noAccess": "You do not have permission to change settings.",
     "save": "Save changes",
@@ -453,23 +455,12 @@
       },
       "workingDay": {
         "title": "Working week",
-        "description": "The days people work, and when the working day starts and ends.",
-        "workingDays": "Working days",
-        "days": {
-          "0": "Sun",
-          "1": "Mon",
-          "2": "Tue",
-          "3": "Wed",
-          "4": "Thu",
-          "5": "Fri",
-          "6": "Sat"
-        },
-        "offDays": "Weekly off: {days}. Leave on these days is not counted.",
-        "noOffDays": "No weekly off day.",
-        "dayStart": "Day starts",
-        "dayEnd": "Day ends",
+        "description": "Late check-ins. The days and hours themselves are set once, for everything.",
         "grace": "Grace minutes",
-        "graceHint": "Check-ins later than the start plus these minutes are marked late."
+        "graceHint": "Check-ins later than the start plus these minutes are marked late.",
+        "summary": "Working days and hours: {summary} — set in",
+        "setIn": "Working time & holidays",
+        "lunch": "lunch {time}"
       },
       "location": {
         "title": "Location at check-in",
@@ -857,6 +848,7 @@
     "sectionLabel": "Settings section",
     "groups": {
       "company": "Your business",
+      "hours": "Hours and visits",
       "leads": "Leads and marketing",
       "pricing": "Pricing and quotes",
       "projects": "Projects",
@@ -1524,6 +1516,120 @@
         "unknown": "No fee entered. Transfers will say the fee is shown after sending.",
         "gst": "Plus {percent}% GST of {gst}. About {total} in all per transfer."
       }
+    },
+    "workingTime": {
+      "title": "Working time & holidays",
+      "loading": "Loading working time",
+      "intro": "The one calendar for the whole business: the days and hours the team works, lunch, and holidays. Visit times, reminders and customer replies all follow it.",
+      "workingDays": "Working days",
+      "days": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "week": {
+        "title": "Working week",
+        "description": "Which days and hours the team works.",
+        "opens": "Opens",
+        "closes": "Closes",
+        "lunch": "Lunch break",
+        "lunchHint": "No visit is booked over it.",
+        "lunchFrom": "Lunch starts",
+        "lunchTo": "Lunch ends"
+      },
+      "preview": {
+        "withLunch": "Open {open}, lunch {lunch}",
+        "noLunch": "Open {open}, no lunch break",
+        "incomplete": "Pick at least one working day and opening hours."
+      },
+      "holidays": {
+        "title": "Holidays",
+        "description": "Days the company is closed. No visits are offered or booked on them.",
+        "date": "Date",
+        "name": "Holiday name",
+        "namePlaceholder": "e.g. Diwali",
+        "add": "Add holiday",
+        "none": "No holidays yet.",
+        "past": "past",
+        "remove": "Remove {name}",
+        "duplicate": "That date is already a holiday.",
+        "missing": "Pick a date and name the holiday."
+      },
+      "blocked": "Cannot save yet: {reason}",
+      "outside": {
+        "title": "{count, plural, one {# booked visit now falls outside working time} other {# booked visits now fall outside working time}}",
+        "hint": "They are kept as booked. Move or cancel them from Visits.",
+        "noTime": "no time set",
+        "more": "{count, plural, one {and # more} other {and # more}}",
+        "dismiss": "Dismiss"
+      }
+    },
+    "visits": {
+      "title": "Visits & bookings",
+      "loading": "Loading visit settings",
+      "intro": "How long a visit takes, when visits can start, and who may book them. Times are checked against Working time & holidays.",
+      "fields": {
+        "visitMinutes": "Visit length (minutes, with travel)",
+        "visitsPerSlot": "Visits per person per time",
+        "customerNoticeHours": "Customer notice (hours)",
+        "staffMayBookToday": "Staff may book today",
+        "daysAhead": "Days ahead",
+        "daysShown": "Days shown",
+        "autoConfirmCustomerPicks": "Book customer picks at once",
+        "dayBeforeAt": "Day-before reminder at",
+        "hoursBefore": "Reminder hours before",
+        "notConfirmedAlertAt": "Not-confirmed alert at",
+        "missedAfterMinutes": "Missed after (minutes past end)"
+      },
+      "hints": {
+        "visitMinutes": "Between 30 and 240.",
+        "visitsPerSlot": "Open visits one person can hold at the same time.",
+        "customerNoticeHours": "A customer can book a time only this many hours ahead.",
+        "staffMayBookToday": "Staff can book a visit for later today.",
+        "daysShown": "Days listed at a time in WhatsApp, up to 9.",
+        "autoConfirmCustomerPicks": "Without it, staff confirm each time the customer picks.",
+        "hoursBefore": "0 turns this reminder off.",
+        "missedAfterMinutes": "A visit not marked done by then counts as missed."
+      },
+      "times": {
+        "title": "Visit length and times",
+        "description": "A visit starts at one of these times and lasts the visit length."
+      },
+      "slots": {
+        "label": "Visit start times",
+        "add": "New start time",
+        "addButton": "Add time",
+        "remove": "Remove {time}"
+      },
+      "booking": {
+        "title": "Who can book, and how far ahead",
+        "description": "The booking window for customers and staff."
+      },
+      "reminders": {
+        "title": "Reminders and missed visits",
+        "description": "When customers and visitors are nudged."
+      },
+      "lead": {
+        "title": "Who does lead surveys",
+        "description": "The person who visits a new lead.",
+        "owner": "Lead owner",
+        "ownerThenTeam": "Lead owner, then other surveyors"
+      },
+      "preview": {
+        "title": "Preview",
+        "day": "A working day:",
+        "lunch": "lunch",
+        "noSlots": "no visit times fit working hours",
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "window": "Customers can book from {from}, up to {ahead} days ahead; {shown} days shown.",
+        "windowNone": "No time is open to customers right now. Up to {ahead} days ahead; {shown} days shown."
+      },
+      "blocked": "Cannot save yet: {reason}"
     }
   }
 }

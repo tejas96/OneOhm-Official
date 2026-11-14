@@ -132,7 +132,7 @@ describe('Problem: fixed check and reopen', () => {
     expect(desk.length).toBeGreaterThan(0);
   });
 
-  it('outside 24 hours the template goes once it is on; while it is off the older update still goes, also in the chat', async () => {
+  it('outside 24 hours the template goes once it is on; while it is off the older update still goes there, but an open chat always gets the question', async () => {
     const { phone: closed } = await resolved('Fixed Template (test)', { open: false });
     const [sent] = await templatesFor(closed, 'problem_fixed_check');
     expect(sent?.payload.yesPayload).toMatch(/^fx:y:/);
@@ -141,10 +141,10 @@ describe('Problem: fixed check and reopen', () => {
 
     await undoTemplate();
     undoTemplate = await setTemplate('problem_fixed_check', false);
-    // Window open, switch off: no chat question, the older "resolved" update goes (C1).
+    // Window open, switch off: the switch governs the template, so the chat still gets the question.
     const { phone: open } = await resolved('Fixed Switch Off (test)');
-    expect((await lastReply(open))?.body ?? '').not.toContain('Is it working now');
-    expect((await templatesFor(open, 'service_update'))[0]?.payload.status).toBe('resolved');
+    expect((await lastReply(open))?.body ?? '').toContain('Is it working now');
+    expect(await templatesFor(open, 'service_update')).toHaveLength(0);
     const { phone } = await resolved('Fixed Template Off (test)', { open: false });
     expect(await templatesFor(phone, 'problem_fixed_check')).toHaveLength(0);
     const [older] = await templatesFor(phone, 'service_update');

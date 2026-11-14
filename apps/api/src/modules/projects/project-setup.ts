@@ -1,5 +1,6 @@
 import {
   type customers,
+  nextInSeries,
   type products,
   projects,
   projectTasks,
@@ -16,7 +17,6 @@ import {
   type ProjectPool,
   pickProjectAssignee,
 } from '@oneohm/domain';
-import { like, sql } from 'drizzle-orm';
 
 type Customer = typeof customers.$inferSelect;
 type Property = typeof properties.$inferSelect;
@@ -177,11 +177,12 @@ export async function writeGeneratedTasks(
 
 /** The next OH-YYYY-NNN code for the year. */
 export async function nextCode(tx: Transaction, year: string): Promise<string> {
-  const [row] = await tx
-    .select({ count: sql<number>`count(*)::int` })
-    .from(projects)
-    .where(like(projects.code, `OH-${year}-%`));
-  return `OH-${year}-${String((row?.count ?? 0) + 1).padStart(3, '0')}`;
+  return nextInSeries(tx, {
+    column: projects.code,
+    prefix: `OH-${year}-`,
+    width: 3,
+    lockKey: 'project',
+  });
 }
 
 /** "Project created from Q-… with 31 tasks, 2 waiting for someone to be assigned." */

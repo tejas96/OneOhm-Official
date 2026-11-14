@@ -652,6 +652,27 @@
       "when": 1793900201304,
       "tag": "0092_vendor_pan",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1793939318258,
+      "tag": "0093_chat_hold_and_lead_pin",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1793946183525,
+      "tag": "0094_chat_message_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1793952208295,
+      "tag": "0095_timed_visits_and_holidays",
+      "breakpoints": true
     }
   ]
 }

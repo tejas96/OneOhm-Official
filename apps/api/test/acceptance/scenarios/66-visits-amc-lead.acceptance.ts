@@ -5,7 +5,7 @@ import { lastReply, say, tap } from '../support/onboarding';
 import { addDays, newCustomer, sellProject, today } from '../support/sales';
 import { openChat, templatesFor } from '../support/send';
 import { openMaintenance, templateOn } from '../support/visit-worker';
-import { pickDay, setVisit, visitsFor, visitTask } from '../support/visits';
+import { pickDay, setVisit, teamConfirmsPicks, visitsFor, visitTask } from '../support/visits';
 
 // AMC visits, a lead's survey and a Marathi customer (redesign §8).
 
@@ -16,10 +16,16 @@ const _alertsOf = (kind: string) =>
 
 describe('Visits: AMC, lead survey, Marathi', () => {
   let admin: Session;
+  let restoreSettings: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    // These scenarios are about the team confirming a customer's pick.
+    restoreSettings = await teamConfirmsPicks(admin);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await restoreSettings();
+    await closeDb();
+  });
 
   it('an AMC visit due: the customer picks a day, the team confirm; with the message off the older notice goes', async () => {
     const restore = await templateOn('visit_pick');
@@ -104,13 +110,18 @@ describe('Visits: AMC, lead survey, Marathi', () => {
     expect(
       (await lastReply(customer.phone))?.buttons?.some((button) => button.id.startsWith('vask:')),
     ).toBe(true);
-    const { day } = await pickDay(customer.phone, list, 'afternoon');
+    const { day, startMin } = await pickDay(customer.phone, list, 'afternoon');
     const [lead] = await rows<{ stage: string; next_action_on: string }>(
       'SELECT stage::text, next_action_on::text FROM leads WHERE id = $1',
       [customer.leadId],
     );
     expect(lead).toMatchObject({ stage: 'survey_scheduled', next_action_on: day });
-    const confirmed = await setVisit(admin, { leadId: customer.leadId, day, slot: 'afternoon' });
+    const confirmed = await setVisit(admin, {
+      leadId: customer.leadId,
+      day,
+      slot: 'afternoon',
+      startMin,
+    });
     expect(confirmed).toMatchObject({
       kind: 'survey',
       status: 'confirmed',

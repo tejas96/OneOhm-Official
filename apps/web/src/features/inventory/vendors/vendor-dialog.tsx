@@ -99,13 +99,7 @@ export function VendorDialog({
       size="lg"
       autoFocusField
       footer={
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          pending={form.pending}
-          disabled={bank.blocked || panWrong}
-        >
+        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
           {vendor ? t('save') : t('create')}
         </Button>
       }

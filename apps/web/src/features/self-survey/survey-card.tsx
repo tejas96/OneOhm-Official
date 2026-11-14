@@ -30,7 +30,7 @@ export function SelfSurveyCard({
 
 function SurveyBody({
   task,
-  survey,
+  survey: view,
   steps,
 }: {
   readonly task: ProjectTask;
@@ -39,6 +39,14 @@ function SurveyBody({
 }) {
   const t = useTranslations('selfSurvey');
   const format = useFormatter();
+  // A stale API or cached answer can miss the lists; treat a missing list as empty.
+  const survey: SelfSurveyView = {
+    ...view,
+    missing: view.missing ?? [],
+    answers: view.answers ?? [],
+    photos: view.photos ?? [],
+    askAgain: view.askAgain ?? [],
+  };
   const choices = useSurveyChoices(task.id);
   const [asking, setAsking] = useState(false);
   const [picked, setPicked] = useState<readonly string[]>([]);

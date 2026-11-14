@@ -1,5 +1,6 @@
 import { type DatabaseExecutor, serviceRequests } from '@oneohm/database';
 import { eq } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 import { callPromise, callWhen } from './call-promise';
 import { alertCall, openCallTask } from './call-task';
 import { callerFor } from './care-person';
@@ -39,7 +40,7 @@ export async function promiseProblemCall(
     .from(serviceRequests)
     .where(eq(serviceRequests.id, given.requestId));
   const person = await callerOfRequest(db, given.requestId, given.phone);
-  const promise = callPromise(new Date(), given.timeZone);
+  const promise = callPromise(new Date(), await loadCalendar(db, given.timeZone));
   const what = PROBLEM_LISTS.en.what[given.kind];
   await openCallTask(db, {
     customerId: given.customerId,

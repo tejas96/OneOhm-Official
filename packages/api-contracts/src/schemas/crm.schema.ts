@@ -32,6 +32,10 @@ export const leadSchema = z.object({
   step: z.object({ key: z.string(), name: z.string() }).nullable(),
   subsidyCategory: subsidyCategorySchema,
   estimatedWp: z.number().int().nullable(),
+  /** The customer's WhatsApp location pin, and the floors they told us (both optional). */
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  floors: z.number().int().nullable().optional(),
   owner: userRefSchema.nullable(),
   nextActionOn: calendarDateSchema.nullable(),
   /** Optional time on that day, "HH:MM". */

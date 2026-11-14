@@ -9,8 +9,14 @@ import {
   notifyHolders,
   notifyStaffHolders,
   projects,
+  readBusinessCalendar,
 } from '@oneohm/database';
-import { workingMinutesBetween } from '@oneohm/domain';
+import {
+  type BusinessCalendar,
+  DEFAULT_CALENDAR,
+  openMinutes,
+  workingMinutesBetween,
+} from '@oneohm/domain';
 import {
   and,
   asc,
@@ -49,22 +55,20 @@ const WHAT: Readonly<Record<string, (customer: string, extra: unknown) => string
 /** When the customer answered, to the millisecond (a parked pin: when it was sent). */
 const answerTime = sql`date_trunc('milliseconds', coalesce(${customerActions.doneAt}, ${customerActions.createdAt}))`;
 
-/** One working day on the working clock (9:30 to 18:30), in minutes. */
-const WORKING_DAY_MIN = 9 * 60;
-
 /**
- * What a staff check is due for, counted in working time (Monday to Saturday 9:30 to 18:30, Sunday
- * closed): the person who asked after 1 working day, the manager after 2. Nothing after 14 days.
+ * What a staff check is due for, counted in working time (the business calendar: working days and
+ * hours, holidays closed): the person who asked after 1 working day, the manager after 2. Nothing after 14 days.
  */
 export function checkDue(
   answeredAt: Date,
   now: Date,
-  timeZone = 'Asia/Kolkata',
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
 ): 'owner' | 'manager' | null {
   if (now.getTime() - answeredAt.getTime() >= UNTIL) return null;
-  const worked = workingMinutesBetween(answeredAt, now, timeZone);
-  if (worked >= 2 * WORKING_DAY_MIN) return 'manager';
-  return worked >= WORKING_DAY_MIN ? 'owner' : null;
+  const worked = workingMinutesBetween(answeredAt, now, cal);
+  const day = openMinutes(cal);
+  if (worked >= 2 * day) return 'manager';
+  return worked >= day ? 'owner' : null;
 }
 
 /**
@@ -128,8 +132,9 @@ export async function queueActionChecks(
     )
     .orderBy(asc(customerActions.updatedAt))
     .limit(PER_TICK);
+  const cal = await readBusinessCalendar(db, timeZone);
   let done = 0;
-  for (const row of waiting) if (await tellOnce(db, row, now, timeZone)) done += 1;
+  for (const row of waiting) if (await tellOnce(db, row, now, cal)) done += 1;
   return done;
 }
 
@@ -141,11 +146,16 @@ interface Waiting {
 }
 
 /** The alert this answer is due for (owner at 1 day, manager at 2), or false when none is. */
-async function tellOnce(db: Database, row: Waiting, now: Date, timeZone: string): Promise<boolean> {
+async function tellOnce(
+  db: Database,
+  row: Waiting,
+  now: Date,
+  cal: BusinessCalendar,
+): Promise<boolean> {
   const { action, customer, phone, manager } = row;
   const parked = action.status === 'open';
   const answeredAt = parked ? action.createdAt : (action.doneAt ?? action.updatedAt);
-  const due = checkDue(answeredAt, now, timeZone);
+  const due = checkDue(answeredAt, now, cal);
   if (!due) return false;
   const notice = {
     kind: parked ? 'location_home_waiting' : 'customer_action_check',

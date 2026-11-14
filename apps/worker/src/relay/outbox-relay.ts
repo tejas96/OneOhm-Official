@@ -23,18 +23,30 @@ export function isStuck(
 }
 
 /**
- * The rows to start now: each recipient's oldest pending row, unless it is already being
- * sent (or waiting for a retry). So one person's messages arrive in the order queued.
+ * The rows to start now: each recipient's oldest pending row that is not held, but only
+ * when none of their rows is in flight (being sent, or waiting for a retry), so two sends
+ * to one person never run at once and their messages arrive in the order queued. A row
+ * held until later (`notBefore`, step updates gathering into one message) is passed over,
+ * and never blocks the recipient's other messages.
  */
-export function nextPerRecipient<T extends { recipient: string; attempts: number }>(
-  pending: readonly T[],
-): T[] {
+export function nextPerRecipient<
+  T extends {
+    recipient: string;
+    attempts: number;
+    startedAt?: Date | null;
+    notBefore?: Date | null;
+  },
+>(pending: readonly T[], now: Date = new Date()): T[] {
+  const inFlight = new Set(
+    pending.filter((row) => row.attempts > 0 || row.startedAt).map((row) => row.recipient),
+  );
   const seen = new Set<string>();
   const ready: T[] = [];
   for (const row of pending) {
-    if (seen.has(row.recipient)) continue;
+    if (inFlight.has(row.recipient) || seen.has(row.recipient)) continue;
+    if (row.notBefore && row.notBefore.getTime() > now.getTime()) continue;
     seen.add(row.recipient);
-    if (row.attempts === 0) ready.push(row);
+    ready.push(row);
   }
   return ready.slice(0, BATCH);
 }
@@ -86,6 +98,7 @@ export class OutboxRelay {
         attempts: outbox.attempts,
         startedAt: outbox.startedAt,
         createdAt: outbox.createdAt,
+        notBefore: outbox.notBefore,
         lastError: outbox.lastError,
       })
       .from(outbox)
@@ -101,7 +114,10 @@ export class OutboxRelay {
         row.lastError === SENDING ? DELIVERY_MAYBE_SENT : DELIVERY_STOPPED,
       );
     let started = 0;
-    for (const row of nextPerRecipient(pending.filter((row) => !isStuck(row, now)))) {
+    for (const row of nextPerRecipient(
+      pending.filter((row) => !isStuck(row, now)),
+      now,
+    )) {
       try {
         await this.client.workflow.start('deliverMessageWorkflow', {
           workflowId: `outbox-${row.id}`,

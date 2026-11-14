@@ -1,0 +1,203 @@
+=== CHAT (wa_messages) for +918087823247 from 08:49 IST ===
+08:49:36 IN | Hi OneOhm DIWALI26
+08:49:36 OUT | Welcome to OneOhm Solar 🙏 / OneOhm सोलरमध्ये आपले स्वागत 🙏 / OneOhm सोलर में आपका स्वागत है 🙏 /  / Please choose your language. / कृपया तुमची भाषा निवडा. / कृपया अपनी भाषा चुनें. / [English · मराठी · हिंदी]
+08:49:54 IN | मराठी
+08:49:54 OUT | आम्ही तुम्हाला Tejas म्हणू का? / [हो · बदला · व्यक्तीशी बोला]
+08:50:56 IN | बदला
+08:50:56 OUT | कृपया तुमचे नाव लिहा. / [मागे · व्यक्तीशी बोला]
+08:51:18 IN | Tejas Patil
+08:51:18 OUT | तुमचे घर किंवा साइट कोणत्या शहरात आहे? / [Pune · Satara · Sangli · 📍 लोकेशन पाठवा · दुसरे शहर · मागे · व्यक्तीशी बोला]
+08:51:45 IN | 📍 लोकेशन पाठवा
+08:51:45 OUT | तुमचे लोकेशन देण्यासाठी बटण दाबा. त्यावरून आम्ही तुमचे शहर ओळखतो. / [📍 Send location]
+08:53:22 IN | 📍 Location: https://maps.google.com/?q=16.8370776,74.5964524
+08:53:22 OUT | धन्यवाद, तुमचे लोकेशन मिळाले. ते कोणत्या शहरात आहे?
+08:53:22 OUT | तुमचे घर किंवा साइट कोणत्या शहरात आहे? / [Pune · Satara · Sangli · 📍 लोकेशन पाठवा · दुसरे शहर · मागे · व्यक्तीशी बोला]
+08:54:27 IN | Sangli
+08:54:27 OUT | सोलर कुठे बसवायचे आहे? / [घर · हाउसिंग सोसायटी · दुकान किंवा व्यवसाय · शेत · मागे · व्यक्तीशी बोला]
+08:54:45 IN | घर
+08:54:45 OUT | तुमचे महिन्याचे वीज बिल साधारण किती येते? / [Up to ₹1,000 · ₹1,000–2,000 · ₹2,000–3,000 · ₹3,000–5,000 · Over ₹5,000 · मागे · व्यक्तीशी बोला]
+08:54:54 IN | ₹2,000–3,000
+08:54:54 OUT | छत कसे आहे? / [RCC स्लॅब · पत्र्याचे छत · इतर · मागे · व्यक्तीशी बोला]
+08:55:10 IN | RCC स्लॅब
+08:55:10 OUT | इमारत किती मजली आहे? / [फक्त तळमजला · 2 मजले · 3 किंवा जास्त · मागे · व्यक्तीशी बोला]
+08:55:20 IN | 2 मजले
+08:55:20 OUT | कृपया तुमच्या अलीकडच्या वीज बिलाचा फोटो पाठवा. त्यामुळे योग्य सिस्टम ठरवता येते. / [नंतर पाठवतो · मागे · व्यक्तीशी बोला]
+08:55:59 IN | (media)
+08:56:06 OUT | तुमचा सोलर अंदाज: 6 पॅनल (3.27 kW), ₹1,83,969 (सबसिडीनंतर ₹1,05,969). दर महिन्याला ₹3,000 पर्यंत बचत होऊ शकते. / हा अंदाज आहे — मोफत कॉल किंवा भेटीनंतर कोटेशनमध्ये अंतिम किंमत. / [OneOhm-Tejas-Patil-estimate.pdf]
+08:56:06 OUT | पुढे काय करायचे? / [भेट ठरवा · मला कॉल करा · आत्ता नको]
+08:56:06 OUT | धन्यवाद. फाईल मिळाली — आमची टीम ती तपासेल.
+08:56:24 IN | मला कॉल करा
+08:56:24 OUT | धन्यवाद. आज Rohit यांच्याकडून तुम्हाला कॉल येईल. / [व्यक्तीशी बोला]
+08:58:00 OUT | ठरले ✅ *शनि ७ नोव्हें, सकाळी*. येण्यापूर्वी Rohit तुम्हाला फोन करतील (+917000000201). / [ठीक आहे · दिवस बदला]
+09:01:02 OUT | Hello Tejas Patil, your OneOhm solar quotation OH-Q-2026-0018 is ready. Total price: ₹1,83,969. Expected government subsidy: ₹78,000. Your cost after subsidy: ₹1,05,969. Tap a button below, or reply here with any question. · sent in Marathi
+09:02:10 IN | कोटेशन स्वीकारा
+09:02:10 OUT | ₹1,83,969 चे सोलर कोटेशन स्वीकारायचे? पहिला हप्ता ₹45,992 स्वीकारताना भरायचा आहे. / [हो, स्वीकारतो · आत्ता नाही]
+09:02:42 IN | आत्ता नाही
+09:02:42 OUT | आम्ही कधी पुन्हा विचारू? / [१ आठवडा · १ महिना · Rohit शी बोला]
+09:02:54 IN | १ महिना
+09:02:54 OUT | ठीक आहे, आम्ही १ महिना नंतर पुन्हा विचारू. तुमचे कोटेशन आमच्याकडे सुरक्षित आहे. / [मेनू]
+09:03:57 IN | हो, स्वीकारतो
+09:03:57 OUT | धन्यवाद ✅ Rohit आज (किंवा पुढच्या कामाच्या दिवशी) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील. / [मेनू · आमच्या टीमशी बोला]
+09:05:34 OUT | तुमचा सोलर प्रकल्प (*Home*) सुरू झाला ✅ / Amit तुमचे प्रोजेक्ट मॅनेजर आहेत आणि इथे तुम्हाला माहिती देत राहतील.
+09:05:34 OUT | तुमच्या घरासाठी *₹45,992* बाकी आहे. / [₹45,992 भरा · दुसऱ्या मार्गे भरले]
+09:06:11 IN | ₹45,992 भरा
+09:06:11 OUT | तुमच्या घरासाठी स्वीकारताना *₹45,992* भरायचे आहेत. / [आता भरा]
+09:06:42 OUT | धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: Amit Kulkarni (demo), +917000000204. / [पावती पाहा · प्रकल्प अपडेट · मेनू]
+09:06:45 OUT | Hello Tejas Patil, we received your payment of ₹45,992 for 1st instalment (25%) on your solar project Sangli · 3.27 kW. Thank you. Your receipt is attached. · sent in Marathi
+09:15:12 OUT | तुमचा साइट सर्व्हे कसा वाटला? कृपया रेटिंग दाबा. / [खूप आनंदी · आनंदी · ठीक आहे · नाखूश · खूप नाखूश]
+09:15:16 OUT | Hello Tejas Patil, an update on your solar project Sangli: Site visit and roof measurements. We will keep you posted here.
+09:15:49 OUT | Hello Tejas Patil, an update on your solar project Sangli: Net-meter application filed with the electricity board. We will keep you posted here.
+09:15:53 OUT | Hello Tejas Patil, an update on your solar project Sangli: Your system design is approved. We will keep you posted here.
+09:18:38 OUT | Home येथील छप्पर बसवणीसाठी तयार आहे का? मोकळे छप्पर, एक पॉवर पॉइंट आणि घरी कोणीतरी हवे. / [हो, तयार आहे · अजून नाही]
+09:18:43 IN | आनंदी
+09:18:43 OUT | रेटिंग दिल्याबद्दल धन्यवाद! 🙏 टीमला मदत होते. / [मेनू]
+09:19:07 OUT | तुमच्या घरासाठी *₹1,19,579* बाकी आहे. / [₹1,19,579 भरा · दुसऱ्या मार्गे भरले]
+09:19:14 OUT | Hello Tejas Patil, an update on your solar project Sangli: Equipment on its way to your home. We will keep you posted here.
+09:19:17 IN | हो, तयार आहे
+09:19:17 OUT | तो मेसेज आता खुला नाही, म्हणून काही बदलले नाही.
+09:20:01 IN | ₹1,19,579 भरा
+09:20:01 OUT | तुमच्या घरासाठी साहित्य पाठवण्यापूर्वी *₹1,19,579* भरायचे आहेत. / [आता भरा]
+09:20:52 OUT | धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: पॅनल आणि इन्व्हर्टर पाठवून बसवणीचा दिवस ठरवणे. तुमचा संपर्क: Amit Kulkarni (demo), +917000000204. / [पावती पाहा · प्रकल्प अपडेट · मेनू]
+09:20:56 OUT | Hello Tejas Patil, we received your payment of ₹1,19,579 for 2nd instalment (65%) on your solar project Sangli · 3.27 kW. Thank you. Your receipt is attached. · sent in Marathi
+09:23:12 OUT | आमच्या टीमने आज Home येथे बसवणी सुरू केली. / [प्रकल्पाची माहिती]
+09:23:55 OUT | Home येथील बसवणी तुमच्या समाधानानुसार पूर्ण झाली आहे का? / [हो, सर्व ठीक · काहीतरी चुकले]
+09:23:56 OUT | Hello Tejas Patil, an update on your solar project Sangli: Installation finished and checked. We will keep you posted here.
+09:24:45 IN | हो, सर्व ठीक
+09:24:45 OUT | धन्यवाद ✅ सगळे नीट झाले, याचा आनंद आहे. / [मेनू]
+09:24:45 OUT | तुमचा इन्स्टॉलेशन कसा वाटला? कृपया रेटिंग दाबा. / [खूप आनंदी · आनंदी · ठीक आहे · नाखूश · खूप नाखूश]
+09:25:02 IN | आनंदी
+09:25:02 OUT | रेटिंग दिल्याबद्दल धन्यवाद! 🙏 टीमला मदत होते. / [मेनू]
+09:25:16 OUT | Home येथील तुमचा सोलर सुरू झाला ☀️ / आता अंतिम पेमेंट *₹18,398* बाकी आहे. / [₹18,398 भरा · वॉरंटी आणि AMC]
+09:25:16 OUT | तुमचा सिस्टिम सुरू करणे आणि हस्तांतरण कसा वाटला? कृपया रेटिंग दाबा. / [खूप आनंदी · आनंदी · ठीक आहे · नाखूश · खूप नाखूश]
+09:25:43 IN | ₹18,398 भरा
+09:25:43 OUT | तुमच्या घरासाठी बसवणीनंतर *₹18,398* भरायचे आहेत. / [आता भरा]
+09:25:45 OUT | Hello Tejas Patil, an update on your solar project Sangli: Electricity board inspection. We will keep you posted here.
+09:25:47 OUT | Hello Tejas Patil, an update on your solar project Sangli: Net meter fitted. We will keep you posted here.
+09:25:54 OUT | Hello Tejas Patil, please pay ₹18,398 for Last instalment (10%) on project Sangli · 3.27 kW. Pay securely here: https://rzp.io/rzp/HsCyJnBq Reply here if you need help. · sent in Marathi
+09:26:33 OUT | धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: नेट मीटर आणि तुमच्या सबसिडीची कागदपत्रे. तुमचा संपर्क: Amit Kulkarni (demo), +917000000204. / [पावती पाहा · प्रकल्प अपडेट · मेनू]
+09:26:36 OUT | Hello Tejas Patil, we received your payment of ₹18,398 for Last instalment (10%) on your solar project Sangli · 3.27 kW. Thank you. Your receipt is attached. · sent in Marathi
+09:27:54 OUT | Work Completion Report · OH-2026-015.pdf / [OneOhm-Work-Completion-Report-OH-2026-015.pdf]
+09:27:54 OUT | Home साठीची तुमची *2* हस्तांतर कागदपत्रे वर आहेत. / [कागदपत्रे · वॉरंटी आणि AMC]
+09:27:54 OUT | handover-and-warranty.pdf / [OneOhm-handover-and-warranty.pdf]
+09:27:57 OUT | Hello Tejas Patil, an update on your solar project Sangli: Handover and warranty papers. We will keep you posted here.
+09:28:18 OUT | Home साठीची *₹78,000* सबसिडी तुमच्या बँक खात्यात जमा झाली का? / [हो, मिळाले · अजून नाही]
+09:28:22 OUT | Hello Tejas Patil, an update on your solar project Sangli: Subsidy applied on the PM Surya Ghar portal. We will keep you posted here.
+09:28:24 OUT | Hello Tejas Patil, an update on your solar project Sangli: Subsidy inspection approved. We will keep you posted here.
+09:28:27 OUT | Hello Tejas Patil, an update on your solar project Sangli: Subsidy released to your bank account. We will keep you posted here.
+09:33:10 IN | हो, मिळाले
+09:33:10 OUT | धन्यवाद ✅ सबसिडी मिळाल्याचा आम्हाला आनंद आहे. / [मेनू]
+09:34:01 IN | मेनू
+09:34:02 OUT | नमस्कार Tejas 👋 तुमचे Sangli येथील सोलर पूर्ण झाले आहे. / कृपया तुमच्या सिस्टिम सुरू करणे आणि हस्तांतरण ला रेटिंग द्या. / [आता रेटिंग द्या · प्रकल्प अपडेट · आणखी]
+09:34:09 IN | आणखी
+09:34:09 OUT | आम्ही कशात मदत करू? / [प्रकल्प अपडेट · पेमेंट · कागदपत्रे · कागद पाठवा · समस्या सांगा · माझ्या समस्या · वॉरंटी आणि AMC · मित्राला सुचवा · Rohit शी बोला · भाषा]
+09:34:32 IN | समस्या सांगा
+09:34:32 OUT | काय अडचण आहे? सर्वात जवळचा पर्याय दाबा. / [इन्व्हर्टर एरर · वीज निर्मिती बंद · वीज कमी येते · नुकसान · सफाई · बिल किंवा मीटर · इतर काही]
+09:34:57 IN | इन्व्हर्टर एरर
+09:34:57 OUT | किती दिवसांपासून? / [आजपासून · या आठवड्यापासून · जास्त दिवसांपासून]
+09:35:09 IN | जास्त दिवसांपासून
+09:35:09 OUT | हवे असल्यास ३ पर्यंत फोटो किंवा थोडे शब्द पाठवा, मग पूर्ण झाले दाबा. / [पूर्ण झाले]
+09:35:43 IN | (media)
+09:35:43 IN | (media)
+09:35:44 IN | (media)
+09:35:45 OUT | हवे असल्यास ३ पर्यंत फोटो किंवा थोडे शब्द पाठवा, मग पूर्ण झाले दाबा. / [पूर्ण झाले]
+09:35:45 OUT | हवे असल्यास ३ पर्यंत फोटो किंवा थोडे शब्द पाठवा, मग पूर्ण झाले दाबा. / [पूर्ण झाले]
+09:35:46 OUT | हवे असल्यास ३ पर्यंत फोटो किंवा थोडे शब्द पाठवा, मग पूर्ण झाले दाबा. / [पूर्ण झाले]
+09:35:49 IN | पूर्ण झाले
+09:35:49 OUT | धन्यवाद ✅ नोंद केली: *इन्व्हर्टर एरर · Home*. *Sanjay* तुम्हाला आज 11:35 am पर्यंत फोन करतील. / [माझ्या समस्या · मेनू]
+09:36:25 IN | मेनू
+09:36:25 OUT | नमस्कार Tejas 👋 तुमचे Sangli येथील सोलर पूर्ण झाले आहे. / कृपया तुमच्या सिस्टिम सुरू करणे आणि हस्तांतरण ला रेटिंग द्या. / 2 गोष्टी तुमच्याकडून हव्या आहेत. / [आता रेटिंग द्या · ते पाहा · आणखी]
+09:36:34 IN | आणखी
+09:36:34 OUT | आम्ही कशात मदत करू? / [प्रकल्प अपडेट · पेमेंट · कागदपत्रे · कागद पाठवा · समस्या सांगा · माझ्या समस्या · वॉरंटी आणि AMC · मित्राला सुचवा · Rohit शी बोला · भाषा]
+09:36:45 IN | मित्राला सुचवा
+09:36:45 OUT | तुमच्या मित्राचे नाव आणि 10 अंकी मोबाईल नंबर एकाच मेसेजमध्ये पाठवा, उदा. "सुरेश पाटील 9876543210". / [मेनू]
+09:37:12 IN | Vinod Burle 9860268344
+09:37:12 OUT | Vinod कोणत्या शहरात राहतात? / [Pune · Satara · Sangli · दुसरे शहर]
+09:37:23 IN | Sangli
+09:37:23 OUT | धन्यवाद! आम्ही Vinod यांना फोन करू. त्यांचा सोलर बसवल्यावर तुम्हाला ₹2,000 मिळतील. / [माझी बक्षिसे · माझी लिंक पाठवा]
+09:37:35 IN | माझी लिंक पाठवा
+09:37:35 OUT | हे तुमच्या मित्रांना फॉरवर्ड करा: / https://wa.me/919822759598?text=Hi%20OneOhm%2C%20my%20friend%20sent%20me.%20Code%20TEJAD88G / किंवा त्यांना तुमचा कोड *TEJAD88G* घेऊन आम्हाला मेसेज करायला सांगा. / [माझी बक्षिसे · मेनू]
+09:40:57 OUT | ठरले ✅ *शनि ७ नोव्हें, सकाळी*. येण्यापूर्वी Sanjay तुम्हाला फोन करतील (+917000000210). / [ठीक आहे · दिवस बदला]
+09:41:11 OUT | Hello Tejas Patil, your service request "inverter error or alarm" is now being worked on. We will keep you posted here.
+09:41:32 OUT | Hello Tejas Patil, your service request "inverter error or alarm" is now resolved. We will keep you posted here.
+
+=== OUTBOX (every send) ===
+08:49:36 sent session:buttons read  key=chat:c75828e8-659e-4a95-bcd4-bdbf1b8d1cbe
+08:49:54 sent session:buttons read  key=chat:77cca608-78ec-4306-a2fa-13f2f2bc217b
+08:50:56 sent session:buttons read  key=chat:e7009093-3747-4d77-b6a1-76300231fbb2
+08:51:18 sent session:list read  key=chat:0a3ba984-3ed9-44fd-b34e-44a9d6260613
+08:51:45 sent session:location_request read  key=chat:b8463750-023e-4b19-8274-75f54e0d19ad
+08:53:22 sent session:text read  key=chat:32518b85-d622-40fa-9817-cf7c74f77f93
+08:53:22 sent session:list read  key=chat:60b473e3-c658-4de7-af94-fa8a9aa0c9ed
+08:54:27 sent session:list read  key=chat:c5de60c4-b7c9-42cd-9905-2ec5d16c90b0
+08:54:45 sent session:list read  key=chat:6ba655b1-2d71-420b-8123-eafe4cc15e5e
+08:54:54 sent session:list read  key=chat:b2d13544-b75c-4189-9c0f-9eb5b4f885ff
+08:55:10 sent session:list read  key=chat:58a7b069-ae10-4124-a0cf-fc494f872ba2
+08:55:20 sent session:buttons read  key=chat:e10e9cfb-47ee-4f2d-8fdf-9fb0ae89a7f2
+08:56:06 sent session:text read  key=chat:d8ed0fb7-4315-4f9a-a1f6-1f74d1ba149f
+08:56:06 sent session:document read  key=chat:0ecf1610-ad0d-4921-b609-ad60e370b7fd
+08:56:06 sent session:buttons read  key=chat:16551574-122f-4688-81b5-8362bbb037a7
+08:56:24 sent session:buttons read  key=chat:04f6d429-86a2-4abf-b525-89219f680362
+08:58:00 sent session:buttons read  key=visit:6012b161-d8a4-4223-bb9b-0e9f7b7bebad:2026-11-07:morning:1793935680674
+09:01:00 sent quotation_sent read  key=quotation_sent:63ff4953-5f9f-4e3f-acd6-e3e90a02a4f4
+09:02:10 sent session:buttons read  key=chat:bce91b66-9b5d-4a33-b2b8-397d9bdfebfe
+09:02:42 sent session:buttons read  key=chat:b3bd7dee-9a79-4b2f-8bff-73d34cd098cd
+09:02:54 sent session:buttons read  key=chat:7d85cbb1-c193-4199-b7b8-46741ef1ade2
+09:03:57 sent session:buttons read  key=quote_thanks:63ff4953-5f9f-4e3f-acd6-e3e90a02a4f4
+09:05:34 sent session:text read  key=project_started:98b2a9e9-7a56-4565-ac36-ffb71e52f109
+09:05:34 sent session:buttons read  key=milestone_due:19b37878-ef38-49ef-9cf3-8ebc16169245
+09:06:11 sent session:cta_url read  key=chat:77773e0f-14ee-4f57-a968-ce722d4f2c3b
+09:06:42 sent payment_received read  key=payment:19b37878-ef38-49ef-9cf3-8ebc16169245:4599200
+09:06:42 sent session:buttons read  key=paid_next:42c6d8b3-43ff-42cf-a514-b6acc590f6fa
+09:15:12 sent project_milestone read  key=task_completed:bd5facd6-147a-4b59-a228-7a5e2adbf32f
+09:15:12 sent session:list read  key=rating_ask:4c642d82-e42c-4654-9447-caa1ed0abe74
+09:15:45 sent project_milestone read  key=task_completed:da57f3c2-be1d-404f-b3d3-e7b6d8077837
+09:15:45 sent project_milestone read  key=task_completed:bbc966f6-6c0b-410f-a4b9-7995e4c87cef
+09:18:38 sent session:buttons read  key=journey:site_ready:e4776490-9d06-4fde-8672-cb3710d9a6be
+09:18:43 sent session:buttons read  key=chat:035662c2-eb2b-4e7e-a9f0-ee23cffde85a
+09:19:07 sent session:buttons read  key=milestone_due:53964faf-ec2c-416b-96a8-05a869a6acab
+09:19:07 sent project_milestone read  key=task_completed:e4776490-9d06-4fde-8672-cb3710d9a6be
+09:19:17 sent session:text read  key=chat:a3545e10-2f2b-4dc2-b30f-27347b704796
+09:20:01 sent session:cta_url read  key=chat:091737bc-45da-4dc0-a7a2-ca41bc1b08d4
+09:20:52 sent payment_received read  key=payment:53964faf-ec2c-416b-96a8-05a869a6acab:11957900
+09:20:52 sent session:buttons read  key=paid_next:93b45da7-a015-4c7b-8714-885cf798d16d
+09:23:12 sent session:buttons read  key=task_started:1406a583-4dd7-4407-8061-699ea1d979e2
+09:23:55 sent project_milestone read  key=task_completed:2bc33a08-0dbc-489c-9953-c921ea992f85
+09:23:55 sent session:buttons read  key=journey:installation:2bc33a08-0dbc-489c-9953-c921ea992f85
+09:24:45 sent session:buttons read  key=chat:e68cc2cd-ff64-49c8-af81-9f0eb9b7398f
+09:24:45 sent session:list read  key=rating_ask:dcc9af7d-8f84-4bc4-9aaa-3eb15f4d3dd4
+09:25:02 sent session:buttons read  key=chat:0a826788-96b4-4735-872f-a6ad2e876492
+09:25:16 sent session:buttons read  key=task_completed:ed07b17c-f546-4d6a-87ea-0f555cd67742
+09:25:16 sent session:list read  key=rating_ask:9933a4e1-cd54-43ea-812b-c25f62141227
+09:25:43 sent project_milestone read  key=task_completed:06a2e998-8462-44c5-9923-046c618a74b6
+09:25:43 sent project_milestone read  key=task_completed:0299c8d6-3cef-4c98-a302-4aa04fbc7667
+09:25:43 sent session:cta_url read  key=chat:4cc22bb9-1662-4684-b29c-ac8e979ba894
+09:25:50 sent payment_link read  key=payment_link:02b86e41-29ee-4da2-9dc3-4ebd7a214e48
+09:26:33 sent payment_received read  key=payment:6132b0c6-41d6-4b48-a3aa-22c831e03b3f:1839800
+09:26:33 sent session:buttons read  key=paid_next:ab0e1590-5ba2-4fce-b114-25bed4eed142
+09:27:54 sent project_milestone read  key=task_completed:60f0ffe3-eca2-48a7-b784-7865b8df2ce9
+09:27:54 sent session:document read  key=journey:pack:98b2a9e9-7a56-4565-ac36-ffb71e52f109
+09:27:54 sent session:document read  key=journey:pack:98b2a9e9-7a56-4565-ac36-ffb71e52f109:1
+09:27:54 sent session:buttons read  key=journey:pack:98b2a9e9-7a56-4565-ac36-ffb71e52f109:2
+09:28:18 sent project_milestone delivered  key=task_completed:030750f0-b640-4081-b3fb-a331fff4ec66
+09:28:18 sent project_milestone read  key=task_completed:1c433fcb-f1ce-44d9-afd2-0e5d0934a01e
+09:28:18 sent project_milestone read  key=task_completed:0c2a5aa0-fd44-4915-b818-d3d622b39268
+09:28:18 sent session:buttons read  key=journey:subsidy_credit:0c2a5aa0-fd44-4915-b818-d3d622b39268
+09:33:10 sent session:buttons read  key=chat:2406ad35-9fe3-4221-b764-d7a78542307d
+09:34:02 sent session:buttons read  key=chat:15703a2e-e8d6-4092-aa03-ebaec0f1bc94
+09:34:09 sent session:list read  key=chat:d76f60ca-3235-471d-bd5a-36dbc517170b
+09:34:32 sent session:list read  key=chat:a6c289b9-f482-4e23-b174-09e9a9e74638
+09:34:57 sent session:buttons read  key=chat:eaccbcad-830d-4f35-8957-2480a3cead83
+09:35:09 sent session:buttons read  key=chat:2b7ebe4d-4ce7-4577-9189-ccc290b2fd2c
+09:35:45 sent session:buttons read  key=chat:a37ed572-783f-4b70-924a-b273a82f336b
+09:35:45 sent session:buttons read  key=chat:76d1de16-17d4-4273-a54a-a6fa13afd5c9
+09:35:46 sent session:buttons read  key=chat:c5927a45-1c17-498f-8a7e-04240e51dff7
+09:35:49 sent session:buttons read  key=chat:ae8c7326-704a-4abe-bd48-31cdb8c3a768
+09:36:25 sent session:buttons read  key=chat:44abf3b9-820b-4d06-a762-42142241ae0f
+09:36:34 sent session:list read  key=chat:c2048ca6-531f-48c5-9b7b-b9343af4dbf4
+09:36:45 sent session:buttons read  key=chat:1285fafd-7775-4318-a976-ffe55bb4cebb
+09:37:12 sent session:list read  key=chat:d138c50e-90c1-4e83-abc1-769d306bb825
+09:37:23 sent session:buttons read  key=chat:deafdf02-b3ef-40ca-beb3-f979a5a66cce
+09:37:35 sent session:buttons read  key=chat:3133ee3e-734c-4b5f-b147-318dc8f6e0ed
+09:40:57 sent session:buttons read  key=visit:93ee342e-44be-452c-9cf4-ed5b0a0caf8d:2026-11-07:morning:1793938257214
+09:41:07 sent service_update read  key=service:d7015d7c-aa3e-416d-a9d2-52f764efab20:in_progress:1793938267213
+09:41:28 sent service_update read  key=service:d7015d7c-aa3e-416d-a9d2-52f764efab20:resolved:1793938288148

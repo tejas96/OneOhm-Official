@@ -6,6 +6,7 @@ import { setNotify, taskIdOf, taskRow } from '../support/journey-steps';
 import { replies } from '../support/onboarding';
 import { sellProject } from '../support/sales';
 import { openChat, sendTo } from '../support/send';
+import { setVisit } from '../support/visits';
 
 // Fixes from the phase 4b review: a cancel never flips an answer that committed first; loan papers asked
 // before the wait still end it; another lead's or home's asks survive; an expired bank day keeps the
@@ -89,8 +90,8 @@ describe('Phase 4b fixes', () => {
       [sale.project.id],
     );
     await setNotify(sale, 'site_survey', true);
-    const visit = await admin.post<{ id: string }>('/visits', {
-      taskId: task?.id,
+    const visit = await setVisit(admin, {
+      taskId: task?.id ?? '',
       day: nextWorkingDay(),
       slot: 'morning',
     });
@@ -172,7 +173,7 @@ describe('Phase 4b fixes', () => {
 });
 
 function nextWorkingDay(): string {
-  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 40)) * 86_400_000);
+  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 10)) * 86_400_000);
   if (day.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1);
   return day.toISOString().slice(0, 10);
 }

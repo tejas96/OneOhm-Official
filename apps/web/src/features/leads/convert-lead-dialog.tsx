@@ -141,6 +141,12 @@ export function ConvertLeadDialog({
           <PropertyFields
             defaultCategory={lead.subsidyCategory}
             defaultCity={lead.city}
+            defaultFloors={lead.floors}
+            defaultPoint={
+              lead.latitude != null && lead.longitude != null
+                ? { latitude: lead.latitude, longitude: lead.longitude }
+                : undefined
+            }
             errors={(field) => error?.fieldErrors[`property.${field}`]}
           />
         )}

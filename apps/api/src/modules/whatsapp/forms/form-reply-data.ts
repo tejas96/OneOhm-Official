@@ -2,6 +2,8 @@ import { SURVEY_ANSWERS, SURVEY_PHOTOS } from '@oneohm/domain';
 
 /** What the problem, refer-a-friend and UPI forms post by name (phase 6). */
 const CARE_ANSWERS = ['home', 'what', 'since', 'note', 'friend', 'mobile', 'city', 'upi'] as const;
+/** What the new-lead onboarding form posts by name (its bill photo comes in `bill_photo`). */
+const ONBOARD_ANSWERS = ['name', 'other_city', 'site', 'bill', 'roof', 'floors'] as const;
 
 /** The most files one "Send a paper" reply takes (4 photos, or 2 PDFs). */
 export const MAX_FORM_FILES = 4;
@@ -78,7 +80,7 @@ function readFile(raw: unknown): FormFile | null {
 }
 
 /** The screens' pickers: photos (SEND_PAPER), pdfs (SEND_PDF), and `files` (the first version). */
-const PICKERS = ['photos', 'pdfs', 'files'] as const;
+const PICKERS = ['photos', 'pdfs', 'files', 'bill_photo'] as const;
 
 /** The form reply in a message's `response_json` (a JSON string); an empty one when unreadable. */
 export function readForm(responseJson: unknown): IncomingForm {
@@ -93,7 +95,7 @@ export function readForm(responseJson: unknown): IncomingForm {
     return listOf(data[name]).flatMap((raw) => readFile(raw) ?? []);
   }).slice(0, MAX_FORM_FILES);
   const answers: Record<string, string> = {};
-  for (const key of [...SURVEY_ANSWERS, ...CARE_ANSWERS]) {
+  for (const key of [...SURVEY_ANSWERS, ...CARE_ANSWERS, ...ONBOARD_ANSWERS]) {
     const value = scalar(data[key]);
     if (value) answers[key] = value;
   }

@@ -4,6 +4,7 @@ import {
   type Database,
   notify,
   notifyStaffHolders,
+  readBusinessCalendar,
   waConversations,
 } from '@oneohm/database';
 import { chatWaitStage } from '@oneohm/domain';
@@ -31,11 +32,12 @@ export async function queueChatReminders(db: Database, now: Date, timeZone: stri
     db,
     open.map((chat) => chat.id),
   );
+  const cal = await readBusinessCalendar(db, timeZone);
   let sent = 0;
   for (const chat of open) {
     const since = waiting.get(chat.id);
     if (!since) continue;
-    const stage = chatWaitStage(since, now, timeZone);
+    const stage = chatWaitStage(since, now, cal);
     if (!stage) continue;
     // One alert per stage for each wait (a person's answer starts a new one).
     const wait = `${chat.id}:${since.getTime()}`;

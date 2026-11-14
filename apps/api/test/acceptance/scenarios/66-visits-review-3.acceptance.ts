@@ -5,7 +5,15 @@ import { replies } from '../support/onboarding';
 import { addDays, sellProject, today } from '../support/sales';
 import { openChat } from '../support/send';
 import { ensurePerson, STAFF } from '../support/team';
-import { askDay, pickDay, setVisit, visitsFor, visitsOf, visitTask } from '../support/visits';
+import {
+  askDay,
+  pickDay,
+  setVisit,
+  teamConfirmsPicks,
+  visitsFor,
+  visitsOf,
+  visitTask,
+} from '../support/visits';
 
 // Fix round 3 for visits: booking and reassigning take turns; announcements; the pick timer.
 
@@ -14,18 +22,31 @@ const told = async (phone: string) =>
 
 describe('Visits: review fixes, round 3', () => {
   let admin: Session;
+  let restoreSettings: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    // These scenarios are about the team confirming a customer's pick.
+    restoreSettings = await teamConfirmsPicks(admin);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await restoreSettings();
+    await closeDb();
+  });
 
   it('booking and reassigning at once take turns, and the crew ends up the new person', async () => {
     const sale = await sellProject(admin, { name: 'Race Assign (test)' });
     const person = await ensurePerson(admin, { ...STAFF.execution });
     const task = await visitTask(sale, 'panel_installation', admin.userId);
-    const [day] = (await visitsOf(admin, { taskId: task })).freeDays;
+    const free = await visitsOf(admin, { taskId: task });
+    const day = free.freeDays[0] ?? '';
+    const time = free.freeTimes[day]?.[0];
     const results = await Promise.all([
-      admin.raw('POST', '/visits', { taskId: task, day: day ?? '', slot: 'morning' }),
+      admin.raw('POST', '/visits', {
+        taskId: task,
+        day,
+        slot: 'morning',
+        startMin: time?.startMin,
+      }),
       admin.raw('POST', `/tasks/${task}/assign`, { userId: person.id }),
     ]);
     expect(results.map((reply) => reply.status)).toEqual([200, 200]);

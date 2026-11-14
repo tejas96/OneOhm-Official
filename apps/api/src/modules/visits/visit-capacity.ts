@@ -1,9 +1,20 @@
-import { type DatabaseExecutor, leaveRequests, users, visits } from '@oneohm/database';
-import { freeVisitDays, OPEN_VISIT_STATUSES, type VisitSlot } from '@oneohm/domain';
+import {
+  type DatabaseExecutor,
+  leaveRequests,
+  readBusinessSetting,
+  users,
+  visits,
+} from '@oneohm/database';
+import { freeSlots, freeVisitDays, OPEN_VISIT_STATUSES, type VisitSlot } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 
-const LOOK_AHEAD = 45;
+/**
+ * How many days of visits and leave are read. This is a data window, wide enough for any
+ * Settings value (how far ahead tops out at 45); what is offered is limited by `daysAhead`.
+ */
+const DATA_WINDOW = 45;
 
 /** Slots already taken per day by anyone of the crew (open visits), from tomorrow. */
 export async function takenSlots(
@@ -21,7 +32,7 @@ export async function takenSlots(
       and(
         inArray(visits.status, [...OPEN_VISIT_STATUSES]),
         gte(visits.day, today),
-        lte(visits.day, addDays(today, LOOK_AHEAD)),
+        lte(visits.day, addDays(today, DATA_WINDOW)),
         sql`${visits.crewUserIds} && ARRAY[${sql.join(
           crew.map((id) => sql`${id}::uuid`),
           sql`, `,
@@ -37,7 +48,7 @@ export async function takenSlots(
 async function leaveDays(db: DatabaseExecutor, crew: readonly string[], today: string) {
   const days = new Set<string>();
   if (crew.length === 0) return days;
-  const end = addDays(today, LOOK_AHEAD);
+  const end = addDays(today, DATA_WINDOW);
   const rows = await db
     .select({ from: leaveRequests.fromDate, to: leaveRequests.toDate })
     .from(leaveRequests)
@@ -55,20 +66,28 @@ async function leaveDays(db: DatabaseExecutor, crew: readonly string[], today: s
 }
 
 /**
- * The next working days the crew is free (existing leave and open visits are the capacity data).
+ * The next working days the crew is free (existing leave and open visits are the capacity data):
+ * at most `daysShown` of them, within `daysAhead` days, by the business calendar and the visits
+ * per slot in Settings → Visits & bookings.
  * Material readiness for an installation is not checked: the data is not kept per project.
  */
 export async function freeDaysFor(
   db: DatabaseExecutor,
   crew: readonly string[],
-  count: number,
   exceptVisitId?: string,
-  timeZone = 'Asia/Kolkata',
+  timeZone?: string,
 ): Promise<string[]> {
-  const today = todayIn(timeZone);
+  const [calendar, settings] = await Promise.all([
+    loadCalendar(db, timeZone),
+    readBusinessSetting(db, 'visits'),
+  ]);
+  const today = todayIn(calendar.timeZone);
   return freeVisitDays({
     today,
-    count,
+    count: settings.daysShown,
+    horizon: settings.daysAhead,
+    perSlot: settings.visitsPerSlot,
+    calendar,
     leave: await leaveDays(db, crew, today),
     taken: await takenSlots(db, crew, today, exceptVisitId),
   });
@@ -99,5 +118,6 @@ export async function busyOn(
   const today = todayIn(timeZone);
   if ((await leaveDays(db, [userId], today)).has(day)) return 'leave';
   const taken = await takenSlots(db, [userId], today, exceptVisitId);
-  return (taken[day] ?? []).includes(slot) ? 'booked' : null;
+  const { visitsPerSlot } = await readBusinessSetting(db, 'visits');
+  return freeSlots(taken[day] ?? [], visitsPerSlot).includes(slot) ? null : 'booked';
 }

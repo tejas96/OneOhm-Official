@@ -2,18 +2,33 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { addLeave, closeDb, rows } from '../support/db';
 import { Session } from '../support/http';
 import { lastReply } from '../support/onboarding';
+import { ownPerson, retire } from '../support/people';
 import { addDays, sellProject, today } from '../support/sales';
 import { openChat } from '../support/send';
-import { askDay, pickDay, setVisit, visitsFor, visitsOf, visitTask } from '../support/visits';
+import {
+  askDay,
+  pickDay,
+  setVisit,
+  teamConfirmsPicks,
+  visitsFor,
+  visitsOf,
+  visitTask,
+} from '../support/visits';
 
-// Visits (redesign §8): the team asks for a day, the customer picks it, the team confirm it.
+// Visits (redesign §8): the team asks for a day, the customer picks it, the team confirm it
+// (with "book customer picks at once" off; the instant booking is in 66-visits-times).
 
 describe('Visits: pick, confirm, change, cancel', () => {
   let admin: Session;
+  let restore: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    restore = await teamConfirmsPicks(admin);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await restore();
+    await closeDb();
+  });
 
   it('asks for a day from the survey task; the pick is proposed, the team confirm; Booked; the task dates follow', async () => {
     const sale = await sellProject(admin, { name: 'Visit Pick (test)' });
@@ -37,7 +52,7 @@ describe('Visits: pick, confirm, change, cancel', () => {
     });
     expect(again.status).toBe(409);
 
-    const { day, slot } = await pickDay(customer.phone, list, 'afternoon');
+    const { day, slot, label, startMin } = await pickDay(customer.phone, list, 'afternoon');
     expect((await lastReply(customer.phone))?.body).toMatch(/^Thanks — we'll confirm by \*.+\*\.$/);
     const [proposed] = await visitsFor(customer.customerId);
     expect(proposed).toMatchObject({
@@ -60,12 +75,11 @@ describe('Visits: pick, confirm, change, cancel', () => {
 
     const shown = await visitsOf(admin, { taskId: task });
     expect(shown.visits[0]).toMatchObject({ status: 'proposed', day });
-    const confirmed = await setVisit(admin, { taskId: task, day, slot });
+    const confirmed = await setVisit(admin, { taskId: task, day, slot, startMin });
     expect(confirmed.status).toBe('confirmed');
     const booked = await lastReply(customer.phone);
-    expect(booked?.body).toMatch(
-      new RegExp(`^Booked ✅ \\*.+, ${slot}\\*\\. .+ will call before coming`),
-    );
+    expect(booked?.body).toMatch(/^Booked ✅ \*.+\*\. .+ will call before coming/);
+    expect(booked?.body).toContain(`, ${label}*.`);
     expect(booked?.buttons?.map((button) => button.title)).toEqual(['Okay', 'Change day']);
     const [dates] = await rows<{ start_date: string }>(
       'SELECT start_date::text FROM project_tasks WHERE id = $1',
@@ -116,26 +130,33 @@ describe('Visits: pick, confirm, change, cancel', () => {
 
   it('free days skip leave and slots another visit of the same person already holds', async () => {
     const sale = await sellProject(admin, { name: 'Visit Free (test)' });
-    const task = await visitTask(sale, 'structure_installation', admin.userId);
+    // A person of this scenario's own (removed after), so the leave and visits do not leak.
+    const person = await ownPerson(admin, 'Visit Free Person (test)');
+    const task = await visitTask(sale, 'structure_installation', person.id);
     const first = (await visitsOf(admin, { taskId: task })).freeDays;
     const tomorrow = first[0] ?? '';
-    await addLeave(admin.userId, tomorrow, tomorrow);
+    await addLeave(person.id, tomorrow, tomorrow);
     const second = (await visitsOf(admin, { taskId: task })).freeDays;
     expect(second).not.toContain(tomorrow);
-    // A second project's task of the same person, booked on the next free day (both slots).
+    // A second project's task of the same person, booked at 10:00 on the next free day.
     const other = await sellProject(admin, { name: 'Visit Free Two (test)' });
-    const otherTask = await visitTask(other, 'structure_installation', admin.userId);
+    const otherTask = await visitTask(other, 'structure_installation', person.id);
     const nextDay = second[0] ?? '';
     await setVisit(admin, { taskId: otherTask, day: nextDay, slot: 'morning' });
-    await setVisit(admin, { taskId: task, day: nextDay, slot: 'afternoon' });
-    const third = (await visitsOf(admin, { taskId: task })).freeDays;
-    expect(third).not.toContain(nextDay);
+    // That exact time is gone from the person's free times; the other times of the day stay.
+    const third = await visitsOf(admin, { taskId: task });
+    const left = (third.freeTimes[nextDay] ?? []).map((time) => time.startMin);
+    expect(left).not.toContain(600);
+    expect(left).toContain(690);
+    await setVisit(admin, { taskId: task, day: nextDay, slot: 'morning', startMin: 690 });
     const clash = await admin.raw('POST', '/visits', {
       taskId: otherTask,
       day: nextDay,
-      slot: 'afternoon',
+      slot: 'morning',
+      startMin: 690,
     });
     expect(clash.status).toBe(409);
+    await retire(admin, [person]);
   });
 
   it('staff change the day: the customer is told with Okay and Change day; cancel tells the customer', async () => {
@@ -143,14 +164,28 @@ describe('Visits: pick, confirm, change, cancel', () => {
     const { customer } = sale;
     const task = await visitTask(sale, 'panel_installation', admin.userId);
     await openChat(customer.phone, customer.customerId);
-    const days = (await visitsOf(admin, { taskId: task })).freeDays;
-    const [one, two] = days;
-    const visit = await setVisit(admin, { taskId: task, day: one ?? '', slot: 'morning' });
+    const free = await visitsOf(admin, { taskId: task });
+    const [one, two] = free.freeDays;
+    // The first free time of the first day, then the last free time of the second.
+    const first = free.freeTimes[one ?? '']?.[0];
+    const last = free.freeTimes[two ?? '']?.at(-1);
+    const visit = await setVisit(admin, {
+      taskId: task,
+      day: one ?? '',
+      slot: 'morning',
+      startMin: first?.startMin ?? 0,
+    });
     expect((await lastReply(customer.phone))?.body).toMatch(/^Booked ✅/);
-    const moved = await setVisit(admin, { taskId: task, day: two ?? '', slot: 'afternoon' });
+    const moved = await setVisit(admin, {
+      taskId: task,
+      day: two ?? '',
+      slot: 'afternoon',
+      startMin: last?.startMin ?? 0,
+    });
     expect(moved.id).toBe(visit.id);
     const told = await lastReply(customer.phone);
-    expect(told?.body).toMatch(/^We have moved your visit to \*.+, afternoon\*\./);
+    expect(told?.body).toContain(`We have moved your visit to *`);
+    expect(told?.body).toContain(`, ${last?.label}*.`);
     expect(told?.buttons?.map((button) => button.title)).toEqual(['Okay', 'Change day']);
     const [dates] = await rows<{ start_date: string }>(
       'SELECT start_date::text FROM project_tasks WHERE id = $1',

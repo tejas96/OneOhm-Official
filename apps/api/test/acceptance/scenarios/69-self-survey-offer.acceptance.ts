@@ -5,7 +5,7 @@ import { lastReply, replies, tap } from '../support/onboarding';
 import { newCustomer, sellProject } from '../support/sales';
 import { offerSurvey, setOffer, surveysOf, surveyTask } from '../support/self-survey';
 import { closeChat, openChat, optionsOf, sendTo } from '../support/send';
-import { visitTask } from '../support/visits';
+import { setVisit, visitTask } from '../support/visits';
 
 // The self site survey offer (redesign §7): only with a project and the setting on, from Send to
 // customer and from Home, with the credit in the words.
@@ -144,7 +144,7 @@ describe('Self survey: the offer', () => {
     await settleAdvance(booked.project.id);
     const taskId = await visitTask(booked, 'site_survey', admin.userId);
     await openChat(booked.customer.phone, booked.customer.customerId);
-    await admin.post('/visits', { taskId, day: nextWorkingDay(), slot: 'morning' });
+    await setVisit(admin, { taskId, day: nextWorkingDay(), slot: 'morning' });
     await tap(booked.customer.phone, 'menu');
     expect((await lastReply(booked.customer.phone))?.body ?? '').not.toContain('site survey');
   });
@@ -156,9 +156,9 @@ const settleAdvance = (projectId: string) =>
     projectId,
   ]);
 
-/** A Monday-to-Saturday day a few days ahead. */
+/** A Monday-to-Saturday day 3 to 12 days ahead (visits open 14 days ahead). */
 function nextWorkingDay(): string {
-  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 40)) * 86_400_000);
+  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 10)) * 86_400_000);
   if (day.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1);
   return day.toISOString().slice(0, 10);
 }

@@ -9,6 +9,7 @@ import {
 } from '@oneohm/database';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { chatFile, chatFileColumns, homesOf } from './chat-file-label';
+import { formsOf } from './chat-forms';
 import { deliveryState } from './delivery-state';
 
 /** A chat's newest 200 messages, oldest first, with delivery, sender and any kept file. */
@@ -36,14 +37,25 @@ export async function chatMessages(
     .from(waConversations)
     .where(eq(waConversations.id, conversationId));
   const homes = await homesOf(db, chat?.customerId ?? null);
-  return rows.reverse().map(({ message, status, deliveryStatus, sentBy, file }) => ({
-    id: message.id,
-    direction: message.direction as 'in' | 'out',
-    kind: message.kind,
-    body: message.body,
-    at: message.createdAt.toISOString(),
-    delivery: status ? deliveryState({ status, deliveryStatus }) : null,
-    sentBy,
-    file: chatFile(file, homes),
-  }));
+  const { forms, grouped } = formsOf(
+    rows.map((row) => ({
+      id: row.message.id,
+      data: row.message.data,
+      file: chatFile(row.file, homes),
+    })),
+  );
+  return rows
+    .reverse()
+    .filter(({ message }) => !grouped.has(message.id))
+    .map(({ message, status, deliveryStatus, sentBy, file }) => ({
+      id: message.id,
+      direction: message.direction as 'in' | 'out',
+      kind: message.kind,
+      body: message.body,
+      at: message.createdAt.toISOString(),
+      delivery: status ? deliveryState({ status, deliveryStatus }) : null,
+      sentBy,
+      file: chatFile(file, homes),
+      ...(forms.has(message.id) && { form: forms.get(message.id) }),
+    }));
 }

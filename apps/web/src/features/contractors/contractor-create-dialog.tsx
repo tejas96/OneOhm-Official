@@ -64,13 +64,7 @@ export function ContractorCreateDialog({
       size="lg"
       autoFocusField
       footer={
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          pending={form.pending}
-          disabled={bank.blocked}
-        >
+        <Button type="submit" form={formId} variant="primary" pending={form.pending}>
           {t('submit')}
         </Button>
       }

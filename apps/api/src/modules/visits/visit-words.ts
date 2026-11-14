@@ -1,5 +1,6 @@
 import { VISIT_PHRASES, type VisitKind } from '@oneohm/domain';
 import { homeEn, homeHi, homeMr } from '@oneohm/shared';
+import { confirmByWords } from '../whatsapp/assistant/hours-words';
 import { localized, type Words } from '../whatsapp/assistant/language';
 
 /**
@@ -32,8 +33,13 @@ const EN_VISIT = {
     none: (name: string) =>
       `We have no free day to show right now. ${name} will call you to fix a day.`,
     slot: (day: string) => `*${day}* — morning or afternoon?`,
+    time: (day: string) => `*${day}* — which time suits you?`,
+    times: 'See times',
+    otherDay: 'Another day',
     thanks: (by: string) => `Thanks — we'll confirm by *${by}*.`,
-    by: { today: '6:30 pm today', tomorrow: 'tomorrow 12 noon', monday: 'Monday 12 noon' },
+    get by() {
+      return confirmByWords('en');
+    },
     taken: 'That time was just taken. Please pick again.',
     team: 'our team',
   },
@@ -84,8 +90,13 @@ const MR_VISIT: Words<typeof EN_VISIT> = {
     talkLine: 'तुम्हाला कोणता दिवस सोयीचा ते सांगा',
     none: (name) => `सध्या दाखवण्यासारखा मोकळा दिवस नाही. ${name} तुम्हाला फोन करून दिवस ठरवतील.`,
     slot: (day) => `*${day}* — सकाळी की दुपारी?`,
+    time: (day) => `*${day}* — कोणती वेळ सोयीची आहे?`,
+    times: 'वेळा पाहा',
+    otherDay: 'दुसरा दिवस',
     thanks: (by) => `धन्यवाद — आम्ही *${by}* पर्यंत पक्के करू.`,
-    by: { today: 'आज संध्याकाळी ६:३०', tomorrow: 'उद्या दुपारी १२', monday: 'सोमवारी दुपारी १२' },
+    get by() {
+      return confirmByWords('mr');
+    },
     taken: 'ती वेळ आत्ताच घेतली गेली. कृपया पुन्हा निवडा.',
     team: 'आमची टीम',
   },
@@ -133,8 +144,13 @@ const HI_VISIT: Words<typeof EN_VISIT> = {
     talkLine: 'बताइए आपको कौन सा दिन ठीक है',
     none: (name) => `अभी दिखाने लायक कोई खाली दिन नहीं है। ${name} आपको फ़ोन करके दिन तय करेंगे।`,
     slot: (day) => `*${day}* — सुबह या दोपहर?`,
+    time: (day) => `*${day}* — कौन सा समय ठीक है?`,
+    times: 'समय देखें',
+    otherDay: 'दूसरा दिन',
     thanks: (by) => `धन्यवाद — हम *${by}* तक पक्का करेंगे।`,
-    by: { today: 'आज शाम 6:30', tomorrow: 'कल दोपहर 12', monday: 'सोमवार दोपहर 12' },
+    get by() {
+      return confirmByWords('hi');
+    },
     taken: 'वह समय अभी ले लिया गया। कृपया दोबारा चुनें।',
     team: 'हमारी टीम',
   },

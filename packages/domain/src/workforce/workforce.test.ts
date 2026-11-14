@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { distanceMeters, isLateCheckIn, nearestLocation } from './attendance';
-import { leaveHalfDays, overlaps, suggestBackups } from './leave';
+import { dateRangesOverlap, leaveHalfDays, suggestBackups } from './leave';
 
 describe('leave days', () => {
   const sundaysOff = [0];
@@ -44,10 +44,16 @@ describe('leave days', () => {
 
   it('finds overlapping ranges, including touching ones', () => {
     expect(
-      overlaps({ from: '2026-11-01', to: '2026-11-05' }, { from: '2026-11-05', to: '2026-11-07' }),
+      dateRangesOverlap(
+        { from: '2026-11-01', to: '2026-11-05' },
+        { from: '2026-11-05', to: '2026-11-07' },
+      ),
     ).toBe(true);
     expect(
-      overlaps({ from: '2026-11-01', to: '2026-11-04' }, { from: '2026-11-05', to: '2026-11-07' }),
+      dateRangesOverlap(
+        { from: '2026-11-01', to: '2026-11-04' },
+        { from: '2026-11-05', to: '2026-11-07' },
+      ),
     ).toBe(false);
   });
 });

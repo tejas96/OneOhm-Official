@@ -1,5 +1,5 @@
 import type { DatabaseExecutor } from '@oneohm/database';
-import { noticeCustomer } from '@oneohm/database';
+import { noticeCustomer, queueCustomerMessage } from '@oneohm/database';
 import { languageOfPhone } from '../documents/document-request-messages';
 import { chatOpenFor, type SendContext } from '../send-to-customer/send-context';
 import { deliver } from '../send-to-customer/send-deliver';
@@ -19,7 +19,8 @@ export async function visitContext(
   >,
 ): Promise<SendContext> {
   return {
-    customerId: target.customerId,
+    // A lead booked before it is a customer has no record yet: '' marks it (see tellVisit).
+    customerId: target.customerId ?? '',
     customerName: target.customerName,
     phone: target.phone,
     language: await languageOfPhone(db, target.phone),
@@ -45,7 +46,16 @@ export async function tellVisit(
   userId: string | null,
 ): Promise<'chat' | 'template'> {
   const built = await inLanguage(ctx.language, async () => build());
-  return deliver(tx, ctx, built, key, userId);
+  if (ctx.customerId) return deliver(tx, ctx, built, key, userId);
+  // A lead without a customer record: its WhatsApp chat while open, else the approved template.
+  if (ctx.chatOpen) {
+    const chat = await conversationForPhone(tx, ctx.phone);
+    for (const [index, reply] of built.replies.entries())
+      await queueReply(tx, chat, reply, userId, index === 0 ? key : `${key}:${index}`);
+    return 'chat';
+  }
+  await queueCustomerMessage(tx, ctx.phone, built.template.key, built.template.payload, key);
+  return 'template';
 }
 
 /** The cancel notice: in the chat while it is open, and always in the app inbox. */

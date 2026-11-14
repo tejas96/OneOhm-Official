@@ -68,17 +68,20 @@ const text = (number: number | null | undefined) =>
  */
 export function GpsFields({
   initial,
+  defaultPoint,
   errors,
 }: {
   readonly initial?: Property | undefined;
+  /** A point to start from when there is no saved site, e.g. the customer's WhatsApp pin. */
+  readonly defaultPoint?: { readonly latitude: number; readonly longitude: number } | undefined;
   readonly errors: (field: string) => string | undefined;
 }) {
   const t = useTranslations('customers.property');
   const mapsT = useTranslations('maps');
   const mapsKey = useMapsKey();
   const company = useCompany();
-  const [latitude, setLatitude] = useState(text(initial?.latitude));
-  const [longitude, setLongitude] = useState(text(initial?.longitude));
+  const [latitude, setLatitude] = useState(text(initial?.latitude ?? defaultPoint?.latitude));
+  const [longitude, setLongitude] = useState(text(initial?.longitude ?? defaultPoint?.longitude));
   const [source, setSource] = useState<Source>('');
   const [typing, setTyping] = useState(false);
   const withMap = mapsKey !== null && !company.isPending;

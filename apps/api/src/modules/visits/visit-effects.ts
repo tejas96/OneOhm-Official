@@ -5,9 +5,11 @@ import {
   leads,
   projectActivities,
   projectTasks,
+  readBusinessSetting,
   serviceRequests,
   type visits,
 } from '@oneohm/database';
+import { clockString, parseClock, slotHalf } from '@oneohm/domain';
 import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { logLead } from '../crm/lead-history';
@@ -75,6 +77,21 @@ export async function mirrorServiceDay(
     .where(eq(serviceRequests.id, serviceRequestId));
 }
 
+/**
+ * The time a survey visit is the lead's next action: its own start time when it has one, else the
+ * first visit time of that half of the day in Settings → Visits & bookings.
+ */
+async function surveyTime(
+  tx: DatabaseExecutor,
+  slot: 'morning' | 'afternoon',
+  startMin: number | null,
+): Promise<string> {
+  if (startMin !== null) return clockString(startMin);
+  const { slotStarts } = await readBusinessSetting(tx, 'visits');
+  const first = slotStarts.find((text) => slotHalf(parseClock(text)) === slot);
+  return first ?? (slot === 'morning' ? '10:00' : '14:00');
+}
+
 const SURVEY_MOVE = 'Moved to Survey scheduled (visit booked).';
 
 /** A survey picked or confirmed on a lead: the lead is "Survey scheduled" with that day as its next action. */
@@ -84,6 +101,7 @@ export async function surveyOnLead(
   userId: string | null,
   day: string,
   slot: 'morning' | 'afternoon',
+  startMin: number | null = null,
 ) {
   const [lead] = await tx.select({ stage: leads.stage }).from(leads).where(eq(leads.id, leadId));
   if (!lead) return;
@@ -93,7 +111,7 @@ export async function surveyOnLead(
     .set({
       ...(early ? { stage: 'survey_scheduled' as const } : {}),
       nextActionOn: day,
-      nextActionTime: slot === 'morning' ? '10:00' : '14:00',
+      nextActionTime: await surveyTime(tx, slot, startMin),
       nextActionNote: `Site survey (${slot})`,
       updatedAt: new Date(),
     })
@@ -110,6 +128,8 @@ export async function settleVisitActions(
   types: ('visit_pick' | 'presence')[] = ['visit_pick', 'presence'],
   from: ('open' | 'received')[] = ['open', 'received'],
 ) {
+  // A lead's visit has no customer (and so no customer actions) until the lead is converted.
+  if (!visit.customerId) return;
   const target = visit.taskId ? eq(customerActions.taskId, visit.taskId) : undefined;
   const rows = await tx
     .select({ id: customerActions.id, payload: customerActions.payload })

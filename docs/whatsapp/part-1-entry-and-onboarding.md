@@ -298,6 +298,18 @@ Accepted: the three taps; typed "english"/"inglish", "marathi"/"मराठी"
 
 On answer: `wa_conversations.language` is saved. There is no lead yet. → Step 3.2.
 
+### 3.1a The onboarding form (WhatsApp Flow `onboarding`, "Tell us about your home")
+
+Instead of 3.2 to 3.6 one by one, a published form can collect everything at once (`forms/onboarding.flow.ts`, words in `onboarding-form-words.ts`).
+
+- **When it is sent:** right after the language answer (`onboarding-form.ts:offerForm`), only when the form has a flow id in Settings → WhatsApp messages → Forms, the 24-hour chat window is open, and the number has no lead yet (a referral or team-made lead keeps the chat steps). It is a flow message "Open form" in the chosen language. If the flow cannot be delivered, the worker sends the plain fallback "Please type your name." (`flow-fallback.ts`).
+- **No flow id, or window closed:** nothing is sent; the name question (3.2) is asked as always. The chat path is unchanged.
+- **The form never blocks the chat.** The chat stays on `onboard:name`; taps and typed answers go on exactly as in 3.2 to 3.6. The form's token (single use, 7 days) is kept in `context.ob.form`, not in `wa_flow_tokens`, because a new number has no customer to attach a flow token to.
+- **Fields (one screen):** name (offered from the WhatsApp name), city (the owner's service cities plus "Other city", and an optional typed "Other city" field that is always shown), site type, monthly bill (Settings bands, in the customer's language), roof, floors, and an optional bill photo (one; "or send a PDF in the chat after").
+- **The reply (`nfm_reply`)** is applied by `onboarding-form.ts:takeForm` through the same code as the chat: each answer is read by `readAnswer` (so the same rules), then kept and written on the lead by `recordAnswer` in order name, city, site, bill, roof, floors. The city answer makes the lead (owner by rule, campaign from the first message, history notes, `leads.floors`). "Other city" uses the typed city; if none is typed, the chat asks the city typed. The bill photo is filed on the lead as the electricity bill (as in 3.6); no photo means "send later". An answer that is missing or not one we offer is simply asked next in the chat. When all are answered the end is the same as 3.10: the estimate PDF with the next-step buttons, or the expert path for a farm or a large bill.
+- **Old form:** a reply with an unknown, used or expired token, or after onboarding finished (`onboard:done`), gets "That form is old — please try again." and, if onboarding is not done, the question the chat is on.
+- Nudges (3.13) work as before: the chat is on the name step until the form or the chat answers.
+
 ### 3.2 Step `name`
 
 - If the WhatsApp profile name is a name we may use **(new, `usableName`)** — at least two letters, no digits or emoji, no business word (solar,

@@ -71,6 +71,9 @@ export interface LeadRow {
   owner_user_id: string | null;
   subsidy_category: string;
   estimated_wp: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  floors: number | null;
   next_action_on: string;
   next_action_note: string;
 }
@@ -78,6 +81,7 @@ export interface LeadRow {
 export async function leadsOf(phone: string): Promise<LeadRow[]> {
   return rows<LeadRow>(
     `SELECT id, name, city, source, owner_user_id, subsidy_category, estimated_wp,
+            latitude, longitude, floors,
             to_char(next_action_on, 'YYYY-MM-DD') AS next_action_on, next_action_note
        FROM leads WHERE phone_e164 = $1`,
     [phone],

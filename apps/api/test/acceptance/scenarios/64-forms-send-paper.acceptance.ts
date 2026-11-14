@@ -6,6 +6,7 @@ import {
   askedBill,
   bodies,
   FLOW_ID,
+  formLinkOf,
   OLD,
   openedForm,
   photo,
@@ -96,7 +97,7 @@ describe('Forms: Send a paper', () => {
       "SELECT body FROM wa_messages WHERE conversation_id = $1 AND kind = 'form'",
       [chat.id],
     );
-    expect(line?.body).toBe('Sent a form (2 files)');
+    expect(line?.body).toBe('Form · Send a paper · 2 photos');
   });
 
   it('a PDF from the second screen answers the paper', async () => {
@@ -111,6 +112,7 @@ describe('Forms: Send a paper', () => {
     const docs = await docsOf(customer.customerId);
     expect(docs).toHaveLength(1);
     expect((await actionOf(ask.id))?.status).toBe('received');
+    expect(await formLinkOf(customer.phone)).toEqual({ kind: 'customer', id: customer.customerId });
   });
 
   it('checks the file against the SHA-256 WhatsApp gave', async () => {

@@ -6,6 +6,7 @@ import {
   usableName,
 } from '@oneohm/domain';
 import { titleCaseName } from '@oneohm/shared';
+import type { GeoPlace } from '../../maps/reverse-geocode';
 
 /** What one message says for the question the chat is on. */
 export type ReadAnswer =
@@ -68,11 +69,30 @@ function readName(
   return parsed.ok ? value(titleCaseName(String(parsed.value))) : MISS;
 }
 
-/** The configured city a shared pin names in its place name or address, else null (the city is then asked). */
+/** Lowercase letters and digits only (Devanagari kept), so "Sangli " and "SANGLI," compare equal. */
+const plain = (text: string | null | undefined) =>
+  (text ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, ' ')
+    .trim();
+
+/**
+ * The configured city a shared pin names: in its place name or address, else in the
+ * place its point was geocoded to (town, district, area); null when none is served.
+ */
 export function cityFromPin(
   pin: { readonly name: string | null; readonly address: string | null },
   cities: readonly string[],
+  place: GeoPlace | null = null,
 ): string | null {
-  const place = `${pin.name ?? ''} ${pin.address ?? ''}`.toLowerCase();
-  return cities.find((city) => place.includes(city.toLowerCase())) ?? null;
+  const text = plain(`${pin.name ?? ''} ${pin.address ?? ''}`);
+  const named = cities.find((city) => plain(city) && text.includes(plain(city)));
+  if (named || !place) return named ?? null;
+  for (const part of [place.locality, place.district, place.sublocality]) {
+    const found = plain(part);
+    const city = found && cities.find((c) => plain(c) && found.includes(plain(c)));
+    if (city) return city;
+  }
+  return null;
 }

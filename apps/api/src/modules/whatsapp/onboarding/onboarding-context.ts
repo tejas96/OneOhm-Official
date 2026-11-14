@@ -19,6 +19,11 @@ export interface OnboardContext {
   readonly nudgedAt?: string;
   /** When this onboarding began; a lead made since then counts even once closed. */
   readonly startedAt?: string;
+  /**
+   * The onboarding form we sent: its token (single use, kept here because a new number has no customer to
+   * hang a flow token on) and when it went out. The chat steps still work while it is open.
+   */
+  readonly form?: { readonly token: string; readonly sentAt: string };
   /** When the stalled-chat job made a lead or set its call-today; it never acts twice. */
   readonly followedUpAt?: string;
 }

@@ -1,3 +1,4 @@
+import { DEFAULT_CALENDAR, zonedInstant } from '../calendar/business-calendar';
 /**
  * Service levels (PRD 7.2 "Service categories and SLAs"): each category promises a first
  * response and a resolution within so many hours. Hours run around the clock.
@@ -29,8 +30,9 @@ export function slaState(clock: SlaClock, now: Date): SlaState | null {
 
 export const hoursAfter = (at: Date, hours: number) => new Date(at.getTime() + hours * HOUR_MS);
 
-/** Midnight in India at the start of a calendar date. */
-export const dayStartsAt = (date: string) => new Date(`${date}T00:00:00+05:30`);
+/** Midnight, in the business time zone, at the start of a calendar date. */
+export const dayStartsAt = (date: string, timeZone = DEFAULT_CALENDAR.timeZone) =>
+  zonedInstant(date, 0, timeZone);
 
 export interface SlaHours {
   readonly responseHours: number;
@@ -45,8 +47,9 @@ export function slaDueDates(
   hours: SlaHours,
   raisedAt: Date,
   scheduledFor?: string | null,
+  timeZone?: string,
 ): { readonly responseDueAt: Date; readonly resolutionDueAt: Date } {
-  const resolutionFrom = scheduledFor ? dayStartsAt(scheduledFor) : raisedAt;
+  const resolutionFrom = scheduledFor ? dayStartsAt(scheduledFor, timeZone) : raisedAt;
   return {
     responseDueAt: hoursAfter(raisedAt, hours.responseHours),
     resolutionDueAt: hoursAfter(resolutionFrom, hours.resolutionHours),
@@ -68,7 +71,7 @@ export interface SlaStatus {
 }
 
 /** Both clocks of a request. Resolving a request also answers it. */
-export function serviceSla(request: SlaRequest, now: Date): SlaStatus {
+export function serviceSla(request: SlaRequest, now: Date, timeZone?: string): SlaStatus {
   return {
     response: slaState(
       {
@@ -80,7 +83,9 @@ export function serviceSla(request: SlaRequest, now: Date): SlaStatus {
     ),
     resolution: slaState(
       {
-        startedAt: request.scheduledFor ? dayStartsAt(request.scheduledFor) : request.createdAt,
+        startedAt: request.scheduledFor
+          ? dayStartsAt(request.scheduledFor, timeZone)
+          : request.createdAt,
         dueAt: request.resolutionDueAt,
         doneAt: request.resolvedAt,
       },

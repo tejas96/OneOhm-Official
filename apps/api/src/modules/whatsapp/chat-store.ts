@@ -10,6 +10,7 @@ import {
 import { DEFAULT_MESSAGE_TEMPLATES, renderTemplate, soleCustomer } from '@oneohm/domain';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { type ChatReply, chatReplySummary } from './chat-reply';
+import { formReplyRow } from './forms/form-record';
 import type { Incoming } from './whatsapp-events';
 
 export type { ChatReply } from './chat-reply';
@@ -66,6 +67,8 @@ export async function logIncoming(
   conversationId: string,
   incoming: Incoming,
 ): Promise<boolean> {
+  // A form reply is saved with its answers as rows, so the team reads them in the chat.
+  const summary = incoming.form ? await formReplyRow(db, conversationId, incoming.form) : null;
   const saved = await db
     .insert(waMessages)
     .values({
@@ -73,8 +76,9 @@ export async function logIncoming(
       direction: 'in',
       waMessageId: incoming.waMessageId,
       kind: incoming.kind,
-      body: incoming.text || `(${incoming.kind})`,
+      body: summary?.body ?? (incoming.text || `(${incoming.kind})`),
       mediaId: incoming.media?.id ?? null,
+      ...(summary && { data: summary.data }),
     })
     .onConflictDoNothing()
     .returning({ id: waMessages.id });
@@ -127,7 +131,7 @@ export async function queueReply(
       createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
-    .returning({ id: outbox.id });
+    .returning({ id: outbox.id, createdAt: outbox.createdAt });
   if (!row && dedupeKey) return;
   await db.insert(waMessages).values({
     conversationId: conversation.id,
@@ -136,6 +140,8 @@ export async function queueReply(
     body: chatReplySummary(reply),
     outboxId: row?.id ?? null,
     sentByUserId,
+    // The same instant as the queued row, so templates logged at send time sort alongside.
+    ...(row && { createdAt: row.createdAt }),
   });
 }
 

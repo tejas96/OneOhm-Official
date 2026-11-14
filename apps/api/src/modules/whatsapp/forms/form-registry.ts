@@ -1,3 +1,4 @@
+import { ONBOARDING_FLOW, ONBOARDING_FORM_VERSION } from './onboarding.flow';
 import { PAID_ANOTHER_WAY_FLOW, PAID_ANOTHER_WAY_VERSION } from './paid-another-way.flow';
 import { REFER_FRIEND_FLOW, REFER_FRIEND_VERSION } from './refer-friend.flow';
 import { REPORT_PROBLEM_FLOW, REPORT_PROBLEM_VERSION } from './report-problem.flow';
@@ -13,6 +14,7 @@ export const FORM_KEYS = [
   'report_problem',
   'refer_friend',
   'share_upi',
+  'onboarding',
 ] as const;
 export type FormKey = (typeof FORM_KEYS)[number];
 
@@ -68,6 +70,13 @@ export const FORMS: readonly FormDefinition[] = [
     version: SHARE_UPI_VERSION,
     flowJson: SHARE_UPI_FLOW,
     categories: ['OTHER'],
+  },
+  {
+    key: 'onboarding',
+    name: 'Tell us about your home',
+    version: ONBOARDING_FORM_VERSION,
+    flowJson: ONBOARDING_FLOW,
+    categories: ['LEAD_GENERATION'],
   },
 ];
 

@@ -5,6 +5,8 @@ export const SECTIONS = [
   'company',
   'roles',
   'workforce',
+  'workingTime',
+  'visits',
   'rewards',
   'leadSteps',
   'leadAssignment',
@@ -37,7 +39,8 @@ export type Section = (typeof SECTIONS)[number];
  * finally the logs. Small groups, each about one thing.
  */
 export const MENU: readonly NavGroup<Section>[] = [
-  { key: 'company', items: ['company', 'roles', 'workforce', 'rewards'] },
+  { key: 'company', items: ['company', 'roles', 'rewards'] },
+  { key: 'hours', items: ['workingTime', 'visits', 'workforce'] },
   {
     key: 'leads',
     items: ['leadSteps', 'leadAssignment', 'leadCampaigns', 'whatsappOnboarding', 'referrals'],

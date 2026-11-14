@@ -3,7 +3,7 @@ export const STAGE_RATING = {
   stage: {
     survey: 'site survey',
     installation: 'installation',
-    commissioning: 'switch-on and handover',
+    commissioning: 'switch-on',
   },
   cardTitle: (stage: string) => `How was the ${stage}?`,
   cardBody: (project: string) => `${project} · it takes a few seconds.`,

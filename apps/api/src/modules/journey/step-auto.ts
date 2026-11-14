@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { type DatabaseExecutor } from '@oneohm/database';
 import { STEP_TASK_KEYS } from '@oneohm/domain';
 import { AppError } from '../../common/http/errors';
+import { genericUpdateFallback } from '../projects/task-messages';
 import { openAction } from '../send-to-customer/send-actions';
-import { deliver } from '../send-to-customer/send-deliver';
+import { deliverRouted, wasDelivered } from '../send-to-customer/send-deliver';
 import { inLanguage } from '../whatsapp/assistant/language';
 import { askedBefore, contextOfTask } from './journey-context';
 import type { JourneyTask } from './journey-store';
@@ -14,27 +15,36 @@ import { creditCompose } from './step-compose';
  * bank (redesign §4 Subsidy). Only a step whose template lets the customer hear about it asks by
  * itself (PRD 6.2); a project with no subsidy amount asks nothing.
  */
-async function askCredit(tx: DatabaseExecutor, task: JourneyTask): Promise<void> {
-  if (!task.notifyCustomer || (await askedBefore(tx, `subsidy_credit:${task.id}`))) return;
+async function askCredit(tx: DatabaseExecutor, task: JourneyTask): Promise<boolean> {
+  if (!task.notifyCustomer || (await askedBefore(tx, `subsidy_credit:${task.id}`))) return false;
   const ctx = await contextOfTask(tx, task);
-  if (!ctx) return;
+  if (!ctx) return false;
   const id = randomUUID();
   try {
     const { built, record } = await inLanguage(ctx.language, () =>
       creditCompose(tx, ctx, task, id),
     );
-    if (record.kind !== 'action') return;
+    if (record.kind !== 'action') return false;
     await openAction(tx, ctx, null, record);
-    await deliver(tx, ctx, built, `journey:subsidy_credit:${task.id}`, null);
+    const sent = await deliverRouted(
+      tx,
+      ctx,
+      built,
+      `journey:subsidy_credit:${task.id}`,
+      null,
+      (await genericUpdateFallback(tx, task)) ?? undefined,
+    );
+    return wasDelivered(tx, built, sent);
   } catch (error) {
     // No subsidy amount to ask about: nothing to say. Anything else is a real failure.
     if (!(error instanceof AppError)) throw error;
+    return false;
   }
 }
 
 /** A step was just completed: the subsidy release asks "Did it reach your bank?". */
-export async function stepOnComplete(tx: DatabaseExecutor, task: JourneyTask): Promise<void> {
+export async function stepOnComplete(tx: DatabaseExecutor, task: JourneyTask): Promise<boolean> {
   // The row given is the one from before it was finished: it is done now.
-  if (task.templateKey === STEP_TASK_KEYS.subsidy_credit)
-    await askCredit(tx, { ...task, status: 'completed' });
+  if (task.templateKey !== STEP_TASK_KEYS.subsidy_credit) return false;
+  return askCredit(tx, { ...task, status: 'completed' });
 }

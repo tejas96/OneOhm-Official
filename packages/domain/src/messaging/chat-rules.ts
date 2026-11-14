@@ -1,11 +1,22 @@
-/** WhatsApp chat rules shared by the API and the worker: the working clock and who answers. */
+import { addDays, daysBetween } from '@oneohm/shared';
+import {
+  type BusinessCalendar,
+  clockAt,
+  DEFAULT_CALENDAR,
+  isWorkingDay,
+  isWorkingTime,
+  nextWorkingDay,
+  previousWorkingDay,
+  weekdayOf,
+  zonedInstant,
+} from '../calendar/business-calendar';
+import { WEEKDAY_NAMES } from '../calendar/hours-text';
 
 /**
- * Working hours, in minutes after midnight: 9:30 am to 6:30 pm, the hours customers are
- * told. Reminders, "late" and the night reply all follow them.
+ * WhatsApp chat rules shared by the API and the worker: the working clock and who answers.
+ * The working hours are the business calendar's (Settings → Working time & holidays).
  */
-export const WORK_START_MIN = 9 * 60 + 30;
-export const WORK_END_MIN = 18 * 60 + 30;
+
 /** After this long the person answering is nudged; after LATE_MIN the desk is told. */
 export const FIRST_NUDGE_MIN = 30;
 export const LATE_MIN = 120;
@@ -26,99 +37,93 @@ export function chatWindowOpen(lastInboundAt: Date | null | undefined, now = new
   );
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** The business clock now: the minute and weekday there (0 Sunday) and when today began. */
-function clockAt(now: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
-  const elapsed = ((part('hour') * 60 + part('minute')) * 60 + part('second')) * 1000;
-  return {
-    minute: part('hour') * 60 + part('minute'),
-    weekday: WEEKDAYS.indexOf(parts.find((entry) => entry.type === 'weekday')?.value ?? ''),
-    midnight: new Date(now.getTime() - elapsed - now.getMilliseconds()),
-  };
-}
-
-/** Monday to Saturday, 9:30 am up to 6:30 pm; Sunday is closed (redesign §14). */
-export function isWorkingTime(now: Date, timeZone: string): boolean {
-  const { minute, weekday } = clockAt(now, timeZone);
-  return weekday !== 0 && minute >= WORK_START_MIN && minute < WORK_END_MIN;
+/**
+ * When the office next opens from `now`: today if it is a working day not yet open, else the
+ * next working day. `add` is the days from today, `weekday` that day's weekday (0 Sunday).
+ */
+export function nextOpening(now: Date, cal: BusinessCalendar = DEFAULT_CALENDAR) {
+  const { day, minute } = clockAt(now, cal.timeZone);
+  if (isWorkingDay(day, cal) && minute < cal.startMin)
+    return { add: 0, day, weekday: weekdayOf(day) };
+  const next = nextWorkingDay(day, cal);
+  return { add: daysBetween(day, next), day: next, weekday: weekdayOf(next) };
 }
 
 /**
  * When a person can reply, as the customer is told: `now` in working hours, else the
- * morning it opens again (9:30 today, tomorrow, or Monday after Saturday evening).
+ * morning it opens again: today, tomorrow, or `later` (a named weekday, such as Monday
+ * after a Saturday evening or the day after a holiday).
  */
-export type ReplyTime = 'now' | 'today' | 'tomorrow' | 'monday';
+export type ReplyTime = 'now' | 'today' | 'tomorrow' | 'later';
 
-export function replyTime(now: Date, timeZone: string): ReplyTime {
-  if (isWorkingTime(now, timeZone)) return 'now';
-  const { minute, weekday } = clockAt(now, timeZone);
-  if (weekday !== 0 && minute < WORK_START_MIN) return 'today';
-  return weekday === 6 ? 'monday' : 'tomorrow';
+export function replyTime(now: Date, cal: BusinessCalendar = DEFAULT_CALENDAR): ReplyTime {
+  if (isWorkingTime(now, cal)) return 'now';
+  const { add } = nextOpening(now, cal);
+  return add === 0 ? 'today' : add === 1 ? 'tomorrow' : 'later';
 }
 
-/** The day a promised call is due: today, the next working day, or Monday. */
-export type CallDay = 'today' | 'tomorrow' | 'monday';
+/** The day a promised call is due: today, the next working day, or a later named weekday. */
+export type CallDay = 'today' | 'tomorrow' | 'later';
 
 /** How a promised call's day is said (the English words; the staff history uses them). */
-export const CALL_DAY_WORDS: Record<CallDay, string> = {
-  today: 'today',
-  tomorrow: 'tomorrow morning',
-  monday: 'on Monday morning',
-};
+export function callDayWords(call: { day: CallDay; weekday: number }): string {
+  if (call.day === 'today') return 'today';
+  if (call.day === 'tomorrow') return 'tomorrow morning';
+  return `on ${WEEKDAY_NAMES.en[call.weekday]} morning`;
+}
 
 /**
  * When a call promised at `now` is due, by the same clock as `replyTime`: today in working
- * hours (or before 9:30 on a working day), else the next working morning — Monday after
- * Saturday evening — with the days to add to today.
+ * hours (or before opening on a working day), else the next working morning, with the days
+ * to add to today and that day's weekday.
  */
-export function callDay(now: Date, timeZone: string): { day: CallDay; add: 0 | 1 | 2 } {
-  const time = replyTime(now, timeZone);
-  if (time === 'now' || time === 'today') return { day: 'today', add: 0 };
-  return time === 'monday' ? { day: 'monday', add: 2 } : { day: 'tomorrow', add: 1 };
+export function callDay(
+  now: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+): { day: CallDay; add: number; weekday: number } {
+  const time = replyTime(now, cal);
+  const { add, weekday } = nextOpening(now, cal);
+  if (time === 'now') return { day: 'today', add: 0, weekday: clockAt(now, cal.timeZone).weekday };
+  return { day: time, add, weekday };
 }
 
 /**
- * When working hours last ended: 6:30 pm today once it is past, else 6:30 pm on the working
- * day before. Sunday is closed, so all Sunday and Monday morning it is Saturday's 6:30 pm.
+ * When working hours last ended: closing time today once it is past, else closing time on the
+ * working day before. A weekly day off or holiday has no closing time.
  */
-export function lastWorkEnd(now: Date, timeZone: string): Date {
-  const { minute, midnight, weekday } = clockAt(now, timeZone);
-  const todayEnd = new Date(midnight.getTime() + WORK_END_MIN * 60_000);
-  // Sunday is closed: its evening is no work end (Saturday's is).
-  let back = minute >= WORK_END_MIN && weekday !== 0 ? 0 : 1;
-  if ((weekday - back + 7) % 7 === 0) back += 1;
-  return new Date(todayEnd.getTime() - back * 24 * 3600_000);
+export function lastWorkEnd(now: Date, cal: BusinessCalendar = DEFAULT_CALENDAR): Date {
+  const { day, minute } = clockAt(now, cal.timeZone);
+  const today = isWorkingDay(day, cal) && minute >= cal.endMin;
+  return zonedInstant(today ? day : previousWorkingDay(day, cal), cal.endMin, cal.timeZone);
 }
 
 /**
  * Working minutes since `from`, on the working clock: it starts when `from` happened, or
- * at 9:30 in the morning for anything earlier; 0 outside working hours.
+ * at opening time for anything earlier; 0 outside working hours.
  */
-export function workingMinutesSince(from: Date, now: Date, timeZone: string): number {
-  if (!isWorkingTime(now, timeZone)) return 0;
-  const { midnight } = clockAt(now, timeZone);
-  const dayStart = new Date(midnight.getTime() + WORK_START_MIN * 60_000);
+export function workingMinutesSince(
+  from: Date,
+  now: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+): number {
+  if (!isWorkingTime(now, cal)) return 0;
+  const { day } = clockAt(now, cal.timeZone);
+  const dayStart = zonedInstant(day, cal.startMin, cal.timeZone);
   const start = from > dayStart ? from : dayStart;
   return Math.max(0, (now.getTime() - start.getTime()) / 60_000);
 }
 
 /**
  * How late an answer is, in working minutes: the clock starts when the customer wrote,
- * or at 9:30 in the morning for a message sent overnight. 1 nudges the person answering,
+ * or at opening time for a message sent overnight. 1 nudges the person answering,
  * 2 is late (the desk is told); null is not yet, or outside working hours.
  */
-export function chatWaitStage(lastInAt: Date, now: Date, timeZone: string): 1 | 2 | null {
-  const minutes = workingMinutesSince(lastInAt, now, timeZone);
+export function chatWaitStage(
+  lastInAt: Date,
+  now: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+): 1 | 2 | null {
+  const minutes = workingMinutesSince(lastInAt, now, cal);
   if (minutes >= LATE_MIN) return 2;
   if (minutes >= FIRST_NUDGE_MIN) return 1;
   return null;
@@ -146,25 +151,30 @@ export function soleCustomer<T extends { readonly id: string }>(rows: readonly T
 }
 
 /**
- * Working minutes between two moments on the working clock: Monday to Saturday, 9:30 to 18:30,
- * Sunday closed. A staff check "after 1 working day" is 540 of these, "after 2" is 1080, so a
- * Friday-evening answer is not overdue on Saturday morning and Sunday never counts.
+ * Working minutes between two moments on the working clock (working days, opening to
+ * closing; days off and holidays never count). A staff check "after 1 working day" is
+ * `openMinutes(cal)` of these, so an answer late on the last working day before a day off is
+ * not overdue the morning after.
  */
-export function workingMinutesBetween(from: Date, to: Date, timeZone: string): number {
+export function workingMinutesBetween(
+  from: Date,
+  to: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+): number {
   if (to <= from) return 0;
   let total = 0;
-  let { midnight } = clockAt(from, timeZone);
-  // Walk day by day (a day is never longer than 25 hours; the clock gives each midnight).
-  for (let guard = 0; midnight < to && guard < 400; guard += 1) {
-    const day = clockAt(new Date(midnight.getTime() + 12 * 3_600_000), timeZone);
-    if (day.weekday !== 0) {
-      const opens = midnight.getTime() + WORK_START_MIN * 60_000;
-      const closes = midnight.getTime() + WORK_END_MIN * 60_000;
+  const last = clockAt(to, cal.timeZone).day;
+  let day = clockAt(from, cal.timeZone).day;
+  // Walk day by day from the day `from` falls on to the day `to` falls on.
+  for (let guard = 0; day <= last && guard < 400; guard += 1) {
+    if (isWorkingDay(day, cal)) {
+      const opens = zonedInstant(day, cal.startMin, cal.timeZone).getTime();
+      const closes = zonedInstant(day, cal.endMin, cal.timeZone).getTime();
       const start = Math.max(opens, from.getTime());
       const end = Math.min(closes, to.getTime());
       if (end > start) total += (end - start) / 60_000;
     }
-    midnight = new Date(midnight.getTime() + 24 * 3_600_000);
+    day = addDays(day, 1);
   }
   return total;
 }

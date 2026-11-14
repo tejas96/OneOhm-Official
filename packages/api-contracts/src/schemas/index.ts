@@ -67,3 +67,4 @@ export * from './vendor-input.schema';
 export * from './visit.schema';
 export * from './whatsapp.schema';
 export * from './workforce.schema';
+export * from './working-time.schema';

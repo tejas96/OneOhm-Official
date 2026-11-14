@@ -91,6 +91,15 @@
       "yesterday": "Yesterday",
       "assistant": "Assistant",
       "picked": "Picked from the menu",
+      "buttons": "Buttons offered",
+      "form": {
+        "label": "Form",
+        "files": "{count, plural, one {# file} other {# files}} sent with the form",
+        "openTicket": "Open ticket",
+        "openLead": "Open lead",
+        "openCustomer": "Open customer",
+        "openProject": "Open project"
+      },
       "filedAs": "Filed: {where}",
       "toSort": "To sort",
       "delivery": {

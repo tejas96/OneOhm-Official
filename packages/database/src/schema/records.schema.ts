@@ -118,6 +118,8 @@ export const outbox = pgTable(
     deliveryStatus: text('delivery_status'),
     deliveredAt: instant('delivered_at'),
     readAt: instant('read_at'),
+    /** Held until this time (step updates wait a little so a burst goes as one message). */
+    notBefore: instant('not_before'),
     createdAt: createdAt(),
   },
   (table) => [

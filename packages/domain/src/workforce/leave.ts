@@ -22,7 +22,7 @@ export function leaveHalfDays(input: {
 }
 
 /** Whether two inclusive date ranges share a day. */
-export function overlaps(
+export function dateRangesOverlap(
   a: { readonly from: string; readonly to: string },
   b: { readonly from: string; readonly to: string },
 ): boolean {

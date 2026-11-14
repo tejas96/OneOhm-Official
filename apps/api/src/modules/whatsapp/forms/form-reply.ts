@@ -18,9 +18,12 @@ import type { Incoming } from '../whatsapp-events';
 import { type FlowToken, releaseFlowToken, takeFlowToken } from './flow-token';
 import { answerFromForm } from './form-answer';
 import { FormFileKeeper, type FormRefusal, type KeptFormFile, showFormFiles } from './form-files';
+import { tellHolder } from './form-held';
+import { linkFormReply } from './form-record';
 import { type IncomingForm } from './form-reply-data';
 import { FORM_WORDS } from './form-words';
 import { dayFrom, paiseFrom } from './paid-parse';
+import { PAID_WORDS } from './paid-words';
 
 const REFUSAL_WORDS: Record<FormRefusal, () => string> = {
   too_large: () => MEDIA_WORDS.tooLarge,
@@ -71,6 +74,10 @@ export class FormReplyService {
     if (!form) return;
     const token = await takeFlowToken(this.db, form.token, chat.id);
     if (!token || token.customerId !== customerId) return this.old(chat, customerId);
+    // A person holds the chat: the form is the assistant's own and is filed, and the person is told.
+    await tellHolder(this.db, chat, incoming.waMessageId, token.formKey).catch((error) =>
+      this.log.error(`Could not tell the holder about a form: ${String(error)}`),
+    );
     // The self-survey form carries answers and one photo per screen: the survey keeps them.
     if (token.formKey === 'self_survey') {
       try {
@@ -135,6 +142,7 @@ export class FormReplyService {
     if (saved.length > 0 && token.formKey === 'paid_another_way') {
       await this.takeProof(chat, customerId, token, saved, form);
     } else if (saved.length > 0 && chosen) {
+      await linkFormReply(this.db, chat.id, { kind: 'customer', id: customerId });
       await this.db.transaction(async (tx) => {
         const locked = await lockedChat(tx, chat.id);
         await showFormFiles(tx, chat.id, saved);
@@ -169,14 +177,29 @@ export class FormReplyService {
     await this.db.transaction(async (tx) => {
       const locked = await lockedChat(tx, chat.id);
       await showFormFiles(tx, chat.id, saved);
-      await takePaymentProof(
+      const amountPaise = paiseFrom(form.amount);
+      const paidOn = dayFrom(form.date);
+      const projectId = await takePaymentProof(
         tx,
         customerId,
         saved.map((file) => ({ id: file.id, contentType: file.contentType })),
         Date.now(),
-        { milestoneId, amountPaise: paiseFrom(form.amount), paidOn: dayFrom(form.date) },
+        { milestoneId, amountPaise, paidOn, amountText: form.amount, dateText: form.date },
       );
-      await sayWithTaps(tx, locked, WHAT_WORDS.payment, ['menu']);
+      // Finance opens the project (the instalment's home); with several homes owing, the customer.
+      await linkFormReply(
+        tx,
+        chat.id,
+        projectId ? { kind: 'project', id: projectId } : { kind: 'customer', id: customerId },
+      );
+      // What was typed but cannot be read is said, and finance sees it as typed.
+      const unclear = (form.amount && !amountPaise) || (form.date && !paidOn);
+      await sayWithTaps(
+        tx,
+        locked,
+        unclear ? `${WHAT_WORDS.payment}\n\n${PAID_WORDS.unclear}` : WHAT_WORDS.payment,
+        ['menu'],
+      );
     });
   }
 

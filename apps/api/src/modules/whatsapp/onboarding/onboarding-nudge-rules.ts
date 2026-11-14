@@ -1,5 +1,6 @@
 import { leads, type Transaction } from '@oneohm/database';
 import {
+  type BusinessCalendar,
   CHAT_WINDOW_HOURS,
   isWorkingTime,
   MAX_NUDGE_AFTER_HOURS,
@@ -33,6 +34,8 @@ interface Due {
   readonly silent: number;
   readonly now: Date;
   readonly zone: string;
+  /** The business calendar: nudges go only in working time. */
+  readonly calendar: BusinessCalendar;
   readonly kept: OnboardContext | null;
   /** An open lead exists. */
   readonly hasLead: boolean;
@@ -55,7 +58,7 @@ export function due(input: Due): { makeLead: boolean; nudge: boolean } {
     (makeLead || input.hasLead) &&
     silent >= settings.nudgeAfterHours * HOUR &&
     silent < WINDOW_HOURS * HOUR &&
-    isWorkingTime(input.now, input.zone);
+    isWorkingTime(input.now, input.calendar);
   return { makeLead, nudge };
 }
 
@@ -72,11 +75,13 @@ export function nudgeTurn(input: {
     ...input,
     known: {},
     file: null,
+    place: null,
     answers: kept?.answers ?? {},
     misses: kept?.misses ?? 0,
     awaiting: kept?.awaiting,
     pendingFile: kept?.pendingFile,
     pin: kept?.pin,
+    form: kept?.form,
     dropEntry: false,
   };
 }

@@ -87,6 +87,7 @@ describe('WhatsApp onboarding flow', () => {
     expect((await leadsOf(phone))[0]?.estimated_wp).toBe(3000);
     await tap(phone, 'ob:roof:rcc');
     await tap(phone, 'ob:floors:2');
+    expect((await leadsOf(phone))[0]?.floors).toBe(2);
     expect(await whatsappNotes(lead?.id ?? '')).toEqual([
       'Site: Shop or business',
       'Bill: ₹2,000–3,000 (about 3 kW)',

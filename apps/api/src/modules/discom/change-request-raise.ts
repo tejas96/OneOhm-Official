@@ -1,13 +1,14 @@
 import {
   changeRequestSteps,
   changeRequests,
+  nextInSeries,
   projectActivities,
   readBusinessSetting,
   type Transaction,
 } from '@oneohm/database';
 import { type AssigneeCandidate, type ChangeRequestStep, pickAssignee } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { and, eq, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { queueWhatsApp } from '../../common/outbox';
 import {
@@ -39,13 +40,12 @@ export async function raiseChangeRequest(
   const definition = input.definition;
   const today = todayIn();
   const year = today.slice(0, 4);
-  // Serialised, so two requests raised together never get the same number.
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:change_request'))`);
-  const [count] = await tx
-    .select({ count: sql<number>`count(*)::int` })
-    .from(changeRequests)
-    .where(like(changeRequests.number, `CR-${year}-%`));
-  const number = `CR-${year}-${String((count?.count ?? 0) + 1).padStart(4, '0')}`;
+  const number = await nextInSeries(tx, {
+    column: changeRequests.number,
+    prefix: `CR-${year}-`,
+    width: 4,
+    lockKey: 'change_request',
+  });
   const [request] = await tx
     .insert(changeRequests)
     .values({

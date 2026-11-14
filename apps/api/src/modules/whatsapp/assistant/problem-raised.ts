@@ -74,6 +74,10 @@ export async function tellRaised(
   return sayWithTaps(db, chat, lines.filter(Boolean).join('\n\n'), ['problems', 'menu']);
 }
 
+/** A note is kept whole up to this many characters. */
+const NOTE_MAX = 1000;
+const cut = (note: string) => note.trim().slice(0, NOTE_MAX).trim() || null;
+
 /** The request's description (the team reads it, so always English): topic, what, since when, the note. */
 export function problemDescription(
   draft: { readonly topic?: string | undefined; readonly note?: string | undefined },
@@ -86,7 +90,7 @@ export function problemDescription(
     draft.topic === 'installation' ? 'Installation' : null,
     W.what[kind],
     W.sinceNote[since],
-    words || draft.note || null,
+    cut(words || draft.note || ''),
   ]
     .filter(Boolean)
     .join(' · ');

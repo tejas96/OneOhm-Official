@@ -103,7 +103,7 @@ describe('WhatsApp quote and pay', () => {
     expect(lead?.stage).toBe('won');
     const told = await rows<{ user_id: string }>(
       'select user_id from notifications where dedupe_key like $1',
-      [`quote_accepted:${quotation.id}%`],
+      [`quote_accepted%${quotation.id}%`],
     );
     const setUp = await rows<{ id: string }>(
       `select distinct u.id from users u join user_roles ur on ur.user_id = u.id

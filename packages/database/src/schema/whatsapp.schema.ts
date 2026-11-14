@@ -71,6 +71,8 @@ export const waMessages = pgTable(
     mediaId: text('media_id'),
     /** Where that file is kept in OneOhm, so the chat can show it. */
     documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),
+    /** Structured extras for the staff view, e.g. a form reply's answers and its files. */
+    data: jsonb('data'),
     createdAt: createdAt(),
   },
   (table) => [

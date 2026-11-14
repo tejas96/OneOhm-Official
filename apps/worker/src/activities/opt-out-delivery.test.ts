@@ -23,6 +23,7 @@ const template = (): Row => ({
   deliveryStatus: null,
   deliveredAt: null,
   readAt: null,
+  notBefore: null,
   createdAt: new Date(),
 });
 
@@ -36,7 +37,7 @@ function setup(optedOutAt: Date | null) {
       from: (table: unknown) => query(table === waConversations ? [{ optedOutAt }] : result),
       where: () => q,
       limit: async () => (result.length > 0 && 'optedOutAt' in (result[0] as object) ? result : []),
-      returning: async () => [{ id: row.id }],
+      returning: async () => [row],
       // biome-ignore lint/suspicious/noThenProperty: a drizzle query is awaited as is.
       then: (done: (rows: unknown[]) => unknown) => Promise.resolve(result).then(done),
     };

@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { amcVisits } from './after-sales.schema';
 import { calendarDate, createdAt, instant, primaryId, updatedAt } from './columns';
 import { customers, leads, properties } from './crm.schema';
@@ -35,9 +44,8 @@ export const visits = pgTable(
     id: primaryId(),
     kind: visitKindEnum('kind').notNull(),
     status: visitStatusEnum('status').notNull(),
-    customerId: uuid('customer_id')
-      .notNull()
-      .references(() => customers.id, { onDelete: 'cascade' }),
+    /** Null only for a lead's survey booked before the lead became a customer. */
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'cascade' }),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
     serviceRequestId: uuid('service_request_id').references(() => serviceRequests.id, {
@@ -47,7 +55,11 @@ export const visits = pgTable(
     taskId: uuid('task_id').references(() => projectTasks.id, { onDelete: 'cascade' }),
     propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),
     day: calendarDate('day').notNull(),
+    /** Half of the day, kept for older visits and messages; the exact time is start/end below. */
     slot: text('slot', { enum: ['morning', 'afternoon'] }).notNull(),
+    /** Start and end of the visit in minutes after midnight (business time zone), e.g. 600 = 10:00. */
+    startMin: integer('start_min'),
+    endMin: integer('end_min'),
     /** The people who come; the first one is the contact the customer is given. */
     crewUserIds: uuid('crew_user_ids').array().notNull().default(sql`'{}'::uuid[]`),
     proposedBy: text('proposed_by', { enum: ['customer', 'staff'] }).notNull(),
@@ -75,6 +87,14 @@ export const visits = pgTable(
   },
   (table) => [
     index('visits_customer_idx').on(table.customerId, table.status),
+    check(
+      'visits_customer_or_lead',
+      sql`${table.customerId} is not null or ${table.leadId} is not null`,
+    ),
+    check(
+      'visits_time_order',
+      sql`${table.startMin} is null or (${table.endMin} > ${table.startMin} and ${table.startMin} >= 0 and ${table.endMin} <= 1440)`,
+    ),
     index('visits_day_idx').on(table.day, table.status),
     // One open visit per task, per service request and per lead survey.
     uniqueIndex('visits_one_open_task')

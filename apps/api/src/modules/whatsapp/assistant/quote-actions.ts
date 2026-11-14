@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { answererFor, holdersOf } from '@oneohm/database';
 import { titleCaseName } from '@oneohm/shared';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
@@ -148,10 +149,16 @@ export class QuoteActionsService {
     if (result === 'already') return this.already(chat, messageId);
     // Accepted now: the thank-you goes once, however often "yes" arrives.
     const taps = ['menu', 'talk'] as const;
-    const thanks = QUOTE_WORDS.quoteThanks(
-      (await this.people.answererName(chat)) ?? QUOTE_WORDS.team,
-    );
+    const thanks = QUOTE_WORDS.quoteThanks((await this.projectStarter(chat)) ?? QUOTE_WORDS.team);
     return sayWithTaps(this.db, chat, thanks, taps, `quote_thanks:${quotationId}`);
+  }
+
+  /** The person answering this chat, only when they can create projects; else null (the team). */
+  private async projectStarter(chat: Conversation): Promise<string | null> {
+    const answerer = await answererFor(this.db, chat.assignedUserId ?? chat.handledByUserId);
+    if (!answerer) return null;
+    if (!(await holdersOf(this.db, 'projects.create')).includes(answerer)) return null;
+    return this.people.answererName(chat);
   }
 
   /**

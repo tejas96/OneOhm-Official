@@ -8,6 +8,7 @@ import {
 } from '@oneohm/database';
 import { isWorkingTime, lastWorkEnd, type ReplyTime, replyTime } from '@oneohm/domain';
 import { and, desc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
+import { currentCalendar, loadCalendar } from '../../../common/calendar';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { answererName, deskFor, ensureChatOwner, tellChatTeam } from '../chat-owner';
@@ -136,7 +137,8 @@ export class HandOverService {
   async nightReply(chat: Conversation): Promise<void> {
     const now = new Date();
     const zone = this.env.BUSINESS_TIMEZONE;
-    if (isWorkingTime(now, zone)) return;
+    const cal = await loadCalendar(this.db, zone);
+    if (isWorkingTime(now, cal)) return;
     if (!(await readBusinessSetting(this.db, 'reminders')).whatsappNightReply) return;
     const [said] = await this.db
       .select({ id: waMessages.id })
@@ -147,7 +149,7 @@ export class HandOverService {
           eq(waMessages.direction, 'out'),
           ne(waMessages.kind, 'note'),
           isNull(waMessages.sentByUserId),
-          gt(waMessages.createdAt, lastWorkEnd(now, zone)),
+          gt(waMessages.createdAt, lastWorkEnd(now, cal)),
         ),
       )
       .limit(1);
@@ -166,6 +168,6 @@ export class HandOverService {
 
   /** When a person can reply now: in working hours, or the next morning it opens. */
   when(): ReplyTime {
-    return replyTime(new Date(), this.env.BUSINESS_TIMEZONE);
+    return replyTime(new Date(), currentCalendar());
   }
 }

@@ -32,7 +32,7 @@ const FLOORS = [1, 2, 3] as const;
 const MAX_ROWS = 10;
 
 /** A bill band in the chat's language: the owner's translation, else the label (C13). */
-function bandLabel(band: BillBand): string {
+export function bandLabel(band: BillBand): string {
   const language = languageNow();
   return (language === 'mr' ? band.labelMr : language === 'hi' ? band.labelHi : null) ?? band.label;
 }

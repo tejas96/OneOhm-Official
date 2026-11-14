@@ -97,11 +97,10 @@ describe('Next actions after a quote is sent or accepted', () => {
       "SELECT payload->>'body' AS body FROM outbox WHERE dedupe_key = $1",
       [`quote_thanks:${quotation.id}`],
     );
-    // Names who starts it (redesign §4 "After accept").
+    // Names a person only when they can create projects; otherwise "Our team".
     expect(thanks?.body).toMatch(
       /^Thank you ✅ .+ will start your project and send the advance payment link today \(or the next working day\)\.$/,
     );
-    expect(thanks?.body).not.toContain('Our team');
   });
 
   it('setting up the project clears "Start project" from the lead', async () => {

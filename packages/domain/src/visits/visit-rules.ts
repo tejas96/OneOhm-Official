@@ -1,5 +1,14 @@
 import { addDays, todayIn } from '@oneohm/shared';
-import { callDay, WORK_END_MIN } from '../messaging/chat-rules';
+import {
+  type BusinessCalendar,
+  clockAt,
+  DEFAULT_CALENDAR,
+  isWorkingDay,
+  previousWorkingDay,
+  zonedInstant,
+} from '../calendar/business-calendar';
+import { confirmByMin } from '../calendar/hours-text';
+import { callDay } from '../messaging/chat-rules';
 
 /** The visits the team books with a customer (redesign §8). */
 export const VISIT_KINDS = [
@@ -43,29 +52,15 @@ const TASK_VISIT: Readonly<Record<string, VisitKind>> = {
 export const visitKindOfTask = (templateKey: string): VisitKind | null =>
   TASK_VISIT[templateKey] ?? null;
 
-/** Open visits per slot for one person: one in the morning and one in the afternoon. */
+/** Open visits one person holds per slot unless Settings → Visits & bookings says otherwise. */
 export const VISITS_PER_SLOT = 1;
 
-/** Monday to Saturday are working days; Sunday is closed. */
-export function isWorkingDay(day: string): boolean {
-  return new Date(`${day}T00:00:00Z`).getUTCDay() !== 0;
-}
-
-/** The next working day after `day` (Saturday → Monday). */
-export function nextWorkingDay(day: string): string {
-  const next = addDays(day, 1);
-  return isWorkingDay(next) ? next : addDays(next, 1);
-}
-
-/** The working day before `day` (Monday → Saturday). */
-export function previousWorkingDay(day: string): string {
-  const before = addDays(day, -1);
-  return isWorkingDay(before) ? before : addDays(before, -1);
-}
-
 /** The slots still free on a day, given the slots already taken that day. */
-export function freeSlots(taken: readonly VisitSlot[]): VisitSlot[] {
-  return VISIT_SLOTS.filter((slot) => taken.filter((one) => one === slot).length < VISITS_PER_SLOT);
+export function freeSlots(
+  taken: readonly VisitSlot[],
+  perSlot: number = VISITS_PER_SLOT,
+): VisitSlot[] {
+  return VISIT_SLOTS.filter((slot) => taken.filter((one) => one === slot).length < perSlot);
 }
 
 /**
@@ -78,15 +73,19 @@ export function freeVisitDays(input: {
   readonly count: number;
   readonly leave?: ReadonlySet<string>;
   readonly taken?: Readonly<Record<string, readonly VisitSlot[]>>;
-  /** Days to look ahead before giving up. */
+  /** Days to look ahead before giving up (Settings: how far ahead). */
   readonly horizon?: number;
+  /** Open visits one person can hold in a slot (Settings). */
+  readonly perSlot?: number;
+  readonly calendar?: BusinessCalendar;
 }): string[] {
   const days: string[] = [];
   const horizon = input.horizon ?? 45;
+  const cal = input.calendar ?? DEFAULT_CALENDAR;
   for (let step = 1; step <= horizon && days.length < input.count; step += 1) {
     const day = addDays(input.today, step);
-    if (!isWorkingDay(day) || input.leave?.has(day)) continue;
-    if (freeSlots(input.taken?.[day] ?? []).length === 0) continue;
+    if (!isWorkingDay(day, cal) || input.leave?.has(day)) continue;
+    if (freeSlots(input.taken?.[day] ?? [], input.perSlot).length === 0) continue;
     days.push(day);
   }
   return days;
@@ -102,67 +101,47 @@ export function reminderDue(input: {
   readonly confirmedOn: string;
   readonly today: string;
   readonly working: boolean;
+  readonly calendar?: BusinessCalendar;
 }): boolean {
   if (!input.working || input.today >= input.visitDay) return false;
-  const reminderDay = previousWorkingDay(input.visitDay);
+  const reminderDay = previousWorkingDay(input.visitDay, input.calendar);
   return input.today >= reminderDay && input.confirmedOn < reminderDay;
 }
 
-/** The business clock as minutes after midnight. */
-function minuteOf(now: Date, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
-  return part('hour') * 60 + part('minute');
-}
-
-/** A visit not marked done by the end of its day (6:30 pm) is missed. */
-export function visitMissed(visitDay: string, now: Date, timeZone: string): boolean {
-  const today = todayIn(timeZone, now);
+/**
+ * A visit not marked done by the end of its day (closing time) is missed. With the visit's own
+ * end and a grace (Settings → missed after), it is missed that many minutes after the visit ends.
+ */
+export function visitMissed(
+  visitDay: string,
+  now: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+  after?: { readonly endMin: number; readonly minutes: number },
+): boolean {
+  const today = todayIn(cal.timeZone, now);
   if (visitDay < today) return true;
-  return visitDay === today && minuteOf(now, timeZone) >= WORK_END_MIN;
+  if (visitDay > today) return false;
+  const at = after ? after.endMin + after.minutes : cal.endMin;
+  return clockAt(now, cal.timeZone).minute >= at;
 }
 
 /** Whether the visit day has started (for "not confirmed by the visit morning"). */
-export const visitDayStarted = (visitDay: string, now: Date, timeZone: string): boolean =>
-  visitDay <= todayIn(timeZone, now);
+export const visitDayStarted = (
+  visitDay: string,
+  now: Date,
+  cal: BusinessCalendar = DEFAULT_CALENDAR,
+): boolean => visitDay <= todayIn(cal.timeZone, now);
 
 /** The days the home shows an upcoming visit: today and the next three. */
 export const HOME_VISIT_DAYS = 3;
 
-/** The instant a clock time (minutes after midnight) on a calendar day is reached in a time zone. */
-export function zonedInstant(day: string, minutes: number, timeZone: string): Date {
-  const guess = Date.parse(`${day}T00:00:00Z`) + minutes * 60_000;
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date(guess));
-  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? 0);
-  const local = Date.UTC(
-    part('year'),
-    part('month') - 1,
-    part('day'),
-    part('hour'),
-    part('minute'),
-  );
-  return new Date(guess - (local - guess));
-}
-
 /**
- * When the team promised to confirm a customer's pick ("we'll confirm by 6:30 pm today", or by
- * 12 noon on the next working day), the same promise the customer was told.
+ * When the team promised to confirm a customer's pick ("we'll confirm by closing time today",
+ * or by `confirmByMin` (12 noon at the usual hours) on the next working day), the same promise
+ * the customer was told.
  */
-export function confirmDeadline(pickedAt: Date, timeZone: string): Date {
-  const { add } = callDay(pickedAt, timeZone);
-  const day = addDays(todayIn(timeZone, pickedAt), add);
-  return zonedInstant(day, add === 0 ? WORK_END_MIN : 12 * 60, timeZone);
+export function confirmDeadline(pickedAt: Date, cal: BusinessCalendar = DEFAULT_CALENDAR): Date {
+  const { add } = callDay(pickedAt, cal);
+  const day = addDays(todayIn(cal.timeZone, pickedAt), add);
+  return zonedInstant(day, add === 0 ? cal.endMin : confirmByMin(cal), cal.timeZone);
 }

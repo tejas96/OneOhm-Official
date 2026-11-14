@@ -7,6 +7,7 @@ import {
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { businessTimeZone } from './business-calendar';
 import { readBusinessSetting } from './business-settings';
 import type { DatabaseExecutor } from './client';
 import { serviceCategories } from './schema/after-sales.schema';
@@ -105,7 +106,7 @@ export async function openServiceRequest(
 ): Promise<{ readonly id: string; readonly assigneeUserId: string | null }> {
   const now = input.now ?? new Date();
   const hours = await categoryHours(db, input.category);
-  const due = hours ? slaDueDates(hours, now, input.scheduledFor) : null;
+  const due = hours ? slaDueDates(hours, now, input.scheduledFor, businessTimeZone()) : null;
   const assigneeUserId = await serviceAssignee(
     db,
     input.scheduledFor ?? todayIn('Asia/Kolkata', now),
