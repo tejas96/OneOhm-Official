@@ -321,6 +321,7 @@
       "unassign": "Remove the assignee"
     },
     "money": {
+      "remindHint": "This payment is late. Send the customer a payment reminder.",
       "title": "Received",
       "ofTotal": "of {total} scheduled",
       "record": "Record payment",

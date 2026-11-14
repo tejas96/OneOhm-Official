@@ -1,6 +1,6 @@
 import type { ActionItem } from '@oneohm/api-contracts';
 import { awayUserIds, type Database, leads } from '@oneohm/database';
-import { and, count, inArray, notInArray } from 'drizzle-orm';
+import { and, count, inArray, notInArray, sql } from 'drizzle-orm';
 import { plural } from './command-center-plural';
 
 /**
@@ -11,7 +11,7 @@ export async function ownerAwayActions(db: Database, today: string): Promise<Act
   const away = [...(await awayUserIds(db, today))];
   if (away.length === 0) return [];
   const [row] = await db
-    .select({ total: count() })
+    .select({ total: count(), first: sql<string>`min(${leads.id}::text)` })
     .from(leads)
     .where(and(inArray(leads.ownerUserId, away), notInArray(leads.stage, ['won', 'lost'])));
   const total = row?.total ?? 0;
@@ -26,9 +26,9 @@ export async function ownerAwayActions(db: Database, today: string): Promise<Act
         '# open leads whose owner is on leave',
       ),
       detail: 'Their backup gets the alerts today. Reassign them if the leave is long.',
-      action: 'Open leads',
+      action: total === 1 ? 'Open lead' : 'Open leads',
       party: 'internal',
-      href: '/leads?filter=open',
+      href: total === 1 && row?.first ? `/leads/${row.first}` : '/leads?filter=open',
     },
   ];
 }

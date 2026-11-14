@@ -1,4 +1,5 @@
 import { addDays, daysBetween } from '@oneohm/shared';
+import { type BusinessCalendar, onWorkingDay } from '../calendar/business-calendar';
 
 /** One task in a project's plan, as the date shift needs it. */
 export interface PlannedTask {
@@ -36,7 +37,10 @@ export function shiftDependents(
   tasks: readonly PlannedTask[],
   links: readonly TaskLink[],
   changed: { readonly id: string; readonly endsOn: string },
+  /** With it, a moved start or due date never lands on a weekly off or a holiday. */
+  calendar?: BusinessCalendar,
 ): DateShift[] {
+  const working = (day: string) => (calendar ? onWorkingDay(day, calendar) : day);
   const current = new Map(tasks.map((task) => [task.id, task]));
   const self = current.get(changed.id);
   if (!self) return [];
@@ -62,7 +66,11 @@ export function shiftDependents(
       .reduce((latest, before) => (endOf(before) > latest ? endOf(before) : latest), '');
     if (!ready || ready <= task.startDate) continue;
     const days = daysBetween(task.startDate, ready);
-    const next = { ...task, startDate: ready, dueDate: addDays(task.dueDate, days) };
+    const next = {
+      ...task,
+      startDate: working(ready),
+      dueDate: working(addDays(task.dueDate, days)),
+    };
     current.set(id, next);
     const original = tasks.find((item) => item.id === id) ?? task;
     moved.set(id, {

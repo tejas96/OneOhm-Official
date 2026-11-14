@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ProjectColumnsHeader, ProjectRow } from '../projects/project-journey';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 import { SectionHeading } from './section-heading';
 
 /** Every live project on one page, each journey drawn as a metro line. */
@@ -24,6 +25,7 @@ export function ProjectLedger({
     <section id="projects" aria-label={t('title')} className="flex flex-col gap-5">
       <SectionHeading
         index="01"
+        info={<InfoButton card="projects" />}
         title={t('title')}
         action={
           <Link

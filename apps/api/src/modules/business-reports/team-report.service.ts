@@ -8,6 +8,7 @@ import {
 } from '@oneohm/domain';
 import { addDays } from '@oneohm/shared';
 import { DATABASE, type Database } from '../../config/core.module';
+import { holidayDatesFrom } from '../workforce/holiday-days';
 import { loadPolicy } from '../workforce/policy';
 import { type CsvTable, percent } from './csv';
 import { type ReportScope, reportScope } from './report-scope';
@@ -33,6 +34,8 @@ export interface TeamFacts {
   readonly leave: readonly TeamLeave[];
   readonly attendance: readonly TeamAttendance[];
   readonly policy: Pick<WorkforcePolicy, 'weeklyOff' | 'leaveTypes'>;
+  /** Holiday dates: never counted as leave. */
+  readonly holidays?: readonly string[];
 }
 
 const AWAY_ROWS = 20;
@@ -46,15 +49,16 @@ export class TeamReportService {
   async report(query: BusinessReportQuery): Promise<TeamReport> {
     // The frame hides the manager filter here; drop it even if the address still has one.
     const scope = reportScope({ ...query, managerUserId: undefined });
-    const [tasks, people, crews, leave, attendance, policy] = await Promise.all([
+    const [tasks, people, crews, leave, attendance, policy, holidays] = await Promise.all([
       readTeamTasks(this.db, scope),
       readPeople(this.db),
       readCrews(this.db),
       readLeave(this.db, scope.meta.range.start),
       readAttendance(this.db, scope),
       loadPolicy(this.db),
+      holidayDatesFrom(this.db, scope.meta.range.start),
     ]);
-    return buildTeam(scope, { tasks, people, crews, leave, attendance, policy });
+    return buildTeam(scope, { tasks, people, crews, leave, attendance, policy, holidays });
   }
 
   csv(report: TeamReport): CsvTable {
@@ -146,7 +150,7 @@ export function buildTeam(
       onLeaveToday: awayToday(person.id),
       ...tally(tasksOf.get(person.id) ?? [], today),
       leaveHalfDays: (leaveOf.get(person.id) ?? []).reduce(
-        (sum, row) => sum + leaveWithin(row, period, off),
+        (sum, row) => sum + leaveWithin(row, period, off, facts.holidays),
         0,
       ),
       daysPresent: present.get(person.id)?.present ?? 0,
@@ -168,7 +172,11 @@ export function buildTeam(
       leaveHalfDays: people.reduce((sum, row) => sum + row.leaveHalfDays, 0),
       leaveAheadHalfDays: facts.leave
         .filter((row) => !crewOf.get(row.userId))
-        .reduce((sum, row) => sum + leaveWithin(row, { from: tomorrow, to: FOREVER }, off), 0),
+        .reduce(
+          (sum, row) =>
+            sum + leaveWithin(row, { from: tomorrow, to: FOREVER }, off, facts.holidays),
+          0,
+        ),
       awayToday: staff.filter((person) => awayToday(person.id)).length,
       daysPresent: people.reduce((sum, row) => sum + row.daysPresent, 0),
       lateCheckIns: people.reduce((sum, row) => sum + row.lateCheckIns, 0),

@@ -26,10 +26,12 @@ export function PapersSection({
   const t = useTranslations('documents');
   const canView = useCan('documents.view');
   if (!canView) return null;
+  // A lead's papers are filed on its customer, so upload opens once it is converted.
+  const hint = 'leadId' in scope ? t('leadUploadLocked') : uploadHint;
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <h2 className="type-title-lg text-ink [font-family:var(--font-display)]">{t('title')}</h2>
-      {!allowUpload && uploadHint && <p className="type-body-sm text-ink-muted">{uploadHint}</p>}
+      {!allowUpload && hint && <p className="type-body-sm text-ink-muted">{hint}</p>}
       <DocumentsGallery scope={scope} bundleName={name} allowUpload={allowUpload} />
     </section>
   );

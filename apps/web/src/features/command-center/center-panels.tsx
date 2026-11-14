@@ -6,6 +6,7 @@ import { ChevronRight, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
+import { InfoButton } from './info-button';
 
 /** Decisions waiting on someone at OneOhm, each a count and a way in. */
 export function DecisionsWaiting({
@@ -16,7 +17,7 @@ export function DecisionsWaiting({
   const t = useTranslations('commandCenter.decisions');
   return (
     <Card className="flex flex-col">
-      <CardHeader title={t('title')} />
+      <CardHeader title={t('title')} info={<InfoButton card="decisions" />} />
       {decisions.length === 0 ? (
         <p className="px-5 pb-5 type-body-sm text-ink-muted">{t('empty')}</p>
       ) : (
@@ -60,7 +61,10 @@ export function DeadlinesAhead({
     <Card className="flex flex-col">
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <div className="flex flex-col gap-0.5">
-          <h2 className="type-title-md text-ink">{t('title', { days })}</h2>
+          <div className="flex items-center gap-1.5">
+            <InfoButton card="deadlines" />
+            <h2 className="type-title-md text-ink">{t('title', { days })}</h2>
+          </div>
           <p className="type-body-sm text-ink-muted">
             {t('range', { start: short(today), end: short(end) })}
           </p>

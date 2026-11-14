@@ -28,6 +28,8 @@ interface CardHeaderProps {
   readonly description?: ReactNode;
   /** Right-aligned control (a link, a count, a button). */
   readonly action?: ReactNode;
+  /** A small control placed in front of the title, e.g. an "About this card" button. */
+  readonly info?: ReactNode;
   readonly headingLevel?: 2 | 3;
   readonly className?: string;
   readonly id?: string;
@@ -37,6 +39,7 @@ export function CardHeader({
   title,
   description,
   action,
+  info,
   headingLevel = 2,
   className,
   id,
@@ -45,9 +48,18 @@ export function CardHeader({
   return (
     <header className={cn('flex items-start justify-between gap-4 px-5 pt-4 pb-3', className)}>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <Heading id={id} className="type-title-md text-ink">
-          {title}
-        </Heading>
+        {info ? (
+          <div className="flex min-w-0 items-center gap-1.5">
+            {info}
+            <Heading id={id} className="type-title-md text-ink">
+              {title}
+            </Heading>
+          </div>
+        ) : (
+          <Heading id={id} className="type-title-md text-ink">
+            {title}
+          </Heading>
+        )}
         {description && <p className="type-body-sm text-ink-faint">{description}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}

@@ -4,6 +4,7 @@ import type { CommandCenter } from '@oneohm/api-contracts';
 import { formatInrCompact } from '@oneohm/shared';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { InfoButton } from './info-button';
 import { SectionHeading } from './section-heading';
 
 interface LedgerRow {
@@ -33,19 +34,23 @@ export function MoneyLedger({
     { key: 'fromBanks', value: money.bankPendingPaise, href: '/finance?tab=loans' },
   ];
   const goingOut: readonly LedgerRow[] = [
-    { key: 'toVendors', value: money.toVendorsPaise, href: '/finance?tab=payables' },
-    { key: 'toContractors', value: money.toContractorsPaise, href: '/finance?tab=payables' },
+    { key: 'toVendors', value: money.toVendorsPaise, href: '/finance?tab=payables&party=vendor' },
+    {
+      key: 'toContractors',
+      value: money.toContractorsPaise,
+      href: '/finance?tab=payables&party=contractor',
+    },
     {
       key: 'dueThisWeek',
       value: money.dueThisWeekPaise,
-      href: '/finance?tab=payables',
+      href: `/finance?tab=payables&due=${dueSoonDays}`,
       label: t('dueThisWeek', { days: dueSoonDays }),
     },
     { key: 'advances', value: money.advancesPaise, href: '/finance?tab=advances' },
   ];
   return (
     <section id="money" aria-label={t('title')} className="flex scroll-mt-24 flex-col gap-5">
-      <SectionHeading index="02" title={t('title')} />
+      <SectionHeading index="02" title={t('title')} info={<InfoButton card="money" />} />
       <div className="grid gap-x-16 gap-y-8 lg:grid-cols-2">
         <Ledger heading={t('comingIn')} rows={comingIn} />
         <Ledger heading={t('goingOut')} rows={goingOut} />

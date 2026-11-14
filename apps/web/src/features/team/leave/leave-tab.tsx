@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { ApplyLeaveSheet } from './apply-leave-sheet';
+import { HolidaysCard } from './holidays-card';
 import { LeaveBalances } from './leave-balances';
 import { LeaveHistory } from './leave-history';
 import { LeaveQueue } from './leave-queue';
@@ -64,6 +65,7 @@ export function LeaveTab() {
               <p className="type-body-sm text-ink-faint">{t('mine.description')}</p>
             </div>
             {workday.data && <LeaveBalances balances={workday.data.balances} />}
+            {workday.data?.calendar && <HolidaysCard calendar={workday.data.calendar} />}
             {mine.isPending && <ListSkeleton label={t('loading')} rows={2} />}
             {mine.isError && <LoadError error={mine.error} onRetry={() => mine.refetch()} />}
             {mine.data && <MyLeave requests={mine.data} />}

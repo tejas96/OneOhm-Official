@@ -12,7 +12,10 @@ const manager = alias(users, 'manager');
  * What could slip, most pressing first (PRD 3.1): overdue work, then work waiting on a
  * customer, bank or DISCOM, then work nobody owns that falls due within a week.
  */
-export async function risksIn(db: Database, scope: CenterScope): Promise<RiskItem[]> {
+export async function risksIn(
+  db: Database,
+  scope: CenterScope,
+): Promise<{ items: RiskItem[]; total: number }> {
   const rows = await db
     .select({
       task: {
@@ -64,12 +67,11 @@ export async function risksIn(db: Database, scope: CenterScope): Promise<RiskIte
     return [];
   });
   const rank = { overdue: 0, waiting: 1, unassigned: 2 } as const;
-  return items
-    .sort(
-      (a, b) =>
-        rank[a.kind] - rank[b.kind] || b.days - a.days || a.dueDate.localeCompare(b.dueDate),
-    )
-    .slice(0, risksShown);
+  const sorted = items.sort(
+    (a, b) => rank[a.kind] - rank[b.kind] || b.days - a.days || a.dueDate.localeCompare(b.dueDate),
+  );
+  // The panel shows the top few; the total says how many there really are.
+  return { items: sorted.slice(0, risksShown), total: sorted.length };
 }
 
 /** Open tasks due in the next seven days on the projects in view, soonest first. */

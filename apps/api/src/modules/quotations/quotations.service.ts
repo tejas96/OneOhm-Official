@@ -14,6 +14,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../crm/customers.service';
 import { autoMoveLead, setLeadNextAction } from '../crm/lead-history';
 import { changeAwaiting, changeTurnedDown } from '../project-changes/change-close';
+import { askDiscountApproval, tellDiscountApproved } from './discount-notices';
 import { linkRevision, projectAwaiting, redraftFor, revisionTurnedDown } from './project-revision';
 import {
   acceptInTx,
@@ -95,7 +96,9 @@ export class QuotationsService {
       });
       return created.id;
     });
-    return this.get(id);
+    const saved = await this.get(id);
+    if (saved.discountPendingApproval) await askDiscountApproval(this.db, saved, actor);
+    return saved;
   }
 
   /** `scope` narrows the list for people who may only see their own (resellers). */
@@ -117,6 +120,7 @@ export class QuotationsService {
       .set({ discountApprovedByUserId: actor.userId, updatedAt: new Date() })
       .where(eq(quotations.id, id));
     await recordAudit(this.db, actor.userId, 'quotation.discount_approved', 'quotation', id);
+    await tellDiscountApproved(this.db, id, actor.userId);
     return this.get(id);
   }
 

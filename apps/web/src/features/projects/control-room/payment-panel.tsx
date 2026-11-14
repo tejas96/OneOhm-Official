@@ -1,12 +1,14 @@
 'use client';
 
 import type { ProjectDetail } from '@oneohm/api-contracts';
-import { Badge, Button, type PillTone, StatusPill } from '@oneohm/design-system/web';
+import { Badge, Button, cn, type PillTone, StatusPill } from '@oneohm/design-system/web';
 import { formatInr, formatInrCompact } from '@oneohm/shared';
 import { IndianRupee } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PaymentLinkAction } from '@/features/finance/payment-link-action';
+import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { useCan } from '@/providers/current-user';
 import { PaymentHistory } from './payment-history';
 import { RecordPaymentDialog } from './record-payment-dialog';
@@ -29,6 +31,7 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
   const total = project.milestones.reduce((sum, milestone) => sum + milestone.amountPaise, 0);
   const paid = project.milestones.reduce((sum, milestone) => sum + milestone.paidPaise, 0);
   const unpaid = project.milestones.filter((milestone) => milestone.status !== 'paid');
+  const focused = useFocusedMilestone();
 
   return (
     <section className="oh-panel flex flex-col gap-5 rounded-[28px] p-6 shadow-e3">
@@ -62,7 +65,14 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
       </span>
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {project.milestones.map((milestone) => (
-          <li key={milestone.id} className="flex flex-col gap-2 rounded-xl bg-raised p-4 text-ink">
+          <li
+            key={milestone.id}
+            ref={milestone.id === focused.id ? focused.ref : undefined}
+            className={cn(
+              'flex scroll-mt-24 flex-col gap-2 rounded-xl bg-raised p-4 text-ink',
+              milestone.id === focused.id && 'ring-2 ring-at-risk ring-offset-2 ring-offset-panel',
+            )}
+          >
             <div className="flex items-start justify-between gap-3">
               <p className="type-body-sm font-medium">{milestone.label}</p>
               <StatusPill
@@ -84,6 +94,12 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
               (milestone.status === 'due' || milestone.status === 'partly_paid') && (
                 <PaymentLinkAction milestoneId={milestone.id} link={milestone.link} />
               )}
+            {milestone.id === focused.id && milestone.status !== 'paid' && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-2">
+                <span className="type-label text-ink-muted">{t('remindHint')}</span>
+                <SendToCustomerButton scope={{ projectId: project.id }} variant="primary" />
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -99,4 +115,14 @@ export function PaymentPanel({ project }: { readonly project: ProjectDetail }) {
       )}
     </section>
   );
+}
+
+/** `?milestone=<id>` (from the command centre's late payment): ring that card and scroll to it. */
+function useFocusedMilestone() {
+  const id = useSearchParams().get('milestone');
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (id) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [id]);
+  return { id, ref };
 }

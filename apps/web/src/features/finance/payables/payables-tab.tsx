@@ -27,6 +27,7 @@ import { useRecentPayouts } from './bank/use-payouts';
 import { BillAmount } from './bill-amount';
 import { BillPaymentsDialog } from './bill-payments-dialog';
 import { PayBillDialog } from './pay-bill-dialog';
+import { PayableNarrowChip, usePayableNarrow } from './payable-narrow';
 import { ReviewBillSheet } from './review-bill-sheet';
 
 const FILTERS = ['open', 'pending', 'approved', 'paid', 'all'] as const;
@@ -86,8 +87,11 @@ export function PayablesTab() {
   }, [wantsPay, params, pathname, router]);
   // The dialog stays open on the bill while it is paid; show the newest figures of that bill.
   const payingNow = paying ? (query.data?.find((bill) => bill.id === paying.id) ?? paying) : null;
-  const rows = (query.data ?? []).filter((bill) =>
-    matchesSearch(search, [bill.partyName, bill.description, bill.billNumber, bill.projectCode]),
+  const narrow = usePayableNarrow();
+  const rows = (query.data ?? []).filter(
+    (bill) =>
+      narrow.keep(bill) &&
+      matchesSearch(search, [bill.partyName, bill.description, bill.billNumber, bill.projectCode]),
   );
 
   const date = (value: string) =>
@@ -206,6 +210,7 @@ export function PayablesTab() {
           </Button>
         )}
       </div>
+      <PayableNarrowChip narrow={narrow} />
       <LowBalanceBanner />
       {query.isPending ? (
         <ListSkeleton label={t('loading')} />

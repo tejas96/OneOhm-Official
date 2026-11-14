@@ -315,8 +315,22 @@
         "pending": "waiting",
         "approved": "approved"
       },
+      "calendar": {
+        "label": "Working time and holidays",
+        "hours": "Working time",
+        "lunch": "Lunch {span}",
+        "holidays": "Holidays ahead",
+        "none": "No holidays added yet. Ask the office if you are not sure.",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "inDays": "In {count} days",
+        "more": "+{count} more later this year",
+        "notCounted": "Holidays are never counted as leave."
+      },
       "impact": {
         "label": "What this leave covers",
+        "holidays": "Not counted, holiday: {names}.",
+        "noWorkingDaysHint": "These dates are all weekly offs or holidays. Pick other days.",
         "pickDays": "Pick the days to see how many count, what is left after, and the work they touch.",
         "noWorkingDays": "No working days",
         "days": "{count, plural, one {# day} other {# days}}",

@@ -76,7 +76,9 @@ export class LeaveService {
       });
     const impact = await leaveImpact(this.db, policy, actor.userId, input);
     if (impact.halfDays === 0)
-      throw invalid('These days are all weekly offs.', { fromDate: 'No working days.' });
+      throw invalid('These days are all weekly offs or holidays.', {
+        fromDate: 'No working days.',
+      });
     if (impact.overlapsExisting)
       throw conflict('You already have leave on some of these days.', 'overlap');
     if (impact.balanceAfterHalfDays < 0 && !input.emergency)

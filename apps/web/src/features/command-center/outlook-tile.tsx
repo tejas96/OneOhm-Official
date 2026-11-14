@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 import { Overline, TILE } from './waiting-tile';
 
 const WINDOWS = [
@@ -31,7 +32,10 @@ export function OutlookTile({
   const row = 'flex items-center gap-3 rounded-md px-2 py-2 -mx-2 hover:bg-sunken/60';
   return (
     <section className={cn(TILE, 'flex flex-col gap-4', className)}>
-      <Overline>{t('title')}</Overline>
+      <div className="flex items-center gap-1.5">
+        <InfoButton card="outlook" />
+        <Overline>{t('title')}</Overline>
+      </div>
       <ul className="flex flex-col">
         {WINDOWS.map((window) => (
           <li key={window.key}>

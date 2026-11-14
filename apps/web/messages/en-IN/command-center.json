@@ -120,11 +120,14 @@
       "bankPending": "Bank disbursements pending",
       "accepted": "Quotations accepted",
       "acceptedDetail": "of {sent} sent",
-      "open": "Open {label}"
+      "open": "Open {label}",
+      "title": "Key numbers"
     },
     "risks": {
       "title": "What could slip, and what to do",
       "count": "{count, plural, one {# risk} other {# risks}}, most pressing first",
+      "countOf": "Top {shown} of {total} risks, most pressing first",
+      "seeAll": "See all late tasks",
       "empty": "Nothing in view is slipping. Every open task is on time and owned.",
       "kind": {
         "overdue": "Overdue",
@@ -139,7 +142,7 @@
       "due": "due {date}",
       "story": {
         "overdue": "Due {date} and still open, {days, plural, one {# day} other {# days}} late.",
-        "waiting": "Waiting on the {party} for {days, plural, =0 {less than a day} one {# day} other {# days}}.",
+        "waiting": "Waiting on {party} for {days, plural, =0 {less than a day} one {# day} other {# days}}.",
         "unassigned": "Ready to start and due {date}, but no one owns it."
       },
       "next": "Next action",
@@ -153,7 +156,14 @@
       },
       "owner": "Task owner",
       "manager": "Project manager",
-      "nobody": "No one yet"
+      "nobody": "No one yet",
+      "hint": "Late tasks, tasks waiting on someone, and ready tasks nobody owns.",
+      "partyThe": {
+        "internal": "our team",
+        "customer": "the customer",
+        "bank": "the bank",
+        "discom": "the DISCOM"
+      }
     },
     "decisions": {
       "title": "Waiting on decisions",
@@ -223,7 +233,8 @@
       "blocked": "Blocked",
       "overdue": "Overdue",
       "completed": "Completed in period",
-      "unpaid": "{count} with money due"
+      "unpaid": "{count} with money due",
+      "title": "Projects by state"
     },
     "outlook": {
       "title": "Expected to finish",
@@ -315,6 +326,539 @@
         "completed": "Done"
       },
       "summaryAll": "{count, plural, =0 {No tasks} one {# task} other {# tasks}} on this project."
+    },
+    "help": {
+      "ui": {
+        "open": "About {title}",
+        "means": "What you are looking at",
+        "how": "How to use it",
+        "example": "Example",
+        "filters": "What the filters change",
+        "setting": "Which setting changes it",
+        "none": "Nothing on this card is set in Settings."
+      },
+      "actions": {
+        "title": "Needs you today",
+        "what": "✅ Your to-do list. Each line is one thing only you can move today, with one button to do it.",
+        "means": [
+          {
+            "term": "🔴 Red circle",
+            "text": "Something is late, like a customer payment or a customer waiting for a WhatsApp reply."
+          },
+          {
+            "term": "🟠 Orange circle",
+            "text": "Something is at risk, like leads with no follow-up or tasks nobody owns."
+          },
+          {
+            "term": "🟣 Purple circle",
+            "text": "Needs a decision from you, like a discount to approve."
+          },
+          {
+            "term": "🟡 Yellow circle",
+            "text": "A wait that has gone on too long, like a DISCOM office that has not answered."
+          },
+          {
+            "term": "🟢 Green circle",
+            "text": "Good news you can act on, like a bank loan ready to claim."
+          },
+          {
+            "term": "Number in the black pill",
+            "text": "How many things need you. The list is capped (see the setting below), so the pill can be lower than the real total."
+          },
+          {
+            "term": "Dot and name (full list only)",
+            "text": "Who the work is waiting on: our team, the customer, the bank or the DISCOM."
+          }
+        ],
+        "how": [
+          "Read the bold line, then the grey line under it for the project and amount.",
+          "Click the button on the right. It opens the exact page where you can finish the job.",
+          "When there is only one item (one lead, one discount, one quote), the button opens that record directly. When there are several, it opens the list.",
+          "Do it there. When it is done, the line disappears on the next refresh (every minute).",
+          "Tap “Show all” to see lines that did not fit."
+        ],
+        "example": "“Advance is 8 days overdue · Patil Home · ₹52K” → click Send reminder → the project's Payments tab opens with that payment highlighted → press “Send to customer” to send the pay link. Another: “1 accepted quote without a project” → Start project → the quote opens with the Create project form ready.",
+        "filters": "Nothing. This list always covers the whole business, as of today.",
+        "setting": "Settings → Late and due-soon: “Payment needs a reminder call after” (default 7 days late), “Call the DISCOM after” (default 5 days waiting) and “Actions shown” (default 6)."
+      },
+      "healthCard": {
+        "title": "Business health",
+        "what": "🩺 One score from 0 to 100 that tells you, at a glance, whether the business is running smoothly.",
+        "means": [
+          {
+            "term": "The big number",
+            "text": "Score = 40% delivery + 35% money + 25% team. Higher is better. 100 means nothing needs attention."
+          },
+          {
+            "term": "🚚 Delivery (40%)",
+            "text": "Share of open tasks that are not overdue. 10 overdue out of 100 open tasks = 90."
+          },
+          {
+            "term": "💰 Money (35%)",
+            "text": "Of the money that has fallen due from customers, how much you have already collected. Collected ÷ (collected + still due)."
+          },
+          {
+            "term": "👥 Team (25%)",
+            "text": "Share of open tasks that have an owner. 20 unowned out of 100 = 80."
+          },
+          {
+            "term": "🟢 Healthy / 🟠 At risk / 🔴 Critical",
+            "text": "75 or more is Healthy. 50 to 74 is At risk. Below 50 is Critical."
+          },
+          {
+            "term": "Biggest contributors",
+            "text": "Only the parts losing you points. The red number is how many points that part costs. For example −7.5 means the score would be 7.5 higher without it."
+          }
+        ],
+        "how": [
+          "Look at the pill first. Green means relax, orange or red means look below.",
+          "Under “Biggest contributors”, start with the largest red number.",
+          "Click the blue link on that row. It opens the exact list to fix: overdue tasks, receivables, or unowned tasks.",
+          "Fix a few items and the score climbs on the next refresh."
+        ],
+        "example": "Delivery 90, money 60, team 100 → 0.4×90 + 0.35×60 + 0.25×100 = 82, which is Healthy. Money costs you 14 points (the biggest), so click “Open receivables” and chase the unpaid customers.",
+        "filters": "Delivery and team follow the manager and project type filters. Money always covers every customer. The period filter sets which payments count as collected.",
+        "setting": "No setting changes the formula. “Coming up” and “late” settings do not affect it. The tasks it counts are just all open tasks on live projects."
+      },
+      "kpis": {
+        "title": "Key numbers",
+        "what": "🔢 Eight big numbers that sum up the business right now. Each one opens the records behind it.",
+        "means": [
+          {
+            "term": "📁 Live projects",
+            "text": "Projects that are active or switched on (operational). Finished and cancelled ones are not counted."
+          },
+          {
+            "term": "⚠️ Projects needing attention",
+            "text": "Live projects that are overdue, blocked, at risk or waiting on someone. Fewer is better."
+          },
+          {
+            "term": "⏰ Overdue tasks",
+            "text": "Open tasks past their due date, out of all open tasks on live projects."
+          },
+          {
+            "term": "🙋 Tasks with no one assigned",
+            "text": "Open tasks that nobody owns yet. Unowned tasks tend to slip."
+          },
+          {
+            "term": "☀️ Installed",
+            "text": "Solar capacity (kWp) whose commissioning task was finished in the period. The line below says how many systems, and how many are due in the coming days."
+          },
+          {
+            "term": "💰 Collected",
+            "text": "Customer money received in the period. “of ₹X due” is collected plus what is still due. The small chart shows the last 8 weeks."
+          },
+          {
+            "term": "🧾 Still due from customers",
+            "text": "Money customers owe for milestones already asked for. The line below is bank loan money still to come."
+          },
+          {
+            "term": "📝 Quotations accepted",
+            "text": "Quotations customers accepted in the period, out of those you sent in the period."
+          }
+        ],
+        "how": [
+          "Click any tile to open the list behind it, already filtered the same way.",
+          "A down arrow tile (like Overdue tasks) is good when the number falls.",
+          "Use the period, manager and type filters above to look at a month, one manager, or one kind of project."
+        ],
+        "example": "“Overdue tasks 12 of 180 open” → click it → the task list opens showing only the 12 overdue tasks, with who owns each one.",
+        "filters": "Live projects, needing attention, overdue, unassigned: follow manager and type. Installed: manager, type and period. Collected, accepted: period only. Still due and bank pending: the whole business.",
+        "setting": "Settings → Late and due-soon: “Coming up means within (days)” sets the days in the Installed line (default 7)."
+      },
+      "states": {
+        "title": "Projects by state",
+        "what": "🚦 Your live projects sorted by how healthy each one is. One count per state.",
+        "means": [
+          {
+            "term": "🟢 On track",
+            "text": "No late work, no waits, nothing stale. Business as usual."
+          },
+          {
+            "term": "🟠 At risk",
+            "text": "Our own team is holding the work, a task has had no update for a while, or the next task is due within a day and nobody started it."
+          },
+          {
+            "term": "🟡 Waiting",
+            "text": "Waiting on the customer, the bank or the DISCOM. Also a switched-on system whose payment is due."
+          },
+          {
+            "term": "🟣 Blocked",
+            "text": "Work cannot move: an open change request is holding it, or an earlier task that later work needs is late."
+          },
+          {
+            "term": "🔴 Overdue",
+            "text": "Our own tasks are past their due date, or a customer payment is more than 7 days late."
+          },
+          {
+            "term": "⚪ Completed in period",
+            "text": "Projects whose work finished since the period began. Red “with money due” means some of them are not fully paid yet."
+          }
+        ],
+        "how": [
+          "Each project shows only one state: the most urgent one wins.",
+          "Click a count to open the projects list already filtered to that state.",
+          "Start with Overdue and Blocked, then Waiting."
+        ],
+        "example": "“Blocked 2” → click it → two projects open. One shows “Name change (CR-2026-0002) is open”. Close that change request and the project moves on.",
+        "filters": "Manager and project type narrow the live projects. The period decides what counts as completed.",
+        "setting": "None. These states come from fixed rules on each project's tasks and payments."
+      },
+      "risks": {
+        "title": "What could slip, and what to do",
+        "what": "🚨 The few tasks most likely to make a project late, each with the next thing to do about it.",
+        "means": [
+          {
+            "term": "🔴 Overdue (pill: Slipping)",
+            "text": "An open task that is past its due date by at least 1 day, and nobody has said it is waiting on someone else. Late tasks that wait on a customer, bank or DISCOM show as Waiting instead."
+          },
+          {
+            "term": "🟡 Waiting (pill: Waiting)",
+            "text": "A task marked as waiting on our team, the customer, the bank or the DISCOM. It shows from the first day, with how many days it has waited. The label says who."
+          },
+          {
+            "term": "🟠 Nobody assigned (pill: At risk)",
+            "text": "A task that is ready to start, is due within the next 7 days, and has no owner. A task that is already late and has no owner shows as Overdue."
+          },
+          {
+            "term": "Order of cards",
+            "text": "Overdue first (most days late on top), then Waiting (longest wait first), then Nobody assigned (soonest due first)."
+          },
+          {
+            "term": "Next action box",
+            "text": "The one thing to do. It opens the task itself."
+          },
+          {
+            "term": "Task owner and Project manager",
+            "text": "Who to ask. “No one yet” means the task has no owner."
+          }
+        ],
+        "how": [
+          "Read the story line in grey. It says why the card is here.",
+          "Click the blue “Next action” box. The task opens on its project, ready to act.",
+          "Overdue: push the work or set a new due date. Waiting on the customer: call them. Bank or DISCOM: follow up with them. Our team: remove the blocker. Nobody assigned: pick an owner.",
+          "Click the project code to see the whole project."
+        ],
+        "example": "“Waiting · DISCOM — Net metering application · due 12 Nov — Waiting on the DISCOM for 6 days” → click “Chase the DISCOM office” → the task opens → call the office, then note the answer on the task.",
+        "filters": "Manager and project type narrow it. The period does not change it. It only lists the top 6 cards (a setting); fix some and the next ones appear.",
+        "setting": "Settings → Late and due-soon: “Task counts as at risk after (days late)” (default 1), “Coming up means within (days)” (default 7, for Nobody assigned) and “Risks shown” (default 6)."
+      },
+      "waiting": {
+        "title": "Waiting time",
+        "what": "⏳ How many days your work has spent stuck, and who it was waiting on.",
+        "means": [
+          {
+            "term": "The big number",
+            "text": "Total days that tasks on live projects have spent in “waiting”, added across all tasks. 3 tasks that each waited 4 days = 12 days."
+          },
+          {
+            "term": "Coloured ring",
+            "text": "The same days split by who we waited on, so you can see the biggest slice."
+          },
+          {
+            "term": "DISCOM",
+            "text": "Days spent waiting for the electricity distribution company."
+          },
+          {
+            "term": "Our team",
+            "text": "Days we kept ourselves waiting. This is the one you can fix."
+          },
+          {
+            "term": "Customer",
+            "text": "Days waiting for the customer to reply, pay or provide documents."
+          },
+          {
+            "term": "Bank",
+            "text": "Days waiting for the bank to approve or release money."
+          }
+        ],
+        "how": [
+          "Find the biggest slice. That is where time is leaking.",
+          "Click the title to open the delays report.",
+          "Click a name (like Customer) to see the exact tasks that waited on them.",
+          "Follow up on the oldest ones first."
+        ],
+        "example": "“Customer 18 days” → click Customer → the list shows which tasks wait on customers and for how long → call those customers.",
+        "filters": "Manager and project type narrow it. The period does not: a task that is still waiting keeps adding days until it moves.",
+        "setting": "None. A task counts from the day it was marked waiting until it finished, or until today."
+      },
+      "pipeline": {
+        "title": "Sales in this period",
+        "what": "🧭 A funnel from new leads to accepted quotations, so you can see where customers drop off.",
+        "means": [
+          {
+            "term": "Leads",
+            "text": "New enquiries created in the period."
+          },
+          {
+            "term": "Site surveys",
+            "text": "Of those new leads, how many reached a survey, a quotation or a win."
+          },
+          {
+            "term": "Quotations sent",
+            "text": "Quotations sent to customers in the period."
+          },
+          {
+            "term": "Accepted",
+            "text": "Quotations customers accepted in the period."
+          },
+          {
+            "term": "Bar width",
+            "text": "Wider bar means a bigger number, so a sudden narrowing shows where you lose people."
+          }
+        ],
+        "how": [
+          "Click the title to open the sales report for the period.",
+          "Click a bar to open that list: leads, surveys, quotations or accepted ones.",
+          "If leads are high but surveys are low, follow up on leads faster."
+        ],
+        "example": "“Leads 40 → Site surveys 15” means only about one lead in three got a survey. Click Leads and call the ones that have not been visited.",
+        "filters": "Only the period. Manager and project type do not apply to sales.",
+        "setting": "None."
+      },
+      "materials": {
+        "title": "Material and purchasing",
+        "what": "📦 Shortages and late orders that could stop installations.",
+        "means": [
+          {
+            "term": "Projects short of material",
+            "text": "Projects with material or installation work due in the next 14 days where the quotation needs more than you hold or have on order."
+          },
+          {
+            "term": "Purchase orders late",
+            "text": "Orders sent to a vendor that are past their expected date with goods still to come. “for stock” means the order is not for one project."
+          },
+          {
+            "term": "Items below reorder level",
+            "text": "Free stock (on hand minus what is reserved for projects, across all stores) is under the minimum you set for that item."
+          },
+          {
+            "term": "“N more” link",
+            "text": "Only the first few rows show. The link opens the full list."
+          }
+        ],
+        "how": [
+          "Click a project row to open its Material tab and request the missing items.",
+          "Click a late order to open it and chase the vendor.",
+          "Click a low item to open stock and raise a purchase request."
+        ],
+        "example": "“P-0012 Patil Home — 6 panel 540W short” → click the row → the project's Material tab opens → request the 6 panels before the installation date.",
+        "filters": "Stock levels and purchase orders cover the whole business. The project shortage list follows the manager and project type filters.",
+        "setting": "Settings → Late and due-soon: “Check material for installs within (days)” (default 14). Reorder levels are set per item in Inventory."
+      },
+      "decisions": {
+        "title": "Waiting on decisions",
+        "what": "🖊️ Everything in the company that is stuck until someone approves or decides.",
+        "means": [
+          {
+            "term": "The number on the left",
+            "text": "How many items of that kind are waiting right now. Kinds with zero do not show."
+          },
+          {
+            "term": "Approvals",
+            "text": "Discounts, task sign-offs, bills, leave, attendance, travel claims, purchase requests, vendor advances, points, commissions and bonuses."
+          },
+          {
+            "term": "Open queues",
+            "text": "DISCOM change requests, customer help requests, and bank loan money ready to claim."
+          }
+        ],
+        "how": [
+          "Click a row to open that exact list.",
+          "Approve or reject each item there. People are waiting on you.",
+          "The count here matches the list you open, so they always agree."
+        ],
+        "example": "“3 Bills to approve” → click it → the approvals list opens with only bills → open each, check the amount and approve it so the vendor can be paid.",
+        "filters": "None. This card shows the whole business.",
+        "setting": "None here. Approval rules and limits are set in Settings (for example the discount limit above which approval is needed)."
+      },
+      "outlook": {
+        "title": "Expected to finish",
+        "what": "🔮 When your live projects are likely to finish, based on how they are really running.",
+        "means": [
+          {
+            "term": "This month / Next month / Later",
+            "text": "How many live projects are expected to finish in each window."
+          },
+          {
+            "term": "Expected finish date",
+            "text": "The due date of the project's last open task, moved later by how many days its work runs behind today."
+          },
+          {
+            "term": "Running behind plan",
+            "text": "Projects whose expected finish is later than planned. The days are the average delay."
+          },
+          {
+            "term": "Orange text",
+            "text": "At least one project is behind plan. Grey means none."
+          }
+        ],
+        "how": [
+          "Click a month to open the projects expected then.",
+          "Click “Running behind plan” to see the projects that are late and need a push.",
+          "Use it to promise honest dates to customers."
+        ],
+        "example": "“Running behind plan, 6 days on average — 4” → click it → four projects open. Open the worst one and look at its late tasks.",
+        "filters": "Manager and project type narrow it. The period does not change it.",
+        "setting": "None. The forecast is recalculated each time from late work."
+      },
+      "deadlines": {
+        "title": "Deadlines",
+        "what": "📅 Tasks falling due soon, soonest first, so nothing surprises you.",
+        "means": [
+          {
+            "term": "Big number (top right)",
+            "text": "How many deadlines are listed here."
+          },
+          {
+            "term": "Date on the left",
+            "text": "The day the task is due."
+          },
+          {
+            "term": "Project code and name",
+            "text": "Which project it belongs to, then who owns it. “Unassigned” means no owner."
+          },
+          {
+            "term": "👁️ Customer sees this",
+            "text": "The customer can see this task in their own tracking page, so a miss is visible to them."
+          }
+        ],
+        "how": [
+          "Click a row to open the task on its project.",
+          "Fix unassigned ones first by picking an owner.",
+          "Look at tasks the customer sees first, because delays there are noticed."
+        ],
+        "example": "“14 Nov — Submit net metering file · P-0012 · Unassigned” → click it → assign someone today.",
+        "filters": "Manager and project type narrow it. The period does not change it.",
+        "setting": "Settings → Late and due-soon: “Coming up means within (days)” (default 7) and “Deadlines shown” (default 12). The big number counts only the rows shown."
+      },
+      "projects": {
+        "title": "Projects in motion",
+        "what": "🏗️ Every live project on one line, from survey to subsidy.",
+        "means": [
+          {
+            "term": "The line of dots",
+            "text": "The seven stages: survey, design, material, installation, commissioning, net metering, subsidy. Finished stages are filled, the current one is highlighted."
+          },
+          {
+            "term": "Status pill",
+            "text": "The most urgent thing about that project: Overdue, Blocked, Waiting, At risk or On track. Same rules as “Projects by state”."
+          },
+          {
+            "term": "Next · date",
+            "text": "The next task and its due date."
+          },
+          {
+            "term": "Forecast note",
+            "text": "Appears when the project is expected to finish later than planned."
+          },
+          {
+            "term": "Order",
+            "text": "Most urgent projects first."
+          }
+        ],
+        "how": [
+          "Scan the pills from the top. Red and purple need you.",
+          "Click a project to open it.",
+          "Click “All N live projects” (top right) for the full projects list."
+        ],
+        "example": "Pill says “2 tasks overdue”, next says “Installation · 10 Nov” → open the project and check the installation crew.",
+        "filters": "Manager and project type narrow it. Only live (active or switched on) projects are shown.",
+        "setting": "None. Payment is treated as late 7 days after its due date."
+      },
+      "money": {
+        "title": "Money",
+        "what": "💰 What is coming in, and what you still have to pay out.",
+        "means": [
+          {
+            "term": "Revenue booked in this period",
+            "text": "Project revenue your ledger recorded in the period. Milestones count when they fall due, even if not yet paid."
+          },
+          {
+            "term": "Collected in this period",
+            "text": "Customer money actually received in the period."
+          },
+          {
+            "term": "Still due from customers",
+            "text": "Money customers owe for milestones already asked for, less anything paid."
+          },
+          {
+            "term": "Bank disbursements pending",
+            "text": "Bank loan money you have not received yet."
+          },
+          {
+            "term": "Owed to vendors / contractors",
+            "text": "Bills not yet paid, after taking off any advance already given."
+          },
+          {
+            "term": "Of which due within N days",
+            "text": "The part of the bills that must be paid soon."
+          },
+          {
+            "term": "Crew advances not yet paid",
+            "text": "Advances promised to crews that are not paid yet. They are already counted in the contractor line."
+          },
+          {
+            "term": "₹52K, ₹1.2 L, ₹3 Cr",
+            "text": "K is thousand, L is lakh (1,00,000), Cr is crore (1,00,00,000)."
+          }
+        ],
+        "how": [
+          "Compare “Still due” with “Owed to vendors”. If you owe more than you will receive soon, plan cash.",
+          "Click any line to open the records: ledger, receivables, loans, payables or advances.",
+          "Chase customers on the receivables list. Pay bills on the payables list."
+        ],
+        "example": "“Of which due within 7 days: ₹2.4 L” → click it → payables opens showing only bills due in that window → pay them. “Owed to vendors” and “Owed to contractors” open payables for that group only.",
+        "filters": "The period sets revenue and collected. Everything else is the amount outstanding today, for the whole business, and ignores manager and project type.",
+        "setting": "Settings → Late and due-soon: “Coming up means within (days)” sets the “due within” window (default 7)."
+      },
+      "team": {
+        "title": "Team and crews",
+        "what": "👥 Who carries the work, who is falling behind, and how reliable they are.",
+        "means": [
+          {
+            "term": "Open",
+            "text": "Tasks not finished yet that belong to that person, role or crew."
+          },
+          {
+            "term": "Late",
+            "text": "Open tasks past their due date. Tasks waiting on the customer, bank or DISCOM are not counted against people."
+          },
+          {
+            "term": "Due today",
+            "text": "Open tasks due today."
+          },
+          {
+            "term": "Done",
+            "text": "Tasks finished in the period."
+          },
+          {
+            "term": "On time",
+            "text": "Of the tasks finished in the period, the share finished by their due date. Work made late by outsiders is left out."
+          },
+          {
+            "term": "Customer rating",
+            "text": "Average stars customers gave for stages this person worked on. Shows after 3 ratings."
+          },
+          {
+            "term": "People / Departments / Contractor crews",
+            "text": "Switch the view above the table. A department is a person's main role."
+          },
+          {
+            "term": "On leave today",
+            "text": "The person has approved leave today, so do not expect work from them."
+          }
+        ],
+        "how": [
+          "The table is sorted so the people with the most late tasks come first.",
+          "Click a person to see their tasks. Click a crew to open the crew page.",
+          "Click a department to see the people in it.",
+          "Move tasks from people with many open ones to those with few."
+        ],
+        "example": "“Ravi: Open 14, Late 5, On time 60%” → click Ravi → see his 5 late tasks → help him or reassign some.",
+        "filters": "Manager and project type narrow which projects count. The period sets Done and On time.",
+        "setting": "None."
+      }
     }
   }
 }

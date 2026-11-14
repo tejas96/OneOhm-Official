@@ -16,6 +16,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { InfoButton } from './info-button';
 
 const TONE_DISC: Readonly<Record<PillTone, string>> = {
   onTrack: 'bg-on-track-tint text-on-track',
@@ -67,6 +68,7 @@ export function ActionList({
     <Card id="actions" className={cn('flex scroll-mt-24 flex-col overflow-hidden', className)}>
       <CardHeader
         title={t('title')}
+        info={<InfoButton card="actions" />}
         description={compact ? undefined : t('description')}
         action={
           <span className="rounded-full bg-ink px-2.5 py-0.5 font-mono text-[0.75rem] text-canvas">

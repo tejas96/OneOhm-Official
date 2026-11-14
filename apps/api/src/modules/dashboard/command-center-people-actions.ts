@@ -20,9 +20,9 @@ export async function leadFollowUps(db: Database, today: string): Promise<Action
       tone: 'atRisk',
       title: plural(rows.length, '1 lead needs a follow-up', '# leads need a follow-up'),
       detail: 'Due today or earlier',
-      action: 'Open leads',
+      action: rows.length === 1 ? 'Open lead' : 'Open leads',
       party: 'internal',
-      href: '/leads?filter=due',
+      href: rows.length === 1 && rows[0] ? `/leads/${rows[0].id}` : '/leads?filter=due',
     },
   ];
 }
@@ -48,7 +48,8 @@ export async function unownedLeads(db: Database): Promise<ActionItem[]> {
       detail: 'Pick who follows them up',
       action: 'Assign',
       party: 'internal',
-      href: '/leads?filter=unowned',
+      // One: the lead, where the owner is changed. Several: only the leads with no owner.
+      href: rows.length === 1 && rows[0] ? `/leads/${rows[0].id}` : '/leads?filter=unowned',
     },
   ];
 }
@@ -69,7 +70,10 @@ export async function lateChats(db: Database): Promise<ActionItem[]> {
   );
   const now = new Date();
   const cal = await loadCalendar(db, businessZone());
-  const late = [...waiting.values()].filter((since) => chatWaitStage(since, now, cal) === 2).length;
+  const lateIds = [...waiting.entries()]
+    .filter(([, since]) => chatWaitStage(since, now, cal) === 2)
+    .map(([id]) => id);
+  const late = lateIds.length;
   if (late === 0) return [];
   return [
     {
@@ -81,9 +85,9 @@ export async function lateChats(db: Database): Promise<ActionItem[]> {
         '# customers are waiting for a WhatsApp reply',
       ),
       detail: 'Waiting over 2 working hours',
-      action: 'Open chats',
+      action: late === 1 ? 'Reply' : 'Open chats',
       party: 'internal',
-      href: '/today?tab=chats&filter=late',
+      href: late === 1 ? `/today?tab=chats&chat=${lateIds[0]}` : '/today?tab=chats&filter=late',
     },
   ];
 }

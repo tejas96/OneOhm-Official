@@ -111,6 +111,12 @@
       }
     },
     "payables": {
+      "narrow": {
+        "showing": "Showing only: {what}",
+        "due": "{days, plural, one {still owed, due within 1 day} other {still owed, due within # days}}",
+        "party": { "vendor": "bills from vendors", "contractor": "bills from contractors" },
+        "clear": "Show all bills"
+      },
       "filterLabel": "Show",
       "filters": {
         "open": "Open",
@@ -515,7 +521,12 @@
         "vendor_advance_adjusted": "Vendor advance used on a bill",
         "cash_deposit": "Cash deposit",
         "cheque_cleared": "Cheque cleared",
-        "payout_fee": "Bank transfer fee"
+        "payout_fee": "Bank transfer fee",
+        "payout_fee_refund": "Bank transfer fee refunded",
+        "payout_paid": "Bank transfer sent",
+        "payable_payment": "Bill payment",
+        "tds_deposit": "TDS deposited",
+        "other": "Other entry"
       }
     },
     "links": {

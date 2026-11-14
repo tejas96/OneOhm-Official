@@ -156,6 +156,7 @@ export function leaveWithin(
   leave: Pick<TeamLeave, 'fromDate' | 'toDate' | 'halfDay' | 'halfDays'>,
   window: { readonly from: string; readonly to: string },
   weeklyOff: readonly number[],
+  holidays: readonly string[] = [],
 ): number {
   if (leave.toDate < window.from || leave.fromDate > window.to) return 0;
   if (leave.fromDate >= window.from && leave.toDate <= window.to) return leave.halfDays;
@@ -164,5 +165,6 @@ export function leaveWithin(
     to: leave.toDate < window.to ? leave.toDate : window.to,
     halfDay: leave.halfDay,
     weeklyOff,
+    holidays,
   });
 }

@@ -6,6 +6,7 @@ import { ChevronRight, PackageCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { InfoButton } from './info-button';
 
 const quantity = (value: number) => value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
@@ -77,7 +78,11 @@ export function MaterialRiskCard({ materials }: { readonly materials: MaterialRi
   const total = counts.belowReorder + counts.latePurchaseOrders + counts.shortProjects;
   return (
     <Card className="flex flex-col">
-      <CardHeader title={t('title')} description={t('description')} />
+      <CardHeader
+        title={t('title')}
+        info={<InfoButton card="materials" />}
+        description={t('description')}
+      />
       {total === 0 ? (
         <p className="flex items-center gap-2 px-5 pb-5 type-body-sm text-ink-muted">
           <PackageCheck aria-hidden className="size-4 text-on-track" />

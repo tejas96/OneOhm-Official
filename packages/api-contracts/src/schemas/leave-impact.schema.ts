@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema } from '../common/primitives';
+import { holidayDaySchema } from './staff-calendar.schema';
 
 /**
  * What a window of leave touches (PRD 4.6, Flow E): open tasks that are already late,
@@ -28,6 +29,8 @@ export const leaveImpactSchema = z.object({
   /** What is left of this kind of leave if this request is approved. */
   balanceAfterHalfDays: z.number().int(),
   overlapsExisting: z.boolean(),
+  /** Holidays inside the dates: they are not counted as leave. */
+  holidays: z.array(holidayDaySchema).default([]),
   clashes: leaveClashesSchema.default({ backupAway: [], covering: [] }),
   /** Open tasks that fall due inside the leave dates. */
   dueInWindow: z.number().int().default(0),

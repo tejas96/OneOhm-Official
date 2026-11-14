@@ -50,6 +50,13 @@ describe('taps the assistant answers while a person has the chat', () => {
     expect(assistantAnswersTap({ customerId: null }, tap('payments'))).toBe(false);
   });
 
+  it('answers a lead’s visit buttons, but not a pick tap (no customer to ask)', () => {
+    const id = '0b6f1c7e-7d3a-4f0e-9c1d-2a4b5c6d7e8f';
+    for (const t of ['vok', 'vcf', 'vchg'])
+      expect(assistantAnswersTap({ customerId: null }, tap(`${t}:${id}`))).toBe(true);
+    expect(assistantAnswersTap({ customerId: null }, tap(`vask:${id}`))).toBe(false);
+  });
+
   it('leaves typed words to the person', () => {
     expect(assistantAnswersTap({ customerId: 'c1' }, typed)).toBe(false);
   });

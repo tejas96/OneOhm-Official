@@ -6,6 +6,7 @@ import { ArrowRight, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { hrefWithTask } from '@/features/projects/task-panel/task-panel-url';
+import { InfoButton } from './info-button';
 
 const TONE: Readonly<Record<RiskItem['kind'], PillTone>> = {
   overdue: 'overdue',
@@ -14,18 +15,40 @@ const TONE: Readonly<Record<RiskItem['kind'], PillTone>> = {
 };
 
 /** What could slip on live projects, most pressing first, each with its next action. */
-export function RiskCards({ risks }: { readonly risks: readonly RiskItem[] }) {
+export function RiskCards({
+  risks,
+  total,
+}: {
+  readonly risks: readonly RiskItem[];
+  readonly total: number;
+}) {
   const t = useTranslations('commandCenter.risks');
   return (
     <section aria-labelledby="risks-title" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="risks-title" className="type-title-md text-ink">
-          {t('title')}
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <InfoButton card="risks" />
+          <h2 id="risks-title" className="type-title-md text-ink">
+            {t('title')}
+          </h2>
+        </div>
         {risks.length > 0 && (
-          <p className="type-body-sm text-ink-faint">{t('count', { count: risks.length })}</p>
+          <p className="flex flex-wrap items-baseline gap-2 type-body-sm text-ink-faint">
+            {total > risks.length
+              ? t('countOf', { shown: risks.length, total })
+              : t('count', { count: risks.length })}
+            {total > risks.length && (
+              <Link
+                href="/command-center/tasks?show=overdue"
+                className="text-accent hover:underline"
+              >
+                {t('seeAll')}
+              </Link>
+            )}
+          </p>
         )}
       </div>
+      <p className="-mt-1 type-body-sm text-ink-muted">{t('hint')}</p>
       {risks.length === 0 ? (
         <p className="rounded-xl border border-dashed border-hairline px-5 py-6 type-body-sm text-ink-muted">
           {t('empty')}
@@ -85,7 +108,7 @@ function RiskCard({ risk }: { readonly risk: RiskItem }) {
         {t(`story.${risk.kind}`, {
           date,
           days: risk.days,
-          party: partyT(risk.party).toLowerCase(),
+          party: t(`partyThe.${risk.party}`),
         })}
       </p>
       <Link

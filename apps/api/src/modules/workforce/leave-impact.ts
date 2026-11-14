@@ -17,6 +17,7 @@ import {
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, isNotNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { holidaysBetween } from './holiday-days';
 import { backupsFor } from './leave-backups';
 import { clashesFor, NO_CLASHES } from './leave-clash-read';
 import { balancesOf, readLeave } from './workforce-read';
@@ -139,11 +140,13 @@ export async function leaveImpact(
   requestId?: string,
   backupUserId: string | null = null,
 ): Promise<LeaveImpact> {
+  const holidays = await holidaysBetween(db, window.fromDate, window.toDate);
   const halfDays = leaveHalfDays({
     from: window.fromDate,
     to: window.toDate,
     halfDay: window.halfDay,
     weeklyOff: policy.weeklyOff,
+    holidays: holidays.map((holiday) => holiday.day),
   });
   const own = (await readLeave(db, policy, eq(leaveRequests.userId, userId)))
     .map((item) => item.row)
@@ -166,6 +169,7 @@ export async function leaveImpact(
     halfDays,
     balanceAfterHalfDays: left - halfDays,
     overlapsExisting,
+    holidays,
     clashes: clashes.get(requestId ?? '') ?? NO_CLASHES,
     dueInWindow: work.tasks.filter((task) => task.reason === 'due').length,
     tasks: work.tasks.map((task) => ({

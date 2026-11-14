@@ -1,13 +1,19 @@
 import { ChoiceChips, Text } from '@oneohm/mobile-ui';
 import { REQUEST_LEAVE } from '@/copy/workforce';
+import { useWorkday } from '@/features/attendance/use-workday';
 import { addDays, businessToday } from '@/lib/dates';
-import { DayChips } from './day-chips';
+import { DayChips, type OffDays } from './day-chips';
 import type { LeaveForm, LeaveKind, LeaveLength } from './use-leave-form';
 
 /** Planned or emergency, the first and last day, and full or half for a single day. */
 export function LeaveDays({ form }: { readonly form: LeaveForm }) {
   const today = businessToday();
   const emergency = form.kind === 'emergency';
+  const calendar = useWorkday().data?.calendar;
+  const off: OffDays | undefined = calendar && {
+    weeklyOff: calendar.weeklyOff,
+    holidays: new Set(calendar.upcomingHolidays.map((holiday) => holiday.day)),
+  };
   return (
     <>
       <ChoiceChips<LeaveKind>
@@ -31,6 +37,7 @@ export function LeaveDays({ form }: { readonly form: LeaveForm }) {
         count={emergency ? 22 : 30}
         value={form.from}
         onChange={form.setFrom}
+        off={off}
       />
       {form.from ? (
         <DayChips
@@ -39,6 +46,7 @@ export function LeaveDays({ form }: { readonly form: LeaveForm }) {
           count={15}
           value={form.last}
           onChange={form.setTo}
+          off={off}
         />
       ) : null}
       {form.oneDay ? (

@@ -7,6 +7,7 @@ import { ArrowRight, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { centerHref } from './center-links';
+import { InfoButton } from './info-button';
 
 const WEIGHT = { delivery: 0.4, money: 0.35, team: 0.25 } as const;
 const HREF = {
@@ -63,7 +64,10 @@ export function HealthCard({
         </ProgressRing>
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="type-title-lg text-ink">{t('title')}</h2>
+            <span className="flex items-center gap-1.5">
+              <InfoButton card="healthCard" />
+              <h2 className="type-title-lg text-ink">{t('title')}</h2>
+            </span>
             <StatusPill tone={tone} label={t(key)} />
             <Popover
               label={t('how')}

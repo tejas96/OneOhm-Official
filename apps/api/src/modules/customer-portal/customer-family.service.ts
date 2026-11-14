@@ -36,6 +36,17 @@ export class CustomerFamilyService {
     if (customer?.phone === input.phone) {
       throw invalid('That is your own number.', { phone: 'Enter the family member’s mobile.' });
     }
+    // A number with its own OneOhm account signs in to that account, never to this one, so
+    // the link would do nothing: say so instead of adding it.
+    const [own] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.phoneE164, input.phone))
+      .limit(1);
+    if (own)
+      throw invalid('This number already has its own OneOhm account.', {
+        phone: 'They sign in to their own account. Add another family member’s mobile.',
+      });
     const current = await familyOf(this.db, who.customerId);
     if (current.length >= MAX_FAMILY) {
       throw conflict(`You can add up to ${MAX_FAMILY} people.`, 'too_many');

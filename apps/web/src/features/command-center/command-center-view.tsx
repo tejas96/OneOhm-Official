@@ -104,7 +104,7 @@ function CommandCenterContent() {
           <ProjectStates data={data} query={query} />
           <div className={COLUMNS}>
             <div className="flex min-w-0 flex-col gap-6">
-              <RiskCards risks={data.risks} />
+              <RiskCards risks={data.risks} total={data.risksTotal ?? data.risks.length} />
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <WaitingTile days={data.waitingDays} query={query} />
                 <PipelineTile pipeline={data.pipeline} query={query} />

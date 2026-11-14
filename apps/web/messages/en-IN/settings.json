@@ -1070,6 +1070,8 @@
         "fromCustomer": "The customer provides it",
         "fromCustomerHint": "The team can ask the customer for it from the checklist.",
         "fromCustomerNotHere": "Only for papers the customer holds. Tick a customer folder such as ID proof or Electricity bill; Other and OneOhm's own folders cannot be asked for.",
+        "maxAge": "Accept papers up to (days old)",
+        "maxAgeHint": "Leave empty to accept any age. Example: 90 means a bill older than 90 days is asked again.",
         "types": "Project types",
         "typesHint": "None ticked means every type.",
         "flags": {

@@ -10,6 +10,7 @@ import {
 import { type DashboardSettings } from '@oneohm/domain';
 import { formatInrCompact } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm';
+import { inboxHref } from '../business-settings/approval-links';
 import { waitsForApproval } from '../lists/quotation-page';
 import { daysSince } from './business-days';
 import { assignmentConfirmations } from './command-center-confirm';
@@ -65,7 +66,7 @@ async function latePayments(db: Database, today: string, lateDays: number): Prom
       detail: `${row.name} · ${formatInrCompact(row.amount)}`,
       action: 'Send reminder',
       party: 'customer' as const,
-      href: `/projects/${row.projectId}?tab=payments`,
+      href: `/projects/${row.projectId}?tab=payments&milestone=${row.id}`,
     }));
 }
 
@@ -109,7 +110,7 @@ async function longDiscomWaits(
 
 async function pendingDiscounts(db: Database): Promise<ActionItem[]> {
   const rows = await db
-    .select({ number: quotations.number })
+    .select({ id: quotations.id, number: quotations.number })
     .from(quotations)
     .where(
       // Only discounts above the limit wait for an approver (same rule as the inbox).
@@ -124,7 +125,8 @@ async function pendingDiscounts(db: Database): Promise<ActionItem[]> {
       detail: rows.map((row) => row.number).join(', '),
       action: 'Review',
       party: 'internal',
-      href: '/quotations?filter=approval',
+      // One: the quote itself (Approve is there). Several: the inbox, where each has Approve.
+      href: rows.length === 1 && rows[0] ? `/quotations/${rows[0].id}` : inboxHref(['discount']),
     },
   ];
 }

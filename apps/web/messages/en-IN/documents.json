@@ -1,6 +1,7 @@
 {
   "documents": {
     "title": "Documents",
+    "leadUploadLocked": "Upload opens after you convert this lead to a customer. Use Convert to customer on this page.",
     "count": "{count, plural, =0 {No files yet} one {# file} other {# files}}",
     "loading": "Loading documents",
     "empty": "No documents yet. Photos added to tasks and files uploaded here appear in this list.",

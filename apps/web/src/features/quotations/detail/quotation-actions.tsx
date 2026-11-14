@@ -14,8 +14,9 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { describeError } from '@/lib/api/api-error';
 import { useCan } from '@/providers/current-user';
@@ -35,6 +36,7 @@ export function QuotationActions({ quotation }: { readonly quotation: QuotationD
   const canStartProject = useCan('projects.create');
   const [rejecting, setRejecting] = useState(false);
   const [starting, setStarting] = useState(false);
+  useStartFromLink(quotation, canStartProject, setStarting);
   const [changed, setChanged] = useState('');
   const params = { params: { id: quotation.id } };
 
@@ -141,4 +143,24 @@ export function QuotationActions({ quotation }: { readonly quotation: QuotationD
       <CreateProjectDialog quotation={quotation} open={starting} onOpenChange={setStarting} />
     </>
   );
+}
+
+/**
+ * `?start=project` (the command centre's "Start project") opens the "Create project" form
+ * once, only when this quote can still start one; the flag is then dropped from the URL.
+ */
+function useStartFromLink(
+  quotation: QuotationDetail,
+  allowed: boolean,
+  open: (value: boolean) => void,
+) {
+  const params = useSearchParams();
+  const router = useRouter();
+  const asked = params.get('start') === 'project';
+  const ready = quotation.status === 'accepted' && !quotation.projectId && allowed;
+  useEffect(() => {
+    if (!asked) return;
+    if (ready) open(true);
+    router.replace(`/quotations/${quotation.id}`, { scroll: false });
+  }, [asked, ready, open, router, quotation.id]);
 }

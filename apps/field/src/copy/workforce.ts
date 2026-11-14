@@ -104,6 +104,10 @@ export const REQUEST_LEAVE = {
   after: (halves: number) =>
     halves < 0 ? `${days(-halves)} over your balance` : `${days(halves)} left after this`,
   overlap: 'You already have leave on some of these days.',
+  holidays: (names: string) => `Not counted, holiday: ${names}.`,
+  noWorkingDays: 'These dates are all weekly offs or holidays. Pick other days.',
+  offTag: 'Off',
+  holidayTag: 'Holiday',
   workTitle: 'WORK DUE DURING THIS TIME',
   noWork: 'Nothing of yours is due in these days.',
   dueOn: (project: string, date: string) => `${project} · due ${date}`,

@@ -24,6 +24,7 @@ import { LEAVE } from '@/copy/workforce';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { confirmAction } from '@/lib/confirm';
 import { shortDate } from '@/lib/dates';
+import { HolidaysCard } from './holidays-card';
 
 const TONE: Readonly<Record<LeaveRequestRecord['status'], Tone>> = {
   pending: 'review',
@@ -63,6 +64,7 @@ export function LeaveScreen() {
             fullWidth
             size="lg"
           />
+          {query.data.calendar ? <HolidaysCard calendar={query.data.calendar} /> : null}
           {query.data.leave.length === 0 ? (
             <EmptyState
               icon={<CalendarDays size={22} color={theme.colors.accent} />}

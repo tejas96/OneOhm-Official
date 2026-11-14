@@ -5,14 +5,17 @@ export function SectionHeading({
   index,
   title,
   action,
+  info,
 }: {
   readonly index: string;
   readonly title: string;
   readonly action?: ReactNode;
+  readonly info?: ReactNode;
 }) {
   return (
     <header className="flex items-baseline gap-4">
       <span className="font-mono text-[0.8125rem] text-accent">{index}</span>
+      {info}
       <h2 className="type-display-md text-ink">{title}</h2>
       <span aria-hidden className="h-px flex-1 translate-y-[-0.35rem] bg-hairline" />
       {action}

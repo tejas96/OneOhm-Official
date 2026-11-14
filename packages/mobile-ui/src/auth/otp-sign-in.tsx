@@ -72,8 +72,16 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
       setPending(false);
     }
   };
-  const digits = phone.replace(/\D/g, '').slice(-10);
-  const phoneReady = digits.length === 10;
+  // A pasted +91 or a leading 0 is dropped; anything else must be exactly 10 digits, so a
+  // mistyped long number is refused here, never cut to its last 10 digits.
+  const typed = phone.replace(/\D/g, '');
+  const digits =
+    typed.length === 12 && typed.startsWith('91')
+      ? typed.slice(2)
+      : typed.length === 11 && typed.startsWith('0')
+        ? typed.slice(1)
+        : typed;
+  const phoneReady = /^[6-9]\d{9}$/.test(digits);
 
   const send = () => {
     if (!phoneReady) {
@@ -81,22 +89,20 @@ export function OtpSignIn({ copy, requestCode, verifyCode }: OtpSignInProps) {
       return;
     }
     return run(async () => {
-      await requestCode(phone);
+      await requestCode(digits);
       setStep('code');
       setCode('');
       setWait(RESEND_SECONDS);
     });
   };
-  const verify = (value = code) => run(() => verifyCode(phone, value));
+  const verify = (value = code) => run(() => verifyCode(digits, value));
 
   return (
     <View style={styles.root}>
       <View style={styles.heading}>
         <Text variant="displayMd">{step === 'phone' ? copy.title : copy.codeTitle}</Text>
         <Text variant="body" tone="secondary">
-          {step === 'phone'
-            ? copy.description
-            : copy.codeSentTo(`+91 ${phone.replace(/\D/g, '').slice(-10)}`)}
+          {step === 'phone' ? copy.description : copy.codeSentTo(`+91 ${digits}`)}
         </Text>
       </View>
       {step === 'phone' ? (

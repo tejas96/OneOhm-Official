@@ -6,6 +6,7 @@ import { offsetOf, pageFrom, searchWords } from '../../common/paging';
 import { quotationSummaries } from '../../common/read-models/quotation-summary';
 import { matchWords } from '../../common/search-match';
 import { quotationScope } from '../quotations/quotation-access';
+import { noProject } from '../quotations/quotation-project';
 
 /** A discount above the limit that no approver has passed yet (as `discountPendingApproval`). */
 export const waitsForApproval: SQL = sql`(${quotations.discountPaise} > 0 and ${quotations.discountApprovedByUserId} is null and coalesce((${quotations.snapshot}->>'discountNeedsApproval')::boolean, false))`;
@@ -13,6 +14,8 @@ export const waitsForApproval: SQL = sql`(${quotations.discountPaise} > 0 and ${
 function filterOf(filter: QuotationListFilter): SQL | undefined {
   if (filter === 'all') return undefined;
   if (filter === 'approval') return waitsForApproval;
+  // Accepted, and nobody has started the project yet (the command centre's "Start project").
+  if (filter === 'no_project') return and(eq(quotations.status, 'accepted'), noProject);
   return eq(quotations.status, filter);
 }
 

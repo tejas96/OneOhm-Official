@@ -2,6 +2,7 @@ import {
   contractorMembers,
   contractors,
   type DatabaseExecutor,
+  notifyHolders,
   payables,
   postWorkOrderTds,
   projectActivities,
@@ -138,6 +139,15 @@ export async function settleIfDone(
     })
     .where(eq(workOrders.id, workOrderId));
   await postWorkOrderTds(db, workOrderId, userId);
+  // Nothing to pay usually means no rate card for this work: say so before the crew asks.
+  if (settlement.grossPaise === 0)
+    await notifyHolders(db, 'finance.record_payments', {
+      kind: 'work_order_unpriced',
+      title: `${order.order.number} finished with nothing to pay`,
+      body: `${order.contractor.name} has no rate for this work, so no bill was made. Add a rate card or a line on the work order.`,
+      subject: { type: 'contractor', id: order.contractor.id },
+      dedupeKey: `wo_unpriced:${workOrderId}`,
+    });
   await db.insert(projectActivities).values({
     projectId: order.order.projectId,
     kind: 'work_order_completed',

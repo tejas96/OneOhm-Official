@@ -6,7 +6,7 @@ import { Lock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type ComponentType, useSyncExternalStore } from 'react';
+import { type ComponentType, useEffect, useSyncExternalStore } from 'react';
 import { ListSkeleton } from '@/components/query-state';
 import { useCurrentUser } from '@/providers/current-user';
 import { ActivityPanel } from './activity/activity-panel';
@@ -108,6 +108,15 @@ export function SettingsView() {
     next.set('tab', value);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
+  // The address always names the open section: plain /settings, or an unknown or
+  // forbidden `?tab=`, is rewritten to what is shown, so a copied link opens the same.
+  const asked = params.get('tab');
+  useEffect(() => {
+    if (!current || asked === current.value) return;
+    const next = new URLSearchParams(params);
+    next.set('tab', current.value);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }, [asked, current, params, pathname, router]);
 
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 py-2">

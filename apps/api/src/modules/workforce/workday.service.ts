@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
 import { AttendanceService } from './attendance.service';
+import { staffCalendar } from './holiday-days';
 import { lifetimePoints } from './points-total';
 import { loadPolicy } from './policy';
 import { trackingFor } from './tracking';
@@ -22,7 +23,7 @@ export class WorkdayService {
   async get(actor: Actor): Promise<MyWorkday> {
     const today = todayIn();
     const policy = await loadPolicy(this.db);
-    const [days, consent, tracking, leave, points] = await Promise.all([
+    const [days, consent, tracking, leave, points, calendar] = await Promise.all([
       readDays(this.db, today, [actor.userId]),
       this.attendance.consented(actor.userId),
       trackingFor(this.db, actor.userId),
@@ -32,6 +33,7 @@ export class WorkdayService {
         and(eq(pointsEntries.userId, actor.userId), eq(pointsEntries.status, 'approved')),
         500,
       ),
+      staffCalendar(this.db, policy, today),
     ]);
     // India months, the same rule as My rewards and the monthly review.
     const month = monthOf(new Date());
@@ -58,6 +60,7 @@ export class WorkdayService {
         leave.map((item) => item.row),
         today.slice(0, 4),
       ),
+      calendar,
       leave: leave
         .map((item) => item.record)
         .filter((record) => record.toDate >= today || record.status === 'pending')
