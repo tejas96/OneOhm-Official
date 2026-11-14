@@ -2,6 +2,9 @@ import { type DatabaseExecutor, type Notice, notifyStaffHolders } from '@oneohm/
 
 export { smsCanStandIn } from '@oneohm/domain';
 
+/** Meta's "re-engagement message" refusal: the 24-hour chat window has closed. */
+export const WINDOW_CLOSED_CODE = 131047;
+
 export const CHAT_WINDOW_CLOSED =
   'Not sent: the chat window closed (the customer last wrote over 23 hours ago).';
 

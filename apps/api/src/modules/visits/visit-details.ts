@@ -48,7 +48,7 @@ export async function visitDetails(
     lines.push(
       isPresenceKind(row.kind)
         ? `• *${dayWords(row.day)}* — ${workWords(row.kind)} ${VISIT_WORDS.byBoard} · ${home}`
-        : `• *${whenWords(row.day, row.slot)}* — ${workWords(row.kind)} · ${home}${who}`,
+        : `• *${whenWords(row.day, row.slot, row.startMin, row.endMin)}* — ${workWords(row.kind)} · ${home}${who}`,
     );
   }
   return lines.join('\n');

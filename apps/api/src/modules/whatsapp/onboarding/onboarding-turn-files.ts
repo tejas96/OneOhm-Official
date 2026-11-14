@@ -17,6 +17,8 @@ export async function takeChatFile(
   turn: Turn,
   files: ChatFilesService,
   step: OnboardStep,
+  /** Called with the filed document, e.g. to show a form's file on its card. */
+  onFiled?: (documentId: string) => Promise<void>,
 ): Promise<FileOutcome> {
   const { tx, chat } = turn;
   const got = await files.receive(tx, turn.file, {
@@ -27,6 +29,7 @@ export async function takeChatFile(
   turn.discard.push(...got.discard);
   if (got.pending) turn.pendingFile = got.pending;
   if (got.outcome === 'filed') turn.answers = { ...turn.answers, photo: 'sent' };
+  if (got.documentId && onFiled) await onFiled(got.documentId);
   await speak(turn, () => queueReply(tx, chat, { kind: 'text', body: fileWords(got.outcome) }));
   // After the estimate nobody is waiting on a question, so the owner is told of the bill.
   if (got.outcome === 'filed' && step === 'done') {

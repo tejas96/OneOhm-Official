@@ -113,7 +113,7 @@ export function LeadDetailView({ id }: { readonly id: string }) {
           {/* The lead's WhatsApp chat, answered here from the business number. */}
           <RecordChat phone={lead.phone} name={lead.name} />
           <LeadAskedCard leadId={lead.id} hasSite={lead.customerId !== null} />
-          {lead.customerId && <VisitCard scope={{ leadId: lead.id }} />}
+          <VisitCard scope={{ leadId: lead.id }} />
           <section aria-label={t('timeline.title')} className="flex flex-col gap-4">
             <SectionHeading index="01" title={t('timeline.title')} />
             <LeadTimeline activities={lead.activities} />

@@ -2,10 +2,11 @@ import type { ActionItem } from '@oneohm/api-contracts';
 import { chatsWaitingSince, type Database, leads, users, waConversations } from '@oneohm/database';
 import { chatWaitStage } from '@oneohm/domain';
 import { and, eq, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
+import { businessZone } from './business-days';
 import { plural } from './command-center-plural';
 
 /** Late chats are counted on the business clock (the same default the API uses). */
-const BUSINESS_TIME_ZONE = process.env.BUSINESS_TIMEZONE ?? 'Asia/Kolkata';
 
 export async function leadFollowUps(db: Database, today: string): Promise<ActionItem[]> {
   const rows = await db
@@ -67,9 +68,8 @@ export async function lateChats(db: Database): Promise<ActionItem[]> {
     open.map((chat) => chat.id),
   );
   const now = new Date();
-  const late = [...waiting.values()].filter(
-    (since) => chatWaitStage(since, now, BUSINESS_TIME_ZONE) === 2,
-  ).length;
+  const cal = await loadCalendar(db, businessZone());
+  const late = [...waiting.values()].filter((since) => chatWaitStage(since, now, cal) === 2).length;
   if (late === 0) return [];
   return [
     {

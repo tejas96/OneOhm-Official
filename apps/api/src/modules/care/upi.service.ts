@@ -8,6 +8,7 @@ import { logAction } from '../documents/customer-action-log';
 import { setStep } from '../whatsapp/assistant/chat-step';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { type Conversation } from '../whatsapp/chat-store';
+import { linkFormReply } from '../whatsapp/forms/form-record';
 import type { IncomingForm } from '../whatsapp/forms/form-reply-data';
 import { FormSendService } from '../whatsapp/forms/form-send';
 import { upiFormStart } from './care-form-words';
@@ -71,7 +72,9 @@ export class UpiService {
 
   /** The form came back with the UPI ID in it. */
   async fromForm(chat: Conversation, customerId: string, actionId: string, form: IncomingForm) {
-    return this.save(chat, customerId, actionId, form.answers.upi ?? '', false);
+    const saved = await this.save(chat, customerId, actionId, form.answers.upi ?? '', false);
+    await linkFormReply(this.db, chat.id, { kind: 'customer', id: customerId });
+    return saved;
   }
 
   private async save(

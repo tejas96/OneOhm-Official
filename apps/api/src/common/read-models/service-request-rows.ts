@@ -1,6 +1,7 @@
 import type { ServiceRequest, ServiceTicket } from '@oneohm/api-contracts';
 import {
   amcVisits,
+  businessTimeZone,
   customers,
   type DatabaseExecutor,
   projects,
@@ -105,7 +106,7 @@ export function toTicket(row: Row, now: Date): ServiceTicket {
     responseDueAt: iso(request.responseDueAt),
     resolutionDueAt: iso(request.resolutionDueAt),
     respondedAt: iso(request.respondedAt),
-    sla: serviceSla({ ...request, scheduledFor: row.visitDueOn }, now),
+    sla: serviceSla({ ...request, scheduledFor: row.visitDueOn }, now, businessTimeZone()),
   };
 }
 

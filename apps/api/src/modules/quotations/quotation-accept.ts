@@ -1,11 +1,12 @@
 import type { QuotationDetail } from '@oneohm/api-contracts';
 import {
+  answererFor,
   customers,
   type DatabaseExecutor,
+  dutyAlertTargets,
   leads,
   type Notice,
-  notifyCover,
-  notifyHolders,
+  notify,
   quotations,
   type Transaction,
 } from '@oneohm/database';
@@ -134,7 +135,11 @@ export async function customerVerdict(
   return 'open';
 }
 
-/** The lead owner and the people who set up projects hear that the customer said yes. */
+/**
+ * The people who can create projects, all of them at work today (the Super Admin too),
+ * hear that the customer said yes. The lead owner, who cannot start it, gets a separate
+ * FYI unless they are among them.
+ */
 export async function tellStartProject(tx: Transaction, quotation: QuotationDetail) {
   const notice: Notice = {
     kind: 'quotation_accepted',
@@ -143,14 +148,26 @@ export async function tellStartProject(tx: Transaction, quotation: QuotationDeta
     subject: { type: 'quotation', id: quotation.id },
     dedupeKey: `quote_accepted:${quotation.id}`,
   };
+  const targets = await dutyAlertTargets(tx, 'projects.create', { includeDesk: true });
+  for (const userId of targets)
+    await notify(tx, { userId }, { ...notice, dedupeKey: `${notice.dedupeKey}:${userId}` });
   const [lead] = quotation.input.leadId
     ? await tx
         .select({ owner: leads.ownerUserId })
         .from(leads)
         .where(eq(leads.id, quotation.input.leadId))
     : [];
-  // The same per-person key as notifyHolders, so an owner who also sets up projects hears
-  // once; an owner on leave today is covered by their backup, or else by the project setters.
-  if (lead?.owner) await notifyCover(tx, lead.owner, 'projects.create', notice);
-  await notifyHolders(tx, 'projects.create', notice);
+  if (!lead?.owner) return;
+  const owner = (await answererFor(tx, lead.owner)) ?? lead.owner;
+  if (targets.includes(owner)) return;
+  await notify(
+    tx,
+    { userId: owner },
+    {
+      ...notice,
+      kind: 'quotation_accepted_fyi',
+      title: `${quotation.customer.name} accepted ${quotation.number} on WhatsApp`,
+      dedupeKey: `quote_accepted_fyi:${quotation.id}:${owner}`,
+    },
+  );
 }

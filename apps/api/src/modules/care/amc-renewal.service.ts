@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { customerActions, customers, type DatabaseExecutor } from '@oneohm/database';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { loadCalendar } from '../../common/calendar';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { logAction } from '../documents/customer-action-log';
@@ -48,7 +49,10 @@ export class AmcRenewalService {
       .from(customers)
       .where(eq(customers.id, customerId));
     const person = await callerFor(this.db, { projectId: ask.projectId, phone: chat.phone });
-    const promise = callPromise(new Date(), this.env.BUSINESS_TIMEZONE);
+    const promise = callPromise(
+      new Date(),
+      await loadCalendar(this.db, this.env.BUSINESS_TIMEZONE),
+    );
     await this.db.transaction(async (tx) => {
       await this.close(ask, 'renew', tx);
       await openCallTask(tx, {

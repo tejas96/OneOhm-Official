@@ -7,9 +7,10 @@ import {
   notifyHolders,
   quotations,
 } from '@oneohm/database';
-import { lastWorkEnd } from '@oneohm/domain';
+import { type BusinessCalendar, lastWorkEnd } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, gte, isNotNull, like, lte, notInArray, type SQL, sql } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 import { acceptedWithoutProject } from '../quotations/quotation-project';
 import { PROMISED_CALL_HISTORY, PROMISED_CALL_NOTE } from './lead-from-chat';
 
@@ -23,8 +24,9 @@ const notAlerted = (key: SQL) =>
   sql`not exists (select 1 from ${notifications} n
     where n.dedupe_key = ${key} or n.dedupe_key like ${key} || ':%')`;
 
-/** The last day whose working hours are over: today after 6:30 pm, else yesterday. */
-const lastEndedDay = (now: Date, zone: string) => todayIn(zone, lastWorkEnd(now, zone));
+/** The last day whose working hours are over: today after closing time, else the working day before. */
+const lastEndedDay = (now: Date, cal: BusinessCalendar) =>
+  todayIn(cal.timeZone, lastWorkEnd(now, cal));
 
 /**
  * A sent quote with 3 days or less left, still not accepted and its lead not lost: one
@@ -74,7 +76,7 @@ export async function expiringQuotes(db: Database, now: Date, zone: string): Pro
  * are over with no call logged on the lead since, the owner gets one alert.
  */
 export async function missedPromisedCalls(db: Database, now: Date, zone: string): Promise<number> {
-  const ended = lastEndedDay(now, zone);
+  const ended = lastEndedDay(now, await loadCalendar(db, zone));
   const promisedAt = sql`(select max(p.created_at) from lead_activities p
     where p.lead_id = ${leads.id} and p.note like ${`${PROMISED_CALL_HISTORY}%`})`;
   const due = await db
@@ -112,7 +114,7 @@ export async function missedPromisedCalls(db: Database, now: Date, zone: string)
  * alert to the people who set up projects, so the advance link is not left waiting.
  */
 export async function acceptedNoProject(db: Database, now: Date, zone: string): Promise<number> {
-  const ended = lastEndedDay(now, zone);
+  const ended = lastEndedDay(now, await loadCalendar(db, zone));
   const since = new Date(now.getTime() - LOOK_BACK_DAYS * 86_400_000);
   let told = 0;
   for (const quote of await acceptedWithoutProject(db, since)) {

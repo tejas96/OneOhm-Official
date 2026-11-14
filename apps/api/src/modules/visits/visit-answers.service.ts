@@ -33,7 +33,10 @@ export class VisitAnswersService {
       case 'day':
         return this.picks.day(chat, customerId, tap.actionId, tap.day);
       case 'slot':
-        return this.picks.slot(chat, customerId, tap.actionId, tap.day, tap.slot);
+        return this.picks.slot(chat, customerId, tap.actionId, tap.day, {
+          ...(tap.slot ? { slot: tap.slot } : {}),
+          ...(tap.startMin !== undefined ? { startMin: tap.startMin } : {}),
+        });
       case 'confirm':
       case 'okay':
         return this.confirm(chat, customerId, tap.visitId, tap.t === 'okay', tap.day);
@@ -59,9 +62,12 @@ export class VisitAnswersService {
   /** [Confirm] / [I'll be there] / [Okay]: the customer's presence is logged. */
   /** A tap on an old message after the visit moved: nothing changes, the customer hears the new day. */
   private moved(chat: Conversation, row: VisitRow) {
-    return sayWithTaps(this.db, chat, VISIT_WORDS.thanks.moved(whenWords(row.day, row.slot)), [
-      'menu',
-    ]);
+    return sayWithTaps(
+      this.db,
+      chat,
+      VISIT_WORDS.thanks.moved(whenWords(row.day, row.slot, row.startMin, row.endMin)),
+      ['menu'],
+    );
   }
 
   private async confirm(

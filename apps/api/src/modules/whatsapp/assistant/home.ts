@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { customers } from '@oneohm/database';
 import { titleCaseName, todayIn } from '@oneohm/shared';
 import { eq } from 'drizzle-orm';
+import { loadCalendar } from '../../../common/calendar';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { callPromise } from '../../care/call-promise';
@@ -153,7 +154,7 @@ export class HomeService {
         title: `Call ${chat.profileName ?? first}: no project yet`,
         reason: 'no_project',
         once: `call:no_project:${chat.id}:${today}`,
-        promise: callPromise(new Date(), this.env.BUSINESS_TIMEZONE),
+        promise: callPromise(new Date(), await loadCalendar(this.db, this.env.BUSINESS_TIMEZONE)),
       });
     const body = `${CHAT_WORDS.home.hello(first)}\n${CHAT_WORDS.home.noProject(name, when)}`;
     return sayWithTaps(this.db, chat, body, [{ id: 'go:talk', title: talkTitle(name) }, 'more']);

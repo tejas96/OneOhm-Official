@@ -1,4 +1,5 @@
 import type { ServiceTicket } from '@oneohm/api-contracts';
+import { businessTimeZone } from '@oneohm/database';
 import { type SlaHours, slaDueDates } from '@oneohm/domain';
 
 export type Patch = {
@@ -29,7 +30,8 @@ export function changesFor(patch: Patch, before: Before, now: Date, recategory?:
   const moving = patch.status !== undefined && patch.status !== before.status;
   const answered = moving && patch.status !== 'open' && !before.respondedAt;
   const due =
-    recategory?.hours && slaDueDates(recategory.hours, before.createdAt, recategory.scheduledFor);
+    recategory?.hours &&
+    slaDueDates(recategory.hours, before.createdAt, recategory.scheduledFor, businessTimeZone());
   return {
     ...(patch.status ? { status: patch.status } : {}),
     ...(patch.assigneeUserId !== undefined ? { assigneeUserId: patch.assigneeUserId } : {}),

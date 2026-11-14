@@ -1,7 +1,7 @@
 /** The rupees typed in the form as paise ("1,200" → 120000); null when it is not a sensible amount. */
 export function paiseFrom(typed: string | null): number | null {
   if (!typed) return null;
-  const rupees = Number(typed.replace(/[,\s₹]/g, ''));
+  const rupees = Number(typed.replace(/[,\s₹]|rs\.?/gi, ''));
   if (!Number.isFinite(rupees) || rupees <= 0 || rupees > 100_000_00) return null;
   return Math.round(rupees * 100);
 }
@@ -19,5 +19,7 @@ export function dayFrom(picked: string | null, now = new Date()): string | null 
       : null;
   if (!date || Number.isNaN(date.getTime())) return null;
   const day = date.toISOString().slice(0, 10);
-  return day > now.toISOString().slice(0, 10) ? null : day;
+  // The customer's today may already be tomorrow in UTC (India is ahead): a day up to 14 hours on is today.
+  const today = new Date(now.getTime() + 14 * 3_600_000).toISOString().slice(0, 10);
+  return day > today ? null : day;
 }

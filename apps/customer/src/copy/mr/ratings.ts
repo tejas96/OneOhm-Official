@@ -10,7 +10,7 @@ export const STAGE_RATING: Copy<typeof en.STAGE_RATING> = {
   stage: {
     survey: 'साईट भेट',
     installation: 'पॅनल बसवण्याचे काम',
-    commissioning: 'सिस्टिम सुरू करणे आणि ताब्यात देणे',
+    commissioning: 'सिस्टिम सुरू करणे',
   },
   cardTitle: (stage) => `${stage}: तुमचा अनुभव कसा होता?`,
   cardBody: (project) => `${project} · काही सेकंद लागतील.`,

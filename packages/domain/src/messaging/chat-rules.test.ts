@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_CALENDAR, isWorkingTime } from '../calendar/business-calendar';
 import {
-  CALL_DAY_WORDS,
   CHAT_WINDOW_HOURS,
   callDay,
+  callDayWords,
   chatWaitStage,
   chatWindowOpen,
-  isWorkingTime,
   lastWorkEnd,
   pickAnswerer,
   replyTime,
@@ -14,7 +14,7 @@ import {
   workingMinutesSince,
 } from './chat-rules';
 
-const TZ = 'Asia/Kolkata';
+const TZ = DEFAULT_CALENDAR;
 /** A time in India on 2 Nov 2026 (UTC+5:30). */
 const ist = (hhmm: string) => new Date(`2026-11-02T${hhmm}:00+05:30`);
 
@@ -88,12 +88,12 @@ describe('the last work end skips Sunday', () => {
 describe('when a promised call is due', () => {
   const at = (iso: string) => callDay(new Date(`${iso}:00+05:30`), TZ);
   it('is today in working hours; Friday evening → Saturday; Saturday evening and Sunday → Monday', () => {
-    expect(at('2026-11-06T11:00')).toEqual({ day: 'today', add: 0 });
-    expect(at('2026-11-06T20:00')).toEqual({ day: 'tomorrow', add: 1 });
-    expect(at('2026-11-07T20:00')).toEqual({ day: 'monday', add: 2 });
-    expect(at('2026-11-08T11:00')).toEqual({ day: 'tomorrow', add: 1 });
-    expect(at('2026-11-09T08:00')).toEqual({ day: 'today', add: 0 });
-    expect(CALL_DAY_WORDS.monday).toBe('on Monday morning');
+    expect(at('2026-11-06T11:00')).toEqual({ day: 'today', add: 0, weekday: 5 });
+    expect(at('2026-11-06T20:00')).toEqual({ day: 'tomorrow', add: 1, weekday: 6 });
+    expect(at('2026-11-07T20:00')).toEqual({ day: 'later', add: 2, weekday: 1 });
+    expect(at('2026-11-08T11:00')).toEqual({ day: 'tomorrow', add: 1, weekday: 1 });
+    expect(at('2026-11-09T08:00')).toEqual({ day: 'today', add: 0, weekday: 1 });
+    expect(callDayWords({ day: 'later', weekday: 1 })).toBe('on Monday morning');
   });
 });
 
@@ -103,7 +103,7 @@ describe('when a person can reply', () => {
     expect(at('2026-11-02T11:00')).toBe('now');
     expect(at('2026-11-02T08:00')).toBe('today');
     expect(at('2026-11-02T19:00')).toBe('tomorrow');
-    expect(at('2026-11-07T19:00')).toBe('monday');
+    expect(at('2026-11-07T19:00')).toBe('later');
     expect(at('2026-11-01T08:00')).toBe('tomorrow');
     expect(at('2026-11-01T20:00')).toBe('tomorrow');
   });
@@ -169,14 +169,10 @@ describe('workingMinutesBetween', () => {
   const at = (day: string, utc: string) => new Date(`${day}T${utc}:00Z`);
   it('counts only Monday to Saturday 9:30 to 18:30 (IST)', () => {
     // Friday 17:30 to Monday 09:30: one hour on Friday, a whole Saturday, no Sunday.
-    expect(
-      workingMinutesBetween(at('2026-11-06', '12:00'), at('2026-11-09', '04:00'), 'Asia/Kolkata'),
-    ).toBe(600);
-    expect(
-      workingMinutesBetween(at('2026-11-08', '04:00'), at('2026-11-08', '12:00'), 'Asia/Kolkata'),
-    ).toBe(0);
-    expect(
-      workingMinutesBetween(at('2026-11-05', '06:00'), at('2026-11-05', '05:00'), 'Asia/Kolkata'),
-    ).toBe(0);
+    expect(workingMinutesBetween(at('2026-11-06', '12:00'), at('2026-11-09', '04:00'), TZ)).toBe(
+      600,
+    );
+    expect(workingMinutesBetween(at('2026-11-08', '04:00'), at('2026-11-08', '12:00'), TZ)).toBe(0);
+    expect(workingMinutesBetween(at('2026-11-05', '06:00'), at('2026-11-05', '05:00'), TZ)).toBe(0);
   });
 });

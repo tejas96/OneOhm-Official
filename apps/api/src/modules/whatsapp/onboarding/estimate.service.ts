@@ -14,7 +14,7 @@ import { ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
 import { CatalogService } from '../../catalog/catalog.service';
 import { updateLeadFromChat } from '../../crm/lead-from-chat';
-import { logLead } from '../../crm/lead-history';
+import { autoMoveLead } from '../../crm/lead-history';
 import {
   type PricedQuotation,
   QuotationPricingService,
@@ -157,13 +157,13 @@ export class EstimateService {
     const size = kw(totals.capacityWp);
     const price = formatInr(totals.totalPaise);
     const after = formatInr(totals.effectivePaise);
-    // The bot's estimate is not a person getting in touch: the lead stays where it is.
-    await logLead(
+    // The customer has a price in hand: the lead is contacted (said on the timeline with why).
+    await autoMoveLead(
       tx,
       leadId,
       null,
-      'note',
-      `Estimate sent: ${size}, ${price} (${after} after subsidy).`,
+      'contacted',
+      `Instant estimate sent on WhatsApp: ${size}, ${price} (${after} after subsidy).`,
     );
     // Nothing tapped yet: the owner calls today (the move's note says why); a tap changes it.
     await updateLeadFromChat(

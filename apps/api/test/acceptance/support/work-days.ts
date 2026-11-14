@@ -1,4 +1,4 @@
-import { CALL_DAY_WORDS, callDay } from '@oneohm/domain';
+import { callDay, callDayWords, DEFAULT_CALENDAR } from '@oneohm/domain';
 import { addDays } from './sales';
 
 /**
@@ -6,7 +6,7 @@ import { addDays } from './sales';
  * Monday–Saturday 9:30–6:30, Sunday closed), so no scenario depends on the day or hour
  * the suite runs.
  */
-const ZONE = 'Asia/Kolkata';
+const ZONE = DEFAULT_CALENDAR.timeZone;
 
 /** The business day (YYYY-MM-DD) of a moment, in India. */
 export const dayIn = (at: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: ZONE }).format(at);
@@ -19,8 +19,8 @@ export const weekdayOf = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay
  * else the next working morning — Monday after Saturday evening or on Sunday.
  */
 export function promisedCall(now = new Date()): { day: string; when: string } {
-  const call = callDay(now, ZONE);
-  return { day: addDays(dayIn(now), call.add), when: CALL_DAY_WORDS[call.day] };
+  const call = callDay(now, DEFAULT_CALENDAR);
+  return { day: addDays(dayIn(now), call.add), when: callDayWords(call) };
 }
 
 /**

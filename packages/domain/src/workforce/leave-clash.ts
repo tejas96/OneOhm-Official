@@ -1,4 +1,4 @@
-import { overlaps } from './leave';
+import { dateRangesOverlap } from './leave';
 
 /** A leave request as far as clashes and approval go. */
 export interface ClashLeave {
@@ -38,7 +38,7 @@ export function leaveClashes<T extends ClashLeave>(
     (leave) =>
       leave.id !== request.id &&
       live(leave) &&
-      overlaps(range, { from: leave.fromDate, to: leave.toDate }),
+      dateRangesOverlap(range, { from: leave.fromDate, to: leave.toDate }),
   );
   return {
     backupAway: request.backupUserId

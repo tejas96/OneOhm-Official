@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { customers, leads } from '@oneohm/database';
 import { addDays, todayIn } from '@oneohm/shared';
 import { and, eq, notInArray } from 'drizzle-orm';
+import { loadCalendar } from '../../../common/calendar';
 import { AppError } from '../../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../../config/core.module';
 import type { Environment } from '../../../config/environment';
@@ -93,7 +94,10 @@ export class QuoteQuestionsService {
   private async callMe(chat: Conversation, quotation: Quotation) {
     const customerId = quotation.customer.id;
     const person = await callerFor(this.db, { phone: chat.phone });
-    const promise = callPromise(new Date(), this.env.BUSINESS_TIMEZONE);
+    const promise = callPromise(
+      new Date(),
+      await loadCalendar(this.db, this.env.BUSINESS_TIMEZONE),
+    );
     await this.db.transaction(async (tx) => {
       const made = await openCallTask(tx, {
         customerId,

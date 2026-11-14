@@ -151,7 +151,7 @@
         "stage": {
           "survey": "Site survey",
           "installation": "Installation",
-          "commissioning": "Switch-on and handover"
+          "commissioning": "Switch-on"
         },
         "stars": "{rating} out of 5 stars",
         "replyBy": "{name} replied:",

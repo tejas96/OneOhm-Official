@@ -18,6 +18,11 @@ import {
   projectVariantSchema,
   reminderTimingSchema,
 } from '../schemas/business-settings.schema';
+import {
+  visitSettingsSchema,
+  workingTimeSavedSchema,
+  workingTimeSchema,
+} from '../schemas/working-time.schema';
 
 const c = initContract();
 
@@ -103,6 +108,32 @@ export const businessSettingsContract = c.router({
     path: '/settings/dashboard',
     body: dashboardSettingsSchema,
     responses: { 200: dashboardSettingsSchema },
+  },
+  workingTime: {
+    method: 'GET',
+    path: '/settings/working-time',
+    responses: { 200: workingTimeSchema },
+    summary: 'Working days, opening hours, lunch and holidays: the one business calendar.',
+  },
+  saveWorkingTime: {
+    method: 'PUT',
+    path: '/settings/working-time',
+    body: workingTimeSchema,
+    responses: { 200: workingTimeSavedSchema },
+    summary:
+      'Saves the calendar (checked against the saved visit times) and lists booked visits it leaves outside working time.',
+  },
+  visitSettings: {
+    method: 'GET',
+    path: '/settings/visits',
+    responses: { 200: visitSettingsSchema },
+  },
+  saveVisitSettings: {
+    method: 'PUT',
+    path: '/settings/visits',
+    body: visitSettingsSchema,
+    responses: { 200: visitSettingsSchema },
+    summary: 'Visit length, times, notice, reminders (checked against the working time).',
   },
   projectVariants: {
     method: 'GET',

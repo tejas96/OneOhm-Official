@@ -29,7 +29,19 @@ interface Policy {
   travel: { hoursMarginMinutes: number };
 }
 
-/** Runs `work` inside working hours for location, restoring the saved policy after. */
+interface WorkingTime {
+  weeklyOff: number[];
+  dayStart: string;
+  dayEnd: string;
+  lunchStart: string | null;
+  lunchEnd: string | null;
+  holidays: { day: string; name: string }[];
+}
+
+/**
+ * Runs `work` inside working hours for location, restoring the hours after. The hours are the
+ * business hours (Settings → Working time & holidays), so they are widened there.
+ */
 export async function inLocationHours<T>(admin: Session, work: () => Promise<T>): Promise<T> {
   const { policy } = await admin.get<{ policy: Policy }>('/settings/workforce');
   const now = minutes(indiaTime());
@@ -38,14 +50,12 @@ export async function inLocationHours<T>(admin: Session, work: () => Promise<T>)
     now >= minutes(policy.attendance.dayStart) - margin &&
     now <= minutes(policy.attendance.dayEnd) + margin;
   if (open) return work();
-  await admin.put('/settings/workforce', {
-    ...policy,
-    attendance: { ...policy.attendance, dayStart: '00:00', dayEnd: '23:59' },
-  });
+  const hours = await admin.get<WorkingTime>('/settings/working-time');
+  await admin.put('/settings/working-time', { ...hours, dayStart: '00:00', dayEnd: '23:59' });
   try {
     return await work();
   } finally {
-    await admin.put('/settings/workforce', policy);
+    await admin.put('/settings/working-time', hours);
   }
 }
 

@@ -17,7 +17,8 @@ import { quoteInput, uniquePhone } from '../support/sales';
 // The run writes the owner's transcript of this customer's whole journey.
 const OUT = 'docs/testing/2026-11-03-whatsapp-journey-transcript.md';
 const MR_THANKS =
-  /^धन्यवाद ✅ \S+ आज \(किंवा पुढच्या कामाच्या दिवशी\) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील\.$/;
+  // "आमची टीम" (our team) unless the person named can start projects.
+  /^धन्यवाद ✅ (?:आमची टीम|\S+) आज \(किंवा पुढच्या कामाच्या दिवशी\) तुमचा प्रकल्प सुरू करतील आणि आगाऊ रकमेची पेमेंट लिंक पाठवतील\.$/;
 const pdfType = { status: 200, type: expect.stringContaining('application/pdf') };
 
 describe('The full WhatsApp customer journey: quote to paid advance', () => {
@@ -109,6 +110,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
     ]);
     expect((await lead()).stage).toBe('won');
     const told = await J.alerted('quotation_accepted', quote.id);
+    told.push(...(await J.alerted('quotation_accepted_fyi', quote.id)));
     for (const id of [j.owner.id, ...(await J.holdersOf('projects.create'))])
       expect(told).toContain(id);
     expect(
@@ -163,11 +165,11 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       [advance().id],
     );
     expect(Number(payment?.amount_paise)).toBe(owed(advance()));
-    const [received] = await J.outboxOf(phone, 'payment_received');
-    const receiptFile = received?.payload.documentName ?? '';
-    // Named for the customer (C16); the chat then says what is next, who to call, with taps (C6).
-    await expectPaidNews(receiptFile, payment?.id ?? '', project.id);
-    expect(await J.fetchFile(received?.payload.documentUrl ?? '')).toMatchObject(pdfType);
+    // The chat is open: one message with the receipt PDF on top, not the template as well (C6, C16).
+    expect(await J.outboxOf(phone, 'payment_received')).toHaveLength(0);
+    const receipt = await expectPaidNews(payment?.id ?? '', project.id);
+    const receiptFile = receipt.filename;
+    expect(await J.fetchFile(receipt.url)).toMatchObject(pdfType);
     const [owner] = await rows<{ id: string }>(
       'SELECT coalesce(manager_user_id, $2) AS id FROM projects WHERE id = $1',
       [project.id, j.owner.id],
@@ -222,7 +224,7 @@ describe('The full WhatsApp customer journey: quote to paid advance', () => {
       'Bill: ₹2,000–3,000',
       'Roof: RCC, 2 floors',
       'Bill file received on WhatsApp (not checked)',
-      'Estimate sent: ',
+      'Instant estimate sent on WhatsApp: ',
       `Asked for a call ${promisedCall().when} after the estimate`,
       'Converted to a customer',
       `Quotation ${quote.number} sent`,

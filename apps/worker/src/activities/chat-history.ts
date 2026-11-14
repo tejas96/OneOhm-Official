@@ -1,7 +1,9 @@
 import {
   customerContacts,
+  customerNotice,
   customers,
   type Database,
+  localValues,
   messageTemplates,
   waConversations,
   waMessages,
@@ -16,6 +18,8 @@ interface SentTemplate {
   readonly template: string;
   readonly payload: unknown;
   readonly dedupeKey: string | null;
+  /** When it was queued: the chat log keeps queue order, as chat replies are logged then. */
+  readonly createdAt?: Date;
 }
 
 /**
@@ -23,7 +27,11 @@ interface SentTemplate {
  * WhatsApp chat, so whoever answers sees what the customer is replying to. Chat replies
  * and follow-ups are already in the chat when they are queued, so they are left alone.
  */
-export async function logTemplateInChat(db: Database, row: SentTemplate): Promise<void> {
+export async function logTemplateInChat(
+  db: Database,
+  row: SentTemplate,
+  sentText?: string,
+): Promise<void> {
   if (row.template.startsWith('session:') || row.dedupeKey?.startsWith('chat:')) return;
   // The customer's own number, or a family member on exactly one customer's list.
   const [own] = await db
@@ -75,9 +83,32 @@ export async function logTemplateInChat(db: Database, row: SentTemplate): Promis
   await db.insert(waMessages).values({
     conversationId: chat.id,
     direction: 'out',
-    kind: 'template',
-    // Staff read English; a Marathi or Hindi template says so at the end.
-    body: `${renderTemplate(words.preview, words.fields, values)}${config ? sentInTag(config, values.language) : ''}`,
+    kind: sentText ? 'text' : 'template',
+    body: sentText ?? templateLogText(row.template, words, values, config),
     outboxId: row.id,
+    ...(row.createdAt && { createdAt: row.createdAt }),
   });
+}
+
+/**
+ * What the staff log says a template said: its English preview, or, when the Marathi or
+ * Hindi template went out, the same news in that language (what the customer read), tagged.
+ */
+export function templateLogText(
+  template: string,
+  words: { readonly preview: string; readonly fields: readonly string[] },
+  values: Record<string, string>,
+  config: Parameters<typeof sentInTag>[0] | undefined,
+): string {
+  const tag = config ? sentInTag(config, values.language) : '';
+  if (!tag) return renderTemplate(words.preview, words.fields, values);
+  const local = customerNotice(
+    template,
+    localValues(values.language, template, values),
+    'log',
+    values.language,
+  );
+  if (!local)
+    return `${renderTemplate(words.preview, words.fields, localValues(values.language, template, values))}${tag}`;
+  return `${local.body ? `${local.title}: ${local.body}` : local.title}${tag}`;
 }

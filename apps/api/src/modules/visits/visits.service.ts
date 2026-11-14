@@ -1,21 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SetVisit, Visit, VisitScope, VisitsOf } from '@oneohm/api-contracts';
 import { homeNameOf, leads, projectTasks, users, visits } from '@oneohm/database';
-import { freeSlots, isPresenceKind, isWorkingDay, OPEN_VISIT_STATUSES } from '@oneohm/domain';
+import { isPresenceKind, isWorkingDay, OPEN_VISIT_STATUSES, slotLabel } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan } from '../../common/auth/actor';
+import { loadCalendar } from '../../common/calendar';
 import { conflict, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { leadVisibility } from '../crm/lead-read';
 import { tellBooked } from './visit-booked';
-import { freeDaysFor, takenSlots } from './visit-capacity';
 import type { VisitRow } from './visit-effects';
 import { openVisitFor, scopeOfRow, targetOf, taskVisitKind, type VisitTarget } from './visit-reads';
 import { cancelVisit, finishVisit, saveVisit } from './visit-store';
 import { tellCancelled, visitContext } from './visit-tell';
+import { daysFor, timesFor } from './visit-times';
 
 /** Staff set, move, cancel and finish visits (redesign §8, §18 actions 4, 5 and 12). */
 @Injectable()
@@ -46,6 +47,7 @@ export class VisitsService {
         visits: [],
         taskStartDate: null,
         freeDays: [],
+        freeTimes: {},
       };
     const target = await targetOf(this.db, scope);
     const rows = await this.db
@@ -60,9 +62,7 @@ export class VisitsService {
       customerMessages: target.mayMessage,
       visits: await Promise.all(rows.map((row) => this.present(row, target))),
       taskStartDate: target.taskId ? await this.taskStart(target.taskId) : null,
-      freeDays: isPresenceKind(target.kind)
-        ? []
-        : await freeDaysFor(this.db, target.crew, 9, undefined, this.env.BUSINESS_TIMEZONE),
+      ...(await this.freeTimes(target)),
     };
   }
 
@@ -74,15 +74,26 @@ export class VisitsService {
     const presence = isPresenceKind(target.kind);
     if (body.day < today)
       throw invalid('Pick today or a later day.', { day: 'This day has passed.' });
-    if (!presence && !isWorkingDay(body.day))
-      throw invalid('We do not visit on Sunday.', { day: 'Pick Monday to Saturday.' });
+    if (
+      !presence &&
+      !isWorkingDay(body.day, await loadCalendar(this.db, this.env.BUSINESS_TIMEZONE))
+    )
+      throw invalid('We do not visit on a day off or a holiday.', {
+        day: 'Pick a working day (Settings → Working time & holidays).',
+      });
     const existing = await openVisitFor(this.db, target);
-    if (!presence) await this.assertFree(target, body, existing);
     return this.db.transaction(async (tx) => {
       const { row, moved } = await saveVisit(
         tx,
         target,
-        { day: body.day, slot: body.slot, status: 'confirmed', by: 'staff', userId: actor.userId },
+        {
+          day: body.day,
+          slot: body.slot,
+          ...(body.startMin !== undefined ? { startMin: body.startMin } : {}),
+          status: 'confirmed',
+          by: 'staff',
+          userId: actor.userId,
+        },
         existing,
         new Date(),
         this.env.BUSINESS_TIMEZONE,
@@ -145,18 +156,23 @@ export class VisitsService {
   }
 
   /** One person cannot have two visits in one slot. */
-  private async assertFree(target: VisitTarget, body: SetVisit, existing: VisitRow | null) {
-    const taken = await takenSlots(
-      this.db,
-      target.crew,
-      todayIn(this.env.BUSINESS_TIMEZONE),
-      existing?.id,
-    );
-    if (!freeSlots(taken[body.day] ?? []).includes(body.slot))
-      throw conflict(
-        'The person who comes already has a visit then. Pick another time.',
-        'slot_taken',
-      );
+  /** The days staff can book for this crew and each day's free times (one engine with the customer's). */
+  private async freeTimes(target: VisitTarget) {
+    if (isPresenceKind(target.kind)) return { freeDays: [], freeTimes: {} };
+    const query = {
+      crew: target.crew,
+      who: 'staff' as const,
+      timeZone: this.env.BUSINESS_TIMEZONE,
+    };
+    const freeDays = await daysFor(this.db, query);
+    const freeTimes: Record<string, { startMin: number; endMin: number; label: string }[]> = {};
+    for (const day of freeDays)
+      freeTimes[day] = (await timesFor(this.db, day, query)).map(({ startMin, endMin, label }) => ({
+        startMin,
+        endMin,
+        label,
+      }));
+    return { freeDays, freeTimes };
   }
 
   private where(target: VisitTarget) {
@@ -184,6 +200,9 @@ export class VisitsService {
       status: row.status,
       day: row.day,
       slot: row.slot,
+      startMin: row.startMin,
+      endMin: row.endMin,
+      time: row.startMin != null && row.endMin != null ? slotLabel(row.startMin, row.endMin) : null,
       home: target.home || (await homeNameOf(db, row.projectId, row.propertyId)),
       taskId: row.taskId,
       leadId: row.leadId,

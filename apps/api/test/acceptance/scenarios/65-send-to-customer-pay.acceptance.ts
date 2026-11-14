@@ -147,7 +147,13 @@ describe('Send to customer: payments', () => {
       'upi',
     );
     expect((await actionsOf(sale.customer.customerId, 'pay'))[0]?.status).toBe('closed');
-    expect(await templatesFor(sale.customer.phone, 'payment_received')).not.toHaveLength(0);
+    // The chat is open: the receipt PDF rides on the one thank-you message, no template too.
+    expect(await templatesFor(sale.customer.phone, 'payment_received')).toHaveLength(0);
+    const [thanks] = await rows<{ payload: { header?: { document: { filename: string } } } }>(
+      "SELECT payload FROM outbox WHERE recipient = $1 AND dedupe_key LIKE 'paid_next:%'",
+      [sale.customer.phone],
+    );
+    expect(thanks?.payload.header?.document.filename).toMatch(/receipt/i);
   });
 
   it('without a published form the chat asks for the proof photo; a used form is old', async () => {

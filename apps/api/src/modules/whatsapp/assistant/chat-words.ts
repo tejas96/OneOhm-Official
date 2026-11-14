@@ -2,6 +2,7 @@ import type { ReplyTime } from '@oneohm/domain';
 import { homeEn } from '@oneohm/shared';
 import { HI_CHAT } from './chat-words-hi';
 import { MR_CHAT } from './chat-words-mr';
+import { callWord, openingNow, replyWhen } from './hours-words';
 import { localized } from './language';
 
 /**
@@ -62,7 +63,12 @@ const EN_CHAT = {
       problems: { title: 'My problems', description: 'How your problems are going' },
       warranty: { title: 'Warranty & AMC', description: 'Your cover and check-up visits' },
       refer: { title: 'Refer a friend', description: 'Earn a reward for each friend' },
-      talk: { title: 'Talk to our team', description: 'Replies here, Mon–Sat 9:30–6:30' },
+      talk: {
+        title: 'Talk to our team',
+        get description() {
+          return `Replies here, ${openingNow('en')}`;
+        },
+      },
       language: { title: 'Language', description: 'English, मराठी, हिंदी' },
     },
   },
@@ -83,7 +89,7 @@ const EN_CHAT = {
     nothing: 'How can we help today?',
     count: (count: number) => `${count} things need you.`,
     noProject: (name: string | null, when: ReplyTime) =>
-      `We are preparing your solar plan. ${name ?? 'Our team'} will call you ${EN_CALL[when]}.`,
+      `We are preparing your solar plan. ${name ?? 'Our team'} will call you ${callWord(when, 'en')}.`,
     seeThem: 'Here is what needs you now.',
     paperRow: (home: string | null) =>
       home ? `We need it for your ${homeEn(home)}` : 'We need it from you',
@@ -103,16 +109,16 @@ const EN_CHAT = {
   unsupported: 'Sorry, we couldn’t open that. Please send it again as a photo, PDF or text.',
   /** Talk to Priya: who replies and when, said every time (principles §5). */
   talkReply: (name: string | null, when: ReplyTime) =>
-    `${name ?? 'Our team'} will reply ${EN_WHEN[when]}.`,
+    `${name ?? 'Our team'} will reply ${replyWhen(when, 'en')}.`,
   /** Words for their person (a reply to our update, a quote question). */
   passed: (name: string | null, when: ReplyTime) =>
-    `Thank you. We’ve passed this to ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
+    `Thank you. We’ve passed this to ${name ?? 'our team'}, who will reply ${replyWhen(when, 'en')}.`,
   /** The second message in a row we did not understand. */
   passedUnknown: (name: string | null, when: ReplyTime) =>
-    `Sorry, we still didn’t get that. We’ve passed your message to ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
+    `Sorry, we still didn’t get that. We’ve passed your message to ${name ?? 'our team'}, who will reply ${replyWhen(when, 'en')}.`,
   /** Once a night, outside working hours, while a person has the chat. */
   nightReply: (name: string | null, when: ReplyTime) =>
-    `Thank you. Your message is with ${name ?? 'our team'}, who will reply ${EN_WHEN[when]}.`,
+    `Thank you. Your message is with ${name ?? 'our team'}, who will reply ${replyWhen(when, 'en')}.`,
   handedBack: (name: string | null) => `${name ?? 'Our team'} is away now — we’re here to help.`,
   earlier: 'That was an earlier message — here is the latest.',
   /** A typed "bill": their electricity bill we need, our invoice, or what they owe? */
@@ -128,20 +134,6 @@ const EN_CHAT = {
     list: (papers: string) => `We still need: ${papers}.\nSend the photo or PDF here.`,
     any: 'Send the photo or PDF here and tell us what it is.',
   },
-};
-
-const EN_WHEN: Record<ReplyTime, string> = {
-  now: 'here soon (Mon–Sat, 9:30–6:30)',
-  today: 'here today from 9:30',
-  tomorrow: 'here tomorrow from 9:30',
-  monday: 'here on Monday from 9:30',
-};
-
-const EN_CALL: Record<ReplyTime, string> = {
-  now: 'today',
-  today: 'today',
-  tomorrow: 'tomorrow',
-  monday: 'on Monday',
 };
 
 export type ChatWords = typeof EN_CHAT;

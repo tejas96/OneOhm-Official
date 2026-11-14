@@ -1,5 +1,5 @@
-import { quotations, type Transaction } from '@oneohm/database';
-import { and, eq, inArray, like, sql } from 'drizzle-orm';
+import { nextInSeries, quotations, type Transaction } from '@oneohm/database';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 export interface RevisionOf {
   readonly id: string;
@@ -39,14 +39,11 @@ export async function numberFor(
       .where(eq(quotations.id, previous.id));
     return { number: previous.number, revision: previous.revision + 1, previousId: previous.id };
   }
-  const prefix = `OH-Q-${today.slice(0, 4)}-`;
-  const [row] = await tx
-    .select({ count: sql<number>`count(distinct ${quotations.number})::int` })
-    .from(quotations)
-    .where(like(quotations.number, `${prefix}%`));
-  return {
-    number: `${prefix}${String((row?.count ?? 0) + 1).padStart(4, '0')}`,
-    revision: 1,
-    previousId: null,
-  };
+  const number = await nextInSeries(tx, {
+    column: quotations.number,
+    prefix: `OH-Q-${today.slice(0, 4)}-`,
+    width: 4,
+    lockKey: 'quotation',
+  });
+  return { number, revision: 1, previousId: null };
 }

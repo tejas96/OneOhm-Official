@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BUTTON_MAX,
   CHAT_LISTS,
@@ -13,6 +13,8 @@ import { PAPER_LISTS } from './paper-words';
 import { EN } from './words';
 import { HI } from './words-hi';
 import { MR } from './words-mr';
+
+afterEach(() => vi.useRealTimers());
 
 const LANGUAGES = ['en', 'mr', 'hi'] as const;
 
@@ -79,11 +81,15 @@ describe('the chat dictionary (redesign §1: WhatsApp limits)', () => {
   });
 
   it('says who replies and when, in hours and outside them', () => {
+    // Saturday evening: the next opening that is not tomorrow is Monday.
+    vi.useFakeTimers({ now: new Date('2026-11-07T20:00:00+05:30') });
     const en = CHAT_LISTS.en;
-    expect(en.talkReply('Priya', 'now')).toBe('Priya will reply here soon (Mon–Sat, 9:30–6:30).');
+    expect(en.talkReply('Priya', 'now')).toBe(
+      'Priya will reply here soon (Mon–Sat, 9:30 am–6:30 pm).',
+    );
     expect(en.talkReply('Priya', 'tomorrow')).toBe('Priya will reply here tomorrow from 9:30.');
-    expect(en.talkReply(null, 'monday')).toBe('Our team will reply here on Monday from 9:30.');
-    expect(en.nightReply('Priya', 'monday')).toBe(
+    expect(en.talkReply(null, 'later')).toBe('Our team will reply here on Monday from 9:30.');
+    expect(en.nightReply('Priya', 'later')).toBe(
       'Thank you. Your message is with Priya, who will reply here on Monday from 9:30.',
     );
     expect(en.handedBack('Priya')).toBe('Priya is away now — we’re here to help.');
@@ -92,9 +98,9 @@ describe('the chat dictionary (redesign §1: WhatsApp limits)', () => {
       for (const text of [
         words.talkReply('Priya', 'now'),
         words.passed('Priya', 'today'),
-        words.passedUnknown('Priya', 'monday'),
+        words.passedUnknown('Priya', 'later'),
         words.handedBack('Priya'),
-        words.nightReply('Priya', 'monday'),
+        words.nightReply('Priya', 'later'),
         words.home.noProject('Priya', 'tomorrow'),
       ])
         expect(text, language).toContain('Priya');

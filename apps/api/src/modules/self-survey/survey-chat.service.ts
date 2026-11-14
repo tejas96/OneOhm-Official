@@ -11,6 +11,7 @@ import { targetOf } from '../visits/visit-reads';
 import { sayWithTaps } from '../whatsapp/assistant/closing-taps';
 import { type Conversation, chatDocumentFor, queueReply } from '../whatsapp/chat-store';
 import { FormFileKeeper, showFormFiles } from '../whatsapp/forms/form-files';
+import { linkFormToProject } from '../whatsapp/forms/form-record';
 import type { IncomingForm } from '../whatsapp/forms/form-reply-data';
 import { FormSendService } from '../whatsapp/forms/form-send';
 import type { Incoming, IncomingMedia } from '../whatsapp/whatsapp-events';
@@ -118,14 +119,12 @@ export class SurveyChatService {
     if (task) await this.db.transaction((tx) => askLocationAfter(tx, task));
   }
 
-  /**
-   * The survey form came back: the answers and each photo (checked and stored once like any chat file) are
-   * saved; what is missing or refused is asked in the chat, one at a time; a complete survey is sent.
-   */
+  /** The form came back: answers and photos are saved; what is missing is asked in the chat; complete is sent. */
   async fromForm(chat: Conversation, customerId: string, id: string, form: IncomingForm) {
     const ask = await surveyById(this.db, customerId, id);
     if (!ask)
       return void (await queueReply(this.db, chat, { kind: 'text', body: SURVEY_WORDS.old }));
+    await linkFormToProject(this.db, chat.id, ask.projectId, customerId);
     const kept: { id: string; media: string; item: SurveyPhoto }[] = [];
     const refused = new Set<string>();
     for (const [item, file] of Object.entries(form.named)) {

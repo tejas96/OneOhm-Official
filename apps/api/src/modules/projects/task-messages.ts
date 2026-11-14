@@ -1,6 +1,7 @@
 import {
   customers,
   type DatabaseExecutor,
+  type MessageFallback,
   notify,
   projects,
   type projectTasks,
@@ -49,8 +50,10 @@ export async function tellCustomerAbout(
   db: DatabaseExecutor,
   task: TaskRow,
   event: TaskNotifyEvent,
+  /** The step already told the customer in a richer message of its own (journeyOnComplete). */
+  alreadyTold = false,
 ): Promise<void> {
-  if (!task.notifyCustomer) return;
+  if (!task.notifyCustomer || alreadyTold) return;
   const template = await templateOf(db, task.templateKey);
   if ((template?.notifyEvent ?? 'completed') !== event) return;
   const project = await projectOf(db, task.projectId);
@@ -79,6 +82,31 @@ export async function tellCustomerAbout(
     if (await tellStepWithButtons(db, message, about, person, payload, key)) continue;
     await queueWhatsApp(db, person.phone, message, payload, key);
   }
+}
+
+/**
+ * The generic step update `tellCustomerAbout` would queue for this completed task, to ride along as
+ * the fallback of the step's own chat message: if that chat send fails, the customer still hears.
+ */
+export async function genericUpdateFallback(
+  db: DatabaseExecutor,
+  task: TaskRow,
+): Promise<MessageFallback | null> {
+  const project = await projectOf(db, task.projectId);
+  if (!project) return null;
+  const template = await templateOf(db, task.templateKey);
+  return {
+    template: 'project_milestone',
+    payload: {
+      customer: project.name,
+      project: project.code,
+      milestone: template?.customerTitle?.trim() || task.title,
+      capacity: formatKwp(project.capacityWp),
+      step: task.templateKey,
+    },
+    // The key the generic update itself would use: the customer is never told twice.
+    dedupeKey: `task_completed:${task.id}`,
+  };
 }
 
 async function projectOf(db: DatabaseExecutor, projectId: string) {

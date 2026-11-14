@@ -15,7 +15,8 @@ import { invalid, notFound } from '../../common/http/errors';
 /** What a visit is about, resolved from a task, a lead or a service request. */
 export interface VisitTarget {
   readonly kind: VisitKind;
-  readonly customerId: string;
+  /** Null for a lead's survey booked before the lead became a customer. */
+  readonly customerId: string | null;
   readonly customerName: string;
   readonly phone: string;
   readonly projectId: string | null;
@@ -128,25 +129,28 @@ async function serviceTarget(db: DatabaseExecutor, id: string): Promise<VisitTar
 }
 
 async function leadTarget(db: DatabaseExecutor, leadId: string): Promise<VisitTarget> {
+  // A lead from WhatsApp can book its survey before it is a customer: the lead's own name and number.
   const [row] = await db
     .select({ lead: leads, name: customers.name, phone: customers.phoneE164 })
     .from(leads)
-    .innerJoin(customers, eq(customers.id, leads.customerId))
+    .leftJoin(customers, eq(customers.id, leads.customerId))
     .where(eq(leads.id, leadId))
     .limit(1);
-  if (!row?.lead.customerId) throw invalid('Add the site to this lead before booking a visit.');
+  if (!row) throw invalid('That lead was not found.');
   return {
     kind: 'survey',
     customerId: row.lead.customerId,
-    customerName: row.name,
-    phone: row.phone,
+    customerName: row.name ?? row.lead.name,
+    phone: row.phone ?? row.lead.phoneE164,
     projectId: null,
     leadId,
     serviceRequestId: null,
     amcVisitId: null,
     taskId: null,
     propertyId: row.lead.propertyId,
-    home: await homeNameOf(db, null, row.lead.propertyId),
+    home: row.lead.propertyId
+      ? await homeNameOf(db, null, row.lead.propertyId)
+      : row.lead.city || (await homeNameOf(db, null, null)),
     crew: person(row.lead.ownerUserId),
     owner: row.lead.ownerUserId,
     mayMessage: true,

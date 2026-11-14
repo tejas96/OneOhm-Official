@@ -11,6 +11,7 @@ import {
 import { slaDueDates } from '@oneohm/domain';
 import { and, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
+import { loadCalendar } from '../../common/calendar';
 import { queueWhatsApp } from '../../common/outbox';
 import { logAction } from '../documents/customer-action-log';
 import { assistantLanguage, inLanguage } from '../whatsapp/assistant/language';
@@ -24,7 +25,7 @@ import { PROBLEM_WORDS } from './problem-words';
 
 /**
  * A problem is resolved (by the desk or the technician): "Fixed ✅ Is it working now?" with [Yes,
- * working] [Still a problem] (redesign §12). Inside 24 hours the chat message, else the template
+ * working] [Still a problem] (redesign §12). Inside 24 hours the chat message (whatever the template's switch says), else the template
  * `problem_fixed_check`; while that template is off the customer still hears the older "resolved"
  * update, as before. One check per fix: a request reopened and fixed again is asked again.
  */
@@ -89,6 +90,8 @@ export async function tellFixed(
       stillPayload: careTaps.fixedNo(id),
     },
     key: `fixed_check:${id}`,
+    // The Settings switch governs the template; an open chat always gets the check in the customer's language.
+    chatIgnoresSwitch: true,
     reply: async () => ({
       kind: 'buttons',
       body: PROBLEM_WORDS.fixed(CATEGORY_WORDS[row.category] ?? row.category),
@@ -214,7 +217,7 @@ export function answerFixed(
       projectId: request.projectId,
       phone: given.phone,
     });
-    const promise = callPromise(now, given.timeZone);
+    const promise = callPromise(now, await loadCalendar(tx, given.timeZone));
     await openCallTask(tx, {
       customerId,
       projectId: request.projectId,

@@ -1,25 +1,13 @@
 import type { ReplyTime } from '@oneohm/domain';
 import { homeHi } from '@oneohm/shared';
 import type { ChatWords } from './chat-words';
+import { callWord, openingNow, replyWhen } from './hours-words';
 import type { Words } from './language';
 
-/** When a person replies, in Hindi; a named person takes the respectful plural. */
-const WHEN: Record<ReplyTime, string> = {
-  now: 'जल्द ही (सोम–शनि, 9:30–6:30)',
-  today: 'आज सुबह 9:30 के बाद',
-  tomorrow: 'कल सुबह 9:30 के बाद',
-  monday: 'सोमवार सुबह 9:30 के बाद',
-};
-
-const CALL: Record<ReplyTime, string> = {
-  now: 'आज',
-  today: 'आज',
-  tomorrow: 'कल',
-  monday: 'सोमवार को',
-};
-
 const replies = (name: string | null, when: ReplyTime) =>
-  name ? `${name} आपको ${WHEN[when]} यहीं जवाब देंगे।` : `हमारी टीम आपको ${WHEN[when]} यहीं जवाब देगी।`;
+  name
+    ? `${name} आपको ${replyWhen(when, 'hi')} यहीं जवाब देंगे।`
+    : `हमारी टीम आपको ${replyWhen(when, 'hi')} यहीं जवाब देगी।`;
 
 const toWhom = (name: string | null) => (name ? `${name} को` : 'हमारी टीम को');
 
@@ -66,7 +54,12 @@ export const HI_CHAT: Words<ChatWords> = {
       problems: { title: 'मेरी समस्याएँ', description: 'आपकी समस्याओं की स्थिति' },
       warranty: { title: 'वारंटी और AMC', description: 'आपका कवर और जाँच विज़िट' },
       refer: { title: 'दोस्त को बताएँ', description: 'हर दोस्त के लिए इनाम पाएँ' },
-      talk: { title: 'टीम से बात करें', description: 'यहीं जवाब, सोम–शनि 9:30–6:30' },
+      talk: {
+        title: 'टीम से बात करें',
+        get description() {
+          return `यहीं जवाब, ${openingNow('hi')}`;
+        },
+      },
       language: { title: 'भाषा', description: 'English, मराठी, हिंदी' },
     },
   },
@@ -84,7 +77,7 @@ export const HI_CHAT: Words<ChatWords> = {
     nothing: 'आज हम कैसे मदद करें?',
     count: (count) => `${count} चीज़ें आपसे चाहिए।`,
     noProject: (name, when) =>
-      `हम आपका सोलर प्लान तैयार कर रहे हैं। ${name ? `${name} आपको ${CALL[when]} कॉल करेंगे` : `हमारी टीम आपको ${CALL[when]} कॉल करेगी`}।`,
+      `हम आपका सोलर प्लान तैयार कर रहे हैं। ${name ? `${name} आपको ${callWord(when, 'hi')} कॉल करेंगे` : `हमारी टीम आपको ${callWord(when, 'hi')} कॉल करेगी`}।`,
     seeThem: 'अभी आपसे यह चाहिए।',
     paperRow: (home) => (home ? `${homeHi(home, 'वाले')} के लिए चाहिए` : 'आपसे चाहिए'),
     payRow: (home) => `${homeHi(home, 'वाले')} के लिए बाकी`,

@@ -23,6 +23,9 @@ export interface ProofDetail {
   readonly amountPaise?: number | null;
   /** YYYY-MM-DD. */
   readonly paidOn?: string | null;
+  /** What was typed and picked, as typed, so what could not be read is not lost. */
+  readonly amountText?: string | null;
+  readonly dateText?: string | null;
 }
 
 /**
@@ -38,7 +41,7 @@ export async function takePaymentProof(
   now: number,
   /** What the "I paid another way" form told us, when it was used. */
   detail: ProofDetail = {},
-): Promise<void> {
+): Promise<string | null> {
   const [customer] = await tx
     .select({ name: customers.name })
     .from(customers)
@@ -48,6 +51,7 @@ export async function takePaymentProof(
       id: paymentMilestones.id,
       projectId: paymentMilestones.projectId,
       propertyId: projects.propertyId,
+      amountPaise: paymentMilestones.amountPaise,
     })
     .from(paymentMilestones)
     .innerJoin(projects, eq(projects.id, paymentMilestones.projectId))
@@ -91,6 +95,9 @@ export async function takePaymentProof(
     documentId: first?.id ?? null,
     amountPaise: detail.amountPaise ?? null,
     paidOn: detail.paidOn ?? null,
+    // Typed but unreadable (zero, words, a day not yet come): kept as typed for finance.
+    ...(!detail.amountPaise && detail.amountText ? { amountText: detail.amountText } : {}),
+    ...(!detail.paidOn && detail.dateText ? { dateText: detail.dateText } : {}),
   };
   const answered = await proofReceived(tx, customerId, detail.milestoneId ?? null, proof);
   // Proof nobody asked for still becomes a tracked item ("Done by customer, to check"), so finance's
@@ -121,7 +128,9 @@ export async function takePaymentProof(
     only,
     detail,
     now,
+    dueFor: named ?? single ?? null,
   });
+  return only?.projectId ?? null;
 }
 
 /** Finance is asked to check the proof and record the payment (with what the customer told). */
@@ -134,12 +143,23 @@ async function alertFinance(
     only: { projectId: string } | undefined;
     detail: ProofDetail;
     now: number;
+    dueFor: { amountPaise: number } | null;
   },
 ) {
   const { name, count, firstId, only, detail, now } = about;
+  const over =
+    detail.amountPaise && about.dueFor && detail.amountPaise > about.dueFor.amountPaise
+      ? `more than the ${formatInr(about.dueFor.amountPaise)} due`
+      : null;
   const told = [
-    detail.amountPaise ? formatInr(detail.amountPaise) : null,
+    detail.amountPaise ? `${formatInr(detail.amountPaise)}${over ? `, ${over}` : ''}` : null,
+    !detail.amountPaise && detail.amountText
+      ? `amount typed "${detail.amountText.slice(0, 40)}" could not be read`
+      : null,
     detail.paidOn ? `on ${detail.paidOn}` : null,
+    !detail.paidOn && detail.dateText
+      ? `date "${detail.dateText.slice(0, 40)}" could not be read or is in the future`
+      : null,
   ].filter(Boolean);
   await notifyHolders(tx, 'finance.record_payments', {
     kind: 'payment_proof',

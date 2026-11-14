@@ -143,7 +143,7 @@ describe('Journey: is the roof ready?', () => {
     const [ask] = await asksOf(customer.customerId, 'confirm');
     await tap(customer.phone, `rdy:n:${ask?.id}`);
     expect((await taskRow(dispatch.id))?.status).toBe('waiting');
-    return { customer, dispatch, ask };
+    return { sale, customer, dispatch, ask };
   }
 
   it('cancelling the ask after Not yet opens the step again; another wait is left alone', async () => {
@@ -163,7 +163,7 @@ describe('Journey: is the roof ready?', () => {
     });
   });
 
-  it('an open roof ask closes quietly when the step is done: no Home line, no alert', async () => {
+  it('the roof ask outlives dispatch and closes quietly when installation work is done', async () => {
     const sale = await sellProject(admin, { name: 'Roof Stale (test)' });
     const { customer } = sale;
     await openChat(customer.phone, customer.customerId);
@@ -171,6 +171,9 @@ describe('Journey: is the roof ready?', () => {
     const [ask] = await asksOf(customer.customerId, 'confirm');
     expect(ask?.status).toBe('open');
     await completeThrough(admin, sale.project.id, 'dispatch_material');
+    // Dispatch is done, but the customer has not answered: the question stays.
+    expect((await asksOf(customer.customerId, 'confirm'))[0]?.status).toBe('open');
+    await completeThrough(admin, sale.project.id, 'structure_installation');
     const [closed] = await asksOf(customer.customerId, 'confirm');
     expect(closed).toMatchObject({ status: 'closed' });
     expect(closed?.payload.answer).toBe('step_done');
@@ -182,11 +185,32 @@ describe('Journey: is the roof ready?', () => {
     await say(customer.phone, 'hi');
     const home = await lastReply(customer.phone);
     expect(choices(home).some((id) => id.startsWith('rdy:'))).toBe(false);
-    // A late tap on the old question changes nothing and says so.
+  });
+
+  it('a late answer after the step moved on is still recorded: yes is thanked, not yet calls the owner', async () => {
+    const sale = await sellProject(admin, { name: 'Roof Late (test)' });
+    const { customer } = sale;
+    await openChat(customer.phone, customer.customerId);
+    const dispatch = await advanceTo(admin, sale.project.id, 'dispatch_material');
+    await completeThrough(admin, sale.project.id, 'structure_installation');
+    const [ask] = await asksOf(customer.customerId, 'confirm');
+    expect(ask?.payload.answer).toBe('step_done');
     await tap(customer.phone, `rdy:n:${ask?.id}`);
-    expect((await lastReply(customer.phone))?.body).toBe(
-      'That message is no longer open, so nothing has changed.',
+    const [alert] = await rows<{ body: string }>(
+      "SELECT body FROM notifications WHERE kind = 'site_not_ready' AND subject_id = $1",
+      [dispatch.id],
     );
+    expect(alert?.body).toMatch(/Material is dispatched but .+ says the roof is not ready/);
+    expect(alert?.body).not.toMatch(/waits on the customer/);
+    await tap(customer.phone, `rdy:y:${ask?.id}`);
+    expect((await lastReply(customer.phone))?.body).toMatch(
+      /^Thank you ✅ We have noted that the roof is ready\./,
+    );
+    const [log] = await rows<{ message: string }>(
+      "SELECT message FROM project_activities WHERE project_id = $1 AND message LIKE '%roof at%is ready%'",
+      [sale.project.id],
+    );
+    expect(log).toBeDefined();
   });
 
   it('a wait on the customer names what is needed: your roof check, linked to the question', async () => {
@@ -204,5 +228,14 @@ describe('Journey: is the roof ready?', () => {
       'Yes, ready',
       'Not yet',
     ]);
+  });
+
+  it('closing the roof ask after Not yet keeps the answer and does not leave dispatch waiting', async () => {
+    const { sale, customer, dispatch, ask } = await notYet();
+    await completeThrough(admin, sale.project.id, 'structure_installation');
+    const [closed] = await asksOf(customer.customerId, 'confirm');
+    expect(closed).toMatchObject({ id: ask?.id, status: 'closed' });
+    expect(closed?.payload).toMatchObject({ answer: 'step_done', customerAnswer: 'not_yet' });
+    expect((await taskRow(dispatch.id))?.status).not.toBe('waiting');
   });
 });

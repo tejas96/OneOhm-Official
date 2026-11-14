@@ -68,9 +68,8 @@ export function WorkforcePanel() {
           errors={form.fieldErrors}
         />
         <WorkingDaySection
-          weeklyOff={draft.weeklyOff}
           attendance={draft.attendance}
-          onChange={(patch) => setDraft({ ...draft, ...patch })}
+          onChange={(attendance) => setDraft({ ...draft, attendance })}
           errors={form.fieldErrors}
         />
         <LocationSection

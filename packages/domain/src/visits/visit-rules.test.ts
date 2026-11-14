@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_CALENDAR,
+  isWorkingDay,
+  nextWorkingDay,
+  previousWorkingDay,
+  zonedInstant,
+} from '../calendar/business-calendar';
+import {
   confirmDeadline,
   freeSlots,
   freeVisitDays,
   isPresenceKind,
-  isWorkingDay,
-  nextWorkingDay,
-  previousWorkingDay,
   reminderDue,
   visitKindOfTask,
   visitMissed,
-  zonedInstant,
 } from './visit-rules';
 
 // 2026-11-05 is a Thursday; 2026-11-08 a Sunday.
@@ -70,7 +73,7 @@ describe('the day-before reminder', () => {
 });
 
 describe('missed and kinds', () => {
-  const tz = 'Asia/Kolkata';
+  const tz = DEFAULT_CALENDAR;
   it('missed after 6:30 pm on its day, or any later day', () => {
     expect(visitMissed('2026-11-05', new Date('2026-11-05T11:00:00Z'), tz)).toBe(false);
     expect(visitMissed('2026-11-05', new Date('2026-11-05T13:00:00Z'), tz)).toBe(true);
@@ -88,7 +91,7 @@ describe('missed and kinds', () => {
 });
 
 describe('the promise to confirm', () => {
-  const tz = 'Asia/Kolkata';
+  const tz = DEFAULT_CALENDAR;
   it('a pick in working hours is promised for 6:30 pm that day', () => {
     // 2026-11-05 is a Thursday; 11:00 UTC is 16:30 in India.
     expect(confirmDeadline(new Date('2026-11-05T11:00:00Z'), tz).toISOString()).toBe(
@@ -101,6 +104,8 @@ describe('the promise to confirm', () => {
     );
   });
   it('turns a local clock time into an instant', () => {
-    expect(zonedInstant('2026-11-05', 12 * 60, tz).toISOString()).toBe('2026-11-05T06:30:00.000Z');
+    expect(zonedInstant('2026-11-05', 12 * 60, tz.timeZone).toISOString()).toBe(
+      '2026-11-05T06:30:00.000Z',
+    );
   });
 });

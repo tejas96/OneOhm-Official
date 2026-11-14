@@ -2,6 +2,7 @@ import {
   contractorMembers,
   contractorRates,
   type DatabaseExecutor,
+  nextInSeries,
   projects,
   projectTasks,
   workOrderLines,
@@ -10,7 +11,7 @@ import {
 } from '@oneohm/database';
 import { type ContractorRate, type ProjectType, workOrderLines as rateLines } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray, like, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { settleIfDone } from './work-order-settle';
 
 const OPEN = ['open', 'in_progress'] as const;
@@ -18,12 +19,12 @@ const OPEN = ['open', 'in_progress'] as const;
 /** Next work order number for this year (India time); serialised so two never clash. */
 async function nextNumber(db: DatabaseExecutor): Promise<string> {
   const year = todayIn().slice(0, 4);
-  await db.execute(sql`select pg_advisory_xact_lock(hashtext('oneohm:work_order'))`);
-  const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(workOrders)
-    .where(like(workOrders.number, `WO-${year}-%`));
-  return `WO-${year}-${String((row?.count ?? 0) + 1).padStart(4, '0')}`;
+  return nextInSeries(db, {
+    column: workOrders.number,
+    prefix: `WO-${year}-`,
+    width: 4,
+    lockKey: 'work_order',
+  });
 }
 
 /** Rate lines recalculated from the rate card; lines added by hand stay. */

@@ -81,7 +81,8 @@ describe('Referral: refer a friend', () => {
     await tap(phone, 'go:refer');
     const form = await flowOf(phone);
     expect(form).toMatchObject({ screen: 'REFER', button: 'Refer a friend' });
-    expect((form?.data.city_options as unknown as { id: string }[] | undefined)?.length).toBe(2);
+    // The service cities, then "Other city".
+    expect((form?.data.city_options as unknown as { id: string }[] | undefined)?.length).toBe(3);
     await sendInbound(phone, {
       form: {
         token: form?.token ?? '',
@@ -101,11 +102,11 @@ describe('Referral: refer a friend', () => {
     await tap(phone, 'go:refer');
     await say(phone, 'just a name');
     expect(await bodyOf(phone)).toContain('could not find a name');
-    // A number we are already in touch with (an open lead) is said so.
+    // A number that already belongs to a customer is said so (a plain open lead: 70-referral-form-edges).
     const open = await newCustomer(admin, { name: 'Refer Known Lead (test)' });
     await say(phone, `Known ${open.phone.replace('+91', '')}`);
     await tap(phone, 'rf:city:Sangli');
-    expect(await bodyOf(phone)).toContain('already in touch');
+    expect(await bodyOf(phone)).toContain('already with us');
 
     const marathi = await sellProject(admin, { name: 'Refer Marathi (test)' });
     await openChat(marathi.customer.phone, marathi.customer.customerId);

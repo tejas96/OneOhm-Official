@@ -1,42 +1,37 @@
 import {
   customerNotice,
-  customers,
   type Database,
   type DatabaseExecutor,
+  fallbackOf,
   GENERIC_WORDS,
-  messageTemplates,
   outbox,
+  queueFallback,
   tellChatSendFailed,
-  waConversations,
+  withFallback,
 } from '@oneohm/database';
-import { chatWindowOpen, isNotOnWhatsApp, templateIsOn } from '@oneohm/domain';
-import { eq, sql } from 'drizzle-orm';
+import { isNotOnWhatsApp } from '@oneohm/domain';
+import { and, eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
-import {
-  approvedMessage,
-  MESSAGE_TEMPLATES,
-  MissingFieldError,
-} from '../channels/message-templates';
 import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
 import type { SmsSender } from '../channels/sms';
-import type {
-  SendResult,
-  SessionMessage,
-  TemplateButton,
-  TemplateHeader,
-  WhatsAppSender,
-} from '../channels/whatsapp-cloud';
+import type { SendResult, SessionMessage, WhatsAppSender } from '../channels/whatsapp-cloud';
 import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
 import { queueFlowFallback } from './flow-fallback';
+import { chatInsteadOfTemplate, windowOpenFor } from './in-window';
 import { fallBackNote } from './not-on-whatsapp';
+import { type Prepared, prepareTemplate } from './prepare-template';
 import { deliverPush } from './push-delivery';
-import { alertTokenExpired, CHAT_WINDOW_CLOSED, smsCanStandIn } from './send-checks';
+import {
+  alertTokenExpired,
+  CHAT_WINDOW_CLOSED,
+  smsCanStandIn,
+  WINDOW_CLOSED_CODE,
+} from './send-checks';
 
 /** Written just before the provider call; found on entry, the last attempt died mid-send. */
 export const SENDING = 'sending';
 
-const OPTED_OUT_NOTE = 'The person asked not to get WhatsApp messages';
 export type DeliveryOutcome = 'sent' | 'skipped' | 'failed' | 'not_pending';
 
 interface DeliveryDeps {
@@ -47,9 +42,15 @@ interface DeliveryDeps {
   readonly language: string;
 }
 
+/** Thrown inside a send to end it as skipped (not failed) with this note. */
+class NotSent extends Error {}
+
 /** The plain words of a customer message, for its SMS version. */
 const wordsFor = (template: string, payload: Record<string, string>) =>
   customerNotice(template, payload, 'sms') ?? GENERIC_WORDS;
+
+/** The note on a chat message that a template took the place of. */
+const SENT_AS_TEMPLATE = ' It was sent as a template message instead.';
 
 /** Why a message was only logged: log mode, or a number outside the test list. */
 const loggedNote = (channel: string, result: { readonly note?: string }) =>
@@ -79,72 +80,6 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       .where(eq(outbox.id, id));
   };
 
-  /** Why this number gets no template: the customer opted out, or the person sent STOP. */
-  const optOutNote = async (phone: string) => {
-    const [chat] = await db
-      .select({ optedOutAt: waConversations.optedOutAt })
-      .from(waConversations)
-      .where(eq(waConversations.phone, phone))
-      .limit(1);
-    if (chat?.optedOutAt) return OPTED_OUT_NOTE;
-    const [customer] = await db
-      .select({ optIn: customers.whatsappOptIn })
-      .from(customers)
-      .where(eq(customers.phoneE164, phone))
-      .limit(1);
-    if (customer && !customer.optIn) return 'The customer has opted out of WhatsApp messages.';
-    return null;
-  };
-
-  /** Why a message cannot go out as is, or the approved template and values it needs. */
-  const prepare = async (
-    row: typeof outbox.$inferSelect,
-  ): Promise<
-    | { readonly verdict: 'skipped' | 'failed'; readonly note: string }
-    | {
-        readonly verdict: 'send';
-        readonly name: string;
-        readonly language: string;
-        readonly parameters: string[];
-        readonly header?: TemplateHeader;
-        readonly buttons?: TemplateButton[];
-      }
-  > => {
-    if (row.channel !== 'whatsapp') {
-      return { verdict: 'skipped', note: `The ${row.channel} channel is not connected yet.` };
-    }
-    const [config] = await db
-      .select()
-      .from(messageTemplates)
-      .where(eq(messageTemplates.key, row.template))
-      .limit(1);
-    const fields = config?.fields ?? MESSAGE_TEMPLATES[row.template];
-    if (!fields) {
-      return { verdict: 'failed', note: `No WhatsApp template is set up for "${row.template}".` };
-    }
-    if (!templateIsOn(row.template, config))
-      return { verdict: 'skipped', note: 'This message is turned off in Settings.' };
-    const unwanted = await optOutNote(row.recipient);
-    if (unwanted) return { verdict: 'skipped', note: unwanted };
-    try {
-      const names = { metaName: row.template, language, ...config };
-      return {
-        verdict: 'send',
-        ...approvedMessage(
-          row.template,
-          fields,
-          names,
-          row.payload,
-          config?.extrasApproved,
-          config?.quickRepliesApproved,
-        ),
-      };
-    } catch (error) {
-      if (!(error instanceof MissingFieldError)) throw error;
-      return { verdict: 'failed', note: error.message };
-    }
-  };
-
   /** A message in a chat that never arrived tells the chat's people; a bad token tells admins. */
   const failWithAlerts = (id: string, reason: string, tokenInvalid = false) =>
     db.transaction(async (tx) => {
@@ -154,17 +89,24 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       if (tokenInvalid) await alertTokenExpired(tx);
     });
 
-  /** Meta refuses a chat message once the window closes, so retries check it again. */
-  const windowOpenFor = async (phone: string) => {
-    const [chat] = await db
-      .select({ lastInboundAt: waConversations.lastInboundAt })
-      .from(waConversations)
-      .where(eq(waConversations.phone, phone))
-      .limit(1);
-    return chatWindowOpen(chat?.lastInboundAt);
+  /**
+   * A chat message the 24-hour window cannot carry goes as its fallback template instead:
+   * queued once (fixed dedupe key), and this row is skipped, not failed. False: no fallback.
+   */
+  const useFallback = async (row: typeof outbox.$inferSelect, why: string) => {
+    if (!fallbackOf(row.payload)) return false;
+    await db.transaction(async (tx) => {
+      await queueFallback(tx, row);
+      await finish(row.id, 'skipped', `${why}${SENT_AS_TEMPLATE}`, null, tx);
+    });
+    return true;
   };
 
-  const send = async (row: typeof outbox.$inferSelect, call: () => Promise<SendResult>) => {
+  /** `call` may say what it really sent (a chat message instead of the template) for the chat log. */
+  const send = async (
+    row: typeof outbox.$inferSelect,
+    call: () => Promise<SendResult & { readonly sentText?: string }>,
+  ) => {
     await db.update(outbox).set({ lastError: SENDING }).where(eq(outbox.id, row.id));
     try {
       const result = await call();
@@ -173,11 +115,20 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return 'skipped';
       }
       await finish(row.id, 'sent', null, result.providerId);
-      if (row.channel === 'whatsapp') await logTemplateInChat(db, row).catch(() => undefined);
+      if (row.channel === 'whatsapp')
+        await logTemplateInChat(db, row, 'sentText' in result ? result.sentText : undefined).catch(
+          () => undefined,
+        );
       return 'sent';
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
+      if (error instanceof NotSent) {
+        await finish(row.id, 'skipped', reason);
+        return 'skipped';
+      }
       if (error instanceof PermanentSendError) {
+        if (error.code === WINDOW_CLOSED_CODE && (await useFallback(row, CHAT_WINDOW_CLOSED)))
+          return 'skipped';
         // Not on WhatsApp: customer news goes by SMS (later ones SMS first); staff ones fail.
         const viaSms = row.channel === 'whatsapp' && smsCanStandIn(row.template);
         if (viaSms && isNotOnWhatsApp(error.code)) {
@@ -194,17 +145,20 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
 
   return {
     async deliverOutboxMessage(id: string): Promise<DeliveryOutcome> {
-      const [row] = await db.select().from(outbox).where(eq(outbox.id, id));
-      if (row?.status !== 'pending') return 'not_pending';
+      const [current] = await db.select().from(outbox).where(eq(outbox.id, id));
+      if (current?.status !== 'pending') return 'not_pending';
       // The provider may have the message already: never send it a second time.
-      if (row.lastError === SENDING) {
+      if (current.lastError === SENDING) {
         await failWithAlerts(id, MAYBE_SENT);
         return 'failed';
       }
-      await db
+      // Claimed in one statement, so a step update cannot be merged into a row being sent.
+      const [row] = await db
         .update(outbox)
         .set({ attempts: sql`${outbox.attempts} + 1`, startedAt: new Date() })
-        .where(eq(outbox.id, id));
+        .where(and(eq(outbox.id, id), eq(outbox.status, 'pending')))
+        .returning();
+      if (!row) return 'not_pending';
       if (row.channel === 'push') {
         const outcome = await deliverPush(db, push, row.recipient);
         await finish(id, outcome.status, outcome.note);
@@ -219,28 +173,50 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         return send(row, () => sms.send(row.recipient, text));
       }
       if (row.template.startsWith('session:')) {
-        if (!(await windowOpenFor(row.recipient))) {
+        if (!(await windowOpenFor(db, row.recipient))) {
+          if (await useFallback(row, CHAT_WINDOW_CLOSED)) return 'skipped';
           await failWithAlerts(id, CHAT_WINDOW_CLOSED);
           return 'failed';
         }
         return send(row, () => sender.sendSession(row.recipient, row.payload as SessionMessage));
       }
-      const prepared = await prepare(row);
-      if (prepared.verdict !== 'send') {
-        await finish(id, prepared.verdict, prepared.note);
-        return prepared.verdict;
-      }
-      const { name, parameters, header, buttons } = prepared;
-      return send(row, () =>
+      // A Marathi or Hindi customer with no template in their language, chat open: a chat message.
+      const chat = await chatInsteadOfTemplate(db, row);
+      const viaTemplate = (prepared: Prepared): Promise<SendResult> =>
         sender.send({
           toE164: row.recipient,
-          template: name,
+          template: prepared.name,
           language: prepared.language,
-          parameters,
-          ...(header && { header }),
-          ...(buttons && { buttons }),
-        }),
-      );
+          parameters: prepared.parameters,
+          ...(prepared.header && { header: prepared.header }),
+          ...(prepared.buttons && { buttons: prepared.buttons }),
+        });
+      if (!chat) {
+        const prepared = await prepareTemplate(db, language, row);
+        if (prepared.verdict !== 'send') {
+          await finish(id, prepared.verdict, prepared.note);
+          return prepared.verdict;
+        }
+        return send(row, () => viaTemplate(prepared));
+      }
+      // Meta may still report the closed window later (a receipt): keep the template for that.
+      const { fallback: _kept, ...original } = row.payload as Record<string, unknown>;
+      const converted = withFallback(original, row.template, original as Record<string, string>);
+      await db.update(outbox).set({ payload: converted }).where(eq(outbox.id, id));
+      return send(row, async () => {
+        try {
+          const sent = await sender.sendSession(row.recipient, chat.message);
+          return { ...sent, sentText: chat.text };
+        } catch (error) {
+          // The window closed just now: Meta refuses the chat message, so the template goes.
+          if (!(error instanceof PermanentSendError) || error.code !== WINDOW_CLOSED_CODE)
+            throw error;
+          const prepared = await prepareTemplate(db, language, row);
+          if (prepared.verdict === 'skipped') throw new NotSent(prepared.note);
+          if (prepared.verdict !== 'send') throw new PermanentSendError(prepared.note);
+          return viaTemplate(prepared);
+        }
+      });
     },
 
     /** Called once retries run out, so the failure is visible to the office. */

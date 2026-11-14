@@ -35,7 +35,7 @@ export function useVisitMutations(scope: VisitScope) {
     toast({ tone: 'error', title: t('failed'), description: describeError(error) });
   return {
     set: useMutation({
-      mutationFn: (day: Pick<SetVisit, 'day' | 'slot'>) =>
+      mutationFn: (day: Pick<SetVisit, 'day' | 'slot' | 'startMin'>) =>
         expectStatus(api.visits.setVisit({ body: { ...scope, ...day } }), 200),
       onSuccess: () => refresh(t('saved')),
       onError: failed,

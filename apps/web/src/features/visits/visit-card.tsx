@@ -19,7 +19,6 @@ const rightsOf = (scope: VisitScope): Capability[] =>
       ? ['service.manage']
       : ['leads.manage'];
 
-const SLOTS = ['morning', 'afternoon'] as const;
 const DAY = { weekday: 'short', day: 'numeric', month: 'short' } as const;
 const OPEN = new Set(['proposed', 'confirmed']);
 
@@ -68,7 +67,17 @@ function VisitBody({
   const mutations = useVisitMutations(scope);
   const ask = useSendAction(scope);
   const [day, setDay] = useState(open?.day ?? data.freeDays[0] ?? '');
-  const [slot, setSlot] = useState<(typeof SLOTS)[number]>(open?.slot ?? 'morning');
+  const [start, setStart] = useState(open?.startMin != null ? String(open.startMin) : '');
+  // The free times of the day picked (the open visit's own time stays offered for re-confirming).
+  const times = [
+    ...(open && open.day === day && open.startMin != null && open.time
+      ? [{ value: String(open.startMin), label: open.time }]
+      : []),
+    ...(data.freeTimes[day] ?? [])
+      .filter((one) => one.startMin !== open?.startMin || open?.day !== day)
+      .map((one) => ({ value: String(one.startMin), label: one.label })),
+  ];
+  const chosen = times.some((one) => one.value === start) ? start : (times[0]?.value ?? '');
   const label = (iso: string) =>
     format.dateTime(new Date(`${iso}T00:00:00Z`), { ...DAY, timeZone: 'UTC' });
   const days = data.freeDays.map((value) => ({ value, label: label(value) }));
@@ -109,20 +118,31 @@ function VisitBody({
             )}
           </Field>
           {!data.presence && (
-            <Field label={t('slot')} className="sm:max-w-40">
+            <Field label={t('time')} className="sm:max-w-48">
               <Select
-                value={slot}
-                onValueChange={setSlot}
-                options={SLOTS.map((value) => ({ value, label: t(`slots.${value}`) }))}
+                value={chosen || undefined}
+                onValueChange={setStart}
+                options={times}
+                placeholder={t('noFreeTime')}
               />
             </Field>
           )}
           <Button
             variant="secondary"
             leadingIcon={<CalendarCheck />}
-            disabled={!day}
+            disabled={!day || (!data.presence && !chosen)}
             pending={mutations.set.isPending}
-            onClick={() => mutations.set.mutate({ day, slot: data.presence ? 'morning' : slot })}
+            onClick={() =>
+              mutations.set.mutate(
+                data.presence
+                  ? { day, slot: 'morning' }
+                  : {
+                      day,
+                      slot: Number(chosen) < 720 ? 'morning' : 'afternoon',
+                      startMin: Number(chosen),
+                    },
+              )
+            }
           >
             {t(setLabel(data.presence, visit?.status))}
           </Button>
@@ -143,7 +163,13 @@ function VisitBody({
             variant="secondary"
             leadingIcon={<Check />}
             pending={mutations.set.isPending}
-            onClick={() => mutations.set.mutate({ day: open.day, slot: open.slot })}
+            onClick={() =>
+              mutations.set.mutate({
+                day: open.day,
+                slot: open.slot,
+                ...(open.startMin != null ? { startMin: open.startMin } : {}),
+              })
+            }
           >
             {t('confirm')}
           </Button>
@@ -203,7 +229,7 @@ function VisitLine({ visit, label }: { readonly visit: Visit; readonly label: st
         {label}
         {visit.kind === 'inspection' || visit.kind === 'net_meter'
           ? ''
-          : `, ${t(`slots.${visit.slot}`)}`}
+          : `, ${visit.time ?? t(`slots.${visit.slot}`)}`}
       </span>
       <StatusPill size="sm" tone={TONE[visit.status]} label={t(`status.${visit.status}`)} />
       {crew && <span className="type-body-sm text-ink-faint">{crew}</span>}

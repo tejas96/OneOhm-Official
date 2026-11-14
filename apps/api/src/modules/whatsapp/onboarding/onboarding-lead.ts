@@ -96,7 +96,9 @@ const WRITES: Partial<Record<OnboardStep, (a: OnboardAnswers, s: OnboardingSetti
   },
   // The roof is written with the floors, as one note: "Roof: RCC, 2 floors".
   floors: (a) =>
-    a.floors ? { change: {}, note: `Roof: ${roofAnd(a.roof)}${floorsText(a.floors)}` } : null,
+    a.floors
+      ? { change: { floors: a.floors }, note: `Roof: ${roofAnd(a.roof)}${floorsText(a.floors)}` }
+      : null,
   photo: (a) => (a.photo === 'later' ? { change: {}, note: 'Bill photo: will send later' } : null),
 };
 

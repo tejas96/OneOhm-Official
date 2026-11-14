@@ -41,14 +41,25 @@ export class WorkforceSettingsService {
     };
   }
 
-  async savePolicy(actor: Actor, policy: WorkforcePolicyInput) {
-    const keys = policy.leaveTypes.map((type) => type.key);
+  async savePolicy(actor: Actor, input: WorkforcePolicyInput) {
+    const keys = input.leaveTypes.map((type) => type.key);
     if (new Set(keys).size !== keys.length)
       throw invalid('Two kinds of leave share a short name.', {
         leaveTypes: 'Make each one unique.',
       });
-    if (policy.attendance.dayEnd <= policy.attendance.dayStart)
-      throw invalid('The day must end after it starts.', { dayEnd: 'Later than the start.' });
+    // Working days, hours and lunch are edited in Working time & holidays, not here: keep them.
+    const current = await loadPolicy(this.db);
+    const policy = {
+      ...input,
+      weeklyOff: [...current.weeklyOff],
+      attendance: {
+        ...input.attendance,
+        dayStart: current.attendance.dayStart,
+        dayEnd: current.attendance.dayEnd,
+        lunchStart: current.attendance.lunchStart,
+        lunchEnd: current.attendance.lunchEnd,
+      },
+    };
     await this.db.transaction(async (tx) => {
       await tx
         .insert(workforcePolicy)

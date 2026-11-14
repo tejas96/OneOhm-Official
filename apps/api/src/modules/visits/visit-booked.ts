@@ -37,7 +37,8 @@ export async function tellBooked(
 ): Promise<void> {
   const ctx = await visitContext(tx, target);
   const key = `visit:${row.id}:${row.day}:${row.slot}:${Date.now()}`;
-  if (isPresenceKind(row.kind)) {
+  // A DISCOM date is always for a project's customer; a lead's survey has no customer yet.
+  if (isPresenceKind(row.kind) && row.customerId) {
     await tx.insert(customerActions).values({
       type: 'presence',
       customerId: row.customerId,
@@ -89,6 +90,8 @@ export async function tellBooked(
         visitId: row.id,
         day: row.day,
         slot: row.slot,
+        startMin: row.startMin,
+        endMin: row.endMin,
         staff: who?.name ?? VISIT_WORDS.pick.team,
         phone: who?.phone ?? '',
         moved,

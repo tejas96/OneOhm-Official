@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type DatabaseExecutor, waMessages } from '@oneohm/database';
+import { type DatabaseExecutor, documents, waMessages } from '@oneohm/database';
 import { WHATSAPP_FILE_TYPES } from '@oneohm/domain';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { AppError } from '../../../common/http/errors';
@@ -11,6 +11,8 @@ import { keptFile, storedBefore, whatsappFileScope } from '../chat-files-kept';
 import { tellChatTeam } from '../chat-owner';
 import type { Conversation } from '../chat-store';
 import { type MediaGateway, MediaTooLargeError, WHATSAPP_MEDIA } from '../media-gateway';
+import { readableFileName } from './form-file-names';
+import { addFormFiles, latestFormReply } from './form-record';
 import type { FormFile } from './form-reply-data';
 
 /** Why a form file was not kept; the customer is told this, once per reason. */
@@ -102,6 +104,9 @@ export async function showFormFiles(
   chatId: string,
   kept: ReadonlyArray<{ id: string; media: string }>,
 ): Promise<void> {
+  // The files belong to the card of the form reply being answered, when it has one.
+  const form = await latestFormReply(tx, chatId);
+  const shownNow: string[] = [];
   for (const file of kept) {
     const [shown] = await tx
       .select({ id: waMessages.id })
@@ -122,7 +127,32 @@ export async function showFormFiles(
       body: '(form file)',
       mediaId: file.media,
       documentId: file.id,
+      ...(form && { data: { formMessageId: form.id } }),
     });
+    shownNow.push(file.id);
+  }
+  if (!form || shownNow.length === 0) return;
+  const already = form.form.fileIds.length;
+  await addFormFiles(tx, form.id, shownNow);
+  await nameFiles(tx, form.form.key, shownNow, already);
+}
+
+/** Gives files named by a machine ("<uuid>.jpg") the name of what they are ("Problem photo 1.jpg"). */
+async function nameFiles(
+  tx: DatabaseExecutor,
+  formKey: string,
+  ids: readonly string[],
+  from: number,
+) {
+  for (const [index, id] of ids.entries()) {
+    const [document] = await tx
+      .select({ name: documents.name, contentType: documents.contentType })
+      .from(documents)
+      .where(eq(documents.id, id))
+      .limit(1);
+    if (!document) continue;
+    const name = readableFileName(formKey, from + index, ids.length + from, document);
+    if (name) await tx.update(documents).set({ name }).where(eq(documents.id, id));
   }
 }
 

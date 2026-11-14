@@ -17,13 +17,18 @@ const EN_PROJECT = {
   instalment: INSTALMENT_NAMES['en-IN'],
   bankShare: BANK_SHARE_NAMES['en-IN'],
   next: {
-    quotation_accepted: 'a site visit to plan your system',
+    quotation_accepted: 'a technical site survey for exact measurements',
     material_dispatch: 'we send your panels and inverter and fix the installation day',
     commissioning_completed: 'the net meter and your subsidy papers',
     loan_disbursement: 'we keep you posted here at each step',
   } as Record<MilestoneTrigger, string>,
-  paidNext: (trigger: MilestoneTrigger, name: string | null, phone: string | null) =>
-    `Thank you, your payment is received. Next: ${EN_NEXT[trigger] ?? EN_NEXT.loan_disbursement}.${name || phone ? ` Your contact: ${name ?? 'our team'}${phone ? `, ${phone}` : ''}.` : ''}`,
+  paidNext: (
+    trigger: MilestoneTrigger,
+    name: string | null,
+    phone: string | null,
+    surveyDone: boolean,
+  ) =>
+    `Thank you, your payment is received. Next: ${nextStep(EN_NEXT, EN_SURVEYED, trigger, surveyDone)}.${name || phone ? ` Your contact: ${name ?? 'our team'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number: string) => `Your payment receipt (${number})`,
   partPaid: (amount: string, left: string) =>
     `${amount} received. ${left} is left on this instalment.`,
@@ -33,13 +38,28 @@ const EN_PROJECT = {
   homeGone: 'That home is no longer active.',
 };
 const EN_NEXT = EN_PROJECT.next;
+/** After the advance, when the site survey is already done (or the project has none). */
+const EN_SURVEYED = 'we finalise your system design and plan the installation';
+
+/** What comes next after an instalment; the advance depends on whether the survey is done. */
+function nextStep(
+  table: Record<MilestoneTrigger, string>,
+  surveyed: string,
+  trigger: MilestoneTrigger,
+  surveyDone: boolean,
+): string {
+  if (trigger === 'quotation_accepted' && surveyDone) return surveyed;
+  return table[trigger] ?? table.loan_disbursement;
+}
 
 const MR_NEXT: Record<MilestoneTrigger, string> = {
-  quotation_accepted: 'सिस्टमच्या नियोजनासाठी साइट भेट',
+  quotation_accepted: 'अचूक मोजमापांसाठी तांत्रिक साइट सर्वेक्षण',
   material_dispatch: 'पॅनल आणि इन्व्हर्टर पाठवून बसवणीचा दिवस ठरवणे',
   commissioning_completed: 'नेट मीटर आणि तुमच्या सबसिडीची कागदपत्रे',
   loan_disbursement: 'प्रत्येक टप्प्यावर आम्ही इथे कळवत राहू',
 };
+
+const MR_SURVEYED = 'आम्ही तुमच्या सिस्टिमची अंतिम रचना ठरवून बसवणीचे नियोजन करू';
 
 const MR_PROJECT: Words<typeof EN_PROJECT> = {
   projectIn: (city) => `${city} येथील तुमचा सोलर प्रकल्प`,
@@ -47,8 +67,8 @@ const MR_PROJECT: Words<typeof EN_PROJECT> = {
   instalment: INSTALMENT_NAMES['mr-IN'],
   bankShare: BANK_SHARE_NAMES['mr-IN'],
   next: MR_NEXT,
-  paidNext: (trigger, name, phone) =>
-    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: ${MR_NEXT[trigger] ?? MR_NEXT.loan_disbursement}.${name || phone ? ` तुमचा संपर्क: ${name ?? 'आमची टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
+  paidNext: (trigger, name, phone, surveyDone) =>
+    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: ${nextStep(MR_NEXT, MR_SURVEYED, trigger, surveyDone)}.${name || phone ? ` तुमचा संपर्क: ${name ?? 'आमची टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `तुमची पेमेंट पावती (${number})`,
   partPaid: (amount, left) => `${amount} मिळाले. या हप्त्याचे ${left} बाकी आहेत.`,
   whichHome: 'समस्या कोणत्या घरी आहे?',
@@ -56,11 +76,13 @@ const MR_PROJECT: Words<typeof EN_PROJECT> = {
 };
 
 const HI_NEXT: Record<MilestoneTrigger, string> = {
-  quotation_accepted: 'सिस्टम की योजना के लिए साइट विज़िट',
+  quotation_accepted: 'सटीक माप के लिए तकनीकी साइट सर्वे',
   material_dispatch: 'पैनल और इन्वर्टर भेजकर इंस्टॉलेशन का दिन तय करना',
   commissioning_completed: 'नेट मीटर और आपकी सब्सिडी के कागज़',
   loan_disbursement: 'हर कदम पर हम यहाँ बताते रहेंगे',
 };
+
+const HI_SURVEYED = 'हम आपके सिस्टम का अंतिम डिज़ाइन तय करके इंस्टॉलेशन की योजना बनाएँगे';
 
 const HI_PROJECT: Words<typeof EN_PROJECT> = {
   projectIn: (city) => `${city} में आपका सोलर प्रोजेक्ट`,
@@ -68,8 +90,8 @@ const HI_PROJECT: Words<typeof EN_PROJECT> = {
   instalment: INSTALMENT_NAMES['hi-IN'],
   bankShare: BANK_SHARE_NAMES['hi-IN'],
   next: HI_NEXT,
-  paidNext: (trigger, name, phone) =>
-    `धन्यवाद, आपका पेमेंट मिल गया. आगे: ${HI_NEXT[trigger] ?? HI_NEXT.loan_disbursement}.${name || phone ? ` आपके संपर्क: ${name ?? 'हमारी टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
+  paidNext: (trigger, name, phone, surveyDone) =>
+    `धन्यवाद, आपका पेमेंट मिल गया. आगे: ${nextStep(HI_NEXT, HI_SURVEYED, trigger, surveyDone)}.${name || phone ? ` आपके संपर्क: ${name ?? 'हमारी टीम'}${phone ? `, ${phone}` : ''}.` : ''}`,
   receiptCaption: (number) => `आपकी पेमेंट रसीद (${number})`,
   partPaid: (amount, left) => `${amount} मिल गए. इस किस्त के ${left} बाकी हैं.`,
   whichHome: 'समस्या किस घर में है?',

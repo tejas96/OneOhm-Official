@@ -119,8 +119,9 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     await closeIfSettled(tx, task.projectId);
   }
 
-  await tellCustomerAbout(tx, task, 'completed');
-  await journeyOnComplete(tx, task, userId);
+  // The journey runs first: a step with a richer message of its own skips the generic update.
+  const toldInJourney = await journeyOnComplete(tx, task, userId);
+  await tellCustomerAbout(tx, task, 'completed', toldInJourney);
   await tellManagerDone(tx, task, userId);
   await tx.insert(projectActivities).values({
     projectId: task.projectId,

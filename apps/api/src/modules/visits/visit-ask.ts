@@ -1,5 +1,5 @@
 import type { SendRequest } from '@oneohm/api-contracts';
-import { projectTasks } from '@oneohm/database';
+import { projectTasks, readBusinessSetting } from '@oneohm/database';
 import { isPresenceKind, visitKindOfTask } from '@oneohm/domain';
 import { and, eq, ne } from 'drizzle-orm';
 import { conflict, invalid } from '../../common/http/errors';
@@ -35,9 +35,12 @@ export async function askVisitCompose(
     throw invalid('The DISCOM chooses this day: tell the customer the date instead.');
   if (!target.mayMessage)
     throw invalid('This step is not set to message customers (Settings → Task templates).');
-  const days = await freeDaysFor(deps.db, target.crew, 9, undefined, deps.env.BUSINESS_TIMEZONE);
+  const days = await freeDaysFor(deps.db, target.crew, undefined, deps.env.BUSINESS_TIMEZONE);
   if (days.length === 0)
-    throw conflict('The person who comes has no free day in the next 45 days.', 'no_free_day');
+    throw conflict(
+      `The person who comes has no free day in the next ${(await readBusinessSetting(deps.db, 'visits')).daysAhead} days.`,
+      'no_free_day',
+    );
   const name = await callerName(deps.db, ctx);
   return {
     built: pickList({

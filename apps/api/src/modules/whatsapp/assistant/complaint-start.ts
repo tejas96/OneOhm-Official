@@ -31,6 +31,8 @@ export interface Draft {
   readonly files?: readonly string[];
   /** The form's "anything to add" words, kept while the home is asked in the chat. */
   readonly note?: string | undefined;
+  /** When the last question was sent (ms), so a burst of photos is answered once. */
+  readonly promptedAt?: number;
 }
 
 /** What a report form already answered when its home had to be asked again in the chat. */
@@ -42,7 +44,7 @@ export function draftOf(context: unknown): Draft | null {
   return draft?.stage ? draft : null;
 }
 
-const remember = (db: DatabaseExecutor, chat: Conversation, draft: Draft) =>
+export const remember = (db: DatabaseExecutor, chat: Conversation, draft: Draft) =>
   setStep(db, chat, 'await_problem', { ...keepPending(chat.context), problem: draft });
 
 /**
@@ -113,7 +115,7 @@ function continueFrom(db: DatabaseExecutor, chat: Conversation, draft: Draft) {
 
 /** "What is wrong?" as a list. */
 export async function askWhat(db: DatabaseExecutor, chat: Conversation, draft: Draft) {
-  await remember(db, chat, { ...draft, stage: 'what' });
+  await remember(db, chat, { ...draft, stage: 'what', promptedAt: Date.now() });
   await queueReply(db, chat, {
     kind: 'list',
     body: PROBLEM_WORDS.askWhat,
@@ -127,7 +129,7 @@ export async function askWhat(db: DatabaseExecutor, chat: Conversation, draft: D
 
 /** "Since when?" as three buttons. */
 export async function askSince(db: DatabaseExecutor, chat: Conversation, draft: Draft) {
-  await remember(db, chat, { ...draft, stage: 'since' });
+  await remember(db, chat, { ...draft, stage: 'since', promptedAt: Date.now() });
   await queueReply(db, chat, {
     kind: 'buttons',
     body: PROBLEM_WORDS.askSince,
@@ -140,7 +142,7 @@ export async function askSince(db: DatabaseExecutor, chat: Conversation, draft: 
 
 /** Photos or a few words, closed by [Done]. */
 export async function askExtra(db: DatabaseExecutor, chat: Conversation, draft: Draft) {
-  await remember(db, chat, { ...draft, stage: 'extra' });
+  await remember(db, chat, { ...draft, stage: 'extra', promptedAt: Date.now() });
   await queueReply(db, chat, {
     kind: 'buttons',
     body: PROBLEM_WORDS.addOn,

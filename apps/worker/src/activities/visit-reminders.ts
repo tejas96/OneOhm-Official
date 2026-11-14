@@ -8,12 +8,15 @@ import {
   messageTemplates,
   projectTasks,
   queueCustomerMessageAs,
+  readBusinessCalendar,
   serviceRequests,
   visits,
 } from '@oneohm/database';
 import {
+  type BusinessCalendar,
   isPresenceKind,
   isWorkingTime,
+  openMinutes,
   previousWorkingDay,
   reminderDue,
   templateIsOn,
@@ -31,7 +34,6 @@ import { alertProposed, markDone, markMissed } from './visit-closing';
 import { claimAlert, type Row } from './visit-row';
 
 const PER_TICK = 200;
-const WORKING_DAY_MIN = 9 * 60;
 
 /** The work itself is finished: the task is completed or the request resolved. */
 const finishedNow = sql`coalesce(${projectTasks.status} = 'completed', ${serviceRequests.status} = 'resolved', false)`;
@@ -91,19 +93,20 @@ export async function queueVisitReminders(
       .orderBy(asc(visits.day))
       .limit(PER_TICK),
   );
+  const cal = await readBusinessCalendar(db, timeZone);
   let done = 0;
-  for (const row of open) done += (await step(db, row, now, timeZone)) ? 1 : 0;
+  for (const row of open) done += (await step(db, row, now, cal)) ? 1 : 0;
   return done;
 }
 
 /** What one open visit is due for this tick; true when it did something. */
-async function step(db: Database, row: Row, now: Date, timeZone: string): Promise<boolean> {
+async function step(db: Database, row: Row, now: Date, cal: BusinessCalendar): Promise<boolean> {
   if (row.finished && row.status !== 'proposed') return markDone(db, row, now);
   if (row.status === 'missed') return false;
-  if (visitMissed(row.day, now, timeZone)) return markMissed(db, row, now);
-  if (row.status === 'proposed') return alertProposed(db, row, now, timeZone);
-  const reminded = await remind(db, row, now, timeZone);
-  return (await alertUnconfirmed(db, row, now, timeZone)) || reminded;
+  if (visitMissed(row.day, now, cal)) return markMissed(db, row, now);
+  if (row.status === 'proposed') return alertProposed(db, row, now, cal);
+  const reminded = await remind(db, row, now, cal);
+  return (await alertUnconfirmed(db, row, now, cal)) || reminded;
 }
 
 async function templateOn(db: Database, key: string) {
@@ -129,14 +132,15 @@ async function reminderWasTask(db: Database, row: Row): Promise<boolean> {
 }
 
 /** "Our team visits Sangli tomorrow morning for the installation." [Confirm] [Change day]. */
-async function remind(db: Database, row: Row, now: Date, timeZone: string): Promise<boolean> {
+async function remind(db: Database, row: Row, now: Date, cal: BusinessCalendar): Promise<boolean> {
   if (row.reminderSentAt || isPresenceKind(row.kind) || !mayMessage(row)) return false;
-  const today = todayIn(timeZone, now);
+  const today = todayIn(cal.timeZone, now);
   const due = reminderDue({
     visitDay: row.day,
-    confirmedOn: todayIn(timeZone, row.confirmedAt ?? row.createdAt),
+    confirmedOn: todayIn(cal.timeZone, row.confirmedAt ?? row.createdAt),
     today,
-    working: isWorkingTime(now, timeZone),
+    working: isWorkingTime(now, cal),
+    calendar: cal,
   });
   // With the message off nothing is sent and nothing is marked: the visit morning alert says so.
   if (!due || !(await templateOn(db, 'visit_reminder'))) return false;
@@ -171,17 +175,17 @@ async function remind(db: Database, row: Row, now: Date, timeZone: string): Prom
  * customer. A DISCOM date unanswered after 1 working day is told the same way, and again the
  * working day before it. Nothing for a task whose customer is not messaged (PRD 6.2).
  */
-async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: string) {
+async function alertUnconfirmed(db: Database, row: Row, now: Date, cal: BusinessCalendar) {
   if (!mayMessage(row) || row.customerConfirmedAt || row.customerCannotAt) return false;
   const presence = isPresenceKind(row.kind);
   const day = visitDayLabel(row.day, 'en');
   if (
     presence &&
-    previousWorkingDay(row.day) === todayIn(timeZone, now) &&
-    isWorkingTime(now, timeZone) &&
+    previousWorkingDay(row.day, cal) === todayIn(cal.timeZone, now) &&
+    isWorkingTime(now, cal) &&
     // Not straight after the date was told: they have had no time to answer yet.
     row.toldAt !== null &&
-    workingMinutesBetween(row.toldAt, now, timeZone) >= 120
+    workingMinutesBetween(row.toldAt, now, cal) >= 120
   ) {
     // The key makes this one alert, whatever the number of ticks.
     await alertVisitOwner(db, row, {
@@ -192,11 +196,11 @@ async function alertUnconfirmed(db: Database, row: Row, now: Date, timeZone: str
     });
   }
   if (row.unconfirmedAlertAt) return false;
-  const confirmedOn = todayIn(timeZone, row.confirmedAt ?? row.createdAt);
+  const confirmedOn = todayIn(cal.timeZone, row.confirmedAt ?? row.createdAt);
   const waited = presence
-    ? row.toldAt !== null && workingMinutesBetween(row.toldAt, now, timeZone) >= WORKING_DAY_MIN
-    : visitDayStarted(row.day, now, timeZone) &&
-      isWorkingTime(now, timeZone) &&
+    ? row.toldAt !== null && workingMinutesBetween(row.toldAt, now, cal) >= openMinutes(cal)
+    : visitDayStarted(row.day, now, cal) &&
+      isWorkingTime(now, cal) &&
       // A visit booked for the day itself was never due a reminder.
       (row.reminderSentAt !== null || confirmedOn < row.day);
   if (!waited || !(await claimAlert(db, row, now))) return false;

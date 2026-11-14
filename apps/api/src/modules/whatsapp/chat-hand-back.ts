@@ -1,6 +1,7 @@
 import { chatsWaitingSince, type Database, waConversations, waMessages } from '@oneohm/database';
 import { HAND_BACK_MIN, workingMinutesSince } from '@oneohm/domain';
 import { and, eq, sql } from 'drizzle-orm';
+import { loadCalendar } from '../../common/calendar';
 import { tellHandedBack } from './assistant/hand-back';
 import { keepEntry } from './chat-store';
 
@@ -31,12 +32,13 @@ export async function handBackQuietChats(db: Database, now: Date, zone: string):
     db,
     open.map((chat) => chat.id),
   );
+  const cal = await loadCalendar(db, zone);
   let handed = 0;
   for (const chat of open) {
     if (waiting.has(chat.id)) continue;
     const times = [chat.handedOverAt, chat.lastReply ? new Date(chat.lastReply) : null];
     const last = Math.max(...times.map((at) => at?.getTime() ?? 0));
-    if (last === 0 || workingMinutesSince(new Date(last), now, zone) < HAND_BACK_MIN) continue;
+    if (last === 0 || workingMinutesSince(new Date(last), now, cal) < HAND_BACK_MIN) continue;
     const moved = await db.transaction(async (tx) => {
       const [row] = await tx
         .update(waConversations)

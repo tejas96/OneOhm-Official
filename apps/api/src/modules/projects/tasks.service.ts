@@ -10,6 +10,7 @@ import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
 import { syncWorkOrders } from '../contractors/work-order-sync';
+import { closeAsksOnStart } from '../journey/journey-stale';
 import { ReportArchiveService } from '../reports/report-archive.service';
 import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
 import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
@@ -82,13 +83,10 @@ export class TasksService {
     await closeOpenWait(this.db, task);
     await this.db
       .update(projectTasks)
-      .set({
-        status: 'in_progress',
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      })
+      .set({ status: 'in_progress', startedAt: new Date(), updatedAt: new Date() })
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
+    await closeAsksOnStart(this.db, task); // installation work ends "Is the roof ready?"
     // Only the first start counts; resuming after a wait does not message again.
     if (!task.startedAt)
       await Promise.all([tellCustomerAbout(this.db, task, 'started'), this.stale.afterStart(task)]);

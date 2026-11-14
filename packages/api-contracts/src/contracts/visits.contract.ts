@@ -4,6 +4,8 @@ import { idSchema } from '../common/primitives';
 import {
   cancelVisitSchema,
   setVisitSchema,
+  visitListQuerySchema,
+  visitListRowSchema,
   visitSchema,
   visitScopeSchema,
   visitsOfSchema,
@@ -15,6 +17,14 @@ const empty = z.object({}).optional();
 
 /** Visits to the customer's home (redesign §8): read, set a day, confirm, cancel, mark done. */
 export const visitsContract = c.router({
+  listVisits: {
+    method: 'GET',
+    path: '/visits/list',
+    query: visitListQuerySchema,
+    responses: { 200: z.array(visitListRowSchema) },
+    summary:
+      'Every visit of the days asked (the visits page); people without a team view see their own.',
+  },
   visitsOf: {
     method: 'GET',
     path: '/visits',

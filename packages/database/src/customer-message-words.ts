@@ -1,6 +1,7 @@
 import { customerLanguage, DEFAULT_MILESTONES, DEFAULT_SERVICE_CATEGORIES } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { sayMilestones } from './customer-message-burst';
 import { CARE_EN, CARE_MESSAGES } from './customer-message-care';
 import { HINDI_WORDS } from './customer-message-hi';
 import { JOURNEY_MESSAGES, JOURNEY_EN as JOURNEY_ONLY_EN } from './customer-message-journey';
@@ -216,7 +217,16 @@ export function localWords(language: string | undefined, template: string): Loca
  */
 export function localValues(language: string | undefined, template: string, payload: Payload) {
   const code = customerLanguage(language);
-  return code === 'en-IN' ? payload : localPayload(template, payload, TABLES[code], code);
+  if (code === 'en-IN') return payload;
+  const words = TABLES[code];
+  const said = localPayload(template, payload, words, code);
+  // Step updates merged into one: each step is named in the language, then joined again.
+  const steps = sayMilestones(
+    payload,
+    (title, step) =>
+      localPayload(template, { ...payload, milestone: title, step }, words, code).milestone,
+  );
+  return steps && template === 'project_milestone' ? { ...said, milestone: steps } : said;
 }
 
 /** The title of an app-only alert in the customer's language; undefined for English. */

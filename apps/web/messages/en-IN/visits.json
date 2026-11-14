@@ -15,6 +15,8 @@
     "day": "Day",
     "slot": "Time",
     "noFreeDay": "No free day",
+    "time": "Time",
+    "noFreeTime": "No free time that day",
     "noMessages": "This step is not set to message customers, so the customer is not told.",
     "slots": {
       "morning": "Morning",
@@ -38,6 +40,19 @@
     "done": "Mark done",
     "cancel": "Cancel visit",
     "taskDiffers": "Task starts {task}, visit is {visit}",
-    "bookAgain": "Book again and tell the customer"
+    "bookAgain": "Book again and tell the customer",
+    "page": {
+      "overline": "Delivery",
+      "title": "Visits",
+      "intro": "Every site visit by day: who goes, when, and whether the customer confirmed.",
+      "earlier": "Earlier week",
+      "later": "Next week",
+      "thisWeek": "This week",
+      "everyone": "Everyone",
+      "loading": "Loading visits…",
+      "failed": "Visits could not be loaded. Try again.",
+      "empty": "No visits in these days.",
+      "call": "Call {name}"
+    }
   }
 }

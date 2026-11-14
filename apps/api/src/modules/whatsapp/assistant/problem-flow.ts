@@ -11,9 +11,11 @@ import { activeHomes } from '../../customer-portal/active-projects';
 import { CustomerPortalService } from '../../customer-portal/customer-portal.service';
 import { CustomerRequestPhotosService } from '../../customer-portal/customer-request-photos.service';
 import { propertyOfProject } from '../../documents/document-links';
-import type { Conversation } from '../chat-store';
+import { type Conversation, queueReply } from '../chat-store';
 import { filePaper } from '../file-paper';
 import { FormFileKeeper, type KeptFormFile, showFormFiles } from '../forms/form-files';
+import { linkFormReply } from '../forms/form-record';
+import { refusalWords } from '../forms/form-refusal';
 import type { IncomingForm } from '../forms/form-reply-data';
 import { FormSendService } from '../forms/form-send';
 import { setStep } from './chat-step';
@@ -26,6 +28,7 @@ import {
   draftOf,
   startComplaint,
 } from './complaint-start';
+import { keepFile, MAX_FILES } from './problem-file';
 import { type JoinedKind, noteJoined } from './problem-joined';
 import {
   CATEGORY,
@@ -36,8 +39,6 @@ import {
 } from './problem-raised';
 import { releaseHeldFiles } from './waiting-files';
 import { MEDIA_WORDS } from './words';
-
-const MAX_FILES = 3;
 
 /**
  * "Report a problem" (redesign §12): the form when published, else one tap at a time in the chat. The
@@ -92,17 +93,10 @@ export class ProblemFlowService {
     return this.raise(chat, customerId, draft, said.trim());
   }
 
-  /** A stored photo or voice note sent while the report waits is kept for it. */
+  /** A stored photo or voice note sent while the report waits is kept for it (under the chat's lock). */
   async file(chat: Conversation, customerId: string, documentId: string): Promise<void> {
-    const draft = draftOf(chat.context);
-    if (!draft) return;
-    const files = [...(draft.files ?? []), documentId].slice(0, MAX_FILES);
-    const next: Draft = { ...draft, files };
-    if (draft.stage === 'extra' && draft.kind && draft.since) {
-      if (files.length >= MAX_FILES) return this.raise(chat, customerId, next, '');
-      return askExtra(this.db, chat, next);
-    }
-    return askAgain(this.db, chat, next);
+    const kept = await keepFile(this.db, chat.id, documentId);
+    if (kept.kind === 'raise') return this.raise(kept.chat, customerId, kept.draft, '');
   }
 
   /** The form came back: every answer is a choice, so the report is raised at once. */
@@ -113,7 +107,11 @@ export class ProblemFlowService {
     const offered = homes.slice(0, 10);
     const said = form.answers.home;
     const picked = offered.find((home) => home.id === said)?.id ?? null;
-    const stored = await this.keepFiles(chat, customerId, form);
+    const kept = [
+      ...(draftOf(chat.context)?.files ?? []),
+      ...(await this.keepFiles(chat, customerId, form)),
+    ];
+    const stored = [...new Set(kept)].slice(0, MAX_FILES);
     // An unknown home is asked in the chat; what the form already said (and its photos) goes along.
     if (said ? !picked : offered.length > 1)
       return startComplaint(this.db, chat, customerId, topic, {
@@ -132,22 +130,31 @@ export class ProblemFlowService {
     };
     if (!kind || !since)
       return askAgain(this.db, chat, { ...draft, stage: kind ? 'since' : 'what', files: stored });
-    return this.raise(chat, customerId, { ...draft, files: stored }, form.answers.note ?? '');
+    return this.raise(chat, customerId, { ...draft, files: stored }, form.answers.note ?? '', true);
   }
 
-  /** The form's photos, stored and shown in the chat; the stored documents' ids. */
+  /** The form's photos stored and shown; a refused one is told to the customer once (the team was told). */
   private async keepFiles(chat: Conversation, customerId: string, form: IncomingForm) {
     const saved: Extract<KeptFormFile, { ok: true }>[] = [];
+    const reasons = new Set<string>();
     for (const file of form.files.slice(0, MAX_FILES)) {
       const kept = await this.files.keep(chat, customerId, file);
       if (kept.ok) saved.push(kept);
+      else reasons.add(refusalWords(kept.why));
     }
+    for (const body of reasons) await queueReply(this.db, chat, { kind: 'text', body });
     if (saved.length > 0) await this.db.transaction((tx) => showFormFiles(tx, chat.id, saved));
     return saved.map((file) => file.id);
   }
 
   /** Raises the report from the draft, then tells the customer who will call and when. */
-  async raise(chat: Conversation, customerId: string, draft: Draft, words: string): Promise<void> {
+  async raise(
+    chat: Conversation,
+    customerId: string,
+    draft: Draft,
+    words: string,
+    fromForm = false,
+  ): Promise<void> {
     const kind = draft.kind ?? 'other';
     const since: Since = draft.since ?? 'today';
     const homes = await activeHomes(this.db, customerId);
@@ -159,6 +166,8 @@ export class ProblemFlowService {
       category,
       description,
     });
+    if (fromForm)
+      await linkFormReply(this.db, chat.id, { kind: 'service_request', id: request.id });
     const raised: RaisedRequest = { id: request.id, at: Date.now() };
     await setStep(this.db, chat, 'menu', { raised });
     await releaseHeldFiles(this.db, chat.id);
@@ -202,7 +211,7 @@ export class ProblemFlowService {
     return true;
   }
 
-  /** A voice note sent right after a report joins it, and the person who calls is told. */
+  /** A voice note right after a report joins it; the person who calls is told. */
   async addVoice(chat: Conversation, customerId: string, requestId: string, documentId: string) {
     if (!(await this.attach(customerId, requestId, documentId))) return false;
     const person = await callerOfRequest(this.db, requestId, chat.phone);

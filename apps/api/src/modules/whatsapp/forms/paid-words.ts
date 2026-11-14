@@ -18,6 +18,8 @@ const EN_PAID = {
   photosLabel: 'Proof of payment',
   photosHint: 'A screenshot or a photo of the receipt.',
   send: 'Send',
+  unclear:
+    'We could not read the amount or the date you typed, so our team will check it against your proof.',
 };
 
 const MR_PAID: Words<typeof EN_PAID> = {
@@ -31,6 +33,8 @@ const MR_PAID: Words<typeof EN_PAID> = {
   photosLabel: 'पेमेंटचा पुरावा',
   photosHint: 'स्क्रीनशॉट किंवा पावतीचा फोटो.',
   send: 'पाठवा',
+  unclear:
+    'तुम्ही टाईप केलेली रक्कम किंवा तारीख आम्हाला वाचता आली नाही, म्हणून आमची टीम ती तुमच्या पुराव्याशी तपासेल.',
 };
 
 const HI_PAID: Words<typeof EN_PAID> = {
@@ -44,6 +48,7 @@ const HI_PAID: Words<typeof EN_PAID> = {
   photosLabel: 'भुगतान का सबूत',
   photosHint: 'स्क्रीनशॉट या रसीद की फ़ोटो।',
   send: 'भेजें',
+  unclear: 'आपकी लिखी रकम या तारीख़ हमसे पढ़ी नहीं गई, इसलिए हमारी टीम उसे आपके सबूत से मिलाकर जाँचेगी।',
 };
 
 export const PAID_LISTS = { en: EN_PAID, mr: MR_PAID, hi: HI_PAID };

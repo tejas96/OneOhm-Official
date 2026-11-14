@@ -7,9 +7,10 @@ import {
   notifyHolders,
   projects,
   queueCustomerMessage,
+  readBusinessCalendar,
   routeOfCustomer,
 } from '@oneohm/database';
-import { isWorkingTime } from '@oneohm/domain';
+import { type BusinessCalendar, isWorkingTime } from '@oneohm/domain';
 import { formatInr, titleCaseName } from '@oneohm/shared';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { capabilityOf } from './action-capability';
@@ -59,6 +60,7 @@ export async function queueActionReminders(
 ): Promise<number> {
   // The day to sign at the bank has passed: that ask closes itself before anything is chased.
   await expireBankSigns(db, now, timeZone);
+  const cal = await readBusinessCalendar(db, timeZone);
   await abandonSurveys(db, now);
   const open = await db
     .select({
@@ -114,12 +116,12 @@ export async function queueActionReminders(
     if (
       due === 'customer' &&
       (await inChat(db, row.action)) &&
-      (await remindCustomer(db, row, now, timeZone))
+      (await remindCustomer(db, row, now, cal))
     )
       done += 1;
     // The self survey is optional: nobody on the team is told to "call them" about it. The team hears in
     // working hours only (a later tick tells them); the manager joins at 7 days.
-    if (due === 'team' && row.action.type !== 'self_survey' && isWorkingTime(now, timeZone)) {
+    if (due === 'team' && row.action.type !== 'self_survey' && isWorkingTime(now, cal)) {
       await alertAsker(db, row, now);
       done += 1;
     }
@@ -138,9 +140,9 @@ async function inChat(db: Database, action: typeof customerActions.$inferSelect)
 }
 
 /** A location is asked again with the approved template, in working hours. */
-async function remindCustomer(db: Database, row: Row, now: Date, timeZone: string) {
+async function remindCustomer(db: Database, row: Row, now: Date, cal: BusinessCalendar) {
   const { action } = row;
-  if (!isWorkingTime(now, timeZone)) return false;
+  if (!isWorkingTime(now, cal)) return false;
   if (now.getTime() - askedSince(action).getTime() >= CUSTOMER_UNTIL) return false;
   if (action.type === 'callback') return remindCallback(db, row, `action_reminder:${action.id}`);
   if (action.type === 'visit_pick') return remindVisitPick(db, row, `action_reminder:${action.id}`);

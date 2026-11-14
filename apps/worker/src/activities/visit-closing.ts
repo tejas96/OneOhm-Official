@@ -1,17 +1,20 @@
 import {
   alertVisitOwner,
   type Database,
+  leadActivities,
+  leads,
   projectActivities,
   serviceRequests,
   visits,
 } from '@oneohm/database';
-import { confirmDeadline, visitDayLabel } from '@oneohm/domain';
+import { type BusinessCalendar, confirmDeadline, visitDayLabel } from '@oneohm/domain';
+import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { claimAlert, type Row } from './visit-row';
 
 /** The customer's pick still waits for the team after the time we promised: the owner is told. */
-export async function alertProposed(db: Database, row: Row, now: Date, timeZone: string) {
-  if (row.unconfirmedAlertAt || now < confirmDeadline(row.createdAt, timeZone)) return false;
+export async function alertProposed(db: Database, row: Row, now: Date, cal: BusinessCalendar) {
+  if (row.unconfirmedAlertAt || now < confirmDeadline(row.createdAt, cal)) return false;
   if (!(await claimAlert(db, row, now))) return false;
   await alertVisitOwner(db, row, {
     kind: 'visit_pick_waiting',
@@ -68,5 +71,34 @@ export async function markMissed(db: Database, row: Row, now: Date): Promise<boo
       : 'Mark it done if it happened, or book a new day with the customer.',
     key: `visit_missed:${row.id}`,
   });
+  if (row.leadId && row.kind === 'survey' && !row.taskId && !row.serviceRequestId)
+    await leadSurveyMissed(db, row.leadId, day, now);
   return true;
+}
+
+/**
+ * A lead's site visit went by without being done: the lead goes back from Survey booked to
+ * Contacted, and its owner's next action is today, to book a new time (said on the timeline).
+ * A lead moved on meanwhile (quoted, won, lost) is left as it is.
+ */
+async function leadSurveyMissed(db: Database, leadId: string, day: string, now: Date) {
+  const today = todayIn(process.env.BUSINESS_TIMEZONE ?? 'Asia/Kolkata', now);
+  const moved = await db
+    .update(leads)
+    .set({
+      stage: 'contacted',
+      stepKey: null,
+      nextActionOn: today,
+      nextActionTime: null,
+      nextActionNote: 'Site visit missed — book a new time',
+      updatedAt: now,
+    })
+    .where(and(eq(leads.id, leadId), eq(leads.stage, 'survey_scheduled')))
+    .returning({ id: leads.id });
+  if (moved.length === 0) return;
+  await db.insert(leadActivities).values({
+    leadId,
+    kind: 'stage_change',
+    note: `Site visit on ${day} was missed. Moved from Survey booked to Contacted.`,
+  });
 }

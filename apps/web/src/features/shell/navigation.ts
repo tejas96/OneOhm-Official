@@ -2,6 +2,7 @@ import type { Capability } from '@oneohm/domain';
 import {
   Award,
   Boxes,
+  CalendarClock,
   ChartColumn,
   CircleGauge,
   FileText,
@@ -42,6 +43,19 @@ export const NAVIGATION: readonly NavGroup[] = [
     items: [
       { key: 'today', href: '/today', icon: Sun, built: true },
       { key: 'rewards', href: '/rewards', icon: Award, built: true },
+      {
+        key: 'visits',
+        href: '/visits',
+        icon: CalendarClock,
+        built: true,
+        requires: [
+          'leads.view_all',
+          'leads.manage',
+          'projects.view_all',
+          'service.manage',
+          'surveys.perform',
+        ],
+      },
       {
         key: 'commandCenter',
         href: '/command-center',

@@ -15,6 +15,16 @@ export const DISPATCH_KEY = 'dispatch_material';
 export const INSTALLATION_KEY = 'installation_complete';
 export const HANDOVER_KEY = 'handover';
 
+/**
+ * Steps whose completion gets its own richer message (a question or the handover pack) instead of
+ * the generic step update. Matches the keys journeyOnComplete answers for.
+ */
+export const OWN_NEWS_KEYS: ReadonlySet<string> = new Set([
+  INSTALLATION_KEY,
+  HANDOVER_KEY,
+  'subsidy_release',
+]);
+
 export type JourneyTask = typeof projectTasks.$inferSelect;
 
 export async function taskFor(db: DatabaseExecutor, taskId: string): Promise<JourneyTask | null> {

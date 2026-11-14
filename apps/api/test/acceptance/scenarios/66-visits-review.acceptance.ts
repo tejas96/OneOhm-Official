@@ -9,7 +9,15 @@ import { addDays, newCustomer, sellProject, today } from '../support/sales';
 import { closeChat, openChat } from '../support/send';
 import { advanceTo, project, surveyFacts, workTask } from '../support/tasks';
 import { eveningOn, noonOn, runVisitWorker } from '../support/visit-worker';
-import { askDay, pickDay, setVisit, visitsFor, visitsOf, visitTask } from '../support/visits';
+import {
+  askDay,
+  pickDay,
+  setVisit,
+  teamConfirmsPicks,
+  visitsFor,
+  visitsOf,
+  visitTask,
+} from '../support/visits';
 
 // Review fixes for visits (phase 3b, fix round 1).
 
@@ -29,10 +37,16 @@ const workingDayAfter = (day: string, n = 1) => {
 
 describe('Visits: review fixes', () => {
   let admin: Session;
+  let restoreSettings: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    // These scenarios are about the team confirming a customer's pick.
+    restoreSettings = await teamConfirmsPicks(admin);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await restoreSettings();
+    await closeDb();
+  });
 
   it('a DISCOM date on a task that does not message customers is never told, and never alerted as unanswered', async () => {
     const sale = await sellProject(admin, { name: 'Review Quiet Discom (test)' });

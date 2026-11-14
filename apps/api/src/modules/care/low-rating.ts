@@ -1,4 +1,5 @@
 import { type DatabaseExecutor, notifyHolders } from '@oneohm/database';
+import { loadCalendar } from '../../common/calendar';
 import { callPromise, callWhen } from './call-promise';
 import { alertCall, openCallTask } from './call-task';
 import { callerFor } from './care-person';
@@ -29,7 +30,7 @@ export async function lowRatingFollowUp(
     projectId: given.projectId,
     phone: given.phone,
   });
-  const promise = callPromise(new Date(), given.timeZone);
+  const promise = callPromise(new Date(), await loadCalendar(tx, given.timeZone));
   await openCallTask(tx, {
     customerId: given.customerId,
     projectId: given.projectId,

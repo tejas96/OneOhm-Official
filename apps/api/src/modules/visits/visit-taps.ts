@@ -5,6 +5,8 @@ const DAY = '\\d{4}-\\d{2}-\\d{2}';
 const ASK = new RegExp(`^vask:(${UUID})$`);
 const PICK_DAY = new RegExp(`^vday:(${UUID}):(${DAY})$`);
 const PICK_SLOT = new RegExp(`^vslot:(${UUID}):(${DAY}):(${VISIT_SLOTS.join('|')})$`);
+/** An exact time: minutes after midnight (e.g. 600 = 10:00). */
+const PICK_TIME = new RegExp(`^vtime:(${UUID}):(${DAY}):(\\d{1,4})$`);
 const VISIT = new RegExp(`^(vcf|vok|vchg):(${UUID})(?::(${DAY}))?$`);
 
 /** A tap on a button or row the visit messages carry. */
@@ -16,7 +18,9 @@ export type VisitTap =
       readonly t: 'slot';
       readonly actionId: string;
       readonly day: string;
-      readonly slot: VisitSlot;
+      /** Older Morning/Afternoon buttons; new lists carry `startMin`. */
+      readonly slot?: VisitSlot;
+      readonly startMin?: number;
     }
   /** [Confirm] / [I'll be there]. */
   | { readonly t: 'confirm'; readonly visitId: string; readonly day?: string }
@@ -37,6 +41,14 @@ export function readVisitTap(id: string | null | undefined): VisitTap | null {
       actionId: slot[1] as string,
       day: slot[2] as string,
       slot: slot[3] as VisitSlot,
+    };
+  const time = PICK_TIME.exec(id);
+  if (time)
+    return {
+      t: 'slot',
+      actionId: time[1] as string,
+      day: time[2] as string,
+      startMin: Number(time[3]),
     };
   const visit = VISIT.exec(id);
   if (!visit) return null;

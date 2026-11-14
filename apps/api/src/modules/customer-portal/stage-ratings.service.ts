@@ -23,7 +23,7 @@ import { customerStageCards, readStageRatings } from './stage-ratings-read';
 const STAGE_NAME = {
   survey: 'site survey',
   installation: 'installation',
-  commissioning: 'switch-on and handover',
+  commissioning: 'switch-on',
 } as const;
 
 /**

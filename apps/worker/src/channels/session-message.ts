@@ -5,6 +5,8 @@ export type SessionMessage =
       readonly kind: 'buttons';
       readonly body: string;
       readonly buttons: readonly { readonly id: string; readonly title: string }[];
+      /** A file on top of the message, such as the receipt PDF. */
+      readonly header?: { readonly document: { readonly url: string; readonly filename: string } };
     }
   | {
       /** WhatsApp's "Send location" button (location_request_message). */
@@ -117,6 +119,15 @@ export function sessionRequestBody(toE164: string, message: SessionMessage) {
       type: 'interactive',
       interactive: {
         type: 'button',
+        ...(message.header && {
+          header: {
+            type: 'document',
+            document: {
+              link: message.header.document.url,
+              filename: message.header.document.filename,
+            },
+          },
+        }),
         body: { text: message.body },
         action: {
           buttons: message.buttons.map((button) => ({ type: 'reply', reply: button })),

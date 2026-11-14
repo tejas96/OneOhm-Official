@@ -5,7 +5,7 @@ const EN = {
   stage: {
     survey: 'site survey',
     installation: 'installation',
-    commissioning: 'switch-on and handover',
+    commissioning: 'switch-on',
   } as Record<string, string>,
   askStage: (stage: string) => `How was your ${stage}? Please tap a rating.`,
   askProblem: (topic: string) => `How was our help with "${topic}"? Please tap a rating.`,
@@ -35,7 +35,7 @@ const MR: Words<typeof EN> = {
   stage: {
     survey: 'साइट सर्व्हे',
     installation: 'इन्स्टॉलेशन',
-    commissioning: 'सिस्टिम सुरू करणे आणि हस्तांतरण',
+    commissioning: 'स्विच-ऑन',
   },
   askStage: (stage) => `तुमचा ${stage} कसा वाटला? कृपया रेटिंग दाबा.`,
   askProblem: (topic) => `"${topic}" साठी आमची मदत कशी वाटली? कृपया रेटिंग दाबा.`,
@@ -62,7 +62,7 @@ const MR: Words<typeof EN> = {
 };
 
 const HI: Words<typeof EN> = {
-  stage: { survey: 'साइट सर्वे', installation: 'इंस्टॉलेशन', commissioning: 'सिस्टम चालू करना और हैंडओवर' },
+  stage: { survey: 'साइट सर्वे', installation: 'इंस्टॉलेशन', commissioning: 'स्विच-ऑन' },
   askStage: (stage) => `आपका ${stage} कैसा रहा? कृपया रेटिंग दबाएँ।`,
   askProblem: (topic) => `"${topic}" में हमारी मदद कैसी रही? कृपया रेटिंग दबाएँ।`,
   button: 'रेटिंग दें',

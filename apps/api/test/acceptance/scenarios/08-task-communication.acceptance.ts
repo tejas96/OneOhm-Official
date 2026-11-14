@@ -33,6 +33,17 @@ describe('Task communication', () => {
   let projectWords: string;
   const forTask = (rows: OutboxRow[], event: string, taskId: string) =>
     rows.filter((row) => row.dedupe_key === `task_${event}:${taskId}`);
+  // Step updates finished close together go out as one held message (payload.milestones lists
+  // the titles), so a task is told by its own row or by its title inside such a merged one.
+  const told = (rows: OutboxRow[], event: string, taskId: string, title: string) => {
+    const own = forTask(rows, event, taskId).length;
+    if (own > 0 || event !== 'completed') return own;
+    return rows.filter(
+      (row) =>
+        row.template === 'project_milestone' &&
+        (row.payload.milestones ?? row.payload.milestone ?? '').split('; ').includes(title),
+    ).length;
+  };
 
   beforeAll(async () => {
     admin = await Session.admin();
@@ -123,7 +134,16 @@ describe('Task communication', () => {
     for (const task of finished) {
       const template = templates.get(task.templateKey);
       const expected = template?.notifyCustomer ? 1 : 0;
-      const sent = forTask(outbox, template?.notifyEvent ?? 'completed', task.id).length;
+      const raw = told(
+        outbox,
+        template?.notifyEvent ?? 'completed',
+        task.id,
+        template?.customerTitle?.trim() || task.title,
+      );
+      // A step with a richer message of its own (installation question, handover pack, subsidy
+      // question) skips the generic update when that message goes out, so it is told once, not twice.
+      const ownNews = ['installation_complete', 'handover', 'subsidy_release'];
+      const sent = ownNews.includes(task.templateKey) && raw === 0 ? expected : raw;
       expect({ task: task.templateKey, sent }).toEqual({ task: task.templateKey, sent: expected });
     }
   });

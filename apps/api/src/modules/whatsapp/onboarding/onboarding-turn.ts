@@ -7,11 +7,17 @@ import {
   previousStep,
 } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
+import type { GeoPlace } from '../../maps/reverse-geocode';
 import { assistantLanguage, inLanguage } from '../assistant/language';
 import type { Conversation } from '../chat-store';
 import type { Incoming } from '../whatsapp-events';
 import { changesName } from './onboarding-answer';
-import { onboardState, PERSON_CHOICE, readOnboard } from './onboarding-context';
+import {
+  type OnboardContext,
+  onboardState,
+  PERSON_CHOICE,
+  readOnboard,
+} from './onboarding-context';
 import type { Fetched, PendingFile } from './onboarding-files';
 import { knownFrom, type OpenLead } from './onboarding-lead';
 
@@ -20,12 +26,17 @@ export interface Turn {
   readonly tx: Transaction;
   readonly chat: Conversation;
   readonly settings: OnboardingSettings;
-  readonly lead: OpenLead | null;
+  /** The open lead; set when this turn makes one, so later answers in the same turn are written on it. */
+  lead: OpenLead | null;
   readonly known: Partial<OnboardAnswers>;
+  /** The onboarding form offered to this chat, until its one reply is taken. */
+  form: OnboardContext['form'];
   /** The photo or paper in this message, downloaded before the lock was taken. */
   readonly file: Fetched | null;
   /** Held-bill objects to remove once this transaction has committed. */
   readonly discard: string[];
+  /** Where a shared pin's point is, looked up before the lock was taken (null if unknown). */
+  readonly place: GeoPlace | null;
   answers: OnboardAnswers;
   misses: number;
   awaiting: 'name' | 'city' | undefined;
@@ -70,6 +81,7 @@ export async function saveTurn(turn: Turn, step: OnboardStep): Promise<void> {
     ...(turn.awaiting ? { awaiting: turn.awaiting } : {}),
     ...(turn.pendingFile ? { pendingFile: turn.pendingFile } : {}),
     ...(turn.pin ? { pin: turn.pin } : {}),
+    ...(turn.form ? { form: turn.form } : {}),
   };
   const context = { ...rest, ...(turn.dropEntry || entry === undefined ? {} : { entry }), ob };
   await turn.tx
@@ -95,6 +107,7 @@ export async function newTurn(
   lead: OpenLead | null,
   file: Fetched | null,
   referral: boolean,
+  place: GeoPlace | null = null,
 ): Promise<Turn> {
   const kept = readOnboard(chat);
   return {
@@ -112,8 +125,10 @@ export async function newTurn(
     awaiting: kept?.awaiting,
     pendingFile: kept?.pendingFile,
     pin: kept?.pin,
+    form: kept?.form,
     file,
     discard: [],
+    place,
     dropEntry: false,
   };
 }

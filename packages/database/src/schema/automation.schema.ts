@@ -17,6 +17,7 @@ export const businessSettings = pgTable('business_settings', {
       'lead_assignment',
       'onboarding',
       'payments',
+      'visits',
     ],
   }).primaryKey(),
   value: jsonb('value').notNull(),

@@ -69,11 +69,24 @@ const HI: Words<typeof EN> = {
 };
 
 export const CARE_FORM_LISTS = { en: EN, mr: MR, hi: HI };
+/** The id of the form's "Other city" row. */
+export const OTHER_CITY = '-';
 const FORM = localized(EN, { mr: MR, hi: HI });
+
+/** The homes as the form lists them: the town, and the site name when two homes share a town (30 characters). */
+export function homeOptions(homes: readonly { id: string; city: string; site?: string }[]) {
+  const towns = homes.map((home) => home.city);
+  return homes.slice(0, 10).map((home, index) => {
+    const shared = towns.filter((town) => town === home.city).length > 1;
+    const named = shared && home.site ? `${home.city} · ${home.site}` : home.city;
+    const title = shared && named === home.city ? `${home.city} (${index + 1})` : named;
+    return { id: home.id, title: title.slice(0, 30) };
+  });
+}
 
 /** The start of the problem form: the homes (when 2 or more), the choices and the words. */
 export function problemFormStart(
-  homes: readonly { id: string; city: string }[],
+  homes: readonly { id: string; city: string; site?: string }[],
   payload: Record<string, unknown>,
 ): FormStart {
   return {
@@ -90,9 +103,7 @@ export function problemFormStart(
       note_label: FORM.noteLabel,
       send: FORM.send,
       ask_home: homes.length > 1,
-      home_options: homes
-        .slice(0, 10)
-        .map((home) => ({ id: home.id, title: home.city.slice(0, 30) })),
+      home_options: homeOptions(homes),
       what_options: PROBLEM_KINDS.map((id) => ({ id, title: PROBLEM_WORDS.what[id].slice(0, 30) })),
       since_options: SINCE_CHOICES.map((id) => ({
         id,
@@ -119,7 +130,11 @@ export function referFormStart(
       mobile_hint: FORM.mobileHint,
       city_label: FORM.cityLabel,
       send: FORM.send,
-      city_options: cities.slice(0, 20).map((city) => ({ id: city, title: city.slice(0, 30) })),
+      // The last row is "Other city": the form has no free text, so it means the city is not given.
+      city_options: [
+        ...cities.slice(0, 19).map((city) => ({ id: city, title: city.slice(0, 30) })),
+        { id: OTHER_CITY, title: REFER_WORDS.otherCity.slice(0, 30) },
+      ],
     },
     payload,
   };

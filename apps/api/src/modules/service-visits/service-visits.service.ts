@@ -163,7 +163,7 @@ export class ServiceVisitsService {
           .set({ ...changes, updatedAt: now })
           .where(eq(serviceRequests.id, id));
       }
-      if (changes.status) await tellCustomer(tx, job, 'in_progress', now);
+      if (changes.status) await tellCustomer(tx, job, now);
       await noteServiceCheckIn(tx, job.ticket, {
         visitId: created.id,
         userId: actor.userId,

@@ -61,7 +61,7 @@ export async function queueSlaAlerts(db: Database, now: Date, timeZone: string):
   let sent = 0;
   for (const row of await openRequests(db)) {
     const { request } = row;
-    const status = serviceSla({ ...request, scheduledFor: row.scheduledFor }, now);
+    const status = serviceSla({ ...request, scheduledFor: row.scheduledFor }, now, timeZone);
     const clocks: readonly [Clock, SlaState | null, Date | null][] = [
       ['response', status.response, request.responseDueAt],
       ['resolution', status.resolution, request.resolutionDueAt],

@@ -4,7 +4,7 @@ import { Session } from '../support/http';
 import { lastReply, replies, tap } from '../support/onboarding';
 import { addDays, sellProject, today } from '../support/sales';
 import { templateOn } from '../support/visit-worker';
-import { askDay, setVisit, visitsFor, visitTask } from '../support/visits';
+import { askDay, setVisit, teamConfirmsPicks, visitsFor, visitTask } from '../support/visits';
 
 // Review fixes for visits (phase 3b, fix round 1).
 
@@ -15,10 +15,16 @@ const _alerts = async (kind: string, name: string) =>
 
 describe('Visits: review fixes (taps)', () => {
   let admin: Session;
+  let restoreSettings: () => Promise<unknown>;
   beforeAll(async () => {
     admin = await Session.admin();
+    // These scenarios are about the team confirming a customer's pick.
+    restoreSettings = await teamConfirmsPicks(admin);
   });
-  afterAll(closeDb);
+  afterAll(async () => {
+    await restoreSettings();
+    await closeDb();
+  });
 
   it('two taps at once answer an ask once; a tap on an old reminder does not touch a moved visit', async () => {
     const sale = await sellProject(admin, { name: 'Review Race (test)' });

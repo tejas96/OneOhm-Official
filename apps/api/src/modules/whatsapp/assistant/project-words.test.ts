@@ -37,18 +37,35 @@ describe('the customer’s words for a project (live review C9)', () => {
 
   it('tells what happens after each payment, with a named person and a phone', () => {
     for (const [language, words] of Object.entries(PROJECT_LISTS)) {
-      const said = words.paidNext('quotation_accepted', 'Priya Kulkarni', '+919800000001');
+      const said = words.paidNext('quotation_accepted', 'Priya Kulkarni', '+919800000001', false);
       expect(said, language).toContain('Priya Kulkarni');
       expect(said, language).toContain('+919800000001');
-      expect(words.paidNext('commissioning_completed', null, null), language).not.toContain('null');
+      expect(words.paidNext('commissioning_completed', null, null, true), language).not.toContain(
+        'null',
+      );
       // Only the business phone known: the team, with that phone.
-      expect(words.paidNext('quotation_accepted', null, '+912000000000'), language).toContain(
+      expect(words.paidNext('quotation_accepted', null, '+912000000000', true), language).toContain(
         '+912000000000',
       );
       expect(said.length, language).toBeLessThanOrEqual(1024);
     }
-    expect(PROJECT_LISTS.en.paidNext('quotation_accepted', 'Priya', '+919800000001')).toBe(
-      'Thank you, your payment is received. Next: a site visit to plan your system. Your contact: Priya, +919800000001.',
+    expect(PROJECT_LISTS.en.paidNext('quotation_accepted', 'Priya', '+919800000001', false)).toBe(
+      'Thank you, your payment is received. Next: a technical site survey for exact measurements. Your contact: Priya, +919800000001.',
+    );
+  });
+
+  it('after the advance, names the survey only while it is still to do', () => {
+    for (const [language, words] of Object.entries(PROJECT_LISTS)) {
+      const todo = words.paidNext('quotation_accepted', null, null, false);
+      const done = words.paidNext('quotation_accepted', null, null, true);
+      expect(done, language).not.toBe(todo);
+      // Other instalments do not depend on the survey.
+      expect(words.paidNext('material_dispatch', null, null, true), language).toBe(
+        words.paidNext('material_dispatch', null, null, false),
+      );
+    }
+    expect(PROJECT_LISTS.en.paidNext('quotation_accepted', null, null, true)).toBe(
+      'Thank you, your payment is received. Next: we finalise your system design and plan the installation.',
     );
   });
 });

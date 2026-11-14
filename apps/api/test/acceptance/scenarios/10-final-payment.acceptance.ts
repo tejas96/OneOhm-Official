@@ -1,9 +1,10 @@
 import type { ProjectTask, Receivable } from '@oneohm/api-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeDb, rows } from '../support/db';
+import { closeDb, outboxFor, rows } from '../support/db';
 import { Session } from '../support/http';
 import { expectBalanced, milestoneOf, postings, recordPayment } from '../support/money';
 import { type Sale, sellProject } from '../support/sales';
+import { openChat } from '../support/send';
 import {
   advanceTo,
   completeThrough,
@@ -14,6 +15,8 @@ import {
   workTask,
 } from '../support/tasks';
 import { staffEmail, TEAM_PASSWORD } from '../support/team';
+
+afterAll(closeDb);
 
 // PRD 13 "Final payment": commissioning creates the final receivable once; net-meter
 // completion closes the project operationally. Settlement stays a separate event.
@@ -29,7 +32,6 @@ describe('Final payment', () => {
     sale = await sellProject(admin, { name: 'Final Payment Customer (test)' });
     finalId = milestoneOf(sale.project, 'commissioning_completed').id;
   });
-  afterAll(closeDb);
 
   const finalMilestone = async () =>
     milestoneOf(await project(admin, sale.project.id), 'commissioning_completed');
@@ -126,5 +128,57 @@ describe('Final payment', () => {
     expect(paid.financiallyClosedAt).not.toBeNull();
     expect(await postings('milestone_due', finalId)).toBe(1);
     await expectBalanced(accounts);
+  });
+});
+
+// Inside the 24-hour window the chat carries the [Pay] button of the final instalment: the due notice
+// stays quiet for a final milestone, so the final-link job asks itself, and no template follows it.
+describe('Final payment inside the chat window', () => {
+  it('asks to pay once in the chat, with no link template alongside', {
+    timeout: 150_000,
+  }, async () => {
+    const admin = await Session.admin();
+    const accounts = await Session.password(staffEmail('accounts'), TEAM_PASSWORD);
+    const sale = await sellProject(admin, { name: 'Final Payment Chat (test)' });
+    const finalId = milestoneOf(sale.project, 'commissioning_completed').id;
+    await recordPayment(
+      accounts,
+      sale.project.id,
+      milestoneOf(sale.project, 'quotation_accepted'),
+      'bank_transfer',
+    );
+    await advanceTo(admin, sale.project.id, 'testing_commissioning');
+    const detail = await project(admin, sale.project.id);
+    await recordPayment(accounts, detail.id, milestoneOf(detail, 'material_dispatch'), 'upi');
+    await openChat(sale.customer.phone, sale.customer.customerId);
+    await workTask(
+      admin,
+      taskByKey(await project(admin, sale.project.id), 'testing_commissioning'),
+    );
+
+    const asks = () =>
+      outboxFor(sale.customer.phone).then((all) =>
+        all.filter(
+          (row) =>
+            row.template.startsWith('session:') &&
+            JSON.stringify(row.payload).includes(`"pay:${finalId}"`),
+        ),
+      );
+    const links = () =>
+      rows<{ id: string }>('select id from payment_links where milestone_id = $1', [finalId]);
+    // The final-link job runs every minute: wait until it has made the link.
+    for (let second = 0; second < 90 && (await links()).length === 0; second += 2)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    expect(await links()).toHaveLength(1);
+    // One Pay ask: the switch-on message already carries it, so the final-link job adds none. (Had
+    // that message failed, it would not count and the job would send the link template instead.)
+    const [ask, ...more] = await asks();
+    expect(ask).toBeDefined();
+    expect(more).toHaveLength(0);
+    // The chat is the way to reach them while it is open: no payment_link template alongside it.
+    const templates = (await outboxFor(sale.customer.phone)).filter(
+      (row) => row.template === 'payment_link' && row.payload.milestoneId === finalId,
+    );
+    expect(templates).toHaveLength(0);
   });
 });

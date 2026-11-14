@@ -24,6 +24,7 @@ const smsRow = (lastError: string | null = null): Row => ({
   deliveryStatus: null,
   deliveredAt: null,
   readAt: null,
+  notBefore: null,
   createdAt: new Date(),
 });
 
@@ -35,7 +36,7 @@ function fakeDb(row: Row) {
       from: () => q,
       where: () => q,
       limit: async () => [],
-      returning: async () => [{ id: row.id }],
+      returning: async () => [row],
       // biome-ignore lint/suspicious/noThenProperty: a drizzle query is awaited as is.
       then: (done: (rows: unknown[]) => unknown) => Promise.resolve(result).then(done),
     };

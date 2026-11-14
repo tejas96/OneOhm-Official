@@ -5,6 +5,7 @@ import {
   notifyHolders,
   projects,
   queueCustomerMessage,
+  readBusinessCalendar,
   referralRewards,
   routeOfCustomer,
 } from '@oneohm/database';
@@ -22,7 +23,7 @@ const PAYOUT_DAYS = 14;
 const STAGE_NAME: Readonly<Record<string, string>> = {
   survey: 'site survey',
   installation: 'installation',
-  commissioning: 'switch-on and handover',
+  commissioning: 'switch-on',
 };
 
 /**
@@ -72,7 +73,7 @@ export async function queueCareReminders(
     )
     .orderBy(asc(customerActions.createdAt))
     .limit(PER_TICK);
-  const working = isWorkingTime(now, timeZone);
+  const working = isWorkingTime(now, await readBusinessCalendar(db, timeZone));
   let done = 0;
   for (const row of open) {
     const age = now.getTime() - row.action.createdAt.getTime();

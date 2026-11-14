@@ -4,6 +4,7 @@ import type {
   LeadAssignmentRulesRecord,
   OnboardingSettingsRecord,
   PaymentSettingsView,
+  VisitSettingsRecord,
 } from '@oneohm/api-contracts';
 import {
   type BusinessSettingKey,
@@ -36,6 +37,7 @@ import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { cityOwnerStanding } from '../crm/lead-owner';
 import { assertSecondPersonCovered } from './second-person-check';
+import { savedWorkErrors } from './working-time-check';
 
 const CHECKS: {
   readonly [K in BusinessSettingKey]: (value: BusinessSettingsMap[K]) => SettingErrors;
@@ -47,6 +49,8 @@ const CHECKS: {
   dashboard: checkDashboardSettings,
   lead_assignment: (value) =>
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
+  // Checked against the saved working time in save(), which can read the database.
+  visits: () => ({}),
   onboarding: (value) => {
     const problem = onboardingProblem(value);
     // Field paths (`billBands.2.maxRupees`) mark the inputs; `onboarding` is the summary.
@@ -62,6 +66,7 @@ const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
   dashboard: 'Check the dashboard numbers.',
   lead_assignment: 'Check the lead rule.',
   onboarding: 'Check the onboarding settings.',
+  visits: 'Check the visit settings.',
 };
 
 const copyLeadRules = (rules: LeadAssignmentRules): LeadAssignmentRulesRecord => ({
@@ -89,12 +94,21 @@ export class BusinessSettingsService {
     return readBusinessSetting(this.db, key);
   }
 
+  /** The visit settings as the screen shows them (plain arrays). */
+  async visits(): Promise<VisitSettingsRecord> {
+    const saved = await this.get('visits');
+    return { ...saved, slotStarts: [...saved.slotStarts], reminders: { ...saved.reminders } };
+  }
+
   async save<K extends BusinessSettingKey>(
     actor: Actor,
     key: K,
     value: BusinessSettingsMap[K],
   ): Promise<BusinessSettingsMap[K]> {
-    const errors = CHECKS[key](value);
+    const errors =
+      key === 'visits'
+        ? await savedWorkErrors(this.db, value as BusinessSettingsMap['visits'])
+        : CHECKS[key](value);
     // Onboarding names the limit it breaks (say "At most 8 bill bands."), not just the area.
     if (Object.keys(errors).length > 0) throw invalid(errors.onboarding ?? PROBLEM[key], errors);
     if (key === 'approvals') {
@@ -169,8 +183,7 @@ export class BusinessSettingsService {
     return this.leadAssignment();
   }
 
-  /** The WhatsApp onboarding settings as the screen shows them. */
-  async onboarding(): Promise<OnboardingSettingsRecord> {
+    async onboarding(): Promise<OnboardingSettingsRecord> {
     const saved = await this.get('onboarding');
     return {
       ...saved,
@@ -216,8 +229,6 @@ export class BusinessSettingsService {
     return this.onboarding();
   }
 
-  /** The approval limits with the discount limit from the rate card, on one screen. */
-  /** The RazorpayX fee per payout with its 18% GST worked out; both null while unknown. */
   async payments(): Promise<PaymentSettingsView> {
     const { razorpayxFeePaise } = await this.get('payments');
     return {

@@ -4,6 +4,7 @@ import {
   type Database,
   notifyCover,
   notifyHolders,
+  readBusinessCalendar,
 } from '@oneohm/database';
 import { workingMinutesBetween } from '@oneohm/domain';
 import { and, asc, eq, gt, sql } from 'drizzle-orm';
@@ -41,10 +42,11 @@ export async function queueCallTasks(
     )
     .orderBy(asc(customerActions.createdAt))
     .limit(PER_TICK);
+  const cal = await readBusinessCalendar(db, timeZone);
   let told = 0;
   for (const { action, customer } of late) {
     const due = new Date(String(action.payload.callBy));
-    const managerDue = workingMinutesBetween(due, now, timeZone) >= MANAGER_AFTER_MIN;
+    const managerDue = workingMinutesBetween(due, now, cal) >= MANAGER_AFTER_MIN;
     const stage = managerDue ? 'manager' : 'owner';
     if (action.payload.escalated === stage || (action.payload.escalated === 'owner' && !managerDue))
       continue;

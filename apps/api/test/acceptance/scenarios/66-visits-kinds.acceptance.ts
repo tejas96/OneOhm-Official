@@ -124,7 +124,9 @@ describe('Visits: DISCOM presence, service visits, Home', () => {
 
     // [Visit details] lists it with the day, slot, work and home.
     await tap(customer.phone, 'go:visit');
-    expect((await lastReply(customer.phone))?.body).toMatch(/• \*.+, morning\* — service visit · /);
+    expect((await lastReply(customer.phone))?.body).toMatch(
+      /• \*.+, \d+:\d\d.+\* — service visit · /,
+    );
 
     // Clearing the day cancels the visit quietly.
     await admin.put(`/service-requests/${id}/visit-day`, { visitOn: null });

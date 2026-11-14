@@ -9,6 +9,7 @@ import {
   categoryHours,
   customerFeedback,
   customers,
+  type DatabaseExecutor,
   holdersOf,
   notify,
   projects,
@@ -25,6 +26,7 @@ import { queueWhatsApp } from '../../common/outbox';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
 import { tellFixed } from '../care/fixed-check';
+import { tellServiceStatus } from '../care/service-status';
 import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { changesFor, type Patch } from './service-ticket-changes';
 
@@ -45,6 +47,28 @@ export function matchesSla(ticket: Ticket, filter: Query['sla']): boolean {
 type Row = Awaited<ReturnType<typeof serviceRequestRows>>[number];
 
 const topicOf = (row: Row) => (row.customerLabel ?? row.label ?? 'your request').toLowerCase();
+
+/** The customer hears the request moved on: in their chat when "being worked on", else the template. */
+async function tellStatus(tx: DatabaseExecutor, current: Row, status: Ticket['status'], now: Date) {
+  const { request, customer } = current;
+  if (status === 'in_progress') {
+    const topic = topicOf(current);
+    await tellServiceStatus(
+      tx,
+      { id: request.id, category: request.category, topic, customer },
+      status,
+      now,
+    );
+    return;
+  }
+  await queueWhatsApp(
+    tx,
+    customer.phone,
+    'service_update',
+    { customer: customer.name, topic: topicOf(current), status: STATUS_LABEL[status] },
+    `service:${request.id}:${status}:${now.getTime()}`,
+  );
+}
 
 function assignedNotice(current: Row, owner: string, now: Date) {
   const { request } = current;
@@ -128,17 +152,7 @@ export class ServiceDeskService {
         // "Fixed ✅ Is it working now?" with two buttons (redesign §12); the older update while it is off.
         await tellFixed(tx, { id, topicWords: topicOf(current) }, now);
       } else if (patch.status && patch.status !== before.status) {
-        await queueWhatsApp(
-          tx,
-          current.customer.phone,
-          'service_update',
-          {
-            customer: current.customer.name,
-            topic: topicOf(current),
-            status: STATUS_LABEL[patch.status],
-          },
-          `service:${id}:${patch.status}:${now.getTime()}`,
-        );
+        await tellStatus(tx, current, patch.status, now);
       }
       const owner = patch.assigneeUserId;
       if (owner !== undefined && owner !== before.assigneeUserId)

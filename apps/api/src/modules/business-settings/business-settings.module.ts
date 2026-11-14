@@ -4,6 +4,7 @@ import { BusinessSettingsController } from './business-settings.controller';
 import { BusinessSettingsService } from './business-settings.service';
 import { JobRunsService } from './job-runs.service';
 import { ProjectVariantsService } from './project-variants.service';
+import { WorkingTimeService } from './working-time.service';
 
 /**
  * Central configuration owners change without a developer (PRD 7.2), the automatic
@@ -16,6 +17,7 @@ import { ProjectVariantsService } from './project-variants.service';
     ProjectVariantsService,
     JobRunsService,
     ApprovalsInboxService,
+    WorkingTimeService,
   ],
 })
 export class BusinessSettingsModule {}

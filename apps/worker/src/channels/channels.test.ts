@@ -103,6 +103,29 @@ describe('WhatsApp Cloud request', () => {
     });
   });
 
+  it('sessionRequestBody buttons with the receipt PDF as header', () => {
+    const body = sessionRequestBody('+919800000000', {
+      kind: 'buttons',
+      body: 'Thank you',
+      buttons: [{ id: 'menu', title: 'Menu' }],
+      header: { document: { url: 'https://x.test/r.pdf', filename: 'Receipt.pdf' } },
+    });
+    expect((body as { interactive?: unknown }).interactive).toMatchObject({
+      type: 'button',
+      header: {
+        type: 'document',
+        document: { link: 'https://x.test/r.pdf', filename: 'Receipt.pdf' },
+      },
+      body: { text: 'Thank you' },
+    });
+    const plain = sessionRequestBody('+919800000000', {
+      kind: 'buttons',
+      body: 'Hi',
+      buttons: [{ id: 'menu', title: 'Menu' }],
+    });
+    expect((plain as { interactive?: unknown }).interactive).not.toHaveProperty('header');
+  });
+
   it('sessionRequestBody document', () => {
     expect(
       sessionRequestBody('+919800000000', {

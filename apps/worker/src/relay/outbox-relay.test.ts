@@ -3,7 +3,12 @@ import type { Client } from '@temporalio/client';
 import { WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import { describe, expect, it, vi } from 'vitest';
 import { SENDING } from '../activities/delivery.activities';
-import { DELIVERY_MAYBE_SENT, DELIVERY_STOPPED, OutboxRelay } from './outbox-relay';
+import {
+  DELIVERY_MAYBE_SENT,
+  DELIVERY_STOPPED,
+  nextPerRecipient,
+  OutboxRelay,
+} from './outbox-relay';
 
 const stopped = vi.hoisted(() => [] as { id: string; reason: string }[]);
 vi.mock('../activities/fail-delivery', () => ({
@@ -18,6 +23,7 @@ interface Row {
   attempts: number;
   startedAt?: Date | null;
   createdAt?: Date;
+  notBefore?: Date | null;
   lastError?: string | null;
 }
 
@@ -29,7 +35,13 @@ function fakeDb(pending: Row[]): Database {
     where: () => chain,
     orderBy: () => chain,
     limit: async () =>
-      pending.map((row) => ({ startedAt: null, createdAt: new Date(), lastError: null, ...row })),
+      pending.map((row) => ({
+        startedAt: null,
+        createdAt: new Date(),
+        notBefore: null,
+        lastError: null,
+        ...row,
+      })),
   };
   return chain as unknown as Database;
 }
@@ -86,6 +98,27 @@ describe('OutboxRelay order per recipient', () => {
   });
 });
 
+describe('OutboxRelay in-flight rows block the whole recipient', () => {
+  it('starts nothing for a recipient with a later row already in flight', async () => {
+    const pending: Row[] = [
+      { id: 'a1', recipient: '+911', attempts: 0 },
+      { id: 'a2', recipient: '+911', attempts: 1, startedAt: new Date() },
+      { id: 'b1', recipient: '+912', attempts: 0 },
+    ];
+    const { started, client } = fakeClient();
+    await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
+    expect(started).toEqual(['b1']);
+  });
+
+  it('counts a started row as in flight even if attempts is still 0', () => {
+    const rows = [
+      { recipient: '+911', attempts: 0, startedAt: new Date() },
+      { recipient: '+911', attempts: 0 },
+    ];
+    expect(nextPerRecipient(rows)).toEqual([]);
+  });
+});
+
 describe('OutboxRelay stuck deliveries', () => {
   it('gives up a row stuck in flight for hours, so the next one can go', async () => {
     const longAgo = new Date(Date.now() - 6 * 3600_000);
@@ -113,5 +146,41 @@ describe('OutboxRelay stuck deliveries', () => {
     await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
     expect(stopped).toEqual([{ id: 'm1', reason: DELIVERY_MAYBE_SENT }]);
     expect(DELIVERY_MAYBE_SENT).toContain('may have been sent — check before resending');
+  });
+});
+
+describe('OutboxRelay held rows (step updates gathering into one message)', () => {
+  const later = new Date(Date.now() + 60_000);
+  const earlier = new Date(Date.now() - 1000);
+
+  it('skips a row until its wait is over, without blocking the recipient’s other messages', async () => {
+    const pending: Row[] = [
+      { id: 'held', recipient: '+911', attempts: 0, notBefore: later },
+      { id: 'pay', recipient: '+911', attempts: 0 },
+      { id: 'only-held', recipient: '+912', attempts: 0, notBefore: later },
+    ];
+    const { started, client } = fakeClient();
+    await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
+    expect(started).toEqual(['pay']);
+  });
+
+  it('starts the held row once its time has come', async () => {
+    const pending: Row[] = [{ id: 'held', recipient: '+911', attempts: 0, notBefore: earlier }];
+    const { started, client } = fakeClient();
+    await new OutboxRelay(fakeDb(pending), client, 'q', 1000, () => {}).tick();
+    expect(started).toEqual(['held']);
+  });
+
+  it('keeps one message at a time per recipient among the rows that are ready', () => {
+    const rows = [
+      { id: 'a', recipient: '+1', attempts: 0, notBefore: later },
+      { id: 'b', recipient: '+1', attempts: 0, notBefore: null },
+      { id: 'c', recipient: '+1', attempts: 0 },
+    ];
+    expect(nextPerRecipient(rows).map((row) => row.id)).toEqual(['b']);
+    // The held one is the oldest ready row once its time passes.
+    expect(nextPerRecipient(rows, new Date(later.getTime() + 1)).map((row) => row.id)).toEqual([
+      'a',
+    ]);
   });
 });

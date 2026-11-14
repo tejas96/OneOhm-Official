@@ -6,6 +6,7 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import {
+  customers,
   noteBackgroundRun,
   paymentLinks,
   paymentMilestones,
@@ -17,6 +18,8 @@ import { FINAL_LINK_WINDOW_DAYS, finalCustomerMilestones, finalLinkDecision } fr
 import { formatInr } from '@oneohm/shared';
 import { and, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
+import { chatOpenFor } from '../send-to-customer/send-context';
+import { askToPayInChat, payAsked } from './final-link-ask';
 import { PAYMENT_GATEWAY, type PaymentGateway } from './gateway';
 import { PaymentLinksService } from './payment-links.service';
 
@@ -143,7 +146,7 @@ export class FinalLinkService implements OnApplicationBootstrap, OnModuleDestroy
           .where(eq(paymentLinks.milestoneId, milestone.id))
           .limit(1);
         if (existing) return false;
-        const link = await this.links.create({ userId: null }, milestone.id);
+        const link = await this.makeLink(tx, milestone);
         await tx.insert(projectActivities).values({
           projectId: milestone.projectId,
           kind: 'payment',
@@ -158,6 +161,44 @@ export class FinalLinkService implements OnApplicationBootstrap, OnModuleDestroy
       this.logger.warn(`Final link for milestone ${milestone.id} not sent: ${message(error)}`);
       return false;
     }
+  }
+
+  /**
+   * Inside the customer's 24-hour chat window the chat already carries (or gets) a [Pay ₹X] button, so
+   * no `payment_link` template follows it: the link is made quietly, and the in-chat payment ask goes
+   * only when none was sent (or is pending) for this milestone. Outside the window the template is the way to reach them.
+   */
+  private async makeLink(
+    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
+    milestone: typeof paymentMilestones.$inferSelect,
+  ) {
+    const [who] = await tx
+      .select({
+        phone: customers.phoneE164,
+        name: customers.name,
+        code: projects.code,
+        customerId: customers.id,
+      })
+      .from(projects)
+      .innerJoin(customers, eq(customers.id, projects.customerId))
+      .where(eq(projects.id, milestone.projectId))
+      .limit(1);
+    if (!who || !(await chatOpenFor(tx, who.phone)))
+      return this.links.create({ userId: null }, milestone.id);
+    const link = await this.links.create({ userId: null }, milestone.id, { tell: false });
+    // The due notice stays quiet for a final milestone, so the ask is queued here, unless a Pay button
+    // really went (or is going) to this chat already: failed and skipped rows reached nobody.
+    if (!(await payAsked(tx, who.phone, milestone.id)))
+      await askToPayInChat(tx, {
+        phone: who.phone,
+        customerName: who.name,
+        customerId: who.customerId,
+        projectId: milestone.projectId,
+        projectCode: who.code,
+        milestone: { id: milestone.id, label: milestone.label },
+        owedPaise: link.amountPaise,
+      });
+    return link;
   }
 }
 

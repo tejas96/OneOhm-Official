@@ -24,6 +24,9 @@ export const workforcePolicySchema = z.object({
   attendance: z.object({
     dayStart: timeOfDay,
     dayEnd: timeOfDay,
+    /** Lunch; both null = none. Edited in Working time & holidays, kept as saved here. */
+    lunchStart: timeOfDay.nullable().optional(),
+    lunchEnd: timeOfDay.nullable().optional(),
     graceMinutes: z.number().int().min(0).max(240),
     captureLocation: z.boolean(),
     retentionDays: z.number().int().min(7).max(730),

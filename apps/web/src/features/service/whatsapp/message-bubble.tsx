@@ -14,6 +14,8 @@ import {
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { documentThumbUrl, documentUrl } from '@/lib/api/upload';
+import { FormCard } from './form-card';
+import { splitChips } from './message-chips';
 
 type DeliveryState = NonNullable<ChatMessage['delivery']>;
 
@@ -116,6 +118,7 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
   const t = useTranslations('service.whatsapp');
   const format = useFormatter();
   const outgoing = message.direction === 'out';
+  const { text, chips } = splitChips(message.kind, caption(message));
   // A line about the chat itself (the assistant took it back), never sent to the customer.
   if (message.kind === 'note')
     return (
@@ -131,6 +134,7 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
             : 'rounded-bl-md border border-hairline bg-raised',
         )}
       >
+        {message.form && <FormCard form={message.form} />}
         {message.kind === 'choice' && (
           <span className="block type-label text-ink-faint">{t('picked')}</span>
         )}
@@ -140,10 +144,22 @@ export function MessageBubble({ message }: { readonly message: ChatMessage }) {
             {message.file.filedAs ? t('filedAs', { where: message.file.filedAs }) : t('toSort')}
           </span>
         )}
-        {caption(message) && (
+        {!message.form && text && (
           <span className={cn('block', message.file && 'mt-1.5')}>
-            <RichText body={caption(message)} links={outgoing} />
+            <RichText body={text} links={outgoing} />
           </span>
+        )}
+        {chips.length > 0 && (
+          <ul aria-label={t('buttons')} className="mt-2 flex flex-wrap gap-1.5">
+            {chips.map((title) => (
+              <li
+                key={title}
+                className="rounded-full border border-hairline bg-raised px-3 py-1 type-label text-ink-muted"
+              >
+                {title}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
       <p className="flex flex-wrap items-center gap-x-2 px-1 type-label text-ink-faint">

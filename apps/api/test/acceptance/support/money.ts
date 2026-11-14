@@ -128,12 +128,24 @@ export async function providerId(table: 'payment_links' | 'bank_payouts', id: st
  * chat says in Marathi what happens next and who to call (the project manager, else the
  * lead owner, whoever has a phone), ending with taps.
  */
-export async function expectPaidNews(receiptFile: string, paymentId: string, projectId: string) {
-  expect(receiptFile).toBe('OneOhm-Ravi-Patil-test-receipt.pdf');
-  const [next] = await rows<{ payload: { body: string; buttons: { id: string }[] } }>(
-    'SELECT payload FROM outbox WHERE dedupe_key = $1',
-    [`paid_next:${paymentId}`],
+export async function expectPaidNews(
+  paymentId: string,
+  projectId: string,
+): Promise<{ url: string; filename: string }> {
+  const [next] = await rows<{
+    payload: {
+      body: string;
+      buttons: { id: string }[];
+      header?: { document: { url: string; filename: string } };
+    };
+  }>('SELECT payload FROM outbox WHERE dedupe_key = $1', [`paid_next:${paymentId}`]);
+  // Inside the chat window it is ONE message: the receipt PDF on top, no payment_received template.
+  expect(next?.payload.header?.document.filename).toBe('OneOhm-Ravi-Patil-test-receipt.pdf');
+  const [survey] = await rows<{ status: string }>(
+    "SELECT status FROM project_tasks WHERE project_id = $1 AND template_key = 'site_survey'",
+    [projectId],
   );
+  const surveyDone = !survey || survey.status === 'completed';
   const [contact] = await rows<{ name: string; phone: string }>(
     `SELECT u.full_name AS name, u.phone_e164 AS phone FROM projects p
        JOIN quotations q ON q.id = p.quotation_id LEFT JOIN leads l ON l.id = q.lead_id
@@ -144,7 +156,7 @@ export async function expectPaidNews(receiptFile: string, paymentId: string, pro
   );
   expect(contact?.phone).toBeTruthy();
   expect(next?.payload.body).toBe(
-    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: सिस्टमच्या नियोजनासाठी साइट भेट. तुमचा संपर्क: ${contact?.name}, ${contact?.phone}.`,
+    `धन्यवाद, तुमचे पेमेंट मिळाले. पुढे: ${surveyDone ? 'आम्ही तुमच्या सिस्टिमची अंतिम रचना ठरवून बसवणीचे नियोजन करू' : 'अचूक मोजमापांसाठी तांत्रिक साइट सर्वेक्षण'}. तुमचा संपर्क: ${contact?.name}, ${contact?.phone}.`,
   );
   // View receipt sends this receipt's PDF (live QA round 2).
   expect(next?.payload.buttons.map((button) => button.id)).toEqual([
@@ -152,6 +164,7 @@ export async function expectPaidNews(receiptFile: string, paymentId: string, pro
     'go:update',
     'menu',
   ]);
+  return next?.payload.header?.document ?? { url: '', filename: '' };
 }
 
 /** The [Pay ₹X] button's id on the newest buttons message to this phone (redesign §10). */

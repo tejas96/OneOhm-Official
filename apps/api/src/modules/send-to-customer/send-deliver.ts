@@ -1,9 +1,13 @@
 import type { SendPreview } from '@oneohm/api-contracts';
 import {
   type DatabaseExecutor,
+  type MessageFallback,
   messageTemplates,
   noticeCustomer,
-  queueCustomerMessage,
+  queueCustomerMessageAs,
+  type Routed,
+  wasQueued,
+  withFallback,
 } from '@oneohm/database';
 import {
   DEFAULT_MESSAGE_TEMPLATES,
@@ -70,11 +74,64 @@ export async function previewOf(
   };
 }
 
+/** How a send went: the way it travelled, and what routing did when it went as the template. */
+export interface Delivered {
+  readonly via: 'chat' | 'template';
+  readonly routed: Routed | 'chat';
+}
+
 /**
  * Sends it: the chat messages inside the 24-hour window (and the same news in the app inbox),
  * else the approved template, which also reaches an SMS or in-person customer by the usual
- * route. `key` makes the same send once.
+ * route. `key` makes the same send once. `fallback` rides on the first chat message: if the
+ * window turns out to be closed when it is sent, the worker queues that template instead.
  */
+export async function deliverRouted(
+  tx: DatabaseExecutor,
+  ctx: SendContext,
+  built: Built,
+  key: string,
+  userId: string | null,
+  fallback?: MessageFallback,
+): Promise<Delivered> {
+  if (!ctx.chatOpen) {
+    const routed = await queueCustomerMessageAs(
+      tx,
+      ctx.phone,
+      built.template.key,
+      built.template.payload,
+      key,
+    );
+    return { via: 'template', routed };
+  }
+  const chat = await conversationForPhone(tx, ctx.phone);
+  for (const [index, reply] of built.replies.entries()) {
+    const carried =
+      fallback && index === 0
+        ? withFallback(reply, fallback.template, fallback.payload, fallback.dedupeKey)
+        : reply;
+    await queueReply(tx, chat, carried, userId, index === 0 ? key : `${key}:${index}`);
+  }
+  await noticeCustomer(tx, ctx.phone, built.template.key, built.template.payload, key);
+  return { via: 'chat', routed: 'chat' };
+}
+
+/**
+ * Whether the customer will hear it: the chat message went, or the template was newly queued (or
+ * handed to the team) and is switched on. Nothing routed, a duplicate or a switched-off template: no.
+ */
+export async function wasDelivered(
+  tx: DatabaseExecutor,
+  built: Built,
+  sent: Delivered,
+): Promise<boolean> {
+  if (sent.via === 'chat') return true;
+  return (
+    sent.routed !== 'chat' && wasQueued(sent.routed) && (await templateOn(tx, built.template.key))
+  );
+}
+
+/** `deliverRouted`, saying only the way it travelled. */
 export async function deliver(
   tx: DatabaseExecutor,
   ctx: SendContext,
@@ -82,13 +139,5 @@ export async function deliver(
   key: string,
   userId: string | null,
 ): Promise<'chat' | 'template'> {
-  if (!ctx.chatOpen) {
-    await queueCustomerMessage(tx, ctx.phone, built.template.key, built.template.payload, key);
-    return 'template';
-  }
-  const chat = await conversationForPhone(tx, ctx.phone);
-  for (const [index, reply] of built.replies.entries())
-    await queueReply(tx, chat, reply, userId, index === 0 ? key : `${key}:${index}`);
-  await noticeCustomer(tx, ctx.phone, built.template.key, built.template.payload, key);
-  return 'chat';
+  return (await deliverRouted(tx, ctx, built, key, userId)).via;
 }
