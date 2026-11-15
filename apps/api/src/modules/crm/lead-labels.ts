@@ -18,6 +18,9 @@ export const SOURCE_LABEL: Readonly<Record<LeadSource, string>> = {
   employee: 'Employee',
   reseller: 'Reseller',
   referral: 'Customer referral',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  google: 'Google',
 };
 
 /** Lost reasons as the history note says them. */

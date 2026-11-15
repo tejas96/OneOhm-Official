@@ -53,6 +53,10 @@ const MARKETING: readonly string[] = [
   'self_survey_offer',
   'self_survey_reminder',
   'amc_renewal_offer',
+  'offer_quote_follow_up',
+  'offer_revisit',
+  'offer_past_customer',
+  'review_request',
 ];
 /** Reminders whose words send the customer to the WhatsApp chat. */
 const CHAT_REMINDERS: readonly string[] = [

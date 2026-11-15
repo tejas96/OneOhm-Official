@@ -7,6 +7,7 @@ import { BellOff, Clock3, SendHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, type KeyboardEvent, useState } from 'react';
 import { describeError } from '@/lib/api/api-error';
+import { canTypeReply, isSocial } from './chat-channel';
 import { useReply } from './use-whatsapp';
 
 /** A staff reply. Sending one quietens the assistant in this chat until it is handed back. */
@@ -15,11 +16,13 @@ export function ReplyBox({ chat }: { readonly chat: ChatSummary }) {
   const toast = useToast();
   const reply = useReply(chat.id);
   const [draft, setDraft] = useState('');
+  const social = isSocial(chat.channel);
+  const locked = !canTypeReply(chat);
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     const text = draft.trim();
-    if (!text || reply.isPending) return;
+    if (!text || reply.isPending || locked) return;
     reply.mutate(text, {
       onSuccess: () => setDraft(''),
       onError: (error) =>
@@ -46,18 +49,19 @@ export function ReplyBox({ chat }: { readonly chat: ChatSummary }) {
       {!chat.windowOpen && (
         <p className="flex items-start gap-2 px-1 type-body-sm text-ink-muted">
           <Clock3 aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-faint" />
-          {t('reply.closed')}
+          {social ? t(`reply.closedSocial.${chat.channel}`) : t('reply.closed')}
         </p>
       )}
       <div className="flex items-end gap-2">
         <Textarea
-          aria-label={t('reply.label')}
+          aria-label={social ? t(`reply.labelSocial.${chat.channel}`) : t('reply.label')}
           aria-keyshortcuts="Control+Enter Meta+Enter"
           placeholder={chat.windowOpen ? t('reply.placeholder') : t('reply.followUpPlaceholder')}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           readOnly={reply.isPending}
+          disabled={locked}
           rows={2}
           maxLength={chat.windowOpen ? 4000 : FOLLOW_UP_MAX}
           className="min-h-12 flex-1 resize-none"
@@ -67,13 +71,13 @@ export function ReplyBox({ chat }: { readonly chat: ChatSummary }) {
           variant="primary"
           leadingIcon={<SendHorizontal />}
           pending={reply.isPending}
-          disabled={!draft.trim()}
+          disabled={locked || !draft.trim()}
         >
           {t('reply.send')}
         </Button>
       </div>
       <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 type-label text-ink-faint">
-        <span>{chat.state === 'human' ? null : t('reply.takeOver')}</span>
+        <span>{chat.state === 'human' || social ? null : t('reply.takeOver')}</span>
         <span className="max-sm:hidden">{t('reply.hint')}</span>
       </p>
     </form>

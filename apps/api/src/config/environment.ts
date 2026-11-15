@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { marketingEnvironmentShape, marketingProductionIssues } from './marketing-environment';
 
 const flag = z
   .enum(['true', 'false'])
@@ -93,11 +94,14 @@ const environmentSchema = z
     FILE_WAIT_SECONDS: z.coerce.number().int().min(0).max(120).default(15),
     /** Runs the sales checks (quote validity, promised calls, start project) every 15 minutes. */
     SALES_CHECKS_TIMER: flag,
+    ...marketingEnvironmentShape,
   })
   .superRefine((env, context) => {
     const issues = [
       ...missingKeys(env),
-      ...(env.NODE_ENV === 'production' ? productionIssues(env) : []),
+      ...(env.NODE_ENV === 'production'
+        ? [...productionIssues(env), ...marketingProductionIssues(env)]
+        : []),
     ];
     for (const [path, message] of issues)
       context.addIssue({ code: 'custom', path: [path], message });

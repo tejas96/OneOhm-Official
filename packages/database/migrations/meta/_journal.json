@@ -673,6 +673,20 @@
       "when": 1793952208295,
       "tag": "0095_timed_visits_and_holidays",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1794720153979,
+      "tag": "0096_marketing",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1794721057419,
+      "tag": "0097_marketing_job_data",
+      "breakpoints": true
     }
   ]
 }

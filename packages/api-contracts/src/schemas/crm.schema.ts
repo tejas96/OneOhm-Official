@@ -96,6 +96,10 @@ export const leadAttributionSchema = z.object({
   utmMedium: z.string().nullable(),
   utmCampaign: z.string().nullable(),
   landingPage: z.string().nullable(),
+  /** The Marketing campaign the code belongs to, for the lead card's link; null for hand-made codes. */
+  marketingCampaignId: idSchema.nullable(),
+  /** Where the ad ran: Instagram, Facebook, Google or a WhatsApp chat from an ad. */
+  adPlace: z.enum(['instagram', 'facebook', 'google', 'whatsapp_ad']).nullable(),
 });
 export type LeadAttributionRecord = z.infer<typeof leadAttributionSchema>;
 

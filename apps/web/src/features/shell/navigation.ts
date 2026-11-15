@@ -9,6 +9,7 @@ import {
   HardHat,
   IndianRupee,
   type LucideIcon,
+  Megaphone,
   Settings2,
   SolarPanel,
   Sun,
@@ -68,6 +69,13 @@ export const NAVIGATION: readonly NavGroup[] = [
   {
     key: 'sales',
     items: [
+      {
+        key: 'marketing',
+        href: '/marketing',
+        icon: Megaphone,
+        built: true,
+        requires: ['marketing.manage'],
+      },
       {
         key: 'leads',
         href: '/leads',

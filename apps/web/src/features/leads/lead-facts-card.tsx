@@ -5,8 +5,10 @@ import { Card, cn, Select } from '@oneohm/design-system/web';
 import { campaignLabel } from '@oneohm/domain';
 import { formatKwp } from '@oneohm/shared';
 import { CalendarClock } from 'lucide-react';
+import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { PlaceIcon } from '@/components/place-icon';
 import { useCan } from '@/providers/current-user';
 import { clockLabel, isOpenLead } from './lead-labels';
 import { useUpdateLead } from './use-lead-mutations';
@@ -100,6 +102,11 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
             .filter(Boolean)
             .join(' · ')}
         </Fact>
+        {lead.attribution.adPlace && (
+          <Fact label={t('facts.adFrom')}>
+            <AdLine attribution={lead.attribution} />
+          </Fact>
+        )}
         {lead.referredBy && <Fact label={t('facts.referredBy')}>{lead.referredBy.name}</Fact>}
         {lead.email && <Fact label={t('facts.email')}>{lead.email}</Fact>}
       </dl>
@@ -109,6 +116,33 @@ export function LeadFactsCard({ lead }: { readonly lead: LeadDetail }) {
         </p>
       )}
     </Card>
+  );
+}
+
+/** "From an Instagram ad · Diwali offer", the campaign linking to its page in Marketing. */
+function AdLine({ attribution }: { readonly attribution: LeadDetail['attribution'] }) {
+  const t = useTranslations('leads.facts');
+  if (!attribution.adPlace) return null;
+  const name = attribution.campaignName ?? campaignLabel(attribution);
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5">
+      <PlaceIcon place={attribution.adPlace} className="size-4 shrink-0 text-ink-faint" />
+      <span className="truncate">{t(`adPlace.${attribution.adPlace}`)}</span>
+      {name &&
+        (attribution.marketingCampaignId ? (
+          <>
+            {' · '}
+            <Link
+              href={`/marketing?campaign=${attribution.marketingCampaignId}`}
+              className="truncate text-accent hover:underline"
+            >
+              {name}
+            </Link>
+          </>
+        ) : (
+          ` · ${name}`
+        ))}
+    </span>
   );
 }
 

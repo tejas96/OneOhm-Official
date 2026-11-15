@@ -1,0 +1,1 @@
+ALTER TABLE "marketing_jobs" ADD COLUMN "data" jsonb;

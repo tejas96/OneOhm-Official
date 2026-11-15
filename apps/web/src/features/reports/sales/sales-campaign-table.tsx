@@ -5,6 +5,7 @@ import { Card, CardHeader, ResponsiveTable, type TableColumn } from '@oneohm/des
 import { useTranslations } from 'next-intl';
 import { NUM } from '../parts/report-body';
 import { money } from '../parts/report-format';
+import { hasAdSpend, salesPerRupee } from './campaign-spend';
 
 type CampaignRow = SalesReport['byCampaign'][number];
 
@@ -64,12 +65,39 @@ export function SalesByCampaign({ rows }: { readonly rows: readonly CampaignRow[
       cell: (row) => <span className={`${NUM} text-ink`}>{money(row.collectedPaise)}</span>,
     },
   ];
+  const dash = (paise: number | null) => (paise === null ? '—' : money(paise));
+  const spendColumns: TableColumn<CampaignRow>[] = [
+    {
+      key: 'spend',
+      header: t('adSpend'),
+      align: 'end',
+      cell: (row) => <span className={NUM}>{money(row.spendPaise)}</span>,
+    },
+    {
+      key: 'costPerLead',
+      header: t('costPerLead'),
+      align: 'end',
+      cell: (row) => <span className={NUM}>{dash(row.costPerLeadPaise)}</span>,
+    },
+    {
+      key: 'costPerSale',
+      header: t('costPerSale'),
+      align: 'end',
+      cell: (row) => <span className={NUM}>{dash(row.costPerSalePaise)}</span>,
+    },
+    {
+      key: 'returnOnSpend',
+      header: t('salesPerRupee'),
+      align: 'end',
+      cell: (row) => <span className={NUM}>{salesPerRupee(row.returnOnSpend)}</span>,
+    },
+  ];
   return (
     <Card>
       <CardHeader title={t('byCampaign')} description={t('byCampaignBody')} />
       <ResponsiveTable
         caption={t('byCampaign')}
-        columns={columns}
+        columns={hasAdSpend(rows) ? [...columns, ...spendColumns] : columns}
         rows={rows}
         rowKey={(row) => row.key}
         className="px-2 pb-3 max-md:px-4"

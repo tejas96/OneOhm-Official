@@ -7,16 +7,32 @@ import {
   leadActivities,
   leadCampaigns,
   leads,
+  marketingClicks,
   notify,
 } from '@oneohm/database';
 import { campaignLabel, type LeadSource } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, isNull, notInArray, sql } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
-import { conflict } from '../../common/http/errors';
+import { AppError } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { adLeadAlert, arrivalKey, cameFromAd } from './lead-ad-alert';
 import { SOURCE_LABEL } from './lead-labels';
 import { alertNobodyFree, ownerByRule } from './lead-owner';
+
+/** Nobody holds the leads permission, so a new lead has no one to take it. Waiting will not fix it. */
+export class NoLeadTaker extends AppError {
+  constructor() {
+    super(
+      409,
+      'Nobody can take new leads yet. Give a staff role the leads permission.',
+      'conflict',
+    );
+  }
+}
+
+/** Where a lead came from, plus the landing-page visit (a Marketing click) it should claim. */
+export type IntakeAttribution = LeadAttribution & { readonly clickId?: string };
 
 export interface IntakeInput {
   readonly name: string;
@@ -29,24 +45,29 @@ export interface IntakeInput {
   /** The first line on the lead's timeline, e.g. "Sent the website form from /solar". */
   readonly firstNote: string;
   /** Where the lead came from; written only when a lead is made (first touch wins). */
-  readonly attribution?: LeadAttribution | undefined;
+  readonly attribution?: IntakeAttribution | undefined;
 }
 
-/** The lead's campaign in words (its listed name, else code, ad or UTM), or null. */
-async function campaignOf(db: DatabaseExecutor, leadId: string): Promise<string | null> {
-  const [row] = await db
-    .select({
-      campaignCode: leads.campaignCode,
-      campaignName: leadCampaigns.name,
-      adId: leads.adId,
-      adHeadline: leads.adHeadline,
-      utmCampaign: leads.utmCampaign,
-    })
-    .from(leads)
-    .leftJoin(leadCampaigns, eq(leadCampaigns.code, leads.campaignCode))
-    .where(eq(leads.id, leadId))
-    .limit(1);
-  return row ? campaignLabel(row) : null;
+/** The campaign in words (its listed name, else code, ad or UTM), or null. */
+async function campaignOf(
+  db: DatabaseExecutor,
+  attribution: LeadAttribution | undefined,
+): Promise<string | null> {
+  if (!attribution) return null;
+  const [listed] = attribution.campaignCode
+    ? await db
+        .select({ name: leadCampaigns.name })
+        .from(leadCampaigns)
+        .where(eq(leadCampaigns.code, attribution.campaignCode))
+        .limit(1)
+    : [];
+  return campaignLabel({
+    campaignCode: attribution.campaignCode ?? null,
+    campaignName: listed?.name ?? null,
+    adId: attribution.adId ?? null,
+    adHeadline: attribution.adHeadline ?? null,
+    utmCampaign: attribution.utmCampaign ?? null,
+  });
 }
 
 export interface IntakeResult {
@@ -86,6 +107,8 @@ export class LeadIntakeService {
    */
   receive(input: IntakeInput, db: DatabaseExecutor = this.db): Promise<IntakeResult> {
     return db.transaction(async (tx) => {
+      // Two webhooks for one number at once take turns: the second sees the first's lead.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.phone}))`);
       const open = await this.openLeadByPhone(tx, input.phone);
       if (!open) return this.insert(tx, input);
       const today = todayIn();
@@ -101,7 +124,7 @@ export class LeadIntakeService {
       await tx
         .insert(leadActivities)
         .values({ leadId: open.id, kind: 'note', note: input.firstNote });
-      if (open.ownerUserId) await this.tellOwner(tx, open.ownerUserId, open, input, today);
+      if (open.ownerUserId) await this.tellOwner(tx, open.ownerUserId, open, input, true);
       return { leadId: open.id, name: open.name, createdAt: open.createdAt, created: false };
     });
   }
@@ -129,11 +152,10 @@ export class LeadIntakeService {
 
   private async insert(tx: DatabaseExecutor, input: IntakeInput): Promise<IntakeResult> {
     const ruled = await ownerByRule(tx, { city: input.city });
-    if (!ruled) {
-      throw conflict('Nobody can take new leads yet. Give a staff role the leads permission.');
-    }
+    if (!ruled) throw new NoLeadTaker();
     const owner = ruled.userId;
     const today = todayIn();
+    const { clickId, ...columns } = input.attribution ?? {};
     const [lead] = await tx
       .insert(leads)
       .values({
@@ -146,37 +168,57 @@ export class LeadIntakeService {
         nextActionOn: today,
         nextActionNote: input.nextActionNote,
         notes: input.notes ?? null,
-        ...input.attribution,
+        ...columns,
       })
       .returning({ id: leads.id, name: leads.name, createdAt: leads.createdAt });
     if (!lead) throw new Error('Lead insert returned nothing.');
     await tx
       .insert(leadActivities)
       .values({ leadId: lead.id, kind: 'note', note: input.firstNote });
-    await this.tellOwner(tx, owner, lead, input, today);
+    if (clickId)
+      await tx
+        .update(marketingClicks)
+        .set({ leadId: lead.id })
+        .where(and(eq(marketingClicks.id, clickId), isNull(marketingClicks.leadId)));
+    await this.tellOwner(tx, owner, lead, input, false);
     if (ruled.fallback) await alertNobodyFree(tx, lead);
     return { leadId: lead.id, name: lead.name, createdAt: lead.createdAt, created: true };
   }
 
-  /** "New lead · <source>", with the campaign it came from when it has one. */
+  /**
+   * "New lead · <source>" (an ad lead: "New ad lead · call now"; a person already on file who
+   * wrote again from an ad: "<name> came back from an ad · call now"). The campaign is the one
+   * this arrival came from. The dedupe key is per arrival, not per day.
+   */
   private async tellOwner(
     tx: DatabaseExecutor,
     ownerUserId: string,
     lead: { readonly id: string; readonly name: string },
     input: IntakeInput,
-    today: string,
+    cameBack: boolean,
   ) {
-    const campaign = await campaignOf(tx, lead.id);
+    const campaign = await campaignOf(tx, input.attribution);
+    const fromAd = await cameFromAd(tx, input.source, input.attribution);
     const from = campaign ? ` Campaign: ${campaign}.` : '';
+    const words = fromAd
+      ? adLeadAlert({
+          name: lead.name,
+          city: input.city,
+          from: campaign ?? SOURCE_LABEL[input.source],
+          cameBack,
+        })
+      : {
+          title: `New lead · ${SOURCE_LABEL[input.source]}`,
+          body: `${lead.name}, ${input.city}.${from} ${input.nextActionNote}.`,
+        };
     return notify(
       tx,
       { userId: ownerUserId },
       {
         kind: 'lead_assigned',
-        title: `New lead · ${SOURCE_LABEL[input.source]}`,
-        body: `${lead.name}, ${input.city}.${from} ${input.nextActionNote}.`,
+        ...words,
         subject: { type: 'lead', id: lead.id },
-        dedupeKey: `lead_intake:${lead.id}:${ownerUserId}:${today}`,
+        dedupeKey: `lead_intake:${lead.id}:${ownerUserId}:${arrivalKey(input)}`,
       },
     );
   }

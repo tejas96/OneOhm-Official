@@ -2,7 +2,14 @@
 
 import type { CustomerAlert, CustomerOutbound as Outbound } from '@oneohm/api-contracts';
 import { Badge, Card, CardHeader } from '@oneohm/design-system/web';
-import { Bell, type LucideIcon, MessageCircle, MessageSquareText } from 'lucide-react';
+import {
+  Bell,
+  Camera,
+  type LucideIcon,
+  MessageCircle,
+  MessageSquareText,
+  MessagesSquare,
+} from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { DeliveryMark } from '@/features/service/whatsapp/message-bubble';
@@ -11,6 +18,8 @@ const CHANNEL_ICONS: Readonly<Record<Outbound['channel'], LucideIcon>> = {
   whatsapp: MessageCircle,
   sms: MessageSquareText,
   push: Bell,
+  instagram: Camera,
+  messenger: MessagesSquare,
 };
 
 /** "5 minutes ago", never "in 5 seconds" when the page clock lags the server's. */

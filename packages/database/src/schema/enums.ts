@@ -81,7 +81,13 @@ export const paymentMethodEnum = pgEnum('payment_method', [
 export const payablePartyEnum = pgEnum('payable_party', ['vendor', 'contractor', 'employee']);
 export const payableStatusEnum = pgEnum('payable_status', ['pending', 'approved', 'paid']);
 export const documentSourceEnum = pgEnum('document_source', ['upload', 'system', 'report']);
-export const outboxChannelEnum = pgEnum('outbox_channel', ['whatsapp', 'sms', 'push']);
+export const outboxChannelEnum = pgEnum('outbox_channel', [
+  'whatsapp',
+  'sms',
+  'push',
+  'instagram',
+  'messenger',
+]);
 export const outboxStatusEnum = pgEnum('outbox_status', ['pending', 'sent', 'failed', 'skipped']);
 
 /** How OneOhm reaches a customer: WhatsApp first, SMS, or papers handed over in person. */

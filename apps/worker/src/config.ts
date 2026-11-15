@@ -44,9 +44,41 @@ const schema = z.object({
   /** Signs the Pay now links; falls back to FILE_LINK_SECRET outside production. */
   PAY_LINK_SECRET: z.string().min(16).optional(),
   PAYMENT_LINK_DAYS: z.coerce.number().int().min(1).max(180).default(30),
+  /** Marketing: "sandbox" runs against a practice platform and never leaves OneOhm. */
+  MARKETING_MODE: z.enum(['live', 'sandbox']).default('live'),
+  /** Encrypts the saved Meta and Google logins; must equal the API's value. */
+  MARKETING_SECRET_KEY: z.string().min(16).optional(),
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  META_LOGIN_CONFIG_ID: z.string().optional(),
+  META_GRAPH_VERSION: z.string().default('v26.0'),
+  GOOGLE_ADS_CLIENT_ID: z.string().optional(),
+  GOOGLE_ADS_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
+  GOOGLE_ADS_API_VERSION: z.string().default('v26'),
+  /** The WhatsApp Business account whose marketing templates Meta approves. */
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
+  /** Where Meta, Google and customers reach the API (campaign photos, landing pages). */
+  API_PUBLIC_URL: z.string().default('http://localhost:4200'),
+  GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
 });
 
 export type WorkerConfig = z.infer<typeof schema>;
+
+/** Marketing settings production refuses: practice mode, and a default key for real logins. */
+function checkMarketing(config: WorkerConfig): void {
+  if (config.NODE_ENV !== 'production') return;
+  if (config.MARKETING_MODE === 'sandbox')
+    throw new Error('MARKETING_MODE=sandbox is for testing only; use live in production.');
+  const key = config.MARKETING_SECRET_KEY;
+  const real = Boolean(key) && !key?.startsWith('oneohm-local');
+  if ((config.META_APP_ID || config.GOOGLE_ADS_CLIENT_ID) && !real)
+    throw new Error(
+      'MARKETING_SECRET_KEY must be set to a real secret when Meta or Google is set up.',
+    );
+}
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
   // Blank lines in an env file (`KEY=`) mean "not set".
@@ -66,6 +98,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
         'PAY_LINK_SECRET must be set, and differ from FILE_LINK_SECRET, in production.',
       );
   }
+  checkMarketing(config);
   if (
     config.WHATSAPP_DELIVERY === 'live' &&
     (!config.WHATSAPP_ACCESS_TOKEN || !config.WHATSAPP_PHONE_NUMBER_ID)

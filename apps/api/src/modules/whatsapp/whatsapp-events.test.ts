@@ -27,6 +27,7 @@ describe('WhatsApp webhook', () => {
               source_url: 'https://fb.me/abc',
               headline: 'Solar for homes',
               source_type: 'ad',
+              ctwa_clid: 'clid-9',
             },
           },
           { from: '919000000101', id: 'w2', type: 'text', text: { body: 'Hi' } },
@@ -37,6 +38,8 @@ describe('WhatsApp webhook', () => {
       sourceId: 'ad-77',
       sourceUrl: 'https://fb.me/abc',
       headline: 'Solar for homes',
+      ctwaClid: 'clid-9',
+      sourceType: 'ad',
     });
     expect(incoming[1]?.referral).toBeNull();
   });

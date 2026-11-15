@@ -16,11 +16,24 @@ export function isReservedCampaignWord(code: string): boolean {
  * an underscore is taken as a code even when it is not listed yet.
  */
 export function findCampaignCode(text: string, known?: ReadonlySet<string>): string | null {
-  const match = /^(?:(?:hi|hello|hey)[\s,]+)?oneohm[\s,]+([A-Za-z0-9_-]{2,20})[\s.!]*$/i.exec(
-    text.trim(),
-  );
+  const match =
+    /^(?:(?:hi|hello|hey)[\s,]+)?oneohm[\s,]+([A-Za-z0-9_-]{2,20})(?:[\s,]+#[a-z0-9]{4,10})?[\s.!]*$/i.exec(
+      text.trim(),
+    );
   const word = match?.[1];
   if (!word || NOT_CODES.has(word.toLowerCase())) return null;
   const code = word.toUpperCase();
   return /[0-9_-]/.test(code) || known?.has(code) ? code : null;
+}
+
+/**
+ * The landing-page click a WhatsApp opener carries ("Hi OneOhm SOLAR-01 #k3f9q2"), lower case,
+ * so the chat finds the Google or Meta click that sent it. Null when there is none.
+ */
+export function findClickRef(text: string): string | null {
+  const match =
+    /^(?:(?:hi|hello|hey)[\s,]+)?oneohm[\s,]+[A-Za-z0-9_-]{2,20}[\s,]+#([a-z0-9]{4,10})[\s.!]*$/i.exec(
+      text.trim(),
+    );
+  return match?.[1]?.toLowerCase() ?? null;
 }

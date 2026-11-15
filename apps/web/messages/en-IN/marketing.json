@@ -1,0 +1,317 @@
+{
+  "marketing": {
+    "title": "Marketing",
+    "description": "Put your offer in front of people nearby. Add a photo, write a line, pick a city. We do the rest.",
+    "newCampaign": "New campaign",
+    "loading": "Loading marketing",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "tryAgain": "Try again",
+    "practice": "Practice mode: nothing is sent to Meta or Google",
+    "chip": "{place} · {state}",
+    "tabs": {
+      "label": "Marketing sections",
+      "campaigns": "Campaigns",
+      "connections": "Connections"
+    },
+    "provider": {
+      "meta": "Meta",
+      "google": "Google",
+      "whatsapp": "WhatsApp"
+    },
+    "placeLong": {
+      "meta": "Instagram and Facebook",
+      "google": "Google",
+      "whatsapp": "WhatsApp messages"
+    },
+    "placeState": {
+      "pending": "Getting ready",
+      "in_review": "In review",
+      "live": "Live",
+      "paused": "Paused",
+      "stopped": "Stopped",
+      "scheduled": "Scheduled",
+      "posted": "Posted",
+      "sent": "Sent",
+      "failed": "Needs attention"
+    },
+    "connection": {
+      "connected": "Connected",
+      "in_review": "In review",
+      "needs_attention": "Needs attention",
+      "not_connected": "Not connected"
+    },
+    "channel": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "google": "Google",
+      "whatsapp": "WhatsApp messages"
+    },
+    "channelLong": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "google": "Google",
+      "whatsapp": "WhatsApp message to your own contacts"
+    },
+    "look": {
+      "starting": "Starting…",
+      "in_review": "In review",
+      "live": "Live",
+      "paused": "Paused",
+      "stopped": "Stopped",
+      "scheduled": "Scheduled",
+      "scheduledOn": "Scheduled for {date}",
+      "posted": "Posted",
+      "needs_attention": "Needs attention"
+    },
+    "numbers": {
+      "spent": "Spent",
+      "leads": "Leads",
+      "sales": "Sales",
+      "costPerSale": "Cost per sale"
+    },
+    "totals": {
+      "title": "Last 30 days"
+    },
+    "actions": {
+      "pause": "Pause",
+      "stop": "Stop",
+      "runAgain": "Run again",
+      "stopLabel": "Stop this campaign",
+      "stopAsk": "Stop for good? You can run it again later.",
+      "stopYes": "Yes, stop",
+      "keep": "Keep it"
+    },
+    "toast": {
+      "pause": "Campaign paused",
+      "stop": "Campaign stopped",
+      "runAgain": "Campaign started again",
+      "actionFailed": "That did not work",
+      "connectionFailed": "That did not work",
+      "chosen": "Saved your choice",
+      "disconnected": "Disconnected",
+      "templateSent": "Sent to Meta for approval",
+      "saved": "Saved",
+      "placeSaved": "Your business is saved"
+    },
+    "alerts": {
+      "label": "Worth a look",
+      "topUp": "Add money",
+      "open": "Open campaign",
+      "reconnect": "Reconnect",
+      "review": "See connections"
+    },
+    "empty": {
+      "title": "Your first campaign takes two minutes",
+      "body": "Add a photo, write one line, pick a city. We do the rest.",
+      "connectFirst": "Connect Meta first"
+    },
+    "referral": {
+      "title": "Refer and earn",
+      "on": "On",
+      "off": "Off",
+      "line": "Customers bring their friends",
+      "rewards": "Rewards paid"
+    },
+    "codes": {
+      "title": "Poster codes",
+      "empty": "No poster codes yet. Make one for a poster or flyer and see who it brings.",
+      "counts": "{leads} leads · {sales} sales",
+      "hint": "Tap to add or change codes"
+    },
+    "reviews": {
+      "title": "Google reviews",
+      "empty": "Connect your business on Google Maps to see what customers say.",
+      "new": "New",
+      "newCount": "{count} new",
+      "total": "{count, plural, one {# review} other {# reviews}}",
+      "stars": "{count} out of 5 stars",
+      "asked": "Asked {count, plural, one {# customer} other {# customers}} for a review"
+    },
+    "goal": {
+      "title": "What is this for?",
+      "label": "Goal of the campaign",
+      "chats": {
+        "title": "WhatsApp chats",
+        "line": "People message you on WhatsApp"
+      },
+      "lead_form": {
+        "title": "Lead form",
+        "line": "People leave their number in a form"
+      },
+      "post": {
+        "title": "Post only",
+        "line": "A post on your page, no money spent"
+      }
+    },
+    "media": {
+      "section": "Photo or video",
+      "title": "Tap to add a photo or video",
+      "hint": "Or drop it here. Photos, or MP4 and MOV videos.",
+      "pick": "Choose a photo or video",
+      "replace": "Use a different one",
+      "previewAlt": "The photo you picked",
+      "uploading": "Uploading",
+      "wrongType": "Please pick a photo, or an MP4 or MOV video."
+    },
+    "text": {
+      "section": "Your offer",
+      "label": "What is your offer?",
+      "hint": "The first line is the headline",
+      "placeholder": "Free site visit this week. Cut your power bill with solar."
+    },
+    "preview": {
+      "label": "How your ad will look",
+      "sponsored": "Sponsored",
+      "yourPage": "Your business",
+      "photoHere": "Your photo shows here",
+      "headlineHere": "Your headline",
+      "textHere": "Your words show here as you type.",
+      "button": {
+        "whatsapp": "Send WhatsApp message",
+        "quote": "Get quote"
+      }
+    },
+    "places": {
+      "title": "Where should it show?",
+      "label": "Places",
+      "connect": "Connect",
+      "googleNeedsPhoto": "Google needs a photo",
+      "whoGets": "Who should get the WhatsApp message?",
+      "segment": "{name} · {count}",
+      "whatsappNeedsPhoto": "WhatsApp offers need a photo"
+    },
+    "segment": {
+      "quoted_not_won": "Quoted but did not buy",
+      "lost_revisit": "Lost, due a revisit",
+      "past_customers": "Past customers"
+    },
+    "money": {
+      "title": "Where and how much?"
+    },
+    "city": {
+      "label": "City",
+      "placeholder": "For example Pune"
+    },
+    "budget": {
+      "label": "Daily budget",
+      "perDay": "a day",
+      "line": "About {monthly} a month · split {split}",
+      "part": "{amount} {place}"
+    },
+    "when": {
+      "title": "When should it go out?",
+      "label": "When",
+      "now": "Now",
+      "later": "Pick a day",
+      "date": "Day",
+      "time": "Time"
+    },
+    "problem": {
+      "uploading": "Your photo is still uploading",
+      "noMedia": "Add a photo or video to launch",
+      "noText": "Write a line about your offer",
+      "noPlace": "Pick at least one place",
+      "googleNeedsPhoto": "Google needs a photo",
+      "googleVideo": "Google needs a photo, so switch Google off or pick a photo",
+      "noSegment": "Pick who gets the WhatsApp message",
+      "noCity": "Pick a city",
+      "noDay": "Pick a day and time",
+      "pastDay": "Pick a time that has not passed yet",
+      "whatsappVideo": "WhatsApp offers need a photo, so switch WhatsApp off or pick a photo"
+    },
+    "launch": {
+      "button": "Launch",
+      "working": "Setting it up",
+      "backToEdit": "Go back and change it",
+      "see": "See my campaign",
+      "code": "Your campaign code is {code}",
+      "steps": {
+        "photo": "Photo ready",
+        "making": "Making your ad",
+        "review": "Sent to {places} for review",
+        "post": "Posting to your page",
+        "messages": "Sending your messages",
+        "live": "Live"
+      },
+      "outcome": {
+        "all_good": "You are on your way",
+        "some_failed": "Some places need a look",
+        "all_failed": "Nothing went out yet"
+      }
+    },
+    "detail": {
+      "title": "Campaign",
+      "places": "Where it runs",
+      "spendDaily": "Spent each day",
+      "leadsDaily": "Leads each day",
+      "noDays": "Daily numbers show up after the first day.",
+      "opener": "What people type on WhatsApp",
+      "landing": "Link to share on posters",
+      "leads": "Latest leads",
+      "noLeads": "No leads yet. They will show up here as soon as someone gets in touch."
+    },
+    "connections": {
+      "metaCovers": "Instagram, Facebook and WhatsApp ads",
+      "googleCovers": "Ads on Google search and maps",
+      "connect": "Connect {place}",
+      "reconnect": "Connect {place} again",
+      "needsSettings": "The server needs these settings first: {names}",
+      "waitingFor": "Waiting for {place}",
+      "chooseIntro": "We found more than one. Pick the ones to use.",
+      "adAccount": "Ad account",
+      "page": "Page",
+      "useThese": "Use these",
+      "balance": "Balance: {amount}",
+      "addMoney": "Add money",
+      "tokenSoon": "Your sign-in runs out on {date}. Reconnect before then so ads keep running.",
+      "disconnect": "Disconnect",
+      "disconnectAsk": "Disconnect? Running campaigns will stop spending.",
+      "disconnectYes": "Yes, disconnect",
+      "justConnected": "{place} is connected",
+      "returnError": "We could not finish connecting: {reason}"
+    },
+    "templates": {
+      "title": "WhatsApp messages",
+      "intro": "Meta must approve each message before it can be sent to your contacts.",
+      "notReady": "WhatsApp is not set up on the server yet, so messages cannot be sent for approval.",
+      "send": "Send for approval",
+      "rejected": "Not approved: {reason}",
+      "state": {
+        "approved": "Approved",
+        "pending": "Waiting for Meta",
+        "rejected": "Not approved",
+        "not_sent": "Not sent yet",
+        "unknown": "Not sent yet"
+      }
+    },
+    "reviewsSetup": {
+      "title": "Google reviews",
+      "intro": "Find your business on Google Maps so we can show new reviews and send customers to the right page.",
+      "search": "Business name",
+      "placeholder": "Leave empty to use your company name",
+      "find": "Find my business",
+      "none": "We could not find a match. Try the name as it shows on Google Maps.",
+      "thisOne": "This one",
+      "ask": "Ask finished customers for a review",
+      "askHint": "A friendly WhatsApp message after a job is done."
+    },
+    "defaults": {
+      "title": "Your usual choices",
+      "intro": "New campaigns start from these. You can change them each time.",
+      "budget": "First daily budget",
+      "city": "City",
+      "radius": "Show ads within (km)",
+      "days": "Tell me after (days with no leads)",
+      "daysHint": "We will let you know on this screen.",
+      "low": "Tell me when balance is below",
+      "lowHint": "In rupees",
+      "website": "Your website",
+      "privacy": "Privacy policy link",
+      "privacyHint": "Lead forms must link one. Leave empty to use ours.",
+      "save": "Save"
+    }
+  }
+}

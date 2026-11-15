@@ -4,13 +4,14 @@ import { coveredBy, notify, roles, userRoles, users, waConversations } from '@on
 import { followUpText } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
-import { forbidden, notFound } from '../../common/http/errors';
+import { forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
 import { contactLeadsByPhone } from '../crm/lead-history';
 import { tellHandedBack } from './assistant/hand-back';
 import { chatMessages } from './chat-history';
 import { chatOwnerFor, ensureChatOwner } from './chat-owner';
+import { replyInSocialChat } from './chat-social';
 import {
   conversationForPhone,
   customerForPhone,
@@ -19,6 +20,7 @@ import {
   queueTemplate,
 } from './chat-store';
 import { chatSearch, chatSummaries } from './chat-summaries';
+import { isSocialChannel, socialHandle } from './social-reply';
 
 /** "Sunita Jadhav (test)" → "Sunita"; a chat without a name is greeted as "there". */
 export function firstName(name: string): string {
@@ -62,6 +64,10 @@ export class ChatsService {
    */
   async reply(actor: Actor, id: string, text: string): Promise<ChatDetail> {
     const { chat } = await this.get(actor, id);
+    if (isSocialChannel(chat.channel)) {
+      await replyInSocialChat(this.db, actor, { ...chat, channel: chat.channel }, text);
+      return this.get(actor, id);
+    }
     await this.db.transaction(async (tx) => {
       await tx
         .update(waConversations)
@@ -97,6 +103,7 @@ export class ChatsService {
    * from a customer or lead page, so whoever owns that customer may open it.
    */
   async open(actor: Actor, phone: string): Promise<ChatSummary> {
+    if (socialHandle(phone)) throw invalid('Instagram and Facebook chats open from the inbox.');
     // Checked before anything is made, so a refused open leaves nothing behind.
     if (!seesAllChats(actor) && (await this.ownerOfPhone(phone)) !== actor.userId)
       throw forbidden();
@@ -184,7 +191,9 @@ export class ChatsService {
 
   /** Back to the assistant; a customer who wrote since the hand-over is told (redesign §14). */
   async release(actor: Actor, id: string): Promise<ChatDetail> {
-    await this.get(actor, id);
+    const { chat } = await this.get(actor, id);
+    if (isSocialChannel(chat.channel))
+      throw invalid('Instagram and Facebook chats have no assistant.');
     const [held] = await this.db.select().from(waConversations).where(eq(waConversations.id, id));
     await this.db
       .update(waConversations)

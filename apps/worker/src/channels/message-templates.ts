@@ -109,6 +109,8 @@ export function templateExtraParts(
       index: requiredReplies.length + optional.length,
       suffix: required(key, extras.urlButton, values),
     });
+  // A photo on top is optional: a message queued without its link goes as plain text.
+  const imageLink = extras.image ? String(values[extras.image.urlField] ?? '').trim() : '';
   return {
     ...(extras.document && {
       header: {
@@ -117,6 +119,7 @@ export function templateExtraParts(
         filename: required(key, extras.document.nameField, values),
       },
     }),
+    ...(!extras.document && imageLink && { header: { kind: 'image' as const, link: imageLink } }),
     ...(buttons.length > 0 && { buttons }),
   };
 }

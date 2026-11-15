@@ -9,6 +9,10 @@
 	request_body /api/* {
 		max_size 25MB
 	}
+	# Campaign videos (Marketing) may be up to 60 MB; the more specific path wins.
+	request_body /api/v1/marketing/media {
+		max_size 70MB
+	}
 	handle_path /api/* {
 		reverse_proxy api:4200
 	}

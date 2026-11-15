@@ -31,6 +31,8 @@ export * from './inventory.schema';
 export * from './lead-campaign.schema';
 export * from './lead-step.schema';
 export * from './list-page.schema';
+export * from './marketing.schema';
+export * from './marketing-connections.schema';
 export * from './material-custody.schema';
 export * from './monthly-review.schema';
 export * from './notification.schema';

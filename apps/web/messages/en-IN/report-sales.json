@@ -45,6 +45,10 @@
       "quoted": "Quoted",
       "advancePaid": "Advance paid",
       "collected": "Collected",
+      "adSpend": "Ad spend",
+      "costPerLead": "Cost per lead",
+      "costPerSale": "Cost per sale",
+      "salesPerRupee": "Sales per ₹1 of ads",
       "person": "Salesperson",
       "unassigned": "No owner",
       "source": "Source",
@@ -62,7 +66,10 @@
       "whatsapp": "WhatsApp",
       "employee": "Employee",
       "reseller": "Reseller",
-      "referral": "Customer referral"
+      "referral": "Customer referral",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "google": "Google"
     },
     "funnel": {
       "title": "Pipeline",

@@ -1,0 +1,34 @@
+{
+  "name": "@oneohm/marketing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ad platforms behind one interface (Meta, Google, a sandbox): launch, pause, spend, conversions, audiences, lead forms, social messages. Tokens encrypted, personal data hashed.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests src"
+  },
+  "dependencies": {
+    "@oneohm/database": "workspace:*",
+    "@oneohm/domain": "workspace:*",
+    "drizzle-orm": "0.45.4"
+  },
+  "devDependencies": {
+    "@oneohm/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

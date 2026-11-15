@@ -34,6 +34,9 @@ export const LEAD_SOURCES = [
   'employee',
   'reseller',
   'referral',
+  'facebook',
+  'instagram',
+  'google',
 ] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
 

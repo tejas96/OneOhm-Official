@@ -16,6 +16,7 @@ import {
 import {
   checkApprovalPolicy,
   checkDashboardSettings,
+  checkMarketingSettings,
   checkPaymentSettings,
   checkReminderTiming,
   cleanCityOwners,
@@ -37,6 +38,7 @@ import type { Environment } from '../../config/environment';
 import { CatalogService } from '../catalog/catalog.service';
 import { cityOwnerStanding } from '../crm/lead-owner';
 import { assertSecondPersonCovered } from './second-person-check';
+import { PROBLEM } from './setting-problems';
 import { savedWorkErrors } from './working-time-check';
 
 const CHECKS: {
@@ -51,22 +53,12 @@ const CHECKS: {
     isLeadAssignmentRules(value) ? {} : { strategy: 'Pick how new leads are given out.' },
   // Checked against the saved working time in save(), which can read the database.
   visits: () => ({}),
+  marketing: checkMarketingSettings,
   onboarding: (value) => {
     const problem = onboardingProblem(value);
     // Field paths (`billBands.2.maxRupees`) mark the inputs; `onboarding` is the summary.
     return problem ? { ...onboardingFieldErrors(value), onboarding: problem } : {};
   },
-};
-
-const PROBLEM: Readonly<Record<BusinessSettingKey, string>> = {
-  reminders: 'Check the reminder times.',
-  assignment: 'Check the assignment rules.',
-  approvals: 'Check the approval limits.',
-  payments: 'Check the RazorpayX fee.',
-  dashboard: 'Check the dashboard numbers.',
-  lead_assignment: 'Check the lead rule.',
-  onboarding: 'Check the onboarding settings.',
-  visits: 'Check the visit settings.',
 };
 
 const copyLeadRules = (rules: LeadAssignmentRules): LeadAssignmentRulesRecord => ({

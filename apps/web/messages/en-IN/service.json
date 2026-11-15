@@ -110,8 +110,20 @@
         "read": "Read",
         "failed": "Not delivered"
       },
+      "channel": {
+        "instagram": "Instagram",
+        "messenger": "Facebook"
+      },
       "reply": {
         "label": "Reply on WhatsApp",
+        "labelSocial": {
+          "instagram": "Reply on Instagram",
+          "messenger": "Reply on Facebook"
+        },
+        "closedSocial": {
+          "instagram": "Instagram lets you reply only within 24 hours of their last message, or once to a comment within 7 days.",
+          "messenger": "Facebook lets you reply only within 24 hours of their last message, or once to a comment within 7 days."
+        },
         "placeholder": "Write a reply",
         "send": "Send",
         "hint": "Ctrl or ⌘ + Enter sends.",

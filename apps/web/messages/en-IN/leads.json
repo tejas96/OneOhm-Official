@@ -62,7 +62,10 @@
       "whatsapp": "WhatsApp",
       "employee": "Employee referral",
       "reseller": "Reseller",
-      "referral": "Customer referral"
+      "referral": "Customer referral",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "google": "Google"
     },
     "category": {
       "individual": "Residential",
@@ -184,6 +187,13 @@
       "owner": "Owner",
       "category": "Site type",
       "size": "Expected size",
+      "adFrom": "Ad",
+      "adPlace": {
+        "instagram": "From an Instagram ad",
+        "facebook": "From a Facebook ad",
+        "google": "From a Google ad",
+        "whatsapp_ad": "WhatsApp chat from an ad"
+      },
       "source": "Came from",
       "referredBy": "Referred by",
       "email": "Email"

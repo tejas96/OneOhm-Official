@@ -32,7 +32,13 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     name: 'Marketing',
     kind: 'staff',
     description: 'Lead capture, campaigns and referral programmes.',
-    capabilities: [...EVERYONE, 'leads.view_all', 'leads.manage', 'customers.view'],
+    capabilities: [
+      ...EVERYONE,
+      'leads.view_all',
+      'leads.manage',
+      'customers.view',
+      'marketing.manage',
+    ],
   },
   {
     key: 'sales',

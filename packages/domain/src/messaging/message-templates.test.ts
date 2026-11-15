@@ -81,6 +81,9 @@ describe('follow-up text', () => {
       'problem_fixed_check',
       'reward_upi_ask',
       'amc_renewal_offer',
+      'offer_quote_follow_up',
+      'offer_revisit',
+      'offer_past_customer',
     ]);
     // The newer buttons of the older step messages are optional: they send only behind their own switch.
     expect(templateExtras('commissioning_completed')?.optionalQuickReplies).toEqual([

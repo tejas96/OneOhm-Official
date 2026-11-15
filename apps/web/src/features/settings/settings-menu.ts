@@ -10,9 +10,7 @@ export const SECTIONS = [
   'rewards',
   'leadSteps',
   'leadAssignment',
-  'leadCampaigns',
   'whatsappOnboarding',
-  'referrals',
   'products',
   'rates',
   'payments',
@@ -41,10 +39,7 @@ export type Section = (typeof SECTIONS)[number];
 export const MENU: readonly NavGroup<Section>[] = [
   { key: 'company', items: ['company', 'roles', 'rewards'] },
   { key: 'hours', items: ['workingTime', 'visits', 'workforce'] },
-  {
-    key: 'leads',
-    items: ['leadSteps', 'leadAssignment', 'leadCampaigns', 'whatsappOnboarding', 'referrals'],
-  },
+  { key: 'leads', items: ['leadSteps', 'leadAssignment', 'whatsappOnboarding'] },
   { key: 'pricing', items: ['products', 'rates', 'payments', 'approvals'] },
   { key: 'projects', items: ['projectTypes', 'tasks', 'documents', 'discoms', 'assignment'] },
   { key: 'messages', items: ['messages', 'reminders', 'dashboard'] },
@@ -68,3 +63,6 @@ export function openSection(
   const items = menu.flatMap((group) => group.items);
   return items.find((value) => value === requested) ?? items[0];
 }
+
+/** Sections that moved to the Marketing page; an old `?tab=` link to one goes there. */
+export const MOVED_TO_MARKETING: readonly string[] = ['leadCampaigns', 'referrals'];

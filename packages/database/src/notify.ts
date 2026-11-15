@@ -24,7 +24,13 @@ export type NoticeSubject =
   | 'travel_claim'
   | 'lead'
   | 'approval'
-  | 'chat';
+  | 'chat'
+  /** A Marketing campaign (id: the campaign). */
+  | 'marketing'
+  /** Marketing → Connections (low ad money, reconnect); the id is the nil UUID. */
+  | 'marketing_connections'
+  /** A new Google review (id: the review row). */
+  | 'marketing_reviews';
 
 export interface Notice {
   readonly kind: string;

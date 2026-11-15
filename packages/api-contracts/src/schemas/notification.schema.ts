@@ -24,6 +24,12 @@ export const NOTICE_SUBJECTS = [
   'approval',
   /** A WhatsApp chat that needs an answer; opens the chat. */
   'chat',
+  /** A Marketing campaign; opens it. */
+  'marketing',
+  /** Marketing → Connections (ad money, reconnect); the id is the nil UUID. */
+  'marketing_connections',
+  /** A new Google review; opens Marketing. */
+  'marketing_reviews',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */

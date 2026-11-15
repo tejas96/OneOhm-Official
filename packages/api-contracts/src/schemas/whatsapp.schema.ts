@@ -18,7 +18,10 @@ export const DELIVERY_LIST_LIMIT = 200;
 /** One WhatsApp chat in the staff inbox (PRD 6.1). */
 export const chatSummarySchema = z.object({
   id: idSchema,
+  /** The WhatsApp number; Instagram and Facebook chats show their handle (`ig:…`, `fb:…`). */
   phone: z.string(),
+  /** WhatsApp chats have the assistant; Instagram and Facebook chats are answered by people only. */
+  channel: z.enum(['whatsapp', 'instagram', 'messenger']),
   name: z.string(),
   customerId: idSchema.nullable(),
   /** `human` while a team member has taken over from the assistant. */
@@ -91,7 +94,7 @@ export type ChatDetail = z.infer<typeof chatDetailSchema>;
 /** One business message and how far it got (PRD 6.2: delivery tracking and retries). */
 export const deliverySchema = z.object({
   id: idSchema,
-  channel: z.enum(['whatsapp', 'sms', 'push']),
+  channel: z.enum(['whatsapp', 'sms', 'push', 'instagram', 'messenger']),
   recipient: z.string(),
   template: z.string(),
   state: z.enum(DELIVERY_STATES),
