@@ -3,6 +3,8 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
+import { DutySitesService } from './duty-sites.service';
+import { phonePosition, phoneVisit } from './site-visit-auto';
 import { SiteVisitsService } from './site-visits.service';
 import { TravelClaimsService } from './travel-claims.service';
 
@@ -13,6 +15,7 @@ const routes = apiContract.siteActivity;
 export class SiteActivityController {
   constructor(
     private readonly visits: SiteVisitsService,
+    private readonly dutySites: DutySitesService,
     private readonly travel: TravelClaimsService,
   ) {}
 
@@ -27,11 +30,17 @@ export class SiteActivityController {
       },
       siteCheckIn: async ({ params, body }) => {
         onSite();
-        return { status: 200, body: await this.visits.checkIn(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkIn(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
       siteCheckOut: async ({ params, body }) => {
         onSite();
-        return { status: 200, body: await this.visits.checkOut(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkOut(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
       closeSiteVisit: async ({ params, body }) => {
         assertCan(actor, 'tasks.complete', 'tasks.view_assigned', 'service.manage');
@@ -39,6 +48,18 @@ export class SiteActivityController {
           status: 200,
           body: await this.visits.checkOutVisit(actor, params.id, body.position),
         };
+      },
+      leaveReasonSiteVisit: async ({ params, body }) => {
+        onSite();
+        return { status: 200, body: await this.visits.leaveReason(actor, params.id, body.reason) };
+      },
+      myOpenVisit: async () => {
+        onSite();
+        return { status: 200, body: { visit: await this.dutySites.openVisit(actor.userId) } };
+      },
+      myDutySites: async () => {
+        onSite();
+        return { status: 200, body: await this.dutySites.forToday(actor.userId) };
       },
       forceCloseSiteVisit: async ({ params, body }) => ({
         // Who may is decided from the visit itself: its project's manager, its work's managers.

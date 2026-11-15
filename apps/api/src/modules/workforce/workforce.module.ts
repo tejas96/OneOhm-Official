@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SiteActivityModule } from '../site-activity/site-activity.module';
 import { AnnouncementsService } from './announcements.service';
 import { AttendanceService } from './attendance.service';
 import { BonusesService } from './bonuses.service';
@@ -23,6 +24,7 @@ import { WorkforceSettingsService } from './workforce-settings.service';
  * cleared by the worker's daily job.
  */
 @Module({
+  imports: [SiteActivityModule],
   controllers: [WorkforceController, RewardsController, EngagementController, DutyPointsController],
   providers: [
     WorkdayService,

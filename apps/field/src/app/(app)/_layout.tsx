@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { PushAlerts } from '@/features/alerts/push-alerts';
 import { TapQueueSync } from '@/features/attendance/tap-sync';
 import { DutyRecorder } from '@/features/duty/duty-sync';
+import { SiteFence } from '@/features/site-fence/fence-sync';
 import { UploadQueueProvider } from '@/features/uploads/upload-queue';
 
 /**
@@ -16,6 +17,7 @@ export default function SignedInLayout() {
       <PushAlerts />
       <TapQueueSync />
       <DutyRecorder />
+      <SiteFence />
       <Stack
         screenOptions={{
           headerShown: false,

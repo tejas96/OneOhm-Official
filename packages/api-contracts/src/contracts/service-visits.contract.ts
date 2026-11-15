@@ -1,6 +1,6 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { idSchema } from '../common/primitives';
+import { idSchema, instantSchema } from '../common/primitives';
 import { documentSchema } from '../schemas/document.schema';
 import {
   serviceFieldWorkSchema,
@@ -8,11 +8,20 @@ import {
   serviceJobSchema,
   serviceVisitSchema,
 } from '../schemas/service-visit.schema';
+import { phoneSourceSchema } from '../schemas/site-activity.schema';
 import { positionSchema } from '../schemas/workforce.schema';
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
-const reading = z.object({ position: positionSchema.nullable().optional() });
+const reading = z.object({
+  position: positionSchema.nullable().optional(),
+  /** Sent by the phone's own site fence; a tap sends neither. */
+  source: phoneSourceSchema.optional(),
+  /** When the fence event happened on the phone, for one that waited for signal. */
+  tappedAt: instantSchema.optional(),
+  /** Whether the reading the phone sent is a fake (mock) location; sent with every fence event. */
+  mocked: z.boolean().optional(),
+});
 
 /**
  * Service visits from the field app (PRD 5.5, 4.2): the technician's open requests,

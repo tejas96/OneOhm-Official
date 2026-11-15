@@ -72,7 +72,20 @@ export function SiteTravelSection({
         description={travel.autoApprove ? t('autoApproveOn') : t('autoApproveOff')}
       />
       <p className="-mt-3 type-body-sm text-ink-faint">{t('autoApproveHint')}</p>
+      <Switch
+        checked={travel.autoSiteVisits}
+        onCheckedChange={(autoSiteVisits) => onChange({ ...travel, autoSiteVisits })}
+        label={t('autoSiteVisits')}
+        description={travel.autoSiteVisits ? t('autoSiteVisitsOn') : t('autoSiteVisitsOff')}
+      />
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label={t('siteFence')} hint={t('siteFenceHint')} error={errors['travel.siteFenceM']}>
+          <NumberInput
+            unit="whole"
+            value={travel.siteFenceM}
+            onValueChange={(value) => onChange({ ...travel, siteFenceM: value ?? 0 })}
+          />
+        </Field>
         <Field
           label={t('routeCap')}
           hint={t('routeCapHint')}

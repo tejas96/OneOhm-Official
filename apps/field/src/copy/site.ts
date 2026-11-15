@@ -56,6 +56,27 @@ export const SITE = {
   done: 'This task is complete.',
 } as const;
 
+/** Automatic site visits: the phone's site fence and the Today card (Duty Day step 3). */
+export const FENCE = {
+  checkedIn: (label: string, time: string) => `At ${label}, checked in ${time}`,
+  leftTitle: (label: string) => `Left ${label}. Job not finished, why?`,
+  leftBody: 'Tell your manager in one tap.',
+  near: (first: string, second: string) => `You are near ${first} and ${second}. Tap to check in.`,
+  byHand: (label: string) => `Could not check you in automatically at ${label}. Check in by hand.`,
+  reasons: {
+    come_back_later: 'Come back later',
+    need_material: 'Need material',
+    customer_not_home: 'Customer not home',
+  },
+  reasonSaved: 'Noted. Your manager is told.',
+  reasonFailed: 'Could not send the reason. Open the job and try again.',
+  atSite: (label: string, time: string) => `At ${label} since ${time}`,
+  auto: 'Checked in automatically',
+  openJob: 'Open job',
+  addPhoto: 'Add photo',
+  complete: 'Complete',
+} as const;
+
 /** The satellite map for pinning the roof. */
 export const PIN = {
   title: 'Pin the roof',

@@ -5,6 +5,7 @@ import { DUTY_SKEW_MS, type DutyPointRejection, judgeDutyPoint } from '@oneohm/d
 import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
+import { RouteVisitsService } from '../site-activity/route-visits.service';
 import { trackingFor } from './tracking';
 
 /**
@@ -17,7 +18,10 @@ const DAY_LOOKBACK_MS = 48 * 3_600_000;
 
 @Injectable()
 export class DutyPointsService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly routeVisits: RouteVisitsService,
+  ) {}
 
   /**
    * Points that reached a day already closed (a late flush) change its km, so the day's saved
@@ -122,6 +126,8 @@ export class DutyPointsService {
     if (keep.length) {
       await this.db.insert(dutyPoints).values(keep).onConflictDoNothing();
       await this.remeasureClosedDays(actor.userId, keep, days);
+      // The route may show an arrival or a departure the phone's fence missed (Duty Day step 3).
+      await this.routeVisits.afterPoints(actor, now);
     }
     return { accepted, rejected };
   }

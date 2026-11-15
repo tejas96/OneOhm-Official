@@ -10,6 +10,8 @@ interface VisitFacts {
   readonly far: boolean | null;
   /** The phone's location was kept (with consent, in working hours). */
   readonly located: boolean;
+  /** Made by the phone's fence or the route, not by a tap. */
+  readonly automatic?: boolean;
 }
 
 /** "Checked in at the site for Panel installation · 40 m from the site" in the project history. */
@@ -18,7 +20,7 @@ export async function noteCheckIn(db: DatabaseExecutor, task: SiteTask, visit: V
     projectId: task.projectId,
     taskId: task.id,
     kind: 'site_check_in',
-    message: `Checked in at the site for ${task.title} · ${distanceWords(visit.distanceM, visit.far, visit.located)}.`,
+    message: `Checked in at the site${visit.automatic ? ' automatically' : ''} for ${task.title} · ${distanceWords(visit.distanceM, visit.far, visit.located)}.`,
     userId: visit.userId,
     data: { visitId: visit.visitId, distanceM: visit.distanceM, far: visit.far },
   });
@@ -48,7 +50,7 @@ export async function noteCheckOut(
     projectId: task.projectId,
     taskId: task.id,
     kind: 'site_check_out',
-    message: `Checked out of the site for ${task.title} after ${durationWords(visit.minutes)}${away}.`,
+    message: `Checked out of the site${visit.automatic ? ' automatically' : ''} for ${task.title} after ${durationWords(visit.minutes)}${away}.`,
     userId: visit.userId,
     data: { visitId: visit.visitId, minutes: visit.minutes, far: visit.far },
   });

@@ -92,6 +92,10 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
         locationCleared: row.locationClearedAt !== null,
         closeKind: row.closeKind,
         closeNote: row.closeNote,
+        checkInSource: row.checkInSource,
+        checkOutSource: row.checkOutSource,
+        leaveReason: row.leaveReason,
+        leaveReasonAt: row.leaveReasonAt?.toISOString() ?? null,
       },
     };
   });

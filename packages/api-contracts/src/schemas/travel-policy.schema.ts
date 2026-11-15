@@ -16,4 +16,8 @@ export const travelPolicySchema = z.object({
   autoApproveMaxPaise: z.number().int().min(0).max(10_000_000).default(150_000),
   /** Paid km are cut to the straight-line distance between stops times this. */
   routeCapRatio: z.number().min(1).max(5).default(1.6),
+  /** The phone and the route check the person in and out at their sites by themselves. */
+  autoSiteVisits: z.boolean().default(true),
+  /** How close to a site, in metres, counts as being at it. */
+  siteFenceM: z.number().int().min(50).max(1000).default(150),
 });

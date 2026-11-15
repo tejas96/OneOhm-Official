@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SiteVisit, TaskSite } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, properties, siteVisits } from '@oneohm/database';
-import { type GeoPoint, locationChange, siteDistance } from '@oneohm/domain';
+import { type GeoPoint, type LeaveReason, locationChange, siteDistance } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, isNull, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -9,15 +9,21 @@ import type { Actor } from '../../common/auth/actor';
 import { currentCalendar } from '../../common/calendar';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { startOnVisit } from '../projects/task-visit-start';
+import { TasksService } from '../projects/tasks.service';
 import { afterSiteCheckIn, assertDayNotClosed } from '../workforce/site-hooks';
-import { type Position, trackingFor, usableReading } from '../workforce/tracking';
+import { type Position, usableReading } from '../workforce/tracking';
 import { plannedVisitFor } from './planned-visit';
 import { SitePinService } from './site-pin.service';
 import { loadSiteTask, readSiteTask, type SiteTask } from './site-task';
+import { presentTaskSite } from './site-task-view';
+import { type AutoVisit, visitMoment } from './site-visit-auto';
 import { accuracy, endOwnVisit, oneVisitRecord, sitePointOf } from './site-visit-end';
 import { noteCheckIn, noteSiteSaved } from './site-visit-events';
 import { forceCloseVisit } from './site-visit-force-close';
-import { checkInPoint, readVisits, visitRecords } from './site-visit-read';
+import { giveLeaveReason } from './site-visit-leave';
+import { checkInPoint, visitRecords } from './site-visit-read';
+import { holdAutoCheckIn } from './site-visit-skip';
 
 /**
  * Checking in and out at the customer's site on a task (PRD 4.2, 4.3). The phone's
@@ -29,6 +35,7 @@ export class SiteVisitsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly pins: SitePinService,
+    private readonly tasks: TasksService,
   ) {}
 
   async taskSite(actor: Actor, taskId: string): Promise<TaskSite> {
@@ -36,10 +43,24 @@ export class SiteVisitsService {
     return this.present(actor, task);
   }
 
-  async checkIn(actor: Actor, taskId: string, position?: Position | null): Promise<TaskSite> {
+  /**
+   * Checks the person in at the task's site. The phone's fence sends `auto` with the event's
+   * time; the route backstop calls it with `auto_route`. The same arrival twice makes one
+   * visit. A task not started yet starts with the check-in (the worker's own Start).
+   */
+  async checkIn(
+    actor: Actor,
+    taskId: string,
+    position?: Position | null,
+    auto?: AutoVisit,
+  ): Promise<TaskSite> {
     const task = await this.ownSiteTask(actor, taskId);
     if (task.status === 'completed') throw conflict('This task is already complete.', 'completed');
-    const now = new Date();
+    const { at: now, source, delayed } = await visitMoment(this.db, actor, auto, new Date(), 'in');
+    const hold =
+      auto &&
+      (await holdAutoCheckIn(this.db, actor.userId, { taskId: task.id }, task.site, position, now));
+    if (hold) return { ...(await this.present(actor, task)), ...hold };
     const reading = await usableReading(this.db, actor.userId, position, now);
     const radius = reading?.policy.travel.farFromSiteM ?? 0;
     const measured = reading ? siteDistance(reading.position, task.site, radius) : null;
@@ -68,6 +89,8 @@ export class SiteVisitsService {
           kind: task.kind ?? 'installation',
           workDate,
           checkInAt: now,
+          checkInSource: source,
+          delayed,
           checkInLatitude: reading?.position.latitude ?? null,
           checkInLongitude: reading?.position.longitude ?? null,
           checkInAccuracyM: reading ? accuracy(reading.position) : null,
@@ -77,7 +100,7 @@ export class SiteVisitsService {
         .onConflictDoNothing()
         .returning({ id: siteVisits.id });
       if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
-      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now);
+      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now, delayed);
       await noteCheckIn(tx, task, {
         visitId: created.id,
         userId: actor.userId,
@@ -85,14 +108,22 @@ export class SiteVisitsService {
         distanceM: measured?.distanceM ?? null,
         far: measured?.far ?? null,
         located: reading !== null,
+        automatic: source !== 'manual',
       });
     });
+    // A task not started yet starts with its person's arrival; a failure never undoes the visit.
+    await startOnVisit(this.db, actor, task, this.tasks, source !== 'manual', now);
     return this.present(actor, task);
   }
 
-  async checkOut(actor: Actor, taskId: string, position?: Position | null): Promise<TaskSite> {
+  async checkOut(
+    actor: Actor,
+    taskId: string,
+    position?: Position | null,
+    auto?: AutoVisit,
+  ): Promise<TaskSite> {
     const task = await this.ownSiteTask(actor, taskId);
-    await endOwnVisit(this.db, actor, { task, site: task.site, position });
+    await endOwnVisit(this.db, actor, { task, site: task.site, position, auto });
     return this.present(actor, task);
   }
 
@@ -114,6 +145,11 @@ export class SiteVisitsService {
     const site = task ? task.site : await sitePointOf(this.db, row.propertyId);
     await endOwnVisit(this.db, actor, { visitId, task, site, position });
     return oneVisitRecord(this.db, visitId);
+  }
+
+  /** The person says why they left before the job was done; the manager is told. */
+  leaveReason(actor: Actor, visitId: string, reason: LeaveReason): Promise<SiteVisit> {
+    return giveLeaveReason(this.db, actor, visitId, reason);
   }
 
   /** A manager ends someone's stuck visit and says why (live review S1); see `forceCloseVisit`. */
@@ -197,35 +233,7 @@ export class SiteVisitsService {
     return open ?? null;
   }
 
-  private async present(actor: Actor, task: SiteTask): Promise<TaskSite> {
-    const [tracking, visits, mine] = await Promise.all([
-      trackingFor(this.db, actor.userId),
-      readVisits(this.db, eq(siteVisits.taskId, task.id)),
-      visitRecords(
-        this.db,
-        and(eq(siteVisits.userId, actor.userId), isNull(siteVisits.checkOutAt)) as SQL,
-      ),
-    ]);
-    const openHere = visits.find(
-      (item) => item.row.userId === actor.userId && item.row.checkOutAt === null,
-    );
-    return {
-      taskId: task.id,
-      kind: task.kind,
-      siteLabel: task.siteLabel,
-      siteAddress: task.siteAddress,
-      siteLocated: task.site !== null,
-      farFromSiteM: tracking.policy.travel.farFromSiteM,
-      openVisit: mine[0] ?? null,
-      visits: visits.map((item) => item.record),
-      tracking: tracking.status,
-      canSetSite:
-        task.site === null &&
-        task.assigneeUserId === actor.userId &&
-        Boolean(openHere && checkInPoint(openHere.row)),
-      sitePoint: task.site,
-      siteFlagged: task.siteFlagged,
-      canPinSite: task.assigneeUserId === actor.userId && Boolean(openHere),
-    };
+  private present(actor: Actor, task: SiteTask): Promise<TaskSite> {
+    return presentTaskSite(this.db, actor, task);
   }
 }

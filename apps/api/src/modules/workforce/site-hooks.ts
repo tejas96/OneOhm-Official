@@ -20,6 +20,8 @@ export async function afterSiteCheckIn(
   visitId: string,
   kept: Position | null,
   at: Date = new Date(),
+  /** The check-in is an automatic one that reached the server late. */
+  delayed = false,
 ): Promise<void> {
   await saveConditions(db, {
     userId: actor.userId,
@@ -27,7 +29,7 @@ export async function afterSiteCheckIn(
     subjectId: visitId,
     position: kept,
   });
-  await autoCheckIn(db, actor, kept, at);
+  await autoCheckIn(db, actor, kept, at, delayed);
 }
 
 /**
@@ -64,6 +66,7 @@ async function autoCheckIn(
   actor: Actor,
   kept: Position | null,
   at: Date,
+  delayed: boolean,
 ): Promise<void> {
   if (!can(actor, 'attendance.mark')) return;
   const policy = await loadPolicy(db);
@@ -79,6 +82,7 @@ async function autoCheckIn(
       checkInLongitude: kept?.longitude ?? null,
       checkInAccuracyM: kept?.accuracyM ? Math.round(kept.accuracyM) : null,
       autoFromSite: true,
+      tapDelayed: delayed,
     })
     .onConflictDoNothing({ target: [attendanceDays.userId, attendanceDays.workDate] })
     .returning({ id: attendanceDays.id });

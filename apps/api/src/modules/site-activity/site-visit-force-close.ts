@@ -53,6 +53,7 @@ export async function forceCloseVisit(
       .set({
         checkOutAt: now,
         closeKind: 'manager',
+        checkOutSource: 'force_close',
         closedByUserId: actor.userId,
         closeNote: reason,
         updatedAt: now,

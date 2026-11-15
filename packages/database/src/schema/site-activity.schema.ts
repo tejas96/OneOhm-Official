@@ -62,6 +62,21 @@ export const siteVisits = pgTable(
     /** How it ended: the person, a manager's force-close, or the end of the person's day. */
     closeKind: text('close_kind', { enum: ['self', 'manager', 'day_end'] }),
     closeNote: text('close_note'),
+    /** How the check-in happened: a tap, the phone's site fence, or the recorded route (Duty Day step 3). */
+    checkInSource: text('check_in_source', { enum: ['manual', 'auto_fence', 'auto_route'] })
+      .notNull()
+      .default('manual'),
+    /** How the check-out happened; null while open. */
+    checkOutSource: text('check_out_source', {
+      enum: ['manual', 'auto_fence', 'auto_route', 'task_complete', 'day_end', 'force_close'],
+    }),
+    /** Why the person left before the job was done, from the phone's "Why?" question. */
+    leaveReason: text('leave_reason', {
+      enum: ['come_back_later', 'need_material', 'customer_not_home'],
+    }),
+    leaveReasonAt: instant('leave_reason_at'),
+    /** The check-in was an automatic one that reached the server late (the phone waited for signal). */
+    delayed: boolean('delayed').notNull().default(false),
     locationClearedAt: instant('location_cleared_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

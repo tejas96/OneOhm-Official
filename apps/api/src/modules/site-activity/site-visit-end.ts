@@ -1,6 +1,6 @@
 import type { SiteVisit } from '@oneohm/api-contracts';
 import { type DatabaseExecutor, properties, siteVisits, type Transaction } from '@oneohm/database';
-import { type GeoPoint, siteDistance } from '@oneohm/domain';
+import { type CheckInSource, type GeoPoint, siteDistance, visitCloseAt } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
@@ -9,6 +9,7 @@ import { afterSiteCheckOut } from '../workforce/site-hooks';
 import { type Position, usableReading } from '../workforce/tracking';
 import { finishLinkedVisit } from './planned-visit';
 import type { SiteTask } from './site-task';
+import { type AutoVisit, visitMoment } from './site-visit-auto';
 import { noteCheckOut, noteVisitEnded } from './site-visit-events';
 import { distanceWords, visitRecords } from './site-visit-read';
 
@@ -41,6 +42,7 @@ export async function sitePointOf(
 }
 
 interface Left {
+  readonly automatic: boolean;
   readonly distanceM: number | null;
   readonly far: boolean | null;
   readonly located: boolean;
@@ -69,7 +71,7 @@ async function noteLeft(
     projectId: open.projectId,
     taskId: open.taskId,
     userId: actor.userId,
-    message: `Checked out of the site after ${left.minutes} min, ${distanceWords(
+    message: `Checked out of the site${left.automatic ? ' automatically' : ''} after ${left.minutes} min, ${distanceWords(
       left.distanceM,
       left.far,
       left.located,
@@ -91,48 +93,76 @@ export async function endOwnVisit(
     readonly visitId?: string;
     readonly site: GeoPoint | null;
     readonly position: Position | null | undefined;
+    /** The phone's fence or the route ended it: the event's time, and nothing if already ended. */
+    readonly auto?: AutoVisit | undefined;
   },
 ): Promise<void> {
-  const now = new Date();
-  const { task } = input;
+  const { auto } = input;
+  const { at: now, source } = await visitMoment(db, actor, auto, new Date(), 'out');
   const reading = await usableReading(db, actor.userId, input.position, now);
   const radius = reading?.policy.travel.farFromSiteM ?? 0;
   const measured = reading ? siteDistance(reading.position, input.site, radius) : null;
-  await db.transaction(async (tx) => {
-    const [open] = await tx
-      .select()
-      .from(siteVisits)
-      .where(
-        and(
-          eq(siteVisits.userId, actor.userId),
-          isNull(siteVisits.checkOutAt),
-          task ? eq(siteVisits.taskId, task.id) : eq(siteVisits.id, input.visitId ?? ''),
-        ),
-      )
-      .limit(1);
-    if (!open) throw conflict('You are not checked in at this site.', 'not_checked_in');
-    const [done] = await tx
-      .update(siteVisits)
-      .set({
-        checkOutAt: now,
-        checkOutLatitude: reading?.position.latitude ?? null,
-        checkOutLongitude: reading?.position.longitude ?? null,
-        checkOutAccuracyM: reading ? accuracy(reading.position) : null,
-        checkOutDistanceM: measured?.distanceM ?? null,
-        checkOutFar: measured?.far ?? null,
-        closeKind: 'self',
-        updatedAt: now,
-      })
-      .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)))
-      .returning({ id: siteVisits.id });
-    if (!done) throw conflict('You are not checked in at this site.', 'not_checked_in');
-    await afterSiteCheckOut(tx, actor.userId, open.id, reading?.position ?? null);
-    await finishLinkedVisit(tx, open.visitId, actor.userId, task?.title ?? 'Service visit');
-    await noteLeft(tx, actor, open, task, {
-      distanceM: measured?.distanceM ?? null,
-      far: measured?.far ?? null,
-      located: reading !== null,
-      minutes: Math.max(0, Math.round((now.getTime() - open.checkInAt.getTime()) / 60_000)),
-    });
+  const ended = await db.transaction((tx) =>
+    closeOpen(tx, actor, input, { at: now, source, reading, measured }),
+  );
+  // The route or the phone already ended it: the same event twice is not an error.
+  if (!ended && !(auto && auto.source !== 'manual'))
+    throw conflict('You are not checked in at this site.', 'not_checked_in');
+}
+
+type Reading = Awaited<ReturnType<typeof usableReading>>;
+
+/** The check-out itself, in the caller's transaction; false when nothing was open to close. */
+async function closeOpen(
+  tx: Transaction,
+  actor: Actor,
+  input: { readonly task: SiteTask | null; readonly visitId?: string | undefined },
+  moment: {
+    readonly at: Date;
+    readonly source: CheckInSource;
+    readonly reading: Reading;
+    readonly measured: ReturnType<typeof siteDistance> | null;
+  },
+): Promise<boolean> {
+  const { task } = input;
+  const { at, source, reading, measured } = moment;
+  const [open] = await tx
+    .select()
+    .from(siteVisits)
+    .where(
+      and(
+        eq(siteVisits.userId, actor.userId),
+        isNull(siteVisits.checkOutAt),
+        task ? eq(siteVisits.taskId, task.id) : eq(siteVisits.id, input.visitId ?? ''),
+      ),
+    )
+    .limit(1);
+  if (!open) return false;
+  const closedAt = visitCloseAt(open.checkInAt, at);
+  const [done] = await tx
+    .update(siteVisits)
+    .set({
+      checkOutAt: closedAt,
+      checkOutSource: source,
+      checkOutLatitude: reading?.position.latitude ?? null,
+      checkOutLongitude: reading?.position.longitude ?? null,
+      checkOutAccuracyM: reading ? accuracy(reading.position) : null,
+      checkOutDistanceM: measured?.distanceM ?? null,
+      checkOutFar: measured?.far ?? null,
+      closeKind: 'self',
+      updatedAt: at,
+    })
+    .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)))
+    .returning({ id: siteVisits.id });
+  if (!done) return false;
+  await afterSiteCheckOut(tx, actor.userId, open.id, reading?.position ?? null);
+  await finishLinkedVisit(tx, open.visitId, actor.userId, task?.title ?? 'Service visit');
+  await noteLeft(tx, actor, open, task, {
+    distanceM: measured?.distanceM ?? null,
+    far: measured?.far ?? null,
+    located: reading !== null,
+    minutes: Math.max(0, Math.round((closedAt.getTime() - open.checkInAt.getTime()) / 60_000)),
+    automatic: source !== 'manual',
   });
+  return true;
 }

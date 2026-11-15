@@ -149,7 +149,15 @@ describe('workforce policy defaults', () => {
       autoApproveMaxKm: 150,
       autoApproveMaxPaise: 150_000,
       routeCapRatio: 1.6,
+      autoSiteVisits: true,
+      siteFenceM: 150,
     });
+  });
+
+  it('fills the automatic site visit rules into a policy saved with only the older travel rules', () => {
+    const { autoSiteVisits: _a, siteFenceM: _f, ...older } = DEFAULT_WORKFORCE_POLICY.travel;
+    const filled = withPolicyDefaults({ ...DEFAULT_WORKFORCE_POLICY, travel: older as never });
+    expect(filled.travel).toMatchObject({ autoSiteVisits: true, siteFenceM: 150 });
   });
 
   it('fills the automatic claim rules into a policy saved with only the older travel rules', () => {

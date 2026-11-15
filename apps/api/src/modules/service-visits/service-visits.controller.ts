@@ -6,6 +6,7 @@ import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import type { IncomingFile } from '../documents/upload-file';
+import { phonePosition, phoneVisit } from '../site-activity/site-visit-auto';
 import { SERVICE_FILE_TYPES, ServiceFilesService } from './service-files.service';
 import { ServiceFinishService } from './service-finish.service';
 import { ServiceVisitsService } from './service-visits.service';
@@ -37,11 +38,17 @@ export class ServiceVisitsController {
       },
       serviceCheckIn: async ({ params, body }) => {
         fieldWorker();
-        return { status: 200, body: await this.visits.checkIn(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkIn(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
       serviceCheckOut: async ({ params, body }) => {
         fieldWorker();
-        return { status: 200, body: await this.visits.checkOut(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkOut(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
       finishServiceVisit: async ({ params, body }) => {
         fieldWorker();

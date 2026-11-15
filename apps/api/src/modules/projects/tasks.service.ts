@@ -76,20 +76,23 @@ export class TasksService {
     return this.present(id);
   }
 
-  async start(actor: Actor, id: string): Promise<ProjectTask> {
+  /** Only the first start messages the customer, and an automatic one (a check-in, from `at`) never. */
+  async start(actor: Actor, id: string, auto?: { at: Date }) {
     const task = await this.load(actor, id);
     await assertUnblocked(this.db, task);
     if (task.status === 'completed') throw conflict('This task is already done.', 'done');
     await closeOpenWait(this.db, task);
     await this.db
       .update(projectTasks)
-      .set({ status: 'in_progress', startedAt: new Date(), updatedAt: new Date() })
+      .set({ status: 'in_progress', startedAt: auto?.at ?? new Date(), updatedAt: new Date() })
       .where(eq(projectTasks.id, id));
     await settleWorkOrderForTask(this.db, id, actor.userId);
     await closeAsksOnStart(this.db, task); // installation work ends "Is the roof ready?"
-    // Only the first start counts; resuming after a wait does not message again.
     if (!task.startedAt)
-      await Promise.all([tellCustomerAbout(this.db, task, 'started'), this.stale.afterStart(task)]);
+      await Promise.all([
+        auto ? null : tellCustomerAbout(this.db, task, 'started'),
+        this.stale.afterStart(task),
+      ]);
     return this.present(id);
   }
 

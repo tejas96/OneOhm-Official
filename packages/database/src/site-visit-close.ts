@@ -36,6 +36,7 @@ export async function closeVisitsAtDayEnd(
       .set({
         checkOutAt: visitCloseAt(visit.checkInAt, at),
         closeKind: 'day_end',
+        checkOutSource: 'day_end',
         closeNote: 'Ended with the day.',
         updatedAt: now,
       })
@@ -76,6 +77,7 @@ export async function closeStaleVisits(
         .set({
           checkOutAt: visitCloseAt(visit.checkInAt, dayEnd),
           closeKind: 'day_end',
+          checkOutSource: 'day_end',
           closeNote: 'Ended with the day.',
           updatedAt: now,
         })

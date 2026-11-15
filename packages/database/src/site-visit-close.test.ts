@@ -32,7 +32,11 @@ describe('closeVisitsAtDayEnd (S1)', () => {
     const at = new Date('2026-11-15T12:00:00Z');
     const { db, sets } = fakeDb([{ id: 'a', checkInAt: new Date('2026-11-15T05:00:00Z') }]);
     expect(await closeVisitsAtDayEnd(db, 'u1', at)).toEqual(['closed']);
-    expect(sets[0]).toMatchObject({ checkOutAt: at, closeKind: 'day_end' });
+    expect(sets[0]).toMatchObject({
+      checkOutAt: at,
+      closeKind: 'day_end',
+      checkOutSource: 'day_end',
+    });
   });
 
   it('never closes a visit before it began', async () => {

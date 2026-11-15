@@ -70,3 +70,8 @@ export function businessClock(now = new Date()): string {
   const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
   return `${hour}:${minute}`;
 }
+
+/** "10:42" in India time (24-hour) for an instant, as the site notices show it. */
+export function clock24(instant: string): string {
+  return businessClock(new Date(instant));
+}

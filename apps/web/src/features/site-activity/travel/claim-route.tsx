@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useSiteFormat } from '../site-format';
 import { VisitDistance } from '../visit-distance';
+import { VisitNotes } from '../visit-notes';
 import { useClaimDay } from './use-travel';
 
 export function Section({
@@ -85,6 +86,7 @@ export function DayVisits({ claimId }: { readonly claimId: string }) {
             </span>
           </span>
           <VisitDistance visit={visit} />
+          <VisitNotes visit={visit} />
         </li>
       ))}
     </ul>

@@ -75,6 +75,10 @@ export interface SiteTravelPolicy {
   readonly autoApproveMaxPaise: number;
   /** The paid route is cut to the straight-line distance between stops times this. */
   readonly routeCapRatio: number;
+  /** The phone and the route check the person in and out at their sites by themselves (Duty Day step 3). */
+  readonly autoSiteVisits: boolean;
+  /** How close to a site, in metres, counts as being at it for automatic visits. */
+  readonly siteFenceM: number;
 }
 
 export interface WorkforcePolicy {
@@ -121,6 +125,8 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     autoApproveMaxKm: 150,
     autoApproveMaxPaise: 150_000,
     routeCapRatio: 1.6,
+    autoSiteVisits: true,
+    siteFenceM: 150,
   },
   capacity: { defaultOpenTaskLimit: 0 },
 };

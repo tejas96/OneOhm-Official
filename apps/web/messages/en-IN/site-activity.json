@@ -23,6 +23,13 @@
       "onSite": "On site now"
     },
     "visits": {
+      "auto": "Auto",
+      "leftBecause": "Left unfinished: {reason}",
+      "leaveReasons": {
+        "come_back_later": "will come back later",
+        "need_material": "needs material",
+        "customer_not_home": "customer was not home"
+      },
       "title": "Site visits",
       "description": "Check-ins and check-outs at the customer's site, with how far from the saved site location they were.",
       "empty": "No one has checked in at this site yet.",
@@ -159,7 +166,12 @@
       "maxKm": "Automatic approval up to (km)",
       "maxKmHint": "A day with more paid km than this always waits for a manager.",
       "maxAmount": "Automatic approval up to",
-      "maxAmountHint": "A claim worth more than this always waits for a manager."
+      "maxAmountHint": "A claim worth more than this always waits for a manager.",
+      "autoSiteVisits": "Check in and out at sites automatically",
+      "autoSiteVisitsOn": "The phone and the route check the person in when they reach a site they work at today, and out when they leave.",
+      "autoSiteVisitsOff": "People check in and out at sites themselves.",
+      "siteFence": "Site fence (m)",
+      "siteFenceHint": "Closer than this to a saved site counts as being there. 50 to 1000."
     },
     "review": {
       "route_gap": "The phone sent no location for a long stretch.",

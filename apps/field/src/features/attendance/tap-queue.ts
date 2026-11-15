@@ -13,9 +13,14 @@ export interface QueuedTap {
   readonly position: PositionInput | null;
 }
 
-export interface TapStore {
-  load(): Promise<QueuedTap[]>;
-  save(items: readonly QueuedTap[]): Promise<void>;
+/** Anything kept per person with signal: attendance taps here, site fence events beside it. */
+export interface QueuedItem {
+  readonly userId: string;
+}
+
+export interface TapStore<T extends QueuedItem = QueuedTap> {
+  load(): Promise<T[]>;
+  save(items: readonly T[]): Promise<void>;
 }
 
 /** What to do with a failed send: try later, count it as done, or drop it with the reason. */
@@ -54,9 +59,9 @@ export function parseTaps(raw: unknown): QueuedTap[] {
 
 type Attempt = 'sent' | 'retry' | 'done' | 'unauthorized' | { readonly refused: unknown };
 
-async function attempt(
-  send: (tap: QueuedTap) => Promise<unknown>,
-  tap: QueuedTap,
+async function attempt<T extends QueuedItem>(
+  send: (tap: T) => Promise<unknown>,
+  tap: T,
 ): Promise<Attempt> {
   try {
     await send(tap);
@@ -67,14 +72,14 @@ async function attempt(
   }
 }
 
-export interface RefusedTap {
-  readonly tap: QueuedTap;
+export interface RefusedTap<T extends QueuedItem = QueuedTap> {
+  readonly tap: T;
   readonly error: unknown;
 }
 
-export interface FlushResult {
+export interface FlushResult<T extends QueuedItem = QueuedTap> {
   readonly sent: number;
-  readonly refused: readonly RefusedTap[];
+  readonly refused: readonly RefusedTap<T>[];
   /** The run ended on a 401: nothing is sent again until `resume`. */
   readonly unauthorized: boolean;
 }
@@ -85,13 +90,13 @@ export interface FlushResult {
  * never doubled, so a tap is not sent twice. A 401 halts the queue, with no retry loop,
  * until `resume` (the next sign-in or the app coming to the front).
  */
-export function createTapQueue(store: TapStore) {
-  let items: QueuedTap[] = [];
+export function createTapQueue<T extends QueuedItem = QueuedTap>(store: TapStore<T>) {
+  let items: T[] = [];
   let loading: Promise<void> | null = null;
-  let flushing: Promise<FlushResult> | null = null;
+  let flushing: Promise<FlushResult<T>> | null = null;
   let flushingFor = '';
   const listeners = new Set<() => void>();
-  const set = async (next: QueuedTap[]) => {
+  const set = async (next: T[]) => {
     items = next;
     for (const listener of listeners) listener();
     await store.save(next).catch(() => undefined);
@@ -106,11 +111,11 @@ export function createTapQueue(store: TapStore) {
   let halted = false;
   /** Sends the person's waiting taps in order until one is kept for later. */
   const drain = async (
-    send: (tap: QueuedTap) => Promise<unknown>,
+    send: (tap: T) => Promise<unknown>,
     userId: string,
-  ): Promise<FlushResult> => {
+  ): Promise<FlushResult<T>> => {
     let sent = 0;
-    const refused: RefusedTap[] = [];
+    const refused: RefusedTap<T>[] = [];
     if (halted) return { sent, refused, unauthorized: true };
     for (let tap = items.find((item) => item.userId === userId); tap; ) {
       const outcome = await attempt(send, tap);
@@ -128,14 +133,13 @@ export function createTapQueue(store: TapStore) {
     }
     return { sent, refused, unauthorized: false };
   };
-  let mineOf: { from: readonly QueuedTap[]; userId: string; list: readonly QueuedTap[] } | null =
-    null;
+  let mineOf: { from: readonly T[]; userId: string; list: readonly T[] } | null = null;
   return {
     load,
     /** Every kept tap, whoever's: the same list object until it changes. */
-    get: (): readonly QueuedTap[] => items,
+    get: (): readonly T[] => items,
     /** The person's own taps: the same list object until they change, for `useSyncExternalStore`. */
-    mine(userId: string): readonly QueuedTap[] {
+    mine(userId: string): readonly T[] {
       if (mineOf?.from === items && mineOf.userId === userId) return mineOf.list;
       mineOf = { from: items, userId, list: items.filter((item) => item.userId === userId) };
       return mineOf.list;
@@ -150,11 +154,11 @@ export function createTapQueue(store: TapStore) {
         listeners.delete(listener);
       };
     },
-    async add(tap: QueuedTap) {
+    async add(tap: T) {
       await load();
       await set([...items, tap]);
     },
-    flush(send: (tap: QueuedTap) => Promise<unknown>, userId: string): Promise<FlushResult> {
+    flush(send: (tap: T) => Promise<unknown>, userId: string): Promise<FlushResult<T>> {
       if (flushing && flushingFor === userId) return flushing;
       // Another person's run in progress finishes first, so two runs never overlap.
       const run = () => load().then(() => drain(send, userId));

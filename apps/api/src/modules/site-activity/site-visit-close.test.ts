@@ -40,7 +40,8 @@ vi.mock('@oneohm/database', async (importOriginal) => ({
 import { actor, type Harness, harness, open, task } from './site-visit-test-kit';
 import { SiteVisitsService } from './site-visits.service';
 
-const service = (h: Harness) => new SiteVisitsService(h.db as never, {} as never);
+const service = (h: Harness) =>
+  new SiteVisitsService(h.db as never, {} as never, { start: vi.fn() } as never);
 
 beforeEach(() => {
   vi.clearAllMocks();

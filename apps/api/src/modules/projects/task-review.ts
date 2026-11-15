@@ -12,6 +12,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { forbidden } from '../../common/http/errors';
+import { closeVisitsOnTaskDone } from '../site-activity/site-visit-task-done';
 import { finishTask } from './task-completion';
 import { askReviewers } from './task-notices';
 
@@ -70,6 +71,8 @@ export async function sendForReview(
     userId: actor.userId,
   });
   await askReviewers(tx, task, actor, route.reviewers);
+  // Handed in for review: the work at the site is over, so every open visit on it ends now.
+  await closeVisitsOnTaskDone(tx, task, new Date());
   return false;
 }
 

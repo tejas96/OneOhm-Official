@@ -1,4 +1,11 @@
-import { SITE_VISIT_KINDS } from '@oneohm/domain';
+import {
+  AUTO_SKIPS,
+  CHECK_IN_SOURCES,
+  CHECK_OUT_SOURCES,
+  LEAVE_REASONS,
+  PHONE_SOURCES,
+  SITE_VISIT_KINDS,
+} from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
 import { decisionStatusSchema } from './workforce.schema';
@@ -53,8 +60,48 @@ export const siteVisitSchema = z.object({
   /** How it ended when not by the person's own check-out: a manager, or the end of their day. */
   closeKind: z.enum(['self', 'manager', 'day_end']).nullable().optional(),
   closeNote: z.string().nullable().optional(),
+  /** How it began and ended: by a tap, the phone's site fence, the route, or the task finishing. */
+  checkInSource: z.enum(CHECK_IN_SOURCES),
+  checkOutSource: z.enum(CHECK_OUT_SOURCES).nullable(),
+  /** Why the person left before the job was done, and when they said so. */
+  leaveReason: z.enum(LEAVE_REASONS).nullable(),
+  leaveReasonAt: instantSchema.nullable(),
 });
 export type SiteVisit = z.infer<typeof siteVisitSchema>;
+
+/**
+ * The person's latest visit that just ended, so the phone can ask "Job not finished, why?"
+ * when the job is not done. Null when there is none in the last 12 hours.
+ */
+export const leftVisitSchema = z.object({
+  visitId: idSchema,
+  /** The work is finished, in review or the visit ended another way: there is nothing to explain. */
+  done: z.boolean(),
+  /** The person already said why. */
+  reasonGiven: z.boolean(),
+});
+export type LeftVisit = z.infer<typeof leftVisitSchema>;
+
+/** Why an automatic check-in did nothing; the phone ignores it. */
+export const autoSkipSchema = z.enum(AUTO_SKIPS);
+
+/** What a phone sends with a site check-in or check-out made by its own geofence. */
+export const phoneSourceSchema = z.enum(PHONE_SOURCES);
+
+/** One site where the person has work today, for the phone to fence (Duty Day step 3). */
+export const dutySiteSchema = z.object({
+  /** The task, or the service request when `kind` is service. */
+  id: idSchema,
+  kind: siteVisitKindSchema,
+  label: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  radiusM: z.number().int(),
+});
+export type DutySiteRecord = z.infer<typeof dutySiteSchema>;
+
+/** Empty when automatic visits are off in Settings: the phone then watches nothing. */
+export const dutySitesSchema = z.array(dutySiteSchema);
 
 /** Everything the task screen needs to check in and out at the site. */
 export const taskSiteSchema = z.object({
@@ -78,6 +125,9 @@ export const taskSiteSchema = z.object({
   siteFlagged: z.boolean(),
   /** The person has an open visit on this task, so may pin the roof on the map. */
   canPinSite: z.boolean(),
+  justLeft: leftVisitSchema.nullable(),
+  /** Set when an automatic check-in was ignored, with the reason; the visit was not made. */
+  autoSkipped: autoSkipSchema.nullable().optional(),
 });
 export type TaskSite = z.infer<typeof taskSiteSchema>;
 

@@ -1,5 +1,6 @@
 import type { LocationObject } from 'expo-location';
 import { readDeviceState } from '../attendance/device-state';
+import { checkArrivals } from '../site-fence/fence-dwell';
 import { flushWhenDue } from './duty-flush';
 import { dutyPointOf } from './duty-point';
 import type { DutyFlush } from './duty-queue';
@@ -20,5 +21,7 @@ export async function recordLocations(
     userId,
     locations.map((location) => dutyPointOf(location, device)),
   );
+  // A fence Enter waits for the person to stay; each new reading may confirm it.
+  await checkArrivals(userId, locations);
   return flushWhenDue(userId).catch(() => null);
 }
