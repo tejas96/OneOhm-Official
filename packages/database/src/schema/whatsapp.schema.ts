@@ -13,7 +13,12 @@ export const waConversations = pgTable(
   'wa_conversations',
   {
     id: primaryId(),
+    /** The WhatsApp number (E.164); Instagram and Facebook chats keep `ig:<id>` / `fb:<id>`. */
     phone: text('phone').notNull().unique(),
+    /** Where the chat happens. Only WhatsApp chats have the assistant; the others are answered by people. */
+    channel: text('channel', { enum: ['whatsapp', 'instagram', 'messenger'] })
+      .notNull()
+      .default('whatsapp'),
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
     profileName: text('profile_name'),
     /** The language the customer picked for the onboarding chat: en, mr or hi. */

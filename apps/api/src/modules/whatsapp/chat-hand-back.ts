@@ -13,7 +13,8 @@ export const HANDED_BACK_NOTE = 'Handed back to the assistant (no reply for 4 wo
  * hours since the hand-over or their last reply, and no customer waiting for an answer
  * (those stay with the person; the reminders chase them). They go back to the assistant,
  * with a line in the chat's history in the same transaction, and a customer who wrote
- * since the hand-over is told. Returns how many.
+ * since the hand-over is told. Returns how many. Instagram and Facebook chats have no
+ * assistant, so they stay with their people.
  */
 export async function handBackQuietChats(db: Database, now: Date, zone: string): Promise<number> {
   const open = await db
@@ -26,7 +27,7 @@ export async function handBackQuietChats(db: Database, now: Date, zone: string):
           and o.sent_by_user_id is not null)`,
     })
     .from(waConversations)
-    .where(eq(waConversations.state, 'human'));
+    .where(and(eq(waConversations.state, 'human'), eq(waConversations.channel, 'whatsapp')));
   if (open.length === 0) return 0;
   const waiting = await chatsWaitingSince(
     db,

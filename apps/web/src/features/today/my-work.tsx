@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { TaskCard } from '../projects/tasks/task-card';
 import { TODAY_GROUPS, type TodayGroup } from './group-tasks';
+import { WaitingAdLeads } from './waiting-ad-leads';
 
 export const ACCENT: Readonly<Record<TodayGroup, string>> = {
   first: 'text-overdue',
@@ -27,10 +28,23 @@ export function MyWork({
 }) {
   const t = useTranslations('today');
   const total = TODAY_GROUPS.reduce((sum, group) => sum + groups[group].length, 0);
-  if (query.isPending) return <ListSkeleton label={t('loading')} />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
-  if (total === 0)
-    return <EmptyState icon={<Coffee />} title={t('clearTitle')} description={t('clearBody')} />;
+  const body = (() => {
+    if (query.isPending) return <ListSkeleton label={t('loading')} />;
+    if (query.isError) return <LoadError error={query.error} onRetry={() => query.refetch()} />;
+    if (total === 0)
+      return <EmptyState icon={<Coffee />} title={t('clearTitle')} description={t('clearBody')} />;
+    return null;
+  })();
+  return (
+    <>
+      <WaitingAdLeads />
+      {body ?? <TaskGroups groups={groups} />}
+    </>
+  );
+}
+
+function TaskGroups({ groups }: { readonly groups: Record<TodayGroup, ProjectTask[]> }) {
+  const t = useTranslations('today');
   return (
     <>
       {TODAY_GROUPS.filter((group) => group !== 'first' || groups.first.length > 0).map((group) => (

@@ -45,4 +45,19 @@ describe('hrefOf', () => {
       '/team?tab=points',
     );
   });
+
+  it('opens Marketing for marketing alerts', () => {
+    expect(hrefOf({ subject: subject('marketing', 'c1'), kind: 'campaign_paused' })).toBe(
+      '/marketing?campaign=c1',
+    );
+    expect(
+      hrefOf({
+        subject: subject('marketing_connections', '00000000-0000-0000-0000-000000000000'),
+        kind: 'connection_broke',
+      }),
+    ).toBe('/marketing?tab=connections');
+    expect(hrefOf({ subject: subject('marketing_reviews', 'r1'), kind: 'review_waiting' })).toBe(
+      '/marketing',
+    );
+  });
 });

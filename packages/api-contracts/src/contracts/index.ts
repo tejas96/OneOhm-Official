@@ -35,6 +35,7 @@ import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { listsContract } from './lists.contract';
 import { mapsContract } from './maps.contract';
+import { marketingContract } from './marketing.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
 import { paymentPlansContract } from './payment-plans.contract';
@@ -128,6 +129,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly lists: typeof listsContract;
   readonly search: typeof searchContract;
   readonly maps: typeof mapsContract;
+  readonly marketing: typeof marketingContract;
   readonly businessSettings: typeof businessSettingsContract;
   readonly projectChanges: typeof projectChangesContract;
   readonly stateSupport: typeof stateSupportContract;
@@ -197,35 +199,13 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   lists: listsContract,
   search: searchContract,
   maps: mapsContract,
+  marketing: marketingContract,
   businessSettings: businessSettingsContract,
   projectChanges: projectChangesContract,
   stateSupport: stateSupportContract,
 };
 
-export type { IfscBranch, IfscLookup } from './banking.contract';
-export {
-  type ContractorInput,
-  contractorInputSchema,
-  contractorPatchSchema,
-} from './contractors.contract';
-export { type PropertyInput, propertyInputSchema } from './crm.contract';
-export { type CustomerPayLink, customerPayLinkSchema } from './customer-pay.contract';
-export { type ReportSetting, reportSettingSchema } from './document-requests.contract';
-export {
-  type LeadOwner,
-  leadOwnerSchema,
-  type PhoneMatch,
-  phoneMatchSchema,
-  type WebsiteLeadInput,
-  websiteLeadInputSchema,
-} from './lead-intake.contract';
-export {
-  REPORT_KEYS,
-  type ReportKey,
-  type ReportOverview,
-  reportKeySchema,
-  reportOverviewSchema,
-} from './reports.contract';
+export * from './shared-exports';
 export {
   authContract,
   billingContract,

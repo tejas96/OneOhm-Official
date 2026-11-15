@@ -16,13 +16,11 @@ import { WarrantyPanel } from './after-sales/warranty-panel';
 import { AutomationPanel } from './automation/automation-panel';
 import { CompanyPanel } from './company/company-panel';
 import { DiscomsPanel } from './discoms/discoms-panel';
-import { LeadCampaignsPanel } from './lead-campaigns/lead-campaigns-panel';
 import { LeadStepsPanel } from './lead-steps/lead-steps-panel';
 import { OnboardingPanel } from './onboarding/onboarding-panel';
 import { PaymentPlansPanel } from './payment-plans/payment-plans-panel';
 import { ProductsPanel } from './products/products-panel';
 import { RatesPanel } from './rates/rates-panel';
-import { ReferralsPanel } from './referrals/referrals-panel';
 import { RequirementsPanel } from './requirements/requirements-panel';
 import { RewardsPanel } from './rewards/rewards-panel';
 import { RolesPanel } from './roles/roles-panel';
@@ -32,7 +30,7 @@ import { DashboardPanel } from './rules/dashboard-panel';
 import { LeadAssignmentSection } from './rules/lead-assignment-section';
 import { ProjectTypesPanel } from './rules/project-types-panel';
 import { RemindersPanel } from './rules/reminders-panel';
-import { openSection, type Section, visibleMenu } from './settings-menu';
+import { MOVED_TO_MARKETING, openSection, type Section, visibleMenu } from './settings-menu';
 import { SettingsNav } from './settings-nav';
 import { MessageTemplatesPanel } from './templates/message-templates-panel';
 import { TaskTemplatesPanel } from './templates/task-templates-panel';
@@ -47,8 +45,6 @@ const TABS = [
   { value: 'rates', requires: 'settings.manage', Panel: RatesPanel },
   { value: 'payments', requires: 'settings.manage', Panel: PaymentPlansPanel },
   { value: 'discoms', requires: 'settings.manage', Panel: DiscomsPanel },
-  { value: 'referrals', requires: 'settings.manage', Panel: ReferralsPanel },
-  { value: 'leadCampaigns', requires: 'settings.manage', Panel: LeadCampaignsPanel },
   { value: 'whatsappOnboarding', requires: 'settings.manage', Panel: OnboardingPanel },
   { value: 'leadSteps', requires: 'settings.manage', Panel: LeadStepsPanel },
   { value: 'leadAssignment', requires: 'settings.manage', Panel: LeadAssignmentSection },
@@ -111,12 +107,17 @@ export function SettingsView() {
   // The address always names the open section: plain /settings, or an unknown or
   // forbidden `?tab=`, is rewritten to what is shown, so a copied link opens the same.
   const asked = params.get('tab');
+  const moved = asked !== null && MOVED_TO_MARKETING.includes(asked);
+  // Campaigns and referrals now live in Marketing: an old link goes there.
   useEffect(() => {
-    if (!current || asked === current.value) return;
+    if (moved) router.replace('/marketing');
+  }, [moved, router]);
+  useEffect(() => {
+    if (moved || !current || asked === current.value) return;
     const next = new URLSearchParams(params);
     next.set('tab', current.value);
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }, [asked, current, params, pathname, router]);
+  }, [asked, current, moved, params, pathname, router]);
 
   return (
     <motion.div {...pageEnter} className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 py-2">

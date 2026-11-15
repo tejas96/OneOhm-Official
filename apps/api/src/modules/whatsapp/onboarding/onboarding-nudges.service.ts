@@ -131,6 +131,7 @@ export class OnboardingNudgesService implements OnApplicationBootstrap, OnModule
       .from(waConversations)
       .where(
         and(
+          eq(waConversations.channel, 'whatsapp'),
           like(waConversations.state, 'onboard:%'),
           ne(waConversations.state, 'onboard:done'),
           isNull(waConversations.customerId),

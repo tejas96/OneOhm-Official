@@ -15,6 +15,7 @@ import {
   readLeads,
   readOrders,
 } from './sales-report.read';
+import { readSpendByCode } from './sales-spend.read';
 
 const DAY_MS = 86_400_000;
 const within = (scope: ReportScope, at: Date | null): at is Date =>
@@ -60,7 +61,7 @@ export class SalesReportService {
       byBucket: this.buckets(scope, cohort, won),
       funnel: this.funnel(cohort, orders),
       bySource: this.bySource(cohort, orders),
-      byCampaign: await this.byCampaign(cohort, orders),
+      byCampaign: await this.byCampaign(cohort, orders, scope),
       byOwner: this.byOwner(scope, cohort, orders),
       lostReasons: this.lostReasons(cohort),
     };
@@ -144,7 +145,11 @@ export class SalesReportService {
       .sort((a, b) => b.leads - a.leads);
   }
 
-  private async byCampaign(cohort: readonly LeadFact[], orders: readonly OrderFact[]) {
+  private async byCampaign(
+    cohort: readonly LeadFact[],
+    orders: readonly OrderFact[],
+    scope: ReportScope,
+  ) {
     const quotedLeadIds = new Set(
       orders.flatMap((order) => (order.leadId && order.sentAt ? [order.leadId] : [])),
     );
@@ -165,6 +170,7 @@ export class SalesReportService {
         this.db,
         cohort.map((lead) => lead.id),
       ),
+      await readSpendByCode(this.db, scope),
     );
   }
 

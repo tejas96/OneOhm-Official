@@ -6,11 +6,13 @@ import {
   DEFAULT_ASSIGNMENT_RULES,
   DEFAULT_DASHBOARD_SETTINGS,
   DEFAULT_LEAD_ASSIGNMENT,
+  DEFAULT_MARKETING_SETTINGS,
   DEFAULT_ONBOARDING,
   DEFAULT_PAYMENT_SETTINGS,
   DEFAULT_REMINDER_TIMING,
   DEFAULT_VISIT_SETTINGS,
   type LeadAssignmentRules,
+  type MarketingSettings,
   type OnboardingSettings,
   type PaymentSettings,
   type ReminderTiming,
@@ -32,6 +34,7 @@ export interface BusinessSettingsMap {
   readonly onboarding: OnboardingSettings;
   readonly payments: PaymentSettings;
   readonly visits: VisitSettings;
+  readonly marketing: MarketingSettings;
 }
 export type BusinessSettingKey = keyof BusinessSettingsMap;
 
@@ -46,6 +49,7 @@ export const BUSINESS_SETTING_DEFAULTS: {
   onboarding: DEFAULT_ONBOARDING,
   payments: DEFAULT_PAYMENT_SETTINGS,
   visits: DEFAULT_VISIT_SETTINGS,
+  marketing: DEFAULT_MARKETING_SETTINGS,
 };
 
 /** The saved values for one area over the shipped ones; never throws for a missing row. */

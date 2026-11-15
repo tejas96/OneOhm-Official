@@ -10,6 +10,7 @@ import {
   withFallback,
 } from '@oneohm/database';
 import { isNotOnWhatsApp } from '@oneohm/domain';
+import { type MarketingConfig, metaTools } from '@oneohm/marketing';
 import { and, eq, sql } from 'drizzle-orm';
 import type { PushSender } from '../channels/expo-push';
 import { MAYBE_SENT, PermanentSendError } from '../channels/send-errors';
@@ -19,6 +20,7 @@ import { logTemplateInChat } from './chat-history';
 import { failPendingDelivery } from './fail-delivery';
 import { queueFlowFallback } from './flow-fallback';
 import { chatInsteadOfTemplate, windowOpenFor } from './in-window';
+import { SOCIAL_MAYBE_SENT, sendSocialMessage } from './marketing/social-delivery';
 import { fallBackNote } from './not-on-whatsapp';
 import { type Prepared, prepareTemplate } from './prepare-template';
 import { deliverPush } from './push-delivery';
@@ -40,6 +42,8 @@ interface DeliveryDeps {
   readonly push: PushSender;
   readonly sms: SmsSender;
   readonly language: string;
+  /** Instagram and Messenger replies go through Meta; without it they fail in plain words. */
+  readonly marketing?: MarketingConfig;
 }
 
 /** Thrown inside a send to end it as skipped (not failed) with this note. */
@@ -60,7 +64,7 @@ const loggedNote = (channel: string, result: { readonly note?: string }) =>
  * Sends one queued message. Final outcomes (sent, skipped, failed) are written to the
  * outbox row; temporary failures throw so Temporal retries with backoff.
  */
-export function deliveryActivities({ db, sender, push, sms, language }: DeliveryDeps) {
+export function deliveryActivities({ db, sender, push, sms, language, marketing }: DeliveryDeps) {
   const finish = async (
     id: string,
     status: 'sent' | 'skipped' | 'failed',
@@ -149,7 +153,8 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
       if (current?.status !== 'pending') return 'not_pending';
       // The provider may have the message already: never send it a second time.
       if (current.lastError === SENDING) {
-        await failWithAlerts(id, MAYBE_SENT);
+        const social = current.channel === 'instagram' || current.channel === 'messenger';
+        await failWithAlerts(id, social ? SOCIAL_MAYBE_SENT : MAYBE_SENT);
         return 'failed';
       }
       // Claimed in one statement, so a step update cannot be merged into a row being sent.
@@ -163,6 +168,25 @@ export function deliveryActivities({ db, sender, push, sms, language }: Delivery
         const outcome = await deliverPush(db, push, row.recipient);
         await finish(id, outcome.status, outcome.note);
         return outcome.status;
+      }
+      if (row.channel === 'instagram' || row.channel === 'messenger') {
+        await db.update(outbox).set({ lastError: SENDING }).where(eq(outbox.id, id));
+        try {
+          const tools = marketing ? await metaTools(db, marketing) : null;
+          const sent = await sendSocialMessage(tools, row);
+          if (sent.status === 'sent') {
+            await finish(id, 'sent', null, sent.messageId);
+            return 'sent';
+          }
+          await failWithAlerts(id, sent.reason);
+          return 'failed';
+        } catch (error) {
+          await db
+            .update(outbox)
+            .set({ lastError: error instanceof Error ? error.message : String(error) })
+            .where(eq(outbox.id, id));
+          throw error;
+        }
       }
       if (row.channel === 'sms') {
         const text = (row.payload as { text?: string } | null)?.text;

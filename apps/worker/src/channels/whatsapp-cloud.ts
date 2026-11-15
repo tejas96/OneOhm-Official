@@ -3,12 +3,10 @@ import { maskPhone, withoutLinks } from './log-mask';
 import { metaSendFailure, whenNoAnswer } from './send-errors';
 import { type SessionMessage, sessionRequestBody } from './session-message';
 
-/** A file shown at the top of a template message. */
-export interface TemplateHeader {
-  readonly kind: 'document';
-  readonly link: string;
-  readonly filename: string;
-}
+/** A file or photo shown at the top of a template message. */
+export type TemplateHeader =
+  | { readonly kind: 'document'; readonly link: string; readonly filename: string }
+  | { readonly kind: 'image'; readonly link: string };
 
 /** A button on a template, by its position (index) in the approved template. */
 export type TemplateButton =
@@ -49,10 +47,12 @@ export function templateRequestBody(message: WhatsAppTemplateMessage) {
         {
           type: 'header',
           parameters: [
-            {
-              type: 'document',
-              document: { link: message.header.link, filename: message.header.filename },
-            },
+            message.header.kind === 'image'
+              ? { type: 'image', image: { link: message.header.link } }
+              : {
+                  type: 'document',
+                  document: { link: message.header.link, filename: message.header.filename },
+                },
           ],
         },
       ]
@@ -88,7 +88,9 @@ export function createWhatsAppSender(
   if (config.WHATSAPP_DELIVERY === 'log') {
     return {
       async send(message) {
-        const header = message.header ? ` header=${message.header.filename}` : '';
+        const header = message.header
+          ? ` header=${message.header.kind === 'image' ? 'image' : message.header.filename}`
+          : '';
         const buttons = (message.buttons ?? []).map((b) =>
           b.kind === 'quick_reply' ? b.payload : '[link]',
         );

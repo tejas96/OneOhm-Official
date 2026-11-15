@@ -1,4 +1,5 @@
 import { STEP_MESSAGE_TEMPLATES } from './customer-steps';
+import { MARKETING_MESSAGE_TEMPLATES } from './marketing-templates';
 import { PAYEE_MESSAGE_TEMPLATES } from './payee-templates';
 import { SEND_MESSAGE_TEMPLATES } from './send-templates';
 
@@ -17,6 +18,8 @@ export interface MessageTemplateDefault {
    */
   readonly extras?: {
     readonly document?: { readonly urlField: string; readonly nameField: string };
+    /** A photo on top (marketing offers): the payload field holding its public link. */
+    readonly image?: { readonly urlField: string };
     /** Payload field names, in button order. */
     readonly quickReplies?: readonly string[];
     /** The payload field holding the URL button's suffix. */
@@ -162,6 +165,7 @@ export const DEFAULT_MESSAGE_TEMPLATES = [
   ...STEP_MESSAGE_TEMPLATES,
   ...SEND_MESSAGE_TEMPLATES,
   ...PAYEE_MESSAGE_TEMPLATES,
+  ...MARKETING_MESSAGE_TEMPLATES,
   {
     key: 'chat_follow_up',
     audience: 'customer',
@@ -210,20 +214,6 @@ export function unknownMessageFields(key: string, fields: readonly string[]): st
   const known = messageFieldsFor(key);
   return known ? fields.filter((field) => !known.includes(field)) : [];
 }
-
-/** Fields a task's customer message can fill; templates needing others cannot be picked. */
-export const TASK_MESSAGE_FIELDS = [
-  'customer',
-  'project',
-  'milestone',
-  'capacity',
-  // The task's report or paper link, when the template attaches one (PRD 6.2).
-  'link',
-] as const;
-
-/** When a task's customer message goes out. */
-export const TASK_NOTIFY_EVENTS = ['started', 'completed', 'approved'] as const;
-export type TaskNotifyEvent = (typeof TASK_NOTIFY_EVENTS)[number];
 
 /** Fills {{1}}, {{2}}… with the fields in order, for previews and the in-app copy. */
 export function renderTemplate(

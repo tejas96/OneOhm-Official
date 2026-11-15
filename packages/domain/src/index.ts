@@ -12,6 +12,7 @@ export * from './identity';
 export * from './incentives';
 export * from './inventory';
 export * from './language';
+export * from './marketing';
 export * from './messaging';
 export * from './onboarding';
 export * from './pricing';

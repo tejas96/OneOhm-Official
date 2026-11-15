@@ -5,9 +5,11 @@ import {
   leadCampaigns,
   leadEstimates,
   leads,
+  marketingCampaigns,
   quotations,
   users,
 } from '@oneohm/database';
+import { adPlaceOf } from '@oneohm/domain';
 import {
   and,
   desc,
@@ -168,8 +170,9 @@ async function attributionOf(
 ): Promise<LeadDetail['attribution']> {
   const [campaign] = row.campaignCode
     ? await db
-        .select({ name: leadCampaigns.name })
+        .select({ name: leadCampaigns.name, marketingId: marketingCampaigns.id })
         .from(leadCampaigns)
+        .leftJoin(marketingCampaigns, eq(marketingCampaigns.code, leadCampaigns.code))
         .where(eq(leadCampaigns.code, row.campaignCode))
         .limit(1)
     : [];
@@ -183,5 +186,7 @@ async function attributionOf(
     utmMedium: row.utmMedium,
     utmCampaign: row.utmCampaign,
     landingPage: row.landingPage,
+    marketingCampaignId: campaign?.marketingId ?? null,
+    adPlace: adPlaceOf(row),
   };
 }

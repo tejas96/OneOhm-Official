@@ -65,6 +65,12 @@ export const salesReportSchema = z.object({
       wonValuePaise: paiseSchema,
       /** Customer payments on the projects these leads' quotations became. */
       collectedPaise: paiseSchema,
+      /** Ad spend in the period (Meta and Google), and what it cost per lead and per sale. */
+      spendPaise: paiseSchema,
+      costPerLeadPaise: paiseSchema.nullable(),
+      costPerSalePaise: paiseSchema.nullable(),
+      /** Rupees of sales for each rupee of ads; null with no spend. */
+      returnOnSpend: z.number().nullable(),
     }),
   ),
   byOwner: z.array(

@@ -166,6 +166,12 @@ export const leads = pgTable(
     utmMedium: text('utm_medium'),
     utmCampaign: text('utm_campaign'),
     landingPage: text('landing_page'),
+    /** Ad click ids, sent back with the sale steps (Google, Meta web, Click-to-WhatsApp). */
+    gclid: text('gclid'),
+    fbclid: text('fbclid'),
+    ctwaClid: text('ctwa_clid'),
+    /** The lead form entry's own id on Meta or Google (`meta:<id>` / `google:<id>`). */
+    platformLeadId: text('platform_lead_id'),
     wonAt: instant('won_at'),
     version: version(),
     createdAt: createdAt(),
@@ -175,6 +181,11 @@ export const leads = pgTable(
     index('leads_stage_idx').on(table.stage),
     index('leads_owner_idx').on(table.ownerUserId),
     index('leads_phone_idx').on(table.phoneE164),
+    // A lead form entry Meta or Google sends twice makes one lead.
+    uniqueIndex('leads_platform_lead_unique')
+      .on(table.platformLeadId)
+      .where(sql`${table.platformLeadId} is not null`),
+    index('leads_campaign_code_idx').on(table.campaignCode),
     // PRD 3.3: every open lead has an owner.
     check(
       'leads_open_has_owner',
@@ -195,6 +206,10 @@ export type LeadAttribution = Partial<
     | 'utmMedium'
     | 'utmCampaign'
     | 'landingPage'
+    | 'gclid'
+    | 'fbclid'
+    | 'ctwaClid'
+    | 'platformLeadId'
   >
 >;
 

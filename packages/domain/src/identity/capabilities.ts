@@ -7,6 +7,7 @@ export const CAPABILITIES = [
   'leads.view_all',
   'leads.view_own',
   'leads.manage',
+  'marketing.manage',
   'customers.view',
   'customers.manage',
   'surveys.perform',

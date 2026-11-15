@@ -77,7 +77,13 @@ export class FileQuestionsService implements OnApplicationBootstrap, OnModuleDes
       const due = await this.db
         .select({ id: waConversations.id })
         .from(waConversations)
-        .where(and(isNotNull(waConversations.filesAskAt), lte(waConversations.filesAskAt, now)))
+        .where(
+          and(
+            eq(waConversations.channel, 'whatsapp'),
+            isNotNull(waConversations.filesAskAt),
+            lte(waConversations.filesAskAt, now),
+          ),
+        )
         .orderBy(asc(waConversations.filesAskAt))
         .limit(50);
       const failed: string[] = [];

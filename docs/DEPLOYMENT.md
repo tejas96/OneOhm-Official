@@ -342,6 +342,25 @@ curl -X POST https://<domain>/api/v1/public/leads \
 - Every enquiry is also kept, as it arrived, in the `website_enquiries` table (name, phone, city, message, `sourcePage`, address and outcome). The UTM fields and `campaignCode` are held on the lead itself, not in that table.
 
 
+## 5f. Marketing (Meta and Google ads)
+
+Marketing runs each business's own Meta and Google ad accounts; they pay Meta and Google
+directly and OneOhm never holds ad money. Set the keys in Part A of
+[LIVE-TEST-MARKETING.md](LIVE-TEST-MARKETING.md), then:
+
+- `MARKETING_SECRET_KEY` is required in production once a Meta or Google key is set: it
+  encrypts the tokens in the database. Keep it safe; changing it means connecting again.
+- `MARKETING_MODE=sandbox` is refused in production.
+- Meta webhook: `https://<domain>/api/v1/webhooks/meta` (Page: leadgen, messages,
+  messaging_postbacks, messaging_referrals, feed; Instagram: messages, comments), signed with
+  `META_APP_SECRET` (or `WHATSAPP_APP_SECRET` when it is the same app).
+- Google lead forms post to `https://<domain>/api/v1/webhooks/google-leads`; OneOhm sets this
+  and its secret key itself when it makes a lead form.
+- OAuth redirects: `<API_PUBLIC_URL>/v1/marketing/connect/meta/callback` and
+  `/v1/marketing/connect/google/callback`.
+- Landing pages and campaign photos are public at `<API_PUBLIC_URL>/v1/go/<code>` and
+  `/v1/m/<id>`: Meta and Google fetch the photos from there.
+
 ## 6. Backups
 
 Add a daily cron entry (`crontab -e`):

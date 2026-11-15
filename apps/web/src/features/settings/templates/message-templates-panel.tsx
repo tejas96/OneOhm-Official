@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { FormsSection } from './forms-section';
 import { MessageTemplateDialog } from './message-template-dialog';
+import { withoutMarketing } from './template-filter';
 import { useMessageTemplates } from './use-templates';
 
 /** The WhatsApp templates, matched one by one to what Meta approved (PRD 7.2). */
@@ -91,10 +92,16 @@ export function MessageTemplatesPanel() {
           <ResponsiveTable
             caption={t('title')}
             columns={columns}
-            rows={query.data}
+            rows={withoutMarketing(query.data)}
             rowKey={(row) => row.key}
           />
         )}
+        <p className="type-body-sm text-ink-faint">
+          {t('marketingNote')}{' '}
+          <Link href="/marketing?tab=connections" className="text-accent hover:underline">
+            {t('marketingLink')}
+          </Link>
+        </p>
         <MessageTemplateDialog
           template={editing}
           name={editing ? name(editing.key) : ''}

@@ -10,6 +10,9 @@ import {
 import { chatWaitStage } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 
+/** Where the customer wrote, in plain words. */
+const PLACE = { whatsapp: 'WhatsApp', instagram: 'Instagram', messenger: 'Facebook' } as const;
+
 /**
  * Chats a person took over where the customer wrote last and nobody has answered. Each
  * stage alerts once per customer message, so a reply resets it and nothing repeats.
@@ -23,6 +26,7 @@ export async function queueChatReminders(db: Database, now: Date, timeZone: stri
       assignedUserId: waConversations.assignedUserId,
       handledByUserId: waConversations.handledByUserId,
       customerId: waConversations.customerId,
+      channel: waConversations.channel,
     })
     .from(waConversations)
     .where(eq(waConversations.state, 'human'));
@@ -42,6 +46,7 @@ export async function queueChatReminders(db: Database, now: Date, timeZone: stri
     // One alert per stage for each wait (a person's answer starts a new one).
     const wait = `${chat.id}:${since.getTime()}`;
     const who = chat.name ?? chat.phone;
+    const place = PLACE[chat.channel];
     const subject = { type: 'chat' as const, id: chat.id };
     // Whoever covers today: an owner on leave hands to their backup.
     const covering = await Promise.all(
@@ -55,7 +60,7 @@ export async function queueChatReminders(db: Database, now: Date, timeZone: stri
         {
           kind: 'whatsapp_waiting',
           title: `${who} is waiting for your reply`,
-          body: 'They wrote on WhatsApp and have no answer yet.',
+          body: `They wrote on ${place} and have no answer yet.`,
           subject,
           dedupeKey: `wa_wait:${wait}:1:${userId}`,
         },
@@ -64,7 +69,7 @@ export async function queueChatReminders(db: Database, now: Date, timeZone: stri
     if (stage === 2 || people.length === 0)
       await notifyStaffHolders(db, chat.customerId ? 'service.manage' : 'leads.manage', {
         kind: 'whatsapp_waiting',
-        title: `${who} has no WhatsApp reply`,
+        title: `${who} has no ${place} reply`,
         body: `Waiting ${stage === 2 ? 'over 2 hours' : 'over 30 minutes'}. Open the chat to answer.`,
         subject,
         dedupeKey: `wa_wait:${wait}:desk:${stage}`,

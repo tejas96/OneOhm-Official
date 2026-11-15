@@ -40,6 +40,10 @@ export interface IncomingReferral {
   readonly sourceId: string | null;
   readonly sourceUrl: string | null;
   readonly headline: string | null;
+  /** Meta's click id for this ad click, so a later sale can be told back to Meta. */
+  readonly ctwaClid: string | null;
+  /** `ad` or `post`, as Meta says it. */
+  readonly sourceType: string | null;
 }
 
 export interface DeliveryUpdate {
@@ -70,7 +74,13 @@ interface RawMessage {
   location?: { latitude?: number; longitude?: number; name?: string; address?: string };
   contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string }[] }[];
   reaction?: { emoji?: string };
-  referral?: { source_id?: string; source_url?: string; headline?: string };
+  referral?: {
+    source_id?: string;
+    source_url?: string;
+    headline?: string;
+    ctwa_clid?: string;
+    source_type?: string;
+  };
 }
 
 interface RawMedia {
@@ -118,6 +128,8 @@ function readReferral(message: RawMessage): IncomingReferral | null {
     sourceId: raw.source_id ?? null,
     sourceUrl: raw.source_url ?? null,
     headline: raw.headline ?? null,
+    ctwaClid: raw.ctwa_clid ?? null,
+    sourceType: raw.source_type ?? null,
   };
 }
 

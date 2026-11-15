@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findCampaignCode, isReservedCampaignWord } from './campaign-code';
+import { findCampaignCode, findClickRef, isReservedCampaignWord } from './campaign-code';
 
 describe('findCampaignCode', () => {
   it('reads the code from the ad opener, uppercased', () => {
@@ -46,5 +46,14 @@ describe('isReservedCampaignWord', () => {
 
   it('allows an ordinary code', () => {
     expect(isReservedCampaignWord('DIWALI-26')).toBe(false);
+  });
+});
+
+describe('click references', () => {
+  it('reads the code and the click ref from a landing-page opener', () => {
+    expect(findCampaignCode('Hi OneOhm SOLAR-01 #k3f9q2')).toBe('SOLAR-01');
+    expect(findClickRef('Hi OneOhm SOLAR-01 #K3F9Q2')).toBe('k3f9q2');
+    expect(findClickRef('Hi OneOhm SOLAR-01')).toBeNull();
+    expect(findClickRef('my ref #abcd')).toBeNull();
   });
 });

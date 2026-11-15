@@ -1,0 +1,33 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@oneohm/api",
+        "exec",
+        "node",
+        "--env-file=../../.env",
+        "--enable-source-maps",
+        "dist/main.js"
+      ],
+      "port": 4200
+    },
+    {
+      "name": "api-papers",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "/Volumes/works-space/oneohm-official/OneOhm-Official/.claude/worktrees/papers-per-home/apps/api",
+        "exec",
+        "node",
+        "--env-file=../../.env",
+        "--enable-source-maps",
+        "dist/main.js"
+      ],
+      "port": 4200
+    }
+  ]
+}

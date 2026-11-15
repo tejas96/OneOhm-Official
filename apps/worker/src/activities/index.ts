@@ -4,6 +4,7 @@ import type { SmsSender } from '../channels/sms';
 import type { WhatsAppSender } from '../channels/whatsapp-cloud';
 import { dailyActivities } from './daily.activities';
 import { deliveryActivities } from './delivery.activities';
+import { type MarketingDeps, marketingActivities } from './marketing';
 import type { PayLinkSettings } from './payment-reminders';
 
 export interface ActivityDeps {
@@ -14,10 +15,16 @@ export interface ActivityDeps {
   readonly language: string;
   readonly timeZone: string;
   readonly payLinks: PayLinkSettings;
+  readonly marketing: Omit<MarketingDeps, 'db' | 'timeZone'>;
 }
 
 export function createActivities(deps: ActivityDeps) {
-  return { ...deliveryActivities(deps), ...dailyActivities(deps.db, deps.timeZone, deps.payLinks) };
+  const marketing = { ...deps.marketing, db: deps.db, timeZone: deps.timeZone };
+  return {
+    ...deliveryActivities({ ...deps, marketing: marketing.config }),
+    ...dailyActivities(deps.db, deps.timeZone, deps.payLinks),
+    ...marketingActivities(marketing),
+  };
 }
 
 export type Activities = ReturnType<typeof createActivities>;

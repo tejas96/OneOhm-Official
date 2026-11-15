@@ -64,7 +64,7 @@ export type CustomerChat = z.infer<typeof customerChatSchema>;
 /** A business message from the outbox: WhatsApp or SMS to their phone, or a push alert. */
 export const customerOutboundSchema = z.object({
   id: idSchema,
-  channel: z.enum(['whatsapp', 'sms', 'push']),
+  channel: z.enum(['whatsapp', 'sms', 'push', 'instagram', 'messenger']),
   template: z.string(),
   /** Push only: the alert's title. */
   title: z.string().nullable(),

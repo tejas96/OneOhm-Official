@@ -92,9 +92,15 @@ export async function tellChatTeam(
     await notify(db, { userId }, { ...notice, dedupeKey: `${alert.key}:${userId}` });
 }
 
+const SOCIAL_WORDS: Readonly<Record<string, string>> = {
+  instagram: 'Instagram',
+  messenger: 'Facebook',
+};
+
 /**
- * A WhatsApp message of ours to a customer ended failed, by the worker or by WhatsApp's
- * receipt: the chat's people are told. A file says to send it again; any other message
+ * A message of ours to a chat ended failed, by the worker or by WhatsApp's receipt: the
+ * chat's people are told. An Instagram or Facebook reply that failed is told the same way
+ * (as a message, in plain words). A file says to send it again; any other message
  * says it did not arrive. Once per outbox row. Both the API and the worker call this, but
  * never for a number that is not on WhatsApp (that message goes by SMS instead).
  */
@@ -104,7 +110,9 @@ export async function tellChatSendFailed(db: DatabaseExecutor, outboxId: string)
     .from(outbox)
     .where(eq(outbox.id, outboxId))
     .limit(1);
-  if (row?.channel !== 'whatsapp') return;
+  if (!row) return;
+  const social = SOCIAL_WORDS[row.channel];
+  if (row.channel !== 'whatsapp' && !social) return;
   const [chat] = await db
     .select({
       id: waConversations.id,
@@ -121,6 +129,19 @@ export async function tellChatSendFailed(db: DatabaseExecutor, outboxId: string)
   const owner = chat.assignedUserId ?? (await chatOwnerFor(db, chat));
   const who = chat.profileName ? `${chat.profileName} (${chat.phone})` : chat.phone;
   const file = row.template === 'session:document';
+  if (social) {
+    await tellChatTeam(
+      db,
+      { ...chat, assignedUserId: owner },
+      {
+        kind: 'social_send_failed',
+        title: `A ${social} message was not sent`,
+        body: `A reply could not be sent to ${chat.profileName ?? 'a contact'} on ${social} — please check the chat and try again.`,
+        key: `social_send_failed:${chat.id}:${new Date().toISOString().slice(0, 13)}`,
+      },
+    );
+    return;
+  }
   await tellChatTeam(
     db,
     { ...chat, assignedUserId: owner },

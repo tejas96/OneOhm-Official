@@ -3,9 +3,11 @@
 import type { ChatSummary } from '@oneohm/api-contracts';
 import { Avatar, Badge, cn, StatusPill } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
+import { PlaceIcon } from '@/components/place-icon';
 import { useBrandName } from '@/features/shell/company-name';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
+import { isSocial } from './chat-channel';
 
 /** One line of a WhatsApp message: no line breaks, no *bold* markers. */
 export function plainLine(body: string): string {
@@ -82,7 +84,16 @@ function ChatRow({
         </span>
         <span className="truncate type-body-sm text-ink-muted">{preview}</span>
         <span className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="type-label text-ink-faint tabular-nums">{formatPhone(chat.phone)}</span>
+          {isSocial(chat.channel) ? (
+            <span className="inline-flex items-center gap-1 type-label text-ink-faint">
+              <PlaceIcon place={chat.channel} className="size-3.5" />
+              {t(`channel.${chat.channel}`)}
+            </span>
+          ) : (
+            <span className="type-label text-ink-faint tabular-nums">
+              {formatPhone(chat.phone)}
+            </span>
+          )}
           {chat.late ? (
             <StatusPill tone="overdue" size="sm" label={t('late')} />
           ) : chat.needsReply ? (

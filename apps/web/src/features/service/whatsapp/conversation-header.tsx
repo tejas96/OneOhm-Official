@@ -5,11 +5,13 @@ import { Avatar, Button, IconButton, useToast } from '@oneohm/design-system/web'
 import { ArrowLeft, Bot, Phone, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { PlaceIcon } from '@/components/place-icon';
 import { ChatLeadAction } from '@/features/leads/chat-lead-action';
 import { SendToCustomerButton } from '@/features/send-to-customer/send-to-customer-button';
 import { describeError } from '@/lib/api/api-error';
 import { formatPhone, swatchFor } from '@/lib/format/contact';
 import { useAgo } from '../use-ago';
+import { isSocial } from './chat-channel';
 import { PassChat } from './pass-chat';
 import { useRelease } from './use-whatsapp';
 
@@ -35,7 +37,8 @@ export function ConversationHeader({
   const ago = useAgo();
   const toast = useToast();
   const release = useRelease(chat.id);
-  const human = chat.state === 'human';
+  const social = isSocial(chat.channel);
+  const human = chat.state === 'human' && !social;
 
   const handBack = () =>
     release.mutate(undefined, {
@@ -53,29 +56,38 @@ export function ConversationHeader({
         </span>
         <div className="flex min-w-0 flex-col">
           <h2 className="truncate type-title-md text-ink">{chat.name}</h2>
-          <a
-            href={`tel:${chat.phone}`}
-            className="inline-flex items-center gap-1 self-start type-body-sm text-ink-muted tabular-nums hover:text-accent"
-          >
-            <Phone aria-hidden className="size-3.5" />
-            {formatPhone(chat.phone)}
-          </a>
+          {social ? (
+            <span className="inline-flex items-center gap-1 self-start type-body-sm text-ink-muted">
+              <PlaceIcon place={chat.channel} className="size-3.5" />
+              {t(`channel.${chat.channel}`)}
+            </span>
+          ) : (
+            <a
+              href={`tel:${chat.phone}`}
+              className="inline-flex items-center gap-1 self-start type-body-sm text-ink-muted tabular-nums hover:text-accent"
+            >
+              <Phone aria-hidden className="size-3.5" />
+              {formatPhone(chat.phone)}
+            </a>
+          )}
           <p className="type-label text-ink-faint">
             {chat.assignee
               ? t('answeredBy', { name: chat.assignee.name })
               : chat.customerId
                 ? t('teamAnswers')
                 : t('salesAnswers')}
-            {' · '}
-            {human && chat.handedOverAt
-              ? t('personSince', { time: ago(chat.handedOverAt) })
-              : t('assistantOn')}
+            {!social && ' · '}
+            {social
+              ? null
+              : human && chat.handedOverAt
+                ? t('personSince', { time: ago(chat.handedOverAt) })
+                : t('assistantOn')}
           </p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <PassChat chat={chat} />
-        {!chat.customerId && <ChatLeadAction name={chat.name} phone={chat.phone} />}
+        {!social && !chat.customerId && <ChatLeadAction name={chat.name} phone={chat.phone} />}
         {chat.customerId && <SendToCustomerButton scope={{ customerId: chat.customerId }} />}
         {chat.customerId && (
           <Button asChild size="sm" variant="quiet">

@@ -8,8 +8,24 @@ import { searchWords } from '../../common/paging';
 import { matchWords } from '../../common/search-match';
 import type { Database } from '../../config/core.module';
 import type { Environment } from '../../config/environment';
+import { chooseSocialTarget, type SocialWindows, socialHandle } from './social-reply';
 
 const assignee = alias(users, 'assignee');
+
+/**
+ * Whether a free reply can go now: WhatsApp's 24 hours; on Instagram and Facebook a DM within
+ * 24 hours or a private reply to an unanswered comment within 7 days (the same rule the reply
+ * itself uses).
+ */
+function replyOpen(chat: typeof waConversations.$inferSelect): boolean {
+  if (chat.channel === 'whatsapp') return chatWindowOpen(chat.lastInboundAt);
+  const target = chooseSocialTarget(
+    (chat.context ?? {}) as SocialWindows,
+    socialHandle(chat.phone)?.id ?? null,
+    chat.lastInboundAt?.toISOString() ?? null,
+  );
+  return target !== null;
+}
 
 /** Waiting over 2 working hours for a person's answer. */
 function isLate(since: Date | undefined, now: Date, cal: BusinessCalendar): boolean {
@@ -71,6 +87,7 @@ export async function chatSummaries(
     return {
       id: chat.id,
       phone: chat.phone,
+      channel: chat.channel,
       name: customer ?? chat.profileName ?? chat.phone,
       customerId: chat.customerId,
       state: chat.state,
@@ -91,7 +108,7 @@ export async function chatSummaries(
           }
         : null,
       lastInboundAt: chat.lastInboundAt?.toISOString() ?? null,
-      windowOpen: chatWindowOpen(chat.lastInboundAt),
+      windowOpen: replyOpen(chat),
       optedOut: chat.optedOutAt !== null,
     };
   });

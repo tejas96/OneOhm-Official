@@ -229,7 +229,9 @@
       "channels": {
         "whatsapp": "WhatsApp",
         "sms": "SMS",
-        "push": "Phone alert"
+        "push": "Phone alert",
+        "instagram": "Instagram",
+        "messenger": "Facebook Messenger"
       },
       "templates": {
         "quotation_sent": "Quotation sent",

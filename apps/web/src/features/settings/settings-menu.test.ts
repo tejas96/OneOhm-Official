@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MENU, openSection, SECTIONS, visibleMenu } from './settings-menu';
+import { MENU, MOVED_TO_MARKETING, openSection, SECTIONS, visibleMenu } from './settings-menu';
 
 describe('settings menu', () => {
   it('lists every section exactly once', () => {
@@ -32,5 +32,12 @@ describe('settings menu', () => {
 
   it('hides groups with nothing the person may see', () => {
     expect(visibleMenu(['activity']).map((group) => group.key)).toEqual(['system']);
+  });
+
+  it('leaves campaigns and referrals to Marketing', () => {
+    for (const moved of MOVED_TO_MARKETING) {
+      expect(SECTIONS).not.toContain(moved);
+      expect(openSection(visibleMenu(SECTIONS), moved)).toBe('company');
+    }
   });
 });

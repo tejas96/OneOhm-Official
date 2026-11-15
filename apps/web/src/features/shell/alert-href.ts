@@ -42,6 +42,9 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
     lead: ({ id }) => `/leads/${id}`,
     approval: () => '/today?tab=approvals',
     chat: ({ id }) => `/today?tab=chats&chat=${id}`,
+    marketing: ({ id }) => `/marketing?campaign=${id}`,
+    marketing_connections: () => '/marketing?tab=connections',
+    marketing_reviews: () => '/marketing',
   };
 
 /** Notices with no subject, by kind: where the person acts on them. */
@@ -52,6 +55,10 @@ const KIND_HREF: Readonly<Record<string, string>> = {
   payout_sync_failing: '/finance?tab=payables',
 };
 
+/**
+ * A Marketing alert: a campaign opens itself; `connections` and `reviews` are not campaigns,
+ * so they open the Connections tab and the Marketing page.
+ */
 export function hrefOf({ subject, kind }: Pick<NotificationItem, 'subject' | 'kind'>): string {
   if (!subject) return KIND_HREF[kind] ?? '/';
   return SUBJECT_HREF[subject.type](subject, kind);

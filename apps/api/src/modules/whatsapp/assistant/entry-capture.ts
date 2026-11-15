@@ -6,10 +6,11 @@ import {
 } from '@oneohm/database';
 import { findCampaignCode, isReservedCampaignWord } from '@oneohm/domain';
 import { eq, sql } from 'drizzle-orm';
-import type { LeadIntakeService } from '../../crm/lead-intake.service';
+import type { IntakeAttribution, LeadIntakeService } from '../../crm/lead-intake.service';
 import type { Conversation } from '../chat-store';
 import { isOnboardingChat } from '../onboarding/onboarding-context';
 import type { Incoming } from '../whatsapp-events';
+import { withAdLinks } from './entry-ads';
 import { exactChoice, isHello, isMenuWord, smallTalkOf } from './known-words';
 
 /** Where a message came from: the Meta ad it was sent from, and/or "Hi OneOhm <CODE>". */
@@ -18,7 +19,14 @@ export function entryOf(incoming: Incoming, known?: ReadonlySet<string>): LeadAt
   const code = incoming.kind === 'text' ? findCampaignCode(incoming.text, known) : null;
   if (!ad && !code) return null;
   return {
-    ...(ad ? { adId: ad.sourceId, adHeadline: ad.headline, adSourceUrl: ad.sourceUrl } : {}),
+    ...(ad
+      ? {
+          adId: ad.sourceId,
+          adHeadline: ad.headline,
+          adSourceUrl: ad.sourceUrl,
+          ...(ad.ctwaClid ? { ctwaClid: ad.ctwaClid } : {}),
+        }
+      : {}),
     ...(code ? { campaignCode: code } : {}),
   };
 }
@@ -52,8 +60,8 @@ export async function asOpener(
 }
 
 /** What was remembered in the chat about where this person came from, if anything. */
-export function savedEntry(chat: Pick<Conversation, 'context'>): LeadAttribution | undefined {
-  const entry = (chat.context as { entry?: LeadAttribution } | null)?.entry;
+export function savedEntry(chat: Pick<Conversation, 'context'>): IntakeAttribution | undefined {
+  const entry = (chat.context as { entry?: IntakeAttribution } | null)?.entry;
   return entry ?? undefined;
 }
 
@@ -70,8 +78,9 @@ export async function captureEntry(
   incoming: Incoming,
 ): Promise<Conversation> {
   if (chat.customerId || savedEntry(chat)) return chat;
-  const entry = entryOf(incoming, incoming.kind === 'text' ? await listedCodes(db) : undefined);
-  if (!entry) return chat;
+  const read = entryOf(incoming, incoming.kind === 'text' ? await listedCodes(db) : undefined);
+  if (!read) return chat;
+  const entry = await withAdLinks(db, read, incoming);
   if (await intake.openLeadByPhone(db, chat.phone)) return chat;
   // Merged in the database, not from the copy read before the lock: two quick messages
   // never overwrite each other's keys (such as the onboarding answers), and the first wins.

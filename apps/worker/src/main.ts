@@ -1,4 +1,5 @@
 import { createDatabaseConnection } from '@oneohm/database';
+import { marketingConfig } from '@oneohm/marketing';
 import { Client, Connection } from '@temporalio/client';
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { createActivities } from './activities';
@@ -9,6 +10,7 @@ import { loadConfig } from './config';
 import { JobRetryLoop } from './relay/job-retry';
 import { OutboxRelay } from './relay/outbox-relay';
 import { ensureDailyOperationsSchedule } from './schedules/daily-operations.schedule';
+import { ensureMarketingSyncSchedule } from './schedules/marketing-sync.schedule';
 import { ensureServiceSlaSchedule } from './schedules/service-sla.schedule';
 import { ensureTimedRemindersSchedule } from './schedules/timed-reminders.schedule';
 import { workflowSource } from './workflow-source';
@@ -43,6 +45,19 @@ async function main(): Promise<void> {
       language: config.WHATSAPP_TEMPLATE_LANGUAGE,
       timeZone: config.BUSINESS_TIMEZONE,
       payLinks,
+      marketing: {
+        config: marketingConfig(config),
+        apiPublicUrl: config.API_PUBLIC_URL,
+        googleMapsKey: config.GOOGLE_MAPS_SERVER_KEY ?? config.GOOGLE_MAPS_API_KEY ?? null,
+        whatsapp:
+          config.WHATSAPP_ACCESS_TOKEN && config.WHATSAPP_BUSINESS_ACCOUNT_ID
+            ? {
+                token: config.WHATSAPP_ACCESS_TOKEN,
+                businessAccountId: config.WHATSAPP_BUSINESS_ACCOUNT_ID,
+                apiVersion: config.WHATSAPP_API_VERSION,
+              }
+            : null,
+      },
     }),
     ...workflowSource(config.NODE_ENV),
   });
@@ -58,6 +73,10 @@ async function main(): Promise<void> {
     timeZone: config.BUSINESS_TIMEZONE,
   });
   await ensureTimedRemindersSchedule(client, {
+    taskQueue: config.TEMPORAL_TASK_QUEUE,
+    timeZone: config.BUSINESS_TIMEZONE,
+  });
+  await ensureMarketingSyncSchedule(client, {
     taskQueue: config.TEMPORAL_TASK_QUEUE,
     timeZone: config.BUSINESS_TIMEZONE,
   });

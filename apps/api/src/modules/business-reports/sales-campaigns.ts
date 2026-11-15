@@ -1,5 +1,5 @@
 import type { SalesReport } from '@oneohm/api-contracts';
-import { campaignLabel } from '@oneohm/domain';
+import { campaignLabel, costPer, returnOnSpend } from '@oneohm/domain';
 import type { LeadFact } from './sales-report.read';
 
 const QUOTED_OR_LATER = new Set(['quoted', 'won']);
@@ -29,6 +29,7 @@ export function byCampaign(
   quotedLeadIds: ReadonlySet<string>,
   estimatedLeadIds: ReadonlySet<string>,
   advancePaidLeadIds: ReadonlySet<string>,
+  spendByCode: ReadonlyMap<string, number> = new Map(),
 ): SalesReport['byCampaign'] {
   const rows = new Map<string, SalesReport['byCampaign'][number]>();
   for (const lead of cohort) {
@@ -43,6 +44,10 @@ export function byCampaign(
       advancePaid: 0,
       wonValuePaise: 0,
       collectedPaise: 0,
+      spendPaise: 0,
+      costPerLeadPaise: null,
+      costPerSalePaise: null,
+      returnOnSpend: null,
     };
     row.leads += 1;
     if (estimatedLeadIds.has(lead.id)) row.estimates += 1;
@@ -56,5 +61,37 @@ export function byCampaign(
     row.collectedPaise += collected.get(lead.id) ?? 0;
     rows.set(key, row);
   }
-  return [...rows.values()].sort((a, b) => b.leads - a.leads || a.label.localeCompare(b.label));
+  // A campaign that spent in the period but brought no lead still shows: that is the news.
+  for (const [code, spend] of spendByCode) {
+    if (spend > 0 && !rows.has(code))
+      rows.set(code, {
+        key: code,
+        label: names.get(code) ?? code,
+        leads: 0,
+        estimates: 0,
+        quoted: 0,
+        won: 0,
+        advancePaid: 0,
+        wonValuePaise: 0,
+        collectedPaise: 0,
+        spendPaise: 0,
+        costPerLeadPaise: null,
+        costPerSalePaise: null,
+        returnOnSpend: null,
+      });
+  }
+  return [...rows.values()]
+    .map((row) => {
+      const spendPaise = spendByCode.get(row.key) ?? 0;
+      return {
+        ...row,
+        spendPaise,
+        costPerLeadPaise: spendPaise > 0 ? costPer(spendPaise, row.leads) : null,
+        costPerSalePaise: spendPaise > 0 ? costPer(spendPaise, row.won) : null,
+        returnOnSpend: returnOnSpend(row.wonValuePaise, spendPaise),
+      };
+    })
+    .sort(
+      (a, b) => b.leads - a.leads || b.spendPaise - a.spendPaise || a.label.localeCompare(b.label),
+    );
 }
