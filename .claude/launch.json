@@ -28,6 +28,26 @@
         "dist/main.js"
       ],
       "port": 4200
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@oneohm/web",
+        "dev"
+      ],
+      "port": 3200
+    },
+    {
+      "name": "field-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@oneohm/field",
+        "web"
+      ],
+      "port": 8081
     }
   ]
 }

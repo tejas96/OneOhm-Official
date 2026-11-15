@@ -41,5 +41,8 @@ test-results/
 # agent worktrees
 .claude/worktrees/
 
+# local demo test password (never commit; the repo is public)
+.claude/.demo-password
+
 # sandbox-only build certificate (never commit)
 .sandbox-ca.crt
