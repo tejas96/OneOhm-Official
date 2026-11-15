@@ -14,6 +14,7 @@ export const JOB_NAMES = [
   'cash_reminders',
   'location_cleanup',
   'attendance_autoclose',
+  'travel_auto_approve',
   'service_sla',
   'job_runs_cleanup',
   'message_delivery',
@@ -40,6 +41,7 @@ export const RETRYABLE_JOBS: readonly JobName[] = [
   'cash_reminders',
   'location_cleanup',
   'attendance_autoclose',
+  'travel_auto_approve',
   'service_sla',
   'message_delivery',
 ];
@@ -87,6 +89,7 @@ export const DAILY_JOBS: readonly JobName[] = [
   'cash_reminders',
   'location_cleanup',
   'attendance_autoclose',
+  'travel_auto_approve',
   'job_runs_cleanup',
 ];
 const MISSING_AFTER_MS = 26 * 3_600_000;

@@ -3,6 +3,7 @@ import { Card, formatInr, StatusPill, Text, type Tone } from '@oneohm/mobile-ui'
 import { StyleSheet, View } from 'react-native';
 import { TRAVEL } from '@/copy/site';
 import { shortDate } from '@/lib/dates';
+import { autoNote } from './claim-state';
 
 type State = keyof typeof TRAVEL.status;
 
@@ -44,6 +45,11 @@ export function ClaimCard({ claim }: { readonly claim: TravelClaim }) {
       </View>
       <View style={styles.status}>
         <StatusPill size="sm" tone={TONE[state]} label={TRAVEL.status[state]} />
+        {autoNote(claim) ? (
+          <Text variant="bodySm" tone="secondary">
+            {TRAVEL.autoNote[autoNote(claim) ?? 'sent']}
+          </Text>
+        ) : null}
       </View>
       {claim.voidReason ? (
         <Text variant="bodySm" tone="secondary">
@@ -63,5 +69,5 @@ const styles = StyleSheet.create({
   card: { gap: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
   amount: { fontVariant: ['tabular-nums'] },
-  status: { flexDirection: 'row' },
+  status: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
 });

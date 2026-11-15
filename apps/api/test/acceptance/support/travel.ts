@@ -100,11 +100,16 @@ export async function claimProjectTravel(
     await me.raw('POST', '/attendance/check-in', {});
     await me.post('/attendance/check-out', {});
     const closedDay = await me.get<TravelDay>(`/me/travel?date=${indiaDate()}`);
-    const made = await me.post<TravelClaim>('/me/travel-claims', {
-      workDate: indiaDate(),
-      projectId: detail.id,
-      note: 'Survey and installation check visits (test)',
-    });
+    // Ending the day makes the claim by itself (Duty Day step 2); a day with no recorded route
+    // is paid on the straight line and waits for a person, so it is decided below.
+    const made =
+      closedDay.claim?.status === 'pending'
+        ? closedDay.claim
+        : await me.post<TravelClaim>('/me/travel-claims', {
+            workDate: indiaDate(),
+            projectId: detail.id,
+            note: 'Survey and installation check visits (test)',
+          });
     const claim = await admin.post<TravelClaim>(`/travel-claims/${made.id}/decide`, {
       approve: true,
       note: 'Checked against the visits (test)',

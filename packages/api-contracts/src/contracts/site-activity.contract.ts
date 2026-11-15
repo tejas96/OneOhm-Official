@@ -129,7 +129,12 @@ export const siteActivityContract = c.router({
     method: 'POST',
     path: '/travel-claims/:id/decide',
     pathParams: idParams,
-    body: z.object({ approve: z.boolean(), note: noteSchema.nullable().optional() }),
+    body: z.object({
+      approve: z.boolean(),
+      note: noteSchema.nullable().optional(),
+      /** The amount the approver saw; if the claim changed since, the decision is refused (409 `amount_changed`). */
+      expectedAmountPaise: z.number().int().min(0).optional(),
+    }),
     responses: { 200: travelClaimSchema },
   },
 });

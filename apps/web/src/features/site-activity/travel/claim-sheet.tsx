@@ -10,9 +10,10 @@ import { useState } from 'react';
 import { DecideDialog } from '@/features/team/decide-dialog';
 import { useCurrentUser } from '@/providers/current-user';
 import { useSiteFormat } from '../site-format';
+import { AutoBadge, KmLine, WhyNeedsYou } from './claim-km';
 import { DayVisits, Route, Section } from './claim-route';
 import { ClaimStatus } from './claim-status';
-import { canDecideClaim, canVoidClaim, useDecideClaim } from './use-travel';
+import { canDecideClaim, canVoidClaim, changedAmountPaise, useDecideClaim } from './use-travel';
 import { VoidClaimDialog } from './void-claim-dialog';
 
 /** Close, plus Void, Decline and Approve for those who may (S9, S10). */
@@ -87,8 +88,9 @@ export function ClaimSheet({
       description={claim?.user.fullName}
       header={
         claim ? (
-          <div className="flex">
+          <div className="flex flex-wrap items-center gap-2">
             <ClaimStatus claim={claim} />
+            <AutoBadge claim={claim} />
           </div>
         ) : undefined
       }
@@ -105,6 +107,7 @@ export function ClaimSheet({
         <div className="flex flex-col gap-7 px-5 py-6 sm:px-6">
           <div className="flex flex-col gap-1">
             <p className="type-title-md text-ink tabular-nums">{total}</p>
+            <KmLine claim={claim} />
             {claim.project ? (
               <Link
                 href={`/projects/${claim.project.id}`}
@@ -116,9 +119,13 @@ export function ClaimSheet({
               <p className="type-body-sm text-ink-faint">{t('sheet.noProject')}</p>
             )}
           </div>
+          <WhyNeedsYou claim={claim} />
           {claim.note && <p className="type-body-sm text-ink-muted">“{claim.note}”</p>}
           {pending && own && <p className="type-body-sm text-ink-faint">{t('sheet.ownClaim')}</p>}
-          <Section title={t('sheet.legs')} hint={t('sheet.legsHint')}>
+          <Section
+            title={t('sheet.legs')}
+            hint={t(claim.method === 'route' ? 'sheet.legsHintRoute' : 'sheet.legsHint')}
+          >
             <Route claim={claim} />
           </Section>
           <Section title={t('sheet.visits')}>
@@ -175,7 +182,16 @@ export function ClaimSheet({
         onClose={() => setDeciding(null)}
         onDecide={async (approve, note) => {
           if (!claim) return;
-          const decided = await decide(claim.id, approve, note);
+          let decided: Awaited<ReturnType<typeof decide>>;
+          try {
+            decided = await decide(claim.id, approve, note, claim.amountPaise);
+          } catch (error) {
+            const amount = changedAmountPaise(error);
+            // The list is already refreshed, so the sheet shows the new amount behind this.
+            if (amount !== null)
+              throw new Error(t('claims.amountChanged', { amount: formatInr(amount) }));
+            throw error;
+          }
           toast({
             title: approve ? t('claims.approved') : t('claims.declined'),
             description: approve ? t('claims.approvedBody') : undefined,

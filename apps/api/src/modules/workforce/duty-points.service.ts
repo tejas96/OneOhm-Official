@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DutyPointInput, DutyPointsResult } from '@oneohm/api-contracts';
-import { attendanceDays, businessTimeZone, dutyPoints } from '@oneohm/database';
+import { attendanceDays, businessTimeZone, dutyPoints, takeTravelSnapshot } from '@oneohm/database';
 import { DUTY_SKEW_MS, type DutyPointRejection, judgeDutyPoint } from '@oneohm/domain';
 import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
@@ -10,14 +10,30 @@ import { trackingFor } from './tracking';
 /**
  * Route points from the phone while the person is on duty (Duty Day step 1). Each point is
  * judged on its own by `judgeDutyPoint`; a rejected one never blocks the rest of the batch.
- * Points of a day that is already closed (a late flush, within the rule) are stored as they
- * are and the day's saved travel is not worked out again here: the step-2 km reads these rows.
+ * Points of a day that is already closed (a late flush, within the rule) are stored, and the
+ * day's saved travel and any waiting claim are worked out again (`remeasureClosedDays`).
  */
 const DAY_LOOKBACK_MS = 48 * 3_600_000;
 
 @Injectable()
 export class DutyPointsService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  /**
+   * Points that reached a day already closed (a late flush) change its km, so the day's saved
+   * travel is measured again; a claim still waiting takes the new amount, an approved or paid
+   * one is never changed (`settleDayClaim`). Together with the claim, in one transaction.
+   */
+  private async remeasureClosedDays(
+    userId: string,
+    kept: readonly { attendanceDayId: string }[],
+    days: readonly { id: string; workDate: string; checkOutAt: Date | null }[],
+  ): Promise<void> {
+    const ids = new Set(kept.map((point) => point.attendanceDayId));
+    for (const day of days)
+      if (ids.has(day.id) && day.checkOutAt)
+        await this.db.transaction((tx) => takeTravelSnapshot(tx, userId, day.workDate));
+  }
 
   async upload(actor: Actor, points: readonly DutyPointInput[]): Promise<DutyPointsResult> {
     const now = new Date();
@@ -103,7 +119,10 @@ export class DutyPointsService {
         });
     }
     // A point that raced in from a second upload hits the (person, id) key and is skipped.
-    if (keep.length) await this.db.insert(dutyPoints).values(keep).onConflictDoNothing();
+    if (keep.length) {
+      await this.db.insert(dutyPoints).values(keep).onConflictDoNothing();
+      await this.remeasureClosedDays(actor.userId, keep, days);
+    }
     return { accepted, rejected };
   }
 }

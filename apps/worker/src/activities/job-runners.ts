@@ -1,4 +1,9 @@
-import { clearOldJobRuns, closeForgottenDays, type Database } from '@oneohm/database';
+import {
+  clearOldJobRuns,
+  closeForgottenDays,
+  type Database,
+  runTravelMorningJob,
+} from '@oneohm/database';
 import type { JobName } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { openMaintenanceVisits } from './after-sales';
@@ -53,6 +58,7 @@ export function jobRunners(
         );
       return result.closed + result.quiet + result.visits;
     },
+    travel_auto_approve: () => runTravelMorningJob(db, today()),
     service_sla: () => queueSlaAlerts(db, new Date(), timeZone),
     job_runs_cleanup: () => clearOldJobRuns(db),
   };

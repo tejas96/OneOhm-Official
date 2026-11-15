@@ -144,6 +144,29 @@ describe('workforce policy defaults', () => {
       ratePaisePerKm: 500,
       hoursMarginMinutes: 60,
       pinTrustM: 100,
+      autoClaim: true,
+      autoApprove: false,
+      autoApproveMaxKm: 150,
+      autoApproveMaxPaise: 150_000,
+      routeCapRatio: 1.6,
+    });
+  });
+
+  it('fills the automatic claim rules into a policy saved with only the older travel rules', () => {
+    const filled = withPolicyDefaults({
+      ...DEFAULT_WORKFORCE_POLICY,
+      travel: {
+        farFromSiteM: 200,
+        ratePaisePerKm: 800,
+        hoursMarginMinutes: 30,
+        pinTrustM: 50,
+      } as never,
+    });
+    expect(filled.travel).toMatchObject({
+      ratePaisePerKm: 800,
+      autoClaim: true,
+      autoApprove: false,
+      routeCapRatio: 1.6,
     });
   });
 });

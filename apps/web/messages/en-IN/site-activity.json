@@ -54,11 +54,11 @@
     },
     "claims": {
       "title": "Travel claims",
-      "description": "Travel between site visits, claimed from the field app at the rate in Settings. Approving makes a payable to the employee in Finance.",
+      "description": "Travel between site visits. The system makes the claim when a worker ends duty, at the rate in Settings. Approving makes a payable to the employee in Finance.",
       "loading": "Loading travel claims",
       "caption": "Travel claims",
       "emptyTitle": "No travel claims here",
-      "emptyBody": "Claims made from the field app show here.",
+      "emptyBody": "Claims show here when workers end duty.",
       "waiting": "{count, plural, one {# claim waiting for approval} other {# claims waiting for approval}}",
       "statusLabel": "Status",
       "personLabel": "Person",
@@ -72,8 +72,10 @@
         "paid": "Paid",
         "rejected": "Declined",
         "cancelled": "Withdrawn",
-        "voided": "Voided"
+        "voided": "Voided",
+        "withdrawn": "Withdrawn: day reopened"
       },
+      "amountChanged": "The amount changed to {amount} after new route points. Check and decide again.",
       "columns": {
         "person": "Person",
         "day": "Day",
@@ -101,7 +103,9 @@
         "cancel": "Keep it",
         "submit": "Void claim",
         "done": "Claim voided"
-      }
+      },
+      "auto": "Auto",
+      "autoApproved": "Approved automatically"
     },
     "sheet": {
       "title": "Travel on {day}",
@@ -123,7 +127,14 @@
       "close": "Close",
       "loading": "Loading the day",
       "void": "Void claim",
-      "voided": "Voided: {reason}"
+      "voided": "Voided: {reason}",
+      "legsHintRoute": "Straight-line distance between stops. The paid km come from the recorded route.",
+      "paidRoute": "Paid {paid} (route {route} · straight line {straight})",
+      "paidStraight": "Paid {paid} (straight line, no route recorded)",
+      "capNote": "The route was longer than the allowed share of the straight line, so the paid km were cut to {paid}.",
+      "gapNote": "{count, plural, one {# stretch} other {# stretches}} with no location, {minutes} min in all, counted as a straight line.",
+      "autoMade": "Made automatically from the route when the day ended.",
+      "whyTitle": "Why this needs you"
     },
     "settings": {
       "title": "Site check-ins and travel",
@@ -133,9 +144,42 @@
       "pinTrust": "Field pin trust distance (m)",
       "pinTrustHint": "A roof pin farther than this from where the worker checked in is saved, and flagged for the office to check.",
       "rate": "Travel rate per km",
-      "rateHint": "Paid on straight-line distance between the day's stops.",
+      "rateHint": "Paid per km of the day’s route, or of the straight line between stops when no route was recorded.",
       "margin": "Window either side (min)",
-      "marginHint": "Location is read only from the day’s start minus this to its end plus this."
+      "marginHint": "Location is read only from the day’s start minus this to its end plus this.",
+      "autoClaim": "Make the claim automatically",
+      "autoClaimOn": "When the day ends, the system makes the travel claim for the person.",
+      "autoClaimOff": "People make their own claim from the field app.",
+      "autoApprove": "Approve clean days automatically",
+      "autoApproveHint": "Turn on to approve clean days automatically each morning.",
+      "autoApproveOn": "A day with a recorded route, no gaps, no fake GPS and no far check-ins is approved the next morning and goes to Finance.",
+      "autoApproveOff": "Every claim waits for a manager.",
+      "routeCap": "Route cap (times the straight line)",
+      "routeCapHint": "Paid km never go above the straight-line distance between stops times this. Under 1 km of straight line, at most 2 km is paid and a manager checks it.",
+      "maxKm": "Automatic approval up to (km)",
+      "maxKmHint": "A day with more paid km than this always waits for a manager.",
+      "maxAmount": "Automatic approval up to",
+      "maxAmountHint": "A claim worth more than this always waits for a manager."
+    },
+    "review": {
+      "route_gap": "The phone sent no location for a long stretch.",
+      "fake_gps": "A fake or mock location was reported.",
+      "cap_applied": "The route was far longer than the straight line, so it was cut.",
+      "far_check_in": "A site check-in was far from the site.",
+      "visit_no_location": "A site visit has no location.",
+      "auto_closed": "The day was ended by the system, not by the person.",
+      "delayed_tap": "A check-in or check-out reached the server late.",
+      "over_km": "More km than the automatic limit.",
+      "over_amount": "More money than the automatic limit.",
+      "no_route": "No route was recorded, so this is a straight-line distance.",
+      "no_visits": "There was no site visit that day.",
+      "uncapped_route": "The day was under 1 km in a straight line, so the route was not held to the usual cap.",
+      "short_route": "The recorded route was shorter than the straight line, so the straight line is paid.",
+      "start_outside_office": "The day was started away from an office.",
+      "end_outside_office": "The day was ended away from an office.",
+      "on_leave": "The person was on leave this day.",
+      "auto_approve_off": "Automatic approval is switched off.",
+      "other": "Needs a person to look at it."
     }
   }
 }

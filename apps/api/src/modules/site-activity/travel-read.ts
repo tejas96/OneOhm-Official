@@ -8,12 +8,12 @@ import {
   readTravelSnapshot,
   siteVisits,
   travelClaims,
+  travelDays,
   users,
 } from '@oneohm/database';
 import {
   claimBlocker,
   isHrOrFinance,
-  summariseTravel,
   travelAmountPaise,
   travelDeciderProblem,
   type WorkforcePolicy,
@@ -23,6 +23,7 @@ import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { currentCalendar } from '../../common/calendar';
 import { visitRecords } from './site-visit-read';
+import { kmOf, liveMeasure } from './travel-km-read';
 
 /**
  * One person's travel on a day (PRD 4.3): the office check-in, each site check-in in
@@ -45,29 +46,40 @@ export async function travelDay(
     readClaims(db, and(eq(travelClaims.userId, userId), eq(travelClaims.workDate, date)) as SQL),
   ]);
   const ordered = [...visits].sort((left, right) => left.checkInAt.localeCompare(right.checkInAt));
-  const summary =
+  // A closed day reads what was saved; a running one is measured now, route included.
+  const kept =
     facts.closed && saved
       ? {
-          distanceM: saved.distanceM,
-          ratePaisePerKm: saved.ratePaisePerKm,
-          legs: saved.legs,
+          summary: {
+            distanceM: saved.paidM,
+            ratePaisePerKm: saved.ratePaisePerKm,
+            legs: saved.legs,
+          },
+          km: kmOf(saved),
         }
-      : summariseTravel(facts.stops, policy.travel.ratePaisePerKm, ordered.length);
-  const amountPaise = travelAmountPaise(summary.distanceM, summary.ratePaisePerKm);
-  const live = claims.find((claim) => claim.status === 'pending' || claim.status === 'approved');
+      : await liveMeasure(db, facts, policy, ordered.length);
+  const amountPaise = travelAmountPaise(kept.summary.distanceM, kept.summary.ratePaisePerKm);
+  // A claim taken back when the day was reopened is not the day's claim any more.
+  const current = claims.filter((claim) => !claim.withdrawn);
+  const live = current.find((claim) => claim.status === 'pending' || claim.status === 'approved');
+  const shown = live ?? current[0] ?? null;
   return {
+    ...kept.km,
+    autoMade: shown?.autoMade ?? false,
+    autoApproved: shown?.autoApproved ?? false,
+    reviewReasons: shown?.reviewReasons ?? [],
     workDate: date,
     visits: ordered,
-    legs: summary.legs.map(({ fromLabel, toLabel, distanceM: metres }) => ({
+    legs: kept.summary.legs.map(({ fromLabel, toLabel, distanceM: metres }) => ({
       fromLabel,
       toLabel,
       distanceM: metres,
     })),
-    distanceM: summary.distanceM,
-    ratePaisePerKm: summary.ratePaisePerKm,
+    distanceM: kept.summary.distanceM,
+    ratePaisePerKm: kept.summary.ratePaisePerKm,
     amountPaise,
     unlocated: ordered.filter((visit) => visit.locationNote === 'not_shared').length,
-    claim: live ?? claims[0] ?? null,
+    claim: shown,
     closed: facts.closed,
     claimable:
       claimBlocker({
@@ -130,12 +142,20 @@ export async function readClaims(
       payableStatus: payables.status,
       paidOn: payables.paidOn,
       projectCode: projects.code,
+      day: travelDays,
     })
     .from(travelClaims)
     .innerJoin(users, eq(users.id, travelClaims.userId))
     .leftJoin(decider, eq(decider.id, travelClaims.decidedByUserId))
     .leftJoin(payables, eq(payables.id, travelClaims.payableId))
     .leftJoin(projects, eq(projects.id, travelClaims.projectId))
+    .leftJoin(
+      travelDays,
+      and(
+        eq(travelDays.userId, travelClaims.userId),
+        eq(travelDays.workDate, travelClaims.workDate),
+      ),
+    )
     .where(where)
     .orderBy(desc(travelClaims.workDate), desc(travelClaims.createdAt));
   const mayDecide = await decidableBy(db, viewer, [
@@ -143,7 +163,25 @@ export async function readClaims(
       rows.filter(({ claim }) => claim.status === 'pending').map(({ claim }) => claim.userId),
     ),
   ]);
-  return rows.map(({ claim, fullName, deciderName, payableStatus, paidOn, projectCode }) => ({
+  return rows.map(({ claim, fullName, deciderName, payableStatus, paidOn, projectCode, day }) => ({
+    // The route facts come from the saved day, but the km paid are the claim's own, so the
+    // km and the amount always agree. A claim made before its day was saved reads as straight.
+    ...(day
+      ? { ...kmOf(day), paidM: claim.distanceM }
+      : {
+          routeM: 0,
+          straightM: claim.distanceM,
+          paidM: claim.distanceM,
+          method: 'straight' as const,
+          capApplied: false,
+          gapCount: 0,
+          gapMinutes: 0,
+          mockedCount: 0,
+        }),
+    withdrawn: claim.withdrawnByResumeAt !== null,
+    autoMade: claim.autoMade,
+    autoApproved: claim.autoApproved,
+    reviewReasons: claim.reviewReasons ?? [],
     id: claim.id,
     user: { id: claim.userId, fullName },
     workDate: claim.workDate,

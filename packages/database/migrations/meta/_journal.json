@@ -736,6 +736,13 @@
       "when": 1794769995442,
       "tag": "0104_duty_points",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1794771766811,
+      "tag": "0105_duty_route_km",
+      "breakpoints": true
     }
   ]
 }

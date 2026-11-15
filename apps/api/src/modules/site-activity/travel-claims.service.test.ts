@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Actor } from '../../common/auth/actor';
 
 const read = vi.hoisted(() => ({ travelDay: vi.fn(), readClaims: vi.fn() }));
-const snap = vi.hoisted(() => ({ ensureTravelSnapshot: vi.fn(), tellClaimDeciders: vi.fn() }));
+const snap = vi.hoisted(() => ({
+  ensureTravelSnapshot: vi.fn(),
+  tellClaimDeciders: vi.fn(),
+  reviewDayClaim: vi.fn(),
+}));
 
 vi.mock('./travel-read', () => read);
 vi.mock('../workforce/policy', () => ({ loadPolicy: vi.fn(async () => ({})) }));
@@ -87,6 +91,32 @@ describe('telling the deciders of a new claim (S10)', () => {
         subject: { type: 'travel_claim', id: 'c1' },
       }),
     );
+  });
+});
+
+describe('why a day deserves a look, on a claim the person made', () => {
+  it('saves the review reasons of the day on the claim, read as a manual claim', async () => {
+    read.travelDay.mockResolvedValue(day());
+    snap.ensureTravelSnapshot.mockResolvedValue({ id: 's1', userId: 'u1' });
+    snap.reviewDayClaim.mockResolvedValue({ review: { reasons: ['route_gap', 'short_route'] } });
+    const { db, rows } = insertable();
+    await new TravelClaimsService(db as never).claim(actor, '2026-11-14');
+    expect(snap.reviewDayClaim).toHaveBeenCalledWith(
+      db,
+      expect.anything(),
+      expect.anything(),
+      true,
+    );
+    expect(rows[0]).toMatchObject({ reviewReasons: ['route_gap', 'short_route'] });
+  });
+
+  it('saves no reasons for a clean day', async () => {
+    read.travelDay.mockResolvedValue(day());
+    snap.ensureTravelSnapshot.mockResolvedValue({ id: 's1', userId: 'u1' });
+    snap.reviewDayClaim.mockResolvedValue({ review: { reasons: [] } });
+    const { db, rows } = insertable();
+    await new TravelClaimsService(db as never).claim(actor, '2026-11-14');
+    expect(rows[0]).toMatchObject({ reviewReasons: null });
   });
 });
 

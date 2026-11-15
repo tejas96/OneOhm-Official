@@ -79,7 +79,18 @@ export const TRAVEL = {
   days: { today: 'Today', yesterday: 'Yesterday' },
   pickDay: 'Day',
   route: 'Route',
-  routeHint: 'Straight-line distance between stops, not road distance.',
+  routeHint: 'Straight-line distance between stops. Your paid km are shown below.',
+  paid: (metres: number) => `Paid ${distance(metres)}`,
+  paidFrom: {
+    route: 'from your route',
+    straight: 'straight line, no route was recorded',
+  },
+  capped: 'Your route was much longer than the straight line, so the paid km were cut.',
+  autoNote: {
+    approved: 'Approved automatically',
+    sent: 'Sent for approval automatically',
+    ready: 'Made for you. It will be approved tomorrow morning if everything checks out.',
+  },
   unpaidLeg: 'No location at one end, not paid',
   total: (metres: number, rate: string, amount: string) =>
     `${distance(metres)} at ${rate}/km = ${amount}`,

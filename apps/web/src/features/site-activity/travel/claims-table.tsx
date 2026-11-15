@@ -6,6 +6,7 @@ import { formatInr } from '@oneohm/shared';
 import { useTranslations } from 'next-intl';
 import { swatchFor } from '@/lib/format/contact';
 import { useSiteFormat } from '../site-format';
+import { AutoBadge } from './claim-km';
 import { ClaimStatus } from './claim-status';
 
 /** One row per claimed day: who, which day, how far, how much, and where it stands. */
@@ -85,7 +86,10 @@ export function ClaimsTable({
       header: t('columns.status'),
       cell: (claim) => (
         <span className="flex flex-wrap items-center justify-end gap-2 md:justify-between">
-          <ClaimStatus claim={claim} />
+          <span className="flex items-center gap-1.5">
+            <ClaimStatus claim={claim} />
+            <AutoBadge claim={claim} short />
+          </span>
           <Button
             size="sm"
             variant={claim.status === 'pending' ? 'secondary' : 'quiet'}

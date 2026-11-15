@@ -1,6 +1,7 @@
 import type { TravelClaim } from '@oneohm/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { canDecideClaim, canVoidClaim, claimState } from './use-travel';
+import { ApiError } from '@/lib/api/api-error';
+import { canDecideClaim, canVoidClaim, changedAmountPaise, claimState } from './use-travel';
 
 const claim = (patch: Partial<TravelClaim>) =>
   ({ status: 'pending', paid: false, canDecide: true, canVoid: true, ...patch }) as TravelClaim;
@@ -20,6 +21,17 @@ describe('who sees the decide and void buttons', () => {
     );
     expect(canVoidClaim(claim({ status: 'approved', paid: true }))).toBe(false);
     expect(canVoidClaim(claim({ status: 'pending' }))).toBe(false);
+  });
+
+  it('tells a claim taken back when the day was reopened', () => {
+    expect(claimState(claim({ status: 'cancelled', withdrawn: true }))).toBe('withdrawn');
+  });
+
+  it('reads the new amount from an amount_changed refusal, and nothing from another error', () => {
+    const refusal = new ApiError(409, 'Changed.', 'amount_changed', {}, { amountPaise: 9_200 });
+    expect(changedAmountPaise(refusal)).toBe(9_200);
+    expect(changedAmountPaise(new ApiError(409, 'Done.', 'conflict', {}))).toBeNull();
+    expect(changedAmountPaise(new Error('x'))).toBeNull();
   });
 
   it('tells a voided claim from one the worker withdrew', () => {

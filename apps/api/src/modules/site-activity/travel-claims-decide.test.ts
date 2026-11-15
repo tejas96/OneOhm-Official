@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const read = vi.hoisted(() => ({ travelDay: vi.fn(), readClaims: vi.fn() }));
 const db = vi.hoisted(() => ({
   notify: vi.fn(),
-  notifyHolders: vi.fn(),
-  postPayableApproved: vi.fn(),
+  approveTravelClaim: vi.fn(async () => 'pay1'),
 }));
 const people = vi.hoisted(() => ({ assertMayDecideClaim: vi.fn() }));
 
@@ -17,7 +16,7 @@ vi.mock('@oneohm/database', async (importOriginal) => ({
   ...db,
 }));
 
-import { payables, travelClaims } from '@oneohm/database';
+import { travelClaims } from '@oneohm/database';
 import { actor } from './site-visit-test-kit';
 import { TravelClaimsService } from './travel-claims.service';
 import { scripted } from './travel-test-kit';
@@ -34,13 +33,19 @@ const claim = (patch: object = {}) => ({
   ...patch,
 });
 
-function decide(approve: boolean, row: object | null = claim()) {
+function decide(approve: boolean, row: object | null = claim(), expectedAmountPaise?: number) {
   const { tx, updates } = scripted(
     [row ? [row] : [], [{ fullName: 'Ravi' }], [{ name: 'Ravi' }]],
     [[{ id: 'pay1' }]],
   );
   read.readClaims.mockResolvedValue([{ id: 'c1' }]);
-  const result = new TravelClaimsService(tx as never).decide(actor('boss'), 'c1', approve, 'ok');
+  const result = new TravelClaimsService(tx as never).decide(
+    actor('boss'),
+    'c1',
+    approve,
+    'ok',
+    expectedAmountPaise,
+  );
   return { updates, result };
 }
 
@@ -62,29 +67,26 @@ describe('deciding a travel claim (S8, S10)', () => {
     );
   });
 
-  it('approving makes an employee payable and books it', async () => {
+  it('approving goes through the shared approval, as the deciding person', async () => {
     const { updates, result } = decide(true);
     await result;
-    expect(db.postPayableApproved).toHaveBeenCalledWith(expect.anything(), 'pay1', 'boss');
-    expect(updates.find((u) => u.table === travelClaims)?.set).toMatchObject({
-      status: 'approved',
-      payableId: 'pay1',
-      decidedByUserId: 'boss',
-    });
+    expect(db.approveTravelClaim).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'c1' }),
+      { userId: 'boss', note: 'ok' },
+    );
+    // The shared approval writes the claim; the service writes nothing of its own.
+    expect(updates.find((u) => u.table === travelClaims)).toBeUndefined();
   });
 
-  it('tells finance on approval, with an alert that opens the bill', async () => {
-    await decide(true).result;
-    expect(db.notifyHolders).toHaveBeenCalledWith(
-      expect.anything(),
-      'finance.record_payments',
-      expect.objectContaining({
-        kind: 'travel_payable_ready',
-        subject: { type: 'payable', id: 'pay1', projectId: 'p1' },
-      }),
-      'boss',
-    );
-    // The worker hears too.
+  it('declining makes no bill and tells finance nothing', async () => {
+    const { updates, result } = decide(false);
+    await result;
+    expect(db.approveTravelClaim).not.toHaveBeenCalled();
+    expect(updates.find((u) => u.table === travelClaims)?.set).toMatchObject({
+      status: 'rejected',
+      decidedByUserId: 'boss',
+    });
     expect(db.notify).toHaveBeenCalledWith(
       expect.anything(),
       { userId: 'worker' },
@@ -92,17 +94,33 @@ describe('deciding a travel claim (S8, S10)', () => {
     );
   });
 
-  it('declining makes no bill and tells finance nothing', async () => {
-    const { updates, result } = decide(false);
-    await result;
-    expect(updates.some((u) => u.table === payables)).toBe(false);
-    expect(db.notifyHolders).not.toHaveBeenCalled();
-    expect(db.postPayableApproved).not.toHaveBeenCalled();
-  });
-
   it('refuses a claim that is already decided', async () => {
     const { updates, result } = decide(true, claim({ status: 'approved' }));
     await expect(result).rejects.toMatchObject({ status: 409 });
     expect(updates).toHaveLength(0);
+    expect(db.approveTravelClaim).not.toHaveBeenCalled();
+  });
+
+  it('decides when the amount the approver saw is still the amount', async () => {
+    const { result } = decide(true, claim(), 8400);
+    await result;
+    expect(db.approveTravelClaim).toHaveBeenCalled();
+  });
+
+  it('refuses with 409 amount_changed, and the new amount, when route points changed it', async () => {
+    const { updates, result } = decide(true, claim({ amountPaise: 9200 }), 8400);
+    await expect(result).rejects.toMatchObject({
+      status: 409,
+      code: 'amount_changed',
+      details: { amountPaise: 9200 },
+    });
+    expect(updates).toHaveLength(0);
+    expect(db.approveTravelClaim).not.toHaveBeenCalled();
+  });
+
+  it('decides without an expected amount, as before', async () => {
+    const { result } = decide(true, claim({ amountPaise: 9200 }));
+    await result;
+    expect(db.approveTravelClaim).toHaveBeenCalled();
   });
 });

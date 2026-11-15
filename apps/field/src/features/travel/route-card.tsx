@@ -64,9 +64,19 @@ export function RouteCard({ day }: { readonly day: TravelDay }) {
           </View>
         ))}
       </View>
-      <Text variant="titleMd">
-        {TRAVEL.total(day.distanceM, formatInr(day.ratePaisePerKm), formatInr(day.amountPaise))}
-      </Text>
+      <View style={styles.paid}>
+        <Text variant="titleMd">
+          {TRAVEL.paid(day.paidM)} {TRAVEL.paidFrom[day.method]}
+        </Text>
+        <Text variant="bodySm" tone="secondary">
+          {TRAVEL.total(day.paidM, formatInr(day.ratePaisePerKm), formatInr(day.amountPaise))}
+        </Text>
+        {day.capApplied ? (
+          <Text variant="bodySm" tone="secondary">
+            {TRAVEL.capped}
+          </Text>
+        ) : null}
+      </View>
       {day.unlocated > 0 ? (
         <Text variant="bodySm" tone="secondary">
           {TRAVEL.unlocated(day.unlocated)}
@@ -83,5 +93,6 @@ const styles = StyleSheet.create({
   leg: { gap: 6 },
   stop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   distance: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 1 },
+  paid: { gap: 2 },
   shrink: { flexShrink: 1 },
 });

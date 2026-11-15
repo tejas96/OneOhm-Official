@@ -123,6 +123,17 @@ export const travelClaims = pgTable(
     /** The project the travel was for, so it counts in that project's actual cost. */
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
     note: text('note'),
+    /** Made by the system when the day closed, not by the person (Duty Day step 2). */
+    autoMade: boolean('auto_made').notNull().default(false),
+    /** Approved by the system at once: a clean day. Never set on a person's decision. */
+    autoApproved: boolean('auto_approved').notNull().default(false),
+    /** Why an automatic claim waits for a person: codes like route_gap, fake_gps. */
+    reviewReasons: jsonb('review_reasons').$type<string[]>(),
+    /**
+     * Set when the person reopened the day (Resume duty) and the system took back its waiting
+     * claim: the claim is then `cancelled` and the next close makes a fresh one.
+     */
+    withdrawnByResumeAt: instant('withdrawn_by_resume_at'),
     status: decisionStatusEnum('status').notNull().default('pending'),
     decidedByUserId: uuid('decided_by_user_id').references(() => users.id, {
       onDelete: 'set null',
@@ -165,6 +176,21 @@ export const travelDays = pgTable(
     ratePaisePerKm: integer('rate_paise_per_km').notNull(),
     legs: jsonb('legs').$type<TravelClaimLeg[]>().notNull(),
     visits: integer('visits').notNull(),
+    /** Metres along the recorded route, bad points removed; 0 when there was no route. */
+    routeM: integer('route_m').notNull().default(0),
+    /** Metres of the straight lines between the day's stops. */
+    straightM: integer('straight_m').notNull().default(0),
+    /** What is paid (also saved in `distance_m`, which claims read): route within the cap, or straight. */
+    paidM: integer('paid_m').notNull().default(0),
+    /** `route` when the paid km came from the recorded route, else `straight`. */
+    method: text('method', { enum: ['route', 'straight'] })
+      .notNull()
+      .default('straight'),
+    capApplied: boolean('cap_applied').notNull().default(false),
+    gapCount: integer('gap_count').notNull().default(0),
+    gapMinutes: integer('gap_minutes').notNull().default(0),
+    mockedCount: integer('mocked_count').notNull().default(0),
+    pointsCount: integer('points_count').notNull().default(0),
     computedAt: instant('computed_at').notNull(),
     /** `close` when saved as the day closed; `backfill` when made later for a day closed before. */
     source: text('source').notNull().default('close'),

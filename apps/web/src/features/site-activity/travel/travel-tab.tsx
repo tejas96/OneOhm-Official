@@ -12,7 +12,16 @@ import { ClaimSheet } from './claim-sheet';
 import { ClaimsTable } from './claims-table';
 import { type ClaimState, claimState, useTravelClaims } from './use-travel';
 
-const STATES = ['all', 'pending', 'approved', 'paid', 'rejected', 'voided', 'cancelled'] as const;
+const STATES = [
+  'all',
+  'pending',
+  'approved',
+  'paid',
+  'rejected',
+  'voided',
+  'cancelled',
+  'withdrawn',
+] as const;
 type StateFilter = (typeof STATES)[number];
 
 /**

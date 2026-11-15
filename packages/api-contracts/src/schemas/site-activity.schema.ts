@@ -88,7 +88,35 @@ export const travelLegSchema = z.object({
 });
 export type TravelLegRecord = z.infer<typeof travelLegSchema>;
 
+/** How a day's km were worked out (Duty Day step 2); `distanceM` everywhere is `paidM`. */
+const travelKmShape = {
+  /** Metres along the recorded route; 0 without one. */
+  routeM: z.number().int(),
+  /** Metres of the straight lines between the day's stops. */
+  straightM: z.number().int(),
+  /** What is paid: the route within the cap, or the straight line when there is no route. */
+  paidM: z.number().int(),
+  method: z.enum(['route', 'straight']),
+  /** The route was longer than the cap, so the paid km were cut to it. */
+  capApplied: z.boolean(),
+  gapCount: z.number().int(),
+  gapMinutes: z.number().int(),
+  mockedCount: z.number().int(),
+};
+
+/** Who made and who decided a claim: the system acts on a clean day (Duty Day step 2). */
+const travelAutoShape = {
+  /** The system made the claim for the person when the day closed. */
+  autoMade: z.boolean(),
+  /** The system approved it at once: a clean day. */
+  autoApproved: z.boolean(),
+  /** Why an automatic claim waits for a person: codes such as route_gap, fake_gps, cap_applied. */
+  reviewReasons: z.array(z.string()),
+};
+
 export const travelClaimSchema = z.object({
+  ...travelKmShape,
+  ...travelAutoShape,
   id: idSchema,
   user: userRef,
   workDate: calendarDateSchema,
@@ -110,6 +138,8 @@ export const travelClaimSchema = z.object({
   decisionNote: z.string().nullable(),
   /** Voided after approval (status is then cancelled): when, and the reason given. */
   voidedAt: instantSchema.nullable(),
+  /** The system took the claim back when the person reopened the day: status is `cancelled`. */
+  withdrawn: z.boolean(),
   voidReason: z.string().nullable(),
   /** Whether the person looking may decide it (manager, HR or finance; never the claimant). */
   canDecide: z.boolean(),
@@ -121,6 +151,8 @@ export type TravelClaim = z.infer<typeof travelClaimSchema>;
 
 /** A person's travel on one day, built from their site check-ins, and its claim if made. */
 export const travelDaySchema = z.object({
+  ...travelKmShape,
+  ...travelAutoShape,
   workDate: calendarDateSchema,
   visits: z.array(siteVisitSchema),
   legs: z.array(travelLegSchema),

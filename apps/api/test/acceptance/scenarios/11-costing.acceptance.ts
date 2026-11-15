@@ -114,11 +114,12 @@ describe('Costing', () => {
     travel = await claimProjectTravel(admin, sale.project, 'Costing Traveller (test)');
     expect(travel.day.visits.length).toBe(2);
     expect(travel.day.distanceM).toBeGreaterThan(5_000);
-    // Still running: not claimable, and a claim is a 409. Ended: saved, and claimable.
+    // Still running: not claimable, and a claim is a 409. Ended: saved, and the system made the
+    // claim (no route was recorded, so it waits for a person).
     expect(travel.day.closed).toBe(false);
     expect(travel.earlyClaimStatus).toBe(409);
     expect(travel.closedDay.closed).toBe(true);
-    expect(travel.closedDay.claimable).toBe(true);
+    expect(travel.closedDay.claim).toMatchObject({ autoMade: true, status: 'pending' });
     expect(travel.closedDay.distanceM).toBe(travel.day.distanceM);
     expect(travel.claim.status).toBe('approved');
     expect(travel.claim.project?.id).toBe(sale.project.id);

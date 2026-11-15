@@ -3,6 +3,7 @@ import { calendarDateSchema, idSchema, instantSchema } from '../common/primitive
 import { leaveClashesSchema } from './leave-impact.schema';
 import { locationResultSchema } from './location-result.schema';
 import { staffCalendarSchema } from './staff-calendar.schema';
+import { travelPolicySchema } from './travel-policy.schema';
 
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 09:30.');
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -44,13 +45,8 @@ export const workforcePolicySchema = z.object({
     recognitionMax: z.number().int().min(1).max(10000),
     stageRating: z.number().int().min(0).max(5000).default(20),
   }),
-  /** Site check-ins and travel reimbursement (PRD 4.3). */
-  travel: z.object({
-    farFromSiteM: z.number().int().min(50).max(5000),
-    ratePaisePerKm: z.number().int().min(0).max(10_000),
-    hoursMarginMinutes: z.number().int().min(0).max(240),
-    pinTrustM: z.number().int().min(25).max(2000).default(100),
-  }),
+  /** Site check-ins and travel reimbursement (PRD 4.3, Duty Day step 2). */
+  travel: travelPolicySchema,
   /** Open tasks one person should carry (PRD 3.12); 0 means no limit. */
   capacity: z
     .object({ defaultOpenTaskLimit: z.number().int().min(0).max(500) })

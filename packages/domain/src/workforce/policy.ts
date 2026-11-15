@@ -65,6 +65,16 @@ export interface SiteTravelPolicy {
   readonly hoursMarginMinutes: number;
   /** A field pin farther than this from the worker's check-in reading is flagged for the office, in metres. */
   readonly pinTrustM: number;
+  /** The system makes the day's claim when the day closes (Duty Day step 2). */
+  readonly autoClaim: boolean;
+  /** A clean automatic claim is approved by the system the next morning; off until switched on. */
+  readonly autoApprove: boolean;
+  /** An automatic claim over this many km always waits for a person. */
+  readonly autoApproveMaxKm: number;
+  /** An automatic claim over this many paise always waits for a person. */
+  readonly autoApproveMaxPaise: number;
+  /** The paid route is cut to the straight-line distance between stops times this. */
+  readonly routeCapRatio: number;
 }
 
 export interface WorkforcePolicy {
@@ -101,7 +111,17 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     recognitionMax: 200,
     stageRating: 20,
   },
-  travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60, pinTrustM: 100 },
+  travel: {
+    farFromSiteM: 300,
+    ratePaisePerKm: 500,
+    hoursMarginMinutes: 60,
+    pinTrustM: 100,
+    autoClaim: true,
+    autoApprove: false,
+    autoApproveMaxKm: 150,
+    autoApproveMaxPaise: 150_000,
+    routeCapRatio: 1.6,
+  },
   capacity: { defaultOpenTaskLimit: 0 },
 };
 

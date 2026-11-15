@@ -28,21 +28,35 @@ const link = (rows: unknown[]): unknown =>
 describe('resume duty (S3, S4)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  /** The transaction reads the day first, then any pending or approved travel claim. */
-  const run = (claim: unknown[]) => {
+  /**
+   * The transaction reads the day, then locks any pending or approved travel claim; the
+   * withdrawal is one update that returns the claim only when it was still pending and automatic.
+   */
+  const run = (claim: unknown[], withdrawn: unknown[] = []) => {
     const reads = [[{ id: 'd1', workDate: '2026-11-15', checkOutAt: new Date() }], claim];
-    const updates: unknown[] = [];
+    const updates: Record<string, unknown>[] = [];
+    const deletes: unknown[] = [];
     const tx = {
       select: () => link(reads.shift() ?? []),
+      delete: () => ({
+        where: async () => {
+          deletes.push(true);
+        },
+      }),
       update: () => ({
-        set: (set: unknown) => {
+        set: (set: Record<string, unknown>) => {
           updates.push(set);
-          return { where: async () => undefined };
+          return { where: () => ({ returning: async () => ('status' in set ? withdrawn : []) }) };
         },
       }),
     };
     const db = { transaction: async (work: (handle: typeof tx) => unknown) => work(tx) };
-    return { tx, updates, result: resumeDuty(db as never, { userId: 'u1' } as unknown as Actor) };
+    return {
+      tx,
+      updates,
+      deletes,
+      result: resumeDuty(db as never, { userId: 'u1' } as unknown as Actor),
+    };
   };
 
   it('forgets the saved travel of the day, which is open again and is saved at the next End duty', async () => {
@@ -51,11 +65,29 @@ describe('resume duty (S3, S4)', () => {
     expect(lib.dropTravelSnapshot).toHaveBeenCalledWith(tx, 'u1', '2026-11-15');
   });
 
-  it('refuses with 409 claim_exists when a pending or approved claim is on the day', async () => {
-    const { updates, result } = run([{ id: 'c1' }]);
+  it('refuses with 409 claim_exists when no row could be withdrawn: approved, the person’s own, or decided a moment ago', async () => {
+    const { updates, deletes, result } = run([{ id: 'c1' }], []);
     await expect(result).rejects.toMatchObject({ status: 409, code: 'claim_exists' });
-    expect(updates).toHaveLength(0);
+    expect(updates.filter((set) => 'withdrawnByResumeAt' in set)).toHaveLength(1);
+    expect(deletes).toHaveLength(0);
     expect(lib.dropTravelSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('withdraws the system’s own pending claim, keeping the row, and reopens the day', async () => {
+    const { updates, deletes, result } = run([{ id: 'c1' }], [{ id: 'c1' }]);
+    await result;
+    expect(updates[0]).toMatchObject({
+      status: 'cancelled',
+      withdrawnByResumeAt: expect.any(Date),
+    });
+    expect(deletes).toHaveLength(0);
+    expect(lib.dropTravelSnapshot).toHaveBeenCalled();
+  });
+
+  it('locks the claim row before changing it', async () => {
+    const text = await readFile(join(__dirname, 'attendance-resume.ts'), 'utf8');
+    expect(text).toMatch(/\.for\('update'\)\s*\.limit\(1\);\s*if \(!claim\) return;/);
+    expect(text).toMatch(/eq\(travelClaims\.status, 'pending'\)/);
   });
 
   it('counts today in the business time zone', async () => {

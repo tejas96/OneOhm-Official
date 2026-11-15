@@ -1,7 +1,7 @@
 'use client';
 
 import type { WorkforcePolicyInput } from '@oneohm/api-contracts';
-import { Field } from '@oneohm/design-system/web';
+import { Field, Switch } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { NumberInput } from '@/features/settings/number-input';
 import { SettingsSection } from '@/features/settings/settings-section';
@@ -56,6 +56,50 @@ export function SiteTravelSection({
             unit="whole"
             value={travel.hoursMarginMinutes}
             onValueChange={(value) => onChange({ ...travel, hoursMarginMinutes: value ?? 0 })}
+          />
+        </Field>
+      </div>
+      <Switch
+        checked={travel.autoClaim}
+        onCheckedChange={(autoClaim) => onChange({ ...travel, autoClaim })}
+        label={t('autoClaim')}
+        description={travel.autoClaim ? t('autoClaimOn') : t('autoClaimOff')}
+      />
+      <Switch
+        checked={travel.autoApprove}
+        onCheckedChange={(autoApprove) => onChange({ ...travel, autoApprove })}
+        label={t('autoApprove')}
+        description={travel.autoApprove ? t('autoApproveOn') : t('autoApproveOff')}
+      />
+      <p className="-mt-3 type-body-sm text-ink-faint">{t('autoApproveHint')}</p>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field
+          label={t('routeCap')}
+          hint={t('routeCapHint')}
+          error={errors['travel.routeCapRatio']}
+        >
+          <NumberInput
+            unit="decimal"
+            value={travel.routeCapRatio}
+            onValueChange={(value) => onChange({ ...travel, routeCapRatio: value ?? 1 })}
+          />
+        </Field>
+        <Field label={t('maxKm')} hint={t('maxKmHint')} error={errors['travel.autoApproveMaxKm']}>
+          <NumberInput
+            unit="whole"
+            value={travel.autoApproveMaxKm}
+            onValueChange={(value) => onChange({ ...travel, autoApproveMaxKm: value ?? 0 })}
+          />
+        </Field>
+        <Field
+          label={t('maxAmount')}
+          hint={t('maxAmountHint')}
+          error={errors['travel.autoApproveMaxPaise']}
+        >
+          <NumberInput
+            unit="paise"
+            value={travel.autoApproveMaxPaise}
+            onValueChange={(value) => onChange({ ...travel, autoApproveMaxPaise: value ?? 0 })}
           />
         </Field>
       </div>

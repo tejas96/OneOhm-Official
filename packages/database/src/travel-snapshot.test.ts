@@ -1,68 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { ensureTravelSnapshot, takeTravelSnapshot } from './travel-snapshot';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-/** A drizzle-like handle: each `select()` takes the next queued result; writes are recorded. */
-function fakeDb(queue: unknown[][]) {
-  const writes: { values?: Record<string, unknown> }[] = [];
-  const link = (rows: unknown[]): unknown =>
-    new Proxy(
-      {},
-      {
-        get: (_, key) =>
-          key === 'then' ? (ok: (value: unknown[]) => void) => ok(rows) : () => link(rows),
-      },
-    );
-  const db = {
-    select: () => link(queue.shift() ?? []),
-    insert: () => ({
-      values: (values: Record<string, unknown>) => {
-        const write: { values?: Record<string, unknown> } = { values };
-        writes.push(write);
-        return { onConflictDoUpdate: () => link([{ ...values, id: 'row' }]) };
-      },
-    }),
-  };
-  return { db: db as never, writes };
-}
+const lib = vi.hoisted(() => ({ alertJobFailed: vi.fn(async () => 1) }));
+vi.mock('./job-alerts', () => lib);
 
-const OFFICE = { latitude: 18.52, longitude: 73.85 };
-const dayRow = (patch: Record<string, unknown> = {}) => ({
-  day: {
-    checkInAt: new Date('2026-11-15T04:00:00Z'),
-    checkInLatitude: OFFICE.latitude,
-    checkInLongitude: OFFICE.longitude,
-    checkInInside: true,
-    checkOutAt: new Date('2026-11-15T12:00:00Z'),
-    checkOutLatitude: OFFICE.latitude,
-    checkOutLongitude: OFFICE.longitude,
-    checkOutInside: true,
-    locationClearedAt: null,
-    ...patch,
-  },
-  place: 'Office',
+import { takeTravelSnapshot } from './travel-snapshot';
+import { dayRow, fakeDb, place, policy, visit } from './travel-snapshot-test-kit';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
-const visit = (id: string, at: string, lat: number | null, lon: number | null) => ({
-  visit: {
-    id,
-    checkInAt: new Date(at),
-    checkInLatitude: lat,
-    checkInLongitude: lon,
-    locationClearedAt: null,
-  },
-  taskTitle: `Task ${id}`,
-  serviceLabel: null,
-  projectCode: 'P-1',
-});
-const place = {
-  id: 'o',
-  name: 'Office',
-  latitude: 18.52,
-  longitude: 73.85,
-  radiusM: 100,
-  active: true,
-  createdAt: new Date(),
-};
-const policy = (rate: number) => ({ policy: { travel: { ratePaisePerKm: rate } } });
 
 describe('takeTravelSnapshot (S3, S4)', () => {
   it('saves nothing for a day that is still running', async () => {
@@ -135,21 +82,5 @@ describe('takeTravelSnapshot (S3, S4)', () => {
     ]);
     expect(await takeTravelSnapshot(db, 'u1', '2026-11-15')).toBe(saved);
     expect(writes).toHaveLength(0);
-  });
-});
-
-describe('ensureTravelSnapshot (S4)', () => {
-  it('returns the saved day without measuring', async () => {
-    const saved = { distanceM: 5 };
-    const { db, writes } = fakeDb([[saved]]);
-    expect(await ensureTravelSnapshot(db, 'u1', '2026-11-15')).toBe(saved);
-    expect(writes).toHaveLength(0);
-  });
-
-  it('marks a day closed before snapshots existed, saved now, as a backfill', async () => {
-    // Nothing saved yet, then the closed day as the live rows have it.
-    const { db, writes } = fakeDb([[], [dayRow()], [], [place], [], [policy(900)]]);
-    await ensureTravelSnapshot(db, 'u1', '2026-11-15');
-    expect(writes[0]?.values?.source).toBe('backfill');
   });
 });

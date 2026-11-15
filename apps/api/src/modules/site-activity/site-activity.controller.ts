@@ -87,7 +87,13 @@ export class SiteActivityController {
         // Who may decide is the person's manager, HR or finance: checked in the service.
         return {
           status: 200,
-          body: await this.travel.decide(actor, params.id, body.approve, body.note),
+          body: await this.travel.decide(
+            actor,
+            params.id,
+            body.approve,
+            body.note,
+            body.expectedAmountPaise,
+          ),
         };
       },
       voidTravelClaim: async ({ params, body }) => ({

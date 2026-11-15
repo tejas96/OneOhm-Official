@@ -20,6 +20,8 @@ export function dailyActivities(db: Database, timeZone: string, payLinks: PayLin
     queueCashReminders: run('cash_reminders'),
     /** Days nobody ended are ended at the last activity, and the person and approvers told. */
     closeForgottenDays: run('attendance_autoclose'),
+    /** Clean automatic travel claims of earlier days are approved; missed ones are made again. */
+    approveTravelClaims: run('travel_auto_approve'),
     clearOldLocations: run('location_cleanup'),
     clearOldJobRuns: run('job_runs_cleanup'),
     queueSlaAlerts: run('service_sla'),

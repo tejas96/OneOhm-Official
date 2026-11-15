@@ -1,23 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TravelClaim, TravelDay } from '@oneohm/api-contracts';
 import {
+  approveTravelClaim,
   ensureTravelSnapshot,
   notify,
-  notifyHolders,
-  payables,
-  postPayableApproved,
-  type Transaction,
+  reviewDayClaim,
   tellClaimDeciders,
   travelClaims,
-  users,
 } from '@oneohm/database';
-import { formatInr, todayIn } from '@oneohm/shared';
-import { and, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
+import { todayIn } from '@oneohm/shared';
+import { and, eq, gte, inArray, isNull, lte, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { currentCalendar } from '../../common/calendar';
 import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
-import { daySpan } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { loadPolicy } from '../workforce/policy';
 import { insertClaimLocked } from './travel-claim-insert';
@@ -32,8 +28,6 @@ export interface ClaimFilter {
   readonly from?: string | undefined;
   readonly to?: string | undefined;
 }
-
-const km = (metres: number) => `${(metres / 1000).toFixed(1)} km`;
 
 /**
  * Travel between sites, claimed per day at the rate in Settings (PRD 4.3). The person's
@@ -54,7 +48,11 @@ export class TravelClaimsService {
   }
 
   async mine(actor: Actor): Promise<TravelClaim[]> {
-    return readClaims(this.db, eq(travelClaims.userId, actor.userId));
+    // Claims taken back when the person reopened the day are not theirs to see any more.
+    return readClaims(
+      this.db,
+      and(eq(travelClaims.userId, actor.userId), isNull(travelClaims.withdrawnByResumeAt)),
+    );
   }
 
   async list(actor: Actor, filter: ClaimFilter): Promise<TravelClaim[]> {
@@ -77,8 +75,9 @@ export class TravelClaimsService {
       throw invalid('Claim a day that has started.', { workDate: 'Later.' });
     // A claim is for a closed day: a clear 409 while the day is running (live review S5).
     // A day closed before saved travel existed is saved now, before anything clears it.
-    await ensureTravelSnapshot(this.db, actor.userId, workDate);
-    const day = await this.day(actor.userId, workDate);
+    const snapshot = await ensureTravelSnapshot(this.db, actor.userId, workDate);
+    const policy = await loadPolicy(this.db);
+    const day = await travelDay(this.db, actor.userId, workDate, policy);
     if (day.claim && (day.claim.status === 'pending' || day.claim.status === 'approved'))
       throw conflict('You have already claimed this day.', 'claimed');
     if (!day.closed) throw conflict('End your day to claim.', 'day_open');
@@ -86,6 +85,10 @@ export class TravelClaimsService {
       throw invalid('There is no travel to claim on this day.', { workDate: 'No distance.' });
     if (projectId && !day.visits.some((visit) => visit.projectId === projectId))
       throw invalid('Pick a project you visited that day.', { projectId: 'Not visited.' });
+    // The approver reads why a day deserves a look on this claim too, made by hand or not.
+    const reasons = snapshot
+      ? (await reviewDayClaim(this.db, snapshot, policy, true)).review.reasons
+      : [];
     const row = await insertClaimLocked(this.db, {
       userId: actor.userId,
       workDate,
@@ -96,6 +99,7 @@ export class TravelClaimsService {
       visits: day.visits.length,
       projectId: projectId ?? null,
       note: note?.trim() || null,
+      reviewReasons: reasons.length > 0 ? [...reasons] : null,
     });
     if (!row) throw conflict('You have already claimed this day.', 'claimed');
     await recordAudit(this.db, actor.userId, 'travel_claim.made', 'travel_claim', row.id, {
@@ -134,6 +138,7 @@ export class TravelClaimsService {
     id: string,
     approve: boolean,
     note?: string | null,
+    expectedAmountPaise?: number,
   ): Promise<TravelClaim> {
     await this.db.transaction(async (tx) => {
       const [row] = await tx
@@ -146,50 +151,39 @@ export class TravelClaimsService {
       // Only the person's manager, HR or finance, and never the person (S10).
       await assertMayDecideClaim(tx, actor, row.userId);
       if (row.status !== 'pending') throw conflict('This claim has already been decided.');
-      const payableId = approve ? await this.payableFor(tx, actor, row) : null;
+      // New route points can change the amount after the approver opened it: decide on what they saw.
+      if (expectedAmountPaise !== undefined && expectedAmountPaise !== row.amountPaise)
+        throw conflict(
+          'The amount of this claim changed. Check it and decide again.',
+          'amount_changed',
+          {
+            amountPaise: row.amountPaise,
+          },
+        );
+      if (approve) {
+        // The same path the system takes on a clean day: payable, ledger, finance and worker told.
+        await approveTravelClaim(tx, row, { userId: actor.userId, note });
+        return;
+      }
       await tx
         .update(travelClaims)
         .set({
-          status: approve ? 'approved' : 'rejected',
+          status: 'rejected',
           decidedByUserId: actor.userId,
           decidedAt: new Date(),
           decisionNote: note?.trim() || null,
-          payableId,
           updatedAt: new Date(),
         })
         .where(eq(travelClaims.id, id));
       await notify(
         tx,
         { userId: row.userId },
-        TRAVEL_NOTICES.decided(id, approve, row.workDate, row.amountPaise),
+        TRAVEL_NOTICES.decided(id, false, row.workDate, row.amountPaise),
       );
-      if (payableId) {
-        // Finance pays what is owed: told now, with an alert that opens the bill (S8).
-        const [person] = await tx
-          .select({ name: users.fullName })
-          .from(users)
-          .where(eq(users.id, row.userId));
-        await notifyHolders(
-          tx,
-          'finance.record_payments',
-          TRAVEL_NOTICES.readyToPay(
-            payableId,
-            row.projectId,
-            person?.name ?? 'Employee',
-            row.workDate,
-            row.amountPaise,
-          ),
-          actor.userId,
-        );
-      }
-      await recordAudit(
-        tx,
-        actor.userId,
-        `travel_claim.${approve ? 'approved' : 'rejected'}`,
-        'travel_claim',
-        id,
-        { amountPaise: row.amountPaise, payableId },
-      );
+      await recordAudit(tx, actor.userId, 'travel_claim.rejected', 'travel_claim', id, {
+        amountPaise: row.amountPaise,
+        payableId: null,
+      });
     });
     return this.one(id, actor);
   }
@@ -198,38 +192,6 @@ export class TravelClaimsService {
   async void(actor: Actor, id: string, reason: string): Promise<TravelClaim> {
     await this.db.transaction((tx) => voidClaim(tx, actor, id, reason));
     return this.one(id, actor);
-  }
-
-  /** The approved claim as money owed to the employee, booked in the ledger at once. */
-  private async payableFor(
-    tx: Transaction,
-    actor: Actor,
-    row: typeof travelClaims.$inferSelect,
-  ): Promise<string> {
-    const [person] = await tx
-      .select({ fullName: users.fullName })
-      .from(users)
-      .where(eq(users.id, row.userId))
-      .limit(1);
-    const rate = formatInr(row.ratePaisePerKm);
-    const now = new Date();
-    const [payable] = await tx
-      .insert(payables)
-      .values({
-        party: 'employee',
-        partyName: person?.fullName ?? 'Employee',
-        partyUserId: row.userId,
-        description: `Travel ${daySpan(row.workDate, row.workDate)} · ${km(row.distanceM)} at ${rate}/km`,
-        amountPaise: row.amountPaise,
-        dueOn: todayIn(),
-        status: 'approved',
-        approvedByUserId: actor.userId,
-        approvedAt: now,
-      })
-      .returning({ id: payables.id });
-    if (!payable) throw new Error('Payable insert returned nothing.');
-    await postPayableApproved(tx, payable.id, actor.userId);
-    return payable.id;
   }
 
   private async one(id: string, viewer?: Actor): Promise<TravelClaim> {
