@@ -94,6 +94,13 @@
       "payment": "Unlocks a payment",
       "due": "Due {date}"
     },
+    "announcements": {
+      "label": "Announcements",
+      "posted": "{name} · {when}",
+      "until": "Until {date}",
+      "close": "Close announcement: {title}",
+      "failed": "That announcement could not be closed"
+    },
     "chats": {
       "title": "Chats",
       "brief": "{count, plural, one {# customer is} other {# customers are}} waiting for your WhatsApp reply."

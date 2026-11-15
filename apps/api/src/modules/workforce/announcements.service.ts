@@ -1,8 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Announcement, AnnouncementInput } from '@oneohm/api-contracts';
-import { announcements, notify, roles, userRoles, users } from '@oneohm/database';
+import {
+  announcementDismissals,
+  announcements,
+  notify,
+  roles,
+  userRoles,
+  users,
+} from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
-import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, notInArray, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -23,7 +30,13 @@ export class AnnouncementsService {
 
   /** Showing now for this person: for everyone on the staff, or for one of their roles. */
   async mine(actor: Actor): Promise<Announcement[]> {
-    const rows = await this.read(isNull(announcements.endedAt));
+    const closed = this.db
+      .select({ id: announcementDismissals.announcementId })
+      .from(announcementDismissals)
+      .where(eq(announcementDismissals.userId, actor.userId));
+    const rows = await this.read(
+      and(isNull(announcements.endedAt), notInArray(announcements.id, closed)),
+    );
     return rows.filter(
       (item) =>
         item.active &&
@@ -31,6 +44,19 @@ export class AnnouncementsService {
           ? actor.kind === 'staff'
           : item.audienceRoleKeys.some((key) => actor.roleKeys.includes(key))),
     );
+  }
+
+  /** Closes it for this person only; closing it twice changes nothing. */
+  async dismiss(actor: Actor, id: string): Promise<void> {
+    const [found] = await this.db
+      .select({ id: announcements.id })
+      .from(announcements)
+      .where(eq(announcements.id, id));
+    if (!found) throw notFound('That announcement');
+    await this.db
+      .insert(announcementDismissals)
+      .values({ announcementId: id, userId: actor.userId })
+      .onConflictDoNothing();
   }
 
   list(): Promise<Announcement[]> {

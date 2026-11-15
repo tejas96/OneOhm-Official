@@ -11,6 +11,7 @@ import { WhatsAppInbox } from '@/features/service/whatsapp/whatsapp-inbox';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useCan, useCurrentUser } from '@/providers/current-user';
 import { useGreeting } from '../command-center/use-greeting';
+import { AnnouncementsBanner } from './announcements-banner';
 import { ApprovalsInbox } from './approvals/approvals-inbox';
 import { useMyApprovals } from './approvals/use-my-approvals';
 import { groupTasks, TODAY_GROUPS } from './group-tasks';
@@ -120,6 +121,7 @@ export function TodayView() {
           </nav>
         )}
       </header>
+      <AnnouncementsBanner />
       {showApprovals || showChats ? (
         <Tabs<View>
           label={t('views')}

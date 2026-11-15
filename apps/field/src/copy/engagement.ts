@@ -8,6 +8,7 @@ export const ANNOUNCEMENTS = {
   overline: 'ANNOUNCEMENT',
   posted: (name: string | null, when: string) => (name ? `${name} · ${when}` : when),
   until: (date: string) => `Until ${date}`,
+  close: (title: string) => `Close announcement: ${title}`,
 } as const;
 
 export const LEAVE_CARD = {
