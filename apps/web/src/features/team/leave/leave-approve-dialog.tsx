@@ -162,7 +162,10 @@ export function LeaveApproveDialog({
       <div className="flex flex-col gap-5 pb-2">
         <SegmentedControl
           value={choice}
-          onValueChange={setChoice}
+          onValueChange={(next) => {
+            setChoice(next);
+            reset();
+          }}
           label={t('choice')}
           options={[
             { value: 'approve', label: t('approve'), icon: <Check /> },
@@ -190,7 +193,15 @@ export function LeaveApproveDialog({
             hint={t(hintKey(asking, affected))}
             error={form.fieldErrors.backupUserId}
           >
-            <Select value={backup} onValueChange={setBackup} options={options} />
+            <Select
+              value={backup}
+              onValueChange={(next) => {
+                // A new pick is a new question: old refusals no longer apply.
+                setBackup(next);
+                reset();
+              }}
+              options={options}
+            />
           </Field>
         )}
         {approving && leave?.emergency && affected > 0 && backup === NONE && (

@@ -247,6 +247,7 @@
       "emergency": "Emergency",
       "noBackup": "No backup named",
       "coveredBy": "{name} covers",
+      "askedToCover": "Asked to cover: {name}",
       "handedOver": "{count, plural, =0 {nothing handed over} one {# item handed over} other {# items handed over}}",
       "decidedBy": "Decided by {name}.",
       "status": {

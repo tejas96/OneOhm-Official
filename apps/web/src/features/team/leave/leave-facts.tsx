@@ -66,7 +66,12 @@ export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
       <p className="flex items-center gap-2 type-body-sm text-ink">
         <UserRoundCheck aria-hidden className="size-4 shrink-0 text-ink-faint" />
         <span>
-          {t('coveredBy', { name: leave.backup.fullName })}
+          {t(
+            leave.coverAnswer === 'accepted' || !leave.coverAnswer ? 'coveredBy' : 'askedToCover',
+            {
+              name: leave.backup.fullName,
+            },
+          )}
           {leave.status === 'approved' && (
             <span className="text-ink-faint">
               {' · '}
