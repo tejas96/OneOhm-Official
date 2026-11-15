@@ -6,6 +6,7 @@ export const WORKFORCE_KEYS = {
   leave: ['leave'],
   allLeave: ['leave', 'all'],
   myLeave: ['leave', 'mine'],
+  coveringLeave: ['leave', 'covering'],
   workday: ['me', 'workday'],
   points: ['points'],
   standings: ['points', 'standings'],

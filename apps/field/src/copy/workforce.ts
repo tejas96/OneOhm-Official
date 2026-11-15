@@ -84,6 +84,31 @@ export const LEAVE = {
   emergencyBadge: 'Emergency',
 } as const;
 
+export const COVER = {
+  title: 'ASKED TO COVER',
+  for: (name: string) => `For ${name}`,
+  handover: 'Their note',
+  accept: 'Accept',
+  decline: 'Decline',
+  youAccepted: 'You accepted',
+  youDeclined: 'You declined',
+  note: 'Your note',
+  notePlaceholder: 'Say why you cannot cover',
+  acceptTitle: 'Accept cover?',
+  declineTitle: 'Decline cover?',
+  acceptBody: 'Their work moves to you only when the leave is approved.',
+  declineBody: 'Say why. They will ask someone else.',
+  answered: 'Thanks, your answer is sent.',
+  waiting: (name: string) => `Waiting for ${name}`,
+  accepted: (name: string) => `${name} accepted`,
+  declined: (name: string) => `${name} declined`,
+  askElse: 'Ask someone else',
+  askElseTitle: 'Who else can cover?',
+  askElseBody: 'They are asked first. Your manager approves after they say yes.',
+  asked: 'Asked. You will hear their answer.',
+  none: 'Nobody else shares this work right now.',
+} as const;
+
 export const REQUEST_LEAVE = {
   pickDays: 'Pick the days first.',
   title: 'Request leave',

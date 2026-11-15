@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { calendarDate, createdAt, instant, money, primaryId, updatedAt } from './columns';
 import { payables } from './finance.schema';
 import { users } from './identity.schema';
@@ -27,6 +36,21 @@ export const announcements = pgTable(
     createdAt: createdAt(),
   },
   (table) => [index('announcements_created_idx').on(table.createdAt)],
+);
+
+/** An announcement one person closed; it stops showing for them and for nobody else. */
+export const announcementDismissals = pgTable(
+  'announcement_dismissals',
+  {
+    announcementId: uuid('announcement_id')
+      .notNull()
+      .references(() => announcements.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    dismissedAt: instant('dismissed_at').notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.announcementId, table.userId] })],
 );
 
 /**

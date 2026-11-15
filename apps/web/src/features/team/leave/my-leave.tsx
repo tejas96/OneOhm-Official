@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { useWorkforceFormat } from '../workforce-format';
+import { AskSomeoneElseDialog, canAskSomeoneElse } from './ask-someone-else';
 import { LeaveCover, LeaveDecision, LeaveStatus, useLeaveText } from './leave-facts';
 import { useCancelLeave } from './use-leave';
 
@@ -21,6 +22,7 @@ export function MyLeave({ requests }: { readonly requests: readonly LeaveRequest
   const cancel = useCancelLeave();
   const form = useApiForm();
   const [cancelling, setCancelling] = useState<LeaveRequestRecord | null>(null);
+  const [asking, setAsking] = useState<LeaveRequestRecord | null>(null);
   const today = todayIn();
   const sorted = [...requests].sort((a, b) => b.fromDate.localeCompare(a.fromDate));
 
@@ -66,20 +68,23 @@ export function MyLeave({ requests }: { readonly requests: readonly LeaveRequest
               </div>
               <LeaveCover leave={item} />
               <LeaveDecision leave={item} />
-              {cancellable && (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  className="self-start"
-                  onClick={() => open(item)}
-                >
-                  {t('cancel')}
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {canAskSomeoneElse(item) && (
+                  <Button size="sm" variant="secondary" onClick={() => setAsking(item)}>
+                    {t('askSomeoneElse')}
+                  </Button>
+                )}
+                {cancellable && (
+                  <Button size="sm" variant="danger" onClick={() => open(item)}>
+                    {t('cancel')}
+                  </Button>
+                )}
+              </div>
             </motion.li>
           );
         })}
       </ul>
+      <AskSomeoneElseDialog leave={asking} onClose={() => setAsking(null)} />
       <Dialog
         open={cancelling !== null}
         onOpenChange={(next) => !next && setCancelling(null)}

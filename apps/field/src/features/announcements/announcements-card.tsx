@@ -1,9 +1,10 @@
 import type { Announcement } from '@oneohm/api-contracts';
-import { Card, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
-import { useQuery } from '@tanstack/react-query';
-import { Megaphone } from 'lucide-react-native';
+import { Card, describeError, PressableScale, Text, unwrap, useTheme } from '@oneohm/mobile-ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Megaphone, X } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api/api';
+import { useToast } from '@/components/toast';
 import { ANNOUNCEMENTS } from '@/copy/engagement';
 import { shortDate, shortMoment } from '@/lib/dates';
 
@@ -28,6 +29,24 @@ export function AnnouncementsCard() {
 
 function AnnouncementItem({ item }: { readonly item: Announcement }) {
   const theme = useTheme();
+  const toast = useToast();
+  const client = useQueryClient();
+  const dismiss = useMutation({
+    mutationFn: () => unwrap(api.engagement.dismissAnnouncement({ params: { id: item.id } })),
+    onMutate: async () => {
+      await client.cancelQueries({ queryKey: announcementKeys.mine });
+      const before = client.getQueryData<Announcement[]>(announcementKeys.mine);
+      client.setQueryData<Announcement[]>(announcementKeys.mine, (items) =>
+        items?.filter((other) => other.id !== item.id),
+      );
+      return { before };
+    },
+    onError: (error, _vars, context) => {
+      client.setQueryData(announcementKeys.mine, context?.before);
+      toast(describeError(error));
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: announcementKeys.mine }),
+  });
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -37,6 +56,15 @@ function AnnouncementItem({ item }: { readonly item: Announcement }) {
         <Text variant="overline" tone="tertiary">
           {ANNOUNCEMENTS.overline}
         </Text>
+        <View style={styles.grow} />
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={ANNOUNCEMENTS.close(item.title)}
+          hitSlop={12}
+          onPress={() => dismiss.mutate()}
+        >
+          <X size={18} color={theme.colors.textTertiary} />
+        </PressableScale>
       </View>
       <Text variant="titleMd">{item.title}</Text>
       <Text variant="body" tone="secondary">
@@ -54,5 +82,6 @@ const styles = StyleSheet.create({
   list: { gap: 12 },
   card: { gap: 8 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  grow: { flex: 1 },
   icon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
 });

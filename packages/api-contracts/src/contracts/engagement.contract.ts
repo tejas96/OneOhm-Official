@@ -25,6 +25,14 @@ export const engagementContract = c.router({
     responses: { 200: z.array(announcementSchema) },
     summary: 'Announcements showing now for the signed-in person’s roles.',
   },
+  dismissAnnouncement: {
+    method: 'POST',
+    path: '/me/announcements/:id/dismiss',
+    pathParams: idParams,
+    body: c.noBody(),
+    responses: { 204: c.noBody() },
+    summary: 'Closes it for the signed-in person only; closing it again is fine.',
+  },
   listAnnouncements: {
     method: 'GET',
     path: '/announcements',

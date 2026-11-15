@@ -687,6 +687,20 @@
       "when": 1794721057419,
       "tag": "0097_marketing_job_data",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1794753326913,
+      "tag": "0098_leave_cover_answer",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1794756795316,
+      "tag": "0099_announcement_dismissals",
+      "breakpoints": true
     }
   ]
 }

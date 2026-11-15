@@ -8,7 +8,7 @@ import {
 } from '@oneohm/database';
 import type { TaskPointFacts } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { reviewHistory } from './review-history';
 
 type TaskRow = typeof projectTasks.$inferSelect;
@@ -43,7 +43,7 @@ export async function taskPointFacts(
     accepted?.submittedBy ?? (task.approval ? (task.assigneeUserId ?? finishedBy) : finishedBy);
   const handedInAt = accepted?.at ?? now;
 
-  const [waits, leave, moves, current] = await Promise.all([
+  const [waits, leave, moves, current, handovers] = await Promise.all([
     tx
       .select({ party: taskWaits.party, from: taskWaits.startedAt, to: taskWaits.endedAt })
       .from(taskWaits)
@@ -74,7 +74,21 @@ export async function taskPointFacts(
       .select({ since: projectTasks.waitingSince, party: projectTasks.waitingParty })
       .from(projectTasks)
       .where(eq(projectTasks.id, task.id)),
+    // Leave hand-overs of this task to the credited person: the latest says how late it came.
+    tx
+      .select({ data: projectActivities.data })
+      .from(projectActivities)
+      .where(
+        and(
+          eq(projectActivities.taskId, task.id),
+          eq(projectActivities.kind, 'task_handover'),
+          sql`${projectActivities.data}->>'toUserId' = ${userId}`,
+        ),
+      )
+      .orderBy(desc(projectActivities.createdAt))
+      .limit(1),
   ]);
+  const lateDays = (handovers[0]?.data as { lateDays?: unknown } | null)?.lateDays;
   const outsideWaits = [
     ...history.withReviewer,
     ...waits.map((wait) => ({
@@ -107,6 +121,7 @@ export async function taskPointFacts(
       selfMoves,
       outsideWaits,
       leave,
+      lateBeforeHandover: typeof lateDays === 'number' ? lateDays : 0,
       needsApproval: history.needsApproval,
       returns: history.returns,
     },

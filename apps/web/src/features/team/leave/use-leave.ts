@@ -31,6 +31,15 @@ export function useMyLeave(enabled: boolean) {
   });
 }
 
+/** Leave the signed-in person is asked to cover, or covers. */
+export function useCoveringLeave(enabled: boolean) {
+  return useQuery({
+    queryKey: WORKFORCE_KEYS.coveringLeave,
+    queryFn: () => expectStatus(api.workforce.coveringLeave(), 200),
+    enabled,
+  });
+}
+
 /** Everyone's leave, every status (approvers); the queue and history filter it. */
 export function useAllLeave(enabled: boolean) {
   return useQuery({
@@ -76,6 +85,35 @@ export function useCancelLeave() {
       const cancelled = await expectStatus(api.workforce.cancelLeave({ params: { id } }), 200);
       await refresh();
       return cancelled;
+    },
+    [refresh],
+  );
+}
+
+/** The named backup says yes or no; a note is needed to say no. */
+export function useAnswerCover() {
+  const refresh = useRefreshLeave();
+  return useCallback(
+    async (id: string, body: { accept: boolean; note: string | null }) => {
+      const answered = await expectStatus(api.workforce.answerCover({ params: { id }, body }), 200);
+      await refresh();
+      return answered;
+    },
+    [refresh],
+  );
+}
+
+/** Ask someone else to cover (or nobody) while the leave is pending. */
+export function useChangeBackup() {
+  const refresh = useRefreshLeave();
+  return useCallback(
+    async (id: string, backupUserId: string | null) => {
+      const changed = await expectStatus(
+        api.workforce.changeBackup({ params: { id }, body: { backupUserId } }),
+        200,
+      );
+      await refresh();
+      return changed;
     },
     [refresh],
   );

@@ -23,8 +23,11 @@ import { COMMON } from '@/copy/common';
 import { LEAVE } from '@/copy/workforce';
 import { useWorkday } from '@/features/attendance/use-workday';
 import { confirmAction } from '@/lib/confirm';
-import { shortDate } from '@/lib/dates';
+import { BackupStatus } from './backup-status';
+import { CoverCard } from './cover-card';
+import { dateRange } from './date-range';
 import { HolidaysCard } from './holidays-card';
+import { useCovering } from './use-cover';
 
 const TONE: Readonly<Record<LeaveRequestRecord['status'], Tone>> = {
   pending: 'review',
@@ -37,8 +40,15 @@ const TONE: Readonly<Record<LeaveRequestRecord['status'], Tone>> = {
 export function LeaveScreen() {
   const theme = useTheme();
   const query = useWorkday();
+  const covering = useCovering();
   return (
-    <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <Screen
+      refreshing={query.isRefetching}
+      onRefresh={() => {
+        void query.refetch();
+        void covering.refetch();
+      }}
+    >
       <View style={styles.head}>
         <Text variant="overline" tone="tertiary">
           {LEAVE.overline}
@@ -56,6 +66,7 @@ export function LeaveScreen() {
       ) : null}
       {query.data ? (
         <>
+          {covering.data && covering.data.length > 0 ? <CoverCard items={covering.data} /> : null}
           <Balances workday={query.data} />
           <Button
             label={LEAVE.request}
@@ -127,6 +138,7 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
     mutationFn: () => unwrap(api.workforce.cancelLeave({ params: { id: request.id } })),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: keys.workday });
+      await client.invalidateQueries({ queryKey: keys.covering });
       toast(LEAVE.cancelled);
     },
     onError: (error) => toast(describeError(error)),
@@ -141,10 +153,6 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
       onConfirm: () => cancel.mutate(),
     });
   };
-  const range =
-    request.fromDate === request.toDate
-      ? shortDate(request.fromDate)
-      : `${shortDate(request.fromDate)} – ${shortDate(request.toDate)}`;
   return (
     <Card style={styles.request}>
       <View style={styles.row}>
@@ -156,7 +164,7 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
         </Text>
       </View>
       <Text variant="body" tone="secondary">
-        {range}
+        {dateRange(request)}
       </Text>
       <View style={styles.pills}>
         <StatusPill size="sm" tone={TONE[request.status]} label={LEAVE.status[request.status]} />
@@ -169,6 +177,7 @@ function RequestCard({ request }: { readonly request: LeaveRequestRecord }) {
           {LEAVE.handedOver(request.tasksHandedOver)}
         </Text>
       ) : null}
+      <BackupStatus request={request} />
       {request.status === 'pending' || request.status === 'approved' ? (
         <Button
           label={LEAVE.cancel}

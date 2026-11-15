@@ -10,6 +10,18 @@ describe('alertRoute', () => {
     expect(alertRoute({ type: 'points' }, 'bonus_proposed')).toBe('/rewards');
   });
 
+  it('opens Leave for cover and leave notices', () => {
+    for (const kind of [
+      'leave_cover_asked',
+      'leave_cover_answered',
+      'leave_cover_dropped',
+      'leave_cover_cancelled',
+      'leave_cancelled',
+    ]) {
+      expect(alertRoute({ type: 'leave', id: 'l1' }, kind)).toBe('/leave');
+    }
+  });
+
   it('opens a set tab for notices with no subject', () => {
     expect(alertRoute({}, 'departure_cover')).toBe('/');
     expect(alertRoute({}, 'payout_details_changed')).toBe('/');

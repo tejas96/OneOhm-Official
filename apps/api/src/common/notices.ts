@@ -80,10 +80,16 @@ export const STAFF_NOTICES = {
     subject: { type: 'leave', id },
     dedupeKey: `leave_requested:${id}`,
   }),
-  leaveDecided: (id: string, approved: boolean, from: string, to: string): Notice => ({
+  leaveDecided: (
+    id: string,
+    approved: boolean,
+    from: string,
+    to: string,
+    note?: string | null,
+  ): Notice => ({
     kind: 'leave_decided',
     title: approved ? 'Leave approved' : 'Leave not approved',
-    body: daySpan(from, to),
+    body: note?.trim() ? `${daySpan(from, to)}: “${note.trim()}”` : daySpan(from, to),
     subject: { type: 'leave', id },
     dedupeKey: `leave_decided:${id}`,
   }),

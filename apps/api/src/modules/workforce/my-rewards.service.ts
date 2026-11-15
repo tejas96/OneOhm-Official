@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { MyRewards } from '@oneohm/api-contracts';
 import {
   pointsEntries,
+  projectActivities,
   projects,
   projectTasks,
   stageRatingPeople,
@@ -79,7 +80,12 @@ export class MyRewardsService {
   /** The latest finished tasks, newest first, for the on-time streak. */
   private async recentFinished(userId: string) {
     const rows = await this.db
-      .select({ onTime: ON_TIME, waitingParty: projectTasks.waitingParty })
+      .select({
+        onTime: ON_TIME,
+        waitingParty: projectTasks.waitingParty,
+        // Came over already late in a leave hand-over: the lateness was not theirs.
+        inheritedLate: sql<boolean>`exists (select 1 from ${projectActivities} where ${projectActivities.taskId} = ${projectTasks.id} and ${projectActivities.kind} = 'task_handover' and ${projectActivities.data}->>'toUserId' = ${userId} and coalesce((${projectActivities.data}->>'lateDays')::int, 0) > 0)`,
+      })
       .from(projectTasks)
       .where(
         and(
@@ -92,7 +98,7 @@ export class MyRewardsService {
       .limit(100);
     return rows.map((row) => ({
       onTime: Boolean(row.onTime),
-      lateOnOthers: !row.onTime && row.waitingParty !== 'internal',
+      lateOnOthers: !row.onTime && (row.waitingParty !== 'internal' || Boolean(row.inheritedLate)),
     }));
   }
 

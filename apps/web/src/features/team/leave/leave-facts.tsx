@@ -37,6 +37,25 @@ export function LeaveKind({ leave }: { readonly leave: LeaveRequestRecord }) {
   );
 }
 
+const COVER_TONE = { asked: 'review', accepted: 'onTrack', declined: 'overdue' } as const;
+
+/** Whether the backup said yes, with their note. */
+function CoverAnswerLine({ leave }: { readonly leave: LeaveRequestRecord }) {
+  const t = useTranslations('team.leave.cover.answer');
+  if (!leave.backup || !leave.coverAnswer) return null;
+  const name = leave.backup.fullName;
+  return (
+    <div className="flex flex-col gap-1 pl-6">
+      <StatusPill
+        size="sm"
+        tone={COVER_TONE[leave.coverAnswer]}
+        label={t(leave.coverAnswer, { name })}
+      />
+      {leave.coverNote && <p className="type-body-sm text-ink-muted">“{leave.coverNote}”</p>}
+    </div>
+  );
+}
+
 /** Who covers, what they were told, and how much work moved to them. */
 export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
   const t = useTranslations('team.leave');
@@ -47,7 +66,12 @@ export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
       <p className="flex items-center gap-2 type-body-sm text-ink">
         <UserRoundCheck aria-hidden className="size-4 shrink-0 text-ink-faint" />
         <span>
-          {t('coveredBy', { name: leave.backup.fullName })}
+          {t(
+            leave.coverAnswer === 'accepted' || !leave.coverAnswer ? 'coveredBy' : 'askedToCover',
+            {
+              name: leave.backup.fullName,
+            },
+          )}
           {leave.status === 'approved' && (
             <span className="text-ink-faint">
               {' · '}
@@ -59,6 +83,7 @@ export function LeaveCover({ leave }: { readonly leave: LeaveRequestRecord }) {
       {leave.handoverNote && (
         <p className="pl-6 type-body-sm text-ink-muted">“{leave.handoverNote}”</p>
       )}
+      <CoverAnswerLine leave={leave} />
     </div>
   );
 }

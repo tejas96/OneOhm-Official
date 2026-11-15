@@ -26,6 +26,19 @@ describe('judgeTask: on time', () => {
     expect(onTime).toMatchObject({ earned: true, reason: 'On time', daysLate: 0 });
   });
 
+  it('does not hold lateness that came with a leave hand-over against the backup', () => {
+    // Handed over 3 days late; the backup finished the same day they got it.
+    const fair = judgeTask(facts({ handedInOn: '2026-11-04', lateBeforeHandover: 3 }));
+    expect(fair.onTime).toMatchObject({
+      earned: true,
+      reason: 'On time (after 3 days late before hand-over)',
+      judgedDue: '2026-11-04',
+    });
+    // Their own slowness after the hand-over still counts.
+    const late = judgeTask(facts({ handedInOn: '2026-11-06', lateBeforeHandover: 3 }));
+    expect(late.onTime).toMatchObject({ earned: false, daysLate: 2 });
+  });
+
   it('adds outside waits to the due date and says so', () => {
     const { onTime } = judgeTask(
       facts({

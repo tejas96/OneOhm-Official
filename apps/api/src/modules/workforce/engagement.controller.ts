@@ -29,6 +29,10 @@ export class EngagementController {
         status: 200,
         body: await this.announcements.mine(actor),
       }),
+      dismissAnnouncement: async ({ params }) => {
+        await this.announcements.dismiss(actor, params.id);
+        return { status: 204, body: undefined };
+      },
       listAnnouncements: async () => {
         post();
         return { status: 200, body: await this.announcements.list() };
