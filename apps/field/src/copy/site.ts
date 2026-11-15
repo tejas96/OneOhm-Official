@@ -46,7 +46,8 @@ export const SITE = {
   pinnedFlagged: 'Roof pinned. The office will check it.',
   pinWaiting: 'Roof pin waiting for signal',
   navigate: 'Navigate',
-  elsewhere: (task: string) => `You are checked in for ${task}. Check out there first.`,
+  elsewhere: (task: string) => `You are still checked in for ${task}.`,
+  checkOutElsewhere: (task: string) => (task ? `Check out of ${task}` : 'Check out of that visit'),
   checkedIn: 'Checked in at the site.',
   checkedOut: 'Checked out of the site.',
   past: 'Earlier visits',
@@ -85,8 +86,8 @@ export const TRAVEL = {
   noVisits: 'No site check-ins on this day.',
   unlocated: (count: number) =>
     count === 1
-      ? '1 visit had no location, so its legs are not paid.'
-      : `${count} visits had no location, so their legs are not paid.`,
+      ? '1 visit had no location, so it is left out of the distance.'
+      : `${count} visits had no location, so they are left out of the distance.`,
   note: 'Note for your manager',
   noteHint: 'For example: two trips to the same site.',
   project: 'Project',
@@ -99,6 +100,7 @@ export const TRAVEL = {
   cancel: 'Cancel claim',
   cancelled: 'Claim cancelled.',
   nothingToClaim: 'Nothing to claim on this day.',
+  endDayToClaim: 'End your day to claim.',
   mine: 'Your claims',
   noClaims: 'Claims you make show here.',
   status: {
@@ -109,5 +111,7 @@ export const TRAVEL = {
     cancelled: 'Cancelled',
   },
   decisionNote: (note: string) => `Note: ${note}`,
+  voided: (reason: string) =>
+    `Cancelled by your approver: ${reason}. You can claim this day again.`,
   distance,
 } as const;

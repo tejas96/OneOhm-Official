@@ -1,6 +1,7 @@
 import {
   contractors,
   type DatabaseExecutor,
+  employeeBankDetails,
   notifyHolders,
   users,
   vendors,
@@ -18,7 +19,7 @@ import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import type { Payee } from './payees';
 
-export type PayeeKind = 'vendor' | 'contractor';
+export type PayeeKind = 'vendor' | 'contractor' | 'employee';
 
 interface BankColumns {
   bankAccountName?: string | null | undefined;
@@ -43,9 +44,25 @@ export const bankAfterSave = (row: BankColumns, changes: BankColumns): BankField
     bankIfsc: changes.bankIfsc !== undefined ? changes.bankIfsc : row.bankIfsc,
   });
 
-/** Both payee tables carry the same bank and hold columns. */
+/** The payee tables carry the same bank and hold columns (an employee's row id is the user id). */
 export const payeeTable = (kind: PayeeKind) =>
-  kind === 'vendor' ? vendors : (contractors as unknown as typeof vendors);
+  kind === 'vendor'
+    ? vendors
+    : kind === 'employee'
+      ? (employeeBankDetails as unknown as typeof vendors)
+      : (contractors as unknown as typeof vendors);
+
+/** A payee's name: vendors and crews carry it; an employee's is their user name. */
+export async function payeeName(
+  db: DatabaseExecutor,
+  kind: PayeeKind,
+  id: string,
+  stored: string | undefined,
+): Promise<string> {
+  if (kind !== 'employee' && stored) return stored;
+  const [person] = await db.select({ name: users.fullName }).from(users).where(eq(users.id, id));
+  return person?.name ?? 'the payee';
+}
 
 /** A moment in plain words, in Indian time, for example "6 Nov, 4:30 pm". */
 export function readableMoment(at: Date): string {
@@ -139,8 +156,9 @@ export async function recordBankChange(
         title: `Bank details changed: ${input.payeeName}`,
         body: `${input.actor.fullName} changed the bank details of ${input.payeeName}. Bank transfers to them wait until ${readableMoment(holdEndsAt(now))}.`,
         dedupeKey: `payee_bank_changed:${input.kind}:${input.id}:${now.getTime()}`,
-        // Opens the vendor or crew page, where the new details and the hold show.
-        subject: { type: input.kind, id: input.id },
+        // Opens the vendor or crew page, where the new details and the hold show. An
+        // employee has no page of their own, so that alert opens Finance by its kind.
+        ...(input.kind === 'employee' ? {} : { subject: { type: input.kind, id: input.id } }),
       },
       input.actor.userId,
     );

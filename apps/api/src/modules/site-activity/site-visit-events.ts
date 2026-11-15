@@ -63,3 +63,28 @@ export async function noteSiteSaved(db: DatabaseExecutor, task: SiteTask, userId
     userId,
   });
 }
+
+/**
+ * A visit ended without a task in hand (a service visit, a task since deleted) or by a
+ * manager, written in the project history when the visit has a project.
+ */
+export async function noteVisitEnded(
+  db: DatabaseExecutor,
+  visit: {
+    readonly visitId: string;
+    readonly projectId: string | null;
+    readonly taskId: string | null;
+    readonly userId: string;
+    readonly message: string;
+  },
+) {
+  if (!visit.projectId) return;
+  await db.insert(projectActivities).values({
+    projectId: visit.projectId,
+    taskId: visit.taskId,
+    kind: 'site_check_out',
+    message: visit.message,
+    userId: visit.userId,
+    data: { visitId: visit.visitId },
+  });
+}

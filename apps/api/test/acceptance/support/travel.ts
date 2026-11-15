@@ -65,6 +65,10 @@ const MIRAJ = { latitude: 16.8222, longitude: 74.6457, accuracyM: 15 };
 export interface ProjectTravel {
   person: OwnPerson;
   day: TravelDay;
+  /** The answer to a claim made while the day was still running (it must be refused). */
+  earlyClaimStatus: number;
+  /** The same day after the person ended it: saved, and open for a claim. */
+  closedDay: TravelDay;
   claim: TravelClaim;
 }
 
@@ -90,6 +94,12 @@ export async function claimProjectTravel(
       await me.post(`/tasks/${visit.task.id}/site/check-out`, { position: visit.at });
     }
     const day = await me.get<TravelDay>(`/me/travel?date=${indiaDate()}`);
+    // A day is claimed once it is over (live review S5): while it runs the claim is refused.
+    const early = await me.raw('POST', '/me/travel-claims', { workDate: indiaDate() });
+    // The day may already be open from the first site check-in; then only End duty is needed.
+    await me.raw('POST', '/attendance/check-in', {});
+    await me.post('/attendance/check-out', {});
+    const closedDay = await me.get<TravelDay>(`/me/travel?date=${indiaDate()}`);
     const made = await me.post<TravelClaim>('/me/travel-claims', {
       workDate: indiaDate(),
       projectId: detail.id,
@@ -99,6 +109,6 @@ export async function claimProjectTravel(
       approve: true,
       note: 'Checked against the visits (test)',
     });
-    return { person, day, claim };
+    return { person, day, earlyClaimStatus: early.status, closedDay, claim };
   });
 }

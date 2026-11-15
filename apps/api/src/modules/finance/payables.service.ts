@@ -6,11 +6,13 @@ import {
   payables,
   postPayableApproved,
   projects,
+  travelClaims,
   users,
 } from '@oneohm/database';
 import { billTds } from '@oneohm/domain';
 import { formatInr, todayIn } from '@oneohm/shared';
 import { and, asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -22,7 +24,7 @@ import { assertTdsHere } from './payable-tds-guard';
 import { presentPayable as present } from './payable-view';
 import { assertPanForTds } from './payee-pan-check';
 
-type StatusFilter = 'open' | 'pending' | 'approved' | 'paid' | 'all';
+type StatusFilter = 'open' | 'pending' | 'approved' | 'paid' | 'cancelled' | 'all';
 
 export interface NewPayable {
   projectId?: string | null | undefined;
@@ -35,6 +37,27 @@ export interface NewPayable {
   /** TDS to hold, in basis points; worked out on the whole amount (no GST known). */
   tdsBp?: number | undefined;
 }
+
+const claimProject = alias(projects, 'claim_project');
+
+/** A bill with its own project and, for a travel claim, the claim's project (a join). */
+const BILL_COLUMNS = {
+  payable: payables,
+  code: projects.code,
+  claimProjectId: travelClaims.projectId,
+  claimCode: claimProject.code,
+  approver: users.fullName,
+};
+
+const projectOf = (row: {
+  payable: typeof payables.$inferSelect;
+  code: string | null;
+  claimProjectId: string | null;
+  claimCode: string | null;
+}) =>
+  row.payable.projectId
+    ? { id: row.payable.projectId, code: row.code }
+    : { id: row.claimProjectId, code: row.claimCode };
 
 /**
  * Bills owed to vendors and contractor crews (PRD 3.11, 3.13). A bill is approved before
@@ -52,9 +75,11 @@ export class PayablesService {
           ? inArray(payables.status, ['pending', 'approved'])
           : eq(payables.status, status);
     const rows = await this.db
-      .select({ payable: payables, code: projects.code, approver: users.fullName })
+      .select(BILL_COLUMNS)
       .from(payables)
       .leftJoin(projects, eq(projects.id, payables.projectId))
+      .leftJoin(travelClaims, eq(travelClaims.payableId, payables.id))
+      .leftJoin(claimProject, eq(claimProject.id, travelClaims.projectId))
       .leftJoin(users, eq(users.id, payables.approvedByUserId))
       .where(filter)
       .orderBy(
@@ -62,19 +87,21 @@ export class PayablesService {
         asc(payables.createdAt),
       );
     const today = todayIn();
-    return rows.map((row) => present(row.payable, row.code, row.approver, today));
+    return rows.map((row) => present(row.payable, projectOf(row), row.approver, today));
   }
 
   async get(id: string): Promise<Payable> {
     const [row] = await this.db
-      .select({ payable: payables, code: projects.code, approver: users.fullName })
+      .select(BILL_COLUMNS)
       .from(payables)
       .leftJoin(projects, eq(projects.id, payables.projectId))
+      .leftJoin(travelClaims, eq(travelClaims.payableId, payables.id))
+      .leftJoin(claimProject, eq(claimProject.id, travelClaims.projectId))
       .leftJoin(users, eq(users.id, payables.approvedByUserId))
       .where(eq(payables.id, id))
       .limit(1);
     if (!row) throw notFound('That bill');
-    return present(row.payable, row.code, row.approver, todayIn());
+    return present(row.payable, projectOf(row), row.approver, todayIn());
   }
 
   async create(actor: Actor, input: NewPayable): Promise<Payable> {
@@ -204,6 +231,7 @@ export class PayablesService {
       .where(eq(payables.id, id))
       .limit(1);
     if (!row) return notFound('That bill');
+    if (row.status === 'cancelled') return conflict('This bill was cancelled.', 'cancelled');
     if (action === 'paid' && row.status === 'pending') {
       return conflict(`This ${formatInr(row.amount)} bill needs approval before it is paid.`);
     }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 import { leaveClashesSchema } from './leave-impact.schema';
+import { locationResultSchema } from './location-result.schema';
 import { staffCalendarSchema } from './staff-calendar.schema';
 
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 09:30.');
@@ -109,6 +110,8 @@ export const attendanceDaySchema = z.object({
     .optional(),
   /** Checked in by the day's first site check-in (PRD 4.3). */
   autoFromSite: z.boolean().optional(),
+  /** The night job ended this day at the person's last activity (live review A1). */
+  autoClosed: z.boolean().optional(),
 });
 export type AttendanceDay = z.infer<typeof attendanceDaySchema>;
 
@@ -173,7 +176,12 @@ export type PointsEntry = z.infer<typeof pointsEntrySchema>;
 
 /** Everything the field app's Today screen shows about the person's own day (PRD 4.1). */
 export const myWorkdaySchema = z.object({
+  /** Today's day, else the open day left from an earlier date (A2: Check out after midnight). */
   today: attendanceDaySchema.nullable(),
+  /** Today in business time: a `today.workDate` before it is a day left open. */
+  businessDate: calendarDateSchema.optional(),
+  /** On the check-in and check-out answers only. */
+  locationResult: locationResultSchema.optional(),
   /** `answered` is false until the person has said yes or no once. */
   consent: z.object({
     given: z.boolean(),
@@ -190,6 +198,8 @@ export const myWorkdaySchema = z.object({
     dayEnd: z.string(),
     captureLocation: z.boolean(),
     retentionDays: z.number().int(),
+    /** How many days back a correction may name (older APIs leave it out). */
+    correctionWindowDays: z.number().int().optional(),
   }),
   balances: z.array(leaveBalanceSchema),
   /** Working days, hours and holidays ahead (older APIs leave it out). */
@@ -210,6 +220,7 @@ export {
   leaveClashesSchema,
   leaveImpactSchema,
 } from './leave-impact.schema';
+export { type LocationResult, locationResultSchema } from './location-result.schema';
 
 export const correctionSchema = z.object({
   id: idSchema,

@@ -11,10 +11,12 @@ import { todayIn } from '@oneohm/shared';
 import { and, eq, isNull, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
+import { currentCalendar } from '../../common/calendar';
 import { conflict, forbidden, notFound } from '../../common/http/errors';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
-import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
+import { finishLinkedVisit, plannedVisitFor } from '../site-activity/planned-visit';
+import { afterSiteCheckIn, afterSiteCheckOut, assertDayNotClosed } from '../workforce/site-hooks';
 import { type Position, trackingFor, usableReading } from '../workforce/tracking';
 import { noteServiceCheckIn, noteServiceCheckOut, tellCustomer } from './service-visit-events';
 import { fieldWorkOf, openVisitOf, placesOf, type ServicePlace, toJob } from './service-visit-read';
@@ -134,7 +136,9 @@ export class ServiceVisitsService {
       );
     const now = new Date();
     const { reading, measured } = await this.measure(actor, job.place, position);
+    const workDate = todayIn(currentCalendar().timeZone, now);
     await this.db.transaction(async (tx) => {
+      await assertDayNotClosed(tx, actor.userId, workDate);
       const [created] = await tx
         .insert(siteVisits)
         .values({
@@ -142,8 +146,9 @@ export class ServiceVisitsService {
           projectId: job.ticket.project?.id ?? null,
           propertyId: job.place?.id ?? null,
           serviceRequestId: id,
+          visitId: await plannedVisitFor(tx, { serviceRequestId: id }, workDate),
           kind: 'service',
-          workDate: todayIn('Asia/Kolkata', now),
+          workDate,
           checkInAt: now,
           checkInLatitude: reading?.position.latitude ?? null,
           checkInLongitude: reading?.position.longitude ?? null,
@@ -218,10 +223,13 @@ export class ServiceVisitsService {
           checkOutAccuracyM: rounded(reading?.position.accuracyM),
           checkOutDistanceM: measured?.distanceM ?? null,
           checkOutFar: measured?.far ?? null,
+          closeKind: 'self',
           updatedAt: now,
         })
         .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)));
       await afterSiteCheckOut(tx, actor.userId, open.id, reading?.position ?? null);
+      // The booked visit for this request is done once the person has left the site (S6).
+      await finishLinkedVisit(tx, open.visitId, actor.userId, job.ticket.categoryLabel);
       await noteServiceCheckOut(tx, job.ticket, {
         visitId: open.id,
         userId: actor.userId,

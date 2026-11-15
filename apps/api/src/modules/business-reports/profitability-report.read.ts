@@ -12,6 +12,7 @@ import {
 } from '@oneohm/database';
 import type { LineCategory } from '@oneohm/domain';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { billStatus } from '../../common/bill-status';
 import { pricedLinesOnly } from '../quotations/quotation-rows';
 import {
   acceptedQuotationId,
@@ -128,7 +129,7 @@ export async function readBills(
           {
             projectId: row.projectId,
             party: row.party,
-            status: row.status,
+            status: billStatus(row.status),
             amountPaise: row.amountPaise,
             fromReceipt: row.receipt !== null,
           },

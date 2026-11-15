@@ -9,12 +9,14 @@ import {
 import * as Haptics from 'expo-haptics';
 import { CircleCheck } from 'lucide-react-native';
 import { createContext, type ReactNode, use, useCallback, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface ToastOptions {
   /** A small illustration in place of the tick, for moments worth marking. */
   readonly illustration?: IllustrationName;
+  /** Makes the toast tappable (a path onward) and keeps it up a little longer. */
+  readonly onPress?: () => void;
 }
 
 type ShowToast = (message: string, options?: ToastOptions) => void;
@@ -27,6 +29,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
   const [illustration, setIllustration] = useState<IllustrationName | null>(null);
+  const [onPress, setOnPress] = useState<(() => void) | null>(null);
   const shown = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -35,6 +38,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
     (next: string, options?: ToastOptions) => {
       setMessage(next);
       setIllustration(options?.illustration ?? null);
+      setOnPress(options?.onPress ? () => options.onPress : null);
       if (Platform.OS !== 'web')
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (timer.current) clearTimeout(timer.current);
@@ -47,13 +51,16 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
           stiffness: 380,
           damping: 32,
         }).start();
-      timer.current = setTimeout(() => {
-        Animated.timing(shown, {
-          toValue: 0,
-          duration: reduced ? 0 : 180,
-          useNativeDriver: Platform.OS !== 'web',
-        }).start(() => setMessage(null));
-      }, 2400);
+      timer.current = setTimeout(
+        () => {
+          Animated.timing(shown, {
+            toValue: 0,
+            duration: reduced ? 0 : 180,
+            useNativeDriver: Platform.OS !== 'web',
+          }).start(() => setMessage(null));
+        },
+        options?.onPress ? 6000 : 2400,
+      );
     },
     [shown, reduced],
   );
@@ -63,7 +70,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
       {children}
       {message ? (
         <Animated.View
-          pointerEvents="none"
+          pointerEvents={onPress ? 'box-none' : 'none'}
           accessibilityLiveRegion="polite"
           style={[
             styles.wrap,
@@ -76,7 +83,12 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
             },
           ]}
         >
-          <View style={[styles.toast, { backgroundColor: theme.colors.textPrimary }]}>
+          <Pressable
+            accessibilityRole={onPress ? 'button' : undefined}
+            disabled={!onPress}
+            onPress={onPress ?? undefined}
+            style={[styles.toast, { backgroundColor: theme.colors.textPrimary }]}
+          >
             {illustration && canShowIllustrations() ? (
               // The toast is inverted (dark on a light theme), so are its colours.
               <Illustration
@@ -91,7 +103,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
             <Text variant="bodySm" color={theme.colors.canvas}>
               {message}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
       ) : null}
     </ToastContext>

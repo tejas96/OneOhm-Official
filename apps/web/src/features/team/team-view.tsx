@@ -34,7 +34,11 @@ const TABS = [
     requires: ['people.manage', 'projects.manage', 'finance.approve_payments'],
     Panel: BonusesTab,
   },
-  { value: 'travel', requires: ['leave.approve', 'finance.view'], Panel: TravelTab },
+  {
+    value: 'travel',
+    requires: ['leave.approve', 'finance.view', 'people.manage'],
+    Panel: TravelTab,
+  },
   {
     value: 'resellers',
     requires: ['people.view', 'finance.view', 'settings.manage'],

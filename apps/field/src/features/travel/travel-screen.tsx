@@ -26,6 +26,7 @@ import { TrackingStatus } from '@/features/site/tracking-status';
 import { addDays, businessToday, shortDate } from '@/lib/dates';
 import { ClaimCard, stateOf } from './claim-card';
 import { ClaimProject, defaultProject } from './claim-project';
+import { claimBoxState } from './claim-state';
 import { RouteCard } from './route-card';
 import { useClaimActions, useMyClaims, useTravelDay } from './use-travel';
 
@@ -129,11 +130,13 @@ function ClaimBox({ day }: { readonly day: TravelDay }) {
     );
   }
   if (!day.claimable) {
-    return day.visits.length > 0 ? (
+    const state = claimBoxState(day);
+    if (state === 'none') return null;
+    return (
       <Text variant="bodySm" tone="secondary">
-        {TRAVEL.nothingToClaim}
+        {state === 'end_day' ? TRAVEL.endDayToClaim : TRAVEL.nothingToClaim}
       </Text>
-    ) : null;
+    );
   }
   return (
     <View style={styles.form}>

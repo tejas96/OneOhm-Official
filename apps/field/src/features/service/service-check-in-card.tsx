@@ -1,12 +1,12 @@
 import type { ServiceVisit } from '@oneohm/api-contracts';
-import { Button, Card, describeError, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
-import { router } from 'expo-router';
+import { Button, Card, describeError, Text, useTheme } from '@oneohm/mobile-ui';
 import { LogIn, LogOut } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
 import { SERVICE } from '@/copy/service';
 import { SITE } from '@/copy/site';
 import { ConsentPrompt } from '@/features/attendance/consent-prompt';
+import { OpenVisitNotice } from '@/features/site/open-visit-notice';
 import { TrackingStatus } from '@/features/site/tracking-status';
 import type { Missed } from '@/features/site/use-task-site';
 import { VisitLine } from '@/features/site/visit-line';
@@ -16,15 +16,6 @@ function missedNote(missed: Missed): string | null {
   if (missed === 'denied') return SITE.denied;
   if (missed === 'nofix') return SITE.noFix;
   return null;
-}
-
-/** Leaves for the visit the person is still checked in on elsewhere. */
-function openElsewhere(visit: NonNullable<ServiceVisit['openVisit']>) {
-  if (visit.serviceRequestId) {
-    router.push({ pathname: '/service/[id]', params: { id: visit.serviceRequestId } });
-  } else if (visit.taskId) {
-    router.push({ pathname: '/tasks/[id]', params: { id: visit.taskId } });
-  }
 }
 
 /** Check out when here; check in when checked in nowhere (with what it tells the customer). */
@@ -111,11 +102,7 @@ export function ServiceCheckInCard({ visit }: { readonly visit: ServiceVisit }) 
       {visit.canWork && askConsent ? <ConsentPrompt days={visit.tracking.retentionDays} /> : null}
       {here ? <VisitLine visit={here} /> : null}
       {visit.canWork && elsewhere ? (
-        <PressableScale accessibilityRole="button" onPress={() => openElsewhere(elsewhere)}>
-          <Text variant="bodySm" tone="accent">
-            {SITE.elsewhere(elsewhere.taskTitle ?? '')}
-          </Text>
-        </PressableScale>
+        <OpenVisitNotice visit={elsewhere} tracking={visit.tracking} />
       ) : null}
       {visit.canWork ? (
         <CheckInButtons

@@ -1,24 +1,23 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { SiteVisit, TaskSite } from '@oneohm/api-contracts';
-import { properties, siteVisits } from '@oneohm/database';
+import { type DatabaseExecutor, properties, siteVisits } from '@oneohm/database';
 import { type GeoPoint, locationChange, siteDistance } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, isNull, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
-import { conflict, forbidden, invalid } from '../../common/http/errors';
+import { currentCalendar } from '../../common/calendar';
+import { conflict, forbidden, invalid, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
+import { afterSiteCheckIn, assertDayNotClosed } from '../workforce/site-hooks';
 import { type Position, trackingFor, usableReading } from '../workforce/tracking';
+import { plannedVisitFor } from './planned-visit';
 import { SitePinService } from './site-pin.service';
-import { loadSiteTask, type SiteTask } from './site-task';
-import { noteCheckIn, noteCheckOut, noteSiteSaved } from './site-visit-events';
+import { loadSiteTask, readSiteTask, type SiteTask } from './site-task';
+import { accuracy, endOwnVisit, oneVisitRecord, sitePointOf } from './site-visit-end';
+import { noteCheckIn, noteSiteSaved } from './site-visit-events';
+import { forceCloseVisit } from './site-visit-force-close';
 import { checkInPoint, readVisits, visitRecords } from './site-visit-read';
-
-const accuracy = (position: Position) =>
-  position.accuracyM === null || position.accuracyM === undefined
-    ? null
-    : Math.round(position.accuracyM);
 
 /**
  * Checking in and out at the customer's site on a task (PRD 4.2, 4.3). The phone's
@@ -40,81 +39,86 @@ export class SiteVisitsService {
   async checkIn(actor: Actor, taskId: string, position?: Position | null): Promise<TaskSite> {
     const task = await this.ownSiteTask(actor, taskId);
     if (task.status === 'completed') throw conflict('This task is already complete.', 'completed');
-    const [open] = await visitRecords(
-      this.db,
-      and(eq(siteVisits.userId, actor.userId), isNull(siteVisits.checkOutAt)) as SQL,
-    );
-    if (open)
-      throw conflict(
-        `You are still checked in for ${open.taskTitle ?? 'another visit'}. Check out there first.`,
-        'open_visit',
-      );
     const now = new Date();
     const reading = await usableReading(this.db, actor.userId, position, now);
     const radius = reading?.policy.travel.farFromSiteM ?? 0;
     const measured = reading ? siteDistance(reading.position, task.site, radius) : null;
-    const [created] = await this.db
-      .insert(siteVisits)
-      .values({
+    // One transaction (live review S7): a failure part way leaves no half-saved visit, and a
+    // retry starts clean instead of finding an open visit with no history or attendance.
+    await this.db.transaction(async (tx) => {
+      const [open] = await visitRecords(
+        tx,
+        and(eq(siteVisits.userId, actor.userId), isNull(siteVisits.checkOutAt)) as SQL,
+      );
+      if (open)
+        throw conflict(
+          `You are still checked in for ${open.taskTitle ?? 'another visit'}. Check out there first.`,
+          'open_visit',
+        );
+      const workDate = todayIn(currentCalendar().timeZone, now);
+      await assertDayNotClosed(tx, actor.userId, workDate);
+      const [created] = await tx
+        .insert(siteVisits)
+        .values({
+          userId: actor.userId,
+          taskId: task.id,
+          projectId: task.projectId,
+          propertyId: task.propertyId,
+          visitId: await plannedVisitFor(tx, { taskId: task.id }, workDate),
+          kind: task.kind ?? 'installation',
+          workDate,
+          checkInAt: now,
+          checkInLatitude: reading?.position.latitude ?? null,
+          checkInLongitude: reading?.position.longitude ?? null,
+          checkInAccuracyM: reading ? accuracy(reading.position) : null,
+          checkInDistanceM: measured?.distanceM ?? null,
+          checkInFar: measured?.far ?? null,
+        })
+        .onConflictDoNothing()
+        .returning({ id: siteVisits.id });
+      if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
+      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now);
+      await noteCheckIn(tx, task, {
+        visitId: created.id,
         userId: actor.userId,
-        taskId: task.id,
-        projectId: task.projectId,
-        propertyId: task.propertyId,
-        kind: task.kind ?? 'installation',
-        workDate: todayIn('Asia/Kolkata', now),
-        checkInAt: now,
-        checkInLatitude: reading?.position.latitude ?? null,
-        checkInLongitude: reading?.position.longitude ?? null,
-        checkInAccuracyM: reading ? accuracy(reading.position) : null,
-        checkInDistanceM: measured?.distanceM ?? null,
-        checkInFar: measured?.far ?? null,
-      })
-      .onConflictDoNothing()
-      .returning({ id: siteVisits.id });
-    if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
-    await afterSiteCheckIn(this.db, actor, created.id, reading?.position ?? null, now);
-    await noteCheckIn(this.db, task, {
-      visitId: created.id,
-      userId: actor.userId,
-      fullName: actor.fullName,
-      distanceM: measured?.distanceM ?? null,
-      far: measured?.far ?? null,
-      located: reading !== null,
+        fullName: actor.fullName,
+        distanceM: measured?.distanceM ?? null,
+        far: measured?.far ?? null,
+        located: reading !== null,
+      });
     });
     return this.present(actor, task);
   }
 
   async checkOut(actor: Actor, taskId: string, position?: Position | null): Promise<TaskSite> {
     const task = await this.ownSiteTask(actor, taskId);
-    const open = await this.openVisitOn(actor, task.id);
-    if (!open) throw conflict('You are not checked in at this site.', 'not_checked_in');
-    const now = new Date();
-    const reading = await usableReading(this.db, actor.userId, position, now);
-    const radius = reading?.policy.travel.farFromSiteM ?? 0;
-    const measured = reading ? siteDistance(reading.position, task.site, radius) : null;
-    await this.db
-      .update(siteVisits)
-      .set({
-        checkOutAt: now,
-        checkOutLatitude: reading?.position.latitude ?? null,
-        checkOutLongitude: reading?.position.longitude ?? null,
-        checkOutAccuracyM: reading ? accuracy(reading.position) : null,
-        checkOutDistanceM: measured?.distanceM ?? null,
-        checkOutFar: measured?.far ?? null,
-        updatedAt: now,
-      })
-      .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)));
-    await afterSiteCheckOut(this.db, actor.userId, open.id, reading?.position ?? null);
-    await noteCheckOut(this.db, task, {
-      visitId: open.id,
-      userId: actor.userId,
-      fullName: actor.fullName,
-      distanceM: measured?.distanceM ?? null,
-      far: measured?.far ?? null,
-      located: reading !== null,
-      minutes: Math.max(0, Math.round((now.getTime() - open.checkInAt.getTime()) / 60_000)),
-    });
+    await endOwnVisit(this.db, actor, { task, site: task.site, position });
     return this.present(actor, task);
+  }
+
+  /**
+   * The person ends their own open visit by its id (live review S1). It needs no task: it
+   * works after the task was handed over, deleted or finished, or the request resolved, so
+   * "You are still checked in for X" always has a way out.
+   */
+  async checkOutVisit(
+    actor: Actor,
+    visitId: string,
+    position?: Position | null,
+  ): Promise<SiteVisit> {
+    const [row] = await this.db.select().from(siteVisits).where(eq(siteVisits.id, visitId));
+    // Someone else's visit looks like no visit at all.
+    if (!row || row.userId !== actor.userId) throw notFound('That visit');
+    if (row.checkOutAt) throw conflict('You are not checked in at this site.', 'not_checked_in');
+    const task = row.taskId ? await readSiteTask(this.db, row.taskId) : null;
+    const site = task ? task.site : await sitePointOf(this.db, row.propertyId);
+    await endOwnVisit(this.db, actor, { visitId, task, site, position });
+    return oneVisitRecord(this.db, visitId);
+  }
+
+  /** A manager ends someone's stuck visit and says why (live review S1); see `forceCloseVisit`. */
+  forceClose(actor: Actor, visitId: string, reason: string): Promise<SiteVisit> {
+    return forceCloseVisit(this.db, actor, visitId, reason);
   }
 
   /**
@@ -178,8 +182,8 @@ export class SiteVisitsService {
     return task;
   }
 
-  private async openVisitOn(actor: Actor, taskId: string) {
-    const [open] = await this.db
+  private async openVisitOn(actor: Actor, taskId: string, db: DatabaseExecutor = this.db) {
+    const [open] = await db
       .select()
       .from(siteVisits)
       .where(

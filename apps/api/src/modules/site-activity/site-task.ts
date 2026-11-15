@@ -36,6 +36,16 @@ export async function loadSiteTask(
   actor: Actor,
   taskId: string,
 ): Promise<SiteTask> {
+  const found = await readSiteTask(db, taskId);
+  if (!canViewTask(actor, { assigneeUserId: found.assigneeUserId })) throw forbidden();
+  return found;
+}
+
+/**
+ * The same, with no access check: for ending a visit the person already holds, which
+ * must work after the task was handed over (live review S1).
+ */
+export async function readSiteTask(db: DatabaseExecutor, taskId: string): Promise<SiteTask> {
   const [row] = await db
     .select({
       task: projectTasks,
@@ -56,7 +66,6 @@ export async function loadSiteTask(
     .where(eq(projectTasks.id, taskId))
     .limit(1);
   if (!row) throw notFound('That task');
-  if (!canViewTask(actor, row.task)) throw forbidden();
   return {
     id: row.task.id,
     title: row.task.title,

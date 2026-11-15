@@ -6,7 +6,7 @@ import { recordAudit } from '../../common/audit';
 import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { forbidden, notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
-import { type PayeeKind, payeeTable } from './bank-hold';
+import { type PayeeKind, payeeName, payeeTable } from './bank-hold';
 
 /** Lets bank transfers go before the 24-hour hold ends (a second approver only). */
 @Injectable()
@@ -19,6 +19,7 @@ export class BankHoldService {
     await this.db.transaction(async (tx) => {
       const [payee] = await tx.select().from(table).where(eq(table.id, id)).for('update');
       if (!payee) throw notFound('That payee');
+      const name = await payeeName(tx, kind, id, payee.name);
       const problem = releaseProblem({
         held: isHeld(
           { heldUntil: payee.bankHoldUntil, releasedAt: payee.bankHoldReleasedAt },
@@ -34,7 +35,7 @@ export class BankHoldService {
         .set({ bankHoldReleasedAt: new Date(), bankHoldReleasedByUserId: actor.userId })
         .where(eq(table.id, id));
       await recordAudit(tx, actor.userId, 'payee.bank_hold_released', kind, id, {
-        payee: payee.name,
+        payee: name,
         changedByUserId: payee.bankChangedByUserId,
       });
       const [changer] = payee.bankChangedByUserId
@@ -48,10 +49,10 @@ export class BankHoldService {
         'finance.approve_payments',
         {
           kind: 'payee_bank_hold_released',
-          title: `Bank hold released: ${payee.name}`,
-          body: `${actor.fullName} released the hold on the new bank details of ${payee.name}${changer ? ` (changed by ${changer.name})` : ''}. Bank transfers to them can go now.`,
+          title: `Bank hold released: ${name}`,
+          body: `${actor.fullName} released the hold on the new bank details of ${name}${changer ? ` (changed by ${changer.name})` : ''}. Bank transfers to them can go now.`,
           dedupeKey: `payee_bank_hold_released:${kind}:${id}:${Date.now()}`,
-          subject: { type: kind, id },
+          ...(kind === 'employee' ? {} : { subject: { type: kind, id } }),
         },
         actor.userId,
       );

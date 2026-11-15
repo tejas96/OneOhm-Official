@@ -1,5 +1,6 @@
 import {
   Button,
+  ChoiceChips,
   describeError,
   Field,
   fieldErrorsOf,
@@ -10,13 +11,14 @@ import {
   useTheme,
 } from '@oneohm/mobile-ui';
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { api } from '@/api/api';
 import { useToast } from '@/components/toast';
 import { COMMON } from '@/copy/common';
 import { CORRECTION } from '@/copy/workforce';
 import { businessToday } from '@/lib/dates';
+import { choiceFor, correctionDay, type DayChoice } from './correction-date';
 
 const TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
@@ -49,16 +51,31 @@ function timeProblems(
 export function CorrectionSheet({
   open,
   onClose,
+  initialDate = null,
+  windowDays = 31,
 }: {
   readonly open: boolean;
   readonly onClose: () => void;
+  /** A day to open on, e.g. one the night job ended; today when none. */
+  readonly initialDate?: string | null;
+  readonly windowDays?: number;
 }) {
   const toast = useToast();
   const theme = useTheme();
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [reason, setReason] = useState('');
-  const date = businessToday();
+  const today = businessToday();
+  const [choice, setChoice] = useState<DayChoice>(choiceFor(initialDate, today));
+  const [typed, setTyped] = useState(initialDate ?? '');
+  useEffect(() => {
+    if (!open) return;
+    setChoice(choiceFor(initialDate, businessToday()));
+    setTyped(initialDate ?? '');
+  }, [open, initialDate]);
+  const picked = correctionDay(choice, typed, today, windowDays).date;
+  const date = picked ?? today;
+  const dayError = picked ? undefined : CORRECTION.badDay(windowDays);
   const inAt = instantOf(checkIn, date);
   const outAt = instantOf(checkOut, date);
   const { inError, outError } = timeProblems(inAt, outAt, new Date().toISOString());
@@ -84,7 +101,13 @@ export function CorrectionSheet({
   });
   // A failure shows once, in the sheet: the sentence below, field messages in place.
   const errors = send.error ? fieldErrorsOf(send.error) : {};
-  const ready = Boolean(inAt || outAt) && !inError && !outError && reason.trim().length >= 5;
+  const sendError = send.error
+    ? (send.error as { code?: string }).code === 'pending_exists'
+      ? CORRECTION.pendingExists
+      : describeError(send.error)
+    : null;
+  const ready =
+    Boolean(picked) && Boolean(inAt || outAt) && !inError && !outError && reason.trim().length >= 5;
   return (
     <Sheet
       open={open}
@@ -105,6 +128,31 @@ export function CorrectionSheet({
       }
     >
       <View style={styles.form}>
+        <Field label={CORRECTION.day} error={dayError ?? errors.workDate}>
+          <ChoiceChips
+            kind="segmented"
+            label={CORRECTION.day}
+            value={choice}
+            onChange={setChoice}
+            choices={[
+              { value: 'today', label: CORRECTION.today },
+              { value: 'yesterday', label: CORRECTION.yesterday },
+              { value: 'other', label: CORRECTION.otherDay },
+            ]}
+          />
+        </Field>
+        {choice === 'other' ? (
+          <Field label={CORRECTION.otherDay} hint={CORRECTION.dayHint(windowDays)}>
+            <Input
+              value={typed}
+              onChangeText={setTyped}
+              maxLength={10}
+              invalid={Boolean(dayError)}
+              accessibilityLabel={CORRECTION.otherDay}
+              mono
+            />
+          </Field>
+        ) : null}
         <View style={styles.row}>
           <View style={styles.half}>
             <Field
@@ -150,9 +198,9 @@ export function CorrectionSheet({
             invalid={Boolean(errors.reason)}
           />
         </Field>
-        {send.error ? (
+        {sendError ? (
           <Text variant="bodySm" color={theme.status.overdue.fg} accessibilityRole="alert">
-            {describeError(send.error)}
+            {sendError}
           </Text>
         ) : null}
       </View>

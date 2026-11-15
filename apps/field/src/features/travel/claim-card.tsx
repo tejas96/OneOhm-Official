@@ -45,6 +45,11 @@ export function ClaimCard({ claim }: { readonly claim: TravelClaim }) {
       <View style={styles.status}>
         <StatusPill size="sm" tone={TONE[state]} label={TRAVEL.status[state]} />
       </View>
+      {claim.voidReason ? (
+        <Text variant="bodySm" tone="secondary">
+          {TRAVEL.voided(claim.voidReason)}
+        </Text>
+      ) : null}
       {claim.decisionNote ? (
         <Text variant="bodySm" tone="secondary">
           {TRAVEL.decisionNote(claim.decisionNote)}

@@ -8,6 +8,7 @@ import {
   users,
 } from '@oneohm/database';
 import { desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { billStatus } from '../../common/bill-status';
 
 type BonusRow = typeof projectBonuses.$inferSelect;
 
@@ -58,7 +59,7 @@ export async function readBonuses(db: DatabaseExecutor, where?: SQL): Promise<Bo
         user: { id: row.share.userId, fullName: row.fullName },
         shares: row.share.shares,
         amountPaise: row.share.amountPaise,
-        payableStatus: row.payableStatus ?? null,
+        payableStatus: row.payableStatus ? billStatus(row.payableStatus) : null,
         paidOn: row.paidOn ?? null,
       })),
   }));
@@ -98,7 +99,7 @@ export async function bonusesOf(db: DatabaseExecutor, userId: string) {
     .filter(({ bonus }) => bonus.status === 'approved' || bonus.status === 'pending')
     .map(({ bonus, share, code, payableStatus, paidOn }) =>
       present(bonus, share, code, {
-        payableStatus: payableStatus ?? null,
+        payableStatus: payableStatus ? billStatus(payableStatus) : null,
         paidOn: paidOn ?? null,
       }),
     );

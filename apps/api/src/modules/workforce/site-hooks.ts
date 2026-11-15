@@ -1,9 +1,12 @@
 import { attendanceDays, type DatabaseExecutor } from '@oneohm/database';
-import { isLateCheckIn } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
+import { and, eq } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
+import { currentCalendar } from '../../common/calendar';
+import { conflict } from '../../common/http/errors';
 import { saveConditions } from './device-conditions';
-import { indiaTime, loadPolicy } from './policy';
+import { isLateAt } from './late-rule';
+import { loadPolicy } from './policy';
 import type { Position } from './tracking';
 
 /**
@@ -25,6 +28,25 @@ export async function afterSiteCheckIn(
     position: kept,
   });
   await autoCheckIn(db, actor, kept, at);
+}
+
+/**
+ * A person who ended their day cannot check in at a site that same day (live review S1):
+ * the visit would run after the day's end and be closed or missed by the night job. They
+ * resume duty first. The day row is locked so an End duty cannot slip in between.
+ */
+export async function assertDayNotClosed(
+  db: DatabaseExecutor,
+  userId: string,
+  workDate: string,
+): Promise<void> {
+  const [day] = await db
+    .select({ checkOutAt: attendanceDays.checkOutAt })
+    .from(attendanceDays)
+    .where(and(eq(attendanceDays.userId, userId), eq(attendanceDays.workDate, workDate)))
+    .for('update')
+    .limit(1);
+  if (day?.checkOutAt) throw conflict('You ended your day. Resume duty to check in.', 'day_closed');
 }
 
 export async function afterSiteCheckOut(
@@ -50,13 +72,9 @@ async function autoCheckIn(
     .insert(attendanceDays)
     .values({
       userId: actor.userId,
-      workDate: todayIn('Asia/Kolkata', at),
+      workDate: todayIn(currentCalendar().timeZone, at),
       checkInAt: at,
-      late: isLateCheckIn(
-        indiaTime(at),
-        policy.attendance.dayStart,
-        policy.attendance.graceMinutes,
-      ),
+      late: await isLateAt(db, policy, at),
       checkInLatitude: kept?.latitude ?? null,
       checkInLongitude: kept?.longitude ?? null,
       checkInAccuracyM: kept?.accuracyM ? Math.round(kept.accuracyM) : null,

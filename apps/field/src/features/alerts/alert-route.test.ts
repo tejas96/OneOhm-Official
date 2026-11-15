@@ -22,6 +22,12 @@ describe('alertRoute', () => {
     }
   });
 
+  it('opens Travel when the travel was decided, voided or paid', () => {
+    for (const kind of ['travel_claim_decided', 'travel_claim_voided', 'travel_claim_paid']) {
+      expect(alertRoute({ type: 'travel_claim', id: 'c1' }, kind)).toBe('/travel');
+    }
+  });
+
   it('opens a set tab for notices with no subject', () => {
     expect(alertRoute({}, 'departure_cover')).toBe('/');
     expect(alertRoute({}, 'payout_details_changed')).toBe('/');

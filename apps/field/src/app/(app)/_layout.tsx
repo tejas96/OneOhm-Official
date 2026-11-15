@@ -1,6 +1,7 @@
 import { useTheme } from '@oneohm/mobile-ui';
 import { Stack } from 'expo-router';
 import { PushAlerts } from '@/features/alerts/push-alerts';
+import { TapQueueSync } from '@/features/attendance/tap-sync';
 import { UploadQueueProvider } from '@/features/uploads/upload-queue';
 
 /**
@@ -12,6 +13,7 @@ export default function SignedInLayout() {
   return (
     <UploadQueueProvider>
       <PushAlerts />
+      <TapQueueSync />
       <Stack
         screenOptions={{
           headerShown: false,

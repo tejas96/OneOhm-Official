@@ -123,7 +123,8 @@
         "pending": "Waiting approval",
         "approved": "Approved",
         "paid": "Paid",
-        "all": "All"
+        "all": "All",
+        "cancelled": "Cancelled"
       },
       "add": "Add bill",
       "loading": "Loading bills",
@@ -180,7 +181,8 @@
         "toPay": "To pay",
         "sending": "On its way",
         "cameBack": "Came back",
-        "failed": "Failed"
+        "failed": "Failed",
+        "cancelled": "Cancelled"
       },
       "approve": "Approve",
       "pay": "Pay",

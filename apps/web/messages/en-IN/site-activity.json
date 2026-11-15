@@ -71,7 +71,8 @@
         "approved": "Approved, not paid",
         "paid": "Paid",
         "rejected": "Declined",
-        "cancelled": "Cancelled"
+        "cancelled": "Withdrawn",
+        "voided": "Voided"
       },
       "columns": {
         "person": "Person",
@@ -91,7 +92,16 @@
       "declined": "Claim declined",
       "dialogTitle": "{name}: travel on {day}",
       "approveNote": "Approving adds a payable of {amount} to the employee in Finance, and books it as travel cost.",
-      "totalLine": "{distance} at {rate}/km = {amount}"
+      "totalLine": "{distance} at {rate}/km = {amount}",
+      "void": {
+        "title": "Void this approved claim?",
+        "description": "{amount} is cancelled in Finance and its ledger entry is reversed (the entry stays, a reversing one is added). It cannot be voided once paid. The person is told and can claim the day again.",
+        "reason": "Why",
+        "reasonHint": "For example: claimed for the wrong day. The person sees this.",
+        "cancel": "Keep it",
+        "submit": "Void claim",
+        "done": "Claim voided"
+      }
     },
     "sheet": {
       "title": "Travel on {day}",
@@ -111,7 +121,9 @@
       "decline": "Decline",
       "ownClaim": "Someone else approves your own claim.",
       "close": "Close",
-      "loading": "Loading the day"
+      "loading": "Loading the day",
+      "void": "Void claim",
+      "voided": "Voided: {reason}"
     },
     "settings": {
       "title": "Site check-ins and travel",

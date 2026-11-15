@@ -1,7 +1,7 @@
 /** Expected business errors: a safe sentence for people, mapped to an HTTP status. */
 export class AppError extends Error {
   constructor(
-    readonly status: 400 | 401 | 403 | 404 | 409 | 429,
+    readonly status: 400 | 401 | 403 | 404 | 409 | 422 | 429,
     message: string,
     readonly code: string,
     readonly fieldErrors?: Record<string, string>,
@@ -22,3 +22,5 @@ export const conflict = (message: string, code = 'conflict', details?: Record<st
 export const invalid = (message: string, fieldErrors?: Record<string, string>) =>
   new AppError(400, message, 'invalid', fieldErrors);
 export const tooMany = (message: string) => new AppError(429, message, 'too_many');
+/** The request was understood but its content cannot be accepted, like a tap that is too old. */
+export const unprocessable = (message: string, code: string) => new AppError(422, message, code);

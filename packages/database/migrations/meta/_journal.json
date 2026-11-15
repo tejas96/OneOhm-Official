@@ -701,6 +701,34 @@
       "when": 1794756795316,
       "tag": "0099_announcement_dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1794762901637,
+      "tag": "0100_attendance_auto_close",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794763766336,
+      "tag": "0101_site_visit_close_and_travel_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1794764818134,
+      "tag": "0102_travel_void_and_employee_payee",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1794766363575,
+      "tag": "0103_tap_received_and_travel_source",
+      "breakpoints": true
     }
   ]
 }

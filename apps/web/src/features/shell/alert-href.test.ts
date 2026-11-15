@@ -9,6 +9,10 @@ describe('hrefOf', () => {
     expect(hrefOf({ subject: null, kind: 'departure_cover' })).toBe('/today');
     expect(hrefOf({ subject: null, kind: 'payout_details_changed' })).toBe('/finance?tab=payouts');
     expect(hrefOf({ subject: null, kind: 'payout_sync_failing' })).toBe('/finance?tab=payables');
+    expect(hrefOf({ subject: null, kind: 'attendance_auto_closed' })).toBe('/team?tab=attendance');
+    // An employee's bank details have no vendor or crew page: Finance → Payables opens.
+    expect(hrefOf({ subject: null, kind: 'payee_bank_changed' })).toBe('/finance?tab=payables');
+    expect(hrefOf({ subject: null, kind: 'job_failed' })).toBe('/settings?tab=automation');
     expect(hrefOf({ subject: null, kind: 'something_else' })).toBe('/');
   });
 
@@ -23,6 +27,11 @@ describe('hrefOf', () => {
     ['correction', 'correction_requested', '/team?tab=attendance&correction=x1'],
     ['points', 'bonus_proposed', '/team?tab=bonuses&bonus=x1'],
     ['travel_claim', 'travel_claim', '/team?tab=travel&claim=x1'],
+    ['travel_claim', 'travel_claim_paid', '/team?tab=travel&claim=x1'],
+    ['travel_claim', 'travel_claim_voided', '/team?tab=travel&claim=x1'],
+    // Finance is told a travel claim was approved: the alert opens that bill.
+    ['payable', 'travel_payable_ready', '/finance?tab=payables&bill=x1'],
+    ['payable', 'travel_payable_voided', '/finance?tab=payables&bill=x1'],
     ['vendor_advance', 'vendor_advance', '/finance?tab=advances&filter=pending&advance=x1'],
     ['payable', 'payout_processed', '/finance?tab=payables&bill=x1'],
     ['payable', 'payout_failed', '/finance?tab=payables&bill=x1'],

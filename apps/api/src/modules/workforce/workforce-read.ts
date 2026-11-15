@@ -13,7 +13,7 @@ import {
   workLocations,
 } from '@oneohm/database';
 import type { WorkforcePolicy } from '@oneohm/domain';
-import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { conditionsFor } from './device-conditions';
 
 type LeaveRow = typeof leaveRequests.$inferSelect;
@@ -129,6 +129,31 @@ export async function readPoints(
   }));
 }
 
+type DayRow = typeof attendanceDays.$inferSelect;
+
+function presentDay(
+  day: DayRow,
+  place: string | null,
+  device: AttendanceDay['device'],
+): AttendanceDay {
+  return {
+    workDate: day.workDate,
+    checkInAt: day.checkInAt.toISOString(),
+    checkOutAt: day.checkOutAt?.toISOString() ?? null,
+    late: day.late,
+    // An unsure reading (accuracy too poor to tell) has no verdict, so it shows no place.
+    place:
+      place && day.checkInDistanceM !== null && day.checkInInside !== null
+        ? { name: place, inside: day.checkInInside, distanceM: day.checkInDistanceM }
+        : null,
+    checkOutInside: day.checkOutInside,
+    corrected: day.correctedAt !== null,
+    device,
+    autoFromSite: day.autoFromSite,
+    autoClosed: day.autoClosedAt !== null,
+  };
+}
+
 /** Attendance for some people on one day, by person. */
 export async function readDays(
   db: DatabaseExecutor,
@@ -150,22 +175,26 @@ export async function readDays(
     'check_in',
   );
   return new Map(
-    rows.map(({ day, place }) => [
-      day.userId,
-      {
-        workDate: day.workDate,
-        checkInAt: day.checkInAt.toISOString(),
-        checkOutAt: day.checkOutAt?.toISOString() ?? null,
-        late: day.late,
-        place:
-          place && day.checkInDistanceM !== null && day.checkInInside !== null
-            ? { name: place, inside: day.checkInInside, distanceM: day.checkInDistanceM }
-            : null,
-        checkOutInside: day.checkOutInside,
-        corrected: day.correctedAt !== null,
-        device: devices.get(day.id) ?? null,
-        autoFromSite: day.autoFromSite,
-      },
-    ]),
+    rows.map(({ day, place }) => [day.userId, presentDay(day, place, devices.get(day.id) ?? null)]),
   );
+}
+
+/**
+ * The person's latest day that was started and not ended, whatever its date (live review
+ * A2): a night shift, or a check-out forgotten until after midnight, is still theirs to end.
+ */
+export async function readOpenDay(
+  db: DatabaseExecutor,
+  userId: string,
+): Promise<AttendanceDay | null> {
+  const [row] = await db
+    .select({ day: attendanceDays, place: workLocations.name })
+    .from(attendanceDays)
+    .leftJoin(workLocations, eq(workLocations.id, attendanceDays.checkInLocationId))
+    .where(and(eq(attendanceDays.userId, userId), isNull(attendanceDays.checkOutAt)))
+    .orderBy(desc(attendanceDays.workDate))
+    .limit(1);
+  if (!row) return null;
+  const devices = await conditionsFor(db, [row.day.id], 'check_in');
+  return presentDay(row.day, row.place, devices.get(row.day.id) ?? null);
 }

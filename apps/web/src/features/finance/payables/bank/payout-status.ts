@@ -10,7 +10,8 @@ export type BillStatus =
   | 'partPaid'
   | 'paid'
   | 'cameBack'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export const BILL_TONE: Readonly<Record<BillStatus, PillTone>> = {
   pending: 'review',
@@ -20,6 +21,7 @@ export const BILL_TONE: Readonly<Record<BillStatus, PillTone>> = {
   paid: 'done',
   cameBack: 'atRisk',
   failed: 'overdue',
+  cancelled: 'neutral',
 };
 
 /** True while a bank transfer is with the bank (ours or theirs): pay must stay locked. */
@@ -32,6 +34,8 @@ export function billStatus(
   latest?: BankPayout | null,
 ) {
   if (bill.status === 'pending') return 'pending';
+  // A voided travel claim's bill: nothing is owed.
+  if (bill.status === 'cancelled') return 'cancelled';
   if (bill.status === 'paid') return 'paid';
   // A practice transfer closed when transfers went live: no bank was involved, so it says nothing.
   if (latest?.failureCode === 'practice_closed') return bill.paidPaise > 0 ? 'partPaid' : 'toPay';

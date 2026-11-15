@@ -114,6 +114,12 @@ describe('Costing', () => {
     travel = await claimProjectTravel(admin, sale.project, 'Costing Traveller (test)');
     expect(travel.day.visits.length).toBe(2);
     expect(travel.day.distanceM).toBeGreaterThan(5_000);
+    // Still running: not claimable, and a claim is a 409. Ended: saved, and claimable.
+    expect(travel.day.closed).toBe(false);
+    expect(travel.earlyClaimStatus).toBe(409);
+    expect(travel.closedDay.closed).toBe(true);
+    expect(travel.closedDay.claimable).toBe(true);
+    expect(travel.closedDay.distanceM).toBe(travel.day.distanceM);
     expect(travel.claim.status).toBe('approved');
     expect(travel.claim.project?.id).toBe(sale.project.id);
     expect(travel.claim.amountPaise).toBe(

@@ -10,6 +10,9 @@ export type AlertRoute =
 const KIND_ROUTE: Readonly<Record<string, string>> = {
   departure_cover: '/',
   payout_details_changed: '/',
+  payee_bank_changed: '/',
+  // Today shows the day the night job ended, with its times and how to correct them.
+  attendance_auto_closed: '/',
 };
 
 /** The screen an alert is about: a task, a service visit, leave, or Today for the rest. */
@@ -24,6 +27,8 @@ export function alertRoute(
   // A customer wrote on WhatsApp, or asked for a person: open that chat.
   if (type === 'chat' && id) return { pathname: '/chats/[id]', params: { id } };
   if (type === 'leave') return '/leave';
+  // Travel claim decided, voided or paid: the Travel screen has the day and where it stands.
+  if (type === 'travel_claim') return '/travel';
   // Points, recognition and bonuses (PRD 4.7).
   if (type === 'points') return '/rewards';
   return (kind && KIND_ROUTE[kind]) ?? '/';

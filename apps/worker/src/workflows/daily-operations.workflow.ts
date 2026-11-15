@@ -1,11 +1,14 @@
 import { proxyActivities } from '@temporalio/workflow';
 import type { Activities } from '../activities';
+import { failureText } from './failure-text';
 
 const {
   queuePaymentReminders,
   queueEscalations,
   queueApprovalEscalations,
   openMaintenanceVisits,
+  closeForgottenDays,
+  alertFailedJob,
   queueCashReminders,
   clearOldLocations,
   clearOldJobRuns,
@@ -14,11 +17,20 @@ const {
   retry: { initialInterval: '1 minute', maximumAttempts: 5 },
 });
 
-/** Runs one job; a job that still fails after its retries never stops the ones after it. */
-async function settle(job: () => Promise<number>): Promise<number | null> {
+/**
+ * Runs one job; a job that still fails after its retries never stops the ones after it,
+ * and tells the admin desk (live review A11). The alert is best effort: if it cannot be
+ * sent either, the failed run in the job log is still there.
+ */
+async function settle(name: string, job: () => Promise<number>): Promise<number | null> {
   try {
     return await job();
-  } catch {
+  } catch (error) {
+    try {
+      await alertFailedJob(name, failureText(error));
+    } catch {
+      // The failed run is already kept in the job log.
+    }
     return null;
   }
 }
@@ -26,18 +38,20 @@ async function settle(job: () => Promise<number>): Promise<number | null> {
 /**
  * Every morning: payment reminders to customers, late or stuck tasks and long-waiting
  * approvals pushed up, AMC visits due within a week opened as service requests, and
- * cash held too long. Last, location readings past the retention period lose their
- * coordinates (PRD 4.3) and old job runs are cleared. Staff digests and the owner's
+ * cash held too long. Days nobody ended are ended at the last activity and the person
+ * and their approvers told (live review A1). Last, location readings past the retention
+ * period lose their coordinates (PRD 4.3) and old job runs are cleared. Staff digests and the owner's
  * summary go out at their own times (timedRemindersWorkflow). Each run is kept.
  */
 export async function dailyOperationsWorkflow(): Promise<Record<string, number | null>> {
   return {
-    reminders: await settle(queuePaymentReminders),
-    escalations: await settle(queueEscalations),
-    approvalEscalations: await settle(queueApprovalEscalations),
-    visits: await settle(openMaintenanceVisits),
-    cashHolders: await settle(queueCashReminders),
-    locationsCleared: await settle(clearOldLocations),
-    runsCleared: await settle(clearOldJobRuns),
+    daysClosed: await settle('attendance_autoclose', closeForgottenDays),
+    reminders: await settle('payment_reminders', queuePaymentReminders),
+    escalations: await settle('escalations', queueEscalations),
+    approvalEscalations: await settle('approval_escalations', queueApprovalEscalations),
+    visits: await settle('maintenance_visits', openMaintenanceVisits),
+    cashHolders: await settle('cash_reminders', queueCashReminders),
+    locationsCleared: await settle('location_cleanup', clearOldLocations),
+    runsCleared: await settle('job_runs_cleanup', clearOldJobRuns),
   };
 }

@@ -50,6 +50,9 @@ export const siteVisitSchema = z.object({
   /** Why there is no distance: no location shared, or the site has no saved location. */
   locationNote: z.enum(['not_shared', 'site_unknown']).nullable(),
   locationCleared: z.boolean(),
+  /** How it ended when not by the person's own check-out: a manager, or the end of their day. */
+  closeKind: z.enum(['self', 'manager', 'day_end']).nullable().optional(),
+  closeNote: z.string().nullable().optional(),
 });
 export type SiteVisit = z.infer<typeof siteVisitSchema>;
 
@@ -105,6 +108,13 @@ export const travelClaimSchema = z.object({
   decidedBy: userRef.nullable(),
   decidedAt: instantSchema.nullable(),
   decisionNote: z.string().nullable(),
+  /** Voided after approval (status is then cancelled): when, and the reason given. */
+  voidedAt: instantSchema.nullable(),
+  voidReason: z.string().nullable(),
+  /** Whether the person looking may decide it (manager, HR or finance; never the claimant). */
+  canDecide: z.boolean(),
+  /** Whether the person looking may void it once approved (finance or HR only). */
+  canVoid: z.boolean(),
   createdAt: instantSchema,
 });
 export type TravelClaim = z.infer<typeof travelClaimSchema>;
@@ -120,8 +130,10 @@ export const travelDaySchema = z.object({
   /** Visits with no location: their legs are shown but not paid. */
   unlocated: z.number().int(),
   claim: travelClaimSchema.nullable(),
-  /** A claim can be made: the day is over or today, has distance, and has no live claim. */
+  /** A claim can be made: the day is closed, has distance, and has no live claim. */
   claimable: z.boolean(),
+  /** The person's day has ended (End duty, the night job or a correction): only then is it claimed. */
+  closed: z.boolean(),
 });
 export type TravelDay = z.infer<typeof travelDaySchema>;
 

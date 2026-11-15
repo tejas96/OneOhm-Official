@@ -75,7 +75,7 @@ export const financeContract = c.router({
     method: 'GET',
     path: '/finance/payables',
     query: z.object({
-      status: z.enum(['open', 'pending', 'approved', 'paid', 'all']).default('open'),
+      status: z.enum(['open', 'pending', 'approved', 'paid', 'cancelled', 'all']).default('open'),
     }),
     responses: { 200: z.array(payableSchema) },
   },

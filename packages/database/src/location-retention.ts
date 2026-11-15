@@ -1,9 +1,11 @@
 import { locationCutoff, type WorkforcePolicy, withPolicyDefaults } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { businessTimeZone } from './business-calendar';
 import type { DatabaseExecutor } from './client';
-import { documentGeotags, siteVisits } from './schema/site-activity.schema';
+import { documentGeotags, siteVisits, travelDays } from './schema/site-activity.schema';
 import { attendanceDays, workforcePolicy } from './schema/workforce.schema';
+import { takeTravelSnapshot } from './travel-snapshot';
 
 export interface ClearedLocations {
   readonly attendanceDays: number;
@@ -22,6 +24,35 @@ async function retentionDays(db: DatabaseExecutor): Promise<number> {
 }
 
 /**
+ * Safety net (live review S4): a closed day about to lose its coordinates that has no
+ * saved travel yet gets it saved first, so the day is never worth less than it was. Day
+ * close saves it already; this covers days closed before that existed.
+ */
+async function saveUnsavedTravel(db: DatabaseExecutor, before: string, now: Date): Promise<number> {
+  const unsaved = await db
+    .select({ userId: attendanceDays.userId, workDate: attendanceDays.workDate })
+    .from(attendanceDays)
+    .leftJoin(
+      travelDays,
+      and(
+        eq(travelDays.userId, attendanceDays.userId),
+        eq(travelDays.workDate, attendanceDays.workDate),
+      ),
+    )
+    .where(
+      and(
+        lt(attendanceDays.workDate, before),
+        isNull(attendanceDays.locationClearedAt),
+        isNotNull(attendanceDays.checkOutAt),
+        isNull(travelDays.id),
+      ),
+    );
+  for (const day of unsaved)
+    await takeTravelSnapshot(db, day.userId, day.workDate, now, 'backfill');
+  return unsaved.length;
+}
+
+/**
  * Clears raw coordinates older than the retention period in Settings (PRD 4.3,
  * privacy): day check-ins, site check-ins and photo geotags. Times, distances and the
  * far-from-site flags stay, so attendance, visits and travel claims still read right.
@@ -33,6 +64,7 @@ export async function clearExpiredLocations(
 ): Promise<ClearedLocations> {
   const before = locationCutoff(today, await retentionDays(db));
   const now = new Date();
+  await saveUnsavedTravel(db, before, now);
   const days = await db
     .update(attendanceDays)
     .set({
@@ -67,7 +99,7 @@ export async function clearExpiredLocations(
       and(
         isNull(documentGeotags.locationClearedAt),
         lt(
-          sql`(coalesce(${documentGeotags.capturedAt}, ${documentGeotags.createdAt}) at time zone 'Asia/Kolkata')::date`,
+          sql`(coalesce(${documentGeotags.capturedAt}, ${documentGeotags.createdAt}) at time zone ${businessTimeZone()})::date`,
           before,
         ),
       ),

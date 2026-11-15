@@ -1,4 +1,5 @@
-import { type Database, recordJobRun } from '@oneohm/database';
+import { alertJobFailed, type Database, recordJobRun } from '@oneohm/database';
+import { todayIn } from '@oneohm/shared';
 import { jobRunners, type WorkerJob } from './job-runners';
 import type { PayLinkSettings } from './payment-reminders';
 import { runTimedReminders } from './timed-reminders';
@@ -17,9 +18,14 @@ export function dailyActivities(db: Database, timeZone: string, payLinks: PayLin
     queueApprovalEscalations: run('approval_escalations'),
     openMaintenanceVisits: run('maintenance_visits'),
     queueCashReminders: run('cash_reminders'),
+    /** Days nobody ended are ended at the last activity, and the person and approvers told. */
+    closeForgottenDays: run('attendance_autoclose'),
     clearOldLocations: run('location_cleanup'),
     clearOldJobRuns: run('job_runs_cleanup'),
     queueSlaAlerts: run('service_sla'),
+    /** A job that failed after every retry tells the admin desk (once a day per job). */
+    alertFailedJob: (job: string, error: string) =>
+      alertJobFailed(db, job, error, todayIn(timeZone)),
     /** Staff digests, follow-up reminders and the owner summary, at their set times. */
     runTimedReminders: () => runTimedReminders(db, timeZone, jobs),
   };

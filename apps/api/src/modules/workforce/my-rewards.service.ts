@@ -11,14 +11,16 @@ import {
 import { achievementsFrom, onTimeStreak } from '@oneohm/domain';
 import { monthOf } from '@oneohm/shared';
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { currentCalendar } from '../../common/calendar';
 import { DATABASE, type Database } from '../../config/core.module';
 import { bonusesOf } from './bonus-read';
 import { earned, fairPointsSince, monthTotals } from './monthly-review.read';
 import { lifetimePoints } from './points-total';
 import { readPoints } from './workforce-read';
 
-/** Finished on or before its due date, in India time. */
-const ON_TIME = sql<boolean>`(${projectTasks.completedAt} at time zone 'Asia/Kolkata')::date <= ${projectTasks.dueDate}`;
+/** Finished on or before its due date, in business time. */
+const onTime = () =>
+  sql<boolean>`(${projectTasks.completedAt} at time zone ${currentCalendar().timeZone})::date <= ${projectTasks.dueDate}`;
 
 /**
  * The person's own engagement (PRD 4.7): points history, achievements from verified
@@ -81,7 +83,7 @@ export class MyRewardsService {
   private async recentFinished(userId: string) {
     const rows = await this.db
       .select({
-        onTime: ON_TIME,
+        onTime: onTime(),
         waitingParty: projectTasks.waitingParty,
         // Came over already late in a leave hand-over: the lateness was not theirs.
         inheritedLate: sql<boolean>`exists (select 1 from ${projectActivities} where ${projectActivities.taskId} = ${projectTasks.id} and ${projectActivities.kind} = 'task_handover' and ${projectActivities.data}->>'toUserId' = ${userId} and coalesce((${projectActivities.data}->>'lateDays')::int, 0) > 0)`,
@@ -105,7 +107,7 @@ export class MyRewardsService {
   private async counts(userId: string) {
     const [tasks, stars] = await Promise.all([
       this.db
-        .select({ onTime: sql<number>`count(*) filter (where ${ON_TIME})::int` })
+        .select({ onTime: sql<number>`count(*) filter (where ${onTime()})::int` })
         .from(projectTasks)
         .where(
           and(

@@ -11,6 +11,7 @@ import {
 } from '@oneohm/database';
 import { daysBetween, todayIn } from '@oneohm/shared';
 import { inArray, sql } from 'drizzle-orm';
+import { currentCalendar } from '../../common/calendar';
 import { daySpan } from '../../common/notices';
 import { followAssignees, lockVisitTargets } from '../visits/follow-assignee';
 import { nameOf } from './leave-cover';
@@ -70,7 +71,7 @@ export async function handOverWork(
   work: AffectedWork,
 ): Promise<number> {
   const now = new Date();
-  const today = todayIn('Asia/Kolkata', now);
+  const today = todayIn(currentCalendar().timeZone, now);
   const [person, backup] = await Promise.all([nameOf(tx, leave.userId), nameOf(tx, backupId)]);
   if (work.tasks.length > 0) {
     await lockVisitTargets(

@@ -12,7 +12,7 @@ import { ClaimSheet } from './claim-sheet';
 import { ClaimsTable } from './claims-table';
 import { type ClaimState, claimState, useTravelClaims } from './use-travel';
 
-const STATES = ['all', 'pending', 'approved', 'paid', 'rejected', 'cancelled'] as const;
+const STATES = ['all', 'pending', 'approved', 'paid', 'rejected', 'voided', 'cancelled'] as const;
 type StateFilter = (typeof STATES)[number];
 
 /**
@@ -22,7 +22,7 @@ type StateFilter = (typeof STATES)[number];
 export function TravelTab() {
   const t = useTranslations('siteActivity.claims');
   const format = useFormatter();
-  const allowed = useCan('leave.approve', 'finance.view');
+  const allowed = useCan('leave.approve', 'finance.view', 'people.manage');
   const query = useTravelClaims(allowed);
   const [state, setState] = useState<StateFilter>('all');
   const [person, setPerson] = useState('all');

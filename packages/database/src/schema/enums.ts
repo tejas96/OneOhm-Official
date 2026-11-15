@@ -79,7 +79,13 @@ export const paymentMethodEnum = pgEnum('payment_method', [
   'bank_disbursement',
 ]);
 export const payablePartyEnum = pgEnum('payable_party', ['vendor', 'contractor', 'employee']);
-export const payableStatusEnum = pgEnum('payable_status', ['pending', 'approved', 'paid']);
+export const payableStatusEnum = pgEnum('payable_status', [
+  'pending',
+  'approved',
+  'paid',
+  /** Withdrawn before any money moved (a voided travel claim); its ledger entry is reversed. */
+  'cancelled',
+]);
 export const documentSourceEnum = pgEnum('document_source', ['upload', 'system', 'report']);
 export const outboxChannelEnum = pgEnum('outbox_channel', [
   'whatsapp',

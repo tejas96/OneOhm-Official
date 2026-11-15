@@ -29,7 +29,7 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
       if (kind.startsWith('bonus_')) return '/team?tab=bonuses';
       return '/team?tab=points';
     },
-    // The claim's own sheet shows it whatever its state.
+    // The claim's own sheet shows it whatever its state: asked, decided, voided or paid.
     travel_claim: ({ id }) => `/team?tab=travel&claim=${id}`,
     service_request: ({ id }) => `/service?tab=requests&view=all&request=${id}`,
     purchase_request: ({ id }) => `/inventory?tab=requests&status=all&request=${id}`,
@@ -52,8 +52,15 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
 const KIND_HREF: Readonly<Record<string, string>> = {
   departure_cover: '/today',
   payout_details_changed: '/finance?tab=payouts',
+  // An employee's bank details changed or were released (vendors and crews name their own page).
+  payee_bank_changed: '/finance?tab=payables',
+  payee_bank_hold_released: '/finance?tab=payables',
   // The RazorpayX check is failing; no single bill is to blame.
   payout_sync_failing: '/finance?tab=payables',
+  // The night job ended a day nobody ended; the Attendance list is where the times are fixed.
+  attendance_auto_closed: '/team?tab=attendance',
+  // A scheduled job failed after its retries; the job log is in Settings, under Automation.
+  job_failed: '/settings?tab=automation',
 };
 
 /**

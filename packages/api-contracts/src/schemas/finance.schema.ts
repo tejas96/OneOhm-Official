@@ -75,7 +75,7 @@ export const payableSchema = z.object({
   billNumber: z.string().nullable(),
   amountPaise: paiseSchema,
   dueOn: calendarDateSchema,
-  status: z.enum(['pending', 'approved', 'paid']),
+  status: z.enum(['pending', 'approved', 'paid', 'cancelled']),
   overdue: z.boolean(),
   approvedBy: userRefSchema.nullable(),
   approvedAt: instantSchema.nullable(),

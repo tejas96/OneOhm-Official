@@ -1,4 +1,5 @@
 import type { WorkforcePolicy } from '@oneohm/domain';
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   doublePrecision,
@@ -83,6 +84,16 @@ export const attendanceDays = pgTable(
     checkOutInside: boolean('check_out_inside'),
     /** Set when an approved correction changed the times. */
     correctedAt: instant('corrected_at'),
+    /**
+     * Set when the night job ended a day the person forgot to end, at their last known
+     * activity (live review A1). The person and their approvers are told; a correction fixes it.
+     */
+    autoClosedAt: instant('auto_closed_at'),
+    /** When the server received the check-in and check-out taps (the tap times may be older). */
+    checkInReceivedAt: instant('check_in_received_at'),
+    checkOutReceivedAt: instant('check_out_received_at'),
+    /** A tap 30 minutes to 12 hours old was accepted: the manager is told, to review it. */
+    tapDelayed: boolean('tap_delayed').notNull().default(false),
     /** Checked in by the day's first site check-in, under the policy (PRD 4.3). */
     autoFromSite: boolean('auto_from_site').notNull().default(false),
     locationClearedAt: instant('location_cleared_at'),
@@ -115,7 +126,13 @@ export const attendanceCorrections = pgTable(
     decisionNote: text('decision_note'),
     createdAt: createdAt(),
   },
-  (table) => [index('attendance_corrections_status_idx').on(table.status)],
+  (table) => [
+    index('attendance_corrections_status_idx').on(table.status),
+    // One open question per person per day (live review A6); a second is refused.
+    uniqueIndex('attendance_corrections_pending_unique')
+      .on(table.userId, table.workDate)
+      .where(sql`${table.status} = 'pending'`),
+  ],
 );
 
 /** Leave applications with the handover they come with (PRD 4.6, Flow E). */

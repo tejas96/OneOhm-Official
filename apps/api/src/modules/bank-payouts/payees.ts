@@ -1,18 +1,21 @@
 import {
   contractors,
   type DatabaseExecutor,
+  employeeBankDetails,
   goodsReceipts,
+  payables,
   purchaseOrders,
+  users,
   vendors,
   workOrderAdvances,
   workOrders,
 } from '@oneohm/database';
-import { eq, or } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { BankDetails } from './payout-gateway';
 
 /** Who a bill is paid to, and their bank details if OneOhm has them. */
 export interface Payee {
-  readonly kind: 'vendor' | 'contractor';
+  readonly kind: 'vendor' | 'contractor' | 'employee';
   readonly id: string;
   readonly name: string;
   readonly phone: string | null;
@@ -49,8 +52,9 @@ const bankOf = (row: {
 
 /**
  * The payee behind a bill: the vendor of the goods receipt that raised it, or the
- * contractor of the work order (its bill, retention or advance). Bills typed in by hand
- * name nobody, so they are paid outside OneOhm.
+ * contractor of the work order (its bill, retention or advance), or the employee a bill
+ * of theirs (an approved travel claim) is owed to. Bills typed in by hand name nobody, so
+ * they are paid outside OneOhm.
  */
 export async function payeeOf(db: DatabaseExecutor, payableId: string): Promise<Payee | null> {
   const [vendor] = await db
@@ -86,7 +90,7 @@ export async function payeeOf(db: DatabaseExecutor, payableId: string): Promise<
         .where(eq(workOrderAdvances.payableId, payableId))
         .limit(1);
   const found = crew ?? advance;
-  if (!found) return null;
+  if (!found) return employeePayee(db, payableId);
   return {
     kind: 'contractor',
     id: found.contractor.id,
@@ -94,5 +98,26 @@ export async function payeeOf(db: DatabaseExecutor, payableId: string): Promise<
     phone: found.contractor.phoneE164,
     bank: bankOf(found.contractor),
     hold: holdOf(found.contractor),
+  };
+}
+
+/** An employee bill: its person, with the bank account saved for them (maybe none yet). */
+async function employeePayee(db: DatabaseExecutor, payableId: string): Promise<Payee | null> {
+  const [row] = await db
+    .select({ person: users, bank: employeeBankDetails })
+    .from(payables)
+    .innerJoin(users, eq(users.id, payables.partyUserId))
+    .leftJoin(employeeBankDetails, eq(employeeBankDetails.id, users.id))
+    .where(and(eq(payables.id, payableId), eq(payables.party, 'employee')))
+    .limit(1);
+  if (!row) return null;
+  const bank = row.bank;
+  return {
+    kind: 'employee',
+    id: row.person.id,
+    name: row.person.fullName,
+    phone: row.person.phoneE164,
+    bank: bank ? bankOf(bank) : {},
+    hold: bank ? holdOf(bank) : { heldUntil: null, releasedAt: null, changedByUserId: null },
   };
 }

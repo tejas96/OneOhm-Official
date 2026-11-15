@@ -1,12 +1,12 @@
 import type { ProjectTask, TaskSite } from '@oneohm/api-contracts';
-import { Button, Card, describeError, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
-import { router } from 'expo-router';
+import { Button, Card, describeError, Text, useTheme } from '@oneohm/mobile-ui';
 import { LogIn, LogOut, MapPinned } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useToast } from '@/components/toast';
 import { SITE } from '@/copy/site';
 import { ConsentPrompt } from '@/features/attendance/consent-prompt';
 import { buttonState } from './button-state';
+import { OpenVisitNotice } from './open-visit-notice';
 import { SitePlaceActions } from './site-place-actions';
 import { TrackingStatus } from './tracking-status';
 import { mapsEnabled, usePinRoof } from './use-pin-roof';
@@ -75,25 +75,7 @@ function SiteCard({ task, site }: { readonly task: ProjectTask; readonly site: T
         />
       ) : null}
       <SitePlaceActions site={site} pin={pin} />
-      {elsewhere ? (
-        <PressableScale
-          accessibilityRole="button"
-          onPress={() => {
-            if (elsewhere.serviceRequestId) {
-              router.push({
-                pathname: '/service/[id]',
-                params: { id: elsewhere.serviceRequestId },
-              });
-            } else if (elsewhere.taskId) {
-              router.push({ pathname: '/tasks/[id]', params: { id: elsewhere.taskId } });
-            }
-          }}
-        >
-          <Text variant="bodySm" tone="accent">
-            {SITE.elsewhere(elsewhere.taskTitle ?? '')}
-          </Text>
-        </PressableScale>
-      ) : null}
+      {elsewhere ? <OpenVisitNotice visit={elsewhere} tracking={site.tracking} /> : null}
       {here ? (
         <Button
           {...buttonState(checkOut.isPending, checkOut.label, SITE.checkOut)}

@@ -20,7 +20,7 @@ type Problem = NonNullable<PayoutOptions['problem']>;
 export const PROBLEM_TEXT: Readonly<Record<Problem, string>> = {
   not_enabled: 'Bank transfers through RazorpayX are not switched on.',
   not_approved: 'Approve the bill before paying it.',
-  no_payee: 'This bill is not linked to a vendor or crew, so pay it outside OneOhm.',
+  no_payee: 'This bill is not linked to a vendor, crew or employee, so pay it outside OneOhm.',
   no_bank_details: 'Add the payee’s bank account name, number and IFSC first.',
   bad_bank_details: 'The payee’s IFSC or account number does not look right.',
   nothing_due: 'Nothing is left to pay on this bill.',

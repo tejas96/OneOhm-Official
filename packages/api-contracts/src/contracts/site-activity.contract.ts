@@ -38,6 +38,22 @@ export const siteActivityContract = c.router({
     body: reading,
     responses: { 200: taskSiteSchema },
   },
+  /** The person ends their own open visit by its id: works after a hand-over or a deleted task. */
+  closeSiteVisit: {
+    method: 'POST',
+    path: '/site-visits/:id/check-out',
+    pathParams: idParams,
+    body: reading,
+    responses: { 200: siteVisitSchema },
+  },
+  /** A manager ends someone's stuck visit, with the reason on record. */
+  forceCloseSiteVisit: {
+    method: 'POST',
+    path: '/site-visits/:id/force-close',
+    pathParams: idParams,
+    body: z.object({ reason: z.string().trim().min(3, 'Say why it is being closed.').max(500) }),
+    responses: { 200: siteVisitSchema },
+  },
   saveSiteLocation: {
     method: 'POST',
     path: '/tasks/:id/site/location',
@@ -99,6 +115,15 @@ export const siteActivityContract = c.router({
     path: '/travel-claims/:id/day',
     pathParams: idParams,
     responses: { 200: travelDaySchema },
+  },
+  voidTravelClaim: {
+    method: 'POST',
+    path: '/travel-claims/:id/void',
+    pathParams: idParams,
+    body: z.object({ reason: noteSchema.min(2, 'Say why.') }),
+    responses: { 200: travelClaimSchema },
+    summary:
+      'Voids an approved claim that is not paid: cancels the bill and reverses its ledger entry.',
   },
   decideTravelClaim: {
     method: 'POST',

@@ -107,14 +107,15 @@ describe('travel and reimbursement', () => {
     expect(travelDistanceM(legs)).toBe(1042);
   });
 
-  it('shows a leg without a location but pays nothing for it', () => {
+  it('skips a stop without a location and still pays the legs around it (S2)', () => {
     const legs = travelLegs([
       stop('a', 'visit', '2026-11-02T06:00:00Z', site),
       stop('b', 'visit', '2026-11-02T07:00:00Z', null),
       stop('c', 'visit', '2026-11-02T08:00:00Z', halfKmEast),
     ]);
-    expect(legs.map((leg) => leg.distanceM)).toEqual([null, null]);
-    expect(travelDistanceM(legs)).toBe(0);
+    expect(legs.map((leg) => [leg.fromId, leg.toId])).toEqual([['a', 'c']]);
+    expect(legs.map((leg) => leg.distanceM)).toEqual([500]);
+    expect(travelDistanceM(legs)).toBe(500);
   });
 
   it('pays the rate per km on the metres, to the nearest paisa', () => {

@@ -1,0 +1,3 @@
+ALTER TABLE "attendance_days" ADD COLUMN "auto_closed_at" timestamp with time zone;--> statement-breakpoint
+UPDATE "attendance_corrections" SET "status" = 'rejected', "decided_at" = now(), "decision_note" = 'Replaced by a newer request for the same day.' WHERE "status" = 'pending' AND "id" NOT IN (SELECT DISTINCT ON ("user_id", "work_date") "id" FROM "attendance_corrections" WHERE "status" = 'pending' ORDER BY "user_id", "work_date", "created_at" DESC);--> statement-breakpoint
+CREATE UNIQUE INDEX "attendance_corrections_pending_unique" ON "attendance_corrections" USING btree ("user_id","work_date") WHERE "attendance_corrections"."status" = 'pending';

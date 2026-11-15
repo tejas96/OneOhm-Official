@@ -42,6 +42,20 @@ describe('who may decide an approval (PRD 7.1, 7.3)', () => {
     expect(mayDecide(review, { userId: 'meena', capabilities: [] }, policy)).toBe(true);
   });
 
+  it('a travel claim goes to the listed people only, never a plain leave approver (S10)', () => {
+    const claim = item({ kind: 'travel_claim', reviewerIds: ['boss', 'hr1'] });
+    expect(mayDecide(claim, { userId: 'boss', capabilities: [] }, policy)).toBe(true);
+    expect(mayDecide(claim, { userId: 'hr1', capabilities: ['people.manage'] }, policy)).toBe(true);
+    expect(mayDecide(claim, manager, policy)).toBe(false);
+    expect(
+      mayDecide(
+        { ...claim, requestedByUserId: 'boss' },
+        { userId: 'boss', capabilities: [] },
+        policy,
+      ),
+    ).toBe(false);
+  });
+
   it('small bonuses go to managers, large ones to payment approvers', () => {
     expect(mayDecide(item({ kind: 'bonus', amountPaise: 400_000 }), manager, policy)).toBe(true);
     expect(mayDecide(item({ kind: 'bonus', amountPaise: 600_000 }), manager, policy)).toBe(false);

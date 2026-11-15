@@ -27,6 +27,9 @@ export const payoutSucceeded = (status: PayoutStatus): boolean => status === 'pr
 export const payoutFailed = (status: PayoutStatus): boolean =>
   status === 'reversed' || status === 'failed' || status === 'cancelled' || status === 'rejected';
 
+/** The statuses that mean the money will not arrive. */
+export const PAYOUT_FAILED_STATUSES = ['reversed', 'failed', 'cancelled', 'rejected'] as const;
+
 export const payoutOpen = (status: PayoutStatus): boolean =>
   !payoutSucceeded(status) && !payoutFailed(status);
 

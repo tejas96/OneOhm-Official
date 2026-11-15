@@ -1,69 +1,35 @@
 import type { TravelClaim, TravelDay } from '@oneohm/api-contracts';
 import {
-  attendanceDays,
   type DatabaseExecutor,
+  managerIdsOf,
   payables,
   projects,
+  readTravelFacts,
+  readTravelSnapshot,
   siteVisits,
   travelClaims,
   users,
-  workLocations,
 } from '@oneohm/database';
 import {
-  type GeoPoint,
-  nearestLocation,
-  orderStops,
-  type TravelStop,
+  claimBlocker,
+  isHrOrFinance,
+  summariseTravel,
   travelAmountPaise,
-  travelDistanceM,
-  travelLegs,
+  travelDeciderProblem,
   type WorkforcePolicy,
 } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { activeLocations } from '../workforce/policy';
-import { checkInPoint, visitRecords } from './site-visit-read';
-
-const point = (latitude: number | null, longitude: number | null): GeoPoint | null =>
-  latitude !== null && longitude !== null ? { latitude, longitude } : null;
-
-/** The day's check-in and check-out at an authorised place: where travel starts and ends. */
-async function dayEnds(db: DatabaseExecutor, userId: string, date: string): Promise<TravelStop[]> {
-  const [day] = await db
-    .select({ day: attendanceDays, place: workLocations.name })
-    .from(attendanceDays)
-    .leftJoin(workLocations, eq(workLocations.id, attendanceDays.checkInLocationId))
-    .where(and(eq(attendanceDays.userId, userId), eq(attendanceDays.workDate, date)))
-    .limit(1);
-  if (!day) return [];
-  const stops: TravelStop[] = [];
-  const start = point(day.day.checkInLatitude, day.day.checkInLongitude);
-  if (start && day.day.checkInInside && day.place)
-    stops.push({
-      id: 'start',
-      kind: 'start',
-      label: day.place,
-      at: day.day.checkInAt.toISOString(),
-      point: start,
-    });
-  const end = point(day.day.checkOutLatitude, day.day.checkOutLongitude);
-  if (end && day.day.checkOutAt && day.day.checkOutInside) {
-    const place = nearestLocation(end, await activeLocations(db));
-    stops.push({
-      id: 'end',
-      kind: 'end',
-      label: place?.location.name ?? day.place ?? 'Check-out',
-      at: day.day.checkOutAt.toISOString(),
-      point: end,
-    });
-  }
-  return stops;
-}
+import { currentCalendar } from '../../common/calendar';
+import { visitRecords } from './site-visit-read';
 
 /**
  * One person's travel on a day (PRD 4.3): the office check-in, each site check-in in
- * order, and the office check-out, with straight-line distances between them.
+ * order, and the office check-out, with straight-line distances between them. A closed
+ * day reads from what was saved when it closed (distance, legs and the km rate of that
+ * day, live review S3, S4); a running day, or one closed before saving existed, is
+ * measured from the live rows at today's rate and can not be claimed until it closes.
  */
 export async function travelDay(
   db: DatabaseExecutor,
@@ -72,52 +38,90 @@ export async function travelDay(
   policy: WorkforcePolicy,
 ): Promise<TravelDay> {
   const where = and(eq(siteVisits.userId, userId), eq(siteVisits.workDate, date)) as SQL;
-  const [visits, rows, ends, claims] = await Promise.all([
+  const [visits, facts, saved, claims] = await Promise.all([
     visitRecords(db, where),
-    db.select().from(siteVisits).where(where),
-    dayEnds(db, userId, date),
+    readTravelFacts(db, userId, date),
+    readTravelSnapshot(db, userId, date),
     readClaims(db, and(eq(travelClaims.userId, userId), eq(travelClaims.workDate, date)) as SQL),
   ]);
   const ordered = [...visits].sort((left, right) => left.checkInAt.localeCompare(right.checkInAt));
-  const stops = orderStops([
-    ...ends,
-    ...ordered.map((visit): TravelStop => {
-      const row = rows.find((entry) => entry.id === visit.id);
-      return {
-        id: visit.id,
-        kind: 'visit',
-        label: [visit.projectCode, visit.taskTitle].filter(Boolean).join(' · ') || 'Site visit',
-        at: visit.checkInAt,
-        point: row ? checkInPoint(row) : null,
-      };
-    }),
-  ]);
-  const legs = ordered.length > 0 ? travelLegs(stops) : [];
-  const distanceM = travelDistanceM(legs);
-  const rate = policy.travel.ratePaisePerKm;
-  const amountPaise = travelAmountPaise(distanceM, rate);
+  const summary =
+    facts.closed && saved
+      ? {
+          distanceM: saved.distanceM,
+          ratePaisePerKm: saved.ratePaisePerKm,
+          legs: saved.legs,
+        }
+      : summariseTravel(facts.stops, policy.travel.ratePaisePerKm, ordered.length);
+  const amountPaise = travelAmountPaise(summary.distanceM, summary.ratePaisePerKm);
   const live = claims.find((claim) => claim.status === 'pending' || claim.status === 'approved');
   return {
     workDate: date,
     visits: ordered,
-    legs: legs.map(({ fromLabel, toLabel, distanceM: metres }) => ({
+    legs: summary.legs.map(({ fromLabel, toLabel, distanceM: metres }) => ({
       fromLabel,
       toLabel,
       distanceM: metres,
     })),
-    distanceM,
-    ratePaisePerKm: rate,
+    distanceM: summary.distanceM,
+    ratePaisePerKm: summary.ratePaisePerKm,
     amountPaise,
     unlocated: ordered.filter((visit) => visit.locationNote === 'not_shared').length,
     claim: live ?? claims[0] ?? null,
-    claimable: !live && amountPaise > 0 && date <= todayIn(),
+    closed: facts.closed,
+    claimable:
+      claimBlocker({
+        closed: facts.closed,
+        amountPaise,
+        live: Boolean(live),
+        future: date > todayIn(currentCalendar().timeZone),
+      }) === null,
   };
 }
 
 const decider = alias(users, 'decider');
 
-/** Claims with who made and decided them, and whether finance has paid them. */
-export async function readClaims(db: DatabaseExecutor, where?: SQL): Promise<TravelClaim[]> {
+/** Finance or HR, and never the claimant's own claim. */
+const mayVoid = (viewer: ClaimViewer | undefined, claimantId: string): boolean =>
+  Boolean(viewer) &&
+  viewer?.userId !== claimantId &&
+  isHrOrFinance([...(viewer?.capabilities ?? [])]);
+
+/** The person looking at claims, to say which of them they may decide (S10). */
+export interface ClaimViewer {
+  readonly userId: string;
+  readonly capabilities: ReadonlySet<string>;
+}
+
+/** Whether the viewer is the manager (or cover), HR or finance for each claimant, never for themselves. */
+async function decidableBy(
+  db: DatabaseExecutor,
+  viewer: ClaimViewer | undefined,
+  claimantIds: readonly string[],
+): Promise<Set<string>> {
+  if (!viewer || claimantIds.length === 0) return new Set();
+  const managers = await managerIdsOf(db, claimantIds);
+  return new Set(
+    claimantIds.filter(
+      (claimantId) =>
+        travelDeciderProblem({
+          decider: { userId: viewer.userId, capabilities: [...viewer.capabilities] },
+          claimantId,
+          managerIds: managers.get(claimantId) ?? [],
+        }) === null,
+    ),
+  );
+}
+
+/**
+ * Claims with who made and decided them, and whether finance has paid them. With a viewer,
+ * each says whether that person may decide it (only for claims still open to a decision).
+ */
+export async function readClaims(
+  db: DatabaseExecutor,
+  where?: SQL,
+  viewer?: ClaimViewer,
+): Promise<TravelClaim[]> {
   const rows = await db
     .select({
       claim: travelClaims,
@@ -134,6 +138,11 @@ export async function readClaims(db: DatabaseExecutor, where?: SQL): Promise<Tra
     .leftJoin(projects, eq(projects.id, travelClaims.projectId))
     .where(where)
     .orderBy(desc(travelClaims.workDate), desc(travelClaims.createdAt));
+  const mayDecide = await decidableBy(db, viewer, [
+    ...new Set(
+      rows.filter(({ claim }) => claim.status === 'pending').map(({ claim }) => claim.userId),
+    ),
+  ]);
   return rows.map(({ claim, fullName, deciderName, payableStatus, paidOn, projectCode }) => ({
     id: claim.id,
     user: { id: claim.userId, fullName },
@@ -155,6 +164,12 @@ export async function readClaims(db: DatabaseExecutor, where?: SQL): Promise<Tra
         : null,
     decidedAt: claim.decidedAt?.toISOString() ?? null,
     decisionNote: claim.decisionNote,
+    voidedAt: claim.voidedAt?.toISOString() ?? null,
+    voidReason: claim.voidReason,
+    canDecide: claim.status === 'pending' && mayDecide.has(claim.userId),
+    // Only finance or HR undo an approved claim; a manager decides a waiting one (S9, S10).
+    canVoid:
+      claim.status === 'approved' && payableStatus !== 'paid' && mayVoid(viewer, claim.userId),
     createdAt: claim.createdAt.toISOString(),
   }));
 }

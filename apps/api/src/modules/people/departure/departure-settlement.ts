@@ -9,7 +9,7 @@ import {
   travelClaims,
 } from '@oneohm/database';
 import type { Capability } from '@oneohm/domain';
-import { and, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 export interface Owed {
   readonly count: number;
@@ -59,7 +59,9 @@ export async function settlement(db: DatabaseExecutor, userId: string): Promise<
     db
       .select({ count, paise: total(sql`${payables.amountPaise} - ${payables.paidPaise}`) })
       .from(payables)
-      .where(and(eq(payables.partyUserId, userId), ne(payables.status, 'paid'))),
+      .where(
+        and(eq(payables.partyUserId, userId), inArray(payables.status, ['pending', 'approved'])),
+      ),
     db
       .select({ count, paise: total(commissionEntries.amountPaise) })
       .from(commissionEntries)

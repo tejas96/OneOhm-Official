@@ -35,6 +35,28 @@ export const ATTENDANCE = {
   stopSharing: 'Stop sharing',
   noFix: 'Your location could not be read. You are checked in without it.',
   permissionDenied: 'Location is off for OneOhm. You are checked in without it.',
+  notSaved: {
+    no_reading: 'Your location was not sent, so this is saved without it.',
+    no_consent: 'Location sharing is off, so this is saved without your location.',
+    policy_off: 'Location is not needed for you right now. This is saved without it.',
+    outside_hours: 'This is outside working hours, so your location was not saved.',
+  },
+  fenceOutside: 'Saved. You seem to be away from your usual place. Your manager can see this.',
+  fenceUnsure: 'Saved. We are not sure where you are, as the location is not very accurate.',
+  stillIn: (when: string) => `Still checked in from ${when}`,
+  confirmOutTitle: 'End your day?',
+  confirmOutBody: 'You can resume today.',
+  confirmOutYes: 'End day',
+  confirmOutNo: 'Keep working',
+  resume: 'Resume duty',
+  resumed: 'Welcome back. Your day is open again.',
+  autoClosed: 'Your day ended automatically because you did not check out.',
+  fixTimes: 'Fix times',
+  queuedToast: 'Saved, will send when online.',
+  queued: (time: string) => `Saved at ${time}. Will send when you are online.`,
+  sentLater: 'Your saved attendance was sent.',
+  tapTooOld: (kind: 'in' | 'out', time: string) =>
+    `${kind === 'in' ? 'Check-in' : 'Check-out'} from ${time} was too old to send. Ask for a correction.`,
 } as const;
 
 export const CORRECTION = {
@@ -50,6 +72,14 @@ export const CORRECTION = {
   badTime: 'Use HH:MM, for example 09:25.',
   notYet: 'This time has not come yet.',
   outBeforeIn: 'Check-out must be after check-in.',
+  day: 'Which day?',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  otherDay: 'Another day',
+  dayHint: (days: number) => `Any day in the last ${days} days, as YYYY-MM-DD.`,
+  badDay: (days: number) => `Pick a day from the last ${days} days, up to today.`,
+  pendingExists:
+    'You already asked for a correction for that day. Wait for your manager to decide.',
 } as const;
 
 export const LEAVE = {

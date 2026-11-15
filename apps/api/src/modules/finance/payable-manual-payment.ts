@@ -34,6 +34,7 @@ export async function recordManualPayment(
   if (bill.status === 'pending') {
     throw conflict(`This ${formatInr(bill.amountPaise)} bill needs approval before it is paid.`);
   }
+  if (bill.status === 'cancelled') throw conflict('This bill was cancelled.', 'cancelled');
   if (bill.status === 'paid') throw conflict('This bill is already paid.');
   const left = leftToPay(bill);
   const amountPaise = input.amountPaise ?? left;

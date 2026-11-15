@@ -90,6 +90,8 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
         leftFarFromSite: row.checkOutFar,
         locationNote: locationNote(row, site !== null),
         locationCleared: row.locationClearedAt !== null,
+        closeKind: row.closeKind,
+        closeNote: row.closeNote,
       },
     };
   });
