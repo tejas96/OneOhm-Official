@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useCan } from '@/providers/current-user';
 import { ApplyLeaveSheet } from './apply-leave-sheet';
+import { CoverSection } from './cover-requests';
 import { HolidaysCard } from './holidays-card';
 import { LeaveBalances } from './leave-balances';
 import { LeaveHistory } from './leave-history';
@@ -46,6 +47,7 @@ export function LeaveTab() {
       <div className="grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr]">
         {canApprove && (
           <div className="flex min-w-0 flex-col gap-10 xl:col-start-1 xl:row-start-1">
+            {!canRequest && <CoverSection />}
             {all.isPending && <ListSkeleton label={t('loading')} rows={3} />}
             {all.isError && <LoadError error={all.error} onRetry={() => all.refetch()} />}
             {all.data && <LeaveQueue requests={all.data} />}
@@ -64,6 +66,7 @@ export function LeaveTab() {
               <h2 className="type-title-lg text-ink">{t('mine.title')}</h2>
               <p className="type-body-sm text-ink-faint">{t('mine.description')}</p>
             </div>
+            <CoverSection />
             {workday.data && <LeaveBalances balances={workday.data.balances} />}
             {workday.data?.calendar && <HolidaysCard calendar={workday.data.calendar} />}
             {mine.isPending && <ListSkeleton label={t('loading')} rows={2} />}

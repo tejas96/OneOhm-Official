@@ -112,6 +112,9 @@ export const attendanceDaySchema = z.object({
 });
 export type AttendanceDay = z.infer<typeof attendanceDaySchema>;
 
+export const coverAnswerSchema = z.enum(['asked', 'accepted', 'declined']);
+export type CoverAnswer = z.infer<typeof coverAnswerSchema>;
+
 export const leaveRequestSchema = z.object({
   id: idSchema,
   user: userRef,
@@ -125,6 +128,11 @@ export const leaveRequestSchema = z.object({
   emergency: z.boolean(),
   backup: userRef.nullable(),
   handoverNote: z.string().nullable(),
+  /** The backup's answer: asked, accepted or declined; null when nobody is named. */
+  coverAnswer: coverAnswerSchema.nullable(),
+  /** Why the backup said no, or what they added when they said yes. */
+  coverNote: z.string().nullable(),
+  coverAnsweredAt: instantSchema.nullable(),
   status: decisionStatusSchema,
   decidedBy: userRef.nullable(),
   decisionNote: z.string().nullable(),

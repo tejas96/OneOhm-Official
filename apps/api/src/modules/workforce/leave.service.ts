@@ -1,17 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { LeaveImpact, LeaveRequestRecord } from '@oneohm/api-contracts';
-import {
-  leaveRequests,
-  notify,
-  notifyHolders,
-  roles,
-  type Transaction,
-  userRoles,
-  users,
-} from '@oneohm/database';
+import { leaveRequests, notify, notifyHolders, type Transaction } from '@oneohm/database';
 import { checkHandover } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, invalid, notFound } from '../../common/http/errors';
@@ -19,6 +11,16 @@ import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { assertMayDecide } from './leave-approver';
 import { clashesFor, NO_CLASHES } from './leave-clash-read';
+import {
+  askCover,
+  assertActiveStaff,
+  assertNotAway,
+  COVER_NOTICES,
+  coverProblem,
+  dropCover,
+  nameOf,
+  tellCoverAnswer,
+} from './leave-cover';
 import { handOverWork, tellProjectManagers } from './leave-handover';
 import { affectedCount, affectedWork, type LeaveWindow, leaveImpact } from './leave-impact';
 import { loadPolicy } from './policy';
@@ -40,8 +42,8 @@ export interface LeaveDecision {
 
 /**
  * Leave with its handover (PRD 3.12, 4.6, Flow E). Applying checks the balance (an
- * emergency may go over and HR settles it); approving hands the open tasks in the
- * window to the named backup, so projects keep moving.
+ * emergency may go over and HR settles it) and asks the named backup; approving hands
+ * the open tasks in the window to a backup who said yes, so projects keep moving.
  */
 @Injectable()
 export class LeaveService {
@@ -85,6 +87,7 @@ export class LeaveService {
       throw invalid('Not enough leave left of this kind.', { leaveType: 'Over the balance.' });
     if (input.backupUserId === actor.userId)
       throw invalid('Pick someone else to cover.', { backupUserId: 'Not yourself.' });
+    if (input.backupUserId) await assertActiveStaff(this.db, input.backupUserId);
     const [row] = await this.db
       .insert(leaveRequests)
       .values({
@@ -98,8 +101,10 @@ export class LeaveService {
         emergency: input.emergency,
         backupUserId: input.backupUserId ?? null,
         handoverNote: input.handoverNote ?? null,
+        coverAnswer: input.backupUserId ? 'asked' : null,
       })
-      .returning({ id: leaveRequests.id });
+      .returning();
+    if (row) await askCover(this.db, row);
     if (row)
       await notifyHolders(
         this.db,
@@ -110,19 +115,152 @@ export class LeaveService {
     return this.one(row?.id ?? '');
   }
 
+  /**
+   * The applicant takes leave back. Whoever was asked to cover hears it; after approval the
+   * backup and the approver hear that the handed work stays with the backup for now.
+   */
   async cancel(actor: Actor, id: string): Promise<LeaveRequestRecord> {
-    const [row] = await this.db
-      .update(leaveRequests)
-      .set({ status: 'cancelled', updatedAt: new Date() })
-      .where(
-        and(
-          eq(leaveRequests.id, id),
-          eq(leaveRequests.userId, actor.userId),
-          inArray(leaveRequests.status, ['pending', 'approved']),
-        ),
-      )
-      .returning({ id: leaveRequests.id });
-    if (!row) throw conflict('This leave can no longer be cancelled.', 'closed');
+    await this.db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(leaveRequests)
+        .where(and(eq(leaveRequests.id, id), eq(leaveRequests.userId, actor.userId)))
+        .for('update')
+        .limit(1);
+      if (!before || (before.status !== 'pending' && before.status !== 'approved'))
+        throw conflict('This leave can no longer be cancelled.', 'closed');
+      await tx
+        .update(leaveRequests)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(leaveRequests.id, id));
+      if (before.status === 'pending') {
+        await dropCover(tx, before, 'the leave was cancelled.');
+        return;
+      }
+      const handed = before.backupUserId !== null && before.tasksHandedOver > 0;
+      if (handed && before.backupUserId)
+        await notify(
+          tx,
+          { userId: before.backupUserId },
+          COVER_NOTICES.cancelledAfterHandover(before, actor.fullName),
+        );
+      else await dropCover(tx, before, 'the leave was cancelled.');
+      if (before.decidedByUserId && before.decidedByUserId !== actor.userId)
+        await notify(
+          tx,
+          { userId: before.decidedByUserId },
+          COVER_NOTICES.approvedLeaveCancelled(
+            before,
+            actor.fullName,
+            handed ? before.tasksHandedOver : 0,
+          ),
+        );
+    });
+    return this.one(id);
+  }
+
+  /** Leave the signed-in person is asked to cover, or covers, newest first. */
+  async covering(actor: Actor): Promise<LeaveRequestRecord[]> {
+    const items = await this.list(eq(leaveRequests.backupUserId, actor.userId));
+    return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  /**
+   * The named backup says yes or no, once, while the leave is pending. No needs a note; yes
+   * is refused when they are away themselves then. Applicant and approvers hear the answer.
+   */
+  async answerCover(
+    actor: Actor,
+    id: string,
+    answer: { accept: boolean; note?: string | null | undefined },
+  ): Promise<LeaveRequestRecord> {
+    const note = answer.note?.trim() || null;
+    if (!answer.accept && !note)
+      throw invalid('Say why you cannot cover.', { note: 'Needed to decline.' });
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(leaveRequests)
+        .where(eq(leaveRequests.id, id))
+        .for('update')
+        .limit(1);
+      if (!row || row.backupUserId !== actor.userId) throw notFound('A cover request for you');
+      if (row.status !== 'pending')
+        throw conflict('This leave has already been decided or cancelled.', 'decided');
+      if (row.coverAnswer !== 'asked')
+        throw conflict('You have already answered this request.', 'answered');
+      if (answer.accept)
+        await assertNotAway(tx, actor.userId, row, 'You are on leave on some of these days.');
+      const [answered] = await tx
+        .update(leaveRequests)
+        .set({
+          coverAnswer: answer.accept ? 'accepted' : 'declined',
+          coverNote: note,
+          coverAnsweredAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(leaveRequests.id, id))
+        .returning();
+      if (answered) await tellCoverAnswer(tx, answered, answer.accept);
+      await recordAudit(
+        tx,
+        actor.userId,
+        `leave.cover_${answer.accept ? 'accepted' : 'declined'}`,
+        'leave_request',
+        id,
+        { note },
+      );
+    });
+    return this.one(id);
+  }
+
+  /**
+   * The applicant or an approver asks someone else to cover, or nobody, while pending. The
+   * person dropped hears it; the new one is asked.
+   */
+  async changeBackup(
+    actor: Actor,
+    id: string,
+    backupUserId: string | null,
+    mayApprove: boolean,
+  ): Promise<LeaveRequestRecord> {
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(leaveRequests)
+        .where(eq(leaveRequests.id, id))
+        .for('update')
+        .limit(1);
+      if (!row || (row.userId !== actor.userId && !mayApprove))
+        throw notFound('That leave request');
+      if (row.status !== 'pending')
+        throw conflict('This leave has already been decided or cancelled.', 'decided');
+      if (backupUserId === row.userId)
+        throw invalid('Pick someone else to cover.', { backupUserId: 'Not the person on leave.' });
+      if (backupUserId === row.backupUserId && row.coverAnswer !== 'declined') return;
+      if (backupUserId) {
+        await assertActiveStaff(tx, backupUserId);
+        await assertNotAway(tx, backupUserId, row, 'They are on leave on some of these days.');
+      }
+      if (row.backupUserId !== backupUserId)
+        await dropCover(tx, row, 'someone else was asked to cover.');
+      const [changed] = await tx
+        .update(leaveRequests)
+        .set({
+          backupUserId,
+          coverAnswer: backupUserId ? 'asked' : null,
+          coverNote: null,
+          coverAnsweredAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(leaveRequests.id, id))
+        .returning();
+      if (changed) await askCover(tx, changed);
+      await recordAudit(tx, actor.userId, 'leave.backup_changed', 'leave_request', id, {
+        from: row.backupUserId,
+        to: backupUserId,
+      });
+    });
     return this.one(id);
   }
 
@@ -151,13 +289,16 @@ export class LeaveService {
       if (row.status !== 'pending')
         throw conflict('This request has already been decided.', 'decided');
       await assertMayDecide(tx, actor.userId, row);
+      if (!decision.approve && !decision.note?.trim())
+        throw invalid('Say why the leave is not approved.', { note: 'Needed to decline.' });
       const outcome = decision.approve
         ? await this.approve(tx, actor, row, decision)
         : { handed: 0, skipped: false, backupId: row.backupUserId };
+      if (!decision.approve) await dropCover(tx, row, 'the leave was not approved.');
       await notify(
         tx,
         { userId: row.userId },
-        STAFF_NOTICES.leaveDecided(id, decision.approve, row.fromDate, row.toDate),
+        STAFF_NOTICES.leaveDecided(id, decision.approve, row.fromDate, row.toDate, decision.note),
       );
       await tx
         .update(leaveRequests)
@@ -167,6 +308,9 @@ export class LeaveService {
           decidedAt: new Date(),
           decisionNote: decision.note ?? null,
           backupUserId: outcome.backupId,
+          ...(outcome.backupId
+            ? {}
+            : { coverAnswer: null, coverNote: null, coverAnsweredAt: null }),
           tasksHandedOver: outcome.handed,
           handoverSkipped: outcome.skipped,
           updatedAt: new Date(),
@@ -194,8 +338,16 @@ export class LeaveService {
     row: typeof leaveRequests.$inferSelect,
     decision: LeaveDecision,
   ) {
-    const backupId = decision.backupUserId === undefined ? row.backupUserId : decision.backupUserId;
+    const named = decision.backupUserId === undefined ? row.backupUserId : decision.backupUserId;
+    // Nobody gets the work by force: someone new is asked first, and must say yes.
+    if (named && named !== row.backupUserId)
+      throw invalid('Ask them to cover first; they need to accept.', {
+        backupUserId: 'Not asked yet.',
+      });
     const work = await affectedWork(tx, row.userId, row);
+    // Nothing to cover: a backup who has not said yes is let go, not left waiting.
+    const backupId =
+      named && affectedCount(work) === 0 && row.coverAnswer !== 'accepted' ? null : named;
     const check = checkHandover({
       affected: affectedCount(work),
       backupUserId: backupId,
@@ -212,21 +364,23 @@ export class LeaveService {
           : 'This leave touches open work. Pick who covers it.',
         { backupUserId: 'Pick a backup.' },
       );
-    if (backupId) await this.assertActiveStaff(tx, backupId);
+    if (backupId) {
+      const problem = coverProblem(row, await nameOf(tx, backupId));
+      if (problem) throw invalid(problem, { backupUserId: 'Not accepted.' });
+      await assertActiveStaff(tx, backupId);
+      await assertNotAway(tx, backupId, row, 'The backup is on leave on some of these days.');
+    } else if (row.backupUserId) {
+      await dropCover(
+        tx,
+        row,
+        affectedCount(work) === 0
+          ? 'the leave touches no open work.'
+          : 'the leave was approved with nobody covering.',
+      );
+    }
     const handed = backupId ? await handOverWork(tx, actor.userId, row, backupId, work) : 0;
     await tellProjectManagers(tx, row, work, backupId);
     return { handed, skipped: check.skipped, backupId };
-  }
-
-  private async assertActiveStaff(tx: Transaction, userId: string) {
-    const [person] = await tx
-      .select({ id: users.id })
-      .from(users)
-      .innerJoin(userRoles, eq(userRoles.userId, users.id))
-      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.kind, 'staff')))
-      .where(and(eq(users.id, userId), eq(users.status, 'active')))
-      .limit(1);
-    if (!person) throw invalid('Pick an active team member.', { backupUserId: 'Not available.' });
   }
 
   private async one(id: string): Promise<LeaveRequestRecord> {

@@ -17,6 +17,8 @@ export interface TaskPointFacts {
   readonly outsideWaits: readonly (Span & { readonly party: string })[];
   /** The credited person's approved leave. */
   readonly leave: readonly Span[];
+  /** Days the task was already late when it was handed to the credited person (leave cover). */
+  readonly lateBeforeHandover?: number;
   readonly needsApproval: boolean;
   /** Times the work was sent back. */
   readonly returns: number;
@@ -76,8 +78,9 @@ function heldDays(facts: TaskPointFacts) {
   return { waiting, leave, who };
 }
 
-function heldText(held: ReturnType<typeof heldDays>): string {
+function heldText(held: ReturnType<typeof heldDays>, inherited: number): string {
   const parts = [
+    inherited > 0 ? `${days(inherited)} late before hand-over` : null,
     held.waiting > 0
       ? `${days(held.waiting)} ${held.who === 'the reviewer' ? 'with' : 'waiting on'} ${held.who}`
       : null,
@@ -88,7 +91,8 @@ function heldText(held: ReturnType<typeof heldDays>): string {
 
 /**
  * Judges a finished task fairly (spec 3.7): on time against the due date the person
- * did not move themselves, moved later by outside waits and leave; first-time right
+ * did not move themselves, moved later by outside waits, leave and lateness that came with
+ * a leave hand-over; first-time right
  * only where there is an approval step. Nothing here ever takes points away.
  */
 export function judgeTask(facts: TaskPointFacts): {
@@ -103,9 +107,11 @@ export function judgeTask(facts: TaskPointFacts): {
   );
   const baseDue = addDays(facts.dueDate, -selfAdded);
   const held = heldDays(facts);
-  const judgedDue = addDays(baseDue, held.waiting + held.leave);
+  // Lateness inherited with the task (it came over already late) is not the backup's.
+  const inherited = Math.max(0, facts.lateBeforeHandover ?? 0);
+  const judgedDue = addDays(baseDue, held.waiting + held.leave + inherited);
   const daysLate = Math.max(0, daysBetween(judgedDue, facts.handedInOn));
-  const because = heldText(held);
+  const because = heldText(held, inherited);
   const onTime =
     daysLate === 0
       ? { earned: true, reason: because ? `On time (after ${because})` : 'On time' }

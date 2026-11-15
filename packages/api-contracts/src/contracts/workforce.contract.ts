@@ -119,20 +119,46 @@ export const workforceContract = c.router({
     responses: { 200: leaveImpactSchema },
     summary: 'For the approver: the work a pending request touches and who could cover it.',
   },
+  coveringLeave: {
+    method: 'GET',
+    path: '/leave/covering',
+    responses: { 200: z.array(leaveRequestSchema) },
+    summary: 'Leave the signed-in person is asked to cover, or covers, newest first.',
+  },
+  answerCover: {
+    method: 'POST',
+    path: '/leave/:id/cover',
+    pathParams: idParams,
+    body: z
+      .object({ accept: z.boolean(), note: noteSchema.nullable().optional() })
+      .refine((body) => body.accept || Boolean(body.note?.trim()), {
+        message: 'Say why you cannot cover.',
+        path: ['note'],
+      }),
+    responses: { 200: leaveRequestSchema },
+    summary: 'The named backup accepts (note optional) or declines (note needed).',
+  },
+  changeBackup: {
+    method: 'POST',
+    path: '/leave/:id/backup',
+    pathParams: idParams,
+    body: z.object({ backupUserId: idSchema.nullable() }),
+    responses: { 200: leaveRequestSchema },
+    summary: 'The applicant or an approver asks someone else to cover (or nobody), while pending.',
+  },
   decideLeave: {
     method: 'POST',
     path: '/leave/:id/decide',
     pathParams: idParams,
     body: decision.and(
       z.object({
-        /** Who covers the affected work; the approver may pick or change it. */
+        /** null clears the backup; a new person must be asked first (changeBackup). */
         backupUserId: idSchema.nullable().optional(),
         /** Emergency leave only: approve with work affected and nobody covering it. */
         skipHandover: z.boolean().optional(),
       }),
     ),
     responses: { 200: leaveRequestSchema },
-    summary:
-      'Approving hands the affected work to the backup; ordinary leave with affected work needs one.',
+    summary: 'Approving hands the affected work to a backup who accepted; declining needs a note.',
   },
 });

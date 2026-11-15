@@ -306,7 +306,8 @@
         "confirmTitle": "Cancel this leave?",
         "confirmBody": "The days go back to your balance. If tasks were handed over, they stay with your backup until someone reassigns them.",
         "keep": "Keep it",
-        "confirm": "Cancel leave"
+        "confirm": "Cancel leave",
+        "askSomeoneElse": "Ask someone else"
       },
       "clash": {
         "backupAway": "{name}, named to cover, is on leave {range} ({status}).",
@@ -350,9 +351,30 @@
         "openTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
         "hintTasks": "{count, plural, one {Approving hands this task to them.} other {Approving hands these # tasks to them.}}",
         "hintNoTasks": "Nothing is due, but they will know to stand in.",
-        "note": "What they need to know",
+        "note": "Your note",
         "noteHint": "Optional. Where things are, who to call.",
-        "nobodyFree": "Nobody who does this kind of work is free on these days. A manager can reassign the tasks after approving."
+        "nobodyFree": "Nobody who does this kind of work is free on these days. A manager can reassign the tasks after approving.",
+        "askedTitle": "Asked to cover",
+        "askedDescription": "People who want you to cover their work while they are away.",
+        "who": "{name} is away",
+        "accept": "Accept",
+        "decline": "Decline",
+        "youAccepted": "You accepted",
+        "youDeclined": "You declined",
+        "acceptTitle": "Cover this leave?",
+        "declineTitle": "Say no to covering",
+        "noteHintAccept": "Optional. Anything they should know.",
+        "noteHintDecline": "Say why you cannot cover.",
+        "back": "Back",
+        "confirmAccept": "Accept",
+        "confirmDecline": "Decline",
+        "accepted": "You will cover",
+        "declined": "You said no",
+        "answer": {
+          "asked": "Waiting for {name} to answer",
+          "accepted": "{name} accepted",
+          "declined": "{name} declined"
+        }
       },
       "apply": {
         "title": "Apply for leave",
@@ -405,7 +427,22 @@
         "skip": "Approve without a handover",
         "skipHint": "Emergency leave only. The work stays with them, and their projects’ managers are told nobody covers it.",
         "note": "Note for them",
-        "noteHint": "Optional. They see it with your decision."
+        "noteHint": "Optional. They see it with your decision.",
+        "askToCover": "Ask to cover",
+        "asked": "Asked to cover",
+        "askHint": "They have not been asked yet. This asks them and leaves the leave waiting.",
+        "waitsForYes": "Approval waits for {name} to say yes.",
+        "noteHintDecline": "Needed. They see why."
+      },
+      "ask": {
+        "title": "Ask someone else to cover",
+        "backup": "Who covers",
+        "hint": "They are asked first. Nothing moves until they accept and the leave is approved.",
+        "back": "Back",
+        "confirm": "Ask to cover",
+        "confirmNone": "Cover with no one",
+        "sent": "Asked to cover",
+        "cleared": "No backup now"
       }
     },
     "points": {

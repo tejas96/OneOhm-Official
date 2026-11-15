@@ -21,6 +21,9 @@ export const decisionStatusEnum = pgEnum('decision_status', [
   'cancelled',
 ]);
 
+/** The named backup's answer to covering a leave: asked, then yes or no. */
+export const coverAnswerEnum = pgEnum('cover_answer', ['asked', 'accepted', 'declined']);
+
 /** Leave, attendance and points rules (PRD 7.2). One row, edited in Settings. */
 export const workforcePolicy = pgTable('workforce_policy', {
   id: text('id').primaryKey().default('default'),
@@ -133,6 +136,11 @@ export const leaveRequests = pgTable(
     emergency: boolean('emergency').notNull().default(false),
     backupUserId: uuid('backup_user_id').references(() => users.id, { onDelete: 'set null' }),
     handoverNote: text('handover_note'),
+    /** The backup's answer; null when nobody is named. A named backup must accept first. */
+    coverAnswer: coverAnswerEnum('cover_answer'),
+    /** The backup's note: why they said no (needed), or anything to add when they said yes. */
+    coverNote: text('cover_note'),
+    coverAnsweredAt: instant('cover_answered_at'),
     status: decisionStatusEnum('status').notNull().default('pending'),
     decidedByUserId: uuid('decided_by_user_id').references(() => users.id, {
       onDelete: 'set null',

@@ -9,47 +9,65 @@ import {
   SegmentedControl,
   Select,
   Textarea,
+  useToast,
 } from '@oneohm/design-system/web';
 import { Check, TriangleAlert, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { FormError } from '@/components/form-error';
 import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useApiForm } from '@/lib/forms/use-api-form';
-import { usePeople } from '../use-team';
+import { NONE, useBackupOptions } from './backup-options';
 import { affectedCount, LeaveAffectedWork } from './leave-affected-work';
 import { LeaveClashNotes } from './leave-clash-notes';
-import { useLeaveText } from './leave-facts';
-import { type LeaveDecisionBody, useRequestImpact } from './use-leave';
+import { LeaveCover, useLeaveText } from './leave-facts';
+import { type LeaveDecisionBody, useChangeBackup, useRequestImpact } from './use-leave';
 
-const NONE = 'none';
 type Choice = 'approve' | 'decline';
 
-/** Suggested backups first, then anyone else active on the staff; never the person away. */
-function useBackupOptions(leave: LeaveRequestRecord | null, impact: LeaveImpact | undefined) {
+function confirmKey(asking: boolean, approving: boolean) {
+  if (asking) return 'askToCover';
+  return approving ? 'confirmApprove' : 'confirmDecline';
+}
+
+function hintKey(asking: boolean, affected: number) {
+  if (asking) return 'askHint';
+  return affected > 0 ? 'backupHint' : 'backupHintNothing';
+}
+
+/** What to know before choosing who covers: nobody on late work, and the backup's answer. */
+function BackupNotes({
+  leave,
+  impact,
+  backup,
+}: {
+  readonly leave: LeaveRequestRecord;
+  readonly impact: LeaveImpact;
+  readonly backup: string;
+}) {
   const t = useTranslations('team.leave.approveDialog');
-  const people = usePeople();
-  const suggested = impact?.backups ?? [];
-  const others = (people.data ?? []).filter(
-    (person) =>
-      person.status === 'active' &&
-      person.id !== leave?.user.id &&
-      person.roles.some((role) => role.kind === 'staff') &&
-      !suggested.some((backup) => backup.id === person.id),
+  const queueT = useTranslations('team.leave.queue');
+  const waiting = leave.backup && backup === leave.backup.id && leave.coverAnswer !== 'accepted';
+  return (
+    <>
+      {backup === NONE && impact.dueInWindow > 0 && (
+        <Warning>{queueT('nobodyCovering', { count: impact.dueInWindow })}</Warning>
+      )}
+      {leave.backup && <LeaveCover leave={leave} />}
+      {waiting && leave.backup && (
+        <Warning>{t('waitsForYes', { name: leave.backup.fullName })}</Warning>
+      )}
+    </>
   );
-  return [
-    { value: NONE, label: t('noOne') },
-    ...suggested.map((backup) => ({
-      value: backup.id,
-      label: backup.fullName,
-      description: t('suggested', { count: backup.openTasks }),
-    })),
-    ...others.map((person) => ({
-      value: person.id,
-      label: person.fullName,
-      description: t('openTasks', { count: person.openTasks }),
-    })),
-  ];
+}
+
+function Warning({ children }: { readonly children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 rounded-md bg-at-risk-tint px-3 py-2.5 type-body-sm text-ink">
+      <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />
+      {children}
+    </p>
+  );
 }
 
 /**
@@ -71,6 +89,8 @@ export function LeaveApproveDialog({
   const t = useTranslations('team.leave.approveDialog');
   const queueT = useTranslations('team.leave.queue');
   const { when } = useLeaveText();
+  const toast = useToast();
+  const changeBackup = useChangeBackup();
   const form = useApiForm();
   const [choice, setChoice] = useState<Choice>('approve');
   const [note, setNote] = useState('');
@@ -91,7 +111,19 @@ export function LeaveApproveDialog({
 
   const approving = choice === 'approve';
   const affected = impact.data ? affectedCount(impact.data) : 0;
+  // Someone new has to be asked first; approving never hands work to a person who was not.
+  const asking = approving && backup !== NONE && backup !== leave?.backup?.id;
   const submit = async () => {
+    if (asking && leave) {
+      await form.run(
+        () => changeBackup(leave.id, backup),
+        () => {
+          toast({ title: t('asked'), reference: leave.leaveLabel, tone: 'success' });
+          onClose();
+        },
+      );
+      return;
+    }
     const body: LeaveDecisionBody = approving
       ? {
           approve: true,
@@ -122,7 +154,7 @@ export function LeaveApproveDialog({
             pending={form.pending}
             onClick={submit}
           >
-            {approving ? t('confirmApprove') : t('confirmDecline')}
+            {t(confirmKey(asking, approving))}
           </Button>
         </>
       }
@@ -146,19 +178,16 @@ export function LeaveApproveDialog({
             {impact.data && <LeaveAffectedWork impact={impact.data} />}
           </section>
         )}
-        {approving && impact.data && (
-          <LeaveClashNotes clashes={impact.data.clashes} applicant={leave?.user.fullName} />
-        )}
-        {approving && impact.data && backup === NONE && impact.data.dueInWindow > 0 && (
-          <p className="flex items-start gap-2 rounded-md bg-at-risk-tint px-3 py-2.5 type-body-sm text-ink">
-            <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-at-risk" />
-            {queueT('nobodyCovering', { count: impact.data.dueInWindow })}
-          </p>
+        {approving && impact.data && leave && (
+          <>
+            <LeaveClashNotes clashes={impact.data.clashes} applicant={leave.user.fullName} />
+            <BackupNotes leave={leave} impact={impact.data} backup={backup} />
+          </>
         )}
         {approving && impact.data && (
           <Field
             label={t('backup')}
-            hint={affected > 0 ? t('backupHint') : t('backupHintNothing')}
+            hint={t(hintKey(asking, affected))}
             error={form.fieldErrors.backupUserId}
           >
             <Select value={backup} onValueChange={setBackup} options={options} />
@@ -172,7 +201,12 @@ export function LeaveApproveDialog({
             description={t('skipHint')}
           />
         )}
-        <Field label={t('note')} hint={t('noteHint')} error={form.fieldErrors.note}>
+        <Field
+          label={t('note')}
+          hint={t(approving ? 'noteHint' : 'noteHintDecline')}
+          required={!approving}
+          error={form.fieldErrors.note}
+        >
           <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
         <FormError message={form.error} />

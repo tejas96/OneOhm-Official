@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { attendanceCorrections, leaveRequests } from '@oneohm/database';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { eq } from 'drizzle-orm';
-import { type Actor, assertCan } from '../../common/auth/actor';
+import { type Actor, assertCan, can } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
 import { AttendanceService } from './attendance.service';
@@ -89,6 +89,28 @@ export class WorkforceController {
       requestImpact: async ({ params }) => {
         approve();
         return { status: 200, body: await this.leave.requestImpact(params.id) };
+      },
+      coveringLeave: async () => {
+        assertCan(actor, 'leave.request', 'leave.approve');
+        return { status: 200, body: await this.leave.covering(actor) };
+      },
+      answerCover: async ({ params, body }) => {
+        // Only the named backup may answer; the service checks it is them.
+        assertCan(actor, 'leave.request', 'leave.approve');
+        return { status: 200, body: await this.leave.answerCover(actor, params.id, body) };
+      },
+      changeBackup: async ({ params, body }) => {
+        // The applicant, or an approver; the service checks which.
+        assertCan(actor, 'leave.request', 'leave.approve');
+        return {
+          status: 200,
+          body: await this.leave.changeBackup(
+            actor,
+            params.id,
+            body.backupUserId,
+            can(actor, 'leave.approve'),
+          ),
+        };
       },
       decideLeave: async ({ params, body }) => {
         approve();

@@ -16,6 +16,7 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
     project: ({ id }) => `/projects/${id}`,
     payment: ({ projectId }) => (projectId ? `/projects/${projectId}?tab=payments` : '/finance'),
     quotation: ({ id }) => `/quotations/${id}`,
+    // Cover asks, answers and cancellations all land on the Leave tab, where the list is.
     leave: ({ id }, kind) =>
       kind === 'leave_requested' ? `/team?tab=leave&leave=${id}` : '/team?tab=leave',
     correction: ({ id }, kind) =>

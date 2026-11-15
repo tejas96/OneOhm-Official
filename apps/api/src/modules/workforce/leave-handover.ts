@@ -8,11 +8,12 @@ import {
   projectTasks,
   serviceRequests,
   type Transaction,
-  users,
 } from '@oneohm/database';
+import { daysBetween, todayIn } from '@oneohm/shared';
 import { inArray, sql } from 'drizzle-orm';
 import { daySpan } from '../../common/notices';
 import { followAssignees, lockVisitTargets } from '../visits/follow-assignee';
+import { nameOf } from './leave-cover';
 import type { AffectedWork } from './leave-impact';
 
 type LeaveRow = typeof leaveRequests.$inferSelect;
@@ -55,17 +56,10 @@ const NOTICES = {
   }),
 };
 
-async function nameOf(tx: Transaction, id: string): Promise<string> {
-  const [row] = await tx
-    .select({ fullName: users.fullName })
-    .from(users)
-    .where(inArray(users.id, [id]));
-  return row?.fullName ?? 'a colleague';
-}
-
 /**
  * On approval (Flow E step 4): the affected tasks, service requests and lead follow-ups
- * go to the backup, with a note on each project and lead, and the backup is told.
+ * go to the backup who accepted, with a note on each project and lead, and the backup is
+ * told what is now theirs.
  * Returns how many items moved.
  */
 export async function handOverWork(
@@ -76,6 +70,7 @@ export async function handOverWork(
   work: AffectedWork,
 ): Promise<number> {
   const now = new Date();
+  const today = todayIn('Asia/Kolkata', now);
   const [person, backup] = await Promise.all([nameOf(tx, leave.userId), nameOf(tx, backupId)]);
   if (work.tasks.length > 0) {
     await lockVisitTargets(
@@ -106,6 +101,12 @@ export async function handOverWork(
         kind: 'task_handover',
         message: `${task.title} handed to ${backup} during ${person}'s leave.`,
         userId: approverId,
+        // Days it was already late: not held against the backup's on-time points.
+        data: {
+          leaveId: leave.id,
+          toUserId: backupId,
+          lateDays: Math.max(0, daysBetween(task.dueDate, today)),
+        },
       })),
     );
   }

@@ -36,6 +36,16 @@ describe('hrefOf', () => {
     expect(hrefOf({ subject: subject(type), kind })).toBe(href);
   });
 
+  it.each([
+    'leave_cover_asked',
+    'leave_cover_answered',
+    'leave_cover_dropped',
+    'leave_cover_cancelled',
+    'leave_cancelled',
+  ])('opens the Leave tab for %s', (kind) => {
+    expect(hrefOf({ subject: subject('leave'), kind })).toBe('/team?tab=leave');
+  });
+
   it('opens the tab for alerts that tell an outcome', () => {
     expect(hrefOf({ subject: subject('leave'), kind: 'leave_decided' })).toBe('/team?tab=leave');
     expect(hrefOf({ subject: subject('points'), kind: 'bonus_approved' })).toBe(
