@@ -23,6 +23,7 @@ export * from './document.schema';
 export * from './document-checklist.schema';
 export * from './document-request.schema';
 export * from './document-requirement.schema';
+export * from './duty-points.schema';
 export * from './employee-bank.schema';
 export * from './engagement.schema';
 export * from './finance.schema';

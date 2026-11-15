@@ -2,6 +2,7 @@ import { useTheme } from '@oneohm/mobile-ui';
 import { Stack } from 'expo-router';
 import { PushAlerts } from '@/features/alerts/push-alerts';
 import { TapQueueSync } from '@/features/attendance/tap-sync';
+import { DutyRecorder } from '@/features/duty/duty-sync';
 import { UploadQueueProvider } from '@/features/uploads/upload-queue';
 
 /**
@@ -14,6 +15,7 @@ export default function SignedInLayout() {
     <UploadQueueProvider>
       <PushAlerts />
       <TapQueueSync />
+      <DutyRecorder />
       <Stack
         screenOptions={{
           headerShown: false,

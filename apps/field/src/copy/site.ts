@@ -15,7 +15,7 @@ export const TRACKING = {
   policyOff: 'Location off for everyone',
   // Short enough for a phone pill; the working hours show on the card itself.
   outsideHours: 'Location off outside work hours',
-  explainOn: 'Read only when you check in or out and when you take a site photo.',
+  explainOn: 'Recorded only while you are on duty: from check-in to check-out.',
 } as const;
 
 export const SITE = {

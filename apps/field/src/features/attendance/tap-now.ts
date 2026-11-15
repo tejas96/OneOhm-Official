@@ -2,9 +2,17 @@ import type { MyWorkday } from '@oneohm/api-contracts';
 import { unwrap } from '@oneohm/mobile-ui';
 import type { QueryClient } from '@tanstack/react-query';
 import { api, keys } from '@/api/api';
+import { flushBeforeCheckOut } from '../duty/duty-flush';
 import { readLocation } from './location';
 import { outcomeOf } from './tap-queue';
 import { sendTap, tapQueue } from './tap-sender';
+
+/** What the phone could not read, for the note after the tap. */
+function missedOf(wanted: boolean, reading: unknown): 'denied' | 'nofix' | null {
+  if (!wanted) return null;
+  if (reading === 'denied') return 'denied';
+  return reading ? null : 'nofix';
+}
 
 /**
  * One tap on Check in or Check out. The time of the tap is taken first; the location is
@@ -18,16 +26,11 @@ export async function tapNow(
   userId: string,
 ) {
   const tappedAt = new Date().toISOString();
+  if (kind === 'out') await flushBeforeCheckOut(userId);
   const wanted = Boolean(workday?.attendance.captureLocation && workday.consent.given);
   const reading = wanted ? await readLocation() : null;
   const position = reading && reading !== 'denied' ? reading : null;
-  const missed: 'denied' | 'nofix' | null = wanted
-    ? reading === 'denied'
-      ? 'denied'
-      : reading
-        ? null
-        : 'nofix'
-    : null;
+  const missed = missedOf(wanted, reading);
   const keep = async () => {
     await tapQueue.add({ userId, kind, tappedAt, position });
     return { day: null, missed, queued: true };

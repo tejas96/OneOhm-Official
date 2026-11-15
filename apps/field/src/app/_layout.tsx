@@ -11,6 +11,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/api';
 import { ToastProvider } from '@/components/toast';
+// Defines the duty route's background task: it must load with the app, before any screen.
+import '@/features/duty/duty-background';
 import { SessionProvider, useSession } from '@/session/session-provider';
 
 void SplashScreen.preventAutoHideAsync();

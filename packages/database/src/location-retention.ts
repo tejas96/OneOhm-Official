@@ -1,8 +1,9 @@
 import { locationCutoff, type WorkforcePolicy, withPolicyDefaults } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { businessTimeZone } from './business-calendar';
 import type { DatabaseExecutor } from './client';
+import { dutyPoints } from './schema/duty-points.schema';
 import { documentGeotags, siteVisits, travelDays } from './schema/site-activity.schema';
 import { attendanceDays, workforcePolicy } from './schema/workforce.schema';
 import { takeTravelSnapshot } from './travel-snapshot';
@@ -11,6 +12,7 @@ export interface ClearedLocations {
   readonly attendanceDays: number;
   readonly siteVisits: number;
   readonly photos: number;
+  readonly dutyPoints: number;
 }
 
 async function retentionDays(db: DatabaseExecutor): Promise<number> {
@@ -26,7 +28,9 @@ async function retentionDays(db: DatabaseExecutor): Promise<number> {
 /**
  * Safety net (live review S4): a closed day about to lose its coordinates that has no
  * saved travel yet gets it saved first, so the day is never worth less than it was. Day
- * close saves it already; this covers days closed before that existed.
+ * close saves it already; this covers days closed before that existed. The snapshot is
+ * worked out from the day's site visits today. Step 2 of Duty Day will work the km out from
+ * the day's `duty_points` here, before those points are deleted below.
  */
 async function saveUnsavedTravel(db: DatabaseExecutor, before: string, now: Date): Promise<number> {
   const unsaved = await db
@@ -56,6 +60,10 @@ async function saveUnsavedTravel(db: DatabaseExecutor, before: string, now: Date
  * Clears raw coordinates older than the retention period in Settings (PRD 4.3,
  * privacy): day check-ins, site check-ins and photo geotags. Times, distances and the
  * far-from-site flags stay, so attendance, visits and travel claims still read right.
+ * Duty route points of those days are deleted outright (the saved travel day, made first
+ * above, is what stays). The points of a day that is still open are kept: the
+ * night auto-close has not ended it yet, and step 2 reads the km from a day's points when
+ * the day is closed, so they go on a later run, once it is closed.
  * Safe to run any number of times; the daily worker job runs it every morning.
  */
 export async function clearExpiredLocations(
@@ -105,5 +113,22 @@ export async function clearExpiredLocations(
       ),
     )
     .returning({ id: documentGeotags.documentId });
-  return { attendanceDays: days.length, siteVisits: visits.length, photos: photos.length };
+  const route = await db
+    .delete(dutyPoints)
+    .where(
+      inArray(
+        dutyPoints.attendanceDayId,
+        db
+          .select({ id: attendanceDays.id })
+          .from(attendanceDays)
+          .where(and(lt(attendanceDays.workDate, before), isNotNull(attendanceDays.checkOutAt))),
+      ),
+    )
+    .returning({ id: dutyPoints.id });
+  return {
+    attendanceDays: days.length,
+    siteVisits: visits.length,
+    photos: photos.length,
+    dutyPoints: route.length,
+  };
 }

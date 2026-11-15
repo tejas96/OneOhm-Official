@@ -3,6 +3,7 @@ export * from './attendance';
 export * from './attendance-day';
 export * from './bonus';
 export * from './capacity';
+export * from './duty-points';
 export * from './leave';
 export * from './leave-clash';
 export * from './leave-handover';

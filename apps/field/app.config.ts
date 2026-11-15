@@ -70,7 +70,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'OneOhm reads your location only when you check in or out, to confirm you are at an approved place.',
+          'OneOhm reads your location while you are on duty, to confirm attendance and visits and to work out your travel.',
+        locationAlwaysAndWhenInUsePermission:
+          'OneOhm records your duty route from check-in to check-out. It keeps recording in the background; if you force-close the app on iPhone, it stops until you open it again. It stops when you end duty.',
+        locationAlwaysPermission:
+          'OneOhm records your duty route in the background from check-in to check-out. It stops when you end duty.',
+        isAndroidBackgroundLocationEnabled: true,
+        isAndroidForegroundServiceEnabled: true,
+        isIosBackgroundLocationEnabled: true,
       },
     ],
     [

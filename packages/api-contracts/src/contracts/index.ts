@@ -26,6 +26,7 @@ import { documentChecklistContract } from './document-checklist.contract';
 import { customerActionContracts } from './document-requests.contract';
 import { documentRequirementsContract } from './document-requirements.contract';
 import { documentsContract } from './documents.contract';
+import { dutyPointsContract } from './duty-points.contract';
 import { engagementContract } from './engagement.contract';
 import { financeContract } from './finance.contract';
 import { gatewayCheckContract } from './gateway-check.contract';
@@ -124,6 +125,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly serviceVisits: typeof serviceVisitsContract;
   readonly leadIntake: typeof leadIntakeContract;
   readonly engagement: typeof engagementContract;
+  readonly dutyPoints: typeof dutyPointsContract;
   readonly projectTeam: typeof projectTeamContract;
   readonly productDatasheet: typeof productDatasheetContract;
   readonly lists: typeof listsContract;
@@ -194,6 +196,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   serviceVisits: serviceVisitsContract,
   leadIntake: leadIntakeContract,
   engagement: engagementContract,
+  dutyPoints: dutyPointsContract,
   projectTeam: projectTeamContract,
   productDatasheet: productDatasheetContract,
   lists: listsContract,

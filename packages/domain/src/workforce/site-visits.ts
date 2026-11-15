@@ -49,8 +49,10 @@ export function siteVisitKindOf(task: {
 /**
  * The version of the consent words the field app shows. Bump it whenever those words
  * change: everyone is asked again, and nothing is captured until they answer.
+ * Version 3 added the duty route: while on duty the phone records its location in the
+ * background (Duty Day step 1), so every consent given to the version 2 words is stale.
  */
-export const LOCATION_CONSENT_VERSION = 2;
+export const LOCATION_CONSENT_VERSION = 3;
 
 export interface ConsentState {
   readonly consentedAt: Date | null;

@@ -20,17 +20,20 @@ export const ATTENDANCE = {
     inside ? `At ${place}` : `${metres} m from ${place}`,
   noPlace: 'Location not shared',
   correction: 'Wrong time? Ask for a correction',
-  consentTitle: 'Share your location during work?',
+  consentTitle: 'Record your route while you are on duty?',
+  /** Shown on top when the person agreed to older words: the words changed, so they are asked again. */
+  consentChanged: 'We changed how location works. Please read this and answer again.',
   /**
-   * The consent words, version 2 (LOCATION_CONSENT_VERSION in @oneohm/domain). Change
-   * them only together with that version, so everyone is asked again.
+   * The consent words, version 3 (LOCATION_CONSENT_VERSION in @oneohm/domain). Change
+   * them only together with that version, so everyone is asked again. The 2 minutes and
+   * 100 m are the recording settings in features/duty/duty-settings.ts.
    */
   consentBody: (days: number) =>
-    `OneOhm reads where you are only when you check in or out (for the day or at a customer's site) and when you take a site photo, and only during working hours. It confirms attendance and site visits and works out your travel. Nothing is tracked in between or after work, and the location is deleted after ${days} days.`,
+    `While you are on duty, from check-in (Start) to check-out (End), OneOhm records where you are about every 2 minutes or every 100 metres. It keeps recording in the background; if you force-close the app on iPhone, it stops until you open it again. It stops when you end duty. Your managers can see it. It also reads your location when you check in or out and when you take a site photo. Nothing is recorded before you start or after you end duty. The location is deleted after ${days} days.`,
   allow: 'Share during work',
   notNow: 'Not now',
   locationTitle: 'Location during work',
-  sharing: 'Location shared at check-ins and site photos',
+  sharing: 'Location recorded while you are on duty',
   notSharing: 'Location not shared. You can still check in.',
   stopSharing: 'Stop sharing',
   noFix: 'Your location could not be read. You are checked in without it.',

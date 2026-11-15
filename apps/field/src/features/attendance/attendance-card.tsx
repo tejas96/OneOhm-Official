@@ -7,6 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { TRAVEL } from '@/copy/site';
 import { ATTENDANCE } from '@/copy/workforce';
 import { TrackingStatus } from '@/features/site/tracking-status';
+import { DutySection } from '../duty/duty-section';
 import { ConsentPrompt } from './consent-prompt';
 import { onCorrectionRequest } from './correction-request';
 import { CorrectionSheet } from './correction-sheet';
@@ -21,6 +22,8 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
   useEffect(() => onCorrectionRequest((date) => setCorrecting({ date })), []);
   const day = workday.today;
   const askConsent = workday.attendance.captureLocation && !workday.consent.answered;
+  // Agreed to older words: asked again even in the middle of a day, as the route needs the new ones.
+  const stale = !workday.consent.given && workday.consent.version !== null;
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -37,7 +40,10 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
           <TrackingStatus state={workday.tracking} />
         </View>
       ) : null}
-      {askConsent && !day ? <ConsentPrompt days={workday.attendance.retentionDays} /> : null}
+      {askConsent && (!day || stale) ? (
+        <ConsentPrompt days={workday.attendance.retentionDays} stale={stale} />
+      ) : null}
+      <DutySection workday={workday} />
       <DayActions workday={workday} onFix={fix} />
       <View style={styles.foot}>
         <PressableScale accessibilityRole="button" onPress={() => fix(null)}>

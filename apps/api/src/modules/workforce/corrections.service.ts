@@ -18,6 +18,7 @@ import { conflict, invalid, notFound } from '../../common/http/errors';
 import { STAFF_NOTICES } from '../../common/notices';
 import { DATABASE, type Database } from '../../config/core.module';
 import { ALREADY_PENDING, assertDayFits, pendingClash } from './correction-rules';
+import { pruneDutyPoints } from './duty-prune';
 import { isLateAt } from './late-rule';
 import { loadPolicy } from './policy';
 
@@ -172,6 +173,7 @@ async function applyCorrection(
     })
     .where(and(eq(attendanceDays.userId, row.userId), eq(attendanceDays.workDate, row.workDate)))
     .returning({ id: attendanceDays.id });
+  if (day) await pruneDutyPoints(tx, day.id);
   if (day || !row.checkInAt) return;
   await tx.insert(attendanceDays).values({
     userId: row.userId,
