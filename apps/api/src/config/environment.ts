@@ -82,6 +82,8 @@ const environmentSchema = z
     /** Google Maps: one key can serve every app in development; split keys in production. */
     GOOGLE_MAPS_API_KEY: z.string().optional(),
     GOOGLE_MAPS_BROWSER_KEY: z.string().optional(),
+    /** A Map ID (Google Cloud, Map management, JavaScript, vector): smooth zoom on the live map. */
+    GOOGLE_MAPS_MAP_ID: z.string().optional(),
     /** Server-side geocoding (WhatsApp pins → city); falls back to GOOGLE_MAPS_API_KEY. */
     GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
     /** Where customers reach this API from outside; sandbox payment pages live here. */

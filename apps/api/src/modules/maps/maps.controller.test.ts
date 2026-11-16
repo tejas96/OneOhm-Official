@@ -24,7 +24,11 @@ describe('maps config key', () => {
 describe('maps config access', () => {
   const env = loadEnvironment({ ...base, GOOGLE_MAPS_API_KEY: 'k' });
   it('gives staff the key', () => {
-    expect(mapsConfigFor({ kind: 'staff' }, env)).toEqual({ browserKey: 'k' });
+    expect(mapsConfigFor({ kind: 'staff' }, env)).toEqual({ browserKey: 'k', mapId: null });
+  });
+  it('gives staff the Map ID when set', () => {
+    const withId = loadEnvironment({ ...base, GOOGLE_MAPS_API_KEY: 'k', GOOGLE_MAPS_MAP_ID: 'm' });
+    expect(mapsConfigFor({ kind: 'staff' }, withId)).toEqual({ browserKey: 'k', mapId: 'm' });
   });
   it.each(['partner', 'reseller'] as const)('refuses a %s', (kind) => {
     expect(() => mapsConfigFor({ kind }, env)).toThrow();

@@ -30,7 +30,7 @@ export function MapControls({
   const { zoomBy } = useCamera(padding);
   useZoomKeys(zoomBy);
   return (
-    <div className={cn('pointer-events-auto flex flex-col gap-2', className)}>
+    <div data-map-obstacle className={cn('pointer-events-auto flex flex-col gap-2', className)}>
       <Group>
         <Control label={t('zoomIn')} hint="+" onClick={() => zoomBy(1)}>
           <Plus />

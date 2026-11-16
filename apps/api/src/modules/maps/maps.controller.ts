@@ -14,13 +14,13 @@ export function browserKeyFrom(
   return env.GOOGLE_MAPS_BROWSER_KEY ?? env.GOOGLE_MAPS_API_KEY ?? null;
 }
 
-/** Staff get the key; every other kind of person is refused. */
+/** Staff get the key and the Map ID; every other kind of person is refused. */
 export function mapsConfigFor(
   actor: Pick<Actor, 'kind'>,
-  env: Pick<Environment, 'GOOGLE_MAPS_BROWSER_KEY' | 'GOOGLE_MAPS_API_KEY'>,
-): { browserKey: string | null } {
+  env: Pick<Environment, 'GOOGLE_MAPS_BROWSER_KEY' | 'GOOGLE_MAPS_API_KEY' | 'GOOGLE_MAPS_MAP_ID'>,
+): { browserKey: string | null; mapId: string | null } {
   if (actor.kind !== 'staff') throw forbidden();
-  return { browserKey: browserKeyFrom(env) };
+  return { browserKey: browserKeyFrom(env), mapId: env.GOOGLE_MAPS_MAP_ID ?? null };
 }
 
 /** Map settings for signed-in staff. Customers and partners get nothing. */

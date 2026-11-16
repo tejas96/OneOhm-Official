@@ -3,6 +3,7 @@
 import { DARK_COLORS, LIGHT_COLORS } from '@oneohm/design-system/tokens';
 import { Map as GoogleMap, useMap } from '@vis.gl/react-google-maps';
 import { type ReactNode, useEffect, useRef } from 'react';
+import { CameraMotion } from './camera-motion';
 import { type LatLng, useCamera, useUserMoved } from './map-camera';
 import { DARK_MAP_STYLE, LIGHT_MAP_STYLE } from './map-style';
 import { OverlayLayer } from './overlay-layer';
@@ -25,6 +26,8 @@ export interface CameraCommand {
 }
 
 export interface CanvasProps {
+  /** A vector Map ID: smooth, fractional zoom. Without one the map draws raster tiles. */
+  readonly mapId: string | null;
   readonly satellite: boolean;
   readonly camera: CameraCommand | null;
   /** Room the panes take over the map, so a fit keeps everything in the clear part. */
@@ -41,23 +44,35 @@ export interface CanvasProps {
 /**
  * The full-page map, as on Google Maps: wheel and pinch zoom without a modifier, double-click
  * zoom, drag to pan, the arrow and +/− keys. Google's own buttons are off; ours sit in the
- * same glass as the panes.
+ * same glass as the panes. With a Map ID it is a vector map, which zooms smoothly by any
+ * amount (a raster map only in whole steps, blurring and then snapping sharp).
  */
 export function LiveCanvas(props: CanvasProps) {
   const dark = useDarkTheme();
+  // A vector map takes its look from the Map ID's cloud style (light and dark); the colour
+  // scheme is fixed when the map is made, so a theme switch makes a new map.
+  const look = props.mapId
+    ? {
+        mapId: props.mapId,
+        renderingType: 'VECTOR' as const,
+        colorScheme: dark ? ('DARK' as const) : ('LIGHT' as const),
+      }
+    : { styles: dark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE };
   return (
     <GoogleMap
+      key={props.mapId ? (dark ? 'dark' : 'light') : 'raster'}
+      {...look}
       className="absolute inset-0"
       defaultCenter={INDIA}
       defaultZoom={5}
       mapTypeId={props.satellite ? 'hybrid' : 'roadmap'}
-      styles={dark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
       backgroundColor={dark ? DARK_COLORS.surface : LIGHT_COLORS.canvas}
       disableDefaultUI
       clickableIcons={false}
       gestureHandling="greedy"
       keyboardShortcuts
-      disableDoubleClickZoom={false}
+      // A vector map's own double-click zoom jumps; ours (SmoothDoubleClick) glides.
+      disableDoubleClickZoom={Boolean(props.mapId)}
       minZoom={4}
       maxZoom={20}
       onClick={props.onMapClick}
@@ -65,6 +80,7 @@ export function LiveCanvas(props: CanvasProps) {
     >
       <OverlayLayer shapes={props.shapes} pins={props.pins} />
       <CameraRunner command={props.camera} padding={props.padding} />
+      {props.mapId && <SmoothDoubleClick />}
       {props.children}
     </GoogleMap>
   );
@@ -89,7 +105,22 @@ function CameraRunner({
     const [first] = command.points;
     if (command.mode === 'fit' || !first) camera.fit(command.points);
     else if (command.mode === 'focus') camera.focus(first);
-    else if (!map.getBounds()?.contains(first)) map.panTo(first);
+    else camera.reveal(first);
   }, [map, command, camera, moved]);
+  return null;
+}
+
+/** Double click zooms in a step around the clicked point, Shift + double click out. */
+function SmoothDoubleClick() {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener('dblclick', (event: google.maps.MapMouseEvent) => {
+      if (!event.latLng) return;
+      const shift = event.domEvent instanceof MouseEvent && event.domEvent.shiftKey;
+      CameraMotion.of(map).zoomAt(event.latLng.toJSON(), shift ? -1 : 1);
+    });
+    return () => listener.remove();
+  }, [map]);
   return null;
 }

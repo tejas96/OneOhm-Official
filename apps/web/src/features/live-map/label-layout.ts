@@ -19,7 +19,7 @@ const HEIGHT_PX = 22;
 const OFFSET_Y = 26;
 const GAP_PX = 4;
 
-interface Rect {
+export interface Rect {
   readonly left: number;
   readonly right: number;
   readonly top: number;
@@ -58,11 +58,13 @@ const coversPin = (rect: Rect, pin: PinObstacle) =>
 
 /**
  * The captions to show: the most important pin keeps its caption; a caption that would cover
- * another caption, or any pin other than its own, is hidden (never drawn under a pin).
+ * another caption, any pin other than its own, or something over the map (the map buttons,
+ * the numbers bar: `blocked`) is hidden, never drawn under it.
  */
 export function visibleCaptions(
   boxes: readonly LabelBox[],
   pins: readonly PinObstacle[] = [],
+  blocked: readonly Rect[] = [],
 ): Set<string> {
   const placed: Rect[] = [];
   const shown = new Set<string>();
@@ -71,6 +73,7 @@ export function visibleCaptions(
     const rect = captionRect(box);
     if (placed.some((other) => overlaps(rect, other))) continue;
     if (pins.some((pin) => pin.id !== box.id && coversPin(rect, pin))) continue;
+    if (blocked.some((other) => overlaps(rect, other))) continue;
     placed.push(rect);
     shown.add(box.id);
   }

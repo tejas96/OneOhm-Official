@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { createPortal } from 'react-dom';
+import type { Rect } from './label-layout';
 import { type Frame, PinLayout } from './pin-layout';
 
 /**
@@ -93,6 +94,23 @@ function keepClicksOnPins(pins: HTMLDivElement) {
     pins.addEventListener(type, (event) => event.stopPropagation());
 }
 
+/**
+ * The things drawn over the map (marked `data-map-obstacle`: the map buttons, the numbers
+ * bar) in the pins layer's pixels, so no caption is placed under them.
+ */
+function blockedRects(pins: HTMLDivElement): Rect[] {
+  const origin = pins.getBoundingClientRect();
+  return [...document.querySelectorAll('[data-map-obstacle]')].map((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      left: rect.left - origin.left,
+      right: rect.right - origin.left,
+      top: rect.top - origin.top,
+      bottom: rect.bottom - origin.top,
+    };
+  });
+}
+
 export function OverlayLayer({
   shapes,
   pins,
@@ -109,6 +127,7 @@ export function OverlayLayer({
     keepClicksOnPins(pinsDiv);
     const store = new FrameStore();
     const layout = new PinLayout();
+    layout.setBlocked(() => blockedRects(pinsDiv));
     class Overlay extends google.maps.OverlayView {
       override onAdd() {
         const panes = this.getPanes();

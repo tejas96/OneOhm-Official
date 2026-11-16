@@ -100,6 +100,15 @@ describe('visibleCaptions', () => {
     ]);
     expect([...shown].sort()).toEqual(['b', 'c']);
   });
+
+  it('hides a caption that would run under the map buttons', () => {
+    const buttons = { left: 160, right: 200, top: 100, bottom: 200 };
+    const boxes = [
+      { id: 'a', x: 120, y: 100, text: 'Sunita · 19.0 km · 81%', priority: 1 },
+      { id: 'b', x: 40, y: 300, text: 'Amit', priority: 0 },
+    ];
+    expect([...visibleCaptions(boxes, [], [buttons])]).toEqual(['b']);
+  });
 });
 
 describe('fanOut', () => {

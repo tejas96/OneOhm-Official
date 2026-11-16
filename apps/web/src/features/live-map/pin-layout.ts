@@ -2,6 +2,7 @@ import {
   fanRing,
   type LabelBox,
   type PinObstacle,
+  type Rect,
   type RingSpot,
   SITE_RADIUS,
   visibleCaptions,
@@ -42,6 +43,8 @@ export class PinLayout {
   private readonly pins = new Map<string, Pin>();
   private readonly refs = new Map<string, (el: HTMLElement | null) => void>();
   private frame: Frame | null = null;
+  /** What sits over the map (buttons, the numbers bar), in layer pixels; none until set. */
+  private blocked: () => readonly Rect[] = () => [];
   private loop = 0;
 
   /** A stable ref callback for a pin's element. */
@@ -99,6 +102,11 @@ export class PinLayout {
     this.draw();
   }
 
+  /** Where the things over the map are, asked each time the captions are picked. */
+  setBlocked(blocked: () => readonly Rect[]) {
+    this.blocked = blocked;
+  }
+
   /** Regroups the fan-out and picks the captions for the map as it is now (map idle, new data). */
   settle() {
     const frame = this.frame;
@@ -143,7 +151,7 @@ export class PinLayout {
       if (pin.kind === 'worker' && pin.caption)
         boxes.push({ id, ...at, text: pin.caption, priority: pin.priority });
     }
-    return visibleCaptions(boxes, obstacles);
+    return visibleCaptions(boxes, obstacles, this.blocked());
   }
 
   dispose() {

@@ -3,7 +3,7 @@
 import { todayIn } from '@oneohm/shared';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { useEffect, useState } from 'react';
-import { useMapsKey } from '@/features/maps/use-maps-config';
+import { useMapsConfig } from '@/features/maps/use-maps-config';
 import { usePeople } from '@/features/team/use-team';
 import type { CameraCommand } from '../live-canvas';
 import { LiveCanvas } from '../live-canvas';
@@ -17,8 +17,9 @@ import { dayPlaces, segmentPlaces, useDayView } from './use-day-view';
 import '../live-map.css';
 import '../live-pins.css';
 
-const PADDING = { top: 48, right: 400, bottom: 120, left: 48 };
-const PHONE_PADDING = { top: 96, right: 24, bottom: 320, left: 24 };
+/** The panel and the map buttons on the right: no pin lands under a button after a fit. */
+const PADDING = { top: 48, right: 496, bottom: 120, left: 72 };
+const PHONE_PADDING = { top: 96, right: 100, bottom: 320, left: 24 };
 
 const initialsOf = (name: string) =>
   name
@@ -36,7 +37,7 @@ export function DayPage({
   readonly personId: string;
   readonly date: string | null;
 }) {
-  const browserKey = useMapsKey();
+  const { browserKey, mapId } = useMapsConfig();
   const today = todayIn();
   const [day, setDay] = useState(date ?? today);
   const view = useDayView(personId, day);
@@ -68,6 +69,7 @@ export function DayPage({
       {browserKey ? (
         <APIProvider apiKey={browserKey}>
           <LiveCanvas
+            mapId={mapId}
             satellite={satellite}
             camera={camera}
             padding={padding}

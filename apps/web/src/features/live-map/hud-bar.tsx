@@ -50,7 +50,10 @@ export function HudBar({ counts, filter, onFilter, alerts, onAlerts }: HudBarPro
   const t = useTranslations('liveMap');
   const toggle = (next: LiveFilter) => onFilter(filter === next ? 'all' : next);
   return (
-    <div className="live-glass pointer-events-auto flex w-fit max-w-full min-w-0 items-center gap-0.5 rounded-2xl p-1.5">
+    <div
+      data-map-obstacle
+      className="live-glass pointer-events-auto flex w-fit max-w-full min-w-0 items-center gap-0.5 rounded-2xl p-1.5"
+    >
       <h1 className="sr-only">{t('title')}</h1>
       <fieldset
         className={cn(

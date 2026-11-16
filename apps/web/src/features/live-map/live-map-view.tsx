@@ -2,7 +2,7 @@
 
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
-import { useMapsKey } from '@/features/maps/use-maps-config';
+import { useMapsConfig } from '@/features/maps/use-maps-config';
 import { alertCounts } from './alerts/alert-format';
 import { useLiveAlerts } from './alerts/use-alerts';
 import { BottomSheet, type SheetStop } from './bottom-sheet';
@@ -20,10 +20,14 @@ import { useLiveView } from './use-live-view';
 import './live-map.css';
 import './live-pins.css';
 
-/** Room the panes take over the map, for fits. */
-const WIDE_PADDING = { top: 104, right: 400, bottom: 48, left: 48 };
-const WIDE_DAY_PADDING = { top: 48, right: 400, bottom: 120, left: 48 };
-const PHONE_PADDING = { top: 132, right: 28, bottom: 200, left: 28 };
+/**
+ * Room the panes and the map buttons take over the map, for fits: on the right the panel
+ * (372 px), the button column (60 px) and a fanned-out group of pins (64 px), so no pin
+ * lands under a button.
+ */
+const WIDE_PADDING = { top: 104, right: 496, bottom: 64, left: 72 };
+const WIDE_DAY_PADDING = { top: 48, right: 496, bottom: 120, left: 72 };
+const PHONE_PADDING = { top: 132, right: 100, bottom: 200, left: 28 };
 
 /**
  * The manager's live map (Duty Day steps 4 and 5): the whole screen is the map; the numbers
@@ -31,7 +35,7 @@ const PHONE_PADDING = { top: 132, right: 28, bottom: 200, left: 28 };
  * on phones). Refreshes every 30 s.
  */
 export function LiveMapView() {
-  const browserKey = useMapsKey();
+  const { browserKey, mapId } = useMapsConfig();
   const { team, people, sites, offices, alertList, loaded, alertsLoaded } = useLiveData();
   const wide = useWideScreen();
   const view = useLiveView({
@@ -82,6 +86,7 @@ export function LiveMapView() {
       {browserKey ? (
         <APIProvider apiKey={browserKey}>
           <LiveCanvas
+            mapId={mapId}
             satellite={satellite}
             camera={view.camera}
             padding={padding}
