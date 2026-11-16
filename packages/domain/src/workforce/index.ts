@@ -17,6 +17,7 @@ export * from './month-employment';
 export * from './month-sheet';
 export * from './month-sheet-diff';
 export * from './month-sheet-types';
+export * from './on-the-way';
 export * from './paid-km';
 export * from './policy';
 export * from './rating-split';

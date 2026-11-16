@@ -55,6 +55,8 @@ const environmentSchema = z
     FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
     /** Signs the Pay now links. Falls back to FILE_LINK_SECRET outside production. */
     PAY_LINK_SECRET: z.string().min(16).optional(),
+    /** Signs the "Track live" links of the "on the way" message. Falls back to FILE_LINK_SECRET. */
+    TRACK_LINK_SECRET: z.string().min(16).optional(),
     FILE_LINK_HOURS: z.coerce.number().int().min(1).max(168).default(72),
     CHROMIUM_PATH: z.string().optional(),
     /** S3-compatible object storage (RustFS) for photos, documents and company assets. */

@@ -4,8 +4,11 @@ import { attendanceDays, businessTimeZone, dutyPoints, takeTravelSnapshot } from
 import { DUTY_SKEW_MS, type DutyPointRejection, judgeDutyPoint } from '@oneohm/domain';
 import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
-import { DATABASE, type Database } from '../../config/core.module';
+import { DATABASE, type Database, ENVIRONMENT } from '../../config/core.module';
+import type { Environment } from '../../config/environment';
 import { RouteVisitsService } from '../site-activity/route-visits.service';
+import { tellOnTheWay } from '../visit-news/visit-news-on-way';
+import { sendDueChecks } from '../visit-news/visit-news-send';
 import { alertsAfterPoints } from './duty-point-alerts';
 import { trackingFor } from './tracking';
 
@@ -23,6 +26,7 @@ export class DutyPointsService {
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(ENVIRONMENT) private readonly env: Environment,
     private readonly routeVisits: RouteVisitsService,
   ) {}
 
@@ -139,7 +143,21 @@ export class DutyPointsService {
       } catch (error) {
         this.log.error(`Duty alerts after points failed for ${actor.userId}`, error);
       }
+      await this.customerNews(actor.userId, now);
     }
     return { accepted, rejected };
+  }
+
+  /**
+   * The customer's news (Duty Day step 6): a visit check whose wait is over, and "on the way".
+   * A fault here never fails the upload.
+   */
+  private async customerNews(userId: string, now: Date): Promise<void> {
+    try {
+      await sendDueChecks(this.db, userId, now);
+      await tellOnTheWay(this.db, this.env, userId, now);
+    } catch (error) {
+      this.log.error(`Customer visit news after points failed for ${userId}`, error);
+    }
   }
 }

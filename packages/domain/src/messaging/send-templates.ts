@@ -1,5 +1,6 @@
 import type { MessageTemplateDefault } from './message-templates';
 import { CARE_TEMPLATES } from './send-templates-care';
+import { DUTY_VISIT_TEMPLATES } from './send-templates-duty';
 import { STEP_ASK_TEMPLATES } from './send-templates-steps';
 
 /**
@@ -147,6 +148,7 @@ export const SEND_MESSAGE_TEMPLATES = [
   },
   ...STEP_ASK_TEMPLATES,
   ...CARE_TEMPLATES,
+  ...DUTY_VISIT_TEMPLATES,
 ] as const satisfies readonly MessageTemplateDefault[];
 
 /**

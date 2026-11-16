@@ -8,7 +8,7 @@ import {
 } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
-import { visitProofReasonSchema, visitProofSchema } from './visit-proof.schema';
+import { customerSaidSchema, visitProofReasonSchema, visitProofSchema } from './visit-proof.schema';
 import { decisionStatusSchema } from './workforce.schema';
 
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -71,6 +71,8 @@ export const siteVisitSchema = z.object({
   proof: visitProofSchema.nullable(),
   proofReasons: z.array(visitProofReasonSchema),
   proofAt: instantSchema.nullable(),
+  /** The customer's answer to "Was this visit done?"; null when not given. */
+  customerSaid: customerSaidSchema.nullable().optional(),
 });
 export type SiteVisit = z.infer<typeof siteVisitSchema>;
 

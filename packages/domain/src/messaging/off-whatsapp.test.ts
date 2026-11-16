@@ -70,6 +70,12 @@ describe('what an automatic message becomes for a customer not on WhatsApp', () 
       expect(offWhatsAppPathForTemplate(key)).toBe('sms');
   });
 
+  it('site visit news goes by SMS, except "Was this visit done?" (chat or app only)', () => {
+    for (const key of ['worker_on_way', 'worker_arrived', 'visit_delayed'])
+      expect(offWhatsAppPathForTemplate(key)).toBe('sms');
+    expect(offWhatsAppPathForTemplate('visit_check')).toBe('skip');
+  });
+
   it('the task names the customer and the ask', () => {
     expect(inPersonTask('Asha', 'Share your location')).toEqual({
       title: 'Do in person: Share your location',

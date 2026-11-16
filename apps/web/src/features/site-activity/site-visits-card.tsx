@@ -82,7 +82,11 @@ export function SiteVisitsCard({ projectId }: { readonly projectId: string }) {
       header: t('visits.columns.proof'),
       cell: (visit) =>
         visit.proof ? (
-          <VisitProof proof={visit.proof} reasons={visit.proofReasons} />
+          <VisitProof
+            proof={visit.proof}
+            reasons={visit.proofReasons}
+            customerSaid={visit.customerSaid ?? null}
+          />
         ) : (
           <span className="type-body-sm text-ink-faint">{t('proof.pending')}</span>
         ),

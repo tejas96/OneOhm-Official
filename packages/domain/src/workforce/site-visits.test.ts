@@ -154,6 +154,7 @@ describe('workforce policy defaults', () => {
       baseStartMaxKm: 5,
       commuteDeductKm: 0,
       unknownStopMinutes: 45,
+      customerVisitMessages: true,
     });
   });
 

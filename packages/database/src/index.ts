@@ -15,6 +15,7 @@ export * from './customer-message';
 export * from './customer-message-chat';
 export * from './customer-message-names';
 export { languageOf, localAlertTitle, localValues, SOME_HOME } from './customer-message-words';
+export * from './customer-visit-delayed';
 export * from './duty-alert-escalate';
 export * from './duty-alert-gap';
 export * from './duty-alert-gap-sweep';

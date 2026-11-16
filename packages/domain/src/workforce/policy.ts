@@ -108,6 +108,8 @@ export interface SiteTravelPolicy {
   readonly commuteDeductKm: number;
   /** A stop away from every office and site this long or longer is flagged, in minutes (Duty Day step 5). */
   readonly unknownStopMinutes: number;
+  /** The customer hears about site visits on WhatsApp: on the way, arrived, was it done, running late (Duty Day step 6). */
+  readonly customerVisitMessages: boolean;
 }
 
 export interface WorkforcePolicy {
@@ -162,6 +164,7 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     baseStartMaxKm: 5,
     commuteDeductKm: 0,
     unknownStopMinutes: 45,
+    customerVisitMessages: true,
   },
   capacity: { defaultOpenTaskLimit: 0 },
 };

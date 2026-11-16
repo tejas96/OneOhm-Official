@@ -1,4 +1,5 @@
 import { CARE_TEMPLATE_WORDS } from './send-template-words-care';
+import { DUTY_TEMPLATE_WORDS } from './send-template-words-duty';
 import { STEP_TEMPLATE_WORDS } from './send-template-words-steps';
 
 /**
@@ -20,6 +21,7 @@ export interface SendTemplateWords {
 export const SEND_TEMPLATE_WORDS: Readonly<Record<string, SendTemplateWords>> = {
   ...STEP_TEMPLATE_WORDS,
   ...CARE_TEMPLATE_WORDS,
+  ...DUTY_TEMPLATE_WORDS,
   location_request: {
     mr: 'नमस्कार {{1}}, तुमच्या {{2}} घराचे लोकेशन पाठवा, म्हणजे आमची टीम सहज पोहोचेल. पाठवण्यासाठी खालील बटण दाबा.',
     hi: 'नमस्ते {{1}}, कृपया अपने {{2}} घर की लोकेशन भेजें, ताकि हमारी टीम आसानी से पहुँच सके। भेजने के लिए नीचे का बटन दबाएँ।',

@@ -166,12 +166,14 @@
         "visit_doubtful": "Visit could not be confirmed",
         "job_left_unfinished": "Left a job unfinished",
         "claim_waiting": "Travel claim waiting",
-        "claim_unpaid": "Travel claim not paid"
+        "claim_unpaid": "Travel claim not paid",
+        "visit_customer_no": "Customer says the visit did not happen"
       },
       "where": {
         "between": "From {from} to {to}",
         "planned": "{place}, planned {time}",
-        "amount": "₹{amount, number}"
+        "amount": "₹{amount, number}",
+        "customerNo": "{customer} tapped No for {home}"
       },
       "ago": {
         "now": "just now",
@@ -181,6 +183,8 @@
       },
       "call": "Call",
       "callName": "Call {name}",
+      "callCustomer": "Call customer",
+      "callCustomerName": "Call the customer, {name}",
       "whatsapp": "WhatsApp",
       "whatsappName": "WhatsApp {name}",
       "openDay": "Open day",

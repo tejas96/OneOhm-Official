@@ -78,6 +78,16 @@ export function SiteTravelSection({
         label={t('autoSiteVisits')}
         description={travel.autoSiteVisits ? t('autoSiteVisitsOn') : t('autoSiteVisitsOff')}
       />
+      <Switch
+        checked={travel.customerVisitMessages ?? true}
+        onCheckedChange={(customerVisitMessages) => onChange({ ...travel, customerVisitMessages })}
+        label={t('customerVisitMessages')}
+        description={
+          (travel.customerVisitMessages ?? true)
+            ? t('customerVisitMessagesOn')
+            : t('customerVisitMessagesOff')
+        }
+      />
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field label={t('siteFence')} hint={t('siteFenceHint')} error={errors['travel.siteFenceM']}>
           <NumberInput

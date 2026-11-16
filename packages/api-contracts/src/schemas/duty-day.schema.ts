@@ -1,7 +1,7 @@
 import { GAP_REASONS, STOP_PLACES } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
-import { visitProofReasonSchema, visitProofSchema } from './visit-proof.schema';
+import { customerSaidSchema, visitProofReasonSchema, visitProofSchema } from './visit-proof.schema';
 
 /**
  * A person's duty day as one ordered list (Duty Day step 5, `GET /people/:id/day`): the side
@@ -41,6 +41,8 @@ export const dutyVisitSegmentSchema = z.object({
   open: z.boolean(),
   proof: visitProofSchema.nullable(),
   proofReasons: z.array(visitProofReasonSchema),
+  /** The customer's answer to "Was this visit done?"; null when not given. */
+  customerSaid: customerSaidSchema.nullable().optional(),
 });
 
 /**

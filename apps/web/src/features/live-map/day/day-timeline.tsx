@@ -104,7 +104,12 @@ export const DayTimeline = memo(function DayTimeline({
                 {note && <span className="type-label text-ink-muted">{note}</span>}
                 {segment.kind === 'visit' && segment.proof && (
                   <span className="mt-1">
-                    <VisitProof proof={segment.proof} reasons={segment.proofReasons} showReasons />
+                    <VisitProof
+                      proof={segment.proof}
+                      reasons={segment.proofReasons}
+                      customerSaid={segment.customerSaid ?? null}
+                      showReasons
+                    />
                   </span>
                 )}
               </span>

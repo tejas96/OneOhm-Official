@@ -8,6 +8,8 @@ const db = vi.hoisted(() => ({
 const conditions = vi.hoisted(() => ({ saveConditions: vi.fn() }));
 
 vi.mock('./device-conditions', () => conditions);
+// The customer's waiting visit checks (Duty Day step 6) are their own tests.
+vi.mock('../visit-news/visit-news-send', () => ({ sendDueChecks: vi.fn() }));
 vi.mock('./tracking', () => ({
   readingOutcome: vi.fn(async () => ({ reading: null, skipped: 'no_reading' })),
   consentSummary: vi.fn(),

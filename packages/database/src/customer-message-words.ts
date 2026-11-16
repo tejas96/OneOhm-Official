@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { sayMilestones } from './customer-message-burst';
 import { CARE_EN, CARE_MESSAGES } from './customer-message-care';
+import { DUTY_EN, DUTY_MESSAGES } from './customer-message-duty';
 import { HINDI_WORDS } from './customer-message-hi';
 import { JOURNEY_MESSAGES, JOURNEY_EN as JOURNEY_ONLY_EN } from './customer-message-journey';
 import { MARATHI_WORDS } from './customer-message-mr';
@@ -58,11 +59,12 @@ export const IN_APP_MESSAGES = [
   ...JOURNEY_MESSAGES,
   ...STEP_MESSAGES,
   ...CARE_MESSAGES,
+  ...DUTY_MESSAGES,
 ] as const;
 type InAppMessage = (typeof IN_APP_MESSAGES)[number];
 
-/** The journey messages and the subsidy, loan and layout ones, as the app inbox says them in English. */
-export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN, ...CARE_EN };
+/** The journey, subsidy, loan, layout, care and site visit messages, as the app inbox says them in English. */
+export const JOURNEY_EN = { ...JOURNEY_ONLY_EN, ...STEP_EN, ...CARE_EN, ...DUTY_EN };
 
 /** A paper's home when its request has no project; said in the customer's language. */
 export const SOME_HOME = 'your home';

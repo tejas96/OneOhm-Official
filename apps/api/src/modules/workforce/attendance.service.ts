@@ -12,6 +12,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { sendDueChecks } from '../visit-news/visit-news-send';
 import { resumeDuty } from './attendance-resume';
 import { acceptTap, checkInDay, flagDelayedTap } from './attendance-tap';
 import { teamAttendance } from './attendance-team';
@@ -204,6 +205,8 @@ export class AttendanceService {
         position: reading?.position,
       });
     });
+    // A "Was this visit done?" still waiting for the person's reason goes now: none comes after End duty.
+    await sendDueChecks(this.db, actor.userId, received, true);
     return result;
   }
 

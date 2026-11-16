@@ -1,7 +1,7 @@
 import { type GapReason, gapReason } from './duty-alert-rules';
 import { ROUTE_GAP_MINUTES, type RoutePoint, routeKm } from './route-km';
 import type { Stop } from './stops';
-import type { VisitProofReason, VisitProofValue } from './visit-proof';
+import type { CustomerSaid, VisitProofReason, VisitProofValue } from './visit-proof';
 
 /**
  * A person's duty day as one ordered list (Duty Day step 5): stops, travel, site visits and
@@ -26,6 +26,8 @@ export interface TimelineVisit {
   readonly siteLabel: string | null;
   readonly proof: VisitProofValue | null;
   readonly proofReasons: readonly VisitProofReason[];
+  /** The customer's answer to "Was this visit done?"; null when not given. */
+  readonly customerSaid?: CustomerSaid | null;
 }
 
 interface Span {

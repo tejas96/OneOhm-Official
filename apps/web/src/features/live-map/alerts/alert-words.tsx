@@ -5,6 +5,7 @@ import {
   CalendarX,
   CircleDashed,
   CircleQuestionMark,
+  MessageSquareX,
   Receipt,
   ShieldAlert,
   ShieldQuestionMark,
@@ -27,6 +28,7 @@ const ICON = {
   job_left_unfinished: CircleDashed,
   claim_waiting: Receipt,
   claim_unpaid: Wallet,
+  visit_customer_no: MessageSquareX,
 } as const;
 
 export function AlertIcon({ kind }: { readonly kind: DutyAlert['kind'] }) {
@@ -76,6 +78,11 @@ export function useAlertWords() {
           });
         case 'visit_doubtful':
           return [job, reasonWords(text(detail.reasons))].filter(Boolean).join(': ');
+        case 'visit_customer_no':
+          return t('where.customerNo', {
+            customer: text(detail.customerName),
+            home: text(detail.home),
+          });
         case 'claim_waiting':
         case 'claim_unpaid':
           return t('where.amount', { amount: number(detail.amountPaise) / 100 });

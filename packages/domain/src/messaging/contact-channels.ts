@@ -42,6 +42,11 @@ export const SKIPPED_AFTER_STOP: readonly string[] = [
   'offer_revisit',
   'offer_past_customer',
   'review_request',
+  // Site visit news (Duty Day step 6): on the way, arrived, was it done, running late.
+  'worker_on_way',
+  'worker_arrived',
+  'visit_check',
+  'visit_delayed',
 ];
 
 export const skippedAfterStop = (template: string, whatsappOptIn: boolean): boolean =>

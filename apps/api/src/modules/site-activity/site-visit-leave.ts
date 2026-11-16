@@ -14,6 +14,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict, notFound } from '../../common/http/errors';
 import type { Database } from '../../config/core.module';
+import { afterLeaveReason, safely } from '../visit-news/visit-news-send';
 import { oneVisitRecord } from './site-visit-end';
 import { readVisits } from './site-visit-read';
 
@@ -130,6 +131,8 @@ export async function giveLeaveReason(
     );
     // The alert feed's copy (Duty Day step 5). The manager was just told above: not again.
     await raiseDutyAlert(tx, feedAlert(actor, row, record, reason), { notify: false });
+    // "Customer not home" drops the customer's waiting "Was this visit done?"; any other reason sends it.
+    await safely(tx, 'Visit check after the reason', (sp) => afterLeaveReason(sp, visitId, reason));
   });
   return oneVisitRecord(db, visitId);
 }

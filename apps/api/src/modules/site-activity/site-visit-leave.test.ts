@@ -5,6 +5,8 @@ const ended = vi.hoisted(() => ({ oneVisitRecord: vi.fn() }));
 const alerts = vi.hoisted(() => ({ alertVisitOwner: vi.fn() }));
 vi.mock('./site-visit-read', () => reads);
 vi.mock('./site-visit-end', () => ended);
+// What the reason does to the customer's "Was this visit done?" is tested in visit-news.
+vi.mock('../visit-news/visit-news-send', () => ({ afterLeaveReason: vi.fn(), safely: vi.fn() }));
 vi.mock('@oneohm/database', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@oneohm/database')>()),
   ...alerts,

@@ -2,6 +2,7 @@ import { clockString, plannedVisitMissed, VISIT_MISSED_AFTER_MINUTES } from '@on
 import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
+import { tellVisitDelayed } from './customer-visit-delayed';
 import { raiseDutyAlert } from './duty-alert-store';
 import { serviceCategories } from './schema/after-sales.schema';
 import { customers } from './schema/crm.schema';
@@ -61,7 +62,8 @@ async function someoneArrived(
  * work itself (the task or request, the live map's site id), never the person, so the feed's
  * "Send nearest" opens that site. A visit with nobody named raises nothing: the live map
  * already shows the site as late. Once closed (reached, cancelled, moved, or by a person) it
- * opens again only when a moved visit's new start is missed too.
+ * opens again only when a moved visit's new start is missed too. When the alert is new, the
+ * customer hears the team is running late (`tellVisitDelayed`).
  */
 export async function missedVisits(
   db: DatabaseExecutor,
@@ -129,7 +131,10 @@ export async function missedVisits(
       opens: work,
       since: new Date(now.getTime() - lateBy * 60_000),
     });
-    if (alert.created) raised += 1;
+    if (!alert.created) continue;
+    raised += 1;
+    // The customer is told too, once per planned visit (Duty Day step 6).
+    await tellVisitDelayed(db, visit);
   }
   return raised;
 }

@@ -29,6 +29,11 @@ export function AlertItem(props: AlertItemProps) {
   const words = useAlertWords();
   const red = alert.severity === 'red';
   const phone = alert.person.phone;
+  // "Customer says the visit did not happen": the first call is to the customer (Duty Day step 6).
+  const customerPhone =
+    alert.kind === 'visit_customer_no' && typeof alert.detail.customerPhone === 'string'
+      ? alert.detail.customerPhone
+      : null;
   return (
     <article
       data-severity={alert.severity}
@@ -76,12 +81,25 @@ export function AlertItem(props: AlertItemProps) {
             {t('sendNearest')}
           </Button>
         )}
+        {customerPhone && (
+          <Button
+            asChild
+            size="sm"
+            variant="primary"
+            aria-label={t('callCustomerName', { name: String(alert.detail.customerName ?? '') })}
+          >
+            <a href={`tel:${customerPhone}`}>
+              <Phone aria-hidden className="size-4" />
+              {t('callCustomer')}
+            </a>
+          </Button>
+        )}
         {phone && (
           <>
             <Button
               asChild
               size="sm"
-              variant={red && !canSendNearest(alert) ? 'primary' : 'secondary'}
+              variant={red && !canSendNearest(alert) && !customerPhone ? 'primary' : 'secondary'}
               aria-label={t('callName', { name: alert.person.fullName })}
             >
               <a href={`tel:${phone}`}>

@@ -4,6 +4,7 @@ import { isCareTap } from '../../care/care-taps';
 import { isJourneyTap } from '../../journey/journey-taps';
 import { isSurveyTap } from '../../self-survey/survey-taps';
 import { isSendTap } from '../../send-to-customer/send-taps';
+import { isVisitCheckTap } from '../../visit-news/visit-check-taps';
 import { isLeadVisitTap, isVisitTap } from '../../visits/visit-taps';
 import type { Conversation } from '../chat-store';
 import { isFormTap } from '../forms/form-pick';
@@ -45,6 +46,7 @@ export function assistantAnswersTap(
     isFormTap(id) ||
     isSendTap(id) ||
     isVisitTap(id) ||
+    isVisitCheckTap(id) ||
     isJourneyTap(id) ||
     isSurveyTap(id) ||
     isCareTap(id) ||

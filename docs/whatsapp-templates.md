@@ -1,6 +1,6 @@
 # WhatsApp templates (draft for Meta)
 
-The app sends these 56 templates (the numbered sections below; a few have newer versions). Each one:
+The app sends these 60 templates (the numbered sections below; a few have newer versions). Each one:
 
 - Category **Utility**, language **English (`en`)**.
 - Uses **numbered** fields (`{{1}}`, `{{2}}`, …). The app fills them in the order of "Fields".
@@ -80,6 +80,10 @@ news still goes inside 24 hours while it is off (money and answer flows never go
 | `staff_daily_digest` | Staff daily summary | Utility | none | — | To submit |
 | `staff_welcome` | Welcome a new staff member | Utility | none | — | To submit |
 | `vendor_paid` | Tell a vendor or crew a bank transfer reached them | Utility | none | — (the On/Off switch) | To submit |
+| `worker_on_way` | The worker is on the way, with the ETA (Duty Day) | Utility | URL "Track live" | extras approved | To submit |
+| `worker_arrived` | The worker reached the site (Duty Day) | Utility | none | — | To submit |
+| `visit_check` | Was this visit done? (Duty Day) | Utility | 2 quick replies | extras approved | To submit |
+| `visit_delayed` | The team is running late for a planned visit (Duty Day) | Utility | none | — | To submit |
 
 Quick-reply switch: **extras approved** = the version with the quick replies / document header is approved (turn it on with the new Meta name in the
 same dialog); **quick replies approved** = a newer version with quick replies in front of an older button is approved (the older version keeps working
@@ -114,9 +118,13 @@ Unicode DLT template.
 | The fixed check (`problem_fixed_sms`) | Fixed: {topic} Is it working now? Please call us or open the OneOhm app. | दुरुस्त केले: {topic} आता ते नीट चालते का? कृपया आम्हाला फोन करा किंवा OneOhm अ‍ॅप उघडा. | ठीक किया: {topic} क्या अब यह ठीक चल रहा है? कृपया हमें फोन करें या OneOhm ऐप खोलें। |
 | A paper is shared (`document_share_sms`) | Your {document} is ready Find it in the OneOhm app or ask our team. | तुमचे {document} तयार आहे ते OneOhm अ‍ॅपमध्ये पाहा किंवा आमच्या टीमला विचारा. | आपका {document} तैयार है इसे OneOhm ऐप में देखें या हमारी टीम से पूछें। |
 | A visit reminder (`visit_reminder_sms`) | Our team visits {home} {when} For the {work}. | आमची टीम {home} येथे {when} येणार आहे {work} साठी. | हमारी टीम {home} पर {when} आ रही है {work} के लिए। |
+| On the way (`worker_on_way`) | {worker} from OneOhm is on the way to {home} Expected in about {minutes} min. | OneOhm चे {worker} {home} येथे येण्यासाठी निघाले आहेत सुमारे {minutes} मिनिटांत पोहोचतील. | OneOhm से {worker} {home} के लिए निकल चुके हैं लगभग {minutes} मिनट में पहुँचेंगे। |
+| Arrived (`worker_arrived`) | {worker} from OneOhm has reached {home} Our team is at your site now. | OneOhm चे {worker} {home} येथे पोहोचले आहेत आमची टीम आता तुमच्या साइटवर आहे. | OneOhm से {worker} {home} पर पहुँच गए हैं हमारी टीम अभी आपकी साइट पर है। |
+| Running late (`visit_delayed`) | Our team is running late For your visit to {home}. We will update you soon. | आमच्या टीमला उशीर होत आहे {home} येथील तुमच्या भेटीसाठी. आम्ही लवकरच कळवू. | हमारी टीम को देर हो रही है {home} पर आपकी विज़िट के लिए। हम जल्द ही बताएँगे। |
 
-The last three rows are the SMS twins of `problem_fixed_check`, `document_share` and `visit_reminder` (their WhatsApp words point to the chat, so the SMS says
-something else). Register them with the others. Other news (receipts, crew, delay, handover pack, layout, the older approved messages) goes as the app's own short title and body, as before.
+The `problem_fixed_sms`, `document_share_sms` and `visit_reminder_sms` rows are the SMS twins of `problem_fixed_check`, `document_share` and `visit_reminder` (their WhatsApp words point to the chat, so the SMS says
+something else). The last three rows are the site visit news (Duty Day step 6), in the same words as the app inbox; `visit_check`
+("Was this visit done?") is never an SMS and never a task for the team, since only the customer's own tap proves a visit. Register them with the others. Other news (receipts, crew, delay, handover pack, layout, the older approved messages) goes as the app's own short title and body, as before.
 
 ## Customer templates
 
@@ -811,6 +819,77 @@ text. In the chat the Pay button reads `Pay ₹X` (the amount); the template's f
 | `installation_started` | `Project update` · `प्रकल्पाची माहिती` · `प्रोजेक्ट अपडेट` | `go:update` |
 | `commissioning_completed` | `Pay now` · `आता भरा` · `अभी भरें`; `Warranty & AMC` · `वॉरंटी आणि AMC` · `वारंटी और AMC` | `pay:<instalment id>` (else `go:payments`), `go:warranty` |
 | `project_waiting` | `Send it now` · `आत्ता पाठवा` · `अभी भेजें` | the open ask (`sendit:<id>`, `locreq:<id>`, `pay:<id>`, `jr:<id>`); sent only when a step waiting on the customer has one |
+
+## Site visit templates (Duty Day step 6)
+
+Sent by the system around a site visit. Inside the 24-hour chat window the same news goes as a chat message (with the same
+buttons), so these work before Meta approves them; outside it they need the template. All four are **off** until Meta approves
+English, Marathi and Hindi. Each goes once per job and day. Nothing goes after STOP, for a task whose template does not message the
+customer, or while **Settings → Workforce → Tell customers about site visits on WhatsApp** is off.
+
+### 57. `worker_on_way` — **New** (the worker is coming closer to the next job; **Utility**)
+Fields: customer, worker, home, minutes
+
+> en: Hello {{1}}, {{2}} from OneOhm is on the way to {{3}}. Expected in about {{4}} min.
+
+> mr: नमस्कार {{1}}, OneOhm चे {{2}} {{3}} येथे येण्यासाठी निघाले आहेत. सुमारे {{4}} मिनिटांत पोहोचतील.
+
+> hi: नमस्ते {{1}}, OneOhm से {{2}} {{3}} के लिए निकल चुके हैं। लगभग {{4}} मिनट में पहुँचेंगे।
+
+Examples: Ramesh Patil · Ravi · Sangli · 25
+
+**Button:** one **Call to action → Visit website** button, type **Dynamic**. Button text: en `Track live`, mr `लाइव्ह पाहा`,
+hi `लाइव देखें`. URL: `<WEB_BASE_URL>/track/{{1}}`, with `WEB_BASE_URL` exactly as set for the web app (production domain; Meta
+fixes the base at approval). Sample for `{{1}}`: `abc123`. The app fills it with the signed track token (payload `trackToken`). The
+page shows the worker's position only while they are on the way: not after they reach the site, after 3 hours, or after their day ends.
+
+When it goes: the worker is on duty, not at a site, and the last 3 usable route points (not mocked, accuracy 100 m or better) each come
+closer to today's next job (the earliest planned or scheduled site work today with a saved pin that nobody has reached yet), by more
+than 25 m each, the newest under 10 minutes old, still outside the fence, and the ETA is 45 minutes or less. ETA = straight distance ×
+1.4 at 25 km/h, rounded up to 5 minutes, at least 5.
+
+### 58. `worker_arrived` — **New** (the worker checked in at the site, by hand or by the fence; **Utility**)
+Fields: customer, worker, home
+
+> en: Hello {{1}}, {{2}} from OneOhm has reached {{3}}.
+
+> mr: नमस्कार {{1}}, OneOhm चे {{2}} {{3}} येथे पोहोचले आहेत.
+
+> hi: नमस्ते {{1}}, OneOhm से {{2}} {{3}} पर पहुँच गए हैं।
+
+Examples: Ramesh Patil · Ravi · Sangli
+
+No buttons. Meta may reject a body ending with a field: if so, add "Thank you." and change the app's wording to match.
+
+### 59. `visit_check` — **New** ("Was this visit done?" after the check-out; **Utility**)
+Fields: customer, worker, home
+
+> en: Hello {{1}}, {{2}} from OneOhm visited {{3}} today. Was this visit done?
+
+> mr: नमस्कार {{1}}, OneOhm चे {{2}} आज {{3}} येथे आले होते. ही भेट झाली का?
+
+> hi: नमस्ते {{1}}, OneOhm से {{2}} आज {{3}} पर आए थे। क्या यह विज़िट हुई?
+
+Examples: Ramesh Patil · Ravi · Sangli
+
+**Buttons:** two quick replies. en `Yes, visited`, `No`; mr `हो, आले होते`, `नाही`; hi `हाँ, आए थे`, `नहीं`. Payloads
+`vc:y:<site visit id>` and `vc:n:<site visit id>`. Yes verifies the visit (unless the phone faked its location); No makes it
+doubtful and raises a red alert for the worker's manager. Sent at a real check-out only (the worker's own, the fence, the route, the
+task completed), never after a manager's force-close or the day's end; when the job was left unfinished it waits 10 minutes and is
+dropped if the worker says the customer was not home. WhatsApp and the app only: never an SMS.
+
+### 60. `visit_delayed` — **New** (a planned visit is 30 minutes late and nobody arrived; **Utility**)
+Fields: customer, home
+
+> en: Hello {{1}}, our team is running late for your visit to {{2}}. We will update you soon.
+
+> mr: नमस्कार {{1}}, {{2}} येथील तुमच्या भेटीसाठी आमच्या टीमला उशीर होत आहे. आम्ही लवकरच कळवू.
+
+> hi: नमस्ते {{1}}, {{2}} पर आपकी विज़िट के लिए हमारी टीम को देर हो रही है। हम जल्द ही बताएँगे।
+
+Examples: Ramesh Patil · Sangli
+
+No buttons. Sent with the manager's `visit_missed` alert, once per planned visit.
 
 ## Staff templates
 

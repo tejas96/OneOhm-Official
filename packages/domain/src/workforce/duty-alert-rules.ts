@@ -16,6 +16,8 @@ export const DUTY_ALERT_KINDS = [
   'job_left_unfinished',
   'claim_waiting',
   'claim_unpaid',
+  /** The customer tapped No on "Was this visit done?" (Duty Day step 6). */
+  'visit_customer_no',
 ] as const;
 export type DutyAlertKind = (typeof DUTY_ALERT_KINDS)[number];
 
@@ -48,6 +50,7 @@ export const DUTY_ALERT_SEVERITY: Readonly<Record<DutyAlertKind, DutyAlertSeveri
   job_left_unfinished: 'amber',
   claim_waiting: 'amber',
   claim_unpaid: 'amber',
+  visit_customer_no: 'red',
 };
 
 /** Not checked in this long after the day start is an alert, in minutes. */

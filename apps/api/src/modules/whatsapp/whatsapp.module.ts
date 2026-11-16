@@ -20,6 +20,7 @@ import { SurveyCreditService } from '../self-survey/survey-credit.service';
 import { SurveyStaffService } from '../self-survey/survey-staff.service';
 import { LocationPinService } from '../send-to-customer/location-pin.service';
 import { SendAnswersService } from '../send-to-customer/send-answers.service';
+import { VisitCheckAnswersService } from '../visit-news/visit-check-answers.service';
 import { VisitAnswersService } from '../visits/visit-answers.service';
 import { VisitPickService } from '../visits/visit-pick.service';
 import { AnswersService } from './assistant/answers.service';
@@ -112,6 +113,7 @@ import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
     LocationPinService,
     SendAnswersService,
     VisitAnswersService,
+    VisitCheckAnswersService,
     VisitPickService,
     JourneyAnswersService,
     StepAnswersService,

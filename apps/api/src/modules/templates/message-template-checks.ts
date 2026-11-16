@@ -1,8 +1,15 @@
 import { messageFieldsFor, unknownMessageFields } from '@oneohm/domain';
 import { invalid } from '../../common/http/errors';
 
-/** The visit messages, whose buttons are the whole point (redesign §8). */
-const VISIT_MESSAGES = ['visit_pick', 'visit_booked', 'visit_reminder', 'inspection_presence'];
+/** The visit messages, whose buttons are the whole point (redesign §8, Duty Day step 6). */
+const VISIT_MESSAGES = [
+  'visit_pick',
+  'visit_booked',
+  'visit_reminder',
+  'inspection_presence',
+  'worker_on_way',
+  'visit_check',
+];
 
 /**
  * A message's wording and fields must line up, and each field must be a detail its sender

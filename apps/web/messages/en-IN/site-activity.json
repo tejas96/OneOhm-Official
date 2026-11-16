@@ -173,6 +173,9 @@
       "autoSiteVisits": "Check in and out at sites automatically",
       "autoSiteVisitsOn": "The phone and the route check the person in when they reach a site they work at today, and out when they leave.",
       "autoSiteVisitsOff": "People check in and out at sites themselves.",
+      "customerVisitMessages": "Tell customers about site visits on WhatsApp",
+      "customerVisitMessagesOn": "The customer hears when the person is on the way (with a live map link) and has arrived, is asked \"Was this visit done?\" after check-out, and is told when the team is running late. Only for tasks that message their customer; never after STOP.",
+      "customerVisitMessagesOff": "Customers hear nothing about site visits from the system.",
       "siteFence": "Site fence (m)",
       "siteFenceHint": "Closer than this to a saved site counts as being there. 50 to 1000.",
       "baseStartMax": "Known start within (km)",
@@ -217,9 +220,12 @@
         "far_check_in": "checked in far from the site",
         "photo_far": "photos taken away from the site",
         "fake_gps": "fake location on the phone",
+        "customer_said_no": "the customer said the visit did not happen",
         "no_location": "no location from the phone",
         "site_unknown": "site location not saved"
-      }
+      },
+      "customerYes": "Customer said Yes",
+      "customerNo": "Customer said No"
     }
   }
 }

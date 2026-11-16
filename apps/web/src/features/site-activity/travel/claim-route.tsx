@@ -86,7 +86,12 @@ export function DayVisits({ claimId }: { readonly claimId: string }) {
                 : t('visits.stillIn', { from: format.time(visit.checkInAt) })}
             </span>
           </span>
-          <VisitProof proof={visit.proof} reasons={visit.proofReasons} showReasons />
+          <VisitProof
+            proof={visit.proof}
+            reasons={visit.proofReasons}
+            customerSaid={visit.customerSaid ?? null}
+            showReasons
+          />
           <VisitDistance visit={visit} />
           <VisitNotes visit={visit} />
         </li>

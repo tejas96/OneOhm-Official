@@ -26,4 +26,6 @@ export const travelPolicySchema = z.object({
   commuteDeductKm: z.number().min(0).max(50).default(0),
   /** A stop away from every office and site this long or longer is flagged, in minutes. */
   unknownStopMinutes: z.number().int().min(10).max(480).default(45),
+  /** The customer hears about site visits on WhatsApp (on the way, arrived, was it done, late). */
+  customerVisitMessages: z.boolean().default(true),
 });

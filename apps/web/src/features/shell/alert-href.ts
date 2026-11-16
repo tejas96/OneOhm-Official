@@ -81,6 +81,7 @@ const DUTY_KIND_HREF: Readonly<Record<string, (subject: Subject | null) => strin
   duty_job_left_unfinished: () => '/live?kind=job_left_unfinished',
   duty_visit_missed: (subject) => siteAlert('visit_missed', subject),
   duty_visit_doubtful: (subject) => siteAlert('visit_doubtful', subject),
+  duty_visit_customer_no: (subject) => siteAlert('visit_customer_no', subject),
   duty_claim_waiting: (subject) => (subject ? null : '/live?kind=claim_waiting'),
   duty_claim_unpaid: (subject) => (subject ? null : '/live?kind=claim_unpaid'),
   duty_alerts_digest: () => '/live?tab=alerts',

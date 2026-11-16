@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
 import { currentCalendar } from '../../common/calendar';
 import { conflict } from '../../common/http/errors';
+import { askVisitCheck, safely, tellArrived } from '../visit-news/visit-news-send';
 import { saveConditions } from './device-conditions';
 import { isLateAt } from './late-rule';
 import { loadPolicy } from './policy';
@@ -12,7 +13,8 @@ import type { Position } from './tracking';
 /**
  * Called by the site and service check-ins with the reading they kept (or null).
  * Keeps the phone's battery and connection with it, and, when the policy says so, makes
- * the day's first site check-in the person's attendance check-in too (PRD 4.3).
+ * the day's first site check-in the person's attendance check-in too (PRD 4.3). The customer is
+ * told the person arrived, by hand or by the fence (Duty Day step 6).
  */
 export async function afterSiteCheckIn(
   db: DatabaseExecutor,
@@ -30,6 +32,8 @@ export async function afterSiteCheckIn(
     position: kept,
   });
   await autoCheckIn(db, actor, kept, at, delayed);
+  // The customer hears "Ravi has reached Sangli" (Duty Day step 6); a fault never undoes the check-in.
+  await safely(db, 'Arrived message', (tx) => tellArrived(tx, visitId));
 }
 
 /**
@@ -54,7 +58,9 @@ export async function assertDayNotClosed(
 /**
  * Called by every check-out (a tap, the fence, the route, the task finishing, a service
  * visit) once the visit is closed: keeps the phone's battery and connection, and works out
- * the visit's proof (Duty Day step 5), raising `visit_doubtful` when it is doubtful.
+ * the visit's proof (Duty Day step 5), raising `visit_doubtful` when it is doubtful, and asks
+ * the customer "Was this visit done?" (Duty Day step 6). A manager's force-close and the day's
+ * end do not come here, so they ask the customer nothing.
  */
 export async function afterSiteCheckOut(
   db: DatabaseExecutor,
@@ -64,6 +70,7 @@ export async function afterSiteCheckOut(
 ): Promise<void> {
   await saveConditions(db, { userId, kind: 'site_check_out', subjectId: visitId, position: kept });
   await settleVisitProof(db, visitId);
+  await safely(db, 'Visit check', (tx) => askVisitCheck(tx, visitId));
 }
 
 /** Staff who mark attendance only; a day already checked in is left as it is. */

@@ -37,6 +37,7 @@ import { SiteActivityModule } from './site-activity/site-activity.module';
 import { StateSupportModule } from './state-support/state-support.module';
 import { SystemPapersModule } from './system-papers/system-papers.module';
 import { TemplatesModule } from './templates/templates.module';
+import { VisitNewsModule } from './visit-news/visit-news.module';
 import { VisitsModule } from './visits/visits.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { WorkforceModule } from './workforce/workforce.module';
@@ -82,6 +83,7 @@ export const FEATURE_MODULES = [
   StateSupportModule,
   MapsModule,
   LiveMapModule,
+  VisitNewsModule,
   MonthSheetModule,
   MarketingModule,
   MarketingIntakeModule,

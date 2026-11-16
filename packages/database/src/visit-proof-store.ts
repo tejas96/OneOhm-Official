@@ -79,7 +79,8 @@ export interface SettleOptions {
  * turns verified (late points) closes that alert by itself. With no route expected for the
  * person, missing points prove nothing either way. Called at every check-out path, again
  * when late route points reach the visit's time, and by the five-minute sweep for any closed
- * visit of today still without one. Returns null for an open visit.
+ * visit of today still without one, and after the customer answers "Was this visit done?" (their
+ * Yes verifies it unless GPS was faked; their No makes it doubtful). Returns null for an open visit.
  */
 export async function settleVisitProof(
   db: DatabaseExecutor,
@@ -131,6 +132,7 @@ export async function settleVisitProof(
     checkInFar: visit.checkInFar,
     photos,
     trackingExpected,
+    customerSaid: visit.customerSaid,
   });
   await db
     .update(siteVisits)

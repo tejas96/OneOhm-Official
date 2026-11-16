@@ -98,6 +98,7 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
         leaveReasonAt: row.leaveReasonAt?.toISOString() ?? null,
         proof: row.proof,
         proofReasons: row.proofReasons ?? [],
+        customerSaid: row.customerSaid,
         proofAt: row.proofAt?.toISOString() ?? null,
       },
     };

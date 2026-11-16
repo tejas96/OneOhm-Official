@@ -62,6 +62,7 @@ import { customerStageRatingsContract, stageRatingsContract } from './stage-rati
 import { stateSupportContract } from './state-support.contract';
 import { teamLoadContract } from './team-load.contract';
 import { templatesContract } from './templates.contract';
+import { trackContract } from './track.contract';
 import { whatsappContract } from './whatsapp.contract';
 import { workforceContract } from './workforce.contract';
 
@@ -139,6 +140,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly businessSettings: typeof businessSettingsContract;
   readonly projectChanges: typeof projectChangesContract;
   readonly stateSupport: typeof stateSupportContract;
+  readonly track: typeof trackContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -212,6 +214,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   businessSettings: businessSettingsContract,
   projectChanges: projectChangesContract,
   stateSupport: stateSupportContract,
+  track: trackContract,
 };
 
 export * from './shared-exports';

@@ -46,6 +46,7 @@ function present(segment: TimelineSegment): DutyDaySegment {
         open: visit.endAt === null,
         proof: visit.proof,
         proofReasons: [...visit.proofReasons],
+        customerSaid: visit.customerSaid ?? null,
       };
     }
     case 'gap':
@@ -117,6 +118,7 @@ export class DutyDayService {
         siteLabel: record.siteLabel,
         proof: row.proof,
         proofReasons: row.proofReasons ?? [],
+        customerSaid: row.customerSaid,
       })),
       locationOn,
     });

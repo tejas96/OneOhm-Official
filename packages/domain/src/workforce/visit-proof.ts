@@ -10,8 +10,9 @@ export type VisitProofValue = (typeof VISIT_PROOFS)[number];
 
 /**
  * Why a visit is not verified. Doubtful: `short_visit`, `not_seen_at_site`, `far_check_in`,
- * `photo_far`, `fake_gps`. No proof: `no_location` (nothing says where the person was) or
- * `site_unknown` (located, but the site has no saved pin to compare with).
+ * `photo_far`, `fake_gps`, `customer_said_no` (the customer tapped No on "Was this visit
+ * done?"). No proof: `no_location` (nothing says where the person was) or `site_unknown`
+ * (located, but the site has no saved pin to compare with).
  */
 export const VISIT_PROOF_REASONS = [
   'short_visit',
@@ -19,10 +20,15 @@ export const VISIT_PROOF_REASONS = [
   'far_check_in',
   'photo_far',
   'fake_gps',
+  'customer_said_no',
   'no_location',
   'site_unknown',
 ] as const;
 export type VisitProofReason = (typeof VISIT_PROOF_REASONS)[number];
+
+/** The customer's answer to "Was this visit done?" (Duty Day step 6). */
+export const CUSTOMER_SAID = ['yes', 'no'] as const;
+export type CustomerSaid = (typeof CUSTOMER_SAID)[number];
 
 /** A visit shorter than this is too short to prove, in minutes. */
 export const PROOF_MIN_VISIT_MINUTES = 10;
@@ -55,6 +61,8 @@ export interface VisitProofInput {
    * Defaults to true.
    */
   readonly trackingExpected?: boolean;
+  /** The customer's tap on "Was this visit done?"; null or left out when they have not answered. */
+  readonly customerSaid?: CustomerSaid | null;
 }
 
 export interface VisitProof {
@@ -91,6 +99,23 @@ export function siteCoverage(
 }
 
 /**
+ * The visit's proof with the customer's answer on top (spec section 4): Yes is the strongest
+ * proof, so the visit is verified unless a point was mocked (fake GPS stays doubtful); No
+ * makes it doubtful with `customer_said_no` added to any other reasons.
+ */
+export function visitProof(input: VisitProofInput): VisitProof {
+  const route = routeProof(input);
+  if (input.customerSaid === 'no')
+    return {
+      proof: 'doubtful',
+      reasons: [...(route.proof === 'doubtful' ? route.reasons : []), 'customer_said_no' as const],
+    };
+  if (input.customerSaid === 'yes' && !route.reasons.includes('fake_gps'))
+    return { proof: 'verified', reasons: [] };
+  return route;
+}
+
+/**
  * Verified when the visit lasted 10 minutes or more, points near the site cover 60% of it,
  * no point during it was mocked, the check-in was not far, and (when photos have a place) a
  * photo was taken near the site. Any failing check makes it doubtful, with every reason. With
@@ -99,7 +124,7 @@ export function siteCoverage(
  * was not expected (`trackingExpected` false) the coverage check is left out: a check-in that
  * was not far is then what places the person at the site.
  */
-export function visitProof(input: VisitProofInput): VisitProof {
+export function routeProof(input: VisitProofInput): VisitProof {
   const from = input.checkInAt.getTime();
   const to = input.checkOutAt.getTime();
   const during = input.points

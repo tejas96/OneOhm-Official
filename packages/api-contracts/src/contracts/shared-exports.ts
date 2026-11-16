@@ -23,3 +23,4 @@ export {
   reportKeySchema,
   reportOverviewSchema,
 } from './reports.contract';
+export { type TrackView, trackViewSchema } from './track.contract';

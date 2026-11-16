@@ -126,3 +126,36 @@ describe('siteCoverage', () => {
     expect(siteCoverage([], input)).toBe(0);
   });
 });
+
+describe('visitProof with the customer answer (Duty Day step 6)', () => {
+  it('Yes verifies a visit the route doubts, or one with no location', () => {
+    const short = visit({ checkOutAt: at(5).recordedAt, points: every2(0, 4) });
+    expect(visitProof(short).proof).toBe('doubtful');
+    expect(visitProof({ ...short, customerSaid: 'yes' })).toEqual({
+      proof: 'verified',
+      reasons: [],
+    });
+    const nowhere = visit({ points: [], checkInLocated: false });
+    expect(visitProof({ ...nowhere, customerSaid: 'yes' }).proof).toBe('verified');
+  });
+
+  it('Yes never covers fake GPS', () => {
+    const faked = visit({ points: [...every2(0, 30), at(15, 0, true)], customerSaid: 'yes' });
+    expect(visitProof(faked)).toEqual({ proof: 'doubtful', reasons: ['fake_gps'] });
+  });
+
+  it('No makes even a clean visit doubtful, keeping the route reasons first', () => {
+    expect(visitProof(visit({ customerSaid: 'no' }))).toEqual({
+      proof: 'doubtful',
+      reasons: ['customer_said_no'],
+    });
+    const far = visit({ checkInFar: true, customerSaid: 'no' });
+    expect(visitProof(far).reasons).toEqual(['far_check_in', 'customer_said_no']);
+    const nowhere = visit({ points: [], checkInLocated: false, customerSaid: 'no' });
+    expect(visitProof(nowhere).reasons).toEqual(['customer_said_no']);
+  });
+
+  it('no answer keeps the route proof', () => {
+    expect(visitProof(visit({ customerSaid: null }))).toEqual(visitProof(visit()));
+  });
+});

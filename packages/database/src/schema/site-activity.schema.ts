@@ -1,4 +1,4 @@
-import { VISIT_PROOFS, type VisitProofReason } from '@oneohm/domain';
+import { CUSTOMER_SAID, VISIT_PROOFS, type VisitProofReason } from '@oneohm/domain';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -86,6 +86,14 @@ export const siteVisits = pgTable(
     proof: text('proof', { enum: VISIT_PROOFS }),
     proofReasons: jsonb('proof_reasons').$type<VisitProofReason[]>(),
     proofAt: instant('proof_at'),
+    /** The customer's tap on "Was this visit done?" (Duty Day step 6); the first answer is kept. */
+    customerSaid: text('customer_said', { enum: CUSTOMER_SAID }),
+    customerSaidAt: instant('customer_said_at'),
+    /**
+     * "Was this visit done?" waits until then: the job was left unfinished, and a "customer not
+     * home" answer from the worker in the meantime means it is never asked. Null once asked or dropped.
+     */
+    customerCheckDueAt: instant('customer_check_due_at'),
     locationClearedAt: instant('location_cleared_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

@@ -23,10 +23,13 @@ export function useProofReasons(): (reasons: readonly Reason[]) => string {
 export function VisitProof({
   proof,
   reasons,
+  customerSaid = null,
   showReasons = false,
 }: {
   readonly proof: Proof | null;
   readonly reasons: readonly Reason[];
+  /** The customer's answer to "Was this visit done?" (Duty Day step 6), shown under the badge. */
+  readonly customerSaid?: SiteVisit['customerSaid'];
   /** Write the reasons under the badge instead of only in the tooltip. */
   readonly showReasons?: boolean;
 }) {
@@ -34,22 +37,33 @@ export function VisitProof({
   const words = useProofReasons()(reasons);
   if (!proof) return null;
   const pill = <StatusPill tone={TONE[proof]} glyph={GLYPH[proof]} label={t(proof)} size="sm" />;
+  const said = customerSaid && (
+    <span
+      className={customerSaid === 'yes' ? 'type-label text-ink-muted' : 'type-label text-overdue'}
+    >
+      {t(customerSaid === 'yes' ? 'customerYes' : 'customerNo')}
+    </span>
+  );
   if (showReasons || !words)
     return (
       <span className="inline-flex flex-col items-end gap-0.5 md:items-start">
         {pill}
+        {said}
         {showReasons && words && <span className="type-label text-ink-muted">{words}</span>}
       </span>
     );
   return (
-    <Tooltip content={t('why', { reasons: words })}>
-      <button
-        type="button"
-        aria-label={`${t(proof)}: ${words}`}
-        className="inline-flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-      >
-        {pill}
-      </button>
-    </Tooltip>
+    <span className="inline-flex flex-col items-end gap-0.5 md:items-start">
+      <Tooltip content={t('why', { reasons: words })}>
+        <button
+          type="button"
+          aria-label={`${t(proof)}: ${words}`}
+          className="inline-flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          {pill}
+        </button>
+      </Tooltip>
+      {said}
+    </span>
   );
 }

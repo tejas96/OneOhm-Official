@@ -14,6 +14,8 @@ import { readJourneyTap } from '../../journey/journey-taps';
 import { SurveyChatService } from '../../self-survey/survey-chat.service';
 import { SendAnswersService } from '../../send-to-customer/send-answers.service';
 import { readSendTap } from '../../send-to-customer/send-taps';
+import { VisitCheckAnswersService } from '../../visit-news/visit-check-answers.service';
+import { readVisitCheckTap } from '../../visit-news/visit-check-taps';
 import { VisitAnswersService } from '../../visits/visit-answers.service';
 import { readVisitTap } from '../../visits/visit-taps';
 import { type Conversation, queueReply, setState } from '../chat-store';
@@ -74,6 +76,7 @@ export class AssistantService {
     private readonly formPicks: FormPickService,
     private readonly sends: SendAnswersService,
     private readonly visitAnswers: VisitAnswersService,
+    private readonly visitChecks: VisitCheckAnswersService,
     private readonly journey: JourneyAnswersService,
     private readonly survey: SurveyChatService,
   ) {}
@@ -158,6 +161,8 @@ export class AssistantService {
     if (sendTap) return this.sends.tapped(chat, customerId, sendTap);
     const visitTap = readVisitTap(id);
     if (visitTap) return this.visitAnswers.tapped(chat, customerId, visitTap);
+    const checkTap = readVisitCheckTap(id);
+    if (checkTap) return this.visitChecks.tapped(chat, customerId, checkTap);
     const journeyTap = readJourneyTap(id);
     if (journeyTap) return this.journey.tapped(chat, customerId, journeyTap);
     const formTap = readFormTap(id);

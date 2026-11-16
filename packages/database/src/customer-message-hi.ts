@@ -6,6 +6,7 @@ import { homeHi } from '@oneohm/shared';
  */
 
 import { CARE_HI } from './customer-message-care';
+import { DUTY_HI } from './customer-message-duty';
 import { JOURNEY_HI } from './customer-message-journey';
 import { STEP_HI } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
@@ -28,6 +29,7 @@ export const HINDI_WORDS: LanguageWords = {
     ...JOURNEY_HI,
     ...STEP_HI,
     ...CARE_HI,
+    ...DUTY_HI,
     quotation_sent: (p) => ({
       title: 'आपका कोटेशन तैयार है',
       body: `${p.number}: ${p.total}। सब्सिडी के बाद आपको ${p.effective} देने हैं।`,
