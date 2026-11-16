@@ -14,7 +14,7 @@ import { kindsOfRoles, queueInvite, requireNewPassword } from './person-invite';
 import { afterPhoneChange } from './person-phone-change';
 import { setSkills } from './person-skills';
 import { assertUnique } from './person-unique';
-import { saveWork, type WorkPatch } from './person-work';
+import { savePay, saveWork, type WorkPatch } from './person-work';
 import { saveReportingLine } from './reporting-line';
 import { archivedRolesNewlyGiven, rolesOutOfReach } from './role-grant';
 import { assertKeepsASuperAdmin } from './super-admin-guard';
@@ -126,6 +126,7 @@ export class PeopleService {
       }
       if (patch.skills) await setSkills(tx, id, patch.skills);
       await saveWork(tx, id, patch);
+      const payChanged = await savePay(tx, id, patch.monthlyPayPaise, actor.userId);
       await saveReportingLine(tx, id, patch.reportsToUserId, actor.userId);
       if (Object.keys(fields).length > 0)
         await tx
@@ -138,7 +139,14 @@ export class PeopleService {
           reinvite: !patch.requireNewPassword,
         });
       if (patch.requireNewPassword) await requireNewPassword(tx, this.env, id);
-      await recordAudit(tx, actor.userId, 'person.updated', 'user', id, auditablePatch(patch));
+      await recordAudit(
+        tx,
+        actor.userId,
+        'person.updated',
+        'user',
+        id,
+        auditablePatch(patch, payChanged),
+      );
     });
     return this.get(id);
   }

@@ -56,6 +56,8 @@ export const peopleContract = c.router({
       tracking: z.enum(['on', 'off']).nullable().optional(),
       /** Home or base place, where travel is paid from; null clears it. */
       base: personBaseSchema.nullable().optional(),
+      /** Monthly pay in paise (up to ₹50,00,000) for the month sheet; null clears it. */
+      monthlyPayPaise: z.number().int().min(0).max(500_000_000).nullable().optional(),
       /** Who the person reports to; null for no one. */
       reportsToUserId: idSchema.nullable().optional(),
     }),

@@ -10,7 +10,7 @@ import { FormError } from '@/components/form-error';
 import { useWorkforceSettings } from '@/features/settings/workforce/use-workforce-settings';
 import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
-import { useCurrentUser } from '@/providers/current-user';
+import { useCan, useCurrentUser } from '@/providers/current-user';
 import {
   PersonWorkFields,
   parseBase,
@@ -18,6 +18,7 @@ import {
   workBodyFrom,
   workDraftFrom,
 } from './capacity/person-work-fields';
+import { MonthlyPayField } from './monthly-pay-field';
 import { bodyFrom, draftFrom, EMPTY_PERSON, PersonFields } from './person-fields';
 import { RequireNewPassword } from './require-new-password';
 import { SkillsPicker } from './skills/skills-picker';
@@ -40,6 +41,8 @@ export function EditPersonSheet({
   const formId = useId();
   const toast = useToast();
   const me = useCurrentUser();
+  const mayEditPay = useCan('people.manage');
+  const [pay, setPay] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const form = useApiForm();
   const [draft, setDraft] = useState(EMPTY_PERSON);
@@ -61,6 +64,7 @@ export function EditPersonSheet({
     setOnLeave(person.onLeave);
     setSkills(person.skills);
     setWork(workDraftFrom(person));
+    setPay(person.monthlyPayPaise ?? null);
     reset();
   }, [person, reset]);
 
@@ -72,6 +76,8 @@ export function EditPersonSheet({
       onLeave,
       skills,
       ...workBodyFrom(work),
+      // Sent only when it changed: each change starts a new pay from today in the pay history.
+      ...(mayEditPay && pay !== (person.monthlyPayPaise ?? null) ? { monthlyPayPaise: pay } : {}),
     } as const;
     await form.run(
       () => expectStatus(api.people.updatePerson({ params: { id: person.id }, body }), 200),
@@ -128,6 +134,13 @@ export function EditPersonSheet({
             errors={form.fieldErrors}
             personId={person?.id ?? null}
           />
+          {mayEditPay && (
+            <MonthlyPayField
+              value={pay}
+              onChange={setPay}
+              error={form.fieldErrors.monthlyPayPaise}
+            />
+          )}
         </section>
         <section className="flex flex-col gap-1 border-t border-hairline pt-6">
           <h3 className="mb-2 type-overline text-ink-faint uppercase">{t('access')}</h3>

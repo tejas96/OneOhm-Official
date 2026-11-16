@@ -28,6 +28,13 @@ describe('alertRoute', () => {
     }
   });
 
+  it('opens My month for month sheet notices', () => {
+    expect(alertRoute({ type: 'month_sheet', id: 'u1' }, 'month_final')).toBe('/month');
+    expect(alertRoute({ type: 'month_sheet', id: 'u1', month: '2026-10' }, 'month_final')).toBe(
+      '/month?month=2026-10',
+    );
+  });
+
   it('opens a set tab for notices with no subject', () => {
     expect(alertRoute({}, 'departure_cover')).toBe('/');
     expect(alertRoute({}, 'payout_details_changed')).toBe('/');

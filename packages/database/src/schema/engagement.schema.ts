@@ -116,6 +116,11 @@ export const personWorkSettings = pgTable('person_work_settings', {
   baseLatitude: doublePrecision('base_latitude'),
   baseLongitude: doublePrecision('base_longitude'),
   baseLabel: text('base_label'),
+  /**
+   * Monthly pay for the month sheet's gross pay (Duty Day step 7), in paise; null = not set.
+   * Read only by people.manage and finance holders and the person themself.
+   */
+  monthlyPayPaise: money('monthly_pay_paise'),
   updatedAt: updatedAt(),
 });
 

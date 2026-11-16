@@ -13,6 +13,7 @@ const {
   queueCashReminders,
   clearOldLocations,
   clearOldJobRuns,
+  watchMonthSheets,
 } = proxyActivities<Activities>({
   startToCloseTimeout: '5 minutes',
   retry: { initialInterval: '1 minute', maximumAttempts: 5 },
@@ -56,5 +57,7 @@ export async function dailyOperationsWorkflow(): Promise<Record<string, number |
     cashHolders: await settle('cash_reminders', queueCashReminders),
     locationsCleared: await settle('location_cleanup', clearOldLocations),
     runsCleared: await settle('job_runs_cleanup', clearOldJobRuns),
+    // Last, once the night close and claim approvals are in: locked months changed since.
+    monthRowsChanged: await settle('month_sheet_watch', watchMonthSheets),
   };
 }

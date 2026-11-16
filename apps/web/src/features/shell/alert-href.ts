@@ -31,6 +31,8 @@ const SUBJECT_HREF: Readonly<Record<Subject['type'], (subject: Subject, kind: st
     },
     // The claim's own sheet shows it whatever its state: asked, decided, voided or paid.
     travel_claim: ({ id }) => `/team?tab=travel&claim=${id}`,
+    // A month sheet alert names the person and the month: their panel opens on that month.
+    month_sheet: ({ id, month }) => `/team?tab=month&person=${id}${month ? `&month=${month}` : ''}`,
     service_request: ({ id }) => `/service?tab=requests&view=all&request=${id}`,
     purchase_request: ({ id }) => `/inventory?tab=requests&status=all&request=${id}`,
     vendor_advance: ({ id }) => `/finance?tab=advances&filter=pending&advance=${id}`,

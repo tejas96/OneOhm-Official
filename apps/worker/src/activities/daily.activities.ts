@@ -39,6 +39,8 @@ export function dailyActivities(db: Database, timeZone: string, payLinks: PayLin
           quiet: true,
         },
       ),
+    /** Locked month sheets compared with the facts, after the morning jobs (Duty Day step 7). */
+    watchMonthSheets: run('month_sheet_watch'),
     /** A job that failed after every retry tells the admin desk (once a day per job). */
     alertFailedJob: (job: string, error: string) =>
       alertJobFailed(db, job, error, todayIn(timeZone)),

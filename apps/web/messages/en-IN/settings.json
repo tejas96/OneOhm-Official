@@ -448,8 +448,11 @@
           "daysError": "Between 0 and 366.",
           "cancel": "Cancel",
           "add": "Add",
-          "update": "Done"
-        }
+          "update": "Done",
+          "paid": "Paid",
+          "paidHint": "Unpaid leave is not counted in payable days and has no yearly limit."
+        },
+        "unpaid": "Unpaid"
       },
       "workingDay": {
         "title": "Working week",
@@ -544,6 +547,19 @@
         "description": "How many open tasks one person should carry. Team shows a warning when someone is at or over it.",
         "limit": "Open tasks per person",
         "limitHint": "0 means no limit. People can have their own limit in Team."
+      },
+      "monthSheet": {
+        "title": "Month sheet",
+        "description": "How each month turns into payable days.",
+        "halfDay": "Half-day hours",
+        "halfDayHint": "A worked day shorter than this is a half day.",
+        "late": "Late marks per deduction",
+        "lateHint": "Every this many late marks take off half a day. 0 turns it off.",
+        "lateOn": "Every {count, plural, one {# late mark takes} other {# late marks take}} off half a day.",
+        "lateOff": "Late marks do not take off pay days.",
+        "offs": "Pay days off only in a week with work",
+        "offsOn": "A weekly off or holiday is paid when the person worked, worked half a day or was on paid leave at least once that week (Monday to Sunday). A week fully absent gets no paid days off.",
+        "offsOff": "Every weekly off and holiday is paid, even in a week the person was fully absent."
       }
     },
     "taskTemplates": {
@@ -1371,6 +1387,7 @@
         "location_cleanup": "Old locations cleared",
         "service_sla": "Service time alerts",
         "duty_alerts": "Field duty alerts",
+        "month_sheet_watch": "Month sheet changes after lock",
         "job_runs_cleanup": "Old runs cleared",
         "message_delivery": "Message sending",
         "payment_link_sync": "Online payment check",
@@ -1395,6 +1412,7 @@
         "location_cleanup": "{count, plural, =0 {Nothing to clear} one {1 reading cleared} other {# readings cleared}}",
         "service_sla": "{count, plural, =0 {All on time} one {1 alert} other {# alerts}}",
         "duty_alerts": "{count, plural, =0 {Nothing new} one {1 alert raised} other {# alerts raised}}",
+        "month_sheet_watch": "{count, plural, =0 {No changes} one {1 notice sent} other {# notices sent}}",
         "job_runs_cleanup": "{count, plural, =0 {Nothing to clear} one {1 old run cleared} other {# old runs cleared}}",
         "message_delivery": "{count, plural, =0 {Nothing to send} other {Sent back to the outbox}}",
         "payment_link_sync": "{count, plural, one {1 change recorded} other {# changes recorded}}",

@@ -168,6 +168,7 @@ export async function leaveImpact(
   return {
     halfDays,
     balanceAfterHalfDays: left - halfDays,
+    paid: balance?.paid ?? true,
     overlapsExisting,
     holidays,
     clashes: clashes.get(requestId ?? '') ?? NO_CLASHES,

@@ -80,6 +80,7 @@ function present(row: typeof notifications.$inferSelect): NotificationItem {
           type: row.subjectType as NonNullable<NotificationItem['subject']>['type'],
           id: row.subjectId,
           projectId: row.projectId,
+          month: row.subjectMonth,
         }
       : null;
   return {

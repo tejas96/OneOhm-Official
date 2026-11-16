@@ -1,6 +1,12 @@
-import { type DatabaseExecutor, personWorkSettings } from '@oneohm/database';
+import {
+  type DatabaseExecutor,
+  payHistory,
+  personWorkSettings,
+  readBusinessCalendar,
+} from '@oneohm/database';
 import { loadState, openTaskLimit } from '@oneohm/domain';
-import { inArray } from 'drizzle-orm';
+import { todayIn } from '@oneohm/shared';
+import { eq, inArray } from 'drizzle-orm';
 import { loadPolicy } from '../workforce/policy';
 
 type Tracking = 'on' | 'off' | null;
@@ -10,6 +16,8 @@ export interface WorkPatch {
   readonly tracking?: Tracking | undefined;
   /** Home or base place; null clears it. */
   readonly base?: { latitude: number; longitude: number; label: string | null } | null | undefined;
+  /** Monthly pay in paise for the month sheet; null clears it. */
+  readonly monthlyPayPaise?: number | null | undefined;
 }
 
 /**
@@ -39,6 +47,7 @@ export async function workOf(db: DatabaseExecutor, ids: readonly string[]) {
         row?.baseLatitude != null && row.baseLongitude != null
           ? { latitude: row.baseLatitude, longitude: row.baseLongitude, label: row.baseLabel }
           : null,
+      monthlyPayPaise: row?.monthlyPayPaise ?? null,
     };
   };
 }
@@ -64,4 +73,37 @@ export async function saveWork(db: DatabaseExecutor, userId: string, patch: Work
       target: personWorkSettings.userId,
       set: { ...set, updatedAt: new Date() },
     });
+}
+
+/**
+ * A new monthly pay, kept with the day it starts (today, business time) in the pay history the
+ * month sheet reads; the same pay again writes nothing. True when it changed.
+ */
+export async function savePay(
+  db: DatabaseExecutor,
+  userId: string,
+  monthlyPayPaise: number | null | undefined,
+  byUserId: string,
+): Promise<boolean> {
+  if (monthlyPayPaise === undefined) return false;
+  const [current] = await db
+    .select({ paise: personWorkSettings.monthlyPayPaise })
+    .from(personWorkSettings)
+    .where(eq(personWorkSettings.userId, userId));
+  if ((current?.paise ?? null) === monthlyPayPaise) return false;
+  await db
+    .insert(personWorkSettings)
+    .values({ userId, monthlyPayPaise })
+    .onConflictDoUpdate({
+      target: personWorkSettings.userId,
+      set: { monthlyPayPaise, updatedAt: new Date() },
+    });
+  const { timeZone } = await readBusinessCalendar(db);
+  await db.insert(payHistory).values({
+    userId,
+    monthlyPayPaise,
+    effectiveFrom: todayIn(timeZone),
+    setByUserId: byUserId,
+  });
+  return true;
 }

@@ -56,7 +56,11 @@ export function LeaveKindsSection({
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <p className="truncate type-title-md text-ink">{kind.label}</p>
                   <p className="flex flex-wrap items-center gap-2">
-                    <Badge variant="soft">{t('perYear', { count: kind.daysPerYear })}</Badge>
+                    {!kind.paid ? (
+                      <Badge variant="soft">{t('unpaid')}</Badge>
+                    ) : (
+                      <Badge variant="soft">{t('perYear', { count: kind.daysPerYear })}</Badge>
+                    )}
                     <span className="font-mono text-[0.75rem] text-ink-faint">{kind.key}</span>
                   </p>
                 </div>

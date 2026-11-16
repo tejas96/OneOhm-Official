@@ -92,6 +92,7 @@ export const LEAVE = {
   loading: 'Loading your leave',
   left: (halves: number) => days(halves),
   daysLeft: 'left',
+  unpaidTaken: 'unpaid, this year',
   usedPending: (used: number, pending: number) =>
     pending > 0 ? `${days(used)} used · ${days(pending)} waiting` : `${days(used)} used`,
   request: 'Request leave',
@@ -161,6 +162,7 @@ export const REQUEST_LEAVE = {
   counted: (halves: number) => `${days(halves)} of leave`,
   after: (halves: number) =>
     halves < 0 ? `${days(-halves)} over your balance` : `${days(halves)} left after this`,
+  unpaid: (halves: number) => `Unpaid leave: ${days(halves)}. Not paid on your month sheet.`,
   overlap: 'You already have leave on some of these days.',
   holidays: (names: string) => `Not counted, holiday: ${names}.`,
   noWorkingDays: 'These dates are all weekly offs or holidays. Pick other days.',

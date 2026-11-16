@@ -28,7 +28,15 @@ export function personFields(patch: PersonPatch) {
 }
 
 /** The audit entry says a new password was required, nothing more. */
-export function auditablePatch(patch: PersonPatch): Record<string, unknown> {
-  const { requireNewPassword, ...rest } = patch;
-  return { ...rest, ...(requireNewPassword ? { passwordReset: true } : {}) };
+export function auditablePatch(
+  patch: PersonPatch & { readonly monthlyPayPaise?: number | null | undefined },
+  payChanged = false,
+): Record<string, unknown> {
+  // Pay is private: the log says it changed (only when it did), never to what.
+  const { requireNewPassword, monthlyPayPaise: _private, ...rest } = patch;
+  return {
+    ...rest,
+    ...(requireNewPassword ? { passwordReset: true } : {}),
+    ...(payChanged ? { monthlyPayChanged: true } : {}),
+  };
 }

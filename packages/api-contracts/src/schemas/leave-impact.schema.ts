@@ -28,6 +28,8 @@ export const leaveImpactSchema = z.object({
   halfDays: z.number().int(),
   /** What is left of this kind of leave if this request is approved. */
   balanceAfterHalfDays: z.number().int(),
+  /** The kind is paid; unpaid leave has no balance to run out of (show the days instead). */
+  paid: z.boolean().default(true),
   overlapsExisting: z.boolean(),
   /** Holidays inside the dates: they are not counted as leave. */
   holidays: z.array(holidayDaySchema).default([]),

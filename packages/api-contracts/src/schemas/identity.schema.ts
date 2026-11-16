@@ -60,6 +60,11 @@ export const personSchema = z.object({
   tracking: z.enum(['on', 'off']).nullable(),
   /** Where travel is paid from when the day starts away from an office (home), null when not saved. Left out for anyone but people.manage holders and the person themself. */
   base: personBaseSchema.nullable().optional(),
+  /**
+   * Monthly pay in paise for the month sheet's gross pay (Duty Day step 7); null when not set.
+   * Left out for anyone but people.manage and finance holders and the person themself.
+   */
+  monthlyPayPaise: z.number().int().nullable().optional(),
   /** Who the person reports to (PRD 3.12); null for no one. */
   reportsTo: z.object({ id: idSchema, fullName: z.string() }).nullable(),
   /** Whether they have signed in yet (last_active_at is set on the first sign-in). */

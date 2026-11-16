@@ -22,6 +22,15 @@ describe('hrefOf', () => {
     ).toBe('/leads/l1');
   });
 
+  it('opens a month sheet alert on its month', () => {
+    expect(
+      hrefOf({
+        subject: { type: 'month_sheet', id: 'u1', projectId: null, month: '2026-10' },
+        kind: 'month_row_changed',
+      }),
+    ).toBe('/team?tab=month&person=u1&month=2026-10');
+  });
+
   it.each([
     ['leave', 'leave_requested', '/team?tab=leave&leave=x1'],
     ['correction', 'correction_requested', '/team?tab=attendance&correction=x1'],
@@ -29,6 +38,7 @@ describe('hrefOf', () => {
     ['travel_claim', 'travel_claim', '/team?tab=travel&claim=x1'],
     ['travel_claim', 'travel_claim_paid', '/team?tab=travel&claim=x1'],
     ['travel_claim', 'travel_claim_voided', '/team?tab=travel&claim=x1'],
+    ['month_sheet', 'month_final', '/team?tab=month&person=x1'],
     // Finance is told a travel claim was approved: the alert opens that bill.
     ['payable', 'travel_payable_ready', '/finance?tab=payables&bill=x1'],
     ['payable', 'travel_payable_voided', '/finance?tab=payables&bill=x1'],

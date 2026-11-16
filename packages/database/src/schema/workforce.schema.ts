@@ -147,6 +147,11 @@ export const leaveRequests = pgTable(
     fromDate: calendarDate('from_date').notNull(),
     toDate: calendarDate('to_date').notNull(),
     halfDay: boolean('half_day').notNull().default(false),
+    /**
+     * Paid or not, frozen from the leave kind when the leave is approved, so changing or
+     * deleting the kind later never moves a past month. Null until approved.
+     */
+    paid: boolean('paid'),
     /** Working days in halves, so a half day stays exact. */
     halfDays: integer('half_days').notNull(),
     reason: text('reason'),

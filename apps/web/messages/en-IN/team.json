@@ -101,6 +101,10 @@
         "confirm": "Sign out and invite",
         "cancel": "Cancel",
         "done": "New invite sent"
+      },
+      "pay": {
+        "label": "Monthly pay (₹)",
+        "hint": "What they are paid for a full month. The month sheet turns it into a gross figure. Only HR and finance see it."
       }
     },
     "remove": {
@@ -176,7 +180,8 @@
       "travel": "Travel",
       "workload": "Workload",
       "bonuses": "Bonuses",
-      "announcements": "Announcements"
+      "announcements": "Announcements",
+      "month": "Month sheet"
     },
     "decide": {
       "choice": "Your decision",
@@ -271,7 +276,8 @@
         "label": "Your leave balances",
         "ring": "{booked} of {allowed} days used or booked",
         "left": "{count, plural, one {# day} other {# days}} left of {allowed}",
-        "waiting": "{count, plural, one {# day} other {# days}} waiting for approval"
+        "waiting": "{count, plural, one {# day} other {# days}} waiting for approval",
+        "unpaid": "Unpaid leave: {count, plural, one {# day} other {# days}} this year"
       },
       "queue": {
         "title": "Waiting for a decision",
@@ -349,6 +355,7 @@
         "days": "{count, plural, one {# day} other {# days}}",
         "left": "{count, plural, one {# day} other {# days}} of {kind} left after this",
         "over": "{count, plural, one {# day} other {# days}} more than your {kind} left",
+        "unpaid": "Unpaid leave: {count, plural, one {# day} other {# days}}, not paid on the month sheet",
         "overlap": "You already have leave on some of these days.",
         "noTasks": "Nothing you own is due in these days.",
         "tasks": "{count, plural, one {# task due while you are away} other {# tasks due while you are away}}",
@@ -786,6 +793,241 @@
       "copyTitle": "Copy the invite",
       "copyHint": "Your browser did not copy it. The text is selected: copy it and paste it in any chat.",
       "copyDone": "Done"
+    },
+    "monthSheet": {
+      "description": "Each person’s month on one line: days worked, leave, late marks, and what it comes to for salary. Rows that need a look come first.",
+      "loading": "Loading the month sheet",
+      "emptyTitle": "No one on this sheet yet",
+      "emptyBody": "Add people to the team and their month appears here.",
+      "emptyReports": "No one reports to you, so there is nothing to show.",
+      "emptyAction": "Open People",
+      "header": {
+        "previous": "Previous month",
+        "next": "Next month",
+        "thisMonth": "This month",
+        "export": "Export CSV",
+        "exportLabel": "Export {month} as a CSV file",
+        "lock": "Lock month",
+        "unlock": "Open again",
+        "notYet": "{month} can be locked from {date}, once every day of it is over."
+      },
+      "chips": {
+        "label": "Month at a glance",
+        "people": "People",
+        "payableDays": "Payable days",
+        "gross": "Gross pay",
+        "travel": "Travel approved",
+        "paid": "paid {amount}",
+        "check": "Rows to check",
+        "changed": "Changed after lock",
+        "notInLock": "Not in the locked sheet"
+      },
+      "banner": {
+        "final": "{month} is final. Locked by {name} on {date}.",
+        "unlocked": "Opened again by {name} on {date}: {reason}",
+        "openedAgain": "Opened again by {name}: {reason}",
+        "readOnly": "Your team, read-only. Pay is shown to HR and finance."
+      },
+      "table": {
+        "caption": "Month sheet, one row for each person",
+        "person": "Person",
+        "flags": "To check",
+        "check": "Check",
+        "changed": "Changed after lock",
+        "notInLock": "Not in the locked sheet",
+        "openRow": "Open {name}’s month",
+        "paid": "paid {amount}",
+        "columns": {
+          "working": "Working days",
+          "present": "Present",
+          "half": "Half",
+          "absent": "Absent",
+          "paidLeave": "Paid leave",
+          "unpaidLeave": "Unpaid leave",
+          "off": "Holidays and offs",
+          "late": "Late",
+          "payable": "Payable days",
+          "pay": "Monthly pay",
+          "gross": "Gross",
+          "travel": "Travel",
+          "bonus": "Bonus"
+        }
+      },
+      "flags": {
+        "none": "Nothing to check",
+        "allClear": "Nothing to check. This month is clear.",
+        "auto_closed": {
+          "title": "Day closed by the system",
+          "hint": "Nobody ended this day, so the night job did. Check the check-out time."
+        },
+        "delayed_tap": {
+          "title": "Tap reached us late",
+          "hint": "A check-in or check-out was made offline and arrived later. Confirm the time is right."
+        },
+        "open_correction": {
+          "title": "Correction waiting",
+          "hint": "Someone asked to fix their times and nobody has decided yet."
+        },
+        "pending_leave": {
+          "title": "Leave waiting for a decision",
+          "hint": "Approve or decline it so these days count correctly."
+        },
+        "pending_travel": {
+          "title": "Travel claim waiting",
+          "hint": "Approve or decline it so the travel money is right."
+        },
+        "doubtful_visit": {
+          "title": "Doubtful site visit",
+          "hint": "The route proof for a visit does not look right. Open the day to check."
+        },
+        "open_alert": {
+          "title": "Duty alert still open",
+          "hint": "An alert on one of these days has not been dealt with."
+        },
+        "absent_no_reason": {
+          "title": "Absent with no reason",
+          "hint": "No check-in, leave or holiday. Check whether they worked or were on leave."
+        }
+      },
+      "marks": {
+        "late": "Late",
+        "autoClosed": "Closed by the system",
+        "tapDelayed": "Tap reached us late",
+        "doubtfulVisit": "Doubtful visit",
+        "openAlert": "Alert open",
+        "openCorrection": "Correction waiting",
+        "pendingLeave": "Leave waiting",
+        "offUnpaid": "Day off not paid: no work that week"
+      },
+      "calendar": {
+        "label": "Month calendar",
+        "legend": "What the colours mean",
+        "pick": "Tap a day to see its times.",
+        "half": "half day",
+        "unpaid": "unpaid",
+        "workedOnDayOff": "Worked on a day off",
+        "openDay": "Open this day",
+        "times": "In {from}, out {to}",
+        "stillIn": "still in",
+        "noCheckIn": "No check-in.",
+        "status": {
+          "present": "Present",
+          "half_day": "Half day",
+          "absent": "Absent",
+          "paid_leave": "Paid leave",
+          "unpaid_leave": "Unpaid leave",
+          "holiday": "Holiday",
+          "weekly_off": "Weekly off",
+          "not_joined": "Not joined yet",
+          "left": "Left",
+          "upcoming": "Not counted yet"
+        }
+      },
+      "breakdown": {
+        "lines": {
+          "present": "Present days",
+          "half": "Half days ({count} × ½)",
+          "paidLeave": "Paid leave",
+          "holidays": "Holidays",
+          "weeklyOffs": "Weekly offs",
+          "unpaidOffs": "{count, plural, one {# day off} other {# days off}} not paid: no work or paid leave that week",
+          "late": "Late deduction ({lates} late marks, every {every} costs ½ day)",
+          "other": "Other days counted, such as work on a day off"
+        },
+        "payable": "Payable days",
+        "countedTo": "Counted up to {date}. Later days are not counted yet.",
+        "sum": "{pay} × {days} ÷ {month} days",
+        "noPay": "No monthly pay is set, so there is no gross figure.",
+        "setPay": "Set it on the person’s page."
+      },
+      "fix": {
+        "day": "Open {date}",
+        "correction": "Decide the correction for {date}",
+        "leave": "Decide {detail}",
+        "claim": "Open the claim for {date}",
+        "alert": "Open alert: {detail}"
+      },
+      "items": {
+        "none": "No claims, bonuses or leave this month.",
+        "claims": "Travel claims",
+        "bonuses": "Bonuses",
+        "leaves": "Leave",
+        "paid": "Paid",
+        "approvedUnpaid": "Approved, not paid",
+        "waiting": "Waiting",
+        "half": "half day",
+        "unpaid": "Unpaid",
+        "approved": "Approved",
+        "pending": "Waiting"
+      },
+      "diff": {
+        "title": "Changed after lock",
+        "body": "Something changed since this row was frozen on {date}. The locked numbers still stand until you refresh the row.",
+        "bodyNoDate": "Something changed since this row was frozen. The locked numbers still stand until you refresh the row.",
+        "fields": {
+          "present": "Present days",
+          "halfDays": "Half days",
+          "absent": "Absent days",
+          "paidLeave": "Paid leave",
+          "unpaidLeave": "Unpaid leave",
+          "holidays": "Holidays",
+          "weeklyOffs": "Weekly offs",
+          "lates": "Late marks",
+          "lateDeduction": "Late deduction",
+          "payableDays": "Payable days",
+          "grossPaise": "Gross pay",
+          "travelApprovedPaise": "Travel approved",
+          "bonusPaise": "Bonus"
+        },
+        "refresh": "Refresh row",
+        "confirmTitle": "Refresh {name}’s row?",
+        "confirmBody": "The row is frozen again from the facts as they are now. The new numbers replace the locked ones, and the change stays in the history.",
+        "confirm": "Refresh row",
+        "cancel": "Cancel",
+        "done": "Row refreshed"
+      },
+      "addRow": {
+        "title": "Not in the locked sheet",
+        "body": "{name} qualifies for {month} but was not on the sheet when it was locked. The numbers here are live. Add the row to freeze them with the others.",
+        "refresh": "Add to the sheet",
+        "confirmTitle": "Add {name} to the locked sheet?",
+        "confirmBody": "Their row is frozen from the facts as they are now and kept with the others. This is written to the history.",
+        "confirm": "Add the row",
+        "cancel": "Cancel",
+        "done": "Row added"
+      },
+      "lock": {
+        "title": "Lock {month}?",
+        "body": "This freezes {count, plural, one {# row} other {# rows}} as they are now. You can open the month again later with a reason.",
+        "cancel": "Cancel",
+        "confirm": "Lock {month}",
+        "warning": "{count, plural, one {# person still has something to check} other {# people still have something to check}}",
+        "warningHint": "You can lock anyway. Anything fixed after locking shows up as “Changed after lock”.",
+        "notify": "Everyone is told their month is final.",
+        "done": "{month} is locked",
+        "doneBody": "Rows are frozen and everyone has been told."
+      },
+      "unlock": {
+        "title": "Open {month} again?",
+        "body": "The month stops being final, and rows follow the facts again until you lock it. Your reason is kept in the month’s history.",
+        "cancel": "Cancel",
+        "confirm": "Open again",
+        "reason": "Why is it being opened?",
+        "reasonHint": "A few words, at least 5 letters. Everyone who sees the sheet can read it.",
+        "reasonError": "Say why, in a few words.",
+        "done": "{month} is open again"
+      },
+      "panel": {
+        "title": "Month",
+        "loading": "Loading this person’s month",
+        "check": "Check",
+        "changed": "Changed after lock",
+        "notInLock": "Not in the locked sheet",
+        "calendar": "Day by day",
+        "breakdown": "How the days add up",
+        "flags": "To check",
+        "items": "Claims, bonuses and leave"
+      }
     }
   }
 }

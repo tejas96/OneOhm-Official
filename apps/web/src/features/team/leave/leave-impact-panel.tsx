@@ -34,7 +34,9 @@ export function LeaveImpactPanel({
       </p>
     );
 
-  const short = impact.balanceAfterHalfDays < 0;
+  // Unpaid leave has no balance: it is the days, not paid on the month sheet.
+  const unpaid = impact.paid === false;
+  const short = !unpaid && impact.balanceAfterHalfDays < 0;
   return (
     <section
       aria-label={t('label')}
@@ -48,9 +50,11 @@ export function LeaveImpactPanel({
             : t('days', { count: daysOf(impact.halfDays) })}
         </p>
         <p className={short ? 'type-body-sm text-at-risk' : 'type-body-sm text-ink-muted'}>
-          {short
-            ? t('over', { count: daysOf(-impact.balanceAfterHalfDays), kind: kindLabel })
-            : t('left', { count: daysOf(impact.balanceAfterHalfDays), kind: kindLabel })}
+          {unpaid
+            ? t('unpaid', { count: daysOf(impact.halfDays) })
+            : short
+              ? t('over', { count: daysOf(-impact.balanceAfterHalfDays), kind: kindLabel })
+              : t('left', { count: daysOf(impact.balanceAfterHalfDays), kind: kindLabel })}
         </p>
       </div>
       {impact.halfDays === 0 && (

@@ -32,6 +32,7 @@ export default function SignedInLayout() {
         <Stack.Screen name="leave/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="alerts" />
         <Stack.Screen name="rewards" />
+        <Stack.Screen name="month" />
         <Stack.Screen name="search" />
         <Stack.Screen name="chats/index" />
         <Stack.Screen name="chats/[id]" />

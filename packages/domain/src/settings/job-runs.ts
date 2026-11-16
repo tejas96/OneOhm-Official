@@ -17,6 +17,7 @@ export const JOB_NAMES = [
   'travel_auto_approve',
   'service_sla',
   'duty_alerts',
+  'month_sheet_watch',
   'job_runs_cleanup',
   'message_delivery',
   'payment_link_sync',
@@ -44,6 +45,7 @@ export const RETRYABLE_JOBS: readonly JobName[] = [
   'attendance_autoclose',
   'travel_auto_approve',
   'service_sla',
+  'month_sheet_watch',
   'message_delivery',
 ];
 

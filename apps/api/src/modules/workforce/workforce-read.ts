@@ -12,7 +12,7 @@ import {
   users,
   workLocations,
 } from '@oneohm/database';
-import type { WorkforcePolicy } from '@oneohm/domain';
+import { leaveIsPaid, type WorkforcePolicy } from '@oneohm/domain';
 import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { conditionsFor } from './device-conditions';
 
@@ -101,6 +101,7 @@ export function balancesOf(
     leaveType: type.key,
     label: type.label,
     allowedHalfDays: type.daysPerYear * 2,
+    paid: leaveIsPaid(type),
     usedHalfDays: sum(type.key, 'approved'),
     pendingHalfDays: sum(type.key, 'pending'),
   }));

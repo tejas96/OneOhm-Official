@@ -30,7 +30,9 @@ export type NoticeSubject =
   /** Marketing → Connections (low ad money, reconnect); the id is the nil UUID. */
   | 'marketing_connections'
   /** A new Google review (id: the review row). */
-  | 'marketing_reviews';
+  | 'marketing_reviews'
+  /** A month sheet (id: the person whose month it is). */
+  | 'month_sheet';
 
 export interface Notice {
   readonly kind: string;
@@ -40,6 +42,8 @@ export interface Notice {
     readonly type: NoticeSubject;
     readonly id: string;
     readonly projectId?: string | null;
+    /** The month it is about (`YYYY-MM`), for month sheet notices. */
+    readonly month?: string | null;
   };
   /** The same key never makes a second alert, so a retried request stays quiet. */
   readonly dedupeKey: string;
@@ -67,6 +71,7 @@ export async function notify(
       subjectType: notice.subject?.type ?? null,
       subjectId: notice.subject?.id ?? null,
       projectId: notice.subject?.projectId ?? null,
+      subjectMonth: notice.subject?.month ?? null,
       dedupeKey: notice.dedupeKey,
     })
     .onConflictDoNothing()

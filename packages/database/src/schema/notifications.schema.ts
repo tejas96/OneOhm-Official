@@ -21,6 +21,8 @@ export const notifications = pgTable(
     subjectType: text('subject_type'),
     subjectId: uuid('subject_id'),
     projectId: uuid('project_id'),
+    /** The month a notice is about (`YYYY-MM`), so it opens that month (month sheet notices). */
+    subjectMonth: text('subject_month'),
     dedupeKey: text('dedupe_key').notNull(),
     readAt: instant('read_at'),
     createdAt: createdAt(),

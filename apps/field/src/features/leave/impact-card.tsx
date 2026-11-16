@@ -17,13 +17,17 @@ export function ImpactCard({
   readonly onBackup: (id: string | null) => void;
 }) {
   const theme = useTheme();
-  const over = impact.balanceAfterHalfDays < 0;
+  // Unpaid leave has no balance to run out of: it shows the days instead.
+  const unpaid = impact.paid === false;
+  const over = !unpaid && impact.balanceAfterHalfDays < 0;
   return (
     <Card style={styles.card}>
       <Text variant="titleMd">{REQUEST_LEAVE.impactTitle}</Text>
       <Text variant="body">{REQUEST_LEAVE.counted(impact.halfDays)}</Text>
       <Text variant="bodySm" color={over ? theme.status.overdue.fg : theme.colors.textSecondary}>
-        {REQUEST_LEAVE.after(impact.balanceAfterHalfDays)}
+        {unpaid
+          ? REQUEST_LEAVE.unpaid(impact.halfDays)
+          : REQUEST_LEAVE.after(impact.balanceAfterHalfDays)}
       </Text>
       {impact.holidays.length > 0 ? (
         <View style={styles.warn}>

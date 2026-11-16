@@ -39,6 +39,7 @@ export * from './live-map.schema';
 export * from './marketing.schema';
 export * from './marketing-connections.schema';
 export * from './material-custody.schema';
+export * from './month-sheet.schema';
 export * from './monthly-review.schema';
 export * from './notification.schema';
 export * from './payable-payment.schema';

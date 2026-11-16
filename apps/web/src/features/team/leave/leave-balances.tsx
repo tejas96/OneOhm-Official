@@ -6,7 +6,10 @@ import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { daysOf } from '../workforce-format';
 
-/** One ring per kind of leave: the arc is what is used or booked, the number what is left. */
+/**
+ * One ring per kind of leave: the arc is what is used or booked, the number what is left. An
+ * unpaid kind has no balance to run out of: it shows the days taken instead.
+ */
 export function LeaveBalances({ balances }: { readonly balances: readonly LeaveBalance[] }) {
   const t = useTranslations('team.leave.balances');
   if (balances.length === 0) return null;
@@ -15,6 +18,7 @@ export function LeaveBalances({ balances }: { readonly balances: readonly LeaveB
       {balances.map((balance, index) => {
         const booked = balance.usedHalfDays + balance.pendingHalfDays;
         const left = Math.max(0, balance.allowedHalfDays - booked);
+        const unpaid = balance.paid === false;
         return (
           <motion.li
             key={balance.leaveType}
@@ -22,23 +26,26 @@ export function LeaveBalances({ balances }: { readonly balances: readonly LeaveB
             className="flex items-center gap-4 rounded-lg border border-hairline bg-raised p-4"
           >
             <ProgressRing
-              value={balance.allowedHalfDays ? booked / balance.allowedHalfDays : 0}
-              label={t('ring', {
-                booked: daysOf(booked),
-                allowed: daysOf(balance.allowedHalfDays),
-              })}
+              value={!unpaid && balance.allowedHalfDays ? booked / balance.allowedHalfDays : 0}
+              label={
+                unpaid
+                  ? t('unpaid', { count: daysOf(booked) })
+                  : t('ring', { booked: daysOf(booked), allowed: daysOf(balance.allowedHalfDays) })
+              }
               size={56}
               thickness={4}
               toneClassName="text-accent"
             >
               <span className="type-title-lg text-ink tabular-nums [font-family:var(--font-display)]">
-                {daysOf(left)}
+                {daysOf(unpaid ? booked : left)}
               </span>
             </ProgressRing>
             <div className="flex min-w-0 flex-col gap-0.5">
               <p className="type-title-md break-words text-ink">{balance.label}</p>
               <p className="type-body-sm text-ink-muted">
-                {t('left', { count: daysOf(left), allowed: daysOf(balance.allowedHalfDays) })}
+                {unpaid
+                  ? t('unpaid', { count: daysOf(booked) })
+                  : t('left', { count: daysOf(left), allowed: daysOf(balance.allowedHalfDays) })}
               </p>
               {balance.pendingHalfDays > 0 && (
                 <p className="type-body-sm text-ink-faint">

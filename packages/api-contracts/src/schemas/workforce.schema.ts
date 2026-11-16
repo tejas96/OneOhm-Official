@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 import { leaveClashesSchema } from './leave-impact.schema';
 import { locationResultSchema } from './location-result.schema';
+import { monthSheetPolicyFields } from './month-rules.schema';
 import { staffCalendarSchema } from './staff-calendar.schema';
 import { travelPolicySchema } from './travel-policy.schema';
 
@@ -20,6 +21,7 @@ export const workforcePolicySchema = z.object({
           .regex(/^[a-z_]{2,30}$/, 'Use lowercase letters.'),
         label: z.string().trim().min(2).max(60),
         daysPerYear: z.number().int().min(0).max(366),
+        paid: z.boolean().default(true), // Unpaid: not payable, no yearly limit.
       }),
     )
     .min(1, 'Keep at least one kind of leave.'),
@@ -37,6 +39,7 @@ export const workforcePolicySchema = z.object({
     autoCheckInFromSite: z.boolean().default(false),
     /** Location on or off for whole roles (role key → on), over `captureLocation`. */
     trackingByRole: z.record(z.string(), z.boolean()).default({}),
+    ...monthSheetPolicyFields,
   }),
   points: z.object({
     onTimeTask: z.number().int().min(0).max(1000),
@@ -150,6 +153,7 @@ export const leaveBalanceSchema = z.object({
   allowedHalfDays: z.number().int(),
   usedHalfDays: z.number().int(),
   pendingHalfDays: z.number().int(),
+  paid: z.boolean().default(true), // Unpaid: no balance; show the days taken instead.
 });
 export type LeaveBalance = z.infer<typeof leaveBalanceSchema>;
 

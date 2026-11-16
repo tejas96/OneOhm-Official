@@ -16,6 +16,7 @@ import { AttendanceTab } from './attendance/attendance-tab';
 import { BonusesTab } from './bonuses/bonuses-tab';
 import { WorkloadTab } from './capacity/workload-tab';
 import { LeaveTab } from './leave/leave-tab';
+import { MonthSheetTab } from './month-sheet/month-sheet-tab';
 import { PeopleTab } from './people-tab';
 import { PointsTab } from './points/points-tab';
 import { ResellersTab } from './resellers/resellers-tab';
@@ -45,6 +46,11 @@ const TABS = [
     Panel: TravelTab,
   },
   {
+    value: 'month',
+    requires: ['people.manage', 'finance.approve_payments', 'finance.record_payments'],
+    Panel: MonthSheetTab,
+  },
+  {
     value: 'resellers',
     requires: ['people.view', 'finance.view', 'settings.manage'],
     Panel: ResellersTab,
@@ -58,8 +64,8 @@ const TABS = [
 type TabValue = (typeof TABS)[number]['value'];
 
 /**
- * A way to the live map, then people, workload, the day's attendance, leave, points, bonuses, travel and
- * announcements. The open tab lives in `?tab=`.
+ * A way to the live map, then people, workload, the day's attendance, leave, points, bonuses, travel, the month sheet
+ * and announcements. The open tab lives in `?tab=`.
  */
 export function TeamView() {
   const t = useTranslations('team');
@@ -70,7 +76,7 @@ export function TeamView() {
   const allowed = TABS.filter(
     (tab) =>
       tab.requires.some((capability) => user.capabilities.includes(capability)) ||
-      (tab.value === 'live' && canSeeLiveMap(user)),
+      ((tab.value === 'live' || tab.value === 'month') && canSeeLiveMap(user)),
   );
   // Live map opens its own page, so it is never the tab shown here.
   const panels = allowed.filter((tab) => tab.value !== 'live');

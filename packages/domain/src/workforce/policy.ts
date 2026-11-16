@@ -7,6 +7,20 @@ export interface LeaveType {
   readonly label: string;
   /** Days allowed per calendar year. */
   readonly daysPerYear: number;
+  /**
+   * Whether a day of this leave is paid on the month sheet. Missing means paid, so kinds
+   * saved before this setting keep counting as they always did. Unpaid leave has no limit.
+   */
+  readonly paid?: boolean;
+}
+
+/** A leave kind is paid unless it says otherwise; an unknown kind counts as paid. */
+export const leaveIsPaid = (kind: Pick<LeaveType, 'paid'> | null | undefined): boolean =>
+  kind?.paid !== false;
+
+/** Month sheet: every `every` late marks take off half a day; 0 switches the rule off. */
+export interface LateDeductionRule {
+  readonly every: number;
 }
 
 export interface AttendancePolicy {
@@ -32,6 +46,15 @@ export interface AttendancePolicy {
    * A person's own setting (in Team) wins over these.
    */
   readonly trackingByRole: Readonly<Record<string, boolean>>;
+  /** A worked day shorter than this many hours is a half day on the month sheet. */
+  readonly halfDayHours: number;
+  /**
+   * Month sheet: holidays and weekly offs are paid only in a week (Mon–Sun) with at least one
+   * present, half or paid-leave day. On by default.
+   */
+  readonly offsNeedWorkInWeek: boolean;
+  /** Late marks that cost half a day on the month sheet; off by default. */
+  readonly lateDeduction: LateDeductionRule;
 }
 
 export interface PointsPolicy {
@@ -113,6 +136,9 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     retentionDays: 90,
     autoCheckInFromSite: false,
     trackingByRole: {},
+    halfDayHours: 4,
+    offsNeedWorkInWeek: true,
+    lateDeduction: { every: 0 },
   },
   points: {
     onTimeTask: 10,

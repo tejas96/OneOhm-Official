@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { WorkforcePolicyInput } from '@oneohm/api-contracts';
 import { workforcePolicy, workLocations } from '@oneohm/database';
+import { leaveIsPaid } from '@oneohm/domain';
 import { eq } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
@@ -27,7 +28,7 @@ export class WorkforceSettingsService {
       // Plain arrays: the contract's shape, not the domain's read-only one.
       policy: {
         ...policy,
-        leaveTypes: policy.leaveTypes.map((type) => ({ ...type })),
+        leaveTypes: policy.leaveTypes.map((type) => ({ ...type, paid: leaveIsPaid(type) })),
         weeklyOff: [...policy.weeklyOff],
       },
       locations: locations.map(({ id, name, latitude, longitude, radiusM, active }) => ({

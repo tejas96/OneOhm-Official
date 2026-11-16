@@ -19,6 +19,7 @@ import { checkRemoval, type RemovalProblem } from './departure-rules';
 import { countsOf } from './departure-summary';
 import { openWork } from './departure-work';
 import { wrapUp } from './departure-wrapup';
+import { recordLeft, recordRejoined } from './employment-events';
 
 export interface Removal {
   readonly handToUserId: string;
@@ -106,6 +107,7 @@ export class DepartureService {
         .update(users)
         .set({ status: 'inactive', leftOn: input.lastWorkingDay, updatedAt: now })
         .where(eq(users.id, id));
+      await recordLeft(tx, id, input.lastWorkingDay, actor.userId);
       await recordAudit(tx, actor.userId, 'person.removed', 'user', id, {
         handTo: target.id,
         counts: countsOf(work),
@@ -125,6 +127,7 @@ export class DepartureService {
         throw conflict('This person is still on the team.', 'not_removed');
       // They sign in and get the invite on their mobile number.
       if (!user.phoneE164) throw conflict('Add their mobile number first.', 'phone_needed');
+      await recordRejoined(tx, id, user.leftOn, todayIn(), actor.userId);
       await tx
         .update(users)
         .set({

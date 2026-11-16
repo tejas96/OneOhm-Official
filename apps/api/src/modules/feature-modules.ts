@@ -18,6 +18,7 @@ import { LiveMapModule } from './live-map/live-map.module';
 import { MapsModule } from './maps/maps.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { MarketingIntakeModule } from './marketing-intake/marketing-intake.module';
+import { MonthSheetModule } from './month-sheet/month-sheet.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GatewayModule } from './online-payments/gateway.module';
 import { OnlinePaymentsModule } from './online-payments/online-payments.module';
@@ -81,6 +82,7 @@ export const FEATURE_MODULES = [
   StateSupportModule,
   MapsModule,
   LiveMapModule,
+  MonthSheetModule,
   MarketingModule,
   MarketingIntakeModule,
 ];
