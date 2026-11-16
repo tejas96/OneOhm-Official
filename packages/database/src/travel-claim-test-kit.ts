@@ -49,6 +49,7 @@ export const snap = (over: Record<string, unknown> = {}) =>
     straightM: 14_200,
     method: 'route',
     capApplied: false,
+    commuteDeductM: 0,
     gapCount: 0,
     gapMinutes: 0,
     mockedCount: 0,
@@ -67,19 +68,59 @@ export const cleanVisits = [
 export const plainDay = {
   autoClosedAt: null,
   tapDelayed: false,
-  checkInInside: true,
-  checkOutInside: true,
 };
+
+/** The reads of a duty start and end when the day has no position at all: nothing to judge. */
+export const noStart: unknown[][] = [[], []];
+
+type Spot = { latitude: number; longitude: number };
+
+/**
+ * The reads of the duty start and end (`dutyPlaces`), in order: the attendance day, the visits,
+ * the route, the offices (for the end label), the saved base and the offices again.
+ * Both ends have a position (the end defaults to the start); the offices are none by default.
+ */
+export const startAt = (
+  checkIn: Spot,
+  base: Spot | null,
+  offices: unknown[] = [],
+  checkOut: Spot | null = checkIn,
+): unknown[][] => [
+  [
+    {
+      day: {
+        id: 'day1',
+        checkInAt: new Date(Date.UTC(2026, 10, 14, 4)),
+        checkInLatitude: checkIn.latitude,
+        checkInLongitude: checkIn.longitude,
+        checkOutAt: new Date(Date.UTC(2026, 10, 14, 12)),
+        checkOutLatitude: checkOut?.latitude ?? null,
+        checkOutLongitude: checkOut?.longitude ?? null,
+        locationClearedAt: null,
+      },
+      place: null,
+    },
+  ],
+  [],
+  [],
+  ...(checkOut ? [offices] : []),
+  base ? [base] : [],
+  offices,
+];
+
+/** The default day for the scripted claim tests: starts and ends at home, which is the saved base. */
+const HOME = { latitude: 16.85, longitude: 74.58 };
+export const homeDay: unknown[][] = startAt(HOME, HOME);
 
 export const policyWith = (travel: Partial<WorkforcePolicy['travel']> = {}): WorkforcePolicy => ({
   ...DEFAULT_WORKFORCE_POLICY,
   travel: { ...DEFAULT_WORKFORCE_POLICY.travel, ...travel },
 });
 
-export /** Reads in order: the day's claims, then visits, the attendance day, leave, and (flagged) the worker. */
+export /** Reads in order: the day's claims, then visits, the attendance day, leave, the duty start, and (flagged) the worker. */
 const settle = (
   claims: unknown[],
-  extra: { visits?: unknown[]; day?: unknown; leave?: unknown[] } = {},
+  extra: { visits?: unknown[]; day?: unknown; leave?: unknown[]; start?: unknown[][] } = {},
   snapshot = snap(),
   policy = policyWith({ autoApprove: true }),
 ) => {
@@ -89,6 +130,7 @@ const settle = (
       extra.visits ?? cleanVisits,
       [extra.day ?? plainDay],
       extra.leave ?? [],
+      ...(extra.start ?? homeDay),
       [{ name: 'Ravi' }],
     ],
     { travel_claims: [[{ id: 'c1', userId: 'worker', workDate: '2026-11-14' }]] },

@@ -24,6 +24,8 @@ export interface PaidKm {
   readonly uncappedRoute: boolean;
   /** The route was shorter than the straight line, so the straight line is paid. */
   readonly shortRoute: boolean;
+  /** Metres taken off for the commute, once, after the cap (never more than was to be paid). */
+  readonly commuteDeductM: number;
 }
 
 const result = (paidM: number, method: PaidMethod, flags: Partial<PaidKm> = {}): PaidKm => ({
@@ -33,10 +35,31 @@ const result = (paidM: number, method: PaidMethod, flags: Partial<PaidKm> = {}):
   noVisits: false,
   uncappedRoute: false,
   shortRoute: false,
+  commuteDeductM: 0,
   ...flags,
 });
 
+/** The commute taken off once, after the cap: what is paid and what was actually taken off. */
+function lessCommute(paid: PaidKm, commuteDeductM: number): PaidKm {
+  const taken = Math.min(paid.paidM, Math.max(0, Math.round(commuteDeductM)));
+  return taken === 0 ? paid : { ...paid, paidM: paid.paidM - taken, commuteDeductM: taken };
+}
+
 export function paidKm(input: {
+  readonly straightM: number;
+  readonly routeM: number;
+  /** Usable (kept) route points of the day. */
+  readonly keptPoints: number;
+  readonly capRatio: number;
+  /** Site visits of the day. */
+  readonly visits: number;
+  /** Metres to take off the day once, after the cap; 0 when none. */
+  readonly commuteDeductM?: number;
+}): PaidKm {
+  return lessCommute(beforeCommute(input), input.commuteDeductM ?? 0);
+}
+
+function beforeCommute(input: {
   readonly straightM: number;
   readonly routeM: number;
   /** Usable (kept) route points of the day. */

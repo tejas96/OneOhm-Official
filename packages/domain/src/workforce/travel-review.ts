@@ -1,4 +1,5 @@
 import type { PaidMethod } from './paid-km';
+import type { StartPlace } from './travel-start';
 
 /**
  * Whether a day's travel claim can be approved by the system, or needs a person (Duty Day
@@ -18,8 +19,11 @@ export type ReviewReason =
   | 'no_visits'
   | 'uncapped_route'
   | 'short_route'
-  | 'start_outside_office'
-  | 'end_outside_office'
+  | 'far_from_base'
+  | 'start_unknown_place'
+  | 'end_unknown_place'
+  | 'start_unknown'
+  | 'end_unknown'
   | 'on_leave'
   | 'auto_approve_off';
 
@@ -43,9 +47,10 @@ export interface DayFacts {
   readonly uncappedRoute?: boolean;
   /** The route was shorter than the straight line, so the straight line was paid. */
   readonly shortRoute?: boolean;
-  /** The check-in or check-out was not at an office, so that end of the day is not a known place. */
-  readonly startOutsideOffice?: boolean;
-  readonly endOutsideOffice?: boolean;
+  /** Where the duty started, against the person's base and the offices (`startPlaceCheck`). */
+  readonly startPlace?: StartPlace | 'missing' | undefined;
+  /** Where the duty ended, judged the same way; 'missing' when the day has visits but no end position. */
+  readonly endPlace?: StartPlace | 'missing' | undefined;
   /** Site visits whose check-in was farther than allowed from the site. */
   readonly farCheckIns: number;
   /** Site visits with no location at check-in: nothing proves where they were. */
@@ -62,6 +67,19 @@ export interface AutoReview {
   readonly reasons: readonly ReviewReason[];
 }
 
+/** The reasons from where the duty started and ended (`startPlaceCheck`), in reading order. */
+function placeReasons(facts: DayFacts): ReviewReason[] {
+  const { startPlace, endPlace } = facts;
+  const reasons: ReviewReason[] = [];
+  if (startPlace === 'far_from_base') reasons.push('far_from_base');
+  if (startPlace === 'unknown_place') reasons.push('start_unknown_place');
+  if (startPlace === 'missing') reasons.push('start_unknown');
+  if (endPlace === 'far_from_base' || endPlace === 'unknown_place')
+    reasons.push('end_unknown_place');
+  if (endPlace === 'missing') reasons.push('end_unknown');
+  return reasons;
+}
+
 export function reviewTravelDay(facts: DayFacts, rules: AutoApproveRules): AutoReview {
   const reasons: ReviewReason[] = [];
   if (!rules.autoApprove) reasons.push('auto_approve_off');
@@ -72,8 +90,7 @@ export function reviewTravelDay(facts: DayFacts, rules: AutoApproveRules): AutoR
   if (facts.noVisits) reasons.push('no_visits');
   if (facts.uncappedRoute) reasons.push('uncapped_route');
   if (facts.shortRoute) reasons.push('short_route');
-  if (facts.startOutsideOffice) reasons.push('start_outside_office');
-  if (facts.endOutsideOffice) reasons.push('end_outside_office');
+  reasons.push(...placeReasons(facts));
   if (facts.farCheckIns > 0) reasons.push('far_check_in');
   if (facts.unlocatedVisits > 0) reasons.push('visit_no_location');
   if (facts.autoClosed) reasons.push('auto_closed');
@@ -101,8 +118,14 @@ export const REVIEW_REASON_TEXT: Readonly<Record<ReviewReason, string>> = {
     'The day was under 1 km in a straight line, so the route was not held to the usual cap.',
   short_route:
     'The recorded route was shorter than the straight line, so the straight line is paid.',
-  start_outside_office: 'The day was started away from an office.',
-  end_outside_office: 'The day was ended away from an office.',
+  far_from_base:
+    'The day started far from the person’s home or base place and far from every office.',
+  start_unknown_place:
+    'The day started away from every office and the person has no home or base place saved.',
+  end_unknown_place:
+    'The day ended far from the person’s home or base place and far from every office.',
+  start_unknown: 'The day has site visits but no start position, so its start cannot be checked.',
+  end_unknown: 'The day has site visits but no end position, so its end cannot be checked.',
   on_leave: 'The person was on leave this day.',
   auto_approve_off: 'Automatic approval is switched off.',
 };

@@ -13,6 +13,7 @@ import { useApiForm } from '@/lib/forms/use-api-form';
 import { useCurrentUser } from '@/providers/current-user';
 import {
   PersonWorkFields,
+  parseBase,
   type WorkDraft,
   workBodyFrom,
   workDraftFrom,
@@ -44,7 +45,12 @@ export function EditPersonSheet({
   const [draft, setDraft] = useState(EMPTY_PERSON);
   const [onLeave, setOnLeave] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
-  const [work, setWork] = useState<WorkDraft>({ limit: '', tracking: 'follow' });
+  const [work, setWork] = useState<WorkDraft>({
+    limit: '',
+    tracking: 'follow',
+    base: '',
+    baseLabel: '',
+  });
   const settings = useWorkforceSettings(person !== null);
   const companyLimit = settings.data?.policy.capacity.defaultOpenTaskLimit || null;
   const { reset } = form;
@@ -60,7 +66,7 @@ export function EditPersonSheet({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!person) return;
+    if (!person || parseBase(work.base) === 'invalid') return;
     const body = {
       ...bodyFrom(draft),
       onLeave,
@@ -120,6 +126,7 @@ export function EditPersonSheet({
             onChange={setWork}
             companyLimit={companyLimit}
             errors={form.fieldErrors}
+            personId={person?.id ?? null}
           />
         </section>
         <section className="flex flex-col gap-1 border-t border-hairline pt-6">

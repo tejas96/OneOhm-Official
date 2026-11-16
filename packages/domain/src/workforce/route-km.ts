@@ -139,3 +139,23 @@ export function routeKm(points: readonly RoutePoint[], window?: RouteWindow | nu
     droppedPoints: points.length - kept,
   };
 }
+
+/**
+ * The first and last points the route measures with (not mocked, not vague, not a jump), for
+ * the day's start and end when the check-in or check-out has no position of its own.
+ */
+export function keptEnds(points: readonly RoutePoint[]): {
+  readonly first: RoutePoint | null;
+  readonly last: RoutePoint | null;
+} {
+  const badStart = badFirstPoint(points);
+  let first: RoutePoint | null = null;
+  let last: RoutePoint | null = null;
+  for (const [index, point] of points.entries()) {
+    const verdict = index === badStart ? 'jump' : judge(point, last);
+    if (verdict !== 'ok') continue;
+    first ??= point;
+    last = point;
+  }
+  return { first, last };
+}

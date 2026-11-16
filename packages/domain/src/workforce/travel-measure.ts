@@ -18,6 +18,8 @@ export function measureDay(input: {
   readonly ratePaisePerKm: number;
   readonly visits: number;
   readonly capRatio: number;
+  /** Metres taken off the day once, after the cap. */
+  readonly commuteDeductM?: number;
   /** Check-in and check-out, so silence at either end counts as a gap. */
   readonly window?: RouteWindow | null;
 }): DayMeasure {
@@ -29,6 +31,7 @@ export function measureDay(input: {
     keptPoints: route.keptPoints,
     capRatio: input.capRatio,
     visits: input.visits,
+    commuteDeductM: input.commuteDeductM ?? 0,
   });
   return { summary, route, paid, pointsCount: input.points.length };
 }

@@ -202,6 +202,8 @@ export const travelDays = pgTable(
       .notNull()
       .default('straight'),
     capApplied: boolean('cap_applied').notNull().default(false),
+    /** Metres taken off the paid km for the commute, once a day, after the cap. */
+    commuteDeductM: integer('commute_deduct_m').notNull().default(0),
     gapCount: integer('gap_count').notNull().default(0),
     gapMinutes: integer('gap_minutes').notNull().default(0),
     mockedCount: integer('mocked_count').notNull().default(0),

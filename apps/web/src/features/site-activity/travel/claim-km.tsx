@@ -20,6 +20,11 @@ const KNOWN = new Set([
   'no_visits',
   'uncapped_route',
   'short_route',
+  'far_from_base',
+  'start_unknown_place',
+  'end_unknown_place',
+  'start_unknown',
+  'end_unknown',
   'start_outside_office',
   'end_outside_office',
   'on_leave',
@@ -34,12 +39,16 @@ export function KmLine({ claim }: { readonly claim: TravelClaim }) {
     <div className="flex flex-col gap-0.5">
       <p className="type-body-sm text-ink-muted tabular-nums">
         {claim.method === 'route'
-          ? t('paidRoute', {
+          ? t(claim.commuteDeductM > 0 ? 'paidRouteCommute' : 'paidRoute', {
               paid: format.distance(claim.paidM),
               route: format.distance(claim.routeM),
               straight: format.distance(claim.straightM),
+              commute: format.distance(claim.commuteDeductM),
             })
-          : t('paidStraight', { paid: format.distance(claim.paidM) })}
+          : t(claim.commuteDeductM > 0 ? 'paidStraightCommute' : 'paidStraight', {
+              paid: format.distance(claim.paidM),
+              commute: format.distance(claim.commuteDeductM),
+            })}
       </p>
       {claim.capApplied && (
         <p className="type-body-sm text-ink-faint">

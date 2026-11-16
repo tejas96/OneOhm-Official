@@ -115,15 +115,11 @@ describe('the automatic claim at day close', () => {
     });
   });
 
-  it('flags a start or end away from an office, a short route, an uncapped short day', async () => {
-    const out = settle(
-      [],
-      { day: { ...plainDay, checkInInside: false, checkOutInside: false } },
-      snap({ routeM: 10_000, straightM: 14_200, paidM: 14_200 }),
-    );
+  it('flags a short route and an uncapped short day', async () => {
+    const out = settle([], {}, snap({ routeM: 10_000, straightM: 14_200, paidM: 14_200 }));
     await out.result;
     expect(out.inserts.find((i) => i.table === travelClaims)?.values).toMatchObject({
-      reviewReasons: ['short_route', 'start_outside_office', 'end_outside_office'],
+      reviewReasons: ['short_route'],
     });
     const short = settle([], {}, snap({ straightM: 600, routeM: 1_500, paidM: 1_500 }));
     await short.result;

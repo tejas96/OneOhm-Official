@@ -39,11 +39,19 @@ describe('reviewTravelDay', () => {
     ['no_visits', { noVisits: true }],
     ['uncapped_route', { uncappedRoute: true }],
     ['short_route', { shortRoute: true }],
-    ['start_outside_office', { startOutsideOffice: true }],
-    ['end_outside_office', { endOutsideOffice: true }],
+    ['far_from_base', { startPlace: 'far_from_base' as const }],
+    ['start_unknown_place', { startPlace: 'unknown_place' as const }],
+    ['start_unknown', { startPlace: 'missing' as const }],
+    ['end_unknown', { endPlace: 'missing' as const }],
+    ['end_unknown_place', { endPlace: 'unknown_place' as const }],
+    ['end_unknown_place', { endPlace: 'far_from_base' as const }],
     ['on_leave', { onLeave: true }],
   ] as const)('sends the day to a person for %s', (reason, over) => {
     expect(review(over)).toEqual({ approve: false, reasons: [reason] });
+  });
+
+  it('gives no reason for a start at a known place', () => {
+    expect(review({ startPlace: 'known' })).toEqual({ approve: true, reasons: [] });
   });
 
   it('holds a day over the km limit, not one at it', () => {

@@ -83,7 +83,16 @@
         "trackingHint": "Over their roles and the company setting. They still agree in the app first.",
         "follow": "Follow role and company",
         "on": "Always ask",
-        "off": "Never ask"
+        "off": "Never ask",
+        "base": "Home / base place",
+        "baseHint": "Travel is paid from where the day starts. Paste latitude and longitude, like 19.0760, 72.8777. A day that starts here or at an office needs no check.",
+        "basePlaceholder": "Latitude, longitude",
+        "baseInvalid": "Use two numbers like 19.0760, 72.8777.",
+        "suggest": "Use the first start of the last 7 days",
+        "suggestNone": "No duty start in the last 7 days to use.",
+        "suggestFailed": "Could not read the last 7 days. Try again.",
+        "baseLabel": "Name of the place",
+        "baseLabelHint": "For example: Home, Pune. Only for your own reference."
       },
       "requireNewPassword": {
         "button": "Make them set a new password",

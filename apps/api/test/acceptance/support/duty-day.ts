@@ -36,7 +36,8 @@ export function dutyDayKit(admin: () => Session, sale: () => Sale) {
   const putTravel = (patch: Record<string, unknown>) =>
     admin().put('/settings/workforce', {
       ...saved?.policy,
-      travel: { ...travelPolicy(), ...patch },
+      // The demo day ends at Miraj, 7.5 km from the home base at Sangli: allow it unless a scenario narrows it.
+      travel: { ...travelPolicy(), baseStartMaxKm: 10, ...patch },
     });
   /** Saves Settings → Workforce and switches automatic approval on, which is off by default. */
   const startPolicy = async () => {
@@ -65,9 +66,20 @@ export function dutyDayKit(admin: () => Session, sale: () => Sale) {
     )[0];
 
   /** Consent, a day that began 165 minutes ago, two site visits, the route points, End duty. */
-  async function workDay(name: string, plan: Plan, flush = true, withVisits = true) {
+  async function workDay(
+    name: string,
+    plan: Plan,
+    flush = true,
+    withVisits = true,
+    /** The person's saved base: home at the route's start by default; null saves none. */
+    base: { latitude: number; longitude: number } | null = SANGLI,
+  ) {
     const person = await ownPerson(admin(), name);
     people.push(person);
+    if (base)
+      await admin().patch(`/people/${person.id}`, {
+        base: { latitude: base.latitude, longitude: base.longitude, label: 'Home' },
+      });
     const visits = withVisits
       ? [
           { task: taskByKey(sale().project, 'site_survey'), at: SANGLI },

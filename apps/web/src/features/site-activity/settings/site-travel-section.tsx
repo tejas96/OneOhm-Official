@@ -97,6 +97,28 @@ export function SiteTravelSection({
             onValueChange={(value) => onChange({ ...travel, routeCapRatio: value ?? 1 })}
           />
         </Field>
+        <Field
+          label={t('baseStartMax')}
+          hint={t('baseStartMaxHint')}
+          error={errors['travel.baseStartMaxKm']}
+        >
+          <NumberInput
+            unit="decimal"
+            value={travel.baseStartMaxKm}
+            onValueChange={(value) => onChange({ ...travel, baseStartMaxKm: value ?? 1 })}
+          />
+        </Field>
+        <Field
+          label={t('commuteDeduct')}
+          hint={t('commuteDeductHint')}
+          error={errors['travel.commuteDeductKm']}
+        >
+          <NumberInput
+            unit="decimal"
+            value={travel.commuteDeductKm}
+            onValueChange={(value) => onChange({ ...travel, commuteDeductKm: value ?? 0 })}
+          />
+        </Field>
         <Field label={t('maxKm')} hint={t('maxKmHint')} error={errors['travel.autoApproveMaxKm']}>
           <NumberInput
             unit="whole"

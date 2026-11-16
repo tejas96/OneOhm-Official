@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { paidKm } from './paid-km';
 
 const base = { capRatio: 1.6, keptPoints: 10, visits: 2 };
-const plain = { noVisits: false, uncappedRoute: false, shortRoute: false };
+const plain = { noVisits: false, uncappedRoute: false, shortRoute: false, commuteDeductM: 0 };
 
 describe('paidKm', () => {
   it('pays the route when it is within the cap', () => {
@@ -80,5 +80,28 @@ describe('paidKm', () => {
         capApplied: false,
         noVisits: true,
       });
+  });
+
+  it('takes the commute off once, after the cap', () => {
+    const cut = paidKm({ ...base, straightM: 10_000, routeM: 30_000, commuteDeductM: 2_000 });
+    expect(cut).toMatchObject({ paidM: 14_000, capApplied: true, commuteDeductM: 2_000 });
+    const plainDay = paidKm({ ...base, straightM: 14_200, routeM: 19_100, commuteDeductM: 2_000 });
+    expect(plainDay).toMatchObject({ paidM: 17_100, commuteDeductM: 2_000 });
+  });
+
+  it('never takes more off than was to be paid, and nothing off a day with no visit', () => {
+    expect(paidKm({ ...base, straightM: 600, routeM: 900, commuteDeductM: 2_000 })).toMatchObject({
+      paidM: 0,
+      commuteDeductM: 900,
+    });
+    expect(
+      paidKm({ ...base, visits: 0, straightM: 9_000, routeM: 9_000, commuteDeductM: 2_000 }),
+    ).toMatchObject({ paidM: 0, noVisits: true, commuteDeductM: 0 });
+  });
+
+  it('takes the commute off a straight-line day too', () => {
+    expect(
+      paidKm({ ...base, keptPoints: 0, straightM: 9_000, routeM: 0, commuteDeductM: 2_000 }),
+    ).toMatchObject({ paidM: 7_000, method: 'straight', commuteDeductM: 2_000 });
   });
 });

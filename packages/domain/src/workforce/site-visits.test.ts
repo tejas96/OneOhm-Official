@@ -151,6 +151,8 @@ describe('workforce policy defaults', () => {
       routeCapRatio: 1.6,
       autoSiteVisits: true,
       siteFenceM: 150,
+      baseStartMaxKm: 5,
+      commuteDeductKm: 0,
     });
   });
 
@@ -158,6 +160,12 @@ describe('workforce policy defaults', () => {
     const { autoSiteVisits: _a, siteFenceM: _f, ...older } = DEFAULT_WORKFORCE_POLICY.travel;
     const filled = withPolicyDefaults({ ...DEFAULT_WORKFORCE_POLICY, travel: older as never });
     expect(filled.travel).toMatchObject({ autoSiteVisits: true, siteFenceM: 150 });
+  });
+
+  it('fills the start place and commute rules into a policy saved before they existed', () => {
+    const { baseStartMaxKm: _b, commuteDeductKm: _c, ...older } = DEFAULT_WORKFORCE_POLICY.travel;
+    const filled = withPolicyDefaults({ ...DEFAULT_WORKFORCE_POLICY, travel: older as never });
+    expect(filled.travel).toMatchObject({ baseStartMaxKm: 5, commuteDeductKm: 0 });
   });
 
   it('fills the automatic claim rules into a policy saved with only the older travel rules', () => {

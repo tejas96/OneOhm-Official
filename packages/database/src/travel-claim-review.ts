@@ -1,6 +1,8 @@
 import {
   CAP_MIN_STRAIGHT_M,
+  type GeoPoint,
   reviewTravelDay,
+  startPlaceCheck,
   travelAmountPaise,
   type WorkforcePolicy,
 } from '@oneohm/domain';
@@ -8,6 +10,7 @@ import { and, asc, eq, gte, isNull, lte } from 'drizzle-orm';
 import type { DatabaseExecutor } from './client';
 import { siteVisits, travelClaims, type travelDays } from './schema/site-activity.schema';
 import { attendanceDays, leaveRequests } from './schema/workforce.schema';
+import { activePlaces, readBase, readTravelFacts } from './travel-facts';
 
 type Snapshot = typeof travelDays.$inferSelect;
 
@@ -40,6 +43,26 @@ export function busiestProject(
 }
 
 /**
+ * Where the duty started and ended against the person's base and the offices. A day with
+ * visits but no start (or end) position is 'missing'. A day with no visits, or whose
+ * coordinates the retention sweep already cleared, has nothing to judge.
+ */
+async function dutyPlaces(db: DatabaseExecutor, snap: Snapshot, policy: WorkforcePolicy) {
+  if (snap.visits === 0) return {};
+  const facts = await readTravelFacts(db, snap.userId, snap.workDate);
+  if (facts.cleared) return {};
+  const [base, offices] =
+    facts.start || facts.end
+      ? await Promise.all([readBase(db, snap.userId), activePlaces(db)])
+      : [null, []];
+  const judge = (place: GeoPoint | null) =>
+    place
+      ? startPlaceCheck({ start: place, base, offices, maxKm: policy.travel.baseStartMaxKm })
+      : ('missing' as const);
+  return { startPlace: judge(facts.start), endPlace: judge(facts.end) };
+}
+
+/**
  * What the day says about how far its km can be trusted (Duty Day step 2), from the saved
  * travel and the live day. A claim the person made is read with automatic approval taken as
  * on, so `auto_approve_off` is not listed against it: it was never going to be automatic.
@@ -50,7 +73,7 @@ export async function reviewDayClaim(
   policy: WorkforcePolicy,
   manual = false,
 ) {
-  const [visits, [day], leave] = await Promise.all([
+  const [visits, [day], leave, places] = await Promise.all([
     db
       .select({
         projectId: siteVisits.projectId,
@@ -66,8 +89,6 @@ export async function reviewDayClaim(
       .select({
         autoClosedAt: attendanceDays.autoClosedAt,
         tapDelayed: attendanceDays.tapDelayed,
-        checkInInside: attendanceDays.checkInInside,
-        checkOutInside: attendanceDays.checkOutInside,
       })
       .from(attendanceDays)
       .where(
@@ -86,6 +107,7 @@ export async function reviewDayClaim(
         ),
       )
       .limit(1),
+    dutyPlaces(db, snap, policy),
   ]);
   const amountPaise = travelAmountPaise(snap.paidM, snap.ratePaisePerKm);
   const route = snap.method === 'route';
@@ -98,8 +120,7 @@ export async function reviewDayClaim(
       noVisits: snap.visits === 0,
       uncappedRoute: route && snap.visits > 0 && snap.straightM < CAP_MIN_STRAIGHT_M,
       shortRoute: route && snap.routeM < snap.straightM,
-      startOutsideOffice: day?.checkInInside === false,
-      endOutsideOffice: day?.checkOutInside === false,
+      ...places,
       farCheckIns: visits.filter((visit) => visit.far === true).length,
       // A visit whose coordinates were cleared by retention did have a location.
       unlocatedVisits: visits.filter((visit) => visit.latitude === null && !visit.cleared).length,

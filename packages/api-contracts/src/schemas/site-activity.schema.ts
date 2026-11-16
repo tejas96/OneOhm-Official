@@ -149,6 +149,8 @@ const travelKmShape = {
   method: z.enum(['route', 'straight']),
   /** The route was longer than the cap, so the paid km were cut to it. */
   capApplied: z.boolean(),
+  /** Metres taken off the paid km for the commute, once a day, after the cap. */
+  commuteDeductM: z.number().int(),
   gapCount: z.number().int(),
   gapMinutes: z.number().int(),
   mockedCount: z.number().int(),

@@ -8,6 +8,8 @@ type Tracking = 'on' | 'off' | null;
 export interface WorkPatch {
   readonly openTaskLimit?: number | null | undefined;
   readonly tracking?: Tracking | undefined;
+  /** Home or base place; null clears it. */
+  readonly base?: { latitude: number; longitude: number; label: string | null } | null | undefined;
 }
 
 /**
@@ -33,6 +35,10 @@ export async function workOf(db: DatabaseExecutor, ids: readonly string[]) {
       personalTaskLimit: row?.openTaskLimit ?? null,
       loadState: loadState(open, limit),
       tracking: (row?.tracking ?? null) as Tracking,
+      base:
+        row?.baseLatitude != null && row.baseLongitude != null
+          ? { latitude: row.baseLatitude, longitude: row.baseLongitude, label: row.baseLabel }
+          : null,
     };
   };
 }
@@ -42,6 +48,13 @@ export async function saveWork(db: DatabaseExecutor, userId: string, patch: Work
   const set = {
     ...(patch.openTaskLimit !== undefined ? { openTaskLimit: patch.openTaskLimit } : {}),
     ...(patch.tracking !== undefined ? { tracking: patch.tracking } : {}),
+    ...(patch.base !== undefined
+      ? {
+          baseLatitude: patch.base?.latitude ?? null,
+          baseLongitude: patch.base?.longitude ?? null,
+          baseLabel: patch.base?.label?.trim() || null,
+        }
+      : {}),
   };
   if (Object.keys(set).length === 0) return;
   await db

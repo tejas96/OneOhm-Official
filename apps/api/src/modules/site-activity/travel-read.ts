@@ -57,7 +57,7 @@ export async function travelDay(
           },
           km: kmOf(saved),
         }
-      : await liveMeasure(db, facts, policy, ordered.length);
+      : liveMeasure(facts, policy, ordered.length);
   const amountPaise = travelAmountPaise(kept.summary.distanceM, kept.summary.ratePaisePerKm);
   // A claim taken back when the day was reopened is not the day's claim any more.
   const current = claims.filter((claim) => !claim.withdrawn);
@@ -174,6 +174,7 @@ export async function readClaims(
           paidM: claim.distanceM,
           method: 'straight' as const,
           capApplied: false,
+          commuteDeductM: 0,
           gapCount: 0,
           gapMinutes: 0,
           mockedCount: 0,

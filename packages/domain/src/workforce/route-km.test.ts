@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type RoutePoint, routeKm } from './route-km';
+import { keptEnds, type RoutePoint, routeKm } from './route-km';
 
 const start = new Date('2026-11-16T04:00:00Z').getTime();
 /** One degree of latitude is about 111,195 m. */
@@ -150,5 +150,32 @@ describe('routeKm', () => {
     it('keeps a normal first point', () => {
       expect(routeKm([pt(0, 0), ...real]).droppedPoints).toBe(0);
     });
+  });
+});
+
+describe('keptEnds', () => {
+  const p = (minute: number, over: Partial<RoutePoint> = {}): RoutePoint => ({
+    recordedAt: new Date(Date.UTC(2026, 10, 16, 4, minute)),
+    latitude: 19 + minute * 0.0005,
+    longitude: 72.8,
+    accuracyM: 10,
+    mocked: false,
+    ...over,
+  });
+
+  it('skips mocked and vague points at either end', () => {
+    const { first, last } = keptEnds([
+      p(0, { mocked: true }),
+      p(1),
+      p(5),
+      p(9),
+      p(10, { accuracyM: 500 }),
+    ]);
+    expect(first?.recordedAt).toEqual(p(1).recordedAt);
+    expect(last?.recordedAt).toEqual(p(9).recordedAt);
+  });
+
+  it('is empty without usable points', () => {
+    expect(keptEnds([p(0, { mocked: true })])).toEqual({ first: null, last: null });
   });
 });

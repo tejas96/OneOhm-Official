@@ -100,12 +100,14 @@ export const TRAVEL = {
   days: { today: 'Today', yesterday: 'Yesterday' },
   pickDay: 'Day',
   route: 'Route',
-  routeHint: 'Straight-line distance between stops. Your paid km are shown below.',
+  routeHint:
+    'Straight line from where your duty started, through each site, to where it ended. Your paid km are shown below.',
   paid: (metres: number) => `Paid ${distance(metres)}`,
   paidFrom: {
     route: 'from your route',
     straight: 'straight line, no route was recorded',
   },
+  commute: (metres: number) => `Less ${distance(metres)} for the commute.`,
   capped: 'Your route was much longer than the straight line, so the paid km were cut.',
   autoNote: {
     approved: 'Approved automatically',

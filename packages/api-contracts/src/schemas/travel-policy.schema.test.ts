@@ -21,3 +21,25 @@ describe('travel policy, automatic site visits', () => {
     expect(travelPolicySchema.safeParse({ ...base, siteFenceM: 150.5 }).success).toBe(false);
   });
 });
+
+describe('travel policy, start place and commute', () => {
+  it('defaults to 5 km for a known start and no commute taken off', () => {
+    const { baseStartMaxKm: _b, commuteDeductKm: _c, ...older } = base;
+    expect(travelPolicySchema.parse(older)).toMatchObject({
+      baseStartMaxKm: 5,
+      commuteDeductKm: 0,
+    });
+  });
+
+  it('keeps the known-start distance between 1 and 50 km', () => {
+    const check = (baseStartMaxKm: number) =>
+      travelPolicySchema.safeParse({ ...base, baseStartMaxKm }).success;
+    expect([check(0.5), check(1), check(50), check(51)]).toEqual([false, true, true, false]);
+  });
+
+  it('keeps the commute between 0 and 50 km', () => {
+    const check = (commuteDeductKm: number) =>
+      travelPolicySchema.safeParse({ ...base, commuteDeductKm }).success;
+    expect([check(-1), check(0), check(50), check(50.5)]).toEqual([false, true, true, false]);
+  });
+});

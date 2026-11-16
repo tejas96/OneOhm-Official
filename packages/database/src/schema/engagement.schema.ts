@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   pgTable,
@@ -111,6 +112,10 @@ export const personWorkSettings = pgTable('person_work_settings', {
     .references(() => users.id, { onDelete: 'cascade' }),
   openTaskLimit: integer('open_task_limit'),
   tracking: text('tracking', { enum: ['on', 'off'] }),
+  /** Where travel is paid from on a day that starts away from an office: home or a base place. */
+  baseLatitude: doublePrecision('base_latitude'),
+  baseLongitude: doublePrecision('base_longitude'),
+  baseLabel: text('base_label'),
   updatedAt: updatedAt(),
 });
 

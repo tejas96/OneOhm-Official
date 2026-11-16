@@ -12,7 +12,14 @@ vi.mock('./travel-claim-approve', () => ({ approveTravelClaim: lib.approveTravel
 import type { WorkforcePolicy } from '@oneohm/domain';
 import { travelClaims } from './schema/site-activity.schema';
 import { approveCleanAutoClaims, settleMissedDays } from './travel-auto-approve';
-import { cleanVisits, plainDay, policyWith, scriptedTx, snap } from './travel-claim-test-kit';
+import {
+  cleanVisits,
+  homeDay,
+  plainDay,
+  policyWith,
+  scriptedTx,
+  snap,
+} from './travel-claim-test-kit';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -45,6 +52,7 @@ describe('the morning approval', () => {
       over.extra?.visits ?? cleanVisits,
       [over.extra?.day ?? plainDay],
       over.extra?.leave ?? [],
+      ...homeDay,
       [{ name: 'Ravi' }],
     ]);
     return {
@@ -114,7 +122,7 @@ describe('settling closed days again', () => {
   it('makes the claim for a day saved with none, when automatic claims are on', async () => {
     const kit = scriptedTx(
       // The first read is the list of days; the second is the "has no claim" subquery inside it.
-      [[snap()], [], [], cleanVisits, [plainDay], [], [{ name: 'Ravi' }]],
+      [[snap()], [], [], cleanVisits, [plainDay], [], ...homeDay, [{ name: 'Ravi' }]],
       {
         travel_claims: [[{ id: 'c1', userId: 'worker', workDate: '2026-11-14' }]],
       },

@@ -24,10 +24,10 @@ describe('takeTravelSnapshot with a recorded route', () => {
   const queue = (route: unknown[]) => [
     [dayRow()],
     [visit('a', '2026-11-15T06:00:00Z', 18.56, 73.9)],
+    route,
     [place],
     [],
     [policy(900)],
-    route,
   ];
 
   it('pays the route, saves how it was worked out, and keeps distance_m equal to the paid km', async () => {
@@ -57,7 +57,7 @@ describe('takeTravelSnapshot with a recorded route', () => {
   });
 
   it('pays nothing for a day with a route but no site visit', async () => {
-    const noVisits = [[dayRow()], [], [place], [], [policy(900)], points(10)];
+    const noVisits = [[dayRow()], [], points(10), [place], [], [policy(900)]];
     const { db, writes } = fakeDb(noVisits);
     await takeTravelSnapshot(db, 'u1', '2026-11-15');
     expect(writes[0]?.values).toMatchObject({ paidM: 0, distanceM: 0, visits: 0 });
@@ -109,8 +109,77 @@ describe('ensureTravelSnapshot (S4)', () => {
 
   it('marks a day closed before snapshots existed, saved now, as a backfill', async () => {
     // Nothing saved yet, then the closed day as the live rows have it.
-    const { db, writes } = fakeDb([[], [dayRow()], [], [place], [], [policy(900)]]);
+    const { db, writes } = fakeDb([[], [dayRow()], [], [], [place], [], [policy(900)]]);
     await ensureTravelSnapshot(db, 'u1', '2026-11-15');
     expect(writes[0]?.values?.source).toBe('backfill');
+  });
+});
+
+describe('takeTravelSnapshot from where the duty started', () => {
+  const home = { latitude: 18.4, longitude: 73.7 };
+  const site = visit('a', '2026-11-15T06:00:00Z', 18.52, 73.85);
+  const away = { checkInLatitude: home.latitude, checkInLongitude: home.longitude };
+  const awayBoth = {
+    ...away,
+    checkInInside: false,
+    checkOutLatitude: home.latitude,
+    checkOutLongitude: home.longitude,
+    checkOutInside: false,
+  };
+
+  it('measures home to the site and back, though neither end is at an office', async () => {
+    const { db, writes } = fakeDb([
+      [{ ...dayRow(awayBoth), place: null }],
+      [site],
+      [],
+      [place],
+      [],
+      [policy(900)],
+    ]);
+    await takeTravelSnapshot(db, 'u1', '2026-11-15');
+    const legs = writes[0]?.values?.legs as { fromLabel: string; toLabel: string }[];
+    expect(legs.map((leg) => leg.fromLabel)).toEqual(['Check-in', 'P-1 · Task a']);
+    // About 20 km each way from the home point to the site.
+    expect(Number(writes[0]?.values?.straightM)).toBeGreaterThan(30_000);
+  });
+
+  it('starts from the first kept route point when the check-in has no position', async () => {
+    const route = [
+      { recordedAt: new Date('2026-11-15T05:00:00Z'), ...home, accuracyM: 10, mocked: false },
+      {
+        recordedAt: new Date('2026-11-15T05:10:00Z'),
+        latitude: 18.52,
+        longitude: 73.85,
+        accuracyM: 10,
+        mocked: false,
+      },
+    ];
+    const noFix = dayRow({
+      checkInLatitude: null,
+      checkInLongitude: null,
+      checkOutLatitude: null,
+      checkOutLongitude: null,
+    });
+    const { db, writes } = fakeDb([[noFix], [site], route, [], [policy(900)]]);
+    await takeTravelSnapshot(db, 'u1', '2026-11-15');
+    const legs = writes[0]?.values?.legs as { fromLabel: string; toLabel: string }[];
+    expect(legs.map((leg) => leg.fromLabel)).toEqual(['Duty start', 'P-1 · Task a']);
+    expect(legs.map((leg) => leg.toLabel)).toEqual(['P-1 · Task a', 'Duty end']);
+  });
+
+  it('takes the commute off the paid km and saves what was taken', async () => {
+    const { db, writes } = fakeDb([
+      [dayRow(awayBoth)],
+      [site],
+      [],
+      [place],
+      [],
+      [{ policy: { travel: { commuteDeductKm: 2 } } }],
+    ]);
+    await takeTravelSnapshot(db, 'u1', '2026-11-15');
+    const values = writes[0]?.values as Record<string, number>;
+    expect(values.commuteDeductM).toBe(2000);
+    expect(values.paidM).toBe(Number(values.straightM) - 2000);
+    expect(values.distanceM).toBe(values.paidM);
   });
 });

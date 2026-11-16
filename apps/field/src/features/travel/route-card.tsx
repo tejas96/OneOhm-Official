@@ -71,6 +71,11 @@ export function RouteCard({ day }: { readonly day: TravelDay }) {
         <Text variant="bodySm" tone="secondary">
           {TRAVEL.total(day.paidM, formatInr(day.ratePaisePerKm), formatInr(day.amountPaise))}
         </Text>
+        {day.commuteDeductM > 0 ? (
+          <Text variant="bodySm" tone="secondary">
+            {TRAVEL.commute(day.commuteDeductM)}
+          </Text>
+        ) : null}
         {day.capApplied ? (
           <Text variant="bodySm" tone="secondary">
             {TRAVEL.capped}

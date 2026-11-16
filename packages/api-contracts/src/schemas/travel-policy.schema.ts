@@ -20,4 +20,8 @@ export const travelPolicySchema = z.object({
   autoSiteVisits: z.boolean().default(true),
   /** How close to a site, in metres, counts as being at it. */
   siteFenceM: z.number().int().min(50).max(1000).default(150),
+  /** A duty start within this many km of the person's base or of an office is a known place. */
+  baseStartMaxKm: z.number().min(1).max(50).default(5),
+  /** Km taken off each day's paid km once, after the cap. */
+  commuteDeductKm: z.number().min(0).max(50).default(0),
 });

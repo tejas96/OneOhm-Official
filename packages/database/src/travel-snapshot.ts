@@ -1,10 +1,9 @@
 import { jobErrorText, measureDay, type WorkforcePolicy, withPolicyDefaults } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { businessTimeZone } from './business-calendar';
 import type { DatabaseExecutor } from './client';
 import { alertJobFailed } from './job-alerts';
-import { dutyPoints } from './schema/duty-points.schema';
 import { auditLog } from './schema/records.schema';
 import { travelDays } from './schema/site-activity.schema';
 import { workforcePolicy } from './schema/workforce.schema';
@@ -46,22 +45,6 @@ export async function currentWorkforcePolicy(db: DatabaseExecutor): Promise<Work
   return withPolicyDefaults(row?.policy);
 }
 
-/** The day's recorded route points in time order (empty when none was recorded or kept). */
-export async function readRoute(db: DatabaseExecutor, dayId: string | null) {
-  if (!dayId) return [];
-  return db
-    .select({
-      recordedAt: dutyPoints.recordedAt,
-      latitude: dutyPoints.latitude,
-      longitude: dutyPoints.longitude,
-      accuracyM: dutyPoints.accuracyM,
-      mocked: dutyPoints.mocked,
-    })
-    .from(dutyPoints)
-    .where(eq(dutyPoints.attendanceDayId, dayId))
-    .orderBy(asc(dutyPoints.recordedAt), asc(dutyPoints.id));
-}
-
 /**
  * Saves the day's travel (live review S3, S4): the km paid, the legs, the visit count and the
  * km rate in force that day. The paid km come from the recorded route, held to the straight
@@ -90,7 +73,8 @@ export async function takeTravelSnapshot(
   const rate = saved?.ratePaisePerKm ?? policy.travel.ratePaisePerKm;
   const { summary, route, paid, pointsCount } = measureDay({
     stops: facts.stops,
-    points: await readRoute(db, facts.dayId),
+    points: facts.route,
+    commuteDeductM: Math.round(policy.travel.commuteDeductKm * 1000),
     ratePaisePerKm: rate,
     visits: facts.visits,
     capRatio: policy.travel.routeCapRatio,
@@ -108,6 +92,7 @@ export async function takeTravelSnapshot(
     paidM: paid.paidM,
     method: paid.method,
     capApplied: paid.capApplied,
+    commuteDeductM: paid.commuteDeductM,
     gapCount: route.gapCount,
     gapMinutes: route.gapMinutes,
     mockedCount: route.mockedCount,

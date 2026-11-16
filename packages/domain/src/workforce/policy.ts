@@ -79,6 +79,10 @@ export interface SiteTravelPolicy {
   readonly autoSiteVisits: boolean;
   /** How close to a site, in metres, counts as being at it for automatic visits. */
   readonly siteFenceM: number;
+  /** A duty start within this many km of the person's base or of an office is a known place. */
+  readonly baseStartMaxKm: number;
+  /** Km taken off each day's paid km once, after the cap (the part of the day that is commuting). */
+  readonly commuteDeductKm: number;
 }
 
 export interface WorkforcePolicy {
@@ -127,6 +131,8 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     routeCapRatio: 1.6,
     autoSiteVisits: true,
     siteFenceM: 150,
+    baseStartMaxKm: 5,
+    commuteDeductKm: 0,
   },
   capacity: { defaultOpenTaskLimit: 0 },
 };

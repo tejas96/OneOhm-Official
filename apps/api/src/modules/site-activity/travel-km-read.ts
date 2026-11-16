@@ -1,9 +1,4 @@
-import {
-  type DatabaseExecutor,
-  readRoute,
-  type readTravelFacts,
-  type travelDays,
-} from '@oneohm/database';
+import { type readTravelFacts, type travelDays } from '@oneohm/database';
 import { measureDay, type WorkforcePolicy } from '@oneohm/domain';
 
 type Saved = typeof travelDays.$inferSelect;
@@ -15,20 +10,21 @@ export const kmOf = (saved: Saved) => ({
   paidM: saved.paidM,
   method: saved.method,
   capApplied: saved.capApplied,
+  commuteDeductM: saved.commuteDeductM,
   gapCount: saved.gapCount,
   gapMinutes: saved.gapMinutes,
   mockedCount: saved.mockedCount,
 });
 
-export async function liveMeasure(
-  db: DatabaseExecutor,
+export function liveMeasure(
   facts: Awaited<ReturnType<typeof readTravelFacts>>,
   policy: WorkforcePolicy,
   visits: number,
 ) {
   const day = measureDay({
     stops: facts.stops,
-    points: await readRoute(db, facts.dayId),
+    points: facts.route,
+    commuteDeductM: Math.round(policy.travel.commuteDeductKm * 1000),
     ratePaisePerKm: policy.travel.ratePaisePerKm,
     visits,
     capRatio: policy.travel.routeCapRatio,
@@ -41,6 +37,7 @@ export async function liveMeasure(
       paidM: day.paid.paidM,
       method: day.paid.method,
       capApplied: day.paid.capApplied,
+      commuteDeductM: day.paid.commuteDeductM,
       gapCount: day.route.gapCount,
       gapMinutes: day.route.gapMinutes,
       mockedCount: day.route.mockedCount,

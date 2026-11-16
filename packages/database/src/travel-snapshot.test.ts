@@ -30,6 +30,7 @@ describe('takeTravelSnapshot (S3, S4)', () => {
         visit('a', '2026-11-15T06:00:00Z', 18.56, 73.9),
         visit('b', '2026-11-15T08:00:00Z', null, null),
       ],
+      [],
       [place],
       [],
       [policy(900)],
@@ -49,7 +50,7 @@ describe('takeTravelSnapshot (S3, S4)', () => {
   });
 
   it('marks a day saved as it closed with source close', async () => {
-    const { db, writes } = fakeDb([[dayRow()], [], [place], [], [policy(900)]]);
+    const { db, writes } = fakeDb([[dayRow()], [], [], [place], [], [policy(900)]]);
     await takeTravelSnapshot(db, 'u1', '2026-11-15');
     expect(writes[0]?.values?.source).toBe('close');
   });
@@ -58,6 +59,7 @@ describe('takeTravelSnapshot (S3, S4)', () => {
     const { db, writes } = fakeDb([
       [dayRow()],
       [visit('a', '2026-11-15T06:00:00Z', 18.56, 73.9)],
+      [],
       [place],
       [{ ratePaisePerKm: 650, distanceM: 1, legs: [], visits: 1 }],
     ]);
@@ -78,6 +80,7 @@ describe('takeTravelSnapshot (S3, S4)', () => {
         }),
       ],
       [visit('a', '2026-11-15T06:00:00Z', null, null)],
+      [],
       [saved],
     ]);
     expect(await takeTravelSnapshot(db, 'u1', '2026-11-15')).toBe(saved);
