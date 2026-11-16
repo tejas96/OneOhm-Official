@@ -167,6 +167,7 @@
     "tabsLabel": "Team sections",
     "noAccess": "You do not have permission to see the team.",
     "tabs": {
+      "live": "Live map",
       "people": "People",
       "attendance": "Attendance",
       "leave": "Leave",

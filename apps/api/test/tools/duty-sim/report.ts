@@ -19,11 +19,16 @@ const time = (value: Date | string) =>
 const km = (metres: number) => `${(metres / 1000).toFixed(2)} km`;
 
 /** Plain text of what the server made of the day: route, visits, travel day, claim. */
-export async function report(world: World, tally: Tally, sim: Simulation): Promise<string> {
+export async function report(
+  world: World,
+  tally: Tally,
+  sim: Simulation,
+  live = false,
+): Promise<string> {
   const date = indiaDate();
   const route = await world.me.get<DutyRoute>(`/me/duty-route?date=${date}`);
   const visits = await visitRows(world.worker.id);
-  const day = await world.me.get<TravelDay>(`/me/travel?date=${date}`);
+  const day = live ? null : await world.me.get<TravelDay>(`/me/travel?date=${date}`);
   const rejected = Object.entries(tally.rejected).map(([why, n]) => `${why} ${n}`);
   const lines = [
     `Worker ${world.worker.name} (${world.worker.phone}), day ${date}`,
@@ -37,8 +42,12 @@ export async function report(world: World, tally: Tally, sim: Simulation): Promi
         `  in ${time(v.check_in_at)} (${v.check_in_source}${v.delayed ? ', delayed' : ''}) out ${v.check_out_at ? `${time(v.check_out_at)} (${v.check_out_source})` : 'still open'}${v.leave_reason ? `, left: ${v.leave_reason}` : ''}`,
     ),
     `Base saved: ${world.base ? `${world.base.latitude}, ${world.base.longitude}` : 'none'}`,
-    `Travel day: route ${km(day.routeM)}, straight from duty start through the site to duty end ${km(day.straightM)}, commute deduct ${km(day.commuteDeductM)}, paid ${km(day.paidM)}, method ${day.method}, cap ${day.capApplied ? 'applied' : 'not applied'}, gaps ${day.gapCount} (${day.gapMinutes} min), mocked ${day.mockedCount}, closed ${day.closed}`,
   ];
+  // A live day is still open: there is no saved travel day or claim to show yet.
+  if (!day) return [...lines, 'Duty still open (--live): no travel day or claim yet.'].join('\n');
+  lines.push(
+    `Travel day: route ${km(day.routeM)}, straight from duty start through the site to duty end ${km(day.straightM)}, commute deduct ${km(day.commuteDeductM)}, paid ${km(day.paidM)}, method ${day.method}, cap ${day.capApplied ? 'applied' : 'not applied'}, gaps ${day.gapCount} (${day.gapMinutes} min), mocked ${day.mockedCount}, closed ${day.closed}`,
+  );
   const claim = day.claim;
   lines.push(
     claim

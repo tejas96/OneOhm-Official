@@ -19,10 +19,22 @@ export interface Args {
   seed: number | undefined;
   /** The worker's base (home) saved at setup; null means the first waypoint. */
   base: { latitude: number; longitude: number } | null;
+  /** Keep duty open and end the trip about now, for the live map (no claim report). */
+  live: boolean;
+  /** Stay at the site to the end of the trip (an open visit with --live). */
+  stay: boolean;
+  /** Minutes standing still after the trip (idle with --live). */
+  idle: number;
+  /** Minutes of silence before now: the trip ends this long ago (a gap with --live). */
+  quiet: number;
+  /** The worker's name instead of `Sim Worker <time>`. */
+  name: string | undefined;
+  /** Phone of the worker's reporting manager, set at setup. */
+  manager: string | undefined;
   help: boolean;
 }
 
-const BOOLEANS = new Set(['setup', 'no-setup', 'fence', 'approve-run', 'help']);
+const BOOLEANS = new Set(['setup', 'no-setup', 'fence', 'approve-run', 'live', 'stay', 'help']);
 const VALUES = new Set([
   'api',
   'worker',
@@ -39,6 +51,10 @@ const VALUES = new Set([
   'bad-accuracy',
   'seed',
   'base',
+  'idle',
+  'quiet',
+  'name',
+  'manager',
 ]);
 
 function num(name: string, text: string | undefined, min = 0): number | undefined {
@@ -110,6 +126,12 @@ export function parseArgs(argv: readonly string[]): Args {
     approveRun: flags.has('approve-run'),
     seed: num('seed', seen.get('seed')),
     base: point(seen.get('base')),
+    live: flags.has('live'),
+    stay: flags.has('stay'),
+    idle: num('idle', seen.get('idle')) ?? 0,
+    quiet: num('quiet', seen.get('quiet')) ?? 0,
+    name: seen.get('name')?.trim() || undefined,
+    manager: seen.get('manager'),
     help: flags.has('help'),
   };
 }

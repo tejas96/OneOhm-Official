@@ -9,6 +9,7 @@ import {
   HardHat,
   IndianRupee,
   type LucideIcon,
+  MapPinned,
   Megaphone,
   Settings2,
   SolarPanel,
@@ -29,6 +30,8 @@ export interface NavItem {
   readonly built: boolean;
   /** Shown only to people holding at least one of these. */
   readonly requires?: readonly Capability[];
+  /** Also shown to anyone someone reports to (the live map). */
+  readonly orHasReports?: boolean;
 }
 
 export interface NavGroup {
@@ -56,6 +59,14 @@ export const NAVIGATION: readonly NavGroup[] = [
           'service.manage',
           'surveys.perform',
         ],
+      },
+      {
+        key: 'live',
+        href: '/live',
+        icon: MapPinned,
+        built: true,
+        requires: ['people.manage'],
+        orHasReports: true,
       },
       {
         key: 'commandCenter',

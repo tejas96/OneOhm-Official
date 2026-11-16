@@ -1,0 +1,137 @@
+{
+  "liveMap": {
+    "title": "Live map",
+    "loading": "Loading the live map",
+    "filters": "Show on the map",
+    "fitAll": "Fit all",
+    "noAccess": {
+      "title": "The live map is for managers",
+      "body": "It shows the people who report to you. Ask HR to set who reports to you on the Team page."
+    },
+    "updated": {
+      "never": "Connecting…",
+      "now": "Updated just now",
+      "ago": "Updated {seconds, plural, =60 {over a minute ago} other {# s ago}}",
+      "failed": "Not updating. Check your connection."
+    },
+    "chip": {
+      "on_duty": "On duty",
+      "on_visit": "On visit",
+      "moving": "Moving",
+      "idle": "Idle",
+      "gap": "No signal",
+      "location_off": "Location off",
+      "on_leave": "On leave",
+      "off_duty": "Off duty"
+    },
+    "state": {
+      "on_visit": "On visit",
+      "moving": "Moving",
+      "idle": "Idle",
+      "gap": "No signal",
+      "location_off": "Location off",
+      "on_leave": "On leave",
+      "off_duty": "Off duty"
+    },
+    "doing": {
+      "on_visit": "At {label}",
+      "moving": "On the move",
+      "idle": "Stopped",
+      "gap": "No location for {minutes} min",
+      "location_off": "On duty, location is off",
+      "on_leave": "On leave today",
+      "off_duty": "Not on duty",
+      "off_duty_done": "Day ended · {km} km"
+    },
+    "seen": {
+      "now": "now",
+      "minutes": "{minutes} min",
+      "hours": "{hours} h"
+    },
+    "siteStatus": {
+      "planned": "Planned",
+      "in_progress": "In progress",
+      "done": "Done",
+      "late": "Late"
+    },
+    "pin": {
+      "person": "{name}, {state}",
+      "site": "{job}, {status}"
+    },
+    "panel": {
+      "people": "People",
+      "onDutyOf": "{onDuty} of {total} on duty",
+      "back": "All people"
+    },
+    "list": {
+      "search": "Find a person",
+      "filtered": "Showing: {filter}",
+      "showAll": "Show all",
+      "none": "Nobody here."
+    },
+    "card": {
+      "since": "Checked in at {time}",
+      "visits": "Visits today",
+      "km": "Travelled",
+      "battery": "Battery",
+      "network": "Network",
+      "networks": {
+        "wifi": "Wi-Fi",
+        "cellular": "Mobile data",
+        "none": "No network"
+      },
+      "unknown": "Not known",
+      "lastSeen": "Last location",
+      "notSeen": "Not today",
+      "dutyStarted": "Started duty",
+      "notStarted": "Not today",
+      "mocked": "A fake location was seen on this phone today.",
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "noPhone": "No phone number saved for this person."
+    },
+    "site": {
+      "kind": "Work",
+      "kinds": {
+        "survey": "Site survey",
+        "installation": "Installation",
+        "inspection": "Inspection",
+        "service": "Service visit"
+      },
+      "planned": "Planned for",
+      "anyTime": "Any time today",
+      "crew": "Who is going",
+      "noCrew": "Nobody you look after.",
+      "openJob": "Open job"
+    },
+    "controls": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "satellite": "Satellite view",
+      "roadmap": "Map view"
+    },
+    "sheet": {
+      "expand": "Show more",
+      "collapse": "Show less"
+    },
+    "notice": {
+      "nobodyOnDuty": {
+        "title": "Nobody is on duty right now",
+        "body": "People show on the map when they start duty in the field app."
+      },
+      "nobody": {
+        "title": "Nobody to show yet",
+        "body": "People who report to you show here once location is on for them."
+      },
+      "error": {
+        "title": "Could not load the live map",
+        "body": "Check your connection, then try again.",
+        "action": "Try again"
+      },
+      "noMap": {
+        "title": "The map is not set up",
+        "body": "Add a Google Maps key to the server settings to see the map. The list still works."
+      }
+    }
+  }
+}

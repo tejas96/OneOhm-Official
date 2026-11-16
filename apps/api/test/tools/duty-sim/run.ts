@@ -118,5 +118,6 @@ export async function runDay(
     }
     await upload(world, sim.points.slice(exit + 1), tally);
   });
-  await world.me.post('/attendance/check-out', {});
+  // --live keeps the day open, so the live map shows the worker where the trip ended.
+  if (!args.live) await world.me.post('/attendance/check-out', {});
 }

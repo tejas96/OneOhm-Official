@@ -154,3 +154,22 @@ describe('the phone fence', () => {
     expect(fenceEvents(sim.points, sim.site, 150).enter).toBeNull();
   });
 });
+
+describe('ending a live trip', () => {
+  it('stays at the site to the end with --stay', () => {
+    const path = demoPath();
+    const m = motion(path, 25, 10, { stay: true });
+    expect(m.totalSec).toBeCloseTo(m.leaveSec, 3);
+    const last = m.at(m.totalSec);
+    expect(distanceM(last.at, path.waypoints[1] as LatLng)).toBeLessThan(80);
+    expect(last.heading).toBeNull();
+  });
+
+  it('stands still for --idle minutes after the trip', () => {
+    const plain = motion(demoPath(), 25, 10);
+    const idle = motion(demoPath(), 25, 10, { idleMin: 8 });
+    expect(idle.totalSec - plain.totalSec).toBeCloseTo(480, 3);
+    expect(distanceM(idle.at(idle.totalSec).at, plain.at(plain.totalSec).at)).toBeLessThan(1);
+    expect(idle.at(idle.totalSec - 60).speedMps).toBe(0);
+  });
+});

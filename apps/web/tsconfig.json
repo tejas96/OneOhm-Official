@@ -1,7 +1,7 @@
 {
   "extends": "@oneohm/tsconfig/nextjs.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "google.maps"],
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "src", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],

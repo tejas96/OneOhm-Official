@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DutyRoute } from '@oneohm/api-contracts';
-import { attendanceDays, dutyPoints, reportingLines, users } from '@oneohm/database';
+import { attendanceDays, dutyPoints, users } from '@oneohm/database';
 import { summariseDutyRoute } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, eq } from 'drizzle-orm';
-import { type Actor, can } from '../../common/auth/actor';
-import { forbidden, notFound } from '../../common/http/errors';
+import type { Actor } from '../../common/auth/actor';
+import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { assertMayWatch } from './duty-scope';
 
 /** A person's recorded route for a day, for them and for the people who look after them. */
 @Injectable()
@@ -16,21 +17,10 @@ export class DutyRouteService {
   /**
    * Who may read it: the person, their reporting manager (direct line only) and HR
    * (`people.manage`). Nobody else, whatever else they may see (`people.view`,
-   * `leave.approve` do not open a route).
+   * `leave.approve` do not open a route). The live map uses the same rule.
    */
-  private async assertMayRead(actor: Actor, userId: string): Promise<void> {
-    if (actor.userId === userId) return;
-    if (can(actor, 'people.manage')) return;
-    const [line] = await this.db
-      .select({ manager: reportingLines.managerUserId })
-      .from(reportingLines)
-      .where(eq(reportingLines.userId, userId))
-      .limit(1);
-    if (line?.manager !== actor.userId) throw forbidden();
-  }
-
   async route(actor: Actor, userId: string, date = todayIn()): Promise<DutyRoute> {
-    await this.assertMayRead(actor, userId);
+    await assertMayWatch(this.db, actor, userId);
     const [person] = await this.db
       .select({ id: users.id })
       .from(users)

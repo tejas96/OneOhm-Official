@@ -21,6 +21,8 @@ export const currentUserSchema = z.object({
   kind: roleKindSchema,
   roles: z.array(roleRefSchema),
   capabilities: z.array(capabilitySchema),
+  /** Someone reports to this person (opens the live map without `people.manage`). */
+  hasReports: z.boolean().optional(),
 });
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 

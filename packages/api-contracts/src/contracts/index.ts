@@ -35,6 +35,7 @@ import { leadCampaignsContract } from './lead-campaigns.contract';
 import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { listsContract } from './lists.contract';
+import { liveMapContract } from './live-map.contract';
 import { mapsContract } from './maps.contract';
 import { marketingContract } from './marketing.contract';
 import { notificationsContract } from './notifications.contract';
@@ -126,6 +127,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly leadIntake: typeof leadIntakeContract;
   readonly engagement: typeof engagementContract;
   readonly dutyPoints: typeof dutyPointsContract;
+  readonly liveMap: typeof liveMapContract;
   readonly projectTeam: typeof projectTeamContract;
   readonly productDatasheet: typeof productDatasheetContract;
   readonly lists: typeof listsContract;
@@ -197,6 +199,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   leadIntake: leadIntakeContract,
   engagement: engagementContract,
   dutyPoints: dutyPointsContract,
+  liveMap: liveMapContract,
   projectTeam: projectTeamContract,
   productDatasheet: productDatasheetContract,
   lists: listsContract,

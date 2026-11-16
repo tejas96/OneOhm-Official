@@ -6,7 +6,10 @@ const HELP = `Duty Day simulator (acceptance API on port 4300 only). See apps/ap
   --route "lat,lng;*lat,lng;..." | --gpx F | --kml F | --geojson F   (default: built-in Sangli demo)
   --site-index N  --speed 25  --dwell 12  --fence  --gap 20-50  --fake 30  --jump 40  --bad-accuracy 10
   --worker <phone>  --no-setup  --approve-run  --seed N  --api URL
-  --base "lat,lng"   the worker's home, saved at setup (default: the first waypoint)`;
+  --base "lat,lng"   the worker's home, saved at setup (default: the first waypoint)
+  --live   keep duty open, the last point about now (for the live map)
+  --stay  --idle <min>  --quiet <min>   end at the site / stand still / go silent before now
+  --name "Ravi"  --manager <phone>   the worker's name and reporting manager`;
 
 async function apiIsUp(): Promise<boolean> {
   try {
@@ -51,9 +54,13 @@ async function main(): Promise<void> {
       fake: args.fake,
       jump: args.jump,
       badAccuracy: args.badAccuracy,
+      stay: args.stay,
+      idleMin: args.idle,
     };
     const probe = simulate(path, config);
-    config.startMs = Date.now() - Math.ceil(probe.totalSec * 1000) - 60_000;
+    // With --quiet the phone went silent that many minutes before now.
+    const quietMs = args.quiet * 60_000;
+    config.startMs = Date.now() - Math.ceil(probe.totalSec * 1000) - 60_000 - quietMs;
     const sim = simulate(path, config);
     console.info(
       `Trip ${(sim.totalSec / 60).toFixed(1)} min, arrive at minute ${(sim.arriveSec / 60).toFixed(1)}, leave at ${(sim.leaveSec / 60).toFixed(1)}`,
@@ -64,7 +71,7 @@ async function main(): Promise<void> {
     const tally = newTally();
     await runDay(world, sim, args, tally);
     if (args.approveRun) await approveRun(world.admin);
-    console.info(`\n${await report(world, tally, sim)}`);
+    console.info(`\n${await report(world, tally, sim, args.live)}`);
     console.info(`\nGeoJSON: ${writeGeoJson(OUT_DIR, path, sim)}`);
   } finally {
     await closeDb();

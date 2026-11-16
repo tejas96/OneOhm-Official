@@ -140,22 +140,25 @@ export function routeKm(points: readonly RoutePoint[], window?: RouteWindow | nu
   };
 }
 
+/** The points the route measures with (not mocked, not vague, not a jump), in time order. */
+export function keptPoints<T extends RoutePoint>(points: readonly T[]): T[] {
+  const badStart = badFirstPoint(points);
+  const kept: T[] = [];
+  for (const [index, point] of points.entries()) {
+    const verdict = index === badStart ? 'jump' : judge(point, kept[kept.length - 1] ?? null);
+    if (verdict === 'ok') kept.push(point);
+  }
+  return kept;
+}
+
 /**
- * The first and last points the route measures with (not mocked, not vague, not a jump), for
- * the day's start and end when the check-in or check-out has no position of its own.
+ * The first and last points the route measures with, for the day's start and end when the
+ * check-in or check-out has no position of its own.
  */
 export function keptEnds(points: readonly RoutePoint[]): {
   readonly first: RoutePoint | null;
   readonly last: RoutePoint | null;
 } {
-  const badStart = badFirstPoint(points);
-  let first: RoutePoint | null = null;
-  let last: RoutePoint | null = null;
-  for (const [index, point] of points.entries()) {
-    const verdict = index === badStart ? 'jump' : judge(point, last);
-    if (verdict !== 'ok') continue;
-    first ??= point;
-    last = point;
-  }
-  return { first, last };
+  const kept = keptPoints(points);
+  return { first: kept[0] ?? null, last: kept[kept.length - 1] ?? null };
 }

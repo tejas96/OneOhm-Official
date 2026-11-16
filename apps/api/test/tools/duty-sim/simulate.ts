@@ -21,8 +21,17 @@ export interface Motion {
   at(tSec: number): Sample;
 }
 
-/** Drive to the site at a steady speed, stand there for the dwell, then drive on to the end. */
-export function motion(path: Path, speedKmh: number, dwellMin: number): Motion {
+/** How the trip ends: at the site without leaving (`stay`), then standing still `idleMin`. */
+export interface TripEnd {
+  readonly stay?: boolean | undefined;
+  readonly idleMin?: number | undefined;
+}
+
+/**
+ * Drive to the site at a steady speed, stand there for the dwell, then drive on to the end
+ * (or stay at the site), then stand still for `idleMin`.
+ */
+export function motion(path: Path, speedKmh: number, dwellMin: number, end: TripEnd = {}): Motion {
   const cum = cumulative(path.line);
   const length = cum[cum.length - 1] ?? 0;
   const site = path.waypoints[path.siteIndex] as LatLng;
@@ -30,15 +39,22 @@ export function motion(path: Path, speedKmh: number, dwellMin: number): Motion {
   const v = speedKmh / 3.6;
   const arriveSec = siteDist / v;
   const leaveSec = arriveSec + dwellMin * 60;
-  const totalSec = leaveSec + (length - siteDist) / v;
+  const driveEnd = end.stay ? leaveSec : leaveSec + (length - siteDist) / v;
+  const totalSec = driveEnd + (end.idleMin ?? 0) * 60;
   return {
     totalSec,
     arriveSec,
     leaveSec,
     at(tSec) {
-      const dwelling = tSec >= arriveSec && tSec < leaveSec;
+      // Standing at the site, standing still after the trip, or staying at the site to the end.
+      const dwelling =
+        (tSec >= arriveSec && (tSec < leaveSec || end.stay === true)) || tSec > driveEnd;
       const d =
-        tSec < arriveSec ? v * tSec : dwelling ? siteDist : siteDist + v * (tSec - leaveSec);
+        tSec < arriveSec
+          ? v * tSec
+          : tSec < leaveSec || end.stay
+            ? siteDist
+            : Math.min(length, siteDist + v * (tSec - leaveSec));
       const spot = positionAt(path.line, cum, d);
       return {
         tSec,
@@ -102,6 +118,8 @@ export interface SimConfig {
   fake?: number | undefined;
   jump?: number | undefined;
   badAccuracy?: number | undefined;
+  stay?: boolean | undefined;
+  idleMin?: number | undefined;
 }
 
 /** Adds what a real phone has: GPS noise, accuracy, speed, heading, battery, network. */
@@ -172,7 +190,7 @@ export interface Simulation {
 }
 
 export function simulate(path: Path, cfg: SimConfig): Simulation {
-  const m = motion(path, cfg.speedKmh, cfg.dwellMin);
+  const m = motion(path, cfg.speedKmh, cfg.dwellMin, { stay: cfg.stay, idleMin: cfg.idleMin });
   const decorated = decorate(resample(m), cfg);
   const { points, dropped } = applyProblems(decorated, cfg);
   return {

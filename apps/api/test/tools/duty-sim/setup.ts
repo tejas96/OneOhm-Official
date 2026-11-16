@@ -27,6 +27,15 @@ const clock = () =>
     hourCycle: 'h23',
   }).format(new Date());
 
+/** The reporting manager named by phone (+91… or 10 digits); they must already exist. */
+async function managerId(phone: string): Promise<string> {
+  const e164 = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
+  const [row] = await rows<{ id: string }>('SELECT id FROM users WHERE phone_e164 = $1', [e164]);
+  if (!row)
+    throw new Error(`--manager ${phone}: nobody has that phone in the acceptance database.`);
+  return row.id;
+}
+
 /**
  * The admin makes (or finds) the worker and, with setup on, a sold project whose site_survey
  * task goes to the worker, with the customer's property pinned at the site and the task
@@ -43,7 +52,7 @@ export async function setup(args: Args, site: LatLng, start: LatLng): Promise<Wo
     if (!args.setup)
       throw new Error('--no-setup needs --worker <phone> (there is nobody to run the day).');
     await ensureTeam(admin);
-    worker = await ownPerson(admin, `Sim Worker ${clock()}`, ['execution']);
+    worker = await ownPerson(admin, args.name ?? `Sim Worker ${clock()}`, ['execution']);
     me = await Session.code(worker.phone);
   }
   // Travel is paid from where the duty starts: the worker's base is their home, the first waypoint
@@ -51,6 +60,7 @@ export async function setup(args: Args, site: LatLng, start: LatLng): Promise<Wo
   const base = args.base ?? start;
   await admin.patch(`/people/${worker.id}`, {
     base: { latitude: base.latitude, longitude: base.longitude, label: 'Simulator base' },
+    ...(args.manager ? { reportsToUserId: await managerId(args.manager) } : {}),
   });
   if (!args.setup) return { admin, me, worker, sale: null, taskId: null, base };
   if (!args.worker) await ensureTeam(admin);

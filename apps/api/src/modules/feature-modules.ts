@@ -14,6 +14,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { FinanceModule } from './finance/finance.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ListsModule } from './lists/lists.module';
+import { LiveMapModule } from './live-map/live-map.module';
 import { MapsModule } from './maps/maps.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { MarketingIntakeModule } from './marketing-intake/marketing-intake.module';
@@ -79,6 +80,7 @@ export const FEATURE_MODULES = [
   ProjectChangesModule,
   StateSupportModule,
   MapsModule,
+  LiveMapModule,
   MarketingModule,
   MarketingIntakeModule,
 ];

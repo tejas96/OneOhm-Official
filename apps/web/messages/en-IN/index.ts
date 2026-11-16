@@ -14,6 +14,7 @@ import finance from './finance.json';
 import inventory from './inventory.json';
 import leads from './leads.json';
 import lists from './lists.json';
+import liveMap from './live-map.json';
 import marketing from './marketing.json';
 import projectTeam from './project-team.json';
 import projects from './projects.json';
@@ -60,6 +61,7 @@ const messages = {
   ...discomSetup,
   ...leads,
   ...lists,
+  ...liveMap,
   ...marketing,
   ...projects,
   ...projectTeam,
