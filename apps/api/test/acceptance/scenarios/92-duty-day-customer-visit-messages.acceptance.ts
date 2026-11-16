@@ -13,8 +13,8 @@ import { indiaDate, inLocationHours } from '../support/travel';
 import { sendInbound } from '../support/whatsapp';
 
 // Duty Day step 6: the customer hears "on the way" (once, only when coming closer and near
-// enough), "arrived" at check-in, "Was this visit done?" at a real check-out (not when nobody was
-// home, not at the day's end), and "running late" with a missed visit. Their Yes verifies the
+// enough), "arrived" at check-in, "Was this visit done?" at a real check-out of an unfinished job
+// (not when nobody was home, not at the day's end, not for a finished job), and "running late" with a missed visit. Their Yes verifies the
 // visit; their No makes it doubtful and raises a red alert. STOP, a task that does not message
 // its customer, and the policy switch keep it all quiet.
 const DEG_PER_M = 1 / 111_195;
@@ -66,7 +66,7 @@ describe('Duty Day: customer WhatsApp for site visits', () => {
     manager = await ownPerson(admin, 'Visit News Manager (test)', ['execution']);
     worker = await ownPerson(admin, 'Ravi Visit News (test)');
     await admin.patch(`/people/${worker.id}`, { reportsToUserId: manager.id });
-    for (const key of ['a', 'b', 'c', 'd', 'h', 'late']) {
+    for (const key of ['a', 'b', 'c', 'd', 'h', 'f', 'g', 'late']) {
       sales[key] = await sellProject(admin, { name: `Visit News ${key} (test)` });
       await admin.post(`/tasks/${taskOf(key)}/assign`, { userId: worker.id });
       await rows('UPDATE project_tasks SET notify_customer = true WHERE id = $1', [taskOf(key)]);
@@ -217,6 +217,31 @@ describe('Duty Day: customer WhatsApp for site visits', () => {
     expect(await sent('h', 'worker_arrived')).toHaveLength(1);
     await checkOut('h');
     await reason('customer_not_home');
+  });
+
+  it('6b: a finished job asks nothing: the "work done" message and the rating cover it', async () => {
+    // Finished before the check-out: no question, no hold.
+    await checkIn('f');
+    await rows("UPDATE project_tasks SET status = 'in_review' WHERE id = $1", [taskOf('f')]);
+    await checkOut('f');
+    expect((await lastVisit())?.customer_check_due_at ?? null).toBeNull();
+    // Finished during the 10-minute hold: the waiting question is dropped.
+    await checkIn('g');
+    await checkOut('g');
+    const held = (await lastVisit())?.id ?? '';
+    await rows("UPDATE project_tasks SET status = 'completed' WHERE id = $1", [taskOf('g')]);
+    await rows(
+      "UPDATE site_visits SET customer_check_due_at = now() - interval '1 minute' WHERE id = $1",
+      [held],
+    );
+    await hours(() => sendPoints(me, [pointAt(0, north(19_200))]));
+    const [row] = await rows<{ customer_check_due_at: string | null }>(
+      'SELECT customer_check_due_at FROM site_visits WHERE id = $1',
+      [held],
+    );
+    expect(row?.customer_check_due_at).toBeNull();
+    expect(await sent('f', 'visit_check')).toHaveLength(0);
+    expect(await sent('g', 'visit_check')).toHaveLength(0);
   });
 
   it('7: a missed planned visit tells the customer the team is running late, once', async () => {

@@ -874,9 +874,10 @@ Examples: Ramesh Patil · Ravi · Sangli
 
 **Buttons:** two quick replies. en `Yes, visited`, `No`; mr `हो, आले होते`, `नाही`; hi `हाँ, आए थे`, `नहीं`. Payloads
 `vc:y:<site visit id>` and `vc:n:<site visit id>`. Yes verifies the visit (unless the phone faked its location); No makes it
-doubtful and raises a red alert for the worker's manager. Sent at a real check-out only (the worker's own, the fence, the route, the
-task completed), never after a manager's force-close or the day's end; when the job was left unfinished it waits 10 minutes and is
-dropped if the worker says the customer was not home. WhatsApp and the app only: never an SMS.
+doubtful and raises a red alert for the worker's manager. Sent only when the job was left unfinished at a real check-out (the worker's own, the fence,
+the route), never after a manager's force-close or the day's end. It waits 10 minutes and is dropped if the worker says the
+customer was not home, or if the job is finished meanwhile. A finished job never asks it: the customer already gets the "work
+done" message and the stage rating. WhatsApp and the app only: never an SMS.
 
 ### 60. `visit_delayed` — **New** (a planned visit is 30 minutes late and nobody arrived; **Utility**)
 Fields: customer, home

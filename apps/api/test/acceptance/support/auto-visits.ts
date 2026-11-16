@@ -39,6 +39,7 @@ export interface VisitRow {
   delayed: boolean;
   proof: string | null;
   proof_reasons: string[] | null;
+  customer_check_due_at: Date | null;
 }
 export const visitRows = (userId: string) =>
   rows<VisitRow>('SELECT * FROM site_visits WHERE user_id = $1 ORDER BY check_in_at', [userId]);

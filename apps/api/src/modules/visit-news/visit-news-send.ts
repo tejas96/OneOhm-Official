@@ -80,11 +80,15 @@ export async function tellArrived(db: DatabaseExecutor, siteVisitId: string): Pr
   await tellNews(db, target, () => arrivedMessage(given), `worker_arrived:${dayKey(row)}`);
 }
 
-/** The visit check itself; the hold is cleared so it never goes twice. */
+/**
+ * The visit check itself; the hold is cleared so it never goes twice. A job finished meanwhile
+ * asks nothing: its customer already hears "work done" and the stage rating.
+ */
 async function sendCheck(db: DatabaseExecutor, row: VisitRow): Promise<void> {
   await db.update(siteVisits).set({ customerCheckDueAt: null }).where(eq(siteVisits.id, row.id));
+  if (row.customerSaid || (await jobFinished(db, row))) return;
   const target = await newsTargetFor(db, jobOf(row));
-  if (!target || row.customerSaid) return;
+  if (!target) return;
   const worker = await workerFirstName(db, row.userId);
   const given = { customer: target.customerName, worker, home: target.home, siteVisitId: row.id };
   await tellNews(db, target, () => checkMessage(given), `visit_check:${dayKey(row)}`);
@@ -108,9 +112,10 @@ async function jobFinished(db: DatabaseExecutor, row: VisitRow): Promise<boolean
 }
 
 /**
- * At a real check-out (the worker's own, the fence, the route, the task finishing; never a
- * manager's force-close or the day's end): "Was this visit done?". With the job finished it goes
- * now; a job left unfinished waits 10 minutes, since the worker may say the customer was not home.
+ * At a real check-out (the worker's own, the fence, the route; never a manager's force-close or
+ * the day's end) of a job left unfinished: "Was this visit done?", after 10 minutes, since the
+ * worker may say the customer was not home. A finished job asks nothing: the "work done" message
+ * and the stage rating already reach the customer, and three messages at once is noise.
  */
 export async function askVisitCheck(
   db: DatabaseExecutor,
@@ -119,7 +124,7 @@ export async function askVisitCheck(
 ): Promise<void> {
   const row = await visitRow(db, siteVisitId);
   if (!row?.checkOutAt || row.customerSaid) return;
-  if (await jobFinished(db, row)) return sendCheck(db, row);
+  if (await jobFinished(db, row)) return;
   await db
     .update(siteVisits)
     .set({ customerCheckDueAt: new Date(now.getTime() + VISIT_CHECK_HOLD_MINUTES * 60_000) })
