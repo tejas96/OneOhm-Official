@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema } from '../common/primitives';
+import { dutyDaySchema } from '../schemas/duty-day.schema';
 import {
   dutyPointsBatchSchema,
   dutyPointsResultSchema,
@@ -33,5 +34,14 @@ export const dutyPointsContract = c.router({
     query: dateQuery,
     responses: { 200: dutyRouteSchema },
     summary: 'A person’s route for a day: themself, their manager, HR or a team attendance viewer.',
+  },
+  personDay: {
+    method: 'GET',
+    path: '/people/:id/day',
+    pathParams: z.object({ id: idSchema }),
+    query: dateQuery,
+    responses: { 200: dutyDaySchema },
+    summary:
+      'A person’s duty day as stops, travel, visits and gaps, with totals and replay points (same rule as the route).',
   },
 });

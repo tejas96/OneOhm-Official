@@ -7,5 +7,6 @@ import { ServiceVisitDayService } from './service-visit-day.service';
 @Module({
   controllers: [ServiceDeskController],
   providers: [ServiceDeskService, ServiceVisitDayService],
+  exports: [ServiceDeskService],
 })
 export class ServiceDeskModule {}

@@ -246,7 +246,8 @@
         "none": "Offline",
         "other": "Other network",
         "autoFromSite": "Auto, from a site check-in"
-      }
+      },
+      "openDay": "Route and stops"
     },
     "leave": {
       "intro": "Leave is counted in working days; a half day counts as 0.5. Approving hands the open work in those days to the backup.",

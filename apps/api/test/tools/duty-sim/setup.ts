@@ -8,7 +8,7 @@ import { taskByKey } from '../../acceptance/support/tasks';
 import { ensureTeam } from '../../acceptance/support/team';
 import { indiaDate } from '../../acceptance/support/travel';
 import type { Args } from './args';
-import type { LatLng } from './geo';
+import { type LatLng, offsetM } from './geo';
 
 export interface World {
   admin: Session;
@@ -68,7 +68,33 @@ export async function setup(args: Args, site: LatLng, start: LatLng): Promise<Wo
   const taskId = taskByKey(sale.project, 'site_survey').id;
   await admin.post(`/tasks/${taskId}/assign`, { userId: worker.id });
   await pinAndSchedule(sale.project.id, taskId, site, indiaDate());
+  if (args.missed) await missedVisit(admin, worker.id, site);
   return { admin, me, worker, sale, taskId, base };
+}
+
+/** Minutes after midnight, India time, now. */
+const indiaMinutes = () => {
+  const [hours = 0, minutes = 0] = clock().split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+/**
+ * `--missed`: a second customer, 3 km east of the site, whose survey is the worker's with a
+ * planned visit that started an hour ago. Nobody goes there, so the alert job raises
+ * `visit_missed` for it (30 minutes after the start).
+ */
+async function missedVisit(admin: Session, workerId: string, site: LatLng): Promise<void> {
+  const sale = await sellProject(admin, { name: 'Sim Missed Customer (test)' });
+  const taskId = taskByKey(sale.project, 'site_survey').id;
+  await admin.post(`/tasks/${taskId}/assign`, { userId: workerId });
+  await pinAndSchedule(sale.project.id, taskId, offsetM(site, 0, 3000), indiaDate());
+  const start = Math.max(0, indiaMinutes() - 60);
+  await rows(
+    `INSERT INTO visits (kind, status, customer_id, project_id, task_id, day, slot, start_min, end_min, proposed_by, crew_user_ids)
+     SELECT 'survey', 'confirmed', p.customer_id, p.id, t.id, $2, 'morning', $3, $3 + 30, 'staff', ARRAY[$4]::uuid[]
+       FROM project_tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = $1`,
+    [taskId, indiaDate(), start, workerId],
+  );
 }
 
 /** Consent (current version), check-in, then both moved back so the whole trip is "in the past". */

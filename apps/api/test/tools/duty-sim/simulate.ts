@@ -66,6 +66,28 @@ export function motion(path: Path, speedKmh: number, dwellMin: number, end: Trip
   };
 }
 
+/**
+ * The same trip with a stand-still inserted: from minute `atMin` the person stays where they
+ * are for `minutes` (an unknown stop when that is away from every office and site), then goes
+ * on. Everything after the stop happens that much later.
+ */
+export function withStop(m: Motion, stop?: { atMin: number; minutes: number }): Motion {
+  if (!stop) return m;
+  const from = Math.min(stop.atMin * 60, m.totalSec);
+  const length = stop.minutes * 60;
+  const later = (sec: number) => (sec >= from ? sec + length : sec);
+  return {
+    totalSec: m.totalSec + length,
+    arriveSec: later(m.arriveSec),
+    leaveSec: later(m.leaveSec),
+    at(tSec) {
+      if (tSec < from) return m.at(tSec);
+      if (tSec < from + length) return { ...m.at(from), tSec, speedMps: 0, heading: null };
+      return { ...m.at(tSec - length), tSec };
+    },
+  };
+}
+
 /** The readings the phone would record: first, then every 120 s or 100 m, and the last. */
 export function resample(
   m: Pick<Motion, 'totalSec' | 'at'>,
@@ -120,6 +142,7 @@ export interface SimConfig {
   badAccuracy?: number | undefined;
   stay?: boolean | undefined;
   idleMin?: number | undefined;
+  stop?: { atMin: number; minutes: number } | undefined;
 }
 
 /** Adds what a real phone has: GPS noise, accuracy, speed, heading, battery, network. */
@@ -190,7 +213,10 @@ export interface Simulation {
 }
 
 export function simulate(path: Path, cfg: SimConfig): Simulation {
-  const m = motion(path, cfg.speedKmh, cfg.dwellMin, { stay: cfg.stay, idleMin: cfg.idleMin });
+  const m = withStop(
+    motion(path, cfg.speedKmh, cfg.dwellMin, { stay: cfg.stay, idleMin: cfg.idleMin }),
+    cfg.stop,
+  );
   const decorated = decorate(resample(m), cfg);
   const { points, dropped } = applyProblems(decorated, cfg);
   return {

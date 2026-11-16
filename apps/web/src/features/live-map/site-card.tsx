@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
 import { jobHref } from './live-format';
+import { canSendTo, SendNearest } from './nearest/send-nearest';
 import { PersonAvatar } from './person-bits';
 
 const STATUS_TONE: Readonly<Record<LiveSite['status'], string>> = {
@@ -25,10 +26,15 @@ export function SiteCard({
   site,
   people,
   onOpenPerson,
+  nearestOpen,
+  onNearestOpen,
 }: {
   readonly site: LiveSite;
   readonly people: readonly LivePerson[];
   readonly onOpenPerson: (id: string) => void;
+  /** Send nearest shows its list (opened here, or from a missed-visit alert). */
+  readonly nearestOpen: boolean;
+  readonly onNearestOpen: () => void;
 }) {
   const t = useTranslations('liveMap');
   const crew = site.assigneeIds.flatMap((id) => people.filter((row) => row.person.id === id));
@@ -75,7 +81,14 @@ export function SiteCard({
           </button>
         ))}
       </div>
-      <Button asChild variant="primary" trailingIcon={<ArrowUpRight />}>
+      {canSendTo(site) && (
+        <SendNearest key={site.id} site={site} open={nearestOpen} onOpen={onNearestOpen} />
+      )}
+      <Button
+        asChild
+        variant={canSendTo(site) ? 'secondary' : 'primary'}
+        trailingIcon={<ArrowUpRight />}
+      >
         <Link href={jobHref(site)} scroll={false}>
           {t('site.openJob')}
         </Link>

@@ -1,90 +1,114 @@
 'use client';
 
 import { APIProvider } from '@vis.gl/react-google-maps';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMapsKey } from '@/features/maps/use-maps-config';
+import { alertCounts } from './alerts/alert-format';
+import { useLiveAlerts } from './alerts/use-alerts';
 import { BottomSheet, type SheetStop } from './bottom-sheet';
+import { useLiveDay } from './day/use-live-day';
 import { HudBar } from './hud-bar';
 import { LiveCanvas, type Selection } from './live-canvas';
-import { type LiveFilter, liveCounts } from './live-format';
-import { PanelBody, PanelHeader } from './live-panel';
+import { liveCounts } from './live-format';
+import { type LivePanelProps, PanelBody, PanelHeader } from './live-panel';
+import { LivePins } from './live-pins';
 import { MapControls } from './map-controls';
 import { MapLoading, MapNotice, noticeFor } from './map-notice';
+import { MapShapes } from './map-shapes';
 import { useLiveSites, useLiveTeam, useWideScreen } from './use-live';
+import { useLiveView } from './use-live-view';
 import './live-map.css';
 import './live-pins.css';
 
-/** Room the panes take over the map, for Fit all. */
+/** Room the panes take over the map, for fits. */
 const WIDE_PADDING = { top: 104, right: 400, bottom: 48, left: 48 };
+const WIDE_DAY_PADDING = { top: 48, right: 400, bottom: 120, left: 48 };
 const PHONE_PADDING = { top: 132, right: 28, bottom: 200, left: 28 };
 
 /**
- * The manager's live map (Duty Day step 4): the whole screen is the map; the numbers float on
- * top, the people and the picked card sit in a panel (a sheet on phones). Refreshes every 30 s.
+ * The manager's live map (Duty Day steps 4 and 5): the whole screen is the map; the numbers
+ * float on top; the people, the alerts, a picked card or a person's day sit in a panel (a sheet
+ * on phones). Refreshes every 30 s.
  */
 export function LiveMapView() {
   const browserKey = useMapsKey();
-  const team = useLiveTeam();
-  const sitesQuery = useLiveSites();
+  const { team, people, sites, offices, alertList, loaded, alertsLoaded } = useLiveData();
   const wide = useWideScreen();
-  const [filter, setFilter] = useState<LiveFilter>('all');
-  const [selection, setSelection] = useState<Selection>(null);
+  const view = useLiveView({
+    people,
+    sites,
+    offices,
+    alerts: alertsLoaded ? alertList : undefined,
+    loaded,
+  });
   const [satellite, setSatellite] = useState(false);
-  const [fitSignal, setFitSignal] = useState(0);
   const [stop, setStop] = useState<SheetStop>('peek');
   const [mapReady, setMapReady] = useState(false);
-  const loaded = Boolean(team.data && sitesQuery.data);
-  useEffect(() => {
-    if (loaded) setFitSignal((signal) => (signal === 0 ? 1 : signal));
-  }, [loaded]);
-  const people = team.data?.people ?? [];
-  const sites = sitesQuery.data?.sites ?? [];
   const counts = liveCounts(people);
-  const select = (next: Selection) => {
-    setSelection(next);
+  const alerts = alertCounts(alertList);
+  const { dayPins, dayRoute, replayBar, dayPanel, fitDay } = useLiveDay({
+    view,
+    people,
+    alerts: alertList,
+    onPicked: () => !wide && setStop('peek'),
+  });
+  const select = (next: Selection, reveal = false) => {
+    view.pick(next);
     if (!wide && next) setStop('half');
-  };
-  const filterBy = (next: LiveFilter) => {
-    setFilter(next);
-    setSelection(null);
+    if (reveal) view.reveal(next);
   };
   const panel = {
+    view,
     people,
     sites,
     onDuty: counts.on_duty,
-    filter,
-    onClearFilter: () => setFilter('all'),
-    selection,
-    onSelect: select,
+    alerts,
     updatedAt: team.dataUpdatedAt,
     failed: team.isError,
+    onSelect: (next: Selection) => select(next, true),
+    dayPanel,
   };
+  // A day view has its own empty state in the panel.
   const notice = noticeFor({
     failed: team.isError,
     loaded: Boolean(team.data),
-    picked: selection !== null,
+    picked: view.selection !== null || view.day !== null,
     people: people.length,
     onDuty: counts.on_duty,
   });
+  const padding = paddingFor(wide, Boolean(view.day));
   return (
     <div className="relative -mx-4 -my-6 h-[calc(100dvh-3.5rem)] overflow-hidden bg-sunken sm:-mx-6 md:-mx-10 md:-my-9 md:h-dvh">
       {browserKey ? (
         <APIProvider apiKey={browserKey}>
           <LiveCanvas
-            people={people}
-            sites={sites}
-            offices={sitesQuery.data?.offices ?? []}
-            filter={filter}
-            selection={selection}
-            onSelect={select}
             satellite={satellite}
-            fitSignal={fitSignal}
-            padding={wide ? WIDE_PADDING : PHONE_PADDING}
+            camera={view.camera}
+            padding={padding}
+            onMapClick={() => select(null)}
             onReady={() => setMapReady(true)}
+            shapes={view.day ? null : <MapShapes people={people} offices={offices} />}
+            pins={
+              view.day ? (
+                dayPins
+              ) : (
+                <LivePins
+                  people={people}
+                  sites={sites}
+                  filter={view.filter}
+                  selection={view.selection}
+                  onSelect={(next) => select(next)}
+                />
+              )
+            }
           >
+            {dayRoute}
             <MapControls
               satellite={satellite}
               onSatellite={setSatellite}
+              onFitAll={view.day ? fitDay : view.fitAll}
+              onMyTeam={view.day ? undefined : view.myTeam}
+              padding={padding}
               className="absolute right-3 top-[7.5rem] md:right-[24.5rem] md:top-auto md:bottom-4"
             />
           </LiveCanvas>
@@ -99,24 +123,72 @@ export function LiveMapView() {
           onRetry={notice === 'error' ? () => void team.refetch() : undefined}
         />
       )}
-      <div className="pointer-events-none absolute inset-x-3 top-3 md:right-[24.5rem]">
-        <HudBar
-          counts={counts}
-          filter={filter}
-          onFilter={filterBy}
-          onFit={() => setFitSignal((signal) => signal + 1)}
-        />
-      </div>
-      {wide ? (
-        <aside className="live-glass live-pane absolute top-3 right-3 bottom-3 flex w-[22.5rem] flex-col overflow-hidden rounded-2xl">
-          <PanelHeader {...panel} />
-          <PanelBody {...panel} />
-        </aside>
-      ) : (
-        <BottomSheet stop={stop} onStop={setStop} header={<PanelHeader {...panel} />}>
-          <PanelBody {...panel} />
-        </BottomSheet>
+      {replayBar}
+      {!view.day && (
+        <div className="pointer-events-none absolute inset-x-3 top-3 md:right-[24.5rem]">
+          <HudBar
+            counts={counts}
+            filter={view.filter}
+            onFilter={(next) => {
+              view.setFilter(next);
+              select(null);
+            }}
+            alerts={alerts}
+            onAlerts={() => {
+              view.setTab('alerts');
+              if (!wide) setStop('half');
+            }}
+          />
+        </div>
       )}
+      <PanelFrame wide={wide} stop={stop} onStop={setStop} panel={panel} />
     </div>
   );
 }
+
+/** The people, today's sites and offices, and the open alerts, each refreshing on its own. */
+function useLiveData() {
+  const team = useLiveTeam();
+  const sites = useLiveSites();
+  const alerts = useLiveAlerts();
+  return {
+    team,
+    people: team.data?.people ?? [],
+    sites: sites.data?.sites ?? [],
+    offices: sites.data?.offices ?? [],
+    alertList: alerts.data?.alerts ?? [],
+    alertsLoaded: alerts.data !== undefined,
+    loaded: Boolean(team.data && sites.data),
+  };
+}
+
+/** The panel: on the right on wide screens, a sheet over the map on phones. */
+function PanelFrame({
+  wide,
+  stop,
+  onStop,
+  panel,
+}: {
+  readonly wide: boolean;
+  readonly stop: SheetStop;
+  readonly onStop: (stop: SheetStop) => void;
+  readonly panel: LivePanelProps;
+}) {
+  if (wide)
+    return (
+      <aside className="live-glass live-pane absolute top-3 right-3 bottom-3 flex w-[22.5rem] flex-col overflow-hidden rounded-2xl">
+        <PanelHeader {...panel} />
+        <PanelBody {...panel} />
+      </aside>
+    );
+  return (
+    <BottomSheet stop={stop} onStop={onStop} header={<PanelHeader {...panel} />}>
+      <PanelBody {...panel} />
+    </BottomSheet>
+  );
+}
+
+const paddingFor = (wide: boolean, day: boolean) => {
+  if (!wide) return PHONE_PADDING;
+  return day ? WIDE_DAY_PADDING : WIDE_PADDING;
+};

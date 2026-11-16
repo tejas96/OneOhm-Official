@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { parseArgs } from './args';
 import { demoPath } from './demo';
 import { fenceEvents } from './fence';
 import { distanceM, type LatLng, offsetM } from './geo';
 import { cumulative, parseWaypoints, positionAt } from './path';
-import { applyProblems, batches, decorate, motion, resample, simulate } from './simulate';
+import { applyProblems, batches, decorate, motion, resample, simulate, withStop } from './simulate';
 
 const ORIGIN: LatLng = { latitude: 16.85, longitude: 74.58 };
 const straight = (metres: number) => [ORIGIN, offsetM(ORIGIN, metres, 0)];
@@ -171,5 +172,27 @@ describe('ending a live trip', () => {
     expect(idle.totalSec - plain.totalSec).toBeCloseTo(480, 3);
     expect(distanceM(idle.at(idle.totalSec).at, plain.at(plain.totalSec).at)).toBeLessThan(1);
     expect(idle.at(idle.totalSec - 60).speedMps).toBe(0);
+  });
+});
+
+describe('a long stop on the way (--stop)', () => {
+  it('stands still from the minute for the minutes, then goes on later', () => {
+    const plain = motion(demoPath(), 25, 10);
+    const stopped = withStop(plain, { atMin: 3, minutes: 50 });
+    expect(stopped.totalSec - plain.totalSec).toBe(3000);
+    expect(stopped.arriveSec - plain.arriveSec).toBe(3000);
+    const during = stopped.at(3 * 60 + 1200);
+    expect(during.speedMps).toBe(0);
+    expect(distanceM(during.at, plain.at(180).at)).toBeLessThan(1);
+    expect(distanceM(stopped.at(stopped.totalSec).at, plain.at(plain.totalSec).at)).toBeLessThan(1);
+  });
+
+  it('reads --stop and --missed', () => {
+    expect(parseArgs(['--stop', '6:50', '--missed'])).toMatchObject({
+      stop: { atMin: 6, minutes: 50 },
+      missed: true,
+    });
+    expect(() => parseArgs(['--stop', '6'])).toThrow();
+    expect(() => parseArgs(['--stop', '6:0'])).toThrow();
   });
 });

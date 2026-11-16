@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DutyRoute, TravelDay } from '@oneohm/api-contracts';
 import { visitRows } from '../../acceptance/support/auto-visits';
+import { rows } from '../../acceptance/support/db';
 import { indiaDate } from '../../acceptance/support/travel';
 import type { Path } from './path';
 import type { Tally } from './run';
@@ -18,7 +19,27 @@ const time = (value: Date | string) =>
   }).format(new Date(value));
 const km = (metres: number) => `${(metres / 1000).toFixed(2)} km`;
 
-/** Plain text of what the server made of the day: route, visits, travel day, claim. */
+/** The worker's duty alerts (Duty Day step 5), open or already resolved, oldest first. */
+async function alertLines(userId: string): Promise<string[]> {
+  const alerts = await rows<{
+    kind: string;
+    severity: string;
+    title: string;
+    resolved_reason: string | null;
+  }>(
+    'SELECT kind, severity, title, resolved_reason FROM duty_alerts WHERE person_id = $1 ORDER BY created_at',
+    [userId],
+  );
+  return [
+    `Duty alerts: ${alerts.length || 'none'}`,
+    ...alerts.map(
+      (a) =>
+        `  ${a.kind} (${a.severity}): ${a.title}${a.resolved_reason ? `, resolved: ${a.resolved_reason}` : ''}`,
+    ),
+  ];
+}
+
+/** Plain text of what the server made of the day: route, visits, alerts, travel day, claim. */
 export async function report(
   world: World,
   tally: Tally,
@@ -39,8 +60,9 @@ export async function report(
     `Site visits: ${visits.length}`,
     ...visits.map(
       (v) =>
-        `  in ${time(v.check_in_at)} (${v.check_in_source}${v.delayed ? ', delayed' : ''}) out ${v.check_out_at ? `${time(v.check_out_at)} (${v.check_out_source})` : 'still open'}${v.leave_reason ? `, left: ${v.leave_reason}` : ''}`,
+        `  in ${time(v.check_in_at)} (${v.check_in_source}${v.delayed ? ', delayed' : ''}) out ${v.check_out_at ? `${time(v.check_out_at)} (${v.check_out_source})` : 'still open'}${v.leave_reason ? `, left: ${v.leave_reason}` : ''}${v.proof ? `, proof ${v.proof}${v.proof_reasons?.length ? ` (${v.proof_reasons.join(', ')})` : ''}` : ''}`,
     ),
+    ...(await alertLines(world.worker.id)),
     `Base saved: ${world.base ? `${world.base.latitude}, ${world.base.longitude}` : 'none'}`,
   ];
   // A live day is still open: there is no saved travel day or claim to show yet.

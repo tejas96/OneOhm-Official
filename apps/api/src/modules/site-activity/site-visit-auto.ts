@@ -1,5 +1,5 @@
 import type { DatabaseExecutor } from '@oneohm/database';
-import { siteVisits } from '@oneohm/database';
+import { raiseDutyAlert, siteVisits } from '@oneohm/database';
 import type { CheckInSource } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, gte, isNull, lte, or } from 'drizzle-orm';
@@ -34,7 +34,7 @@ const SAME_VISIT_MS = 15 * 60_000;
  * - `delayed` when it reached the server over 30 minutes after it happened.
  * An automatic check-in also needs the switch on in Settings and the person's consent, so a
  * fence event queued before they withdrew consent is turned away, and a fake location
- * (`mocked`) is refused (`mocked_location`, 422).
+ * (`mocked`) is refused (`mocked_location`, 422) and raises a `fake_gps` alert.
  */
 export async function visitMoment(
   db: DatabaseExecutor,
@@ -52,7 +52,20 @@ export async function visitMoment(
       status.state === 'policy_off'
     )
       throw conflict('Automatic site visits are not on for you.', 'auto_off');
-    if (auto.mocked) throw unprocessable('A fake location cannot check you in.', 'mocked_location');
+    if (auto.mocked) {
+      // The refusal is kept as a red alert for the manager (Duty Day step 5), once a day.
+      await raiseDutyAlert(db, {
+        kind: 'fake_gps',
+        personId: actor.userId,
+        subjectType: 'person',
+        subjectId: actor.userId,
+        day: todayIn(currentCalendar().timeZone, now),
+        title: `${actor.fullName}: fake GPS`,
+        body: 'An automatic site check-in came from a fake (mock) location and was refused.',
+        detail: { source: 'site_check_in' },
+      });
+      throw unprocessable('A fake location cannot check you in.', 'mocked_location');
+    }
   }
   const happened = auto.tappedAt ? new Date(auto.tappedAt) : null;
   if (happened && now.getTime() - happened.getTime() > AUTO_EVENT_MAX_MS)

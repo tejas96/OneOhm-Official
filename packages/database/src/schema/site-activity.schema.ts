@@ -1,3 +1,4 @@
+import { VISIT_PROOFS, type VisitProofReason } from '@oneohm/domain';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -77,6 +78,14 @@ export const siteVisits = pgTable(
     leaveReasonAt: instant('leave_reason_at'),
     /** The check-in was an automatic one that reached the server late (the phone waited for signal). */
     delayed: boolean('delayed').notNull().default(false),
+    /**
+     * Whether the route proves the visit (Duty Day step 5, `visitProof`): verified, doubtful or
+     * no proof, with the reason codes. Worked out at check-out and again when late points
+     * arrive; null while the visit is open.
+     */
+    proof: text('proof', { enum: VISIT_PROOFS }),
+    proofReasons: jsonb('proof_reasons').$type<VisitProofReason[]>(),
+    proofAt: instant('proof_at'),
     locationClearedAt: instant('location_cleared_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

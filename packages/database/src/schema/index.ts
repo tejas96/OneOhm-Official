@@ -15,6 +15,7 @@ export * from './customer-portal.schema';
 export * from './discom-requests.schema';
 export * from './discom-setup.schema';
 export * from './document-requirements.schema';
+export * from './duty-alerts.schema';
 export * from './duty-points.schema';
 export * from './engagement.schema';
 export * from './enums';

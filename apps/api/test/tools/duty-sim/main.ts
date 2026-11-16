@@ -9,7 +9,9 @@ const HELP = `Duty Day simulator (acceptance API on port 4300 only). See apps/ap
   --base "lat,lng"   the worker's home, saved at setup (default: the first waypoint)
   --live   keep duty open, the last point about now (for the live map)
   --stay  --idle <min>  --quiet <min>   end at the site / stand still / go silent before now
-  --name "Ravi"  --manager <phone>   the worker's name and reporting manager`;
+  --name "Ravi"  --manager <phone>   the worker's name and reporting manager
+  --stop <minute>:<minutes>   stand still that long from that minute (an unknown stop)
+  --missed   also schedule a second site visit today that nobody attends`;
 
 async function apiIsUp(): Promise<boolean> {
   try {
@@ -37,7 +39,8 @@ async function main(): Promise<void> {
   const { newTally, runDay } = await import('./run.js');
   const { report, writeGeoJson } = await import('./report.js');
   const { approveRun } = await import('./approve.js');
-  const { closeDb } = await import('../../acceptance/support/db.js');
+  const { acceptanceDb, closeDb } = await import('../../acceptance/support/db.js');
+  const { sweepDutyAlerts } = await import('@oneohm/database');
 
   try {
     const path = await resolvePath(args, OUT_DIR);
@@ -56,6 +59,7 @@ async function main(): Promise<void> {
       badAccuracy: args.badAccuracy,
       stay: args.stay,
       idleMin: args.idle,
+      stop: args.stop,
     };
     const probe = simulate(path, config);
     // With --quiet the phone went silent that many minutes before now.
@@ -71,6 +75,8 @@ async function main(): Promise<void> {
     const tally = newTally();
     await runDay(world, sim, args, tally);
     if (args.approveRun) await approveRun(world.admin);
+    // The five-minute alert job, once, as the worker would run it (Duty Day step 5).
+    await sweepDutyAlerts(acceptanceDb().db);
     console.info(`\n${await report(world, tally, sim, args.live)}`);
     console.info(`\nGeoJSON: ${writeGeoJson(OUT_DIR, path, sim)}`);
   } finally {

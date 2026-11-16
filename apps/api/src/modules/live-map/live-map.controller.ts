@@ -18,6 +18,26 @@ export class LiveMapController {
     return tsRestHandler(apiContract.liveMap, {
       liveTeam: async () => ({ status: 200, body: await this.live.team(actor) }),
       liveSites: async () => ({ status: 200, body: await this.live.sites(actor) }),
+      liveAlerts: async () => ({
+        status: 200,
+        body: { alerts: await this.live.alerts(actor) },
+      }),
+      seeAlert: async ({ params }) => ({
+        status: 200,
+        body: await this.live.seeAlert(actor, params.id),
+      }),
+      resolveAlert: async ({ params, body }) => ({
+        status: 200,
+        body: await this.live.resolveAlert(actor, params.id, body.reason),
+      }),
+      nearestToSite: async ({ params }) => ({
+        status: 200,
+        body: await this.live.nearest(actor, params.id),
+      }),
+      assignSite: async ({ params, body }) => ({
+        status: 200,
+        body: await this.live.assign(actor, params.id, body.userId),
+      }),
     });
   }
 }

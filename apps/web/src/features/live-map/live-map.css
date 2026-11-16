@@ -36,6 +36,11 @@
   background: var(--oh-duty-idle);
 }
 
+/*
+ * Every pin is placed by PinLayout on each draw of the map (a transform it writes), so the
+ * transform never transitions: a pin is exactly where the map is, frame by frame. It stays
+ * hidden until it has been placed once.
+ */
 .live-pin {
   position: absolute;
   left: 0;
@@ -44,13 +49,10 @@
   border: 0;
   background: none;
   cursor: pointer;
-  transition:
-    transform calc(var(--duration-data) * 1.2) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
-    opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
   will-change: transform;
-}
-.live-pins[data-instant] .live-pin {
-  transition: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .live-pin:focus-visible {
   outline: none;
@@ -170,4 +172,12 @@
   :root:not([data-motion="calm"]) .live-site[data-status="in_progress"] .live-site-halo {
     animation: live-pulse 2.6s var(--ease-out-quint, cubic-bezier(0.22, 1, 0.36, 1)) infinite;
   }
+}
+
+/* An alert's colour: red to act now, amber to check. */
+.live-alert[data-severity="red"] {
+  --tone: var(--oh-overdue);
+}
+.live-alert[data-severity="amber"] {
+  --tone: var(--oh-at-risk);
 }

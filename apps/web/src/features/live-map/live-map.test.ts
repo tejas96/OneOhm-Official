@@ -28,6 +28,7 @@ const person = (name: string, state: LivePerson['state'], over: Partial<LivePers
     tail: [],
     today: { kmSoFar: 0, visitsDone: 0, visitsPlanned: 0, currentVisit: null, dutyStartedAt: null },
     flags: { mockedToday: false },
+    alerts: { open: 0, red: 0 },
     ...over,
   }) as LivePerson;
 

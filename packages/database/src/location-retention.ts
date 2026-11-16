@@ -3,6 +3,7 @@ import { todayIn } from '@oneohm/shared';
 import { and, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { businessTimeZone } from './business-calendar';
 import type { DatabaseExecutor } from './client';
+import { deleteOldDutyAlerts } from './duty-alert-escalate';
 import { dutyPoints } from './schema/duty-points.schema';
 import { documentGeotags, siteVisits, travelDays } from './schema/site-activity.schema';
 import { attendanceDays, workforcePolicy } from './schema/workforce.schema';
@@ -13,6 +14,8 @@ export interface ClearedLocations {
   readonly siteVisits: number;
   readonly photos: number;
   readonly dutyPoints: number;
+  /** Duty alerts of those days (Duty Day step 5): deleted, as they are about the route. */
+  readonly dutyAlerts: number;
 }
 
 async function retentionDays(db: DatabaseExecutor): Promise<number> {
@@ -61,7 +64,7 @@ async function saveUnsavedTravel(db: DatabaseExecutor, before: string, now: Date
  * privacy): day check-ins, site check-ins and photo geotags. Times, distances and the
  * far-from-site flags stay, so attendance, visits and travel claims still read right.
  * Duty route points of those days are deleted outright (the saved travel day, made first
- * above, is what stays). The points of a day that is still open are kept: the
+ * above, is what stays), and so are the duty alerts of those days. The points of a day that is still open are kept: the
  * night auto-close has not ended it yet, and step 2 reads the km from a day's points when
  * the day is closed, so they go on a later run, once it is closed.
  * Safe to run any number of times; the daily worker job runs it every morning.
@@ -130,5 +133,6 @@ export async function clearExpiredLocations(
     siteVisits: visits.length,
     photos: photos.length,
     dutyPoints: route.length,
+    dutyAlerts: await deleteOldDutyAlerts(db, before),
   };
 }

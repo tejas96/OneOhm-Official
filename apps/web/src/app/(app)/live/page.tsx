@@ -2,6 +2,7 @@ import { EmptyState } from '@oneohm/design-system/web';
 import { Lock } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { canSeeLiveMap } from '@/features/live-map/live-format';
 import { LiveMapView } from '@/features/live-map/live-map-view';
 import { currentUser } from '@/lib/api/server-session';
@@ -20,5 +21,9 @@ export default async function LivePage() {
       <EmptyState icon={<Lock />} title={t('noAccess.title')} description={t('noAccess.body')} />
     );
   }
-  return <LiveMapView />;
+  return (
+    <Suspense>
+      <LiveMapView />
+    </Suspense>
+  );
 }

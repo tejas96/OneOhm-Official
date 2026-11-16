@@ -1,0 +1,50 @@
+/* A person's day on the map: its stops and the replay's marker (see live-pins.css for pins). */
+
+/* A day's stops: a dot ringed in the surface; unknown stops amber and larger when flagged. */
+.live-stop {
+  width: 0;
+  height: 0;
+  cursor: default;
+}
+.live-stop-dot {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--oh-ink-muted);
+  box-shadow:
+    0 0 0 3px var(--oh-raised),
+    var(--oh-shadow-e2);
+  transition: transform var(--duration-base) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.live-stop[data-place="office"] .live-stop-dot {
+  background: var(--oh-accent);
+}
+.live-stop[data-place="site"] .live-stop-dot {
+  background: var(--oh-duty-visit);
+}
+.live-stop[data-place="unknown"] .live-stop-dot {
+  background: var(--oh-duty-idle);
+}
+.live-stop[data-flagged] .live-stop-dot {
+  left: -9px;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+}
+.live-stop[data-selected] .live-stop-dot {
+  transform: scale(1.35);
+  box-shadow:
+    0 0 0 3px var(--oh-raised),
+    0 0 0 9px color-mix(in oklab, var(--oh-duty-idle) 28%, transparent),
+    var(--oh-shadow-e2);
+}
+/* The replay's marker: the worker's disc, a little smaller, always on top. */
+.live-replay {
+  cursor: default;
+}
+.live-worker.live-replay .live-worker-body {
+  transform: scale(0.9);
+}

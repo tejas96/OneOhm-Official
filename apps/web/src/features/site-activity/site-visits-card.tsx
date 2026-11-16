@@ -16,6 +16,7 @@ import { useSiteFormat } from './site-format';
 import { useProjectSiteVisits } from './use-site-visits';
 import { VisitDistance } from './visit-distance';
 import { VisitNotes } from './visit-notes';
+import { VisitProof } from './visit-proof';
 
 /** Check-ins at the project's site: who, for which task, in and out, and how far (PRD 4.2). */
 export function SiteVisitsCard({ projectId }: { readonly projectId: string }) {
@@ -74,6 +75,16 @@ export function SiteVisitsCard({ projectId }: { readonly projectId: string }) {
           <span className="type-body-sm text-ink tabular-nums">
             {format.duration(visit.durationMinutes)}
           </span>
+        ),
+    },
+    {
+      key: 'proof',
+      header: t('visits.columns.proof'),
+      cell: (visit) =>
+        visit.proof ? (
+          <VisitProof proof={visit.proof} reasons={visit.proofReasons} />
+        ) : (
+          <span className="type-body-sm text-ink-faint">{t('proof.pending')}</span>
         ),
     },
     {

@@ -89,7 +89,59 @@
   font: 500 0.75rem / 1 var(--font-sans);
   font-variant-numeric: tabular-nums;
   box-shadow: var(--oh-shadow-e2);
-  animation: live-fade-in var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  pointer-events: none;
+  /* Shown by PinLayout (data-caption) when it fits; fades, never jumps. */
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    visibility 0s linear var(--duration-base);
+}
+/* Pointing at a pin (or focusing it) shows its caption and lifts it over its neighbours. */
+.live-worker {
+  z-index: 10;
+}
+.live-worker[data-state="moving"] {
+  z-index: 20;
+}
+.live-worker[data-alerts] {
+  z-index: 22;
+}
+.live-worker[data-selected] {
+  z-index: 30;
+}
+.live-worker:hover,
+.live-worker:focus-visible {
+  z-index: 45;
+}
+.live-worker:hover .live-caption,
+.live-worker:focus-visible .live-caption,
+.live-worker[data-caption] .live-caption {
+  opacity: 1;
+  visibility: inherit;
+  transition: opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* Open alerts about the person: a small badge on the disc, red when one needs acting on now. */
+.live-worker-alerts {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--oh-duty-idle);
+  color: var(--oh-raised);
+  font: 700 0.6875rem / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--oh-raised);
+}
+.live-worker-alerts[data-red] {
+  background: var(--oh-duty-gap);
 }
 .live-caption::before {
   content: "";

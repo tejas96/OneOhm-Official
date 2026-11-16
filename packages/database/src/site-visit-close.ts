@@ -4,6 +4,7 @@ import { and, eq, isNull, lt, lte } from 'drizzle-orm';
 import type { Database, DatabaseExecutor } from './client';
 import { siteVisits } from './schema/site-activity.schema';
 import { takeTravelSnapshot } from './travel-snapshot';
+import { settleVisitProof } from './visit-proof-store';
 
 /**
  * Ends the person's open site visits when their day ends (live review S1): the person's
@@ -42,7 +43,9 @@ export async function closeVisitsAtDayEnd(
       })
       .where(and(eq(siteVisits.id, visit.id), isNull(siteVisits.checkOutAt)))
       .returning({ id: siteVisits.id });
-    if (done) closed.push(done.id);
+    if (!done) continue;
+    closed.push(done.id);
+    await settleVisitProof(db, done.id, now);
   }
   return closed;
 }
@@ -84,6 +87,7 @@ export async function closeStaleVisits(
         .where(and(eq(siteVisits.id, visit.id), isNull(siteVisits.checkOutAt)))
         .returning({ id: siteVisits.id });
       if (!row) return false;
+      await settleVisitProof(tx, row.id, now);
       await takeTravelSnapshot(tx, visit.userId, visit.workDate, now);
       return true;
     });

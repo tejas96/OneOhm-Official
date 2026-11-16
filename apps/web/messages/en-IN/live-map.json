@@ -3,7 +3,6 @@
     "title": "Live map",
     "loading": "Loading the live map",
     "filters": "Show on the map",
-    "fitAll": "Fit all",
     "noAccess": {
       "title": "The live map is for managers",
       "body": "It shows the people who report to you. Ask HR to set who reports to you on the Team page."
@@ -61,7 +60,10 @@
     "panel": {
       "people": "People",
       "onDutyOf": "{onDuty} of {total} on duty",
-      "back": "All people"
+      "back": "All people",
+      "alerts": "Alerts",
+      "tabs": "People and alerts",
+      "backFromDay": "Back to the map"
     },
     "list": {
       "search": "Find a person",
@@ -88,7 +90,9 @@
       "mocked": "A fake location was seen on this phone today.",
       "call": "Call",
       "whatsapp": "WhatsApp",
-      "noPhone": "No phone number saved for this person."
+      "noPhone": "No phone number saved for this person.",
+      "openDay": "Open day",
+      "openDayAlerts": "Open day ({count, plural, one {# alert} other {# alerts}})"
     },
     "site": {
       "kind": "Work",
@@ -108,7 +112,9 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "satellite": "Satellite view",
-      "roadmap": "Map view"
+      "roadmap": "Map view",
+      "fitAll": "Fit all",
+      "myTeam": "My team"
     },
     "sheet": {
       "expand": "Show more",
@@ -132,6 +138,115 @@
         "title": "The map is not set up",
         "body": "Add a Google Maps key to the server settings to see the map. The list still works."
       }
+    },
+    "alertsButton": "{count, plural, =0 {No open alerts} one {# open alert} other {# open alerts}}",
+    "words": {
+      "gapReason": {
+        "low_battery": "Battery was low",
+        "no_network": "No network",
+        "location_off": "Location was turned off",
+        "unknown": "The phone probably closed the app"
+      }
+    },
+    "alerts": {
+      "loading": "Loading alerts",
+      "new": "New",
+      "showOnMap": "Show on the map: {title}",
+      "none": {
+        "title": "All clear",
+        "body": "Nothing needs you right now. New alerts show up here."
+      },
+      "kind": {
+        "not_checked_in": "Not checked in yet",
+        "fake_gps": "Fake location on the phone",
+        "route_gap": "No location for {minutes} min",
+        "unknown_stop": "Stopped {minutes} min at an unknown place",
+        "visit_open_long": "Still checked in after {hours} h",
+        "visit_missed": "Planned visit missed",
+        "visit_doubtful": "Visit could not be confirmed",
+        "job_left_unfinished": "Left a job unfinished",
+        "claim_waiting": "Travel claim waiting",
+        "claim_unpaid": "Travel claim not paid"
+      },
+      "where": {
+        "between": "From {from} to {to}",
+        "planned": "{place}, planned {time}",
+        "amount": "₹{amount, number}"
+      },
+      "ago": {
+        "now": "just now",
+        "min": "{n} min ago",
+        "h": "{n} h ago",
+        "d": "{n, plural, one {yesterday} other {# days ago}}"
+      },
+      "call": "Call",
+      "callName": "Call {name}",
+      "whatsapp": "WhatsApp",
+      "whatsappName": "WhatsApp {name}",
+      "openDay": "Open day",
+      "seen": "Seen",
+      "resolve": "Resolve",
+      "sendNearest": "Send nearest",
+      "resolved": "Alert resolved",
+      "resolveFailed": "Could not resolve the alert. Try again."
+    },
+    "day": {
+      "title": "Day",
+      "today": "Today",
+      "loading": "Loading the day",
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "pickDate": "Pick a day",
+      "noDuty": "No duty on this day.",
+      "empty": "Nothing recorded yet.",
+      "locationOff": "Location is off for this person, so stops and travel are not shown.",
+      "minutes": "{m} min",
+      "hoursMinutes": "{h} h {m} min",
+      "travel": "Travel, {km} km",
+      "visitOpen": "{place}, here for {span} so far",
+      "gap": "No location for {span}",
+      "likely": "Likely: {reason}",
+      "unknownStop": "Unknown stop, {span}",
+      "unknownNote": "Away from every office and site",
+      "stopped": "Stopped {span}",
+      "stopAt": {
+        "office": "At the office",
+        "site": "At a site",
+        "unknown": "Unknown place"
+      },
+      "totals": {
+        "routeKm": "Route",
+        "paidKm": "Paid",
+        "paidLater": "After duty ends",
+        "hours": "On duty",
+        "visits": "Visits",
+        "unknownStops": "Unknown stops",
+        "gaps": "No location"
+      }
+    },
+    "replay": {
+      "play": "Play the day",
+      "pause": "Pause",
+      "scrub": "Time of day",
+      "speed": "Replay speed"
+    },
+    "nearest": {
+      "open": "Send nearest",
+      "title": "Nearest free people",
+      "straightLine": "Straight-line distance",
+      "loading": "Finding people nearby",
+      "none": "Nobody on duty is free nearby right now.",
+      "closest": "Closest",
+      "away": "{distance} away, about {minutes} min",
+      "assign": "Assign",
+      "confirm": {
+        "title": "Send {name}?",
+        "body": "{name} gets {job} at {place} and is told in the app. The customer is not messaged.",
+        "cancel": "Cancel",
+        "assign": "Send"
+      },
+      "sent": "{name} has the job",
+      "sentNote": "They are told in the app. The pin updates on the map."
     }
   }
 }

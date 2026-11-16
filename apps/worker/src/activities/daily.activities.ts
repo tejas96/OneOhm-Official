@@ -25,6 +25,20 @@ export function dailyActivities(db: Database, timeZone: string, payLinks: PayLin
     clearOldLocations: run('location_cleanup'),
     clearOldJobRuns: run('job_runs_cleanup'),
     queueSlaAlerts: run('service_sla'),
+    /**
+     * The time-based duty alerts, every five minutes. Kept in the job log only when it raised
+     * something or failed, so the log shows work, not every quiet tick.
+     */
+    sweepDutyAlerts: () =>
+      recordJobRun(
+        db,
+        'duty_alerts',
+        jobs.duty_alerts,
+        (raised) => (raised > 0 ? String(raised) : null),
+        {
+          quiet: true,
+        },
+      ),
     /** A job that failed after every retry tells the admin desk (once a day per job). */
     alertFailedJob: (job: string, error: string) =>
       alertJobFailed(db, job, error, todayIn(timeZone)),

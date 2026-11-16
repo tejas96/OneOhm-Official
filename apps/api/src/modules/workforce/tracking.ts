@@ -10,6 +10,7 @@ import {
   consentIsCurrent,
   inLocationWindow,
   LOCATION_CONSENT_VERSION,
+  trackingState,
   trackingSwitchedOn,
   type WorkforcePolicy,
 } from '@oneohm/domain';
@@ -84,10 +85,12 @@ function stateOf(
   given: boolean,
   at: Date,
 ): TrackingStatus['state'] {
-  if (!switchedOn) return 'policy_off';
-  if (!given) return 'no_consent';
-  const open = inLocationWindow(indiaTime(at), policy.attendance, policy.travel.hoursMarginMinutes);
-  return open ? 'on' : 'outside_hours';
+  const inHours = inLocationWindow(
+    indiaTime(at),
+    policy.attendance,
+    policy.travel.hoursMarginMinutes,
+  );
+  return trackingState({ switchedOn, consentGiven: given, inHours });
 }
 
 /**

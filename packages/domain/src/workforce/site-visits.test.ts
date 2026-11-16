@@ -153,6 +153,7 @@ describe('workforce policy defaults', () => {
       siteFenceM: 150,
       baseStartMaxKm: 5,
       commuteDeductKm: 0,
+      unknownStopMinutes: 45,
     });
   });
 

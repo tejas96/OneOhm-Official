@@ -158,7 +158,8 @@ describe('Duty Day: automatic site visits', () => {
       subject_type: string;
       subject_id: string;
     }>(
-      "SELECT user_id, body, subject_type, subject_id FROM notifications WHERE kind = 'site_visit_left_unfinished'",
+      "SELECT user_id, body, subject_type, subject_id FROM notifications WHERE kind = 'site_visit_left_unfinished' AND subject_id = $1",
+      [taskId],
     );
     expect(alerts).toHaveLength(1);
     // The project's manager is told, with the task to open.
@@ -179,7 +180,10 @@ describe('Duty Day: automatic site visits', () => {
     expect(again.status).toBe(409);
     expect(again.body.code).toBe('reason_given');
     expect(
-      await rows("SELECT 1 FROM notifications WHERE kind = 'site_visit_left_unfinished'"),
+      await rows(
+        "SELECT 1 FROM notifications WHERE kind = 'site_visit_left_unfinished' AND subject_id = $1",
+        [taskId],
+      ),
     ).toHaveLength(1);
     const history = await rows(
       "SELECT 1 FROM project_activities WHERE task_id = $1 AND kind = 'site_leave_reason'",

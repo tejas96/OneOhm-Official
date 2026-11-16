@@ -4,7 +4,7 @@ import type { LivePerson, LiveSite, LiveStateValue } from '@oneohm/api-contracts
 import { Check, Home, type LucideIcon, Navigation, Pause, WifiOff } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { toneOf } from './live-format';
-import { useProjection } from './overlay-layer';
+import { usePinLayout } from './overlay-layer';
 
 /** The small glyph on each pin, so a state never rests on colour alone. */
 const GLYPH: Partial<Record<LiveStateValue, LucideIcon>> = {
@@ -16,47 +16,38 @@ const GLYPH: Partial<Record<LiveStateValue, LucideIcon>> = {
 
 interface WorkerPinProps {
   readonly person: LivePerson;
-  /** Where the pin is drawn (fanned out when people share a spot), in layer pixels. */
-  readonly at: { x: number; y: number } | null;
   readonly label: string;
+  /** The caption's words; whether it fits is decided by the layout when the map rests. */
   readonly caption: string | null;
   readonly selected: boolean;
   readonly dimmed: boolean;
   readonly onSelect: () => void;
 }
 
-/** A worker: round initials with a ring in the state's colour, a glyph, and a caption below. */
-export function WorkerPin({
-  person,
-  at,
-  label,
-  caption,
-  selected,
-  dimmed,
-  onSelect,
-}: WorkerPinProps) {
-  if (!at) return null;
-  const { x, y } = at;
+/**
+ * A worker: round initials with a ring in the state's colour, a glyph, a red badge with the
+ * open alerts, and a caption below. Where it sits is set by `PinLayout`, not by this render.
+ */
+export function WorkerPin({ person, label, caption, selected, dimmed, onSelect }: WorkerPinProps) {
+  const layout = usePinLayout();
   const Glyph = GLYPH[person.state];
+  const alerts = person.alerts.open;
   const style = {
-    transform: `translate3d(${x}px, ${y}px, 0)`,
     '--tone': toneOf(person.state),
-    zIndex: selected ? 30 : person.state === 'moving' ? 20 : 10,
   } as CSSProperties;
   return (
     <button
+      ref={layout.ref(person.person.id, 'worker')}
       type="button"
       className="live-pin live-worker"
       data-state={person.state}
       data-selected={selected || undefined}
       data-dimmed={dimmed || undefined}
+      data-alerts={alerts > 0 || undefined}
       style={style}
       aria-label={label}
       aria-pressed={selected}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
+      onClick={onSelect}
     >
       <span className="live-worker-body">
         <span aria-hidden className="live-worker-halo" />
@@ -69,6 +60,15 @@ export function WorkerPin({
         {Glyph && (
           <span aria-hidden className="live-worker-glyph">
             <Glyph />
+          </span>
+        )}
+        {alerts > 0 && (
+          <span
+            aria-hidden
+            className="live-worker-alerts"
+            data-red={person.alerts.red > 0 || undefined}
+          >
+            {alerts > 9 ? '9+' : alerts}
           </span>
         )}
       </span>
@@ -90,21 +90,18 @@ interface SitePinProps {
 
 /** A customer's site: a small house, outlined when planned, filled while someone is there. */
 export function SitePin({ site, label, selected, onSelect }: SitePinProps) {
-  const { toPixel } = useProjection();
-  const { x, y } = toPixel(site.latitude, site.longitude);
+  const layout = usePinLayout();
   return (
     <button
+      ref={layout.ref(site.id, 'site')}
       type="button"
       className="live-pin live-site"
       data-status={site.status}
       data-selected={selected || undefined}
-      style={{ transform: `translate3d(${x}px, ${y}px, 0)`, zIndex: selected ? 25 : 5 }}
+      style={{ zIndex: selected ? 25 : 5 }}
       aria-label={label}
       aria-pressed={selected}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
+      onClick={onSelect}
     >
       <span aria-hidden className="live-site-halo" />
       <svg aria-hidden viewBox="0 0 28 30" className="live-site-house">

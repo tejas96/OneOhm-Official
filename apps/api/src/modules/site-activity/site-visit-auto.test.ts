@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tracking = vi.hoisted(() => ({ trackingFor: vi.fn() }));
 const floor = vi.hoisted(() => ({ autoFloor: vi.fn() }));
+const alerts = vi.hoisted(() => ({ raiseDutyAlert: vi.fn() }));
+vi.mock('@oneohm/database', async (original) => ({
+  ...(await original<typeof import('@oneohm/database')>()),
+  ...alerts,
+}));
 vi.mock('../workforce/tracking', () => tracking);
 vi.mock('./site-visit-floor', () => floor);
 
@@ -106,6 +111,11 @@ describe('visitMoment', () => {
     await expect(
       visitMoment({} as never, actor('u1'), { source: 'auto_fence', mocked: true }, now, 'in'),
     ).rejects.toMatchObject({ status: 422, code: 'mocked_location' });
+    // The refusal is kept as a red fake GPS alert for the person's day.
+    expect(alerts.raiseDutyAlert).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ kind: 'fake_gps', personId: 'u1', subjectId: 'u1' }),
+    );
     expect(
       (
         await visitMoment(

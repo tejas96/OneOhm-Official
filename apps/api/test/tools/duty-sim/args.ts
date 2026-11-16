@@ -31,10 +31,23 @@ export interface Args {
   name: string | undefined;
   /** Phone of the worker's reporting manager, set at setup. */
   manager: string | undefined;
+  /** Stand still from this minute of the trip for this many minutes (an unknown stop). */
+  stop: { atMin: number; minutes: number } | undefined;
+  /** Also schedule a second site visit today that nobody attends (a missed visit). */
+  missed: boolean;
   help: boolean;
 }
 
-const BOOLEANS = new Set(['setup', 'no-setup', 'fence', 'approve-run', 'live', 'stay', 'help']);
+const BOOLEANS = new Set([
+  'setup',
+  'no-setup',
+  'fence',
+  'approve-run',
+  'live',
+  'stay',
+  'missed',
+  'help',
+]);
 const VALUES = new Set([
   'api',
   'worker',
@@ -55,6 +68,7 @@ const VALUES = new Set([
   'quiet',
   'name',
   'manager',
+  'stop',
 ]);
 
 function num(name: string, text: string | undefined, min = 0): number | undefined {
@@ -72,6 +86,14 @@ function range(text: string | undefined): [number, number] | undefined {
   const to = Number(match?.[2]);
   if (!match || to <= from) throw new Error(`--gap needs "<from>-<to>" minutes, got "${text}".`);
   return [from, to];
+}
+
+function stopAt(text: string | undefined): Args['stop'] {
+  if (text === undefined) return undefined;
+  const match = /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(text);
+  const minutes = Number(match?.[2]);
+  if (!match || minutes <= 0) throw new Error(`--stop needs "<minute>:<minutes>", got "${text}".`);
+  return { atMin: Number(match[1]), minutes };
 }
 
 function point(text: string | undefined): Args['base'] {
@@ -132,6 +154,8 @@ export function parseArgs(argv: readonly string[]): Args {
     quiet: num('quiet', seen.get('quiet')) ?? 0,
     name: seen.get('name')?.trim() || undefined,
     manager: seen.get('manager'),
+    stop: stopAt(seen.get('stop')),
+    missed: flags.has('missed'),
     help: flags.has('help'),
   };
 }

@@ -1,4 +1,4 @@
-import { attendanceDays, type DatabaseExecutor } from '@oneohm/database';
+import { attendanceDays, type DatabaseExecutor, settleVisitProof } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
@@ -51,6 +51,11 @@ export async function assertDayNotClosed(
   if (day?.checkOutAt) throw conflict('You ended your day. Resume duty to check in.', 'day_closed');
 }
 
+/**
+ * Called by every check-out (a tap, the fence, the route, the task finishing, a service
+ * visit) once the visit is closed: keeps the phone's battery and connection, and works out
+ * the visit's proof (Duty Day step 5), raising `visit_doubtful` when it is doubtful.
+ */
 export async function afterSiteCheckOut(
   db: DatabaseExecutor,
   userId: string,
@@ -58,6 +63,7 @@ export async function afterSiteCheckOut(
   kept: Position | null,
 ): Promise<void> {
   await saveConditions(db, { userId, kind: 'site_check_out', subjectId: visitId, position: kept });
+  await settleVisitProof(db, visitId);
 }
 
 /** Staff who mark attendance only; a day already checked in is left as it is. */

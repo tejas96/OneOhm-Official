@@ -38,13 +38,39 @@ const overlaps = (a: Rect, b: Rect) =>
   a.top < b.bottom + GAP_PX &&
   b.top < a.bottom + GAP_PX;
 
-export function visibleCaptions(boxes: readonly LabelBox[]): Set<string> {
+/** A pin on screen that no caption may cover: its anchor and the radius it takes. */
+export interface PinObstacle {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+}
+
+/** A worker's disc with its ring and glyph; a site's house. */
+export const WORKER_RADIUS = 26;
+export const SITE_RADIUS = 16;
+
+const coversPin = (rect: Rect, pin: PinObstacle) =>
+  rect.left < pin.x + pin.radius &&
+  pin.x - pin.radius < rect.right &&
+  rect.top < pin.y + pin.radius &&
+  pin.y - pin.radius < rect.bottom;
+
+/**
+ * The captions to show: the most important pin keeps its caption; a caption that would cover
+ * another caption, or any pin other than its own, is hidden (never drawn under a pin).
+ */
+export function visibleCaptions(
+  boxes: readonly LabelBox[],
+  pins: readonly PinObstacle[] = [],
+): Set<string> {
   const placed: Rect[] = [];
   const shown = new Set<string>();
   const ordered = [...boxes].sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   for (const box of ordered) {
     const rect = captionRect(box);
     if (placed.some((other) => overlaps(rect, other))) continue;
+    if (pins.some((pin) => pin.id !== box.id && coversPin(rect, pin))) continue;
     placed.push(rect);
     shown.add(box.id);
   }
@@ -62,12 +88,21 @@ export interface PinSpot {
   readonly y: number;
 }
 
+/** Where a pin sits relative to its group's centre: the members, and its offset on the ring. */
+export interface RingSpot {
+  /** Everyone at this spot, this pin included; one id for a pin on its own. */
+  readonly members: readonly string[];
+  readonly dx: number;
+  readonly dy: number;
+}
+
 /**
  * Pins that would sit on top of each other at this zoom (several people at the office) are
  * spread on a small ring around their shared spot, so each stays visible and clickable. Pins
- * on their own keep their place. Returns the drawn place of every pin by id.
+ * on their own keep their place (offset 0). The ring is in screen pixels around the group's
+ * centre, so while the map zooms the ring keeps its size and only its centre moves.
  */
-export function fanOut(pins: readonly PinSpot[]): Map<string, { x: number; y: number }> {
+export function fanRing(pins: readonly PinSpot[]): Map<string, RingSpot> {
   const groups: PinSpot[][] = [];
   for (const pin of [...pins].sort((a, b) => a.id.localeCompare(b.id))) {
     const near = groups.find((group) =>
@@ -76,20 +111,31 @@ export function fanOut(pins: readonly PinSpot[]): Map<string, { x: number; y: nu
     if (near) near.push(pin);
     else groups.push([pin]);
   }
-  const placed = new Map<string, { x: number; y: number }>();
+  const spots = new Map<string, RingSpot>();
   for (const group of groups) {
+    const members = group.map((pin) => pin.id);
     if (group.length === 1) {
-      const [only] = group;
-      if (only) placed.set(only.id, { x: only.x, y: only.y });
+      spots.set(members[0] ?? '', { members, dx: 0, dy: 0 });
       continue;
     }
-    const cx = group.reduce((sum, pin) => sum + pin.x, 0) / group.length;
-    const cy = group.reduce((sum, pin) => sum + pin.y, 0) / group.length;
     const radius = Math.max(26, (group.length * RING_STEP_PX) / (2 * Math.PI));
     group.forEach((pin, index) => {
       const angle = -Math.PI / 2 + (index * 2 * Math.PI) / group.length;
-      placed.set(pin.id, { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) });
+      spots.set(pin.id, { members, dx: radius * Math.cos(angle), dy: radius * Math.sin(angle) });
     });
+  }
+  return spots;
+}
+
+/** The drawn place of every pin by id: its group's centre plus its ring offset. */
+export function fanOut(pins: readonly PinSpot[]): Map<string, { x: number; y: number }> {
+  const byId = new Map(pins.map((pin) => [pin.id, pin]));
+  const placed = new Map<string, { x: number; y: number }>();
+  for (const [id, spot] of fanRing(pins)) {
+    const group = spot.members.flatMap((member) => byId.get(member) ?? []);
+    const cx = group.reduce((sum, pin) => sum + pin.x, 0) / group.length;
+    const cy = group.reduce((sum, pin) => sum + pin.y, 0) / group.length;
+    placed.set(id, { x: cx + spot.dx, y: cy + spot.dy });
   }
   return placed;
 }

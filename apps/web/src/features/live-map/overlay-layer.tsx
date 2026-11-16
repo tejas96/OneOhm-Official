@@ -1,32 +1,64 @@
 'use client';
 
 import { useMap } from '@vis.gl/react-google-maps';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { createPortal } from 'react-dom';
+import { type Frame, PinLayout } from './pin-layout';
 
 /**
  * Our own HTML and SVG on the map without a Map ID (an AdvancedMarker needs one): a single
  * OverlayView with two layers, shapes under (tails, office circles) and pins over (clickable).
- * Pixels are worked out on each draw (zoom); while the map pans the layers move with it.
+ *
+ * The map calls `draw` on every frame its projection changes (each zoom step, a pan past the
+ * edge). Pins are moved right there, in the same frame as the tiles, by `PinLayout` writing
+ * their transforms; React is not involved, so no pin ever lags, slides or re-animates while
+ * the map moves. Shapes read the same frame through a store that re-renders them at once.
  */
-export interface Projection {
-  /** Pixel position inside the layers for a place. */
-  readonly toPixel: (latitude: number, longitude: number) => { x: number; y: number };
-  readonly zoom: number;
-}
-
-const ProjectionContext = createContext<Projection | null>(null);
-
-export function useProjection(): Projection {
-  const projection = useContext(ProjectionContext);
-  if (!projection) throw new Error('useProjection outside OverlayLayer.');
-  return projection;
+class FrameStore {
+  private frame: Frame | null = null;
+  private readonly listeners = new Set<() => void>();
+  readonly subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+  readonly get = () => this.frame;
+  set(frame: Frame) {
+    this.frame = frame;
+    for (const listener of this.listeners) listener();
+  }
 }
 
 interface Layers {
   readonly shapes: HTMLDivElement;
   readonly pins: HTMLDivElement;
-  readonly projection: Projection;
+  readonly store: FrameStore;
+  readonly layout: PinLayout;
+}
+
+const LayersContext = createContext<Layers | null>(null);
+
+function useLayers(): Layers {
+  const layers = useContext(LayersContext);
+  if (!layers) throw new Error('Map layer hooks are used outside OverlayLayer.');
+  return layers;
+}
+
+/** The projection at the last draw, for shapes (re-renders on every frame of a zoom). */
+export function useFrame(): Frame | null {
+  const { store } = useLayers();
+  return useSyncExternalStore(store.subscribe, store.get, () => null);
+}
+
+/** The engine that places pins; components give it refs and places. */
+export function usePinLayout(): PinLayout {
+  return useLayers().layout;
 }
 
 const layerDiv = (className: string) => {
@@ -38,10 +70,27 @@ const layerDiv = (className: string) => {
   return div;
 };
 
-/** Pins glide between refreshes, but jump at once when the zoom changes (no slide while zooming). */
-function settleInstantly(pins: HTMLDivElement) {
-  pins.dataset.instant = '';
-  requestAnimationFrame(() => requestAnimationFrame(() => delete pins.dataset.instant));
+/** Pins take their own clicks (the map would treat them as a click on empty map and close the
+ * card), but a drag, a wheel or a double click on a pin still moves and zooms the map, as on
+ * Google Maps. A press that turned into a drag is not a click on the pin. */
+function keepClicksOnPins(pins: HTMLDivElement) {
+  let down: { x: number; y: number } | null = null;
+  pins.addEventListener('pointerdown', (event) => {
+    down = { x: event.clientX, y: event.clientY };
+  });
+  pins.addEventListener(
+    'click',
+    (event) => {
+      const moved = down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6;
+      if (moved) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    },
+    true,
+  );
+  for (const type of ['click', 'contextmenu'])
+    pins.addEventListener(type, (event) => event.stopPropagation());
 }
 
 export function OverlayLayer({
@@ -57,33 +106,27 @@ export function OverlayLayer({
     if (!map) return;
     const shapesDiv = layerDiv('live-shapes');
     const pinsDiv = layerDiv('live-pins');
-    let lastZoom: number | null = null;
+    keepClicksOnPins(pinsDiv);
+    const store = new FrameStore();
+    const layout = new PinLayout();
     class Overlay extends google.maps.OverlayView {
       override onAdd() {
         const panes = this.getPanes();
         panes?.overlayLayer.appendChild(shapesDiv);
         panes?.overlayMouseTarget.appendChild(pinsDiv);
-        google.maps.OverlayView.preventMapHitsAndGesturesFrom(pinsDiv);
       }
       override draw() {
         const projection = this.getProjection();
         if (!projection) return;
-        const zoom = map?.getZoom() ?? 0;
-        if (lastZoom !== null && lastZoom !== zoom) settleInstantly(pinsDiv);
-        lastZoom = zoom;
-        setLayers({
-          shapes: shapesDiv,
-          pins: pinsDiv,
-          projection: {
-            zoom,
-            toPixel: (latitude, longitude) => {
-              const point = projection.fromLatLngToDivPixel(
-                new google.maps.LatLng(latitude, longitude),
-              );
-              return { x: point?.x ?? 0, y: point?.y ?? 0 };
-            },
+        const frame: Frame = {
+          zoom: map?.getZoom() ?? 0,
+          toPixel: (latitude, longitude) => {
+            const point = projection.fromLatLngToDivPixel({ lat: latitude, lng: longitude });
+            return { x: point?.x ?? 0, y: point?.y ?? 0 };
           },
-        });
+        };
+        layout.setFrame(frame);
+        store.set(frame);
       }
       override onRemove() {
         shapesDiv.remove();
@@ -92,13 +135,20 @@ export function OverlayLayer({
     }
     const overlay = new Overlay();
     overlay.setMap(map);
-    return () => overlay.setMap(null);
+    // Grouping and captions are decided once the map comes to rest.
+    const idle = map.addListener('idle', () => layout.settle());
+    setLayers({ shapes: shapesDiv, pins: pinsDiv, store, layout });
+    return () => {
+      idle.remove();
+      layout.dispose();
+      overlay.setMap(null);
+    };
   }, [map]);
   if (!layers) return null;
   return (
-    <ProjectionContext.Provider value={layers.projection}>
+    <LayersContext.Provider value={layers}>
       {createPortal(shapes, layers.shapes)}
       {createPortal(pins, layers.pins)}
-    </ProjectionContext.Provider>
+    </LayersContext.Provider>
   );
 }

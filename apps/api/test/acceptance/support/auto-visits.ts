@@ -37,6 +37,8 @@ export interface VisitRow {
   leave_reason: string | null;
   visit_id: string | null;
   delayed: boolean;
+  proof: string | null;
+  proof_reasons: string[] | null;
 }
 export const visitRows = (userId: string) =>
   rows<VisitRow>('SELECT * FROM site_visits WHERE user_id = $1 ORDER BY check_in_at', [userId]);

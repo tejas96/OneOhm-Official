@@ -83,6 +83,8 @@ export interface SiteTravelPolicy {
   readonly baseStartMaxKm: number;
   /** Km taken off each day's paid km once, after the cap (the part of the day that is commuting). */
   readonly commuteDeductKm: number;
+  /** A stop away from every office and site this long or longer is flagged, in minutes (Duty Day step 5). */
+  readonly unknownStopMinutes: number;
 }
 
 export interface WorkforcePolicy {
@@ -133,6 +135,7 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     siteFenceM: 150,
     baseStartMaxKm: 5,
     commuteDeductKm: 0,
+    unknownStopMinutes: 45,
   },
   capacity: { defaultOpenTaskLimit: 0 },
 };

@@ -21,3 +21,17 @@ export function trackingSwitchedOn(input: {
   if (said.includes(true)) return true;
   return input.company;
 }
+
+/** What may be read now (PRD 4.3): `on`, or why not. */
+export type TrackingState = 'on' | 'no_consent' | 'policy_off' | 'outside_hours';
+
+/** Switched off wins, then consent to the current words, then working hours. */
+export function trackingState(input: {
+  readonly switchedOn: boolean;
+  readonly consentGiven: boolean;
+  readonly inHours: boolean;
+}): TrackingState {
+  if (!input.switchedOn) return 'policy_off';
+  if (!input.consentGiven) return 'no_consent';
+  return input.inHours ? 'on' : 'outside_hours';
+}

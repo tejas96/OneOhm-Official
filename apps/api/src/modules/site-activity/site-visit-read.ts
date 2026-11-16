@@ -96,6 +96,9 @@ export async function readVisits(db: DatabaseExecutor, where: SQL): Promise<Visi
         checkOutSource: row.checkOutSource,
         leaveReason: row.leaveReason,
         leaveReasonAt: row.leaveReasonAt?.toISOString() ?? null,
+        proof: row.proof,
+        proofReasons: row.proofReasons ?? [],
+        proofAt: row.proofAt?.toISOString() ?? null,
       },
     };
   });

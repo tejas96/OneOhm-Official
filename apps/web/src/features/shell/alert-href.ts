@@ -64,10 +64,39 @@ const KIND_HREF: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Duty Day alerts (`duty_<kind>`) open the live map. One about a site (a missed or doubtful
+ * visit) opens the Alerts tab on that site's alert; one about a person's day opens their day;
+ * a travel claim's opens the claim (below, by its subject); the morning digest of alerts nobody dealt with opens
+ * the feed. The notice does not carry the alert's id, so the map picks the newest open alert
+ * of that kind (for that site).
+ */
+const DUTY_KIND_HREF: Readonly<Record<string, (subject: Subject | null) => string | null>> = {
+  duty_not_checked_in: () => '/live?kind=not_checked_in',
+  duty_fake_gps: () => '/live?kind=fake_gps',
+  duty_route_gap: () => '/live?kind=route_gap',
+  duty_unknown_stop: () => '/live?kind=unknown_stop',
+  duty_visit_open_long: () => '/live?kind=visit_open_long',
+  duty_job_left_unfinished: () => '/live?kind=job_left_unfinished',
+  duty_visit_missed: (subject) => siteAlert('visit_missed', subject),
+  duty_visit_doubtful: (subject) => siteAlert('visit_doubtful', subject),
+  duty_claim_waiting: (subject) => (subject ? null : '/live?kind=claim_waiting'),
+  duty_claim_unpaid: (subject) => (subject ? null : '/live?kind=claim_unpaid'),
+  duty_alerts_digest: () => '/live?tab=alerts',
+};
+
+function siteAlert(kind: string, subject: Subject | null): string {
+  if (subject && (subject.type === 'task' || subject.type === 'service_request'))
+    return `/live?kind=${kind}&site=${subject.id}`;
+  return `/live?kind=${kind}`;
+}
+
+/**
  * A Marketing alert: a campaign opens itself; `connections` and `reviews` are not campaigns,
  * so they open the Connections tab and the Marketing page.
  */
 export function hrefOf({ subject, kind }: Pick<NotificationItem, 'subject' | 'kind'>): string {
+  const duty = DUTY_KIND_HREF[kind]?.(subject);
+  if (duty) return duty;
   if (!subject) return KIND_HREF[kind] ?? '/';
   return SUBJECT_HREF[subject.type](subject, kind);
 }

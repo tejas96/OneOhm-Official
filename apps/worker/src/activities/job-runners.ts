@@ -3,6 +3,7 @@ import {
   closeForgottenDays,
   type Database,
   runTravelMorningJob,
+  sweepDutyAlerts,
 } from '@oneohm/database';
 import type { JobName } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
@@ -60,6 +61,7 @@ export function jobRunners(
     },
     travel_auto_approve: () => runTravelMorningJob(db, today()),
     service_sla: () => queueSlaAlerts(db, new Date(), timeZone),
+    duty_alerts: () => sweepDutyAlerts(db, new Date(), timeZone),
     job_runs_cleanup: () => clearOldJobRuns(db),
   };
 }

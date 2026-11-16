@@ -132,7 +132,13 @@ export class ServiceDeskService {
       );
   }
 
-  async update(actorId: string, id: string, patch: Patch): Promise<Ticket> {
+  /** Changes a request; `tellCustomer` false keeps a reassignment quiet to the customer ("Send nearest"). */
+  async update(
+    actorId: string,
+    id: string,
+    patch: Patch,
+    options: { readonly tellCustomer?: boolean } = {},
+  ): Promise<Ticket> {
     const current = await this.one(id);
     const before = current.request;
     const moved = patch.category && patch.category !== before.category ? patch.category : null;
@@ -156,7 +162,14 @@ export class ServiceDeskService {
       }
       const owner = patch.assigneeUserId;
       if (owner !== undefined && owner !== before.assigneeUserId)
-        await followAssignee(tx, { serviceRequestId: id }, owner, actorId);
+        await followAssignee(
+          tx,
+          { serviceRequestId: id },
+          owner,
+          actorId,
+          undefined,
+          options.tellCustomer ?? true,
+        );
       if (owner && owner !== before.assigneeUserId && owner !== actorId) {
         await notify(tx, { userId: owner }, assignedNotice(current, owner, now));
       }

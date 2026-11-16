@@ -24,4 +24,6 @@ export const travelPolicySchema = z.object({
   baseStartMaxKm: z.number().min(1).max(50).default(5),
   /** Km taken off each day's paid km once, after the cap. */
   commuteDeductKm: z.number().min(0).max(50).default(0),
+  /** A stop away from every office and site this long or longer is flagged, in minutes. */
+  unknownStopMinutes: z.number().int().min(10).max(480).default(45),
 });

@@ -52,6 +52,8 @@ export const livePersonSchema = z.object({
     dutyStartedAt: instantSchema.nullable(),
   }),
   flags: z.object({ mockedToday: z.boolean().nullable() }),
+  /** Open duty alerts about the person (any day): the red badge on the pin. */
+  alerts: z.object({ open: z.number().int(), red: z.number().int() }),
 });
 export type LivePerson = z.infer<typeof livePersonSchema>;
 

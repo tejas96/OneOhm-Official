@@ -9,18 +9,17 @@ import { conflict, forbidden, invalid, notFound } from '../../common/http/errors
 import { presentTasks } from '../../common/read-models/project-tasks';
 import { DATABASE, type Database } from '../../config/core.module';
 import { settleWorkOrderForTask } from '../contractors/work-order-settle';
-import { syncWorkOrders } from '../contractors/work-order-sync';
 import { closeAsksOnStart } from '../journey/journey-stale';
 import { ReportArchiveService } from '../reports/report-archive.service';
 import { StalePaperAsksService } from '../reports/stale-paper-asks.service';
-import { followAssignee, lockVisitTarget } from '../visits/follow-assignee';
 import { BudgetCheckService, SURVEY_FACTS } from './budget-check.service';
 import { checkHandoverMaterial, recordHandoverOverride } from './handover-material';
 import { canViewTask } from './task-access';
+import { assignTask } from './task-assign';
 import { finishTask, missingCaptures } from './task-completion';
 import { assertEvidence, assertUnblocked, checkedConsumerNumber } from './task-guards';
 import { tellCustomerAbout, waitStarted } from './task-messages';
-import { tellApproved, tellAssignee, tellHelpAsked } from './task-notices';
+import { tellApproved, tellHelpAsked } from './task-notices';
 import { assertMayReview, closeReview, sendForReview } from './task-review';
 import { closeOpenWait, nextWaitStart } from './task-waits';
 
@@ -210,22 +209,15 @@ export class TasksService {
     return this.present(id);
   }
 
-  async assign(actor: Actor, id: string, userId: string | null): Promise<ProjectTask> {
+  /** See `assignTask`; `tellCustomer` false is the live map's "Send nearest". */
+  async assign(
+    actor: Actor,
+    id: string,
+    userId: string | null,
+    options: { readonly tellCustomer?: boolean } = {},
+  ): Promise<ProjectTask> {
     assertCan(actor, 'tasks.assign');
-    const [task] = await this.db.select().from(projectTasks).where(eq(projectTasks.id, id));
-    if (!task) throw notFound('That task');
-    await this.db.transaction(async (tx) => {
-      await lockVisitTarget(tx, { taskId: id });
-      await tx
-        .update(projectTasks)
-        .set({ assigneeUserId: userId, updatedAt: new Date() })
-        .where(eq(projectTasks.id, id));
-      // A task given to a contractor's crew joins that contractor's work order.
-      await syncWorkOrders(tx, task.projectId, actor.userId);
-      await followAssignee(tx, { taskId: id }, userId, actor.userId);
-      await recordAudit(tx, actor.userId, 'task.assigned', 'task', id, { userId });
-      await tellAssignee(tx, task, userId, actor.userId);
-    });
+    await assignTask(this.db, actor, id, userId, options.tellCustomer ?? true);
     return this.present(id);
   }
 

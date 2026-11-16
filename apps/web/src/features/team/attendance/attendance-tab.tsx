@@ -53,7 +53,7 @@ export function AttendanceTab() {
         <>
           <AttendanceKpis rows={rows.data} date={date} />
           <AttendanceShowChip />
-          <AttendanceTable rows={attendanceShown(rows.data, show)} />
+          <AttendanceTable rows={attendanceShown(rows.data, show)} date={date} />
         </>
       )}
       {canDecide && corrections.data && waiting.length === 0 && (

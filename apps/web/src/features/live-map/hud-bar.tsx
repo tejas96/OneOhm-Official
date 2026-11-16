@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@oneohm/design-system/web';
-import { Scan } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
 import { type LiveFilter, type liveCounts, STATES, toneOf } from './live-format';
@@ -11,7 +11,9 @@ interface HudBarProps {
   readonly counts: ReturnType<typeof liveCounts>;
   readonly filter: LiveFilter;
   readonly onFilter: (filter: LiveFilter) => void;
-  readonly onFit: () => void;
+  /** Open alerts; the bell opens the Alerts tab. */
+  readonly alerts: { readonly open: number; readonly red: number };
+  readonly onAlerts: () => void;
 }
 
 /** Older than two refreshes: the beacon turns amber. */
@@ -43,8 +45,8 @@ export function LiveStatus({
   );
 }
 
-/** The top bar: what is happening in numbers, each number a filter, and Fit all. */
-export function HudBar({ counts, filter, onFilter, onFit }: HudBarProps) {
+/** The top bar: what is happening in numbers, each number a filter, and the open alerts. */
+export function HudBar({ counts, filter, onFilter, alerts, onAlerts }: HudBarProps) {
   const t = useTranslations('liveMap');
   const toggle = (next: LiveFilter) => onFilter(filter === next ? 'all' : next);
   return (
@@ -81,13 +83,22 @@ export function HudBar({ counts, filter, onFilter, onFit }: HudBarProps) {
       <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-hairline" />
       <button
         type="button"
-        onClick={onFit}
-        aria-label={t('fitAll')}
-        title={t('fitAll')}
-        className="flex h-10 shrink-0 items-center gap-2 rounded-xl px-2.5 type-label text-ink-muted transition-colors duration-(--duration-fast) hover:bg-sunken hover:text-ink"
+        onClick={onAlerts}
+        aria-label={t('alertsButton', { count: alerts.open })}
+        title={t('alertsButton', { count: alerts.open })}
+        data-red={alerts.red > 0 || undefined}
+        className={cn(
+          'flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-2.5 transition-colors duration-(--duration-fast)',
+          alerts.open === 0 && 'text-ink-faint hover:bg-sunken',
+          alerts.open > 0 &&
+            alerts.red === 0 &&
+            'bg-at-risk-tint text-at-risk hover:bg-[color-mix(in_oklab,var(--oh-at-risk)_20%,transparent)]',
+          alerts.red > 0 &&
+            'bg-overdue-tint text-overdue hover:bg-[color-mix(in_oklab,var(--oh-overdue)_20%,transparent)]',
+        )}
       >
-        <Scan aria-hidden className="size-4" />
-        <span className="hidden 2xl:inline">{t('fitAll')}</span>
+        <Bell aria-hidden className="size-4" />
+        <span className="text-[0.9375rem] font-semibold tabular-nums">{alerts.open}</span>
       </button>
     </div>
   );

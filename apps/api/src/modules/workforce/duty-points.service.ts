@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { DutyPointInput, DutyPointsResult } from '@oneohm/api-contracts';
 import { attendanceDays, businessTimeZone, dutyPoints, takeTravelSnapshot } from '@oneohm/database';
 import { DUTY_SKEW_MS, type DutyPointRejection, judgeDutyPoint } from '@oneohm/domain';
@@ -6,6 +6,7 @@ import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { DATABASE, type Database } from '../../config/core.module';
 import { RouteVisitsService } from '../site-activity/route-visits.service';
+import { alertsAfterPoints } from './duty-point-alerts';
 import { trackingFor } from './tracking';
 
 /**
@@ -18,6 +19,8 @@ const DAY_LOOKBACK_MS = 48 * 3_600_000;
 
 @Injectable()
 export class DutyPointsService {
+  private readonly log = new Logger('DutyPoints');
+
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly routeVisits: RouteVisitsService,
@@ -128,6 +131,14 @@ export class DutyPointsService {
       await this.remeasureClosedDays(actor.userId, keep, days);
       // The route may show an arrival or a departure the phone's fence missed (Duty Day step 3).
       await this.routeVisits.afterPoints(actor, now);
+      // Fake GPS, a route gap, an unknown stop, and late points for a closed visit's proof
+      // (Duty Day step 5). The points are saved either way: a fault here never fails the upload.
+      try {
+        const tracking = { on: status.state === 'on', consentedAt };
+        await alertsAfterPoints(this.db, actor, keep, days, tracking, now, timeZone);
+      } catch (error) {
+        this.log.error(`Duty alerts after points failed for ${actor.userId}`, error);
+      }
     }
     return { accepted, rejected };
   }

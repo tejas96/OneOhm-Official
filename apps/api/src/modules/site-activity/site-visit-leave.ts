@@ -1,8 +1,10 @@
 import type { SiteVisit } from '@oneohm/api-contracts';
 import {
   alertVisitOwner,
+  type DutyAlertInput,
   projectActivities,
   projectTasks,
+  raiseDutyAlert,
   serviceRequests,
   siteVisits,
   visits,
@@ -14,6 +16,26 @@ import { conflict, notFound } from '../../common/http/errors';
 import type { Database } from '../../config/core.module';
 import { oneVisitRecord } from './site-visit-end';
 import { readVisits } from './site-visit-read';
+
+/** The alert feed's `job_left_unfinished` for the visit (its notice went out already). */
+function feedAlert(
+  actor: Actor,
+  row: typeof siteVisits.$inferSelect,
+  record: SiteVisit,
+  reason: LeaveReason,
+): DutyAlertInput {
+  const what = record.taskTitle ?? 'the site';
+  return {
+    kind: 'job_left_unfinished',
+    personId: actor.userId,
+    subjectType: 'site_visit',
+    subjectId: row.id,
+    day: row.workDate,
+    title: `${actor.fullName}: left ${record.siteLabel ?? 'the site'} unfinished`,
+    body: `${what}: ${LEAVE_REASON_WORDS[reason]}.`,
+    detail: { visitId: row.id, label: what, reason },
+  };
+}
 
 /**
  * The person says why they left a site before the job was done (Duty Day step 3). Only for
@@ -106,6 +128,8 @@ export async function giveLeaveReason(
         key: `site_visit_left:${visitId}`,
       },
     );
+    // The alert feed's copy (Duty Day step 5). The manager was just told above: not again.
+    await raiseDutyAlert(tx, feedAlert(actor, row, record, reason), { notify: false });
   });
   return oneVisitRecord(db, visitId);
 }

@@ -8,6 +8,7 @@ import {
 } from '@oneohm/domain';
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema, paiseSchema } from '../common/primitives';
+import { visitProofReasonSchema, visitProofSchema } from './visit-proof.schema';
 import { decisionStatusSchema } from './workforce.schema';
 
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -66,6 +67,10 @@ export const siteVisitSchema = z.object({
   /** Why the person left before the job was done, and when they said so. */
   leaveReason: z.enum(LEAVE_REASONS).nullable(),
   leaveReasonAt: instantSchema.nullable(),
+  /** Whether the route proves the visit (see `visitProofSchema`); null while open. */
+  proof: visitProofSchema.nullable(),
+  proofReasons: z.array(visitProofReasonSchema),
+  proofAt: instantSchema.nullable(),
 });
 export type SiteVisit = z.infer<typeof siteVisitSchema>;
 

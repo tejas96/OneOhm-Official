@@ -6,6 +6,7 @@ import {
   BatteryCharging,
   BatteryLow,
   BatteryMedium,
+  CalendarDays,
   Home,
   MessageCircle,
   Phone,
@@ -29,7 +30,14 @@ function BatteryIcon({ percent, charging }: { percent: number; charging: boolean
 const NETWORK_ICON = { wifi: Wifi, cellular: Signal, none: WifiOff } as const;
 
 /** One person's day at a glance, with the two ways to reach them. */
-export function PersonCard({ person }: { readonly person: LivePerson }) {
+export function PersonCard({
+  person,
+  onOpenDay,
+}: {
+  readonly person: LivePerson;
+  /** Opens the person's day (timeline and replay) over the map. */
+  readonly onOpenDay: () => void;
+}) {
   const t = useTranslations('liveMap.card');
   const format = useFormatter();
   const now = useNow(15_000);
@@ -134,6 +142,16 @@ export function PersonCard({ person }: { readonly person: LivePerson }) {
         ) : (
           <p className="col-span-2 type-body-sm text-ink-muted">{t('noPhone')}</p>
         )}
+        <Button
+          className="col-span-2"
+          variant="secondary"
+          leadingIcon={<CalendarDays />}
+          onClick={onOpenDay}
+        >
+          {person.alerts.open > 0
+            ? t('openDayAlerts', { count: person.alerts.open })
+            : t('openDay')}
+        </Button>
       </div>
     </div>
   );

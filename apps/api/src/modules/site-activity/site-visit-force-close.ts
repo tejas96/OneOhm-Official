@@ -1,5 +1,5 @@
 import type { SiteVisit } from '@oneohm/api-contracts';
-import { notify, projects, reportingLines, siteVisits } from '@oneohm/database';
+import { notify, projects, reportingLines, settleVisitProof, siteVisits } from '@oneohm/database';
 import { canForceCloseVisit } from '@oneohm/domain';
 import { and, eq, isNull } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -72,6 +72,7 @@ export async function forceCloseVisit(
       userId: actor.userId,
       message: `Site visit closed by ${actor.fullName}: ${reason}`,
     });
+    await settleVisitProof(tx, visitId, now);
     await notify(
       tx,
       { userId: row.userId },

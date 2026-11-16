@@ -2,7 +2,8 @@
 
 import type { LivePerson, LiveSites } from '@oneohm/api-contracts';
 import { toneOf } from './live-format';
-import { useProjection } from './overlay-layer';
+import { useFrame } from './overlay-layer';
+import type { Frame } from './pin-layout';
 
 /** Metres north of a latitude, in degrees. */
 const northOf = (metres: number) => metres / 111_195;
@@ -18,7 +19,9 @@ export function MapShapes({
   readonly people: readonly LivePerson[];
   readonly offices: LiveSites['offices'];
 }) {
-  const { toPixel, zoom } = useProjection();
+  const frame = useFrame();
+  if (!frame) return null;
+  const { toPixel, zoom } = frame;
   return (
     <svg aria-hidden className="live-shapes-svg" width="1" height="1">
       {offices.map((office) => {
@@ -38,14 +41,14 @@ export function MapShapes({
       })}
       {people.map((person) => (
         // A new last point remounts the tail, so it fades in again behind the gliding pin.
-        <Tail key={`${person.person.id}:${person.tail.at(-1)?.at}`} person={person} />
+        <Tail key={`${person.person.id}:${person.tail.at(-1)?.at}`} person={person} frame={frame} />
       ))}
     </svg>
   );
 }
 
-function Tail({ person }: { readonly person: LivePerson }) {
-  const { toPixel } = useProjection();
+function Tail({ person, frame }: { readonly person: LivePerson; readonly frame: Frame }) {
+  const { toPixel } = frame;
   if (person.state !== 'moving' || person.tail.length < 2) return null;
   const points = person.tail.map((point) => toPixel(point.latitude, point.longitude));
   const segments = points.slice(1).map((to, index) => ({ from: points[index] ?? to, to, index }));

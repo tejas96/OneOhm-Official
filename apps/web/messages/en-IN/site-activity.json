@@ -41,7 +41,8 @@
         "task": "Task",
         "inOut": "In and out",
         "duration": "Time on site",
-        "where": "Distance"
+        "where": "Distance",
+        "proof": "Proof"
       },
       "inOut": "{from} to {to}",
       "stillIn": "In at {from}, still on site",
@@ -203,6 +204,22 @@
       "on_leave": "The person was on leave this day.",
       "auto_approve_off": "Automatic approval is switched off.",
       "other": "Needs a person to look at it."
+    },
+    "proof": {
+      "verified": "Verified",
+      "doubtful": "Doubtful",
+      "no_proof": "No proof",
+      "pending": "After check-out",
+      "why": "Why: {reasons}",
+      "reasons": {
+        "short_visit": "too short to prove",
+        "not_seen_at_site": "phone not seen at the site",
+        "far_check_in": "checked in far from the site",
+        "photo_far": "photos taken away from the site",
+        "fake_gps": "fake location on the phone",
+        "no_location": "no location from the phone",
+        "site_unknown": "site location not saved"
+      }
     }
   }
 }

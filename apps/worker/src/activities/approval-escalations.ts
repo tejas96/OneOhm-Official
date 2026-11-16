@@ -1,5 +1,6 @@
 import {
   type Database,
+  escalateDutyAlerts,
   listPendingApprovals,
   notify,
   type PendingApprovalRow,
@@ -58,8 +59,9 @@ function body(item: PendingApprovalRow, days: number): string {
 
 /**
  * Each morning, approvals waiting longer than Settings → Approvals allows go up to the
- * owner (PRD 7.1 "approval workflows, reminders and escalations"). Each one alerts
- * once, so a long wait is raised, not repeated.
+ * owner (PRD 7.1 "approval workflows, reminders and escalations"). Each one alerts once, so
+ * a long wait is raised, not repeated. Duty alerts still open from the last two days go up as
+ * one digest per owner (`escalateDutyAlerts`).
  */
 export async function queueApprovalEscalations(db: Database, timeZone: string): Promise<number> {
   const today = todayIn(timeZone);
@@ -89,5 +91,6 @@ export async function queueApprovalEscalations(db: Database, timeZone: string): 
     }
     if (to.length > 0) raised += 1;
   }
-  return raised;
+  // Duty alerts of the last two days nobody resolved go up as one digest each (Duty Day step 5).
+  return raised + (await escalateDutyAlerts(db, today, ownerIds, timeZone));
 }

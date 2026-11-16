@@ -21,6 +21,8 @@ export async function followAssignee(
   newUserId: string | null,
   actorId: string | null = null,
   timeZone = 'Asia/Kolkata',
+  /** False for "Send nearest" from the live map: the customer hears nothing from it. */
+  tellCustomer = true,
 ): Promise<void> {
   // Normally taken before the assignee was changed (see lockVisitTarget); a repeat is harmless.
   await lockVisitTarget(tx, scope);
@@ -61,7 +63,13 @@ export async function followAssignee(
       },
     );
   // The board's own dates are not the customer's crew to announce.
-  if (visit.status === 'confirmed' && target.mayMessage && who && !isPresenceKind(visit.kind))
+  if (
+    tellCustomer &&
+    visit.status === 'confirmed' &&
+    target.mayMessage &&
+    who &&
+    !isPresenceKind(visit.kind)
+  )
     await tellCrewChanged(tx, await visitContext(tx, target), {
       day: visit.day,
       name: who.name,

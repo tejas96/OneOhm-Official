@@ -79,4 +79,36 @@ describe('hrefOf', () => {
       '/marketing',
     );
   });
+
+  it('opens the live map for every Duty Day alert', () => {
+    const task = { type: 'task', id: 't1', projectId: 'p1' } as const;
+    const claim = { type: 'travel_claim', id: 'c1', projectId: null } as const;
+    // A person's day: the map opens that person's day on the newest alert of the kind.
+    for (const kind of [
+      'not_checked_in',
+      'fake_gps',
+      'route_gap',
+      'unknown_stop',
+      'visit_open_long',
+      'job_left_unfinished',
+    ])
+      expect(hrefOf({ subject: null, kind: `duty_${kind}` })).toBe(`/live?kind=${kind}`);
+    // A site: the Alerts tab on that site's alert (Send nearest is one tap away).
+    expect(hrefOf({ subject: task, kind: 'duty_visit_missed' })).toBe(
+      '/live?kind=visit_missed&site=t1',
+    );
+    expect(
+      hrefOf({
+        subject: { type: 'service_request', id: 's1', projectId: null },
+        kind: 'duty_visit_doubtful',
+      }),
+    ).toBe('/live?kind=visit_doubtful&site=s1');
+    expect(hrefOf({ subject: null, kind: 'duty_visit_missed' })).toBe('/live?kind=visit_missed');
+    // A travel claim opens the claim itself.
+    expect(hrefOf({ subject: claim, kind: 'duty_claim_waiting' })).toBe(
+      '/team?tab=travel&claim=c1',
+    );
+    expect(hrefOf({ subject: claim, kind: 'duty_claim_unpaid' })).toBe('/team?tab=travel&claim=c1');
+    expect(hrefOf({ subject: null, kind: 'duty_alerts_digest' })).toBe('/live?tab=alerts');
+  });
 });

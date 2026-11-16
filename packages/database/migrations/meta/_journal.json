@@ -757,6 +757,13 @@
       "when": 1794801928095,
       "tag": "0107_duty_start_base",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1794812034804,
+      "tag": "0108_duty_alerts_and_visit_proof",
+      "breakpoints": true
     }
   ]
 }

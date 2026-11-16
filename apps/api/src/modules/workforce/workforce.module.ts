@@ -5,6 +5,7 @@ import { AttendanceService } from './attendance.service';
 import { BonusesService } from './bonuses.service';
 import { CapacityService } from './capacity.service';
 import { CorrectionsService } from './corrections.service';
+import { DutyDayService } from './duty-day.service';
 import { DutyPointsController } from './duty-points.controller';
 import { DutyPointsService } from './duty-points.service';
 import { DutyRouteService } from './duty-route.service';
@@ -40,6 +41,7 @@ import { WorkforceSettingsService } from './workforce-settings.service';
     MonthlyReviewService,
     DutyPointsService,
     DutyRouteService,
+    DutyDayService,
   ],
 })
 export class WorkforceModule {}

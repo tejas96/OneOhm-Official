@@ -63,9 +63,9 @@ function positionOf(
 /**
  * One person on the live map. Only today's open day is live. With location off (no current
  * consent, or switched off) nothing is read from the route: no position, tail, km, battery or
- * mocked flag; the state comes from duty and visits only.
+ * mocked flag; the state comes from duty and visits only. The alert counts are added by the caller.
  */
-export function livePerson(facts: PersonFacts): LivePerson {
+export function livePerson(facts: PersonFacts): Omit<LivePerson, 'alerts'> {
   const { person, day, now } = facts;
   const openDay = day && !day.checkOutAt ? day : null;
   const reads = person.locationOn;

@@ -48,6 +48,8 @@ export const dutyPoints = pgTable(
   (table) => [
     primaryKey({ name: 'duty_points_user_id_pk', columns: [table.userId, table.id] }),
     index('duty_points_user_recorded_idx').on(table.userId, table.recordedAt),
-    index('duty_points_day_idx').on(table.attendanceDayId),
+    // A day's points in time order: the day's route, and each open day's newest point for the
+    // five-minute gap check (Duty Day step 5).
+    index('duty_points_day_recorded_idx').on(table.attendanceDayId, table.recordedAt),
   ],
 );

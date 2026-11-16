@@ -8,6 +8,7 @@ import { ListSkeleton, LoadError } from '@/components/query-state';
 import { useSiteFormat } from '../site-format';
 import { VisitDistance } from '../visit-distance';
 import { VisitNotes } from '../visit-notes';
+import { VisitProof } from '../visit-proof';
 import { useClaimDay } from './use-travel';
 
 export function Section({
@@ -85,6 +86,7 @@ export function DayVisits({ claimId }: { readonly claimId: string }) {
                 : t('visits.stillIn', { from: format.time(visit.checkInAt) })}
             </span>
           </span>
+          <VisitProof proof={visit.proof} reasons={visit.proofReasons} showReasons />
           <VisitDistance visit={visit} />
           <VisitNotes visit={visit} />
         </li>

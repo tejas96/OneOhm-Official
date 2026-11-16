@@ -3,6 +3,7 @@
 import type { AttendanceDay, TeamAttendanceRow } from '@oneohm/api-contracts';
 import { Badge, ResponsiveTable, StatusPill, type TableColumn } from '@oneohm/design-system/web';
 import { BatteryMedium, MapPin, MapPinOff, Signal, Wifi, WifiOff } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PersonChip } from '../person-chip';
 import { useWorkforceFormat } from '../workforce-format';
@@ -70,7 +71,14 @@ function Device({ day }: { readonly day: AttendanceDay }) {
 }
 
 /** One row per staff member for the chosen day. */
-export function AttendanceTable({ rows }: { readonly rows: readonly TeamAttendanceRow[] }) {
+export function AttendanceTable({
+  rows,
+  date,
+}: {
+  readonly rows: readonly TeamAttendanceRow[];
+  /** The day shown, for each person's day link. */
+  readonly date: string;
+}) {
   const t = useTranslations('team.attendance');
   const format = useWorkforceFormat();
 
@@ -79,7 +87,21 @@ export function AttendanceTable({ rows }: { readonly rows: readonly TeamAttendan
       key: 'person',
       header: t('columns.person'),
       primary: true,
-      cell: (row) => <PersonChip person={row.user} />,
+      cell: (row) => (
+        <PersonChip
+          person={row.user}
+          detail={
+            row.day ? (
+              <Link
+                href={`/team/people/${row.user.id}/day?date=${date}`}
+                className="text-accent hover:underline"
+              >
+                {t('openDay')}
+              </Link>
+            ) : undefined
+          }
+        />
+      ),
     },
     {
       key: 'in',

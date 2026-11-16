@@ -33,6 +33,15 @@ the trip that many minutes before now (a gap), `--name "Ravi"` names the worker 
     pnpm sim:duty --live --name "Ravi" --manager +919812345678
     pnpm sim:duty --live --name "Sunita" --site-index 2 --stay --fence --dwell 30
 
+For the alert feed (Duty Day step 5), the problem days raise the matching alerts: `--gap 20-50`
+gives `route_gap` (resolved by itself once the points came back), `--fake 30` gives `fake_gps`,
+and `--stop <minute>:<minutes>` stands still that long from that minute, an `unknown_stop` when
+it is 45 minutes or more away from every office and site. `--missed` also schedules a second
+site visit today, 3 km away, that nobody attends: `visit_missed`. After the day the simulator
+runs the five-minute alert job once and prints the worker's alerts and each visit's proof:
+
+    pnpm sim:duty --gap 20-50 --fake 30 --stop 80:50 --missed
+
 Each run makes a worker `Sim Worker <time>`, a sold project, assigns the site survey, pins the
 property at the site and schedules the task today; starts duty at now minus the trip time, posts
 points like the phone (every 120 s or 100 m, GPS noise, batches of 200), ends duty, and prints the

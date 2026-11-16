@@ -16,6 +16,7 @@ export const JOB_NAMES = [
   'attendance_autoclose',
   'travel_auto_approve',
   'service_sla',
+  'duty_alerts',
   'job_runs_cleanup',
   'message_delivery',
   'payment_link_sync',
