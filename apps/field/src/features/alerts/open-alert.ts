@@ -4,7 +4,11 @@ import { alertRoute } from './alert-route';
 
 /** Opens the screen an alert is about (see alertRoute). */
 export function openAlert(
-  subject: { readonly type?: string | undefined; readonly id?: string | undefined },
+  subject: {
+    readonly type?: string | undefined;
+    readonly id?: string | undefined;
+    readonly month?: string | null | undefined;
+  },
   kind?: string,
 ) {
   router.push(alertRoute(subject, kind) as Href);
@@ -12,5 +16,5 @@ export function openAlert(
 
 /** The same, from the data a push alert carries. */
 export function openPushedAlert(data: AlertData) {
-  openAlert({ type: data.subjectType, id: data.subjectId }, data.kind);
+  openAlert({ type: data.subjectType, id: data.subjectId, month: data.subjectMonth }, data.kind);
 }

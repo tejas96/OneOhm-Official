@@ -1,15 +1,20 @@
-import { attendanceDays, type DatabaseExecutor } from '@oneohm/database';
-import { isLateCheckIn } from '@oneohm/domain';
+import { attendanceDays, type DatabaseExecutor, settleVisitProof } from '@oneohm/database';
 import { todayIn } from '@oneohm/shared';
+import { and, eq } from 'drizzle-orm';
 import { type Actor, can } from '../../common/auth/actor';
+import { currentCalendar } from '../../common/calendar';
+import { conflict } from '../../common/http/errors';
+import { askVisitCheck, safely, tellArrived } from '../visit-news/visit-news-send';
 import { saveConditions } from './device-conditions';
-import { indiaTime, loadPolicy } from './policy';
+import { isLateAt } from './late-rule';
+import { loadPolicy } from './policy';
 import type { Position } from './tracking';
 
 /**
  * Called by the site and service check-ins with the reading they kept (or null).
  * Keeps the phone's battery and connection with it, and, when the policy says so, makes
- * the day's first site check-in the person's attendance check-in too (PRD 4.3).
+ * the day's first site check-in the person's attendance check-in too (PRD 4.3). The customer is
+ * told the person arrived, by hand or by the fence (Duty Day step 6).
  */
 export async function afterSiteCheckIn(
   db: DatabaseExecutor,
@@ -17,6 +22,8 @@ export async function afterSiteCheckIn(
   visitId: string,
   kept: Position | null,
   at: Date = new Date(),
+  /** The check-in is an automatic one that reached the server late. */
+  delayed = false,
 ): Promise<void> {
   await saveConditions(db, {
     userId: actor.userId,
@@ -24,9 +31,37 @@ export async function afterSiteCheckIn(
     subjectId: visitId,
     position: kept,
   });
-  await autoCheckIn(db, actor, kept, at);
+  await autoCheckIn(db, actor, kept, at, delayed);
+  // The customer hears "Ravi has reached Sangli" (Duty Day step 6); a fault never undoes the check-in.
+  await safely(db, 'Arrived message', (tx) => tellArrived(tx, visitId));
 }
 
+/**
+ * A person who ended their day cannot check in at a site that same day (live review S1):
+ * the visit would run after the day's end and be closed or missed by the night job. They
+ * resume duty first. The day row is locked so an End duty cannot slip in between.
+ */
+export async function assertDayNotClosed(
+  db: DatabaseExecutor,
+  userId: string,
+  workDate: string,
+): Promise<void> {
+  const [day] = await db
+    .select({ checkOutAt: attendanceDays.checkOutAt })
+    .from(attendanceDays)
+    .where(and(eq(attendanceDays.userId, userId), eq(attendanceDays.workDate, workDate)))
+    .for('update')
+    .limit(1);
+  if (day?.checkOutAt) throw conflict('You ended your day. Resume duty to check in.', 'day_closed');
+}
+
+/**
+ * Called by every check-out (a tap, the fence, the route, the task finishing, a service
+ * visit) once the visit is closed: keeps the phone's battery and connection, and works out
+ * the visit's proof (Duty Day step 5), raising `visit_doubtful` when it is doubtful, and asks
+ * the customer "Was this visit done?" (Duty Day step 6). A manager's force-close and the day's
+ * end do not come here, so they ask the customer nothing.
+ */
 export async function afterSiteCheckOut(
   db: DatabaseExecutor,
   userId: string,
@@ -34,6 +69,8 @@ export async function afterSiteCheckOut(
   kept: Position | null,
 ): Promise<void> {
   await saveConditions(db, { userId, kind: 'site_check_out', subjectId: visitId, position: kept });
+  await settleVisitProof(db, visitId);
+  await safely(db, 'Visit check', (tx) => askVisitCheck(tx, visitId));
 }
 
 /** Staff who mark attendance only; a day already checked in is left as it is. */
@@ -42,6 +79,7 @@ async function autoCheckIn(
   actor: Actor,
   kept: Position | null,
   at: Date,
+  delayed: boolean,
 ): Promise<void> {
   if (!can(actor, 'attendance.mark')) return;
   const policy = await loadPolicy(db);
@@ -50,17 +88,14 @@ async function autoCheckIn(
     .insert(attendanceDays)
     .values({
       userId: actor.userId,
-      workDate: todayIn('Asia/Kolkata', at),
+      workDate: todayIn(currentCalendar().timeZone, at),
       checkInAt: at,
-      late: isLateCheckIn(
-        indiaTime(at),
-        policy.attendance.dayStart,
-        policy.attendance.graceMinutes,
-      ),
+      late: await isLateAt(db, policy, at),
       checkInLatitude: kept?.latitude ?? null,
       checkInLongitude: kept?.longitude ?? null,
       checkInAccuracyM: kept?.accuracyM ? Math.round(kept.accuracyM) : null,
       autoFromSite: true,
+      tapDelayed: delayed,
     })
     .onConflictDoNothing({ target: [attendanceDays.userId, attendanceDays.workDate] })
     .returning({ id: attendanceDays.id });

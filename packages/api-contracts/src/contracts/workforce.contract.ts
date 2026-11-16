@@ -39,13 +39,27 @@ export const workforceContract = c.router({
   checkIn: {
     method: 'POST',
     path: '/attendance/check-in',
-    body: z.object({ position: positionSchema.nullable().optional() }),
+    body: z.object({
+      position: positionSchema.nullable().optional(),
+      /** When the phone was tapped, for a tap sent later (kept only within limits). */
+      tappedAt: instantSchema.optional(),
+    }),
     responses: { 200: myWorkdaySchema },
   },
   checkOut: {
     method: 'POST',
     path: '/attendance/check-out',
-    body: z.object({ position: positionSchema.nullable().optional() }),
+    body: z.object({
+      position: positionSchema.nullable().optional(),
+      /** When the phone was tapped, for a tap sent later (kept only within limits). */
+      tappedAt: instantSchema.optional(),
+    }),
+    responses: { 200: myWorkdaySchema },
+  },
+  resumeDuty: {
+    method: 'POST',
+    path: '/attendance/resume',
+    body: z.object({}),
     responses: { 200: myWorkdaySchema },
   },
   requestCorrection: {

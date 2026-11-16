@@ -1,7 +1,10 @@
+import { LEAVE_REASONS } from '@oneohm/domain';
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
-import { calendarDateSchema, idSchema, noteSchema } from '../common/primitives';
+import { calendarDateSchema, idSchema, instantSchema, noteSchema } from '../common/primitives';
 import {
+  dutySitesSchema,
+  phoneSourceSchema,
   siteVisitSchema,
   taskSiteSchema,
   travelClaimSchema,
@@ -11,7 +14,15 @@ import { decisionStatusSchema, positionSchema } from '../schemas/workforce.schem
 
 const c = initContract();
 const idParams = z.object({ id: idSchema });
-const reading = z.object({ position: positionSchema.nullable().optional() });
+const reading = z.object({
+  position: positionSchema.nullable().optional(),
+  /** Sent by the phone's own site fence; a tap sends neither. */
+  source: phoneSourceSchema.optional(),
+  /** When the fence event happened on the phone, for one that waited for signal. */
+  tappedAt: instantSchema.optional(),
+  /** Whether the reading the phone sent is a fake (mock) location; sent with every fence event. */
+  mocked: z.boolean().optional(),
+});
 
 /**
  * Site check-in and check-out on a task, the day's travel between sites, and travel
@@ -37,6 +48,42 @@ export const siteActivityContract = c.router({
     pathParams: idParams,
     body: reading,
     responses: { 200: taskSiteSchema },
+  },
+  /** The person ends their own open visit by its id: works after a hand-over or a deleted task. */
+  closeSiteVisit: {
+    method: 'POST',
+    path: '/site-visits/:id/check-out',
+    pathParams: idParams,
+    body: reading,
+    responses: { 200: siteVisitSchema },
+  },
+  /** The person says why they left before the job was done; the manager is told. */
+  leaveReasonSiteVisit: {
+    method: 'POST',
+    path: '/site-visits/:id/leave-reason',
+    pathParams: idParams,
+    body: z.object({ reason: z.enum(LEAVE_REASONS) }),
+    responses: { 200: siteVisitSchema },
+  },
+  /** The person's open visit anywhere, for the Today card; null when not checked in. */
+  myOpenVisit: {
+    method: 'GET',
+    path: '/me/open-visit',
+    responses: { 200: z.object({ visit: siteVisitSchema.nullable() }) },
+  },
+  /** Where the person has work today and a saved pin: the phone fences these. */
+  myDutySites: {
+    method: 'GET',
+    path: '/me/duty-sites',
+    responses: { 200: dutySitesSchema },
+  },
+  /** A manager ends someone's stuck visit, with the reason on record. */
+  forceCloseSiteVisit: {
+    method: 'POST',
+    path: '/site-visits/:id/force-close',
+    pathParams: idParams,
+    body: z.object({ reason: z.string().trim().min(3, 'Say why it is being closed.').max(500) }),
+    responses: { 200: siteVisitSchema },
   },
   saveSiteLocation: {
     method: 'POST',
@@ -100,11 +147,25 @@ export const siteActivityContract = c.router({
     pathParams: idParams,
     responses: { 200: travelDaySchema },
   },
+  voidTravelClaim: {
+    method: 'POST',
+    path: '/travel-claims/:id/void',
+    pathParams: idParams,
+    body: z.object({ reason: noteSchema.min(2, 'Say why.') }),
+    responses: { 200: travelClaimSchema },
+    summary:
+      'Voids an approved claim that is not paid: cancels the bill and reverses its ledger entry.',
+  },
   decideTravelClaim: {
     method: 'POST',
     path: '/travel-claims/:id/decide',
     pathParams: idParams,
-    body: z.object({ approve: z.boolean(), note: noteSchema.nullable().optional() }),
+    body: z.object({
+      approve: z.boolean(),
+      note: noteSchema.nullable().optional(),
+      /** The amount the approver saw; if the claim changed since, the decision is refused (409 `amount_changed`). */
+      expectedAmountPaise: z.number().int().min(0).optional(),
+    }),
     responses: { 200: travelClaimSchema },
   },
 });

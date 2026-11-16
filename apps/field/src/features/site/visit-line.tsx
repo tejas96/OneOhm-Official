@@ -2,7 +2,7 @@ import type { SiteVisit } from '@oneohm/api-contracts';
 import { StatusPill, Text, useTheme } from '@oneohm/mobile-ui';
 import { MapPin, MapPinOff } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
-import { SITE } from '@/copy/site';
+import { FENCE, SITE } from '@/copy/site';
 import { clockTime } from '@/lib/dates';
 
 /** How far from the saved site a check-in was, with the far flag; or why it is unknown. */
@@ -52,6 +52,11 @@ export function VisitLine({ visit }: { readonly visit: SiteVisit }) {
           : SITE.inSince(clockTime(visit.checkInAt))}
       </Text>
       <VisitDistance visit={visit} />
+      {visit.checkInSource !== 'manual' ? (
+        <Text variant="label" tone="tertiary">
+          {FENCE.auto}
+        </Text>
+      ) : null}
     </View>
   );
 }

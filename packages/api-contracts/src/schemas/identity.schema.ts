@@ -21,8 +21,18 @@ export const currentUserSchema = z.object({
   kind: roleKindSchema,
   roles: z.array(roleRefSchema),
   capabilities: z.array(capabilitySchema),
+  /** Someone reports to this person (opens the live map without `people.manage`). */
+  hasReports: z.boolean().optional(),
 });
 export type CurrentUser = z.infer<typeof currentUserSchema>;
+
+/** A person's home or base place, where travel is paid from when the day starts away from an office. */
+export const personBaseSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  label: z.string().trim().max(120).nullable(),
+});
+export type PersonBase = z.infer<typeof personBaseSchema>;
 
 export const personSchema = z.object({
   id: idSchema,
@@ -48,6 +58,13 @@ export const personSchema = z.object({
   loadState: z.enum(['ok', 'full', 'over']),
   /** Location for this person over their roles and the company: on, off, or null to follow. */
   tracking: z.enum(['on', 'off']).nullable(),
+  /** Where travel is paid from when the day starts away from an office (home), null when not saved. Left out for anyone but people.manage holders and the person themself. */
+  base: personBaseSchema.nullable().optional(),
+  /**
+   * Monthly pay in paise for the month sheet's gross pay (Duty Day step 7); null when not set.
+   * Left out for anyone but people.manage and finance holders and the person themself.
+   */
+  monthlyPayPaise: z.number().int().nullable().optional(),
   /** Who the person reports to (PRD 3.12); null for no one. */
   reportsTo: z.object({ id: idSchema, fullName: z.string() }).nullable(),
   /** Whether they have signed in yet (last_active_at is set on the first sign-in). */

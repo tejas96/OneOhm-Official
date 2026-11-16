@@ -90,13 +90,38 @@ describe('attendance places', () => {
     expect(distanceMeters(office, office)).toBe(0);
   });
 
-  it('counts a reading inside the radius, allowing for GPS accuracy', () => {
+  it('counts a reading inside only when the whole accuracy circle fits the fence', () => {
     const near = { latitude: 16.8536, longitude: 74.5815 }; // ~133 m north
     expect(nearestLocation(near, [office])?.inside).toBe(true);
-    const farther = { latitude: 16.8542, longitude: 74.5815, accuracyM: 50 }; // ~200 m
-    expect(nearestLocation(farther, [office])?.inside).toBe(true);
-    expect(nearestLocation({ ...farther, accuracyM: 5 }, [office])?.inside).toBe(false);
+    expect(nearestLocation({ ...near, accuracyM: 10 }, [office])?.inside).toBe(true);
+    // 133 m + 30 m of doubt reaches past the 150 m fence: unsure, never inside.
+    expect(nearestLocation({ ...near, accuracyM: 30 }, [office])?.inside).toBeNull();
     expect(nearestLocation(near, [])).toBeNull();
+  });
+
+  it('does not let poor accuracy make a far reading inside', () => {
+    const farther = { latitude: 16.8542, longitude: 74.5815 }; // ~200 m
+    expect(nearestLocation({ ...farther, accuracyM: 5 }, [office])?.inside).toBe(false);
+    // The old rule added 50 m of slack to the radius and called this inside.
+    expect(nearestLocation({ ...farther, accuracyM: 50 }, [office])?.inside).toBeNull();
+    expect(nearestLocation({ ...farther, accuracyM: 5000 }, [office])?.inside).toBeNull();
+  });
+
+  it('is inside when any place contains the point, not only the nearest', () => {
+    // A wide yard whose centre is farther than the small office, but whose fence holds it.
+    const yard = { id: 'y', name: 'Yard', latitude: 16.8554, longitude: 74.5815, radiusM: 600 };
+    const small = { id: 's', name: 'Gate', latitude: 16.8546, longitude: 74.5815, radiusM: 20 };
+    const point = { latitude: 16.8549, longitude: 74.5815, accuracyM: 3 };
+    const match = nearestLocation(point, [small, yard]);
+    expect(match?.location.id).toBe('y');
+    expect(match?.inside).toBe(true);
+  });
+
+  it('prefers unsure over outside when no place clearly holds the point', () => {
+    const point = { latitude: 16.8542, longitude: 74.5815, accuracyM: 60 }; // ~200 m from office
+    const faraway = { id: 'f', name: 'Far', latitude: 17.5, longitude: 75, radiusM: 100 };
+    expect(nearestLocation(point, [faraway, office])?.inside).toBeNull();
+    expect(nearestLocation(point, [faraway, office])?.location.id).toBe('o');
   });
 
   it('marks a check-in late only after the grace period', () => {

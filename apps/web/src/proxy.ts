@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 const SESSION_COOKIE = 'oneohm_session';
-const PUBLIC_PATHS = ['/sign-in'];
+/** Pages anyone opens without signing in: sign-in, and the customer's "Track live" page. */
+const PUBLIC_PATHS = ['/sign-in', '/track'];
 
 /**
  * Sends visitors without a session cookie to sign-in, keeping where they were going.

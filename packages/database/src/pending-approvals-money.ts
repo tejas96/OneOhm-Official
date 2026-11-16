@@ -12,6 +12,7 @@ import { projects } from './schema/projects.schema';
 import { purchaseRequests, vendorAdvances } from './schema/purchasing.schema';
 import { quotations } from './schema/quotations.schema';
 import { travelClaims } from './schema/site-activity.schema';
+import { travelReviewersOf } from './travel-approvers';
 
 const iso = (value: Date) => value.toISOString();
 const noProject = { projectId: null, projectCode: null } as const;
@@ -74,6 +75,8 @@ async function claimRows(db: DatabaseExecutor): Promise<PendingApprovalRow[]> {
     .innerJoin(users, eq(users.id, travelClaims.userId))
     .leftJoin(projects, eq(projects.id, travelClaims.projectId))
     .where(eq(travelClaims.status, 'pending'));
+  // A claim goes to the person's manager (and cover), HR and finance only (S10).
+  const reviewers = await travelReviewersOf(db, [...new Set(travel.map((row) => row.by))]);
   const requests = await db
     .select({
       id: purchaseRequests.id,
@@ -98,6 +101,7 @@ async function claimRows(db: DatabaseExecutor): Promise<PendingApprovalRow[]> {
       amountPaise: row.amount,
       subject: readableDay(row.day),
       requesterName: row.name,
+      reviewerIds: reviewers.get(row.by) ?? [],
       projectId: row.projectId,
       projectCode: row.code,
     })),

@@ -11,6 +11,8 @@ const TONE: Readonly<Record<ClaimState, PillTone>> = {
   paid: 'done',
   rejected: 'overdue',
   cancelled: 'neutral',
+  voided: 'neutral',
+  withdrawn: 'neutral',
 };
 
 export function ClaimStatus({ claim }: { readonly claim: TravelClaim }) {

@@ -10,5 +10,6 @@ import { ServiceVisitsService } from './service-visits.service';
   imports: [DocumentsModule],
   controllers: [ServiceVisitsController],
   providers: [ServiceVisitsService, ServiceFinishService, ServiceFilesService],
+  exports: [ServiceVisitsService],
 })
 export class ServiceVisitsModule {}

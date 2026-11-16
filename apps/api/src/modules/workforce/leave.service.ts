@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { LeaveImpact, LeaveRequestRecord } from '@oneohm/api-contracts';
 import { leaveRequests, notify, notifyHolders, type Transaction } from '@oneohm/database';
-import { checkHandover } from '@oneohm/domain';
+import { checkHandover, leaveIsPaid } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, eq, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
@@ -83,7 +83,9 @@ export class LeaveService {
       });
     if (impact.overlapsExisting)
       throw conflict('You already have leave on some of these days.', 'overlap');
-    if (impact.balanceAfterHalfDays < 0 && !input.emergency)
+    // Unpaid leave has no yearly limit: it is simply not paid on the month sheet.
+    const kind = policy.leaveTypes.find((type) => type.key === input.leaveType);
+    if (impact.balanceAfterHalfDays < 0 && !input.emergency && leaveIsPaid(kind))
       throw invalid('Not enough leave left of this kind.', { leaveType: 'Over the balance.' });
     if (input.backupUserId === actor.userId)
       throw invalid('Pick someone else to cover.', { backupUserId: 'Not yourself.' });
@@ -293,7 +295,7 @@ export class LeaveService {
         throw invalid('Say why the leave is not approved.', { note: 'Needed to decline.' });
       const outcome = decision.approve
         ? await this.approve(tx, actor, row, decision)
-        : { handed: 0, skipped: false, backupId: row.backupUserId };
+        : { handed: 0, skipped: false, backupId: row.backupUserId, paid: null };
       if (!decision.approve) await dropCover(tx, row, 'the leave was not approved.');
       await notify(
         tx,
@@ -304,6 +306,7 @@ export class LeaveService {
         .update(leaveRequests)
         .set({
           status: decision.approve ? 'approved' : 'rejected',
+          paid: outcome.paid,
           decidedByUserId: actor.userId,
           decidedAt: new Date(),
           decisionNote: decision.note ?? null,
@@ -380,7 +383,9 @@ export class LeaveService {
     }
     const handed = backupId ? await handOverWork(tx, actor.userId, row, backupId, work) : 0;
     await tellProjectManagers(tx, row, work, backupId);
-    return { handed, skipped: check.skipped, backupId };
+    // Paid or not is frozen now, so a later change to the kind never moves this month.
+    const kind = (await loadPolicy(tx)).leaveTypes.find((one) => one.key === row.leaveType);
+    return { handed, skipped: check.skipped, backupId, paid: leaveIsPaid(kind) as boolean | null };
   }
 
   private async one(id: string): Promise<LeaveRequestRecord> {

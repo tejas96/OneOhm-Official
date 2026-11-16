@@ -1,4 +1,11 @@
-import { clearOldJobRuns, type Database } from '@oneohm/database';
+import {
+  clearOldJobRuns,
+  closeForgottenDays,
+  type Database,
+  runTravelMorningJob,
+  sweepDutyAlerts,
+  watchLockedMonths,
+} from '@oneohm/database';
 import type { JobName } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { openMaintenanceVisits } from './after-sales';
@@ -45,7 +52,18 @@ export function jobRunners(
       (await openMaintenanceVisits(db, today())) + (await offerAmcRenewals(db, today())),
     cash_reminders: () => queueCashReminders(db, today()),
     location_cleanup: () => clearOldLocations(db, today()),
+    attendance_autoclose: async () => {
+      const result = await closeForgottenDays(db, today(), timeZone);
+      if (result.quiet > 0 || result.visits > 0)
+        console.info(
+          `Night close: ${result.quiet} older days closed without notices, ${result.visits} old site visits closed.`,
+        );
+      return result.closed + result.quiet + result.visits;
+    },
+    travel_auto_approve: () => runTravelMorningJob(db, today()),
     service_sla: () => queueSlaAlerts(db, new Date(), timeZone),
+    duty_alerts: () => sweepDutyAlerts(db, new Date(), timeZone),
+    month_sheet_watch: () => watchLockedMonths(db, new Date(), timeZone),
     job_runs_cleanup: () => clearOldJobRuns(db),
   };
 }

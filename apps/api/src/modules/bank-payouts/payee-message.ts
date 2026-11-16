@@ -50,6 +50,8 @@ export async function tellPayee(
   utr: string | null,
 ): Promise<PayeeTold> {
   const payee = await payeeOf(tx, row.payableId);
+  // An employee hears in the app (the "travel paid" alert), not by the vendor message.
+  if (payee?.kind === 'employee') return 'off';
   if (!payee?.phone) return 'no_phone';
   const [config] = await tx
     .select({ active: messageTemplates.active })

@@ -18,6 +18,7 @@ describe('billStatus', () => {
   it('shows one status per bill', () => {
     expect(billStatus({ status: 'pending', paidPaise: 0 })).toBe('pending');
     expect(billStatus(approved)).toBe('toPay');
+    expect(billStatus({ status: 'cancelled', paidPaise: 0 })).toBe('cancelled');
     expect(billStatus({ status: 'approved', paidPaise: 500 })).toBe('partPaid');
     expect(billStatus({ status: 'paid', paidPaise: 900 }, payout('came_back'))).toBe('paid');
   });

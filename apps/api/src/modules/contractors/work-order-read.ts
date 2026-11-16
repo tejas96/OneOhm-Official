@@ -15,6 +15,7 @@ import {
 import { settleWorkOrder } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { billStatus } from '../../common/bill-status';
 import { notFound } from '../../common/http/errors';
 import { contractorTdsBp } from './contractor-tds';
 
@@ -68,7 +69,7 @@ async function payableRef(db: DatabaseExecutor, id: string | null) {
   if (!id) return null;
   const [row] = await db.select().from(payables).where(eq(payables.id, id));
   return row
-    ? { id: row.id, status: row.status, amountPaise: row.amountPaise, dueOn: row.dueOn }
+    ? { id: row.id, status: billStatus(row.status), amountPaise: row.amountPaise, dueOn: row.dueOn }
     : null;
 }
 
@@ -163,7 +164,7 @@ export async function presentWorkOrder(db: DatabaseExecutor, id: string): Promis
       note: row.note,
       createdAt: row.createdAt.toISOString(),
       payableId: row.payableId,
-      payableStatus: status,
+      payableStatus: billStatus(status),
     })),
     settlement,
     payable: await payableRef(db, order.payableId),

@@ -5,6 +5,7 @@ import { ReportsModule } from '../reports/reports.module';
 import { BankHoldService } from './bank-hold.service';
 import { BankPayoutsController } from './bank-payouts.controller';
 import { BankPayoutsService } from './bank-payouts.service';
+import { EmployeeBankService } from './employee-bank.service';
 import { PayoutAdviceService } from './payout-advice.service';
 import { createPayoutGateway, PAYOUT_GATEWAY } from './payout-gateway';
 import { PayoutIpService } from './payout-ip.service';
@@ -20,6 +21,7 @@ import { PayoutSyncService } from './payout-sync.service';
     BankPayoutsService,
     PayoutRequestsService,
     BankHoldService,
+    EmployeeBankService,
     PayoutAdviceService,
     PayoutSyncService,
     PayoutIpService,

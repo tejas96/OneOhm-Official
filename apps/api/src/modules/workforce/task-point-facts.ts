@@ -9,11 +9,12 @@ import {
 import type { TaskPointFacts } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { currentCalendar } from '../../common/calendar';
 import { reviewHistory } from './review-history';
 
 type TaskRow = typeof projectTasks.$inferSelect;
 
-const indiaDay = (instant: Date) => todayIn('Asia/Kolkata', instant);
+const indiaDay = (instant: Date) => todayIn(currentCalendar().timeZone, instant);
 
 /**
  * Who earns a finished task's points and the facts it is judged on (spec 3.7), read in

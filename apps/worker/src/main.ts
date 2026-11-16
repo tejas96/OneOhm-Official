@@ -10,6 +10,7 @@ import { loadConfig } from './config';
 import { JobRetryLoop } from './relay/job-retry';
 import { OutboxRelay } from './relay/outbox-relay';
 import { ensureDailyOperationsSchedule } from './schedules/daily-operations.schedule';
+import { ensureDutyAlertsSchedule } from './schedules/duty-alerts.schedule';
 import { ensureMarketingSyncSchedule } from './schedules/marketing-sync.schedule';
 import { ensureServiceSlaSchedule } from './schedules/service-sla.schedule';
 import { ensureTimedRemindersSchedule } from './schedules/timed-reminders.schedule';
@@ -73,6 +74,10 @@ async function main(): Promise<void> {
     timeZone: config.BUSINESS_TIMEZONE,
   });
   await ensureTimedRemindersSchedule(client, {
+    taskQueue: config.TEMPORAL_TASK_QUEUE,
+    timeZone: config.BUSINESS_TIMEZONE,
+  });
+  await ensureDutyAlertsSchedule(client, {
     taskQueue: config.TEMPORAL_TASK_QUEUE,
     timeZone: config.BUSINESS_TIMEZONE,
   });

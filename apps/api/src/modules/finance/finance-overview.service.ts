@@ -3,7 +3,7 @@ import type { FinanceOverview } from '@oneohm/api-contracts';
 import { payablePayments, payables, payments, vendorAdvances } from '@oneohm/database';
 import { ACCOUNT, AGEING_BUCKETS, leftToPay } from '@oneohm/domain';
 import { addDays, todayIn } from '@oneohm/shared';
-import { and, eq, gte, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../config/core.module';
 import { accountBalances } from './ledger-read.service';
 import { ReceivablesService } from './receivables.service';
@@ -49,7 +49,10 @@ export class FinanceOverviewService {
     const sumOf = (filter: (item: (typeof owed)[number]) => boolean) =>
       owed.filter(filter).reduce((sum, item) => sum + item.outstandingPaise, 0);
 
-    const bills = await this.db.select().from(payables).where(ne(payables.status, 'paid'));
+    const bills = await this.db
+      .select()
+      .from(payables)
+      .where(inArray(payables.status, ['pending', 'approved']));
     const weekEnd = addDays(today, 7);
     const billSum = (filter: (bill: (typeof bills)[number]) => boolean) =>
       bills.filter(filter).reduce((sum, bill) => sum + leftToPay(bill), 0);

@@ -20,21 +20,46 @@ export const ATTENDANCE = {
     inside ? `At ${place}` : `${metres} m from ${place}`,
   noPlace: 'Location not shared',
   correction: 'Wrong time? Ask for a correction',
-  consentTitle: 'Share your location during work?',
+  consentTitle: 'Record your route while you are on duty?',
+  /** Shown on top when the person agreed to older words: the words changed, so they are asked again. */
+  consentChanged: 'We changed how location works. Please read this and answer again.',
   /**
-   * The consent words, version 2 (LOCATION_CONSENT_VERSION in @oneohm/domain). Change
-   * them only together with that version, so everyone is asked again.
+   * The consent words, version 3 (LOCATION_CONSENT_VERSION in @oneohm/domain). Change
+   * them only together with that version, so everyone is asked again. The 2 minutes and
+   * 100 m are the recording settings in features/duty/duty-settings.ts.
    */
   consentBody: (days: number) =>
-    `OneOhm reads where you are only when you check in or out (for the day or at a customer's site) and when you take a site photo, and only during working hours. It confirms attendance and site visits and works out your travel. Nothing is tracked in between or after work, and the location is deleted after ${days} days.`,
+    `While you are on duty, from check-in (Start) to check-out (End), OneOhm records where you are about every 2 minutes or every 100 metres. It keeps recording in the background; if you force-close the app on iPhone, it stops until you open it again. It stops when you end duty. Your managers can see it. It also reads your location when you check in or out and when you take a site photo. Nothing is recorded before you start or after you end duty. The location is deleted after ${days} days.`,
   allow: 'Share during work',
   notNow: 'Not now',
   locationTitle: 'Location during work',
-  sharing: 'Location shared at check-ins and site photos',
+  sharing: 'Location recorded while you are on duty',
   notSharing: 'Location not shared. You can still check in.',
   stopSharing: 'Stop sharing',
   noFix: 'Your location could not be read. You are checked in without it.',
   permissionDenied: 'Location is off for OneOhm. You are checked in without it.',
+  notSaved: {
+    no_reading: 'Your location was not sent, so this is saved without it.',
+    no_consent: 'Location sharing is off, so this is saved without your location.',
+    policy_off: 'Location is not needed for you right now. This is saved without it.',
+    outside_hours: 'This is outside working hours, so your location was not saved.',
+  },
+  fenceOutside: 'Saved. You seem to be away from your usual place. Your manager can see this.',
+  fenceUnsure: 'Saved. We are not sure where you are, as the location is not very accurate.',
+  stillIn: (when: string) => `Still checked in from ${when}`,
+  confirmOutTitle: 'End your day?',
+  confirmOutBody: 'You can resume today.',
+  confirmOutYes: 'End day',
+  confirmOutNo: 'Keep working',
+  resume: 'Resume duty',
+  resumed: 'Welcome back. Your day is open again.',
+  autoClosed: 'Your day ended automatically because you did not check out.',
+  fixTimes: 'Fix times',
+  queuedToast: 'Saved, will send when online.',
+  queued: (time: string) => `Saved at ${time}. Will send when you are online.`,
+  sentLater: 'Your saved attendance was sent.',
+  tapTooOld: (kind: 'in' | 'out', time: string) =>
+    `${kind === 'in' ? 'Check-in' : 'Check-out'} from ${time} was too old to send. Ask for a correction.`,
 } as const;
 
 export const CORRECTION = {
@@ -50,6 +75,14 @@ export const CORRECTION = {
   badTime: 'Use HH:MM, for example 09:25.',
   notYet: 'This time has not come yet.',
   outBeforeIn: 'Check-out must be after check-in.',
+  day: 'Which day?',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  otherDay: 'Another day',
+  dayHint: (days: number) => `Any day in the last ${days} days, as YYYY-MM-DD.`,
+  badDay: (days: number) => `Pick a day from the last ${days} days, up to today.`,
+  pendingExists:
+    'You already asked for a correction for that day. Wait for your manager to decide.',
 } as const;
 
 export const LEAVE = {
@@ -59,6 +92,7 @@ export const LEAVE = {
   loading: 'Loading your leave',
   left: (halves: number) => days(halves),
   daysLeft: 'left',
+  unpaidTaken: 'unpaid, this year',
   usedPending: (used: number, pending: number) =>
     pending > 0 ? `${days(used)} used · ${days(pending)} waiting` : `${days(used)} used`,
   request: 'Request leave',
@@ -128,6 +162,7 @@ export const REQUEST_LEAVE = {
   counted: (halves: number) => `${days(halves)} of leave`,
   after: (halves: number) =>
     halves < 0 ? `${days(-halves)} over your balance` : `${days(halves)} left after this`,
+  unpaid: (halves: number) => `Unpaid leave: ${days(halves)}. Not paid on your month sheet.`,
   overlap: 'You already have leave on some of these days.',
   holidays: (names: string) => `Not counted, holiday: ${names}.`,
   noWorkingDays: 'These dates are all weekly offs or holidays. Pick other days.',

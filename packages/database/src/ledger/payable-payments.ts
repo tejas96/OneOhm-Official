@@ -2,6 +2,7 @@ import { leftToPay, type MoneyOutMethod } from '@oneohm/domain';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseExecutor } from '../client';
 import { payablePayments, payables } from '../schema';
+import { tellTravelPaid } from '../travel-notices';
 import { postPayablePayment, reversePayablePaymentEntry } from './payable-payment-postings';
 
 export interface NewPayablePayment {
@@ -113,6 +114,8 @@ export async function recordPayablePayment(
   if (!payment) return null;
   await postPayablePayment(db, payment.id, input.userId);
   const change = await refreshPaidState(db, input.payableId);
+  // Travel money paid, by hand or by bank transfer: the worker is told (S8).
+  if (change === 'paid') await tellTravelPaid(db, input.payableId);
   return {
     paymentId: payment.id,
     leftBeforePaise: leftToPay(bill),

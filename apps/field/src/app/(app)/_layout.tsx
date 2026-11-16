@@ -1,6 +1,9 @@
 import { useTheme } from '@oneohm/mobile-ui';
 import { Stack } from 'expo-router';
 import { PushAlerts } from '@/features/alerts/push-alerts';
+import { TapQueueSync } from '@/features/attendance/tap-sync';
+import { DutyRecorder } from '@/features/duty/duty-sync';
+import { SiteFence } from '@/features/site-fence/fence-sync';
 import { UploadQueueProvider } from '@/features/uploads/upload-queue';
 
 /**
@@ -12,6 +15,9 @@ export default function SignedInLayout() {
   return (
     <UploadQueueProvider>
       <PushAlerts />
+      <TapQueueSync />
+      <DutyRecorder />
+      <SiteFence />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -26,6 +32,7 @@ export default function SignedInLayout() {
         <Stack.Screen name="leave/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="alerts" />
         <Stack.Screen name="rewards" />
+        <Stack.Screen name="month" />
         <Stack.Screen name="search" />
         <Stack.Screen name="chats/index" />
         <Stack.Screen name="chats/[id]" />

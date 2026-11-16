@@ -20,26 +20,37 @@ export interface TravelLeg {
   readonly toId: string;
   readonly fromLabel: string;
   readonly toLabel: string;
-  /** Null when either end has no location: the leg is shown but not paid. */
+  /** Null only on a claim made before stops without a location were skipped. */
   readonly distanceM: number | null;
 }
 
-/** Legs between consecutive stops, in the order given (sort the stops by time first). */
+/**
+ * Legs between consecutive stops, in the order given (sort the stops by time first).
+ * A stop with no location cannot be measured, so it is skipped: the legs connect the
+ * previous stop that has a location to the next one, and both of its neighbours are
+ * still paid (live review S2). Every leg returned therefore has a distance.
+ */
 export function travelLegs(stops: readonly TravelStop[]): TravelLeg[] {
+  const located = stops.filter((stop) => stop.point !== null);
   const legs: TravelLeg[] = [];
-  for (let index = 1; index < stops.length; index += 1) {
-    const from = stops[index - 1];
-    const to = stops[index];
-    if (!from || !to) continue;
+  for (let index = 1; index < located.length; index += 1) {
+    const from = located[index - 1];
+    const to = located[index];
+    if (!from?.point || !to?.point) continue;
     legs.push({
       fromId: from.id,
       toId: to.id,
       fromLabel: from.label,
       toLabel: to.label,
-      distanceM: from.point && to.point ? distanceMeters(from.point, to.point) : null,
+      distanceM: distanceMeters(from.point, to.point),
     });
   }
   return legs;
+}
+
+/** The stops with no location, in order, for a note that they are not counted. */
+export function unlocatedStops(stops: readonly TravelStop[]): TravelStop[] {
+  return stops.filter((stop) => stop.point === null);
 }
 
 /** Metres travelled over the legs that have both ends located. */
@@ -61,4 +72,44 @@ export function orderStops(stops: readonly TravelStop[]): TravelStop[] {
       ? left.at.localeCompare(right.at)
       : rank[left.kind] - rank[right.kind],
   );
+}
+
+/** One day's travel as it is saved when the day closes (live review S3, S4). */
+export interface TravelSummary {
+  readonly distanceM: number;
+  readonly ratePaisePerKm: number;
+  readonly visits: number;
+  readonly legs: readonly { fromLabel: string; toLabel: string; distanceM: number | null }[];
+}
+
+/** Measures the day: stops in time order, the km rate in force that day, the visit count. */
+export function summariseTravel(
+  stops: readonly TravelStop[],
+  ratePaisePerKm: number,
+  visits: number,
+): TravelSummary {
+  const legs = visits > 0 ? travelLegs(stops) : [];
+  return {
+    distanceM: travelDistanceM(legs),
+    ratePaisePerKm,
+    visits,
+    legs: legs.map(({ fromLabel, toLabel, distanceM }) => ({ fromLabel, toLabel, distanceM })),
+  };
+}
+
+/**
+ * Why a day cannot be claimed, or null when it can (live review S5). A claim is for a
+ * closed day only: the person ended it, the night job did, or a correction did.
+ */
+export function claimBlocker(day: {
+  readonly closed: boolean;
+  readonly amountPaise: number;
+  readonly live: boolean;
+  readonly future: boolean;
+}): 'future' | 'open_day' | 'claimed' | 'no_travel' | null {
+  if (day.future) return 'future';
+  if (day.live) return 'claimed';
+  if (!day.closed) return 'open_day';
+  if (day.amountPaise <= 0) return 'no_travel';
+  return null;
 }

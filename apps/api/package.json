@@ -8,8 +8,9 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput & node --watch-path=dist --enable-source-maps dist/main.js",
     "start": "node --enable-source-maps dist/main.js",
     "forms:publish": "tsc -p tsconfig.build.json && node --env-file-if-exists=../../.env dist/scripts/forms-publish.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests src"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tools/duty-sim/tsconfig.json",
+    "test": "vitest run --passWithNoTests src test/tools",
+    "sim:duty": "tsx test/tools/duty-sim/main.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
@@ -43,6 +44,7 @@
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/node": "catalog:",
+    "tsx": "4.23.15",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

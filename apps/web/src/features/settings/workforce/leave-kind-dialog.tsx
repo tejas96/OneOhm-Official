@@ -1,7 +1,7 @@
 'use client';
 
 import type { WorkforcePolicyInput } from '@oneohm/api-contracts';
-import { Button, Dialog, Field, Input } from '@oneohm/design-system/web';
+import { Button, Dialog, Field, Input, Switch } from '@oneohm/design-system/web';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { NumberInput } from '../number-input';
@@ -39,6 +39,7 @@ export function LeaveKindDialog({
   const [key, setKey] = useState('');
   const [keyTouched, setKeyTouched] = useState(false);
   const [days, setDays] = useState<number | null>(12);
+  const [paid, setPaid] = useState(true);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
@@ -46,7 +47,8 @@ export function LeaveKindDialog({
     setLabel(kind?.label ?? '');
     setKey(kind?.key ?? '');
     setKeyTouched(kind !== null);
-    setDays(kind?.daysPerYear ?? 12);
+    setDays(kind ? kind.daysPerYear : 12);
+    setPaid(kind?.paid ?? true);
     setChecked(false);
   }, [open, kind]);
 
@@ -63,8 +65,8 @@ export function LeaveKindDialog({
 
   const done = () => {
     setChecked(true);
-    if (errors.label || errors.key || errors.days || days === null) return;
-    onSave({ key: shownKey, label: label.trim(), daysPerYear: days });
+    if (errors.label || errors.key || (paid && errors.days) || days === null) return;
+    onSave({ key: shownKey, label: label.trim(), daysPerYear: paid ? days : 0, paid });
   };
 
   return (
@@ -105,14 +107,22 @@ export function LeaveKindDialog({
             }}
           />
         </Field>
-        <Field
-          label={t('days')}
-          hint={t('daysHint')}
-          error={checked ? errors.days : null}
-          className="max-w-xs"
-        >
-          <NumberInput unit="whole" value={days} onValueChange={setDays} />
-        </Field>
+        <Switch
+          checked={paid}
+          onCheckedChange={setPaid}
+          label={t('paid')}
+          description={t('paidHint')}
+        />
+        {paid && (
+          <Field
+            label={t('days')}
+            hint={t('daysHint')}
+            error={checked ? errors.days : null}
+            className="max-w-xs"
+          >
+            <NumberInput unit="whole" value={days} onValueChange={setDays} />
+          </Field>
+        )}
       </div>
     </Dialog>
   );

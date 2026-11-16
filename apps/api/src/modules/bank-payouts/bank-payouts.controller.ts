@@ -6,6 +6,7 @@ import { apiContract } from '../../contract';
 import { pdfBody } from '../reports/reports.controller';
 import { BankHoldService } from './bank-hold.service';
 import { BankPayoutsService } from './bank-payouts.service';
+import { EmployeeBankService } from './employee-bank.service';
 import { PayoutAdviceService } from './payout-advice.service';
 import { PayoutIpService } from './payout-ip.service';
 import { PayoutMatchService } from './payout-match.service';
@@ -17,6 +18,7 @@ export class BankPayoutsController {
     private readonly payouts: BankPayoutsService,
     private readonly requests: PayoutRequestsService,
     private readonly holds: BankHoldService,
+    private readonly employeeBank: EmployeeBankService,
     private readonly advice: PayoutAdviceService,
     private readonly ip: PayoutIpService,
     private readonly match: PayoutMatchService,
@@ -49,6 +51,10 @@ export class BankPayoutsController {
         await this.holds.release(actor, params.kind, params.id);
         return { status: 204, body: undefined };
       },
+      saveEmployeeBank: async ({ params, body }) => ({
+        status: 200,
+        body: await this.employeeBank.save(actor, params.id, body),
+      }),
       payoutSetup: async () => {
         const setup = await this.payouts.setup(actor);
         return { status: 200, body: { ...setup, ...(await this.ip.forSetup(setup)) } };

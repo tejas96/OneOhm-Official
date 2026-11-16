@@ -1,17 +1,6 @@
-import type { Notice } from '@oneohm/database';
+import { daySpan, type Notice } from '@oneohm/database';
 
-const dayLabel = new Intl.DateTimeFormat('en-IN', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-});
-
-/** "Mon, 9 Nov", or "Mon, 9 Nov – Tue, 10 Nov" for a range. */
-export function daySpan(from: string, to: string): string {
-  const one = (date: string) => dayLabel.format(new Date(`${date}T00:00:00Z`));
-  return from === to ? one(from) : `${one(from)} – ${one(to)}`;
-}
+export { daySpan };
 
 interface TaskRef {
   readonly id: string;

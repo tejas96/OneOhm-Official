@@ -14,11 +14,12 @@ import {
 import { isMissedLine } from '@oneohm/domain';
 import { monthOf, monthRange, previousMonth } from '@oneohm/shared';
 import { and, asc, eq, gte, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { currentCalendar } from '../../common/calendar';
 
 /** A point line's India day falls in the month. */
 export function inMonth(column: typeof pointsEntries.createdAt, month: string): SQL {
   const { start, end } = monthRange(month);
-  return sql`(${column} at time zone 'Asia/Kolkata')::date between ${start}::date and ${end}::date`;
+  return sql`(${column} at time zone ${currentCalendar().timeZone})::date between ${start}::date and ${end}::date`;
 }
 
 /** A judged part was earned unless the shared rule reads it as missed (spec 3.7). */
@@ -94,7 +95,7 @@ export async function readMonth(db: DatabaseExecutor, month: string): Promise<Mo
       .from(stageRatingPeople)
       .innerJoin(stageRatings, eq(stageRatings.id, stageRatingPeople.ratingId))
       .where(
-        sql`(${stageRatings.createdAt} at time zone 'Asia/Kolkata')::date between ${start}::date and ${end}::date`,
+        sql`(${stageRatings.createdAt} at time zone ${currentCalendar().timeZone})::date between ${start}::date and ${end}::date`,
       )
       .groupBy(stageRatingPeople.userId),
     db

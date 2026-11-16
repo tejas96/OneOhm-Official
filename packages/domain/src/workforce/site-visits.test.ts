@@ -107,14 +107,15 @@ describe('travel and reimbursement', () => {
     expect(travelDistanceM(legs)).toBe(1042);
   });
 
-  it('shows a leg without a location but pays nothing for it', () => {
+  it('skips a stop without a location and still pays the legs around it (S2)', () => {
     const legs = travelLegs([
       stop('a', 'visit', '2026-11-02T06:00:00Z', site),
       stop('b', 'visit', '2026-11-02T07:00:00Z', null),
       stop('c', 'visit', '2026-11-02T08:00:00Z', halfKmEast),
     ]);
-    expect(legs.map((leg) => leg.distanceM)).toEqual([null, null]);
-    expect(travelDistanceM(legs)).toBe(0);
+    expect(legs.map((leg) => [leg.fromId, leg.toId])).toEqual([['a', 'c']]);
+    expect(legs.map((leg) => leg.distanceM)).toEqual([500]);
+    expect(travelDistanceM(legs)).toBe(500);
   });
 
   it('pays the rate per km on the metres, to the nearest paisa', () => {
@@ -143,6 +144,47 @@ describe('workforce policy defaults', () => {
       ratePaisePerKm: 500,
       hoursMarginMinutes: 60,
       pinTrustM: 100,
+      autoClaim: true,
+      autoApprove: false,
+      autoApproveMaxKm: 150,
+      autoApproveMaxPaise: 150_000,
+      routeCapRatio: 1.6,
+      autoSiteVisits: true,
+      siteFenceM: 150,
+      baseStartMaxKm: 5,
+      commuteDeductKm: 0,
+      unknownStopMinutes: 45,
+      customerVisitMessages: true,
+    });
+  });
+
+  it('fills the automatic site visit rules into a policy saved with only the older travel rules', () => {
+    const { autoSiteVisits: _a, siteFenceM: _f, ...older } = DEFAULT_WORKFORCE_POLICY.travel;
+    const filled = withPolicyDefaults({ ...DEFAULT_WORKFORCE_POLICY, travel: older as never });
+    expect(filled.travel).toMatchObject({ autoSiteVisits: true, siteFenceM: 150 });
+  });
+
+  it('fills the start place and commute rules into a policy saved before they existed', () => {
+    const { baseStartMaxKm: _b, commuteDeductKm: _c, ...older } = DEFAULT_WORKFORCE_POLICY.travel;
+    const filled = withPolicyDefaults({ ...DEFAULT_WORKFORCE_POLICY, travel: older as never });
+    expect(filled.travel).toMatchObject({ baseStartMaxKm: 5, commuteDeductKm: 0 });
+  });
+
+  it('fills the automatic claim rules into a policy saved with only the older travel rules', () => {
+    const filled = withPolicyDefaults({
+      ...DEFAULT_WORKFORCE_POLICY,
+      travel: {
+        farFromSiteM: 200,
+        ratePaisePerKm: 800,
+        hoursMarginMinutes: 30,
+        pinTrustM: 50,
+      } as never,
+    });
+    expect(filled.travel).toMatchObject({
+      ratePaisePerKm: 800,
+      autoClaim: true,
+      autoApprove: false,
+      routeCapRatio: 1.6,
     });
   });
 });

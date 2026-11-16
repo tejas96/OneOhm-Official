@@ -15,6 +15,12 @@ describe('buildThemeCss', () => {
     expect(css).toContain('--color-party-discom: var(--oh-party-discom);');
   });
 
+  it('exposes the live map duty colours in both themes', () => {
+    expect(css).toContain('--color-duty-moving: var(--oh-duty-moving);');
+    expect(css).toContain('--oh-duty-gap: #C4432C;');
+    expect(css).toContain('--oh-duty-gap: #E2735C;');
+  });
+
   it('keeps the deep ocean available in any theme', () => {
     expect(css).toMatch(/\.oh-ocean \{[^}]*--oh-panel: #05344D;/);
   });

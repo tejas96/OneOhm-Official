@@ -1,4 +1,5 @@
 import { Controller } from '@nestjs/common';
+import type { LocationResult } from '@oneohm/api-contracts';
 import { attendanceCorrections, leaveRequests } from '@oneohm/database';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { eq } from 'drizzle-orm';
@@ -23,7 +24,10 @@ export class WorkforceController {
   handler(@CurrentActor() actor: Actor) {
     const mark = () => assertCan(actor, 'attendance.mark');
     const approve = () => assertCan(actor, 'leave.approve');
-    const day = async () => ({ status: 200 as const, body: await this.workday.get(actor) });
+    const day = async (locationResult?: LocationResult) => ({
+      status: 200 as const,
+      body: { ...(await this.workday.get(actor)), ...(locationResult ? { locationResult } : {}) },
+    });
     return tsRestHandler(apiContract.workforce, {
       myWorkday: async () => {
         mark();
@@ -37,12 +41,15 @@ export class WorkforceController {
       },
       checkIn: async ({ body }) => {
         mark();
-        await this.attendance.checkIn(actor, body.position);
-        return day();
+        return day(await this.attendance.checkIn(actor, body.position, body.tappedAt));
       },
       checkOut: async ({ body }) => {
         mark();
-        await this.attendance.checkOut(actor, body.position);
+        return day(await this.attendance.checkOut(actor, body.position, body.tappedAt));
+      },
+      resumeDuty: async () => {
+        mark();
+        await this.attendance.resume(actor);
         return day();
       },
       requestCorrection: async ({ body }) => {

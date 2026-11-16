@@ -1,5 +1,12 @@
 import type { CurrentUser } from '@oneohm/api-contracts';
-import { type Database, roleCapabilities, roles, userRoles, users } from '@oneohm/database';
+import {
+  type Database,
+  reportingLines,
+  roleCapabilities,
+  roles,
+  userRoles,
+  users,
+} from '@oneohm/database';
 import { type Capability, isCapability, type RoleKind } from '@oneohm/domain';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -9,11 +16,20 @@ const KIND_ORDER: readonly RoleKind[] = ['staff', 'partner', 'reseller'];
 export async function loadCurrentUser(db: Database, userId: string): Promise<CurrentUser | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (user?.status !== 'active') return null;
-  const roleRows = await db
-    .select({ id: roles.id, key: roles.key, name: roles.name, kind: roles.kind })
-    .from(userRoles)
-    .innerJoin(roles, eq(roles.id, userRoles.roleId))
-    .where(and(eq(userRoles.userId, userId), isNull(roles.archivedAt)));
+  const [roleRows, reports] = await Promise.all([
+    db
+      .select({ id: roles.id, key: roles.key, name: roles.name, kind: roles.kind })
+      .from(userRoles)
+      .innerJoin(roles, eq(roles.id, userRoles.roleId))
+      .where(and(eq(userRoles.userId, userId), isNull(roles.archivedAt))),
+    // One row at most: whether an active person reports to this one (the live map's menu entry).
+    db
+      .select({ userId: reportingLines.userId })
+      .from(reportingLines)
+      .innerJoin(users, and(eq(users.id, reportingLines.userId), eq(users.status, 'active')))
+      .where(eq(reportingLines.managerUserId, userId))
+      .limit(1),
+  ]);
   const grants =
     roleRows.length === 0
       ? []
@@ -39,5 +55,6 @@ export async function loadCurrentUser(db: Database, userId: string): Promise<Cur
     kind,
     roles: roleRows,
     capabilities: capabilities.sort(),
+    hasReports: reports.length > 0,
   };
 }

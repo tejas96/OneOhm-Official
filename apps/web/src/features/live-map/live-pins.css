@@ -1,0 +1,216 @@
+/* Worker and site pins on the live map. Each worker pin sets `--tone` to its state colour. */
+
+/* Worker: a 40 px disc centred on the point, its ring in the state's colour. */
+.live-worker-body {
+  position: absolute;
+  left: -20px;
+  top: -20px;
+  width: 40px;
+  height: 40px;
+  transition: transform var(--duration-slow) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.live-worker-disc {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--oh-on-accent);
+  font: 600 0.8125rem / 1 var(--font-sans);
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 0 0 2.5px var(--oh-raised),
+    0 0 0 5px var(--tone),
+    var(--oh-shadow-e2);
+  transition: box-shadow var(--duration-slow) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+.live-worker-halo {
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  background: var(--tone);
+  opacity: 0;
+}
+/* Lost signal: a broken ring and a quieter face. */
+.live-worker[data-state="gap"] .live-worker-disc {
+  box-shadow:
+    0 0 0 2.5px var(--oh-raised),
+    var(--oh-shadow-e2);
+  outline: 2.5px dashed var(--tone);
+  outline-offset: 2px;
+  filter: saturate(0.45);
+}
+.live-worker-glyph {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  background: var(--tone);
+  color: var(--oh-raised);
+  box-shadow: 0 0 0 2px var(--oh-raised);
+}
+.live-worker-glyph svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.6;
+}
+.live-worker[data-selected] .live-worker-body {
+  transform: translateY(-6px) scale(1.14);
+}
+.live-worker[data-selected] .live-worker-disc {
+  box-shadow:
+    0 0 0 2.5px var(--oh-raised),
+    0 0 0 5px var(--tone),
+    0 0 0 11px color-mix(in oklab, var(--tone) 24%, transparent),
+    0 14px 28px -8px color-mix(in oklab, var(--tone) 70%, transparent);
+}
+
+/* The caption under a pin: first name, km today, battery. */
+.live-caption {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--oh-raised) 92%, transparent);
+  color: var(--oh-ink);
+  font: 500 0.75rem / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--oh-shadow-e2);
+  pointer-events: none;
+  /* Shown by PinLayout (data-caption) when it fits; fades, never jumps. */
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    visibility 0s linear var(--duration-base);
+}
+/* Pointing at a pin (or focusing it) shows its caption and lifts it over its neighbours. */
+.live-worker {
+  z-index: 10;
+}
+.live-worker[data-state="moving"] {
+  z-index: 20;
+}
+.live-worker[data-alerts] {
+  z-index: 22;
+}
+.live-worker[data-selected] {
+  z-index: 30;
+}
+.live-worker:hover,
+.live-worker:focus-visible {
+  z-index: 45;
+}
+.live-worker:hover .live-caption,
+.live-worker:focus-visible .live-caption,
+.live-worker[data-caption] .live-caption {
+  opacity: 1;
+  visibility: inherit;
+  transition: opacity var(--duration-base) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* Open alerts about the person: a small badge on the disc, red when one needs acting on now. */
+.live-worker-alerts {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--oh-duty-idle);
+  color: var(--oh-raised);
+  font: 700 0.6875rem / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--oh-raised);
+}
+.live-worker-alerts[data-red] {
+  background: var(--oh-duty-gap);
+}
+.live-caption::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tone);
+}
+
+/* Site: a small house; the anchor is the house's centre. */
+.live-site {
+  width: 0;
+  height: 0;
+}
+.live-site-house {
+  position: absolute;
+  left: -13px;
+  top: -14px;
+  width: 26px;
+  height: 28px;
+  fill: var(--oh-raised);
+  stroke: var(--oh-ink-muted);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.18));
+  transition: transform var(--duration-slow) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.live-site[data-status="in_progress"] .live-site-house {
+  fill: var(--oh-duty-visit);
+  stroke: var(--oh-raised);
+}
+.live-site[data-status="done"] .live-site-house {
+  fill: var(--oh-done-solid);
+  stroke: var(--oh-raised);
+}
+.live-site[data-status="late"] .live-site-house {
+  stroke: var(--oh-duty-gap);
+}
+.live-site[data-selected] .live-site-house {
+  transform: translateY(-4px) scale(1.18);
+}
+.live-site-halo {
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--oh-duty-visit);
+  opacity: 0;
+}
+.live-site-mark {
+  position: absolute;
+  left: -6px;
+  top: -3px;
+  color: var(--oh-raised);
+}
+.live-site-mark svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3.2;
+}
+.live-site-late {
+  position: absolute;
+  left: 6px;
+  top: -18px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--oh-duty-gap);
+  box-shadow: 0 0 0 2px var(--oh-raised);
+}

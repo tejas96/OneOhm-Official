@@ -143,7 +143,7 @@ async function goingOut(db: Database, today: string, dueSoonDays: number) {
     })
     .from(payables)
     .leftJoin(workOrderAdvances, eq(workOrderAdvances.payableId, payables.id))
-    .where(ne(payables.status, 'paid'));
+    .where(inArray(payables.status, ['pending', 'approved']));
   const total = (rows: typeof outgoing) => rows.reduce((sum, row) => sum + row.amount, 0);
   return {
     toVendorsPaise: total(outgoing.filter((row) => row.party === 'vendor')),

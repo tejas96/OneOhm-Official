@@ -7,7 +7,14 @@ import { ATTENDANCE } from '@/copy/workforce';
 import { useConsent } from './use-workday';
 
 /** Asked once, in plain words, before any location is shared (PRD 4.3, privacy). */
-export function ConsentPrompt({ days }: { readonly days: number }) {
+export function ConsentPrompt({
+  days,
+  stale = false,
+}: {
+  readonly days: number;
+  /** They agreed to older words: say the words changed. */
+  readonly stale?: boolean;
+}) {
   const theme = useTheme();
   const consent = useConsent();
   const toast = useToast();
@@ -27,6 +34,11 @@ export function ConsentPrompt({ days }: { readonly days: number }) {
         <MapPin size={16} color={theme.colors.accent} />
         <Text variant="titleMd">{ATTENDANCE.consentTitle}</Text>
       </View>
+      {stale ? (
+        <Text variant="bodySm" tone="accent">
+          {ATTENDANCE.consentChanged}
+        </Text>
+      ) : null}
       <Text variant="bodySm" tone="secondary">
         {ATTENDANCE.consentBody(days)}
       </Text>

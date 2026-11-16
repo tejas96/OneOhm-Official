@@ -15,7 +15,7 @@ export const TRACKING = {
   policyOff: 'Location off for everyone',
   // Short enough for a phone pill; the working hours show on the card itself.
   outsideHours: 'Location off outside work hours',
-  explainOn: 'Read only when you check in or out and when you take a site photo.',
+  explainOn: 'Recorded only while you are on duty: from check-in to check-out.',
 } as const;
 
 export const SITE = {
@@ -46,13 +46,35 @@ export const SITE = {
   pinnedFlagged: 'Roof pinned. The office will check it.',
   pinWaiting: 'Roof pin waiting for signal',
   navigate: 'Navigate',
-  elsewhere: (task: string) => `You are checked in for ${task}. Check out there first.`,
+  elsewhere: (task: string) => `You are still checked in for ${task}.`,
+  checkOutElsewhere: (task: string) => (task ? `Check out of ${task}` : 'Check out of that visit'),
   checkedIn: 'Checked in at the site.',
   checkedOut: 'Checked out of the site.',
   past: 'Earlier visits',
   noFix: 'Your location could not be read. The visit is saved without it.',
   denied: 'Location is off for OneOhm. The visit is saved without it.',
   done: 'This task is complete.',
+} as const;
+
+/** Automatic site visits: the phone's site fence and the Today card (Duty Day step 3). */
+export const FENCE = {
+  checkedIn: (label: string, time: string) => `At ${label}, checked in ${time}`,
+  leftTitle: (label: string) => `Left ${label}. Job not finished, why?`,
+  leftBody: 'Tell your manager in one tap.',
+  near: (first: string, second: string) => `You are near ${first} and ${second}. Tap to check in.`,
+  byHand: (label: string) => `Could not check you in automatically at ${label}. Check in by hand.`,
+  reasons: {
+    come_back_later: 'Come back later',
+    need_material: 'Need material',
+    customer_not_home: 'Customer not home',
+  },
+  reasonSaved: 'Noted. Your manager is told.',
+  reasonFailed: 'Could not send the reason. Open the job and try again.',
+  atSite: (label: string, time: string) => `At ${label} since ${time}`,
+  auto: 'Checked in automatically',
+  openJob: 'Open job',
+  addPhoto: 'Add photo',
+  complete: 'Complete',
 } as const;
 
 /** The satellite map for pinning the roof. */
@@ -78,15 +100,28 @@ export const TRAVEL = {
   days: { today: 'Today', yesterday: 'Yesterday' },
   pickDay: 'Day',
   route: 'Route',
-  routeHint: 'Straight-line distance between stops, not road distance.',
+  routeHint:
+    'Straight line from where your duty started, through each site, to where it ended. Your paid km are shown below.',
+  paid: (metres: number) => `Paid ${distance(metres)}`,
+  paidFrom: {
+    route: 'from your route',
+    straight: 'straight line, no route was recorded',
+  },
+  commute: (metres: number) => `Less ${distance(metres)} for the commute.`,
+  capped: 'Your route was much longer than the straight line, so the paid km were cut.',
+  autoNote: {
+    approved: 'Approved automatically',
+    sent: 'Sent for approval automatically',
+    ready: 'Made for you. It will be approved tomorrow morning if everything checks out.',
+  },
   unpaidLeg: 'No location at one end, not paid',
   total: (metres: number, rate: string, amount: string) =>
     `${distance(metres)} at ${rate}/km = ${amount}`,
   noVisits: 'No site check-ins on this day.',
   unlocated: (count: number) =>
     count === 1
-      ? '1 visit had no location, so its legs are not paid.'
-      : `${count} visits had no location, so their legs are not paid.`,
+      ? '1 visit had no location, so it is left out of the distance.'
+      : `${count} visits had no location, so they are left out of the distance.`,
   note: 'Note for your manager',
   noteHint: 'For example: two trips to the same site.',
   project: 'Project',
@@ -99,6 +134,7 @@ export const TRAVEL = {
   cancel: 'Cancel claim',
   cancelled: 'Claim cancelled.',
   nothingToClaim: 'Nothing to claim on this day.',
+  endDayToClaim: 'End your day to claim.',
   mine: 'Your claims',
   noClaims: 'Claims you make show here.',
   status: {
@@ -109,5 +145,7 @@ export const TRAVEL = {
     cancelled: 'Cancelled',
   },
   decisionNote: (note: string) => `Note: ${note}`,
+  voided: (reason: string) =>
+    `Cancelled by your approver: ${reason}. You can claim this day again.`,
   distance,
 } as const;

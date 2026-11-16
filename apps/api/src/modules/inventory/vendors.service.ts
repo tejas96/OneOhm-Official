@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Vendor, VendorData, VendorPatchData } from '@oneohm/api-contracts';
 import { goodsReceipts, payables, purchaseOrders, vendorProducts, vendors } from '@oneohm/database';
 import { maskAccount } from '@oneohm/domain';
-import { asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import type { Actor } from '../../common/auth/actor';
 import { notFound } from '../../common/http/errors';
@@ -39,7 +39,7 @@ export class VendorsService {
       .from(goodsReceipts)
       .innerJoin(purchaseOrders, eq(purchaseOrders.id, goodsReceipts.purchaseOrderId))
       .innerJoin(payables, eq(payables.id, goodsReceipts.payableId))
-      .where(ne(payables.status, 'paid'))
+      .where(inArray(payables.status, ['pending', 'approved']))
       .groupBy(purchaseOrders.vendorId);
     const open = await this.db
       .select({ vendorId: purchaseOrders.vendorId, count: sql<string>`count(*)` })

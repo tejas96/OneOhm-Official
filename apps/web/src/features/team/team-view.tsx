@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
 import { BlockedTab } from '@/components/blocked-tab';
+import { canSeeLiveMap } from '@/features/live-map/live-format';
 import { TravelTab } from '@/features/site-activity/travel/travel-tab';
 import { useCurrentUser } from '@/providers/current-user';
 import { AnnouncementsTab } from './announcements/announcements-tab';
@@ -15,11 +16,16 @@ import { AttendanceTab } from './attendance/attendance-tab';
 import { BonusesTab } from './bonuses/bonuses-tab';
 import { WorkloadTab } from './capacity/workload-tab';
 import { LeaveTab } from './leave/leave-tab';
+import { MonthSheetTab } from './month-sheet/month-sheet-tab';
 import { PeopleTab } from './people-tab';
 import { PointsTab } from './points/points-tab';
 import { ResellersTab } from './resellers/resellers-tab';
 
+/** The Live map tab is a way to the live map page; it has no panel of its own. */
+const LiveMapLink = () => null;
+
 const TABS = [
+  { value: 'live', requires: ['people.manage'], Panel: LiveMapLink },
   { value: 'people', requires: ['people.view', 'people.manage'], Panel: PeopleTab },
   {
     value: 'workload',
@@ -34,7 +40,16 @@ const TABS = [
     requires: ['people.manage', 'projects.manage', 'finance.approve_payments'],
     Panel: BonusesTab,
   },
-  { value: 'travel', requires: ['leave.approve', 'finance.view'], Panel: TravelTab },
+  {
+    value: 'travel',
+    requires: ['leave.approve', 'finance.view', 'people.manage'],
+    Panel: TravelTab,
+  },
+  {
+    value: 'month',
+    requires: ['people.manage', 'finance.approve_payments', 'finance.record_payments'],
+    Panel: MonthSheetTab,
+  },
   {
     value: 'resellers',
     requires: ['people.view', 'finance.view', 'settings.manage'],
@@ -49,8 +64,8 @@ const TABS = [
 type TabValue = (typeof TABS)[number]['value'];
 
 /**
- * People, workload, the day's attendance, leave, points, bonuses, travel and
- * announcements. The open tab lives in `?tab=`.
+ * A way to the live map, then people, workload, the day's attendance, leave, points, bonuses, travel, the month sheet
+ * and announcements. The open tab lives in `?tab=`.
  */
 export function TeamView() {
   const t = useTranslations('team');
@@ -58,15 +73,23 @@ export function TeamView() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const allowed = TABS.filter((tab) =>
-    tab.requires.some((capability) => user.capabilities.includes(capability)),
+  const allowed = TABS.filter(
+    (tab) =>
+      tab.requires.some((capability) => user.capabilities.includes(capability)) ||
+      ((tab.value === 'live' || tab.value === 'month') && canSeeLiveMap(user)),
   );
-  const current = allowed.find((tab) => tab.value === params.get('tab')) ?? allowed[0];
+  // Live map opens its own page, so it is never the tab shown here.
+  const panels = allowed.filter((tab) => tab.value !== 'live');
+  const current = panels.find((tab) => tab.value === params.get('tab')) ?? panels[0];
   // A link to a tab this role cannot open says so, rather than landing on another tab.
   const blocked = TABS.find((tab) => tab.value === params.get('tab') && !allowed.includes(tab));
 
   // Filters, searches and open items belong to one tab, so a new tab starts clean.
   const select = (value: TabValue) => {
+    if (value === 'live') {
+      router.push('/live');
+      return;
+    }
     router.replace(`${pathname}?${new URLSearchParams({ tab: value }).toString()}`, {
       scroll: false,
     });

@@ -100,18 +100,21 @@ function Balances({ workday }: { readonly workday: MyWorkday }) {
       contentContainerStyle={styles.balances}
     >
       {workday.balances.map((balance) => {
-        const left = balance.allowedHalfDays - balance.usedHalfDays - balance.pendingHalfDays;
-        const used = balance.allowedHalfDays
-          ? (balance.usedHalfDays + balance.pendingHalfDays) / balance.allowedHalfDays
-          : 0;
+        const unpaid = balance.paid === false;
+        const booked = balance.usedHalfDays + balance.pendingHalfDays;
+        const left = balance.allowedHalfDays - booked;
+        const used =
+          !unpaid && balance.allowedHalfDays
+            ? (balance.usedHalfDays + balance.pendingHalfDays) / balance.allowedHalfDays
+            : 0;
         return (
           <Card key={balance.leaveType} style={styles.balance}>
             <Text variant="label" tone="secondary">
               {balance.label}
             </Text>
-            <Text variant="displayMd">{LEAVE.left(Math.max(0, left))}</Text>
+            <Text variant="displayMd">{LEAVE.left(unpaid ? booked : Math.max(0, left))}</Text>
             <Text variant="label" tone="tertiary">
-              {LEAVE.daysLeft}
+              {unpaid ? LEAVE.unpaidTaken : LEAVE.daysLeft}
             </Text>
             <View style={[styles.track, { backgroundColor: theme.colors.surfaceSunken }]}>
               <View

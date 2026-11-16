@@ -88,7 +88,7 @@ export const payoutOptionsSchema = z.object({
   mode: z.enum(['off', 'sandbox', 'live']),
   payee: z
     .object({
-      kind: z.enum(['vendor', 'contractor']),
+      kind: z.enum(['vendor', 'contractor', 'employee']),
       id: idSchema,
       name: z.string(),
       accountName: z.string().nullable(),

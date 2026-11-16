@@ -123,6 +123,30 @@ export const payoutAccounts = pgTable(
 );
 
 /**
+ * An employee's bank account for travel and other money owed to them. Same columns and the
+ * same 24-hour hold as vendors and crews; `id` is the employee's user id.
+ */
+export const employeeBankDetails = pgTable('employee_bank_details', {
+  id: uuid('id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  bankAccountName: text('bank_account_name'),
+  bankAccountNumber: text('bank_account_number'),
+  bankIfsc: text('bank_ifsc'),
+  bankChangedAt: instant('bank_changed_at'),
+  bankChangedByUserId: uuid('bank_changed_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  bankHoldUntil: instant('bank_hold_until'),
+  bankHoldReleasedByUserId: uuid('bank_hold_released_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  bankHoldReleasedAt: instant('bank_hold_released_at'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/**
  * One payment against a bill: all of it, or a part. A bill is paid when its payments add
  * up to what is to pay. Never edited: a mistake or a returned bank transfer marks the row
  * reversed (with the reason), and its ledger entry is reversed with it.

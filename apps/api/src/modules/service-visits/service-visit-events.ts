@@ -10,6 +10,8 @@ interface Visit {
   readonly distanceM: number | null;
   readonly far: boolean | null;
   readonly located: boolean;
+  /** Made by the phone's fence or the route, not by a tap. */
+  readonly automatic?: boolean;
 }
 
 const subjectOf = (ticket: ServiceTicket) => ({
@@ -43,7 +45,7 @@ export async function noteServiceCheckIn(
     await db.insert(projectActivities).values({
       projectId: ticket.project.id,
       kind: 'site_check_in',
-      message: `Checked in at the site for service: ${ticket.categoryLabel} · ${where}.`,
+      message: `Checked in at the site${visit.automatic ? ' automatically' : ''} for service: ${ticket.categoryLabel} · ${where}.`,
       userId: visit.userId,
       data: { visitId: visit.visitId, serviceRequestId: ticket.id, distanceM: visit.distanceM },
     });
@@ -75,7 +77,7 @@ export async function noteServiceCheckOut(
   await db.insert(projectActivities).values({
     projectId: ticket.project.id,
     kind: 'site_check_out',
-    message: `Checked out of the site for service: ${ticket.categoryLabel} after ${durationWords(visit.minutes)}${away}.`,
+    message: `Checked out of the site${visit.automatic ? ' automatically' : ''} for service: ${ticket.categoryLabel} after ${durationWords(visit.minutes)}${away}.`,
     userId: visit.userId,
     data: { visitId: visit.visitId, serviceRequestId: ticket.id, minutes: visit.minutes },
   });

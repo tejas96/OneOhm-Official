@@ -3,6 +3,8 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { apiContract } from '../../contract';
+import { DutySitesService } from './duty-sites.service';
+import { phonePosition, phoneVisit } from './site-visit-auto';
 import { SiteVisitsService } from './site-visits.service';
 import { TravelClaimsService } from './travel-claims.service';
 
@@ -13,6 +15,7 @@ const routes = apiContract.siteActivity;
 export class SiteActivityController {
   constructor(
     private readonly visits: SiteVisitsService,
+    private readonly dutySites: DutySitesService,
     private readonly travel: TravelClaimsService,
   ) {}
 
@@ -20,7 +23,6 @@ export class SiteActivityController {
   handler(@CurrentActor() actor: Actor) {
     const onSite = () => assertCan(actor, 'tasks.complete', 'tasks.view_assigned');
     const claims = () => assertCan(actor, 'attendance.mark');
-    const decides = () => assertCan(actor, 'leave.approve');
     return tsRestHandler(routes, {
       taskSite: async ({ params }) => {
         onSite();
@@ -28,12 +30,42 @@ export class SiteActivityController {
       },
       siteCheckIn: async ({ params, body }) => {
         onSite();
-        return { status: 200, body: await this.visits.checkIn(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkIn(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
       siteCheckOut: async ({ params, body }) => {
         onSite();
-        return { status: 200, body: await this.visits.checkOut(actor, params.id, body.position) };
+        return {
+          status: 200,
+          body: await this.visits.checkOut(actor, params.id, phonePosition(body), phoneVisit(body)),
+        };
       },
+      closeSiteVisit: async ({ params, body }) => {
+        assertCan(actor, 'tasks.complete', 'tasks.view_assigned', 'service.manage');
+        return {
+          status: 200,
+          body: await this.visits.checkOutVisit(actor, params.id, body.position),
+        };
+      },
+      leaveReasonSiteVisit: async ({ params, body }) => {
+        onSite();
+        return { status: 200, body: await this.visits.leaveReason(actor, params.id, body.reason) };
+      },
+      myOpenVisit: async () => {
+        onSite();
+        return { status: 200, body: { visit: await this.dutySites.openVisit(actor.userId) } };
+      },
+      myDutySites: async () => {
+        onSite();
+        return { status: 200, body: await this.dutySites.forToday(actor.userId) };
+      },
+      forceCloseSiteVisit: async ({ params, body }) => ({
+        // Who may is decided from the visit itself: its project's manager, its work's managers.
+        status: 200,
+        body: await this.visits.forceClose(actor, params.id, body.reason),
+      }),
       saveSiteLocation: async ({ params, body }) => {
         onSite();
         return {
@@ -65,20 +97,30 @@ export class SiteActivityController {
         return { status: 200, body: await this.travel.cancel(actor, params.id) };
       },
       listTravelClaims: async ({ query }) => {
-        assertCan(actor, 'leave.approve', 'finance.view');
-        return { status: 200, body: await this.travel.list(query) };
+        assertCan(actor, 'leave.approve', 'finance.view', 'people.manage');
+        return { status: 200, body: await this.travel.list(actor, query) };
       },
       travelClaimDay: async ({ params }) => {
-        assertCan(actor, 'leave.approve', 'finance.view');
+        assertCan(actor, 'leave.approve', 'finance.view', 'people.manage');
         return { status: 200, body: await this.travel.dayOfClaim(params.id) };
       },
       decideTravelClaim: async ({ params, body }) => {
-        decides();
+        // Who may decide is the person's manager, HR or finance: checked in the service.
         return {
           status: 200,
-          body: await this.travel.decide(actor, params.id, body.approve, body.note),
+          body: await this.travel.decide(
+            actor,
+            params.id,
+            body.approve,
+            body.note,
+            body.expectedAmountPaise,
+          ),
         };
       },
+      voidTravelClaim: async ({ params, body }) => ({
+        status: 200,
+        body: await this.travel.void(actor, params.id, body.reason),
+      }),
     });
   }
 }

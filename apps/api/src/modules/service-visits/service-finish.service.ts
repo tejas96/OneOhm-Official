@@ -32,7 +32,14 @@ export class ServiceFinishService {
     const problems = finishProblems(input);
     if (Object.keys(problems).length > 0) throw invalid('Some details need fixing.', problems);
     const job = await this.visits.ownJob(actor, id);
-    const visitId = await this.visits.closeVisit(actor, job, input.position);
+    // Marking the work done ends the visit with it; handing back is the person leaving.
+    const visitId = await this.visits.closeVisit(
+      actor,
+      job,
+      input.position,
+      undefined,
+      input.outcome === 'done' ? 'task_complete' : 'manual',
+    );
     const now = new Date();
     const changes = finishChanges(job.request, input, now);
     const reason = clean(input.reason);

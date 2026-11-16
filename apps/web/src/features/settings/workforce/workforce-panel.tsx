@@ -12,6 +12,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { useApiForm } from '@/lib/forms/use-api-form';
 import { LeaveKindsSection } from './leave-kinds-section';
 import { LocationSection } from './location-section';
+import { MonthSheetSection } from './month-sheet-section';
 import { PlacesSection } from './places-section';
 import { SkillsSection } from './skills-section';
 import { useWorkforceSettings, WORKFORCE_SETTINGS_KEY } from './use-workforce-settings';
@@ -68,6 +69,11 @@ export function WorkforcePanel() {
           errors={form.fieldErrors}
         />
         <WorkingDaySection
+          attendance={draft.attendance}
+          onChange={(attendance) => setDraft({ ...draft, attendance })}
+          errors={form.fieldErrors}
+        />
+        <MonthSheetSection
           attendance={draft.attendance}
           onChange={(attendance) => setDraft({ ...draft, attendance })}
           errors={form.fieldErrors}

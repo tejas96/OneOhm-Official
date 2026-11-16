@@ -16,6 +16,7 @@ export const LEAVE_CARD = {
   days,
   leftOf: (label: string) => `${label} left`,
   other: (label: string, halves: number) => `${label}: ${days(halves)}`,
+  unpaid: (halves: number) => `Unpaid leave: ${days(halves)}`,
   waiting: (halves: number) => `${days(halves)} waiting`,
   request: 'Request leave',
 } as const;

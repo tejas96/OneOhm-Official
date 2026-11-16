@@ -26,15 +26,10 @@ import { payoutOptionsFor } from './payout-options';
 import { approverOf, secondPersonMessage } from './payout-people';
 import { type PracticeOutcome, practiceOutcome } from './payout-practice';
 import { closeRequest, openRequestOf } from './payout-requests';
+import { reservePayout } from './payout-reserve';
 import { PROBLEM_TEXT, presentPayout } from './payout-rules';
 import { payoutSetupFor } from './payout-setup';
 import { PayoutSyncService } from './payout-sync.service';
-
-const isUniqueViolation = (error: unknown): boolean => {
-  const code = (value: unknown) =>
-    typeof value === 'object' && value !== null ? (value as { code?: string }).code : undefined;
-  return code(error) === '23505' || code((error as { cause?: unknown })?.cause) === '23505';
-};
 
 /** Paying approved bills straight to the payee's bank through RazorpayX (PRD 3.11). */
 @Injectable()
@@ -89,27 +84,16 @@ export class BankPayoutsService {
         );
       },
     );
-    const [row] = await this.db
-      .insert(bankPayouts)
-      .values({
-        payableId,
-        provider: this.gateway.provider,
-        fundAccountId,
-        mode: mode,
-        amountPaise: sendPaise,
-        accountMasked: maskAccount(bank.accountNumber),
-        requestedByUserId: actor.userId,
-        payoutRequestId: request?.id ?? null,
-        askedByUserId: request?.requestedByUserId ?? null,
-      })
-      .returning()
-      .catch((error: unknown) => {
-        // Two clicks at once: the database allows one open transfer per bill.
-        if (isUniqueViolation(error))
-          throw conflict(PROBLEM_TEXT.already_sending, 'already_sending');
-        throw error;
-      });
-    if (!row) throw new Error('Payout insert returned nothing');
+    // The bill is locked and checked again, and the payout row is saved as 'queued' before
+    // RazorpayX is called, so a void (which takes the same lock) cannot slip in between and
+    // a crash after the call leaves a row the check settles by reference.
+    const row = await reservePayout(this.db, this.gateway.provider, actor, payableId, sendPaise, {
+      fundAccountId,
+      mode,
+      accountMasked: maskAccount(bank.accountNumber),
+      requestId: request?.id ?? null,
+      askedBy: request?.requestedByUserId ?? null,
+    });
     const to = `${payee.name} ${maskAccount(bank.accountNumber)}`;
     let created: Awaited<ReturnType<PayoutGateway['createPayout']>>;
     try {

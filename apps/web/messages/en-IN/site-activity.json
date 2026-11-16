@@ -23,6 +23,13 @@
       "onSite": "On site now"
     },
     "visits": {
+      "auto": "Auto",
+      "leftBecause": "Left unfinished: {reason}",
+      "leaveReasons": {
+        "come_back_later": "will come back later",
+        "need_material": "needs material",
+        "customer_not_home": "customer was not home"
+      },
       "title": "Site visits",
       "description": "Check-ins and check-outs at the customer's site, with how far from the saved site location they were.",
       "empty": "No one has checked in at this site yet.",
@@ -34,7 +41,8 @@
         "task": "Task",
         "inOut": "In and out",
         "duration": "Time on site",
-        "where": "Distance"
+        "where": "Distance",
+        "proof": "Proof"
       },
       "inOut": "{from} to {to}",
       "stillIn": "In at {from}, still on site",
@@ -54,11 +62,11 @@
     },
     "claims": {
       "title": "Travel claims",
-      "description": "Travel between site visits, claimed from the field app at the rate in Settings. Approving makes a payable to the employee in Finance.",
+      "description": "Travel between site visits. The system makes the claim when a worker ends duty, at the rate in Settings. Approving makes a payable to the employee in Finance.",
       "loading": "Loading travel claims",
       "caption": "Travel claims",
       "emptyTitle": "No travel claims here",
-      "emptyBody": "Claims made from the field app show here.",
+      "emptyBody": "Claims show here when workers end duty.",
       "waiting": "{count, plural, one {# claim waiting for approval} other {# claims waiting for approval}}",
       "statusLabel": "Status",
       "personLabel": "Person",
@@ -71,8 +79,11 @@
         "approved": "Approved, not paid",
         "paid": "Paid",
         "rejected": "Declined",
-        "cancelled": "Cancelled"
+        "cancelled": "Withdrawn",
+        "voided": "Voided",
+        "withdrawn": "Withdrawn: day reopened"
       },
+      "amountChanged": "The amount changed to {amount} after new route points. Check and decide again.",
       "columns": {
         "person": "Person",
         "day": "Day",
@@ -91,12 +102,23 @@
       "declined": "Claim declined",
       "dialogTitle": "{name}: travel on {day}",
       "approveNote": "Approving adds a payable of {amount} to the employee in Finance, and books it as travel cost.",
-      "totalLine": "{distance} at {rate}/km = {amount}"
+      "totalLine": "{distance} at {rate}/km = {amount}",
+      "void": {
+        "title": "Void this approved claim?",
+        "description": "{amount} is cancelled in Finance and its ledger entry is reversed (the entry stays, a reversing one is added). It cannot be voided once paid. The person is told and can claim the day again.",
+        "reason": "Why",
+        "reasonHint": "For example: claimed for the wrong day. The person sees this.",
+        "cancel": "Keep it",
+        "submit": "Void claim",
+        "done": "Claim voided"
+      },
+      "auto": "Auto",
+      "autoApproved": "Approved automatically"
     },
     "sheet": {
       "title": "Travel on {day}",
       "legs": "Route",
-      "legsHint": "Straight-line distance between stops, not road distance.",
+      "legsHint": "Straight-line distance from where duty started, through each site, to where it ended. Not road distance.",
       "unpaidLeg": "No location at one end, not paid",
       "project": "Counted in the cost of {code}",
       "noProject": "Not tied to a project, so it is not in any project's cost.",
@@ -111,7 +133,18 @@
       "decline": "Decline",
       "ownClaim": "Someone else approves your own claim.",
       "close": "Close",
-      "loading": "Loading the day"
+      "loading": "Loading the day",
+      "void": "Void claim",
+      "voided": "Voided: {reason}",
+      "legsHintRoute": "The straight line runs from where duty started, through each site, to where duty ended. The paid km come from the recorded route.",
+      "paidRoute": "Paid {paid} (route {route} · straight line {straight})",
+      "paidRouteCommute": "Paid {paid} (route {route} · straight line {straight} · less {commute} commute)",
+      "paidStraight": "Paid {paid} (straight line, no route recorded)",
+      "paidStraightCommute": "Paid {paid} (straight line, no route recorded · less {commute} commute)",
+      "capNote": "The route was longer than the allowed share of the straight line, so the paid km were cut to {paid}.",
+      "gapNote": "{count, plural, one {# stretch} other {# stretches}} with no location, {minutes} min in all, counted as a straight line.",
+      "autoMade": "Made automatically from the route when the day ended.",
+      "whyTitle": "Why this needs you"
     },
     "settings": {
       "title": "Site check-ins and travel",
@@ -121,9 +154,78 @@
       "pinTrust": "Field pin trust distance (m)",
       "pinTrustHint": "A roof pin farther than this from where the worker checked in is saved, and flagged for the office to check.",
       "rate": "Travel rate per km",
-      "rateHint": "Paid on straight-line distance between the day's stops.",
+      "rateHint": "Paid per km of the day’s route, or of the straight line from duty start through each site to duty end when no route was recorded.",
       "margin": "Window either side (min)",
-      "marginHint": "Location is read only from the day’s start minus this to its end plus this."
+      "marginHint": "Location is read only from the day’s start minus this to its end plus this.",
+      "autoClaim": "Make the claim automatically",
+      "autoClaimOn": "When the day ends, the system makes the travel claim for the person.",
+      "autoClaimOff": "People make their own claim from the field app.",
+      "autoApprove": "Approve clean days automatically",
+      "autoApproveHint": "Turn on to approve clean days automatically each morning.",
+      "autoApproveOn": "A day with a recorded route, no gaps, no fake GPS and no far check-ins is approved the next morning and goes to Finance.",
+      "autoApproveOff": "Every claim waits for a manager.",
+      "routeCap": "Route cap (times the straight line)",
+      "routeCapHint": "Paid km never go above the straight-line distance from duty start through each site to duty end, times this. Under 1 km of straight line, at most 2 km is paid and a manager checks it.",
+      "maxKm": "Automatic approval up to (km)",
+      "maxKmHint": "A day with more paid km than this always waits for a manager.",
+      "maxAmount": "Automatic approval up to",
+      "maxAmountHint": "A claim worth more than this always waits for a manager.",
+      "autoSiteVisits": "Check in and out at sites automatically",
+      "autoSiteVisitsOn": "The phone and the route check the person in when they reach a site they work at today, and out when they leave.",
+      "autoSiteVisitsOff": "People check in and out at sites themselves.",
+      "customerVisitMessages": "Tell customers about site visits on WhatsApp",
+      "customerVisitMessagesOn": "The customer hears when the person is on the way (with a live map link) and has arrived, is asked \"Was this visit done?\" after check-out, and is told when the team is running late. Only for tasks that message their customer; never after STOP.",
+      "customerVisitMessagesOff": "Customers hear nothing about site visits from the system.",
+      "siteFence": "Site fence (m)",
+      "siteFenceHint": "Closer than this to a saved site counts as being there. 50 to 1000.",
+      "baseStartMax": "Known start within (km)",
+      "baseStartMaxHint": "A day that starts farther than this from the person's home or base place and from every office waits for a manager. 1 to 50.",
+      "commuteDeduct": "Commute taken off each day (km)",
+      "commuteDeductHint": "Taken off the paid km once a day, after the route cap. 0 pays all of it. 0 to 50."
+    },
+    "review": {
+      "route_gap": "The phone sent no location for a long stretch.",
+      "fake_gps": "A fake or mock location was reported.",
+      "cap_applied": "The route was far longer than the straight line, so it was cut.",
+      "far_check_in": "A site check-in was far from the site.",
+      "visit_no_location": "A site visit has no location.",
+      "auto_closed": "The day was ended by the system, not by the person.",
+      "delayed_tap": "A check-in or check-out reached the server late.",
+      "over_km": "More km than the automatic limit.",
+      "over_amount": "More money than the automatic limit.",
+      "no_route": "No route was recorded, so this is a straight-line distance.",
+      "no_visits": "There was no site visit that day.",
+      "uncapped_route": "The day was under 1 km in a straight line, so the route was not held to the usual cap.",
+      "short_route": "The recorded route was shorter than the straight line, so the straight line is paid.",
+      "far_from_base": "The day started far from the person's home or base place and far from every office.",
+      "start_unknown_place": "The day started away from every office and the person has no home or base place saved.",
+      "end_unknown_place": "The day ended far from the person's home or base place and far from every office.",
+      "start_unknown": "The day has site visits but no start position, so its start could not be checked.",
+      "end_unknown": "The day has site visits but no end position, so its end could not be checked.",
+      "start_outside_office": "The day was started away from an office.",
+      "end_outside_office": "The day was ended away from an office.",
+      "on_leave": "The person was on leave this day.",
+      "auto_approve_off": "Automatic approval is switched off.",
+      "other": "Needs a person to look at it."
+    },
+    "proof": {
+      "verified": "Verified",
+      "doubtful": "Doubtful",
+      "no_proof": "No proof",
+      "pending": "After check-out",
+      "why": "Why: {reasons}",
+      "reasons": {
+        "short_visit": "too short to prove",
+        "not_seen_at_site": "phone not seen at the site",
+        "far_check_in": "checked in far from the site",
+        "photo_far": "photos taken away from the site",
+        "fake_gps": "fake location on the phone",
+        "customer_said_no": "the customer said the visit did not happen",
+        "no_location": "no location from the phone",
+        "site_unknown": "site location not saved"
+      },
+      "customerYes": "Customer said Yes",
+      "customerNo": "Customer said No"
     }
   }
 }

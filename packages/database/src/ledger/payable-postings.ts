@@ -1,9 +1,9 @@
 import { contractorTdsPosting, payableApprovedPosting } from '@oneohm/domain';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { DatabaseExecutor } from '../client';
-import { contractors, payables, projects, workOrders } from '../schema';
+import { contractors, journalEntries, payables, projects, workOrders } from '../schema';
 import { postJournal } from './post-journal';
-import { businessDate } from './receivable-postings';
+import { businessDate, reverseEntry } from './receivable-postings';
 
 export async function loadPayable(db: DatabaseExecutor, payableId: string) {
   const [row] = await db
@@ -40,6 +40,33 @@ export async function postPayableApproved(
       tdsPaise: payable.tdsPaise,
     }),
   });
+}
+
+/**
+ * A bill that was approved and is now withdrawn: the approval entry is reversed with an
+ * equal and opposite entry (never deleted), once. Returns null when it had no entry.
+ */
+export async function reversePayableApproved(
+  db: DatabaseExecutor,
+  payableId: string,
+  userId: string | null,
+  reason: string,
+): Promise<string | null> {
+  const [entry] = await db
+    .select({
+      id: journalEntries.id,
+      number: journalEntries.number,
+      projectId: journalEntries.projectId,
+    })
+    .from(journalEntries)
+    .where(
+      and(
+        eq(journalEntries.sourceType, 'payable_approved'),
+        eq(journalEntries.sourceId, payableId),
+      ),
+    )
+    .limit(1);
+  return entry ? reverseEntry(db, entry, userId, reason) : null;
 }
 
 /**

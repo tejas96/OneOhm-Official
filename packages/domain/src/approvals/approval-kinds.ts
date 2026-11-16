@@ -34,7 +34,7 @@ export interface PendingApproval {
   /** More people who may not approve it (a bonus's own sharers). */
   readonly excludedUserIds?: readonly string[];
   readonly amountPaise: number | null;
-  /** Task reviews only: who may review it (from the task's reviewers). */
+  /** Task reviews and travel claims: who may decide it (the task's reviewers; a claim's manager, HR, finance). */
   readonly reviewerIds?: readonly string[];
 }
 
@@ -44,7 +44,7 @@ const FIXED: Readonly<Record<Exclude<ApprovalKind, 'task_review' | 'bill' | 'bon
     discount: 'quotations.approve_discount',
     leave: 'leave.approve',
     attendance_correction: 'leave.approve',
-    travel_claim: 'leave.approve',
+    travel_claim: 'people.manage',
     purchase_request: 'procurement.manage',
     vendor_advance: 'finance.approve_payments',
     bank_payout: 'finance.approve_payments',
@@ -108,6 +108,9 @@ export interface Approver {
 export function mayDecide(item: PendingApproval, who: Approver, policy: ApprovalPolicy): boolean {
   if (item.kind === 'task_review') return (item.reviewerIds ?? []).includes(who.userId);
   if (isOwnRequest(item, who.userId)) return false;
+  // A travel claim goes to the person's manager (or cover), HR and finance only (S10).
+  if (item.kind === 'travel_claim' && item.reviewerIds)
+    return item.reviewerIds.includes(who.userId);
   if (item.excludedUserIds?.includes(who.userId)) return false;
   return approvalRights(item, policy).some((right) => who.capabilities.includes(right));
 }

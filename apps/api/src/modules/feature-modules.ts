@@ -14,9 +14,11 @@ import { DocumentsModule } from './documents/documents.module';
 import { FinanceModule } from './finance/finance.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ListsModule } from './lists/lists.module';
+import { LiveMapModule } from './live-map/live-map.module';
 import { MapsModule } from './maps/maps.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { MarketingIntakeModule } from './marketing-intake/marketing-intake.module';
+import { MonthSheetModule } from './month-sheet/month-sheet.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GatewayModule } from './online-payments/gateway.module';
 import { OnlinePaymentsModule } from './online-payments/online-payments.module';
@@ -35,6 +37,7 @@ import { SiteActivityModule } from './site-activity/site-activity.module';
 import { StateSupportModule } from './state-support/state-support.module';
 import { SystemPapersModule } from './system-papers/system-papers.module';
 import { TemplatesModule } from './templates/templates.module';
+import { VisitNewsModule } from './visit-news/visit-news.module';
 import { VisitsModule } from './visits/visits.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { WorkforceModule } from './workforce/workforce.module';
@@ -79,6 +82,9 @@ export const FEATURE_MODULES = [
   ProjectChangesModule,
   StateSupportModule,
   MapsModule,
+  LiveMapModule,
+  VisitNewsModule,
+  MonthSheetModule,
   MarketingModule,
   MarketingIntakeModule,
 ];

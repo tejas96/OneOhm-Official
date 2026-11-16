@@ -1,6 +1,7 @@
 import { type DatabaseExecutor, workforcePolicy, workLocations } from '@oneohm/database';
 import { type WorkforcePolicy, type WorkLocation, withPolicyDefaults } from '@oneohm/domain';
 import { asc, eq } from 'drizzle-orm';
+import { currentCalendar } from '../../common/calendar';
 
 /**
  * The current rules; the defaults until an owner saves their own, and for any section
@@ -34,15 +35,14 @@ export async function activeLocations(db: DatabaseExecutor): Promise<WorkLocatio
     }));
 }
 
-const clock = new Intl.DateTimeFormat('en-GB', {
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-  timeZone: 'Asia/Kolkata',
-});
-
-/** "HH:MM" in India time for a moment. */
-export const indiaTime = (at: Date) => clock.format(at);
+/** "HH:MM" in business time (Settings → Working time) for a moment. */
+export const indiaTime = (at: Date) =>
+  new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: currentCalendar().timeZone,
+  }).format(at);
 
 /** The calendar year (India time) a date falls in, as its first and last day. */
 export const yearOf = (date: string) => ({

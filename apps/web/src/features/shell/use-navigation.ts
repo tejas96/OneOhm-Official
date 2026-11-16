@@ -10,11 +10,13 @@ export function useAllowedNavigation(): readonly NavGroup[] {
   const user = useCurrentUser();
   return useMemo(() => {
     const allowed = (item: NavItem) =>
-      !item.requires || item.requires.some((capability) => user.capabilities.includes(capability));
+      !item.requires ||
+      item.requires.some((capability) => user.capabilities.includes(capability)) ||
+      (item.orHasReports === true && user.hasReports === true);
     return NAVIGATION.map((group) => ({ ...group, items: group.items.filter(allowed) })).filter(
       (group) => group.items.length > 0,
     );
-  }, [user.capabilities]);
+  }, [user.capabilities, user.hasReports]);
 }
 
 /** Whether a menu entry owns the current page (its own path or anything under it). */

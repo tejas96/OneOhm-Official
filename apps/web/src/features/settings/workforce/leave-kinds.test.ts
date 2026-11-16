@@ -9,10 +9,14 @@ describe('keyEditable', () => {
   });
 
   it('allows editing a kind added this session and not yet saved', () => {
-    expect(keyEditable({ key: 'study', label: 'Study', daysPerYear: 2 }, saved)).toBe(true);
+    expect(keyEditable({ key: 'study', label: 'Study', daysPerYear: 2, paid: true }, saved)).toBe(
+      true,
+    );
   });
 
   it('locks the short name once the kind is saved, as requests may use it', () => {
-    expect(keyEditable({ key: 'sick', label: 'Sick', daysPerYear: 12 }, saved)).toBe(false);
+    expect(keyEditable({ key: 'sick', label: 'Sick', daysPerYear: 12, paid: true }, saved)).toBe(
+      false,
+    );
   });
 });

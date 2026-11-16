@@ -10,6 +10,7 @@ import {
   consentIsCurrent,
   inLocationWindow,
   LOCATION_CONSENT_VERSION,
+  trackingState,
   trackingSwitchedOn,
   type WorkforcePolicy,
 } from '@oneohm/domain';
@@ -84,10 +85,12 @@ function stateOf(
   given: boolean,
   at: Date,
 ): TrackingStatus['state'] {
-  if (!switchedOn) return 'policy_off';
-  if (!given) return 'no_consent';
-  const open = inLocationWindow(indiaTime(at), policy.attendance, policy.travel.hoursMarginMinutes);
-  return open ? 'on' : 'outside_hours';
+  const inHours = inLocationWindow(
+    indiaTime(at),
+    policy.attendance,
+    policy.travel.hoursMarginMinutes,
+  );
+  return trackingState({ switchedOn, consentGiven: given, inHours });
 }
 
 /**
@@ -129,6 +132,28 @@ function shift(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/** Why a reading was not kept (live review A5): the phone sent none, or the tracking state. */
+export type LocationSkip = 'no_reading' | 'no_consent' | 'policy_off' | 'outside_hours';
+
+/**
+ * The reading to keep, and when there is none, why not. Callers that tell the person
+ * (check-in, check-out) use the reason; the rest only need the reading.
+ */
+export async function readingOutcome(
+  db: DatabaseExecutor,
+  userId: string,
+  position: Position | null | undefined,
+  at: Date = new Date(),
+): Promise<{
+  reading: { position: Position; policy: WorkforcePolicy } | null;
+  skipped: LocationSkip | null;
+}> {
+  const { status, policy } = await trackingFor(db, userId, at);
+  if (status.state !== 'on') return { reading: null, skipped: status.state };
+  if (!position) return { reading: null, skipped: 'no_reading' };
+  return { reading: { position, policy }, skipped: null };
+}
+
 /** The reading to keep, or null when location may not be kept for this person now. */
 export async function usableReading(
   db: DatabaseExecutor,
@@ -136,7 +161,5 @@ export async function usableReading(
   position: Position | null | undefined,
   at: Date = new Date(),
 ): Promise<{ position: Position; policy: WorkforcePolicy } | null> {
-  const { status, policy } = await trackingFor(db, userId, at);
-  if (!position || status.state !== 'on') return null;
-  return { position, policy };
+  return (await readingOutcome(db, userId, position, at)).reading;
 }

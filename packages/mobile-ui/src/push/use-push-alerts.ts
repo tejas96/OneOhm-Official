@@ -22,6 +22,8 @@ export interface AlertData {
   readonly subjectType?: string;
   readonly subjectId?: string;
   readonly projectId?: string;
+  /** The month a month sheet alert is about (`YYYY-MM`). */
+  readonly subjectMonth?: string;
 }
 
 let registered: string | null = null;

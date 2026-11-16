@@ -17,6 +17,7 @@ import { journeyOnComplete, journeyOnReady } from '../journey/journey-auto';
 import { tellCustomerMilestonesDue } from '../online-payments/milestone-due-notice';
 import { recordSubsidyClaim } from '../quotations/subsidy-claim';
 import { applyPendingCredit } from '../self-survey/survey-credit';
+import { closeVisitsOnTaskDone } from '../site-activity/site-visit-task-done';
 import { openVisitForTask } from '../visits/visit-reads';
 import { finishVisit } from '../visits/visit-store';
 import { awardTaskPoints } from '../workforce/points';
@@ -42,6 +43,8 @@ export async function finishTask(tx: Transaction, task: TaskRow, userId: string)
     .where(and(eq(projectTasks.id, task.id), ne(projectTasks.status, 'completed')))
     .returning({ id: projectTasks.id });
   if (finished.length === 0) throw conflict('This task is already done.', 'done');
+  // Whoever is still checked in at the site for it leaves with it: the visit ends now.
+  await closeVisitsOnTaskDone(tx, task, now);
   // The visit for this task happened, whoever did not tick it.
   const visit = await openVisitForTask(tx, task.id);
   if (visit) await finishVisit(tx, visit, userId, task.title);

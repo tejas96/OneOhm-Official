@@ -12,6 +12,7 @@ import {
 import { ratingSummary } from '@oneohm/domain';
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
+import { billStatus } from '../../common/bill-status';
 import { DATABASE, type Database } from '../../config/core.module';
 import { contractorPerformance } from './contractor-performance';
 import { crewContractor } from './crew-scope';
@@ -161,7 +162,7 @@ function present(
     workOrderNumber: order.order.number,
     project: { code: order.projectCode, name: order.projectName },
     amountPaise: payable.amountPaise,
-    status: payable.status,
+    status: billStatus(payable.status),
     dueOn: payable.dueOn,
     approvedAt: payable.approvedAt?.toISOString() ?? null,
     paidOn: payable.paidOn,

@@ -9,6 +9,10 @@ describe('hrefOf', () => {
     expect(hrefOf({ subject: null, kind: 'departure_cover' })).toBe('/today');
     expect(hrefOf({ subject: null, kind: 'payout_details_changed' })).toBe('/finance?tab=payouts');
     expect(hrefOf({ subject: null, kind: 'payout_sync_failing' })).toBe('/finance?tab=payables');
+    expect(hrefOf({ subject: null, kind: 'attendance_auto_closed' })).toBe('/team?tab=attendance');
+    // An employee's bank details have no vendor or crew page: Finance → Payables opens.
+    expect(hrefOf({ subject: null, kind: 'payee_bank_changed' })).toBe('/finance?tab=payables');
+    expect(hrefOf({ subject: null, kind: 'job_failed' })).toBe('/settings?tab=automation');
     expect(hrefOf({ subject: null, kind: 'something_else' })).toBe('/');
   });
 
@@ -18,11 +22,26 @@ describe('hrefOf', () => {
     ).toBe('/leads/l1');
   });
 
+  it('opens a month sheet alert on its month', () => {
+    expect(
+      hrefOf({
+        subject: { type: 'month_sheet', id: 'u1', projectId: null, month: '2026-10' },
+        kind: 'month_row_changed',
+      }),
+    ).toBe('/team?tab=month&person=u1&month=2026-10');
+  });
+
   it.each([
     ['leave', 'leave_requested', '/team?tab=leave&leave=x1'],
     ['correction', 'correction_requested', '/team?tab=attendance&correction=x1'],
     ['points', 'bonus_proposed', '/team?tab=bonuses&bonus=x1'],
     ['travel_claim', 'travel_claim', '/team?tab=travel&claim=x1'],
+    ['travel_claim', 'travel_claim_paid', '/team?tab=travel&claim=x1'],
+    ['travel_claim', 'travel_claim_voided', '/team?tab=travel&claim=x1'],
+    ['month_sheet', 'month_final', '/team?tab=month&person=x1'],
+    // Finance is told a travel claim was approved: the alert opens that bill.
+    ['payable', 'travel_payable_ready', '/finance?tab=payables&bill=x1'],
+    ['payable', 'travel_payable_voided', '/finance?tab=payables&bill=x1'],
     ['vendor_advance', 'vendor_advance', '/finance?tab=advances&filter=pending&advance=x1'],
     ['payable', 'payout_processed', '/finance?tab=payables&bill=x1'],
     ['payable', 'payout_failed', '/finance?tab=payables&bill=x1'],
@@ -69,5 +88,37 @@ describe('hrefOf', () => {
     expect(hrefOf({ subject: subject('marketing_reviews', 'r1'), kind: 'review_waiting' })).toBe(
       '/marketing',
     );
+  });
+
+  it('opens the live map for every Duty Day alert', () => {
+    const task = { type: 'task', id: 't1', projectId: 'p1' } as const;
+    const claim = { type: 'travel_claim', id: 'c1', projectId: null } as const;
+    // A person's day: the map opens that person's day on the newest alert of the kind.
+    for (const kind of [
+      'not_checked_in',
+      'fake_gps',
+      'route_gap',
+      'unknown_stop',
+      'visit_open_long',
+      'job_left_unfinished',
+    ])
+      expect(hrefOf({ subject: null, kind: `duty_${kind}` })).toBe(`/live?kind=${kind}`);
+    // A site: the Alerts tab on that site's alert (Send nearest is one tap away).
+    expect(hrefOf({ subject: task, kind: 'duty_visit_missed' })).toBe(
+      '/live?kind=visit_missed&site=t1',
+    );
+    expect(
+      hrefOf({
+        subject: { type: 'service_request', id: 's1', projectId: null },
+        kind: 'duty_visit_doubtful',
+      }),
+    ).toBe('/live?kind=visit_doubtful&site=s1');
+    expect(hrefOf({ subject: null, kind: 'duty_visit_missed' })).toBe('/live?kind=visit_missed');
+    // A travel claim opens the claim itself.
+    expect(hrefOf({ subject: claim, kind: 'duty_claim_waiting' })).toBe(
+      '/team?tab=travel&claim=c1',
+    );
+    expect(hrefOf({ subject: claim, kind: 'duty_claim_unpaid' })).toBe('/team?tab=travel&claim=c1');
+    expect(hrefOf({ subject: null, kind: 'duty_alerts_digest' })).toBe('/live?tab=alerts');
   });
 });

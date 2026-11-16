@@ -5,6 +5,7 @@ import { deliveryOutcome, leftToPay, payableAgeing, summariseDeliveries } from '
 import { todayIn } from '@oneohm/shared';
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
+import { billStatus } from '../../common/bill-status';
 import { notFound } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
 import { VendorsService } from '../inventory/vendors.service';
@@ -73,7 +74,7 @@ export class VendorPerformanceService {
         amountPaise: payable.amountPaise,
         adjustedPaise: payable.advanceAdjustedPaise,
         balancePaise: leftToPay(payable),
-        status: payable.status,
+        status: billStatus(payable.status),
         overdue: payable.dueOn < today,
       })),
       rejections: facts.rejections.map(({ receiptId: _receipt, vendorId: _vendor, ...row }) => row),

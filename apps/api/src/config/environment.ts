@@ -55,6 +55,8 @@ const environmentSchema = z
     FILE_LINK_SECRET: z.string().min(16).default('oneohm-local-file-link-secret'),
     /** Signs the Pay now links. Falls back to FILE_LINK_SECRET outside production. */
     PAY_LINK_SECRET: z.string().min(16).optional(),
+    /** Signs the "Track live" links of the "on the way" message. Falls back to FILE_LINK_SECRET. */
+    TRACK_LINK_SECRET: z.string().min(16).optional(),
     FILE_LINK_HOURS: z.coerce.number().int().min(1).max(168).default(72),
     CHROMIUM_PATH: z.string().optional(),
     /** S3-compatible object storage (RustFS) for photos, documents and company assets. */
@@ -82,6 +84,8 @@ const environmentSchema = z
     /** Google Maps: one key can serve every app in development; split keys in production. */
     GOOGLE_MAPS_API_KEY: z.string().optional(),
     GOOGLE_MAPS_BROWSER_KEY: z.string().optional(),
+    /** A Map ID (Google Cloud, Map management, JavaScript, vector): smooth zoom on the live map. */
+    GOOGLE_MAPS_MAP_ID: z.string().optional(),
     /** Server-side geocoding (WhatsApp pins → city); falls back to GOOGLE_MAPS_API_KEY. */
     GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
     /** Where customers reach this API from outside; sandbox payment pages live here. */

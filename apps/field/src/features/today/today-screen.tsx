@@ -29,6 +29,7 @@ import { LeaveAndPoints } from '@/features/rewards/leave-and-points';
 import { SearchButton } from '@/features/search/search-button';
 import { ServiceVisitsSection } from '@/features/service/service-visits-section';
 import { useMyServiceVisits } from '@/features/service/use-service-visits';
+import { AtSiteCard } from '@/features/site/at-site-card';
 import { TaskRow } from '@/features/tasks/task-row';
 import { PendingUploadsCard } from '@/features/uploads/pending-uploads-card';
 import { BUSINESS_TIME_ZONE, businessToday, longToday } from '@/lib/dates';
@@ -88,6 +89,7 @@ export function TodayScreen() {
       <AnnouncementsCard />
       {workday.data ? <AttendanceCard workday={workday.data} /> : null}
       {workday.data ? <LeaveAndPoints workday={workday.data} /> : null}
+      <AtSiteCard />
       <PendingUploadsCard />
       {query.isPending ? <LoadingState label={TODAY.loading} /> : null}
       {query.isError ? (

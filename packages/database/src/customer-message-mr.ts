@@ -6,6 +6,7 @@ import { homeMr } from '@oneohm/shared';
  */
 
 import { CARE_MR } from './customer-message-care';
+import { DUTY_MR } from './customer-message-duty';
 import { JOURNEY_MR } from './customer-message-journey';
 import { STEP_MR } from './customer-message-steps';
 import type { LanguageWords } from './customer-message-words';
@@ -28,6 +29,7 @@ export const MARATHI_WORDS: LanguageWords = {
     ...JOURNEY_MR,
     ...STEP_MR,
     ...CARE_MR,
+    ...DUTY_MR,
     quotation_sent: (p) => ({
       title: 'तुमचे कोटेशन तयार आहे',
       body: `${p.number}: ${p.total}. सबसिडीनंतर तुम्हाला ${p.effective} भरायचे आहेत.`,

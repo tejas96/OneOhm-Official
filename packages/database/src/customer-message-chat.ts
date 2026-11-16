@@ -5,7 +5,7 @@ type Payload = Readonly<Record<string, string>>;
 type Language = 'en' | 'mr' | 'hi';
 
 /**
- * Two news items said as one natural chat sentence (not a title and a body) for a customer
+ * News said as one natural chat sentence (not a title and a body) for a customer
  * whose chat is open: the step update and the service update.
  */
 const SENTENCES: Readonly<Record<string, Readonly<Record<Language, (p: Payload) => string>>>> = {
@@ -20,6 +20,11 @@ const SENTENCES: Readonly<Record<string, Readonly<Record<Language, (p: Payload) 
     en: (p) => `Update on your service request, ${p.topic}: ${p.status}.`,
     mr: (p) => `तुमच्या सर्व्हिस विनंतीची माहिती, ${p.topic}: ${p.status}.`,
     hi: (p) => `आपके सर्विस अनुरोध की जानकारी, ${p.topic}: ${p.status}।`,
+  },
+  visit_delayed: {
+    en: (p) => `Our team is running late for your visit to ${p.home}. We will update you soon.`,
+    mr: (p) => `${p.home} येथील तुमच्या भेटीसाठी आमच्या टीमला उशीर होत आहे. आम्ही लवकरच कळवू.`,
+    hi: (p) => `${p.home} पर आपकी विज़िट के लिए हमारी टीम को देर हो रही है। हम जल्द ही बताएँगे।`,
   },
 };
 

@@ -8,6 +8,7 @@ import {
   payoutSetupSchema,
   practiceOutcomeSchema,
 } from '../schemas/bank-payout.schema';
+import { employeeBankInputSchema, employeeBankViewSchema } from '../schemas/employee-bank.schema';
 import { payoutIpSchema, payoutMatchSchema } from '../schemas/payout-ip-match.schema';
 
 const c = initContract();
@@ -63,10 +64,19 @@ export const bankPayoutsContract = c.router({
   releaseBankHold: {
     method: 'POST',
     path: '/payees/:kind/:id/bank-hold/release',
-    pathParams: z.object({ kind: z.enum(['vendor', 'contractor']), id: idSchema }),
+    pathParams: z.object({ kind: z.enum(['vendor', 'contractor', 'employee']), id: idSchema }),
     body: c.noBody(),
     responses: { 204: c.noBody() },
     summary: 'Lets bank transfers go before the 24-hour hold ends; not the person who changed it.',
+  },
+  saveEmployeeBank: {
+    method: 'PUT',
+    path: '/employees/:id/payout-bank',
+    pathParams: idParams,
+    body: employeeBankInputSchema,
+    responses: { 200: employeeBankViewSchema },
+    summary:
+      'Saves an employee bank account for travel and other pay. A change starts the same 24-hour hold as a vendor or crew.',
   },
   recentPayouts: {
     method: 'GET',

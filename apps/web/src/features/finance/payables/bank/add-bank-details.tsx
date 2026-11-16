@@ -22,6 +22,20 @@ type Body = {
 async function saveBank(payee: Payee, body: Body): Promise<void> {
   if (payee.kind === 'vendor')
     await expectStatus(api.inventory.vendors.update({ params: { id: payee.id }, body }), 200);
+  else if (payee.kind === 'employee')
+    // An employee's account is saved whole: name, IFSC and the number typed twice.
+    await expectStatus(
+      api.bankPayouts.saveEmployeeBank({
+        params: { id: payee.id },
+        body: {
+          bankAccountName: body.bankAccountName ?? payee.accountName ?? '',
+          bankIfsc: body.bankIfsc ?? payee.ifsc ?? '',
+          bankAccountNumber: body.bankAccountNumber ?? '',
+          bankAccountNumberConfirm: body.bankAccountNumberConfirm ?? '',
+        },
+      }),
+      200,
+    );
   else
     await expectStatus(api.contractors.updateContractor({ params: { id: payee.id }, body }), 200);
 }

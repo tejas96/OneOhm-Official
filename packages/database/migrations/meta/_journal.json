@@ -701,6 +701,83 @@
       "when": 1794756795316,
       "tag": "0099_announcement_dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1794762901637,
+      "tag": "0100_attendance_auto_close",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794763766336,
+      "tag": "0101_site_visit_close_and_travel_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1794764818134,
+      "tag": "0102_travel_void_and_employee_payee",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1794766363575,
+      "tag": "0103_tap_received_and_travel_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1794769995442,
+      "tag": "0104_duty_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1794771766811,
+      "tag": "0105_duty_route_km",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794774122478,
+      "tag": "0106_duty_site_auto",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1794801928095,
+      "tag": "0107_duty_start_base",
+      "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1794812034804,
+      "tag": "0108_duty_alerts_and_visit_proof",
+      "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1794817186636,
+      "tag": "0109_month_sheet",
+      "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1794829428178,
+      "tag": "0110_duty_customer_messages",
+      "breakpoints": true
     }
   ]
 }

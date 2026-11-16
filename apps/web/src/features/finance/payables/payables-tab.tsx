@@ -30,7 +30,7 @@ import { PayBillDialog } from './pay-bill-dialog';
 import { PayableNarrowChip, usePayableNarrow } from './payable-narrow';
 import { ReviewBillSheet } from './review-bill-sheet';
 
-const FILTERS = ['open', 'pending', 'approved', 'paid', 'all'] as const;
+const FILTERS = ['open', 'pending', 'approved', 'paid', 'cancelled', 'all'] as const;
 
 /** The chosen status lives in `?filter=`, so "bills to approve" opens exactly those bills. */
 function useBillFilter(): readonly [PayableFilter, (next: PayableFilter) => void] {

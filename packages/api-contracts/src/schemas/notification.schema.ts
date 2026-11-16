@@ -30,6 +30,8 @@ export const NOTICE_SUBJECTS = [
   'marketing_connections',
   /** A new Google review; opens Marketing. */
   'marketing_reviews',
+  /** A month sheet (id: the person whose month it is); opens My month or the person's row. */
+  'month_sheet',
 ] as const;
 
 /** One alert in a person's inbox, with what it is about so the app can open it. */
@@ -43,6 +45,8 @@ export const notificationSchema = z.object({
       type: z.enum(NOTICE_SUBJECTS),
       id: idSchema,
       projectId: idSchema.nullable(),
+      /** The month it is about (`YYYY-MM`): month sheet notices open that month. */
+      month: z.string().nullable().optional(),
     })
     .nullable(),
   read: z.boolean(),

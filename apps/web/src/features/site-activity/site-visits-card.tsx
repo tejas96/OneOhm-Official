@@ -15,6 +15,8 @@ import { swatchFor } from '@/lib/format/contact';
 import { useSiteFormat } from './site-format';
 import { useProjectSiteVisits } from './use-site-visits';
 import { VisitDistance } from './visit-distance';
+import { VisitNotes } from './visit-notes';
+import { VisitProof } from './visit-proof';
 
 /** Check-ins at the project's site: who, for which task, in and out, and how far (PRD 4.2). */
 export function SiteVisitsCard({ projectId }: { readonly projectId: string }) {
@@ -76,9 +78,28 @@ export function SiteVisitsCard({ projectId }: { readonly projectId: string }) {
         ),
     },
     {
+      key: 'proof',
+      header: t('visits.columns.proof'),
+      cell: (visit) =>
+        visit.proof ? (
+          <VisitProof
+            proof={visit.proof}
+            reasons={visit.proofReasons}
+            customerSaid={visit.customerSaid ?? null}
+          />
+        ) : (
+          <span className="type-body-sm text-ink-faint">{t('proof.pending')}</span>
+        ),
+    },
+    {
       key: 'where',
       header: t('visits.columns.where'),
-      cell: (visit) => <VisitDistance visit={visit} />,
+      cell: (visit) => (
+        <span className="flex flex-col items-end gap-1 md:items-start">
+          <VisitDistance visit={visit} />
+          <VisitNotes visit={visit} />
+        </span>
+      ),
     },
   ];
 

@@ -1,23 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { TeamAttendanceRow } from '@oneohm/api-contracts';
+import type { LocationResult, TeamAttendanceRow } from '@oneohm/api-contracts';
 import {
   attendanceDays,
-  leaveRequests,
+  closeVisitsAtDayEnd,
   locationConsents,
-  roles,
-  userRoles,
-  users,
+  takeTravelSnapshot,
 } from '@oneohm/database';
-import { isLateCheckIn, LOCATION_CONSENT_VERSION, nearestLocation } from '@oneohm/domain';
+import { LOCATION_CONSENT_VERSION, nearestLocation } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
 import { conflict } from '../../common/http/errors';
 import { DATABASE, type Database } from '../../config/core.module';
+import { sendDueChecks } from '../visit-news/visit-news-send';
+import { resumeDuty } from './attendance-resume';
+import { acceptTap, checkInDay, flagDelayedTap } from './attendance-tap';
+import { teamAttendance } from './attendance-team';
 import { saveConditions } from './device-conditions';
-import { activeLocations, indiaTime, loadPolicy } from './policy';
-import { consentSummary, type Position, usableReading } from './tracking';
-import { readDays } from './workforce-read';
+import { isLateAt } from './late-rule';
+import { locationResultOf } from './location-result';
+import { activeLocations, loadPolicy } from './policy';
+import { consentSummary, type Position, readingOutcome } from './tracking';
 
 export type { Position } from './tracking';
 
@@ -65,120 +68,155 @@ export class AttendanceService {
 
   /**
    * The reading kept for this person now: none without consent to the current words,
-   * when the policy is off, or outside working hours.
+   * when the policy is off, or outside working hours. `result` tells the phone what
+   * happened, so a reading that was not saved is never silent (live review A5).
    */
   private async usable(actor: Actor, position: Position | null | undefined) {
-    const reading = await usableReading(this.db, actor.userId, position);
-    if (!reading) return null;
-    const match = nearestLocation(reading.position, await activeLocations(this.db));
-    return { position: reading.position, match, policy: reading.policy };
+    const { reading, skipped } = await readingOutcome(this.db, actor.userId, position);
+    const match = reading
+      ? nearestLocation(reading.position, await activeLocations(this.db))
+      : null;
+    return {
+      reading: reading && { position: reading.position, match },
+      result: locationResultOf(skipped, match),
+    };
   }
 
-  async checkIn(actor: Actor, position: Position | null | undefined): Promise<void> {
-    const today = todayIn();
-    const now = new Date();
+  /**
+   * `tappedAt` is the phone's own tap time, for a tap that waited for signal (A9). Within 30
+   * minutes it is used as it is; up to 12 hours old it is used but flagged and the manager is
+   * told; older, or ahead of the server, it is refused with 422 (see `acceptTap`). The
+   * server's receive time is kept beside it.
+   */
+  async checkIn(
+    actor: Actor,
+    position: Position | null | undefined,
+    tappedAt?: string,
+  ): Promise<LocationResult> {
+    const received = new Date();
+    const tap = await checkInDay(this.db, actor.userId, acceptTap(tappedAt, received), received);
+    const now = tap.at;
+    const today = tap.workDate;
     const policy = await loadPolicy(this.db);
-    const reading = await this.usable(actor, position);
-    const [created] = await this.db
-      .insert(attendanceDays)
-      .values({
+    const { reading, result } = await this.usable(actor, position);
+    await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(attendanceDays)
+        .values({
+          userId: actor.userId,
+          workDate: today,
+          checkInAt: now,
+          checkInReceivedAt: received,
+          late: await isLateAt(tx, policy, now, today),
+          checkInLatitude: reading?.position.latitude ?? null,
+          checkInLongitude: reading?.position.longitude ?? null,
+          checkInAccuracyM: reading?.position.accuracyM
+            ? Math.round(reading.position.accuracyM)
+            : null,
+          checkInLocationId: reading?.match?.location.id ?? null,
+          checkInDistanceM: reading?.match?.distanceM ?? null,
+          // Null when the accuracy was too poor to tell (see `fenceOf`).
+          checkInInside: reading?.match?.inside ?? null,
+        })
+        .onConflictDoNothing({ target: [attendanceDays.userId, attendanceDays.workDate] })
+        .returning({ id: attendanceDays.id });
+      if (!created) throw conflict('You have already checked in today.', 'checked_in');
+      await saveConditions(tx, {
         userId: actor.userId,
-        workDate: today,
-        checkInAt: now,
-        late: isLateCheckIn(
-          indiaTime(now),
-          policy.attendance.dayStart,
-          policy.attendance.graceMinutes,
-        ),
-        checkInLatitude: reading?.position.latitude ?? null,
-        checkInLongitude: reading?.position.longitude ?? null,
-        checkInAccuracyM: reading?.position.accuracyM
-          ? Math.round(reading.position.accuracyM)
-          : null,
-        checkInLocationId: reading?.match?.location.id ?? null,
-        checkInDistanceM: reading?.match?.distanceM ?? null,
-        checkInInside: reading?.match?.inside ?? null,
-      })
-      .onConflictDoNothing({ target: [attendanceDays.userId, attendanceDays.workDate] })
-      .returning({ id: attendanceDays.id });
-    if (!created) throw conflict('You have already checked in today.', 'checked_in');
-    await saveConditions(this.db, {
-      userId: actor.userId,
-      kind: 'check_in',
-      subjectId: created.id,
-      position: reading?.position,
+        kind: 'check_in',
+        subjectId: created.id,
+        position: reading?.position,
+      });
+      if (tap.delayed)
+        await flagDelayedTap(
+          tx,
+          actor,
+          { id: created.id, workDate: today },
+          {
+            kind: 'check_in',
+            at: now,
+            received,
+          },
+        );
     });
+    return result;
   }
 
-  async checkOut(actor: Actor, position: Position | null | undefined): Promise<void> {
-    const reading = await this.usable(actor, position);
-    const [updated] = await this.db
-      .update(attendanceDays)
-      .set({
-        checkOutAt: new Date(),
-        checkOutLatitude: reading?.position.latitude ?? null,
-        checkOutLongitude: reading?.position.longitude ?? null,
-        checkOutAccuracyM: reading?.position.accuracyM
-          ? Math.round(reading.position.accuracyM)
-          : null,
-        checkOutInside: reading?.match?.inside ?? null,
-        updatedAt: new Date(),
+  /**
+   * Ends the person's open day, whatever its date (live review A2): a check-out after
+   * midnight closes the day that began yesterday and never starts a new one.
+   */
+  async checkOut(
+    actor: Actor,
+    position: Position | null | undefined,
+    tappedAt?: string,
+  ): Promise<LocationResult> {
+    const { reading, result } = await this.usable(actor, position);
+    const [open] = await this.db
+      .select({
+        id: attendanceDays.id,
+        workDate: attendanceDays.workDate,
+        checkInAt: attendanceDays.checkInAt,
       })
-      .where(
-        and(
-          eq(attendanceDays.userId, actor.userId),
-          eq(attendanceDays.workDate, todayIn()),
-          isNull(attendanceDays.checkOutAt),
-        ),
-      )
-      .returning({ id: attendanceDays.id });
-    if (!updated)
-      throw conflict('Check in first, or you have already checked out.', 'not_checked_in');
-    await saveConditions(this.db, {
-      userId: actor.userId,
-      kind: 'check_out',
-      subjectId: updated.id,
-      position: reading?.position,
+      .from(attendanceDays)
+      .where(and(eq(attendanceDays.userId, actor.userId), isNull(attendanceDays.checkOutAt)))
+      .orderBy(desc(attendanceDays.workDate))
+      .limit(1);
+    if (!open) throw conflict('Check in first, or you have already checked out.', 'not_checked_in');
+    const received = new Date();
+    const { at: outAt, delayed } = acceptTap(tappedAt, received, open.checkInAt);
+    // One transaction: the day ends, the person's open site visits end with it (S1) and the
+    // day's travel is saved with the rate of the day (S3, S4). A failure leaves the day open.
+    await this.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(attendanceDays)
+        .set({
+          checkOutAt: outAt,
+          checkOutReceivedAt: received,
+          checkOutLatitude: reading?.position.latitude ?? null,
+          checkOutLongitude: reading?.position.longitude ?? null,
+          checkOutAccuracyM: reading?.position.accuracyM
+            ? Math.round(reading.position.accuracyM)
+            : null,
+          checkOutInside: reading?.match?.inside ?? null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(attendanceDays.id, open.id), isNull(attendanceDays.checkOutAt)))
+        .returning({ id: attendanceDays.id });
+      if (!updated)
+        throw conflict('Check in first, or you have already checked out.', 'not_checked_in');
+      if (delayed)
+        await flagDelayedTap(
+          tx,
+          actor,
+          { id: open.id, workDate: open.workDate },
+          {
+            kind: 'check_out',
+            at: outAt,
+            received,
+          },
+        );
+      await closeVisitsAtDayEnd(tx, actor.userId, outAt);
+      await takeTravelSnapshot(tx, actor.userId, open.workDate);
+      await saveConditions(tx, {
+        userId: actor.userId,
+        kind: 'check_out',
+        subjectId: updated.id,
+        position: reading?.position,
+      });
     });
+    // A "Was this visit done?" still waiting for the person's reason goes now: none comes after End duty.
+    await sendDueChecks(this.db, actor.userId, received, true);
+    return result;
+  }
+
+  /** Takes back today's End duty (live review A10); see `resumeDuty`. */
+  resume(actor: Actor): Promise<void> {
+    return resumeDuty(this.db, actor);
   }
 
   /** Every active staff member on a day: checked in or not, or away on approved leave. */
-  async team(date = todayIn()): Promise<TeamAttendanceRow[]> {
-    const people = await this.db
-      .selectDistinct({ id: users.id, fullName: users.fullName })
-      .from(users)
-      .innerJoin(userRoles, eq(userRoles.userId, users.id))
-      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.kind, 'staff')))
-      .where(eq(users.status, 'active'))
-      .orderBy(asc(users.fullName));
-    const ids = people.map((person) => person.id);
-    const [days, away] = await Promise.all([
-      readDays(this.db, date, ids),
-      ids.length
-        ? this.db
-            .select({ userId: leaveRequests.userId, leaveType: leaveRequests.leaveType })
-            .from(leaveRequests)
-            .where(
-              and(
-                inArray(leaveRequests.userId, ids),
-                eq(leaveRequests.status, 'approved'),
-                lte(leaveRequests.fromDate, date),
-                gte(leaveRequests.toDate, date),
-              ),
-            )
-        : Promise.resolve([]),
-    ]);
-    const policy = await loadPolicy(this.db);
-    return people.map((person) => {
-      const leave = away.find((row) => row.userId === person.id);
-      return {
-        user: person,
-        day: days.get(person.id) ?? null,
-        onLeave: leave
-          ? (policy.leaveTypes.find((type) => type.key === leave.leaveType)?.label ??
-            leave.leaveType)
-          : null,
-      };
-    });
+  team(date = todayIn()): Promise<TeamAttendanceRow[]> {
+    return teamAttendance(this.db, date);
   }
 }

@@ -81,6 +81,8 @@ describe('follow-up text', () => {
       'problem_fixed_check',
       'reward_upi_ask',
       'amc_renewal_offer',
+      'worker_on_way',
+      'visit_check',
       'offer_quote_follow_up',
       'offer_revisit',
       'offer_past_customer',
@@ -92,6 +94,7 @@ describe('follow-up text', () => {
     ]);
     expect(templateExtras('quotation_sent')?.quickReplies).toEqual(['acceptPayload', 'askPayload']);
     expect(templateExtras('payment_link')?.urlButton).toBe('payToken');
+    expect(templateExtras('worker_on_way')?.urlButton).toBe('trackToken');
     expect(templateExtras('project_started')).toBeUndefined();
   });
 });

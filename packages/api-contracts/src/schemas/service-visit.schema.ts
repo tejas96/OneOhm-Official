@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 import { attachmentSchema } from './document.schema';
 import { SERVICE_KINDS, SERVICE_STATUSES, ticketSlaSchema } from './service-desk.schema';
-import { siteVisitSchema, trackingStatusSchema } from './site-activity.schema';
+import {
+  autoSkipSchema,
+  leftVisitSchema,
+  siteVisitSchema,
+  trackingStatusSchema,
+} from './site-activity.schema';
 import { positionSchema } from './workforce.schema';
 
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -86,6 +91,10 @@ export const serviceVisitSchema = serviceJobSchema.extend({
   sitePoint: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
   /** The person may check in, add evidence and finish: it is theirs and not resolved. */
   canWork: z.boolean(),
+  /** The person's latest visit that just ended, to ask why when the work is not done. */
+  justLeft: leftVisitSchema.nullable(),
+  /** Set when an automatic check-in was ignored, with the reason; the visit was not made. */
+  autoSkipped: autoSkipSchema.nullable().optional(),
 });
 export type ServiceVisit = z.infer<typeof serviceVisitSchema>;
 

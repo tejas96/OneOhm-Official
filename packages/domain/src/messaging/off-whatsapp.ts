@@ -43,7 +43,8 @@ export const channelOf = (path: SendPath): ContactChannel =>
  * What an automatic customer message becomes for a customer not on WhatsApp, by template (the same
  * rule as `sendPath` for the staff menu):
  * - `never`: marketing (cost, optional) is never sent by SMS;
- * - `skip`: a reminder of an answer only the WhatsApp chat can take (the first ask was handed over);
+ * - `skip`: a reminder of an answer only the WhatsApp chat can take (the first ask was handed over),
+ *   or an ask that proves something only when the customer taps it (`visit_check`);
  * - `in_person`: the first ask of such an answer - one "Do in person" task for the team;
  * - `sms`: it goes as an SMS text in the usual words (which point to the app or the team).
  */
@@ -81,9 +82,15 @@ const CHAT_ASKS: readonly string[] = [
   'inspection_presence',
 ];
 
+/**
+ * Asks only the WhatsApp chat (or the app) can take, and that are not worth a task for the team:
+ * "Was this visit done?" proves a visit only when the customer taps it themselves.
+ */
+const CHAT_ONLY: readonly string[] = ['visit_check'];
+
 export function offWhatsAppPathForTemplate(template: string): TemplatePath {
   if (MARKETING.includes(template)) return 'never';
-  if (CHAT_REMINDERS.includes(template)) return 'skip';
+  if (CHAT_REMINDERS.includes(template) || CHAT_ONLY.includes(template)) return 'skip';
   return CHAT_ASKS.includes(template) ? 'in_person' : 'sms';
 }
 

@@ -1,4 +1,4 @@
-import type { TravelDay } from '@oneohm/api-contracts';
+import type { TravelClaim, TravelDay } from '@oneohm/api-contracts';
 import {
   Button,
   ChoiceChips,
@@ -26,6 +26,7 @@ import { TrackingStatus } from '@/features/site/tracking-status';
 import { addDays, businessToday, shortDate } from '@/lib/dates';
 import { ClaimCard, stateOf } from './claim-card';
 import { ClaimProject, defaultProject } from './claim-project';
+import { autoNote, claimBoxState } from './claim-state';
 import { RouteCard } from './route-card';
 import { useClaimActions, useMyClaims, useTravelDay } from './use-travel';
 
@@ -93,47 +94,60 @@ export function TravelScreen() {
   );
 }
 
+/** The live claim of the day: what it is, whether the system made it, and cancel while it waits. */
+function LiveClaim({ claim }: { readonly claim: TravelClaim }) {
+  const toast = useToast();
+  const { cancel } = useClaimActions();
+  const state = stateOf(claim);
+  const note = autoNote(claim);
+  return (
+    <View style={styles.box}>
+      <Text variant="bodySm" tone="secondary">
+        {TRAVEL.claimedFor(formatInr(claim.amountPaise), claim.distanceM)}
+      </Text>
+      <StatusPill tone={state === 'pending' ? 'review' : 'done'} label={TRAVEL.status[state]} />
+      {note ? (
+        <Text variant="bodySm" tone="secondary">
+          {TRAVEL.autoNote[note]}
+        </Text>
+      ) : null}
+      {claim.status === 'pending' ? (
+        <Button
+          label={TRAVEL.cancel}
+          variant="quiet"
+          size="sm"
+          pending={cancel.isPending}
+          onPress={() => {
+            if (cancel.isPending) return;
+            cancel.mutate(claim.id, {
+              onSuccess: () => toast(TRAVEL.cancelled),
+              onError: (error) => toast(describeError(error)),
+            });
+          }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
 /** The claim for the shown day: make one with a note, see it, or cancel it while waiting. */
 function ClaimBox({ day }: { readonly day: TravelDay }) {
   const theme = useTheme();
   const toast = useToast();
-  const { claim, cancel } = useClaimActions();
+  const { claim } = useClaimActions();
   const [note, setNote] = useState('');
   const [projectId, setProjectId] = useState(() => defaultProject(day));
   const errors = fieldErrorsOf(claim.error);
   const live = day.claim && (day.claim.status === 'pending' || day.claim.status === 'approved');
-  if (live && day.claim) {
-    const state = stateOf(day.claim);
-    return (
-      <View style={styles.box}>
-        <Text variant="bodySm" tone="secondary">
-          {TRAVEL.claimedFor(formatInr(day.claim.amountPaise), day.claim.distanceM)}
-        </Text>
-        <StatusPill tone={state === 'pending' ? 'review' : 'done'} label={TRAVEL.status[state]} />
-        {day.claim.status === 'pending' ? (
-          <Button
-            label={TRAVEL.cancel}
-            variant="quiet"
-            size="sm"
-            pending={cancel.isPending}
-            onPress={() => {
-              if (!day.claim || cancel.isPending) return;
-              cancel.mutate(day.claim.id, {
-                onSuccess: () => toast(TRAVEL.cancelled),
-                onError: (error) => toast(describeError(error)),
-              });
-            }}
-          />
-        ) : null}
-      </View>
-    );
-  }
+  if (live && day.claim) return <LiveClaim claim={day.claim} />;
   if (!day.claimable) {
-    return day.visits.length > 0 ? (
+    const state = claimBoxState(day);
+    if (state === 'none') return null;
+    return (
       <Text variant="bodySm" tone="secondary">
-        {TRAVEL.nothingToClaim}
+        {state === 'end_day' ? TRAVEL.endDayToClaim : TRAVEL.nothingToClaim}
       </Text>
-    ) : null;
+    );
   }
   return (
     <View style={styles.form}>

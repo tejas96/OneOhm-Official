@@ -40,6 +40,7 @@ export async function deliverPush(
       ...(notice.subjectType ? { subjectType: notice.subjectType } : {}),
       ...(notice.subjectId ? { subjectId: notice.subjectId } : {}),
       ...(notice.projectId ? { projectId: notice.projectId } : {}),
+      ...(notice.subjectMonth ? { subjectMonth: notice.subjectMonth } : {}),
     },
   });
   if (result.outcome === 'logged')

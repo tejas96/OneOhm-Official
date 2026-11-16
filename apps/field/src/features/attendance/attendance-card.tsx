@@ -1,34 +1,29 @@
 import type { MyWorkday } from '@oneohm/api-contracts';
-import { Button, Card, describeError, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
+import { Card, PressableScale, Text, useTheme } from '@oneohm/mobile-ui';
 import { router } from 'expo-router';
-import { LogIn, LogOut, Route } from 'lucide-react-native';
-import { useState } from 'react';
+import { Route } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useToast } from '@/components/toast';
 import { TRAVEL } from '@/copy/site';
 import { ATTENDANCE } from '@/copy/workforce';
 import { TrackingStatus } from '@/features/site/tracking-status';
+import { DutySection } from '../duty/duty-section';
 import { ConsentPrompt } from './consent-prompt';
+import { onCorrectionRequest } from './correction-request';
 import { CorrectionSheet } from './correction-sheet';
+import { DayActions } from './day-actions';
 import { DayLine } from './day-line';
-import { useAttendanceAction } from './use-workday';
 
 /** Today's check-in and check-out and where they happened; points sit in their own tile. */
 export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
   const theme = useTheme();
-  const toast = useToast();
-  const [correcting, setCorrecting] = useState(false);
+  const [correcting, setCorrecting] = useState<{ readonly date: string | null } | null>(null);
+  const fix = (date: string | null) => setCorrecting({ date });
+  useEffect(() => onCorrectionRequest((date) => setCorrecting({ date })), []);
   const day = workday.today;
-  const action = useAttendanceAction(day ? 'out' : 'in', workday);
   const askConsent = workday.attendance.captureLocation && !workday.consent.answered;
-  const run = () =>
-    action.mutate(undefined, {
-      onSuccess: ({ missed }) => {
-        if (missed === 'denied') toast(ATTENDANCE.permissionDenied);
-        if (missed === 'nofix') toast(ATTENDANCE.noFix);
-      },
-      onError: (error) => toast(describeError(error)),
-    });
+  // Agreed to older words: asked again even in the middle of a day, as the route needs the new ones.
+  const stale = !workday.consent.given && workday.consent.version !== null;
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -45,29 +40,13 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
           <TrackingStatus state={workday.tracking} />
         </View>
       ) : null}
-      {askConsent && !day ? <ConsentPrompt days={workday.attendance.retentionDays} /> : null}
-      {day?.checkOutAt ? (
-        <Text variant="bodySm" tone="secondary">
-          {ATTENDANCE.dayDone}
-        </Text>
-      ) : (
-        <Button
-          label={day ? ATTENDANCE.checkOut : ATTENDANCE.checkIn}
-          variant={day ? 'secondary' : 'primary'}
-          icon={
-            day ? (
-              <LogOut size={18} color={theme.colors.textPrimary} />
-            ) : (
-              <LogIn size={18} color={theme.colors.onAccent} />
-            )
-          }
-          pending={action.isPending}
-          onPress={run}
-          fullWidth
-        />
-      )}
+      {askConsent && (!day || stale) ? (
+        <ConsentPrompt days={workday.attendance.retentionDays} stale={stale} />
+      ) : null}
+      <DutySection workday={workday} />
+      <DayActions workday={workday} onFix={fix} />
       <View style={styles.foot}>
-        <PressableScale accessibilityRole="button" onPress={() => setCorrecting(true)}>
+        <PressableScale accessibilityRole="button" onPress={() => fix(null)}>
           <Text variant="label" tone="accent">
             {ATTENDANCE.correction}
           </Text>
@@ -83,7 +62,12 @@ export function AttendanceCard({ workday }: { readonly workday: MyWorkday }) {
           </Text>
         </PressableScale>
       </View>
-      <CorrectionSheet open={correcting} onClose={() => setCorrecting(false)} />
+      <CorrectionSheet
+        open={correcting !== null}
+        initialDate={correcting?.date ?? null}
+        windowDays={workday.attendance.correctionWindowDays ?? 31}
+        onClose={() => setCorrecting(null)}
+      />
     </Card>
   );
 }

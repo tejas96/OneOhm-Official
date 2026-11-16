@@ -73,6 +73,8 @@ export const SAMPLE = {
   company: 'OneOhm Solar',
   utr: 'SBIN52611050012',
   last4: '1234',
+  worker: 'Ravi',
+  minutes: '25',
 } as const;
 
 /** Samples that differ by message: the invite carries the app link, not a pay link. */

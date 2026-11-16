@@ -1,6 +1,7 @@
 import { BRAND } from '../tokens/brand';
 import {
   DARK_COLORS,
+  DUTY_SWATCHES,
   LIGHT_COLORS,
   OCEAN_PANEL,
   PARTY_SWATCHES,
@@ -35,6 +36,7 @@ const TAILWIND_FONT_NAMES: Readonly<Record<FontRole, string>> = {
 };
 
 const PARTY_NAMES = Object.keys(PARTY_SWATCHES.light) as Array<keyof typeof PARTY_SWATCHES.light>;
+const DUTY_NAMES = Object.keys(DUTY_SWATCHES.light) as Array<keyof typeof DUTY_SWATCHES.light>;
 
 function fontStack(role: FontRole): string {
   return `var(${FONT_FACE_VARIABLES[role]}), "${FONT_FAMILIES[role]}", ${FONT_FALLBACKS[role]}`;
@@ -71,6 +73,7 @@ function themeVariables(theme: ThemeName): string[] {
     ...statusVariables(statuses),
     ...PROJECT_SWATCHES[theme].map((swatch, index) => `--oh-swatch-${index}: ${swatch};`),
     ...PARTY_NAMES.map((party) => `--oh-party-${party}: ${parties[party]};`),
+    ...DUTY_NAMES.map((name) => `--oh-duty-${name}: ${DUTY_SWATCHES[theme][name]};`),
     ...Object.entries(shadows).map(([level, shadow]) => `--oh-shadow-${level}: ${shadow};`),
   ];
 }
@@ -90,6 +93,7 @@ function inlineThemeEntries(): string[] {
     ...statusNames.map((name) => `--color-${name}: var(--oh-${name});`),
     ...PROJECT_SWATCHES.light.map((_, i) => `--color-swatch-${i}: var(--oh-swatch-${i});`),
     ...PARTY_NAMES.map((party) => `--color-party-${party}: var(--oh-party-${party});`),
+    ...DUTY_NAMES.map((name) => `--color-duty-${name}: var(--oh-duty-${name});`),
     '--shadow-*: initial;',
     ...Object.keys(ELEVATION).map((level) => `--shadow-${level}: var(--oh-shadow-${level});`),
   ];

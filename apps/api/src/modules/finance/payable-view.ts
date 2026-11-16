@@ -6,18 +6,19 @@ type Row = typeof payables.$inferSelect;
 
 /**
  * A bill as finance sees it: what it is for, where approval and payment stand, the
- * vendor's invoice against the order, and the TDS held back from the payee.
+ * vendor's invoice against the order, and the TDS held back from the payee. The project is
+ * the bill's own, or, for an approved travel claim, the claim's (joined, not copied).
  */
 export function presentPayable(
   row: Row,
-  code: string | null,
+  project: { id: string | null; code: string | null },
   approver: string | null,
   today: string,
 ): Payable {
   return {
     id: row.id,
-    projectId: row.projectId,
-    projectCode: code,
+    projectId: project.id,
+    projectCode: project.code,
     party: row.party,
     partyName: row.partyName,
     description: row.description,
@@ -25,7 +26,7 @@ export function presentPayable(
     amountPaise: row.amountPaise,
     dueOn: row.dueOn,
     status: row.status,
-    overdue: row.status !== 'paid' && row.dueOn < today,
+    overdue: (row.status === 'pending' || row.status === 'approved') && row.dueOn < today,
     approvedBy:
       row.approvedByUserId && approver ? { id: row.approvedByUserId, fullName: approver } : null,
     approvedAt: row.approvedAt?.toISOString() ?? null,
@@ -42,8 +43,8 @@ export function presentPayable(
     gstPaise: row.gstPaise,
     tdsBp: row.tdsBp,
     tdsPaise: row.tdsPaise,
-    toPayPaise: billToPay(row),
+    toPayPaise: row.status === 'cancelled' ? 0 : billToPay(row),
     paidPaise: row.paidPaise,
-    leftPaise: leftToPay(row),
+    leftPaise: row.status === 'cancelled' ? 0 : leftToPay(row),
   };
 }

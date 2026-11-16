@@ -6,17 +6,23 @@ import type {
   ServiceVisit,
 } from '@oneohm/api-contracts';
 import { serviceRequests, siteVisits } from '@oneohm/database';
-import { byUrgency, checkInChanges, siteDistance } from '@oneohm/domain';
+import { byUrgency, type CheckOutSource, checkInChanges } from '@oneohm/domain';
 import { todayIn } from '@oneohm/shared';
-import { and, eq, isNull, ne, type SQL } from 'drizzle-orm';
+import { and, eq, ne, type SQL } from 'drizzle-orm';
 import { recordAudit } from '../../common/audit';
 import { type Actor, can } from '../../common/auth/actor';
+import { currentCalendar } from '../../common/calendar';
 import { conflict, forbidden, notFound } from '../../common/http/errors';
 import { serviceRequestRows, toTicket } from '../../common/read-models/service-request-rows';
 import { DATABASE, type Database } from '../../config/core.module';
-import { afterSiteCheckIn, afterSiteCheckOut } from '../workforce/site-hooks';
-import { type Position, trackingFor, usableReading } from '../workforce/tracking';
-import { noteServiceCheckIn, noteServiceCheckOut, tellCustomer } from './service-visit-events';
+import { plannedVisitFor } from '../site-activity/planned-visit';
+import { type AutoVisit, alreadyVisiting, visitMoment } from '../site-activity/site-visit-auto';
+import { leftVisitOf } from '../site-activity/site-visit-left';
+import { autoCheckInSkip } from '../site-activity/site-visit-skip';
+import { afterSiteCheckIn, assertDayNotClosed } from '../workforce/site-hooks';
+import { type Position, trackingFor } from '../workforce/tracking';
+import { closeServiceVisit, measureService } from './service-visit-close';
+import { noteServiceCheckIn, tellCustomer } from './service-visit-events';
 import { fieldWorkOf, openVisitOf, placesOf, type ServicePlace, toJob } from './service-visit-read';
 
 export interface LoadedJob {
@@ -89,10 +95,11 @@ export class ServiceVisitsService {
 
   async detail(actor: Actor, id: string, checked = false): Promise<ServiceVisit> {
     const job = await this.load(actor, id, checked);
-    const [tracking, open, work] = await Promise.all([
+    const [tracking, open, work, justLeft] = await Promise.all([
       trackingFor(this.db, actor.userId),
       openVisitOf(this.db, actor.userId),
       fieldWorkOf(this.db, id),
+      leftVisitOf(this.db, actor.userId, { serviceRequestId: id }),
     ]);
     return {
       ...toJob(job.ticket, job.place, open),
@@ -104,6 +111,7 @@ export class ServiceVisitsService {
       farFromSiteM: tracking.policy.travel.farFromSiteM,
       sitePoint: job.place?.point ?? null,
       canWork: job.assigneeUserId === actor.userId && job.ticket.status !== 'resolved',
+      justLeft,
     };
   }
 
@@ -117,24 +125,42 @@ export class ServiceVisitsService {
     return fieldWorkOf(this.db, id);
   }
 
-  async measure(actor: Actor, place: ServicePlace | undefined, position?: Position | null) {
-    const reading = await usableReading(this.db, actor.userId, position, new Date());
-    const radius = reading?.policy.travel.farFromSiteM ?? 0;
-    const measured = reading ? siteDistance(reading.position, place?.point ?? null, radius) : null;
-    return { reading, measured };
+  measure(actor: Actor, place: ServicePlace | undefined, position?: Position | null, at?: Date) {
+    return measureService(this.db, actor, place, position, at);
   }
 
-  async checkIn(actor: Actor, id: string, position?: Position | null): Promise<ServiceVisit> {
+  async checkIn(
+    actor: Actor,
+    id: string,
+    position?: Position | null,
+    auto?: AutoVisit,
+  ): Promise<ServiceVisit> {
     const job = await this.ownJob(actor, id);
+    const { at: now, source, delayed } = await visitMoment(this.db, actor, auto, new Date(), 'in');
+    // The same arrival twice (the phone and the route) is one visit.
+    if (auto && (await alreadyVisiting(this.db, actor.userId, { serviceRequestId: id }, now)))
+      return this.detail(actor, id);
+    if (auto) {
+      const skipped = await autoCheckInSkip(
+        this.db,
+        actor.userId,
+        { serviceRequestId: id },
+        job.place?.point ?? null,
+        position,
+        now,
+      );
+      if (skipped) return { ...(await this.detail(actor, id)), autoSkipped: skipped };
+    }
     const open = await openVisitOf(this.db, actor.userId);
     if (open)
       throw conflict(
         `You are still checked in for ${open.taskTitle ?? 'another visit'}. Check out there first.`,
         'open_visit',
       );
-    const now = new Date();
-    const { reading, measured } = await this.measure(actor, job.place, position);
+    const { reading, measured } = await this.measure(actor, job.place, position, now);
+    const workDate = todayIn(currentCalendar().timeZone, now);
     await this.db.transaction(async (tx) => {
+      await assertDayNotClosed(tx, actor.userId, workDate);
       const [created] = await tx
         .insert(siteVisits)
         .values({
@@ -142,9 +168,12 @@ export class ServiceVisitsService {
           projectId: job.ticket.project?.id ?? null,
           propertyId: job.place?.id ?? null,
           serviceRequestId: id,
+          visitId: await plannedVisitFor(tx, { serviceRequestId: id }, workDate),
           kind: 'service',
-          workDate: todayIn('Asia/Kolkata', now),
+          workDate,
           checkInAt: now,
+          checkInSource: source,
+          delayed,
           checkInLatitude: reading?.position.latitude ?? null,
           checkInLongitude: reading?.position.longitude ?? null,
           checkInAccuracyM: rounded(reading?.position.accuracyM),
@@ -154,7 +183,7 @@ export class ServiceVisitsService {
         .onConflictDoNothing()
         .returning({ id: siteVisits.id });
       if (!created) throw conflict('You are already checked in somewhere.', 'open_visit');
-      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now);
+      await afterSiteCheckIn(tx, actor, created.id, reading?.position ?? null, now, delayed);
       // Reaching the site answers the request, if nothing had answered it yet.
       const changes = checkInChanges(job.request, now);
       if (Object.keys(changes).length > 0) {
@@ -163,7 +192,8 @@ export class ServiceVisitsService {
           .set({ ...changes, updatedAt: now })
           .where(eq(serviceRequests.id, id));
       }
-      if (changes.status) await tellCustomer(tx, job, now);
+      // An automatic check-in answers the request but says nothing to the customer.
+      if (changes.status && source === 'manual') await tellCustomer(tx, job, now);
       await noteServiceCheckIn(tx, job.ticket, {
         visitId: created.id,
         userId: actor.userId,
@@ -171,6 +201,7 @@ export class ServiceVisitsService {
         distanceM: measured?.distanceM ?? null,
         far: measured?.far ?? null,
         located: reading !== null,
+        automatic: source !== 'manual',
       });
       await recordAudit(tx, actor.userId, 'service.checked_in', 'service_request', id, {
         visitId: created.id,
@@ -181,57 +212,28 @@ export class ServiceVisitsService {
     return this.detail(actor, id);
   }
 
-  async checkOut(actor: Actor, id: string, position?: Position | null): Promise<ServiceVisit> {
+  async checkOut(
+    actor: Actor,
+    id: string,
+    position?: Position | null,
+    auto?: AutoVisit,
+  ): Promise<ServiceVisit> {
     const job = await this.ownJob(actor, id);
-    const closed = await this.closeVisit(actor, job, position);
-    if (!closed) throw conflict('You are not checked in at this site.', 'not_checked_in');
+    const closed = await this.closeVisit(actor, job, position, auto);
+    // The same departure seen twice is not an error for the phone or the route.
+    if (!closed && !(auto && auto.source !== 'manual'))
+      throw conflict('You are not checked in at this site.', 'not_checked_in');
     return this.detail(actor, id);
   }
 
   /** Checks the person out of their open visit on this request: its id, or null if none. */
-  async closeVisit(
+  closeVisit(
     actor: Actor,
     job: LoadedJob,
     position?: Position | null,
+    auto?: AutoVisit,
+    finished?: CheckOutSource,
   ): Promise<string | null> {
-    const [open] = await this.db
-      .select()
-      .from(siteVisits)
-      .where(
-        and(
-          eq(siteVisits.userId, actor.userId),
-          eq(siteVisits.serviceRequestId, job.ticket.id),
-          isNull(siteVisits.checkOutAt),
-        ),
-      )
-      .limit(1);
-    if (!open) return null;
-    const now = new Date();
-    const { reading, measured } = await this.measure(actor, job.place, position);
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(siteVisits)
-        .set({
-          checkOutAt: now,
-          checkOutLatitude: reading?.position.latitude ?? null,
-          checkOutLongitude: reading?.position.longitude ?? null,
-          checkOutAccuracyM: rounded(reading?.position.accuracyM),
-          checkOutDistanceM: measured?.distanceM ?? null,
-          checkOutFar: measured?.far ?? null,
-          updatedAt: now,
-        })
-        .where(and(eq(siteVisits.id, open.id), isNull(siteVisits.checkOutAt)));
-      await afterSiteCheckOut(tx, actor.userId, open.id, reading?.position ?? null);
-      await noteServiceCheckOut(tx, job.ticket, {
-        visitId: open.id,
-        userId: actor.userId,
-        fullName: actor.fullName,
-        distanceM: measured?.distanceM ?? null,
-        far: measured?.far ?? null,
-        located: reading !== null,
-        minutes: Math.max(0, Math.round((now.getTime() - open.checkInAt.getTime()) / 60_000)),
-      });
-    });
-    return open.id;
+    return closeServiceVisit(this.db, actor, job, position, auto, finished);
   }
 }

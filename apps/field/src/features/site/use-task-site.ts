@@ -94,3 +94,32 @@ export function useSiteAction(taskId: string, kind: 'in' | 'out' | 'save') {
   const label = progress.reading ? SITE.finding(progress.accuracyM) : null;
   return { ...mutation, label };
 }
+
+/**
+ * Checks out of the open visit by its id, wherever it is (live review S1): a task handed
+ * over, a deleted task or a resolved request cannot leave the person stuck. Location is
+ * read only when it may be, like every other check-out.
+ */
+export function useCloseOpenVisit() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      visitId,
+      tracking,
+    }: {
+      readonly visitId: string;
+      readonly tracking: TrackingStatus | undefined;
+    }) => {
+      const { position, missed } = await readIfAllowed(tracking);
+      const visit = await unwrap(
+        api.siteActivity.closeSiteVisit({ params: { id: visitId }, body: { position } }),
+      );
+      return { visit, missed };
+    },
+    onSuccess: async () => {
+      // 'site' holds the task and service cards and the travel days.
+      await client.invalidateQueries({ queryKey: ['site'] });
+      await client.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}

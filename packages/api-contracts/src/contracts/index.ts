@@ -26,6 +26,7 @@ import { documentChecklistContract } from './document-checklist.contract';
 import { customerActionContracts } from './document-requests.contract';
 import { documentRequirementsContract } from './document-requirements.contract';
 import { documentsContract } from './documents.contract';
+import { dutyPointsContract } from './duty-points.contract';
 import { engagementContract } from './engagement.contract';
 import { financeContract } from './finance.contract';
 import { gatewayCheckContract } from './gateway-check.contract';
@@ -34,8 +35,10 @@ import { leadCampaignsContract } from './lead-campaigns.contract';
 import { leadIntakeContract } from './lead-intake.contract';
 import { leadStepsContract } from './lead-steps.contract';
 import { listsContract } from './lists.contract';
+import { liveMapContract } from './live-map.contract';
 import { mapsContract } from './maps.contract';
 import { marketingContract } from './marketing.contract';
+import { monthSheetContract } from './month-sheet.contract';
 import { notificationsContract } from './notifications.contract';
 import { paymentLinksContract } from './payment-links.contract';
 import { paymentPlansContract } from './payment-plans.contract';
@@ -59,6 +62,7 @@ import { customerStageRatingsContract, stageRatingsContract } from './stage-rati
 import { stateSupportContract } from './state-support.contract';
 import { teamLoadContract } from './team-load.contract';
 import { templatesContract } from './templates.contract';
+import { trackContract } from './track.contract';
 import { whatsappContract } from './whatsapp.contract';
 import { workforceContract } from './workforce.contract';
 
@@ -124,6 +128,9 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly serviceVisits: typeof serviceVisitsContract;
   readonly leadIntake: typeof leadIntakeContract;
   readonly engagement: typeof engagementContract;
+  readonly dutyPoints: typeof dutyPointsContract;
+  readonly liveMap: typeof liveMapContract;
+  readonly monthSheet: typeof monthSheetContract;
   readonly projectTeam: typeof projectTeamContract;
   readonly productDatasheet: typeof productDatasheetContract;
   readonly lists: typeof listsContract;
@@ -133,6 +140,7 @@ export type ApiRouterDefinition = typeof customerActionContracts & {
   readonly businessSettings: typeof businessSettingsContract;
   readonly projectChanges: typeof projectChangesContract;
   readonly stateSupport: typeof stateSupportContract;
+  readonly track: typeof trackContract;
 };
 
 export const apiRouterDefinition: ApiRouterDefinition = {
@@ -194,6 +202,9 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   serviceVisits: serviceVisitsContract,
   leadIntake: leadIntakeContract,
   engagement: engagementContract,
+  dutyPoints: dutyPointsContract,
+  liveMap: liveMapContract,
+  monthSheet: monthSheetContract,
   projectTeam: projectTeamContract,
   productDatasheet: productDatasheetContract,
   lists: listsContract,
@@ -203,6 +214,7 @@ export const apiRouterDefinition: ApiRouterDefinition = {
   businessSettings: businessSettingsContract,
   projectChanges: projectChangesContract,
   stateSupport: stateSupportContract,
+  track: trackContract,
 };
 
 export * from './shared-exports';

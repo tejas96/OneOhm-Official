@@ -12,7 +12,7 @@ import { api, expectStatus } from '@/lib/api/api-client';
 import { usePagedList } from '@/lib/query/use-paged-list';
 
 export const FINANCE_KEY = ['finance'] as const;
-export type PayableFilter = 'open' | 'pending' | 'approved' | 'paid' | 'all';
+export type PayableFilter = 'open' | 'pending' | 'approved' | 'paid' | 'cancelled' | 'all';
 
 export const useFinanceOverview = () =>
   useQuery({

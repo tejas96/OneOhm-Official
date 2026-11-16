@@ -5,10 +5,12 @@ import { type Actor, assertCan } from '../../common/auth/actor';
 import { CurrentActor } from '../../common/auth/auth.decorators';
 import { DATABASE, type Database } from '../../config/core.module';
 import { apiContract } from '../../contract';
+import { baseSuggestion } from './base-suggestion';
 import { DepartureService } from './departure/departure.service';
 import { departureSummary } from './departure/departure-summary';
 import { PeopleService } from './people.service';
 import { PersonInvites } from './person-invite';
+import { personFor } from './person-privacy';
 import { RolesService } from './roles.service';
 
 @Controller()
@@ -26,24 +28,37 @@ export class PeopleController {
     return tsRestHandler(apiContract.people, {
       listPeople: async () => {
         assertCan(actor, 'people.view', 'people.manage', 'tasks.assign', 'projects.manage');
-        return { status: 200, body: await this.people.list() };
+        return {
+          status: 200,
+          body: (await this.people.list()).map((person) => personFor(actor, person)),
+        };
       },
       createPerson: async ({ body }) => {
         assertCan(actor, 'people.manage');
-        return { status: 201, body: await this.people.create(actor, body) };
+        return { status: 201, body: personFor(actor, await this.people.create(actor, body)) };
       },
       updatePerson: async ({ params, body }) => {
         // Which roles may change is checked in the service: rolesOutOfReach.
         assertCan(actor, 'people.manage');
-        return { status: 200, body: await this.people.update(actor, params.id, body) };
+        return {
+          status: 200,
+          body: personFor(actor, await this.people.update(actor, params.id, body)),
+        };
+      },
+      getBaseSuggestion: async ({ params }) => {
+        assertCan(actor, 'people.manage');
+        return { status: 200, body: await baseSuggestion(this.db, params.id) };
       },
       invitePerson: async ({ params }) => {
         assertCan(actor, 'people.manage');
-        return { status: 202, body: await this.invites.resend(actor, params.id) };
+        return { status: 202, body: personFor(actor, await this.invites.resend(actor, params.id)) };
       },
       releasePhone: async ({ params }) => {
         assertCan(actor, 'people.manage');
-        return { status: 200, body: await this.invites.releasePhone(actor, params.id) };
+        return {
+          status: 200,
+          body: personFor(actor, await this.invites.releasePhone(actor, params.id)),
+        };
       },
       getDeparture: async ({ params }) => {
         // Finance settles what a past member is still owed from the same summary.
@@ -52,11 +67,17 @@ export class PeopleController {
       },
       removePerson: async ({ params, body }) => {
         assertCan(actor, 'people.manage');
-        return { status: 200, body: await this.departures.remove(actor, params.id, body) };
+        return {
+          status: 200,
+          body: personFor(actor, await this.departures.remove(actor, params.id, body)),
+        };
       },
       rejoinPerson: async ({ params }) => {
         assertCan(actor, 'people.manage');
-        return { status: 200, body: await this.departures.rejoin(actor, params.id) };
+        return {
+          status: 200,
+          body: personFor(actor, await this.departures.rejoin(actor, params.id)),
+        };
       },
       listRoles: async () => {
         assertCan(actor, 'people.view', 'people.manage', 'roles.manage');

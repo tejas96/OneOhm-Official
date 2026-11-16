@@ -6,7 +6,7 @@ import {
   purchaseOrders,
   vendorAdvances,
 } from '@oneohm/database';
-import { and, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../config/core.module';
 
 type Reader = Pick<Database, 'select'>;
@@ -65,7 +65,7 @@ export async function loadVendorFacts(db: Reader, vendorId?: string) {
     .from(payables)
     .innerJoin(goodsReceipts, eq(goodsReceipts.payableId, payables.id))
     .innerJoin(purchaseOrders, eq(purchaseOrders.id, goodsReceipts.purchaseOrderId))
-    .where(and(ne(payables.status, 'paid'), byVendor))
+    .where(and(inArray(payables.status, ['pending', 'approved']), byVendor))
     .orderBy(payables.dueOn);
   const advances = await db
     .select({

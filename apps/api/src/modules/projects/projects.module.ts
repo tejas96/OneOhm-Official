@@ -31,6 +31,6 @@ import { TasksService } from './tasks.service';
     AssignmentConfirmService,
     EscalationPolicyService,
   ],
-  exports: [FinanceService],
+  exports: [FinanceService, TasksService],
 })
 export class ProjectsModule {}

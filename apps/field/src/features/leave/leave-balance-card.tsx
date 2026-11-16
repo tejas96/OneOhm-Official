@@ -5,13 +5,22 @@ import { ChevronRight } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { LEAVE_CARD } from '@/copy/engagement';
 
-const leftOf = (balance: MyWorkday['balances'][number]) =>
+type Balance = MyWorkday['balances'][number];
+const leftOf = (balance: Balance) =>
   Math.max(0, balance.allowedHalfDays - balance.usedHalfDays - balance.pendingHalfDays);
+/** Unpaid leave has no balance: the line says the days taken, never "0 of 0". */
+const lineOf = (balance: Balance) =>
+  balance.paid === false
+    ? LEAVE_CARD.unpaid(balance.usedHalfDays + balance.pendingHalfDays)
+    : LEAVE_CARD.other(balance.label, leftOf(balance));
 
 /** Leave left this year and a quick way to ask for more (PRD 4.1), as a Today tile. */
 export function LeaveBalanceCard({ workday }: { readonly workday: MyWorkday }) {
   const theme = useTheme();
-  const [main, ...others] = workday.balances;
+  // The first paid kind leads; unpaid kinds follow as a line.
+  const paid = workday.balances.filter((balance) => balance.paid !== false);
+  const main = paid[0];
+  const others = workday.balances.filter((balance) => balance !== main);
   if (!main) return null;
   const waiting = workday.balances.reduce((sum, balance) => sum + balance.pendingHalfDays, 0);
   return (
@@ -27,7 +36,7 @@ export function LeaveBalanceCard({ workday }: { readonly workday: MyWorkday }) {
       </View>
       {others.map((balance) => (
         <Text key={balance.leaveType} variant="label" tone="secondary">
-          {LEAVE_CARD.other(balance.label, leftOf(balance))}
+          {lineOf(balance)}
         </Text>
       ))}
       {waiting > 0 ? (

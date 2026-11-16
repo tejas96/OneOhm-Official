@@ -7,6 +7,20 @@ export interface LeaveType {
   readonly label: string;
   /** Days allowed per calendar year. */
   readonly daysPerYear: number;
+  /**
+   * Whether a day of this leave is paid on the month sheet. Missing means paid, so kinds
+   * saved before this setting keep counting as they always did. Unpaid leave has no limit.
+   */
+  readonly paid?: boolean;
+}
+
+/** A leave kind is paid unless it says otherwise; an unknown kind counts as paid. */
+export const leaveIsPaid = (kind: Pick<LeaveType, 'paid'> | null | undefined): boolean =>
+  kind?.paid !== false;
+
+/** Month sheet: every `every` late marks take off half a day; 0 switches the rule off. */
+export interface LateDeductionRule {
+  readonly every: number;
 }
 
 export interface AttendancePolicy {
@@ -32,6 +46,15 @@ export interface AttendancePolicy {
    * A person's own setting (in Team) wins over these.
    */
   readonly trackingByRole: Readonly<Record<string, boolean>>;
+  /** A worked day shorter than this many hours is a half day on the month sheet. */
+  readonly halfDayHours: number;
+  /**
+   * Month sheet: holidays and weekly offs are paid only in a week (Mon–Sun) with at least one
+   * present, half or paid-leave day. On by default.
+   */
+  readonly offsNeedWorkInWeek: boolean;
+  /** Late marks that cost half a day on the month sheet; off by default. */
+  readonly lateDeduction: LateDeductionRule;
 }
 
 export interface PointsPolicy {
@@ -65,6 +88,28 @@ export interface SiteTravelPolicy {
   readonly hoursMarginMinutes: number;
   /** A field pin farther than this from the worker's check-in reading is flagged for the office, in metres. */
   readonly pinTrustM: number;
+  /** The system makes the day's claim when the day closes (Duty Day step 2). */
+  readonly autoClaim: boolean;
+  /** A clean automatic claim is approved by the system the next morning; off until switched on. */
+  readonly autoApprove: boolean;
+  /** An automatic claim over this many km always waits for a person. */
+  readonly autoApproveMaxKm: number;
+  /** An automatic claim over this many paise always waits for a person. */
+  readonly autoApproveMaxPaise: number;
+  /** The paid route is cut to the straight-line distance between stops times this. */
+  readonly routeCapRatio: number;
+  /** The phone and the route check the person in and out at their sites by themselves (Duty Day step 3). */
+  readonly autoSiteVisits: boolean;
+  /** How close to a site, in metres, counts as being at it for automatic visits. */
+  readonly siteFenceM: number;
+  /** A duty start within this many km of the person's base or of an office is a known place. */
+  readonly baseStartMaxKm: number;
+  /** Km taken off each day's paid km once, after the cap (the part of the day that is commuting). */
+  readonly commuteDeductKm: number;
+  /** A stop away from every office and site this long or longer is flagged, in minutes (Duty Day step 5). */
+  readonly unknownStopMinutes: number;
+  /** The customer hears about site visits on WhatsApp: on the way, arrived, was it done, running late (Duty Day step 6). */
+  readonly customerVisitMessages: boolean;
 }
 
 export interface WorkforcePolicy {
@@ -93,6 +138,9 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     retentionDays: 90,
     autoCheckInFromSite: false,
     trackingByRole: {},
+    halfDayHours: 4,
+    offsNeedWorkInWeek: true,
+    lateDeduction: { every: 0 },
   },
   points: {
     onTimeTask: 10,
@@ -101,7 +149,23 @@ export const DEFAULT_WORKFORCE_POLICY: WorkforcePolicy = {
     recognitionMax: 200,
     stageRating: 20,
   },
-  travel: { farFromSiteM: 300, ratePaisePerKm: 500, hoursMarginMinutes: 60, pinTrustM: 100 },
+  travel: {
+    farFromSiteM: 300,
+    ratePaisePerKm: 500,
+    hoursMarginMinutes: 60,
+    pinTrustM: 100,
+    autoClaim: true,
+    autoApprove: false,
+    autoApproveMaxKm: 150,
+    autoApproveMaxPaise: 150_000,
+    routeCapRatio: 1.6,
+    autoSiteVisits: true,
+    siteFenceM: 150,
+    baseStartMaxKm: 5,
+    commuteDeductKm: 0,
+    unknownStopMinutes: 45,
+    customerVisitMessages: true,
+  },
   capacity: { defaultOpenTaskLimit: 0 },
 };
 

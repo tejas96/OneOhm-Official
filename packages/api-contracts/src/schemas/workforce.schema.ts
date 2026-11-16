@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { calendarDateSchema, idSchema, instantSchema } from '../common/primitives';
 import { leaveClashesSchema } from './leave-impact.schema';
+import { locationResultSchema } from './location-result.schema';
+import { monthSheetPolicyFields } from './month-rules.schema';
 import { staffCalendarSchema } from './staff-calendar.schema';
+import { travelPolicySchema } from './travel-policy.schema';
 
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM, for example 09:30.');
 const userRef = z.object({ id: idSchema, fullName: z.string() });
@@ -18,6 +21,7 @@ export const workforcePolicySchema = z.object({
           .regex(/^[a-z_]{2,30}$/, 'Use lowercase letters.'),
         label: z.string().trim().min(2).max(60),
         daysPerYear: z.number().int().min(0).max(366),
+        paid: z.boolean().default(true), // Unpaid: not payable, no yearly limit.
       }),
     )
     .min(1, 'Keep at least one kind of leave.'),
@@ -35,6 +39,7 @@ export const workforcePolicySchema = z.object({
     autoCheckInFromSite: z.boolean().default(false),
     /** Location on or off for whole roles (role key → on), over `captureLocation`. */
     trackingByRole: z.record(z.string(), z.boolean()).default({}),
+    ...monthSheetPolicyFields,
   }),
   points: z.object({
     onTimeTask: z.number().int().min(0).max(1000),
@@ -43,13 +48,8 @@ export const workforcePolicySchema = z.object({
     recognitionMax: z.number().int().min(1).max(10000),
     stageRating: z.number().int().min(0).max(5000).default(20),
   }),
-  /** Site check-ins and travel reimbursement (PRD 4.3). */
-  travel: z.object({
-    farFromSiteM: z.number().int().min(50).max(5000),
-    ratePaisePerKm: z.number().int().min(0).max(10_000),
-    hoursMarginMinutes: z.number().int().min(0).max(240),
-    pinTrustM: z.number().int().min(25).max(2000).default(100),
-  }),
+  /** Site check-ins and travel reimbursement (PRD 4.3, Duty Day step 2). */
+  travel: travelPolicySchema,
   /** Open tasks one person should carry (PRD 3.12); 0 means no limit. */
   capacity: z
     .object({ defaultOpenTaskLimit: z.number().int().min(0).max(500) })
@@ -109,6 +109,8 @@ export const attendanceDaySchema = z.object({
     .optional(),
   /** Checked in by the day's first site check-in (PRD 4.3). */
   autoFromSite: z.boolean().optional(),
+  /** The night job ended this day at the person's last activity (live review A1). */
+  autoClosed: z.boolean().optional(),
 });
 export type AttendanceDay = z.infer<typeof attendanceDaySchema>;
 
@@ -151,6 +153,7 @@ export const leaveBalanceSchema = z.object({
   allowedHalfDays: z.number().int(),
   usedHalfDays: z.number().int(),
   pendingHalfDays: z.number().int(),
+  paid: z.boolean().default(true), // Unpaid: no balance; show the days taken instead.
 });
 export type LeaveBalance = z.infer<typeof leaveBalanceSchema>;
 
@@ -173,7 +176,12 @@ export type PointsEntry = z.infer<typeof pointsEntrySchema>;
 
 /** Everything the field app's Today screen shows about the person's own day (PRD 4.1). */
 export const myWorkdaySchema = z.object({
+  /** Today's day, else the open day left from an earlier date (A2: Check out after midnight). */
   today: attendanceDaySchema.nullable(),
+  /** Today in business time: a `today.workDate` before it is a day left open. */
+  businessDate: calendarDateSchema.optional(),
+  /** On the check-in and check-out answers only. */
+  locationResult: locationResultSchema.optional(),
   /** `answered` is false until the person has said yes or no once. */
   consent: z.object({
     given: z.boolean(),
@@ -190,6 +198,8 @@ export const myWorkdaySchema = z.object({
     dayEnd: z.string(),
     captureLocation: z.boolean(),
     retentionDays: z.number().int(),
+    /** How many days back a correction may name (older APIs leave it out). */
+    correctionWindowDays: z.number().int().optional(),
   }),
   balances: z.array(leaveBalanceSchema),
   /** Working days, hours and holidays ahead (older APIs leave it out). */
@@ -210,6 +220,7 @@ export {
   leaveClashesSchema,
   leaveImpactSchema,
 } from './leave-impact.schema';
+export { type LocationResult, locationResultSchema } from './location-result.schema';
 
 export const correctionSchema = z.object({
   id: idSchema,

@@ -118,3 +118,28 @@ export const PROJECT_SWATCHES = {
   light: ['#006EAA', '#21998C', '#3F9A45', '#A9583A', '#946A1E', '#7A4875'],
   dark: ['#5BB8EC', '#4FC2B4', '#7DCB6A', '#E09A78', '#D9B26A', '#D49ACB'],
 } as const;
+
+/**
+ * What a person on duty is doing, on the live map (rings, dots, tails). Status, so each is
+ * also shown with a glyph and a word. Solids reach 3:1 on the map and on surfaces.
+ */
+export const DUTY_SWATCHES = {
+  light: {
+    visit: '#3F9A45',
+    moving: '#006EAA',
+    idle: '#B97A10',
+    gap: '#C4432C',
+    leave: '#7255C2',
+    off: '#6A7780',
+  },
+  dark: {
+    visit: '#62B56A',
+    moving: '#5BB8EC',
+    idle: '#D9A040',
+    gap: '#E2735C',
+    leave: '#9D87E9',
+    off: '#8B969D',
+  },
+} as const;
+
+export type DutySwatch = keyof (typeof DUTY_SWATCHES)['light'];

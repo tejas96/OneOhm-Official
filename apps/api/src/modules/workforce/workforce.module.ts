@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
+import { SiteActivityModule } from '../site-activity/site-activity.module';
 import { AnnouncementsService } from './announcements.service';
 import { AttendanceService } from './attendance.service';
 import { BonusesService } from './bonuses.service';
 import { CapacityService } from './capacity.service';
 import { CorrectionsService } from './corrections.service';
+import { DutyDayService } from './duty-day.service';
+import { DutyPointsController } from './duty-points.controller';
+import { DutyPointsService } from './duty-points.service';
+import { DutyRouteService } from './duty-route.service';
 import { EngagementController } from './engagement.controller';
 import { LeaveService } from './leave.service';
 import { MonthlyReviewService } from './monthly-review.service';
@@ -20,7 +25,8 @@ import { WorkforceSettingsService } from './workforce-settings.service';
  * cleared by the worker's daily job.
  */
 @Module({
-  controllers: [WorkforceController, RewardsController, EngagementController],
+  imports: [SiteActivityModule],
+  controllers: [WorkforceController, RewardsController, EngagementController, DutyPointsController],
   providers: [
     WorkdayService,
     AttendanceService,
@@ -33,6 +39,9 @@ import { WorkforceSettingsService } from './workforce-settings.service';
     CapacityService,
     MyRewardsService,
     MonthlyReviewService,
+    DutyPointsService,
+    DutyRouteService,
+    DutyDayService,
   ],
 })
 export class WorkforceModule {}

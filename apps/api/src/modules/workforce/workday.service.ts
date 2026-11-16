@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { MyWorkday } from '@oneohm/api-contracts';
 import { leaveRequests, pointsEntries } from '@oneohm/database';
+import { CORRECTION_WINDOW_DAYS } from '@oneohm/domain';
 import { monthOf, todayIn } from '@oneohm/shared';
 import { and, eq } from 'drizzle-orm';
 import type { Actor } from '../../common/auth/actor';
@@ -10,7 +11,7 @@ import { staffCalendar } from './holiday-days';
 import { lifetimePoints } from './points-total';
 import { loadPolicy } from './policy';
 import { trackingFor } from './tracking';
-import { balancesOf, readDays, readLeave, readPoints } from './workforce-read';
+import { balancesOf, readDays, readLeave, readOpenDay, readPoints } from './workforce-read';
 
 /** The person's own day for the field app's Today screen (PRD 4.1). */
 @Injectable()
@@ -23,8 +24,9 @@ export class WorkdayService {
   async get(actor: Actor): Promise<MyWorkday> {
     const today = todayIn();
     const policy = await loadPolicy(this.db);
-    const [days, consent, tracking, leave, points, calendar] = await Promise.all([
+    const [days, open, consent, tracking, leave, points, calendar] = await Promise.all([
       readDays(this.db, today, [actor.userId]),
+      readOpenDay(this.db, actor.userId),
       this.attendance.consented(actor.userId),
       trackingFor(this.db, actor.userId),
       readLeave(this.db, policy, eq(leaveRequests.userId, actor.userId)),
@@ -39,7 +41,10 @@ export class WorkdayService {
     const month = monthOf(new Date());
     const total = await lifetimePoints(this.db, actor.userId);
     return {
-      today: days.get(actor.userId) ?? null,
+      // Today's day, else the day left open from before (A2): Check out still shows after
+      // midnight, and a check-out then ends that day instead of starting a new one.
+      today: days.get(actor.userId) ?? open ?? null,
+      businessDate: today,
       consent: {
         given: consent.given,
         answered: consent.answered,
@@ -54,6 +59,7 @@ export class WorkdayService {
         // On for this person: their own setting, their roles or the company (PRD 4.3).
         captureLocation: tracking.switchedOn,
         retentionDays: policy.attendance.retentionDays,
+        correctionWindowDays: CORRECTION_WINDOW_DAYS,
       },
       balances: balancesOf(
         policy,

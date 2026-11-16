@@ -24,26 +24,55 @@ export function distanceMeters(a: GeoPoint, b: GeoPoint): number {
   return Math.round(2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h))));
 }
 
+/**
+ * Where a reading stands against one place, allowing for the phone's accuracy (live review
+ * A4). Accuracy never makes "inside" easier: the whole circle of doubt must fit in the
+ * fence to be inside, and none of it may touch the fence to be outside. Anything between
+ * is unsure, and is kept as null (not true, not false) so nobody is marked wrongly.
+ */
+export type Fence = 'inside' | 'outside' | 'unsure';
+
+export function fenceOf(distanceM: number, radiusM: number, accuracyM?: number | null): Fence {
+  const doubt = Math.max(0, accuracyM ?? 0);
+  if (distanceM + doubt <= radiusM) return 'inside';
+  if (distanceM - doubt > radiusM) return 'outside';
+  return 'unsure';
+}
+
 export interface PlaceMatch {
   readonly location: WorkLocation;
   readonly distanceM: number;
-  /** Within the location's radius, allowing for the phone's reported accuracy. */
-  readonly inside: boolean;
+  /** True inside, false outside, null when the accuracy is too poor to tell (see `fenceOf`). */
+  readonly inside: boolean | null;
 }
 
-/** The nearest authorised location to a reading, or null when none are set up. */
+const RANK: Readonly<Record<Fence, number>> = { inside: 0, unsure: 1, outside: 2 };
+
+/**
+ * The place a reading belongs to, or null when none are set up (live review A3). Inside
+ * any active place counts as inside, so the nearest one is not the only one asked. With
+ * none containing it, "unsure" about any place beats "outside" all of them. Ties go to the
+ * nearer place.
+ */
 export function nearestLocation(
   point: GeoPoint & { readonly accuracyM?: number | null | undefined },
   locations: readonly WorkLocation[],
 ): PlaceMatch | null {
-  let best: PlaceMatch | null = null;
+  let best: { match: PlaceMatch; fence: Fence } | null = null;
   for (const location of locations) {
     const distanceM = distanceMeters(point, location);
-    if (best && distanceM >= best.distanceM) continue;
-    const slack = Math.min(Math.max(0, point.accuracyM ?? 0), 100);
-    best = { location, distanceM, inside: distanceM <= location.radiusM + slack };
+    const fence = fenceOf(distanceM, location.radiusM, point.accuracyM);
+    const better =
+      !best ||
+      RANK[fence] < RANK[best.fence] ||
+      (RANK[fence] === RANK[best.fence] && distanceM < best.match.distanceM);
+    if (better)
+      best = {
+        fence,
+        match: { location, distanceM, inside: fence === 'unsure' ? null : fence === 'inside' },
+      };
   }
-  return best;
+  return best?.match ?? null;
 }
 
 /** Minutes since midnight for "HH:MM". */
